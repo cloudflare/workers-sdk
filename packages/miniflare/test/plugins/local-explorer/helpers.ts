@@ -1,5 +1,5 @@
-import { z } from "zod";
 import type { ExpectStatic } from "vitest";
+import type { z } from "zod";
 
 /**
  * Validates a response body against a Zod schema and returns typed data.

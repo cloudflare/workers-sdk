@@ -69,49 +69,49 @@ const STATUS_SUMMARY_CONFIG = [
 		key: "complete",
 		label: "Complete",
 		icon: CheckCircleIcon,
-		color: "text-[#2b7bfb] dark:text-[#004ac2]",
+		color: "text-kumo-link",
 		weight: "fill" as const,
 	},
 	{
 		key: "errored",
 		label: "Errored",
 		icon: WarningCircleIcon,
-		color: "text-[#fb2b36] dark:text-[#c10007]",
+		color: "text-kumo-danger",
 		weight: "fill" as const,
 	},
 	{
 		key: "queued",
 		label: "Queued",
 		icon: CircleNotchIcon,
-		color: "text-text-secondary",
+		color: "text-kumo-subtle",
 		weight: "regular" as const,
 	},
 	{
 		key: "running",
 		label: "Running",
 		icon: PlayIcon,
-		color: "text-text-secondary",
+		color: "text-kumo-subtle",
 		weight: "fill" as const,
 	},
 	{
 		key: "paused",
 		label: "Paused",
 		icon: PauseIcon,
-		color: "text-text-secondary",
+		color: "text-kumo-subtle",
 		weight: "fill" as const,
 	},
 	{
 		key: "waiting",
 		label: "Waiting",
 		icon: SpinnerIcon,
-		color: "text-text-secondary",
+		color: "text-kumo-subtle",
 		weight: "regular" as const,
 	},
 	{
 		key: "terminated",
 		label: "Terminated",
 		icon: SquareIcon,
-		color: "text-text-secondary",
+		color: "text-kumo-subtle",
 		weight: "fill" as const,
 	},
 ] as const;
@@ -122,15 +122,15 @@ const StatusSummary = memo(function StatusSummary({
 	statusCounts: Record<string, number>;
 }): JSX.Element {
 	return (
-		<div className="mb-4 flex divide-x divide-border overflow-hidden rounded-lg border border-border bg-bg">
+		<div className="mb-4 flex divide-x divide-kumo-fill overflow-hidden rounded-lg border border-kumo-fill bg-kumo-elevated">
 			{STATUS_SUMMARY_CONFIG.map(
 				({ key, label, icon: Icon, color, weight }) => (
 					<div className="flex-1 px-3 py-2" key={key}>
-						<div className="flex items-center gap-1.5 text-xs text-text-secondary">
+						<div className="flex items-center gap-1.5 text-xs text-kumo-subtle">
 							<Icon className={color} size={12} weight={weight} />
 							{label}
 						</div>
-						<div className="mt-0.5 text-base text-text">
+						<div className="mt-0.5 text-base text-kumo-default">
 							{statusCounts[key] ?? 0}
 						</div>
 					</div>
@@ -150,25 +150,23 @@ const ACTION_CONFIG_LIST: Record<
 > = {
 	pause: {
 		icon: PauseIcon,
-		style:
-			"border-border bg-bg text-text-secondary dark:text-text hover:bg-border/60",
+		style: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill",
 		weight: "fill",
 	},
 	resume: {
 		icon: PlayIcon,
-		style:
-			"border-border bg-bg text-text-secondary dark:text-text hover:bg-border/60",
+		style: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill",
 		weight: "fill",
 	},
 	restart: {
 		icon: ArrowClockwiseIcon,
-		style:
-			"border-border bg-bg text-text-secondary dark:text-text hover:bg-border/60",
+		style: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill",
 		weight: "regular",
 	},
 	terminate: {
 		icon: StopIcon,
-		style: "border-border bg-bg text-danger hover:bg-danger/10",
+		style:
+			"border-kumo-fill bg-kumo-base text-kumo-danger hover:bg-kumo-danger/10",
 		weight: "fill",
 	},
 };
@@ -294,18 +292,18 @@ const InstanceRow = memo(function InstanceRow({
 
 	return (
 		<>
-			<div className="border-b border-border bg-bg p-1 last:border-b-0">
+			<div className="border-b border-kumo-fill bg-kumo-elevated p-1 last:border-b-0">
 				<div
-					className="grid h-10 cursor-pointer grid-cols-[100px_60px_1fr_auto] items-center gap-3 rounded-lg px-2 transition-colors hover:bg-border/60"
+					className="grid h-10 cursor-pointer grid-cols-[100px_60px_1fr_auto] items-center gap-3 rounded-lg px-2 transition-colors hover:bg-kumo-fill"
 					onClick={handleRowClick}
 				>
 					<div>
 						<WorkflowStatusBadge status={status} />
 					</div>
-					<span className="text-sm text-text-secondary">
+					<span className="text-sm text-kumo-subtle">
 						{timeAgo(instance.created_on) || "—"}
 					</span>
-					<span className="truncate font-mono text-xs text-text">
+					<span className="truncate font-mono text-xs text-kumo-default">
 						{instance.id}
 					</span>
 					<div className="flex items-center gap-1">
@@ -334,7 +332,7 @@ const InstanceRow = memo(function InstanceRow({
 							status !== "errored" &&
 							status !== "terminated" && (
 								<button
-									className="ml-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-border bg-bg text-text-secondary transition-colors hover:bg-border/60 disabled:cursor-not-allowed disabled:opacity-40 dark:text-text"
+									className="ml-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-kumo-default transition-colors hover:bg-kumo-fill disabled:cursor-not-allowed disabled:opacity-40"
 									disabled={actionInProgress !== null}
 									onClick={handleSendEventClick}
 									title="Send Event"
@@ -343,7 +341,7 @@ const InstanceRow = memo(function InstanceRow({
 								</button>
 							)}
 						<button
-							className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-border bg-bg text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
+							className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-kumo-danger transition-colors hover:bg-kumo-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
 							disabled={actionInProgress !== null}
 							onClick={handleDeleteClick}
 							title="Delete"
@@ -357,27 +355,27 @@ const InstanceRow = memo(function InstanceRow({
 			{/* Delete confirmation dialog — outside Table.Row to prevent click propagation */}
 			<Dialog.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
 				<Dialog size="lg">
-					<div className="border-b border-border px-6 pt-6 pb-4">
+					<div className="border-b border-kumo-fill px-6 pt-6 pb-4">
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Title className="text-lg font-semibold text-text">
+						<Dialog.Title className="text-lg font-semibold text-kumo-default">
 							Delete this instance?
 						</Dialog.Title>
-						<p className="mt-1 text-sm text-text-secondary">
+						<p className="mt-1 text-sm text-kumo-subtle">
 							This will permanently delete the instance and its persistence
 							data. This action cannot be undone.
 						</p>
 					</div>
 
 					<div className="px-6 py-4">
-						<div className="rounded-lg border border-border bg-bg-secondary px-4 py-3">
-							<span className="text-xs text-text-secondary">Instance ID</span>
-							<p className="mt-0.5 font-mono text-sm text-text">
+						<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-4 py-3">
+							<span className="text-xs text-kumo-subtle">Instance ID</span>
+							<p className="mt-0.5 font-mono text-sm text-kumo-default">
 								{instance.id}
 							</p>
 						</div>
 					</div>
 
-					<div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+					<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
 						<Button
 							variant="secondary"
 							onClick={() => setDeleteDialogOpen(false)}
@@ -405,21 +403,21 @@ const InstanceRow = memo(function InstanceRow({
 					}
 				}}
 			>
-				<Dialog size="lg" className="w-[32rem]">
-					<div className="border-b border-border px-6 py-4">
+				<Dialog size="lg" className="w-lg">
+					<div className="border-b border-kumo-fill px-6 py-4">
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Title className="text-lg font-semibold text-text">
+						<Dialog.Title className="text-lg font-semibold text-kumo-default">
 							Send Event
 						</Dialog.Title>
 					</div>
 
 					<div className="space-y-4 px-6 py-5">
 						<div>
-							<label className="mb-2 block text-sm font-medium text-text">
+							<label className="mb-2 block text-sm font-medium text-kumo-default">
 								Event Type
 							</label>
 							<input
-								className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder-text-secondary focus:border-primary focus:shadow-focus-primary focus:outline-none"
+								className="w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
 								onChange={(e) => setEventType(e.target.value)}
 								placeholder="my-event"
 								type="text"
@@ -427,14 +425,12 @@ const InstanceRow = memo(function InstanceRow({
 							/>
 						</div>
 						<div>
-							<label className="mb-2 block text-sm font-medium text-text">
+							<label className="mb-2 block text-sm font-medium text-kumo-default">
 								Payload{" "}
-								<span className="font-normal text-text-secondary">
-									(optional)
-								</span>
+								<span className="font-normal text-kumo-subtle">(optional)</span>
 							</label>
 							<textarea
-								className="w-full resize-y rounded-lg border border-border bg-bg px-3 py-2.5 font-mono text-sm text-text placeholder-text-secondary focus:border-primary focus:shadow-focus-primary focus:outline-none"
+								className="w-full resize-y rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
 								onChange={(e) => setEventPayload(e.target.value)}
 								placeholder='{"key": "value"}'
 								rows={4}
@@ -443,7 +439,7 @@ const InstanceRow = memo(function InstanceRow({
 						</div>
 					</div>
 
-					<div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+					<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
 						<Button
 							variant="secondary"
 							onClick={() => setSendEventOpen(false)}
@@ -508,17 +504,17 @@ function SettingsTab({
 
 	return (
 		<div className="px-32 py-6">
-			<h3 className="mb-4 text-lg font-semibold text-text">
+			<h3 className="mb-4 text-lg font-semibold text-kumo-default">
 				Delete all instances
 			</h3>
-			<div className="overflow-hidden rounded-lg border border-border bg-bg">
+			<div className="overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
 				<div className="flex items-center justify-between gap-4 px-4 py-1.5">
-					<p className="text-sm text-text-secondary">
+					<p className="text-sm text-kumo-subtle">
 						Permanently delete all workflow instances and their persistence
 						data.
 					</p>
 					<button
-						className="inline-flex shrink-0 cursor-pointer items-center rounded-lg bg-bg p-3 text-sm font-medium text-danger transition-colors hover:bg-danger/10"
+						className="inline-flex shrink-0 cursor-pointer items-center rounded-lg bg-kumo-base p-3 text-sm font-medium text-kumo-danger transition-colors hover:bg-kumo-danger/10"
 						onClick={() => handleOpenChange(true)}
 					>
 						Delete
@@ -527,29 +523,31 @@ function SettingsTab({
 			</div>
 
 			<Dialog.Root open={confirmOpen} onOpenChange={handleOpenChange}>
-				<Dialog size="lg" className="w-[32rem]">
-					<div className="border-b border-border px-6 py-4">
+				<Dialog size="lg" className="w-lg">
+					<div className="border-b border-kumo-fill px-6 py-4">
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Title className="text-lg font-semibold text-text">
+						<Dialog.Title className="text-lg font-semibold text-kumo-default">
 							Delete all instances
 						</Dialog.Title>
 					</div>
 
 					<div className="px-6 py-5">
 						{error && (
-							<div className="mb-4 rounded-lg border border-danger/20 bg-danger/8 p-3 text-sm text-danger">
+							<div className="mb-4 rounded-lg border border-kumo-danger/20 bg-kumo-danger/8 p-3 text-sm text-kumo-danger">
 								{error}
 							</div>
 						)}
-						<p className="text-sm text-text-secondary">
+						<p className="text-sm text-kumo-subtle">
 							This will permanently delete all instances of{" "}
-							<span className="font-semibold text-text">{workflowName}</span>.
-							All instance data and persistence files will be removed. This
+							<span className="font-semibold text-kumo-default">
+								{workflowName}
+							</span>
+							. All instance data and persistence files will be removed. This
 							action cannot be undone.
 						</p>
 					</div>
 
-					<div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+					<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
 						<Button
 							variant="secondary"
 							onClick={() => handleOpenChange(false)}
@@ -730,7 +728,7 @@ function WorkflowInstancesView() {
 			/>
 
 			<div className="px-8 pt-4">
-				<div className="tabs-styled inline-flex">
+				<div className="inline-flex">
 					<Tabs
 						variant="segmented"
 						tabs={[
@@ -741,7 +739,7 @@ function WorkflowInstancesView() {
 						onValueChange={setActiveTab}
 					/>
 				</div>
-				<hr className="-mx-8 mt-4 border-border" />
+				<hr className="-mx-8 mt-4 border-kumo-fill" />
 			</div>
 
 			{activeTab === "instances" && (
@@ -749,7 +747,7 @@ function WorkflowInstancesView() {
 					{totalCount > 0 && !initialLoad && (
 						<>
 							<StatusSummary statusCounts={statusCounts} />
-							<hr className="-mx-8 mb-4 border-border" />
+							<hr className="-mx-8 mb-4 border-kumo-fill" />
 						</>
 					)}
 
@@ -757,7 +755,7 @@ function WorkflowInstancesView() {
 						<DropdownMenu>
 							<DropdownMenu.Trigger
 								render={
-									<button className="inline-flex h-9 w-36 cursor-pointer items-center justify-between rounded-lg border border-border bg-bg px-3 text-base text-text transition-colors hover:bg-border/60">
+									<Button className="min-w-36" icon={CaretDownIcon}>
 										<span>
 											{statusFilter === "all"
 												? "All"
@@ -765,24 +763,24 @@ function WorkflowInstancesView() {
 														(s) => s.key === statusFilter
 													)?.label ?? statusFilter)}
 										</span>
-										<CaretDownIcon size={14} className="text-text-secondary" />
-									</button>
+									</Button>
 								}
 							/>
 							<DropdownMenu.Content
 								align="start"
-								className="w-36 bg-bg"
+								className="w-36 bg-kumo-base"
 								side="bottom"
 							>
 								<DropdownMenu.Item
-									className="cursor-pointer rounded-md transition-colors hover:bg-border/60"
+									className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
 									onClick={() => handleStatusFilterChange("all")}
 								>
 									All
 								</DropdownMenu.Item>
-								{STATUS_SUMMARY_CONFIG.map(({ key, label }) => (
+								{STATUS_SUMMARY_CONFIG.map(({ key, label, icon: Icon }) => (
 									<DropdownMenu.Item
-										className="cursor-pointer rounded-md transition-colors hover:bg-border/60"
+										className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
+										icon={<Icon />}
 										key={key}
 										onClick={() => handleStatusFilterChange(key)}
 									>
@@ -793,13 +791,14 @@ function WorkflowInstancesView() {
 						</DropdownMenu>
 
 						<div className="flex items-center gap-2">
-							<button
+							<Button
 								aria-label="Refresh"
-								className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-bg text-text transition-colors hover:bg-border/60"
 								onClick={() => void fetchInstances()}
+								shape="square"
 							>
 								<ArrowsCounterClockwiseIcon size={14} />
-							</button>
+							</Button>
+
 							<Button
 								onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
 									(e.target as HTMLButtonElement).blur();
@@ -814,21 +813,19 @@ function WorkflowInstancesView() {
 					</div>
 
 					{error && (
-						<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
+						<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
 							{error}
 						</div>
 					)}
 
 					{initialLoad ? (
-						<div className="p-12 text-center text-text-secondary">
-							Loading...
-						</div>
+						<div className="p-12 text-center text-kumo-subtle">Loading...</div>
 					) : instances.length === 0 && !fetching ? (
-						<div className="rounded-lg border border-border bg-bg px-5 py-8 text-center text-sm text-text-secondary">
+						<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-5 py-8 text-center text-sm text-kumo-subtle">
 							No instances found
 						</div>
 					) : instances.length === 0 ? (
-						<div className="rounded-lg border border-border bg-bg px-5 py-8 text-center text-sm text-text-secondary">
+						<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-5 py-8 text-center text-sm text-kumo-subtle">
 							{statusFilter !== "all" ? (
 								<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
 							) : (
@@ -839,7 +836,7 @@ function WorkflowInstancesView() {
 						<div
 							className={`transition-opacity duration-150 ${fetching ? "opacity-60" : "opacity-100"}`}
 						>
-							<div className="overflow-hidden rounded-lg border border-border">
+							<div className="overflow-hidden rounded-lg border border-kumo-fill">
 								{instances.map((instance) => (
 									<InstanceRow
 										instance={instance}
@@ -854,44 +851,34 @@ function WorkflowInstancesView() {
 								<div className="flex items-center justify-between pt-4">
 									<DropdownMenu>
 										<DropdownMenu.Trigger
-											render={
-												<button className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-bg px-3 text-base text-text transition-colors hover:bg-border/60">
-													{perPage}
-													<CaretUpDownIcon
-														size={12}
-														className="text-text-secondary"
-													/>
-												</button>
-											}
+											render={<Button icon={CaretUpDownIcon}>{perPage}</Button>}
 										/>
 										<DropdownMenu.Content
 											align="start"
-											className="bg-bg"
+											className="bg-kumo-base"
 											side="top"
 										>
 											{[10, 25, 50, 100].map((size) => (
 												<DropdownMenu.Item
-													className="cursor-pointer rounded-md transition-colors hover:bg-border/60"
+													className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
 													key={size}
 													onClick={() => handlePerPageChange(size)}
 												>
 													{size}
 													{size === perPage && (
-														<span className="ml-2 text-text-secondary">✓</span>
+														<span className="ml-2 text-kumo-subtle">✓</span>
 													)}
 												</DropdownMenu.Item>
 											))}
 										</DropdownMenu.Content>
 									</DropdownMenu>
 
-									<div className="pagination-styled">
-										<Pagination
-											page={page}
-											perPage={perPage}
-											setPage={handlePageChange}
-											totalCount={totalCount}
-										/>
-									</div>
+									<Pagination
+										page={page}
+										perPage={perPage}
+										setPage={handlePageChange}
+										totalCount={totalCount}
+									/>
 								</div>
 							)}
 						</div>

@@ -1,4 +1,5 @@
-import { MatcherRegExps, testRegExps } from "miniflare:shared";
+import { testRegExps } from "miniflare:shared";
+import type { MatcherRegExps } from "miniflare:shared";
 
 export const KVLimits = {
 	MIN_CACHE_TTL_SECONDS: 30,

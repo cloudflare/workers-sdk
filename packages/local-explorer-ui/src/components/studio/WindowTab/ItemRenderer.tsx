@@ -31,8 +31,10 @@ export function StudioWindowTabItemRenderer({
 	return (
 		<div
 			className={cn(
-				"relative flex h-10 max-w-75 min-w-42.5 cursor-pointer items-center gap-2 border-r border-b border-border px-2 text-left text-xs select-none hover:text-text",
-				selected ? "bg-surface" : "bg-surface-secondary text-muted",
+				"relative flex h-10 max-w-75 min-w-42.5 cursor-pointer items-center gap-2 border-r border-b border-kumo-fill px-2 text-left text-xs select-none hover:bg-kumo-elevated hover:text-kumo-default",
+				selected
+					? "border-b-kumo-brand bg-kumo-base text-kumo-default"
+					: "border-b-kumo-fill bg-kumo-elevated text-kumo-subtle",
 				isTemp && "italic",
 				isDirty && "not-italic"
 			)}
@@ -48,7 +50,7 @@ export function StudioWindowTabItemRenderer({
 			{onClose && (
 				<div
 					className={cn(
-						"ml-2 flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+						"ml-2 flex h-5 w-5 items-center justify-center rounded hover:bg-kumo-overlay"
 					)}
 					onClick={(e) => {
 						e.stopPropagation();
@@ -62,7 +64,7 @@ export function StudioWindowTabItemRenderer({
 					)}
 					{shouldShowDirtyIcon && (
 						<CircleIcon
-							className={"h-3 w-3 shrink-0 grow-0 text-muted"}
+							className={"h-3 w-3 shrink-0 grow-0 text-kumo-subtle"}
 							weight="fill"
 						/>
 					)}

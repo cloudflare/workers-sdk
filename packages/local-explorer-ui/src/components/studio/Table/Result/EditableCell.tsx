@@ -94,7 +94,7 @@ function InputCellEditor({
 			{popover &&
 				createPortal(
 					<div
-						className="fixed flex flex-col rounded border border-border bg-surface shadow"
+						className="fixed flex flex-col rounded border border-kumo-fill bg-kumo-base shadow"
 						ref={refs.setFloating}
 						style={{
 							...(floatingStyles as React.CSSProperties),
@@ -205,7 +205,7 @@ function PopoverEditor({
 					ref={editorRef}
 				/>
 			</div>
-			<div className="flex justify-end border-t border-border p-2">
+			<div className="flex justify-end border-t border-kumo-fill p-2">
 				<Button
 					onClick={() => {
 						onApply(editorRef.current?.getValue());

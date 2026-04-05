@@ -1,13 +1,12 @@
 import SCRIPT_PIPELINE_OBJECT from "worker:pipelines/pipeline";
 import { z } from "zod";
-import { Service } from "../../runtime";
 import {
 	namespaceKeys,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 } from "../shared";
+import type { Service } from "../../runtime";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const PipelineOptionsSchema = z.object({
 	pipelines: z

@@ -6,175 +6,38 @@
 @custom-variant dark (@media (prefers-color-scheme: dark));
 
 @theme {
-	/* Cloudflare Workers brand colors - Light mode (default) */
-	--color-bg: #fffdfb;
-	--color-bg-secondary: #fef7ed;
-	--color-bg-tertiary: #fffbf5;
-	--color-text: #521000;
-	--color-text-secondary: #521000b3;
-	--color-border: #ebd5c1;
-	--color-primary: #ff4801;
-	--color-primary-hover: #ff7038;
-	--color-danger: #fb2c36;
-	--color-danger-hover: #dc2626;
-	--color-success: #16a34a;
-
-	/* Surface colors */
-	--color-surface: #fef7ed;
-	--color-surface-secondary: #f5f0eb;
-	--color-surface-tertiary: #ebe3db;
-	--color-muted: #8a6e5c;
-	--color-accent: #f0e6dc;
-	--color-background: #fffdfb;
-	--color-border-active: #ff4801;
-	--color-tooltip-bg: #3d2e24;
-	--color-tooltip-text: #ffeee6;
-	--color-resizer: #d4c4b6;
-
-	/* SQL editor chrome */
-	--color-selection: rgba(82, 16, 0, 0.12);
-	--color-active-line: rgba(82, 16, 0, 0.05);
-
-	/* SQL editor syntax highlighting */
-	--color-syntax-keyword: #0000ff;
-	--color-syntax-string: #d16969;
-	--color-syntax-number: #098658;
-	--color-syntax-comment: #6a737d;
-	--color-syntax-operator: #5a5a5a;
-	--color-syntax-table: #e84393;
-
-	/* Focus ring shadows */
-	--shadow-focus-primary: 0 0 0 3px rgba(255, 72, 1, 0.15);
-	--shadow-focus-danger: 0 0 0 3px rgba(251, 44, 54, 0.15);
-
-	/* Custom sizing */
+	/* Local Explorer layout sizing */
 	--width-sidebar: 240px;
-}
 
-/*
- * Map @cloudflare/kumo component tokens to our brand theme.
- * Kumo's DropdownMenu, Button, Input, Tooltip, etc. reference --color-kumo-*
- * and --text-color-kumo-* variables internally. Without these mappings,
- * backgrounds and text colors resolve to transparent/invisible.
- */
-:root {
-	/* Background tokens */
-	--color-kumo-base: var(--color-background);
-	--color-kumo-control: var(--color-surface);
-	--color-kumo-elevated: var(--color-surface-secondary);
-	--color-kumo-overlay: var(--color-accent);
-	--color-kumo-recessed: var(--color-surface-tertiary);
-	--color-kumo-tint: var(--color-surface-secondary);
-
-	/* Interactive / brand tokens */
-	--color-kumo-brand: var(--color-primary);
-	--color-kumo-brand-hover: var(--color-primary-hover);
-	--color-kumo-interact: var(--color-surface-tertiary);
-	--color-kumo-danger: var(--color-danger);
-
-	/* Border / line tokens */
-	--color-kumo-fill: var(--color-border);
-	--color-kumo-line: var(--color-border);
-	--color-kumo-ring: var(--color-muted);
-
-	/* Tooltip tokens */
-	--color-kumo-tip-shadow: rgba(0, 0, 0, 0.08);
-	--color-kumo-tip-stroke: transparent;
-
-	/* Text color tokens */
-	--text-color-kumo-default: var(--color-text);
-	--text-color-kumo-subtle: var(--color-muted);
-	--text-color-kumo-inactive: var(--color-muted);
-	--text-color-kumo-danger: var(--color-danger);
-	--text-color-kumo-link: var(--color-primary);
-}
-
-/* Dark mode color overrides */
-@media (prefers-color-scheme: dark) {
-	:root {
-		--color-bg: #1a1412;
-		--color-bg-secondary: #0f0c0a;
-		--color-bg-tertiary: #231c18;
-		--color-text: #ffeee6;
-		--color-text-secondary: #ffeee6b3;
-		--color-border: #3d2e24;
-		--color-primary: #ff6b33;
-		--color-primary-hover: #ff8855;
-		--color-danger: #ff4d55;
-		--color-danger-hover: #ef4444;
-		--color-success: #22c55e;
-
-		/* Studio surface colors — dark mode */
-		--color-surface: #0f0c0a;
-		--color-surface-secondary: #231c18;
-		--color-surface-tertiary: #3d2e24;
-		--color-muted: #a08678;
-		--color-accent: #2e221a;
-		--color-background: #1a1412;
-		--color-border-active: #ff6b33;
-		--color-tooltip-bg: #3d2e24;
-		--color-tooltip-text: #ffeee6;
-		--color-resizer: #3d2e24;
-
-		/* SQL editor chrome — dark mode */
-		--color-selection: rgba(255, 238, 230, 0.15);
-		--color-active-line: rgba(255, 238, 230, 0.06);
-
-		/* SQL editor syntax highlighting — dark mode */
-		--color-syntax-keyword: #4078f2;
-		--color-syntax-string: #d16969;
-		--color-syntax-number: #808080;
-		--color-syntax-comment: #6a737d;
-		--color-syntax-operator: #bfbfbf;
-		--color-syntax-table: #fd79a8;
-
-		--shadow-focus-primary: 0 0 0 3px rgba(255, 107, 51, 0.25);
-		--shadow-focus-danger: 0 0 0 3px rgba(255, 77, 85, 0.25);
-
-		/* Kumo tooltip overrides for dark mode */
-		--color-kumo-tip-shadow: transparent;
-		--color-kumo-tip-stroke: var(--color-border);
-
-		/* Kumo overlay override for dark mode - darker backdrop for dialogs */
-		--color-kumo-overlay: var(--color-surface);
-	}
+	/* Studio/editor tokens mapped to stock Kumo/Tailwind palette */
+	--studio-editor-selection: color-mix(
+		in oklch,
+		var(--color-kumo-brand) 18%,
+		transparent
+	);
+	--studio-editor-active-line: color-mix(
+		in oklch,
+		var(--color-kumo-brand) 8%,
+		transparent
+	);
+	--studio-editor-caret: var(--text-color-kumo-default);
+	--studio-editor-gutter-bg: var(--color-kumo-elevated);
+	--studio-editor-gutter-text: var(--text-color-kumo-subtle);
+	--studio-editor-panel-bg: var(--color-kumo-base);
+	--studio-editor-panel-border: var(--color-kumo-fill);
+	--studio-editor-panel-hover: var(--color-kumo-overlay);
+	--studio-editor-panel-text: var(--text-color-kumo-default);
+	--studio-syntax-keyword: light-dark(#0000ff, #4078f2);
+	--studio-syntax-string: #d16969;
+	--studio-syntax-number: light-dark(#098658, #808080);
+	--studio-syntax-comment: #6a737d;
+	--studio-syntax-operator: light-dark(#5a5a5a, #bfbfbf);
+	--studio-syntax-table: light-dark(#e84393, #fd79a8);
+	--studio-statement-highlight-border: var(--color-kumo-brand);
 }
 
 @layer base {
 	body {
-		font-family:
-			-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
-			sans-serif;
-		@apply text-text bg-bg-secondary text-sm leading-normal;
+		@apply bg-kumo-elevated text-kumo-default text-sm leading-normal;
 	}
-}
-
-/* Style Kumo Pagination buttons to match our theme — background only, no border changes */
-.pagination-styled button {
-	background-color: var(--color-bg);
-}
-
-.pagination-styled button:hover:not(:disabled) {
-	background-color: color-mix(in srgb, var(--color-border) 60%, transparent);
-}
-
-.pagination-styled button:disabled {
-	opacity: 0.4;
-}
-
-.pagination-styled input {
-	background-color: var(--color-bg);
-}
-
-/* Tabs: inactive track uses surface-tertiary, active indicator matches table rows */
-.tabs-styled [role="tablist"] {
-	background-color: var(--color-surface-tertiary);
-}
-
-.tabs-styled [data-active] {
-	background-color: var(--color-bg);
-}
-
-.tabs-styled [role="tab"] {
-	font-weight: 400;
 }

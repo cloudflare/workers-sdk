@@ -85,11 +85,7 @@ export * from "./environment-variables/misc-variables";
 
 export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 
-export {
-	getLocalWorkerdCompatibilityDate,
-	formatCompatibilityDate,
-	isCompatDate,
-} from "./compatibility-date";
+export { isCompatDate, getTodaysCompatDate } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
 
 export { isDockerfile } from "./config/validation";

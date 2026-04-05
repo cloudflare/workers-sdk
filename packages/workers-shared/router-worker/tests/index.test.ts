@@ -36,15 +36,15 @@ describe("unit tests", () => {
 				has_user_worker: true,
 			},
 			USER_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from user worker");
 				},
 			},
 			ASSET_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from asset worker");
 				},
-				async unstable_canFetch(_: Request): Promise<boolean> {
+				async unstable_canFetch(_request: Request): Promise<boolean> {
 					return true;
 				},
 			},
@@ -66,10 +66,10 @@ describe("unit tests", () => {
 				has_user_worker: false,
 			},
 			ASSET_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from asset worker");
 				},
-				async unstable_canFetch(_: Request): Promise<boolean> {
+				async unstable_canFetch(_request: Request): Promise<boolean> {
 					return true;
 				},
 			},
@@ -90,10 +90,10 @@ describe("unit tests", () => {
 				has_user_worker: false,
 			},
 			ASSET_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from asset worker");
 				},
-				async unstable_canFetch(_: Request): Promise<boolean> {
+				async unstable_canFetch(_request: Request): Promise<boolean> {
 					return true;
 				},
 			},
@@ -117,15 +117,15 @@ describe("unit tests", () => {
 				},
 			},
 			USER_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from user worker");
 				},
 			},
 			ASSET_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from asset worker");
 				},
-				async unstable_canFetch(_: Request): Promise<boolean> {
+				async unstable_canFetch(_request: Request): Promise<boolean> {
 					return true;
 				},
 			},
@@ -150,15 +150,15 @@ describe("unit tests", () => {
 				},
 			},
 			USER_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from user worker");
 				},
 			},
 			ASSET_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from asset worker");
 				},
-				async unstable_canFetch(_: Request): Promise<boolean> {
+				async unstable_canFetch(_request: Request): Promise<boolean> {
 					return true;
 				},
 			},
@@ -183,15 +183,15 @@ describe("unit tests", () => {
 				},
 			},
 			USER_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from user worker");
 				},
 			},
 			ASSET_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from asset worker");
 				},
-				async unstable_canFetch(_: Request): Promise<boolean> {
+				async unstable_canFetch(_request: Request): Promise<boolean> {
 					return true;
 				},
 			},
@@ -215,15 +215,15 @@ describe("unit tests", () => {
 				},
 			},
 			USER_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from user worker");
 				},
 			},
 			ASSET_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from asset worker");
 				},
-				async unstable_canFetch(_: Request): Promise<boolean> {
+				async unstable_canFetch(_request: Request): Promise<boolean> {
 					return true;
 				},
 			},
@@ -247,15 +247,15 @@ describe("unit tests", () => {
 				},
 			},
 			USER_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from user worker");
 				},
 			},
 			ASSET_WORKER: {
-				async fetch(_: Request): Promise<Response> {
+				async fetch(_request: Request): Promise<Response> {
 					return new Response("hello from asset worker");
 				},
-				async unstable_canFetch(_: Request): Promise<boolean> {
+				async unstable_canFetch(_request: Request): Promise<boolean> {
 					return false;
 				},
 			},
@@ -284,7 +284,7 @@ describe("unit tests", () => {
 						invoke_user_worker_ahead_of_assets: true,
 					},
 					USER_WORKER: {
-						async fetch(_: Request): Promise<Response> {
+						async fetch(_request: Request): Promise<Response> {
 							return new Response("<!DOCTYPE html><html></html>", {
 								headers: { "content-type": contentType },
 							});
@@ -408,7 +408,7 @@ describe("unit tests", () => {
 							invoke_user_worker_ahead_of_assets: true,
 						},
 						USER_WORKER: {
-							async fetch(_: Request): Promise<Response> {
+							async fetch(_request: Request): Promise<Response> {
 								return new Response(userWorkerResponse.body, {
 									status: userWorkerResponse.status,
 									headers: userWorkerResponse.headers,
@@ -440,7 +440,7 @@ describe("unit tests", () => {
 					invoke_user_worker_ahead_of_assets: true,
 				},
 				USER_WORKER: {
-					async fetch(_: Request): Promise<Response> {
+					async fetch(_request: Request): Promise<Response> {
 						return new Response("<!DOCTYPE html><html></html>", {
 							headers: { "content-type": "text/html" },
 						});
@@ -492,7 +492,7 @@ describe("unit tests", () => {
 						invoke_user_worker_ahead_of_assets: true,
 					},
 					USER_WORKER: {
-						async fetch(_: Request): Promise<Response> {
+						async fetch(_request: Request): Promise<Response> {
 							return new Response(userWorkerResponse.body, {
 								status: userWorkerResponse.status,
 								headers: userWorkerResponse.headers,
@@ -553,7 +553,7 @@ describe("unit tests", () => {
 						invoke_user_worker_ahead_of_assets: true,
 					},
 					USER_WORKER: {
-						async fetch(_: Request): Promise<Response> {
+						async fetch(_request: Request): Promise<Response> {
 							return new Response(
 								"should not reach user worker as it should be redirected by the router worker"
 							);
@@ -583,19 +583,19 @@ describe("unit tests", () => {
 						invoke_user_worker_ahead_of_assets: false,
 					},
 					USER_WORKER: {
-						async fetch(_: Request): Promise<Response> {
+						async fetch(_request: Request): Promise<Response> {
 							return new Response(
 								"should not reach user worker as it should be redirected by the router worker"
 							);
 						},
 					},
 					ASSET_WORKER: {
-						async fetch(_: Request): Promise<Response> {
+						async fetch(_request: Request): Promise<Response> {
 							return new Response(
 								"should not reach asset worker as it should be redirected by the router worker"
 							);
 						},
-						async unstable_canFetch(_: Request): Promise<boolean> {
+						async unstable_canFetch(_request: Request): Promise<boolean> {
 							return false;
 						},
 					},
@@ -623,19 +623,19 @@ describe("unit tests", () => {
 						invoke_user_worker_ahead_of_assets: false,
 					},
 					USER_WORKER: {
-						async fetch(_: Request): Promise<Response> {
+						async fetch(_request: Request): Promise<Response> {
 							return new Response(
 								"should not reach user worker as it should be redirected by the router worker"
 							);
 						},
 					},
 					ASSET_WORKER: {
-						async fetch(_: Request): Promise<Response> {
+						async fetch(_request: Request): Promise<Response> {
 							return new Response(
 								"should not reach asset worker as it should be redirected by the router worker"
 							);
 						},
-						async unstable_canFetch(_: Request): Promise<boolean> {
+						async unstable_canFetch(_request: Request): Promise<boolean> {
 							return true;
 						},
 					},
@@ -770,12 +770,12 @@ describe("unit tests", () => {
 						},
 					},
 					ASSET_WORKER: {
-						async fetch(_: Request): Promise<Response> {
+						async fetch(_request: Request): Promise<Response> {
 							return new Response(
 								"should not reach asset worker as asset does not exist"
 							);
 						},
-						async unstable_canFetch(_: Request): Promise<boolean> {
+						async unstable_canFetch(_request: Request): Promise<boolean> {
 							return false;
 						},
 					},
@@ -799,17 +799,17 @@ describe("unit tests", () => {
 						invoke_user_worker_ahead_of_assets: false,
 					},
 					USER_WORKER: {
-						async fetch(_: Request): Promise<Response> {
+						async fetch(_request: Request): Promise<Response> {
 							return new Response(
 								"should not reach user worker as it should be handled by asset worker"
 							);
 						},
 					},
 					ASSET_WORKER: {
-						async fetch(_: Request): Promise<Response> {
+						async fetch(_request: Request): Promise<Response> {
 							return new Response("hello from asset worker");
 						},
-						async unstable_canFetch(_: Request): Promise<boolean> {
+						async unstable_canFetch(_request: Request): Promise<boolean> {
 							return true;
 						},
 					},
@@ -834,15 +834,15 @@ describe("unit tests", () => {
 				},
 				EYEBALL_CONFIG: { limitedAssetsOnly: true },
 				USER_WORKER: {
-					async fetch(_: Request): Promise<Response> {
+					async fetch(_request: Request): Promise<Response> {
 						return new Response("hello from user worker");
 					},
 				},
 				ASSET_WORKER: {
-					async fetch(_: Request): Promise<Response> {
+					async fetch(_request: Request): Promise<Response> {
 						return new Response("hello from asset worker");
 					},
-					async unstable_canFetch(_: Request): Promise<boolean> {
+					async unstable_canFetch(_request: Request): Promise<boolean> {
 						return true;
 					},
 				},
@@ -864,15 +864,15 @@ describe("unit tests", () => {
 				},
 				EYEBALL_CONFIG: { limitedAssetsOnly: true },
 				USER_WORKER: {
-					async fetch(_: Request): Promise<Response> {
+					async fetch(_request: Request): Promise<Response> {
 						return new Response("hello from user worker");
 					},
 				},
 				ASSET_WORKER: {
-					async fetch(_: Request): Promise<Response> {
+					async fetch(_request: Request): Promise<Response> {
 						return new Response("hello from asset worker");
 					},
-					async unstable_canFetch(_: Request): Promise<boolean> {
+					async unstable_canFetch(_request: Request): Promise<boolean> {
 						return false;
 					},
 				},
@@ -898,15 +898,15 @@ describe("unit tests", () => {
 				},
 				EYEBALL_CONFIG: { limitedAssetsOnly: true },
 				USER_WORKER: {
-					async fetch(_: Request): Promise<Response> {
+					async fetch(_request: Request): Promise<Response> {
 						return new Response("hello from user worker");
 					},
 				},
 				ASSET_WORKER: {
-					async fetch(_: Request): Promise<Response> {
+					async fetch(_request: Request): Promise<Response> {
 						return new Response("hello from asset worker");
 					},
-					async unstable_canFetch(_: Request): Promise<boolean> {
+					async unstable_canFetch(_request: Request): Promise<boolean> {
 						return true;
 					},
 				},
@@ -934,15 +934,15 @@ describe("unit tests", () => {
 				},
 				EYEBALL_CONFIG: { limitedAssetsOnly: true },
 				USER_WORKER: {
-					async fetch(_: Request): Promise<Response> {
+					async fetch(_request: Request): Promise<Response> {
 						return new Response("hello from user worker");
 					},
 				},
 				ASSET_WORKER: {
-					async fetch(_: Request): Promise<Response> {
+					async fetch(_request: Request): Promise<Response> {
 						return new Response("hello from asset worker");
 					},
-					async unstable_canFetch(_: Request): Promise<boolean> {
+					async unstable_canFetch(_request: Request): Promise<boolean> {
 						return true;
 					},
 				},
@@ -971,15 +971,15 @@ describe("unit tests", () => {
 				},
 				EYEBALL_CONFIG: { limitedAssetsOnly: true },
 				USER_WORKER: {
-					async fetch(_: Request): Promise<Response> {
+					async fetch(_request: Request): Promise<Response> {
 						return new Response("hello from user worker");
 					},
 				},
 				ASSET_WORKER: {
-					async fetch(_: Request): Promise<Response> {
+					async fetch(_request: Request): Promise<Response> {
 						return new Response("hello from asset worker");
 					},
-					async unstable_canFetch(_: Request): Promise<boolean> {
+					async unstable_canFetch(_request: Request): Promise<boolean> {
 						return true;
 					},
 				},

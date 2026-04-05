@@ -13,7 +13,7 @@ interface StudioEditTableTabProps {
 	tableName?: string;
 }
 
-const LAYOUT_CLASSES = "overflow-auto w-full h-full bg-surface";
+const LAYOUT_CLASSES = "overflow-auto w-full h-full bg-kumo-base";
 
 export function StudioCreateUpdateTableTab({
 	schemaName,

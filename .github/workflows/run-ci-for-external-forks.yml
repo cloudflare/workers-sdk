@@ -16,11 +16,11 @@ on:
 
 permissions:
   contents: read # no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
-  pull-requests: write # Required for creating the draft PR on behalf of the user
+  pull-requests: write # Required for creating or updating the draft PR on behalf of the user
 
 jobs:
   create-draft-pr:
-    name: Create Draft PR
+    name: Create or Update Draft PR
     if: ${{ inputs.reviewed == true }}
     runs-on: ubuntu-slim
     steps:
@@ -60,14 +60,29 @@ jobs:
           git config user.name "github-actions[bot]"
           git push origin HEAD --force
 
-      - name: "Create Draft PR"
+      - name: "Create or Update Draft PR"
         run: |
-          gh pr create \
+          existing_pr=$(gh pr list \
             --head "run-ci-on-behalf-of-$PR_NUM" \
-            --draft \
-            --label "e2e" \
-            --title "$TITLE" \
-            --body "$BODY"
+            --state open \
+            --json number \
+            --jq 'first(.[].number) // ""')
+
+          if [ -n "$existing_pr" ]; then
+            gh pr edit "$existing_pr" \
+              --add-label "e2e" \
+              --add-label "run-remote-tests" \
+              --title "$TITLE" \
+              --body "$BODY"
+          else
+            gh pr create \
+              --head "run-ci-on-behalf-of-$PR_NUM" \
+              --draft \
+              --label "e2e" \
+              --label "run-remote-tests" \
+              --title "$TITLE" \
+              --body "$BODY"
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUM: ${{ inputs.pr-number }}

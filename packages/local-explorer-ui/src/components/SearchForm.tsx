@@ -21,7 +21,7 @@ export function SearchForm({ onSearch, disabled = false }: SearchFormProps) {
 			</label>
 			<input
 				id="search-prefix"
-				className="h-9 max-w-100 flex-1 rounded-md border border-border bg-bg px-3 font-mono text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary"
+				className="h-9 max-w-100 flex-1 rounded-md border border-kumo-fill bg-kumo-base px-3 font-mono text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:bg-kumo-elevated disabled:text-kumo-subtle"
 				placeholder="Search keys by prefix..."
 				value={prefix}
 				onChange={(e) => setPrefix(e.target.value)}

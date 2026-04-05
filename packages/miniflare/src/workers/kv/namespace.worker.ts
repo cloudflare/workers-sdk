@@ -4,13 +4,11 @@ import {
 	DELETE,
 	GET,
 	HttpError,
-	KeyValueEntry,
 	KeyValueStorage,
 	maybeApply,
 	MiniflareDurableObject,
 	POST,
 	PUT,
-	RouteHandler,
 } from "miniflare:shared";
 import { KVHeaders, KVLimits, KVParams, MAX_BULK_GET_KEYS } from "./constants";
 import {
@@ -21,6 +19,7 @@ import {
 	validateListOptions,
 	validatePutOptions,
 } from "./validator.worker";
+import type { KeyValueEntry, RouteHandler } from "miniflare:shared";
 
 interface KVParams {
 	key: string;

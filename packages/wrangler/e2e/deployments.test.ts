@@ -949,7 +949,7 @@ describe.skipIf(skipContainersTest)("containers", () => {
                   this.ctx = ctx;
                 }
 
-                async fetch(_: Request) {
+                async fetch(_request: Request) {
                   if (!this.ctx.container) {
                     return new Response('this.ctx.container not defined', { status: 500 });
                   }

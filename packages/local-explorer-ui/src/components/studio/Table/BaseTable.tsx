@@ -246,21 +246,21 @@ function renderCellList<HeaderMetadata = unknown>({
 
 		let textClass = "flex items-center justify-end h-full pr-2 font-mono";
 		let tdClass =
-			"sticky left-0 bg-bg-secondary border-r border-b border-border";
+			"sticky left-0 bg-kumo-elevated border-r border-b border-kumo-fill";
 
 		if (state.getSelectedRowIndex().includes(absoluteRowIndex)) {
 			if (state.isFullSelectionRow(absoluteRowIndex)) {
 				textClass = cn(
 					"flex h-full items-center justify-end pr-2 font-mono",
-					"bg-surface-secondary font-bold text-text"
+					"bg-kumo-elevated font-bold text-kumo-default"
 				);
 				tdClass =
-					"sticky left-0 bg-surface-secondary dark:bg-blue-800 border-r border-b border-border";
+					"sticky left-0 bg-kumo-elevated border-r border-b border-kumo-fill";
 			} else {
 				textClass =
-					"flex items-center justify-end h-full pr-2 font-mono text-text font-bold";
+					"flex items-center justify-end h-full pr-2 font-mono text-kumo-default font-bold";
 				tdClass =
-					"sticky left-0 bg-surface-secondary border-r border-b border-border";
+					"sticky left-0 bg-kumo-elevated border-r border-b border-kumo-fill";
 			}
 		}
 

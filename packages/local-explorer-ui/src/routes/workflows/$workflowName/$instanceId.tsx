@@ -98,18 +98,20 @@ const StatsStrip = memo(function StatsStrip({
 	end?: string;
 }) {
 	return (
-		<div className="grid grid-cols-3 overflow-hidden rounded-lg border border-border bg-bg">
+		<div className="grid grid-cols-3 overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
 			<div className="flex items-center justify-between px-5 py-2">
-				<span className="text-base text-text-secondary">Status</span>
+				<span className="text-base text-kumo-subtle">Status</span>
 				<WorkflowStatusBadge status={status} />
 			</div>
-			<div className="flex items-center justify-between border-l border-border px-5 py-2">
-				<span className="text-base text-text-secondary">Steps Completed</span>
-				<span className="text-base font-medium text-text">{stepCount}</span>
+			<div className="flex items-center justify-between border-l border-kumo-fill px-5 py-2">
+				<span className="text-base text-kumo-subtle">Steps Completed</span>
+				<span className="text-base font-medium text-kumo-default">
+					{stepCount}
+				</span>
 			</div>
-			<div className="flex items-center justify-between border-l border-border px-5 py-2">
-				<span className="text-base text-text-secondary">Duration</span>
-				<span className="text-base font-medium text-text">
+			<div className="flex items-center justify-between border-l border-kumo-fill px-5 py-2">
+				<span className="text-base text-kumo-subtle">Duration</span>
+				<span className="text-base font-medium text-kumo-default">
 					{formatDuration(start, end)}
 				</span>
 			</div>
@@ -125,20 +127,22 @@ const ParamsOutput = memo(function ParamsOutput({
 	output: unknown;
 }) {
 	return (
-		<div className="overflow-hidden rounded-xl border border-border bg-bg-tertiary">
-			<div className="grid grid-cols-2 divide-x divide-border">
+		<div className="overflow-hidden rounded-xl border border-kumo-fill bg-kumo-tint">
+			<div className="grid grid-cols-2 divide-x divide-kumo-fill">
 				{/* Input params header */}
 				<div className="px-4 py-2.5">
-					<span className="text-sm font-medium text-text">Input params</span>
+					<span className="text-sm font-medium text-kumo-default">
+						Input params
+					</span>
 				</div>
 				{/* Output header */}
 				<div className="px-4 py-2.5">
-					<span className="text-sm font-medium text-text">Output</span>
+					<span className="text-sm font-medium text-kumo-default">Output</span>
 				</div>
 			</div>
 			{/* Content with rounded top corners to create the LayerCard effect */}
-			<div className="rounded-t-lg border-t border-border bg-bg">
-				<div className="grid grid-cols-2 divide-x divide-border">
+			<div className="rounded-t-lg border-t border-kumo-fill bg-kumo-base">
+				<div className="grid grid-cols-2 divide-x divide-kumo-fill">
 					<div className="relative">
 						<ScrollableCodeBlock content={formatJson(params)} />
 						<div className="absolute top-1.5 right-1.5">
@@ -164,11 +168,11 @@ const ErrorCard = memo(function ErrorCard({
 }) {
 	return (
 		<LayerCard>
-			<LayerCard.Secondary className="bg-bg-tertiary !px-4 !py-2.5">
+			<LayerCard.Secondary className="bg-kumo-tint px-4! py-2.5!">
 				<Text bold>{error.name ?? "Error"}</Text>
 			</LayerCard.Secondary>
-			<LayerCard.Primary className="relative !p-0">
-				<pre className="max-h-64 overflow-y-auto px-4 py-3 font-mono text-sm break-words whitespace-pre-wrap text-text-secondary">
+			<LayerCard.Primary className="relative p-0!">
+				<pre className="max-h-64 overflow-y-auto px-4 py-3 font-mono text-sm wrap-break-word whitespace-pre-wrap text-kumo-subtle">
 					{error.message ?? "Unknown error"}
 				</pre>
 				<div className="absolute top-1.5 right-1.5">
@@ -217,7 +221,9 @@ const StepHistory = memo(function StepHistory({
 	return (
 		<div>
 			<div className="mb-3">
-				<h4 className="text-lg font-semibold text-text">Step History</h4>
+				<h4 className="text-lg font-semibold text-kumo-default">
+					Step History
+				</h4>
 			</div>
 
 			{/* Search + Filter controls */}
@@ -226,10 +232,10 @@ const StepHistory = memo(function StepHistory({
 					<div className="relative flex-1">
 						<MagnifyingGlassIcon
 							size={14}
-							className="absolute top-1/2 left-3 -translate-y-1/2 text-text-secondary"
+							className="absolute top-1/2 left-3 -translate-y-1/2 text-kumo-subtle"
 						/>
 						<input
-							className="h-9 w-full rounded-lg border border-border bg-bg pr-3 pl-9 text-sm text-text placeholder-text-secondary focus:border-primary focus:shadow-focus-primary focus:outline-none"
+							className="h-9 w-full rounded-lg border border-kumo-fill bg-kumo-base pr-3 pl-9 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
 							onChange={(e) => setSearch(e.target.value)}
 							placeholder="Search steps..."
 							type="text"
@@ -239,27 +245,27 @@ const StepHistory = memo(function StepHistory({
 					<DropdownMenu>
 						<DropdownMenu.Trigger
 							render={
-								<button className="inline-flex h-9 w-44 cursor-pointer items-center justify-between rounded-lg border border-border bg-bg px-3 text-sm text-text transition-colors hover:bg-border/60">
+								<button className="inline-flex h-9 w-44 cursor-pointer items-center justify-between rounded-lg border border-kumo-fill bg-kumo-base px-3 text-sm text-kumo-default transition-colors hover:bg-kumo-fill">
 									<span className="flex items-center gap-2">
-										<ActiveIcon size={14} className="text-text-secondary" />
+										<ActiveIcon size={14} className="text-kumo-subtle" />
 										{activeFilter.label}
 									</span>
-									<CaretDownIcon size={14} className="text-text-secondary" />
+									<CaretDownIcon size={14} className="text-kumo-subtle" />
 								</button>
 							}
 						/>
 						<DropdownMenu.Content
 							align="end"
-							className="w-44 bg-bg"
+							className="w-44 bg-kumo-base"
 							side="bottom"
 						>
 							{STEP_TYPE_FILTERS.map(({ value, label, icon: Icon }) => (
 								<DropdownMenu.Item
-									className="flex cursor-pointer items-center gap-2 rounded-md transition-colors hover:bg-border/60"
+									className="flex cursor-pointer items-center gap-2 rounded-md transition-colors hover:bg-kumo-fill"
 									key={value}
 									onClick={() => setTypeFilter(value)}
 								>
-									<Icon size={14} className="text-text-secondary" />
+									<Icon size={14} className="text-kumo-subtle" />
 									{label}
 								</DropdownMenu.Item>
 							))}
@@ -268,13 +274,13 @@ const StepHistory = memo(function StepHistory({
 				</div>
 			)}
 
-			<div className="overflow-hidden rounded-lg border border-border bg-bg">
+			<div className="overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
 				{stepList.length === 0 ? (
-					<div className="px-4 py-8 text-center text-sm text-text-secondary">
+					<div className="px-4 py-8 text-center text-sm text-kumo-subtle">
 						No steps recorded yet
 					</div>
 				) : filtered.length === 0 ? (
-					<div className="px-4 py-8 text-center text-sm text-text-secondary">
+					<div className="px-4 py-8 text-center text-sm text-kumo-subtle">
 						No steps match your search
 					</div>
 				) : (
@@ -403,12 +409,12 @@ function InstanceDetailView() {
 					<div>
 						<header className="flex items-center justify-between pb-6">
 							<div className="flex items-center gap-3">
-								<h1 className="text-2xl font-semibold text-text">
+								<h1 className="text-2xl font-semibold text-kumo-default">
 									{params.workflowName}
 								</h1>
 								<Tooltip content={copied ? "Copied!" : "Copy instance ID"}>
 									<button
-										className={`cursor-pointer font-mono text-2xl transition-colors ${copied ? "text-text" : "text-text-secondary hover:text-text"}`}
+										className={`cursor-pointer font-mono text-2xl transition-colors ${copied ? "text-kumo-default" : "text-kumo-subtle hover:text-kumo-default"}`}
 										onClick={() => {
 											void navigator.clipboard.writeText(instanceId);
 											setCopied(true);
@@ -430,8 +436,8 @@ function InstanceDetailView() {
 											key={action}
 											className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
 												isTerminate
-													? "border-border bg-bg text-danger hover:bg-danger/10"
-													: "border-border bg-bg text-text hover:bg-border/60"
+													? "border-kumo-fill bg-kumo-base text-kumo-danger hover:bg-kumo-danger/10"
+													: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill"
 											}`}
 											disabled={actionInProgress !== null}
 											onClick={() => void handleAction(action)}
@@ -451,7 +457,7 @@ function InstanceDetailView() {
 									status !== "errored" &&
 									status !== "terminated" && (
 										<button
-											className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-bg text-text-secondary transition-colors hover:bg-border/60 disabled:cursor-not-allowed disabled:opacity-40 dark:text-text"
+											className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-kumo-fill bg-kumo-base text-kumo-default transition-colors hover:bg-kumo-fill disabled:cursor-not-allowed disabled:opacity-40"
 											disabled={actionInProgress !== null}
 											onClick={() => setSendEventOpen(true)}
 											title="Send Event"
@@ -460,7 +466,7 @@ function InstanceDetailView() {
 										</button>
 									)}
 								<button
-									className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-bg text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
+									className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-kumo-fill bg-kumo-base text-kumo-danger transition-colors hover:bg-kumo-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
 									disabled={actionInProgress !== null}
 									onClick={() => setDeleteDialogOpen(true)}
 									title="Delete"
@@ -473,7 +479,7 @@ function InstanceDetailView() {
 				</div>
 				{/* Stats strip overlapping the divider line */}
 				<div className="relative">
-					<hr className="absolute top-1/2 w-full border-border" />
+					<hr className="absolute top-1/2 w-full border-kumo-fill" />
 					<div className="relative px-32">
 						<StatsStrip
 							status={status}
@@ -486,28 +492,28 @@ function InstanceDetailView() {
 
 				{/* Delete confirmation dialog */}
 				<Dialog.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-					<Dialog size="lg" className="w-[32rem]">
-						<div className="border-b border-border px-6 py-4">
+					<Dialog size="lg" className="w-lg">
+						<div className="border-b border-kumo-fill px-6 py-4">
 							{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-							<Dialog.Title className="text-lg font-semibold text-text">
+							<Dialog.Title className="text-lg font-semibold text-kumo-default">
 								Delete this instance?
 							</Dialog.Title>
 						</div>
 
 						<div className="px-6 py-5">
-							<p className="text-sm text-text-secondary">
+							<p className="text-sm text-kumo-subtle">
 								This will permanently delete the instance and its persistence
 								data. This action cannot be undone.
 							</p>
-							<div className="mt-3 rounded-lg border border-border bg-bg-secondary px-4 py-3">
-								<span className="text-xs text-text-secondary">Instance ID</span>
-								<p className="mt-0.5 font-mono text-sm text-text">
+							<div className="mt-3 rounded-lg border border-kumo-fill bg-kumo-elevated px-4 py-3">
+								<span className="text-xs text-kumo-subtle">Instance ID</span>
+								<p className="mt-0.5 font-mono text-sm text-kumo-default">
 									{instanceId}
 								</p>
 							</div>
 						</div>
 
-						<div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+						<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
 							<Button
 								variant="secondary"
 								onClick={() => setDeleteDialogOpen(false)}
@@ -554,20 +560,20 @@ function InstanceDetailView() {
 						}
 					}}
 				>
-					<Dialog size="lg" className="w-[32rem]">
-						<div className="border-b border-border px-6 py-4">
+					<Dialog size="lg" className="w-lg">
+						<div className="border-b border-kumo-fill px-6 py-4">
 							{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-							<Dialog.Title className="text-lg font-semibold text-text">
+							<Dialog.Title className="text-lg font-semibold text-kumo-default">
 								Send Event
 							</Dialog.Title>
 						</div>
 						<div className="space-y-4 px-6 py-5">
 							<div>
-								<label className="mb-2 block text-sm font-medium text-text">
+								<label className="mb-2 block text-sm font-medium text-kumo-default">
 									Event Type
 								</label>
 								<input
-									className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder-text-secondary focus:border-primary focus:shadow-focus-primary focus:outline-none"
+									className="w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
 									onChange={(e) => setEventType(e.target.value)}
 									placeholder="my-event"
 									type="text"
@@ -575,14 +581,14 @@ function InstanceDetailView() {
 								/>
 							</div>
 							<div>
-								<label className="mb-2 block text-sm font-medium text-text">
+								<label className="mb-2 block text-sm font-medium text-kumo-default">
 									Payload{" "}
-									<span className="font-normal text-text-secondary">
+									<span className="font-normal text-kumo-subtle">
 										(optional)
 									</span>
 								</label>
 								<textarea
-									className="w-full resize-y rounded-lg border border-border bg-bg px-3 py-2.5 font-mono text-sm text-text placeholder-text-secondary focus:border-primary focus:shadow-focus-primary focus:outline-none"
+									className="w-full resize-y rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
 									onChange={(e) => setEventPayload(e.target.value)}
 									placeholder='{"key": "value"}'
 									rows={4}
@@ -590,7 +596,7 @@ function InstanceDetailView() {
 								/>
 							</div>
 						</div>
-						<div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+						<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
 							<Button
 								variant="secondary"
 								onClick={() => setSendEventOpen(false)}
@@ -639,7 +645,7 @@ function InstanceDetailView() {
 				{/* Content */}
 				<div className="space-y-8 px-32 py-6">
 					{error && (
-						<div className="rounded-lg border border-danger/20 bg-danger/8 p-4 text-sm text-danger">
+						<div className="rounded-lg border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-sm text-kumo-danger">
 							{error}
 						</div>
 					)}

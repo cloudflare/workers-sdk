@@ -4,8 +4,8 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { dim } from "kleur/colors";
 import { fetch } from "undici";
-import { Plugins } from "./plugins";
-import { Log, OptionalZodTypeOf } from "./shared";
+import type { Plugins } from "./plugins";
+import type { Log, OptionalZodTypeOf } from "./shared";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 
 /**

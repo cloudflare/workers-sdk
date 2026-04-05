@@ -13,7 +13,7 @@ export function StatusIcon({ status }: { status: string }): JSX.Element {
 		case "complete":
 			return (
 				<Tooltip content="Complete">
-					<CheckCircleIcon size={20} weight="fill" className="text-[#2b7bfb]" />
+					<CheckCircleIcon size={20} weight="fill" className="text-kumo-link" />
 				</Tooltip>
 			);
 		case "errored":
@@ -22,21 +22,21 @@ export function StatusIcon({ status }: { status: string }): JSX.Element {
 					<WarningCircleIcon
 						size={20}
 						weight="fill"
-						className="text-[#fb2b36]"
+						className="text-kumo-danger"
 					/>
 				</Tooltip>
 			);
 		case "terminated":
 			return (
 				<Tooltip content="Terminated">
-					<StopIcon size={20} weight="fill" className="text-text-secondary" />
+					<StopIcon size={20} weight="fill" className="text-kumo-subtle" />
 				</Tooltip>
 			);
 		case "paused":
 		case "waitingForPause":
 			return (
 				<Tooltip content="Paused">
-					<PauseIcon size={20} weight="fill" className="text-text-secondary" />
+					<PauseIcon size={20} weight="fill" className="text-kumo-subtle" />
 				</Tooltip>
 			);
 		case "running":
@@ -48,11 +48,7 @@ export function StatusIcon({ status }: { status: string }): JSX.Element {
 		case "waiting":
 			return (
 				<Tooltip content="Waiting">
-					<SpinnerIcon
-						size={20}
-						weight="bold"
-						className="text-text-secondary"
-					/>
+					<SpinnerIcon size={20} weight="bold" className="text-kumo-subtle" />
 				</Tooltip>
 			);
 		default:
@@ -61,7 +57,7 @@ export function StatusIcon({ status }: { status: string }): JSX.Element {
 					<CircleNotchIcon
 						size={20}
 						weight="bold"
-						className="text-text-secondary"
+						className="text-kumo-subtle"
 					/>
 				</Tooltip>
 			);

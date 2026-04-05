@@ -19,7 +19,7 @@ async function buildMain(flags: BuildFlags = {}) {
 			{
 				name: "workers-types",
 				setup(build) {
-					build.onResolve({ filter: /^raw:.*/ }, async (args) => {
+					build.onResolve({ filter: /^raw:.*/ }, async () => {
 						const result = path.resolve(
 							"node_modules/@cloudflare/workers-types/experimental/index.d.ts"
 						);

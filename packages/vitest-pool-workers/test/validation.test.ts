@@ -1,5 +1,6 @@
 import path from "node:path";
 import dedent from "ts-dedent";
+import { describe } from "vitest";
 import { test, vitestConfig } from "./helpers";
 
 test(
@@ -107,3 +108,76 @@ test(
 		expect(result.stderr).toMatch(expected);
 	}
 );
+
+describe("coverage provider validation", () => {
+	test(
+		"rejects v8 coverage provider with a clear error",
+		{ timeout: 45_000 },
+		async ({ expect, seed, vitestRun }) => {
+			await seed({
+				"vitest.config.mts": vitestConfig(
+					{},
+					{ coverage: { enabled: true, provider: "v8" } }
+				),
+				"index.test.ts": dedent /* javascript */ `
+				import { it, expect } from "vitest";
+				it("works", () => {
+					expect(1 + 1).toBe(2);
+				});
+			`,
+			});
+			const result = await vitestRun();
+			expect(await result.exitCode).toBe(1);
+			expect(result.stderr).toMatch(
+				'Coverage provider "v8" is not supported by `@cloudflare/vitest-pool-workers`'
+			);
+			expect(result.stderr).toMatch("Use Istanbul instead");
+		}
+	);
+
+	test(
+		"rejects default coverage provider (v8) with a clear error",
+		{ timeout: 45_000 },
+		async ({ expect, seed, vitestRun }) => {
+			// When no provider is specified, Vitest defaults to v8
+			await seed({
+				"vitest.config.mts": vitestConfig({}, { coverage: { enabled: true } }),
+				"index.test.ts": dedent /* javascript */ `
+				import { it, expect } from "vitest";
+				it("works", () => {
+					expect(1 + 1).toBe(2);
+				});
+			`,
+			});
+			const result = await vitestRun();
+			expect(await result.exitCode).toBe(1);
+			expect(result.stderr).toMatch(
+				'Coverage provider "v8" is not supported by `@cloudflare/vitest-pool-workers`'
+			);
+		}
+	);
+
+	test(
+		"allows istanbul coverage provider",
+		{ timeout: 60_000 },
+		async ({ expect, seed, vitestRun }) => {
+			await seed({
+				"vitest.config.mts": vitestConfig(
+					{},
+					{ coverage: { enabled: true, provider: "istanbul" } }
+				),
+				"index.test.ts": dedent /* javascript */ `
+				import { it, expect } from "vitest";
+				it("works", () => {
+					expect(1 + 1).toBe(2);
+				});
+			`,
+			});
+			const result = await vitestRun();
+			// Should not fail with a coverage provider error
+			expect(result.stderr).not.toMatch(
+				'Coverage provider "v8" is not supported'
+			);
+		}
+	);
+});

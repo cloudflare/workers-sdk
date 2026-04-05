@@ -1,6 +1,6 @@
 import { domainToUnicode, URL } from "node:url";
 import { MiniflareError } from "../../shared";
-import { WorkerRoute } from "../../workers";
+import type { WorkerRoute } from "../../workers";
 
 export type RouterErrorCode = "ERR_QUERY_STRING" | "ERR_INFIX_WILDCARD";
 

@@ -1,11 +1,6 @@
 import fs from "node:fs/promises";
 import SCRIPT_R2_BUCKET_OBJECT from "worker:r2/bucket";
 import { z } from "zod";
-import {
-	Service,
-	Worker_Binding,
-	Worker_Binding_DurableObjectNamespaceDesignator,
-} from "../../runtime";
 import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
@@ -16,12 +11,16 @@ import {
 	namespaceKeys,
 	objectEntryWorker,
 	PersistenceSchema,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 	SERVICE_LOOPBACK,
 } from "../shared";
+import type {
+	Service,
+	Worker_Binding,
+	Worker_Binding_DurableObjectNamespaceDesignator,
+} from "../../runtime";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const R2OptionsSchema = z.object({
 	r2Buckets: z

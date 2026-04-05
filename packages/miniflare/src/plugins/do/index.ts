@@ -1,13 +1,15 @@
 import fs from "node:fs/promises";
 import { z } from "zod";
-import { Worker_Binding } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
 	kUnsafeEphemeralUniqueKey,
 	PersistenceSchema,
-	Plugin,
 	ProxyNodeBinding,
+} from "../shared";
+import type { Worker_Binding } from "../../runtime";
+import type {
+	Plugin,
 	RemoteProxyConnectionString,
 	UnsafeUniqueKey,
 } from "../shared";

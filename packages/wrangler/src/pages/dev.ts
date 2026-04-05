@@ -6,7 +6,7 @@ import { setTimeout } from "node:timers/promises";
 import {
 	configFileName,
 	FatalError,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
@@ -1200,7 +1200,7 @@ function resolvePagesDevServerSettings(
 	// resolve compatibility date
 	let compatibilityDate = args.compatibilityDate || config.compatibility_date;
 	if (!compatibilityDate) {
-		const currentDate = formatCompatibilityDate(new Date());
+		const currentDate = getTodaysCompatDate();
 		logger.warn(
 			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
 				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${currentDate}", or\n` +

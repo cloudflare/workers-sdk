@@ -1,14 +1,14 @@
-import { z } from "zod";
 import {
 	aggregateListResults,
 	fetchFromPeer,
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import { zWorkflowsListInstancesData } from "../generated/zod.gen";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type { WorkflowsWorkflow } from "../generated";
+import type { zWorkflowsListInstancesData } from "../generated/zod.gen";
+import type { z } from "zod";
 
 // ============================================================================
 // Error Codes

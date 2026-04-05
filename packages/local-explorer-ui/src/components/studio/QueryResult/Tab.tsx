@@ -46,7 +46,7 @@ export function StudioQueryResultTab({
 				<StudioResultTable state={state} arrangeHeaderIndex={headerIndexList} />
 			</div>
 
-			<div className="flex h-11 shrink-0 items-center border-t border-border">
+			<div className="flex h-11 shrink-0 items-center border-t border-kumo-fill">
 				<div className="grow px-4 text-base">
 					<Button
 						aria-label="Export query results"

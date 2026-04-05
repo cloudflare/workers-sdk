@@ -10,12 +10,13 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { Worker } from "node:worker_threads";
-import { FSWatcher, watch } from "chokidar";
-import { SocketPorts } from "../runtime";
+import { watch } from "chokidar";
 import { getProxyFallbackServiceSocketName } from "./external-service";
-import { Log } from "./log";
 import { getGlobalWranglerConfigPath } from "./wrangler";
+import type { SocketPorts } from "../runtime";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
+import type { Log } from "./log";
+import type { FSWatcher } from "chokidar";
 
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();

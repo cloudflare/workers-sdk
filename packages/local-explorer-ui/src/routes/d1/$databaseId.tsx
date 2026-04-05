@@ -169,9 +169,7 @@ function DatabaseView(): JSX.Element {
 						{databaseName && databaseName !== params.databaseId ? (
 							<>
 								{databaseName}
-								<span className="text-text-secondary">
-									({params.databaseId})
-								</span>
+								<span className="text-kumo-subtle">({params.databaseId})</span>
 							</>
 						) : (
 							params.databaseId
@@ -240,7 +238,7 @@ function DatabaseView(): JSX.Element {
 				/>
 			)}
 
-			<div className="flex-1 overflow-hidden">
+			<div className="flex-1 overflow-hidden bg-kumo-elevated">
 				<Studio
 					driver={driver}
 					initialTable={searchParams.table}
