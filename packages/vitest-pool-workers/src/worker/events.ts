@@ -265,7 +265,11 @@ class QueueController<Body = unknown> /* MessageBatch */ {
 			(message) => new QueueMessage(kConstructFlag, this, message)
 		);
 		const metadata: MessageBatchMetadata = {
-			metrics: { backlogCount: 0, backlogBytes: 0, oldestMessageTimestamp: 0 },
+			metrics: {
+				backlogCount: 0,
+				backlogBytes: 0,
+				oldestMessageTimestamp: new Date(0),
+			},
 		};
 
 		// Match `JSG_READONLY_INSTANCE_PROPERTY` behaviour
