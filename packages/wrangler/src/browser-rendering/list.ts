@@ -27,24 +27,25 @@ export const browserListCommand = createCommand({
 			`/accounts/${accountId}/browser-rendering/devtools/session`
 		);
 
+		if (json) {
+			logger.log(JSON.stringify(sessions, null, 2));
+			return;
+		}
+
 		if (sessions.length === 0) {
 			logger.log("No active browser rendering sessions found.");
 			return;
 		}
 
-		if (json) {
-			logger.log(JSON.stringify(sessions, null, 2));
-		} else {
-			logger.table(
-				sessions.map((session) => ({
-					"Session ID": session.sessionId,
-					"Start Time": new Date(session.startTime).toLocaleString(),
-					"Connection ID": session.connectionId ?? "-",
-					"Connected At": session.connectionStartTime
-						? new Date(session.connectionStartTime).toLocaleString()
-						: "-",
-				}))
-			);
-		}
+		logger.table(
+			sessions.map((session) => ({
+				"Session ID": session.sessionId,
+				"Start Time": new Date(session.startTime).toLocaleString(),
+				"Connection ID": session.connectionId ?? "-",
+				"Connected At": session.connectionStartTime
+					? new Date(session.connectionStartTime).toLocaleString()
+					: "-",
+			}))
+		);
 	},
 });

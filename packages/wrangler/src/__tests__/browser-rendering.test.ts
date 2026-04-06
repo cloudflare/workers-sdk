@@ -132,6 +132,14 @@ describe("wrangler browser", () => {
 				]"
 			`);
 		});
+
+		it("should output empty JSON array when --json flag is used with no sessions", async () => {
+			mockListSessions([]);
+
+			await runWrangler("browser list --json");
+
+			expect(std.out).toMatchInlineSnapshot(`"[]"`);
+		});
 	});
 
 	describe("open", () => {
