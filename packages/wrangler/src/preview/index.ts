@@ -59,6 +59,7 @@ export const previewCommand = createCommand({
 		},
 	},
 	behaviour: {
+		useConfigRedirectIfAvailable: true,
 		printBanner: (args) => args.json !== true,
 	},
 	handler: handlePreviewCommand,
