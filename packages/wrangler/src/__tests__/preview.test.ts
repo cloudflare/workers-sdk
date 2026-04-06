@@ -9,6 +9,10 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import {
+	writeRedirectedWranglerConfig,
+	writeWranglerConfig,
+} from "./helpers/write-wrangler-config";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
 vi.mock("node:child_process", async () => {
@@ -382,6 +386,116 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain('"id": "deployment-id-json"');
 			expect(std.out).not.toContain("Preview: test-preview");
 			expect(std.out).not.toContain("Deployment:");
+		});
+
+		test("should build correctly when using a redirected config", async ({
+			expect,
+		}) => {
+			mkdirSync("src/lib", { recursive: true });
+			mkdirSync("dist", { recursive: true });
+			writeFileSync(
+				"src/lib/message.ts",
+				'export const MESSAGE = "redirected-message";'
+			);
+			writeFileSync(
+				"src/index.ts",
+				'do { } while (false); import { MESSAGE } from "#lib/message"; export default { fetch() { return new Response(MESSAGE); } };'
+			);
+			writeFileSync(
+				"tsconfig.json",
+				JSON.stringify({
+					compilerOptions: {
+						baseUrl: ".",
+						paths: {
+							"#lib/*": ["src/lib/*"],
+						},
+					},
+				})
+			);
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./src/index.ts",
+				},
+				"./wrangler.json"
+			);
+			writeRedirectedWranglerConfig(
+				{
+					name: "test-worker",
+					main: "../src/index.ts",
+					userConfigPath: "./wrangler.json",
+				},
+				"./dist/wrangler.json"
+			);
+
+			let deploymentRequestBody:
+				| {
+						main_module?: string;
+						modules?: Array<{
+							name: string;
+							content_base64: string;
+						}>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-redirected",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-redirected",
+								preview_id: "preview-id-redirected",
+								preview_name: "test-preview",
+								urls: ["https://redirected123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			const mainModule = deploymentRequestBody?.modules?.find(
+				(module) => module.name === deploymentRequestBody?.main_module
+			);
+			const code = Buffer.from(mainModule?.content_base64 ?? "", "base64").toString(
+				"utf8"
+			);
+
+			expect(code).toContain("redirected-message");
 		});
 
 		test("should show existing preview status for existing preview", async ({
