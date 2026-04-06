@@ -947,6 +947,96 @@ test("supports message contentTypes", async ({ expect }) => {
 	]);
 });
 
+test("supports metadata in send() response", async ({ expect }) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "producer",
+				queueProducers: ["QUEUE"],
+				compatibilityFlags: ["experimental"],
+				modules: true,
+				script: `export default {
+					async fetch(request, env, ctx) {
+						const resp = await env.QUEUE.send("msg");
+						return Response.json(resp);
+					}
+				}`,
+			},
+			{
+				name: "consumer",
+				queueConsumers: ["QUEUE"],
+				modules: true,
+				script: `export default {
+					async queue(batch, env, ctx) {}
+				}`,
+			},
+		],
+	});
+	useDispose(mf);
+	const object = await getControlStub(mf, "QUEUE");
+
+	const first = await mf.dispatchFetch("http://localhost");
+	await first.arrayBuffer();
+	await object.waitForFakeTasks();
+
+	const res = await mf.dispatchFetch("http://localhost");
+	const body = await res.json();
+	expect(body).toEqual({
+		metadata: {
+			metrics: {
+				backlogCount: 1,
+				backlogBytes: expect.any(Number),
+				oldestMessageTimestamp: new Date(1_000_000).toISOString(),
+			},
+		},
+	});
+});
+
+test("supports metadata in sendBatch() response", async ({ expect }) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "producer",
+				queueProducers: ["QUEUE"],
+				compatibilityFlags: ["experimental"],
+				modules: true,
+				script: `export default {
+					async fetch(request, env, ctx) {
+						const resp = await env.QUEUE.sendBatch([{ body: "msg1" }, { body: "msg2" }]);
+						return Response.json(resp);
+					}
+				}`,
+			},
+			{
+				name: "consumer",
+				queueConsumers: ["QUEUE"],
+				modules: true,
+				script: `export default {
+					async queue(batch, env, ctx) {}
+				}`,
+			},
+		],
+	});
+	useDispose(mf);
+	const object = await getControlStub(mf, "QUEUE");
+
+	const first = await mf.dispatchFetch("http://localhost");
+	await first.arrayBuffer();
+	await object.waitForFakeTasks();
+
+	const res = await mf.dispatchFetch("http://localhost");
+	const body = await res.json();
+	expect(body).toEqual({
+		metadata: {
+			metrics: {
+				backlogCount: 2,
+				backlogBytes: expect.any(Number),
+				oldestMessageTimestamp: new Date(1_000_000).toISOString(),
+			},
+		},
+	});
+});
+
 test("validates message size", async ({ expect }) => {
 	const mf = new Miniflare({
 		queueProducers: { QUEUE: "MY_QUEUE" },
