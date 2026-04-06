@@ -1,12 +1,11 @@
 import { z } from "zod";
-import { Worker_Binding } from "../../runtime";
 import {
 	getUserBindingServiceName,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 } from "../shared";
+import type { Worker_Binding } from "../../runtime";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const FlagshipSchema = z.object({
 	app_id: z.string(),
