@@ -1,6 +1,7 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { select } from "../dialogs";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { requireAuth } from "../user";
@@ -136,6 +137,11 @@ export const browserOpenCommand = createCommand({
 				}
 
 				// Interactive selection
+				if (isNonInteractiveOrCI()) {
+					throw new UserError(
+						"Multiple sessions found. Provide a session ID explicitly or use --json in non-interactive mode."
+					);
+				}
 				sessionId = await select<string>("Select a session:", {
 					choices: sessions.map((s) => ({
 						title: formatSessionForDisplay(s),
@@ -207,6 +213,11 @@ export const browserOpenCommand = createCommand({
 			}
 
 			// Interactive selection
+			if (isNonInteractiveOrCI()) {
+				throw new UserError(
+					"Multiple targets found. Use --target <selector> or --json in non-interactive mode."
+				);
+			}
 			const selectedId = await select<string>(
 				`Multiple targets found. Select a target:`,
 				{
