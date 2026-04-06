@@ -16,6 +16,7 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
+import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
@@ -187,43 +188,50 @@ async function getDeploymentModules(
 	);
 
 	const destination = path.join(tmpdir(), `wrangler-preview-${Date.now()}`);
-	const bundleResult = await bundleWorker(entry, destination, {
-		bundle: true,
-		additionalModules: [],
-		moduleCollector,
-		doBindings: config.previews?.durable_objects?.bindings ?? [],
-		workflowBindings: config.previews?.workflows ?? [],
-		jsxFactory: config.jsx_factory,
-		jsxFragment: config.jsx_fragment,
-		tsconfig: config.tsconfig,
-		minify: config.minify,
-		keepNames: config.keep_names ?? true,
-		sourcemap: config.upload_source_maps ?? false,
-		nodejsCompatMode,
-		compatibilityDate,
-		compatibilityFlags,
-		alias: config.alias,
-		define: config.previews?.define ?? {},
-		checkFetch: false,
-		targetConsumer: "deploy",
-		watch: undefined,
-		testScheduled: undefined,
-		inject: undefined,
-		plugins: [logBuildOutput(nodejsCompatMode)],
-		isOutfile: undefined,
-		local: false,
-		projectRoot:
-			config.userConfigPath !== undefined
-				? path.dirname(config.userConfigPath)
-				: undefined,
-		defineNavigatorUserAgent: isNavigatorDefined(
-			compatibilityDate,
-			compatibilityFlags
-		),
-		external: undefined,
-		entryName: undefined,
-		metafile: undefined,
-	});
+	const bundleResult = config.no_bundle
+		? await noBundleWorker(
+				entry,
+				getRules(config),
+				destination,
+				config.python_modules.exclude
+			)
+		: await bundleWorker(entry, destination, {
+				bundle: true,
+				additionalModules: [],
+				moduleCollector,
+				doBindings: config.previews?.durable_objects?.bindings ?? [],
+				workflowBindings: config.previews?.workflows ?? [],
+				jsxFactory: config.jsx_factory,
+				jsxFragment: config.jsx_fragment,
+				tsconfig: config.tsconfig,
+				minify: config.minify,
+				keepNames: config.keep_names ?? true,
+				sourcemap: config.upload_source_maps ?? false,
+				nodejsCompatMode,
+				compatibilityDate,
+				compatibilityFlags,
+				alias: config.alias,
+				define: config.previews?.define ?? {},
+				checkFetch: false,
+				targetConsumer: "deploy",
+				watch: undefined,
+				testScheduled: undefined,
+				inject: undefined,
+				plugins: [logBuildOutput(nodejsCompatMode)],
+				isOutfile: undefined,
+				local: false,
+				projectRoot:
+					config.userConfigPath !== undefined
+						? path.dirname(config.userConfigPath)
+						: undefined,
+				defineNavigatorUserAgent: isNavigatorDefined(
+					compatibilityDate,
+					compatibilityFlags
+				),
+				external: undefined,
+				entryName: undefined,
+				metafile: undefined,
+			});
 	const { modules, resolvedEntryPointPath, bundleType } = bundleResult;
 
 	const mainModuleName = path.basename(resolvedEntryPointPath);

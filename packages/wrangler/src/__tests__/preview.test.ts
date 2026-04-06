@@ -500,6 +500,172 @@ describe("wrangler preview", () => {
 			expect(code).toContain("redirected-message");
 		});
 
+		test("should include dist/server chunks when using a vite no-bundle redirected config", async ({
+			expect,
+		}) => {
+			mkdirSync("dist/server/chunks", { recursive: true });
+			mkdirSync("dist/client", { recursive: true });
+			mkdirSync(".wrangler/deploy", { recursive: true });
+			writeFileSync(
+				"dist/server/entry.mjs",
+				'import { MESSAGE } from "./chunks/chunk.mjs"; export default { fetch() { return new Response(MESSAGE); } };'
+			);
+			writeFileSync(
+				"dist/server/chunks/chunk.mjs",
+				'export const MESSAGE = "chunk-message";'
+			);
+			writeFileSync(
+				"wrangler.jsonc",
+				JSON.stringify({
+					name: "entry-worker",
+					main: "./src/index.ts",
+					compatibility_date: "2025-01-01",
+				})
+			);
+			writeFileSync(
+				"dist/server/wrangler.json",
+				JSON.stringify({
+					configPath: "/Users/cina/src/github/example/project/wrangler.jsonc",
+					userConfigPath:
+						"/Users/cina/src/github/example/project/wrangler.jsonc",
+					topLevelName: "entry-worker",
+					definedEnvironments: [],
+					legacy_env: true,
+					compatibility_date: "2025-01-01",
+					compatibility_flags: ["nodejs_compat"],
+					rules: [{ type: "ESModule", globs: ["**/*.mjs"] }],
+					name: "entry-worker",
+					main: "entry.mjs",
+					triggers: {},
+					assets: { binding: "ASSETS", directory: "../client" },
+					vars: {},
+					durable_objects: { bindings: [] },
+					workflows: [],
+					migrations: [],
+					kv_namespaces: [],
+					cloudchamber: {},
+					send_email: [],
+					queues: { producers: [], consumers: [] },
+					r2_buckets: [],
+					d1_databases: [],
+					vectorize: [],
+					ai_search_namespaces: [],
+					ai_search: [],
+					hyperdrive: [],
+					services: [],
+					analytics_engine_datasets: [],
+					dispatch_namespaces: [],
+					mtls_certificates: [],
+					images: { binding: "IMAGES" },
+					pipelines: [],
+					secrets_store_secrets: [],
+					unsafe_hello_world: [],
+					worker_loaders: [],
+					ratelimits: [],
+					vpc_services: [],
+					logfwdr: { bindings: [] },
+					observability: { enabled: true },
+					python_modules: { exclude: ["**/*.pyc"] },
+					dev: {
+						ip: "localhost",
+						local_protocol: "http",
+						upstream_protocol: "http",
+						enable_containers: true,
+						generate_types: false,
+					},
+					no_bundle: true,
+				})
+			);
+			writeFileSync(
+				".wrangler/deploy/config.json",
+				JSON.stringify({
+					configPath: "../../dist/server/wrangler.json",
+					auxiliaryWorkers: [],
+					prerenderWorkerConfigPath:
+						"../../dist/server/.prerender/wrangler.json",
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						main_module?: string;
+						modules?: Array<{
+							name: string;
+							content_base64: string;
+						}>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:workerId/assets-upload-session`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								buckets: [],
+								jwt: "assets-jwt-from-session",
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-vite-nobundle",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.entry-worker.cloudflare.app"],
+								worker_name: "entry-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-vite-nobundle",
+								preview_id: "preview-id-vite-nobundle",
+								preview_name: "test-preview",
+								urls: ["https://vite-nobundle.entry-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.main_module).toBe("entry.mjs");
+			expect(deploymentRequestBody?.modules).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({ name: "chunks/chunk.mjs" }),
+				])
+			);
+		});
+
 		test("should show existing preview status for existing preview", async ({
 			expect,
 		}) => {
