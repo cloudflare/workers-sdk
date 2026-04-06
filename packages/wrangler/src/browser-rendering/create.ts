@@ -101,6 +101,8 @@ export const browserCreateCommand = createCommand({
 			if (pageTarget.devtoolsFrontendUrl) {
 				logger.log(`Opening DevTools...`);
 				await openInBrowser(pageTarget.devtoolsFrontendUrl);
+			} else {
+				logger.log(`No DevTools URL available for target "${pageTarget.id}"`);
 			}
 		}
 	},

@@ -64,6 +64,17 @@ export async function fetchBrowserRendering<ResponseType>(
 		});
 	}
 
-	// Browser Rendering API returns raw JSON, not wrapped in { success, result }
-	return JSON.parse(text) as ResponseType;
+	try {
+		// Browser Rendering API returns raw JSON, not wrapped in { success, result }
+		return JSON.parse(text) as ResponseType;
+	} catch {
+		throw new APIError({
+			text: "Received a malformed response from the Browser Rendering API",
+			notes: [
+				{ text: text.length > 100 ? `${text.substring(0, 100)}...` : text },
+				{ text: `${method} ${url} -> ${response.status}` },
+			],
+			status: response.status,
+		});
+	}
 }
