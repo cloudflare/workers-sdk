@@ -469,7 +469,8 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -491,9 +492,10 @@ describe("wrangler preview", () => {
 			const mainModule = deploymentRequestBody?.modules?.find(
 				(module) => module.name === deploymentRequestBody?.main_module
 			);
-			const code = Buffer.from(mainModule?.content_base64 ?? "", "base64").toString(
-				"utf8"
-			);
+			const code = Buffer.from(
+				mainModule?.content_base64 ?? "",
+				"base64"
+			).toString("utf8");
 
 			expect(code).toContain("redirected-message");
 		});
