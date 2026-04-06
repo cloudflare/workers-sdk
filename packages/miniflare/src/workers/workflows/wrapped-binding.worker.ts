@@ -1,4 +1,4 @@
-import { WorkflowBinding } from "@cloudflare/workflows-shared/src/binding";
+import type { WorkflowBinding } from "@cloudflare/workflows-shared/src/binding";
 
 class WorkflowImpl implements Workflow {
 	constructor(private binding: WorkflowBinding) {}

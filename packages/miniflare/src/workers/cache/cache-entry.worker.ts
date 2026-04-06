@@ -1,5 +1,7 @@
-import { MiniflareDurableObjectCf, SharedBindings } from "miniflare:shared";
-import { CacheBindings, CacheHeaders, CacheObjectCf } from "./constants";
+import { SharedBindings } from "miniflare:shared";
+import { CacheBindings, CacheHeaders } from "./constants";
+import type { CacheObjectCf } from "./constants";
+import type { MiniflareDurableObjectCf } from "miniflare:shared";
 
 interface Env {
 	[SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT]: DurableObjectNamespace;

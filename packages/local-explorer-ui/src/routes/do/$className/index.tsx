@@ -124,7 +124,7 @@ function NamespaceView() {
 					<span className="flex items-center gap-1.5" key="class-name">
 						{params.className}
 						{namespaceId !== params.className && (
-							<span className="text-text-secondary">({namespaceId})</span>
+							<span className="text-kumo-subtle">({namespaceId})</span>
 						)}
 					</span>,
 				]}
@@ -133,15 +133,15 @@ function NamespaceView() {
 
 			<div className="px-6 py-6">
 				{error && (
-					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
+					<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
 						{error}
 					</div>
 				)}
 
 				{loading ? (
-					<div className="p-12 text-center text-text-secondary">Loading...</div>
+					<div className="p-12 text-center text-kumo-subtle">Loading...</div>
 				) : objects.length === 0 ? (
-					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
+					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-kumo-subtle">
 						<h2 className="text-2xl font-medium">
 							No Durable Objects with stored data
 						</h2>
@@ -151,7 +151,7 @@ function NamespaceView() {
 					</div>
 				) : (
 					<>
-						<div className="overflow-hidden rounded-lg border border-border">
+						<div className="overflow-hidden rounded-lg border border-kumo-fill">
 							<Table>
 								<Table.Header>
 									<Table.Row>
@@ -167,7 +167,7 @@ function NamespaceView() {
 											</Table.Cell>
 											<Table.Cell className="text-right">
 												<Link
-													className="inline-flex h-6.5 items-center gap-1 rounded-md px-2 text-xs hover:bg-border/50"
+													className="inline-flex h-6.5 items-center gap-1 rounded-md px-2 text-xs hover:bg-kumo-fill"
 													params={{
 														className: params.className,
 														objectId: obj.id as string,

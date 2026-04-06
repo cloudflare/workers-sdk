@@ -1,11 +1,6 @@
 import SCRIPT_QUEUE_BROKER_OBJECT from "worker:queues/broker";
 import { z } from "zod";
-import {
-	kVoid,
-	Service,
-	Worker_Binding,
-	Worker_Binding_DurableObjectNamespaceDesignator,
-} from "../../runtime";
+import { kVoid } from "../../runtime";
 import {
 	QueueBindings,
 	QueueConsumerOptionsSchema,
@@ -16,11 +11,15 @@ import { getUserServiceName } from "../core";
 import {
 	getMiniflareObjectBindings,
 	objectEntryWorker,
-	Plugin,
 	ProxyNodeBinding,
-	RemoteProxyConnectionString,
 	SERVICE_LOOPBACK,
 } from "../shared";
+import type {
+	Service,
+	Worker_Binding,
+	Worker_Binding_DurableObjectNamespaceDesignator,
+} from "../../runtime";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const QueuesOptionsSchema = z.object({
 	queueProducers: z

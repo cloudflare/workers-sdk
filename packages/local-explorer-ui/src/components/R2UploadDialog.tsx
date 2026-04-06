@@ -190,7 +190,7 @@ export function R2UploadDialog({
 				</Dialog.Title>
 
 				{error && (
-					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-3 text-sm text-danger">
+					<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-3 text-sm text-kumo-danger">
 						{error}
 					</div>
 				)}
@@ -199,8 +199,8 @@ export function R2UploadDialog({
 				<div
 					className={`mb-4 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors duration-200 ${
 						dragOver
-							? "border-primary bg-primary/5"
-							: "border-border hover:border-primary/50"
+							? "border-kumo-brand bg-kumo-brand/5"
+							: "border-kumo-fill hover:border-kumo-brand/50"
 					}`}
 					onClick={() => document.getElementById("file-input")?.click()}
 					onDragLeave={handleDragLeave}
@@ -214,21 +214,23 @@ export function R2UploadDialog({
 						type="file"
 					/>
 
-					<UploadIcon size={32} className="mb-2 text-text-secondary" />
+					<UploadIcon size={32} className="mb-2 text-kumo-subtle" />
 
 					{file ? (
 						<>
-							<p className="text-sm font-medium text-text">{file.name}</p>
-							<p className="text-xs text-text-secondary">
+							<p className="text-sm font-medium text-kumo-default">
+								{file.name}
+							</p>
+							<p className="text-xs text-kumo-subtle">
 								{(file.size / 1024).toFixed(1)} KB
 							</p>
 						</>
 					) : (
 						<>
-							<p className="text-sm text-text">
+							<p className="text-sm text-kumo-default">
 								Drop a file here or click to browse
 							</p>
-							<p className="text-xs text-text-secondary">
+							<p className="text-xs text-kumo-subtle">
 								Any file type supported
 							</p>
 						</>
@@ -237,28 +239,28 @@ export function R2UploadDialog({
 
 				{/* Object Key */}
 				<div className="mb-4">
-					<label className="mb-2 block text-sm font-medium text-text">
+					<label className="mb-2 block text-sm font-medium text-kumo-default">
 						Object key
 					</label>
 					<input
-						className="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text placeholder-text-secondary! focus:border-primary focus:shadow-focus-primary focus:outline-none"
+						className="w-full rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
 						onChange={(e) => setObjectKey(e.target.value)}
 						placeholder={currentPrefix + "file.png"}
 						type="text"
 						value={objectKey}
 					/>
-					<p className="mt-1 text-xs text-text-secondary">
+					<p className="mt-1 text-xs text-kumo-subtle">
 						The full path where the object will be stored
 					</p>
 				</div>
 
 				{/* Content Type */}
 				<div className="mb-4">
-					<label className="mb-2 block text-sm font-medium text-text">
+					<label className="mb-2 block text-sm font-medium text-kumo-default">
 						Content-Type
 					</label>
 					<input
-						className="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text placeholder-text-secondary! focus:border-primary focus:shadow-focus-primary focus:outline-none"
+						className="w-full rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
 						onChange={(e) => setContentType(e.target.value)}
 						placeholder="image/png"
 						type="text"
@@ -269,7 +271,7 @@ export function R2UploadDialog({
 				{/* Custom Metadata */}
 				<div className="mb-4">
 					<div className="mb-2 flex items-center justify-between">
-						<label className="text-sm font-medium text-text">
+						<label className="text-sm font-medium text-kumo-default">
 							Custom metadata
 						</label>
 						<Button variant="ghost" onClick={handleAddMetadata}>
@@ -279,7 +281,7 @@ export function R2UploadDialog({
 					</div>
 
 					{customMetadata.length === 0 ? (
-						<p className="text-sm text-text-secondary italic">
+						<p className="text-sm text-kumo-subtle italic">
 							No custom metadata
 						</p>
 					) : (
@@ -287,7 +289,7 @@ export function R2UploadDialog({
 							{customMetadata.map((entry, index) => (
 								<div key={index} className="flex items-center gap-2">
 									<input
-										className="flex-1 rounded-md border border-border bg-bg px-2 py-1.5 font-mono text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
+										className="flex-1 rounded-md border border-kumo-fill bg-kumo-base px-2 py-1.5 font-mono text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
 										onChange={(e) =>
 											handleMetadataChange(index, "key", e.target.value)
 										}
@@ -296,7 +298,7 @@ export function R2UploadDialog({
 										value={entry.key}
 									/>
 									<input
-										className="flex-1 rounded-md border border-border bg-bg px-2 py-1.5 font-mono text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
+										className="flex-1 rounded-md border border-kumo-fill bg-kumo-base px-2 py-1.5 font-mono text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
 										onChange={(e) =>
 											handleMetadataChange(index, "value", e.target.value)
 										}

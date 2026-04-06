@@ -1,5 +1,38 @@
 # @cloudflare/vite-plugin
 
+## 1.31.0
+
+### Minor Changes
+
+- [#13011](https://github.com/cloudflare/workers-sdk/pull/13011) [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Add experimental headful browser rendering support for local development
+
+  > **Experimental:** This feature may be removed or changed without notice.
+
+  When developing locally with the Browser Rendering API, you can enable headful (visible) mode via the `X_BROWSER_HEADFUL` environment variable to see the browser while debugging:
+
+  ```sh
+  X_BROWSER_HEADFUL=true wrangler dev
+  X_BROWSER_HEADFUL=true vite dev
+  ```
+
+  **Note:** when using `@cloudflare/playwright`, two Chrome windows may appear — the initial blank page and the one created by `browser.newPage()`. This is expected behavior due to how Playwright handles browser contexts via CDP.
+
+- [#13051](https://github.com/cloudflare/workers-sdk/pull/13051) [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update `getLocalWorkerdCompatibilityDate` to return today's date
+
+  The re-exported `getLocalWorkerdCompatibilityDate` function from `@cloudflare/vite-plugin` previously resolved the workerd compatibility date by traversing the local `miniflare` installation, which was unreliable in some package manager setups. It now simply returns today's date. The function is also marked as deprecated — callers should just use today's date instead, for example like so: `new Date().toISOString().slice(0, 10)`
+
+### Patch Changes
+
+- [#13125](https://github.com/cloudflare/workers-sdk/pull/13125) [`f76652c`](https://github.com/cloudflare/workers-sdk/commit/f76652c09453090c7b40da7d916929ec45f3ca8d) Thanks [@kayluhb](https://github.com/kayluhb)! - Fix SyntaxError when SSR-transformed module ends with a single-line comment
+
+  When module code ends with a `//` comment (e.g. `//# sourceMappingURL=...` preserved by vite-plus), the closing `}` of the async wrapper in `runInlinedModule` was absorbed into the comment, causing `SyntaxError: Unexpected end of input`. Adding a newline before the closing brace prevents this.
+
+- [#13188](https://github.com/cloudflare/workers-sdk/pull/13188) [`110002c`](https://github.com/cloudflare/workers-sdk/commit/110002ce0d227a0b411d7749365ea5057a216d67) Thanks [@shulaoda](https://github.com/shulaoda)! - Normalize the return value of `getAssetsDirectory()` with `vite.normalizePath()` to ensure `assets.directory` in the output `wrangler.json` always uses forward slashes
+
+- Updated dependencies [[`9c4035b`](https://github.com/cloudflare/workers-sdk/commit/9c4035b6e48418d9bccf9791354f54a083af5108), [`5d29055`](https://github.com/cloudflare/workers-sdk/commit/5d29055edf482bd51c3728b26594b5e4ac54f0a9), [`fb67a18`](https://github.com/cloudflare/workers-sdk/commit/fb67a18aa2b4a34c292737591e6d5a3401f8d742), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`ab44870`](https://github.com/cloudflare/workers-sdk/commit/ab448708ba725b74927aff4d6e3f1f97dc9c2135), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41), [`14e72eb`](https://github.com/cloudflare/workers-sdk/commit/14e72eb523a5a2dd6b7d332d81148e46cfae16d7), [`4dc94fd`](https://github.com/cloudflare/workers-sdk/commit/4dc94fd5209d17663fac32ac99f7f20d17f1f07f), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87)]:
+  - wrangler@4.80.0
+  - miniflare@4.20260401.0
+
 ## 1.30.3
 
 ### Patch Changes

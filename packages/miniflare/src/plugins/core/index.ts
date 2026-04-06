@@ -12,37 +12,15 @@ import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
 import { z } from "zod";
 import { fetch } from "../../http";
-import {
-	Extension,
-	kVoid,
-	Service,
-	ServiceDesignator,
-	Worker_Binding,
-	Worker_ContainerEngine,
-	Worker_DurableObjectNamespace,
-	Worker_Module,
-} from "../../runtime";
-import {
-	Json,
-	JsonSchema,
-	Log,
-	MiniflareCoreError,
-	PathSchema,
-} from "../../shared";
-import {
-	Awaitable,
-	CoreBindings,
-	CoreHeaders,
-	viewToBuffer,
-} from "../../workers";
+import { kVoid } from "../../runtime";
+import { JsonSchema, Log, MiniflareCoreError, PathSchema } from "../../shared";
+import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
-	DurableObjectClassNames,
 	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
@@ -67,7 +45,7 @@ import {
 	buildStringScriptPath,
 	convertModuleDefinition,
 	ModuleLocator,
-	SourceOptions,
+	type SourceOptions,
 	SourceOptionsSchema,
 	withSourceURL,
 } from "./modules";
@@ -77,8 +55,23 @@ import {
 	kCurrentWorker,
 	ServiceDesignatorSchema,
 } from "./services";
+import type {
+	Extension,
+	Service,
+	ServiceDesignator,
+	Worker_Binding,
+	Worker_ContainerEngine,
+	Worker_DurableObjectNamespace,
+	Worker_Module,
+} from "../../runtime";
+import type { Json } from "../../shared";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
-import type { WorkflowOption } from "../shared";
+import type { Awaitable } from "../../workers";
+import type {
+	WorkflowOption,
+	DurableObjectClassNames,
+	Plugin,
+} from "../shared";
 import type { BindingIdMap } from "./types";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
@@ -674,7 +667,7 @@ export const CORE_PLUGIN: Plugin<
 		return Object.fromEntries(await Promise.all(bindingEntries));
 	},
 	async getServices({
-		log,
+		log: _log,
 		options,
 		sharedOptions,
 		workerBindings,

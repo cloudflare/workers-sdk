@@ -1,5 +1,3 @@
-import { z } from "zod";
-import { ValueOf } from "../workers";
 import { AI_PLUGIN, AI_PLUGIN_NAME } from "./ai";
 import { AI_SEARCH_PLUGIN, AI_SEARCH_PLUGIN_NAME } from "./ai-search";
 import {
@@ -46,6 +44,8 @@ import {
 	WORKER_LOADER_PLUGIN_NAME,
 } from "./worker-loader";
 import { WORKFLOWS_PLUGIN, WORKFLOWS_PLUGIN_NAME } from "./workflows";
+import type { ValueOf } from "../workers";
+import type { z } from "zod";
 
 export const PLUGINS = {
 	[CORE_PLUGIN_NAME]: CORE_PLUGIN,

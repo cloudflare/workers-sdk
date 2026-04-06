@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { Awaitable } from "./types";
+import type { Awaitable } from "./types";
 
 const kFakeTimerHandle = Symbol("kFakeTimerHandle");
 export type TimerHandle = number | { [kFakeTimerHandle]: number };

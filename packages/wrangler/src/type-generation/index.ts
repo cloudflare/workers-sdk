@@ -1831,7 +1831,7 @@ function collectCoreBindings(
 				});
 			}
 
-			addBinding(flagshipBinding.binding, "Flags", "flagship", envName);
+			addBinding(flagshipBinding.binding, "Flagship", "flagship", envName);
 		}
 
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
@@ -2812,7 +2812,7 @@ function collectCoreBindingsPerEnvironment(
 			bindings.push({
 				bindingCategory: "flagship",
 				name: flagshipBinding.binding,
-				type: "Flags",
+				type: "Flagship",
 			});
 		}
 

@@ -1,20 +1,13 @@
-import {
-	blue,
-	bold,
-	Colorize,
-	green,
-	grey,
-	red,
-	reset,
-	yellow,
-} from "kleur/colors";
+import { blue, bold, green, grey, red, reset, yellow } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
 import { CoreBindings, CoreHeaders, CorePaths } from "./constants";
 import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";
-import { matchRoutes, WorkerRoute } from "./routing";
+import { matchRoutes } from "./routing";
 import { handleScheduled } from "./scheduled";
+import type { WorkerRoute } from "./routing";
+import type { Colorize } from "kleur/colors";
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;

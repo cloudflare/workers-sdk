@@ -5,21 +5,13 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { text } from "node:stream/consumers";
-import {
-	Headers,
-	Miniflare,
-	MiniflareOptions,
-	R2_PLUGIN_NAME,
-	ReplaceWorkersTypes,
-} from "miniflare";
+import { Headers, Miniflare, R2_PLUGIN_NAME } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
 	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
-	MiniflareTestContext,
 	namespace,
-	Namespaced,
 	useDispose,
 	useTmp,
 } from "../../test-shared";
@@ -27,6 +19,7 @@ import type {
 	MultipartPartRow,
 	ObjectRow,
 } from "../../../src/workers/r2/schemas.worker";
+import type { MiniflareTestContext, Namespaced } from "../../test-shared";
 import type {
 	R2Bucket,
 	R2Conditional,
@@ -35,6 +28,7 @@ import type {
 	R2ObjectBody,
 	R2Objects,
 } from "@cloudflare/workers-types/experimental";
+import type { MiniflareOptions, ReplaceWorkersTypes } from "miniflare";
 
 const WITHIN_EPSILON = 10_000;
 

@@ -75,9 +75,7 @@ describe.sequential("wrangler pages dev", () => {
 		);
 	});
 
-	it("should show [--service] related warnings if specified as arg in the command line", async ({
-		expect,
-	}) => {
+	it("should show [--service] related warnings if specified as arg in the command line", async () => {
 		const helper = new WranglerE2ETestHelper();
 		const worker = helper.runLongLived(
 			`${cmd} --port ${port} --inspector-port ${inspectorPort} . --service STAGING_SERVICE=test-worker@staging`

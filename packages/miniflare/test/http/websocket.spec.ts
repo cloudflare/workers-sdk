@@ -1,19 +1,19 @@
 import http from "node:http";
-import { AddressInfo } from "node:net";
 import { setImmediate } from "node:timers/promises";
 import { expectTypeOf } from "expect-type";
 import {
-	CloseEvent,
 	coupleWebSocket,
 	DeferredPromise,
-	MessageEvent,
 	viewToBuffer,
 	WebSocket,
 	WebSocketPair,
 } from "miniflare";
 import { assert, test } from "vitest";
-import NodeWebSocket, { Event as WebSocketEvent, WebSocketServer } from "ws";
+import NodeWebSocket, { WebSocketServer } from "ws";
 import { useServer, utf8Decode, utf8Encode } from "../test-shared";
+import type { CloseEvent, MessageEvent } from "miniflare";
+import type { AddressInfo } from "node:net";
+import type { Event as WebSocketEvent } from "ws";
 
 const noop = () => {};
 

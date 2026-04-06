@@ -1,5 +1,17 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.14.1
+
+### Patch Changes
+
+- [#13131](https://github.com/cloudflare/workers-sdk/pull/13131) [`65acf66`](https://github.com/cloudflare/workers-sdk/commit/65acf6658efde6eb7ad28f858fef9e656db80385) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use miniflare's `handleStructuredLogs` option instead of `handleRuntimeStdio` for processing workerd output
+
+  Previously, `vitest-pool-workers` manually processed raw stdout/stderr streams from the workerd runtime via `handleRuntimeStdio`, with its own filtering of known noisy messages (e.g. LLVM symbolizer warnings). This switches to miniflare's `handleStructuredLogs` option, which parses workerd's structured JSON log output and automatically filters known unhelpful messages. This aligns with how both `wrangler` and `vite-plugin-cloudflare` handle workerd logs.
+
+- Updated dependencies [[`9c4035b`](https://github.com/cloudflare/workers-sdk/commit/9c4035b6e48418d9bccf9791354f54a083af5108), [`5d29055`](https://github.com/cloudflare/workers-sdk/commit/5d29055edf482bd51c3728b26594b5e4ac54f0a9), [`fb67a18`](https://github.com/cloudflare/workers-sdk/commit/fb67a18aa2b4a34c292737591e6d5a3401f8d742), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`ab44870`](https://github.com/cloudflare/workers-sdk/commit/ab448708ba725b74927aff4d6e3f1f97dc9c2135), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41), [`14e72eb`](https://github.com/cloudflare/workers-sdk/commit/14e72eb523a5a2dd6b7d332d81148e46cfae16d7), [`4dc94fd`](https://github.com/cloudflare/workers-sdk/commit/4dc94fd5209d17663fac32ac99f7f20d17f1f07f), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87)]:
+  - wrangler@4.80.0
+  - miniflare@4.20260401.0
+
 ## 0.14.0
 
 ### Minor Changes

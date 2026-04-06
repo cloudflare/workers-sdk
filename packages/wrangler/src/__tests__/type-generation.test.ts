@@ -771,7 +771,7 @@ describe("generate types", () => {
 					TEST_QUEUE_BINDING: Queue;
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
-					FLAGS: Flags;
+					FLAGS: Flagship;
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
@@ -887,7 +887,7 @@ describe("generate types", () => {
 					TEST_QUEUE_BINDING: Queue;
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
-					FLAGS: Flags;
+					FLAGS: Flagship;
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
@@ -1066,7 +1066,7 @@ describe("generate types", () => {
 					TEST_QUEUE_BINDING: Queue;
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
-					FLAGS: Flags;
+					FLAGS: Flagship;
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;

@@ -3,7 +3,7 @@
 
 import { Hono } from "hono/tiny";
 import mime from "mime";
-import { CoreBindings, CorePaths } from "../core";
+import { CorePaths } from "../core";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import { wrapResponse } from "./common";
 import {
@@ -48,6 +48,7 @@ import {
 } from "./resources/workflows";
 import type { BindingIdMap } from "../../plugins/core/types";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
+import type { CoreBindings } from "../core";
 import type { LocalExplorerWorker } from "./generated";
 
 export type Env = {

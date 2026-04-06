@@ -1,7 +1,6 @@
 import http from "node:http";
 import https from "node:https";
 import net from "node:net";
-import { Duplex } from "node:stream";
 import { parentPort } from "node:worker_threads";
 import { HOST_CAPNP_CONNECT } from "../plugins/shared/constants";
 import {
@@ -11,6 +10,7 @@ import {
 } from "../shared/external-service";
 import { Log } from "./log";
 import type { WorkerDefinition } from "../shared/dev-registry-types";
+import type { Duplex } from "node:stream";
 import type { MessagePort } from "node:worker_threads";
 
 interface ProxyAddress {

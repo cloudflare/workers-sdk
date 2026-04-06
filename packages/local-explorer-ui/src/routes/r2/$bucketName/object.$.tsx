@@ -55,25 +55,27 @@ function ObjectDetailsCard({ object }: ObjectDetailsCardProps): JSX.Element {
 		: [formattedDate, ""];
 
 	return (
-		<div className="rounded-lg border border-border bg-bg p-6">
-			<h3 className="mb-4 text-base font-semibold text-text">Object Details</h3>
+		<div className="rounded-lg border border-kumo-fill bg-kumo-base p-6">
+			<h3 className="mb-4 text-base font-semibold text-kumo-default">
+				Object Details
+			</h3>
 			<dl className="grid grid-cols-3 gap-x-8 gap-y-2 text-sm">
 				<div>
-					<dt className="text-text-secondary">Date Created</dt>
+					<dt className="text-kumo-subtle">Date Created</dt>
 					<dd className="mt-1">
-						<span className="text-text">{datePart}</span>
+						<span className="text-kumo-default">{datePart}</span>
 						{timePart && (
-							<span className="ml-1 text-text-secondary">{timePart}</span>
+							<span className="ml-1 text-kumo-subtle">{timePart}</span>
 						)}
 					</dd>
 				</div>
 				<div>
-					<dt className="text-text-secondary">Type</dt>
-					<dd className="mt-1 text-text">{contentType}</dd>
+					<dt className="text-kumo-subtle">Type</dt>
+					<dd className="mt-1 text-kumo-default">{contentType}</dd>
 				</div>
 				<div>
-					<dt className="text-text-secondary">Size</dt>
-					<dd className="mt-1 text-text">{formatSize(object.size)}</dd>
+					<dt className="text-kumo-subtle">Size</dt>
+					<dd className="mt-1 text-kumo-default">{formatSize(object.size)}</dd>
 				</div>
 			</dl>
 		</div>
@@ -90,19 +92,19 @@ function CustomMetadataCard({
 	const entries = metadata ? Object.entries(metadata) : [];
 
 	return (
-		<div className="rounded-lg border border-border bg-bg p-6">
-			<h3 className="mb-4 text-base font-semibold text-text">
+		<div className="rounded-lg border border-kumo-fill bg-kumo-base p-6">
+			<h3 className="mb-4 text-base font-semibold text-kumo-default">
 				Custom Metadata
 			</h3>
 
 			{entries.length === 0 ? (
-				<p className="text-sm text-text-secondary">No custom metadata set</p>
+				<p className="text-sm text-kumo-subtle">No custom metadata set</p>
 			) : (
 				<dl className="space-y-2 text-sm">
 					{entries.map(([key, value]) => (
 						<div key={key} className="flex gap-4">
-							<dt className="min-w-30 font-mono text-text-secondary">{key}</dt>
-							<dd className="font-mono text-text">{value}</dd>
+							<dt className="min-w-30 font-mono text-kumo-subtle">{key}</dt>
+							<dd className="font-mono text-kumo-default">{value}</dd>
 						</div>
 					))}
 				</dl>
@@ -163,7 +165,7 @@ function ObjectDetailView(): JSX.Element {
 	const fileName = pathSegments.pop() || search.objectKey;
 	const breadcrumbItems = [
 		<Link
-			className="text-text no-underline hover:text-primary"
+			className="text-kumo-default no-underline hover:text-kumo-link"
 			key="bucket"
 			params={{ bucketName: params.bucketName }}
 			search={{}}
@@ -175,7 +177,7 @@ function ObjectDetailView(): JSX.Element {
 			const segmentPrefix = pathSegments.slice(0, index + 1).join("/") + "/";
 			return (
 				<Link
-					className="text-text no-underline hover:text-primary"
+					className="text-kumo-default no-underline hover:text-kumo-link"
 					key={segmentPrefix}
 					params={{ bucketName: params.bucketName }}
 					search={{ prefix: segmentPrefix }}
@@ -194,7 +196,7 @@ function ObjectDetailView(): JSX.Element {
 
 			<div className="px-6 py-6">
 				{error && (
-					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
+					<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
 						{error}
 					</div>
 				)}
@@ -202,7 +204,7 @@ function ObjectDetailView(): JSX.Element {
 				<div className="mb-6 flex items-center justify-between">
 					<div className="flex min-w-0 items-center gap-2">
 						<h1
-							className="truncate text-base text-text"
+							className="truncate text-base text-kumo-default"
 							title={search.objectKey}
 						>
 							{search.objectKey}
@@ -245,7 +247,7 @@ function ObjectDetailView(): JSX.Element {
 						</Dialog.Title>
 
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Description className="mb-2 text-text-secondary">
+						<Dialog.Description className="mb-2 text-kumo-subtle">
 							Are you sure you want to delete &ldquo;{search.objectKey}
 							&rdquo;? This cannot be undone.
 						</Dialog.Description>

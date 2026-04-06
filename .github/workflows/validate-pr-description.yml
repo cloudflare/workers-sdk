@@ -1,6 +1,7 @@
 name: Validate PR Description
 
 on:
+  merge_group:
   pull_request:
     types:
       [
@@ -19,8 +20,8 @@ permissions:
 
 jobs:
   check:
-    # Don't check the Version Packages PR
-    if: github.head_ref != 'changeset-release/main'
+    # Don't check the Version Packages PR or merge queue jobs
+    if: github.event_name != 'merge_group' && github.head_ref != 'changeset-release/main'
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-add-pr
       cancel-in-progress: true
