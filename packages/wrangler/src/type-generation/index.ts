@@ -209,9 +209,10 @@ export const typesCommand = createCommand({
 							config: secondaryConfig.configPath,
 							env: envName,
 						});
-						const envKey = envConfig.name;
+						const envEntry = await getEntry({}, envConfig, "types");
+						const envKey = envEntry.name;
 						if (envKey && envKey !== key && !secondaryEntries.has(envKey)) {
-							secondaryEntries.set(envKey, serviceEntry);
+							secondaryEntries.set(envKey, envEntry);
 						}
 					}
 				} else {

@@ -1234,6 +1234,99 @@ describe("generate types", () => {
 		`);
 	});
 
+	it("should resolve named service entrypoints when env overrides the worker name", async ({
+		expect,
+	}) => {
+		fs.mkdirSync("primary");
+		fs.mkdirSync("secondary");
+
+		fs.writeFileSync(
+			"./secondary/index.ts",
+			`import { WorkerEntrypoint } from 'cloudflare:workers';
+			export default { async fetch() {} };
+			export class SomeEntrypoint extends WorkerEntrypoint {}
+			`
+		);
+		fs.writeFileSync(
+			"./secondary/wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "secondary-worker",
+				main: "./index.ts",
+				env: {
+					staging: {
+						name: "secondary-worker-staging",
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		fs.writeFileSync(
+			"./primary/index.ts",
+			"export default { async fetch() {} };"
+		);
+		fs.writeFileSync(
+			"./primary/wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "primary-worker",
+				main: "./index.ts",
+				services: [
+					{
+						binding: "SERVICE_A",
+						service: "secondary-worker",
+						entrypoint: "SomeEntrypoint",
+					},
+				],
+				env: {
+					staging: {
+						name: "primary-worker-staging",
+						services: [
+							{
+								binding: "SERVICE_A",
+								service: "secondary-worker-staging",
+								entrypoint: "SomeEntrypoint",
+							},
+						],
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		await runWrangler(
+			"types --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			- Found Worker 'secondary-worker' at 'secondary/index.ts' (secondary/wrangler.jsonc)
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import("./index");
+				}
+				interface StagingEnv {
+					SERVICE_A: Service<typeof import("../secondary/index").SomeEntrypoint>;
+				}
+				interface Env {
+					SERVICE_A: Service<typeof import("../secondary/index").SomeEntrypoint>;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to primary/worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+			"
+		`);
+	});
+
 	it("should create a DTS file at the location that the command is executed from", async ({
 		expect,
 	}) => {
