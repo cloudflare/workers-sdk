@@ -132,7 +132,7 @@ export function WorkerSelector({
 	);
 
 	if (sidebar.open) {
-		return <div className="px-4 py-2">{selectRoot}</div>;
+		return <div className="px-3">{selectRoot}</div>;
 	}
 
 	return (
