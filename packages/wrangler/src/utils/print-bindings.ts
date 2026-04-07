@@ -88,7 +88,10 @@ export function printBindings(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
-	const agent_memory = extractBindingsOfType("agent_memory", bindings);
+	const agent_memory = extractBindingsOfType(
+		"agent_memory_namespace",
+		bindings
+	);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const r2_buckets = extractBindingsOfType("r2_bucket", bindings);
 	const logfwdr = extractBindingsOfType("logfwdr", bindings);
@@ -358,7 +361,7 @@ export function printBindings(
 		output.push(
 			...agent_memory.map(({ binding, namespace }) => ({
 				name: binding,
-				type: getBindingTypeFriendlyName("agent_memory"),
+				type: getBindingTypeFriendlyName("agent_memory_namespace"),
 				value: namespace ?? undefined,
 				mode: getMode({ isSimulatedLocally: false }),
 			}))

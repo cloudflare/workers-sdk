@@ -299,7 +299,7 @@ export function mapWorkerMetadataBindings(
 							},
 						];
 						break;
-					case "agent_memory":
+					case "agent_memory_namespace": {
 						configObj.agent_memory = [
 							...(configObj.agent_memory ?? []),
 							{
@@ -308,6 +308,7 @@ export function mapWorkerMetadataBindings(
 							},
 						];
 						break;
+					}
 					case "hyperdrive":
 						configObj.hyperdrive = [
 							...(configObj.hyperdrive ?? []),

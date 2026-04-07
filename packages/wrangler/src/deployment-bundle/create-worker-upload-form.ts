@@ -131,7 +131,10 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
-	const agent_memory = extractBindingsOfType("agent_memory", bindings);
+	const agent_memory = extractBindingsOfType(
+		"agent_memory_namespace",
+		bindings
+	);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
 		"secrets_store_secret",
@@ -378,7 +381,7 @@ export function createWorkerUploadForm(
 		} else {
 			metadataBindings.push({
 				name: binding,
-				type: "agent_memory",
+				type: "agent_memory_namespace",
 				namespace,
 			});
 		}

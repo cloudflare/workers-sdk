@@ -118,7 +118,7 @@ describe("printBindings — AI Search bindings", () => {
 	it("shows Agent Memory bindings", ({ expect }) => {
 		const output = callPrintBindings({
 			MEMORY: {
-				type: "agent_memory",
+				type: "agent_memory_namespace",
 				namespace: "my-agent",
 			},
 		});
