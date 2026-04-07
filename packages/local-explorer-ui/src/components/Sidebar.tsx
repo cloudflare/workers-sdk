@@ -14,7 +14,7 @@ import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
 import WorkflowsIcon from "../assets/icons/workflows.svg?react";
 import { loadGroupState, saveGroupState } from "../utils/sidebar-state";
-import { type LocalExplorerWorker } from "./WorkerSelector";
+import { WorkerSelector, type LocalExplorerWorker } from "./WorkerSelector";
 import type {
 	D1DatabaseResponse,
 	R2Bucket,
@@ -54,7 +54,7 @@ export function AppSidebar({
 	r2Error,
 	workers,
 	selectedWorker,
-	// onWorkerChange,
+	onWorkerChange,
 	workflows,
 	workflowsError,
 }: SidebarProps) {
@@ -74,7 +74,7 @@ export function AppSidebar({
 		[]
 	);
 
-	// const showWorkerSelector = workers.length > 1;
+	const showWorkerSelector = workers.length > 1;
 
 	// Only include the worker search param when there are multiple workers.
 	// This keeps URLs clean in the common single-worker case.
@@ -230,6 +230,14 @@ export function AppSidebar({
 			</Sidebar.Header>
 
 			<Sidebar.Content>
+				{showWorkerSelector && (
+					<WorkerSelector
+						workers={workers}
+						selectedWorker={selectedWorker}
+						onWorkerChange={onWorkerChange}
+					/>
+				)}
+
 				<Sidebar.MenuItem>
 					{sidebarItemGroups.map((group) => (
 						<Sidebar.Collapsible
