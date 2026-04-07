@@ -3,7 +3,7 @@ import { createNamespace } from "../core/create-command";
 export const vpcNamespace = createNamespace({
 	metadata: {
 		description: "🌐 Manage VPC",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: WVPC",
 		category: "Compute & AI",
 	},

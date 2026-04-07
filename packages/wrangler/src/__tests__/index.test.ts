@@ -66,7 +66,7 @@ describe("wrangler", () => {
 				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
-				  wrangler vpc                    🌐 Manage VPC [open beta]
+				  wrangler vpc                    🌐 Manage VPC
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
@@ -141,7 +141,7 @@ describe("wrangler", () => {
 				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
-				  wrangler vpc                    🌐 Manage VPC [open beta]
+				  wrangler vpc                    🌐 Manage VPC
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
