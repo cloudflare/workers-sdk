@@ -18,6 +18,7 @@ import {
 	zWorkersKvNamespaceListNamespacesData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
+import openApiSpec from "./openapi.local.json";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {
@@ -89,7 +90,8 @@ app.use("/api/*", async (c, next) => {
 			status: 204,
 			headers: {
 				"Access-Control-Allow-Origin": origin ?? "*",
-				"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+				"Access-Control-Allow-Methods":
+					"GET, POST, PUT, PATCH, DELETE, OPTIONS",
 				"Access-Control-Allow-Headers":
 					"Content-Type, cf-metadata-only, cf-r2-custom-metadata",
 				"Access-Control-Max-Age": "86400",
@@ -156,6 +158,12 @@ app.get("/*", async (c, next) => {
 
 	return c.notFound();
 });
+
+// ============================================================================
+// OpenAPI Spec Endpoint
+// ============================================================================
+
+app.get("/api", (c) => c.json(openApiSpec));
 
 // ============================================================================
 // KV Endpoints

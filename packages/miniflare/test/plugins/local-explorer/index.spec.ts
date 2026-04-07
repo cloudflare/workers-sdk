@@ -217,7 +217,7 @@ describe("Local Explorer API validation", () => {
 			"http://localhost:5173"
 		);
 		expect(res.headers.get("Access-Control-Allow-Methods")).toBe(
-			"GET, POST, PUT, DELETE, OPTIONS"
+			"GET, POST, PUT, PATCH, DELETE, OPTIONS"
 		);
 		await res.arrayBuffer();
 
@@ -255,6 +255,20 @@ describe("Local Explorer API validation", () => {
 	});
 
 	describe("routing", () => {
+		test("serves OpenAPI spec at /cdn-cgi/explorer/api", async ({ expect }) => {
+			const res = await mf.dispatchFetch(
+				"http://localhost/cdn-cgi/explorer/api"
+			);
+			expect(res.status).toBe(200);
+			expect(res.headers.get("Content-Type")).toContain("application/json");
+
+			const spec = await res.json();
+			expect(spec).toMatchObject({
+				openapi: "3.0.3",
+				info: { title: "Local Explorer API" },
+			});
+		});
+
 		test("serves explorer UI at /cdn-cgi/explorer", async ({ expect }) => {
 			const res = await mf.dispatchFetch("http://localhost/cdn-cgi/explorer");
 			expect(res.status).toBe(200);
