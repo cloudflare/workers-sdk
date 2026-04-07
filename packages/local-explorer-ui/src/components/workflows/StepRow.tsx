@@ -41,7 +41,7 @@ function StepStatusIcon({
 			);
 		}
 		return (
-			<div className="bg-kumo-success flex size-5 items-center justify-center rounded">
+			<div className="flex size-5 items-center justify-center rounded bg-kumo-success">
 				<CheckIcon size={12} weight="bold" className="text-white" />
 			</div>
 		);
