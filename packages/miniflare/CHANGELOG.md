@@ -1,5 +1,37 @@
 # miniflare
 
+## 4.20260405.0
+
+### Minor Changes
+
+- [#13240](https://github.com/cloudflare/workers-sdk/pull/13240) [`a3e3b57`](https://github.com/cloudflare/workers-sdk/commit/a3e3b57f2aa47b6655af7baaa784d55117368abc) Thanks [@emily-shen](https://github.com/emily-shen)! - local explorer: serve the local explorer's OpenAPI spec at /cdn-cgi/explorer/api
+
+  The local explorer is supported by a REST API served from the worker's local address. It can be accessed independently of the UI, (e.g. by an AI agent) and is thus documented at this endpoint.
+
+- [#13314](https://github.com/cloudflare/workers-sdk/pull/13314) [`7a60d4b`](https://github.com/cloudflare/workers-sdk/commit/7a60d4bd33b03a55f687869378dfd06143247239) Thanks [@Ltadrian](https://github.com/Ltadrian)! - Fix hyperdrive local dev binding tls configuration bug
+
+### Patch Changes
+
+- [#13241](https://github.com/cloudflare/workers-sdk/pull/13241) [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260401.1 | 1.20260402.1 |
+
+- [#13305](https://github.com/cloudflare/workers-sdk/pull/13305) [`fa6d84f`](https://github.com/cloudflare/workers-sdk/commit/fa6d84fe4f07143522e4d41a2934c486d1c4b6d1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260402.1 | 1.20260405.1 |
+
+- [#13241](https://github.com/cloudflare/workers-sdk/pull/13241) [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update Images binding local mock to use chainable handle pattern
+
+  `hosted.image(imageId)` now returns a handle with `details()`, `bytes()`, `update()`, and `delete()` methods, aligning with the updated workerd API (https://github.com/cloudflare/workerd/pull/6288).
+
 ## 4.20260401.0
 
 ### Minor Changes
