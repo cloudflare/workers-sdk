@@ -65,13 +65,13 @@ export function WorkerSelector({
 				open={open}
 				value={selectedWorker}
 			>
-				<Select.Trigger className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm text-text transition-colors hover:bg-bg-secondary data-popup-open:border-primary">
+				<Select.Trigger className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 text-sm text-kumo-default transition-colors hover:bg-kumo-elevated data-popup-open:border-kumo-brand">
 					<span className="flex items-center gap-2 truncate">
-						<TerminalIcon className="h-4 w-4 shrink-0 text-text-secondary" />
+						<TerminalIcon className="h-4 w-4 shrink-0 text-kumo-subtle" />
 						<span className="truncate">{selectedWorker}</span>
 					</span>
 					<Select.Icon>
-						<CaretUpDownIcon className="h-3.5 w-3.5 shrink-0 text-text-secondary" />
+						<CaretUpDownIcon className="h-3.5 w-3.5 shrink-0 text-kumo-subtle" />
 					</Select.Icon>
 				</Select.Trigger>
 
@@ -83,7 +83,7 @@ export function WorkerSelector({
 						side="bottom"
 						sideOffset={4}
 					>
-						<Select.Popup className="max-h-72 min-w-48 overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-[opacity,transform] duration-150 data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-starting-style:-translate-y-1 data-starting-style:opacity-0">
+						<Select.Popup className="max-h-72 min-w-48 overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-[opacity,transform] duration-150 data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-starting-style:-translate-y-1 data-starting-style:opacity-0">
 							<Select.List className="p-1">
 								{workers.map((worker) => {
 									const isSelected = selectedWorker === worker.name;
@@ -91,20 +91,20 @@ export function WorkerSelector({
 
 									return (
 										<Select.Item
-											className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-text transition-colors outline-none select-none data-highlighted:bg-bg-secondary dark:data-highlighted:bg-bg-tertiary"
+											className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-kumo-default transition-colors outline-none select-none data-highlighted:bg-kumo-elevated"
 											key={worker.name}
 											value={worker.name}
 										>
 											<span className="flex w-4 items-center">
 												<Icon
-													className={`h-3.5 w-3.5 ${isSelected ? "" : "text-text-secondary"}`}
+													className={`h-3.5 w-3.5 ${isSelected ? "" : "text-kumo-subtle"}`}
 												/>
 											</span>
 											<Select.ItemText>
 												<span className="flex items-center gap-2">
 													{worker.name}
 													{worker.isSelf && selfWorker && (
-														<span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+														<span className="rounded bg-kumo-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-kumo-link">
 															current
 														</span>
 													)}

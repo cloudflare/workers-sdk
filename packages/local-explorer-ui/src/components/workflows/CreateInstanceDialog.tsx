@@ -88,12 +88,12 @@ export function CreateWorkflowInstanceDialog({
 		<Dialog.Root open={open} onOpenChange={handleOpenChange}>
 			<Dialog size="lg">
 				{/* Header */}
-				<div className="border-b border-border px-6 pt-6 pb-4">
+				<div className="border-b border-kumo-fill px-6 pt-6 pb-4">
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-					<Dialog.Title className="text-lg font-semibold text-text">
+					<Dialog.Title className="text-lg font-semibold text-kumo-default">
 						Trigger this workflow?
 					</Dialog.Title>
-					<p className="mt-1 text-sm text-text-secondary">
+					<p className="mt-1 text-sm text-kumo-subtle">
 						Manually trigger an instance of this Workflow using the payload
 						below.
 					</p>
@@ -102,21 +102,19 @@ export function CreateWorkflowInstanceDialog({
 				{/* Body */}
 				<div className="px-6 py-6">
 					{error && (
-						<div className="mb-5 rounded-lg border border-danger/20 bg-danger/8 p-3 text-sm text-danger">
+						<div className="mb-5 rounded-lg border border-kumo-danger/20 bg-kumo-danger/8 p-3 text-sm text-kumo-danger">
 							{error}
 						</div>
 					)}
 
 					{/* Instance ID */}
 					<div className="mb-5">
-						<label className="mb-2 block text-sm font-medium text-text">
+						<label className="mb-2 block text-sm font-medium text-kumo-default">
 							Instance ID{" "}
-							<span className="font-normal text-text-secondary">
-								(optional)
-							</span>
+							<span className="font-normal text-kumo-subtle">(optional)</span>
 						</label>
 						<input
-							className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder-text-secondary! focus:border-primary focus:shadow-focus-primary focus:outline-none"
+							className="w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
 							onChange={(e) => setInstanceId(e.target.value)}
 							placeholder="Auto-generated UUID if empty"
 							type="text"
@@ -126,14 +124,14 @@ export function CreateWorkflowInstanceDialog({
 
 					{/* Params */}
 					<div>
-						<label className="mb-2 block text-sm font-medium text-text">
+						<label className="mb-2 block text-sm font-medium text-kumo-default">
 							Params
 						</label>
 						<textarea
-							className={`w-full resize-y rounded-lg border bg-bg px-3 py-2.5 font-mono text-sm text-text placeholder-text-secondary! focus:shadow-focus-primary focus:outline-none ${
+							className={`w-full resize-y rounded-lg border bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring ${
 								paramsError
-									? "border-danger focus:border-danger"
-									: "border-border focus:border-primary"
+									? "border-kumo-danger focus:border-kumo-danger"
+									: "border-kumo-fill focus:border-kumo-brand"
 							}`}
 							onChange={(e) => {
 								setParams(e.target.value);
@@ -146,9 +144,9 @@ export function CreateWorkflowInstanceDialog({
 							value={params}
 						/>
 						{paramsError ? (
-							<p className="mt-1 text-xs text-danger">{paramsError}</p>
+							<p className="mt-1 text-xs text-kumo-danger">{paramsError}</p>
 						) : (
-							<p className="mt-1 text-xs text-text-secondary">
+							<p className="mt-1 text-xs text-kumo-subtle">
 								JSON payload passed to the workflow
 							</p>
 						)}
@@ -156,7 +154,7 @@ export function CreateWorkflowInstanceDialog({
 				</div>
 
 				{/* Footer */}
-				<div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+				<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
 					<Button
 						variant="secondary"
 						onClick={() => handleOpenChange(false)}

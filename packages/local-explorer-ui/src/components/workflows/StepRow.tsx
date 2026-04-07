@@ -21,13 +21,13 @@ function StepStatusIcon({
 	if (success === false || hasError) {
 		if (subtle) {
 			return (
-				<div className="flex size-5 items-center justify-center rounded bg-text-secondary/30">
-					<span className="text-xs font-bold text-text">!</span>
+				<div className="flex size-5 items-center justify-center rounded bg-kumo-fill">
+					<span className="text-xs font-bold text-kumo-default">!</span>
 				</div>
 			);
 		}
 		return (
-			<div className="flex size-5 items-center justify-center rounded bg-[#fb2b36]">
+			<div className="flex size-5 items-center justify-center rounded bg-kumo-danger">
 				<span className="text-xs font-bold text-white">!</span>
 			</div>
 		);
@@ -35,13 +35,13 @@ function StepStatusIcon({
 	if (success === true || finished === true) {
 		if (subtle) {
 			return (
-				<div className="flex size-5 items-center justify-center rounded bg-text-secondary/30">
+				<div className="flex size-5 items-center justify-center rounded bg-kumo-fill">
 					<CheckIcon size={12} weight="bold" className="text-white" />
 				</div>
 			);
 		}
 		return (
-			<div className="flex size-5 items-center justify-center rounded bg-[#059669]">
+			<div className="bg-kumo-success flex size-5 items-center justify-center rounded">
 				<CheckIcon size={12} weight="bold" className="text-white" />
 			</div>
 		);
@@ -54,10 +54,9 @@ function StepStatusIcon({
 }
 
 const TYPE_BADGE_STYLES: Record<string, string> = {
-	step: "bg-bg-tertiary text-text-secondary",
-	sleep: "bg-[#f5f5f5] text-[#525252] dark:bg-[#262626] dark:text-[#a3a3a3]",
-	waitForEvent:
-		"bg-[#f5f3ff] text-[#7c3aed] dark:bg-[#2e1065] dark:text-[#a78bfa]",
+	step: "bg-kumo-tint text-kumo-subtle",
+	sleep: "bg-kumo-overlay text-kumo-subtle",
+	waitForEvent: "bg-kumo-brand/10 text-kumo-brand",
 };
 
 export function StepRow({ step }: { step: StepData }): JSX.Element {
@@ -69,10 +68,10 @@ export function StepRow({ step }: { step: StepData }): JSX.Element {
 			(step.error || step.output !== undefined || step.finished));
 
 	return (
-		<div className="border-b border-border p-1 last:border-b-0">
+		<div className="border-b border-kumo-fill p-1 last:border-b-0">
 			{/* Collapsed row */}
 			<div
-				className={`grid h-10 grid-cols-[20px_1fr_160px_160px_80px_24px] items-center gap-3 rounded-lg px-2 transition-colors ${hasDetails ? "cursor-pointer hover:bg-border/40" : ""}`}
+				className={`grid h-10 grid-cols-[20px_1fr_160px_160px_80px_24px] items-center gap-3 rounded-lg px-2 transition-colors ${hasDetails ? "cursor-pointer hover:bg-kumo-fill" : ""}`}
 				onClick={hasDetails ? () => setExpanded(!expanded) : undefined}
 			>
 				<StepStatusIcon
@@ -89,14 +88,14 @@ export function StepRow({ step }: { step: StepData }): JSX.Element {
 							{step.type === "waitForEvent" ? "wait for event" : step.type}
 						</span>
 					)}
-					<span className="truncate text-sm text-text">
+					<span className="truncate text-sm text-kumo-default">
 						{step.name ?? "Unknown step"}
 					</span>
 				</div>
 
 				<Timestamp value={step.start} />
 				<Timestamp value={step.end} />
-				<span className="text-sm text-text-secondary">
+				<span className="text-sm text-kumo-subtle">
 					{formatDuration(step.start, step.end)}
 				</span>
 
@@ -104,7 +103,7 @@ export function StepRow({ step }: { step: StepData }): JSX.Element {
 					{hasDetails ? (
 						<PlusIcon
 							size={14}
-							className={`text-text-secondary transition-transform ${expanded ? "rotate-45" : ""}`}
+							className={`text-kumo-subtle transition-transform ${expanded ? "rotate-45" : ""}`}
 						/>
 					) : (
 						<div className="w-6" />
@@ -115,7 +114,7 @@ export function StepRow({ step }: { step: StepData }): JSX.Element {
 			{/* Expanded detail panel */}
 			{expanded && hasDetails && (
 				<div className="-mx-1 -mb-1">
-					<div className="mt-1 h-2 rounded-t-lg border-t border-border" />
+					<div className="mt-1 h-2 rounded-t-lg border-t border-kumo-fill" />
 					<div className="px-4 pt-3 pb-4">
 						{step.type === "step" && <StepDoDetails step={step} />}
 						{step.type === "waitForEvent" && (
@@ -137,8 +136,8 @@ function StepCodeCard({
 }): JSX.Element {
 	return (
 		<div>
-			<h5 className="mb-2 text-sm font-medium text-text">{label}</h5>
-			<div className="relative overflow-hidden rounded-lg border border-border bg-bg">
+			<h5 className="mb-2 text-sm font-medium text-kumo-default">{label}</h5>
+			<div className="relative overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
 				<ScrollableCodeBlock content={content} />
 				<div className="absolute top-1.5 right-1.5">
 					<CopyButton text={content} label={`Copy ${label.toLowerCase()}`} />
@@ -180,8 +179,10 @@ function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 			{/* Attempts */}
 			{step.attempts && step.attempts.length > 0 && (
 				<div>
-					<hr className="mb-4 border-dashed border-border" />
-					<h5 className="mb-2 text-sm font-medium text-text">Attempts</h5>
+					<hr className="mb-4 border-dashed border-kumo-fill" />
+					<h5 className="mb-2 text-sm font-medium text-kumo-default">
+						Attempts
+					</h5>
 					<div>
 						{[...step.attempts].reverse().map((attempt, i, reversed) => {
 							const attemptNum = reversed.length - i;
@@ -199,10 +200,10 @@ function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 
 							return (
 								<div key={i}>
-									<div className="rounded-md bg-bg py-2 pr-3 text-sm">
+									<div className="rounded-md bg-kumo-base py-2 pr-3 text-sm">
 										<div className="flex items-start gap-3">
 											<div className="flex shrink-0 items-center gap-3 pt-0.5">
-												<span className="font-mono text-text-secondary">
+												<span className="font-mono text-kumo-subtle">
 													#{attemptNum}
 												</span>
 												<StepStatusIcon success={attempt.success} subtle />
@@ -210,21 +211,21 @@ function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 											<div className="min-w-0 flex-1">
 												<div className="flex items-center gap-2">
 													{attempt.error ? (
-														<span className="font-medium text-text">
+														<span className="font-medium text-kumo-default">
 															{attempt.error.name}
 														</span>
 													) : attempt.success ? (
-														<span className="text-text-secondary">Success</span>
+														<span className="text-kumo-subtle">Success</span>
 													) : (
-														<span className="text-text-secondary">Running</span>
+														<span className="text-kumo-subtle">Running</span>
 													)}
-													<span className="flex-1 border-t border-dashed border-border" />
-													<span className="shrink-0 text-text-secondary">
+													<span className="flex-1 border-t border-dashed border-kumo-fill" />
+													<span className="shrink-0 text-kumo-subtle">
 														{formatDuration(attempt.start, attempt.end)}
 													</span>
 												</div>
 												{attempt.error?.message && (
-													<p className="mt-1 text-xs text-text-secondary">
+													<p className="mt-1 text-xs text-kumo-subtle">
 														{attempt.error.message}
 													</p>
 												)}
@@ -232,11 +233,11 @@ function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 										</div>
 									</div>
 									{!isLast && delayMs !== null && delayMs > 0 && (
-										<div className="flex items-center py-1 pl-[28px]">
+										<div className="flex items-center py-1 pl-7">
 											<div className="flex h-10 w-5 items-center justify-center">
-												<div className="h-full border-l border-dashed border-border" />
+												<div className="h-full border-l border-dashed border-kumo-fill" />
 											</div>
-											<span className="ml-2 text-sm text-text-secondary">
+											<span className="ml-2 text-sm text-kumo-subtle">
 												{formatDuration(nextDisplayed?.end, attempt.start)}
 											</span>
 										</div>

@@ -41,7 +41,7 @@ function ActionMenu({ onEdit, onDelete }: ActionMenuProps) {
 					<Button
 						variant="ghost"
 						shape="square"
-						className="!h-7 !w-7"
+						className="h-7! w-7!"
 						aria-label="Actions"
 					>
 						<DotsThreeIcon size={16} weight="bold" />
@@ -55,7 +55,7 @@ function ActionMenu({ onEdit, onDelete }: ActionMenuProps) {
 				</DropdownMenu.Item>
 				<DropdownMenu.Separator />
 				<DropdownMenu.Item
-					className="flex items-center gap-2 text-danger"
+					className="flex items-center gap-2 text-kumo-danger"
 					onClick={onDelete}
 				>
 					<TrashIcon />
@@ -139,7 +139,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 	const isKeyInvalid = editData ? !!validateKey(editData.key) : false;
 
 	return (
-		<div className="overflow-hidden rounded-lg border border-border">
+		<div className="overflow-hidden rounded-lg border border-kumo-fill">
 			<Table>
 				<Table.Header>
 					<Table.Row>
@@ -165,9 +165,9 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 											<input
 												id={`edit-key-${entry.key.name}`}
 												className={cn(
-													"min-h-8 w-full rounded border border-primary bg-bg px-2 py-1.5 font-mono text-[13px] text-text focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary",
+													"min-h-8 w-full rounded border border-kumo-brand bg-kumo-base px-2 py-1.5 font-mono text-[13px] text-kumo-default focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:bg-kumo-elevated disabled:text-kumo-subtle",
 													{
-														"border-danger focus:shadow-focus-danger":
+														"border-kumo-danger focus-visible:ring-2 focus-visible:ring-kumo-danger":
 															editData.keyError,
 													}
 												)}
@@ -178,21 +178,21 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 												autoFocus
 											/>
 											{editData.keyError && (
-												<span className="mt-1 text-xs text-danger">
+												<span className="mt-1 text-xs text-kumo-danger">
 													{editData.keyError}
 												</span>
 											)}
 										</div>
 									) : (
 										<div className="group/cell flex items-center gap-1.5">
-											<code className="font-medium text-primary">
+											<code className="font-medium text-kumo-link">
 												{entry.key.name}
 											</code>
 											<CopyButton text={entry.key.name} />
 										</div>
 									)}
 								</Table.Cell>
-								<Table.Cell className="group/cell max-w-[400px] font-mono text-[13px]">
+								<Table.Cell className="group/cell max-w-100 font-mono text-[13px]">
 									{isEditing && editData ? (
 										<div className="flex flex-col gap-2">
 											<label
@@ -203,7 +203,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 											</label>
 											<textarea
 												id={`edit-value-${entry.key.name}`}
-												className="[field-sizing:content] max-h-[200px] min-h-8 w-full resize-none overflow-y-auto rounded border border-primary bg-bg px-2 py-1.5 font-mono text-[13px] text-text focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary"
+												className="field-sizing-content max-h-50 min-h-8 w-full resize-none overflow-y-auto rounded border border-kumo-brand bg-kumo-base px-2 py-1.5 font-mono text-[13px] text-kumo-default focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:bg-kumo-elevated disabled:text-kumo-subtle"
 												value={editData.value}
 												onChange={(e) =>
 													setEditData({ ...editData, value: e.target.value })
@@ -235,7 +235,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										<div className="flex min-w-0 items-center gap-1.5">
 											<span
 												className={cn("min-w-0 truncate", {
-													"text-text-secondary": !entry.value,
+													"text-kumo-subtle": !entry.value,
 												})}
 											>
 												{formatValue(entry.value)}

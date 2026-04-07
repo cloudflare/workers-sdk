@@ -2,7 +2,7 @@
 	"openapi": "3.0.3",
 	"info": {
 		"title": "Local Explorer API",
-		"description": "Local subset of Cloudflare API for exploring resources during local development.",
+		"description": "A local subset of the Cloudflare API for inspecting and modifying resource state during local development. Supports D1, R2, KV, Durable Objects and Workflows.",
 		"version": "0.0.1"
 	},
 	"servers": [
@@ -1241,7 +1241,6 @@
 			"get": {
 				"description": "List all workers in the local dev registry.",
 				"operationId": "local-explorer-list-workers",
-				"parameters": [],
 				"responses": {
 					"200": {
 						"content": {
@@ -3010,6 +3009,34 @@
 					}
 				}
 			},
+			"workflows_workflow-name": {
+				"description": "The name of the workflow.",
+				"example": "my-workflow",
+				"type": "string"
+			},
+			"workflows_instance-id": {
+				"description": "The unique identifier of a workflow instance.",
+				"example": "my-instance-id",
+				"type": "string"
+			},
+			"workflows_workflow": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"description": "The name of the workflow."
+					},
+					"class_name": {
+						"type": "string",
+						"description": "The entrypoint class name of the workflow."
+					},
+					"script_name": {
+						"type": "string",
+						"description": "The script name containing the workflow."
+					}
+				},
+				"required": ["name"]
+			},
 			"workflows_workflow-details": {
 				"type": "object",
 				"properties": {
@@ -3057,34 +3084,6 @@
 					}
 				},
 				"required": ["name", "class_name", "script_name", "instances"]
-			},
-			"workflows_workflow-name": {
-				"description": "The name of the workflow.",
-				"example": "my-workflow",
-				"type": "string"
-			},
-			"workflows_instance-id": {
-				"description": "The unique identifier of a workflow instance.",
-				"example": "my-instance-id",
-				"type": "string"
-			},
-			"workflows_workflow": {
-				"type": "object",
-				"properties": {
-					"name": {
-						"type": "string",
-						"description": "The name of the workflow."
-					},
-					"class_name": {
-						"type": "string",
-						"description": "The entrypoint class name of the workflow."
-					},
-					"script_name": {
-						"type": "string",
-						"description": "The script name containing the workflow."
-					}
-				},
-				"required": ["name"]
 			},
 			"workflows_instance": {
 				"type": "object",

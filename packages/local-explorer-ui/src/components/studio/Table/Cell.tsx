@@ -49,33 +49,30 @@ export function StudioTableCell<HeaderMetadata = unknown>({
 
 	if (isSelected) {
 		if (isRemoved) {
-			cellBackgroundColor = "bg-red-200 dark:bg-red-800";
+			cellBackgroundColor = "bg-kumo-danger/20";
 		} else if (isChanged) {
-			cellBackgroundColor = "bg-yellow-200 dark:bg-yellow-600";
+			cellBackgroundColor = "bg-kumo-warning/20";
 		} else if (isNew) {
-			cellBackgroundColor = "bg-green-200 dark:bg-green-700";
+			cellBackgroundColor = "bg-kumo-success/20";
 		} else {
 			cellBackgroundColor = "";
 		}
 	} else if (isChanged) {
-		cellBackgroundColor = "bg-[#ffe693] dark:bg-[#916b20]";
+		cellBackgroundColor = "bg-kumo-warning/30";
 	} else if (isNew) {
-		cellBackgroundColor = "bg-green-100 dark:bg-green-900";
+		cellBackgroundColor = "bg-kumo-success/10";
 	} else if (isRemoved) {
-		cellBackgroundColor = "bg-red-100 dark:bg-red-900";
+		cellBackgroundColor = "bg-kumo-danger/10";
 	}
 
 	return (
 		<td
 			className={cn(
-				"box-border overflow-hidden border-r border-b border-border hover:bg-accent",
-				isSelected && "border-neutral-900 dark:border-neutral-100",
-				isBorderBottom &&
-					"border-b border-b-neutral-900 dark:border-b-neutral-100",
-				isBorderRight &&
-					"border-r border-r-neutral-900 dark:border-r-neutral-100",
-				isFocus &&
-					"shadow-[0_0_0_1px_rgba(0,0,0,0.5)_inset] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.5)_inset]",
+				"box-border overflow-hidden border-r border-b border-kumo-fill hover:bg-kumo-overlay",
+				isSelected && "border-kumo-default",
+				isBorderBottom && "border-b-kumo-default border-b",
+				isBorderRight && "border-r-kumo-default border-r",
+				isFocus && "shadow-[inset_0_0_0_1px_var(--color-kumo-default)]",
 				isSticky && "sticky",
 				cellBackgroundColor
 			)}
