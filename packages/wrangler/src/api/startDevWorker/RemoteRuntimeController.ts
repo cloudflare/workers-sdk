@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { MissingConfigError, UserError } from "@cloudflare/workers-utils";
+import { MissingConfigError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex } from "miniflare";
 import { WebSocket } from "ws";
