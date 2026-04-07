@@ -267,7 +267,7 @@ export function AppSidebar({
 				)}
 
 				{sidebar.open ? (
-					<Sidebar.MenuItem>
+					<Sidebar.MenuItem className="space-y-1">
 						{sidebarItemGroups.map((group) => (
 							<Sidebar.Collapsible
 								key={group.groupId}
@@ -308,7 +308,7 @@ export function AppSidebar({
 						))}
 					</Sidebar.MenuItem>
 				) : (
-					<Sidebar.MenuItem>
+					<Sidebar.MenuItem className="space-y-1">
 						{sidebarItemGroups.map((group) => (
 							<SidebarGroupPopup
 								emptyLabel={group.emptyLabel}
