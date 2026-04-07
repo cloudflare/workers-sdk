@@ -36,12 +36,11 @@ runs:
       if: inputs.turbo-api
       shell: bash
       run: |
-        touch .env
-        echo TURBO_API=${{ inputs.turbo-api }} >> .env
-        echo TURBO_TEAM=${{ inputs.turbo-team }} >> .env
-        echo TURBO_TOKEN=${{ inputs.turbo-token }} >> .env
-        echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ inputs.turbo-signature }} >> .env
-        echo TURBO_ENV_MODE=loose >> .env
+        echo "TURBO_API=${{ inputs.turbo-api }}" >> $GITHUB_ENV
+        echo "TURBO_TEAM=${{ inputs.turbo-team }}" >> $GITHUB_ENV
+        echo "TURBO_TOKEN=${{ inputs.turbo-token }}" >> $GITHUB_ENV
+        echo "TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ inputs.turbo-signature }}" >> $GITHUB_ENV
+        echo "TURBO_ENV_MODE=loose" >> $GITHUB_ENV
 
     - name: Install NPM Dependencies
       shell: bash

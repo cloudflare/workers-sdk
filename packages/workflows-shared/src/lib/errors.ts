@@ -21,6 +21,22 @@ export class WorkflowError extends Error {
 	name = "WorkflowError";
 }
 
+export class InvalidStepReadableStreamError extends Error {
+	name = "InvalidStepReadableStreamError";
+}
+
+export class OversizedStreamChunkError extends Error {
+	name = "OversizedStreamChunkError";
+}
+
+export class UnsupportedStreamChunkError extends Error {
+	name = "UnsupportedStreamChunkError";
+}
+
+export class StreamOutputStorageLimitError extends Error {
+	name = "StreamOutputStorageLimitError";
+}
+
 export function createWorkflowError(
 	message: string,
 	errorCode: string
@@ -36,6 +52,7 @@ export const ABORT_REASONS = {
 	USER_TERMINATE: `${ABORT_PREFIX} User called terminate`,
 	NON_RETRYABLE_ERROR: `${ABORT_PREFIX} A step threw a NonRetryableError`,
 	NOT_SERIALISABLE: `${ABORT_PREFIX} Value is not serialisable`,
+	STORAGE_LIMIT_EXCEEDED: `${ABORT_PREFIX} Storage limit exceeded`,
 	GRACE_PERIOD_COMPLETE: `${ABORT_PREFIX} Grace period complete`,
 } as const;
 
