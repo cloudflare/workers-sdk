@@ -228,7 +228,7 @@ export function AppSidebar({
 									</div>
 								) : (
 									group.items.map((item) => (
-										<Sidebar.MenuSub key={item.id}>
+										<Sidebar.MenuSub className="ml-5.5" key={item.id}>
 											<Sidebar.MenuSubButton
 												className="cursor-pointer"
 												href={item.href}
