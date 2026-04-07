@@ -8,10 +8,6 @@ import {
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import {
-	zDurableObjectsNamespaceListObjectsData,
-	zDurableObjectsNamespaceQuerySqliteData,
-} from "../generated/zod.gen";
 import type {
 	GetDONameMethod,
 	IntrospectSqliteMethod,
@@ -19,6 +15,10 @@ import type {
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type { WorkersNamespace } from "../generated";
+import type {
+	zDurableObjectsNamespaceListObjectsData,
+	zDurableObjectsNamespaceQuerySqliteData,
+} from "../generated/zod.gen";
 import type { z } from "zod";
 
 // ============================================================================

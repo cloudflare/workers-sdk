@@ -140,7 +140,7 @@ function NamespaceView() {
 				icon={DOIcon}
 				items={[
 					<span className="flex items-center gap-1.5" key="class-name">
-					{params.className}
+						{params.className}
 					</span>,
 				]}
 				title="Durable Objects"
@@ -160,7 +160,7 @@ function NamespaceView() {
 						</Label>
 						<input
 							id="open-instance"
-							className="mt-1.5 h-9 w-full rounded-lg border border-border bg-bg px-3 font-mono text-sm text-text ring-1 ring-border focus:ring-primary focus:outline-none"
+							className="border-border bg-bg text-text ring-border focus:ring-primary mt-1.5 h-9 w-full rounded-lg border px-3 font-mono text-sm ring-1 focus:outline-none"
 							placeholder="Enter instance name or hex ID..."
 							value={openInstanceInput}
 							onChange={(e) => setOpenInstanceInput(e.target.value)}
@@ -209,7 +209,7 @@ function NamespaceView() {
 											<Table.Cell className="font-mono text-xs">
 												{obj.name ?? "—"}
 											</Table.Cell>
-											<Table.Cell className="font-mono text-xs text-text-secondary">
+											<Table.Cell className="text-text-secondary font-mono text-xs">
 												{obj.id}
 											</Table.Cell>
 											<Table.Cell className="text-right">
