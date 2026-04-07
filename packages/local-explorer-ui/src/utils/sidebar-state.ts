@@ -1,4 +1,5 @@
-const STORAGE_KEY = "local-explorer.sidebar.groups.v1";
+const GROUPS_STORAGE_KEY = "local-explorer.sidebar.groups.v1";
+const OPEN_STORAGE_KEY = "local-explorer.sidebar.open.v1";
 
 export const SIDEBAR_GROUP_IDS = ["d1", "do", "kv", "r2", "workflows"] as const;
 
@@ -26,7 +27,7 @@ export const DEFAULT_GROUP_STATE: SidebarGroupState = {
  */
 export function loadGroupState(): SidebarGroupState {
 	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
+		const raw = localStorage.getItem(GROUPS_STORAGE_KEY);
 		if (raw === null) {
 			return DEFAULT_GROUP_STATE;
 		}
@@ -63,7 +64,48 @@ export function loadGroupState(): SidebarGroupState {
  */
 export function saveGroupState(state: SidebarGroupState): void {
 	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+		localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(state));
+	} catch {
+		// Silently ignore storage errors
+	}
+}
+
+export const DEFAULT_SIDEBAR_OPEN = true;
+
+/**
+ * Read persisted sidebar open/collapsed state from `localStorage`.
+ *
+ * Returns `true` (expanded) when:
+ * - `localStorage` is unavailable (e.g. SSR, security restrictions)
+ * - the stored value is missing, not valid JSON, or not a boolean
+ */
+export function loadSidebarOpenState(): boolean {
+	try {
+		const raw = localStorage.getItem(OPEN_STORAGE_KEY);
+		if (raw === null) {
+			return DEFAULT_SIDEBAR_OPEN;
+		}
+
+		const parsed: unknown = JSON.parse(raw);
+		if (typeof parsed !== "boolean") {
+			return DEFAULT_SIDEBAR_OPEN;
+		}
+
+		return parsed;
+	} catch {
+		return DEFAULT_SIDEBAR_OPEN;
+	}
+}
+
+/**
+ * Persist sidebar open/collapsed state to `localStorage`.
+ *
+ * Silently swallows errors (e.g. quota exceeded, security restrictions)
+ * so the UI never breaks due to storage failures.
+ */
+export function saveSidebarOpenState(open: boolean): void {
+	try {
+		localStorage.setItem(OPEN_STORAGE_KEY, JSON.stringify(open));
 	} catch {
 		// Silently ignore storage errors
 	}

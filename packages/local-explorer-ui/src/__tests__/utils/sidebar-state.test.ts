@@ -1,13 +1,17 @@
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import {
 	DEFAULT_GROUP_STATE,
+	DEFAULT_SIDEBAR_OPEN,
 	loadGroupState,
+	loadSidebarOpenState,
 	saveGroupState,
+	saveSidebarOpenState,
 	SIDEBAR_GROUP_IDS,
 } from "../../utils/sidebar-state";
 import type { SidebarGroupState } from "../../utils/sidebar-state";
 
-const STORAGE_KEY = "local-explorer.sidebar.groups.v1";
+const GROUPS_STORAGE_KEY = "local-explorer.sidebar.groups.v1";
+const OPEN_STORAGE_KEY = "local-explorer.sidebar.open.v1";
 
 /**
  * Minimal localStorage stub scoped to each test.
@@ -66,32 +70,32 @@ describe("sidebar-state", () => {
 		test("returns defaults when stored value is not valid JSON", ({
 			expect,
 		}) => {
-			storageStub.setItem(STORAGE_KEY, "not-json{{{");
+			storageStub.setItem(GROUPS_STORAGE_KEY, "not-json{{{");
 			expect(loadGroupState()).toEqual(DEFAULT_GROUP_STATE);
 		});
 
 		test("returns defaults when stored value is null JSON", ({ expect }) => {
-			storageStub.setItem(STORAGE_KEY, "null");
+			storageStub.setItem(GROUPS_STORAGE_KEY, "null");
 			expect(loadGroupState()).toEqual(DEFAULT_GROUP_STATE);
 		});
 
 		test("returns defaults when stored value is an array", ({ expect }) => {
-			storageStub.setItem(STORAGE_KEY, "[1,2,3]");
+			storageStub.setItem(GROUPS_STORAGE_KEY, "[1,2,3]");
 			expect(loadGroupState()).toEqual(DEFAULT_GROUP_STATE);
 		});
 
 		test("returns defaults when stored value is a string", ({ expect }) => {
-			storageStub.setItem(STORAGE_KEY, '"hello"');
+			storageStub.setItem(GROUPS_STORAGE_KEY, '"hello"');
 			expect(loadGroupState()).toEqual(DEFAULT_GROUP_STATE);
 		});
 
 		test("returns defaults when stored value is a number", ({ expect }) => {
-			storageStub.setItem(STORAGE_KEY, "42");
+			storageStub.setItem(GROUPS_STORAGE_KEY, "42");
 			expect(loadGroupState()).toEqual(DEFAULT_GROUP_STATE);
 		});
 
 		test("merges partial stored state onto defaults", ({ expect }) => {
-			storageStub.setItem(STORAGE_KEY, JSON.stringify({ d1: false }));
+			storageStub.setItem(GROUPS_STORAGE_KEY, JSON.stringify({ d1: false }));
 			const state = loadGroupState();
 			expect(state.d1).toBe(false);
 			expect(state.do).toBe(true);
@@ -108,13 +112,13 @@ describe("sidebar-state", () => {
 				r2: false,
 				workflows: true,
 			};
-			storageStub.setItem(STORAGE_KEY, JSON.stringify(stored));
+			storageStub.setItem(GROUPS_STORAGE_KEY, JSON.stringify(stored));
 			expect(loadGroupState()).toEqual(stored);
 		});
 
 		test("ignores non-boolean values in stored object", ({ expect }) => {
 			storageStub.setItem(
-				STORAGE_KEY,
+				GROUPS_STORAGE_KEY,
 				JSON.stringify({ d1: "yes", do: 42, kv: null, r2: false })
 			);
 			const state = loadGroupState();
@@ -129,7 +133,7 @@ describe("sidebar-state", () => {
 
 		test("ignores unknown keys in stored object", ({ expect }) => {
 			storageStub.setItem(
-				STORAGE_KEY,
+				GROUPS_STORAGE_KEY,
 				JSON.stringify({ d1: false, unknownGroup: false })
 			);
 			const state = loadGroupState();
@@ -155,7 +159,7 @@ describe("sidebar-state", () => {
 				workflows: false,
 			};
 			saveGroupState(state);
-			const raw = storageStub.getItem(STORAGE_KEY);
+			const raw = storageStub.getItem(GROUPS_STORAGE_KEY);
 			expect(raw).not.toBeNull();
 			expect(JSON.parse(raw as string)).toEqual(state);
 		});
@@ -189,6 +193,120 @@ describe("sidebar-state", () => {
 			const state = loadGroupState();
 			expect(state.d1).toBe(true); // overwritten by second save
 			expect(state.kv).toBe(false);
+		});
+	});
+
+	describe("DEFAULT_SIDEBAR_OPEN", () => {
+		test("defaults to true (expanded)", ({ expect }) => {
+			expect(DEFAULT_SIDEBAR_OPEN).toBe(true);
+		});
+	});
+
+	describe("loadSidebarOpenState", () => {
+		test("returns default when nothing is stored", ({ expect }) => {
+			expect(loadSidebarOpenState()).toBe(DEFAULT_SIDEBAR_OPEN);
+		});
+
+		test("returns default when stored value is not valid JSON", ({
+			expect,
+		}) => {
+			storageStub.setItem(OPEN_STORAGE_KEY, "not-json{{{");
+			expect(loadSidebarOpenState()).toBe(DEFAULT_SIDEBAR_OPEN);
+		});
+
+		test("returns default when stored value is null JSON", ({ expect }) => {
+			storageStub.setItem(OPEN_STORAGE_KEY, "null");
+			expect(loadSidebarOpenState()).toBe(DEFAULT_SIDEBAR_OPEN);
+		});
+
+		test("returns default when stored value is a string", ({ expect }) => {
+			storageStub.setItem(OPEN_STORAGE_KEY, '"hello"');
+			expect(loadSidebarOpenState()).toBe(DEFAULT_SIDEBAR_OPEN);
+		});
+
+		test("returns default when stored value is a number", ({ expect }) => {
+			storageStub.setItem(OPEN_STORAGE_KEY, "42");
+			expect(loadSidebarOpenState()).toBe(DEFAULT_SIDEBAR_OPEN);
+		});
+
+		test("returns default when stored value is an object", ({ expect }) => {
+			storageStub.setItem(OPEN_STORAGE_KEY, '{"open":true}');
+			expect(loadSidebarOpenState()).toBe(DEFAULT_SIDEBAR_OPEN);
+		});
+
+		test("returns default when stored value is an array", ({ expect }) => {
+			storageStub.setItem(OPEN_STORAGE_KEY, "[true]");
+			expect(loadSidebarOpenState()).toBe(DEFAULT_SIDEBAR_OPEN);
+		});
+
+		test("returns true when stored value is true", ({ expect }) => {
+			storageStub.setItem(OPEN_STORAGE_KEY, "true");
+			expect(loadSidebarOpenState()).toBe(true);
+		});
+
+		test("returns false when stored value is false", ({ expect }) => {
+			storageStub.setItem(OPEN_STORAGE_KEY, "false");
+			expect(loadSidebarOpenState()).toBe(false);
+		});
+
+		test("returns default when localStorage.getItem throws", ({ expect }) => {
+			vi.spyOn(storageStub, "getItem").mockImplementation(() => {
+				throw new Error("SecurityError");
+			});
+			expect(loadSidebarOpenState()).toBe(DEFAULT_SIDEBAR_OPEN);
+		});
+	});
+
+	describe("saveSidebarOpenState", () => {
+		test("persists true to `localStorage`", ({ expect }) => {
+			saveSidebarOpenState(true);
+			const raw = storageStub.getItem(OPEN_STORAGE_KEY);
+			expect(raw).toBe("true");
+		});
+
+		test("persists false to `localStorage`", ({ expect }) => {
+			saveSidebarOpenState(false);
+			const raw = storageStub.getItem(OPEN_STORAGE_KEY);
+			expect(raw).toBe("false");
+		});
+
+		test("does not throw when localStorage.setItem throws", ({ expect }) => {
+			vi.spyOn(storageStub, "setItem").mockImplementation(() => {
+				throw new Error("QuotaExceededError");
+			});
+			expect(() => saveSidebarOpenState(true)).not.toThrow();
+		});
+	});
+
+	describe("sidebar open round-trip", () => {
+		test("`loadSidebarOpenState` returns what `saveSidebarOpenState` persisted", ({
+			expect,
+		}) => {
+			saveSidebarOpenState(false);
+			expect(loadSidebarOpenState()).toBe(false);
+
+			saveSidebarOpenState(true);
+			expect(loadSidebarOpenState()).toBe(true);
+		});
+
+		test("multiple saves overwrite previous state", ({ expect }) => {
+			saveSidebarOpenState(false);
+			saveSidebarOpenState(true);
+			expect(loadSidebarOpenState()).toBe(true);
+		});
+	});
+
+	describe("storage key isolation", () => {
+		test("sidebar open state and group state use separate keys", ({
+			expect,
+		}) => {
+			saveSidebarOpenState(false);
+			saveGroupState({ ...DEFAULT_GROUP_STATE, d1: false });
+
+			// Each should be independently readable
+			expect(loadSidebarOpenState()).toBe(false);
+			expect(loadGroupState().d1).toBe(false);
+			expect(loadGroupState().kv).toBe(true);
 		});
 	});
 });

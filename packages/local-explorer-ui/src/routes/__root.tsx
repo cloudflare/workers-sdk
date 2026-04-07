@@ -17,6 +17,10 @@ import {
 import { AppSidebar } from "../components/Sidebar";
 import { filterVisibleWorkers } from "../components/WorkerSelector";
 import {
+	loadSidebarOpenState,
+	saveSidebarOpenState,
+} from "../utils/sidebar-state";
+import {
 	applyThemeMode,
 	getNextThemeMode,
 	loadThemeMode,
@@ -134,7 +138,13 @@ function RootLayout() {
 	);
 	const router = useRouter();
 
+	const [sidebarOpen, setSidebarOpen] = useState<boolean>(loadSidebarOpenState);
 	const [themeMode, setThemeMode] = useState<ThemeMode>(loadThemeMode);
+
+	const handleSidebarOpenChange = useCallback((open: boolean) => {
+		setSidebarOpen(open);
+		saveSidebarOpenState(open);
+	}, []);
 
 	const handleCycleTheme = useCallback(() => {
 		const next = getNextThemeMode(themeMode);
@@ -230,7 +240,11 @@ function RootLayout() {
 	return (
 		<Toasty>
 			<div className="flex min-h-screen">
-				<Sidebar.Provider defaultOpen resizable>
+				<Sidebar.Provider
+					onOpenChange={handleSidebarOpenChange}
+					open={sidebarOpen}
+					resizable={true}
+				>
 					<AppSidebar
 						currentPath={currentPath}
 						d1Error={loaderData.d1Error}
