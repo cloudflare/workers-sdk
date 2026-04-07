@@ -2279,9 +2279,9 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-			expect(diagnostics.renderWarnings()).toContain("extra_field");
+				expect(diagnostics.renderWarnings()).toContain("extra_field");
+			});
 		});
-	});
 
 		describe("[agent_memory]", () => {
 			it("should error if agent_memory is an object", ({ expect }) => {

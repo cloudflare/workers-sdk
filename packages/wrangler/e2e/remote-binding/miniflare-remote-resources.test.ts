@@ -493,7 +493,7 @@ const testCases: TestCase[] = [
 				remoteProxySessionConfig: {
 					bindings: {
 						MEMORY: {
-							type: "agent_memory",
+							type: "agent_memory_namespace",
 							namespace,
 						},
 					},
