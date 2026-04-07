@@ -15,6 +15,7 @@ import R2Icon from "../assets/icons/r2.svg?react";
 import WorkflowsIcon from "../assets/icons/workflows.svg?react";
 import { loadGroupState, saveGroupState } from "../utils/sidebar-state";
 import { getNextThemeMode } from "../utils/theme-state";
+import { SidebarGroupPopup } from "./SidebarGroupPopup";
 import { WorkerSelector, type LocalExplorerWorker } from "./WorkerSelector";
 import type {
 	D1DatabaseResponse,
@@ -265,46 +266,61 @@ export function AppSidebar({
 					/>
 				)}
 
-				<Sidebar.MenuItem>
-					{sidebarItemGroups.map((group) => (
-						<Sidebar.Collapsible
-							key={group.groupId}
-							open={groupOpen[group.groupId]}
-							onOpenChange={(open) => {
-								handleGroupOpenChange(group.groupId, open);
-							}}
-						>
-							<Sidebar.CollapsibleTrigger
-								render={
-									<Sidebar.MenuButton
-										icon={<group.icon width={20} height={20} />}
-									>
-										{group.title} <Sidebar.MenuChevron />
-									</Sidebar.MenuButton>
-								}
-							/>
+				{sidebar.open ? (
+					<Sidebar.MenuItem>
+						{sidebarItemGroups.map((group) => (
+							<Sidebar.Collapsible
+								key={group.groupId}
+								open={groupOpen[group.groupId]}
+								onOpenChange={(open) => {
+									handleGroupOpenChange(group.groupId, open);
+								}}
+							>
+								<Sidebar.CollapsibleTrigger
+									render={
+										<Sidebar.MenuButton
+											icon={<group.icon width={20} height={20} />}
+										>
+											{group.title} <Sidebar.MenuChevron />
+										</Sidebar.MenuButton>
+									}
+								/>
 
-							<Sidebar.CollapsibleContent>
-								{!group.error && group.items.length === 0 ? (
-									<div className="text-text-secondary px-2 py-1.5 text-sm italic">
-										{group.emptyLabel}
-									</div>
-								) : (
-									group.items.map((item) => (
-										<Sidebar.MenuSub className="ml-5.5" key={item.id}>
-											<Sidebar.MenuSubButton
-												className="cursor-pointer"
-												href={item.href}
-											>
-												{item.label}
-											</Sidebar.MenuSubButton>
-										</Sidebar.MenuSub>
-									))
-								)}
-							</Sidebar.CollapsibleContent>
-						</Sidebar.Collapsible>
-					))}
-				</Sidebar.MenuItem>
+								<Sidebar.CollapsibleContent>
+									{!group.error && group.items.length === 0 ? (
+										<div className="text-text-secondary px-2 py-1.5 text-sm italic">
+											{group.emptyLabel}
+										</div>
+									) : (
+										group.items.map((item) => (
+											<Sidebar.MenuSub className="ml-5.5" key={item.id}>
+												<Sidebar.MenuSubButton
+													className="cursor-pointer"
+													href={item.href}
+												>
+													{item.label}
+												</Sidebar.MenuSubButton>
+											</Sidebar.MenuSub>
+										))
+									)}
+								</Sidebar.CollapsibleContent>
+							</Sidebar.Collapsible>
+						))}
+					</Sidebar.MenuItem>
+				) : (
+					<Sidebar.MenuItem>
+						{sidebarItemGroups.map((group) => (
+							<SidebarGroupPopup
+								emptyLabel={group.emptyLabel}
+								error={group.error}
+								icon={<group.icon width={20} height={20} />}
+								items={group.items}
+								key={group.groupId}
+								title={group.title}
+							/>
+						))}
+					</Sidebar.MenuItem>
+				)}
 			</Sidebar.Content>
 
 			<Sidebar.Footer className="gap-1">
