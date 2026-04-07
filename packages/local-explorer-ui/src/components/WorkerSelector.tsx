@@ -116,7 +116,7 @@ export function WorkerSelector({
 												{worker.name}
 												{worker.isSelf && selfWorker && (
 													<span className="rounded bg-kumo-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-kumo-link">
-														current
+														Host
 													</span>
 												)}
 											</span>
