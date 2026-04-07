@@ -42,6 +42,7 @@ import {
 	createWorkflowInstance,
 	deleteWorkflow,
 	deleteWorkflowInstance,
+	getWorkflowDag,
 	getWorkflowDetails,
 	getWorkflowInstanceDetails,
 	listWorkflowInstances,
@@ -290,6 +291,10 @@ app.get("/api/workflows/:workflow_name", (c) =>
 
 app.delete("/api/workflows/:workflow_name", (c) =>
 	deleteWorkflow(c, c.req.param("workflow_name"))
+);
+
+app.get("/api/workflows/:workflow_name/graph", (c) =>
+	getWorkflowDag(c, c.req.param("workflow_name"))
 );
 
 app.get(

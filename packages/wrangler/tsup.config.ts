@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { defineConfig } from "tsup";
@@ -5,6 +6,11 @@ import { EXTERNAL_DEPENDENCIES } from "./scripts/deps";
 import type { Options } from "tsup";
 
 const TEMPLATES_DIR = path.join(__dirname, "templates");
+const VENDOR_DAG_PARSER_DIR = path.join(
+	__dirname,
+	"vendor",
+	"workflow-dag-parser"
+);
 const workersContexts = new Map<string, esbuild.BuildContext>();
 function embedWorkersPlugin({
 	isWatch,
@@ -109,6 +115,30 @@ export default defineConfig((options) => [
 					}
 				: {}),
 		},
-		esbuildPlugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
+		esbuildPlugins: [
+			embedWorkersPlugin({ isWatch: !!options.watch }),
+			{
+				name: "vendor-wasm-dag-parser",
+				setup(build) {
+					// Copy the .wasm file to the output directory on build end
+					build.onEnd(() => {
+						const outDir = build.initialOptions.outdir ?? "wrangler-dist";
+						const src = path.join(
+							VENDOR_DAG_PARSER_DIR,
+							"visualizer_controller_bg.wasm"
+						);
+						if (!fs.existsSync(src)) {
+							process.stderr.write(
+								`[vendor-wasm-dag-parser] WASM file not found at ${src}, skipping copy. ` +
+									`Workflow DAG visualization will not be available.\n`
+							);
+							return;
+						}
+						const dst = path.join(outDir, "visualizer_controller_bg.wasm");
+						fs.copyFileSync(src, dst);
+					});
+				},
+			},
+		],
 	},
 ]);

@@ -1,5 +1,6 @@
 import {
 	Button,
+	cn,
 	Dialog,
 	DropdownMenu,
 	Pagination,
@@ -9,6 +10,8 @@ import {
 	ArrowClockwiseIcon,
 	ArrowsCounterClockwiseIcon,
 	CaretDownIcon,
+	CaretLeftIcon,
+	CaretRightIcon,
 	CaretUpDownIcon,
 	CheckCircleIcon,
 	CircleNotchIcon,
@@ -27,16 +30,24 @@ import {
 	workflowsChangeInstanceStatus,
 	workflowsDeleteInstance,
 	workflowsDeleteWorkflow,
+	workflowsGetDag,
 	workflowsListInstances,
 	workflowsSendInstanceEvent,
 } from "../../../api";
 import WorkflowsIcon from "../../../assets/icons/workflows.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { CreateWorkflowInstanceDialog } from "../../../components/workflows/CreateInstanceDialog";
+import {
+	BackgroundDots,
+	CopyDiagramButton,
+	DAGWrapper,
+	WorkflowDiagram,
+} from "../../../components/workflows/diagram";
 import { timeAgo } from "../../../components/workflows/helpers";
 import { WorkflowStatusBadge } from "../../../components/workflows/StatusBadge";
 import { getAvailableActions } from "../../../components/workflows/types";
 import type { WorkflowsInstance } from "../../../api";
+import type { WorkflowEntrypoint } from "../../../components/workflows/diagram";
 import type { Action } from "../../../components/workflows/types";
 
 export const Route = createFileRoute("/workflows/$workflowName/")({
@@ -122,11 +133,11 @@ const StatusSummary = memo(function StatusSummary({
 	statusCounts: Record<string, number>;
 }): JSX.Element {
 	return (
-		<div className="mb-4 flex divide-x divide-kumo-fill overflow-hidden rounded-lg border border-kumo-fill bg-kumo-elevated">
+		<div className="scrollbar-none mb-4 flex divide-x divide-kumo-fill overflow-x-auto rounded-lg border border-kumo-fill bg-kumo-base">
 			{STATUS_SUMMARY_CONFIG.map(
 				({ key, label, icon: Icon, color, weight }) => (
-					<div className="flex-1 px-3 py-2" key={key}>
-						<div className="flex items-center gap-1.5 text-xs text-kumo-subtle">
+					<div className="min-w-24 flex-1 px-3 py-2" key={key}>
+						<div className="flex items-center gap-1.5 text-xs whitespace-nowrap text-kumo-subtle">
 							<Icon className={color} size={12} weight={weight} />
 							{label}
 						</div>
@@ -150,17 +161,17 @@ const ACTION_CONFIG_LIST: Record<
 > = {
 	pause: {
 		icon: PauseIcon,
-		style: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill",
+		style: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-tint",
 		weight: "fill",
 	},
 	resume: {
 		icon: PlayIcon,
-		style: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill",
+		style: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-tint",
 		weight: "fill",
 	},
 	restart: {
 		icon: ArrowClockwiseIcon,
-		style: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill",
+		style: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-tint",
 		weight: "regular",
 	},
 	terminate: {
@@ -293,7 +304,7 @@ const InstanceRow = memo(function InstanceRow({
 
 	return (
 		<>
-			<div className="border-b border-kumo-fill bg-kumo-elevated p-1 last:border-b-0">
+			<div className="border-b border-kumo-fill bg-kumo-base p-1 last:border-b-0">
 				<div
 					className="grid h-10 cursor-pointer grid-cols-[100px_60px_1fr_auto] items-center gap-3 rounded-lg px-2 transition-colors hover:bg-kumo-fill"
 					onClick={handleRowClick}
@@ -333,7 +344,7 @@ const InstanceRow = memo(function InstanceRow({
 							status !== "errored" &&
 							status !== "terminated" && (
 								<button
-									className="ml-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-kumo-default transition-colors hover:bg-kumo-fill disabled:cursor-not-allowed disabled:opacity-40"
+									className="ml-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-kumo-default transition-colors hover:bg-kumo-tint disabled:cursor-not-allowed disabled:opacity-40"
 									disabled={actionInProgress !== null}
 									onClick={handleSendEventClick}
 									title="Send Event"
@@ -378,6 +389,7 @@ const InstanceRow = memo(function InstanceRow({
 
 					<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
 						<Button
+							className="hover:!bg-kumo-tint"
 							variant="secondary"
 							onClick={() => setDeleteDialogOpen(false)}
 						>
@@ -442,6 +454,7 @@ const InstanceRow = memo(function InstanceRow({
 
 					<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
 						<Button
+							className="hover:!bg-kumo-tint"
 							variant="secondary"
 							onClick={() => setSendEventOpen(false)}
 							disabled={sendingEvent}
@@ -550,6 +563,7 @@ function SettingsTab({
 
 					<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
 						<Button
+							className="hover:!bg-kumo-tint"
 							variant="secondary"
 							onClick={() => handleOpenChange(false)}
 							disabled={deleting}
@@ -604,6 +618,9 @@ function WorkflowInstancesView() {
 	const [totalCount, setTotalCount] = useState<number>(
 		loaderData.resultInfo.total_count ?? 0
 	);
+	const [isDiagramExpanded, setIsDiagramExpanded] = useState(false);
+	const [dagData, setDagData] = useState<WorkflowEntrypoint | null>(null);
+	const diagramContentRef = useRef<HTMLDivElement>(null);
 
 	useEffect((): void => {
 		setInstances(loaderData.instances);
@@ -616,6 +633,42 @@ function WorkflowInstancesView() {
 		setInitialLoad(false);
 		setFetching(false);
 	}, [loaderData]);
+
+	// Fetch DAG data for the diagram panel
+	const [dagFetching, setDagFetching] = useState(false);
+	const dagFetchingRef = useRef(false);
+	const fetchDag = useCallback(() => {
+		if (dagFetchingRef.current) {
+			return;
+		}
+		dagFetchingRef.current = true;
+		setDagFetching(true);
+		const minSpinDelay = new Promise((r) => setTimeout(r, 600));
+		void Promise.all([
+			workflowsGetDag({
+				path: { workflow_name: params.workflowName },
+			})
+				.then((response: { data?: { result?: unknown } }) => {
+					const payload = response.data?.result as
+						| { version?: number; workflow?: WorkflowEntrypoint }
+						| undefined;
+					if (payload?.workflow) {
+						setDagData(payload.workflow);
+					}
+				})
+				.catch(() => {
+					// DAG not available — silently ignore, panel will show empty state
+				}),
+			minSpinDelay,
+		]).finally(() => {
+			dagFetchingRef.current = false;
+			setDagFetching(false);
+		});
+	}, [params.workflowName]);
+
+	useEffect(() => {
+		fetchDag();
+	}, [fetchDag]);
 
 	const fetchInstances = useCallback(
 		async (
@@ -674,25 +727,39 @@ function WorkflowInstancesView() {
 		[params.workflowName, page, perPage, statusFilter]
 	);
 
+	const [refreshing, setRefreshing] = useState(false);
+	const refreshingRef = useRef(false);
 	const handleRefresh = useCallback(() => {
-		void fetchInstances(undefined, undefined, true);
+		if (refreshingRef.current) {
+			return;
+		}
+		refreshingRef.current = true;
+		setRefreshing(true);
+		const minSpinDelay = new Promise((r) => setTimeout(r, 600));
+		void Promise.all([
+			fetchInstances(undefined, undefined, true),
+			minSpinDelay,
+		]).finally(() => {
+			refreshingRef.current = false;
+			setRefreshing(false);
+		});
 	}, [fetchInstances]);
 
-	// Auto-poll every 10s (quiet refresh — no opacity flash)
+	// Auto-poll every 10s
 	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	useEffect(() => {
 		if (activeTab !== "instances") {
 			return;
 		}
 		pollRef.current = setInterval(() => {
-			void fetchInstances(undefined, undefined, true);
+			handleRefresh();
 		}, 10_000);
 		return () => {
 			if (pollRef.current) {
 				clearInterval(pollRef.current);
 			}
 		};
-	}, [fetchInstances, activeTab]);
+	}, [handleRefresh, activeTab]);
 
 	function handlePageChange(newPage: number): void {
 		setPage(newPage);
@@ -744,144 +811,257 @@ function WorkflowInstancesView() {
 			</div>
 
 			{activeTab === "instances" && (
-				<div className="px-8 py-6">
-					{totalCount > 0 && !initialLoad && (
-						<>
-							<StatusSummary statusCounts={statusCounts} />
-							<hr className="-mx-8 mb-4 border-kumo-fill" />
-						</>
-					)}
+				<div className="flex grow flex-col lg:flex-row">
+					{/* Left panel: instances table */}
+					<div
+						className={cn(
+							"shrink-0 space-y-4 overflow-hidden px-8 py-6 transition-[width,padding,opacity] duration-400 ease-in-out",
+							dagData ? "lg:w-[55%]" : "lg:w-full",
+							isDiagramExpanded && "lg:w-0 lg:p-0 lg:opacity-0"
+						)}
+					>
+						{totalCount > 0 && !initialLoad && (
+							<>
+								<StatusSummary statusCounts={statusCounts} />
+								<hr className="-mx-8 mb-4 border-kumo-fill" />
+							</>
+						)}
 
-					<div className="mb-4 flex items-center justify-between gap-2">
-						<DropdownMenu>
-							<DropdownMenu.Trigger
-								render={
-									<Button className="min-w-36" icon={CaretDownIcon}>
-										<span>
-											{statusFilter === "all"
-												? "All"
-												: (STATUS_SUMMARY_CONFIG.find(
-														(s) => s.key === statusFilter
-													)?.label ?? statusFilter)}
-										</span>
-									</Button>
-								}
-							/>
-							<DropdownMenu.Content
-								align="start"
-								className="w-36 bg-kumo-base"
-								side="bottom"
-							>
-								<DropdownMenu.Item
-									className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
-									onClick={() => handleStatusFilterChange("all")}
-								>
-									All
-								</DropdownMenu.Item>
-								{STATUS_SUMMARY_CONFIG.map(({ key, label, icon: Icon }) => (
-									<DropdownMenu.Item
-										className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
-										icon={<Icon />}
-										key={key}
-										onClick={() => handleStatusFilterChange(key)}
-									>
-										{label}
-									</DropdownMenu.Item>
-								))}
-							</DropdownMenu.Content>
-						</DropdownMenu>
-
-						<div className="flex items-center gap-2">
-							<Button
-								aria-label="Refresh"
-								onClick={() => void fetchInstances()}
-								shape="square"
-							>
-								<ArrowsCounterClockwiseIcon size={14} />
-							</Button>
-
-							<Button
-								onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-									(e.target as HTMLButtonElement).blur();
-									setDialogOpen(true);
-								}}
-								variant="primary"
-							>
-								<PlayIcon size={14} weight="fill" />
-								Trigger
-							</Button>
-						</div>
-					</div>
-
-					{error && (
-						<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
-							{error}
-						</div>
-					)}
-
-					{initialLoad ? (
-						<div className="p-12 text-center text-kumo-subtle">Loading...</div>
-					) : instances.length === 0 && !fetching ? (
-						<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-5 py-8 text-center text-sm text-kumo-subtle">
-							No instances found
-						</div>
-					) : instances.length === 0 ? (
-						<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-5 py-8 text-center text-sm text-kumo-subtle">
-							{statusFilter !== "all" ? (
-								<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
-							) : (
-								"No instances found"
-							)}
-						</div>
-					) : (
-						<div
-							className={`transition-opacity duration-150 ${fetching ? "opacity-60" : "opacity-100"}`}
-						>
-							<div className="overflow-hidden rounded-lg border border-kumo-fill">
-								{instances.map((instance) => (
-									<InstanceRow
-										instance={instance}
-										key={instance.id}
-										onActionComplete={handleRefresh}
+						{/* Diagram: small screens only (below stats, above filter) */}
+						{dagData && (
+							<div className="relative -mx-8 mb-4 flex max-h-[400px] flex-col border-y border-kumo-fill bg-kumo-elevated lg:hidden">
+								<div className="absolute inset-0 text-kumo-fill">
+									<BackgroundDots size={16} />
+								</div>
+								<div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+									<CopyDiagramButton
+										contentRef={diagramContentRef}
 										workflowName={params.workflowName}
 									/>
-								))}
+									<Button
+										aria-label="Refresh diagram"
+										shape="square"
+										size="sm"
+										className="bg-kumo-base shadow-xs ring ring-kumo-fill hover:!bg-kumo-tint"
+										onClick={fetchDag}
+									>
+										<ArrowsCounterClockwiseIcon
+											size={16}
+											className={dagFetching ? "animate-spin" : ""}
+										/>
+									</Button>
+								</div>
+								<DAGWrapper contentRef={diagramContentRef}>
+									<WorkflowDiagram workflow={dagData} />
+								</DAGWrapper>
+							</div>
+						)}
+
+						<div className="mb-4 flex items-center justify-between gap-2">
+							<DropdownMenu>
+								<DropdownMenu.Trigger
+									render={
+										<Button className="min-w-36 justify-between font-normal hover:!bg-kumo-tint">
+											<span>
+												{statusFilter === "all"
+													? "All"
+													: (STATUS_SUMMARY_CONFIG.find(
+															(s) => s.key === statusFilter
+														)?.label ?? statusFilter)}
+											</span>
+											<CaretDownIcon size={14} />
+										</Button>
+									}
+								/>
+								<DropdownMenu.Content
+									align="start"
+									className="w-36 bg-kumo-base"
+									side="bottom"
+								>
+									<DropdownMenu.Item
+										className="cursor-pointer rounded-md transition-colors hover:!bg-kumo-tint"
+										onClick={() => handleStatusFilterChange("all")}
+									>
+										All
+									</DropdownMenu.Item>
+									{STATUS_SUMMARY_CONFIG.map(({ key, label, icon: Icon }) => (
+										<DropdownMenu.Item
+											className="cursor-pointer rounded-md transition-colors hover:!bg-kumo-tint"
+											icon={<Icon />}
+											key={key}
+											onClick={() => handleStatusFilterChange(key)}
+										>
+											{label}
+										</DropdownMenu.Item>
+									))}
+								</DropdownMenu.Content>
+							</DropdownMenu>
+
+							<div className="flex items-center gap-2">
+								<Button
+									aria-label="Refresh"
+									className="hover:!bg-kumo-tint"
+									onClick={handleRefresh}
+									shape="square"
+								>
+									<ArrowsCounterClockwiseIcon
+										size={14}
+										className={refreshing ? "animate-spin" : ""}
+									/>
+								</Button>
+								<Button
+									className="font-normal"
+									onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+										(e.target as HTMLButtonElement).blur();
+										setDialogOpen(true);
+									}}
+									variant="primary"
+								>
+									<PlayIcon size={14} weight="fill" />
+									Trigger
+								</Button>
+							</div>
+						</div>
+
+						{error && (
+							<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
+								{error}
+							</div>
+						)}
+
+						{initialLoad ? (
+							<div className="p-12 text-center text-kumo-subtle">
+								Loading...
+							</div>
+						) : instances.length === 0 && !fetching ? (
+							<div className="rounded-lg border border-kumo-fill bg-kumo-base px-5 py-8 text-center text-sm text-kumo-subtle">
+								No instances found
+							</div>
+						) : instances.length === 0 ? (
+							<div className="rounded-lg border border-kumo-fill bg-kumo-base px-5 py-8 text-center text-sm text-kumo-subtle">
+								{statusFilter !== "all" ? (
+									<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
+								) : (
+									"No instances found"
+								)}
+							</div>
+						) : (
+							<div
+								className={`transition-opacity duration-150 ${fetching ? "opacity-60" : "opacity-100"}`}
+							>
+								<div className="overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
+									{instances.map((instance) => (
+										<InstanceRow
+											instance={instance}
+											key={instance.id}
+											onActionComplete={handleRefresh}
+											workflowName={params.workflowName}
+										/>
+									))}
+								</div>
+
+								{totalCount > 0 && (
+									<div className="flex items-center justify-between pt-4">
+										<DropdownMenu>
+											<DropdownMenu.Trigger
+												render={
+													<button className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-kumo-fill bg-kumo-base px-3 text-base text-kumo-default transition-colors hover:bg-kumo-tint">
+														{perPage}
+														<CaretUpDownIcon
+															size={12}
+															className="text-kumo-subtle"
+														/>
+													</button>
+												}
+											/>
+											<DropdownMenu.Content
+												align="start"
+												className="bg-kumo-base"
+												side="top"
+											>
+												{[10, 25, 50, 100].map((size) => (
+													<DropdownMenu.Item
+														className="cursor-pointer rounded-md transition-colors hover:!bg-kumo-tint"
+														key={size}
+														onClick={() => handlePerPageChange(size)}
+													>
+														{size}
+														{size === perPage && (
+															<span className="ml-2 text-kumo-subtle">✓</span>
+														)}
+													</DropdownMenu.Item>
+												))}
+											</DropdownMenu.Content>
+										</DropdownMenu>
+
+										<div className="pagination-styled">
+											<Pagination
+												page={page}
+												perPage={perPage}
+												setPage={handlePageChange}
+												totalCount={totalCount}
+											/>
+										</div>
+									</div>
+								)}
+							</div>
+						)}
+					</div>
+
+					{/* Right panel: diagram */}
+					{dagData && (
+						<div className="relative hidden max-h-[500px] flex-col border-b border-kumo-fill bg-kumo-elevated lg:sticky lg:top-0 lg:flex lg:max-h-[calc(100vh-80px)] lg:min-w-0 lg:flex-1 lg:border-l">
+							{/* Dotted background */}
+							<div className="absolute inset-0 text-kumo-fill">
+								<BackgroundDots size={16} />
 							</div>
 
-							{totalCount > 0 && (
-								<div className="flex items-center justify-between pt-4">
-									<DropdownMenu>
-										<DropdownMenu.Trigger
-											render={<Button icon={CaretUpDownIcon}>{perPage}</Button>}
-										/>
-										<DropdownMenu.Content
-											align="start"
-											className="bg-kumo-base"
-											side="top"
-										>
-											{[10, 25, 50, 100].map((size) => (
-												<DropdownMenu.Item
-													className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
-													key={size}
-													onClick={() => handlePerPageChange(size)}
-												>
-													{size}
-													{size === perPage && (
-														<span className="ml-2 text-kumo-subtle">✓</span>
-													)}
-												</DropdownMenu.Item>
-											))}
-										</DropdownMenu.Content>
-									</DropdownMenu>
-
-									<Pagination
-										page={page}
-										perPage={perPage}
-										setPage={handlePageChange}
-										totalCount={totalCount}
+							{/* Copy/download/refresh buttons */}
+							<div className="absolute top-6 right-6 z-10 flex items-center gap-2">
+								<CopyDiagramButton
+									contentRef={diagramContentRef}
+									workflowName={params.workflowName}
+								/>
+								<Button
+									aria-label="Refresh diagram"
+									shape="square"
+									size="sm"
+									className="bg-kumo-base shadow-xs ring ring-kumo-fill hover:!bg-kumo-tint"
+									onClick={fetchDag}
+								>
+									<ArrowsCounterClockwiseIcon
+										size={16}
+										className={dagFetching ? "animate-spin" : ""}
 									/>
-								</div>
-							)}
+								</Button>
+							</div>
+
+							{/* Expand/collapse button */}
+							<div
+								className={cn(
+									"absolute top-8 left-0 z-10 hidden transition-all duration-400 ease-in-out lg:block",
+									isDiagramExpanded ? "left-6" : "-translate-x-1/2"
+								)}
+							>
+								<Button
+									aria-label={
+										isDiagramExpanded ? "Collapse diagram" : "Expand diagram"
+									}
+									className="w-5.5 justify-center bg-kumo-base p-0 hover:!bg-kumo-tint"
+									onClick={() => setIsDiagramExpanded(!isDiagramExpanded)}
+								>
+									{isDiagramExpanded ? (
+										<CaretRightIcon size={16} />
+									) : (
+										<CaretLeftIcon size={16} />
+									)}
+								</Button>
+							</div>
+
+							{/* Diagram content */}
+							<DAGWrapper contentRef={diagramContentRef}>
+								<WorkflowDiagram workflow={dagData} />
+							</DAGWrapper>
 						</div>
 					)}
 				</div>

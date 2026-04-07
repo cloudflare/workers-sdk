@@ -102,6 +102,22 @@ export async function navigateToD1(
 }
 
 /**
+ * Navigate to the workflows list.
+ */
+export async function navigateToWorkflows(): Promise<void> {
+	await navigateTo("/cdn-cgi/explorer/workflows");
+	await waitForPageLoad();
+}
+
+/**
+ * Navigate to a specific workflow by name.
+ */
+export async function navigateToWorkflow(workflowName: string): Promise<void> {
+	await navigateTo(`/cdn-cgi/explorer/workflows/${workflowName}`);
+	await waitForPageLoad();
+}
+
+/**
  * Navigate to a Durable Object class.
  */
 export async function navigateToDOClass(className: string): Promise<void> {

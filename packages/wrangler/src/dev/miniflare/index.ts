@@ -17,11 +17,13 @@ import { logger } from "../../logger";
 import { getSourceMappedString } from "../../sourcemap";
 import { updateCheck } from "../../update-check";
 import { warnOrError } from "../../utils/print-bindings";
+import { parseWorkflowDags } from "../../workflows/dag-parser";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { AssetsOptions } from "../../assets";
 import type { LoggerLevel } from "../../logger";
 import type { LegacyAssetPaths } from "../../sites";
+import type { DagPayload } from "../../workflows/dag-types";
 import type { EsbuildBundle } from "../use-esbuild";
 import type {
 	Binding,
@@ -307,7 +309,8 @@ function workflowEntry(
 		remote,
 		limits,
 	}: CfWorkflow,
-	remoteProxyConnectionString?: RemoteProxyConnectionString
+	remoteProxyConnectionString?: RemoteProxyConnectionString,
+	dag?: DagPayload
 ): [
 	string,
 	{
@@ -316,6 +319,7 @@ function workflowEntry(
 		scriptName?: string;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 		stepLimit?: number;
+		dag?: DagPayload;
 	},
 ] {
 	const stepLimit = limits?.steps;
@@ -328,6 +332,7 @@ function workflowEntry(
 				className,
 				scriptName,
 				...(stepLimit !== undefined && { stepLimit }),
+				...(dag !== undefined && { dag }),
 			},
 		];
 	}
@@ -340,6 +345,7 @@ function workflowEntry(
 			scriptName,
 			remoteProxyConnectionString,
 			...(stepLimit !== undefined && { stepLimit }),
+			...(dag !== undefined && { dag }),
 		},
 	];
 }
@@ -762,21 +768,32 @@ export function buildMiniflareBindingOptions(
 				{ dataset: binding.dataset ?? "dataset" },
 			])
 		),
-		workflows: Object.fromEntries(
-			workflows.map((workflow) => {
-				if (
-					workflow.script_name !== undefined &&
-					workflow.script_name !== config.name &&
-					workflow.limits
-				) {
-					throw new UserError(
-						`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
-							`Configure limits on the worker that defines the workflow.`
-					);
-				}
-				return workflowEntry(workflow, remoteProxyConnectionString);
-			})
-		),
+		workflows: (() => {
+			// Parse DAGs once for all workflows (avoids re-parsing the same source per workflow)
+			const allClassNames = new Map(
+				workflows.map((w) => [w.name, w.class_name])
+			);
+			const allDags = config.bundle?.entrypointSource
+				? parseWorkflowDags(config.bundle.entrypointSource, allClassNames)
+				: new Map<string, DagPayload>();
+
+			return Object.fromEntries(
+				workflows.map((workflow) => {
+					if (
+						workflow.script_name !== undefined &&
+						workflow.script_name !== config.name &&
+						workflow.limits
+					) {
+						throw new UserError(
+							`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
+								`Configure limits on the worker that defines the workflow.`
+						);
+					}
+					const dag = allDags.get(workflow.name);
+					return workflowEntry(workflow, remoteProxyConnectionString, dag);
+				})
+			);
+		})(),
 		secretsStoreSecrets: Object.fromEntries(
 			secretsStoreSecrets.map((binding) => [binding.binding, binding])
 		),
