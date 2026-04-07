@@ -11,6 +11,7 @@
 		"@sentry/cloudflare": "^10"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
