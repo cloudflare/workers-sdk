@@ -7,11 +7,13 @@ import {
 } from "@cloudflare/kumo";
 import { MoonIcon } from "@phosphor-icons/react";
 import { useRouter } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
 import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
 import WorkflowsIcon from "../assets/icons/workflows.svg?react";
+import { loadGroupState, saveGroupState } from "../utils/sidebar-state";
 import { type LocalExplorerWorker } from "./WorkerSelector";
 import type {
 	D1DatabaseResponse,
@@ -20,6 +22,7 @@ import type {
 	WorkersNamespace,
 	WorkflowsWorkflow,
 } from "../api";
+import type { SidebarGroupId } from "../utils/sidebar-state";
 import type { FC } from "react";
 
 interface SidebarProps {
@@ -58,6 +61,19 @@ export function AppSidebar({
 	const router = useRouter();
 	const sidebar = useSidebar();
 
+	const [groupOpen, setGroupOpen] = useState(loadGroupState);
+
+	const handleGroupOpenChange = useCallback(
+		(groupId: SidebarGroupId, open: boolean) => {
+			setGroupOpen((prev) => {
+				const next = { ...prev, [groupId]: open };
+				saveGroupState(next);
+				return next;
+			});
+		},
+		[]
+	);
+
 	// const showWorkerSelector = workers.length > 1;
 
 	// Only include the worker search param when there are multiple workers.
@@ -68,6 +84,7 @@ export function AppSidebar({
 		{
 			emptyLabel: "No databases",
 			error: d1Error,
+			groupId: "d1" as const,
 			icon: D1Icon,
 			items: databases.map((db) => ({
 				href: router.buildLocation({
@@ -84,6 +101,7 @@ export function AppSidebar({
 		{
 			emptyLabel: "No SQLite namespaces",
 			error: doError,
+			groupId: "do" as const,
 			icon: DOIcon,
 			items: doNamespaces.map((ns) => {
 				const className = ns.class ?? ns.name ?? ns.id ?? "Unknown";
@@ -105,6 +123,7 @@ export function AppSidebar({
 		{
 			emptyLabel: "No namespaces",
 			error: kvError,
+			groupId: "kv" as const,
 			icon: KVIcon,
 			items: kvNamespaces.map((ns) => ({
 				href: router.buildLocation({
@@ -121,6 +140,7 @@ export function AppSidebar({
 		{
 			emptyLabel: "No buckets",
 			error: r2Error,
+			groupId: "r2" as const,
 			icon: R2Icon,
 			items: r2Buckets.map((bucket) => {
 				const bucketName = bucket.name ?? "Unknown";
@@ -142,6 +162,7 @@ export function AppSidebar({
 		{
 			emptyLabel: "No workflows",
 			error: workflowsError,
+			groupId: "workflows" as const,
 			icon: WorkflowsIcon,
 			items: workflows.map((wf) => ({
 				href: router.buildLocation({
@@ -160,6 +181,7 @@ export function AppSidebar({
 	] satisfies Array<{
 		emptyLabel: string;
 		error: string | null;
+		groupId: SidebarGroupId;
 		icon: FC<{ className?: string }>;
 		items: Array<{
 			href: string;
@@ -210,7 +232,13 @@ export function AppSidebar({
 			<Sidebar.Content>
 				<Sidebar.MenuItem>
 					{sidebarItemGroups.map((group) => (
-						<Sidebar.Collapsible key={group.title}>
+						<Sidebar.Collapsible
+							key={group.groupId}
+							open={groupOpen[group.groupId]}
+							onOpenChange={(open) => {
+								handleGroupOpenChange(group.groupId, open);
+							}}
+						>
 							<Sidebar.CollapsibleTrigger
 								render={
 									<Sidebar.MenuButton
