@@ -21,7 +21,7 @@ import { getAccessHeaders } from "../../user/access";
 import { retryOnAPIFailure } from "../../utils/retry";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { getPreviewTokenRefreshInterval, unwrapHook } from "./utils";
+import { PREVIEW_TOKEN_REFRESH_INTERVAL, unwrapHook } from "./utils";
 import type {
 	CfAccount,
 	CfPreviewSession,
@@ -336,7 +336,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			proxyData,
 		});
 
-		this.#scheduleRefresh(getPreviewTokenRefreshInterval());
+		this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_INTERVAL);
 		return true;
 	}
 
