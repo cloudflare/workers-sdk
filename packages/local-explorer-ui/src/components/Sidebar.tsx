@@ -288,7 +288,7 @@ export function AppSidebar({
 
 								<Sidebar.CollapsibleContent>
 									{!group.error && group.items.length === 0 ? (
-										<div className="text-text-secondary px-2 py-1.5 text-sm italic">
+										<div className="text-text-secondary ml-8 px-2 py-1.5 text-sm italic">
 											{group.emptyLabel}
 										</div>
 									) : (
