@@ -1,4 +1,4 @@
-import { Toasty } from "@cloudflare/kumo";
+import { Sidebar, Toasty } from "@cloudflare/kumo";
 import {
 	createRootRoute,
 	Outlet,
@@ -14,7 +14,7 @@ import {
 	workersKvNamespaceListNamespaces,
 	workflowsListWorkflows,
 } from "../api";
-import { Sidebar } from "../components/Sidebar";
+import { AppSidebar } from "../components/Sidebar";
 import { filterVisibleWorkers } from "../components/WorkerSelector";
 import type {
 	D1DatabaseResponse,
@@ -211,25 +211,27 @@ function RootLayout() {
 	return (
 		<Toasty>
 			<div className="flex min-h-screen">
-				<Sidebar
-					currentPath={currentPath}
-					d1Error={loaderData.d1Error}
-					databases={filteredData.databases}
-					doError={loaderData.doError}
-					doNamespaces={filteredData.doNamespaces}
-					kvError={loaderData.kvError}
-					kvNamespaces={filteredData.kvNamespaces}
-					r2Buckets={filteredData.r2Buckets}
-					r2Error={loaderData.r2Error}
-					workers={visibleWorkers}
-					selectedWorker={selectedWorker}
-					onWorkerChange={handleWorkerChange}
-					workflows={filteredData.workflows}
-					workflowsError={loaderData.workflowsError}
-				/>
-				<main className="flex flex-1 flex-col overflow-y-auto">
-					<Outlet />
-				</main>
+				<Sidebar.Provider defaultOpen resizable>
+					<AppSidebar
+						currentPath={currentPath}
+						d1Error={loaderData.d1Error}
+						databases={filteredData.databases}
+						doError={loaderData.doError}
+						doNamespaces={filteredData.doNamespaces}
+						kvError={loaderData.kvError}
+						kvNamespaces={filteredData.kvNamespaces}
+						r2Buckets={filteredData.r2Buckets}
+						r2Error={loaderData.r2Error}
+						workers={visibleWorkers}
+						selectedWorker={selectedWorker}
+						onWorkerChange={handleWorkerChange}
+						workflows={filteredData.workflows}
+						workflowsError={loaderData.workflowsError}
+					/>
+					<main className="flex flex-1 flex-col overflow-y-auto">
+						<Outlet />
+					</main>
+				</Sidebar.Provider>
 			</div>
 		</Toasty>
 	);
