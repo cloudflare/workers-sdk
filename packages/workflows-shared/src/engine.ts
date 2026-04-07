@@ -20,6 +20,12 @@ import {
 	GracePeriodSemaphore,
 	startGracePeriod,
 } from "./lib/gracePeriodSemaphore";
+import {
+	createReplayReadableStream,
+	getInvalidStoredStreamOutputError,
+	getStoredStreamOutputPreview,
+	StreamOutputState,
+} from "./lib/streams";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
 import {
 	isModifierKey,
@@ -28,9 +34,11 @@ import {
 } from "./modifier";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
+import type { StreamOutputMeta } from "./lib/streams";
 import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 
 interface Env {
+	ENGINE: DurableObjectNamespace<Engine>;
 	USER_WORKFLOW: WorkflowEntrypoint;
 	STEP_LIMIT?: string; // JSON-encoded number from miniflare binding
 }
@@ -130,15 +138,22 @@ export class Engine extends DurableObject<Env> {
 							CHECK (action IN (0, 1)), -- guararentee that action can only be 0 or 1
 							UNIQUE (action, entryType, hash)
 						);
-					CREATE TABLE IF NOT EXISTS states (
-						id INTEGER PRIMARY KEY NOT NULL,
-						timestamp TIMESTAMP DEFAULT (DATETIME('now','subsec')),
-						groupKey TEXT,
-						target TEXT,
-						metadata TEXT,
-						event INTEGER NOT NULL
-					)
-					`);
+				CREATE TABLE IF NOT EXISTS states (
+					id INTEGER PRIMARY KEY NOT NULL,
+					timestamp TIMESTAMP DEFAULT (DATETIME('now','subsec')),
+					groupKey TEXT,
+					target TEXT,
+					metadata TEXT,
+					event INTEGER NOT NULL
+				);
+				CREATE TABLE IF NOT EXISTS streaming_step_chunks (
+					cache_key TEXT NOT NULL,
+					attempt INTEGER NOT NULL,
+					chunk_index INTEGER NOT NULL,
+					chunk BLOB NOT NULL,
+					PRIMARY KEY (cache_key, attempt, chunk_index)
+				) WITHOUT ROWID
+				`);
 				} catch (e) {
 					console.error(e);
 					throw e;
@@ -187,11 +202,38 @@ export class Engine extends DurableObject<Env> {
 		];
 
 		return {
-			logs: logs.map((log) => ({
-				...log,
-				metadata: JSON.parse(log.metadata),
-				group: log.groupKey,
-			})),
+			logs: logs.map((log) => {
+				const metadata = JSON.parse(log.metadata);
+
+				if (
+					log.event !== InstanceEvent.STEP_SUCCESS ||
+					!metadata.streamOutput
+				) {
+					return { ...log, metadata, group: log.groupKey };
+				}
+
+				const { cacheKey, meta } = metadata.streamOutput as {
+					cacheKey: string;
+					meta: StreamOutputMeta;
+				};
+				try {
+					const preview = getStoredStreamOutputPreview({
+						storage: this.ctx.storage,
+						cacheKey,
+						meta,
+						maxChars: 1024,
+					});
+					metadata.result =
+						preview.type === "text"
+							? preview.output
+							: `[ReadableStream (binary): ${meta.totalBytes} bytes]`;
+				} catch {
+					metadata.result = `[ReadableStream: ${meta.totalBytes} bytes]`;
+				}
+				delete metadata.streamOutput;
+
+				return { ...log, metadata, group: log.groupKey };
+			}),
 		};
 	}
 
@@ -220,14 +262,49 @@ export class Engine extends DurableObject<Env> {
 			),
 		];
 
-		return rows.map((row) => ({
-			id: row.id,
-			timestamp: String(row.timestamp).replace(" ", "T") + "Z",
-			event: row.event,
-			group: row.groupKey,
-			target: row.target,
-			metadata: JSON.parse(row.metadata) as Record<string, unknown>,
-		}));
+		return rows.map((row) => {
+			const metadata = JSON.parse(row.metadata) as Record<string, unknown>;
+
+			if (row.event !== InstanceEvent.STEP_SUCCESS || !metadata.streamOutput) {
+				return {
+					id: row.id,
+					timestamp: String(row.timestamp).replace(" ", "T") + "Z",
+					event: row.event,
+					group: row.groupKey,
+					target: row.target,
+					metadata,
+				};
+			}
+
+			const { cacheKey, meta } = metadata.streamOutput as {
+				cacheKey: string;
+				meta: StreamOutputMeta;
+			};
+			try {
+				const preview = getStoredStreamOutputPreview({
+					storage: this.ctx.storage,
+					cacheKey,
+					meta,
+					maxChars: 1024,
+				});
+				metadata.result =
+					preview.type === "text"
+						? preview.output
+						: `[ReadableStream (binary): ${meta.totalBytes} bytes]`;
+			} catch {
+				metadata.result = `[ReadableStream: ${meta.totalBytes} bytes]`;
+			}
+			delete metadata.streamOutput;
+
+			return {
+				id: row.id,
+				timestamp: String(row.timestamp).replace(" ", "T") + "Z",
+				event: row.event,
+				group: row.groupKey,
+				target: row.target,
+				metadata,
+			};
+		});
 	}
 
 	readLogsFromEvent(eventType: InstanceEvent): EngineLogs {
@@ -426,6 +503,32 @@ export class Engine extends DurableObject<Env> {
 		}
 	}
 
+	/**
+	 * Create a replay ReadableStream from stored stream output metadata.
+	 * Returns undefined if the stream data is not in a valid/complete state.
+	 */
+	private replayStreamFromMeta(streamOutput: {
+		cacheKey: string;
+		meta: StreamOutputMeta;
+	}): ReadableStream<Uint8Array> | undefined {
+		if (streamOutput.meta.state !== StreamOutputState.Complete) {
+			return undefined;
+		}
+		const integrityError = getInvalidStoredStreamOutputError(
+			this.ctx.storage,
+			streamOutput.cacheKey,
+			streamOutput.meta
+		);
+		if (integrityError !== undefined) {
+			return undefined;
+		}
+		return createReplayReadableStream({
+			storage: this.ctx.storage,
+			cacheKey: streamOutput.cacheKey,
+			meta: streamOutput.meta,
+		});
+	}
+
 	private stepResultWaiters: Map<
 		string,
 		{ resolve: (v: unknown) => void; reject: (e: unknown) => void }
@@ -453,6 +556,9 @@ export class Engine extends DurableObject<Env> {
 			const { event, metadata } = rows[0];
 			const parsed = JSON.parse(metadata);
 			if (event === InstanceEvent.STEP_SUCCESS) {
+				if (parsed?.streamOutput) {
+					return this.replayStreamFromMeta(parsed.streamOutput);
+				}
 				return parsed?.result;
 			}
 			if (event === InstanceEvent.STEP_FAILURE) {
@@ -476,8 +582,18 @@ export class Engine extends DurableObject<Env> {
 			return;
 		}
 		if (event === InstanceEvent.STEP_SUCCESS) {
-			const result = metadata?.result;
-			waiter.resolve(result);
+			if (metadata?.streamOutput) {
+				waiter.resolve(
+					this.replayStreamFromMeta(
+						metadata.streamOutput as {
+							cacheKey: string;
+							meta: StreamOutputMeta;
+						}
+					)
+				);
+			} else {
+				waiter.resolve(metadata?.result);
+			}
 			this.stepResultWaiters.delete(group);
 		} else if (event === InstanceEvent.STEP_FAILURE) {
 			const error = metadata?.error ?? new Error("Step failed");
@@ -800,6 +916,13 @@ export class Engine extends DurableObject<Env> {
 	async attemptRestart() {
 		this.ctx.storage.sql.exec("DELETE FROM states");
 		this.ctx.storage.sql.exec("DELETE FROM priority_queue");
+		// Only delete non-mock streaming chunks. Mock stream outputs are stored
+		// at attempt=0 (see modifier.ts mockStepResult) and their sentinels
+		// survive restart via isModifierKey(), so the underlying SQL rows must
+		// be preserved too.
+		this.ctx.storage.sql.exec(
+			"DELETE FROM streaming_step_chunks WHERE attempt != 0"
+		);
 
 		const allKeys = await this.ctx.storage.list();
 		const preservedEventMapKeys = this.getMockedEventMapKeys(allKeys);
