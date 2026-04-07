@@ -2707,6 +2707,14 @@ export class Miniflare {
 
 		const forwardInit = forward as RequestInit;
 		forwardInit.dispatcher = dispatcher;
+		// Omit credentials to prevent undici's HTTP 401 authentication retry
+		// logic from triggering. When a POST request with a streamed body
+		// receives a 401, undici tries to re-extract the body source for
+		// credential re-authentication. Since workerd uses streamed bodies
+		// (body.source === null), this causes a "fetch failed" network error
+		// with "expected non-null body source". Setting credentials to "omit"
+		// bypasses the 401 handling entirely (see Fetch spec step 14).
+		forwardInit.credentials = "omit";
 		const response = await fetch(url, forwardInit);
 
 		// If the Worker threw an uncaught exception, propagate it to the caller

@@ -83,6 +83,15 @@ export async function fetch(
 
 	const response = await undici.fetch(request, {
 		dispatcher: requestInit?.dispatcher,
+		// Prevent undici's HTTP 401 authentication retry logic from triggering.
+		// When a POST request with a streamed body (body.source === null) receives
+		// a 401, undici tries to re-extract the request body for re-sending with
+		// credentials, but fails with "expected non-null body source" because
+		// workerd uses streamed bodies. Setting credentials to "omit" bypasses
+		// the 401 handling entirely (Fetch spec §4.4 step 14). This is safe
+		// because miniflare dispatches to workerd directly — there is no HTTP
+		// authentication to retry.
+		credentials: "omit",
 	});
 	return new Response(response.body, response);
 }
