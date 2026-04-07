@@ -5,7 +5,7 @@ import {
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
 	d1ListDatabases,
 	durableObjectsNamespaceListNamespaces,
@@ -16,6 +16,12 @@ import {
 } from "../api";
 import { AppSidebar } from "../components/Sidebar";
 import { filterVisibleWorkers } from "../components/WorkerSelector";
+import {
+	applyThemeMode,
+	getNextThemeMode,
+	loadThemeMode,
+	saveThemeMode,
+} from "../utils/theme-state";
 import type {
 	D1DatabaseResponse,
 	LocalExplorerWorker,
@@ -24,6 +30,7 @@ import type {
 	WorkersNamespace,
 	WorkflowsWorkflow,
 } from "../api";
+import type { ThemeMode } from "../utils/theme-state";
 
 // Extended types with workerName for filtering
 type KvNamespaceWithWorker = WorkersKvNamespace & { workerName?: string };
@@ -127,6 +134,18 @@ function RootLayout() {
 	);
 	const router = useRouter();
 
+	const [themeMode, setThemeMode] = useState<ThemeMode>(loadThemeMode);
+
+	const handleCycleTheme = useCallback(() => {
+		const next = getNextThemeMode(themeMode);
+		saveThemeMode(next);
+		applyThemeMode(
+			next,
+			window.matchMedia("(prefers-color-scheme: dark)").matches
+		);
+		setThemeMode(next);
+	}, [themeMode]);
+
 	// Filter out internal workers (like __asset-worker__, __router-worker__, etc.)
 	const visibleWorkers = useMemo(
 		() => filterVisibleWorkers(loaderData.workers),
@@ -220,11 +239,13 @@ function RootLayout() {
 						doNamespaces={filteredData.doNamespaces}
 						kvError={loaderData.kvError}
 						kvNamespaces={filteredData.kvNamespaces}
+						onCycleTheme={handleCycleTheme}
+						onWorkerChange={handleWorkerChange}
 						r2Buckets={filteredData.r2Buckets}
 						r2Error={loaderData.r2Error}
-						workers={visibleWorkers}
 						selectedWorker={selectedWorker}
-						onWorkerChange={handleWorkerChange}
+						themeMode={themeMode}
+						workers={visibleWorkers}
 						workflows={filteredData.workflows}
 						workflowsError={loaderData.workflowsError}
 					/>

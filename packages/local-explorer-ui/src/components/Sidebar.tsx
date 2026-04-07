@@ -5,7 +5,7 @@ import {
 	Sidebar,
 	useSidebar,
 } from "@cloudflare/kumo";
-import { MoonIcon } from "@phosphor-icons/react";
+import { MonitorIcon, MoonIcon, SunIcon } from "@phosphor-icons/react";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import D1Icon from "../assets/icons/d1.svg?react";
@@ -14,6 +14,7 @@ import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
 import WorkflowsIcon from "../assets/icons/workflows.svg?react";
 import { loadGroupState, saveGroupState } from "../utils/sidebar-state";
+import { getNextThemeMode } from "../utils/theme-state";
 import { WorkerSelector, type LocalExplorerWorker } from "./WorkerSelector";
 import type {
 	D1DatabaseResponse,
@@ -23,7 +24,29 @@ import type {
 	WorkflowsWorkflow,
 } from "../api";
 import type { SidebarGroupId } from "../utils/sidebar-state";
+import type { ThemeMode } from "../utils/theme-state";
 import type { FC } from "react";
+
+const THEME_MODE_CONFIG = {
+	light: {
+		icon: SunIcon,
+		label: "Light",
+	},
+	dark: {
+		icon: MoonIcon,
+		label: "Dark",
+	},
+	system: {
+		icon: MonitorIcon,
+		label: "System",
+	},
+} satisfies Record<
+	ThemeMode,
+	{
+		icon: typeof SunIcon;
+		label: string;
+	}
+>;
 
 interface SidebarProps {
 	currentPath: string;
@@ -33,11 +56,13 @@ interface SidebarProps {
 	doNamespaces: WorkersNamespace[];
 	kvError: string | null;
 	kvNamespaces: WorkersKvNamespace[];
+	onCycleTheme: () => void;
+	onWorkerChange: (workerName: string) => void;
 	r2Buckets: R2Bucket[];
 	r2Error: string | null;
-	workers: LocalExplorerWorker[];
 	selectedWorker: string;
-	onWorkerChange: (workerName: string) => void;
+	themeMode: ThemeMode;
+	workers: LocalExplorerWorker[];
 	workflows: WorkflowsWorkflow[];
 	workflowsError: string | null;
 }
@@ -50,11 +75,13 @@ export function AppSidebar({
 	doNamespaces,
 	kvError,
 	kvNamespaces,
+	onCycleTheme,
+	onWorkerChange,
 	r2Buckets,
 	r2Error,
-	workers,
 	selectedWorker,
-	onWorkerChange,
+	themeMode,
+	workers,
 	workflows,
 	workflowsError,
 }: SidebarProps) {
@@ -281,13 +308,22 @@ export function AppSidebar({
 			</Sidebar.Content>
 
 			<Sidebar.Footer className="gap-1">
-				<Sidebar.MenuButton
-					className="px-2"
-					icon={<MoonIcon size={18} weight="bold" />}
-					onClick={() => {}}
-					tooltip="Switch theme"
-					type="button"
-				/>
+				{(() => {
+					const { icon: Icon, label } = THEME_MODE_CONFIG[themeMode];
+					const nextLabel =
+						THEME_MODE_CONFIG[getNextThemeMode(themeMode)].label;
+
+					return (
+						<Sidebar.MenuButton
+							aria-label={`Theme: ${label}. Switch to ${nextLabel}`}
+							className="px-2"
+							icon={<Icon size={18} weight="bold" />}
+							onClick={onCycleTheme}
+							tooltip={`Theme: ${label}`}
+							type="button"
+						/>
+					);
+				})()}
 
 				<Sidebar.Trigger className="cursor-pointer" />
 			</Sidebar.Footer>
