@@ -84,15 +84,17 @@ interface AssetWorkerMethods {
 	unstable_exists(pathname: string, request?: Request): Promise<string | null>;
 }
 
-type LoopbackExecutionContext = ExecutionContext & {
+/**
+ * Context type used for communication between outer and inner entrypoints
+ * via ctx.exports. AssetWorkerOuter accesses the inner factory via exports,
+ * AssetWorkerInner receives props via ctx.props.
+ */
+type AssetWorkerContext = ExecutionContext & {
 	exports?: {
 		AssetWorkerInner?: (options: {
 			props: AssetWorkerEntrypointProps;
 		}) => AssetWorkerMethods;
 	};
-};
-
-type PropsExecutionContext = ExecutionContext & {
 	props?: AssetWorkerEntrypointProps;
 };
 
@@ -329,7 +331,7 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 	 * Gets the inner entrypoint from ctx.exports to forward requests to.
 	 */
 	private getInnerEntrypoint(): AssetWorkerMethods {
-		const loopbackCtx = this.ctx as LoopbackExecutionContext;
+		const loopbackCtx = this.ctx as AssetWorkerContext;
 		const entrypoint = loopbackCtx.exports?.AssetWorkerInner;
 		if (entrypoint === undefined) {
 			throw new Error(
@@ -425,7 +427,7 @@ export class AssetWorkerInner extends WorkerEntrypoint<Env>
 	override async fetch(request: Request): Promise<Response> {
 		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
-		const loopbackCtx = this.ctx as PropsExecutionContext;
+		const loopbackCtx = this.ctx as AssetWorkerContext;
 		const traceContext = loopbackCtx.props?.traceContext ?? null;
 
 		const response = await this.env.JAEGER.runWithSpanContext(
