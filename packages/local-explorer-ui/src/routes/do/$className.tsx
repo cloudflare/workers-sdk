@@ -23,4 +23,7 @@ export const Route = createFileRoute("/do/$className")({
 			namespaceId: namespace.id,
 		};
 	},
+	validateSearch: (search: Record<string, unknown>): { worker?: string } => ({
+		worker: typeof search.worker === "string" ? search.worker : undefined,
+	}),
 });

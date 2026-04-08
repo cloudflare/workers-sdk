@@ -35,8 +35,8 @@ export interface R2BucketSearch {
 export const Route = createFileRoute("/r2/$bucketName/")({
 	component: BucketView,
 	validateSearch: (search: Record<string, unknown>): R2BucketSearch => ({
-		prefix: typeof search.prefix === "string" ? search.prefix : undefined,
 		delimiter: search.delimiter === false ? false : true,
+		prefix: typeof search.prefix === "string" ? search.prefix : undefined,
 	}),
 	loaderDeps: ({ search }) => ({
 		prefix: search.prefix,
