@@ -1,16 +1,13 @@
 import { EventEmitter } from "node:events";
 import { afterEach, describe, it, vi } from "vitest";
+import { spawnCloudflared } from "../src/cloudflared";
+import { startTunnel } from "../src/tunnel";
 
-vi.mock("../../tunnel/cloudflared", () => {
+vi.mock("../src/cloudflared", () => {
 	return {
 		spawnCloudflared: vi.fn(),
 	};
 });
-
-// eslint-disable-next-line import/first
-import { startTunnel } from "../../dev/tunnel";
-// eslint-disable-next-line import/first
-import { spawnCloudflared } from "../../tunnel/cloudflared";
 
 function createMockProcess() {
 	const proc = new EventEmitter() as EventEmitter & {

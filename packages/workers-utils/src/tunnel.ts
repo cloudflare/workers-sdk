@@ -1,5 +1,4 @@
-import { logger } from "../logger";
-import { spawnCloudflared } from "../tunnel/cloudflared";
+import { spawnCloudflared } from "./cloudflared";
 import type { ChildProcess } from "node:child_process";
 
 /**
@@ -13,18 +12,19 @@ const TUNNEL_FORCE_KILL_TIMEOUT_MS = 5_000;
  */
 const QUICK_TUNNEL_URL_REGEX = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/;
 
-export interface TunnelReadyResult {
+export interface TunnelResult {
 	publicUrl: URL;
 }
 
-export interface TunnelController {
-	ready: () => Promise<TunnelReadyResult>;
+export interface Tunnel {
+	ready: () => Promise<TunnelResult>;
 	dispose: () => Promise<void>;
 }
 
-export interface StartTunnelOptions {
+export interface TunnelOptions {
 	origin: URL;
 	timeoutMs?: number;
+	logger?: typeof console;
 }
 
 /**
@@ -35,9 +35,10 @@ export interface StartTunnelOptions {
  * promise that resolves once the tunnel URL is available, and a `dispose()`
  * function to stop the tunnel.
  */
-export function startTunnel(options: StartTunnelOptions): TunnelController {
+export function startTunnel(options: TunnelOptions): Tunnel {
 	let disposed = false;
 
+	const logger = options.logger;
 	const timeoutMs = options.timeoutMs ?? TUNNEL_STARTUP_TIMEOUT_MS;
 	const cloudflaredArgs = [
 		"tunnel",
@@ -49,6 +50,7 @@ export function startTunnel(options: StartTunnelOptions): TunnelController {
 	const cloudflaredPromise = spawnCloudflared(cloudflaredArgs, {
 		stdio: "pipe",
 		skipVersionCheck: true,
+		logger,
 	}).then((process) => {
 		if (disposed) {
 			terminateCloudflared(process);
@@ -58,7 +60,7 @@ export function startTunnel(options: StartTunnelOptions): TunnelController {
 	});
 
 	const readyPromise = cloudflaredPromise.then((process) =>
-		waitForQuickTunnelReady(process, timeoutMs)
+		waitForQuickTunnelReady(process, timeoutMs, { logger })
 	);
 
 	return {
@@ -90,12 +92,13 @@ function terminateCloudflared(cloudflared: ChildProcess) {
 
 function waitForQuickTunnelReady(
 	cloudflared: ChildProcess,
-	timeoutMs: number
-): Promise<TunnelReadyResult> {
-	return new Promise<TunnelReadyResult>((resolve, reject) => {
+	timeoutMs: number,
+	options?: { logger?: typeof console }
+): Promise<TunnelResult> {
+	return new Promise<TunnelResult>((resolve, reject) => {
 		let resolved = false;
 		let stderrOutput = "";
-
+		const logger = options?.logger;
 		const timeoutId = setTimeout(() => {
 			if (!resolved) {
 				resolved = true;
@@ -115,7 +118,7 @@ function waitForQuickTunnelReady(
 			cloudflared.stderr.on("data", (data: Buffer) => {
 				const chunk = data.toString();
 				stderrOutput += chunk;
-				logger.debug("[cloudflared]", chunk.trimEnd());
+				logger?.debug("[cloudflared]", chunk.trimEnd());
 
 				const match = QUICK_TUNNEL_URL_REGEX.exec(stderrOutput);
 				if (match && !resolved) {

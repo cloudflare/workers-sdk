@@ -2,7 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { bold, dim, green } from "@cloudflare/cli/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { getRegistryPath } from "@cloudflare/workers-utils";
+import { getRegistryPath, startTunnel } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { DevEnv } from "../api";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
@@ -10,7 +10,6 @@ import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
 import { convertStartDevOptionsToBindings } from "../api/startDevWorker/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
-import { startTunnel } from "../dev/tunnel";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
@@ -22,10 +21,9 @@ import {
 import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
 import type { StartDevOptionsBindings } from "../api/startDevWorker/utils";
 import type { StartDevOptions } from "../dev";
-import type { TunnelController } from "../dev/tunnel";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config, Tunnel } from "@cloudflare/workers-utils";
 
 /**
  * Starts one (primary) or more (secondary) DevEnv environments given the `args`.
@@ -126,7 +124,7 @@ export async function startDev(args: StartDevOptions) {
 		// Start tunnel early, before the proxy is ready.
 		// The port is already resolved by ConfigController, so we can build the
 		// origin URL now and let cloudflared connect as soon as the server binds.
-		let tunnel: TunnelController | undefined;
+		let tunnel: Tunnel | undefined;
 		if (args.tunnel) {
 			const config = primaryDevEnv.config.latestConfig;
 			const protocol = config?.dev?.server?.secure ? "https" : "http";
@@ -134,7 +132,7 @@ export async function startDev(args: StartDevOptions) {
 			const port = config?.dev?.server?.port ?? 8787;
 			const origin = new URL(`${protocol}://${hostname}:${port}`);
 
-			tunnel = startTunnel({ origin });
+			tunnel = startTunnel({ origin, logger });
 		}
 
 		// Clean up tunnel on teardown
