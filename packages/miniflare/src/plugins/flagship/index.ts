@@ -59,7 +59,7 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 		}
 
 		return Object.entries(options.flagship).map(
-			([name, { remoteProxyConnectionString }]) => {
+			([name, { app_id, remoteProxyConnectionString }]) => {
 				return {
 					name: getUserBindingServiceName(
 						FLAGSHIP_PLUGIN_NAME,
@@ -79,7 +79,7 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 								bindings: [
 									{
 										name: "config",
-										json: JSON.stringify({ app_id: name }),
+										json: JSON.stringify({ app_id }),
 									},
 								],
 							},
