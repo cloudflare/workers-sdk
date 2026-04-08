@@ -9,8 +9,10 @@ import {
 	getRouteApi,
 	useNavigate,
 	useRouter,
+	useRouterState,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { getSelectedWorker } from "../../components/WorkerSelector";
 import D1Icon from "../../assets/icons/d1.svg?react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { Studio } from "../../components/studio";
@@ -50,6 +52,7 @@ function DatabaseView(): JSX.Element {
 	const navigate = useNavigate();
 	const router = useRouter();
 	const rootData = rootRoute.useLoaderData();
+	const routerState = useRouterState();
 
 	const lastSyncedTable = useRef<string | undefined>(searchParams.table);
 	const studioRef = useRef<StudioRef>(null);
@@ -68,13 +71,17 @@ function DatabaseView(): JSX.Element {
 		[params.databaseId]
 	);
 
-	// Get database name (binding) from root loader data
+	// Get database binding name from selected worker's bindings
 	const databaseName = useMemo(() => {
-		const database = rootData.databases.find(
-			(db) => db.uuid === params.databaseId
+		const worker = getSelectedWorker(
+			rootData.workers,
+			routerState.location.searchStr
 		);
-		return database?.name;
-	}, [rootData.databases, params.databaseId]);
+		const binding = worker?.bindings?.d1?.find(
+			(db) => db.id === params.databaseId
+		);
+		return binding?.bindingName;
+	}, [rootData.workers, routerState.location.searchStr, params.databaseId]);
 
 	const resource = useMemo<StudioResource>(
 		() => ({
