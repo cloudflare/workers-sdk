@@ -1,5 +1,15 @@
 # @cloudflare/local-explorer-ui
 
+## 0.10.0
+
+### Minor Changes
+
+- [#13161](https://github.com/cloudflare/workers-sdk/pull/13161) [`f071008`](https://github.com/cloudflare/workers-sdk/commit/f07100810d6d8c00e7d1977f0b760b369b52aed0) Thanks [@NuroDev](https://github.com/NuroDev)! - Overhaul local explorer UI color palette.
+
+  The core styles of the local explorer has been overhauled to remove all custom styles in favour of using Kumo styles / colors when possible.
+
+  This is the first part of improving the local explorer UI to kumo-ify it all.
+
 ## 0.9.0
 
 ### Minor Changes
