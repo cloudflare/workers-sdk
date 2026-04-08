@@ -3,15 +3,22 @@ import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import { OUTBOUND_DO_PROXY_SERVICE_NAME } from "../../shared/external-service";
 import { CoreBindings } from "../../workers";
-import { WORKER_BINDING_SERVICE_LOOPBACK } from "../shared";
+import { normaliseDurableObject } from "../do";
+import { namespaceEntries, WORKER_BINDING_SERVICE_LOOPBACK } from "../shared";
 import {
 	getUserServiceName,
 	LOCAL_EXPLORER_DISK,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
+import type { PluginWorkerOptions } from "..";
 import type { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import type { DurableObjectClassNames, WorkflowOption } from "../shared";
-import type { BindingIdMap, WorkflowBindingInfo } from "./types";
+import type {
+	BindingIdMap,
+	ExplorerWorkerOpts,
+	WorkerResourceBindings,
+	WorkflowBindingInfo,
+} from "./types";
 
 export interface ExplorerServicesOptions {
 	localExplorerUiPath: string;
@@ -19,6 +26,7 @@ export interface ExplorerServicesOptions {
 	bindingIdMap: BindingIdMap;
 	hasDurableObjects: boolean;
 	workerNames: string[];
+	explorerWorkerOpts: ExplorerWorkerOpts;
 }
 
 /**
@@ -33,6 +41,7 @@ export function getExplorerServices(
 		bindingIdMap,
 		hasDurableObjects,
 		workerNames,
+		explorerWorkerOpts,
 	} = options;
 
 	const explorerBindings: Worker_Binding[] = [
@@ -54,6 +63,11 @@ export function getExplorerServices(
 		{
 			name: CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES,
 			json: JSON.stringify(workerNames),
+		},
+		// Per-worker resource bindings for the /local/workers endpoint
+		{
+			name: CoreBindings.JSON_EXPLORER_WORKER_OPTS,
+			json: JSON.stringify(explorerWorkerOpts),
 		},
 	];
 
@@ -236,6 +250,85 @@ export function constructExplorerBindingMap(
 	}
 
 	return IDToBindingName;
+}
+
+/**
+ * Build per-worker resource bindings map for the local explorer.
+ * Maps worker names to their resource bindings with IDs.
+ */
+export function constructExplorerWorkerOpts(
+	allWorkerOpts: PluginWorkerOptions[],
+	durableObjectClassNames: DurableObjectClassNames
+): ExplorerWorkerOpts {
+	const result: ExplorerWorkerOpts = {};
+
+	for (const workerOpts of allWorkerOpts) {
+		const workerName = workerOpts.core.name;
+		if (!workerName) {
+			continue;
+		}
+		const bindings: WorkerResourceBindings = {
+			kv: [],
+			d1: [],
+			r2: [],
+			do: [],
+			workflows: [],
+		};
+
+		for (const [bindingName, ns] of namespaceEntries(
+			workerOpts.kv.kvNamespaces
+		)) {
+			bindings.kv.push({ id: ns.id, bindingName });
+		}
+
+		for (const [bindingName, db] of namespaceEntries(
+			workerOpts.d1.d1Databases
+		)) {
+			bindings.d1.push({ id: db.id, bindingName });
+		}
+
+		for (const [bindingName, bucket] of namespaceEntries(
+			workerOpts.r2.r2Buckets
+		)) {
+			bindings.r2.push({ id: bucket.id, bindingName });
+		}
+
+		for (const [bindingName, designator] of Object.entries(
+			workerOpts.do.durableObjects ?? {}
+		)) {
+			const doInfo = normaliseDurableObject(designator);
+			const scriptName = doInfo.scriptName ?? workerName;
+			const serviceName = getUserServiceName(scriptName);
+			const uniqueKey = `${scriptName}-${doInfo.className}`;
+
+			const classMap = durableObjectClassNames.get(serviceName);
+			const classInfo = classMap?.get(doInfo.className);
+			const useSqlite = classInfo?.enableSql ?? false;
+
+			bindings.do.push({
+				id: uniqueKey,
+				bindingName,
+				className: doInfo.className,
+				scriptName,
+				useSqlite,
+			});
+		}
+
+		for (const [bindingName, workflow] of Object.entries(
+			workerOpts.workflows.workflows ?? {}
+		)) {
+			bindings.workflows.push({
+				id: workflow.name,
+				bindingName,
+				className: workflow.className,
+				scriptName: workflow.scriptName ?? workerName,
+			});
+		}
+
+		result[workerName] = bindings;
+	}
+
+	return result;
 }
 
 /**
