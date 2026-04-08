@@ -1,21 +1,22 @@
+import { WorkerEntrypoint } from "cloudflare:workers";
+import type AssetWorker from "../../asset-worker";
 import { generateStaticRoutingRuleMatcher } from "../../asset-worker/src/utils/rules-engine";
 import { PerformanceTimer } from "../../utils/performance";
 import { TemporaryRedirectResponse } from "../../utils/responses";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
-import { Analytics, DISPATCH_TYPE, STATIC_ROUTING_DECISION } from "./analytics";
-import {
-	applyEyeballConfigDefaults,
-	applyRouterConfigDefaults,
-} from "./configuration";
-import { renderLimitedResponse } from "./limited-response";
-import type AssetWorker from "../../asset-worker";
 import type {
 	EyeballRouterConfig,
 	JaegerTracing,
 	RouterConfig,
 	UnsafePerformanceTimer,
 } from "../../utils/types";
+import { Analytics, DISPATCH_TYPE, STATIC_ROUTING_DECISION } from "./analytics";
+import {
+	applyEyeballConfigDefaults,
+	applyRouterConfigDefaults,
+} from "./configuration";
+import { renderLimitedResponse } from "./limited-response";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
 export interface Env {
@@ -38,47 +39,53 @@ export interface Env {
 
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+		return ctx.exports.RouterInnerEntrypoint({}).fetch(request);
+	},
+};
+
+export class RouterInnerEntrypoint extends WorkerEntrypoint<Env>{
+	override async fetch(request: Request): Promise<Response> {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
 		let userWorkerInvocation = false;
-		const analytics = new Analytics(env.ANALYTICS);
-		const performance = new PerformanceTimer(env.UNSAFE_PERFORMANCE);
+		const analytics = new Analytics(this.env.ANALYTICS);
+		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
 		const startTimeMs = performance.now();
 
 		try {
-			if (!env.JAEGER) {
-				env.JAEGER = mockJaegerBinding();
+			if (!this.env.JAEGER) {
+				this.env.JAEGER = mockJaegerBinding();
 			}
 
 			sentry = setupSentry(
 				request,
-				ctx,
-				env.SENTRY_DSN,
-				env.SENTRY_ACCESS_CLIENT_ID,
-				env.SENTRY_ACCESS_CLIENT_SECRET,
-				env.COLO_METADATA,
-				env.VERSION_METADATA,
-				env.CONFIG?.account_id,
-				env.CONFIG?.script_id
+				this.ctx,
+				this.env.SENTRY_DSN,
+				this.env.SENTRY_ACCESS_CLIENT_ID,
+				this.env.SENTRY_ACCESS_CLIENT_SECRET,
+				this.env.COLO_METADATA,
+				this.env.VERSION_METADATA,
+				this.env.CONFIG?.account_id,
+				this.env.CONFIG?.script_id
 			);
 
-			const hasStaticRouting = env.CONFIG.static_routing !== undefined;
-			const config = applyRouterConfigDefaults(env.CONFIG);
-			const eyeballConfig = applyEyeballConfigDefaults(env.EYEBALL_CONFIG);
+			const hasStaticRouting = this.env.CONFIG.static_routing !== undefined;
+			const config = applyRouterConfigDefaults(this.env.CONFIG);
+			const eyeballConfig = applyEyeballConfigDefaults(this.env.EYEBALL_CONFIG);
 
 			const url = new URL(request.url);
 
-			if (env.COLO_METADATA && env.VERSION_METADATA && env.CONFIG) {
+			if (this.env.COLO_METADATA && this.env.VERSION_METADATA && this.env.CONFIG) {
 				analytics.setData({
-					accountId: env.CONFIG.account_id,
-					scriptId: env.CONFIG.script_id,
+					accountId: this.env.CONFIG.account_id,
+					scriptId: this.env.CONFIG.script_id,
 
-					coloId: env.COLO_METADATA.coloId,
-					metalId: env.COLO_METADATA.metalId,
-					coloTier: env.COLO_METADATA.coloTier,
+					coloId: this.env.COLO_METADATA.coloId,
+					metalId: this.env.COLO_METADATA.metalId,
+					coloTier: this.env.COLO_METADATA.coloTier,
 
-					coloRegion: env.COLO_METADATA.coloRegion,
+					coloRegion: this.env.COLO_METADATA.coloRegion,
 					hostname: url.hostname,
-					version: env.VERSION_METADATA.tag,
+					version: this.env.VERSION_METADATA.tag,
 					userWorkerAhead: config.invoke_user_worker_ahead_of_assets,
 				});
 			}
@@ -117,7 +124,7 @@ export default {
 				}
 				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
 				userWorkerInvocation = true;
-				return env.JAEGER.enterSpan("dispatch_worker", async (span) => {
+				return this.env.JAEGER.enterSpan("dispatch_worker", async (span) => {
 					span.setTags({
 						hasUserWorker: true,
 						asset: asset,
@@ -169,7 +176,7 @@ export default {
 					});
 
 					if (shouldCheckContentType) {
-						const response = await env.USER_WORKER.fetch(request);
+						const response = await this.env.USER_WORKER.fetch(request);
 
 						if (response.status !== 304 && shouldBlockContentType(response)) {
 							analytics.setData({ abuseMitigationBlocked: true });
@@ -177,7 +184,7 @@ export default {
 						}
 						return response;
 					}
-					return env.USER_WORKER.fetch(request);
+					return this.env.USER_WORKER.fetch(request);
 				});
 			};
 
@@ -187,7 +194,7 @@ export default {
 				asset: "static_routing" | "found" | "none";
 			}) => {
 				analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
-				return await env.JAEGER.enterSpan("dispatch_assets", async (span) => {
+				return await this.env.JAEGER.enterSpan("dispatch_assets", async (span) => {
 					span.setTags({
 						hasUserWorker: config.has_user_worker,
 						asset: asset,
@@ -197,7 +204,7 @@ export default {
 					analytics.setData({
 						timeToDispatch: performance.now() - startTimeMs,
 					});
-					return env.ASSET_WORKER.fetch(request);
+					return this.env.ASSET_WORKER.fetch(request);
 				});
 			};
 
@@ -253,7 +260,7 @@ export default {
 
 			// If we have a user-Worker, but no assets, dispatch to Worker script
 			// Do not pass the original request as it would consume the body
-			const assetsExist = await env.ASSET_WORKER.unstable_canFetch(
+			const assetsExist = await this.env.ASSET_WORKER.unstable_canFetch(
 				new Request(request.url, {
 					headers: request.headers,
 					method: request.method,
@@ -283,8 +290,8 @@ export default {
 			analytics.setData({ requestTime: performance.now() - startTimeMs });
 			analytics.write();
 		}
-	},
-};
+	}
+}
 
 /**
  * Check if the Content Type is allowed for the the `_next/image` endpoint.
