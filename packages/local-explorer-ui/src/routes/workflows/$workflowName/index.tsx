@@ -1,10 +1,4 @@
-import {
-	Button,
-	Dialog,
-	DropdownMenu,
-	Pagination,
-	Tabs,
-} from "@cloudflare/kumo";
+import { Button, Dialog, DropdownMenu, Pagination } from "@cloudflare/kumo";
 import {
 	ArrowClockwiseIcon,
 	ArrowsCounterClockwiseIcon,
@@ -12,6 +6,7 @@ import {
 	CaretUpDownIcon,
 	CheckCircleIcon,
 	CircleNotchIcon,
+	DotsThreeIcon,
 	SpinnerIcon,
 	WarningCircleIcon,
 	PaperPlaneTiltIcon,
@@ -463,114 +458,6 @@ const InstanceRow = memo(function InstanceRow({
 });
 
 // ---------------------------------------------------------------------------
-// Settings tab
-// ---------------------------------------------------------------------------
-
-function SettingsTab({
-	workflowName,
-	onDeleted,
-}: {
-	workflowName: string;
-	onDeleted: () => void;
-}): JSX.Element {
-	const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
-	const [deleting, setDeleting] = useState<boolean>(false);
-	const [error, setError] = useState<string | null>(null);
-
-	function handleOpenChange(open: boolean): void {
-		setConfirmOpen(open);
-		if (!open) {
-			setError(null);
-		}
-	}
-
-	async function handleDeleteAll(): Promise<void> {
-		setDeleting(true);
-		setError(null);
-		try {
-			await workflowsDeleteWorkflow({
-				path: { workflow_name: workflowName },
-			});
-			handleOpenChange(false);
-			onDeleted();
-		} catch (err) {
-			setError(
-				err instanceof Error ? err.message : "Failed to delete instances"
-			);
-		} finally {
-			setDeleting(false);
-		}
-	}
-
-	return (
-		<div className="px-32 py-6">
-			<h3 className="mb-4 text-lg font-semibold text-kumo-default">
-				Delete all instances
-			</h3>
-			<div className="overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
-				<div className="flex items-center justify-between gap-4 px-4 py-1.5">
-					<p className="text-sm text-kumo-subtle">
-						Permanently delete all workflow instances and their persistence
-						data.
-					</p>
-					<button
-						className="inline-flex shrink-0 cursor-pointer items-center rounded-lg bg-kumo-base p-3 text-sm font-medium text-kumo-danger transition-colors hover:bg-kumo-danger/10"
-						onClick={() => handleOpenChange(true)}
-					>
-						Delete
-					</button>
-				</div>
-			</div>
-
-			<Dialog.Root open={confirmOpen} onOpenChange={handleOpenChange}>
-				<Dialog size="lg" className="w-lg">
-					<div className="border-b border-kumo-fill px-6 py-4">
-						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Title className="text-lg font-semibold text-kumo-default">
-							Delete all instances
-						</Dialog.Title>
-					</div>
-
-					<div className="px-6 py-5">
-						{error && (
-							<div className="mb-4 rounded-lg border border-kumo-danger/20 bg-kumo-danger/8 p-3 text-sm text-kumo-danger">
-								{error}
-							</div>
-						)}
-						<p className="text-sm text-kumo-subtle">
-							This will permanently delete all instances of{" "}
-							<span className="font-semibold text-kumo-default">
-								{workflowName}
-							</span>
-							. All instance data and persistence files will be removed. This
-							action cannot be undone.
-						</p>
-					</div>
-
-					<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
-						<Button
-							variant="secondary"
-							onClick={() => handleOpenChange(false)}
-							disabled={deleting}
-						>
-							Cancel
-						</Button>
-						<Button
-							variant="destructive"
-							disabled={deleting}
-							loading={deleting}
-							onClick={() => void handleDeleteAll()}
-						>
-							Delete
-						</Button>
-					</div>
-				</Dialog>
-			</Dialog.Root>
-		</div>
-	);
-}
-
-// ---------------------------------------------------------------------------
 // Main view
 // ---------------------------------------------------------------------------
 
@@ -578,7 +465,10 @@ function WorkflowInstancesView() {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 
-	const [activeTab, setActiveTab] = useState<string>("instances");
+	const [deleteAllConfirmOpen, setDeleteAllConfirmOpen] =
+		useState<boolean>(false);
+	const [deletingAll, setDeletingAll] = useState<boolean>(false);
+	const [deleteAllError, setDeleteAllError] = useState<string | null>(null);
 	const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 	const [instances, setInstances] = useState<WorkflowsInstance[]>(
@@ -680,9 +570,6 @@ function WorkflowInstancesView() {
 	// Auto-poll every 10s (quiet refresh — no opacity flash)
 	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	useEffect(() => {
-		if (activeTab !== "instances") {
-			return;
-		}
 		pollRef.current = setInterval(() => {
 			void fetchInstances(undefined, undefined, true);
 		}, 10_000);
@@ -691,7 +578,7 @@ function WorkflowInstancesView() {
 				clearInterval(pollRef.current);
 			}
 		};
-	}, [fetchInstances, activeTab]);
+	}, [fetchInstances]);
 
 	function handlePageChange(newPage: number): void {
 		setPage(newPage);
@@ -715,6 +602,31 @@ function WorkflowInstancesView() {
 		void fetchInstances(1, undefined, false, newStatus);
 	}
 
+	function handleDeleteAllOpenChange(open: boolean): void {
+		setDeleteAllConfirmOpen(open);
+		if (!open) {
+			setDeleteAllError(null);
+		}
+	}
+
+	async function handleDeleteAll(): Promise<void> {
+		setDeletingAll(true);
+		setDeleteAllError(null);
+		try {
+			await workflowsDeleteWorkflow({
+				path: { workflow_name: params.workflowName },
+			});
+			handleDeleteAllOpenChange(false);
+			void fetchInstances(1);
+		} catch (err) {
+			setDeleteAllError(
+				err instanceof Error ? err.message : "Failed to delete instances"
+			);
+		} finally {
+			setDeletingAll(false);
+		}
+	}
+
 	return (
 		<>
 			<Breadcrumbs
@@ -725,176 +637,209 @@ function WorkflowInstancesView() {
 					</span>,
 				]}
 				title="Workflows"
-			/>
+			>
+				<Button
+					onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+						(e.target as HTMLButtonElement).blur();
+						setDialogOpen(true);
+					}}
+					variant="primary"
+				>
+					<PlayIcon size={14} weight="fill" />
+					Trigger
+				</Button>
 
-			<div className="px-8 pt-4">
-				<div className="inline-flex">
-					<Tabs
-						variant="segmented"
-						tabs={[
-							{ value: "instances", label: "Instances" },
-							{ value: "settings", label: "Settings" },
-						]}
-						value={activeTab}
-						onValueChange={setActiveTab}
+				<DropdownMenu>
+					<DropdownMenu.Trigger
+						render={
+							<Button className="min-w-36" icon={CaretDownIcon}>
+								<span>
+									{statusFilter === "all"
+										? "All"
+										: (STATUS_SUMMARY_CONFIG.find((s) => s.key === statusFilter)
+												?.label ?? statusFilter)}
+								</span>
+							</Button>
+						}
 					/>
-				</div>
-				<hr className="-mx-8 mt-4 border-kumo-fill" />
+					<DropdownMenu.Content
+						align="start"
+						className="w-36 bg-kumo-base"
+						side="bottom"
+					>
+						<DropdownMenu.Item
+							className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
+							onClick={() => handleStatusFilterChange("all")}
+						>
+							All
+						</DropdownMenu.Item>
+						{STATUS_SUMMARY_CONFIG.map(({ key, label, icon: Icon }) => (
+							<DropdownMenu.Item
+								className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
+								icon={<Icon />}
+								key={key}
+								onClick={() => handleStatusFilterChange(key)}
+							>
+								{label}
+							</DropdownMenu.Item>
+						))}
+					</DropdownMenu.Content>
+				</DropdownMenu>
+
+				<Button
+					aria-label="Refresh"
+					onClick={() => void fetchInstances()}
+					shape="square"
+				>
+					<ArrowsCounterClockwiseIcon size={14} />
+				</Button>
+
+				<DropdownMenu>
+					<DropdownMenu.Trigger
+						render={
+							<Button aria-label="More actions" shape="square">
+								<DotsThreeIcon size={14} weight="bold" />
+							</Button>
+						}
+					/>
+					<DropdownMenu.Content align="end" sideOffset={4}>
+						<DropdownMenu.Item
+							className="flex cursor-pointer items-center gap-2 text-kumo-danger"
+							onClick={() => handleDeleteAllOpenChange(true)}
+						>
+							<TrashIcon />
+							<span>Delete all instances</span>
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu>
+			</Breadcrumbs>
+
+			<div className="px-8 py-6">
+				{totalCount > 0 && !initialLoad && (
+					<StatusSummary statusCounts={statusCounts} />
+				)}
+
+				{error && (
+					<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
+						{error}
+					</div>
+				)}
+
+				{initialLoad ? (
+					<div className="p-12 text-center text-kumo-subtle">Loading...</div>
+				) : instances.length === 0 && !fetching ? (
+					<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-5 py-8 text-center text-sm text-kumo-subtle">
+						No instances found
+					</div>
+				) : instances.length === 0 ? (
+					<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-5 py-8 text-center text-sm text-kumo-subtle">
+						{statusFilter !== "all" ? (
+							<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
+						) : (
+							"No instances found"
+						)}
+					</div>
+				) : (
+					<div
+						className={`transition-opacity duration-150 ${fetching ? "opacity-60" : "opacity-100"}`}
+					>
+						<div className="overflow-hidden rounded-lg border border-kumo-fill">
+							{instances.map((instance) => (
+								<InstanceRow
+									instance={instance}
+									key={instance.id}
+									onActionComplete={handleRefresh}
+									workflowName={params.workflowName}
+								/>
+							))}
+						</div>
+
+						{totalCount > 0 && (
+							<div className="flex items-center justify-between pt-4">
+								<DropdownMenu>
+									<DropdownMenu.Trigger
+										render={<Button icon={CaretUpDownIcon}>{perPage}</Button>}
+									/>
+									<DropdownMenu.Content
+										align="start"
+										className="bg-kumo-base"
+										side="top"
+									>
+										{[10, 25, 50, 100].map((size) => (
+											<DropdownMenu.Item
+												className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
+												key={size}
+												onClick={() => handlePerPageChange(size)}
+											>
+												{size}
+												{size === perPage && (
+													<span className="ml-2 text-kumo-subtle">✓</span>
+												)}
+											</DropdownMenu.Item>
+										))}
+									</DropdownMenu.Content>
+								</DropdownMenu>
+
+								<Pagination
+									page={page}
+									perPage={perPage}
+									setPage={handlePageChange}
+									totalCount={totalCount}
+								/>
+							</div>
+						)}
+					</div>
+				)}
 			</div>
 
-			{activeTab === "instances" && (
-				<div className="px-8 py-6">
-					{totalCount > 0 && !initialLoad && (
-						<>
-							<StatusSummary statusCounts={statusCounts} />
-							<hr className="-mx-8 mb-4 border-kumo-fill" />
-						</>
-					)}
-
-					<div className="mb-4 flex items-center justify-between gap-2">
-						<DropdownMenu>
-							<DropdownMenu.Trigger
-								render={
-									<Button className="min-w-36" icon={CaretDownIcon}>
-										<span>
-											{statusFilter === "all"
-												? "All"
-												: (STATUS_SUMMARY_CONFIG.find(
-														(s) => s.key === statusFilter
-													)?.label ?? statusFilter)}
-										</span>
-									</Button>
-								}
-							/>
-							<DropdownMenu.Content
-								align="start"
-								className="w-36 bg-kumo-base"
-								side="bottom"
-							>
-								<DropdownMenu.Item
-									className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
-									onClick={() => handleStatusFilterChange("all")}
-								>
-									All
-								</DropdownMenu.Item>
-								{STATUS_SUMMARY_CONFIG.map(({ key, label, icon: Icon }) => (
-									<DropdownMenu.Item
-										className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
-										icon={<Icon />}
-										key={key}
-										onClick={() => handleStatusFilterChange(key)}
-									>
-										{label}
-									</DropdownMenu.Item>
-								))}
-							</DropdownMenu.Content>
-						</DropdownMenu>
-
-						<div className="flex items-center gap-2">
-							<Button
-								aria-label="Refresh"
-								onClick={() => void fetchInstances()}
-								shape="square"
-							>
-								<ArrowsCounterClockwiseIcon size={14} />
-							</Button>
-
-							<Button
-								onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-									(e.target as HTMLButtonElement).blur();
-									setDialogOpen(true);
-								}}
-								variant="primary"
-							>
-								<PlayIcon size={14} weight="fill" />
-								Trigger
-							</Button>
-						</div>
+			{/* Delete all instances confirmation dialog */}
+			<Dialog.Root
+				open={deleteAllConfirmOpen}
+				onOpenChange={handleDeleteAllOpenChange}
+			>
+				<Dialog size="lg" className="w-lg">
+					<div className="border-b border-kumo-fill px-6 py-4">
+						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+						<Dialog.Title className="text-lg font-semibold text-kumo-default">
+							Delete all instances
+						</Dialog.Title>
 					</div>
 
-					{error && (
-						<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
-							{error}
-						</div>
-					)}
-
-					{initialLoad ? (
-						<div className="p-12 text-center text-kumo-subtle">Loading...</div>
-					) : instances.length === 0 && !fetching ? (
-						<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-5 py-8 text-center text-sm text-kumo-subtle">
-							No instances found
-						</div>
-					) : instances.length === 0 ? (
-						<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-5 py-8 text-center text-sm text-kumo-subtle">
-							{statusFilter !== "all" ? (
-								<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
-							) : (
-								"No instances found"
-							)}
-						</div>
-					) : (
-						<div
-							className={`transition-opacity duration-150 ${fetching ? "opacity-60" : "opacity-100"}`}
-						>
-							<div className="overflow-hidden rounded-lg border border-kumo-fill">
-								{instances.map((instance) => (
-									<InstanceRow
-										instance={instance}
-										key={instance.id}
-										onActionComplete={handleRefresh}
-										workflowName={params.workflowName}
-									/>
-								))}
+					<div className="px-6 py-5">
+						{deleteAllError && (
+							<div className="mb-4 rounded-lg border border-kumo-danger/20 bg-kumo-danger/8 p-3 text-sm text-kumo-danger">
+								{deleteAllError}
 							</div>
+						)}
+						<p className="text-sm text-kumo-subtle">
+							This will permanently delete all instances of{" "}
+							<span className="font-semibold text-kumo-default">
+								{params.workflowName}
+							</span>
+							. All instance data and persistence files will be removed. This
+							action cannot be undone.
+						</p>
+					</div>
 
-							{totalCount > 0 && (
-								<div className="flex items-center justify-between pt-4">
-									<DropdownMenu>
-										<DropdownMenu.Trigger
-											render={<Button icon={CaretUpDownIcon}>{perPage}</Button>}
-										/>
-										<DropdownMenu.Content
-											align="start"
-											className="bg-kumo-base"
-											side="top"
-										>
-											{[10, 25, 50, 100].map((size) => (
-												<DropdownMenu.Item
-													className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
-													key={size}
-													onClick={() => handlePerPageChange(size)}
-												>
-													{size}
-													{size === perPage && (
-														<span className="ml-2 text-kumo-subtle">✓</span>
-													)}
-												</DropdownMenu.Item>
-											))}
-										</DropdownMenu.Content>
-									</DropdownMenu>
-
-									<Pagination
-										page={page}
-										perPage={perPage}
-										setPage={handlePageChange}
-										totalCount={totalCount}
-									/>
-								</div>
-							)}
-						</div>
-					)}
-				</div>
-			)}
-
-			{activeTab === "settings" && (
-				<SettingsTab
-					workflowName={params.workflowName}
-					onDeleted={() => {
-						setActiveTab("instances");
-						void fetchInstances(1);
-					}}
-				/>
-			)}
+					<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
+						<Button
+							variant="secondary"
+							onClick={() => handleDeleteAllOpenChange(false)}
+							disabled={deletingAll}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							disabled={deletingAll}
+							loading={deletingAll}
+							onClick={() => void handleDeleteAll()}
+						>
+							Delete
+						</Button>
+					</div>
+				</Dialog>
+			</Dialog.Root>
 
 			<CreateWorkflowInstanceDialog
 				onCreated={handleCreated}
