@@ -1,5 +1,61 @@
 # wrangler
 
+## 4.81.0
+
+### Minor Changes
+
+- [#12932](https://github.com/cloudflare/workers-sdk/pull/12932) [`96ee5d4`](https://github.com/cloudflare/workers-sdk/commit/96ee5d465833f4887653078115acea40de2893c0) Thanks [@thomasgauvin](https://github.com/thomasgauvin)! - feat: add `wrangler email routing` and `wrangler email sending` commands
+
+  Email Routing commands:
+
+  - `wrangler email routing list` - list zones with email routing status
+  - `wrangler email routing settings <domain>` - get email routing settings for a zone
+  - `wrangler email routing enable/disable <domain>` - enable or disable email routing
+  - `wrangler email routing dns get/unlock <domain>` - manage DNS records
+  - `wrangler email routing rules list/get/create/update/delete <domain>` - manage routing rules (use `catch-all` as the rule ID for the catch-all rule)
+  - `wrangler email routing addresses list/get/create/delete` - manage destination addresses
+
+  Email Sending commands:
+
+  - `wrangler email sending list` - list zones with email sending
+  - `wrangler email sending settings <domain>` - get email sending settings for a zone
+  - `wrangler email sending enable <domain>` - enable email sending for a zone or subdomain
+  - `wrangler email sending disable <domain>` - disable email sending for a zone or subdomain
+  - `wrangler email sending dns get <domain>` - get DNS records for a sending domain
+  - `wrangler email sending send` - send an email using the builder API
+  - `wrangler email sending send-raw` - send a raw MIME email message
+
+  Also adds `email_routing:write` and `email_sending:write` OAuth scopes to `wrangler login`.
+
+### Patch Changes
+
+- [#13241](https://github.com/cloudflare/workers-sdk/pull/13241) [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260401.1 | 1.20260402.1 |
+
+- [#13305](https://github.com/cloudflare/workers-sdk/pull/13305) [`fa6d84f`](https://github.com/cloudflare/workers-sdk/commit/fa6d84fe4f07143522e4d41a2934c486d1c4b6d1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260402.1 | 1.20260405.1 |
+
+- [#13193](https://github.com/cloudflare/workers-sdk/pull/13193) [`78cbe37`](https://github.com/cloudflare/workers-sdk/commit/78cbe37a3a2ed0c5213fca603f61e3acd4d807e4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - During autoconfig filter out Hono when there are 2 detected frameworks
+
+  During the auto-configuration process Hono is now treated as an auxiliary framework (like Vite) and automatically filtered out when two frameworks are detected (before Hono was being filtered out only when the other framework was Waku).
+
+- [#13205](https://github.com/cloudflare/workers-sdk/pull/13205) [`6fa5dfd`](https://github.com/cloudflare/workers-sdk/commit/6fa5dfddcbad1520db7c3d1bb12233001fe00e45) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: use `formatConfigSnippet` for compatibility_date warning in `wrangler dev`
+
+  The compatibility_date warning shown when no date is configured in `wrangler dev` was hardcoded in TOML format. This now uses `formatConfigSnippet` to render the snippet in the correct format (TOML or JSON) based on the user's config file type.
+
+- Updated dependencies [[`a3e3b57`](https://github.com/cloudflare/workers-sdk/commit/a3e3b57f2aa47b6655af7baaa784d55117368abc), [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e), [`fa6d84f`](https://github.com/cloudflare/workers-sdk/commit/fa6d84fe4f07143522e4d41a2934c486d1c4b6d1), [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e), [`7a60d4b`](https://github.com/cloudflare/workers-sdk/commit/7a60d4bd33b03a55f687869378dfd06143247239)]:
+  - miniflare@4.20260405.0
+
 ## 4.80.0
 
 ### Minor Changes

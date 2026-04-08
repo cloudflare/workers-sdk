@@ -409,22 +409,6 @@ export const zLocalExplorerWorker = z.object({
 	protocol: z.string(),
 });
 
-export const zWorkflowsWorkflowDetails = z.object({
-	name: z.string(),
-	class_name: z.string(),
-	script_name: z.string(),
-	instances: z.object({
-		complete: z.number().optional(),
-		errored: z.number().optional(),
-		paused: z.number().optional(),
-		queued: z.number().optional(),
-		running: z.number().optional(),
-		terminated: z.number().optional(),
-		waiting: z.number().optional(),
-		waitingForPause: z.number().optional(),
-	}),
-});
-
 /**
  * The name of the workflow.
  */
@@ -439,6 +423,22 @@ export const zWorkflowsWorkflow = z.object({
 	name: z.string(),
 	class_name: z.string().optional(),
 	script_name: z.string().optional(),
+});
+
+export const zWorkflowsWorkflowDetails = z.object({
+	name: z.string(),
+	class_name: z.string(),
+	script_name: z.string(),
+	instances: z.object({
+		complete: z.number().optional(),
+		errored: z.number().optional(),
+		paused: z.number().optional(),
+		queued: z.number().optional(),
+		running: z.number().optional(),
+		terminated: z.number().optional(),
+		waiting: z.number().optional(),
+		waitingForPause: z.number().optional(),
+	}),
 });
 
 export const zWorkflowsInstance = z.object({
