@@ -287,7 +287,11 @@ export function AppSidebar({
 								/>
 
 								<Sidebar.CollapsibleContent>
-									{!group.error && group.items.length === 0 ? (
+									{group.error ? (
+										<div className="ml-8 px-2 py-1.5 text-sm text-kumo-danger">
+											{group.error}
+										</div>
+									) : group.items.length === 0 ? (
 										<div className="text-text-secondary ml-8 px-2 py-1.5 text-sm italic">
 											{group.emptyLabel}
 										</div>
