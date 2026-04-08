@@ -3,10 +3,10 @@ import { Link, type NotFoundRouteProps } from "@tanstack/react-router";
 
 export function NotFound(_props: NotFoundRouteProps): JSX.Element {
 	return (
-		<div className="flex flex-1 flex-col items-center justify-center space-y-4 p-12 text-center text-text-secondary">
-			<h2 className="text-3xl font-bold text-text">Page not found</h2>
+		<div className="text-text-secondary flex flex-1 flex-col items-center justify-center space-y-4 p-12 text-center">
+			<h2 className="text-text text-3xl font-bold">Page not found</h2>
 
-			<p className="text-sm font-light text-text-secondary">
+			<p className="text-text-secondary text-sm font-light">
 				The resource you&apos;re looking for doesn&apos;t exist or has been
 				removed.
 			</p>

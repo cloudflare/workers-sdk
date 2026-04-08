@@ -14,12 +14,12 @@ export function ResourceError({
 		DEFAULT_ERROR_DESCRIPTION;
 
 	return (
-		<div className="flex flex-1 flex-col items-center justify-center space-y-4 p-12 text-center text-text-secondary">
+		<div className="text-text-secondary flex flex-1 flex-col items-center justify-center space-y-4 p-12 text-center">
 			<WarningIcon size={48} />
 
-			<h2 className="text-3xl font-bold text-text">Something went wrong</h2>
+			<h2 className="text-text text-3xl font-bold">Something went wrong</h2>
 
-			<p className="text-sm font-light text-text-secondary">{details}</p>
+			<p className="text-text-secondary text-sm font-light">{details}</p>
 
 			<Link to="/">
 				<Button variant="secondary">Go home</Button>
