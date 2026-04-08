@@ -18,6 +18,10 @@ import type {
 } from "../../utils/types";
 import type { Environment, ReadyAnalytics } from "./types";
 
+// ============================================================
+// SECTION 1: SHARED TYPES & INTERFACE CONTRACT
+// ============================================================
+
 export type Env = {
 	/*
 	 * ASSETS_MANIFEST is a pipeline binding to an ArrayBuffer containing the
@@ -63,7 +67,13 @@ type GetByETagFn = (
 	request?: Request,
 ) => Promise<GetByETagResult>;
 
-interface AssetWorkerLoopback {
+/**
+ * Interface defining the public API methods that both the outer and inner
+ * entrypoints implement. The outer entrypoint (AssetWorkerOuter) routes to
+ * the inner entrypoint (AssetWorkerInner) via ctx.exports, except when
+ * subclassed for local development (e.g., Vite's CustomAssetWorker).
+ */
+interface AssetWorkerMethods {
 	fetch(request: Request): Promise<Response>;
 	unstable_canFetch(request: Request): Promise<boolean>;
 	unstable_getByETag(eTag: string, request?: Request): Promise<GetByETagResult>;
@@ -74,36 +84,21 @@ interface AssetWorkerLoopback {
 	unstable_exists(pathname: string, request?: Request): Promise<string | null>;
 }
 
-const FORWARDED_METHODS = {
-	fetch: true,
-	unstable_canFetch: true,
-	unstable_getByETag: true,
-	unstable_getByPathname: true,
-	unstable_exists: true,
-} satisfies Record<keyof AssetWorkerLoopback, true>;
-
-type ForwardRequest =
-	| { method: "fetch"; request: Request }
-	| { method: "unstable_canFetch"; request: Request }
-	| { method: "unstable_getByETag"; eTag: string; request?: Request }
-	| {
-			method: "unstable_getByPathname";
-			pathname: string;
-			request?: Request;
-	  }
-	| { method: "unstable_exists"; pathname: string; request?: Request };
-
 type LoopbackExecutionContext = ExecutionContext & {
 	exports?: {
-		AssetWorkerEntrypoint?: (options: {
+		AssetWorkerInner?: (options: {
 			props: AssetWorkerEntrypointProps;
-		}) => AssetWorkerLoopback;
+		}) => AssetWorkerMethods;
 	};
 };
 
 type PropsExecutionContext = ExecutionContext & {
 	props?: AssetWorkerEntrypointProps;
 };
+
+// ============================================================
+// SECTION 2: SHARED IMPLEMENTATION FUNCTIONS
+// ============================================================
 
 async function unstableExistsImpl(
 	env: Env,
@@ -186,6 +181,30 @@ async function unstableGetByETagImpl(
 			contentType: asset.metadata?.contentType,
 			cacheStatus,
 		};
+	});
+}
+
+async function unstableGetByPathnameImpl(
+	env: Env,
+	exists: ExistsFn,
+	getByETag: GetByETagFn,
+	pathname: string,
+	request?: Request,
+): Promise<GetByETagResult | null> {
+	const jaeger = env.JAEGER ?? mockJaegerBinding();
+	return jaeger.enterSpan("unstable_getByPathname", async (span) => {
+		const eTag = await exists(pathname, request);
+
+		span.setTags({
+			path: pathname,
+			found: eTag !== null,
+		});
+
+		if (!eTag) {
+			return null;
+		}
+
+		return getByETag(eTag, request);
 	});
 }
 
@@ -273,6 +292,10 @@ async function runFetchRequest(
 	}
 }
 
+// ============================================================
+// SECTION 3: OUTER ENTRYPOINT (AssetWorkerOuter)
+// ============================================================
+
 /*
  * The Asset Worker is currently set up as a `WorkerEntrypoint` class so
  * that it is able to accept RPC calls to any of its public methods. There
@@ -283,93 +306,45 @@ async function runFetchRequest(
  * directly. To that end, we are adopting the `unstable_<method_name>`
  * naming convention for all of the aforementioned methods, to indicate that
  * they are still in flux and that they are not an established API contract.
+ *
+ * AssetWorkerOuter serves as the dispatch layer. When not subclassed, it
+ * forwards all method calls to AssetWorkerInner via ctx.exports. When
+ * subclassed (e.g., by Vite's CustomAssetWorker for local development),
+ * it executes methods locally to preserve polymorphic dispatch.
  */
-export default class AssetWorker<TEnv extends Env = Env>
+export default class AssetWorkerOuter<TEnv extends Env = Env>
 	extends WorkerEntrypoint<TEnv>
-	implements AssetWorkerLoopback
+	implements AssetWorkerMethods
 {
 	/**
-	 * True when a subclass (e.g. Vite's CustomAssetWorker) extends AssetWorker
-	 * for local development. Subclasses override unstable_exists / unstable_getByETag
-	 * with dev-server-backed implementations, so loopback must be skipped to
-	 * preserve polymorphic dispatch.
+	 * True when a subclass (e.g., Vite's CustomAssetWorker) extends AssetWorkerOuter
+	 * for local development. Subclasses override methods with dev-server-backed
+	 * implementations, so loopback must be skipped to preserve polymorphic dispatch.
 	 */
 	private isSubclassedForLocalDev(): boolean {
-		return this.constructor !== AssetWorker;
+		return this.constructor !== AssetWorkerOuter;
 	}
 
-	private getLoopbackEntrypoint(): (options: {
-		props: AssetWorkerEntrypointProps;
-	}) => AssetWorkerLoopback {
+	/**
+	 * Gets the inner entrypoint from ctx.exports to forward requests to.
+	 */
+	private getInnerEntrypoint(): AssetWorkerMethods {
 		const loopbackCtx = this.ctx as LoopbackExecutionContext;
-		const entrypoint = loopbackCtx.exports?.AssetWorkerEntrypoint;
+		const entrypoint = loopbackCtx.exports?.AssetWorkerInner;
 		if (entrypoint === undefined) {
 			throw new Error(
-				"AssetWorkerEntrypoint not found on ctx.exports. " +
+				"AssetWorkerInner not found on ctx.exports. " +
 					"Ensure enable_ctx_exports compatibility flag is set and " +
-					"AssetWorkerEntrypoint is exported from the worker module.",
+					"AssetWorkerInner is exported from the worker module.",
 			);
 		}
-		return entrypoint;
-	}
-
-	private forwardToInner(request: {
-		method: "fetch";
-		request: Request;
-	}): Promise<Response | null>;
-	private forwardToInner(request: {
-		method: "unstable_canFetch";
-		request: Request;
-	}): Promise<boolean | null>;
-	private forwardToInner(request: {
-		method: "unstable_getByETag";
-		eTag: string;
-		request?: Request;
-	}): Promise<GetByETagResult | null>;
-	private forwardToInner(request: {
-		method: "unstable_getByPathname";
-		pathname: string;
-		request?: Request;
-	}): Promise<GetByETagResult | null>;
-	private forwardToInner(request: {
-		method: "unstable_exists";
-		pathname: string;
-		request?: Request;
-	}): Promise<string | null>;
-	private async forwardToInner(
-		request: ForwardRequest,
-	): Promise<Response | boolean | GetByETagResult | string | null> {
-		if (!FORWARDED_METHODS[request.method]) {
-			return null;
-		}
-
-		const binding = this.getLoopbackEntrypoint()({
-			props: {
-				traceContext: this.env.JAEGER.getSpanContext(),
-			},
+		return entrypoint({
+			props: { traceContext: this.env.JAEGER.getSpanContext() },
 		});
-
-		switch (request.method) {
-			case "fetch":
-				return binding.fetch(request.request);
-			case "unstable_canFetch":
-				return binding.unstable_canFetch(request.request);
-			case "unstable_getByETag":
-				return binding.unstable_getByETag(request.eTag, request.request);
-			case "unstable_getByPathname":
-				return binding.unstable_getByPathname(
-					request.pathname,
-					request.request,
-				);
-			case "unstable_exists":
-				return binding.unstable_exists(request.pathname, request.request);
-		}
 	}
 
 	override async fetch(request: Request): Promise<Response> {
-		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
-
 		if (this.isSubclassedForLocalDev()) {
 			return runFetchRequest(
 				request,
@@ -379,22 +354,11 @@ export default class AssetWorker<TEnv extends Env = Env>
 				this.unstable_getByETag.bind(this),
 			);
 		}
-
-		const response = await this.forwardToInner({
-			method: "fetch",
-			request,
-		});
-		if (response !== null) {
-			return response;
-		}
-
-		throw new Error("Loopback fetch returned null unexpectedly.");
+		return this.getInnerEntrypoint().fetch(request);
 	}
 
 	async unstable_canFetch(request: Request): Promise<boolean> {
-		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
-
 		if (this.isSubclassedForLocalDev()) {
 			return canFetch(
 				request,
@@ -403,107 +367,61 @@ export default class AssetWorker<TEnv extends Env = Env>
 				this.unstable_exists.bind(this),
 			);
 		}
-
-		const response = await this.forwardToInner({
-			method: "unstable_canFetch",
-			request,
-		});
-		if (response !== null) {
-			return response;
-		}
-
-		throw new Error("Loopback unstable_canFetch returned null unexpectedly.");
+		return this.getInnerEntrypoint().unstable_canFetch(request);
 	}
 
 	async unstable_getByETag(
 		eTag: string,
 		request?: Request,
 	): Promise<GetByETagResult> {
-		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
-
 		if (this.isSubclassedForLocalDev()) {
 			return unstableGetByETagImpl(this.env, eTag, request);
 		}
-
-		const response = await this.forwardToInner({
-			method: "unstable_getByETag",
-			eTag,
-			request,
-		});
-		if (response !== null) {
-			return response;
-		}
-
-		throw new Error("Loopback unstable_getByETag returned null unexpectedly.");
+		return this.getInnerEntrypoint().unstable_getByETag(eTag, request);
 	}
 
 	async unstable_getByPathname(
 		pathname: string,
 		request?: Request,
 	): Promise<GetByETagResult | null> {
-		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
-
 		if (this.isSubclassedForLocalDev()) {
-			return this.env.JAEGER.enterSpan(
-				"unstable_getByPathname",
-				async (span) => {
-					const eTag = await this.unstable_exists(pathname, request);
-
-					span.setTags({
-						path: pathname,
-						found: eTag !== null,
-					});
-
-					if (!eTag) {
-						return null;
-					}
-
-					return this.unstable_getByETag(eTag, request);
-				},
+			return unstableGetByPathnameImpl(
+				this.env,
+				this.unstable_exists.bind(this),
+				this.unstable_getByETag.bind(this),
+				pathname,
+				request,
 			);
 		}
-
-		const response = await this.forwardToInner({
-			method: "unstable_getByPathname",
-			pathname,
-			request,
-		});
-		if (response !== null) {
-			return response;
-		}
-
-		throw new Error(
-			"Loopback unstable_getByPathname returned null unexpectedly.",
-		);
+		return this.getInnerEntrypoint().unstable_getByPathname(pathname, request);
 	}
 
 	async unstable_exists(
 		pathname: string,
 		request?: Request,
 	): Promise<string | null> {
-		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
-
 		if (this.isSubclassedForLocalDev()) {
 			return unstableExistsImpl(this.env, pathname, request);
 		}
-
-		const response = await this.forwardToInner({
-			method: "unstable_exists",
-			pathname,
-			request,
-		});
-		if (response !== null) {
-			return response;
-		}
-
-		throw new Error("Loopback unstable_exists returned null unexpectedly.");
+		return this.getInnerEntrypoint().unstable_exists(pathname, request);
 	}
 }
 
-export class AssetWorkerEntrypoint extends WorkerEntrypoint<Env> {
+// ============================================================
+// SECTION 4: INNER ENTRYPOINT (AssetWorkerInner)
+// ============================================================
+
+/*
+ * AssetWorkerInner contains the actual implementation logic for all asset
+ * worker methods. It is instantiated by AssetWorkerOuter via ctx.exports
+ * when the outer entrypoint is not subclassed (i.e., in production).
+ */
+export class AssetWorkerInner extends WorkerEntrypoint<Env>
+	implements AssetWorkerMethods
+{
 	override async fetch(request: Request): Promise<Response> {
 		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
@@ -526,7 +444,7 @@ export class AssetWorkerEntrypoint extends WorkerEntrypoint<Env> {
 			return response;
 		}
 
-		throw new Error("AssetWorkerEntrypoint fetch returned non-Response value.");
+		throw new Error("AssetWorkerInner fetch returned non-Response value.");
 	}
 
 	async unstable_canFetch(request: Request): Promise<boolean> {
@@ -552,21 +470,13 @@ export class AssetWorkerEntrypoint extends WorkerEntrypoint<Env> {
 		pathname: string,
 		request?: Request,
 	): Promise<GetByETagResult | null> {
-		const jaeger = this.env.JAEGER ?? mockJaegerBinding();
-		return jaeger.enterSpan("unstable_getByPathname", async (span) => {
-			const eTag = await this.unstable_exists(pathname, request);
-
-			span.setTags({
-				path: pathname,
-				found: eTag !== null,
-			});
-
-			if (!eTag) {
-				return null;
-			}
-
-			return this.unstable_getByETag(eTag, request);
-		});
+		return unstableGetByPathnameImpl(
+			this.env,
+			this.unstable_exists.bind(this),
+			this.unstable_getByETag.bind(this),
+			pathname,
+			request,
+		);
 	}
 
 	async unstable_exists(

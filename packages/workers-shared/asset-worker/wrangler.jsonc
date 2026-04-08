@@ -14,7 +14,7 @@
 	"main": "src/worker.ts",
 	"compatibility_date": "2024-07-31",
 	// nodejs_compat required when using @cloudflare/vitest-pool-workers
-	// enable_ctx_exports enables ctx.exports loopback for the AssetWorkerEntrypoint
+	// enable_ctx_exports enables ctx.exports loopback for the AssetWorkerInner
 	"compatibility_flags": ["nodejs_compat", "enable_ctx_exports"],
 	"unsafe": {
 		"metadata": {
