@@ -1,5 +1,6 @@
 import { RpcTarget } from "cloudflare:workers";
 import { computeHash } from "./lib/cache";
+import { isReadableStreamLike, writeStreamOutput } from "./lib/streams";
 import type { Event } from "./context";
 import type { Engine } from "./engine";
 
@@ -54,16 +55,18 @@ export class WorkflowInstanceModifier extends RpcTarget {
 		return waitForEventKey;
 	}
 
-	async #getStepCacheKey(step: StepSelector): Promise<string> {
+	async #getBaseCacheKey(step: StepSelector): Promise<string> {
 		const hash = await computeHash(step.name);
 		let count = 1;
 		if (step.index) {
 			count = step.index;
 		}
-		const cacheKey = `${hash}-${count}`;
-		const valueKey = `${cacheKey}-value`;
+		return `${hash}-${count}`;
+	}
 
-		return valueKey;
+	async #getStepCacheKey(step: StepSelector): Promise<string> {
+		const baseCacheKey = await this.#getBaseCacheKey(step);
+		return `${baseCacheKey}-value`;
 	}
 
 	#getAndIncrementCounter = async (valueKey: string, by: number) => {
@@ -130,10 +133,33 @@ export class WorkflowInstanceModifier extends RpcTarget {
 			);
 		}
 
-		await this.#state.storage.put(
-			`${MODIFIER_KEYS.REPLACE_RESULT}${valueKey}`,
-			stepResult
-		);
+		if (isReadableStreamLike(stepResult)) {
+			// ReadableStream is not structured-cloneable, so we consume it eagerly
+			// and store the chunks via the streaming infrastructure. We use attempt 0
+			// to distinguish mock chunks from real execution attempts (which start at 1).
+			const baseCacheKey = await this.#getBaseCacheKey(step);
+			const streamMeta = await writeStreamOutput({
+				storage: this.#state.storage,
+				cacheKey: baseCacheKey,
+				attempt: 0,
+				stream: stepResult,
+				skipMetaWrite: true,
+			});
+
+			await this.#state.storage.put(
+				`${MODIFIER_KEYS.REPLACE_RESULT}${valueKey}`,
+				{
+					__mockStreamOutput: true,
+					cacheKey: baseCacheKey,
+					meta: streamMeta,
+				}
+			);
+		} else {
+			await this.#state.storage.put(
+				`${MODIFIER_KEYS.REPLACE_RESULT}${valueKey}`,
+				stepResult
+			);
+		}
 	}
 
 	// Same logic of `mockStepResult` but stores an error instead of a value.
