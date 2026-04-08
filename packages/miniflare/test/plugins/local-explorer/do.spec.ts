@@ -100,7 +100,6 @@ describe("Durable Objects API", () => {
 				    "name": "my-worker_AnotherDO",
 				    "script": "my-worker",
 				    "use_sqlite": true,
-				    "workerName": "my-worker",
 				  },
 				  {
 				    "class": "TestDO",
@@ -108,7 +107,6 @@ describe("Durable Objects API", () => {
 				    "name": "my-worker_TestDO",
 				    "script": "my-worker",
 				    "use_sqlite": false,
-				    "workerName": "my-worker",
 				  },
 				]
 			`);
@@ -291,7 +289,6 @@ describe("Durable Objects API", () => {
 					    "name": "my-worker_LocalDO",
 					    "script": "my-worker",
 					    "use_sqlite": false,
-					    "workerName": "my-worker",
 					  },
 					]
 				`);
