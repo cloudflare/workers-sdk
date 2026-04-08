@@ -9,12 +9,6 @@
 	/* Local Explorer layout sizing */
 	--width-sidebar: 240px;
 
-	/* Local Explorer custom semantic colors */
-	--color-kumo-success: light-dark(
-		var(--color-green-600),
-		var(--color-green-700)
-	);
-
 	/* Studio/editor tokens mapped to stock Kumo/Tailwind palette */
 	--studio-editor-selection: color-mix(
 		in oklch,
