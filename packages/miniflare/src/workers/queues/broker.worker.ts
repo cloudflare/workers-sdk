@@ -287,6 +287,7 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 
 		// Extract and dispatch a batch
 		const batch = this.#messages.splice(0, batchSize);
+		this.#backlogBytes -= batch.reduce((total, msg) => total + msg.bytes, 0);
 		const metadata: MessageBatchMetadata = {
 			metrics: {
 				backlogCount: this.#messages.length,
@@ -353,7 +354,6 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 			}
 		}
 		const acked = batch.length - failedMessages;
-		this.#backlogBytes -= batch.reduce((total, msg) => total + msg.bytes, 0);
 		await this.logWithLevel(
 			LogLevel.INFO,
 			formatQueueResponse(this.name, acked, batch.length, endTime - startTime)
