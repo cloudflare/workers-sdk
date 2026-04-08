@@ -19,6 +19,8 @@ export const CorePaths = {
 	LEGACY_SCHEDULED: "/cdn-cgi/mf/scheduled",
 	/** Stream video serving endpoint */
 	STREAM_VIDEO: "/cdn-cgi/mf/stream",
+	/** Local image delivery endpoint for serving hosted images */
+	IMAGE_DELIVERY: "/cdn-cgi/imagedelivery",
 } as const;
 
 export const CoreHeaders = {
@@ -78,6 +80,7 @@ export const CoreBindings = {
 	JSON_TELEMETRY_CONFIG: "MINIFLARE_TELEMETRY_CONFIG",
 	DEV_REGISTRY_DEBUG_PORT: "DEV_REGISTRY_DEBUG_PORT",
 	SERVICE_STREAM: "MINIFLARE_STREAM",
+	SERVICE_IMAGES_DELIVERY: "MINIFLARE_IMAGES_DELIVERY",
 } as const;
 
 export const ProxyOps = {

@@ -20,8 +20,53 @@ function createMiniflare(): Miniflare {
 	});
 }
 
-// Tests temporarily skipped pending workerd API change (https://github.com/cloudflare/workerd/pull/6288)
-describe.skip("Images hosted CRUD", () => {
+describe("Images local delivery", () => {
+	test("variant URLs use /cdn-cgi/imagedelivery/ path", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const images = await mf.getImagesBinding("IMAGES");
+
+		const metadata = await images.hosted.upload(imageBuffer(), {
+			id: "variant-test",
+		});
+		expect(metadata.variants).toHaveLength(1);
+		expect(metadata.variants[0]).toBe(
+			"/cdn-cgi/imagedelivery/variant-test/public"
+		);
+	});
+
+	test("image delivery endpoint serves image bytes", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const images = await mf.getImagesBinding("IMAGES");
+
+		await images.hosted.upload(imageBuffer(), { id: "delivery-test" });
+
+		const url = await mf.ready;
+		const response = await mf.dispatchFetch(
+			`${url.origin}/cdn-cgi/imagedelivery/delivery-test/public`
+		);
+		expect(response.status).toBe(200);
+		const data = new Uint8Array(await response.arrayBuffer());
+		expect(data).toEqual(TEST_IMAGE_BYTES);
+	});
+
+	test("image delivery returns 404 for non-existent image", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		const url = await mf.ready;
+		const response = await mf.dispatchFetch(
+			`${url.origin}/cdn-cgi/imagedelivery/does-not-exist/public`
+		);
+		expect(response.status).toBe(404);
+		await response.arrayBuffer();
+	});
+});
+
+describe("Images hosted CRUD", () => {
 	test("upload and retrieve metadata", async ({ expect }) => {
 		const mf = createMiniflare();
 		useDispose(mf);

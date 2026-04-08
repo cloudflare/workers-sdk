@@ -3,7 +3,7 @@
 // Transforms and info operations are handled via HTTP loopback to Node.js Sharp
 
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
-import { CoreBindings, CoreHeaders } from "../core/constants";
+import { CoreBindings, CoreHeaders, CorePaths } from "../core/constants";
 
 interface Env {
 	IMAGES_STORE: KVNamespace;
@@ -118,7 +118,7 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 			uploaded: new Date().toISOString(),
 			requireSignedURLs: options?.requireSignedURLs ?? false,
 			meta: options?.metadata ?? {},
-			variants: ["public"],
+			variants: [`${CorePaths.IMAGE_DELIVERY}/${id}/public`],
 			draft: false,
 			creator: options?.creator,
 		};
@@ -180,9 +180,56 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		};
 	}
 
-	// Handle HTTP requests for info and transform operations
-	// These are forwarded to Node.js via the loopback service where Sharp runs
+	async #detectContentType(data: ArrayBuffer): Promise<string> {
+		const formData = new FormData();
+		formData.append("image", new Blob([data]));
+
+		const infoRequest = new Request("http://placeholder/info", {
+			method: "POST",
+			body: formData,
+		});
+		infoRequest.headers.set(
+			CoreHeaders.CUSTOM_FETCH_SERVICE,
+			CoreBindings.IMAGES_SERVICE
+		);
+
+		const response =
+			await this.env[CoreBindings.SERVICE_LOOPBACK].fetch(infoRequest);
+		if (response.ok) {
+			const info = (await response.json()) as { format?: string };
+			if (info.format) {
+				return info.format;
+			}
+		}
+		return "application/octet-stream";
+	}
+
+	// Handle HTTP requests for image delivery and transform operations
 	async fetch(request: Request): Promise<Response> {
+		const url = new URL(request.url);
+
+		// Serve image bytes at /cdn-cgi/imagedelivery/<id>/<variant>
+		if (url.pathname.startsWith(`${CorePaths.IMAGE_DELIVERY}/`)) {
+			const parts = url.pathname
+				.slice(CorePaths.IMAGE_DELIVERY.length + 1)
+				.split("/");
+			const imageId = parts[0];
+			if (!imageId) {
+				return new Response("Missing image ID", { status: 400 });
+			}
+
+			const data = await this.env.IMAGES_STORE.get(imageId, "arrayBuffer");
+			if (data === null) {
+				return new Response("Image not found", { status: 404 });
+			}
+
+			const contentType = await this.#detectContentType(data);
+			return new Response(data, {
+				headers: { "Content-Type": contentType },
+			});
+		}
+
+		// Forward transform/info operations to Node.js via loopback where Sharp runs
 		const forwardRequest = new Request(request);
 		forwardRequest.headers.set(
 			CoreHeaders.CUSTOM_FETCH_SERVICE,
