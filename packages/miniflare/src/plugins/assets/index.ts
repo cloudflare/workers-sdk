@@ -94,7 +94,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 
 		const { encodedAssetManifest, assetsReverseMap } = await buildAssetManifest(
-			options.assets.directory
+			options.assets.directory,
 		);
 
 		const redirectsFile = join(options.assets.directory, REDIRECTS_FILENAME);
@@ -121,7 +121,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					redirects,
 					redirectsFile,
 					logger: assetParserLogger,
-				}).redirects
+				}).redirects,
 			);
 		}
 
@@ -133,7 +133,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					headers,
 					headersFile,
 					logger: assetParserLogger,
-				}).headers
+				}).headers,
 			);
 		}
 
@@ -332,14 +332,14 @@ const walk = async (dir: string) => {
 								MAX_ASSET_SIZE,
 								{
 									binary: true,
-								}
+								},
 							)}. We found a file ${filepath} with a size of ${prettyBytes(
 								filestat.size,
 								{
 									binary: true,
-								}
+								},
 							)}.\n` +
-							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`
+							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`,
 					);
 				}
 
@@ -381,13 +381,13 @@ const walk = async (dir: string) => {
 				};
 				counter++;
 			}
-		})
+		}),
 	);
 	if (counter > MAX_ASSET_COUNT) {
 		throw new Error(
 			`Maximum number of assets exceeded.\n` +
 				`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${dir}".\n` +
-				`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`
+				`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`,
 		);
 	}
 	return { manifest, assetsReverseMap };
@@ -418,7 +418,7 @@ const comparisonFn = (a: ManifestEntry, b: ManifestEntry) => {
 
 const encodeManifest = (manifest: ManifestEntry[]) => {
 	const assetManifestBytes = new Uint8Array(
-		HEADER_SIZE + manifest.length * ENTRY_SIZE
+		HEADER_SIZE + manifest.length * ENTRY_SIZE,
 	);
 
 	for (const [i, entry] of manifest.entries()) {
@@ -427,7 +427,7 @@ const encodeManifest = (manifest: ManifestEntry[]) => {
 		// content hash here in dev is hash(path + last modified time of file)
 		assetManifestBytes.set(
 			entry.contentHash,
-			entryOffset + CONTENT_HASH_OFFSET
+			entryOffset + CONTENT_HASH_OFFSET,
 		);
 	}
 	return assetManifestBytes;
@@ -444,7 +444,7 @@ const hashPath = async (path: string) => {
 	const data = encoder.encode(path);
 	const hashBuffer = await crypto.subtle.digest(
 		"SHA-256",
-		data.buffer as ArrayBuffer
+		data.buffer as ArrayBuffer,
 	);
 	return new Uint8Array(hashBuffer, 0, PATH_HASH_SIZE);
 };

@@ -60,7 +60,7 @@ type GetByETagResult = {
 type ExistsFn = (pathname: string, request?: Request) => Promise<string | null>;
 type GetByETagFn = (
 	eTag: string,
-	request?: Request
+	request?: Request,
 ) => Promise<GetByETagResult>;
 
 interface AssetWorkerLoopback {
@@ -69,7 +69,7 @@ interface AssetWorkerLoopback {
 	unstable_getByETag(eTag: string, request?: Request): Promise<GetByETagResult>;
 	unstable_getByPathname(
 		pathname: string,
-		request?: Request
+		request?: Request,
 	): Promise<GetByETagResult | null>;
 	unstable_exists(pathname: string, request?: Request): Promise<string | null>;
 }
@@ -108,7 +108,7 @@ type PropsExecutionContext = ExecutionContext & {
 async function unstableExistsImpl(
 	env: Env,
 	pathname: string,
-	_request?: Request
+	_request?: Request,
 ): Promise<string | null> {
 	const analytics = new ExperimentAnalytics(env.EXPERIMENT_ANALYTICS);
 	const performance = new PerformanceTimer(env.UNSAFE_PERFORMANCE);
@@ -145,13 +145,16 @@ async function unstableExistsImpl(
 async function unstableGetByETagImpl(
 	env: Env,
 	eTag: string,
-	_request?: Request
+	_request?: Request,
 ): Promise<GetByETagResult> {
 	const performance = new PerformanceTimer(env.UNSAFE_PERFORMANCE);
 	const jaeger = env.JAEGER ?? mockJaegerBinding();
 	return jaeger.enterSpan("unstable_getByETag", async (span) => {
 		const startTime = performance.now();
-		const asset = await getAssetWithMetadataFromKV(env.ASSETS_KV_NAMESPACE, eTag);
+		const asset = await getAssetWithMetadataFromKV(
+			env.ASSETS_KV_NAMESPACE,
+			eTag,
+		);
 		const endTime = performance.now();
 		const assetFetchTime = endTime - startTime;
 
@@ -163,7 +166,7 @@ async function unstableGetByETagImpl(
 				error: `Requested asset ${eTag} exists in the asset manifest but not in the KV namespace.`,
 			});
 			throw new Error(
-				`Requested asset ${eTag} exists in the asset manifest but not in the KV namespace.`
+				`Requested asset ${eTag} exists in the asset manifest but not in the KV namespace.`,
 			);
 		}
 
@@ -191,7 +194,7 @@ async function runFetchRequest(
 	env: Env,
 	ctx: ExecutionContext,
 	exists: ExistsFn,
-	getByETag: GetByETagFn
+	getByETag: GetByETagFn,
 ): Promise<Response> {
 	let sentry: ReturnType<typeof setupSentry> | undefined;
 	const analytics = new Analytics(env.ANALYTICS);
@@ -211,7 +214,7 @@ async function runFetchRequest(
 			env.COLO_METADATA,
 			env.VERSION_METADATA,
 			env.CONFIG?.account_id,
-			env.CONFIG?.script_id
+			env.CONFIG?.script_id,
 		);
 
 		const config = normalizeConfiguration(env.CONFIG);
@@ -256,7 +259,7 @@ async function runFetchRequest(
 				config,
 				exists,
 				getByETag,
-				analytics
+				analytics,
 			);
 
 			analytics.setData({ status: response.status });
@@ -304,7 +307,7 @@ export default class AssetWorker<TEnv extends Env = Env>
 			throw new Error(
 				"AssetWorkerEntrypoint not found on ctx.exports. " +
 					"Ensure enable_ctx_exports compatibility flag is set and " +
-					"AssetWorkerEntrypoint is exported from the worker module."
+					"AssetWorkerEntrypoint is exported from the worker module.",
 			);
 		}
 		return entrypoint;
@@ -334,7 +337,7 @@ export default class AssetWorker<TEnv extends Env = Env>
 		request?: Request;
 	}): Promise<string | null>;
 	private async forwardToInner(
-		request: ForwardRequest
+		request: ForwardRequest,
 	): Promise<Response | boolean | GetByETagResult | string | null> {
 		if (!FORWARDED_METHODS[request.method]) {
 			return null;
@@ -356,7 +359,7 @@ export default class AssetWorker<TEnv extends Env = Env>
 			case "unstable_getByPathname":
 				return binding.unstable_getByPathname(
 					request.pathname,
-					request.request
+					request.request,
 				);
 			case "unstable_exists":
 				return binding.unstable_exists(request.pathname, request.request);
@@ -373,7 +376,7 @@ export default class AssetWorker<TEnv extends Env = Env>
 				this.env,
 				this.ctx,
 				this.unstable_exists.bind(this),
-				this.unstable_getByETag.bind(this)
+				this.unstable_getByETag.bind(this),
 			);
 		}
 
@@ -397,7 +400,7 @@ export default class AssetWorker<TEnv extends Env = Env>
 				request,
 				this.env,
 				normalizeConfiguration(this.env.CONFIG),
-				this.unstable_exists.bind(this)
+				this.unstable_exists.bind(this),
 			);
 		}
 
@@ -414,7 +417,7 @@ export default class AssetWorker<TEnv extends Env = Env>
 
 	async unstable_getByETag(
 		eTag: string,
-		request?: Request
+		request?: Request,
 	): Promise<GetByETagResult> {
 		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
@@ -437,7 +440,7 @@ export default class AssetWorker<TEnv extends Env = Env>
 
 	async unstable_getByPathname(
 		pathname: string,
-		request?: Request
+		request?: Request,
 	): Promise<GetByETagResult | null> {
 		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
@@ -458,7 +461,7 @@ export default class AssetWorker<TEnv extends Env = Env>
 					}
 
 					return this.unstable_getByETag(eTag, request);
-				}
+				},
 			);
 		}
 
@@ -472,13 +475,13 @@ export default class AssetWorker<TEnv extends Env = Env>
 		}
 
 		throw new Error(
-			"Loopback unstable_getByPathname returned null unexpectedly."
+			"Loopback unstable_getByPathname returned null unexpectedly.",
 		);
 	}
 
 	async unstable_exists(
 		pathname: string,
-		request?: Request
+		request?: Request,
 	): Promise<string | null> {
 		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
@@ -515,8 +518,8 @@ export class AssetWorkerEntrypoint extends WorkerEntrypoint<Env> {
 					this.env,
 					this.ctx,
 					this.unstable_exists.bind(this),
-					this.unstable_getByETag.bind(this)
-				)
+					this.unstable_getByETag.bind(this),
+				),
 		);
 
 		if (response instanceof Response) {
@@ -534,20 +537,20 @@ export class AssetWorkerEntrypoint extends WorkerEntrypoint<Env> {
 			request,
 			this.env,
 			normalizeConfiguration(this.env.CONFIG),
-			this.unstable_exists.bind(this)
+			this.unstable_exists.bind(this),
 		);
 	}
 
 	async unstable_getByETag(
 		eTag: string,
-		request?: Request
+		request?: Request,
 	): Promise<GetByETagResult> {
 		return unstableGetByETagImpl(this.env, eTag, request);
 	}
 
 	async unstable_getByPathname(
 		pathname: string,
-		request?: Request
+		request?: Request,
 	): Promise<GetByETagResult | null> {
 		const jaeger = this.env.JAEGER ?? mockJaegerBinding();
 		return jaeger.enterSpan("unstable_getByPathname", async (span) => {
@@ -568,7 +571,7 @@ export class AssetWorkerEntrypoint extends WorkerEntrypoint<Env> {
 
 	async unstable_exists(
 		pathname: string,
-		request?: Request
+		request?: Request,
 	): Promise<string | null> {
 		return unstableExistsImpl(this.env, pathname, request);
 	}
