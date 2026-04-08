@@ -7,14 +7,15 @@ import {
 	CheckCircleIcon,
 	CircleNotchIcon,
 	DotsThreeIcon,
-	SpinnerIcon,
-	WarningCircleIcon,
+	ListIcon,
 	PaperPlaneTiltIcon,
 	PauseIcon,
 	PlayIcon,
+	SpinnerIcon,
 	SquareIcon,
 	StopIcon,
 	TrashIcon,
+	WarningCircleIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
@@ -668,14 +669,15 @@ function WorkflowInstancesView() {
 						side="bottom"
 					>
 						<DropdownMenu.Item
-							className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
+							className="cursor-pointer gap-2 rounded-md transition-colors hover:bg-kumo-fill"
+							icon={<ListIcon />}
 							onClick={() => handleStatusFilterChange("all")}
 						>
 							All
 						</DropdownMenu.Item>
 						{STATUS_SUMMARY_CONFIG.map(({ key, label, icon: Icon }) => (
 							<DropdownMenu.Item
-								className="cursor-pointer rounded-md transition-colors hover:bg-kumo-fill"
+								className="cursor-pointer gap-2 rounded-md transition-colors hover:bg-kumo-fill"
 								icon={<Icon />}
 								key={key}
 								onClick={() => handleStatusFilterChange(key)}
