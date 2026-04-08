@@ -76,6 +76,7 @@ import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import { imagesLocalFetcher } from "./plugins/images/fetcher";
+import { getUserBindingServiceName } from "./plugins/shared";
 import {
 	HttpOptions_Style,
 	kInspectorSocket,
@@ -2273,6 +2274,21 @@ export class Miniflare {
 			}
 		}
 
+		// Find the images service name if any worker has a local images binding configured.
+		let imagesServiceName: string | undefined;
+		for (const workerOpts of allWorkerOpts) {
+			if (
+				workerOpts.images.images &&
+				!workerOpts.images.images.remoteProxyConnectionString
+			) {
+				imagesServiceName = getUserBindingServiceName(
+					IMAGES_PLUGIN_NAME,
+					workerOpts.images.images.binding
+				);
+				break;
+			}
+		}
+
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
@@ -2297,6 +2313,7 @@ export class Miniflare {
 			durableObjectClassNames,
 			workflowOptions: workflowOptions.size > 0 ? workflowOptions : undefined,
 			allWorkerOpts,
+			imagesServiceName,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
