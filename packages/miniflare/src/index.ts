@@ -34,6 +34,7 @@ import {
 	BROWSER_RENDERING_PLUGIN_NAME,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
+	FLAGSHIP_PLUGIN_NAME,
 	getDirectSocketName,
 	getGlobalServices,
 	getPersistPath,
@@ -2961,6 +2962,33 @@ export class Miniflare {
 		set: (value: string) => Promise<void>;
 	}> {
 		return this.#getProxy(HELLO_WORLD_PLUGIN_NAME, bindingName, workerName);
+	}
+	getFlagshipBinding(
+		bindingName: string,
+		workerName?: string
+	): Promise<{
+		get: (
+			flagKey: string,
+			defaultValue?: unknown,
+			context?: Record<string, string | number | boolean>
+		) => Promise<unknown>;
+		getBooleanValue: (
+			flagKey: string,
+			defaultValue: boolean,
+			context?: Record<string, string | number | boolean>
+		) => Promise<boolean>;
+		getStringValue: (
+			flagKey: string,
+			defaultValue: string,
+			context?: Record<string, string | number | boolean>
+		) => Promise<string>;
+		getNumberValue: (
+			flagKey: string,
+			defaultValue: number,
+			context?: Record<string, string | number | boolean>
+		) => Promise<number>;
+	}> {
+		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName);
 	}
 	getStreamBinding(
 		bindingName: string,
