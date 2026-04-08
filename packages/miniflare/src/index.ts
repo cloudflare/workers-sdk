@@ -2987,34 +2987,8 @@ export class Miniflare {
 			defaultValue: number,
 			context?: Record<string, string | number | boolean>
 		) => Promise<number>;
-		getObjectValue: <T extends object>(
-			flagKey: string,
-			defaultValue: T,
-			context?: Record<string, string | number | boolean>
-		) => Promise<T>;
-		getBooleanDetails: (
-			flagKey: string,
-			defaultValue: boolean,
-			context?: Record<string, string | number | boolean>
-		) => Promise<{ flagKey: string; value: boolean; variant?: string; reason?: string; errorCode?: string; errorMessage?: string }>;
-		getStringDetails: (
-			flagKey: string,
-			defaultValue: string,
-			context?: Record<string, string | number | boolean>
-		) => Promise<{ flagKey: string; value: string; variant?: string; reason?: string; errorCode?: string; errorMessage?: string }>;
-		getNumberDetails: (
-			flagKey: string,
-			defaultValue: number,
-			context?: Record<string, string | number | boolean>
-		) => Promise<{ flagKey: string; value: number; variant?: string; reason?: string; errorCode?: string; errorMessage?: string }>;
-		getObjectDetails: <T extends object>(
-			flagKey: string,
-			defaultValue: T,
-			context?: Record<string, string | number | boolean>
-		) => Promise<{ flagKey: string; value: T; variant?: string; reason?: string; errorCode?: string; errorMessage?: string }>;
 	}> {
 		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName);
-	}
 	}
 	getStreamBinding(
 		bindingName: string,
