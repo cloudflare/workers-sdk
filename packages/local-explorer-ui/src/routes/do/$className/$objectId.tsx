@@ -104,9 +104,7 @@ function ObjectView(): JSX.Element {
 
 			void navigate({
 				replace: true,
-				search: {
-					table: tableName,
-				},
+				search: (prev) => ({ ...prev, table: tableName }),
 				to: ".",
 			});
 		},
@@ -132,9 +130,7 @@ function ObjectView(): JSX.Element {
 		await handleTableRefresh();
 		void navigate({
 			replace: true,
-			search: {
-				table: undefined,
-			},
+			search: (prev) => ({ ...prev, table: undefined }),
 			to: ".",
 		});
 	}, [handleTableRefresh, navigate]);

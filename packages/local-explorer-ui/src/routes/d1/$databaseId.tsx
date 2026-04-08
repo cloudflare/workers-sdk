@@ -12,13 +12,13 @@ import {
 	useRouterState,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { getSelectedWorker } from "../../components/WorkerSelector";
 import D1Icon from "../../assets/icons/d1.svg?react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { Studio } from "../../components/studio";
 import { DropTableConfirmationModal } from "../../components/studio/Modal/DropTableConfirmation";
 import { StudioTableActionsDropdown } from "../../components/studio/Table/ActionsDropdown";
 import { TableSelect } from "../../components/TableSelect";
+import { getSelectedWorker } from "../../components/WorkerSelector";
 import { LocalD1Driver } from "../../drivers/d1";
 import type { StudioRef } from "../../components/studio";
 import type { StudioResource } from "../../types/studio";
@@ -104,9 +104,7 @@ function DatabaseView(): JSX.Element {
 
 			void navigate({
 				replace: true,
-				search: {
-					table: tableName,
-				},
+				search: (prev) => ({ ...prev, table: tableName }),
 				to: ".",
 			});
 		},
@@ -132,9 +130,7 @@ function DatabaseView(): JSX.Element {
 		await handleTableRefresh();
 		void navigate({
 			replace: true,
-			search: {
-				table: undefined,
-			},
+			search: (prev) => ({ ...prev, table: undefined }),
 			to: ".",
 		});
 	}, [handleTableRefresh, navigate]);

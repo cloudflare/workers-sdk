@@ -1,7 +1,10 @@
 import { Button, Dialog } from "@cloudflare/kumo";
-import { createFileRoute, getRouteApi, useRouterState } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	getRouteApi,
+	useRouterState,
+} from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getSelectedWorker } from "../../components/WorkerSelector";
 import {
 	workersKvNamespaceDeleteKeyValuePair,
 	workersKvNamespaceGetMultipleKeyValuePairs,
@@ -14,6 +17,7 @@ import { AddKVForm } from "../../components/AddKVForm";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { KVTable } from "../../components/KVTable";
 import { SearchForm } from "../../components/SearchForm";
+import { getSelectedWorker } from "../../components/WorkerSelector";
 import type { KVEntry } from "../../api";
 
 export const Route = createFileRoute("/kv/$namespaceId")({
