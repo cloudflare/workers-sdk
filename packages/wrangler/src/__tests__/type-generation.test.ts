@@ -419,7 +419,7 @@ const bindingsConfigMock: Omit<
 	flagship: [
 		{
 			binding: "FLAGS",
-			app_id: "app-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			app_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 		},
 	],
 	services: [
