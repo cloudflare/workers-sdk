@@ -152,6 +152,7 @@ async function handlePostgresTlsConnection(
 			socket: dbSocket,
 			host: targetHost,
 			servername: targetHost,
+			rejectUnauthorized: false,
 		};
 		try {
 			const tlsSocket = await tlsConnect(tlsOptions);
@@ -242,7 +243,7 @@ async function handleMySQLTlsConnection(
 			host: targetHost,
 			servername: targetHost,
 			minVersion: "TLSv1.2",
-			rejectUnauthorized: true,
+			rejectUnauthorized: false,
 		};
 
 		try {

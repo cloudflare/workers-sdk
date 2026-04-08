@@ -1,5 +1,13 @@
 # @cloudflare/workflows-shared
 
+## 0.8.0
+
+### Minor Changes
+
+- [#13145](https://github.com/cloudflare/workers-sdk/pull/13145) [`5b60405`](https://github.com/cloudflare/workers-sdk/commit/5b60405954a2866a67920f5a7a48748861f58a60) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Add support for ReadableStream on workflow steps. This allows users to overcome the 1MB limit per step output.
+
+  `ReadableStream<Uint8Array>` is already serializable on the workers platform. This feature makes it native to workflows as well by persisting each chunk and replaying it if needed
+
 ## 0.7.2
 
 ### Patch Changes
