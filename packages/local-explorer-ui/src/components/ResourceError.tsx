@@ -10,9 +10,8 @@ export function ResourceError({
 	error,
 }: ErrorComponentProps<Error | WorkersApiResponseCommonFailure>): JSX.Element {
 	const details =
-		("errors" in error
-			? error.errors?.[0]?.message
-			: DEFAULT_ERROR_DESCRIPTION) ?? DEFAULT_ERROR_DESCRIPTION;
+		("errors" in error ? error.errors?.[0]?.message : error.message) ??
+		DEFAULT_ERROR_DESCRIPTION;
 
 	return (
 		<div className="flex flex-1 flex-col items-center justify-center space-y-4 p-12 text-center text-text-secondary">
