@@ -1,4 +1,6 @@
-import Worker, { AssetWorkerInner } from "@cloudflare/workers-shared/asset-worker";
+import Worker, {
+	AssetWorkerInner,
+} from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 import { SELF } from "cloudflare:test";
@@ -29,6 +31,7 @@ const BASE_URL = "http://example.com";
 describe("[Asset Worker] `test location rewrite`", () => {
 	afterEach(() => {
 		vi.restoreAllMocks();
+		vi.mocked(getAssetWithMetadataFromKV).mockReset();
 	});
 	beforeEach(async () => {
 		vi.mocked(getAssetWithMetadataFromKV).mockImplementation(

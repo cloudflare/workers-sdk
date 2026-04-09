@@ -1,4 +1,6 @@
-import Worker, { AssetWorkerInner } from "@cloudflare/workers-shared/asset-worker";
+import Worker, {
+	AssetWorkerInner,
+} from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 import { SELF } from "cloudflare:test";
