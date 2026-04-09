@@ -3,4 +3,6 @@
 "miniflare": minor
 ---
 
-explorer: fix handling on resources shared between multiple workers
+local explorer: fix handling on resources that are bound to multiple workers
+
+Note the local explorer is a experimental feature still.

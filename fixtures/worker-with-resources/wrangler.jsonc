@@ -52,7 +52,7 @@
 			{
 				"name": "DO_B",
 				"class_name": "WorkerBDurableObject",
-				"script_name": "worker-c",
+				"script_name": "worker-b",
 			},
 		],
 	},
