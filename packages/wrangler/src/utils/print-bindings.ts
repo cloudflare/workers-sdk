@@ -466,7 +466,9 @@ export function printBindings(
 					name: binding,
 					type: getBindingTypeFriendlyName("flagship"),
 					value: app_id,
-					mode: getMode({ isSimulatedLocally: true }),
+					mode: getMode({
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote
+					}),
 				};
 			})
 		);
