@@ -303,7 +303,7 @@ const StepHistory = memo(function StepHistory({
 			)}
 
 			<div className="overflow-x-auto rounded-lg border border-kumo-fill bg-kumo-base">
-				<div className="min-w-[600px]">
+				<div className="min-w-150">
 					{stepList.length === 0 ? (
 						<div className="px-4 py-8 text-center text-sm text-kumo-subtle">
 							No steps recorded yet
