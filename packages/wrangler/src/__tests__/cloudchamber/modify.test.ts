@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -9,8 +8,9 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
+import type { ExpectStatic } from "vitest";
 
-function mockDeployment() {
+function mockDeployment(expect: ExpectStatic) {
 	msw.use(
 		http.patch(
 			"*/deployments/1234/v2",
@@ -37,7 +37,7 @@ describe("cloudchamber modify", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("cloudchamber modify --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -68,10 +68,12 @@ describe("cloudchamber modify", () => {
 		`);
 	});
 
-	it("should modify deployment (detects no interactivity)", async () => {
+	it("should modify deployment (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		mockDeployment();
+		mockDeployment(expect);
 		await runWrangler(
 			"cloudchamber modify 1234 --image hello:modify --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --label appname:helloworld --label region:wnam --vcpu 3 --memory 40MB"
 		);
@@ -103,7 +105,9 @@ describe("cloudchamber modify", () => {
 		`);
 	});
 
-	it("should modify deployment with wrangler args (detects no interactivity)", async () => {
+	it("should modify deployment with wrangler args (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({
 			image: "hello:modify",
@@ -111,7 +115,7 @@ describe("cloudchamber modify", () => {
 			memory: "40MB",
 			location: "sfo06",
 		});
-		mockDeployment();
+		mockDeployment(expect);
 		await runWrangler(
 			"cloudchamber modify 1234 --var HELLO:WORLD --var YOU:CONQUERED --label appname:helloworld --label region:wnam"
 		);
@@ -141,7 +145,9 @@ describe("cloudchamber modify", () => {
 		`);
 	});
 
-	it("can't modify deployment due to lack of deploymentId (json)", async () => {
+	it("can't modify deployment due to lack of deploymentId (json)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		expect(std.err).toMatchInlineSnapshot(`""`);

@@ -4,8 +4,7 @@ import readline from "node:readline";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
 import {
 	WORKER_NOT_FOUND_ERR_CODE,
@@ -21,6 +20,7 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Interface } from "node:readline";
+import type { ExpectStatic } from "vitest";
 
 function createFetchResult(
 	result: unknown,
@@ -99,6 +99,7 @@ describe("wrangler secret", () => {
 
 	describe("put", () => {
 		function mockPutRequest(
+			expect: ExpectStatic,
 			input: { name: string; text: string },
 			env?: string,
 			useServiceEnvironments = true,
@@ -136,7 +137,9 @@ describe("wrangler secret", () => {
 			);
 		}
 
-		it("should error helpfully if pages_build_output_dir is set", async () => {
+		it("should error helpfully if pages_build_output_dir is set", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"wrangler.toml",
 				TOML.stringify({
@@ -160,7 +163,7 @@ describe("wrangler secret", () => {
 				setIsTTY(true);
 			});
 
-			it("should trim stdin secret value", async () => {
+			it("should trim stdin secret value", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -168,7 +171,7 @@ describe("wrangler secret", () => {
           `,
 				});
 
-				mockPutRequest({ name: `secret-name`, text: `hunter2` });
+				mockPutRequest(expect, { name: `secret-name`, text: `hunter2` });
 				await runWrangler("secret put secret-name --name script-name");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -179,14 +182,14 @@ describe("wrangler secret", () => {
 				`);
 			});
 
-			it("should create a secret: service envs", async () => {
+			it("should create a secret: service envs", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
 					result: "the-secret",
 				});
 
-				mockPutRequest({ name: "the-key", text: "the-secret" });
+				mockPutRequest(expect, { name: "the-key", text: "the-secret" });
 				await runWrangler("secret put the-key --name script-name");
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -199,7 +202,7 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should create a secret", async () => {
+			it("should create a secret", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -207,6 +210,7 @@ describe("wrangler secret", () => {
 				});
 
 				mockPutRequest(
+					expect,
 					{ name: "the-key", text: "the-secret" },
 					"some-env",
 					false
@@ -225,7 +229,7 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should create a secret: service envs", async () => {
+			it("should create a secret: service envs", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -233,6 +237,7 @@ describe("wrangler secret", () => {
 				});
 
 				mockPutRequest(
+					expect,
 					{ name: "the-key", text: "the-secret" },
 					"some-env",
 					true
@@ -251,7 +256,7 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error without a script name", async () => {
+			it("should error without a script name", async ({ expect }) => {
 				let error: Error | undefined;
 				try {
 					await runWrangler("secret put the-key");
@@ -274,7 +279,9 @@ describe("wrangler secret", () => {
 				);
 			});
 
-			it("should ask to create a new Worker if no Worker is found under the provided name and abort if declined", async () => {
+			it("should ask to create a new Worker if no Worker is found under the provided name and abort if declined", async ({
+				expect,
+			}) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -304,8 +311,10 @@ describe("wrangler secret", () => {
 			});
 			const mockStdIn = useMockStdin({ isTTY: false });
 
-			it("should trim stdin secret value, from piped input", async () => {
-				mockPutRequest({ name: "the-key", text: "the-secret" });
+			it("should trim stdin secret value, from piped input", async ({
+				expect,
+			}) => {
+				mockPutRequest(expect, { name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send(
 					`the`,
@@ -326,8 +335,8 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should create a secret, from piped input", async () => {
-				mockPutRequest({ name: "the-key", text: "the-secret" });
+			it("should create a secret, from piped input", async ({ expect }) => {
+				mockPutRequest(expect, { name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send("the", "-", "secret");
 				await runWrangler("secret put the-key --name script-name");
@@ -343,8 +352,8 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error if the piped input fails", async () => {
-				mockPutRequest({ name: "the-key", text: "the-secret" });
+			it("should error if the piped input fails", async ({ expect }) => {
+				mockPutRequest(expect, { name: "the-key", text: "the-secret" });
 				mockStdIn.throwError(new Error("Error in stdin stream"));
 				await expect(
 					runWrangler("secret put the-key --name script-name")
@@ -362,7 +371,9 @@ describe("wrangler secret", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should create a new worker if no worker is found under the provided name", async () => {
+			it("should create a new worker if no worker is found under the provided name", async ({
+				expect,
+			}) => {
 				mockStdIn.send("hunter2");
 				mockNoWorkerFound();
 				msw.use(
@@ -377,6 +388,7 @@ describe("wrangler secret", () => {
 					)
 				);
 				mockPutRequest(
+					expect,
 					{ name: "the-key", text: "hunter2" },
 					undefined,
 					undefined,
@@ -397,7 +409,9 @@ describe("wrangler secret", () => {
 			describe("with accountId", () => {
 				mockAccountId({ accountId: null });
 
-				it("should error if request for memberships fails", async () => {
+				it("should error if request for memberships fails", async ({
+					expect,
+				}) => {
 					mockGetMembershipsFail();
 					await expect(
 						runWrangler("secret put the-key --name script-name")
@@ -406,7 +420,7 @@ describe("wrangler secret", () => {
 					);
 				});
 
-				it("should error if a user has no account", async () => {
+				it("should error if a user has no account", async ({ expect }) => {
 					mockGetMemberships([]);
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
@@ -415,7 +429,7 @@ describe("wrangler secret", () => {
 					`);
 				});
 
-				it("should use the account from wrangler.toml", async () => {
+				it("should use the account from wrangler.toml", async ({ expect }) => {
 					fs.writeFileSync(
 						"wrangler.toml",
 						TOML.stringify({
@@ -424,7 +438,7 @@ describe("wrangler secret", () => {
 						"utf-8"
 					);
 					mockStdIn.send("the-secret");
-					mockPutRequest({ name: "the-key", text: "the-secret" });
+					mockPutRequest(expect, { name: "the-key", text: "the-secret" });
 					await runWrangler("secret put the-key --name script-name");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
@@ -437,7 +451,9 @@ describe("wrangler secret", () => {
 					expect(std.err).toMatchInlineSnapshot(`""`);
 				});
 
-				it("should error if a user has multiple accounts, and has not specified an account in wrangler.toml", async () => {
+				it("should error if a user has multiple accounts, and has not specified an account in wrangler.toml", async ({
+					expect,
+				}) => {
 					mockGetMemberships([
 						{
 							id: "1",
@@ -466,14 +482,16 @@ describe("wrangler secret", () => {
 			});
 
 			describe("multi-env warning", () => {
-				it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+				it("should warn if the wrangler config contains environments but none was specified in the command", async ({
+					expect,
+				}) => {
 					writeWranglerConfig({
 						env: {
 							test: {},
 						},
 					});
 					mockStdIn.send("the-secret");
-					mockPutRequest({ name: "the-key", text: "the-secret" });
+					mockPutRequest(expect, { name: "the-key", text: "the-secret" });
 					await runWrangler("secret put the-key --name script-name");
 					expect(std.warn).toMatchInlineSnapshot(`
 						"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret put command.[0m
@@ -487,7 +505,9 @@ describe("wrangler secret", () => {
 					`);
 				});
 
-				it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+				it("should not warn if the wrangler config contains environments and one was specified in the command", async ({
+					expect,
+				}) => {
 					writeWranglerConfig({
 						env: {
 							test: {},
@@ -495,6 +515,7 @@ describe("wrangler secret", () => {
 					});
 					mockStdIn.send("the-secret");
 					mockPutRequest(
+						expect,
 						{ name: "the-key", text: "the-secret" },
 						"test",
 						false
@@ -503,17 +524,21 @@ describe("wrangler secret", () => {
 					expect(std.warn).toMatchInlineSnapshot(`""`);
 				});
 
-				it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+				it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async ({
+					expect,
+				}) => {
 					writeWranglerConfig();
 					mockStdIn.send("the-secret");
-					mockPutRequest({ name: "the-key", text: "the-secret" });
+					mockPutRequest(expect, { name: "the-key", text: "the-secret" });
 					await runWrangler("secret put the-key --name script-name");
 					expect(std.warn).toMatchInlineSnapshot(`""`);
 				});
 			});
 		});
 
-		it("should error if the latest version is not deployed", async () => {
+		it("should error if the latest version is not deployed", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			const scriptName = "test-script";
@@ -563,6 +588,7 @@ describe("wrangler secret", () => {
 			setIsTTY(true);
 		});
 		function mockDeleteRequest(
+			expect: ExpectStatic,
 			input: {
 				scriptName: string;
 				secretName: string;
@@ -595,7 +621,9 @@ describe("wrangler secret", () => {
 			);
 		}
 
-		it("should error helpfully if pages_build_output_dir is set", async () => {
+		it("should error helpfully if pages_build_output_dir is set", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"wrangler.toml",
 				TOML.stringify({
@@ -614,8 +642,11 @@ describe("wrangler secret", () => {
 			);
 		});
 
-		it("should delete a secret", async () => {
-			mockDeleteRequest({ scriptName: "script-name", secretName: "the-key" });
+		it("should delete a secret", async ({ expect }) => {
+			mockDeleteRequest(expect, {
+				scriptName: "script-name",
+				secretName: "the-key",
+			});
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
 				result: true,
@@ -631,8 +662,13 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should delete a secret which name includes special characters", async () => {
-			mockDeleteRequest({ scriptName: "script-name", secretName: "the/key" });
+		it("should delete a secret which name includes special characters", async ({
+			expect,
+		}) => {
+			mockDeleteRequest(expect, {
+				scriptName: "script-name",
+				secretName: "the/key",
+			});
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the/key on the Worker script-name?",
 				result: true,
@@ -648,8 +684,9 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should delete a secret", async () => {
+		it("should delete a secret", async ({ expect }) => {
 			mockDeleteRequest(
+				expect,
 				{ scriptName: "script-name", secretName: "the-key" },
 				"some-env",
 				false
@@ -671,8 +708,9 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should delete a secret: service envs", async () => {
+		it("should delete a secret: service envs", async ({ expect }) => {
 			mockDeleteRequest(
+				expect,
 				{ scriptName: "script-name", secretName: "the-key" },
 				"some-env"
 			);
@@ -693,7 +731,7 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should error without a script name", async () => {
+		it("should error without a script name", async ({ expect }) => {
 			let error: Error | undefined;
 
 			try {
@@ -718,13 +756,18 @@ describe("wrangler secret", () => {
 		});
 
 		describe("multi-env warning", () => {
-			it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+			it("should warn if the wrangler config contains environments but none was specified in the command", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					env: {
 						test: {},
 					},
 				});
-				mockDeleteRequest({ scriptName: "script-name", secretName: "the-key" });
+				mockDeleteRequest(expect, {
+					scriptName: "script-name",
+					secretName: "the-key",
+				});
 				mockConfirm({
 					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
 					result: true,
@@ -742,13 +785,16 @@ describe("wrangler secret", () => {
 				`);
 			});
 
-			it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+			it("should not warn if the wrangler config contains environments and one was specified in the command", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					env: {
 						test: {},
 					},
 				});
 				mockDeleteRequest(
+					expect,
 					{ scriptName: "script-name", secretName: "the-key" },
 					"test",
 					false
@@ -761,9 +807,14 @@ describe("wrangler secret", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+			it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async ({
+				expect,
+			}) => {
 				writeWranglerConfig();
-				mockDeleteRequest({ scriptName: "script-name", secretName: "the-key" });
+				mockDeleteRequest(expect, {
+					scriptName: "script-name",
+					secretName: "the-key",
+				});
 				mockConfirm({
 					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
 					result: true,
@@ -779,6 +830,7 @@ describe("wrangler secret", () => {
 			setIsTTY(true);
 		});
 		function mockListRequest(
+			expect: ExpectStatic,
 			input: { scriptName: string },
 			env?: string,
 			useServiceEnvironments = true
@@ -815,7 +867,9 @@ describe("wrangler secret", () => {
 			);
 		}
 
-		it("should error helpfully if pages_build_output_dir is set", async () => {
+		it("should error helpfully if pages_build_output_dir is set", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"wrangler.toml",
 				TOML.stringify({
@@ -834,8 +888,8 @@ describe("wrangler secret", () => {
 			);
 		});
 
-		it("should list secrets", async () => {
-			mockListRequest({ scriptName: "script-name" });
+		it("should list secrets", async ({ expect }) => {
+			mockListRequest(expect, { scriptName: "script-name" });
 			await runWrangler("secret list --name script-name");
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
@@ -848,8 +902,8 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should list secrets: wrangler environment", async () => {
-			mockListRequest({ scriptName: "script-name" }, "some-env", false);
+		it("should list secrets: wrangler environment", async ({ expect }) => {
+			mockListRequest(expect, { scriptName: "script-name" }, "some-env", false);
 			await runWrangler(
 				"secret list --name script-name --env some-env --legacy-env"
 			);
@@ -864,8 +918,8 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should list secrets: service envs", async () => {
-			mockListRequest({ scriptName: "script-name" }, "some-env");
+		it("should list secrets: service envs", async ({ expect }) => {
+			mockListRequest(expect, { scriptName: "script-name" }, "some-env");
 			await runWrangler(
 				"secret list --name script-name --env some-env --legacy-env false"
 			);
@@ -880,7 +934,7 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should error without a script name", async () => {
+		it("should error without a script name", async ({ expect }) => {
 			let error: Error | undefined;
 			try {
 				await runWrangler("secret list");
@@ -898,7 +952,9 @@ describe("wrangler secret", () => {
 			);
 		});
 
-		it("should error if worker is not found (error code 10007)", async () => {
+		it("should error if worker is not found (error code 10007)", async ({
+			expect,
+		}) => {
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
@@ -928,8 +984,8 @@ describe("wrangler secret", () => {
 		});
 
 		describe("banner tests", () => {
-			it("banner if pretty", async () => {
-				mockListRequest({ scriptName: "script-name" });
+			it("banner if pretty", async ({ expect }) => {
+				mockListRequest(expect, { scriptName: "script-name" });
 				await runWrangler("secret list --name script-name  --format=pretty");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -939,8 +995,8 @@ describe("wrangler secret", () => {
 					"
 				`);
 			});
-			it("no banner if json", async () => {
-				mockListRequest({ scriptName: "script-name" });
+			it("no banner if json", async ({ expect }) => {
+				mockListRequest(expect, { scriptName: "script-name" });
 				await runWrangler("secret list --name script-name  --format=json");
 				expect(std.out).toMatchInlineSnapshot(`
 					"[
@@ -955,7 +1011,10 @@ describe("wrangler secret", () => {
 	});
 
 	describe("bulk", () => {
-		const mockBulkRequest = (returnNetworkError = false) => {
+		const mockBulkRequest = (
+			expect: ExpectStatic,
+			returnNetworkError = false
+		) => {
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
@@ -977,7 +1036,9 @@ describe("wrangler secret", () => {
 				)
 			);
 		};
-		it("should error helpfully if pages_build_output_dir is set", async () => {
+		it("should error helpfully if pages_build_output_dir is set", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"wrangler.toml",
 				TOML.stringify({
@@ -996,7 +1057,9 @@ describe("wrangler secret", () => {
 			);
 		});
 
-		it("should fail secret bulk w/ no pipe or JSON input", async () => {
+		it("should fail secret bulk w/ no pipe or JSON input", async ({
+			expect,
+		}) => {
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() => null as unknown as Interface
 			);
@@ -1017,7 +1080,7 @@ describe("wrangler secret", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use secret bulk w/ pipe input", async () => {
+		it("should use secret bulk w/ pipe input", async ({ expect }) => {
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
 					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
@@ -1026,7 +1089,7 @@ describe("wrangler secret", () => {
 						password: "hunter2",
 					}) as unknown as Interface
 			);
-			mockBulkRequest();
+			mockBulkRequest(expect);
 
 			await runWrangler(`secret bulk --name script-name`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1044,7 +1107,7 @@ describe("wrangler secret", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should create secrets from JSON file", async () => {
+		it("should create secrets from JSON file", async ({ expect }) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -1053,7 +1116,7 @@ describe("wrangler secret", () => {
 				})
 			);
 
-			mockBulkRequest();
+			mockBulkRequest(expect);
 
 			await runWrangler("secret bulk ./secret.json --name script-name");
 
@@ -1072,13 +1135,13 @@ describe("wrangler secret", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should create secrets from a env file", async () => {
+		it("should create secrets from a env file", async ({ expect }) => {
 			writeFileSync(
 				".env",
 				`SECRET_NAME_1=secret_text\nSECRET_NAME_2=secret_text`
 			);
 
-			mockBulkRequest();
+			mockBulkRequest(expect);
 
 			await runWrangler("secret bulk ./.env --name script-name");
 
@@ -1097,7 +1160,7 @@ describe("wrangler secret", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should fail if file is not valid JSON", async () => {
+		it("should fail if file is not valid JSON", async ({ expect }) => {
 			writeFileSync("secret.json", "bad file content");
 
 			await expect(
@@ -1107,7 +1170,9 @@ describe("wrangler secret", () => {
 			);
 		});
 
-		it("should fail if JSON file contains a record with non-string values", async () => {
+		it("should fail if JSON file contains a record with non-string values", async ({
+			expect,
+		}) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -1122,7 +1187,9 @@ describe("wrangler secret", () => {
 			);
 		});
 
-		it("should count success and network failure on secret bulk", async () => {
+		it("should count success and network failure on secret bulk", async ({
+			expect,
+		}) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -1135,7 +1202,7 @@ describe("wrangler secret", () => {
 					"secret-name-7": "secret_text",
 				})
 			);
-			mockBulkRequest(true);
+			mockBulkRequest(expect, true);
 
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
@@ -1161,7 +1228,7 @@ describe("wrangler secret", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should handle network failure on secret bulk", async () => {
+		it("should handle network failure on secret bulk", async ({ expect }) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -1169,7 +1236,7 @@ describe("wrangler secret", () => {
 					"secret-name-2": "secret_text",
 				})
 			);
-			mockBulkRequest(true);
+			mockBulkRequest(expect, true);
 
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
@@ -1195,7 +1262,7 @@ describe("wrangler secret", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("throws a meaningful error", async () => {
+		it("throws a meaningful error", async ({ expect }) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -1259,7 +1326,9 @@ describe("wrangler secret", () => {
 			`);
 		});
 
-		it("should merge existing bindings and secrets when patching", async () => {
+		it("should merge existing bindings and secrets when patching", async ({
+			expect,
+		}) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -1351,7 +1420,9 @@ describe("wrangler secret", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should, in interactive mode, ask to create a new Worker if no Worker is found under the provided name", async () => {
+		it("should, in interactive mode, ask to create a new Worker if no Worker is found under the provided name", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			writeFileSync(
 				"secret.json",
@@ -1376,7 +1447,9 @@ describe("wrangler secret", () => {
 			`);
 		});
 
-		it("should, in non-interactive mode, create a new worker if no worker is found under the provided name", async () => {
+		it("should, in non-interactive mode, create a new worker if no worker is found under the provided name", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			writeFileSync(
 				"secret.json",
@@ -1395,7 +1468,7 @@ describe("wrangler secret", () => {
 					}
 				)
 			);
-			mockBulkRequest();
+			mockBulkRequest(expect);
 
 			await runWrangler("secret bulk ./secret.json --name script-name");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1412,7 +1485,9 @@ describe("wrangler secret", () => {
 		});
 
 		describe("multi-env warning", () => {
-			it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+			it("should warn if the wrangler config contains environments but none was specified in the command", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					name: "test-name",
 					main: "./index.js",
@@ -1422,7 +1497,7 @@ describe("wrangler secret", () => {
 				});
 				writeFileSync("secret.json", JSON.stringify({}));
 
-				mockBulkRequest();
+				mockBulkRequest(expect);
 
 				await runWrangler("secret bulk ./secret.json --name script-name");
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -1437,7 +1512,9 @@ describe("wrangler secret", () => {
 				`);
 			});
 
-			it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+			it("should not warn if the wrangler config contains environments and one was specified in the command", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					name: "test-name",
 					main: "./index.js",
@@ -1447,7 +1524,7 @@ describe("wrangler secret", () => {
 				});
 				writeFileSync("secret.json", JSON.stringify({}));
 
-				mockBulkRequest();
+				mockBulkRequest(expect);
 
 				await runWrangler(
 					"secret bulk ./secret.json --name script-name -e test"
@@ -1455,14 +1532,16 @@ describe("wrangler secret", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+			it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					name: "test-name",
 					main: "./index.js",
 				});
 				writeFileSync("secret.json", JSON.stringify({}));
 
-				mockBulkRequest();
+				mockBulkRequest(expect);
 
 				await runWrangler("secret bulk ./secret.json --name script-name");
 				expect(std.warn).toMatchInlineSnapshot(`""`);

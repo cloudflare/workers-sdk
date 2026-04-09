@@ -1,7 +1,6 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -11,6 +10,7 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { ServiceReferenceResponse, Tail } from "../delete";
 import type { KVNamespaceInfo } from "../kv/helpers";
+import type { ExpectStatic } from "vitest";
 
 describe("delete", () => {
 	mockAccountId();
@@ -22,15 +22,15 @@ describe("delete", () => {
 	});
 	const std = mockConsoleMethods();
 
-	it("should delete an entire service by name", async () => {
+	it("should delete an entire service by name", async ({ expect }) => {
 		mockConfirm({
 			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
 			result: true,
 		});
-		mockListKVNamespacesRequest();
-		mockListReferencesRequest("my-script");
-		mockListTailsByConsumerRequest("my-script");
-		mockDeleteWorkerRequest({ name: "my-script" });
+		mockListKVNamespacesRequest(expect);
+		mockListReferencesRequest(expect, "my-script");
+		mockListTailsByConsumerRequest(expect, "my-script");
+		mockDeleteWorkerRequest(expect, { name: "my-script" });
 		await runWrangler("delete --name my-script");
 
 		expect(std).toMatchInlineSnapshot(`
@@ -47,15 +47,17 @@ describe("delete", () => {
 		`);
 	});
 
-	it("should delete a service using positional name argument", async () => {
+	it("should delete a service using positional name argument", async ({
+		expect,
+	}) => {
 		mockConfirm({
 			text: `Are you sure you want to delete my-positional-worker? This action cannot be undone.`,
 			result: true,
 		});
-		mockListKVNamespacesRequest();
-		mockListReferencesRequest("my-positional-worker");
-		mockListTailsByConsumerRequest("my-positional-worker");
-		mockDeleteWorkerRequest({ name: "my-positional-worker" });
+		mockListKVNamespacesRequest(expect);
+		mockListReferencesRequest(expect, "my-positional-worker");
+		mockListTailsByConsumerRequest(expect, "my-positional-worker");
+		mockDeleteWorkerRequest(expect, { name: "my-positional-worker" });
 		await runWrangler("delete my-positional-worker");
 
 		expect(std).toMatchInlineSnapshot(`
@@ -72,16 +74,18 @@ describe("delete", () => {
 		`);
 	});
 
-	it("should use positional name argument over the name from the Wrangler config file", async () => {
+	it("should use positional name argument over the name from the Wrangler config file", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({ name: "config-provided-name" });
 		mockConfirm({
 			text: `Are you sure you want to delete cli-provided-name? This action cannot be undone.`,
 			result: true,
 		});
-		mockListKVNamespacesRequest();
-		mockListReferencesRequest("cli-provided-name");
-		mockListTailsByConsumerRequest("cli-provided-name");
-		mockDeleteWorkerRequest({ name: "cli-provided-name" });
+		mockListKVNamespacesRequest(expect);
+		mockListReferencesRequest(expect, "cli-provided-name");
+		mockListTailsByConsumerRequest(expect, "cli-provided-name");
+		mockDeleteWorkerRequest(expect, { name: "cli-provided-name" });
 		await runWrangler("delete cli-provided-name");
 
 		expect(std).toMatchInlineSnapshot(`
@@ -98,16 +102,16 @@ describe("delete", () => {
 		`);
 	});
 
-	it("should delete a script by configuration", async () => {
+	it("should delete a script by configuration", async ({ expect }) => {
 		mockConfirm({
 			text: `Are you sure you want to delete test-name? This action cannot be undone.`,
 			result: true,
 		});
 		writeWranglerConfig();
-		mockListKVNamespacesRequest();
-		mockListReferencesRequest("test-name");
-		mockListTailsByConsumerRequest("test-name");
-		mockDeleteWorkerRequest();
+		mockListKVNamespacesRequest(expect);
+		mockListReferencesRequest(expect, "test-name");
+		mockListTailsByConsumerRequest(expect, "test-name");
+		mockDeleteWorkerRequest(expect);
 		await runWrangler("delete");
 
 		expect(std).toMatchInlineSnapshot(`
@@ -124,7 +128,9 @@ describe("delete", () => {
 		`);
 	});
 
-	it("shouldn't delete a service when doing a --dry-run", async () => {
+	it("shouldn't delete a service when doing a --dry-run", async ({
+		expect,
+	}) => {
 		await runWrangler("delete --name xyz --dry-run");
 
 		expect(std).toMatchInlineSnapshot(`
@@ -141,7 +147,7 @@ describe("delete", () => {
 		`);
 	});
 
-	it('shouldn\'t delete when the user says "no"', async () => {
+	it('shouldn\'t delete when the user says "no"', async ({ expect }) => {
 		mockConfirm({
 			text: `Are you sure you want to delete xyz? This action cannot be undone.`,
 			result: false,
@@ -162,7 +168,9 @@ describe("delete", () => {
 		`);
 	});
 
-	it("should delete a site namespace associated with a worker", async () => {
+	it("should delete a site namespace associated with a worker", async ({
+		expect,
+	}) => {
 		const kvNamespaces = [
 			{
 				title: "__my-script-workers_sites_assets",
@@ -179,7 +187,7 @@ describe("delete", () => {
 			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
 			result: true,
 		});
-		mockListKVNamespacesRequest(...kvNamespaces);
+		mockListKVNamespacesRequest(expect, ...kvNamespaces);
 		// it should only try to delete the site namespace associated with this worker
 		msw.use(
 			http.delete(
@@ -195,9 +203,9 @@ describe("delete", () => {
 			)
 		);
 
-		mockListReferencesRequest("my-script");
-		mockListTailsByConsumerRequest("my-script");
-		mockDeleteWorkerRequest({ name: "my-script" });
+		mockListReferencesRequest(expect, "my-script");
+		mockListTailsByConsumerRequest(expect, "my-script");
+		mockDeleteWorkerRequest(expect, { name: "my-script" });
 		await runWrangler("delete --name my-script");
 		expect(std).toMatchInlineSnapshot(`
 			{
@@ -214,7 +222,9 @@ describe("delete", () => {
 		`);
 	});
 
-	it("should delete a site namespace associated with a worker, including it's preview namespace", async () => {
+	it("should delete a site namespace associated with a worker, including it's preview namespace", async ({
+		expect,
+	}) => {
 		// This is the same test as the previous one, but it includes a preview namespace
 		const kvNamespaces = [
 			{
@@ -238,9 +248,9 @@ describe("delete", () => {
 			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
 			result: true,
 		});
-		mockListKVNamespacesRequest(...kvNamespaces);
-		mockListReferencesRequest("my-script");
-		mockListTailsByConsumerRequest("my-script");
+		mockListKVNamespacesRequest(expect, ...kvNamespaces);
+		mockListReferencesRequest(expect, "my-script");
+		mockListTailsByConsumerRequest(expect, "my-script");
 		// it should only try to delete the site namespace associated with this worker
 
 		msw.use(
@@ -281,7 +291,7 @@ describe("delete", () => {
 			)
 		);
 
-		mockDeleteWorkerRequest({ name: "my-script" });
+		mockDeleteWorkerRequest(expect, { name: "my-script" });
 		await runWrangler("delete --name my-script");
 		expect(std).toMatchInlineSnapshot(`
 			{
@@ -299,7 +309,9 @@ describe("delete", () => {
 		`);
 	});
 
-	it("should error helpfully if pages_build_output_dir is set", async () => {
+	it("should error helpfully if pages_build_output_dir is set", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({ pages_build_output_dir: "dist", name: "test" });
 		await expect(
 			runWrangler("delete")
@@ -311,7 +323,9 @@ describe("delete", () => {
 		);
 	});
 	describe("force deletes", () => {
-		it("should prompt for extra confirmation when service is depended on and use force", async () => {
+		it("should prompt for extra confirmation when service is depended on and use force", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: `Are you sure you want to delete test-name? This action cannot be undone.`,
 				result: true,
@@ -330,8 +344,8 @@ Are you sure you want to continue?`,
 				result: true,
 			});
 			writeWranglerConfig();
-			mockListKVNamespacesRequest();
-			mockListReferencesRequest("test-name", {
+			mockListKVNamespacesRequest(expect);
+			mockListReferencesRequest(expect, "test-name", {
 				services: {
 					incoming: [
 						{
@@ -373,7 +387,7 @@ Are you sure you want to continue?`,
 					},
 				],
 			});
-			mockListTailsByConsumerRequest("test-name", [
+			mockListTailsByConsumerRequest(expect, "test-name", [
 				{
 					consumer: { script: "test-name" },
 					producer: { script: "i-make-logs" },
@@ -382,7 +396,7 @@ Are you sure you want to continue?`,
 					modified_on: "",
 				},
 			]);
-			mockDeleteWorkerRequest({ force: true });
+			mockDeleteWorkerRequest(expect, { force: true });
 			await runWrangler("delete");
 
 			expect(std).toMatchInlineSnapshot(`
@@ -399,7 +413,9 @@ Are you sure you want to continue?`,
 			`);
 		});
 
-		it("should not delete when extra confirmation to use force is denied", async () => {
+		it("should not delete when extra confirmation to use force is denied", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: `Are you sure you want to delete test-name? This action cannot be undone.`,
 				result: true,
@@ -414,8 +430,8 @@ Are you sure you want to continue?`,
 				result: false,
 			});
 			writeWranglerConfig();
-			mockListKVNamespacesRequest();
-			mockListReferencesRequest("test-name", {
+			mockListKVNamespacesRequest(expect);
+			mockListReferencesRequest(expect, "test-name", {
 				services: {
 					incoming: [
 						{
@@ -427,7 +443,7 @@ Are you sure you want to continue?`,
 					outgoing: [],
 				},
 			});
-			mockListTailsByConsumerRequest("test-name");
+			mockListTailsByConsumerRequest(expect, "test-name");
 			await runWrangler("delete");
 
 			expect(std).toMatchInlineSnapshot(`
@@ -443,10 +459,12 @@ Are you sure you want to continue?`,
 			`);
 		});
 
-		it("should not require confirmation when --force is used", async () => {
+		it("should not require confirmation when --force is used", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
-			mockListKVNamespacesRequest();
-			mockDeleteWorkerRequest({ force: true });
+			mockListKVNamespacesRequest(expect);
+			mockDeleteWorkerRequest(expect, { force: true });
 			await runWrangler("delete --force");
 
 			expect(std).toMatchInlineSnapshot(`
@@ -463,7 +481,9 @@ Are you sure you want to continue?`,
 			`);
 		});
 
-		it("should prompt for extra confirmation when worker is used by a Pages function", async () => {
+		it("should prompt for extra confirmation when worker is used by a Pages function", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: `Are you sure you want to delete test-name? This action cannot be undone.`,
 				result: true,
@@ -478,16 +498,16 @@ Are you sure you want to continue?`,
 				result: true,
 			});
 			writeWranglerConfig();
-			mockListKVNamespacesRequest();
-			mockListReferencesRequest("test-name", {
+			mockListKVNamespacesRequest(expect);
+			mockListReferencesRequest(expect, "test-name", {
 				services: {
 					incoming: [],
 					outgoing: [],
 					pages_function: true,
 				},
 			});
-			mockListTailsByConsumerRequest("test-name");
-			mockDeleteWorkerRequest({ force: true });
+			mockListTailsByConsumerRequest(expect, "test-name");
+			mockDeleteWorkerRequest(expect, { force: true });
 			await runWrangler("delete");
 
 			expect(std).toMatchInlineSnapshot(`
@@ -504,7 +524,9 @@ Are you sure you want to continue?`,
 			`);
 		});
 
-		it("should include Pages function in confirmation when combined with other dependencies", async () => {
+		it("should include Pages function in confirmation when combined with other dependencies", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: `Are you sure you want to delete test-name? This action cannot be undone.`,
 				result: true,
@@ -521,8 +543,8 @@ Are you sure you want to continue?`,
 				result: true,
 			});
 			writeWranglerConfig();
-			mockListKVNamespacesRequest();
-			mockListReferencesRequest("test-name", {
+			mockListKVNamespacesRequest(expect);
+			mockListReferencesRequest(expect, "test-name", {
 				services: {
 					incoming: [
 						{
@@ -544,8 +566,8 @@ Are you sure you want to continue?`,
 					},
 				],
 			});
-			mockListTailsByConsumerRequest("test-name");
-			mockDeleteWorkerRequest({ force: true });
+			mockListTailsByConsumerRequest(expect, "test-name");
+			mockDeleteWorkerRequest(expect, { force: true });
 			await runWrangler("delete");
 
 			expect(std).toMatchInlineSnapshot(`
@@ -566,6 +588,7 @@ Are you sure you want to continue?`,
 
 /** Create a mock handler for the request to upload a worker script. */
 function mockDeleteWorkerRequest(
+	expect: ExpectStatic,
 	options: {
 		name?: string;
 		env?: string;
@@ -607,7 +630,10 @@ function mockDeleteWorkerRequest(
 }
 
 /** Create a mock handler for the request to get a list of all KV namespaces. */
-function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
+function mockListKVNamespacesRequest(
+	expect: ExpectStatic,
+	...namespaces: KVNamespaceInfo[]
+) {
 	msw.use(
 		http.get(
 			"*/accounts/:accountId/storage/kv/namespaces",
@@ -629,6 +655,7 @@ function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
 }
 
 function mockListReferencesRequest(
+	expect: ExpectStatic,
 	forScript: string,
 	references: ServiceReferenceResponse = {}
 ) {
@@ -653,7 +680,11 @@ function mockListReferencesRequest(
 	);
 }
 
-function mockListTailsByConsumerRequest(forScript: string, tails: Tail[] = []) {
+function mockListTailsByConsumerRequest(
+	expect: ExpectStatic,
+	forScript: string,
+	tails: Tail[] = []
+) {
 	msw.use(
 		http.get(
 			"*/accounts/:accountId/workers/tails/by-consumer/:scriptName",

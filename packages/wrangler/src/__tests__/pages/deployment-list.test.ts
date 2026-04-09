@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
@@ -8,6 +7,7 @@ import { msw } from "./../helpers/msw";
 import { runInTempDir } from "./../helpers/run-in-tmp";
 import { runWrangler } from "./../helpers/run-wrangler";
 import type { Deployment } from "./../../pages/types";
+import type { ExpectStatic } from "vitest";
 
 describe("pages deployment list", () => {
 	runInTempDir();
@@ -44,7 +44,7 @@ describe("pages deployment list", () => {
 			},
 		];
 
-		const requests = mockDeploymentListRequest(deployments);
+		const requests = mockDeploymentListRequest(expect, deployments);
 		await runWrangler("pages deployment list --project-name=images");
 
 		expect(requests.count).toBe(1);
@@ -83,7 +83,7 @@ describe("pages deployment list", () => {
 			},
 		];
 
-		const requests = mockDeploymentListRequest(deployments);
+		const requests = mockDeploymentListRequest(expect, deployments);
 		await runWrangler("pages deployment list --project-name=images --json");
 
 		expect(requests.count).toBe(1);
@@ -128,7 +128,7 @@ describe("pages deployment list", () => {
 			},
 		];
 
-		const requests = mockDeploymentListRequest(deployments);
+		const requests = mockDeploymentListRequest(expect, deployments);
 		await runWrangler("pages deployment list --project-name=images");
 		expect(requests.count).toBe(1);
 		expect(
@@ -159,7 +159,7 @@ describe("pages deployment list", () => {
 			},
 		];
 
-		const requests = mockDeploymentListRequest(deployments);
+		const requests = mockDeploymentListRequest(expect, deployments);
 		await runWrangler(
 			"pages deployment list --project-name=images --environment=production"
 		);
@@ -192,7 +192,7 @@ describe("pages deployment list", () => {
 			},
 		];
 
-		const requests = mockDeploymentListRequest(deployments);
+		const requests = mockDeploymentListRequest(expect, deployments);
 		await runWrangler(
 			"pages deployment list --project-name=images --environment=preview"
 		);
@@ -219,7 +219,10 @@ type RequestLogger = {
 	queryParams: [string, string][][];
 };
 
-function mockDeploymentListRequest(deployments: unknown[]): RequestLogger {
+function mockDeploymentListRequest(
+	expect: ExpectStatic,
+	deployments: unknown[]
+): RequestLogger {
 	const requests: RequestLogger = { count: 0, queryParams: [] };
 	msw.use(
 		http.get(

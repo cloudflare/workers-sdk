@@ -65,29 +65,14 @@ async function findR2BucketOwner(
 }
 
 /**
- * R2 bucket response extended with worker name for filtering in the UI.
- * We require `name` since we always have it locally.
- */
-type R2BucketWithWorker = Required<Pick<R2BucketType, "name">> &
-	Omit<R2BucketType, "name"> & {
-		workerName: string;
-	};
-
-/**
  * Get local R2 buckets from the binding map.
- * Each bucket is tagged with the worker name it belongs to.
  */
-function getLocalR2Buckets(env: Env): R2BucketWithWorker[] {
+function getLocalR2Buckets(env: Env): Required<Pick<R2BucketType, "name">>[] {
 	const r2BindingMap = env.LOCAL_EXPLORER_BINDING_MAP.r2;
 
-	return Object.entries(r2BindingMap).map(([bucketName, bindingName]) => {
-		// Binding names follow the pattern "MINIFLARE_PROXY:r2:workerName:BINDING"
-		const parts = bindingName.split(":");
-		const workerName = parts.length >= 3 ? parts[2] : "unknown";
-
+	return Object.entries(r2BindingMap).map(([bucketName]) => {
 		return {
 			name: bucketName,
-			workerName,
 		};
 	});
 }
@@ -108,7 +93,6 @@ export async function listR2Buckets(c: AppContext) {
 	const localBuckets = getLocalR2Buckets(c.env);
 	const aggregatedBuckets = await aggregateListResults<{
 		name: string;
-		workerName: string;
 	}>(c, localBuckets, "/r2/buckets", "buckets");
 
 	// Deduplicate by name
