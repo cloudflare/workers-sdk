@@ -426,15 +426,19 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		}
 	}
 
+	#getMetricsResponseObject() {
+		return {
+			backlogCount: this.#messages.length,
+			backlogBytes: this.#backlogBytes,
+			oldestMessageTimestamp: this.#messages[0]?.timestamp.getTime() ?? 0,
+		}
+	}
+
 	@POST("/message")
 	message: RouteHandler = async (req) => {
 		const messageResponse = {
 			metadata: {
-				metrics: {
-					backlogCount: this.#messages.length,
-					backlogBytes: this.#backlogBytes,
-					oldestMessageTimestamp: this.#messages[0]?.timestamp.getTime() ?? 0,
-				},
+				metrics: this.#getMetricsResponseObject(),
 			},
 		};
 
@@ -459,11 +463,7 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 	batch: RouteHandler = async (req) => {
 		const batchResponse = {
 			metadata: {
-				metrics: {
-					backlogCount: this.#messages.length,
-					backlogBytes: this.#backlogBytes,
-					oldestMessageTimestamp: this.#messages[0]?.timestamp.getTime() ?? 0,
-				},
+				metrics: this.#getMetricsResponseObject(),
 			},
 		};
 
@@ -486,10 +486,6 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 
 	@GET("/metrics")
 	metrics: RouteHandler = async (_req) => {
-		return Response.json({
-			backlogCount: this.#messages.length,
-			backlogBytes: this.#backlogBytes,
-			oldestMessageTimestamp: this.#messages[0]?.timestamp.getTime() ?? 0,
-		});
+		return Response.json(this.#getMetricsResponseObject());
 	};
 }
