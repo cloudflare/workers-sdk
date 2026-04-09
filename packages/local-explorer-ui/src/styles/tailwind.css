@@ -42,6 +42,8 @@
 	}
 }
 
+/* TODO: Remove this once this PR is merged and release */
+/* https://github.com/cloudflare/kumo/pull/388 */
 [data-sidebar="sidebar"] [data-closed]:not([data-ending-style]) {
 	height: var(--collapsible-panel-height) !important;
 }
