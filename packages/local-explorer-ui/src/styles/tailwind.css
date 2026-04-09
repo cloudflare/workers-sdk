@@ -42,6 +42,10 @@
 	}
 }
 
+[data-sidebar="sidebar"] [data-closed]:not([data-ending-style]) {
+	height: var(--collapsible-panel-height) !important;
+}
+
 /* Animated Cloudflare Logo keyframes */
 @keyframes animated-logo-container {
 	0% {
