@@ -1,4 +1,4 @@
-import Worker from "@cloudflare/workers-shared/asset-worker";
+import Worker, { AssetWorkerInner } from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 import { SELF } from "cloudflare:test";
@@ -12,13 +12,18 @@ const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 vi.mock("@cloudflare/workers-shared/asset-worker/src/utils/kv.ts");
 vi.mock("@cloudflare/workers-shared/asset-worker/src/configuration");
 const existsMock = (fileList: Set<string>) => {
-	vi.spyOn(Worker.prototype, "unstable_exists").mockImplementation(
-		async (pathname: string) => {
-			if (fileList.has(pathname)) {
-				return pathname;
-			}
-			return null;
+	const mockImplementation = async (pathname: string) => {
+		if (fileList.has(pathname)) {
+			return pathname;
 		}
+		return null;
+	};
+
+	vi.spyOn(Worker.prototype, "unstable_exists").mockImplementation(
+		mockImplementation
+	);
+	vi.spyOn(AssetWorkerInner.prototype, "unstable_exists").mockImplementation(
+		mockImplementation
 	);
 };
 const BASE_URL = "http://example.com";
@@ -57,7 +62,7 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 		);
 	});
 	afterEach(() => {
-		vi.mocked(getAssetWithMetadataFromKV).mockRestore();
+		vi.restoreAllMocks();
 	});
 	describe.each(suite)(`$html_handling`, ({ html_handling, cases }) => {
 		beforeEach(async () => {
