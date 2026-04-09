@@ -53,8 +53,8 @@ describe("versions secret bulk", () => {
 			{ encoding: "utf8" }
 		);
 
-		mockSetupApiCalls();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
@@ -90,8 +90,8 @@ describe("versions secret bulk", () => {
 			".env",
 			"SECRET_1=secret-1\nSECRET_2=secret-2\nSECRET_3=secret-3"
 		);
-		mockSetupApiCalls();
-		mockPostVersion();
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect);
 		await runWrangler(`versions secret bulk .env --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
 			`
@@ -112,8 +112,8 @@ describe("versions secret bulk", () => {
 	test("no wrangler configuration warnings shown", async ({ expect }) => {
 		await writeFile("secrets.json", JSON.stringify({ SECRET_1: "secret-1" }));
 		await writeFile("wrangler.json", JSON.stringify({ invalid_field: true }));
-		mockSetupApiCalls();
-		mockPostVersion();
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect);
 		await runWrangler(`versions secret bulk secrets.json --name script-name`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -130,8 +130,8 @@ describe("versions secret bulk", () => {
 				}) as unknown as Interface
 		);
 
-		mockSetupApiCalls();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
@@ -179,8 +179,8 @@ describe("versions secret bulk", () => {
 				"hello world" as unknown as Interface
 		);
 
-		mockSetupApiCalls();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
@@ -226,8 +226,8 @@ describe("versions secret bulk", () => {
 			{ encoding: "utf8" }
 		);
 
-		mockSetupApiCalls();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
@@ -276,8 +276,8 @@ describe("versions secret bulk", () => {
 			{ encoding: "utf8" }
 		);
 
-		mockSetupApiCalls();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
@@ -322,8 +322,8 @@ describe("versions secret bulk", () => {
 			);
 
 			writeWranglerConfig({ env: { test: {} } });
-			mockSetupApiCalls();
-			mockPostVersion();
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
 
 			await runWrangler(`versions secret bulk --name script-name`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -350,8 +350,8 @@ describe("versions secret bulk", () => {
 			);
 
 			writeWranglerConfig({ env: { test: {} } });
-			mockSetupApiCalls();
-			mockPostVersion();
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
 
 			await runWrangler(`versions secret bulk --name script-name --env test`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -369,8 +369,8 @@ describe("versions secret bulk", () => {
 			);
 
 			writeWranglerConfig();
-			mockSetupApiCalls();
-			mockPostVersion();
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
 
 			await runWrangler(`versions secret bulk --name script-name`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);

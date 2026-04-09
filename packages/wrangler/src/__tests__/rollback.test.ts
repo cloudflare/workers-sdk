@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE } from "../versions/rollback";
 import { collectCLIOutput } from "./helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -10,6 +9,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { ApiDeployment } from "../versions/types";
+import type { ExpectStatic } from "vitest";
 
 describe("rollback", () => {
 	mockConsoleMethods();
@@ -18,7 +18,7 @@ describe("rollback", () => {
 	mockAccountId();
 	mockApiToken();
 
-	function mockGetDeployments(multiVersion = false) {
+	function mockGetDeployments(expect: ExpectStatic, multiVersion = false) {
 		const versions = multiVersion
 			? [
 					{ version_id: "version-id-1", percentage: 50 },
@@ -51,7 +51,7 @@ describe("rollback", () => {
 		);
 	}
 
-	function mockGetVersion(versionId: string) {
+	function mockGetVersion(expect: ExpectStatic, versionId: string) {
 		msw.use(
 			http.get(
 				`*/accounts/:accountId/workers/scripts/:scriptName/versions/${versionId}`,
@@ -100,7 +100,7 @@ describe("rollback", () => {
 		);
 	}
 
-	function mockPostDeployment(forced = false) {
+	function mockPostDeployment(expect: ExpectStatic, forced = false) {
 		msw.use(
 			http.post(
 				`*/accounts/:accountId/workers/scripts/:scriptName/deployments${forced ? "?force=true" : ""}`,
@@ -115,11 +115,11 @@ describe("rollback", () => {
 		);
 	}
 
-	test("can rollback to an earlier version", async () => {
-		mockGetDeployments();
-		mockGetVersion("version-id-1");
-		mockGetVersion("rollback-version");
-		mockPostDeployment();
+	test("can rollback to an earlier version", async ({ expect }) => {
+		mockGetDeployments(expect);
+		mockGetVersion(expect, "version-id-1");
+		mockGetVersion(expect, "rollback-version");
+		mockPostDeployment(expect);
 
 		mockPrompt({
 			text: "Please provide an optional message for this rollback (120 characters max)",
@@ -139,10 +139,12 @@ describe("rollback", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("rolling back with changed secrets prompts confirmation", async () => {
-		mockGetDeployments();
-		mockGetVersion("version-id-1");
-		mockGetVersion("rollback-version");
+	test("rolling back with changed secrets prompts confirmation", async ({
+		expect,
+	}) => {
+		mockGetDeployments(expect);
+		mockGetVersion(expect, "version-id-1");
+		mockGetVersion(expect, "rollback-version");
 
 		// Deployment will fail due to changed secret
 		msw.use(
@@ -168,7 +170,7 @@ describe("rollback", () => {
 		);
 
 		// Now deploy again with force and succeed
-		mockPostDeployment(true);
+		mockPostDeployment(expect, true);
 
 		mockPrompt({
 			text: "Please provide an optional message for this rollback (120 characters max)",
@@ -196,11 +198,13 @@ describe("rollback", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("rolling back with changed secrets (non-interactive)", async () => {
+	test("rolling back with changed secrets (non-interactive)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
-		mockGetDeployments();
-		mockGetVersion("version-id-1");
-		mockGetVersion("rollback-version");
+		mockGetDeployments(expect);
+		mockGetVersion(expect, "version-id-1");
+		mockGetVersion(expect, "rollback-version");
 
 		// Deployment will fail due to changed secret
 		msw.use(
@@ -226,7 +230,7 @@ describe("rollback", () => {
 		);
 
 		// Now deploy again with force and succeed
-		mockPostDeployment(true);
+		mockPostDeployment(expect, true);
 
 		await runWrangler(
 			"rollback --name script-name --version-id rollback-version"

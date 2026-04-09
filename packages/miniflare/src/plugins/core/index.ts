@@ -38,6 +38,7 @@ import {
 } from "./constants";
 import {
 	constructExplorerBindingMap,
+	constructExplorerWorkerOpts,
 	getExplorerServices,
 	wrapDurableObjectModules,
 } from "./explorer";
@@ -55,6 +56,7 @@ import {
 	kCurrentWorker,
 	ServiceDesignatorSchema,
 } from "./services";
+import type { PluginWorkerOptions } from "..";
 import type {
 	Extension,
 	Service,
@@ -966,6 +968,8 @@ export interface GlobalServicesOptions {
 	durableObjectClassNames: DurableObjectClassNames;
 	/** Pass Workflow configuration for the explorer worker */
 	workflowOptions?: Map<string, WorkflowOption>;
+	/** All worker options for building per-worker resource bindings */
+	allWorkerOpts?: PluginWorkerOptions[];
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -976,6 +980,7 @@ export function getGlobalServices({
 	proxyBindings,
 	durableObjectClassNames,
 	workflowOptions,
+	allWorkerOpts,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1114,6 +1119,11 @@ export function getGlobalServices({
 			workflowOptions
 		);
 		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
+
+		const explorerWorkerOpts = constructExplorerWorkerOpts(
+			allWorkerOpts ?? [],
+			durableObjectClassNames
+		);
 		services.push(
 			...getExplorerServices({
 				localExplorerUiPath,
@@ -1121,6 +1131,7 @@ export function getGlobalServices({
 				bindingIdMap: IDToBindingMap,
 				hasDurableObjects,
 				workerNames,
+				explorerWorkerOpts,
 			})
 		);
 	}

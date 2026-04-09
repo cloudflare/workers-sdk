@@ -118,6 +118,8 @@ import type {
 	Plugin,
 	Plugins,
 	PluginServicesOptions,
+	PluginSharedOptions,
+	PluginWorkerOptions,
 	QueueConsumers,
 	QueueProducers,
 	ReplaceWorkersTypes,
@@ -140,13 +142,14 @@ import type {
 	Worker_Binding,
 	Worker_Module,
 } from "./runtime";
-import type { Log, OptionalZodTypeOf } from "./shared";
+import type { Log } from "./shared";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
 	CacheStorage,
 	D1Database,
 	DurableObjectNamespace,
 	Fetcher,
+	Flags,
 	ImagesBinding,
 	KVNamespace,
 	KVNamespaceListKey,
@@ -183,14 +186,6 @@ function getServerPort(server: http.Server) {
 // ===== `Miniflare` User Options =====
 export type MiniflareOptions = SharedOptions &
 	(WorkerOptions | { workers: WorkerOptions[] });
-
-// ===== `Miniflare` Validated Options =====
-type PluginWorkerOptions = {
-	[Key in keyof Plugins]: z.infer<Plugins[Key]["options"]>;
-};
-type PluginSharedOptions = {
-	[Key in keyof Plugins]: OptionalZodTypeOf<Plugins[Key]["sharedOptions"]>;
-};
 
 function hasMultipleWorkers(opts: unknown): opts is { workers: unknown[] } {
 	return (
@@ -2188,6 +2183,7 @@ export class Miniflare {
 			proxyBindings,
 			durableObjectClassNames,
 			workflowOptions: workflowOptions.size > 0 ? workflowOptions : undefined,
+			allWorkerOpts,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
@@ -2966,81 +2962,7 @@ export class Miniflare {
 	getFlagshipBinding(
 		bindingName: string,
 		workerName?: string
-	): Promise<{
-		get: (
-			flagKey: string,
-			defaultValue?: unknown,
-			context?: Record<string, string | number | boolean>
-		) => Promise<unknown>;
-		getBooleanValue: (
-			flagKey: string,
-			defaultValue: boolean,
-			context?: Record<string, string | number | boolean>
-		) => Promise<boolean>;
-		getStringValue: (
-			flagKey: string,
-			defaultValue: string,
-			context?: Record<string, string | number | boolean>
-		) => Promise<string>;
-		getNumberValue: (
-			flagKey: string,
-			defaultValue: number,
-			context?: Record<string, string | number | boolean>
-		) => Promise<number>;
-		getObjectValue: <T extends object>(
-			flagKey: string,
-			defaultValue: T,
-			context?: Record<string, string | number | boolean>
-		) => Promise<T>;
-		getBooleanDetails: (
-			flagKey: string,
-			defaultValue: boolean,
-			context?: Record<string, string | number | boolean>
-		) => Promise<{
-			flagKey: string;
-			value: boolean;
-			variant?: string;
-			reason?: string;
-			errorCode?: string;
-			errorMessage?: string;
-		}>;
-		getStringDetails: (
-			flagKey: string,
-			defaultValue: string,
-			context?: Record<string, string | number | boolean>
-		) => Promise<{
-			flagKey: string;
-			value: string;
-			variant?: string;
-			reason?: string;
-			errorCode?: string;
-			errorMessage?: string;
-		}>;
-		getNumberDetails: (
-			flagKey: string,
-			defaultValue: number,
-			context?: Record<string, string | number | boolean>
-		) => Promise<{
-			flagKey: string;
-			value: number;
-			variant?: string;
-			reason?: string;
-			errorCode?: string;
-			errorMessage?: string;
-		}>;
-		getObjectDetails: <T extends object>(
-			flagKey: string,
-			defaultValue: T,
-			context?: Record<string, string | number | boolean>
-		) => Promise<{
-			flagKey: string;
-			value: T;
-			variant?: string;
-			reason?: string;
-			errorCode?: string;
-			errorMessage?: string;
-		}>;
-	}> {
+	): Promise<FlagshipBinding> {
 		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName);
 	}
 	getStreamBinding(
@@ -3124,6 +3046,8 @@ export interface SecretsStoreSecretAdmin {
 	list(): Promise<KVNamespaceListKey<{ uuid: string }, string>[]>;
 	get(id: string): Promise<string>;
 }
+
+export type FlagshipBinding = Flags;
 
 export * from "./http";
 export * from "./plugins";

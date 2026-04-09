@@ -402,12 +402,44 @@ export const zDoRawQueryResult = z.object({
 		.optional(),
 });
 
+export const zLocalExplorerResourceBinding = z.object({
+	id: z.string(),
+	bindingName: z.string(),
+});
+
+export const zLocalExplorerDoBinding = z.object({
+	id: z.string(),
+	bindingName: z.string(),
+	className: z.string(),
+	scriptName: z.string(),
+	useSqlite: z.boolean(),
+});
+
+export const zLocalExplorerWorkflowBinding = z.object({
+	id: z.string(),
+	bindingName: z.string(),
+	className: z.string(),
+	scriptName: z.string(),
+});
+
+/**
+ * Resource bindings for a worker
+ */
+export const zLocalExplorerWorkerBindings = z.object({
+	kv: z.array(zLocalExplorerResourceBinding).optional(),
+	d1: z.array(zLocalExplorerResourceBinding).optional(),
+	r2: z.array(zLocalExplorerResourceBinding).optional(),
+	do: z.array(zLocalExplorerDoBinding).optional(),
+	workflows: z.array(zLocalExplorerWorkflowBinding).optional(),
+});
+
 export const zLocalExplorerWorker = z.object({
 	host: z.string(),
 	isSelf: z.boolean(),
 	name: z.string(),
 	port: z.number().int(),
 	protocol: z.string(),
+	bindings: zLocalExplorerWorkerBindings.optional(),
 });
 
 /**
