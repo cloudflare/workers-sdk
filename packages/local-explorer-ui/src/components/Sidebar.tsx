@@ -260,22 +260,24 @@ export function AppSidebar({
 								/>
 
 								<Sidebar.CollapsibleContent>
-									{group.items.length === 0 ? (
-										<div className="text-text-secondary ml-8 px-2 py-1.5 text-sm italic">
-											{group.emptyLabel}
-										</div>
-									) : (
-										group.items.map((item) => (
-											<Sidebar.MenuSub className="ml-5.5" key={item.id}>
+									<Sidebar.MenuSub className="ml-5.5 space-y-0.5">
+										{group.items.length === 0 ? (
+											<div className="text-text-secondary ml-8 px-2 py-1.5 text-sm italic">
+												{group.emptyLabel}
+											</div>
+										) : (
+											group.items.map((item) => (
 												<Sidebar.MenuSubButton
+													active={item.isActive}
 													className="cursor-pointer"
 													href={item.href}
+													key={item.id}
 												>
 													{item.label}
 												</Sidebar.MenuSubButton>
-											</Sidebar.MenuSub>
-										))
-									)}
+											))
+										)}
+									</Sidebar.MenuSub>
 								</Sidebar.CollapsibleContent>
 							</Sidebar.Collapsible>
 						))}
