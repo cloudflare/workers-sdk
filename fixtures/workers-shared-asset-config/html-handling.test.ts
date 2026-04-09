@@ -1,6 +1,4 @@
-import Worker, {
-	AssetWorkerInner,
-} from "@cloudflare/workers-shared/asset-worker";
+import { AssetWorkerInner } from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 import { SELF } from "cloudflare:test";
@@ -21,9 +19,6 @@ const existsMock = (fileList: Set<string>) => {
 		return null;
 	};
 
-	vi.spyOn(Worker.prototype, "unstable_exists").mockImplementation(
-		mockImplementation
-	);
 	vi.spyOn(AssetWorkerInner.prototype, "unstable_exists").mockImplementation(
 		mockImplementation
 	);
