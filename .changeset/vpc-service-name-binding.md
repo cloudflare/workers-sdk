@@ -12,7 +12,7 @@ via the Cloudflare API at deploy time.
 ```json
 {
   "vpc_services": [
-    { "binding": "MY_DB", "service_name": "my-database" }
+    { "binding": "API_FOO", "service_name": "foo-api-internal" }
   ]
 }
 ```
@@ -22,7 +22,7 @@ This is equivalent to the existing form:
 ```json
 {
   "vpc_services": [
-    { "binding": "MY_DB", "service_id": "0199295b-b3ac-7760-8246-bca40877b3e9" }
+    { "binding": "API_FOO", "service_id": "0199295b-b3ac-7760-8246-bca40877b3e9" }
   ]
 }
 ```
