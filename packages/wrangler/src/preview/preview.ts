@@ -8,6 +8,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { getAssetsOptions, syncAssets } from "../assets";
+import { getBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { moduleTypeMimeType } from "../deployment-bundle/create-worker-upload-form";
 import { getEntry } from "../deployment-bundle/entry";
@@ -38,6 +39,7 @@ import {
 	editPreview,
 	getPreviewDeployment,
 	getPreview,
+	getWorkerPreviewDefaults,
 } from "./api";
 import {
 	assemblePreviewScriptSettings,
@@ -49,6 +51,7 @@ import {
 	resolveWorkerName,
 	shouldUseCIMetadataFallback,
 } from "./shared";
+import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 import type {
 	Binding,
 	CreatePreviewDeploymentRequestParams,
@@ -717,6 +720,38 @@ function formatDeploymentResource(
 	return drawConnectedChildBox(lines, { footerLines, indent: "  " });
 }
 
+function logMissingPreviewsBindingsWarning(
+	topLevelBindings: StartDevWorkerInput["bindings"],
+	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
+	localPreviewBindings: Record<string, Binding>
+) {
+	const availableBindingNames = new Set([
+		...Object.keys(remotePreviewDefaultBindings ?? {}),
+		...Object.keys(localPreviewBindings),
+	]);
+	const missingBindings = Object.fromEntries(
+		Object.entries(topLevelBindings ?? {}).filter(
+			([name]) => !availableBindingNames.has(name)
+		)
+	);
+
+	if (Object.keys(missingBindings).length === 0) {
+		return;
+	}
+
+	logger.warn(`Your configuration has diverged.
+The following bindings are configured at the top level of your Wrangler config file, but are missing from the Previews settings of your Worker.
+
+${Object.entries(missingBindings)
+	.map(
+		([name, binding]) =>
+			`  ${chalk.cyan(name)}  ${chalk.dim(getBindingTypeFriendlyName(binding.type))}`
+	)
+	.join("\n")}
+
+Either include these bindings in the ${chalk.cyan(`"previews"`)} field of your Wrangler config or update the Previews settings of your Worker in the Cloudflare dashboard.`);
+}
+
 export async function handlePreviewCommand(
 	args: {
 		script?: string;
@@ -822,6 +857,20 @@ export async function handlePreviewCommand(
 		formatPreviewResource(preview, scriptLevel, isNewPreview, configName)
 	);
 	logger.log(formatDeploymentResource(deployment, versionLevel, configName));
+
+	const topLevelBindings = getBindings(config);
+	if (Object.keys(topLevelBindings).length > 0) {
+		const previewDefaults = await getWorkerPreviewDefaults(
+			config,
+			accountId,
+			workerName
+		);
+		logMissingPreviewsBindingsWarning(
+			topLevelBindings,
+			previewDefaults.env,
+			extractConfigBindings(config)
+		);
+	}
 }
 
 export async function handlePreviewDeleteCommand(

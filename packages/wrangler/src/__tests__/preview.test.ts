@@ -1,5 +1,6 @@
 import * as childProcess from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { stripVTControlCharacters } from "node:util";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 import { afterAll, beforeEach, describe, test, vi } from "vitest";
@@ -225,6 +226,16 @@ describe("wrangler preview", () => {
 			);
 			msw.resetHandlers();
 			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							preview_defaults: {},
+						},
+					})
+				)
+			);
+			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
 					() =>
@@ -321,6 +332,171 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("DEFAULT_VAR");
 			expect(std.out).toContain('"from-defaults"');
 			expect(std.out).toContain("◆ from wrangler.json");
+		});
+
+		test("should warn about top-level bindings missing from preview settings", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					kv_namespaces: [{ binding: "IMPORTANT_BINDING", id: "kv-id-123" }],
+				})
+			);
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-warning",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-warning",
+								preview_id: "preview-id-warning",
+								preview_name: "test-preview",
+								urls: ["https://warn123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							preview_defaults: {},
+						},
+					})
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			const warningOutput = stripVTControlCharacters(std.warn);
+			const normalizedWarningOutput = warningOutput.replace(/\s+/g, " ");
+
+			expect(normalizedWarningOutput).toContain(
+				"Your configuration has diverged."
+			);
+			expect(normalizedWarningOutput).toContain(
+				"The following bindings are configured at the top level of your Wrangler config file, but are missing from the Previews settings of your Worker."
+			);
+			expect(warningOutput).toContain("IMPORTANT_BINDING");
+			expect(warningOutput).toContain("KV Namespace");
+			expect(normalizedWarningOutput).toContain(
+				'Either include these bindings in the "previews" field of your Wrangler config'
+			);
+			expect(normalizedWarningOutput).toContain(
+				"or update the Previews settings of your Worker in the Cloudflare dashboard."
+			);
+		});
+
+		test("should not warn about top-level bindings when they are present in local previews config", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					kv_namespaces: [{ binding: "IMPORTANT_BINDING", id: "kv-id-123" }],
+					previews: {
+						kv_namespaces: [
+							{ binding: "IMPORTANT_BINDING", id: "preview-kv-id" },
+						],
+					},
+				})
+			);
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-no-warning",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-no-warning",
+								preview_id: "preview-id-no-warning",
+								preview_name: "test-preview",
+								urls: ["https://nowarn123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							preview_defaults: {},
+						},
+					})
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(std.warn).not.toContain("IMPORTANT_BINDING");
 		});
 
 		test("should output preview and deployment JSON with --json", async ({
