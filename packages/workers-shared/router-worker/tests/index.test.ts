@@ -1,9 +1,40 @@
-import { createExecutionContext } from "cloudflare:test";
+import { SELF, createExecutionContext, env as runtimeEnv } from "cloudflare:test";
 import { describe, it } from "vitest";
-import worker from "../src/worker";
+import { RouterInnerEntrypoint } from "../src/worker";
 import type { Env } from "../src/worker";
 
-describe("unit tests", () => {
+async function fetchFromInnerEntrypoint(
+	request: Request,
+	env: Env,
+	ctx: ExecutionContext
+): Promise<Response> {
+	return new RouterInnerEntrypoint(ctx, env).fetch(request);
+}
+
+describe("runtime loopback", () => {
+	it("routes through outer->inner loopback at runtime boundary", async ({
+		expect,
+	}) => {
+		(runtimeEnv as Env).CONFIG = {
+			has_user_worker: false,
+		};
+		(runtimeEnv as Env).ASSET_WORKER = {
+			async fetch(_request: Request): Promise<Response> {
+				return new Response("loopback asset worker");
+			},
+			async unstable_canFetch(_request: Request): Promise<boolean> {
+				return true;
+			},
+		} as Env["ASSET_WORKER"];
+
+		const response = await SELF.fetch("https://example.com");
+
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe("loopback asset worker");
+	});
+});
+
+describe("inner entrypoint unit tests", () => {
 	it("fails if specify running user worker ahead of assets, without user worker", async ({
 		expect,
 	}) => {
@@ -18,7 +49,7 @@ describe("unit tests", () => {
 		} as Env;
 
 		await expect(
-			async () => await worker.fetch(request, env, ctx)
+			async () => await fetchFromInnerEntrypoint(request, env, ctx)
 		).rejects.toThrowError(
 			"Fetch for user worker without having a user worker binding"
 		);
@@ -50,7 +81,7 @@ describe("unit tests", () => {
 			},
 		} as Env;
 
-		const response = await worker.fetch(request, env, ctx);
+		const response = await fetchFromInnerEntrypoint(request, env, ctx);
 		expect(await response.text()).toEqual("hello from user worker");
 	});
 
@@ -75,7 +106,7 @@ describe("unit tests", () => {
 			},
 		} as Env;
 
-		const response = await worker.fetch(request, env, ctx);
+		const response = await fetchFromInnerEntrypoint(request, env, ctx);
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
@@ -99,7 +130,7 @@ describe("unit tests", () => {
 			},
 		} as Env;
 
-		const response = await worker.fetch(request, env, ctx);
+		const response = await fetchFromInnerEntrypoint(request, env, ctx);
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
@@ -131,7 +162,7 @@ describe("unit tests", () => {
 			},
 		} as Env;
 
-		const response = await worker.fetch(request, env, ctx);
+		const response = await fetchFromInnerEntrypoint(request, env, ctx);
 		expect(await response.text()).toEqual("hello from user worker");
 	});
 
@@ -164,7 +195,7 @@ describe("unit tests", () => {
 			},
 		} as Env;
 
-		const response = await worker.fetch(request, env, ctx);
+		const response = await fetchFromInnerEntrypoint(request, env, ctx);
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
@@ -197,7 +228,7 @@ describe("unit tests", () => {
 			},
 		} as Env;
 
-		const response = await worker.fetch(request, env, ctx);
+		const response = await fetchFromInnerEntrypoint(request, env, ctx);
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
@@ -229,7 +260,7 @@ describe("unit tests", () => {
 			},
 		} as Env;
 
-		const response = await worker.fetch(request, env, ctx);
+		const response = await fetchFromInnerEntrypoint(request, env, ctx);
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
@@ -261,7 +292,7 @@ describe("unit tests", () => {
 			},
 		} as Env;
 
-		const response = await worker.fetch(request, env, ctx);
+		const response = await fetchFromInnerEntrypoint(request, env, ctx);
 		expect(await response.text()).toEqual("hello from user worker");
 	});
 
@@ -300,7 +331,7 @@ describe("unit tests", () => {
 					"image/jpg,text/html",
 					"text/plain,text/html",
 				]) {
-					const response = await worker.fetch(request, env, ctx);
+					const response = await fetchFromInnerEntrypoint(request, env, ctx);
 					expect(response.status).toBe(403);
 					expect(await response.text()).toBe("Blocked");
 				}
@@ -417,7 +448,7 @@ describe("unit tests", () => {
 						},
 					} as Env;
 
-					const response = await worker.fetch(request, env, ctx);
+					const response = await fetchFromInnerEntrypoint(request, env, ctx);
 					expect(response.status).toBe(expectedStatus);
 					if (expectedBody !== null) {
 						expect(await response.text()).toBe(expectedBody);
@@ -449,7 +480,7 @@ describe("unit tests", () => {
 			} as Env;
 			const ctx = createExecutionContext();
 
-			const response = await worker.fetch(request, env, ctx);
+			const response = await fetchFromInnerEntrypoint(request, env, ctx);
 			expect(response.status).toBe(403);
 			expect(await response.text()).toBe("Blocked");
 		});
@@ -502,7 +533,7 @@ describe("unit tests", () => {
 				} as Env;
 				const ctx = createExecutionContext();
 
-				const response = await worker.fetch(request, env, ctx);
+				const response = await fetchFromInnerEntrypoint(request, env, ctx);
 				expect(response.status).toBe(expectedStatus);
 				expect(await response.text()).toBe(expectedBody);
 			}
@@ -562,7 +593,7 @@ describe("unit tests", () => {
 				} as Env;
 				const ctx = createExecutionContext();
 
-				const response = await worker.fetch(request, env, ctx);
+				const response = await fetchFromInnerEntrypoint(request, env, ctx);
 				expect(response.status).toBe(307);
 				expect(response.headers.get("Location")).toBe(expectedLocation);
 			}
@@ -602,7 +633,7 @@ describe("unit tests", () => {
 				} as Env;
 				const ctx = createExecutionContext();
 
-				const response = await worker.fetch(request, env, ctx);
+				const response = await fetchFromInnerEntrypoint(request, env, ctx);
 				expect(response.status).toBe(307);
 				expect(response.headers.get("Location")).toBe(expectedLocation);
 			}
@@ -642,7 +673,7 @@ describe("unit tests", () => {
 				} as Env;
 				const ctx = createExecutionContext();
 
-				const response = await worker.fetch(request, env, ctx);
+				const response = await fetchFromInnerEntrypoint(request, env, ctx);
 				expect(response.status).toBe(307);
 				expect(response.headers.get("Location")).toBe(expectedLocation);
 			}
@@ -737,7 +768,7 @@ describe("unit tests", () => {
 				} as Env;
 				const ctx = createExecutionContext();
 
-				const response = await worker.fetch(request, env, ctx);
+				const response = await fetchFromInnerEntrypoint(request, env, ctx);
 				expect(response.url).toBe(url);
 				expect(response.status).toBe(expectedStatus);
 				expect(await response.text()).toBe(expectedBody);
@@ -782,7 +813,7 @@ describe("unit tests", () => {
 				} as Env;
 				const ctx = createExecutionContext();
 
-				const response = await worker.fetch(request, env, ctx);
+				const response = await fetchFromInnerEntrypoint(request, env, ctx);
 				expect(response.url).toBe(url);
 				expect(response.status).toBe(expectedStatus);
 				expect(await response.text()).toBe(expectedBody);
@@ -816,7 +847,7 @@ describe("unit tests", () => {
 				} as Env;
 				const ctx = createExecutionContext();
 
-				const response = await worker.fetch(request, env, ctx);
+				const response = await fetchFromInnerEntrypoint(request, env, ctx);
 				expect(response.status).toBe(200);
 				expect(await response.text()).toBe("hello from asset worker");
 			}
@@ -848,7 +879,7 @@ describe("unit tests", () => {
 				},
 			} as Env;
 
-			const response = await worker.fetch(request, env, ctx);
+			const response = await fetchFromInnerEntrypoint(request, env, ctx);
 			expect(await response.text()).toEqual("hello from asset worker");
 		});
 
@@ -878,7 +909,7 @@ describe("unit tests", () => {
 				},
 			} as Env;
 
-			const response = await worker.fetch(request, env, ctx);
+			const response = await fetchFromInnerEntrypoint(request, env, ctx);
 			expect(response.status).toEqual(429);
 			const text = await response.text();
 			expect(text).not.toEqual("hello from user worker");
@@ -912,7 +943,7 @@ describe("unit tests", () => {
 				},
 			} as Env;
 
-			const response = await worker.fetch(request, env, ctx);
+			const response = await fetchFromInnerEntrypoint(request, env, ctx);
 			expect(response.status).toEqual(429);
 			const text = await response.text();
 			expect(text).not.toEqual("hello from user worker");
@@ -948,7 +979,7 @@ describe("unit tests", () => {
 				},
 			} as Env;
 
-			const response = await worker.fetch(request, env, ctx);
+			const response = await fetchFromInnerEntrypoint(request, env, ctx);
 			expect(response.status).toEqual(429);
 			const text = await response.text();
 			expect(text).not.toEqual("hello from user worker");
@@ -985,7 +1016,7 @@ describe("unit tests", () => {
 				},
 			} as Env;
 
-			const response = await worker.fetch(request, env, ctx);
+			const response = await fetchFromInnerEntrypoint(request, env, ctx);
 			expect(await response.text()).toEqual("hello from asset worker");
 		});
 	});
