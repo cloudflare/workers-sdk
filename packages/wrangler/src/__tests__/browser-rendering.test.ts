@@ -142,8 +142,11 @@ describe("wrangler browser", () => {
 		});
 	});
 
-	describe("open", () => {
-		it("should open DevTools for a session with single target", async () => {
+	describe("connect", () => {
+		it("should connect to DevTools for a session with single target (interactive)", async () => {
+			setIsTTY(true);
+			vi.mocked(ci).isCI = false;
+
 			const { default: openInBrowser } = await import("../open-in-browser");
 			const targets: BrowserTarget[] = [
 				{
@@ -158,7 +161,7 @@ describe("wrangler browser", () => {
 			];
 			mockGetSessionTargets("session-123", targets);
 
-			await runWrangler("browser open session-123");
+			await runWrangler("browser connect session-123");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -169,6 +172,33 @@ describe("wrangler browser", () => {
 			expect(openInBrowser).toHaveBeenCalledWith(
 				"https://live.browser.run/ui/inspector?wss=..."
 			);
+		});
+
+		it("should print URL only by default in non-interactive mode", async () => {
+			const { default: openInBrowser } = await import("../open-in-browser");
+			vi.mocked(openInBrowser).mockClear();
+			const targets: BrowserTarget[] = [
+				{
+					id: "page-1",
+					type: "page",
+					title: "about:blank",
+					url: "about:blank",
+					description: "",
+					devtoolsFrontendUrl: "https://live.browser.run/ui/inspector?wss=...",
+					webSocketDebuggerUrl: "wss://live.browser.run/api/devtools/...",
+				},
+			];
+			mockGetSessionTargets("session-ci", targets);
+
+			await runWrangler("browser connect session-ci");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				https://live.browser.run/ui/inspector?wss=..."
+			`);
+			expect(openInBrowser).not.toHaveBeenCalled();
 		});
 
 		it("should output JSON when --json flag is used with single target", async () => {
@@ -185,7 +215,7 @@ describe("wrangler browser", () => {
 			];
 			mockGetSessionTargets("session-456", targets);
 
-			await runWrangler("browser open session-456 --json");
+			await runWrangler("browser connect session-456 --json");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
@@ -203,11 +233,14 @@ describe("wrangler browser", () => {
 			mockGetSessionTargets("invalid-session", []);
 
 			await expect(
-				runWrangler("browser open invalid-session")
+				runWrangler("browser connect invalid-session")
 			).rejects.toThrowError('No targets found for session "invalid-session"');
 		});
 
 		it("should prefer page targets over other types", async () => {
+			setIsTTY(true);
+			vi.mocked(ci).isCI = false;
+
 			const { default: openInBrowser } = await import("../open-in-browser");
 			const targets: BrowserTarget[] = [
 				{
@@ -231,11 +264,38 @@ describe("wrangler browser", () => {
 			];
 			mockGetSessionTargets("session-789", targets);
 
-			await runWrangler("browser open session-789");
+			await runWrangler("browser connect session-789");
 
 			expect(openInBrowser).toHaveBeenCalledWith(
 				"https://live.browser.run/page-inspector"
 			);
+		});
+
+		it("should print URL only when --no-open is used", async () => {
+			const { default: openInBrowser } = await import("../open-in-browser");
+			vi.mocked(openInBrowser).mockClear();
+			const targets: BrowserTarget[] = [
+				{
+					id: "page-1",
+					type: "page",
+					title: "Test Page",
+					url: "https://example.com",
+					description: "",
+					devtoolsFrontendUrl: "https://live.browser.run/ui/inspector?wss=...",
+					webSocketDebuggerUrl: "wss://live.browser.run/api/devtools/...",
+				},
+			];
+			mockGetSessionTargets("session-no-open", targets);
+
+			await runWrangler("browser connect session-no-open --no-open");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				https://live.browser.run/ui/inspector?wss=..."
+			`);
+			expect(openInBrowser).not.toHaveBeenCalled();
 		});
 
 		describe("multi-target selection", () => {
@@ -272,7 +332,7 @@ describe("wrangler browser", () => {
 					result: "page-2",
 				});
 
-				await runWrangler("browser open session-multi");
+				await runWrangler("browser connect session-multi");
 
 				expect(openInBrowser).toHaveBeenCalledWith(
 					"https://live.browser.run/inspector/page-2"
@@ -302,7 +362,7 @@ describe("wrangler browser", () => {
 				];
 				mockGetSessionTargets("session-multi-json", targets);
 
-				await runWrangler("browser open session-multi-json --json");
+				await runWrangler("browser connect session-multi-json --json");
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"[
@@ -351,7 +411,7 @@ describe("wrangler browser", () => {
 				mockGetSessionTargets("session-id", targets);
 
 				await runWrangler(
-					"browser open session-id --target DAB7FB6187B554E10B0BD18821265734"
+					"browser connect session-id --target DAB7FB6187B554E10B0BD18821265734"
 				);
 
 				expect(openInBrowser).toHaveBeenCalledWith(
@@ -383,7 +443,7 @@ describe("wrangler browser", () => {
 				];
 				mockGetSessionTargets("session-url", targets);
 
-				await runWrangler("browser open session-url --target google.com");
+				await runWrangler("browser connect session-url --target google.com");
 
 				expect(openInBrowser).toHaveBeenCalledWith(
 					"https://live.browser.run/inspector/google"
@@ -414,7 +474,7 @@ describe("wrangler browser", () => {
 				];
 				mockGetSessionTargets("session-title", targets);
 
-				await runWrangler("browser open session-title --target YAHOO");
+				await runWrangler("browser connect session-title --target YAHOO");
 
 				expect(openInBrowser).toHaveBeenCalledWith(
 					"https://live.browser.run/inspector/yahoo"
@@ -444,7 +504,7 @@ describe("wrangler browser", () => {
 				];
 				mockGetSessionTargets("session-json", targets);
 
-				await runWrangler("browser open session-json --target yahoo --json");
+				await runWrangler("browser connect session-json --target yahoo --json");
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"{
@@ -473,7 +533,7 @@ describe("wrangler browser", () => {
 				mockGetSessionTargets("session-nomatch", targets);
 
 				await expect(
-					runWrangler("browser open session-nomatch --target bing")
+					runWrangler("browser connect session-nomatch --target bing")
 				).rejects.toThrowError(
 					'No target found matching "bing". Available targets:'
 				);
@@ -503,7 +563,7 @@ describe("wrangler browser", () => {
 				mockGetSessionTargets("session-ambig", targets);
 
 				await expect(
-					runWrangler("browser open session-ambig --target google")
+					runWrangler("browser connect session-ambig --target google")
 				).rejects.toThrowError(
 					'Multiple targets match "google". Please be more specific:'
 				);
@@ -514,12 +574,15 @@ describe("wrangler browser", () => {
 			it("should error when no sessions exist", async () => {
 				mockListSessions([]);
 
-				await expect(runWrangler("browser open")).rejects.toThrowError(
+				await expect(runWrangler("browser connect")).rejects.toThrowError(
 					"No active browser rendering sessions found. Use `wrangler browser create` to create one."
 				);
 			});
 
-			it("should auto-select when only one session exists", async () => {
+			it("should auto-select when only one session exists (interactive)", async () => {
+				setIsTTY(true);
+				vi.mocked(ci).isCI = false;
+
 				const { default: openInBrowser } = await import("../open-in-browser");
 				const sessions: BrowserSession[] = [
 					{
@@ -541,7 +604,7 @@ describe("wrangler browser", () => {
 				mockListSessions(sessions);
 				mockGetSessionTargets("only-session", targets);
 
-				await runWrangler("browser open");
+				await runWrangler("browser connect");
 
 				expect(std.out).toContain(
 					`Opening DevTools for session "only-session"`
@@ -584,7 +647,7 @@ describe("wrangler browser", () => {
 				});
 				mockGetSessionTargets("session-b", targets);
 
-				await runWrangler("browser open");
+				await runWrangler("browser connect");
 
 				expect(openInBrowser).toHaveBeenCalledWith(
 					"https://live.browser.run/inspector/b"
@@ -606,7 +669,7 @@ describe("wrangler browser", () => {
 				];
 				mockListSessions(sessions);
 
-				await runWrangler("browser open --json");
+				await runWrangler("browser connect --json");
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"[
@@ -658,7 +721,10 @@ describe("wrangler browser", () => {
 			);
 		};
 
-		it("should create a session and open DevTools", async () => {
+		it("should create a session and open DevTools (interactive)", async () => {
+			setIsTTY(true);
+			vi.mocked(ci).isCI = false;
+
 			const { default: openInBrowser } = await import("../open-in-browser");
 			const response: BrowserAcquireResponse = {
 				sessionId: "new-session-123",
@@ -688,6 +754,68 @@ describe("wrangler browser", () => {
 			expect(openInBrowser).toHaveBeenCalledWith(
 				"https://live.browser.run/inspector/new"
 			);
+		});
+
+		it("should not open browser by default in non-interactive mode", async () => {
+			const { default: openInBrowser } = await import("../open-in-browser");
+			vi.mocked(openInBrowser).mockClear();
+			const response: BrowserAcquireResponse = {
+				sessionId: "ci-session",
+				targets: [
+					{
+						id: "page-1",
+						type: "page",
+						title: "about:blank",
+						url: "about:blank",
+						description: "",
+						devtoolsFrontendUrl: "https://live.browser.run/inspector/ci",
+						webSocketDebuggerUrl: "wss://live.browser.run/ci",
+					},
+				],
+			};
+			mockAcquireSession(response);
+
+			await runWrangler("browser create");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Session created: ci-session
+				https://live.browser.run/inspector/ci"
+			`);
+			expect(openInBrowser).not.toHaveBeenCalled();
+		});
+
+		it("should not open browser when --no-open is used", async () => {
+			const { default: openInBrowser } = await import("../open-in-browser");
+			vi.mocked(openInBrowser).mockClear();
+			const response: BrowserAcquireResponse = {
+				sessionId: "no-open-session",
+				targets: [
+					{
+						id: "page-1",
+						type: "page",
+						title: "about:blank",
+						url: "about:blank",
+						description: "",
+						devtoolsFrontendUrl: "https://live.browser.run/inspector/no-open",
+						webSocketDebuggerUrl: "wss://live.browser.run/no-open",
+					},
+				],
+			};
+			mockAcquireSession(response);
+
+			await runWrangler("browser create --no-open");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Session created: no-open-session
+				https://live.browser.run/inspector/no-open"
+			`);
+			expect(openInBrowser).not.toHaveBeenCalled();
 		});
 
 		it("should pass --lab flag to API", async () => {
@@ -791,6 +919,9 @@ describe("wrangler browser", () => {
 		});
 
 		it("should prefer page targets over other types", async () => {
+			setIsTTY(true);
+			vi.mocked(ci).isCI = false;
+
 			const { default: openInBrowser } = await import("../open-in-browser");
 			const response: BrowserAcquireResponse = {
 				sessionId: "multi-target-session",

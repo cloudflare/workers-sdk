@@ -64,14 +64,15 @@ function formatSessionForDisplay(session: BrowserSession): string {
 }
 
 /**
- * Opens DevTools for a browser session with auto-selection:
+ * Connects to DevTools for a browser session with auto-selection:
  * - Session: uses provided ID, auto-selects if one exists, prompts/errors if multiple
  * - Target: uses --target selector, auto-selects single page, prompts/errors if multiple
- * - Output: opens browser by default, --json outputs info without opening
+ * - Output: --open (default in interactive) opens browser, otherwise prints URL
  */
-export const browserOpenCommand = createCommand({
+export const browserConnectCommand = createCommand({
 	metadata: {
-		description: "Open DevTools for a browser rendering session",
+		description:
+			"Connect to a target in a browser rendering session via DevTools",
 		status: "open beta",
 		owner: "Product: Browser Rendering",
 	},
@@ -83,7 +84,7 @@ export const browserOpenCommand = createCommand({
 		sessionId: {
 			type: "string",
 			description:
-				"The session ID to open DevTools for (optional if only one session exists)",
+				"The session ID to connect to (optional if only one session exists)",
 		},
 		target: {
 			type: "string",
@@ -92,12 +93,17 @@ export const browserOpenCommand = createCommand({
 		},
 		json: {
 			type: "boolean",
-			description: "Return DevTools URL(s) as JSON instead of opening",
+			description: "Return DevTools URL(s) as JSON",
 			default: false,
+		},
+		open: {
+			type: "boolean",
+			description:
+				"Open DevTools in browser (default: true in interactive mode)",
 		},
 	},
 	async handler(
-		{ sessionId: providedSessionId, target: targetSelector, json },
+		{ sessionId: providedSessionId, target: targetSelector, json, open },
 		{ config }
 	) {
 		const accountId = await requireAuth(config);
@@ -234,6 +240,9 @@ export const browserOpenCommand = createCommand({
 			selectedTarget = found;
 		}
 
+		// defaults to true for interactive non-JSON mode
+		const shouldOpen = open ?? (!json && !isNonInteractiveOrCI());
+
 		if (json) {
 			logger.json({
 				id: selectedTarget.id,
@@ -243,15 +252,18 @@ export const browserOpenCommand = createCommand({
 				devtoolsUrl: selectedTarget.devtoolsFrontendUrl,
 				webSocketUrl: selectedTarget.webSocketDebuggerUrl,
 			});
-		} else {
-			if (selectedTarget.devtoolsFrontendUrl) {
+		} else if (selectedTarget.devtoolsFrontendUrl) {
+			if (shouldOpen) {
 				logger.log(`Opening DevTools for session "${sessionId}"...`);
 				await openInBrowser(selectedTarget.devtoolsFrontendUrl);
 			} else {
-				logger.log(
-					`No DevTools URL available for target "${selectedTarget.id}" in session ${sessionId}`
-				);
+				// Print raw URL for piping/scripting
+				logger.log(selectedTarget.devtoolsFrontendUrl);
 			}
+		} else {
+			logger.log(
+				`No DevTools URL available for target "${selectedTarget.id}" in session ${sessionId}`
+			);
 		}
 	},
 });

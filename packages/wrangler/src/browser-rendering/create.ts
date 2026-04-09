@@ -1,5 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { requireAuth } from "../user";
@@ -11,7 +12,7 @@ const MAX_KEEP_ALIVE_SECONDS = 600;
 
 export const browserCreateCommand = createCommand({
 	metadata: {
-		description: "Create a new browser rendering session and open DevTools",
+		description: "Create a new browser rendering session",
 		status: "open beta",
 		owner: "Product: Browser Rendering",
 	},
@@ -22,7 +23,7 @@ export const browserCreateCommand = createCommand({
 		lab: {
 			type: "boolean",
 			description:
-				"Enable lab browser session with experimental Chrome features",
+				"Enable lab browser session with experimental Chrome features (e.g., WebMCP)",
 			default: false,
 		},
 		keepAlive: {
@@ -32,11 +33,16 @@ export const browserCreateCommand = createCommand({
 		},
 		json: {
 			type: "boolean",
-			description: "Return session info as JSON instead of opening browser",
+			description: "Return session info as JSON",
 			default: false,
 		},
+		open: {
+			type: "boolean",
+			description:
+				"Open DevTools in browser (default: true in interactive mode)",
+		},
 	},
-	async handler({ lab, keepAlive, json }, { config }) {
+	async handler({ lab, keepAlive, json, open }, { config }) {
 		// Validate keep-alive range
 		if (keepAlive !== undefined) {
 			const inRange =
@@ -79,6 +85,10 @@ export const browserCreateCommand = createCommand({
 		const pageTarget =
 			response.targets.find((t) => t.type === "page") ?? response.targets[0];
 
+		// Determine if we should open browser
+		// Default: true for interactive non-JSON mode, false otherwise
+		const shouldOpen = open ?? (!json && !isNonInteractiveOrCI());
+
 		if (json) {
 			logger.json({
 				sessionId: response.sessionId,
@@ -94,8 +104,13 @@ export const browserCreateCommand = createCommand({
 		} else {
 			logger.log(`Session created: ${response.sessionId}`);
 			if (pageTarget.devtoolsFrontendUrl) {
-				logger.log(`Opening DevTools...`);
-				await openInBrowser(pageTarget.devtoolsFrontendUrl);
+				if (shouldOpen) {
+					logger.log(`Opening DevTools...`);
+					await openInBrowser(pageTarget.devtoolsFrontendUrl);
+				} else {
+					// Print URL for piping/scripting
+					logger.log(pageTarget.devtoolsFrontendUrl);
+				}
 			} else {
 				logger.log(`No DevTools URL available for target "${pageTarget.id}"`);
 			}
