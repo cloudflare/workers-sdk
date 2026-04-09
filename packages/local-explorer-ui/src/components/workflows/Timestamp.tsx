@@ -36,7 +36,9 @@ export function Timestamp({
 	value: string | undefined | null;
 }): JSX.Element {
 	if (!value) {
-		return <span className="text-sm text-kumo-subtle">—</span>;
+		return (
+			<span className="text-sm whitespace-nowrap text-kumo-subtle">—</span>
+		);
 	}
 
 	const short = formatShort(value);

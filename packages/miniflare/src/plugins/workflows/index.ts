@@ -11,6 +11,7 @@ import {
 } from "../shared";
 import type { Service } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
+import type { WorkflowDagPayload } from "../shared";
 
 export const WorkflowsOptionsSchema = z.object({
 	workflows: z
@@ -23,6 +24,7 @@ export const WorkflowsOptionsSchema = z.object({
 					.custom<RemoteProxyConnectionString>()
 					.optional(),
 				stepLimit: z.number().int().min(1).optional(),
+				dag: z.custom<WorkflowDagPayload>().optional(),
 			})
 		)
 		.optional(),

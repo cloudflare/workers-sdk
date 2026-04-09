@@ -1142,7 +1142,10 @@ export class Context extends RpcTarget {
 				InstanceEvent.WAIT_TIMED_OUT,
 				cacheKey,
 				waitForEventNameWithCounter,
-				error
+				{
+					name: error instanceof Error ? error.name : "Error",
+					message: error instanceof Error ? error.message : String(error),
+				}
 			);
 			await this.#state.storage.put(errorKey, error);
 			throw error;

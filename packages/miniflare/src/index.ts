@@ -130,6 +130,7 @@ import type {
 	NameSourceOptions,
 	ServiceDesignatorSchema,
 } from "./plugins/core";
+import type { WorkflowDagPayload } from "./plugins/shared";
 import type {
 	Config,
 	Extension,
@@ -2145,7 +2146,12 @@ export class Miniflare {
 		// Collect workflow options from all workers for the explorer binding map
 		const workflowOptions = new Map<
 			string,
-			{ name: string; className: string; scriptName?: string }
+			{
+				name: string;
+				className: string;
+				scriptName?: string;
+				dag?: WorkflowDagPayload;
+			}
 		>();
 		for (const workerOpts of allWorkerOpts) {
 			if (workerOpts.workflows.workflows) {
@@ -2154,6 +2160,7 @@ export class Miniflare {
 						name: workflow.name,
 						className: workflow.className,
 						scriptName: workflow.scriptName,
+						dag: workflow.dag,
 					});
 				}
 			}

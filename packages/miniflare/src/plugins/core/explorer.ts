@@ -245,6 +245,7 @@ export function constructExplorerBindingMap(
 				scriptName: workflowOpt.scriptName ?? "",
 				binding: binding.name,
 				engineBinding: `EXPLORER_WORKFLOW_ENGINE_${workflowName}`,
+				...(workflowOpt.dag ? { dag: workflowOpt.dag } : {}),
 			} satisfies WorkflowBindingInfo;
 		}
 	}

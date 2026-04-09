@@ -22,6 +22,14 @@ export type WorkflowBindingInfo = {
 	scriptName: string; // script containing the workflow
 	binding: string; // proxy binding name in env
 	engineBinding: string; // Engine DO namespace binding for direct access
+	dag?: {
+		version: number;
+		workflow: {
+			class_name: string;
+			functions: Record<string, unknown>;
+			nodes: unknown[];
+		};
+	};
 };
 
 /**

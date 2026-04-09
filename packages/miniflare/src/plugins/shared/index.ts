@@ -36,11 +36,22 @@ export type Persistence = z.infer<typeof PersistenceSchema>;
 // be added a regular worker services. These workers shouldn't be routable.
 export type WrappedBindingNames = Set<string>;
 
+/** DAG payload from static analysis of workflow source code. */
+export interface WorkflowDagPayload {
+	version: number;
+	workflow: {
+		class_name: string;
+		functions: Record<string, unknown>;
+		nodes: unknown[];
+	};
+}
+
 // Maps workflow binding names to their workflow options
 export interface WorkflowOption {
 	name: string;
 	className: string;
 	scriptName?: string;
+	dag?: WorkflowDagPayload;
 }
 
 // Maps **service** names to the Durable Object class names exported by them
