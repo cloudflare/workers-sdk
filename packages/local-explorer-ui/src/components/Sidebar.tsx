@@ -18,7 +18,7 @@ import { getNextThemeMode } from "../utils/theme-state";
 import { SidebarGroupPopup } from "./SidebarGroupPopup";
 import { WorkerSelector, type LocalExplorerWorker } from "./WorkerSelector";
 import type { LocalExplorerWorkerBindings } from "../api";
-import type { SidebarGroupId } from "../utils/sidebar-state";
+import type { SidebarGroupId, SidebarGroupState } from "../utils/sidebar-state";
 import type { ThemeMode } from "../utils/theme-state";
 import type { FC } from "react";
 
@@ -65,7 +65,7 @@ export function AppSidebar({
 	const router = useRouter();
 	const sidebar = useSidebar();
 
-	const [groupOpen, setGroupOpen] = useState(loadGroupState);
+	const [groupOpen, setGroupOpen] = useState<SidebarGroupState>(loadGroupState);
 
 	const handleGroupOpenChange = useCallback(
 		(groupId: SidebarGroupId, open: boolean) => {
