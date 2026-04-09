@@ -175,7 +175,7 @@ class QueueMessage {
 			case "v8":
 				return body.body.byteLength;
 			default:
-				assert(false);
+				throw new Error(`Unexpected queue message contentType received`);
 		}
 	}
 
