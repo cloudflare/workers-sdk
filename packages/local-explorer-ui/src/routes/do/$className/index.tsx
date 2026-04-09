@@ -216,7 +216,7 @@ function NamespaceView() {
 									{objects.map((obj) => (
 										<Table.Row key={obj.id}>
 											<Table.Cell className="font-mono text-xs">
-												{obj.id ?? "—"}
+												{obj.name ?? "—"}
 											</Table.Cell>
 											<Table.Cell className="text-text-secondary font-mono text-xs">
 												{obj.id}
