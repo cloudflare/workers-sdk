@@ -21,6 +21,7 @@ import { aiSearchUpdateCommand } from "./ai-search/update";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
 import { aiModelsCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
+import { apiCommand } from "./api-command";
 import { buildCommand } from "./build";
 import {
 	certDeleteCommand,
@@ -744,6 +745,15 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("complete");
+
+	// api
+	registry.define([
+		{
+			command: "wrangler api",
+			definition: apiCommand,
+		},
+	]);
+	registry.registerNamespace("api");
 
 	/******************** CMD GROUP ***********************/
 
