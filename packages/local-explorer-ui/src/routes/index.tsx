@@ -1,5 +1,5 @@
-import { CloudflareLogo } from "@cloudflare/kumo";
 import { createFileRoute } from "@tanstack/react-router";
+import { AnimatedCloudflareLogo } from "../components/AnimatedCloudflareLogo";
 
 export const Route = createFileRoute("/")({
 	component: IndexPage,
@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
 function IndexPage() {
 	return (
 		<div className="flex h-full flex-col items-center justify-center space-y-2 p-12 text-center">
-			<CloudflareLogo variant="glyph" className="h-24 w-24" />
+			<AnimatedCloudflareLogo size={96} />
 
 			<h2 className="text-3xl font-bold text-kumo-default">
 				Welcome to Local Explorer
