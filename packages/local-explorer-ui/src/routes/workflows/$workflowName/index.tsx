@@ -18,7 +18,14 @@ import {
 	WarningCircleIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import {
+	memo,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+	type MouseEvent,
+} from "react";
 import {
 	workflowsChangeInstanceStatus,
 	workflowsDeleteInstance,
@@ -191,10 +198,7 @@ const InstanceRow = memo(function InstanceRow({
 	const status = instance.status ?? "unknown";
 	const actions = getAvailableActions(status);
 
-	async function handleAction(
-		e: React.MouseEvent,
-		action: Action
-	): Promise<void> {
+	async function handleAction(e: MouseEvent, action: Action): Promise<void> {
 		e.stopPropagation(); // Don't navigate when clicking action buttons
 		setActionInProgress(action);
 		try {
@@ -213,7 +217,7 @@ const InstanceRow = memo(function InstanceRow({
 		}
 	}
 
-	function handleDeleteClick(e: React.MouseEvent): void {
+	function handleDeleteClick(e: MouseEvent): void {
 		e.stopPropagation();
 		setDeleteDialogOpen(true);
 	}
@@ -236,7 +240,7 @@ const InstanceRow = memo(function InstanceRow({
 		}
 	}
 
-	function handleSendEventClick(e: React.MouseEvent): void {
+	function handleSendEventClick(e: MouseEvent): void {
 		e.stopPropagation();
 		setSendEventOpen(true);
 	}
@@ -640,7 +644,7 @@ function WorkflowInstancesView() {
 				title="Workflows"
 			>
 				<Button
-					onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+					onClick={(e: MouseEvent<HTMLButtonElement>) => {
 						(e.target as HTMLButtonElement).blur();
 						setDialogOpen(true);
 					}}
