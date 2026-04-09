@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { localExplorerListWorkers } from "../api";
+import { NotFound } from "../components/NotFound";
 import { AppSidebar } from "../components/Sidebar";
 import {
 	filterVisibleWorkers,
@@ -26,6 +27,7 @@ import type { ThemeMode } from "../utils/theme-state";
 
 export const Route = createRootRoute({
 	component: RootLayout,
+	notFoundComponent: NotFound,
 	loader: async () => {
 		const workersResponse = await localExplorerListWorkers();
 		const workers = workersResponse.data?.result ?? [];

@@ -2024,6 +2024,14 @@ function normalizeAndValidateEnvironment(
 			validatePythonModules,
 			{ exclude: ["**/*.pyc"] }
 		),
+		previews: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"previews",
+			validatePreviewsConfig(envName),
+			undefined
+		),
 	};
 
 	warnIfDurableObjectsHaveNoMigrations(
@@ -4503,6 +4511,10 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 
 function validateQueues(envName: string): ValidatorFn {
 	return (diagnostics, field, value, config) => {
+		if (value === undefined) {
+			return true;
+		}
+
 		const fieldPath =
 			config === undefined ? `${field}` : `env.${envName}.${field}`;
 
@@ -4907,6 +4919,353 @@ function normalizeAndValidateLimits(
 		undefined
 	);
 }
+
+const validatePreviewsConfig =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value) => {
+		if (value === undefined) {
+			return true;
+		}
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${field}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		const previews = value as RawEnvironment;
+		let isValid = true;
+
+		isValid =
+			validateAdditionalProperties(diagnostics, field, Object.keys(previews), [
+				"vars",
+				"define",
+				"durable_objects",
+				"workflows",
+				"kv_namespaces",
+				"send_email",
+				"queues",
+				"d1_databases",
+				"r2_buckets",
+				"vectorize",
+				"hyperdrive",
+				"services",
+				"analytics_engine_datasets",
+				"dispatch_namespaces",
+				"mtls_certificates",
+				"tail_consumers",
+				"streaming_tail_consumers",
+				"unsafe",
+				"browser",
+				"ai",
+				"images",
+				"stream",
+				"media",
+				"pipelines",
+				"secrets_store_secrets",
+				"unsafe_hello_world",
+				"worker_loaders",
+				"ratelimits",
+				"vpc_services",
+				"version_metadata",
+				"logpush",
+				"observability",
+				"limits",
+			]) && isValid;
+
+		isValid =
+			validateVars(envName)(
+				diagnostics,
+				`${field}.vars`,
+				previews.vars,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateDefines(envName)(
+				diagnostics,
+				`${field}.define`,
+				previews.define,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingsProperty(envName, validateDurableObjectBinding)(
+				diagnostics,
+				`${field}.durable_objects`,
+				previews.durable_objects,
+				undefined
+			) && isValid;
+
+		isValid =
+			all(
+				validateBindingArray(envName, validateWorkflowBinding),
+				validateUniqueNameProperty
+			)(diagnostics, `${field}.workflows`, previews.workflows, undefined) &&
+			isValid;
+
+		isValid =
+			validateBindingArray(envName, validateKVBinding)(
+				diagnostics,
+				`${field}.kv_namespaces`,
+				previews.kv_namespaces,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateSendEmailBinding)(
+				diagnostics,
+				`${field}.send_email`,
+				previews.send_email,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateQueues(envName)(
+				diagnostics,
+				`${field}.queues`,
+				previews.queues,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateD1Binding)(
+				diagnostics,
+				`${field}.d1_databases`,
+				previews.d1_databases,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateR2Binding)(
+				diagnostics,
+				`${field}.r2_buckets`,
+				previews.r2_buckets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateVectorizeBinding)(
+				diagnostics,
+				`${field}.vectorize`,
+				previews.vectorize,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateHyperdriveBinding)(
+				diagnostics,
+				`${field}.hyperdrive`,
+				previews.hyperdrive,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateServiceBinding)(
+				diagnostics,
+				`${field}.services`,
+				previews.services,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateAnalyticsEngineBinding)(
+				diagnostics,
+				`${field}.analytics_engine_datasets`,
+				previews.analytics_engine_datasets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateWorkerNamespaceBinding)(
+				diagnostics,
+				`${field}.dispatch_namespaces`,
+				previews.dispatch_namespaces,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateMTlsCertificateBinding)(
+				diagnostics,
+				`${field}.mtls_certificates`,
+				previews.mtls_certificates,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateTailConsumers(
+				diagnostics,
+				`${field}.tail_consumers`,
+				previews.tail_consumers,
+				undefined
+			) && isValid;
+
+		// The config APIs don't yet support streaming tail consumers,
+		// so we don't ever send this field up.
+		// Depending on how the streaming tail consumers feature develops,
+		// this field may be removed in the future, but let's validate it anyways for now.
+		isValid =
+			validateStreamingTailConsumers(
+				diagnostics,
+				`${field}.streaming_tail_consumers`,
+				previews.streaming_tail_consumers,
+				undefined
+			) && isValid;
+
+		if (previews.unsafe !== undefined) {
+			isValid =
+				validateUnsafeSettings(envName)(
+					diagnostics,
+					`${field}.unsafe`,
+					previews.unsafe,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.browser !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.browser`,
+					previews.browser,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.ai !== undefined) {
+			isValid =
+				validateAIBinding(envName)(
+					diagnostics,
+					`${field}.ai`,
+					previews.ai,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.images !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.images`,
+					previews.images,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.stream !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.stream`,
+					previews.stream,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.media !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.media`,
+					previews.media,
+					undefined
+				) && isValid;
+		}
+
+		isValid =
+			validateBindingArray(envName, validatePipelineBinding)(
+				diagnostics,
+				`${field}.pipelines`,
+				previews.pipelines,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateSecretsStoreSecretBinding)(
+				diagnostics,
+				`${field}.secrets_store_secrets`,
+				previews.secrets_store_secrets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateHelloWorldBinding)(
+				diagnostics,
+				`${field}.unsafe_hello_world`,
+				previews.unsafe_hello_world,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateWorkerLoaderBinding)(
+				diagnostics,
+				`${field}.worker_loaders`,
+				previews.worker_loaders,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateRateLimitBinding)(
+				diagnostics,
+				`${field}.ratelimits`,
+				previews.ratelimits,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateVpcServiceBinding)(
+				diagnostics,
+				`${field}.vpc_services`,
+				previews.vpc_services,
+				undefined
+			) && isValid;
+
+		if (previews.version_metadata !== undefined) {
+			isValid =
+				validateVersionMetadataBinding(envName)(
+					diagnostics,
+					`${field}.version_metadata`,
+					previews.version_metadata,
+					undefined
+				) && isValid;
+		}
+
+		isValid =
+			isBoolean(diagnostics, `${field}.logpush`, previews.logpush, undefined) &&
+			isValid;
+
+		isValid =
+			validateObservability(
+				diagnostics,
+				`${field}.observability`,
+				previews.observability,
+				undefined
+			) && isValid;
+
+		if (previews.limits) {
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.limits`,
+					"cpu_ms",
+					previews.limits.cpu_ms,
+					"number"
+				) && isValid;
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.limits`,
+					"subrequests",
+					previews.limits.subrequests,
+					"number"
+				) && isValid;
+		}
+
+		return isValid;
+	};
 
 /**
  * Validate the `migrations` configuration and return the normalized values.

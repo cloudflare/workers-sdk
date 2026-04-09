@@ -58,6 +58,7 @@ describe("wrangler", () => {
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
+				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [private beta]
 				  wrangler queues                 📬 Manage Workers Queues
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
@@ -133,6 +134,7 @@ describe("wrangler", () => {
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
+				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [private beta]
 				  wrangler queues                 📬 Manage Workers Queues
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
@@ -235,23 +237,6 @@ describe("wrangler", () => {
 			expect(process.chdir).toHaveBeenCalledTimes(1);
 			expect(process.chdir).toHaveBeenCalledWith("/path");
 			spy.mockRestore();
-		});
-	});
-
-	describe("preview", () => {
-		it("should throw an error if the deprecated command is used with positional arguments", async ({
-			expect,
-		}) => {
-			await expect(
-				runWrangler("preview GET")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Unknown arguments: preview, GET]`
-			);
-			await expect(
-				runWrangler(`preview GET "SomeBody"`)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Unknown arguments: preview, GET, SomeBody]`
-			);
 		});
 	});
 

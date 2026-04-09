@@ -7,6 +7,7 @@ import {
 import {
 	createFileRoute,
 	Link,
+	notFound,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
@@ -14,6 +15,8 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { durableObjectsNamespaceListNamespaces } from "../../../api";
 import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { NotFound } from "../../../components/NotFound";
+import { ResourceError } from "../../../components/ResourceError";
 import { Studio } from "../../../components/studio";
 import { DropTableConfirmationModal } from "../../../components/studio/Modal/DropTableConfirmation";
 import { StudioTableActionsDropdown } from "../../../components/studio/Table/ActionsDropdown";
@@ -31,6 +34,7 @@ function isHexId(str: string): boolean {
 
 export const Route = createFileRoute("/do/$className/$objectId")({
 	component: ObjectView,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		// Resolve className to a namespace ID
 		const response = await durableObjectsNamespaceListNamespaces();
@@ -42,7 +46,7 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 				ns.id === params.className
 		);
 		if (!namespace?.id) {
-			throw new Error(`Durable Object class "${params.className}" not found`);
+			throw notFound();
 		}
 
 		// Determine if the param is a hex ID or a name
@@ -67,6 +71,7 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 			tables,
 		};
 	},
+	notFoundComponent: NotFound,
 	validateSearch: (search) => ({
 		table: typeof search.table === "string" ? search.table : undefined,
 	}),
