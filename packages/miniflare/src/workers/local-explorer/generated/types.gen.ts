@@ -71,6 +71,10 @@ export type WorkersObject = {
 	 * ID of the Durable Object.
 	 */
 	readonly id?: string;
+	/**
+	 * Name of the Durable Object instance, if created via idFromName().
+	 */
+	readonly name?: string;
 };
 
 /**

@@ -393,6 +393,18 @@ describe("getRemoteConfigsDiff", () => {
 						tunnel_id: "my-tunnel",
 					},
 				],
+				ai_search_namespaces: [
+					{
+						binding: "MY_AI_SEARCH_NS",
+						namespace: "my-namespace",
+					},
+				],
+				ai_search: [
+					{
+						binding: "MY_AI_SEARCH",
+						instance_name: "my-instance",
+					},
+				],
 			},
 			{
 				name: "my-worker-id",
@@ -505,6 +517,20 @@ describe("getRemoteConfigsDiff", () => {
 					{
 						binding: "MY_NETWORK",
 						tunnel_id: "my-tunnel",
+						remote: true,
+					},
+				],
+				ai_search_namespaces: [
+					{
+						binding: "MY_AI_SEARCH_NS",
+						namespace: "my-namespace",
+						remote: true,
+					},
+				],
+				ai_search: [
+					{
+						binding: "MY_AI_SEARCH",
+						instance_name: "my-instance",
 						remote: true,
 					},
 				],
