@@ -1,12 +1,11 @@
 import { http, HttpResponse } from "msw";
 import { FormData } from "undici";
-// eslint-disable-next-line no-restricted-imports
-import { expect } from "vitest";
 import { createFetchResult, msw } from "../../helpers/msw";
 import type { VersionDetails, WorkerVersion } from "../../../versions/secrets";
 import type { WorkerMetadata } from "@cloudflare/workers-utils";
+import type { ExpectStatic } from "vitest";
 
-function mockGetVersions() {
+function mockGetVersions(expect: ExpectStatic) {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
@@ -34,7 +33,10 @@ function mockGetVersions() {
 	);
 }
 
-export function mockGetVersion(versionInfo?: VersionDetails) {
+export function mockGetVersion(
+	expect: ExpectStatic,
+	versionInfo?: VersionDetails
+) {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/workers/scripts/:scriptName/versions/ce15c78b-cc43-4f60-b5a9-15ce4f298c2a`,
@@ -86,7 +88,7 @@ export function mockGetVersion(versionInfo?: VersionDetails) {
 	);
 }
 
-function mockGetVersionContent() {
+function mockGetVersionContent(expect: ExpectStatic) {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/workers/scripts/:scriptName/content/v2`,
@@ -116,7 +118,7 @@ function mockGetVersionContent() {
 	);
 }
 
-function mockGetWorkerSettings() {
+function mockGetWorkerSettings(expect: ExpectStatic) {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/workers/scripts/:scriptName/script-settings`,
@@ -137,6 +139,7 @@ function mockGetWorkerSettings() {
 }
 
 export function mockPostVersion(
+	expect: ExpectStatic,
 	validate?: (metadata: WorkerMetadata, formData: FormData) => void
 ) {
 	msw.use(
@@ -168,9 +171,9 @@ export function mockPostVersion(
 	);
 }
 
-export function mockSetupApiCalls() {
-	mockGetVersions();
-	mockGetVersion();
-	mockGetVersionContent();
-	mockGetWorkerSettings();
+export function mockSetupApiCalls(expect: ExpectStatic) {
+	mockGetVersions(expect);
+	mockGetVersion(expect);
+	mockGetVersionContent(expect);
+	mockGetWorkerSettings(expect);
 }

@@ -34,6 +34,24 @@ export function filterVisibleWorkers(
 	return workers.filter((w) => !isInternalWorker(w.name));
 }
 
+/**
+ * Get the selected worker based on URL params and available workers
+ */
+export function getSelectedWorker(
+	workers: LocalExplorerWorker[],
+	searchStr: string
+): LocalExplorerWorker | undefined {
+	const visibleWorkers = filterVisibleWorkers(workers);
+	const workerFromUrl = new URLSearchParams(searchStr).get("worker");
+	const defaultWorker =
+		visibleWorkers.find((w) => w.isSelf)?.name ?? visibleWorkers[0]?.name;
+	const selectedWorkerName =
+		workerFromUrl && visibleWorkers.some((w) => w.name === workerFromUrl)
+			? workerFromUrl
+			: defaultWorker;
+	return visibleWorkers.find((w) => w.name === selectedWorkerName);
+}
+
 interface WorkerSelectorProps {
 	workers: LocalExplorerWorker[];
 	selectedWorker: string;

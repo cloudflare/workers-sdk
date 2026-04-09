@@ -52,31 +52,20 @@ function getD1Binding(env: Env, databaseId: string): D1Database | null {
 }
 
 /**
- * D1 database response extended with worker name for filtering in the UI.
- */
-type D1DatabaseWithWorker = D1DatabaseResponse & {
-	workerName: string;
-};
-
-/**
  * Get local D1 databases from the binding map.
- * Each database is tagged with the worker name it belongs to.
  */
-function getLocalD1Databases(env: Env): D1DatabaseWithWorker[] {
+function getLocalD1Databases(env: Env): D1DatabaseResponse[] {
 	const d1BindingMap = env.LOCAL_EXPLORER_BINDING_MAP.d1;
 
 	return Object.entries(d1BindingMap).map(([id, bindingName]) => {
-		// Binding names follow the pattern "MINIFLARE_PROXY:d1:workerName:BINDING"
 		const parts = bindingName.split(":");
-		const workerName = parts.length >= 3 ? parts[2] : "unknown";
 		const databaseName = parts.pop() || bindingName;
 
 		return {
 			name: databaseName,
 			uuid: id,
 			version: "production",
-			workerName,
-		} satisfies D1DatabaseWithWorker;
+		} satisfies D1DatabaseResponse;
 	});
 }
 
