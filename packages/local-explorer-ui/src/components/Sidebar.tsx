@@ -313,7 +313,7 @@ export function AppSidebar({
 					);
 				})()}
 
-				<Sidebar.Trigger className="cursor-pointer" />
+				<Sidebar.Trigger className="cursor-pointer hover:bg-kumo-tint" />
 			</Sidebar.Footer>
 		</Sidebar>
 	);
