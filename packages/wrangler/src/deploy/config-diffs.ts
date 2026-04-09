@@ -236,6 +236,12 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		);
 	}
 
+	if (normalizedConfig.flagship?.length) {
+		normalizedConfig.flagship = normalizedConfig.flagship.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
 	const singleBindingFields = [
 		"browser",
 		"ai",
