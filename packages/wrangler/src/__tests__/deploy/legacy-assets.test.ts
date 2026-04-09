@@ -115,8 +115,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("deploy");
 
@@ -176,8 +176,8 @@ describe("deploy", () => {
 				},
 			});
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
 			await runWrangler("deploy");
@@ -245,8 +245,8 @@ describe("deploy", () => {
 				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
 			await runWrangler("deploy");
@@ -350,8 +350,8 @@ describe("deploy", () => {
 				},
 			});
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
 			await runWrangler("deploy");
@@ -426,8 +426,8 @@ describe("deploy", () => {
 				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("deploy --env some-env --legacy-env false");
 
@@ -487,8 +487,8 @@ describe("deploy", () => {
 				],
 			});
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("deploy --env some-env --legacy-env true");
 
@@ -536,9 +536,11 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
+			mockListKVNamespacesRequest(expect, kvNamespace);
 			// Put file-1 in the KV namespace
-			mockKeyListRequest(kvNamespace.id, [{ name: "file-1.2ca234f380.txt" }]);
+			mockKeyListRequest(expect, kvNamespace.id, [
+				{ name: "file-1.2ca234f380.txt" },
+			]);
 			// Check we do not upload file-1
 			mockUploadAssetsToKVRequest(
 				kvNamespace.id,
@@ -582,8 +584,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			// Check we only upload file-1
 			mockUploadAssetsToKVRequest(
 				kvNamespace.id,
@@ -634,8 +636,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			// Check we only upload file-1
 			mockUploadAssetsToKVRequest(
 				kvNamespace.id,
@@ -687,8 +689,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			// Check we only upload file-1
 			mockUploadAssetsToKVRequest(
 				kvNamespace.id,
@@ -740,8 +742,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			// Check we only upload file-1
 			mockUploadAssetsToKVRequest(
 				kvNamespace.id,
@@ -793,8 +795,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			// Check we only upload file-1
 			mockUploadAssetsToKVRequest(
 				kvNamespace.id,
@@ -846,8 +848,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			// Check we only upload file-1
 			mockUploadAssetsToKVRequest(
 				kvNamespace.id,
@@ -902,8 +904,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			// Only expect file-1 to be uploaded
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(0, 1));
 			await runWrangler("deploy");
@@ -961,8 +963,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			// Only expect file-2 to be uploaded
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(2));
 			await runWrangler("deploy");
@@ -1016,8 +1018,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 
 			await expect(
 				runWrangler("deploy")
@@ -1064,8 +1066,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			const requests = mockUploadAssetsToKVRequest(kvNamespace.id);
 
 			await runWrangler("deploy");
@@ -1161,8 +1163,8 @@ describe("deploy", () => {
 			writeAssets([longFilePathAsset]);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 
 			await expect(
 				runWrangler("deploy")
@@ -1208,8 +1210,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, [
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, [
 				// Put file-1 in the KV namespace
 				{ name: "file-1.2ca234f380.txt" },
 				// As well as a couple from a previous upload
@@ -1292,8 +1294,8 @@ describe("deploy", () => {
 				},
 			});
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
 			process.chdir("./src");
@@ -1343,8 +1345,8 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			process.chdir("./my-assets");
 			await runWrangler("deploy --site .");
@@ -1398,8 +1400,8 @@ describe("deploy", () => {
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 
 			let requestCount = 0;
 			const bulkUrl =
@@ -1443,16 +1445,17 @@ describe("deploy", () => {
 		});
 
 		describe("should truncate diff with over 100 assets unless debug log level set", () => {
+			const kvNamespace = {
+				title: "__test-name-workers_sites_assets",
+				id: "__test-name-workers_sites_assets-id",
+			};
+
 			beforeEach(() => {
 				const assets = Array.from({ length: 110 }, (_, index) => ({
 					filePath: `file-${`${index}`.padStart(3, "0")}.txt`,
 					content: "X",
 				}));
 
-				const kvNamespace = {
-					title: "__test-name-workers_sites_assets",
-					id: "__test-name-workers_sites_assets-id",
-				};
 				writeWranglerConfig({
 					main: "./index.js",
 					site: {
@@ -1461,14 +1464,16 @@ describe("deploy", () => {
 				});
 				writeWorkerSource();
 				writeAssets(assets);
-				mockUploadWorkerRequest();
 				mockSubDomainRequest();
-				mockListKVNamespacesRequest(kvNamespace);
-				mockKeyListRequest(kvNamespace.id, []);
 				mockUploadAssetsToKVRequest(kvNamespace.id);
 			});
 
 			it("default log level", async ({ expect }) => {
+				mockUploadWorkerRequest();
+
+				mockListKVNamespacesRequest(expect, kvNamespace);
+				mockKeyListRequest(expect, kvNamespace.id, []);
+
 				await runWrangler("deploy");
 				expect(std).toMatchInlineSnapshot(`
 					{
@@ -1595,6 +1600,11 @@ describe("deploy", () => {
 			});
 
 			it("debug log level", async ({ expect }) => {
+				mockUploadWorkerRequest();
+
+				mockListKVNamespacesRequest(expect, kvNamespace);
+				mockKeyListRequest(expect, kvNamespace.id, []);
+
 				vi.stubEnv("WRANGLER_LOG", "debug");
 				vi.stubEnv("WRANGLER_LOG_SANITIZE", "false");
 

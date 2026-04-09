@@ -131,6 +131,7 @@ describe("pages deploy", () => {
 	it("should upload a directory of files", async ({ expect }) => {
 		writeFileSync("logo.png", "foobar");
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -275,6 +276,7 @@ describe("pages deploy", () => {
 		writeFileSync("logo.txt", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -448,6 +450,7 @@ describe("pages deploy", () => {
 		writeFileSync("logo.txt", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -630,6 +633,7 @@ describe("pages deploy", () => {
 		);
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -1060,6 +1064,7 @@ describe("pages deploy", () => {
 		writeFileSync("logo.js", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -1259,6 +1264,7 @@ describe("pages deploy", () => {
 		writeFileSync("public/logo.js", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -1455,6 +1461,7 @@ describe("pages deploy", () => {
 		writeFileSync("public/logo.js", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -1653,6 +1660,7 @@ describe("pages deploy", () => {
 		writeFileSync(".well-known/foobar", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -1797,6 +1805,7 @@ describe("pages deploy", () => {
 		await execa("git", ["init"]);
 		writeFileSync("logo.png", "foobar");
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -2010,6 +2019,7 @@ describe("pages deploy", () => {
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -2274,6 +2284,7 @@ describe("pages deploy", () => {
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -2548,6 +2559,7 @@ async function onRequest() {
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -2812,6 +2824,7 @@ async function onRequest() {
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -2932,6 +2945,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -3149,6 +3163,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -3359,6 +3374,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -3630,6 +3646,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -3902,6 +3919,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -4033,6 +4051,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -4260,6 +4279,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -4384,6 +4404,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -4573,6 +4594,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -4788,6 +4810,7 @@ and that at least one include rule is provided.
 				);
 
 				mockGetUploadTokenRequest(
+					expect,
 					"<<funfetti-auth-jwt>>",
 					"some-account-id",
 					"pages-is-awesome"
@@ -5038,6 +5061,7 @@ and that at least one include rule is provided.
 				);
 
 				mockGetUploadTokenRequest(
+					expect,
 					"<<funfetti-auth-jwt>>",
 					"some-account-id",
 					"pages-project"
@@ -5219,6 +5243,7 @@ and that at least one include rule is provided.
 		aliases?: string[]
 	) => {
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -5737,6 +5762,7 @@ and that at least one include rule is provided.
 			writeFileSync("public/README.md", "# Test project");
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -5858,6 +5884,7 @@ and that at least one include rule is provided.
 			writeFileSync("public/README.md", "# Test project");
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -5955,6 +5982,7 @@ and that at least one include rule is provided.
 			writeFileSync("public/README.md", "# Test project");
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -6221,7 +6249,7 @@ and that at least one include rule is provided.
 					"base64"
 				) +
 				".signature";
-			mockGetUploadTokenRequest(jwt, "some-account-id", "foo");
+			mockGetUploadTokenRequest(expect, jwt, "some-account-id", "foo");
 
 			await expect(
 				runWrangler("pages deploy . --project-name=foo")
@@ -6240,7 +6268,7 @@ and that at least one include rule is provided.
 					"base64"
 				) +
 				".signature";
-			mockGetUploadTokenRequest(jwt, "some-account-id", "foo");
+			mockGetUploadTokenRequest(expect, jwt, "some-account-id", "foo");
 
 			await runWrangler("pages deploy . --project-name=foo");
 
