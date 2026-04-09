@@ -1,8 +1,7 @@
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { WORKFLOW_NOT_FOUND_CODE } from "../../deploy/check-workflow-conflicts";
 import { clearOutputFilePath } from "../../output";
@@ -23,6 +22,7 @@ import {
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
 } from "./helpers";
+import type { ExpectStatic } from "vitest";
 
 vi.mock("command-exists");
 vi.mock("../../check/commands", async (importOriginal) => {
@@ -87,7 +87,10 @@ describe("deploy", () => {
 	});
 
 	describe("workflows", () => {
-		function mockDeployWorkflow(expectedWorkflowName?: string) {
+		function mockDeployWorkflow(
+			expect: ExpectStatic,
+			expectedWorkflowName?: string
+		) {
 			const handler = http.put(
 				"*/accounts/:accountId/workflows/:workflowName",
 				({ params }) => {
@@ -138,7 +141,7 @@ describe("deploy", () => {
             `
 			);
 
-			mockDeployWorkflow("my-workflow");
+			mockDeployWorkflow(expect, "my-workflow");
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedBindings: [
@@ -553,7 +556,7 @@ describe("deploy", () => {
 
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
-				mockDeployWorkflow("my-workflow");
+				mockDeployWorkflow(expect, "my-workflow");
 
 				mockConfirm({
 					text: "Do you want to continue?",
@@ -654,7 +657,7 @@ describe("deploy", () => {
 
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
-				mockDeployWorkflow("my-workflow");
+				mockDeployWorkflow(expect, "my-workflow");
 
 				await runWrangler("deploy");
 
@@ -692,7 +695,7 @@ describe("deploy", () => {
 
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
-				mockDeployWorkflow("my-workflow");
+				mockDeployWorkflow(expect, "my-workflow");
 
 				await runWrangler("deploy");
 
@@ -751,7 +754,7 @@ describe("deploy", () => {
 
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
-				mockDeployWorkflow();
+				mockDeployWorkflow(expect);
 
 				mockConfirm({
 					text: "Do you want to continue?",
@@ -795,7 +798,7 @@ describe("deploy", () => {
 				// Note: we don't mock the workflows API endpoint - if it's called, the test will fail
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
-				mockDeployWorkflow("my-workflow");
+				mockDeployWorkflow(expect, "my-workflow");
 
 				await runWrangler("deploy");
 

@@ -1,7 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, it, vi } from "vitest";
 import {
 	__testSkipCredentialValidation,
 	__testSkipDelays,
@@ -19,6 +18,7 @@ import { createFetchResult, msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Sink, Stream } from "../pipelines/types";
+import type { ExpectStatic } from "vitest";
 
 describe("wrangler pipelines setup", () => {
 	const std = mockConsoleMethods();
@@ -57,6 +57,7 @@ describe("wrangler pipelines setup", () => {
 	}
 
 	function mockCreateStreamRequest(
+		expect: ExpectStatic,
 		expectedName: string,
 		options: { fail?: boolean } = {}
 	) {
@@ -106,6 +107,7 @@ describe("wrangler pipelines setup", () => {
 	}
 
 	function mockCreateSinkRequest(
+		expect: ExpectStatic,
 		expectedName: string,
 		options: { fail?: boolean } = {}
 	) {
@@ -172,7 +174,11 @@ describe("wrangler pipelines setup", () => {
 		return requests;
 	}
 
-	function mockValidateSql(sql: string, options: { fail?: boolean } = {}) {
+	function mockValidateSql(
+		expect: ExpectStatic,
+		sql: string,
+		options: { fail?: boolean } = {}
+	) {
 		const requests = { count: 0 };
 		msw.use(
 			http.post(
@@ -213,6 +219,7 @@ describe("wrangler pipelines setup", () => {
 	}
 
 	function mockCreatePipeline(
+		expect: ExpectStatic,
 		expectedName: string,
 		options: { fail?: boolean } = {}
 	) {
@@ -423,7 +430,7 @@ describe("wrangler pipelines setup", () => {
 		);
 	}
 
-	function mockCreateR2Bucket(bucketName: string) {
+	function mockCreateR2Bucket(expect: ExpectStatic, bucketName: string) {
 		msw.use(
 			http.post(
 				`*/accounts/${accountId}/r2/buckets`,
@@ -443,7 +450,9 @@ describe("wrangler pipelines setup", () => {
 	});
 
 	describe("pipeline name validation", () => {
-		it("validates pipeline name provided via --name flag - rejects hyphens", async () => {
+		it("validates pipeline name provided via --name flag - rejects hyphens", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			await expect(
@@ -453,7 +462,9 @@ describe("wrangler pipelines setup", () => {
 			);
 		});
 
-		it("accepts valid pipeline name with underscores and proceeds to stream config", async () => {
+		it("accepts valid pipeline name with underscores and proceeds to stream config", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockBasicStreamConfig();
@@ -469,7 +480,9 @@ describe("wrangler pipelines setup", () => {
 			expect(std.out).toContain("STREAM");
 		});
 
-		it("falls back to interactive prompt when --name is empty string", async () => {
+		it("falls back to interactive prompt when --name is empty string", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockPrompt({
@@ -490,7 +503,9 @@ describe("wrangler pipelines setup", () => {
 	});
 
 	describe("interactive validation retry", () => {
-		it("shows retry prompt when invalid pipeline name entered interactively", async () => {
+		it("shows retry prompt when invalid pipeline name entered interactively", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockPrompt({
@@ -509,7 +524,9 @@ describe("wrangler pipelines setup", () => {
 			);
 		});
 
-		it("allows retry and accepts valid name on second attempt", async () => {
+		it("allows retry and accepts valid name on second attempt", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockPrompt({
@@ -537,7 +554,7 @@ describe("wrangler pipelines setup", () => {
 			expect(std.out).toContain("SINK");
 		});
 
-		it("allows multiple retries before succeeding", async () => {
+		it("allows multiple retries before succeeding", async ({ expect }) => {
 			setIsTTY(true);
 
 			mockPrompt({
@@ -576,7 +593,7 @@ describe("wrangler pipelines setup", () => {
 	});
 
 	describe("bucket name validation", () => {
-		it("rejects bucket names with underscores", async () => {
+		it("rejects bucket names with underscores", async ({ expect }) => {
 			setIsTTY(true);
 
 			mockSinkDialogs("r2", "simple");
@@ -598,7 +615,7 @@ describe("wrangler pipelines setup", () => {
 			expect(std.err).toContain('The bucket name "invalid_bucket_name"');
 		});
 
-		it("rejects bucket names that are too short", async () => {
+		it("rejects bucket names that are too short", async ({ expect }) => {
 			setIsTTY(true);
 
 			mockBasicStreamConfig();
@@ -620,7 +637,9 @@ describe("wrangler pipelines setup", () => {
 			expect(std.err).toContain('The bucket name "ab"');
 		});
 
-		it("allows retry with valid bucket name after invalid input", async () => {
+		it("allows retry with valid bucket name after invalid input", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockSinkDialogs("r2", "advanced");
@@ -712,7 +731,9 @@ describe("wrangler pipelines setup", () => {
 	});
 
 	describe("stream configuration", () => {
-		it("proceeds through schema selection options with HTTP auth enabled", async () => {
+		it("proceeds through schema selection options with HTTP auth enabled", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockConfirm({
@@ -753,7 +774,7 @@ describe("wrangler pipelines setup", () => {
 	});
 
 	describe("schema loading from file", () => {
-		it("loads schema from JSON file", async () => {
+		it("loads schema from JSON file", async ({ expect }) => {
 			setIsTTY(true);
 
 			const schema = {
@@ -795,7 +816,7 @@ describe("wrangler pipelines setup", () => {
 			expect(std.out).toContain("SINK");
 		});
 
-		it("retries when schema file not found", async () => {
+		it("retries when schema file not found", async ({ expect }) => {
 			setIsTTY(true);
 
 			const schema = {
@@ -845,7 +866,9 @@ describe("wrangler pipelines setup", () => {
 	});
 
 	describe("sink creation retry and cleanup", () => {
-		it("cleans up stream when user cancels after sink failure", async () => {
+		it("cleans up stream when user cancels after sink failure", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockSinkDialogs("r2", "advanced");
@@ -862,8 +885,8 @@ describe("wrangler pipelines setup", () => {
 				result: true,
 			});
 
-			mockCreateStreamRequest("test_pipeline_stream");
-			mockCreateSinkRequest("test_pipeline_sink", { fail: true });
+			mockCreateStreamRequest(expect, "test_pipeline_stream");
+			mockCreateSinkRequest(expect, "test_pipeline_sink", { fail: true });
 
 			mockConfirm({
 				text: "  Retry? (stream was created successfully)",
@@ -922,7 +945,9 @@ describe("wrangler pipelines setup", () => {
 	});
 
 	describe("pipeline creation failure", () => {
-		it("exits gracefully when user declines retry after pipeline failure", async () => {
+		it("exits gracefully when user declines retry after pipeline failure", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockSinkDialogs("r2", "advanced");
@@ -939,8 +964,8 @@ describe("wrangler pipelines setup", () => {
 				result: true,
 			});
 
-			mockCreateStreamRequest("test_pipeline_stream");
-			mockCreateSinkRequest("test_pipeline_sink");
+			mockCreateStreamRequest(expect, "test_pipeline_stream");
+			mockCreateSinkRequest(expect, "test_pipeline_sink");
 
 			mockSelect({
 				text: "Query:",
@@ -949,10 +974,10 @@ describe("wrangler pipelines setup", () => {
 
 			const sql =
 				"INSERT INTO test_pipeline_sink SELECT * FROM test_pipeline_stream;";
-			mockValidateSql(sql);
+			mockValidateSql(expect, sql);
 
 			// Pipeline creation fails
-			mockCreatePipeline("test_pipeline", { fail: true });
+			mockCreatePipeline(expect, "test_pipeline", { fail: true });
 
 			// Decline retry - should exit gracefully without throwing
 			mockConfirm({
@@ -1017,7 +1042,7 @@ describe("wrangler pipelines setup", () => {
 	});
 
 	describe("rolling policy validation", () => {
-		it("validates file size minimum", async () => {
+		it("validates file size minimum", async ({ expect }) => {
 			setIsTTY(true);
 
 			mockSinkDialogs("r2", "advanced");
@@ -1058,7 +1083,7 @@ describe("wrangler pipelines setup", () => {
 			expect(std.err).toContain("File size must be a number >= 5");
 		});
 
-		it("validates interval minimum", async () => {
+		it("validates interval minimum", async ({ expect }) => {
 			setIsTTY(true);
 
 			mockSinkDialogs("r2", "advanced");
@@ -1105,7 +1130,7 @@ describe("wrangler pipelines setup", () => {
 	});
 
 	describe("Data Catalog sink configuration", () => {
-		it("enables catalog when not already enabled", async () => {
+		it("enables catalog when not already enabled", async ({ expect }) => {
 			setIsTTY(true);
 
 			mockSinkDialogs("r2_data_catalog", "simple");
@@ -1136,7 +1161,9 @@ describe("wrangler pipelines setup", () => {
 			expect(std.out).toContain("done");
 		});
 
-		it("shows already enabled message when catalog is active", async () => {
+		it("shows already enabled message when catalog is active", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockSinkDialogs("r2_data_catalog", "simple");
@@ -1166,7 +1193,7 @@ describe("wrangler pipelines setup", () => {
 			expect(std.out).toContain("Data Catalog already enabled");
 		});
 
-		it("creates bucket when it does not exist", async () => {
+		it("creates bucket when it does not exist", async ({ expect }) => {
 			setIsTTY(true);
 
 			mockSinkDialogs("r2_data_catalog", "simple");
@@ -1176,7 +1203,7 @@ describe("wrangler pipelines setup", () => {
 				result: "new-bucket",
 			});
 			mockGetR2Bucket("new-bucket", false);
-			mockCreateR2Bucket("new-bucket");
+			mockCreateR2Bucket(expect, "new-bucket");
 			mockGetR2Catalog("new-bucket", { exists: false });
 			mockEnableR2Catalog("new-bucket");
 
@@ -1198,7 +1225,7 @@ describe("wrangler pipelines setup", () => {
 			expect(std.out).toContain("done");
 		});
 
-		it("retries when catalog token validation fails", async () => {
+		it("retries when catalog token validation fails", async ({ expect }) => {
 			setIsTTY(true);
 
 			mockSinkDialogs("r2_data_catalog", "simple");
@@ -1243,7 +1270,7 @@ describe("wrangler pipelines setup", () => {
 	});
 
 	describe("Advanced mode Data Catalog sink", () => {
-		it("prompts for namespace and table name", async () => {
+		it("prompts for namespace and table name", async ({ expect }) => {
 			setIsTTY(true);
 
 			mockSinkDialogs("r2_data_catalog", "advanced");
@@ -1279,7 +1306,9 @@ describe("wrangler pipelines setup", () => {
 	});
 
 	describe("Data Catalog full flow", () => {
-		it("completes full setup from bucket to pipeline creation", async () => {
+		it("completes full setup from bucket to pipeline creation", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			vi.useFakeTimers({ now: new Date("2025-01-01T00:00:00Z") });
 
@@ -1308,8 +1337,8 @@ describe("wrangler pipelines setup", () => {
 				result: true,
 			});
 
-			mockCreateStreamRequest("test_pipeline_stream");
-			mockCreateSinkRequest("test_pipeline_sink");
+			mockCreateStreamRequest(expect, "test_pipeline_stream");
+			mockCreateSinkRequest(expect, "test_pipeline_sink");
 
 			mockSelect({
 				text: "Query:",
@@ -1318,8 +1347,8 @@ describe("wrangler pipelines setup", () => {
 
 			const sql =
 				"INSERT INTO test_pipeline_sink SELECT * FROM test_pipeline_stream;";
-			mockValidateSql(sql);
-			mockCreatePipeline("test_pipeline");
+			mockValidateSql(expect, sql);
+			mockCreatePipeline(expect, "test_pipeline");
 
 			await runWrangler('pipelines setup --name "test_pipeline"');
 
@@ -1397,7 +1426,9 @@ describe("wrangler pipelines setup", () => {
 	});
 
 	describe("SQL validation", () => {
-		it("shows error and exits when validation fails and user declines retry", async () => {
+		it("shows error and exits when validation fails and user declines retry", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockSinkDialogs("r2", "advanced");
@@ -1414,8 +1445,8 @@ describe("wrangler pipelines setup", () => {
 				result: true,
 			});
 
-			mockCreateStreamRequest("test_pipeline_stream");
-			mockCreateSinkRequest("test_pipeline_sink");
+			mockCreateStreamRequest(expect, "test_pipeline_stream");
+			mockCreateSinkRequest(expect, "test_pipeline_sink");
 
 			mockSelect({
 				text: "Query:",
@@ -1424,7 +1455,7 @@ describe("wrangler pipelines setup", () => {
 
 			const sql =
 				"INSERT INTO test_pipeline_sink SELECT * FROM test_pipeline_stream;";
-			mockValidateSql(sql, { fail: true });
+			mockValidateSql(expect, sql, { fail: true });
 
 			mockConfirm({
 				text: "  SQL validation failed [code: 1000]\n\n  Retry with different SQL?",

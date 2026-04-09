@@ -1,7 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { BATCH_MAX_ERRORS_WARNINGS } from "../../kv/helpers";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -11,6 +10,7 @@ import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { KeyValue } from "../../kv/helpers";
+import type { ExpectStatic } from "vitest";
 
 describe("kv", () => {
 	mockAccountId();
@@ -30,6 +30,7 @@ describe("kv", () => {
 	describe("bulk", () => {
 		describe("put", () => {
 			function mockPutRequest(
+				expect: ExpectStatic,
 				expectedNamespaceId: string,
 				expectedKeyValues: KeyValue[]
 			) {
@@ -56,7 +57,7 @@ describe("kv", () => {
 				return requests;
 			}
 
-			it("should put the key-values parsed from a file", async () => {
+			it("should put the key-values parsed from a file", async ({ expect }) => {
 				const keyValues: KeyValue[] = [
 					{ key: "someKey1", value: "someValue1" },
 					{ key: "ns:someKey2", value: "123", base64: true },
@@ -64,7 +65,7 @@ describe("kv", () => {
 					{ key: "someKey4", value: "someValue4", expiration_ttl: 500 },
 				];
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
-				const requests = mockPutRequest("some-namespace-id", keyValues);
+				const requests = mockPutRequest(expect, "some-namespace-id", keyValues);
 				await runWrangler(
 					`kv bulk put --remote --namespace-id some-namespace-id keys.json`
 				);
@@ -81,13 +82,15 @@ describe("kv", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should put the key-values in batches of 1000 parsed from a file", async () => {
+			it("should put the key-values in batches of 1000 parsed from a file", async ({
+				expect,
+			}) => {
 				const keyValues: KeyValue[] = new Array(12000).fill({
 					key: "someKey1",
 					value: "someValue1",
 				});
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
-				const requests = mockPutRequest("some-namespace-id", keyValues);
+				const requests = mockPutRequest(expect, "some-namespace-id", keyValues);
 				await runWrangler(
 					`kv bulk put --remote --namespace-id some-namespace-id keys.json`
 				);
@@ -117,7 +120,7 @@ describe("kv", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error if the file is not a JSON array", async () => {
+			it("should error if the file is not a JSON array", async ({ expect }) => {
 				const keyValues = { key: "someKey1", value: "someValue1" };
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
 				await expect(
@@ -139,7 +142,9 @@ describe("kv", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error if the array contains items that are not key-value objects", async () => {
+			it("should error if the array contains items that are not key-value objects", async ({
+				expect,
+			}) => {
 				const keyValues = [
 					123,
 					"a string",
@@ -213,7 +218,7 @@ describe("kv", () => {
 				`);
 			});
 
-			it("should cap the number of errors", async () => {
+			it("should cap the number of errors", async ({ expect }) => {
 				const keyValues = [...Array(BATCH_MAX_ERRORS_WARNINGS + 5).keys()];
 
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
@@ -252,7 +257,7 @@ describe("kv", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should cap the number of warnings", async () => {
+			it("should cap the number of warnings", async ({ expect }) => {
 				const keyValues: KeyValue[] = new Array(
 					BATCH_MAX_ERRORS_WARNINGS + 5
 				).fill({
@@ -261,7 +266,7 @@ describe("kv", () => {
 					invalid: true,
 				});
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
-				const requests = mockPutRequest("some-namespace-id", keyValues);
+				const requests = mockPutRequest(expect, "some-namespace-id", keyValues);
 				await runWrangler(
 					`kv bulk put --remote --namespace-id some-namespace-id keys.json`
 				);
@@ -291,6 +296,7 @@ describe("kv", () => {
 
 		describe("delete", () => {
 			function mockDeleteRequest(
+				expect: ExpectStatic,
 				expectedNamespaceId: string,
 				expectedKeys: string[]
 			) {
@@ -320,14 +326,16 @@ describe("kv", () => {
 				return requests;
 			}
 
-			it("should delete the keys parsed from a file (string)", async () => {
+			it("should delete the keys parsed from a file (string)", async ({
+				expect,
+			}) => {
 				const keys = ["someKey1", "ns:someKey2"];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
 					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: true,
 				});
-				const requests = mockDeleteRequest("some-namespace-id", keys);
+				const requests = mockDeleteRequest(expect, "some-namespace-id", keys);
 				await runWrangler(
 					`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 				);
@@ -344,7 +352,9 @@ describe("kv", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should delete the keys parsed from a file ({ name })", async () => {
+			it("should delete the keys parsed from a file ({ name })", async ({
+				expect,
+			}) => {
 				const keys = [{ name: "someKey1" }, { name: "ns:someKey2" }];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
@@ -352,6 +362,7 @@ describe("kv", () => {
 					result: true,
 				});
 				const requests = mockDeleteRequest(
+					expect,
 					"some-namespace-id",
 					keys.map((k) => k.name)
 				);
@@ -371,14 +382,16 @@ describe("kv", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should delete the keys in batches of 5000 parsed from a file", async () => {
+			it("should delete the keys in batches of 5000 parsed from a file", async ({
+				expect,
+			}) => {
 				const keys = new Array(12000).fill("some-key");
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
 					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: true,
 				});
-				const requests = mockDeleteRequest("some-namespace-id", keys);
+				const requests = mockDeleteRequest(expect, "some-namespace-id", keys);
 				await runWrangler(
 					`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 				);
@@ -408,7 +421,9 @@ describe("kv", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should not delete the keys if the user confirms no", async () => {
+			it("should not delete the keys if the user confirms no", async ({
+				expect,
+			}) => {
 				const keys = ["someKey1", "ns:someKey2"];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
@@ -432,10 +447,12 @@ describe("kv", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should delete the keys without asking if --force is provided", async () => {
+			it("should delete the keys without asking if --force is provided", async ({
+				expect,
+			}) => {
 				const keys = ["someKey1", "ns:someKey2"];
 				writeFileSync("./keys.json", JSON.stringify(keys));
-				const requests = mockDeleteRequest("some-namespace-id", keys);
+				const requests = mockDeleteRequest(expect, "some-namespace-id", keys);
 				await runWrangler(
 					`kv bulk delete --remote --namespace-id some-namespace-id keys.json --force`
 				);
@@ -452,10 +469,12 @@ describe("kv", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should delete the keys without asking if -f is provided", async () => {
+			it("should delete the keys without asking if -f is provided", async ({
+				expect,
+			}) => {
 				const keys = ["someKey1", "ns:someKey2"];
 				writeFileSync("./keys.json", JSON.stringify(keys));
-				const requests = mockDeleteRequest("some-namespace-id", keys);
+				const requests = mockDeleteRequest(expect, "some-namespace-id", keys);
 				await runWrangler(
 					`kv bulk delete --remote --namespace-id some-namespace-id keys.json -f`
 				);
@@ -472,7 +491,7 @@ describe("kv", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error if the file is not a JSON array", async () => {
+			it("should error if the file is not a JSON array", async ({ expect }) => {
 				const keys = 12354;
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
@@ -499,7 +518,9 @@ describe("kv", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error if the file contains non-string items", async () => {
+			it("should error if the file contains non-string items", async ({
+				expect,
+			}) => {
 				const keys = ["good", 12354, { key: "someKey" }, null];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
@@ -531,6 +552,7 @@ describe("kv", () => {
 
 		describe("get", () => {
 			function mockGetRequest(
+				expect: ExpectStatic,
 				expectedNamespaceId: string,
 				expectedKeys: string[]
 			) {
@@ -571,10 +593,12 @@ describe("kv", () => {
 				return requests;
 			}
 
-			it("should get the keys parsed from a file (string)", async () => {
+			it("should get the keys parsed from a file (string)", async ({
+				expect,
+			}) => {
 				const keys = ["someKey1", "key2"];
 				writeFileSync("./keys.json", JSON.stringify(keys));
-				const requests = mockGetRequest("some-namespace-id", keys);
+				const requests = mockGetRequest(expect, "some-namespace-id", keys);
 				await runWrangler(
 					`kv bulk get --remote --namespace-id some-namespace-id keys.json`
 				);
@@ -595,10 +619,13 @@ describe("kv", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should get the keys parsed from a file ({ name })", async () => {
+			it("should get the keys parsed from a file ({ name })", async ({
+				expect,
+			}) => {
 				const keys = [{ name: "someKey1" }, { name: "ns:someKey2" }];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				const requests = mockGetRequest(
+					expect,
 					"some-namespace-id",
 					keys.map((k) => k.name)
 				);
@@ -622,7 +649,7 @@ describe("kv", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error if the file is not a JSON array", async () => {
+			it("should error if the file is not a JSON array", async ({ expect }) => {
 				const keys = 12354;
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				await expect(
@@ -642,7 +669,9 @@ describe("kv", () => {
 				`);
 			});
 
-			it("should error if the file contains non-string items", async () => {
+			it("should error if the file contains non-string items", async ({
+				expect,
+			}) => {
 				const keys = ["good", 12354, { key: "someKey" }, null];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				await expect(

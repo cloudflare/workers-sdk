@@ -32,8 +32,8 @@ describe("versions secret put", () => {
 			result: "the-secret",
 		});
 
-		mockSetupApiCalls();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
@@ -71,8 +71,8 @@ describe("versions secret put", () => {
 			result: "the-secret",
 		});
 
-		mockSetupApiCalls();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata["build_options"]).toStrictEqual({ stable_id: "foo/bar" });
 		});
 		await runWrangler("versions secret put NEW_SECRET --name script-name");
@@ -103,8 +103,8 @@ describe("versions secret put", () => {
 			result: "the-secret",
 		});
 
-		mockSetupApiCalls();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
@@ -138,8 +138,8 @@ describe("versions secret put", () => {
 			result: "the-secret",
 		});
 
-		mockSetupApiCalls();
-		mockPostVersion();
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect);
 		await runWrangler("versions secret put NEW_SECRET --name script-name");
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -148,8 +148,8 @@ describe("versions secret put", () => {
 	describe("(non-interactive)", () => {
 		const mockStdIn = useMockStdin({ isTTY: false });
 		test("can add a new secret (non-interactive)", async ({ expect }) => {
-			mockSetupApiCalls();
-			mockPostVersion((metadata) => {
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect, (metadata) => {
 				expect(metadata.bindings).toStrictEqual([
 					{ type: "inherit", name: "do-binding" },
 					{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
@@ -194,8 +194,8 @@ describe("versions secret put", () => {
 			result: "the-secret",
 		});
 
-		mockSetupApiCalls();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
@@ -228,8 +228,8 @@ describe("versions secret put", () => {
 			result: "the-secret",
 		});
 
-		mockSetupApiCalls();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
@@ -269,8 +269,8 @@ describe("versions secret put", () => {
 			result: "the-secret",
 		});
 
-		mockSetupApiCalls();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
@@ -307,7 +307,7 @@ describe("versions secret put", () => {
 	test("all non-secret bindings are inherited", async ({ expect }) => {
 		setIsTTY(true);
 
-		mockSetupApiCalls();
+		mockSetupApiCalls(expect);
 
 		mockPrompt({
 			text: "Enter a secret value:",
@@ -315,7 +315,7 @@ describe("versions secret put", () => {
 			result: "the-secret",
 		});
 
-		mockPostVersion((metadata) => {
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET", text: "the-secret" },
@@ -348,8 +348,8 @@ describe("versions secret put", () => {
 			result: "the-secret",
 		});
 
-		mockSetupApiCalls();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET", text: "the-secret" },
@@ -383,7 +383,7 @@ describe("versions secret put", () => {
 	test("can add secret on wasm worker", async ({ expect }) => {
 		setIsTTY(true);
 
-		mockSetupApiCalls();
+		mockSetupApiCalls(expect);
 		// Mock content call to have wasm
 		msw.use(
 			http.get(
@@ -425,7 +425,7 @@ describe("versions secret put", () => {
 			result: "the-secret",
 		});
 
-		mockPostVersion((metadata, formData) => {
+		mockPostVersion(expect, (metadata, formData) => {
 			expect(formData.get("module.wasm")).not.toBeNull();
 			expect((formData.get("module.wasm") as File).size).equal(10);
 
@@ -469,8 +469,8 @@ describe("versions secret put", () => {
 				name: "script-name",
 				env: { test: {} },
 			});
-			mockSetupApiCalls();
-			mockPostVersion();
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
 
 			mockStdIn.send(
 				`the`,
@@ -499,8 +499,8 @@ describe("versions secret put", () => {
 				name: "script-name",
 				env: { test: {} },
 			});
-			mockSetupApiCalls();
-			mockPostVersion();
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
 
 			mockStdIn.send(
 				`the`,
@@ -519,8 +519,8 @@ describe("versions secret put", () => {
 			writeWranglerConfig({
 				name: "script-name",
 			});
-			mockSetupApiCalls();
-			mockPostVersion();
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
 
 			mockStdIn.send(
 				`the`,

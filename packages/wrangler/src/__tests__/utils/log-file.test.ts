@@ -1,9 +1,9 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-// eslint-disable-next-line no-restricted-imports
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { appendToDebugLogFile, debugLogFilepath } from "../../utils/log-file";
 import { runInTempDir } from "../helpers/run-in-tmp";
+import type { ExpectStatic } from "vitest";
 
 describe("appendToDebugLogFile", () => {
 	runInTempDir();
@@ -12,7 +12,7 @@ describe("appendToDebugLogFile", () => {
 		vi.stubEnv("WRANGLER_LOG_PATH", "logs");
 	});
 
-	function getLogFileContent(): string {
+	function getLogFileContent(expect: ExpectStatic): string {
 		if (existsSync(debugLogFilepath)) {
 			return readFileSync(debugLogFilepath, "utf8");
 		}
@@ -30,41 +30,45 @@ describe("appendToDebugLogFile", () => {
 		);
 	}
 
-	it("should strip ANSI escape codes from error messages", async () => {
+	it("should strip ANSI escape codes from error messages", async ({
+		expect,
+	}) => {
 		const messageWithAnsi = "\u001b[31mError: Something went wrong\u001b[0m";
 		const expectedCleanMessage = "Error: Something went wrong";
 
 		await appendToDebugLogFile("error", messageWithAnsi);
 
-		const logContent = getLogFileContent();
+		const logContent = getLogFileContent(expect);
 		expect(logContent).toContain(expectedCleanMessage);
 		expect(logContent).not.toContain("\u001b[31m");
 		expect(logContent).not.toContain("\u001b[0m");
 	});
 
-	it("should strip complex ANSI escape sequences", async () => {
+	it("should strip complex ANSI escape sequences", async ({ expect }) => {
 		const messageWithComplexAnsi =
 			"\u001b[1;32mSuccess:\u001b[0m \u001b[33mWarning text\u001b[0m";
 		const expectedCleanMessage = "Success: Warning text";
 
 		await appendToDebugLogFile("log", messageWithComplexAnsi);
 
-		const logContent = getLogFileContent();
+		const logContent = getLogFileContent(expect);
 		expect(logContent).toContain(expectedCleanMessage);
 		expect(logContent).not.toContain("\u001b[1;32m");
 		expect(logContent).not.toContain("\u001b[33m");
 	});
 
-	it("should preserve plain messages without ANSI codes", async () => {
+	it("should preserve plain messages without ANSI codes", async ({
+		expect,
+	}) => {
 		const plainMessage = "This is a plain log message";
 
 		await appendToDebugLogFile("info", plainMessage);
 
-		const logContent = getLogFileContent();
+		const logContent = getLogFileContent(expect);
 		expect(logContent).toContain(plainMessage);
 	});
 
-	it("should handle multiline messages with ANSI codes", async () => {
+	it("should handle multiline messages with ANSI codes", async ({ expect }) => {
 		const multilineMessageWithAnsi =
 			"\u001b[31mLine 1 with color\u001b[0m\nLine 2 plain\n\u001b[32mLine 3 with different color\u001b[0m";
 		const expectedCleanMessage =
@@ -72,18 +76,20 @@ describe("appendToDebugLogFile", () => {
 
 		await appendToDebugLogFile("warn", multilineMessageWithAnsi);
 
-		const logContent = getLogFileContent();
+		const logContent = getLogFileContent(expect);
 		expect(logContent).toContain(expectedCleanMessage);
 		expect(logContent).not.toContain("\u001b[31m");
 		expect(logContent).not.toContain("\u001b[32m");
 	});
 
-	it("should maintain timestamp and log level formatting", async () => {
+	it("should maintain timestamp and log level formatting", async ({
+		expect,
+	}) => {
 		const message = "\u001b[31mTest message\u001b[0m";
 
 		await appendToDebugLogFile("error", message);
 
-		const logContent = getLogFileContent();
+		const logContent = getLogFileContent(expect);
 		expect(logContent).toMatch(
 			/--- \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z error/
 		);
@@ -91,21 +97,21 @@ describe("appendToDebugLogFile", () => {
 		expect(logContent).toContain("---");
 	});
 
-	it("should handle empty messages", async () => {
+	it("should handle empty messages", async ({ expect }) => {
 		await appendToDebugLogFile("debug", "");
 
-		const logContent = getLogFileContent();
+		const logContent = getLogFileContent(expect);
 		expect(logContent).toMatch(
 			/--- \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z debug/
 		);
 	});
 
-	it("should handle messages with only ANSI codes", async () => {
+	it("should handle messages with only ANSI codes", async ({ expect }) => {
 		const onlyAnsiMessage = "\u001b[31m\u001b[0m";
 
 		await appendToDebugLogFile("log", onlyAnsiMessage);
 
-		const logContent = getLogFileContent();
+		const logContent = getLogFileContent(expect);
 		expect(logContent).not.toContain("\u001b[31m");
 		expect(logContent).not.toContain("\u001b[0m");
 		expect(logContent).toMatch(
