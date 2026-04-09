@@ -1,7 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -10,6 +9,7 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Pipeline, SchemaField, Sink, Stream } from "../pipelines/types";
+import type { ExpectStatic } from "vitest";
 
 describe("wrangler pipelines", () => {
 	const std = mockConsoleMethods();
@@ -19,7 +19,11 @@ describe("wrangler pipelines", () => {
 
 	const accountId = "some-account-id";
 
-	function mockValidateSqlRequest(sql: string, isValid = true) {
+	function mockValidateSqlRequest(
+		expect: ExpectStatic,
+		sql: string,
+		isValid = true
+	) {
 		const requests = { count: 0 };
 		msw.use(
 			http.post(
@@ -54,10 +58,13 @@ describe("wrangler pipelines", () => {
 		return requests;
 	}
 
-	function mockCreatePipelineRequest(expectedRequest: {
-		name: string;
-		sql: string;
-	}) {
+	function mockCreatePipelineRequest(
+		expect: ExpectStatic,
+		expectedRequest: {
+			name: string;
+			sql: string;
+		}
+	) {
 		const requests = { count: 0 };
 		msw.use(
 			http.post(
@@ -196,7 +203,9 @@ describe("wrangler pipelines", () => {
 	}
 
 	describe("pipelines create", () => {
-		it("should error when neither --sql nor --sql-file is provided", async () => {
+		it("should error when neither --sql nor --sql-file is provided", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler("pipelines create my_pipeline")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -204,10 +213,10 @@ describe("wrangler pipelines", () => {
 			);
 		});
 
-		it("should create pipeline with inline SQL", async () => {
+		it("should create pipeline with inline SQL", async ({ expect }) => {
 			const sql = "INSERT INTO test_sink SELECT * FROM test_stream;";
-			const validateRequest = mockValidateSqlRequest(sql);
-			const createRequest = mockCreatePipelineRequest({
+			const validateRequest = mockValidateSqlRequest(expect, sql);
+			const createRequest = mockCreatePipelineRequest(expect, {
 				name: "my_pipeline",
 				sql,
 			});
@@ -273,13 +282,13 @@ describe("wrangler pipelines", () => {
 			expect(std.out).toContain("Or via HTTP:");
 		});
 
-		it("should create pipeline from SQL file", async () => {
+		it("should create pipeline from SQL file", async ({ expect }) => {
 			const sql = "INSERT INTO test_sink SELECT * FROM test_stream;";
 			const sqlFile = "pipeline.sql";
 			writeFileSync(sqlFile, sql);
 
-			const validateRequest = mockValidateSqlRequest(sql);
-			const createRequest = mockCreatePipelineRequest({
+			const validateRequest = mockValidateSqlRequest(expect, sql);
+			const createRequest = mockCreatePipelineRequest(expect, {
 				name: "my_pipeline",
 				sql,
 			});
@@ -340,9 +349,9 @@ describe("wrangler pipelines", () => {
 			);
 		});
 
-		it("should error when SQL validation fails", async () => {
+		it("should error when SQL validation fails", async ({ expect }) => {
 			const sql = "INVALID SQL QUERY";
-			const validateRequest = mockValidateSqlRequest(sql, false);
+			const validateRequest = mockValidateSqlRequest(expect, sql, false);
 
 			await expect(
 				runWrangler(`pipelines create my_pipeline --sql "${sql}"`)
@@ -353,9 +362,11 @@ describe("wrangler pipelines", () => {
 			expect(validateRequest.count).toBe(1);
 		});
 
-		it("should show wrangler version message on authentication error", async () => {
+		it("should show wrangler version message on authentication error", async ({
+			expect,
+		}) => {
 			const sql = "INSERT INTO test_sink SELECT * FROM test_stream;";
-			const validateRequest = mockValidateSqlRequest(sql);
+			const validateRequest = mockValidateSqlRequest(expect, sql);
 
 			// Mock create returns auth error (code 10000)
 			msw.use(
@@ -393,7 +404,7 @@ describe("wrangler pipelines", () => {
 	});
 
 	describe("pipelines list", () => {
-		it("should list pipelines", async () => {
+		it("should list pipelines", async ({ expect }) => {
 			const mockPipelines: Pipeline[] = [
 				{
 					id: "pipeline_1",
@@ -433,7 +444,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it("should handle empty pipelines list", async () => {
+		it("should handle empty pipelines list", async ({ expect }) => {
 			const listRequest = mockListPipelinesRequest([]);
 
 			await runWrangler("pipelines list");
@@ -448,7 +459,9 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it("should merge new and legacy pipelines with Type column for legacy", async () => {
+		it("should merge new and legacy pipelines with Type column for legacy", async ({
+			expect,
+		}) => {
 			const mockNewPipelines: Pipeline[] = [
 				{
 					id: "pipeline_1",
@@ -529,7 +542,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it('supports valid json output with "--json" flag', async () => {
+		it('supports valid json output with "--json" flag', async ({ expect }) => {
 			const mockPipelines: Pipeline[] = [
 				{
 					id: "pipeline_1",
@@ -578,7 +591,7 @@ describe("wrangler pipelines", () => {
 	});
 
 	describe("pipelines get", () => {
-		it("should error when no pipeline ID provided", async () => {
+		it("should error when no pipeline ID provided", async ({ expect }) => {
 			await expect(
 				runWrangler("pipelines get")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -586,7 +599,7 @@ describe("wrangler pipelines", () => {
 			);
 		});
 
-		it("should get pipeline details", async () => {
+		it("should get pipeline details", async ({ expect }) => {
 			const mockPipeline: Pipeline = {
 				id: "pipeline_123",
 				name: "my_pipeline",
@@ -649,7 +662,9 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it("should fall back to legacy API when pipeline not found in new API", async () => {
+		it("should fall back to legacy API when pipeline not found in new API", async ({
+			expect,
+		}) => {
 			msw.use(
 				http.get(
 					`*/accounts/${accountId}/pipelines/v1/pipelines/my-legacy-pipeline`,
@@ -739,7 +754,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it('supports valid json output with "--json" flag', async () => {
+		it('supports valid json output with "--json" flag', async ({ expect }) => {
 			const mockPipeline: Pipeline = {
 				id: "pipeline_123",
 				name: "my_pipeline",
@@ -804,7 +819,7 @@ describe("wrangler pipelines", () => {
 
 	describe("pipelines delete", () => {
 		const { setIsTTY } = useMockIsTTY();
-		it("should error when no pipeline ID provided", async () => {
+		it("should error when no pipeline ID provided", async ({ expect }) => {
 			await expect(
 				runWrangler("pipelines delete")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -812,7 +827,7 @@ describe("wrangler pipelines", () => {
 			);
 		});
 
-		it("should prompt for confirmation before delete", async () => {
+		it("should prompt for confirmation before delete", async ({ expect }) => {
 			const mockPipeline: Pipeline = {
 				id: "pipeline_123",
 				name: "my_pipeline",
@@ -844,7 +859,9 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it("should fall back to legacy API when deleting pipeline not in new API", async () => {
+		it("should fall back to legacy API when deleting pipeline not in new API", async ({
+			expect,
+		}) => {
 			msw.use(
 				http.get(
 					`*/accounts/${accountId}/pipelines/v1/pipelines/my-legacy-pipeline`,
@@ -916,7 +933,7 @@ describe("wrangler pipelines", () => {
 	});
 
 	describe("pipelines update", () => {
-		it("should error when trying to update V1 pipeline", async () => {
+		it("should error when trying to update V1 pipeline", async ({ expect }) => {
 			const mockPipeline: Pipeline = {
 				id: "pipeline_123",
 				name: "my_pipeline",
@@ -948,7 +965,7 @@ describe("wrangler pipelines", () => {
 			);
 		});
 
-		it("should update legacy pipeline with warning", async () => {
+		it("should update legacy pipeline with warning", async ({ expect }) => {
 			msw.use(
 				http.get(
 					`*/accounts/${accountId}/pipelines/v1/pipelines/my-legacy-pipeline`,
@@ -1052,10 +1069,13 @@ describe("wrangler pipelines", () => {
 
 	describe("pipelines streams create", () => {
 		const { setIsTTY } = useMockIsTTY();
-		function mockCreateStreamRequest(expectedRequest: {
-			name: string;
-			hasSchema?: boolean;
-		}) {
+		function mockCreateStreamRequest(
+			expect: ExpectStatic,
+			expectedRequest: {
+				name: string;
+				hasSchema?: boolean;
+			}
+		) {
 			const requests = { count: 0 };
 			msw.use(
 				http.post(
@@ -1113,7 +1133,7 @@ describe("wrangler pipelines", () => {
 			return requests;
 		}
 
-		it("should error when no stream name provided", async () => {
+		it("should error when no stream name provided", async ({ expect }) => {
 			await expect(
 				runWrangler("pipelines streams create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1121,7 +1141,9 @@ describe("wrangler pipelines", () => {
 			);
 		});
 
-		it("should error when name contains invalid characters", async () => {
+		it("should error when name contains invalid characters", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler("pipelines streams create my-stream")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1129,14 +1151,14 @@ describe("wrangler pipelines", () => {
 			);
 		});
 
-		it("should create stream with default settings", async () => {
+		it("should create stream with default settings", async ({ expect }) => {
 			setIsTTY(true);
 			mockConfirm({
 				text: "No schema file provided. Do you want to create stream without a schema (unstructured JSON)?",
 				result: true,
 			});
 
-			const createRequest = mockCreateStreamRequest({
+			const createRequest = mockCreateStreamRequest(expect, {
 				name: "my_stream",
 			});
 
@@ -1165,7 +1187,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it("should create stream with schema from file", async () => {
+		it("should create stream with schema from file", async ({ expect }) => {
 			const schemaFile = "schema.json";
 			const schema = {
 				fields: [
@@ -1180,7 +1202,7 @@ describe("wrangler pipelines", () => {
 			};
 			writeFileSync(schemaFile, JSON.stringify(schema));
 
-			const createRequest = mockCreateStreamRequest({
+			const createRequest = mockCreateStreamRequest(expect, {
 				name: "my_stream",
 				hasSchema: true,
 			});
@@ -1221,7 +1243,11 @@ describe("wrangler pipelines", () => {
 	});
 
 	describe("pipelines streams list", () => {
-		function mockListStreamsRequest(streams: Stream[], pipelineId?: string) {
+		function mockListStreamsRequest(
+			expect: ExpectStatic,
+			streams: Stream[],
+			pipelineId?: string
+		) {
 			const requests = { count: 0 };
 			msw.use(
 				http.get(
@@ -1251,7 +1277,7 @@ describe("wrangler pipelines", () => {
 			return requests;
 		}
 
-		it("should list streams", async () => {
+		it("should list streams", async ({ expect }) => {
 			const mockStreams: Stream[] = [
 				{
 					id: "stream_1",
@@ -1267,7 +1293,7 @@ describe("wrangler pipelines", () => {
 				},
 			];
 
-			const listRequest = mockListStreamsRequest(mockStreams);
+			const listRequest = mockListStreamsRequest(expect, mockStreams);
 
 			await runWrangler("pipelines streams list");
 
@@ -1285,7 +1311,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it("should filter by pipeline ID", async () => {
+		it("should filter by pipeline ID", async ({ expect }) => {
 			const mockStreams: Stream[] = [
 				{
 					id: "stream_1",
@@ -1301,7 +1327,11 @@ describe("wrangler pipelines", () => {
 				},
 			];
 
-			const listRequest = mockListStreamsRequest(mockStreams, "pipeline_123");
+			const listRequest = mockListStreamsRequest(
+				expect,
+				mockStreams,
+				"pipeline_123"
+			);
 
 			await runWrangler("pipelines streams list --pipeline-id pipeline_123");
 
@@ -1319,7 +1349,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it('supports valid json output with "--json" flag', async () => {
+		it('supports valid json output with "--json" flag', async ({ expect }) => {
 			const mockStreams: Stream[] = [
 				{
 					id: "stream_1",
@@ -1335,7 +1365,7 @@ describe("wrangler pipelines", () => {
 				},
 			];
 
-			mockListStreamsRequest(mockStreams);
+			mockListStreamsRequest(expect, mockStreams);
 
 			await runWrangler("pipelines streams list --json");
 
@@ -1368,7 +1398,7 @@ describe("wrangler pipelines", () => {
 	});
 
 	describe("pipelines streams get", () => {
-		it("should get stream details", async () => {
+		it("should get stream details", async ({ expect }) => {
 			const mockStream: Stream = {
 				id: "stream_123",
 				name: "my_stream",
@@ -1410,7 +1440,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it('supports valid json output with "--json" flag', async () => {
+		it('supports valid json output with "--json" flag', async ({ expect }) => {
 			const mockStream: Stream = {
 				id: "stream_123",
 				name: "my_stream",
@@ -1476,7 +1506,7 @@ describe("wrangler pipelines", () => {
 			return requests;
 		}
 
-		it("should prompt for confirmation", async () => {
+		it("should prompt for confirmation", async ({ expect }) => {
 			const mockStream: Stream = {
 				id: "stream_123",
 				name: "my_stream",
@@ -1514,11 +1544,14 @@ describe("wrangler pipelines", () => {
 	});
 
 	describe("pipelines sinks create", () => {
-		function mockCreateSinkRequest(expectedRequest: {
-			name: string;
-			type: string;
-			isDataCatalog?: boolean;
-		}) {
+		function mockCreateSinkRequest(
+			expect: ExpectStatic,
+			expectedRequest: {
+				name: string;
+				type: string;
+				isDataCatalog?: boolean;
+			}
+		) {
 			const requests = { count: 0 };
 			msw.use(
 				http.post(
@@ -1570,7 +1603,9 @@ describe("wrangler pipelines", () => {
 			return requests;
 		}
 
-		it("should error when name contains invalid characters", async () => {
+		it("should error when name contains invalid characters", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					"pipelines sinks create my-sink --bucket my-bucket --type r2"
@@ -1580,7 +1615,7 @@ describe("wrangler pipelines", () => {
 			);
 		});
 
-		it("should error when type is missing", async () => {
+		it("should error when type is missing", async ({ expect }) => {
 			await expect(
 				runWrangler("pipelines sinks create my_sink --bucket my-bucket")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1588,7 +1623,7 @@ describe("wrangler pipelines", () => {
 			);
 		});
 
-		it("should error with invalid bucket name", async () => {
+		it("should error with invalid bucket name", async ({ expect }) => {
 			await expect(
 				runWrangler(
 					"pipelines sinks create my_sink --type r2 --bucket invalid_bucket_name"
@@ -1598,8 +1633,10 @@ describe("wrangler pipelines", () => {
 			);
 		});
 
-		it("should create R2 sink with explicit credentials", async () => {
-			const createRequest = mockCreateSinkRequest({
+		it("should create R2 sink with explicit credentials", async ({
+			expect,
+		}) => {
+			const createRequest = mockCreateSinkRequest(expect, {
 				name: "my_sink",
 				type: "r2",
 			});
@@ -1635,8 +1672,8 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it("should create R2 Data Catalog sink", async () => {
-			const createRequest = mockCreateSinkRequest({
+		it("should create R2 Data Catalog sink", async ({ expect }) => {
+			const createRequest = mockCreateSinkRequest(expect, {
 				name: "my_sink",
 				type: "r2_data_catalog",
 				isDataCatalog: true,
@@ -1672,7 +1709,9 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it("should error when r2-data-catalog missing required fields", async () => {
+		it("should error when r2-data-catalog missing required fields", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					"pipelines sinks create my_sink --type r2-data-catalog --bucket catalog-bucket"
@@ -1684,7 +1723,11 @@ describe("wrangler pipelines", () => {
 	});
 
 	describe("pipelines sinks list", () => {
-		function mockListSinksRequest(sinks: Sink[], pipelineId?: string) {
+		function mockListSinksRequest(
+			expect: ExpectStatic,
+			sinks: Sink[],
+			pipelineId?: string
+		) {
 			const requests = { count: 0 };
 			msw.use(
 				http.get(
@@ -1714,7 +1757,7 @@ describe("wrangler pipelines", () => {
 			return requests;
 		}
 
-		it("should list sinks", async () => {
+		it("should list sinks", async ({ expect }) => {
 			const mockSinks: Sink[] = [
 				{
 					id: "sink_1",
@@ -1728,7 +1771,7 @@ describe("wrangler pipelines", () => {
 				},
 			];
 
-			const listRequest = mockListSinksRequest(mockSinks);
+			const listRequest = mockListSinksRequest(expect, mockSinks);
 
 			await runWrangler("pipelines sinks list");
 
@@ -1746,7 +1789,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it("should filter by pipeline ID", async () => {
+		it("should filter by pipeline ID", async ({ expect }) => {
 			const mockSinks: Sink[] = [
 				{
 					id: "sink_1",
@@ -1760,7 +1803,11 @@ describe("wrangler pipelines", () => {
 				},
 			];
 
-			const listRequest = mockListSinksRequest(mockSinks, "pipeline_123");
+			const listRequest = mockListSinksRequest(
+				expect,
+				mockSinks,
+				"pipeline_123"
+			);
 
 			await runWrangler("pipelines sinks list --pipeline-id pipeline_123");
 
@@ -1778,7 +1825,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async () => {
+		it('supports json output with "--json" flag', async ({ expect }) => {
 			const mockSinks: Sink[] = [
 				{
 					id: "sink_1",
@@ -1792,7 +1839,7 @@ describe("wrangler pipelines", () => {
 				},
 			];
 
-			mockListSinksRequest(mockSinks);
+			mockListSinksRequest(expect, mockSinks);
 			await runWrangler("pipelines sinks list --json");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1834,7 +1881,7 @@ describe("wrangler pipelines", () => {
 	}
 
 	describe("pipelines sinks get", () => {
-		it("should get sink details", async () => {
+		it("should get sink details", async ({ expect }) => {
 			const mockSink: Sink = {
 				id: "sink_123",
 				name: "my_sink",
@@ -1879,7 +1926,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it('supports valid json output with "--json" flag', async () => {
+		it('supports valid json output with "--json" flag', async ({ expect }) => {
 			const mockSink: Sink = {
 				id: "sink_123",
 				name: "my_sink",
@@ -1936,7 +1983,7 @@ describe("wrangler pipelines", () => {
 			return requests;
 		}
 
-		it("should prompt for confirmation", async () => {
+		it("should prompt for confirmation", async ({ expect }) => {
 			const mockSink: Sink = {
 				id: "sink_123",
 				name: "my_sink",

@@ -8,8 +8,7 @@ import {
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -871,7 +870,7 @@ addEventListener('fetch', event => {});`
 					{ filePath: "index.html", content: "<html>test</html>" },
 				];
 				writeAssets(assets);
-				expect(findWranglerConfig().configPath).toBe(undefined);
+				assert(findWranglerConfig().configPath === undefined);
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					expectedAssets: {

@@ -41,9 +41,13 @@ describe("local explorer", () => {
 					id: "some-kv-id",
 					title: "KV_WITH_ID",
 				},
+				{
+					id: "worker-b-kv-id",
+					title: "KV_B",
+				},
 			],
 			result_info: {
-				count: 2,
+				count: 3,
 			},
 			success: true,
 		});

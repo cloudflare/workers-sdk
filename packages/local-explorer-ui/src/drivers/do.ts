@@ -144,7 +144,11 @@ export class LocalDODriver extends StudioSQLiteDriver {
 		const result = await super.schemas();
 
 		// Filter out internal DO tables
-		const excludeList = new Set(["_cf_KV", "_cf_METADATA"]);
+		const excludeList = new Set([
+			"_cf_KV",
+			"_cf_METADATA",
+			"__miniflare_do_name",
+		]);
 
 		return Object.fromEntries(
 			Object.entries(result).map(([schemaName, schemaItems]) => [

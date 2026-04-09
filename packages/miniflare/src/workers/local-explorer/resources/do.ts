@@ -1,11 +1,17 @@
-import { INTROSPECT_SQLITE_METHOD } from "../../../plugins/core/constants";
+import {
+	GET_DO_NAME_METHOD,
+	INTROSPECT_SQLITE_METHOD,
+} from "../../../plugins/core/constants";
 import {
 	aggregateListResults,
 	fetchFromPeer,
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import type { IntrospectSqliteMethod } from "../../../plugins/core/constants";
+import type {
+	GetDONameMethod,
+	IntrospectSqliteMethod,
+} from "../../../plugins/core/constants";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type { WorkersNamespace } from "../generated";
@@ -33,6 +39,7 @@ interface DirectoryEntry {
 
 interface IntrospectableDurableObject extends Rpc.DurableObjectBranded {
 	[INTROSPECT_SQLITE_METHOD]: IntrospectSqliteMethod;
+	[GET_DO_NAME_METHOD]: GetDONameMethod;
 }
 
 function getDOBinding(
@@ -53,18 +60,9 @@ function getDOBinding(
 }
 
 /**
- * DO namespace response extended with worker name for filtering in the UI.
- * We require `id`, `name`, `script`, `class`, and `use_sqlite` since we always have them locally.
- */
-type DONamespaceWithWorker = Required<WorkersNamespace> & {
-	workerName: string;
-};
-
-/**
  * Get local DO namespaces from the binding map.
- * Each namespace is tagged with the worker name it belongs to.
  */
-function getLocalDONamespaces(env: Env): DONamespaceWithWorker[] {
+function getLocalDONamespaces(env: Env): Required<WorkersNamespace>[] {
 	const doBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.do;
 	return Object.entries(doBindingMap).map(([id, info]) => ({
 		id, // This is the unsafeUniqueKey - ${scriptName}-${className}
@@ -72,7 +70,6 @@ function getLocalDONamespaces(env: Env): DONamespaceWithWorker[] {
 		script: info.scriptName,
 		class: info.className,
 		use_sqlite: info.useSQLite,
-		workerName: info.scriptName,
 	}));
 }
 
@@ -253,11 +250,27 @@ async function executeListDOObjects(
 	const hasMore = objectIds.length > limit;
 	const paginatedIds = objectIds.slice(0, limit);
 
-	const objects = paginatedIds.map((id) => ({
-		id,
-		// TODO: check if this is correct or if we need to check the content of the sqlite file to determine if it has stored data
-		hasStoredData: true,
-	}));
+	// Get the names for each DO object, if available
+	const ns = getDOBinding(c.env, namespaceId);
+	const objects = await Promise.all(
+		paginatedIds.map(async (id) => {
+			let name: string | undefined;
+			if (ns && ns.useSQLite) {
+				try {
+					const doId = ns.binding.idFromString(id);
+					const stub = ns.binding.get(doId);
+					name = await stub[GET_DO_NAME_METHOD]();
+				} catch {
+					// Ignore errors - name is optional
+				}
+			}
+			return {
+				id,
+				name,
+				hasStoredData: true,
+			};
+		})
+	);
 
 	// Build next cursor (last ID if there are more results)
 	const nextCursor = hasMore ? paginatedIds[paginatedIds.length - 1] : "";

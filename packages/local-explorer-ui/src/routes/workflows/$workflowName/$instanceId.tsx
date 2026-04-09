@@ -538,6 +538,7 @@ function InstanceDetailView() {
 											void navigate({
 												to: "/workflows/$workflowName",
 												params: { workflowName: params.workflowName },
+												search: (prev) => prev,
 											});
 										})
 										.finally(() => setDeleting(false));

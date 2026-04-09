@@ -117,6 +117,8 @@ import type {
 	Plugin,
 	Plugins,
 	PluginServicesOptions,
+	PluginSharedOptions,
+	PluginWorkerOptions,
 	QueueConsumers,
 	QueueProducers,
 	ReplaceWorkersTypes,
@@ -139,7 +141,7 @@ import type {
 	Worker_Binding,
 	Worker_Module,
 } from "./runtime";
-import type { Log, OptionalZodTypeOf } from "./shared";
+import type { Log } from "./shared";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
 	CacheStorage,
@@ -182,14 +184,6 @@ function getServerPort(server: http.Server) {
 // ===== `Miniflare` User Options =====
 export type MiniflareOptions = SharedOptions &
 	(WorkerOptions | { workers: WorkerOptions[] });
-
-// ===== `Miniflare` Validated Options =====
-type PluginWorkerOptions = {
-	[Key in keyof Plugins]: z.infer<Plugins[Key]["options"]>;
-};
-type PluginSharedOptions = {
-	[Key in keyof Plugins]: OptionalZodTypeOf<Plugins[Key]["sharedOptions"]>;
-};
 
 function hasMultipleWorkers(opts: unknown): opts is { workers: unknown[] } {
 	return (
@@ -2187,6 +2181,7 @@ export class Miniflare {
 			proxyBindings,
 			durableObjectClassNames,
 			workflowOptions: workflowOptions.size > 0 ? workflowOptions : undefined,
+			allWorkerOpts,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
