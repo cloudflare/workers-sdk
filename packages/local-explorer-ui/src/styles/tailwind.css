@@ -41,3 +41,43 @@
 		@apply bg-kumo-elevated text-kumo-default text-sm leading-normal;
 	}
 }
+
+/* Animated Cloudflare Logo keyframes */
+@keyframes animated-logo-container {
+	0% {
+		transform: scale(0);
+		opacity: 0;
+	}
+	20%,
+	100% {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes animated-logo-cloud {
+	0% {
+		stroke-dashoffset: 145;
+		fill-opacity: 0;
+	}
+	50% {
+		stroke-dashoffset: 0;
+		fill-opacity: 0;
+	}
+	80%,
+	100% {
+		stroke-dashoffset: 0;
+		fill-opacity: 1;
+	}
+}
+
+@keyframes animated-logo-cutout {
+	0%,
+	50% {
+		transform: scale(0);
+	}
+	80%,
+	100% {
+		transform: scale(1);
+	}
+}
