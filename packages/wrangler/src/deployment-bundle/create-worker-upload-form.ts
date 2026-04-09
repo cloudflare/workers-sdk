@@ -394,6 +394,13 @@ export function createWorkerUploadForm(
 	});
 
 	vpc_services.forEach(({ binding, service_id, service_name }) => {
+		if (options?.dryRun && !service_id) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+			return;
+		}
 		assert(
 			service_id,
 			`VPC service binding "${binding}" is missing a "service_id". ${service_name ? `The service name "${service_name}" should have been resolved before upload.` : "Please provide a service_id or service_name."}`
