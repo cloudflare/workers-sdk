@@ -36,6 +36,11 @@ jobs:
           - os: { name: ubuntu-latest, description: Linux }
             pm: { name: pnpm, version: "10.33.0" }
             experimental: true
+            filter: "cli"
+          - os: { name: ubuntu-latest, description: Linux }
+            pm: { name: pnpm, version: "10.33.0" }
+            experimental: true
+            filter: "workers"
     runs-on: ${{ matrix.os.name }}
     steps:
       - name: Checkout Repo
