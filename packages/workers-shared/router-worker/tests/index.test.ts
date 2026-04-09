@@ -1,4 +1,8 @@
-import { SELF, createExecutionContext, env as runtimeEnv } from "cloudflare:test";
+import {
+	SELF,
+	createExecutionContext,
+	env as runtimeEnv,
+} from "cloudflare:test";
 import { describe, it } from "vitest";
 import { RouterInnerEntrypoint } from "../src/worker";
 import type { Env } from "../src/worker";

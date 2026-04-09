@@ -1,22 +1,22 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
-import type AssetWorker from "../../asset-worker";
 import { generateStaticRoutingRuleMatcher } from "../../asset-worker/src/utils/rules-engine";
 import { PerformanceTimer } from "../../utils/performance";
 import { TemporaryRedirectResponse } from "../../utils/responses";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
-import type {
-	EyeballRouterConfig,
-	JaegerTracing,
-	RouterConfig,
-	UnsafePerformanceTimer,
-} from "../../utils/types";
 import { Analytics, DISPATCH_TYPE, STATIC_ROUTING_DECISION } from "./analytics";
 import {
 	applyEyeballConfigDefaults,
 	applyRouterConfigDefaults,
 } from "./configuration";
 import { renderLimitedResponse } from "./limited-response";
+import type AssetWorker from "../../asset-worker";
+import type {
+	EyeballRouterConfig,
+	JaegerTracing,
+	RouterConfig,
+	UnsafePerformanceTimer,
+} from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
 export interface Env {
@@ -37,13 +37,31 @@ export interface Env {
 	SENTRY_ACCESS_CLIENT_SECRET: string;
 }
 
+type LoopbackExecutionContext = ExecutionContext & {
+	exports: {
+		RouterInnerEntrypoint(options: { props: Record<string, never> }): {
+			fetch(request: Request): Promise<Response>;
+		};
+	};
+};
+
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-		return ctx.exports.RouterInnerEntrypoint({}).fetch(request);
+		void env;
+		// Router worker is typechecked both in this package and as a transitive
+		// dependency during miniflare builds. In the miniflare type context,
+		// Cloudflare.Exports may not include this worker's mainModule mapping from
+		// worker-configuration.d.ts, so `ctx.exports.RouterInnerEntrypoint` does not
+		// resolve structurally. Keep this narrow cast so loopback typechecks in both
+		// compilation contexts without changing runtime behavior.
+		const loopbackCtx = ctx as LoopbackExecutionContext;
+		return loopbackCtx.exports
+			.RouterInnerEntrypoint({ props: {} })
+			.fetch(request);
 	},
 };
 
-export class RouterInnerEntrypoint extends WorkerEntrypoint<Env>{
+export class RouterInnerEntrypoint extends WorkerEntrypoint<Env> {
 	override async fetch(request: Request): Promise<Response> {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
 		let userWorkerInvocation = false;
@@ -74,7 +92,11 @@ export class RouterInnerEntrypoint extends WorkerEntrypoint<Env>{
 
 			const url = new URL(request.url);
 
-			if (this.env.COLO_METADATA && this.env.VERSION_METADATA && this.env.CONFIG) {
+			if (
+				this.env.COLO_METADATA &&
+				this.env.VERSION_METADATA &&
+				this.env.CONFIG
+			) {
 				analytics.setData({
 					accountId: this.env.CONFIG.account_id,
 					scriptId: this.env.CONFIG.script_id,
@@ -194,18 +216,21 @@ export class RouterInnerEntrypoint extends WorkerEntrypoint<Env>{
 				asset: "static_routing" | "found" | "none";
 			}) => {
 				analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
-				return await this.env.JAEGER.enterSpan("dispatch_assets", async (span) => {
-					span.setTags({
-						hasUserWorker: config.has_user_worker,
-						asset: asset,
-						dispatchType: DISPATCH_TYPE.ASSETS,
-					});
+				return await this.env.JAEGER.enterSpan(
+					"dispatch_assets",
+					async (span) => {
+						span.setTags({
+							hasUserWorker: config.has_user_worker,
+							asset: asset,
+							dispatchType: DISPATCH_TYPE.ASSETS,
+						});
 
-					analytics.setData({
-						timeToDispatch: performance.now() - startTimeMs,
-					});
-					return this.env.ASSET_WORKER.fetch(request);
-				});
+						analytics.setData({
+							timeToDispatch: performance.now() - startTimeMs,
+						});
+						return this.env.ASSET_WORKER.fetch(request);
+					}
+				);
 			};
 
 			if (config.static_routing) {
