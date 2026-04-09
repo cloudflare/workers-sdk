@@ -2959,10 +2959,7 @@ export class Miniflare {
 	}> {
 		return this.#getProxy(HELLO_WORLD_PLUGIN_NAME, bindingName, workerName);
 	}
-	getFlagshipBinding(
-		bindingName: string,
-		workerName?: string
-	): Promise<FlagshipBinding> {
+	getFlagshipBinding(bindingName: string, workerName?: string): Promise<Flags> {
 		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName);
 	}
 	getStreamBinding(
@@ -3046,8 +3043,6 @@ export interface SecretsStoreSecretAdmin {
 	list(): Promise<KVNamespaceListKey<{ uuid: string }, string>[]>;
 	get(id: string): Promise<string>;
 }
-
-export type FlagshipBinding = Flags;
 
 export * from "./http";
 export * from "./plugins";
