@@ -4324,7 +4324,7 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 	if (!isRequiredProperty(value, "service", "string")) {
 		diagnostics.errors.push(
-			`"${field}" bindings should have a string "service_name" field but got ${JSON.stringify(
+			`"${field}" bindings should have a string "service" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
