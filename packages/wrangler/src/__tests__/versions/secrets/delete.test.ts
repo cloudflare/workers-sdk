@@ -27,9 +27,9 @@ describe("versions secret delete", () => {
 			result: true,
 		});
 
-		mockSetupApiCalls();
-		mockGetVersion();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockGetVersion(expect);
+		mockPostVersion(expect, (metadata) => {
 			// We should have all secrets except the one being deleted
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
@@ -55,9 +55,9 @@ describe("versions secret delete", () => {
 	test("can delete a secret (non-interactive)", async ({ expect }) => {
 		setIsTTY(false);
 
-		mockSetupApiCalls();
-		mockGetVersion();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockGetVersion(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "inherit", name: "ANOTHER_SECRET" },
@@ -88,9 +88,9 @@ describe("versions secret delete", () => {
 		writeWranglerConfig({ name: "script-name" });
 		setIsTTY(false);
 
-		mockSetupApiCalls();
-		mockGetVersion();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockGetVersion(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "inherit", name: "ANOTHER_SECRET" },
@@ -119,9 +119,9 @@ describe("versions secret delete", () => {
 		await writeFile("wrangler.json", JSON.stringify({ invalid_field: true }));
 		setIsTTY(false);
 
-		mockSetupApiCalls();
-		mockGetVersion();
-		mockPostVersion();
+		mockSetupApiCalls(expect);
+		mockGetVersion(expect);
+		mockPostVersion(expect);
 
 		await runWrangler("versions secret delete SECRET --name script-name");
 
@@ -138,9 +138,9 @@ describe("versions secret delete", () => {
 			writeWranglerConfig({
 				env: { test: {} },
 			});
-			mockSetupApiCalls();
-			mockGetVersion();
-			mockPostVersion();
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect);
+			mockPostVersion(expect);
 
 			await runWrangler("versions secret delete SECRET --name script-name");
 
@@ -164,9 +164,9 @@ describe("versions secret delete", () => {
 			writeWranglerConfig({
 				env: { test: {} },
 			});
-			mockSetupApiCalls();
-			mockGetVersion();
-			mockPostVersion();
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect);
+			mockPostVersion(expect);
 
 			await runWrangler(
 				"versions secret delete SECRET --name script-name -e test"
@@ -181,9 +181,9 @@ describe("versions secret delete", () => {
 			setIsTTY(false);
 
 			writeWranglerConfig();
-			mockSetupApiCalls();
-			mockGetVersion();
-			mockPostVersion();
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect);
+			mockPostVersion(expect);
 
 			await runWrangler("versions secret delete SECRET --name script-name");
 

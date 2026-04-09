@@ -25,6 +25,13 @@ import { LocalDODriver } from "../../../drivers/do";
 import type { StudioRef } from "../../../components/studio";
 import type { StudioResource } from "../../../types/studio";
 
+/**
+ * Checks if a string is a valid 64-character hex Durable Object ID.
+ */
+function isHexId(str: string): boolean {
+	return /^[0-9a-f]{64}$/i.test(str);
+}
+
 export const Route = createFileRoute("/do/$className/$objectId")({
 	component: ObjectView,
 	errorComponent: ResourceError,
@@ -42,8 +49,13 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 			throw notFound();
 		}
 
+		// Determine if the param is a hex ID or a name
+		const isId = isHexId(params.objectId);
+		const objectId = isId ? params.objectId : null;
+		const objectName = isId ? null : params.objectId;
+
 		// Fetch tables using the resolved namespace ID
-		const driver = new LocalDODriver(namespace.id, params.objectId);
+		const driver = new LocalDODriver(namespace.id, objectId, objectName);
 		const schemas = await driver.schemas();
 		const mainSchema = schemas["main"] ?? [];
 		const tables = mainSchema
@@ -52,7 +64,10 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 			.sort((a, b) => a.label.localeCompare(b.label));
 
 		return {
+			isId,
 			namespaceId: namespace.id,
+			objectId,
+			objectName,
 			tables,
 		};
 	},
@@ -65,7 +80,7 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 function ObjectView(): JSX.Element {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
-	const { namespaceId } = loaderData;
+	const { namespaceId, objectId, objectName } = loaderData;
 	const searchParams = Route.useSearch();
 	const navigate = useNavigate();
 	const router = useRouter();
@@ -83,8 +98,8 @@ function ObjectView(): JSX.Element {
 	} | null>(null);
 
 	const driver = useMemo<LocalDODriver>(
-		() => new LocalDODriver(namespaceId, params.objectId),
-		[namespaceId, params.objectId]
+		() => new LocalDODriver(namespaceId, objectId, objectName),
+		[namespaceId, objectId, objectName]
 	);
 
 	const resource = useMemo<StudioResource>(
@@ -109,9 +124,7 @@ function ObjectView(): JSX.Element {
 
 			void navigate({
 				replace: true,
-				search: {
-					table: tableName,
-				},
+				search: (prev) => ({ ...prev, table: tableName }),
 				to: ".",
 			});
 		},
@@ -137,9 +150,7 @@ function ObjectView(): JSX.Element {
 		await handleTableRefresh();
 		void navigate({
 			replace: true,
-			search: {
-				table: undefined,
-			},
+			search: (prev) => ({ ...prev, table: undefined }),
 			to: ".",
 		});
 	}, [handleTableRefresh, navigate]);
@@ -189,9 +200,6 @@ function ObjectView(): JSX.Element {
 						to="/do/$className"
 					>
 						{params.className}
-						{namespaceId !== params.className && (
-							<span className="text-kumo-subtle">({namespaceId})</span>
-						)}
 					</Link>,
 					<span
 						className="flex items-center gap-1 font-mono text-xs [&_button]:opacity-100"

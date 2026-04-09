@@ -190,10 +190,11 @@ function BucketView(): JSX.Element {
 			params: {
 				bucketName: params.bucketName,
 			},
-			search: {
+			search: (prev) => ({
+				...prev,
 				prefix: search.prefix && checked ? search.prefix : undefined,
 				delimiter: checked ? undefined : false,
-			},
+			}),
 			to: "/r2/$bucketName",
 		});
 	}
@@ -203,7 +204,7 @@ function BucketView(): JSX.Element {
 			params: {
 				bucketName: params.bucketName,
 			},
-			search: { prefix: newPrefix || undefined },
+			search: (prev) => ({ ...prev, prefix: newPrefix || undefined }),
 			to: "/r2/$bucketName",
 		});
 	}

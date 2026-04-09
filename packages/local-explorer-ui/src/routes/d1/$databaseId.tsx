@@ -9,6 +9,7 @@ import {
 	getRouteApi,
 	useNavigate,
 	useRouter,
+	useRouterState,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import D1Icon from "../../assets/icons/d1.svg?react";
@@ -18,6 +19,7 @@ import { Studio } from "../../components/studio";
 import { DropTableConfirmationModal } from "../../components/studio/Modal/DropTableConfirmation";
 import { StudioTableActionsDropdown } from "../../components/studio/Table/ActionsDropdown";
 import { TableSelect } from "../../components/TableSelect";
+import { getSelectedWorker } from "../../components/WorkerSelector";
 import { LocalD1Driver } from "../../drivers/d1";
 import type { StudioRef } from "../../components/studio";
 import type { StudioResource } from "../../types/studio";
@@ -52,6 +54,7 @@ function DatabaseView(): JSX.Element {
 	const navigate = useNavigate();
 	const router = useRouter();
 	const rootData = rootRoute.useLoaderData();
+	const routerState = useRouterState();
 
 	const lastSyncedTable = useRef<string | undefined>(searchParams.table);
 	const studioRef = useRef<StudioRef>(null);
@@ -70,13 +73,17 @@ function DatabaseView(): JSX.Element {
 		[params.databaseId]
 	);
 
-	// Get database name (binding) from root loader data
+	// Get database binding name from selected worker's bindings
 	const databaseName = useMemo(() => {
-		const database = rootData.databases.find(
-			(db) => db.uuid === params.databaseId
+		const worker = getSelectedWorker(
+			rootData.workers,
+			routerState.location.searchStr
 		);
-		return database?.name;
-	}, [rootData.databases, params.databaseId]);
+		const binding = worker?.bindings?.d1?.find(
+			(db) => db.id === params.databaseId
+		);
+		return binding?.bindingName;
+	}, [rootData.workers, routerState.location.searchStr, params.databaseId]);
 
 	const resource = useMemo<StudioResource>(
 		() => ({
@@ -99,9 +106,7 @@ function DatabaseView(): JSX.Element {
 
 			void navigate({
 				replace: true,
-				search: {
-					table: tableName,
-				},
+				search: (prev) => ({ ...prev, table: tableName }),
 				to: ".",
 			});
 		},
@@ -127,9 +132,7 @@ function DatabaseView(): JSX.Element {
 		await handleTableRefresh();
 		void navigate({
 			replace: true,
-			search: {
-				table: undefined,
-			},
+			search: (prev) => ({ ...prev, table: undefined }),
 			to: ".",
 		});
 	}, [handleTableRefresh, navigate]);

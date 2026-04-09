@@ -1,7 +1,6 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockPrompt } from "../helpers/mock-dialogs";
@@ -11,6 +10,7 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockGetQueueByNameRequest } from "./mock-utils";
 import type { PostTypedConsumerBody, QueueResponse } from "../../queues/client";
+import type { ExpectStatic } from "vitest";
 
 describe("wrangler", () => {
 	mockAccountId();
@@ -23,7 +23,7 @@ describe("wrangler", () => {
 		const expectedConsumerId = "consumerId";
 		const expectedQueueName = "testQueue";
 
-		it("should show the correct help text", async () => {
+		it("should show the correct help text", async ({ expect }) => {
 			await runWrangler("queues --help");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -54,7 +54,11 @@ describe("wrangler", () => {
 		});
 
 		describe("list", () => {
-			function mockListRequest(queues: QueueResponse[], page: number) {
+			function mockListRequest(
+				expect: ExpectStatic,
+				queues: QueueResponse[],
+				page: number
+			) {
 				const requests = { count: 0 };
 				msw.use(
 					http.get(
@@ -79,7 +83,7 @@ describe("wrangler", () => {
 				return requests;
 			}
 
-			it("should show the correct help text", async () => {
+			it("should show the correct help text", async ({ expect }) => {
 				await runWrangler("queues list --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -100,7 +104,7 @@ describe("wrangler", () => {
 				`);
 			});
 
-			it("should list queues on page 1 with no --page", async () => {
+			it("should list queues on page 1 with no --page", async ({ expect }) => {
 				const expectedQueues: QueueResponse[] = [
 					{
 						queue_id: "5e1b9969eb974d8c99c48d19df104c7a",
@@ -130,7 +134,7 @@ describe("wrangler", () => {
 					},
 				];
 				const expectedPage = 1;
-				mockListRequest(expectedQueues, expectedPage);
+				mockListRequest(expect, expectedQueues, expectedPage);
 				await runWrangler("queues list");
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -148,7 +152,7 @@ describe("wrangler", () => {
 				`);
 			});
 
-			it("should list queues using --page=2", async () => {
+			it("should list queues using --page=2", async ({ expect }) => {
 				const expectedQueues: QueueResponse[] = [
 					{
 						queue_id: "7f7c2df28cee49ad-bbb46c9e5426e850",
@@ -165,7 +169,7 @@ describe("wrangler", () => {
 					},
 				];
 				const expectedPage = 2;
-				mockListRequest(expectedQueues, expectedPage);
+				mockListRequest(expect, expectedQueues, expectedPage);
 				await runWrangler("queues list --page=2");
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -184,6 +188,7 @@ describe("wrangler", () => {
 
 		describe("create", () => {
 			function mockCreateRequest(
+				expect: ExpectStatic,
 				queueName: string,
 				queueSettings?: {
 					delivery_delay?: number;
@@ -224,7 +229,7 @@ describe("wrangler", () => {
 				return requests;
 			}
 
-			it("should show the correct help text", async () => {
+			it("should show the correct help text", async ({ expect }) => {
 				await runWrangler("queues create --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -249,16 +254,18 @@ describe("wrangler", () => {
 				`);
 			});
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
-				it("should create a queue", async () => {
+				it("should create a queue", async ({ expect }) => {
 					writeWranglerConfig({}, configPath);
-					const requests = mockCreateRequest("testQueue");
+					const requests = mockCreateRequest(expect, "testQueue");
 					await runWrangler("queues create testQueue");
 					expect(std.out).toMatchSnapshot();
 					expect(requests.count).toEqual(1);
 				});
 
-				it("should send queue settings with delivery delay", async () => {
-					const requests = mockCreateRequest("testQueue", {
+				it("should send queue settings with delivery delay", async ({
+					expect,
+				}) => {
+					const requests = mockCreateRequest(expect, "testQueue", {
 						delivery_delay: 10,
 					});
 					writeWranglerConfig({}, configPath);
@@ -268,8 +275,12 @@ describe("wrangler", () => {
 				});
 			});
 
-			it("should show an error when two delivery delays are set", async () => {
-				const requests = mockCreateRequest("testQueue", { delivery_delay: 0 });
+			it("should show an error when two delivery delays are set", async ({
+				expect,
+			}) => {
+				const requests = mockCreateRequest(expect, "testQueue", {
+					delivery_delay: 0,
+				});
 
 				await expect(
 					runWrangler(
@@ -282,8 +293,12 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(0);
 			});
 
-			it("should show an error when invalid delivery delay is set", async () => {
-				const requests = mockCreateRequest("testQueue", { delivery_delay: 10 });
+			it("should show an error when invalid delivery delay is set", async ({
+				expect,
+			}) => {
+				const requests = mockCreateRequest(expect, "testQueue", {
+					delivery_delay: 10,
+				});
 				await expect(
 					runWrangler("queues create testQueue --delivery-delay-secs=99999")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -293,8 +308,10 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(0);
 			});
 
-			it("should send queue settings with message retention period", async () => {
-				const requests = mockCreateRequest("testQueue", {
+			it("should send queue settings with message retention period", async ({
+				expect,
+			}) => {
+				const requests = mockCreateRequest(expect, "testQueue", {
 					message_retention_period: 100,
 				});
 				await runWrangler(
@@ -334,8 +351,10 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should show an error when two message retention periods are set", async () => {
-				const requests = mockCreateRequest("testQueue", {
+			it("should show an error when two message retention periods are set", async ({
+				expect,
+			}) => {
+				const requests = mockCreateRequest(expect, "testQueue", {
 					message_retention_period: 60,
 				});
 
@@ -350,8 +369,10 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(0);
 			});
 
-			it("should show an error when invalid message retention period is set", async () => {
-				const requests = mockCreateRequest("testQueue", {
+			it("should show an error when invalid message retention period is set", async ({
+				expect,
+			}) => {
+				const requests = mockCreateRequest(expect, "testQueue", {
 					message_retention_period: 100,
 				});
 				await expect(
@@ -368,6 +389,7 @@ describe("wrangler", () => {
 
 		describe("update", () => {
 			function mockUpdateRequest(
+				expect: ExpectStatic,
 				queueName: string,
 				queueSettings:
 					| { delivery_delay?: number; message_retention_period?: number }
@@ -448,7 +470,7 @@ describe("wrangler", () => {
 				return requests;
 			}
 
-			it("should show the correct help text", async () => {
+			it("should show the correct help text", async ({ expect }) => {
 				await runWrangler("queues update --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -473,14 +495,16 @@ describe("wrangler", () => {
 				`);
 			});
 
-			it("should update a queue with new message retention period and preserve old delivery delay", async () => {
+			it("should update a queue with new message retention period and preserve old delivery delay", async ({
+				expect,
+			}) => {
 				const getrequests = mockGetQueueRequest("testQueue", {
 					delivery_delay: 10,
 					message_retention_period: 100,
 				});
 
 				//update queue with new message retention period
-				const requests = mockUpdateRequest("testQueue", {
+				const requests = mockUpdateRequest(expect, "testQueue", {
 					delivery_delay: 10,
 					message_retention_period: 400,
 				});
@@ -500,8 +524,10 @@ describe("wrangler", () => {
 				`);
 			});
 
-			it("should show an error when two message retention periods are set", async () => {
-				const requests = mockUpdateRequest("testQueue", {
+			it("should show an error when two message retention periods are set", async ({
+				expect,
+			}) => {
+				const requests = mockUpdateRequest(expect, "testQueue", {
 					message_retention_period: 60,
 				});
 
@@ -521,8 +547,10 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(0);
 			});
 
-			it("should show an error when two delivery delays are set", async () => {
-				const requests = mockUpdateRequest("testQueue", {
+			it("should show an error when two delivery delays are set", async ({
+				expect,
+			}) => {
+				const requests = mockUpdateRequest(expect, "testQueue", {
 					delivery_delay: 10,
 				});
 
@@ -542,8 +570,10 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(0);
 			});
 
-			it("should show an error when invalid delivery delay is set", async () => {
-				const requests = mockUpdateRequest("testQueue", {
+			it("should show an error when invalid delivery delay is set", async ({
+				expect,
+			}) => {
+				const requests = mockUpdateRequest(expect, "testQueue", {
 					delivery_delay: 10,
 				});
 
@@ -561,8 +591,10 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(0);
 			});
 
-			it("should show an error when invalid message retention period is set", async () => {
-				const requests = mockUpdateRequest("testQueue", {
+			it("should show an error when invalid message retention period is set", async ({
+				expect,
+			}) => {
+				const requests = mockUpdateRequest(expect, "testQueue", {
 					message_retention_period: 100,
 				});
 
@@ -584,7 +616,7 @@ describe("wrangler", () => {
 		});
 
 		describe("delete", () => {
-			function mockDeleteRequest(queueId: string) {
+			function mockDeleteRequest(expect: ExpectStatic, queueId: string) {
 				const requests = { count: 0 };
 				msw.use(
 					http.delete(
@@ -606,7 +638,7 @@ describe("wrangler", () => {
 				return requests;
 			}
 
-			it("should show the correct help text", async () => {
+			it("should show the correct help text", async ({ expect }) => {
 				await runWrangler("queues delete --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -627,7 +659,7 @@ describe("wrangler", () => {
 				`);
 			});
 
-			it("should delete a queue", async () => {
+			it("should delete a queue", async ({ expect }) => {
 				const queueNameResolveRequest = mockGetQueueByNameRequest(
 					expectedQueueName,
 					{
@@ -642,7 +674,7 @@ describe("wrangler", () => {
 					}
 				);
 
-				const deleteRequest = mockDeleteRequest(expectedQueueId);
+				const deleteRequest = mockDeleteRequest(expect, expectedQueueId);
 				await runWrangler("queues delete testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -655,13 +687,13 @@ describe("wrangler", () => {
 				expect(deleteRequest.count).toEqual(1);
 			});
 
-			it("should show error when a queue doesn't exist", async () => {
+			it("should show error when a queue doesn't exist", async ({ expect }) => {
 				const queueNameResolveRequest = mockGetQueueByNameRequest(
 					expectedQueueName,
 					null
 				);
 
-				const deleteRequest = mockDeleteRequest(expectedQueueId);
+				const deleteRequest = mockDeleteRequest(expect, expectedQueueId);
 				await runWrangler();
 				await expect(
 					runWrangler("queues delete testQueue")
@@ -675,7 +707,7 @@ describe("wrangler", () => {
 		});
 
 		describe("consumers", () => {
-			it("should show the correct help text", async () => {
+			it("should show the correct help text", async ({ expect }) => {
 				await runWrangler("queues consumer --help");
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -702,6 +734,7 @@ describe("wrangler", () => {
 
 			describe("add", () => {
 				function mockPostRequest(
+					expect: ExpectStatic,
 					queueName: string,
 					expectedBody: PostTypedConsumerBody
 				) {
@@ -727,7 +760,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should show the correct help text", async () => {
+				it("should show the correct help text", async ({ expect }) => {
 					await runWrangler("queues consumer add --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
@@ -757,7 +790,7 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should add a consumer using defaults", async () => {
+				it("should add a consumer using defaults", async ({ expect }) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						{
@@ -785,22 +818,26 @@ describe("wrangler", () => {
 						},
 						dead_letter_queue: undefined,
 					};
-					const postRequest = mockPostRequest(expectedQueueId, expectedBody);
+					const postRequest = mockPostRequest(
+						expect,
+						expectedQueueId,
+						expectedBody
+					);
 					await runWrangler("queues consumer add testQueue testScript");
 
 					expect(queueNameResolveRequest.count).toEqual(1);
 					expect(postRequest.count).toEqual(1);
 
 					expect(std.out).toMatchInlineSnapshot(`
-						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
-						Adding consumer to queue testQueue.
-						Added consumer to queue testQueue."
-					`);
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Adding consumer to queue testQueue.
+					Added consumer to queue testQueue."
+				`);
 				});
 
-				it("should add a consumer using custom values", async () => {
+				it("should add a consumer using custom values", async ({ expect }) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						{
@@ -828,7 +865,11 @@ describe("wrangler", () => {
 						},
 						dead_letter_queue: "myDLQ",
 					};
-					const postRequest = mockPostRequest(expectedQueueId, expectedBody);
+					const postRequest = mockPostRequest(
+						expect,
+						expectedQueueId,
+						expectedBody
+					);
 
 					await runWrangler(
 						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay-secs=10"
@@ -846,7 +887,9 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should add a consumer with batchTimeout of 0", async () => {
+				it("should add a consumer with batchTimeout of 0", async ({
+					expect,
+				}) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						{
@@ -874,7 +917,11 @@ describe("wrangler", () => {
 						},
 						dead_letter_queue: "myDLQ",
 					};
-					const postRequest = mockPostRequest(expectedQueueId, expectedBody);
+					const postRequest = mockPostRequest(
+						expect,
+						expectedQueueId,
+						expectedBody
+					);
 
 					await runWrangler(
 						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 0 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay-secs=10"
@@ -892,7 +939,9 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should show an error when two retry delays are set", async () => {
+				it("should show an error when two retry delays are set", async ({
+					expect,
+				}) => {
 					const expectedBody: PostTypedConsumerBody = {
 						script_name: "testScript",
 						type: "worker",
@@ -906,7 +955,7 @@ describe("wrangler", () => {
 						},
 						dead_letter_queue: "myDLQ",
 					};
-					const requests = mockPostRequest("testQueue", expectedBody);
+					const requests = mockPostRequest(expect, "testQueue", expectedBody);
 
 					await expect(
 						runWrangler(
@@ -919,7 +968,9 @@ describe("wrangler", () => {
 					expect(requests.count).toEqual(0);
 				});
 
-				it("should show an error when queue does not exist", async () => {
+				it("should show an error when queue does not exist", async ({
+					expect,
+				}) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						null
@@ -937,7 +988,11 @@ describe("wrangler", () => {
 						},
 						dead_letter_queue: "myDLQ",
 					};
-					const postRequest = mockPostRequest(expectedQueueId, expectedBody);
+					const postRequest = mockPostRequest(
+						expect,
+						expectedQueueId,
+						expectedBody
+					);
 
 					await expect(
 						runWrangler(
@@ -951,7 +1006,9 @@ describe("wrangler", () => {
 					expect(postRequest.count).toEqual(0);
 				});
 
-				it.skip("should show link to dash when not enabled", async () => {
+				it.skip("should show link to dash when not enabled", async ({
+					expect,
+				}) => {
 					const queueName = "testQueueId";
 					msw.use(
 						http.post(
@@ -998,7 +1055,11 @@ describe("wrangler", () => {
 			});
 
 			describe("delete", () => {
-				function mockDeleteRequest(queueId: string, consumerId: string) {
+				function mockDeleteRequest(
+					expect: ExpectStatic,
+					queueId: string,
+					consumerId: string
+				) {
 					const requests = { count: 0 };
 					const resource = `accounts/:accountId/queues/:expectedQueueId/consumers/:expectedConsumerId`;
 
@@ -1027,7 +1088,11 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				function mockServiceRequest(serviceName: string, defaultEnv: string) {
+				function mockServiceRequest(
+					expect: ExpectStatic,
+					serviceName: string,
+					defaultEnv: string
+				) {
 					const requests = { count: 0 };
 					const resource = `accounts/:accountId/workers/services/:serviceName`;
 
@@ -1059,7 +1124,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should show the correct help text", async () => {
+				it("should show the correct help text", async ({ expect }) => {
 					await runWrangler("queues consumer remove --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
@@ -1081,12 +1146,15 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should show an error when queue does not exist", async () => {
+				it("should show an error when queue does not exist", async ({
+					expect,
+				}) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						null
 					);
 					const postRequest = mockDeleteRequest(
+						expect,
 						expectedQueueId,
 						expectedConsumerId
 					);
@@ -1104,7 +1172,7 @@ describe("wrangler", () => {
 				});
 
 				describe("when script consumers are in use", () => {
-					it("should delete the correct consumer", async () => {
+					it("should delete the correct consumer", async ({ expect }) => {
 						const queueNameResolveRequest = mockGetQueueByNameRequest(
 							expectedQueueName,
 							{
@@ -1127,6 +1195,7 @@ describe("wrangler", () => {
 						);
 
 						const deleteRequest = mockDeleteRequest(
+							expect,
 							expectedQueueId,
 							expectedConsumerId
 						);
@@ -1135,15 +1204,17 @@ describe("wrangler", () => {
 						expect(queueNameResolveRequest.count).toEqual(1);
 						expect(deleteRequest.count).toEqual(1);
 						expect(std.out).toMatchInlineSnapshot(`
-							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
-							Removing consumer from queue testQueue.
-							Removed consumer from queue testQueue."
-						`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Removing consumer from queue testQueue.
+						Removed consumer from queue testQueue."
+					`);
 					});
 
-					it("should show error when deleting a non-existing consumer", async () => {
+					it("should show error when deleting a non-existing consumer", async ({
+						expect,
+					}) => {
 						const queueNameResolveRequest = mockGetQueueByNameRequest(
 							expectedQueueName,
 							{
@@ -1166,6 +1237,7 @@ describe("wrangler", () => {
 						);
 
 						const deleteRequest = mockDeleteRequest(
+							expect,
 							expectedQueueId,
 							expectedConsumerId
 						);
@@ -1181,7 +1253,7 @@ describe("wrangler", () => {
 				});
 
 				describe("when service consumers are in use", () => {
-					it("should delete a consumer with env set", async () => {
+					it("should delete a consumer with env set", async ({ expect }) => {
 						const queueNameResolveRequest = mockGetQueueByNameRequest(
 							expectedQueueName,
 							{
@@ -1205,6 +1277,7 @@ describe("wrangler", () => {
 						);
 
 						const deleteRequest = mockDeleteRequest(
+							expect,
 							expectedQueueId,
 							expectedConsumerId
 						);
@@ -1215,15 +1288,17 @@ describe("wrangler", () => {
 						expect(queueNameResolveRequest.count).toEqual(1);
 						expect(deleteRequest.count).toEqual(1);
 						expect(std.out).toMatchInlineSnapshot(`
-							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
-							Removing consumer from queue testQueue.
-							Removed consumer from queue testQueue."
-						`);
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Removing consumer from queue testQueue.
+						Removed consumer from queue testQueue."
+					`);
 					});
 
-					it("should show error when deleting a non-matching environment", async () => {
+					it("should show error when deleting a non-matching environment", async ({
+						expect,
+					}) => {
 						const queueNameResolveRequest = mockGetQueueByNameRequest(
 							expectedQueueName,
 							{
@@ -1247,6 +1322,7 @@ describe("wrangler", () => {
 						);
 
 						const deleteRequest = mockDeleteRequest(
+							expect,
 							expectedQueueId,
 							expectedConsumerId
 						);
@@ -1262,7 +1338,7 @@ describe("wrangler", () => {
 						expect(deleteRequest.count).toEqual(0);
 					});
 
-					it("should delete a consumer without env set", async () => {
+					it("should delete a consumer without env set", async ({ expect }) => {
 						const queueNameResolveRequest = mockGetQueueByNameRequest(
 							expectedQueueName,
 							{
@@ -1285,8 +1361,13 @@ describe("wrangler", () => {
 							}
 						);
 
-						const serviceRequest = mockServiceRequest("testScript", "myEnv");
+						const serviceRequest = mockServiceRequest(
+							expect,
+							"testScript",
+							"myEnv"
+						);
 						const deleteRequest = mockDeleteRequest(
+							expect,
 							expectedQueueId,
 							expectedConsumerId
 						);
@@ -1306,7 +1387,9 @@ describe("wrangler", () => {
 					});
 
 					describe("when multiple consumers are set", () => {
-						it("should delete default environment consumer without env set", async () => {
+						it("should delete default environment consumer without env set", async ({
+							expect,
+						}) => {
 							const expectedDefaultEnvironment = "staging";
 							const expectedConsumerIdToDelete = "consumer-id-staging";
 							const queueNameResolveRequest = mockGetQueueByNameRequest(
@@ -1339,10 +1422,12 @@ describe("wrangler", () => {
 							);
 
 							const serviceRequest = mockServiceRequest(
+								expect,
 								"testScript",
 								expectedDefaultEnvironment
 							);
 							const deleteRequest = mockDeleteRequest(
+								expect,
 								expectedQueueId,
 								expectedConsumerIdToDelete
 							);
@@ -1360,7 +1445,9 @@ describe("wrangler", () => {
 							`);
 						});
 
-						it("should delete matching consumer with env set", async () => {
+						it("should delete matching consumer with env set", async ({
+							expect,
+						}) => {
 							const expectedConsumerIdToDelete = "consumer-id-staging";
 							const queueNameResolveRequest = mockGetQueueByNameRequest(
 								expectedQueueName,
@@ -1392,6 +1479,7 @@ describe("wrangler", () => {
 							);
 
 							const deleteRequest = mockDeleteRequest(
+								expect,
 								expectedQueueId,
 								expectedConsumerIdToDelete
 							);
@@ -1410,7 +1498,9 @@ describe("wrangler", () => {
 							`);
 						});
 
-						it("should show error when deleting on a non-matching environment", async () => {
+						it("should show error when deleting on a non-matching environment", async ({
+							expect,
+						}) => {
 							const expectedConsumerIdToDelete = "consumer-id-staging";
 							const queueNameResolveRequest = mockGetQueueByNameRequest(
 								expectedQueueName,
@@ -1442,6 +1532,7 @@ describe("wrangler", () => {
 							);
 
 							const deleteRequest = mockDeleteRequest(
+								expect,
 								expectedQueueId,
 								expectedConsumerId
 							);
@@ -1462,7 +1553,7 @@ describe("wrangler", () => {
 		});
 
 		describe("http_pull consumers", () => {
-			it("should show the correct help text", async () => {
+			it("should show the correct help text", async ({ expect }) => {
 				await runWrangler("queues consumer http --help");
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1487,6 +1578,7 @@ describe("wrangler", () => {
 
 			describe("add", () => {
 				function mockPostRequest(
+					expect: ExpectStatic,
 					queueId: string,
 					expectedBody: PostTypedConsumerBody
 				) {
@@ -1512,7 +1604,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should show the correct help text", async () => {
+				it("should show the correct help text", async ({ expect }) => {
 					await runWrangler("queues consumer http add --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
@@ -1540,7 +1632,7 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should add a consumer using defaults", async () => {
+				it("should add a consumer using defaults", async ({ expect }) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						{
@@ -1565,21 +1657,25 @@ describe("wrangler", () => {
 						},
 						dead_letter_queue: undefined,
 					};
-					const postRequest = mockPostRequest(expectedQueueId, expectedBody);
+					const postRequest = mockPostRequest(
+						expect,
+						expectedQueueId,
+						expectedBody
+					);
 
 					await runWrangler("queues consumer http add testQueue");
 					expect(queueNameResolveRequest.count).toEqual(1);
 					expect(postRequest.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
-						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
-						Adding consumer to queue testQueue.
-						Added consumer to queue testQueue."
-					`);
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Adding consumer to queue testQueue.
+					Added consumer to queue testQueue."
+				`);
 				});
 
-				it("should add a consumer using custom values", async () => {
+				it("should add a consumer using custom values", async ({ expect }) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						{
@@ -1604,7 +1700,11 @@ describe("wrangler", () => {
 						},
 						dead_letter_queue: "myDLQ",
 					};
-					const postRequest = mockPostRequest(expectedQueueId, expectedBody);
+					const postRequest = mockPostRequest(
+						expect,
+						expectedQueueId,
+						expectedBody
+					);
 
 					await runWrangler(
 						"queues consumer http add testQueue --batch-size 20 --message-retries 3 --visibility-timeout-secs 6 --retry-delay-secs 3 --dead-letter-queue myDLQ"
@@ -1622,7 +1722,11 @@ describe("wrangler", () => {
 			});
 
 			describe("delete", () => {
-				function mockDeleteRequest(queueId: string, consumerId: string) {
+				function mockDeleteRequest(
+					expect: ExpectStatic,
+					queueId: string,
+					consumerId: string
+				) {
 					const requests = { count: 0 };
 					const resource = `accounts/:accountId/queues/:expectedQueueId/consumers/:expectedConsumerId`;
 					msw.use(
@@ -1650,7 +1754,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should show the correct help text", async () => {
+				it("should show the correct help text", async ({ expect }) => {
 					await runWrangler("queues consumer http remove --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
@@ -1671,7 +1775,7 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should delete a pull consumer", async () => {
+				it("should delete a pull consumer", async ({ expect }) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						{
@@ -1693,6 +1797,7 @@ describe("wrangler", () => {
 					);
 
 					const postRequest = mockDeleteRequest(
+						expect,
 						expectedQueueId,
 						expectedConsumerId
 					);
@@ -1742,7 +1847,9 @@ describe("wrangler", () => {
 				modified_on: "2024-07-19T14:43:56.70498Z",
 			};
 
-			it("should return the documentation for the info command when using the --help param", async () => {
+			it("should return the documentation for the info command when using the --help param", async ({
+				expect,
+			}) => {
 				await runWrangler("queues info --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -1762,7 +1869,9 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]"
 				`);
 			});
-			it("should return queue info with worker producers when the queue has workers configured as producers", async () => {
+			it("should return queue info with worker producers when the queue has workers configured as producers", async ({
+				expect,
+			}) => {
 				mockGetQueueByNameRequest(expectedQueueName, mockQueue);
 				await runWrangler("queues info testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
@@ -1779,7 +1888,9 @@ describe("wrangler", () => {
 					Consumers: worker:test-consumer"
 				`);
 			});
-			it('should return "http consumer" and a curl command when the consumer type is http_pull', async () => {
+			it('should return "http consumer" and a curl command when the consumer type is http_pull', async ({
+				expect,
+			}) => {
 				const mockHTTPPullQueue = {
 					...mockQueue,
 					consumers: [{ ...mockQueue.consumers[0], type: "http_pull" }],
@@ -1805,7 +1916,9 @@ describe("wrangler", () => {
 						--data '{ "visibility_timeout": 10000, "batch_size": 2 }'"
 				`);
 			});
-			it("should return the list of r2 bucket producers when the queue is used in an r2 event notification", async () => {
+			it("should return the list of r2 bucket producers when the queue is used in an r2 event notification", async ({
+				expect,
+			}) => {
 				const mockEventNotificationQueue = {
 					...mockQueue,
 					producers: [
@@ -1843,7 +1956,7 @@ describe("wrangler", () => {
 	});
 
 	describe("pause-delivery", () => {
-		function mockUpdateRequest(queueName: string) {
+		function mockUpdateRequest(expect: ExpectStatic, queueName: string) {
 			const requests = { count: 0 };
 
 			msw.use(
@@ -1915,7 +2028,7 @@ describe("wrangler", () => {
 			return requests;
 		}
 
-		it("should show the correct help text", async () => {
+		it("should show the correct help text", async ({ expect }) => {
 			await runWrangler("queues pause-delivery --help");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1936,11 +2049,13 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("should update the queue's delivery_paused setting", async () => {
+		it("should update the queue's delivery_paused setting", async ({
+			expect,
+		}) => {
 			const getrequests = mockGetQueueRequest("testQueue", {
 				delivery_paused: false,
 			});
-			const requests = mockUpdateRequest("testQueue");
+			const requests = mockUpdateRequest(expect, "testQueue");
 			await runWrangler("queues pause-delivery testQueue");
 
 			expect(requests.count).toEqual(1);
@@ -1957,7 +2072,7 @@ describe("wrangler", () => {
 	});
 
 	describe("resume-delivery", () => {
-		function mockUpdateRequest(queueName: string) {
+		function mockUpdateRequest(expect: ExpectStatic, queueName: string) {
 			const requests = { count: 0 };
 
 			msw.use(
@@ -2029,7 +2144,7 @@ describe("wrangler", () => {
 			return requests;
 		}
 
-		it("should show the correct help text", async () => {
+		it("should show the correct help text", async ({ expect }) => {
 			await runWrangler("queues resume-delivery --help");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -2050,11 +2165,13 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("should update the queue's delivery_paused setting to false", async () => {
+		it("should update the queue's delivery_paused setting to false", async ({
+			expect,
+		}) => {
 			const getrequests = mockGetQueueRequest("testQueue", {
 				delivery_paused: false,
 			});
-			const requests = mockUpdateRequest("testQueue");
+			const requests = mockUpdateRequest(expect, "testQueue");
 			await runWrangler("queues resume-delivery testQueue");
 
 			expect(requests.count).toEqual(1);
@@ -2076,7 +2193,7 @@ describe("wrangler", () => {
 			setIsTTY(false);
 		});
 
-		function mockPurgeRequest() {
+		function mockPurgeRequest(expect: ExpectStatic) {
 			const requests = { count: 0 };
 
 			msw.use(
@@ -2135,7 +2252,7 @@ describe("wrangler", () => {
 			return requests;
 		}
 
-		it("should show the correct help text", async () => {
+		it("should show the correct help text", async ({ expect }) => {
 			await runWrangler("queues purge --help");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -2159,9 +2276,11 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("rejects a missing --force flag in non-interactive mode", async () => {
+		it("rejects a missing --force flag in non-interactive mode", async ({
+			expect,
+		}) => {
 			const getrequests = mockGetQueueRequest("testQueue");
-			const requests = mockPurgeRequest();
+			const requests = mockPurgeRequest(expect);
 
 			await expect(
 				runWrangler("queues purge testQueue")
@@ -2180,9 +2299,11 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("allows purge with the --force flag in non-interactive mode", async () => {
+		it("allows purge with the --force flag in non-interactive mode", async ({
+			expect,
+		}) => {
 			const getrequests = mockGetQueueRequest("testQueue");
-			const requests = mockPurgeRequest();
+			const requests = mockPurgeRequest(expect);
 
 			await runWrangler("queues purge testQueue --force");
 
@@ -2197,9 +2318,11 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("allows purge with the --force flag in non-interactive mode", async () => {
+		it("allows purge with the --force flag in non-interactive mode", async ({
+			expect,
+		}) => {
 			const getrequests = mockGetQueueRequest("testQueue");
-			const requests = mockPurgeRequest();
+			const requests = mockPurgeRequest(expect);
 
 			await runWrangler("queues purge testQueue --force");
 
@@ -2214,10 +2337,12 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("allows purge with the --force flag in interactive mode", async () => {
+		it("allows purge with the --force flag in interactive mode", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			const getrequests = mockGetQueueRequest("testQueue");
-			const requests = mockPurgeRequest();
+			const requests = mockPurgeRequest(expect);
 			await runWrangler("queues purge testQueue --force");
 
 			expect(requests.count).toEqual(1);
@@ -2231,10 +2356,12 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("rejects invalid confirmation in interactive mode", async () => {
+		it("rejects invalid confirmation in interactive mode", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			const getrequests = mockGetQueueRequest("testQueue");
-			const requests = mockPurgeRequest();
+			const requests = mockPurgeRequest(expect);
 			mockPrompt({
 				text: "This operation will permanently delete all the messages in Queue testQueue. Type testQueue to proceed.",
 				result: "wrong-name",
@@ -2256,10 +2383,12 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("allows purge with correct confirmation in interactive mode", async () => {
+		it("allows purge with correct confirmation in interactive mode", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			const getrequests = mockGetQueueRequest("testQueue");
-			const requests = mockPurgeRequest();
+			const requests = mockPurgeRequest(expect);
 			mockPrompt({
 				text: "This operation will permanently delete all the messages in Queue testQueue. Type testQueue to proceed.",
 				result: "testQueue",

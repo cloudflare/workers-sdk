@@ -27,6 +27,7 @@ interface ListNamespacesResponse {
 interface DOObject {
 	id: string;
 	hasStoredData: boolean;
+	name?: string;
 }
 
 interface ListObjectsResponse {
@@ -100,7 +101,6 @@ describe("Durable Objects API", () => {
 				    "name": "my-worker_AnotherDO",
 				    "script": "my-worker",
 				    "use_sqlite": true,
-				    "workerName": "my-worker",
 				  },
 				  {
 				    "class": "TestDO",
@@ -108,7 +108,6 @@ describe("Durable Objects API", () => {
 				    "name": "my-worker_TestDO",
 				    "script": "my-worker",
 				    "use_sqlite": false,
-				    "workerName": "my-worker",
 				  },
 				]
 			`);
@@ -132,7 +131,7 @@ describe("Durable Objects API", () => {
 		});
 	});
 
-	describe("can list DO objects by checking the file system", () => {
+	describe("can list DO objects", () => {
 		let mf: Miniflare;
 		const persistPath = path.join(__dirname, ".test-do-persist");
 
@@ -144,17 +143,22 @@ describe("Durable Objects API", () => {
 			mf = new Miniflare({
 				name: "worker-with-do",
 				inspectorPort: 0,
-				compatibilityDate: "2025-01-01",
+				compatibilityDate: "2026-01-01",
+				compatibilityFlags: ["nodejs_compat"],
 				modules: true,
 				script: `
-				export class TestDO {
-					constructor(state, env) {
-						this.state = state;
-					}
+				import { DurableObject } from "cloudflare:workers";
+
+				export class TestDO extends DurableObject {
 					async fetch(request) {
 						const url = new URL(request.url);
 						if (url.pathname === "/put") {
-							await this.state.storage.put("key", "value");
+							this.ctx.storage.sql.exec(
+								"CREATE TABLE IF NOT EXISTS data (id INTEGER PRIMARY KEY, val TEXT)"
+							);
+							this.ctx.storage.sql.exec(
+								"INSERT OR REPLACE INTO data (id, val) VALUES (1, 'value')"
+							);
 							return new Response("stored");
 						}
 						return new Response("ok");
@@ -163,27 +167,44 @@ describe("Durable Objects API", () => {
 				export default {
 					async fetch(request, env) {
 						const url = new URL(request.url);
-						const name = url.searchParams.get("name") || "default";
-						const id = env.TEST_DO.idFromName(name);
-						const stub = env.TEST_DO.get(id);
-						return stub.fetch(request);
+						const action = url.pathname.slice(1);
+
+						if (action === "put") {
+							const name = url.searchParams.get("name") || "default";
+							const id = env.TEST_DO.idFromName(name);
+							const stub = env.TEST_DO.get(id);
+							return stub.fetch(request);
+						}
+
+						if (action === "put-unique") {
+							const id = env.TEST_DO.newUniqueId();
+							const stub = env.TEST_DO.get(id);
+							await stub.fetch(new Request("http://localhost/put"));
+							return new Response(id.toString());
+						}
+
+						return new Response("not found", { status: 404 });
 					}
 				}
 			`,
 				unsafeLocalExplorer: true,
 				defaultPersistRoot: persistPath,
 				durableObjects: {
-					TEST_DO: "TestDO",
+					TEST_DO: { className: "TestDO", useSQLite: true },
 				},
 			});
 
-			// Create some DO objects by storing data
+			// Create DO objects by name (names should be persisted)
 			const res1 = await mf.dispatchFetch("http://localhost/put?name=object1");
 			await res1.text();
 			const res2 = await mf.dispatchFetch("http://localhost/put?name=object2");
 			await res2.text();
 			const res3 = await mf.dispatchFetch("http://localhost/put?name=object3");
 			await res3.text();
+
+			// Create a DO object by unique ID (no name)
+			const res4 = await mf.dispatchFetch("http://localhost/put-unique");
+			await res4.text();
 		});
 
 		afterAll(async () => {
@@ -193,7 +214,7 @@ describe("Durable Objects API", () => {
 		});
 
 		describe("GET /workers/durable_objects/namespaces/:namespace_id/objects", () => {
-			test("lists objects with stored data", async ({ expect }) => {
+			test("lists objects with stored data and names", async ({ expect }) => {
 				const response = await mf.dispatchFetch(
 					`${BASE_URL}/workers/durable_objects/namespaces/worker-with-do-TestDO/objects`
 				);
@@ -203,24 +224,30 @@ describe("Durable Objects API", () => {
 
 				expect(data.success).toBe(true);
 				expect(data.result).toBeInstanceOf(Array);
-				expect(data.result.length).toBe(3);
-
-				expect(data.result).toMatchInlineSnapshot(`
-					[
-					  {
-					    "hasStoredData": true,
-					    "id": "21b74c1610ca545cee5981cbe7e52a6f5c9be93c25392761ac404bd6d0ed04c9",
-					  },
-					  {
-					    "hasStoredData": true,
-					    "id": "70bc3409f8f65b3f3e1b018dc0e208e8b6059f1c1e5bc7f7d993ab812e41f0f5",
-					  },
-					  {
-					    "hasStoredData": true,
-					    "id": "807932f392ad89b04b8e6c5cf6676d0a751df6e86d928dc3b1ce6152c9d99313",
-					  },
-					]
-				`);
+				expect(data.result.length).toBe(4);
+				const expected = [
+					{
+						hasStoredData: true,
+						id: "21b74c1610ca545cee5981cbe7e52a6f5c9be93c25392761ac404bd6d0ed04c9",
+						name: "object3",
+					},
+					{
+						hasStoredData: true,
+						id: "70bc3409f8f65b3f3e1b018dc0e208e8b6059f1c1e5bc7f7d993ab812e41f0f5",
+						name: "object1",
+					},
+					{
+						hasStoredData: true,
+						id: "807932f392ad89b04b8e6c5cf6676d0a751df6e86d928dc3b1ce6152c9d99313",
+						name: "object2",
+					},
+					{
+						hasStoredData: true,
+						id: expect.stringMatching(/^[a-f0-9]{64}$/),
+						name: undefined,
+					},
+				];
+				expect(data.result).toEqual(expect.arrayContaining(expected));
 			});
 
 			test("supports cursor pagination", async ({ expect }) => {
@@ -240,7 +267,7 @@ describe("Durable Objects API", () => {
 
 				expect(data2.success).toBe(true);
 				// Cursor pagination should return objects after the cursor
-				expect(data2.result.length).toBe(2);
+				expect(data2.result.length).toBe(3);
 				// The first result should not be the object we used as cursor
 				expect(data2.result[0].id).not.toBe(data1.result[0].id);
 			});
@@ -291,7 +318,6 @@ describe("Durable Objects API", () => {
 					    "name": "my-worker_LocalDO",
 					    "script": "my-worker",
 					    "use_sqlite": false,
-					    "workerName": "my-worker",
 					  },
 					]
 				`);

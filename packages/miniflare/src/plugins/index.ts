@@ -43,6 +43,7 @@ import {
 	WORKER_LOADER_PLUGIN_NAME,
 } from "./worker-loader";
 import { WORKFLOWS_PLUGIN, WORKFLOWS_PLUGIN_NAME } from "./workflows";
+import type { OptionalZodTypeOf } from "../shared";
 import type { ValueOf } from "../workers";
 import type { z } from "zod";
 
@@ -161,6 +162,14 @@ export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 	keyof Plugins,
 	ValueOf<Plugins>,
 ][];
+
+// ===== `Miniflare` Validated Options =====
+export type PluginWorkerOptions = {
+	[Key in keyof Plugins]: z.infer<Plugins[Key]["options"]>;
+};
+export type PluginSharedOptions = {
+	[Key in keyof Plugins]: OptionalZodTypeOf<Plugins[Key]["sharedOptions"]>;
+};
 
 export * from "./shared";
 

@@ -63,29 +63,18 @@ async function findKVNamespaceOwner(
 }
 
 /**
- * KV namespace response extended with worker name for filtering in the UI.
- */
-type KVNamespaceWithWorker = WorkersKvNamespace & {
-	workerName: string;
-};
-
-/**
  * Get local KV namespaces from the binding map.
- * Each namespace is tagged with the worker name it belongs to.
  */
-function getLocalKVNamespaces(env: Env): KVNamespaceWithWorker[] {
+function getLocalKVNamespaces(env: Env): WorkersKvNamespace[] {
 	const kvBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.kv;
 
 	return Object.entries(kvBindingMap).map(([id, bindingName]) => {
-		// Binding names follow the pattern "MINIFLARE_PROXY:kv:workerName:BINDING"
 		const parts = bindingName.split(":");
-		const workerName = parts.length >= 3 ? parts[2] : "unknown";
 		const title = parts.pop() || bindingName;
 
 		return {
 			id,
 			title,
-			workerName,
 		};
 	});
 }
