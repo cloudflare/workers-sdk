@@ -133,6 +133,7 @@ describe("normalizeAndValidateConfig()", () => {
 			images: undefined,
 			media: undefined,
 			stream: undefined,
+			previews: undefined,
 		} satisfies Config);
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);
@@ -3514,6 +3515,7 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
 			it("should error if hyperdrive.bindings are not valid", ({ expect }) => {
@@ -8539,6 +8541,143 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+		});
+
+		describe("[previews]", () => {
+			it("should validate top-level previews config", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						vars: {
+							API_BASE_URL: "https://example.com",
+						},
+						kv_namespaces: [{ binding: "MY_KV", id: "preview-kv-id" }],
+						r2_buckets: [{ binding: "MY_R2", bucket_name: "preview-bucket" }],
+						observability: { enabled: true },
+						limits: { cpu_ms: 50 },
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.queues as an object with producers", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						queues: {
+							producers: [{ binding: "MY_QUEUE", queue: "my-queue" }],
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.stream as a named simple binding", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						stream: {
+							binding: "MY_STREAM",
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.limits with only subrequests", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						limits: {
+							subrequests: 123,
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject previews.queues when passed as a flat array", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						queues: [{ binding: "MY_QUEUE", queue: "my-queue" }],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain("should be an object");
+			});
+
+			it("should validate previews config inside named environments", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					env: {
+						staging: {
+							previews: {
+								browser: "not-an-object" as unknown as { binding: string },
+							},
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"env.staging" environment configuration'
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'The field "previews.browser" should be an object'
+				);
 			});
 		});
 	});
