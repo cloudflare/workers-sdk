@@ -9,14 +9,13 @@ interface AnimatedCloudflareLogoProps extends ComponentProps<"div"> {
 
 export function AnimatedCloudflareLogo({
 	size = 60,
-	className,
 	...props
 }: AnimatedCloudflareLogoProps) {
 	// Height is proportional to the viewBox ratio (31/57 ≈ 0.544)
 	const height = Math.round(size * (31 / 57));
 
 	return (
-		<div className={className} {...props}>
+		<div {...props}>
 			{/* Hidden SVG with reusable path definitions */}
 			<svg className="absolute h-0 w-0 overflow-hidden" aria-hidden="true">
 				<defs>
