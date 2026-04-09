@@ -256,6 +256,7 @@ export interface CfHelloWorld {
 export interface CfFlagship {
 	binding: string;
 	app_id: string;
+	remote?: boolean;
 }
 
 export interface CfWorkerLoader {

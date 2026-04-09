@@ -4811,6 +4811,7 @@ const validateFlagshipBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"app_id",
+		"remote",
 	]);
 
 	return isValid;

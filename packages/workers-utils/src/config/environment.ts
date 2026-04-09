@@ -1351,6 +1351,9 @@ export interface EnvironmentNonInheritable {
 
 		/** The Flagship app ID to bind to. */
 		app_id: string;
+
+		/** Whether to use the remote Flagship service for flag evaluation in local dev. */
+		remote?: boolean;
 	}[];
 
 	/**

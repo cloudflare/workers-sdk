@@ -59,7 +59,7 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 		}
 
 		return Object.entries(options.flagship).map(
-			([name, { app_id, remoteProxyConnectionString }]) => {
+			([name, { remoteProxyConnectionString }]) => {
 				return {
 					name: getUserBindingServiceName(
 						FLAGSHIP_PLUGIN_NAME,
@@ -69,17 +69,11 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 					worker: remoteProxyConnectionString
 						? remoteProxyClientWorker(remoteProxyConnectionString, name)
 						: {
-								compatibilityDate: "2025-01-01",
+								compatibilityDate: "2025-03-17",
 								modules: [
 									{
 										name: "binding.worker.js",
 										esModule: BINDING_SCRIPT(),
-									},
-								],
-								bindings: [
-									{
-										name: "config",
-										json: JSON.stringify({ app_id }),
 									},
 								],
 							},

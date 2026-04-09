@@ -790,7 +790,10 @@ export function buildMiniflareBindingOptions(
 				binding.binding,
 				{
 					app_id: binding.app_id,
-					remoteProxyConnectionString,
+					remoteProxyConnectionString:
+						binding.remote && remoteProxyConnectionString
+							? remoteProxyConnectionString
+							: undefined,
 				},
 			])
 		),
