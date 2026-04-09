@@ -254,7 +254,7 @@ export function AppSidebar({
 								/>
 
 								<Sidebar.CollapsibleContent>
-									<Sidebar.MenuSub className="ml-5.5 space-y-0.5">
+									<Sidebar.MenuSub className="mt-1 ml-5.5 space-y-0.5">
 										{group.items.length === 0 ? (
 											<div className="text-text-secondary ml-8 px-2 py-1.5 text-sm italic">
 												{group.emptyLabel}
