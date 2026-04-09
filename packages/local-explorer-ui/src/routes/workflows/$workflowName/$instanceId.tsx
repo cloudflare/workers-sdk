@@ -442,7 +442,10 @@ function InstanceDetailView() {
 								<h1 className="shrink-0 text-xl font-semibold text-kumo-default sm:text-2xl">
 									{params.workflowName}
 								</h1>
-								<Tooltip content={copied ? "Copied!" : "Copy instance ID"}>
+								<Tooltip
+									content={copied ? "Copied!" : "Copy instance ID"}
+									asChild
+								>
 									<button
 										className={`min-w-0 cursor-pointer truncate font-mono text-base transition-colors sm:text-2xl ${copied ? "text-kumo-default" : "text-kumo-subtle hover:text-kumo-default"}`}
 										onClick={() => {
