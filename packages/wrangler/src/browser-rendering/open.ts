@@ -63,6 +63,12 @@ function formatSessionForDisplay(session: BrowserSession): string {
 	return `${session.sessionId} (started ${dateStr})`;
 }
 
+/**
+ * Opens DevTools for a browser session with auto-selection:
+ * - Session: uses provided ID, auto-selects if one exists, prompts/errors if multiple
+ * - Target: uses --target selector, auto-selects single page, prompts/errors if multiple
+ * - Output: opens browser by default, --json outputs info without opening
+ */
 export const browserOpenCommand = createCommand({
 	metadata: {
 		description: "Open DevTools for a browser rendering session",
@@ -121,17 +127,13 @@ export const browserOpenCommand = createCommand({
 				// Multiple sessions - need to select
 				if (json) {
 					// In JSON mode with multiple sessions, output all of them
-					logger.log(
-						JSON.stringify(
-							sessions.map((s) => ({
-								sessionId: s.sessionId,
-								startTime: s.startTime,
-								connectionId: s.connectionId,
-								connectionStartTime: s.connectionStartTime,
-							})),
-							null,
-							2
-						)
+					logger.json(
+						sessions.map((s) => ({
+							sessionId: s.sessionId,
+							startTime: s.startTime,
+							connectionId: s.connectionId,
+							connectionStartTime: s.connectionStartTime,
+						}))
 					);
 					return;
 				}
@@ -195,19 +197,15 @@ export const browserOpenCommand = createCommand({
 			// Multiple targets, need to select
 			if (json) {
 				// In JSON mode with multiple targets, output all of them
-				logger.log(
-					JSON.stringify(
-						selectableTargets.map((t) => ({
-							id: t.id,
-							title: t.title,
-							url: t.url,
-							type: t.type,
-							devtoolsUrl: t.devtoolsFrontendUrl,
-							webSocketUrl: t.webSocketDebuggerUrl,
-						})),
-						null,
-						2
-					)
+				logger.json(
+					selectableTargets.map((t) => ({
+						id: t.id,
+						title: t.title,
+						url: t.url,
+						type: t.type,
+						devtoolsUrl: t.devtoolsFrontendUrl,
+						webSocketUrl: t.webSocketDebuggerUrl,
+					}))
 				);
 				return;
 			}
@@ -237,20 +235,14 @@ export const browserOpenCommand = createCommand({
 		}
 
 		if (json) {
-			logger.log(
-				JSON.stringify(
-					{
-						id: selectedTarget.id,
-						title: selectedTarget.title,
-						url: selectedTarget.url,
-						type: selectedTarget.type,
-						devtoolsUrl: selectedTarget.devtoolsFrontendUrl,
-						webSocketUrl: selectedTarget.webSocketDebuggerUrl,
-					},
-					null,
-					2
-				)
-			);
+			logger.json({
+				id: selectedTarget.id,
+				title: selectedTarget.title,
+				url: selectedTarget.url,
+				type: selectedTarget.type,
+				devtoolsUrl: selectedTarget.devtoolsFrontendUrl,
+				webSocketUrl: selectedTarget.webSocketDebuggerUrl,
+			});
 		} else {
 			if (selectedTarget.devtoolsFrontendUrl) {
 				logger.log(`Opening DevTools for session "${sessionId}"...`);

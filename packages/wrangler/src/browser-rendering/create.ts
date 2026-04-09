@@ -21,7 +21,8 @@ export const browserCreateCommand = createCommand({
 	args: {
 		lab: {
 			type: "boolean",
-			description: "Enable lab browser session",
+			description:
+				"Enable lab browser session with experimental Chrome features",
 			default: false,
 		},
 		keepAlive: {
@@ -38,10 +39,10 @@ export const browserCreateCommand = createCommand({
 	async handler({ lab, keepAlive, json }, { config }) {
 		// Validate keep-alive range
 		if (keepAlive !== undefined) {
-			if (
-				keepAlive < MIN_KEEP_ALIVE_SECONDS ||
-				keepAlive > MAX_KEEP_ALIVE_SECONDS
-			) {
+			const inRange =
+				keepAlive >= MIN_KEEP_ALIVE_SECONDS &&
+				keepAlive <= MAX_KEEP_ALIVE_SECONDS;
+			if (!inRange) {
 				throw new UserError(
 					`--keep-alive must be between ${MIN_KEEP_ALIVE_SECONDS} and ${MAX_KEEP_ALIVE_SECONDS} seconds`
 				);
@@ -79,23 +80,17 @@ export const browserCreateCommand = createCommand({
 			response.targets.find((t) => t.type === "page") ?? response.targets[0];
 
 		if (json) {
-			logger.log(
-				JSON.stringify(
-					{
-						sessionId: response.sessionId,
-						target: {
-							id: pageTarget.id,
-							title: pageTarget.title,
-							url: pageTarget.url,
-							type: pageTarget.type,
-							devtoolsUrl: pageTarget.devtoolsFrontendUrl,
-							webSocketUrl: pageTarget.webSocketDebuggerUrl,
-						},
-					},
-					null,
-					2
-				)
-			);
+			logger.json({
+				sessionId: response.sessionId,
+				target: {
+					id: pageTarget.id,
+					title: pageTarget.title,
+					url: pageTarget.url,
+					type: pageTarget.type,
+					devtoolsUrl: pageTarget.devtoolsFrontendUrl,
+					webSocketUrl: pageTarget.webSocketDebuggerUrl,
+				},
+			});
 		} else {
 			logger.log(`Session created: ${response.sessionId}`);
 			if (pageTarget.devtoolsFrontendUrl) {

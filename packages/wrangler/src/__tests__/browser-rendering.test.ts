@@ -125,10 +125,10 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
-				  {
-				    "sessionId": "session-1",
-				    "startTime": 1234567890000
-				  }
+				    {
+				        "sessionId": "session-1",
+				        "startTime": 1234567890000
+				    }
 				]"
 			`);
 		});
@@ -189,12 +189,12 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
-				  "id": "page-1",
-				  "title": "Test Page",
-				  "url": "https://example.com",
-				  "type": "page",
-				  "devtoolsUrl": "https://live.browser.run/ui/inspector?wss=abc",
-				  "webSocketUrl": "wss://live.browser.run/api/devtools/abc"
+				    "id": "page-1",
+				    "title": "Test Page",
+				    "url": "https://example.com",
+				    "type": "page",
+				    "devtoolsUrl": "https://live.browser.run/ui/inspector?wss=abc",
+				    "webSocketUrl": "wss://live.browser.run/api/devtools/abc"
 				}"
 			`);
 		});
@@ -306,22 +306,22 @@ describe("wrangler browser", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"[
-					  {
-					    "id": "page-1",
-					    "title": "Yahoo",
-					    "url": "https://www.yahoo.com/",
-					    "type": "page",
-					    "devtoolsUrl": "https://live.browser.run/inspector/page-1",
-					    "webSocketUrl": "wss://live.browser.run/page-1"
-					  },
-					  {
-					    "id": "page-2",
-					    "title": "Google",
-					    "url": "https://www.google.com/",
-					    "type": "page",
-					    "devtoolsUrl": "https://live.browser.run/inspector/page-2",
-					    "webSocketUrl": "wss://live.browser.run/page-2"
-					  }
+					    {
+					        "id": "page-1",
+					        "title": "Yahoo",
+					        "url": "https://www.yahoo.com/",
+					        "type": "page",
+					        "devtoolsUrl": "https://live.browser.run/inspector/page-1",
+					        "webSocketUrl": "wss://live.browser.run/page-1"
+					    },
+					    {
+					        "id": "page-2",
+					        "title": "Google",
+					        "url": "https://www.google.com/",
+					        "type": "page",
+					        "devtoolsUrl": "https://live.browser.run/inspector/page-2",
+					        "webSocketUrl": "wss://live.browser.run/page-2"
+					    }
 					]"
 				`);
 			});
@@ -448,12 +448,12 @@ describe("wrangler browser", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"{
-					  "id": "page-1",
-					  "title": "Yahoo",
-					  "url": "https://www.yahoo.com/",
-					  "type": "page",
-					  "devtoolsUrl": "https://live.browser.run/inspector/yahoo",
-					  "webSocketUrl": "wss://live.browser.run/yahoo"
+					    "id": "page-1",
+					    "title": "Yahoo",
+					    "url": "https://www.yahoo.com/",
+					    "type": "page",
+					    "devtoolsUrl": "https://live.browser.run/inspector/yahoo",
+					    "webSocketUrl": "wss://live.browser.run/yahoo"
 					}"
 				`);
 			});
@@ -610,16 +610,16 @@ describe("wrangler browser", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"[
-					  {
-					    "sessionId": "session-x",
-					    "startTime": 1234567890000,
-					    "connectionId": "conn-1",
-					    "connectionStartTime": 1234567880000
-					  },
-					  {
-					    "sessionId": "session-y",
-					    "startTime": 1234567800000
-					  }
+					    {
+					        "sessionId": "session-x",
+					        "startTime": 1234567890000,
+					        "connectionId": "conn-1",
+					        "connectionStartTime": 1234567880000
+					    },
+					    {
+					        "sessionId": "session-y",
+					        "startTime": 1234567800000
+					    }
 					]"
 				`);
 			});
@@ -755,15 +755,15 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
-				  "sessionId": "json-session-789",
-				  "target": {
-				    "id": "page-1",
-				    "title": "Test Page",
-				    "url": "https://example.com",
-				    "type": "page",
-				    "devtoolsUrl": "https://live.browser.run/inspector/json",
-				    "webSocketUrl": "wss://live.browser.run/json"
-				  }
+				    "sessionId": "json-session-789",
+				    "target": {
+				        "id": "page-1",
+				        "title": "Test Page",
+				        "url": "https://example.com",
+				        "type": "page",
+				        "devtoolsUrl": "https://live.browser.run/inspector/json",
+				        "webSocketUrl": "wss://live.browser.run/json"
+				    }
 				}"
 			`);
 		});
@@ -771,11 +771,11 @@ describe("wrangler browser", () => {
 		it("should validate --keepAlive is within range (60-600)", async () => {
 			await expect(
 				runWrangler("browser create --keepAlive 30")
-			).rejects.toThrowError("--keep-alive must be between 60 and 600 seconds");
+			).rejects.toThrow("--keep-alive must be between 60 and 600 seconds");
 
 			await expect(
 				runWrangler("browser create --keepAlive 700")
-			).rejects.toThrowError("--keep-alive must be between 60 and 600 seconds");
+			).rejects.toThrow("--keep-alive must be between 60 and 600 seconds");
 		});
 
 		it("should throw error when no targets in response", async () => {
@@ -874,8 +874,8 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
-				  "sessionId": "session-json-close",
-				  "status": "closed"
+				    "sessionId": "session-json-close",
+				    "status": "closed"
 				}"
 			`);
 		});

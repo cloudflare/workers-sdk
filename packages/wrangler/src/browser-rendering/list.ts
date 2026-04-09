@@ -28,7 +28,7 @@ export const browserListCommand = createCommand({
 		);
 
 		if (json) {
-			logger.log(JSON.stringify(sessions, null, 2));
+			logger.json(sessions);
 			return;
 		}
 

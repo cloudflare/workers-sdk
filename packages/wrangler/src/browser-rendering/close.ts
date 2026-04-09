@@ -36,16 +36,10 @@ export const browserCloseCommand = createCommand({
 		);
 
 		if (json) {
-			logger.log(
-				JSON.stringify(
-					{
-						sessionId,
-						status: response.status,
-					},
-					null,
-					2
-				)
-			);
+			logger.json({
+				sessionId,
+				status: response.status,
+			});
 		} else {
 			logger.log(`Session ${sessionId} ${response.status}.`);
 		}
