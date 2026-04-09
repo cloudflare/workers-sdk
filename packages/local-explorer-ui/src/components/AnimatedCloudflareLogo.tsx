@@ -32,7 +32,7 @@ export function AnimatedCloudflareLogo({
 				>
 					<svg viewBox="0 0 57 31">
 						<defs>
-							<mask>
+							<mask id="animated-logo-mask">
 								<rect width="100%" height="100%" fill="white" />
 								<use
 									href="#loader-cutout"
