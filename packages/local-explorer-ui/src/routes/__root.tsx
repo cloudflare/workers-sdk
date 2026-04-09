@@ -83,7 +83,7 @@ function RootLayout() {
 
 	return (
 		<Toasty>
-			<div className="flex min-h-screen">
+			<div className="flex h-screen">
 				<Sidebar.Provider
 					onOpenChange={handleSidebarOpenChange}
 					open={sidebarOpen}
