@@ -431,7 +431,7 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 			backlogCount: this.#messages.length,
 			backlogBytes: this.#backlogBytes,
 			oldestMessageTimestamp: this.#messages[0]?.timestamp.getTime() ?? 0,
-		}
+		};
 	}
 
 	@POST("/message")
