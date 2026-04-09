@@ -90,7 +90,6 @@ export function AppSidebar({
 	const sidebarItemGroups = [
 		{
 			emptyLabel: "No databases",
-			// error: d1Error,
 			groupId: "d1" as const,
 			icon: D1Icon,
 			items: d1Databases.map((db) => ({
@@ -107,7 +106,6 @@ export function AppSidebar({
 		},
 		{
 			emptyLabel: "No SQLite namespaces",
-			// error: doError,
 			groupId: "do" as const,
 			icon: DOIcon,
 			items: doNamespaces.map((ns) => ({
@@ -126,7 +124,6 @@ export function AppSidebar({
 		},
 		{
 			emptyLabel: "No namespaces",
-			// error: kvError,
 			groupId: "kv" as const,
 			icon: KVIcon,
 			items: kvNamespaces.map((ns) => ({
@@ -143,7 +140,6 @@ export function AppSidebar({
 		},
 		{
 			emptyLabel: "No buckets",
-			// error: r2Error,
 			groupId: "r2" as const,
 			icon: R2Icon,
 			items: r2Buckets.map((bucket) => ({
@@ -162,7 +158,6 @@ export function AppSidebar({
 		},
 		{
 			emptyLabel: "No workflows",
-			// error: workflowsError,
 			groupId: "workflows" as const,
 			icon: WorkflowsIcon,
 			items: workflows.map((wf) => ({
@@ -181,7 +176,6 @@ export function AppSidebar({
 		},
 	] satisfies Array<{
 		emptyLabel: string;
-		// error: string | null;
 		groupId: SidebarGroupId;
 		icon: FC<{ className?: string }>;
 		items: Array<{
