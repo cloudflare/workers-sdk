@@ -1,8 +1,11 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, notFound, Outlet } from "@tanstack/react-router";
 import { durableObjectsNamespaceListNamespaces } from "../../api";
+import { NotFound } from "../../components/NotFound";
+import { ResourceError } from "../../components/ResourceError";
 
 export const Route = createFileRoute("/do/$className")({
 	component: () => <Outlet />,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		const response = await durableObjectsNamespaceListNamespaces();
 		const namespaces = response.data?.result ?? [];
@@ -15,7 +18,7 @@ export const Route = createFileRoute("/do/$className")({
 				ns.id === params.className
 		);
 		if (!namespace?.id) {
-			throw new Error(`Durable Object class "${params.className}" not found`);
+			throw notFound();
 		}
 
 		return {
@@ -23,4 +26,5 @@ export const Route = createFileRoute("/do/$className")({
 			namespaceId: namespace.id,
 		};
 	},
+	notFoundComponent: NotFound,
 });
