@@ -407,7 +407,7 @@ function InstanceDetailView() {
 				{/* Header */}
 				<div className="px-32 pt-6">
 					<div>
-						<header className="flex items-center justify-between pb-6">
+						<header className="flex items-center justify-between gap-2 pb-6">
 							<div className="flex items-center gap-3">
 								<h1 className="text-2xl font-semibold text-kumo-default">
 									{params.workflowName}
