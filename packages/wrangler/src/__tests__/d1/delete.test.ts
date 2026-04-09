@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
@@ -9,6 +8,7 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { ExpectStatic } from "vitest";
 
 describe("delete", () => {
 	mockAccountId();
@@ -59,7 +59,7 @@ describe("delete", () => {
 			result: true,
 		});
 
-		mockDatabaseDelete("db-uuid-123");
+		mockDatabaseDelete(expect, "db-uuid-123");
 
 		await runWrangler("d1 delete test-db");
 
@@ -82,7 +82,7 @@ describe("delete", () => {
 	}) => {
 		setIsTTY(false);
 
-		mockDatabaseDelete("db-uuid-123");
+		mockDatabaseDelete(expect, "db-uuid-123");
 
 		await runWrangler("d1 delete test-db --skip-confirmation");
 
@@ -113,7 +113,7 @@ function mockDatabaseList(name: string, uuid: string) {
 	);
 }
 
-function mockDatabaseDelete(expectedUuid: string) {
+function mockDatabaseDelete(expect: ExpectStatic, expectedUuid: string) {
 	msw.use(
 		http.delete(
 			"*/accounts/:accountId/d1/database/:databaseId",

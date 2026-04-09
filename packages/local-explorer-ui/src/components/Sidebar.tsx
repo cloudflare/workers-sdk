@@ -17,13 +17,7 @@ import { loadGroupState, saveGroupState } from "../utils/sidebar-state";
 import { getNextThemeMode } from "../utils/theme-state";
 import { SidebarGroupPopup } from "./SidebarGroupPopup";
 import { WorkerSelector, type LocalExplorerWorker } from "./WorkerSelector";
-import type {
-	D1DatabaseResponse,
-	R2Bucket,
-	WorkersKvNamespace,
-	WorkersNamespace,
-	WorkflowsWorkflow,
-} from "../api";
+import type { LocalExplorerWorkerBindings } from "../api";
 import type { SidebarGroupId } from "../utils/sidebar-state";
 import type { ThemeMode } from "../utils/theme-state";
 import type { FC } from "react";
@@ -50,41 +44,23 @@ const THEME_MODE_CONFIG = {
 >;
 
 interface SidebarProps {
+	bindings?: LocalExplorerWorkerBindings;
 	currentPath: string;
-	d1Error: string | null;
-	databases: D1DatabaseResponse[];
-	doError: string | null;
-	doNamespaces: WorkersNamespace[];
-	kvError: string | null;
-	kvNamespaces: WorkersKvNamespace[];
 	onCycleTheme: () => void;
 	onWorkerChange: (workerName: string) => void;
-	r2Buckets: R2Bucket[];
-	r2Error: string | null;
 	selectedWorker: string;
 	themeMode: ThemeMode;
 	workers: LocalExplorerWorker[];
-	workflows: WorkflowsWorkflow[];
-	workflowsError: string | null;
 }
 
 export function AppSidebar({
+	bindings,
 	currentPath,
-	d1Error,
-	databases,
-	doError,
-	doNamespaces,
-	kvError,
-	kvNamespaces,
 	onCycleTheme,
 	onWorkerChange,
-	r2Buckets,
-	r2Error,
 	selectedWorker,
 	themeMode,
 	workers,
-	workflows,
-	workflowsError,
 }: SidebarProps) {
 	const router = useRouter();
 	const sidebar = useSidebar();
@@ -103,54 +79,54 @@ export function AppSidebar({
 	);
 
 	const showWorkerSelector = workers.length > 1;
-
-	// Only include the worker search param when there are multiple workers.
-	// This keeps URLs clean in the common single-worker case.
 	const workerSearch = workers.length > 1 ? { worker: selectedWorker } : {};
+
+	const d1Databases = bindings?.d1 ?? [];
+	const doNamespaces = (bindings?.do ?? []).filter((ns) => ns.useSqlite);
+	const kvNamespaces = bindings?.kv ?? [];
+	const r2Buckets = bindings?.r2 ?? [];
+	const workflows = bindings?.workflows ?? [];
 
 	const sidebarItemGroups = [
 		{
 			emptyLabel: "No databases",
-			error: d1Error,
+			// error: d1Error,
 			groupId: "d1" as const,
 			icon: D1Icon,
-			items: databases.map((db) => ({
+			items: d1Databases.map((db) => ({
 				href: router.buildLocation({
-					params: { databaseId: db.uuid as string },
+					params: { databaseId: db.id },
 					search: { table: undefined, ...workerSearch },
 					to: "/d1/$databaseId",
 				}).href,
-				id: db.uuid as string,
-				isActive: currentPath === `/d1/${db.uuid}`,
-				label: db.name as string,
+				id: db.id,
+				isActive: currentPath === `/d1/${db.id}`,
+				label: db.bindingName,
 			})),
 			title: "D1 Databases",
 		},
 		{
 			emptyLabel: "No SQLite namespaces",
-			error: doError,
+			// error: doError,
 			groupId: "do" as const,
 			icon: DOIcon,
-			items: doNamespaces.map((ns) => {
-				const className = ns.class ?? ns.name ?? ns.id ?? "Unknown";
-				return {
-					href: router.buildLocation({
-						params: { className },
-						search: workerSearch,
-						to: "/do/$className",
-					}).href,
-					id: ns.id as string,
-					isActive:
-						currentPath === `/do/${className}` ||
-						currentPath.startsWith(`/do/${className}/`),
-					label: className,
-				};
-			}),
+			items: doNamespaces.map((ns) => ({
+				href: router.buildLocation({
+					params: { className: ns.className },
+					search: workerSearch,
+					to: "/do/$className",
+				}).href,
+				id: ns.id,
+				isActive:
+					currentPath === `/do/${ns.className}` ||
+					currentPath.startsWith(`/do/${ns.className}/`),
+				label: ns.className,
+			})),
 			title: "Durable Objects",
 		},
 		{
 			emptyLabel: "No namespaces",
-			error: kvError,
+			// error: kvError,
 			groupId: "kv" as const,
 			icon: KVIcon,
 			items: kvNamespaces.map((ns) => ({
@@ -161,54 +137,51 @@ export function AppSidebar({
 				}).href,
 				id: ns.id,
 				isActive: currentPath === `/kv/${ns.id}`,
-				label: ns.title,
+				label: ns.bindingName,
 			})),
 			title: "KV Namespaces",
 		},
 		{
 			emptyLabel: "No buckets",
-			error: r2Error,
+			// error: r2Error,
 			groupId: "r2" as const,
 			icon: R2Icon,
-			items: r2Buckets.map((bucket) => {
-				const bucketName = bucket.name ?? "Unknown";
-				return {
-					href: router.buildLocation({
-						params: { bucketName },
-						search: workerSearch,
-						to: "/r2/$bucketName",
-					}).href,
-					id: bucketName,
-					isActive:
-						currentPath === `/r2/${bucketName}` ||
-						currentPath.startsWith(`/r2/${bucketName}/`),
-					label: bucketName,
-				};
-			}),
+			items: r2Buckets.map((bucket) => ({
+				href: router.buildLocation({
+					params: { bucketName: bucket.id },
+					search: workerSearch,
+					to: "/r2/$bucketName",
+				}).href,
+				id: bucket.id,
+				isActive:
+					currentPath === `/r2/${bucket.id}` ||
+					currentPath.startsWith(`/r2/${bucket.id}/`),
+				label: bucket.bindingName,
+			})),
 			title: "R2 Buckets",
 		},
 		{
 			emptyLabel: "No workflows",
-			error: workflowsError,
+			// error: workflowsError,
 			groupId: "workflows" as const,
 			icon: WorkflowsIcon,
 			items: workflows.map((wf) => ({
 				href: router.buildLocation({
-					params: { workflowName: wf.name },
+					params: { workflowName: wf.id },
 					search: workerSearch,
 					to: "/workflows/$workflowName",
 				}).href,
-				id: wf.name as string,
+				id: wf.id,
 				isActive:
-					currentPath === `/workflows/${wf.name}` ||
-					currentPath.startsWith(`/workflows/${wf.name}/`),
-				label: wf.name as string,
+					currentPath === `/workflows/${wf.id}` ||
+					currentPath.startsWith(`/workflows/${wf.id}/`),
+				label: wf.bindingName,
 			})),
 			title: "Workflows",
 		},
 	] satisfies Array<{
 		emptyLabel: string;
-		error: string | null;
+		// error: string | null;
 		groupId: SidebarGroupId;
 		icon: FC<{ className?: string }>;
 		items: Array<{
@@ -287,11 +260,7 @@ export function AppSidebar({
 								/>
 
 								<Sidebar.CollapsibleContent>
-									{group.error ? (
-										<div className="ml-8 px-2 py-1.5 text-sm text-kumo-danger">
-											{group.error}
-										</div>
-									) : group.items.length === 0 ? (
+									{group.items.length === 0 ? (
 										<div className="text-text-secondary ml-8 px-2 py-1.5 text-sm italic">
 											{group.emptyLabel}
 										</div>
@@ -316,7 +285,6 @@ export function AppSidebar({
 						{sidebarItemGroups.map((group) => (
 							<SidebarGroupPopup
 								emptyLabel={group.emptyLabel}
-								error={group.error}
 								icon={<group.icon width={20} height={20} />}
 								items={group.items}
 								key={group.groupId}

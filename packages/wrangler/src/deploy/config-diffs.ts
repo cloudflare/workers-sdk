@@ -222,6 +222,19 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		);
 	}
 
+	if (normalizedConfig.ai_search_namespaces?.length) {
+		normalizedConfig.ai_search_namespaces =
+			normalizedConfig.ai_search_namespaces.map(
+				({ remote: _, ...binding }) => binding
+			);
+	}
+
+	if (normalizedConfig.ai_search?.length) {
+		normalizedConfig.ai_search = normalizedConfig.ai_search.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
 	const singleBindingFields = [
 		"browser",
 		"ai",

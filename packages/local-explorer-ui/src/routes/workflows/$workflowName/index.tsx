@@ -287,6 +287,7 @@ const InstanceRow = memo(function InstanceRow({
 				instanceId: instance.id ?? "",
 				workflowName,
 			},
+			search: (prev) => prev,
 		});
 	}
 

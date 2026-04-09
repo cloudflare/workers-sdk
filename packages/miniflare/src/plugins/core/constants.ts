@@ -66,3 +66,11 @@ export const INTROSPECT_SQLITE_METHOD = "__miniflare_introspectSqlite";
 export type IntrospectSqliteMethod = (
 	queries: DoSqlWithParams[]
 ) => Promise<DoRawQueryResult[]>;
+
+/**
+ * Used by the local explorer worker.
+ * This method is injected into wrapped Durable Objects to allow getting the DO instance name.
+ */
+export const GET_DO_NAME_METHOD = "__miniflare_getDOName";
+
+export type GetDONameMethod = () => string | undefined;

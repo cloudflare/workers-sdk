@@ -10,7 +10,6 @@ interface SidebarGroupItem {
 
 interface SidebarGroupPopupProps {
 	emptyLabel: string;
-	error: string | null;
 	icon: SidebarMenuButtonProps["icon"];
 	items: SidebarGroupItem[];
 	title: string;
@@ -18,7 +17,6 @@ interface SidebarGroupPopupProps {
 
 export function SidebarGroupPopup({
 	emptyLabel,
-	error,
 	icon,
 	items,
 	title,
@@ -46,9 +44,7 @@ export function SidebarGroupPopup({
 						</div>
 
 						<div className="p-1">
-							{error ? (
-								<div className="px-2 py-1.5 text-sm text-red-500">{error}</div>
-							) : items.length === 0 ? (
+							{items.length === 0 ? (
 								<div className="px-2 py-1.5 text-sm text-kumo-subtle italic">
 									{emptyLabel}
 								</div>
