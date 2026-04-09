@@ -175,8 +175,13 @@ export async function startDev(args: StartDevOptions) {
 					logger.log(dim("⎔ Starting tunnel (usually takes 5-15s)..."));
 					const { publicUrl } = await tunnel.ready();
 					logger.warn(
-						`Your local dev server is now publicly accessible.\n` +
-							`Anyone with this URL can access your dev server. Avoid exposing sensitive data.`
+						"Your local dev server will be publicly accessible.\n" +
+							"Anyone with the URL can interact with your app, e.g.:\n" +
+							"- Call ungated endpoints in your app\n" +
+							"- Trigger app logic that reads or writes through remote bindings\n" +
+							"- Reach internal services if your Worker proxies requests\n" +
+							"\n" +
+							"Consider restricting access with a named tunnel + Cloudflare Access."
 					);
 					logger.log(
 						`⬣ Sharing your dev server via Cloudflare Tunnel\n` +

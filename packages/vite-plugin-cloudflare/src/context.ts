@@ -26,6 +26,8 @@ export interface SharedContext {
 	hasShownWorkerConfigWarnings: boolean;
 	/** Tracks the number of in-flight dev server restarts (0 means no restart in progress) */
 	restartingDevServerCount: number;
+	/** allowed hostnames for tunnel connections */
+	tunnelHostnames: Set<string>;
 }
 
 /**
@@ -118,6 +120,10 @@ export class PluginContext {
 
 	get isRestartingDevServer(): boolean {
 		return this.#sharedContext.restartingDevServerCount > 0;
+	}
+
+	get tunnelHostnames(): Set<string> {
+		return this.#sharedContext.tunnelHostnames;
 	}
 
 	setResolvedPluginConfig(resolvedPluginConfig: ResolvedPluginConfig): void {

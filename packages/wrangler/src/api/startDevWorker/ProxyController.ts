@@ -477,7 +477,7 @@ export class ProxyController extends Controller {
 				// Only warn about SSE if a quick tunnel is active
 				if (this.latestConfig?.dev?.tunnel) {
 					logger.once.warn(
-						"Server-Sent Events (SSE) are not supported with quick tunnels. Use a named Cloudflare Tunnel to test SSE."
+						"Quick tunnels do not support Server-Sent Events (SSE). For SSE support, use a named tunnel: --tunnel=<hostname>"
 					);
 				}
 
