@@ -5103,6 +5103,10 @@ const validatePreviewsConfig =
 				undefined
 			) && isValid;
 
+		// The config APIs don't yet support streaming tail consumers,
+		// so we don't ever send this field up.
+		// Depending on how the streaming tail consumers feature develops,
+		// this field may be removed in the future, but let's validate it anyways for now.
 		isValid =
 			validateStreamingTailConsumers(
 				diagnostics,
