@@ -4814,6 +4814,10 @@ const validateFlagshipBinding: ValidatorFn = (diagnostics, field, value) => {
 		"remote",
 	]);
 
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	return isValid;
 };
 
