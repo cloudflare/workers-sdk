@@ -144,27 +144,28 @@ export async function navigateToDOObject(
  */
 export async function navigateToDOObjectByName(
 	className: string,
-	table?: string
+	table?: string,
+	objectName: string = "test-object"
 ): Promise<string> {
 	await navigateToDOClass(className);
 	await waitForText(className);
 
-	const openStudioLink = page.locator('a:has-text("Open Studio")').first();
-	await openStudioLink.waitFor({ state: "visible", timeout: 10_000 });
+	await fillByPlaceholder("Enter instance name or hex ID...", objectName);
+	await page.getByRole("button", { name: "Open Studio" }).click();
+	await waitForPageLoad();
 
-	const href = await openStudioLink.getAttribute("href");
-	if (!href) {
-		throw new Error("Could not find href on Open Studio link");
-	}
-
-	// Extract the object ID from the href (format: /cdn-cgi/explorer/do/{className}/{objectId})
-	const match = href.match(/\/cdn-cgi\/explorer\/do\/[^/]+\/([a-f0-9]+)/);
+	// Extract the object ID from the current URL after navigation.
+	const objectPath = new URL(page.url()).pathname;
+	const match = objectPath.match(/\/cdn-cgi\/explorer\/do\/[^/]+\/([^/?#]+)/);
 	if (!match || !match[1]) {
-		throw new Error(`Could not extract object ID from href: ${href}`);
+		throw new Error(`Could not extract object ID from URL path: ${objectPath}`);
 	}
+
 	const objectId: string = match[1];
 
-	await navigateToDOObject(className, objectId, table);
+	if (table) {
+		await navigateToDOObject(className, objectId, table);
+	}
 
 	return objectId;
 }
@@ -178,9 +179,36 @@ export async function waitForText(
 		timeout?: number;
 	}
 ): Promise<void> {
-	await page.waitForSelector(`text=${text}`, {
-		timeout: options?.timeout ?? WAIT_OPTIONS.timeout,
-	});
+	await page.waitForFunction(
+		(expectedText: string) => {
+			const elements = Array.from(document.querySelectorAll("body *"));
+
+			return elements.some((element) => {
+				if (!(element instanceof HTMLElement)) {
+					return false;
+				}
+
+				const textContent = element.textContent?.trim();
+				if (!textContent || !textContent.includes(expectedText)) {
+					return false;
+				}
+
+				const styles = window.getComputedStyle(element);
+				if (
+					styles.display === "none" ||
+					styles.visibility === "hidden" ||
+					styles.opacity === "0"
+				) {
+					return false;
+				}
+
+				const rect = element.getBoundingClientRect();
+				return rect.width > 0 && rect.height > 0;
+			});
+		},
+		text,
+		{ timeout: options?.timeout ?? WAIT_OPTIONS.timeout }
+	);
 }
 
 /**
@@ -306,21 +334,20 @@ export async function runQuery(): Promise<void> {
  * Run all SQL statements in the editor using the dropdown menu.
  */
 export async function runAllQueries(): Promise<void> {
-	const runDropdown = page.locator(
-		'button:has(svg[class*="CaretDownIcon"]), button:has-text("Run") + button'
-	);
-	await runDropdown.click();
-
-	await page.getByText("Run all statements").click();
+	const isMac = process.platform === "darwin";
+	const runAllKey = isMac ? "Meta+Shift+Enter" : "Control+Shift+Enter";
+	await page.keyboard.press(runAllKey);
 }
 
 /**
  * Open the table selector dropdown in the breadcrumb bar.
  */
 export async function openTableSelector(): Promise<void> {
-	// The `TableSelect` uses a `Select.Trigger` which contains either "Select table" or the table name
-	// Find the `Select` trigger by looking for the text + caret icon combo
-	const tableSelector = page.locator('text="Select table"').first();
+	// The `TableSelect` trigger text is dynamic ("Select table" or current table name).
+	// Target the table selector trigger by its unique utility class on the breadcrumb row.
+	const tableSelector = page
+		.locator('button[class*="-mx-1.5"]:visible')
+		.first();
 	await tableSelector.click();
 
 	await page.waitForSelector('[role="listbox"]', {
