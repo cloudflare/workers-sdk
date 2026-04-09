@@ -1398,7 +1398,7 @@ export interface EnvironmentNonInheritable {
 	vpc_services: {
 		/** The binding name used to refer to the VPC service in the Worker. */
 		binding: string;
-		/** The service ID of the VPC connectivity service. Mutually exclusive with `service`. */
+		/** The service ID of the VPC connectivity service. Mutually exclusive with `service_name`. */
 		service_id?: string;
 		/** The name of the VPC connectivity service. Wrangler will look up the service_id automatically. Mutually exclusive with `service_id`. */
 		service_name?: string;
