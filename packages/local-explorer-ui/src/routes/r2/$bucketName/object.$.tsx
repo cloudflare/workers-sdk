@@ -149,7 +149,10 @@ function ObjectDetailView(): JSX.Element {
 				params: {
 					bucketName: params.bucketName,
 				},
-				search: parentPrefix ? { prefix: parentPrefix } : {},
+				search: (prev) => ({
+					...prev,
+					prefix: parentPrefix,
+				}),
 				to: "/r2/$bucketName",
 			});
 		} catch (err) {

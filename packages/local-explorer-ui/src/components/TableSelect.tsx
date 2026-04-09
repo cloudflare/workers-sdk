@@ -31,7 +31,7 @@ export function TableSelect({
 			}
 
 			void navigate({
-				search: { table: tableName },
+				search: (prev) => ({ ...prev, table: tableName }),
 				to: ".",
 			});
 		},

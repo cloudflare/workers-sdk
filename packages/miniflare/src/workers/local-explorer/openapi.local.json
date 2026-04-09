@@ -1237,7 +1237,7 @@
 				"tags": ["Durable Objects Namespace"]
 			}
 		},
-		"/workers": {
+		"/local/workers": {
 			"get": {
 				"description": "List all workers in the local dev registry.",
 				"operationId": "local-explorer-list-workers",
@@ -3011,6 +3011,119 @@
 					"protocol": {
 						"type": "string",
 						"description": "Protocol (http or https)"
+					},
+					"bindings": {
+						"$ref": "#/components/schemas/local-explorer_worker-bindings",
+						"description": "Resource bindings for this worker"
+					}
+				}
+			},
+			"local-explorer_worker-bindings": {
+				"type": "object",
+				"description": "Resource bindings for a worker",
+				"properties": {
+					"kv": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/local-explorer_resource-binding"
+						},
+						"description": "KV namespace bindings"
+					},
+					"d1": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/local-explorer_resource-binding"
+						},
+						"description": "D1 database bindings"
+					},
+					"r2": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/local-explorer_resource-binding"
+						},
+						"description": "R2 bucket bindings"
+					},
+					"do": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/local-explorer_do-binding"
+						},
+						"description": "Durable Object bindings"
+					},
+					"workflows": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/local-explorer_workflow-binding"
+						},
+						"description": "Workflow bindings"
+					}
+				}
+			},
+			"local-explorer_resource-binding": {
+				"type": "object",
+				"required": ["id", "bindingName"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Unique identifier for the resource"
+					},
+					"bindingName": {
+						"type": "string",
+						"description": "Name of the binding in the worker's env"
+					}
+				}
+			},
+			"local-explorer_do-binding": {
+				"type": "object",
+				"required": [
+					"id",
+					"bindingName",
+					"className",
+					"scriptName",
+					"useSqlite"
+				],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Unique identifier (scriptName-className)"
+					},
+					"bindingName": {
+						"type": "string",
+						"description": "Name of the binding in the worker's env"
+					},
+					"className": {
+						"type": "string",
+						"description": "Durable Object class name"
+					},
+					"scriptName": {
+						"type": "string",
+						"description": "Script containing the Durable Object"
+					},
+					"useSqlite": {
+						"type": "boolean",
+						"description": "Whether the Durable Object uses SQLite storage"
+					}
+				}
+			},
+			"local-explorer_workflow-binding": {
+				"type": "object",
+				"required": ["id", "bindingName", "className", "scriptName"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Workflow name"
+					},
+					"bindingName": {
+						"type": "string",
+						"description": "Name of the binding in the worker's env"
+					},
+					"className": {
+						"type": "string",
+						"description": "Workflow entrypoint class name"
+					},
+					"scriptName": {
+						"type": "string",
+						"description": "Script containing the workflow"
 					}
 				}
 			},

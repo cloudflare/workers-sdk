@@ -2,35 +2,12 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
-import { getWorkerRegistry, Miniflare } from "miniflare";
+import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
-import { disposeWithRetry } from "../../test-shared";
+import { disposeWithRetry, waitForWorkersInRegistry } from "../../test-shared";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
-
-/**
- * Poll the dev registry until all expected workers are registered.
- * This avoids flakey tests that rely on fixed timeouts.
- */
-async function waitForWorkersInRegistry(
-	registryPath: string,
-	expectedWorkers: string[],
-	timeoutMs = 5000
-): Promise<void> {
-	const startTime = Date.now();
-	while (Date.now() - startTime < timeoutMs) {
-		const registry = getWorkerRegistry(registryPath);
-		const registeredWorkers = Object.keys(registry);
-		if (expectedWorkers.every((w) => registeredWorkers.includes(w))) {
-			return;
-		}
-		await new Promise((resolve) => setTimeout(resolve, 50));
-	}
-	throw new Error(
-		`Timed out waiting for workers to register: ${expectedWorkers.join(", ")}`
-	);
-}
 
 interface ListResponse {
 	result?: Array<{ id?: string; uuid?: string; [key: string]: unknown }>;
@@ -146,17 +123,14 @@ describe("Cross-process aggregation", () => {
 				    {
 				      "id": "kv-a-1",
 				      "title": "KV_A_1",
-				      "workerName": "worker-a",
 				    },
 				    {
 				      "id": "kv-a-2",
 				      "title": "KV_A_2",
-				      "workerName": "worker-a",
 				    },
 				    {
 				      "id": "kv-b-1",
 				      "title": "KV_B_1",
-				      "workerName": "worker-b",
 				    },
 				  ],
 				  "result_info": {
@@ -180,17 +154,14 @@ describe("Cross-process aggregation", () => {
 				    {
 				      "id": "kv-a-1",
 				      "title": "KV_A_1",
-				      "workerName": "worker-a",
 				    },
 				    {
 				      "id": "kv-a-2",
 				      "title": "KV_A_2",
-				      "workerName": "worker-a",
 				    },
 				    {
 				      "id": "kv-b-1",
 				      "title": "KV_B_1",
-				      "workerName": "worker-b",
 				    },
 				  ],
 				  "result_info": {
@@ -308,13 +279,11 @@ describe("Cross-process aggregation", () => {
 				      "name": "DB_A",
 				      "uuid": "db-a",
 				      "version": "production",
-				      "workerName": "worker-a",
 				    },
 				    {
 				      "name": "DB_B",
 				      "uuid": "db-b",
 				      "version": "production",
-				      "workerName": "worker-b",
 				    },
 				  ],
 				  "result_info": {
@@ -407,11 +376,9 @@ describe("Cross-process aggregation", () => {
 				  "buckets": [
 				    {
 				      "name": "bucket-a",
-				      "workerName": "worker-a",
 				    },
 				    {
 				      "name": "bucket-b",
-				      "workerName": "worker-b",
 				    },
 				  ],
 				}
@@ -511,17 +478,14 @@ describe("Multi-worker peer deduplication", () => {
 			    {
 			      "id": "kv-a",
 			      "title": "KV_A",
-			      "workerName": "worker-a",
 			    },
 			    {
 			      "id": "kv-b1",
 			      "title": "KV_B1",
-			      "workerName": "worker-b1",
 			    },
 			    {
 			      "id": "kv-b2",
 			      "title": "KV_B2",
-			      "workerName": "worker-b2",
 			    },
 			  ],
 			  "result_info": {
