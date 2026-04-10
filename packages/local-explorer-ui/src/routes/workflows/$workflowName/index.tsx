@@ -863,7 +863,7 @@ function WorkflowInstancesView() {
 							</div>
 
 							{totalCount > 0 && (
-								<div className="flex items-center justify-between pt-4">
+								<div className="flex items-center justify-between gap-3 pt-4">
 									<DropdownMenu>
 										<DropdownMenu.Trigger
 											render={<Button icon={CaretUpDownIcon}>{perPage}</Button>}

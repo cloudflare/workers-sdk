@@ -78,8 +78,8 @@ export const Route = createFileRoute("/r2/$bucketName/")({
 	},
 	notFoundComponent: NotFound,
 	validateSearch: (search: Record<string, unknown>): R2BucketSearch => ({
-		prefix: typeof search.prefix === "string" ? search.prefix : undefined,
 		delimiter: search.delimiter === false ? false : true,
+		prefix: typeof search.prefix === "string" ? search.prefix : undefined,
 	}),
 });
 
