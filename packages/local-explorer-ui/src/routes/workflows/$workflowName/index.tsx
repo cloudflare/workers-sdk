@@ -86,7 +86,7 @@ const STATUS_SUMMARY_CONFIG = [
 		key: "complete",
 		label: "Complete",
 		icon: CheckCircleIcon,
-		color: "text-kumo-link",
+		color: "text-kumo-success",
 		weight: "fill" as const,
 	},
 	{
