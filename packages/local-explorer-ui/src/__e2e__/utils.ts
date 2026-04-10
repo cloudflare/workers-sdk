@@ -53,7 +53,7 @@ export async function seedDO(objectId: string = "test-object"): Promise<void> {
  */
 const WAIT_OPTIONS = {
 	interval: 100,
-	timeout: 10_000,
+	timeout: 1_000,
 };
 
 /**
@@ -179,36 +179,34 @@ export async function waitForText(
 		timeout?: number;
 	}
 ): Promise<void> {
-	await page.waitForFunction(
-		(expectedText: string) => {
-			const elements = Array.from(document.querySelectorAll("body *"));
+	await page.waitForSelector(`text=${text}`, {
+		timeout: options?.timeout ?? WAIT_OPTIONS.timeout,
+	});
+}
 
-			return elements.some((element) => {
-				if (!(element instanceof HTMLElement)) {
-					return false;
-				}
-
-				const textContent = element.textContent?.trim();
-				if (!textContent || !textContent.includes(expectedText)) {
-					return false;
-				}
-
-				const styles = window.getComputedStyle(element);
-				if (
-					styles.display === "none" ||
-					styles.visibility === "hidden" ||
-					styles.opacity === "0"
-				) {
-					return false;
-				}
-
-				const rect = element.getBoundingClientRect();
-				return rect.width > 0 && rect.height > 0;
-			});
-		},
-		text,
-		{ timeout: options?.timeout ?? WAIT_OPTIONS.timeout }
+/**
+ * Wait for text to appear inside the breadcrumb navigation bar.
+ *
+ * Use this instead of `waitForText` when the same text also appears in the
+ * sidebar (e.g. bucket names, object keys) to avoid Playwright resolving
+ * to the wrong element.
+ */
+export async function waitForBreadcrumbText(
+	text: string,
+	options?: {
+		timeout?: number;
+	}
+): Promise<void> {
+	// The Kumo breadcrumb `<nav>` contains both a mobile and desktop layout.
+	// The desktop layout uses `hidden sm:contents`, so target it directly to
+	// avoid matching the hidden mobile `<span class="truncate">` first.
+	const desktopBreadcrumb = page.locator(
+		'nav[aria-label="breadcrumb"] > .hidden.sm\\:contents'
 	);
+	await desktopBreadcrumb.getByText(text).first().waitFor({
+		state: "visible",
+		timeout: options?.timeout ?? WAIT_OPTIONS.timeout,
+	});
 }
 
 /**
@@ -334,9 +332,12 @@ export async function runQuery(): Promise<void> {
  * Run all SQL statements in the editor using the dropdown menu.
  */
 export async function runAllQueries(): Promise<void> {
-	const isMac = process.platform === "darwin";
-	const runAllKey = isMac ? "Meta+Shift+Enter" : "Control+Shift+Enter";
-	await page.keyboard.press(runAllKey);
+	const runDropdown = page.locator(
+		'button:has(svg[class*="CaretDownIcon"]), button:has-text("Run") + button'
+	);
+	await runDropdown.click();
+
+	await page.getByText("Run all statements").click();
 }
 
 /**
