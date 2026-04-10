@@ -247,6 +247,38 @@ describe("writeOutput()", () => {
 		]);
 	});
 
+	it("should write preview outputs with separate preview and deployment URLs", () => {
+		const WRANGLER_OUTPUT_FILE_PATH = "output.json";
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "");
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", WRANGLER_OUTPUT_FILE_PATH);
+		writeOutput({
+			type: "preview",
+			version: 1,
+			worker_name: "worker",
+			preview_id: "preview-id",
+			preview_name: "branch-name",
+			preview_slug: "branch-name",
+			preview_urls: ["https://branch-name.worker.cloudflare.app"],
+			deployment_id: "deployment-id",
+			deployment_urls: ["https://abc12345.worker.cloudflare.app"],
+		});
+
+		const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
+		expect(outputFile).toContainEntries([
+			{
+				type: "preview",
+				version: 1,
+				worker_name: "worker",
+				preview_id: "preview-id",
+				preview_name: "branch-name",
+				preview_slug: "branch-name",
+				preview_urls: ["https://branch-name.worker.cloudflare.app"],
+				deployment_id: "deployment-id",
+				deployment_urls: ["https://abc12345.worker.cloudflare.app"],
+			},
+		]);
+	});
+
 	it("should write an error log when a handler throws an error", async () => {
 		vi.mock("../user/whoami", () => {
 			return {
