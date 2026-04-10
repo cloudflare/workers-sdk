@@ -42,6 +42,7 @@ type ValidKeys = Exclude<
 	| "dispatch_namespaces"
 	| "secrets_store_secrets"
 	| "unsafe_hello_world"
+	| "flagship"
 >;
 
 export const sharedResourceCreationArgs = {
