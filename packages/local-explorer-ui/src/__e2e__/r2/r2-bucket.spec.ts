@@ -8,6 +8,7 @@ import {
 	navigateToR2Object,
 	page,
 	seedR2,
+	waitForBreadcrumbText,
 	waitForDialog,
 	waitForTableRows,
 	waitForText,
@@ -88,8 +89,8 @@ describe("R2 Bucket", () => {
 			await navigateToR2Bucket("my-bucket");
 			await waitForTableRows(1);
 
-			await waitForText("R2");
-			await waitForText("my-bucket");
+			await waitForBreadcrumbText("R2");
+			await waitForBreadcrumbText("my-bucket");
 		});
 
 		test("navigates into a directory and updates breadcrumbs", async () => {
@@ -273,10 +274,10 @@ describe("R2 Bucket", () => {
 			await navigateToR2Object("my-bucket", "documents/report.txt");
 
 			// Breadcrumbs should show: R2 > my-bucket > documents > report.txt
-			await waitForText("R2");
-			await waitForText("my-bucket");
-			await waitForText("documents");
-			await waitForText("report.txt");
+			await waitForBreadcrumbText("R2");
+			await waitForBreadcrumbText("my-bucket");
+			await waitForBreadcrumbText("documents");
+			await waitForBreadcrumbText("report.txt");
 		});
 	});
 
@@ -358,7 +359,11 @@ describe("R2 Bucket", () => {
 
 			await waitForDialog();
 			await waitForText("Delete object?");
-			await waitForText("readme.txt");
+
+			// "readme.txt" appears in multiple places (sidebar, breadcrumbs, heading),
+			// so scope the assertion to the dialog.
+			const dialog = page.getByRole("dialog");
+			await dialog.getByText("readme.txt").waitFor({ state: "visible" });
 		});
 
 		test("deletes object from detail page and navigates back", async () => {
