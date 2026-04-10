@@ -44,6 +44,86 @@ function ensureMatchingSql(options: MF.Options) {
 	}
 	return options;
 }
+
+/**
+ * Namespace local binding IDs with the worker name to prevent conflicts
+ * when multiple workers have bindings with the same name.
+ *
+ * For example, if two workers both have a D1 database binding named "DB",
+ * without namespacing they would share the same local database file.
+ * With namespacing, they become "worker1:DB" and "worker2:DB".
+ */
+function namespaceLocalBindingIds(
+	worker: MF.Options["workers"][number]
+): MF.Options["workers"][number] {
+	const workerName = worker.name ?? "worker";
+	const namespacedWorker = { ...worker };
+
+	// Helper to namespace a binding value
+	const namespaceBinding = (
+		value: string | { id?: string; remoteProxyConnectionString?: unknown }
+	): string | { id?: string; remoteProxyConnectionString?: unknown } => {
+		// Don't modify remote bindings
+		if (
+			typeof value === "object" &&
+			value !== null &&
+			"remoteProxyConnectionString" in value
+		) {
+			return value;
+		}
+		// Namespace local bindings
+		if (typeof value === "string") {
+			return `${workerName}:${value}`;
+		}
+		if (typeof value === "object" && value !== null && "id" in value) {
+			return { ...value, id: `${workerName}:${value.id}` };
+		}
+		return value;
+	};
+
+	// Helper to namespace a binding option (record or array)
+	const namespaceBindingOption = <T extends Record<string, unknown> | string[]>(
+		option: T | undefined
+	): T | undefined => {
+		if (option === undefined) {
+			return undefined;
+		}
+		// Handle array form: ["binding1", "binding2"]
+		if (Array.isArray(option)) {
+			return option.map((bindingName) => `${workerName}:${bindingName}`) as T;
+		}
+		// Handle record form: { binding1: "id" } or { binding1: { id: "..." } }
+		return Object.fromEntries(
+			Object.entries(option).map(([binding, value]) => [
+				binding,
+				namespaceBinding(value as string | { id?: string }),
+			])
+		) as T;
+	};
+
+	// Namespace D1 databases
+	if (namespacedWorker.d1Databases) {
+		namespacedWorker.d1Databases = namespaceBindingOption(
+			namespacedWorker.d1Databases
+		);
+	}
+
+	// Namespace KV namespaces
+	if (namespacedWorker.kvNamespaces) {
+		namespacedWorker.kvNamespaces = namespaceBindingOption(
+			namespacedWorker.kvNamespaces
+		);
+	}
+
+	// Namespace R2 buckets
+	if (namespacedWorker.r2Buckets) {
+		namespacedWorker.r2Buckets = namespaceBindingOption(
+			namespacedWorker.r2Buckets
+		);
+	}
+
+	return namespacedWorker;
+}
 export class MultiworkerRuntimeController extends LocalRuntimeController {
 	constructor(
 		bus: ControllerBus,
@@ -99,12 +179,19 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 		return {
 			...primary.options,
 			workers: [
-				...primary.options.workers,
+				// Primary worker doesn't need namespacing
+				...primary.options.workers.map((w) => {
+					// TODO: investigate why ratelimits causes everything to crash
+					delete w.ratelimits;
+					return w;
+				}),
+				// Secondary workers need local binding IDs namespaced to avoid conflicts
 				...secondary.flatMap((o) =>
 					o.options.workers.map((w) => {
+						const namespacedWorker = namespaceLocalBindingIds(w);
 						// TODO: investigate why ratelimits causes everything to crash
-						delete w.ratelimits;
-						return w;
+						delete namespacedWorker.ratelimits;
+						return namespacedWorker;
 					})
 				),
 			],
