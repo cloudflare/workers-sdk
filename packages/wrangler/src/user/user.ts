@@ -386,6 +386,7 @@ const DefaultScopes = {
 		"See and change Email Routing settings, rules, and destination addresses.",
 	"email_sending:write":
 		"See and change Email Sending settings and configuration.",
+	"browser:write": "See and manage Browser Rendering sessions",
 } as const;
 
 /**
