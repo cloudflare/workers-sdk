@@ -349,6 +349,7 @@ describe("whoami", () => {
 			  - connectivity:admin
 			  - email_routing:write
 			  - email_sending:write
+			  - browser:write
 
 
 			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
@@ -417,6 +418,7 @@ describe("whoami", () => {
 			  - connectivity:admin
 			  - email_routing:write
 			  - email_sending:write
+			  - browser:write
 
 
 			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
@@ -531,6 +533,7 @@ describe("whoami", () => {
 			  - connectivity:admin
 			  - email_routing:write
 			  - email_sending:write
+			  - browser:write
 
 
 			🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"
