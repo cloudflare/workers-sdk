@@ -142,7 +142,7 @@ const StatusSummary = memo(function StatusSummary({
 		<div className="mb-4 flex divide-x divide-kumo-fill overflow-hidden rounded-lg border border-kumo-fill bg-kumo-elevated">
 			{STATUS_SUMMARY_CONFIG.map(
 				({ key, label, icon: Icon, color, weight }) => (
-					<div className="flex-1 px-3 py-2" key={key}>
+					<div className="flex-1 space-y-1 px-4.5 pt-4 pb-3.5" key={key}>
 						<div className="flex items-center gap-1.5 text-xs text-kumo-subtle">
 							<Icon className={color} size={12} weight={weight} />
 							{label}
