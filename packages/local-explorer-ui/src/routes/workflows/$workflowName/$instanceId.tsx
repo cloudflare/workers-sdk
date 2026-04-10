@@ -282,7 +282,7 @@ const StepHistory = memo(function StepHistory({
 							className="absolute top-1/2 left-3 -translate-y-1/2 text-kumo-subtle"
 						/>
 						<input
-							className="h-9 w-full rounded-lg border border-kumo-fill bg-kumo-base pr-3 pl-9 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+							className="focus-visible:ring-kumo-ring h-9 w-full rounded-lg border border-kumo-fill bg-kumo-base pr-3 pl-9 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 							onChange={(e) => setSearch(e.target.value)}
 							placeholder="Search steps..."
 							type="text"
@@ -626,7 +626,7 @@ function InstanceDetailView() {
 									Event Type
 								</label>
 								<input
-									className="w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+									className="focus-visible:ring-kumo-ring w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 									onChange={(e) => setEventType(e.target.value)}
 									placeholder="my-event"
 									type="text"
@@ -641,7 +641,7 @@ function InstanceDetailView() {
 									</span>
 								</label>
 								<textarea
-									className="w-full resize-y rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+									className="focus-visible:ring-kumo-ring w-full resize-y rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 									onChange={(e) => setEventPayload(e.target.value)}
 									placeholder='{"key": "value"}'
 									rows={4}
