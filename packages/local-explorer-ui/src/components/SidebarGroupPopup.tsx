@@ -1,11 +1,17 @@
 import { Sidebar, type SidebarMenuButtonProps } from "@cloudflare/kumo";
 import { Popover } from "@cloudflare/kumo/primitives/popover";
+import { useRouter } from "@tanstack/react-router";
+import type { FileRouteTypes } from "../routeTree.gen";
 
 interface SidebarGroupItem {
-	href: string;
 	id: string;
 	isActive: boolean;
 	label: string;
+	link: {
+		params: object;
+		search?: object;
+		to: FileRouteTypes["to"];
+	};
 }
 
 interface SidebarGroupPopupProps {
@@ -21,6 +27,8 @@ export function SidebarGroupPopup({
 	items,
 	title,
 }: SidebarGroupPopupProps): JSX.Element {
+	const router = useRouter();
+
 	const hasActiveItem = items.some((item) => item.isActive);
 
 	return (
@@ -56,7 +64,7 @@ export function SidebarGroupPopup({
 												? "bg-kumo-elevated font-medium text-kumo-default"
 												: "text-kumo-default hover:bg-kumo-elevated"
 										}`}
-										href={item.href}
+										href={router.buildLocation(item.link).href}
 										key={item.id}
 									>
 										<span className="truncate">{item.label}</span>

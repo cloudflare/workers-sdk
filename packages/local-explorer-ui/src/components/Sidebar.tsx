@@ -18,6 +18,7 @@ import { getNextThemeMode } from "../utils/theme-state";
 import { SidebarGroupPopup } from "./SidebarGroupPopup";
 import { WorkerSelector, type LocalExplorerWorker } from "./WorkerSelector";
 import type { LocalExplorerWorkerBindings } from "../api";
+import type { FileRouteTypes } from "../routeTree.gen";
 import type { SidebarGroupId, SidebarGroupState } from "../utils/sidebar-state";
 import type { ThemeMode } from "../utils/theme-state";
 import type { FC } from "react";
@@ -93,14 +94,14 @@ export function AppSidebar({
 			groupId: "d1" as const,
 			icon: D1Icon,
 			items: d1Databases.map((db) => ({
-				href: router.buildLocation({
-					params: { databaseId: db.id },
-					search: { table: undefined, ...workerSearch },
-					to: "/d1/$databaseId",
-				}).href,
 				id: db.id,
 				isActive: currentPath === `/d1/${db.id}`,
 				label: db.bindingName,
+				link: {
+					params: { databaseId: db.id },
+					search: { table: undefined, ...workerSearch },
+					to: "/d1/$databaseId",
+				},
 			})),
 			title: "D1 Databases",
 		},
@@ -109,16 +110,16 @@ export function AppSidebar({
 			groupId: "do" as const,
 			icon: DOIcon,
 			items: doNamespaces.map((ns) => ({
-				href: router.buildLocation({
-					params: { className: ns.className },
-					search: workerSearch,
-					to: "/do/$className",
-				}).href,
 				id: ns.id,
 				isActive:
 					currentPath === `/do/${ns.className}` ||
 					currentPath.startsWith(`/do/${ns.className}/`),
 				label: ns.className,
+				link: {
+					params: { className: ns.className },
+					search: workerSearch,
+					to: "/do/$className",
+				},
 			})),
 			title: "Durable Objects",
 		},
@@ -127,14 +128,14 @@ export function AppSidebar({
 			groupId: "kv" as const,
 			icon: KVIcon,
 			items: kvNamespaces.map((ns) => ({
-				href: router.buildLocation({
-					params: { namespaceId: ns.id },
-					search: workerSearch,
-					to: "/kv/$namespaceId",
-				}).href,
 				id: ns.id,
 				isActive: currentPath === `/kv/${ns.id}`,
 				label: ns.bindingName,
+				link: {
+					params: { namespaceId: ns.id },
+					search: workerSearch,
+					to: "/kv/$namespaceId",
+				},
 			})),
 			title: "KV Namespaces",
 		},
@@ -143,16 +144,16 @@ export function AppSidebar({
 			groupId: "r2" as const,
 			icon: R2Icon,
 			items: r2Buckets.map((bucket) => ({
-				href: router.buildLocation({
-					params: { bucketName: bucket.id },
-					search: workerSearch,
-					to: "/r2/$bucketName",
-				}).href,
 				id: bucket.id,
 				isActive:
 					currentPath === `/r2/${bucket.id}` ||
 					currentPath.startsWith(`/r2/${bucket.id}/`),
 				label: bucket.bindingName,
+				link: {
+					params: { bucketName: bucket.id },
+					search: workerSearch,
+					to: "/r2/$bucketName",
+				},
 			})),
 			title: "R2 Buckets",
 		},
@@ -161,16 +162,16 @@ export function AppSidebar({
 			groupId: "workflows" as const,
 			icon: WorkflowsIcon,
 			items: workflows.map((wf) => ({
-				href: router.buildLocation({
-					params: { workflowName: wf.id },
-					search: workerSearch,
-					to: "/workflows/$workflowName",
-				}).href,
 				id: wf.id,
 				isActive:
 					currentPath === `/workflows/${wf.id}` ||
 					currentPath.startsWith(`/workflows/${wf.id}/`),
 				label: wf.bindingName,
+				link: {
+					params: { workflowName: wf.id },
+					search: workerSearch,
+					to: "/workflows/$workflowName",
+				},
 			})),
 			title: "Workflows",
 		},
@@ -179,10 +180,14 @@ export function AppSidebar({
 		groupId: SidebarGroupId;
 		icon: FC<{ className?: string }>;
 		items: Array<{
-			href: string;
 			id: string;
 			isActive: boolean;
 			label: string;
+			link: {
+				params: object;
+				search?: object;
+				to: FileRouteTypes["to"];
+			};
 		}>;
 		title: string;
 	}>;
@@ -264,7 +269,7 @@ export function AppSidebar({
 												<Sidebar.MenuSubButton
 													active={item.isActive}
 													className="cursor-pointer"
-													href={item.href}
+													href={router.buildLocation(item.link).href}
 													key={item.id}
 												>
 													{item.label}
