@@ -586,8 +586,11 @@ function WorkflowInstancesView() {
 
 	const handleRefresh = useCallback(async () => {
 		setRefreshing(true);
-		await withMinimumDelay(fetchInstances(undefined, undefined, true));
-		setRefreshing(false);
+		try {
+			await withMinimumDelay(fetchInstances(undefined, undefined, true));
+		} finally {
+			setRefreshing(false);
+		}
 	}, [fetchInstances]);
 
 	// Auto-poll every 10s (quiet refresh — no opacity flash)
