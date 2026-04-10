@@ -61,6 +61,9 @@ export const Route = createFileRoute("/kv/$namespaceId")({
 			hasMore: !!cursor,
 		};
 	},
+	validateSearch: (search: Record<string, unknown>): { worker?: string } => ({
+		worker: typeof search.worker === "string" ? search.worker : undefined,
+	}),
 });
 
 // Helper functions for optimistic entry state updates
