@@ -16,6 +16,7 @@ import type {
 	CfDispatchNamespace,
 	CfDurableObject,
 	CfDurableObjectMigrations,
+	CfFlagship,
 	CfHelloWorld,
 	CfHyperdrive,
 	CfImagesBinding,
@@ -158,6 +159,11 @@ export type WorkerMetadataBinding =
 			type: "unsafe_hello_world";
 			name: string;
 			enable_timer?: boolean;
+	  }
+	| {
+			type: "flagship";
+			name: string;
+			app_id: string;
 	  }
 	| {
 			type: "ratelimit";
@@ -332,6 +338,7 @@ export type Binding =
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
+	| ({ type: "flagship" } & BindingOmit<CfFlagship>)
 	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
 	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
 	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
