@@ -16,7 +16,7 @@ export function getLocalExplorerApiEndpoint(
  * Creates the agent/LLM prompt text by injecting the resolved API endpoint into the template.
  */
 export function createLocalExplorerPrompt(apiEndpoint: string): string {
-	return AGENT_PROMPT_TEMPLATE.replace("{{apiEndpoint}}", apiEndpoint);
+	return AGENT_PROMPT_TEMPLATE.replaceAll("{{apiEndpoint}}", apiEndpoint);
 }
 
 /**
