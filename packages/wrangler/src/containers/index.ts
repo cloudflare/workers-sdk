@@ -6,7 +6,7 @@ export const containersScope = "containers:write" as const;
 export const containersNamespace = createNamespace({
 	metadata: {
 		description: "📦 Manage Containers",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 });
