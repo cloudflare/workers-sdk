@@ -12,4 +12,4 @@ export const browserNamespace = createNamespace({
 export { browserCreateCommand } from "./create";
 export { browserCloseCommand } from "./close";
 export { browserListCommand } from "./list";
-export { browserConnectCommand } from "./connect";
+export { browserViewCommand } from "./view";

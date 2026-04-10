@@ -73,15 +73,14 @@ function formatSessionForDisplay(session: BrowserSession): string {
 }
 
 /**
- * Connects to DevTools for a browser session with auto-selection:
+ * View a live browser session with auto-selection:
  * - Session: uses provided ID, auto-selects if one exists, prompts/errors if multiple
  * - Target: uses --target selector, auto-selects single page, prompts/errors if multiple
  * - Output: --open (default in interactive) opens browser, otherwise prints URL
  */
-export const browserConnectCommand = createCommand({
+export const browserViewCommand = createCommand({
 	metadata: {
-		description:
-			"Connect to a target in a browser rendering session via DevTools",
+		description: "View a live browser session",
 		status: "open beta",
 		owner: "Product: Browser Rendering",
 	},
@@ -93,7 +92,7 @@ export const browserConnectCommand = createCommand({
 		sessionId: {
 			type: "string",
 			description:
-				"The session ID to connect to (optional if only one session exists)",
+				"The session ID to inspect (optional if only one session exists)",
 		},
 		target: {
 			type: "string",
@@ -102,13 +101,12 @@ export const browserConnectCommand = createCommand({
 		},
 		json: {
 			type: "boolean",
-			description: "Return DevTools URL(s) as JSON",
+			description: "Return live browser session URL(s) as JSON",
 			default: false,
 		},
 		open: {
 			type: "boolean",
-			description:
-				"Open DevTools in browser (default: true in interactive mode)",
+			description: "Open in browser (default: true in interactive mode)",
 		},
 	},
 	async handler(
@@ -224,7 +222,7 @@ export const browserConnectCommand = createCommand({
 			logger.json(selectedTarget);
 		} else if (selectedTarget.devtoolsFrontendUrl) {
 			if (shouldOpen) {
-				logger.log(`Opening DevTools for session "${sessionId}"...`);
+				logger.log(`Opening live browser session "${sessionId}"...`);
 				await openInBrowser(selectedTarget.devtoolsFrontendUrl);
 			} else {
 				// Print raw URL for piping/scripting
@@ -232,7 +230,7 @@ export const browserConnectCommand = createCommand({
 			}
 		} else {
 			logger.log(
-				`No DevTools URL available for target "${selectedTarget.id}" in session ${sessionId}`
+				`No live browser session URL available for target "${selectedTarget.id}" in session ${sessionId}`
 			);
 		}
 	},

@@ -23,9 +23,9 @@ import { aiModelsCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
 import {
 	browserCloseCommand,
-	browserConnectCommand,
 	browserCreateCommand,
 	browserListCommand,
+	browserViewCommand,
 	browserNamespace,
 } from "./browser-rendering";
 import { buildCommand } from "./build";
@@ -1750,7 +1750,7 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler browser create", definition: browserCreateCommand },
 		{ command: "wrangler browser close", definition: browserCloseCommand },
 		{ command: "wrangler browser list", definition: browserListCommand },
-		{ command: "wrangler browser connect", definition: browserConnectCommand },
+		{ command: "wrangler browser view", definition: browserViewCommand },
 	]);
 	registry.registerNamespace("browser");
 

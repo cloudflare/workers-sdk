@@ -142,8 +142,8 @@ describe("wrangler browser", () => {
 		});
 	});
 
-	describe("connect", () => {
-		it("should connect to DevTools for a session with single target (interactive)", async () => {
+	describe("live", () => {
+		it("should open DevTools for a session with single target (interactive)", async () => {
 			setIsTTY(true);
 			vi.mocked(ci).isCI = false;
 
@@ -161,13 +161,13 @@ describe("wrangler browser", () => {
 			];
 			mockGetSessionTargets("session-123", targets);
 
-			await runWrangler("browser connect session-123");
+			await runWrangler("browser view session-123");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				Opening DevTools for session "session-123"..."
+				Opening live browser session "session-123"..."
 			`);
 			expect(openInBrowser).toHaveBeenCalledWith(
 				"https://live.browser.run/ui/inspector?wss=..."
@@ -190,7 +190,7 @@ describe("wrangler browser", () => {
 			];
 			mockGetSessionTargets("session-ci", targets);
 
-			await runWrangler("browser connect session-ci");
+			await runWrangler("browser view session-ci");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -215,7 +215,7 @@ describe("wrangler browser", () => {
 			];
 			mockGetSessionTargets("session-456", targets);
 
-			await runWrangler("browser connect session-456 --json");
+			await runWrangler("browser view session-456 --json");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
@@ -234,7 +234,7 @@ describe("wrangler browser", () => {
 			mockGetSessionTargets("invalid-session", []);
 
 			await expect(
-				runWrangler("browser connect invalid-session")
+				runWrangler("browser view invalid-session")
 			).rejects.toThrowError('No targets found for session "invalid-session"');
 		});
 
@@ -265,7 +265,7 @@ describe("wrangler browser", () => {
 			];
 			mockGetSessionTargets("session-789", targets);
 
-			await runWrangler("browser connect session-789");
+			await runWrangler("browser view session-789");
 
 			expect(openInBrowser).toHaveBeenCalledWith(
 				"https://live.browser.run/page-inspector"
@@ -288,7 +288,7 @@ describe("wrangler browser", () => {
 			];
 			mockGetSessionTargets("session-no-open", targets);
 
-			await runWrangler("browser connect session-no-open --no-open");
+			await runWrangler("browser view session-no-open --no-open");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -333,7 +333,7 @@ describe("wrangler browser", () => {
 					result: "page-2",
 				});
 
-				await runWrangler("browser connect session-multi");
+				await runWrangler("browser view session-multi");
 
 				expect(openInBrowser).toHaveBeenCalledWith(
 					"https://live.browser.run/inspector/page-2"
@@ -364,7 +364,7 @@ describe("wrangler browser", () => {
 				mockGetSessionTargets("session-multi-json", targets);
 
 				await expect(
-					runWrangler("browser connect session-multi-json --json")
+					runWrangler("browser view session-multi-json --json")
 				).rejects.toThrow(
 					"Multiple targets found. Use --target <selector> to specify which one."
 				);
@@ -395,7 +395,7 @@ describe("wrangler browser", () => {
 				mockGetSessionTargets("session-id", targets);
 
 				await runWrangler(
-					"browser connect session-id --target DAB7FB6187B554E10B0BD18821265734"
+					"browser view session-id --target DAB7FB6187B554E10B0BD18821265734"
 				);
 
 				expect(openInBrowser).toHaveBeenCalledWith(
@@ -427,7 +427,7 @@ describe("wrangler browser", () => {
 				];
 				mockGetSessionTargets("session-url", targets);
 
-				await runWrangler("browser connect session-url --target google.com");
+				await runWrangler("browser view session-url --target google.com");
 
 				expect(openInBrowser).toHaveBeenCalledWith(
 					"https://live.browser.run/inspector/google"
@@ -458,7 +458,7 @@ describe("wrangler browser", () => {
 				];
 				mockGetSessionTargets("session-title", targets);
 
-				await runWrangler("browser connect session-title --target YAHOO");
+				await runWrangler("browser view session-title --target YAHOO");
 
 				expect(openInBrowser).toHaveBeenCalledWith(
 					"https://live.browser.run/inspector/yahoo"
@@ -488,7 +488,7 @@ describe("wrangler browser", () => {
 				];
 				mockGetSessionTargets("session-json", targets);
 
-				await runWrangler("browser connect session-json --target yahoo --json");
+				await runWrangler("browser view session-json --target yahoo --json");
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"{
@@ -518,7 +518,7 @@ describe("wrangler browser", () => {
 				mockGetSessionTargets("session-nomatch", targets);
 
 				await expect(
-					runWrangler("browser connect session-nomatch --target bing")
+					runWrangler("browser view session-nomatch --target bing")
 				).rejects.toThrowError(
 					'No target found matching "bing". Available targets:'
 				);
@@ -548,7 +548,7 @@ describe("wrangler browser", () => {
 				mockGetSessionTargets("session-ambig", targets);
 
 				await expect(
-					runWrangler("browser connect session-ambig --target google")
+					runWrangler("browser view session-ambig --target google")
 				).rejects.toThrowError(
 					'Multiple targets match "google". Please be more specific:'
 				);
@@ -559,7 +559,7 @@ describe("wrangler browser", () => {
 			it("should error when no sessions exist", async () => {
 				mockListSessions([]);
 
-				await expect(runWrangler("browser connect")).rejects.toThrowError(
+				await expect(runWrangler("browser view")).rejects.toThrowError(
 					"No active browser rendering sessions found. Use `wrangler browser create` to create one."
 				);
 			});
@@ -589,10 +589,10 @@ describe("wrangler browser", () => {
 				mockListSessions(sessions);
 				mockGetSessionTargets("only-session", targets);
 
-				await runWrangler("browser connect");
+				await runWrangler("browser view");
 
 				expect(std.out).toContain(
-					`Opening DevTools for session "only-session"`
+					`Opening live browser session "only-session"`
 				);
 				expect(openInBrowser).toHaveBeenCalledWith(
 					"https://live.browser.run/inspector/auto"
@@ -632,7 +632,7 @@ describe("wrangler browser", () => {
 				});
 				mockGetSessionTargets("session-b", targets);
 
-				await runWrangler("browser connect");
+				await runWrangler("browser view");
 
 				expect(openInBrowser).toHaveBeenCalledWith(
 					"https://live.browser.run/inspector/b"
@@ -654,7 +654,7 @@ describe("wrangler browser", () => {
 				];
 				mockListSessions(sessions);
 
-				await expect(runWrangler("browser connect --json")).rejects.toThrow(
+				await expect(runWrangler("browser view --json")).rejects.toThrow(
 					"Multiple sessions found. Provide a session ID explicitly."
 				);
 			});
