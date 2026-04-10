@@ -347,6 +347,7 @@ export const defaultWranglerConfig: Config = {
 	media: undefined,
 	version_metadata: undefined,
 	unsafe_hello_world: [],
+	flagship: [],
 	ratelimits: [],
 	worker_loaders: [],
 

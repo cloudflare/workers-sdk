@@ -422,6 +422,7 @@ type WorkerOptionsBindings = Pick<
 	| "dispatchNamespaces"
 	| "mtlsCertificates"
 	| "helloWorld"
+	| "flagship"
 	| "workerLoaders"
 	| "unsafeBindings"
 	| "additionalUnboundDurableObjects"
@@ -494,6 +495,7 @@ export function buildMiniflareBindingOptions(
 		"unsafe_hello_world",
 		bindings
 	);
+	const flagshipBindings = extractBindingsOfType("flagship", bindings);
 	const workerLoaders = extractBindingsOfType("worker_loader", bindings);
 	const sendEmailBindings = extractBindingsOfType("send_email", bindings);
 	// Extract both regular and unsafe ratelimit bindings
@@ -782,6 +784,18 @@ export function buildMiniflareBindingOptions(
 		),
 		helloWorld: Object.fromEntries(
 			helloWorldBindings.map((binding) => [binding.binding, binding])
+		),
+		flagship: Object.fromEntries(
+			flagshipBindings.map((binding) => [
+				binding.binding,
+				{
+					app_id: binding.app_id,
+					remoteProxyConnectionString:
+						binding.remote && remoteProxyConnectionString
+							? remoteProxyConnectionString
+							: undefined,
+				},
+			])
 		),
 		workerLoaders: Object.fromEntries(
 			workerLoaders.map(({ binding }) => [binding, {}])

@@ -1350,6 +1350,26 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies Flagship feature flag bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	flagship: {
+		/** The binding name used to refer to the bound Flagship service. */
+		binding: string;
+
+		/** The Flagship app ID to bind to. */
+		app_id: string;
+
+		/** Whether to use the remote Flagship service for flag evaluation in local dev. */
+		remote?: boolean;
+	}[];
+
+	/**
 	 * Specifies rate limit bindings that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
