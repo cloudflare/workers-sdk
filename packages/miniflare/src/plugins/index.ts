@@ -1,5 +1,3 @@
-import { z } from "zod";
-import { ValueOf } from "../workers";
 import { AI_PLUGIN, AI_PLUGIN_NAME } from "./ai";
 import { AI_SEARCH_PLUGIN, AI_SEARCH_PLUGIN_NAME } from "./ai-search";
 import {
@@ -21,6 +19,7 @@ import {
 } from "./dispatch-namespace";
 import { DURABLE_OBJECTS_PLUGIN, DURABLE_OBJECTS_PLUGIN_NAME } from "./do";
 import { EMAIL_PLUGIN, EMAIL_PLUGIN_NAME } from "./email";
+import { FLAGSHIP_PLUGIN, FLAGSHIP_PLUGIN_NAME } from "./flagship";
 import { HELLO_WORLD_PLUGIN, HELLO_WORLD_PLUGIN_NAME } from "./hello-world";
 import { HYPERDRIVE_PLUGIN, HYPERDRIVE_PLUGIN_NAME } from "./hyperdrive";
 import { IMAGES_PLUGIN, IMAGES_PLUGIN_NAME } from "./images";
@@ -38,12 +37,16 @@ import {
 	VERSION_METADATA_PLUGIN,
 	VERSION_METADATA_PLUGIN_NAME,
 } from "./version-metadata";
+import { VPC_NETWORKS_PLUGIN, VPC_NETWORKS_PLUGIN_NAME } from "./vpc-networks";
 import { VPC_SERVICES_PLUGIN, VPC_SERVICES_PLUGIN_NAME } from "./vpc-services";
 import {
 	WORKER_LOADER_PLUGIN,
 	WORKER_LOADER_PLUGIN_NAME,
 } from "./worker-loader";
 import { WORKFLOWS_PLUGIN, WORKFLOWS_PLUGIN_NAME } from "./workflows";
+import type { OptionalZodTypeOf } from "../shared";
+import type { ValueOf } from "../workers";
+import type { z } from "zod";
 
 export const PLUGINS = {
 	[CORE_PLUGIN_NAME]: CORE_PLUGIN,
@@ -68,9 +71,11 @@ export const PLUGINS = {
 	[IMAGES_PLUGIN_NAME]: IMAGES_PLUGIN,
 	[STREAM_PLUGIN_NAME]: STREAM_PLUGIN,
 	[VECTORIZE_PLUGIN_NAME]: VECTORIZE_PLUGIN,
+	[VPC_NETWORKS_PLUGIN_NAME]: VPC_NETWORKS_PLUGIN,
 	[VPC_SERVICES_PLUGIN_NAME]: VPC_SERVICES_PLUGIN,
 	[MTLS_PLUGIN_NAME]: MTLS_PLUGIN,
 	[HELLO_WORLD_PLUGIN_NAME]: HELLO_WORLD_PLUGIN,
+	[FLAGSHIP_PLUGIN_NAME]: FLAGSHIP_PLUGIN,
 	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
 	[MEDIA_PLUGIN_NAME]: MEDIA_PLUGIN,
 	[VERSION_METADATA_PLUGIN_NAME]: VERSION_METADATA_PLUGIN,
@@ -134,9 +139,11 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof IMAGES_PLUGIN.options> &
 	z.input<typeof STREAM_PLUGIN.options> &
 	z.input<typeof VECTORIZE_PLUGIN.options> &
+	z.input<typeof VPC_NETWORKS_PLUGIN.options> &
 	z.input<typeof VPC_SERVICES_PLUGIN.options> &
 	z.input<typeof MTLS_PLUGIN.options> &
 	z.input<typeof HELLO_WORLD_PLUGIN.options> &
+	z.input<typeof FLAGSHIP_PLUGIN.options> &
 	z.input<typeof WORKER_LOADER_PLUGIN.options> &
 	z.input<typeof MEDIA_PLUGIN.options> &
 	z.input<typeof VERSION_METADATA_PLUGIN.options>;
@@ -158,6 +165,14 @@ export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 	keyof Plugins,
 	ValueOf<Plugins>,
 ][];
+
+// ===== `Miniflare` Validated Options =====
+export type PluginWorkerOptions = {
+	[Key in keyof Plugins]: z.infer<Plugins[Key]["options"]>;
+};
+export type PluginSharedOptions = {
+	[Key in keyof Plugins]: OptionalZodTypeOf<Plugins[Key]["sharedOptions"]>;
+};
 
 export * from "./shared";
 
@@ -214,9 +229,11 @@ export * from "./dispatch-namespace";
 export * from "./images";
 export * from "./stream";
 export * from "./vectorize";
+export * from "./vpc-networks";
 export * from "./vpc-services";
 export * from "./mtls";
 export * from "./hello-world";
+export * from "./flagship";
 export * from "./worker-loader";
 export * from "./media";
 export * from "./version-metadata";

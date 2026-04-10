@@ -253,6 +253,12 @@ export interface CfHelloWorld {
 	enable_timer?: boolean;
 }
 
+export interface CfFlagship {
+	binding: string;
+	app_id: string;
+	remote?: boolean;
+}
+
 export interface CfWorkerLoader {
 	binding: string;
 }
@@ -285,6 +291,13 @@ export interface CfService {
 export interface CfVpcService {
 	binding: string;
 	service_id: string;
+	remote?: boolean;
+}
+
+export interface CfVpcNetwork {
+	binding: string;
+	tunnel_id?: string;
+	network_id?: string;
 	remote?: boolean;
 }
 

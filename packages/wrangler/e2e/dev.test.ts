@@ -661,9 +661,7 @@ describe.each([{ cmd: "wrangler dev" }])(
 			await worker.readUntil(/end/);
 		});
 
-		it(`prints additional modules when vendored modules are present during ${cmd}`, async ({
-			expect,
-		}) => {
+		it(`prints additional modules when vendored modules are present during ${cmd}`, async () => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -959,7 +957,7 @@ describe.each(HYPERDRIVE_DATABASES)(
 
 		it.skipIf(!CLOUDFLARE_ACCOUNT_ID || !process.env[envVar])(
 			"does not require local connection string when running `wrangler dev --remote`",
-			async ({ expect }) => {
+			async () => {
 				const helper = new WranglerE2ETestHelper();
 				const { id } = await helper.hyperdrive(false, scheme);
 
@@ -1165,9 +1163,7 @@ describe("analytics engine", () => {
 			});
 
 			describe("service worker", async () => {
-				it("using analytics engine datasets logs a warning in dev", async ({
-					expect,
-				}) => {
+				it("using analytics engine datasets logs a warning in dev", async () => {
 					const helper = new WranglerE2ETestHelper();
 					await helper.seed({
 						"wrangler.toml": dedent`
@@ -1318,9 +1314,7 @@ describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
 			);
 		});
 
-		it("fails with useful error message if host is not routable", async ({
-			expect,
-		}) => {
+		it("fails with useful error message if host is not routable", async () => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed({
 				"wrangler.toml": dedent`

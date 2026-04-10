@@ -1,8 +1,7 @@
 import path from "node:path";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
 import { logger } from "../../../logger";
@@ -40,7 +39,9 @@ describe("ConfigController", () => {
 		logger.resetLoggerLevel();
 	});
 
-	it("should prompt user to update types if they're out of date", async () => {
+	it("should prompt user to update types if they're out of date", async ({
+		expect,
+	}) => {
 		await seed({
 			"src/index.ts": dedent /* javascript */ `
 				export default {}
@@ -68,7 +69,9 @@ describe("ConfigController", () => {
 		});
 	});
 
-	it("should use account_id from config file before env var", async () => {
+	it("should use account_id from config file before env var", async ({
+		expect,
+	}) => {
 		await seed({
 			"src/index.ts": dedent /* javascript */ `
                 export default {}
@@ -105,7 +108,9 @@ describe("ConfigController", () => {
 		});
 	});
 
-	it("should emit configUpdate events with defaults applied", async () => {
+	it("should emit configUpdate events with defaults applied", async ({
+		expect,
+	}) => {
 		const event = bus.waitFor("configUpdate");
 		await seed({
 			"src/index.ts": dedent /* javascript */ `
@@ -137,7 +142,9 @@ describe("ConfigController", () => {
 		});
 	});
 
-	it("should apply module root to parent if main is nested from base_dir", async () => {
+	it("should apply module root to parent if main is nested from base_dir", async ({
+		expect,
+	}) => {
 		const event = bus.waitFor("configUpdate");
 		await seed({
 			"some/base_dir/nested/index.js": dedent /* javascript */ `
@@ -171,7 +178,7 @@ describe("ConfigController", () => {
 		});
 	});
 
-	it("should shallow merge patched config", async () => {
+	it("should shallow merge patched config", async ({ expect }) => {
 		const event1 = bus.waitFor("configUpdate");
 		await seed({
 			"src/index.ts": dedent /* javascript */ `
@@ -263,7 +270,9 @@ describe("ConfigController", () => {
 		});
 	});
 
-	it("should only log warnings once even with multiple config updates", async () => {
+	it("should only log warnings once even with multiple config updates", async ({
+		expect,
+	}) => {
 		await seed({
 			"src/index.js": dedent /* javascript */ `
 				addEventListener('fetch', event => {

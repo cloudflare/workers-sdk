@@ -1,6 +1,5 @@
-// eslint-disable-next-line no-restricted-imports
-import { expect } from "vitest";
-import { z } from "zod";
+import type { ExpectStatic } from "vitest";
+import type { z } from "zod";
 
 /**
  * Validates a response body against a Zod schema and returns typed data.
@@ -9,6 +8,7 @@ import { z } from "zod";
 export async function expectValidResponse<T extends z.ZodTypeAny>(
 	response: Response,
 	schema: T,
+	expect: ExpectStatic,
 	expectedStatus = 200
 ): Promise<z.infer<T>> {
 	expect(response.status).toBe(expectedStatus);
@@ -17,7 +17,11 @@ export async function expectValidResponse<T extends z.ZodTypeAny>(
 
 	if (!result.success) {
 		throw new Error(
-			`Response validation failed:\n${JSON.stringify(result.error.format(), null, 2)}\n\nActual response:\n${JSON.stringify(json, null, 2)}`
+			`Response validation failed:\n${JSON.stringify(
+				result.error.format(),
+				null,
+				2
+			)}\n\nActual response:\n${JSON.stringify(json, null, 2)}`
 		);
 	}
 

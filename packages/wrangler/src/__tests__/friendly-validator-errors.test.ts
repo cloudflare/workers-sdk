@@ -1,8 +1,7 @@
 import { ParseError } from "@cloudflare/workers-utils";
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { FormData } from "undici";
-// eslint-disable-next-line no-restricted-imports
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import * as checkCommands from "../check/commands";
 import { logger } from "../logger";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
@@ -24,7 +23,9 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 		return () => (logger.loggerLevel = loggerLevel); // Restore original logger level after test
 	});
 
-	it("cleanly reports a startup error even if bundle analysis fails", async () => {
+	it("cleanly reports a startup error even if bundle analysis fails", async ({
+		expect,
+	}) => {
 		mockAnalyseBundle.mockRejectedValue(new Error("workerd profiling failed"));
 
 		expect(
@@ -56,7 +57,9 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 		`);
 	});
 
-	it("reports size errors even if bundle analysis would fail", async () => {
+	it("reports size errors even if bundle analysis would fail", async ({
+		expect,
+	}) => {
 		mockAnalyseBundle.mockRejectedValue(new Error("workerd profiling failed"));
 
 		expect(
@@ -89,7 +92,9 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 		`);
 	});
 
-	it("includes profile information when bundle analysis succeeds", async () => {
+	it("includes profile information when bundle analysis succeeds", async ({
+		expect,
+	}) => {
 		mockAnalyseBundle.mockResolvedValue({ nodes: [], samples: [] });
 
 		const message = await helpIfErrorIsSizeOrScriptStartup(

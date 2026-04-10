@@ -60,7 +60,8 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zD1ListDatabasesResponse
+				zD1ListDatabasesResponse,
+				expect
 			);
 
 			expect(data.success).toBe(true);
@@ -87,7 +88,8 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zD1ListDatabasesResponse
+				zD1ListDatabasesResponse,
+				expect
 			);
 
 			expect(data).toMatchObject({
@@ -119,7 +121,8 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zD1RawDatabaseQueryResponse
+				zD1RawDatabaseQueryResponse,
+				expect
 			);
 
 			expect(data.success).toBe(true);
@@ -152,7 +155,8 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zD1RawDatabaseQueryResponse
+				zD1RawDatabaseQueryResponse,
+				expect
 			);
 
 			expect(data).toMatchObject({
@@ -190,7 +194,8 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zD1RawDatabaseQueryResponse
+				zD1RawDatabaseQueryResponse,
+				expect
 			);
 
 			expect(data).toMatchObject({
@@ -233,6 +238,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			const data = await expectValidResponse(
 				response,
 				zD1ApiResponseCommonFailure,
+				expect,
 				404
 			);
 
@@ -261,6 +267,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			const data = await expectValidResponse(
 				response,
 				zD1ApiResponseCommonFailure,
+				expect,
 				500
 			);
 
@@ -291,6 +298,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			const data = await expectValidResponse(
 				response,
 				zD1ApiResponseCommonFailure,
+				expect,
 				400
 			);
 
@@ -317,6 +325,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			const data = await expectValidResponse(
 				response,
 				zD1ApiResponseCommonFailure,
+				expect,
 				400
 			);
 

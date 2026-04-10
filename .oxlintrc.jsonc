@@ -52,7 +52,7 @@
 		"no-unused-vars": [
 			"error",
 			{
-				"argsIgnorePattern": ".*",
+				"argsIgnorePattern": "^_",
 				"varsIgnorePattern": "^_",
 				"ignoreRestSiblings": true,
 				"fix": { "imports": "fix" },
@@ -127,7 +127,6 @@
 				"curly": "off",
 				"@typescript-eslint/no-explicit-any": "off",
 				"@typescript-eslint/ban-ts-comment": "off",
-				"@typescript-eslint/consistent-type-imports": "off",
 				"@typescript-eslint/no-floating-promises": "off",
 				"no-shadow": "off",
 				"no-useless-escape": "off",
@@ -182,6 +181,14 @@
 				"no-console": "off",
 				"no-restricted-globals": "off",
 				"workers-sdk/no-unsafe-command-execution": "off",
+			},
+		},
+		// Local Explorer UI e2e tests use Playwright helpers (waitForText, waitForTableRows, etc.)
+		// as assertions, which the vitest/expect-expect rule doesn't recognise.
+		{
+			"files": ["packages/local-explorer-ui/src/__e2e__/**"],
+			"rules": {
+				"vitest/expect-expect": "off",
 			},
 		},
 		// Make sure Wrangler's version checking logic in vite-plugin-cloudflare can run properly

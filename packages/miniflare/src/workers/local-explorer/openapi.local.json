@@ -2,7 +2,7 @@
 	"openapi": "3.0.3",
 	"info": {
 		"title": "Local Explorer API",
-		"description": "Local subset of Cloudflare API for exploring resources during local development.",
+		"description": "A local subset of the Cloudflare API for inspecting and modifying resource state during local development. Supports D1, R2, KV, Durable Objects and Workflows.",
 		"version": "0.0.1"
 	},
 	"servers": [
@@ -1237,11 +1237,10 @@
 				"tags": ["Durable Objects Namespace"]
 			}
 		},
-		"/workers": {
+		"/local/workers": {
 			"get": {
 				"description": "List all workers in the local dev registry.",
 				"operationId": "local-explorer-list-workers",
-				"parameters": [],
 				"responses": {
 					"200": {
 						"content": {
@@ -2032,6 +2031,11 @@
 						"example": "fe7803fc55b964e09d94666545aab688d360c6bda69ba349ced1e5f28d2fc2c8",
 						"readOnly": true,
 						"type": "string"
+					},
+					"name": {
+						"type": "string",
+						"description": "Name of the Durable Object instance, if created via idFromName().",
+						"readOnly": true
 					}
 				},
 				"type": "object"
@@ -3007,8 +3011,149 @@
 					"protocol": {
 						"type": "string",
 						"description": "Protocol (http or https)"
+					},
+					"bindings": {
+						"$ref": "#/components/schemas/local-explorer_worker-bindings",
+						"description": "Resource bindings for this worker"
 					}
 				}
+			},
+			"local-explorer_worker-bindings": {
+				"type": "object",
+				"description": "Resource bindings for a worker",
+				"properties": {
+					"kv": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/local-explorer_resource-binding"
+						},
+						"description": "KV namespace bindings"
+					},
+					"d1": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/local-explorer_resource-binding"
+						},
+						"description": "D1 database bindings"
+					},
+					"r2": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/local-explorer_resource-binding"
+						},
+						"description": "R2 bucket bindings"
+					},
+					"do": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/local-explorer_do-binding"
+						},
+						"description": "Durable Object bindings"
+					},
+					"workflows": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/local-explorer_workflow-binding"
+						},
+						"description": "Workflow bindings"
+					}
+				}
+			},
+			"local-explorer_resource-binding": {
+				"type": "object",
+				"required": ["id", "bindingName"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Unique identifier for the resource"
+					},
+					"bindingName": {
+						"type": "string",
+						"description": "Name of the binding in the worker's env"
+					}
+				}
+			},
+			"local-explorer_do-binding": {
+				"type": "object",
+				"required": [
+					"id",
+					"bindingName",
+					"className",
+					"scriptName",
+					"useSqlite"
+				],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Unique identifier (scriptName-className)"
+					},
+					"bindingName": {
+						"type": "string",
+						"description": "Name of the binding in the worker's env"
+					},
+					"className": {
+						"type": "string",
+						"description": "Durable Object class name"
+					},
+					"scriptName": {
+						"type": "string",
+						"description": "Script containing the Durable Object"
+					},
+					"useSqlite": {
+						"type": "boolean",
+						"description": "Whether the Durable Object uses SQLite storage"
+					}
+				}
+			},
+			"local-explorer_workflow-binding": {
+				"type": "object",
+				"required": ["id", "bindingName", "className", "scriptName"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Workflow name"
+					},
+					"bindingName": {
+						"type": "string",
+						"description": "Name of the binding in the worker's env"
+					},
+					"className": {
+						"type": "string",
+						"description": "Workflow entrypoint class name"
+					},
+					"scriptName": {
+						"type": "string",
+						"description": "Script containing the workflow"
+					}
+				}
+			},
+			"workflows_workflow-name": {
+				"description": "The name of the workflow.",
+				"example": "my-workflow",
+				"type": "string"
+			},
+			"workflows_instance-id": {
+				"description": "The unique identifier of a workflow instance.",
+				"example": "my-instance-id",
+				"type": "string"
+			},
+			"workflows_workflow": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"description": "The name of the workflow."
+					},
+					"class_name": {
+						"type": "string",
+						"description": "The entrypoint class name of the workflow."
+					},
+					"script_name": {
+						"type": "string",
+						"description": "The script name containing the workflow."
+					}
+				},
+				"required": ["name"]
 			},
 			"workflows_workflow-details": {
 				"type": "object",
@@ -3057,34 +3202,6 @@
 					}
 				},
 				"required": ["name", "class_name", "script_name", "instances"]
-			},
-			"workflows_workflow-name": {
-				"description": "The name of the workflow.",
-				"example": "my-workflow",
-				"type": "string"
-			},
-			"workflows_instance-id": {
-				"description": "The unique identifier of a workflow instance.",
-				"example": "my-instance-id",
-				"type": "string"
-			},
-			"workflows_workflow": {
-				"type": "object",
-				"properties": {
-					"name": {
-						"type": "string",
-						"description": "The name of the workflow."
-					},
-					"class_name": {
-						"type": "string",
-						"description": "The entrypoint class name of the workflow."
-					},
-					"script_name": {
-						"type": "string",
-						"description": "The script name containing the workflow."
-					}
-				},
-				"required": ["name"]
 			},
 			"workflows_instance": {
 				"type": "object",

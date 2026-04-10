@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import childProcess, { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { Abortable, once } from "node:events";
+import { once } from "node:events";
 import path from "node:path";
 import rl from "node:readline";
 import { Readable, Transform } from "node:stream";
@@ -12,11 +12,10 @@ import workerdPath, {
 import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { MiniflareCoreError } from "../shared";
-import { Awaitable } from "../workers";
-import {
-	handleStructuredLogsFromStream,
-	StructuredLogsHandler,
-} from "./structured-logs";
+import { handleStructuredLogsFromStream } from "./structured-logs";
+import type { Awaitable } from "../workers";
+import type { StructuredLogsHandler } from "./structured-logs";
+import type { Abortable } from "node:events";
 
 const ControlMessageSchema = z.discriminatedUnion("event", [
 	z.object({
@@ -290,7 +289,9 @@ export class Runtime {
 							ipcAddress: info.inspectorIpc || "",
 							pid: String(this.#process.pid),
 							scriptName: name,
-							inspectorURL: `ws://127.0.0.1:${ports?.get(kInspectorSocket)}/core:user:${name}`,
+							inspectorURL: `ws://127.0.0.1:${ports?.get(
+								kInspectorSocket
+							)}/core:user:${name}`,
 							waitForDebugger: true,
 							ownId: randomBytes(12).toString("hex"),
 							openerId: info.openerId,
@@ -363,4 +364,7 @@ function getSafeCompatibilityDate(): string {
 	return workerdCompatibilityDate;
 }
 
+/**
+ * @deprecated Use today's date as the compatibility date instead: `new Date().toISOString().slice(0, 10)`
+ */
 export const supportedCompatibilityDate = getSafeCompatibilityDate();

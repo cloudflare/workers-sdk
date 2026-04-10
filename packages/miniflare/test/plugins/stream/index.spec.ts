@@ -1,4 +1,3 @@
-import http from "node:http";
 import { pathToFileURL } from "node:url";
 import {
 	Miniflare,
@@ -20,6 +19,7 @@ import type {
 	StreamWatermark as Watermark,
 } from "@cloudflare/workers-types";
 import type { MiniflareOptions } from "miniflare";
+import type http from "node:http";
 
 // Mock image / video bytes
 const TEST_VIDEO_BYTES = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]);
@@ -90,10 +90,15 @@ async function handleCommand(stream, op, args) {
 		case "captions.delete":
 			await stream.video(args.id).captions.delete(args.language);
 			return null;
-		case "captions.upload": {
-			const file = new File(["test"], "captions.vtt");
-			return stream.video(args.id).captions.upload(args.language, file);
-		}
+			case "captions.upload": {
+				const stream_input = new ReadableStream({
+					start(controller) {
+						controller.enqueue(new TextEncoder().encode("test"));
+						controller.close();
+					}
+				});
+				return stream.video(args.id).captions.upload(args.language, stream_input);
+			}
 		case "downloads.generate":
 			return stream.video(args.id).downloads.generate(args.type);
 		case "downloads.get":
@@ -107,10 +112,15 @@ async function handleCommand(stream, op, args) {
 		}
 		case "watermarks.generate.fromUrl":
 			return stream.watermarks.generate(args.url, args.params || {});
-		case "watermarks.generate.fromFile": {
-			const file = new File(["test"], "watermark.png");
-			return stream.watermarks.generate(file, args.params || {});
-		}
+			case "watermarks.generate.fromStream": {
+				const stream_input = new ReadableStream({
+					start(controller) {
+						controller.enqueue(new TextEncoder().encode("test"));
+						controller.close();
+					}
+				});
+				return stream.watermarks.generate(stream_input, args.params || {});
+			}
 		case "watermarks.list":
 			return stream.watermarks.list();
 		case "watermarks.get":
@@ -855,7 +865,7 @@ describe("Stream captions", () => {
 		).rejects.toThrow("Video not found");
 	});
 
-	test("caption upload via File fails serialization across the binding", async ({
+	test("caption upload via ReadableStream is not supported in local mode", async ({
 		expect,
 	}) => {
 		const mf = createMiniflare();
@@ -866,9 +876,7 @@ describe("Stream captions", () => {
 				id: "00000000-0000-0000-0000-000000000000",
 				language: "en",
 			})
-		).rejects.toThrow(
-			'Could not serialize object of type "File". This type does not support serialization.'
-		);
+		).rejects.toThrow("caption upload is not supported in local mode");
 	});
 
 	test("generate caption is idempotent (upsert)", async ({ expect }) => {
@@ -986,19 +994,18 @@ describe("Stream watermarks", () => {
 		).rejects.toThrow("Failed to fetch watermark from URL: 404 Missing");
 	});
 
-	test("create watermark via File fails serialization across the binding", async ({
-		expect,
-	}) => {
+	test("create watermark from ReadableStream", async ({ expect }) => {
 		const mf = createMiniflare();
 		useDispose(mf);
 
-		await expect(
-			sendCmdToWorker(mf, "watermarks.generate.fromFile", {
-				params: { name: "unsupported" },
-			})
-		).rejects.toThrow(
-			'Could not serialize object of type "File". This type does not support serialization.'
-		);
+		const watermark = (await sendCmdToWorker(
+			mf,
+			"watermarks.generate.fromStream",
+			{
+				params: { name: "from-stream" },
+			}
+		)) as Watermark;
+		expect(watermark.name).toBe("from-stream");
 	});
 
 	test("list watermarks", async ({ expect }) => {

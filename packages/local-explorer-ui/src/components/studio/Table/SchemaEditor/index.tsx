@@ -138,14 +138,14 @@ export function StudioTableSchemaEditor({
 			defaultSize={250}
 			minSize={150}
 			primary="second"
-			resizerClassName="!bg-resizer border-transparent"
+			resizerClassName="!bg-kumo-fill border-transparent"
 			split="horizontal"
 		>
-			<div className="flex h-full w-full flex-col overflow-hidden bg-surface text-xs">
-				<div className="flex gap-2 border-b border-border p-4 py-2 shadow-xs">
+			<div className="flex h-full w-full flex-col overflow-hidden bg-kumo-elevated text-xs">
+				<div className="flex gap-2 border-b border-kumo-elevated p-4 py-2 shadow-xs">
 					<input
 						autoFocus
-						className="h-9 w-62.5 rounded-lg border border-border bg-transparent px-3 text-base"
+						className="h-9 w-62.5 rounded-lg border border-kumo-fill bg-transparent px-3 text-base"
 						onChange={(e) => handleNameChange(e.target.value)}
 						placeholder="Table name"
 						value={value.name.new ?? ""}
@@ -172,26 +172,26 @@ export function StudioTableSchemaEditor({
 						<table className="w-full border-collapse">
 							<thead className="sticky top-0">
 								<tr>
-									<th className="w-10 border border-border p-2 text-center">
+									<th className="w-10 border border-kumo-fill p-2 text-center">
 										#
 									</th>
-									<th className="w-10 border border-border p-2 text-center">
+									<th className="w-10 border border-kumo-fill p-2 text-center">
 										<KeyIcon />
 									</th>
-									<th className="w-50 border border-border p-2 text-left">
+									<th className="w-50 border border-kumo-fill p-2 text-left">
 										Column Name
 									</th>
-									<th className="w-25 border border-border p-2 text-left">
+									<th className="w-25 border border-kumo-fill p-2 text-left">
 										Type
 									</th>
-									<th className="w-12.5 border border-border p-2 text-left">
+									<th className="w-12.5 border border-kumo-fill p-2 text-left">
 										NULL
 									</th>
-									<th className="w-31.25 border border-border p-2 text-left">
+									<th className="w-31.25 border border-kumo-fill p-2 text-left">
 										Default Value
 									</th>
-									<th className="border border-border p-2"></th>
-									<th className="w-10 border border-border p-2"></th>
+									<th className="border border-kumo-fill p-2"></th>
+									<th className="w-10 border border-kumo-fill p-2"></th>
 								</tr>
 							</thead>
 							<tbody>
@@ -219,7 +219,7 @@ export function StudioTableSchemaEditor({
 					</div>
 				</div>
 			</div>
-			<div className="grow overflow-hidden bg-surface">
+			<div className="grow overflow-hidden bg-kumo-elevated">
 				<StudioSQLEditor
 					className="h-full w-full grow"
 					readOnly
@@ -246,12 +246,12 @@ function IndexList({ indexList }: IndexListProps): JSX.Element | null {
 			<table className="w-full border-collapse">
 				<thead>
 					<tr>
-						<th className="w-10 border border-border p-2">#</th>
-						<th className="w-50 border border-border p-2 text-left">
+						<th className="w-10 border border-kumo-fill p-2">#</th>
+						<th className="w-50 border border-kumo-fill p-2 text-left">
 							Index Name
 						</th>
-						<th className="w-25 border border-border p-2 text-left">Type</th>
-						<th className="border border-border p-2 text-left"></th>
+						<th className="w-25 border border-kumo-fill p-2 text-left">Type</th>
+						<th className="border border-kumo-fill p-2 text-left"></th>
 					</tr>
 				</thead>
 
@@ -259,10 +259,10 @@ function IndexList({ indexList }: IndexListProps): JSX.Element | null {
 					{indexList.map((index, indexIdx) => {
 						return (
 							<tr key={index.name}>
-								<td className="border border-border p-2">{indexIdx + 1}</td>
-								<td className="border border-border p-2">{index.name}</td>
-								<td className="border border-border p-2">{index.type}</td>
-								<td className="border border-border p-2 font-mono">
+								<td className="border border-kumo-fill p-2">{indexIdx + 1}</td>
+								<td className="border border-kumo-fill p-2">{index.name}</td>
+								<td className="border border-kumo-fill p-2">{index.type}</td>
+								<td className="border border-kumo-fill p-2 font-mono">
 									{index.columns.join(", ")}
 								</td>
 							</tr>

@@ -1819,6 +1819,21 @@ function collectCoreBindings(
 			);
 		}
 
+		for (const [index, flagshipBinding] of (env.flagship ?? []).entries()) {
+			if (!flagshipBinding.binding) {
+				throwMissingBindingError({
+					binding: flagshipBinding,
+					bindingType: "flagship",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(flagshipBinding.binding, "Flagship", "flagship", envName);
+		}
+
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
 			if (!ratelimit.name) {
 				throwMissingBindingError({
@@ -1867,6 +1882,58 @@ function collectCoreBindings(
 			}
 
 			addBinding(vpcService.binding, "Fetcher", "vpc_services", envName);
+		}
+
+		for (const [index, vpcNetwork] of (env.vpc_networks ?? []).entries()) {
+			if (!vpcNetwork.binding) {
+				throwMissingBindingError({
+					binding: vpcNetwork,
+					bindingType: "vpc_networks",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(vpcNetwork.binding, "Fetcher", "vpc_networks", envName);
+		}
+
+		for (const [index, aiSearchNamespace] of (
+			env.ai_search_namespaces ?? []
+		).entries()) {
+			if (!aiSearchNamespace.binding) {
+				throwMissingBindingError({
+					binding: aiSearchNamespace,
+					bindingType: "ai_search_namespaces",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(
+				aiSearchNamespace.binding,
+				"AiSearchNamespace",
+				"ai_search_namespaces",
+				envName
+			);
+		}
+
+		for (const [index, aiSearch] of (env.ai_search ?? []).entries()) {
+			if (!aiSearch.binding) {
+				throwMissingBindingError({
+					binding: aiSearch,
+					bindingType: "ai_search",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(aiSearch.binding, "AiSearchInstance", "ai_search", envName);
 		}
 
 		// Pipelines handled separately for async schema fetching
@@ -2730,6 +2797,25 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
+		for (const [index, flagshipBinding] of (env.flagship ?? []).entries()) {
+			if (!flagshipBinding.binding) {
+				throwMissingBindingError({
+					binding: flagshipBinding,
+					bindingType: "flagship",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "flagship",
+				name: flagshipBinding.binding,
+				type: "Flagship",
+			});
+		}
+
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
 			if (!ratelimit.name) {
 				throwMissingBindingError({
@@ -2783,6 +2869,25 @@ function collectCoreBindingsPerEnvironment(
 			bindings.push({
 				bindingCategory: "vpc_services",
 				name: vpcService.binding,
+				type: "Fetcher",
+			});
+		}
+
+		for (const [index, vpcNetwork] of (env.vpc_networks ?? []).entries()) {
+			if (!vpcNetwork.binding) {
+				throwMissingBindingError({
+					binding: vpcNetwork,
+					bindingType: "vpc_networks",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "vpc_networks",
+				name: vpcNetwork.binding,
 				type: "Fetcher",
 			});
 		}
@@ -2910,6 +3015,46 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "assets",
 				name: env.assets.binding,
 				type: "Fetcher",
+			});
+		}
+
+		for (const [index, aiSearchNamespace] of (
+			env.ai_search_namespaces ?? []
+		).entries()) {
+			if (!aiSearchNamespace.binding) {
+				throwMissingBindingError({
+					binding: aiSearchNamespace,
+					bindingType: "ai_search_namespaces",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "ai_search_namespaces",
+				name: aiSearchNamespace.binding,
+				type: "AiSearchNamespace",
+			});
+		}
+
+		for (const [index, aiSearch] of (env.ai_search ?? []).entries()) {
+			if (!aiSearch.binding) {
+				throwMissingBindingError({
+					binding: aiSearch,
+					bindingType: "ai_search",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "ai_search",
+				name: aiSearch.binding,
+				type: "AiSearchInstance",
 			});
 		}
 

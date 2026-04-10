@@ -55,6 +55,13 @@ async function createTestProject() {
 		},
 	};
 	await fs.writeFile(packageJsonPath, JSON.stringify(packageJson));
+	// pnpm 10 blocks lifecycle scripts by default. The transitive deps
+	// (workerd, esbuild) need their postinstall to download platform binaries.
+	const workspaceYamlPath = path.join(projectPath, "pnpm-workspace.yaml");
+	await fs.writeFile(
+		workspaceYamlPath,
+		["allowBuilds:", "  esbuild: true", "  workerd: true", ""].join("\n")
+	);
 	return projectPath;
 }
 

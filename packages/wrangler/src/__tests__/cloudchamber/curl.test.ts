@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
@@ -27,7 +26,7 @@ describe("cloudchamber curl", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("cloudchamber curl --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(helpStd.out).toMatchInlineSnapshot(`
@@ -56,7 +55,7 @@ describe("cloudchamber curl", () => {
 		`);
 	});
 
-	it("can send data with -d/--data", async () => {
+	it("can send data with -d/--data", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -132,7 +131,7 @@ describe("cloudchamber curl", () => {
 		`);
 	});
 
-	it("supports deprecated -D flag", async () => {
+	it("supports deprecated -D flag", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -208,7 +207,7 @@ describe("cloudchamber curl", () => {
 		`);
 	});
 
-	it("should set headers", async () => {
+	it("should set headers", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -231,7 +230,7 @@ describe("cloudchamber curl", () => {
 		`);
 	});
 
-	it("works", async () => {
+	it("works", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -355,7 +354,9 @@ describe("cloudchamber curl", () => {
 		]);
 	});
 
-	it("should give a response with headers and request-id when verbose flag is set", async () => {
+	it("should give a response with headers and request-id when verbose flag is set", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -378,7 +379,9 @@ describe("cloudchamber curl", () => {
 		expect(text).toContain("coordinator-request-id");
 	});
 
-	it("includes headers and request-id in JSON when used with --silent and --verbose", async () => {
+	it("includes headers and request-id in JSON when used with --silent and --verbose", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -400,7 +403,7 @@ describe("cloudchamber curl", () => {
 		expect(response.request_id.length).toBeGreaterThan(0);
 	});
 
-	it("should catch and report errors", async () => {
+	it("should catch and report errors", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await runWrangler(

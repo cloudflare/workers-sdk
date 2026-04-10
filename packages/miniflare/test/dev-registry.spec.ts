@@ -1,6 +1,7 @@
-import { Miniflare, MiniflareOptions, WorkerRegistry } from "miniflare";
+import { Miniflare } from "miniflare";
 import { describe, onTestFinished, test, vi } from "vitest";
 import { useDispose, useTmp } from "./test-shared";
+import type { MiniflareOptions, WorkerRegistry } from "miniflare";
 
 describe.sequential("DevRegistry", () => {
 	test("fetch to service worker", async ({ expect }) => {

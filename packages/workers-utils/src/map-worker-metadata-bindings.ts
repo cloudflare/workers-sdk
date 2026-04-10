@@ -142,6 +142,16 @@ export function mapWorkerMetadataBindings(
 						];
 						break;
 					}
+					case "flagship": {
+						configObj.flagship = [
+							...(configObj.flagship ?? []),
+							{
+								binding: binding.name,
+								app_id: binding.app_id,
+							},
+						];
+						break;
+					}
 					case "service":
 						{
 							configObj.services = [
@@ -366,6 +376,21 @@ export function mapWorkerMetadataBindings(
 									service_id: binding.service_id,
 								},
 							];
+						}
+						break;
+					case "vpc_network":
+						{
+							if (binding.tunnel_id !== undefined) {
+								configObj.vpc_networks = [
+									...(configObj.vpc_networks ?? []),
+									{ binding: binding.name, tunnel_id: binding.tunnel_id },
+								];
+							} else if (binding.network_id !== undefined) {
+								configObj.vpc_networks = [
+									...(configObj.vpc_networks ?? []),
+									{ binding: binding.name, network_id: binding.network_id },
+								];
+							}
 						}
 						break;
 					default: {

@@ -6,7 +6,6 @@ import {
 	ENTRY_SIZE,
 	getContentType,
 	HEADER_SIZE,
-	Logger,
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
 	normalizeFilePath,
@@ -28,7 +27,6 @@ import {
 	maybeGetFile,
 } from "@cloudflare/workers-shared/utils/helpers";
 import {
-	AssetConfig,
 	HeadersSchema,
 	RedirectsSchema,
 } from "@cloudflare/workers-shared/utils/types";
@@ -37,11 +35,9 @@ import SCRIPT_ASSETS from "worker:assets/assets";
 import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
 import SCRIPT_ROUTER from "worker:assets/router";
 import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
-import { z } from "zod";
-import { Service } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import { getUserServiceName } from "../core";
-import { Plugin, ProxyNodeBinding } from "../shared";
+import { ProxyNodeBinding } from "../shared";
 import {
 	ASSETS_KV_SERVICE_NAME,
 	ASSETS_PLUGIN_NAME,
@@ -50,6 +46,11 @@ import {
 	RPC_PROXY_SERVICE_NAME,
 } from "./constants";
 import { AssetsOptionsSchema } from "./schema";
+import type { Service } from "../../runtime";
+import type { Plugin } from "../shared";
+import type { Logger } from "@cloudflare/workers-shared";
+import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
+import type { z } from "zod";
 
 export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 	options: AssetsOptionsSchema,

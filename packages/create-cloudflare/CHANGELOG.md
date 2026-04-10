@@ -1,5 +1,117 @@
 # create-cloudflare
 
+## 2.66.4
+
+### Patch Changes
+
+- [#13358](https://github.com/cloudflare/workers-sdk/pull/13358) [`40b4f11`](https://github.com/cloudflare/workers-sdk/commit/40b4f11b23d78e4850fcc6ae2720d683497eb931) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To     |
+  | ----------------- | ----- | ------ |
+  | create-docusaurus | 3.9.2 | 3.10.0 |
+
+## 2.66.3
+
+### Patch Changes
+
+- [#13274](https://github.com/cloudflare/workers-sdk/pull/13274) [`6e62043`](https://github.com/cloudflare/workers-sdk/commit/6e6204361c457545694f63759585612d6604d928) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-astro | 5.0.4 | 5.0.5 |
+
+- [#13275](https://github.com/cloudflare/workers-sdk/pull/13275) [`b221b00`](https://github.com/cloudflare/workers-sdk/commit/b221b00fe3fd96e2850b6b6be053e7762cf1af65) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.2.1 | 16.2.2 |
+
+- [#13276](https://github.com/cloudflare/workers-sdk/pull/13276) [`94ea512`](https://github.com/cloudflare/workers-sdk/commit/94ea5124b4d5486bcd97f900aca2444ff70136f6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From   | To     |
+  | ------------------- | ------ | ------ |
+  | create-react-router | 7.13.2 | 7.14.0 |
+
+- [#13278](https://github.com/cloudflare/workers-sdk/pull/13278) [`8e7074f`](https://github.com/cloudflare/workers-sdk/commit/8e7074f97e6f7629b3d9b14f395aa9aacf347263) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.2.5 | 21.2.6 |
+
+- [#13279](https://github.com/cloudflare/workers-sdk/pull/13279) [`51f784f`](https://github.com/cloudflare/workers-sdk/commit/51f784fdf62a5fd0fcf00e2f3044e7ddc4eadf25) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.22.1 | 3.22.2 |
+
+- [#13243](https://github.com/cloudflare/workers-sdk/pull/13243) [`448fec8`](https://github.com/cloudflare/workers-sdk/commit/448fec88a19cad5a3ab7a4d7ff99e166cd485ea2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Show a clear error message when running on an unsupported Node.js version
+
+  Previously, running `create-cloudflare` on an older Node.js version (e.g. v18) would fail with a confusing syntax error. Now, a dedicated version check runs before loading the CLI and displays a helpful message explaining the minimum required Node.js version and suggesting version managers like Volta or nvm.
+
+## 2.66.2
+
+### Patch Changes
+
+- [#13051](https://github.com/cloudflare/workers-sdk/pull/13051) [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use today's date as the default compatibility date
+
+  Previously, when generating a compatibility date for new projects or when no compatibility date was configured, the date was resolved by loading the locally installed `workerd` package via `miniflare`. This approach was unreliable in some package manager environments (notably `pnpm`). The logic now simply uses today's date instead, which is always correct and works reliably across all environments.
+
+## 2.66.1
+
+### Patch Changes
+
+- [#13106](https://github.com/cloudflare/workers-sdk/pull/13106) [`c8c44a7`](https://github.com/cloudflare/workers-sdk/commit/c8c44a708039b8a9cd38fd0e7d45c7dba6e39312) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From   | To     |
+  | ------------------- | ------ | ------ |
+  | create-react-router | 7.13.1 | 7.13.2 |
+
+- [#13107](https://github.com/cloudflare/workers-sdk/pull/13107) [`687f144`](https://github.com/cloudflare/workers-sdk/commit/687f1444ece93d3bf61a3e8b4567cd17065a2449) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-astro | 5.0.3 | 5.0.4 |
+
+- [#13108](https://github.com/cloudflare/workers-sdk/pull/13108) [`3a8a24c`](https://github.com/cloudflare/workers-sdk/commit/3a8a24cbb91b897cc71cc2b135ec702ada4053a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.2.3 | 21.2.5 |
+
+- [#13109](https://github.com/cloudflare/workers-sdk/pull/13109) [`9deba25`](https://github.com/cloudflare/workers-sdk/commit/9deba25ff8a7dfbc3d590a98edda8f074fcac271) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From                   | To                     |
+  | ----------- | ---------------------- | ---------------------- |
+  | create-waku | 0.12.5-1.0.0-alpha.5-0 | 0.12.5-1.0.0-alpha.6-0 |
+
+- [#13110](https://github.com/cloudflare/workers-sdk/pull/13110) [`71059be`](https://github.com/cloudflare/workers-sdk/commit/71059be812e3d227c26d3a617834272f3394c182) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.22.0 | 3.22.1 |
+
 ## 2.66.0
 
 ### Minor Changes

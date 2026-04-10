@@ -1,5 +1,254 @@
 # wrangler
 
+## 4.81.1
+
+### Patch Changes
+
+- [#13337](https://github.com/cloudflare/workers-sdk/pull/13337) [`c510494`](https://github.com/cloudflare/workers-sdk/commit/c510494e522927f60fa4915358a881cf73e31a39) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260405.1 | 1.20260408.1 |
+
+- [#13362](https://github.com/cloudflare/workers-sdk/pull/13362) [`8b71eca`](https://github.com/cloudflare/workers-sdk/commit/8b71ecae4fed8f0bebf5789f1a617db26c0e4365) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260408.1 | 1.20260409.1 |
+
+- [#13329](https://github.com/cloudflare/workers-sdk/pull/13329) [`7ca6f6e`](https://github.com/cloudflare/workers-sdk/commit/7ca6f6e98ff84e68e901ae35028435f4916ae1c2) Thanks [@G4brym](https://github.com/G4brym)! - fix: Treat AI Search bindings as always-remote in local dev
+
+  AI Search namespace (`ai_search_namespaces`) and instance (`ai_search`) bindings are always-remote (they have no local simulation), but `pickRemoteBindings()` did not include them in its always-remote type list. This caused the remote proxy session to exclude these bindings when `remote: true` was not explicitly set in the config, resulting in broken AI Search bindings during `wrangler dev`.
+
+  Additionally, `removeRemoteConfigFieldFromBindings()` in the deploy config-diff logic was not stripping the `remote` field from AI Search bindings, which could cause false config diffs during deployment.
+
+- Updated dependencies [[`42c7ef0`](https://github.com/cloudflare/workers-sdk/commit/42c7ef04385094c77f0c2830134fc38b2dc39b02), [`c510494`](https://github.com/cloudflare/workers-sdk/commit/c510494e522927f60fa4915358a881cf73e31a39), [`8b71eca`](https://github.com/cloudflare/workers-sdk/commit/8b71ecae4fed8f0bebf5789f1a617db26c0e4365), [`a42e0e8`](https://github.com/cloudflare/workers-sdk/commit/a42e0e8b52df128513f85025f50eb985bc7f5748)]:
+  - miniflare@4.20260409.0
+
+## 4.81.0
+
+### Minor Changes
+
+- [#12932](https://github.com/cloudflare/workers-sdk/pull/12932) [`96ee5d4`](https://github.com/cloudflare/workers-sdk/commit/96ee5d465833f4887653078115acea40de2893c0) Thanks [@thomasgauvin](https://github.com/thomasgauvin)! - feat: add `wrangler email routing` and `wrangler email sending` commands
+
+  Email Routing commands:
+
+  - `wrangler email routing list` - list zones with email routing status
+  - `wrangler email routing settings <domain>` - get email routing settings for a zone
+  - `wrangler email routing enable/disable <domain>` - enable or disable email routing
+  - `wrangler email routing dns get/unlock <domain>` - manage DNS records
+  - `wrangler email routing rules list/get/create/update/delete <domain>` - manage routing rules (use `catch-all` as the rule ID for the catch-all rule)
+  - `wrangler email routing addresses list/get/create/delete` - manage destination addresses
+
+  Email Sending commands:
+
+  - `wrangler email sending list` - list zones with email sending
+  - `wrangler email sending settings <domain>` - get email sending settings for a zone
+  - `wrangler email sending enable <domain>` - enable email sending for a zone or subdomain
+  - `wrangler email sending disable <domain>` - disable email sending for a zone or subdomain
+  - `wrangler email sending dns get <domain>` - get DNS records for a sending domain
+  - `wrangler email sending send` - send an email using the builder API
+  - `wrangler email sending send-raw` - send a raw MIME email message
+
+  Also adds `email_routing:write` and `email_sending:write` OAuth scopes to `wrangler login`.
+
+### Patch Changes
+
+- [#13241](https://github.com/cloudflare/workers-sdk/pull/13241) [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260401.1 | 1.20260402.1 |
+
+- [#13305](https://github.com/cloudflare/workers-sdk/pull/13305) [`fa6d84f`](https://github.com/cloudflare/workers-sdk/commit/fa6d84fe4f07143522e4d41a2934c486d1c4b6d1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260402.1 | 1.20260405.1 |
+
+- [#13193](https://github.com/cloudflare/workers-sdk/pull/13193) [`78cbe37`](https://github.com/cloudflare/workers-sdk/commit/78cbe37a3a2ed0c5213fca603f61e3acd4d807e4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - During autoconfig filter out Hono when there are 2 detected frameworks
+
+  During the auto-configuration process Hono is now treated as an auxiliary framework (like Vite) and automatically filtered out when two frameworks are detected (before Hono was being filtered out only when the other framework was Waku).
+
+- [#13205](https://github.com/cloudflare/workers-sdk/pull/13205) [`6fa5dfd`](https://github.com/cloudflare/workers-sdk/commit/6fa5dfddcbad1520db7c3d1bb12233001fe00e45) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: use `formatConfigSnippet` for compatibility_date warning in `wrangler dev`
+
+  The compatibility_date warning shown when no date is configured in `wrangler dev` was hardcoded in TOML format. This now uses `formatConfigSnippet` to render the snippet in the correct format (TOML or JSON) based on the user's config file type.
+
+- Updated dependencies [[`a3e3b57`](https://github.com/cloudflare/workers-sdk/commit/a3e3b57f2aa47b6655af7baaa784d55117368abc), [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e), [`fa6d84f`](https://github.com/cloudflare/workers-sdk/commit/fa6d84fe4f07143522e4d41a2934c486d1c4b6d1), [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e), [`7a60d4b`](https://github.com/cloudflare/workers-sdk/commit/7a60d4bd33b03a55f687869378dfd06143247239)]:
+  - miniflare@4.20260405.0
+
+## 4.80.0
+
+### Minor Changes
+
+- [#13151](https://github.com/cloudflare/workers-sdk/pull/13151) [`9c4035b`](https://github.com/cloudflare/workers-sdk/commit/9c4035b6e48418d9bccf9791354f54a083af5108) Thanks [@G4brym](https://github.com/G4brym)! - Add type generation for AI Search bindings
+
+  Running `wrangler types` now generates `AiSearchNamespace` and `AiSearchInstance` types for `ai_search_namespaces` and `ai_search` config bindings respectively. Both simple and per-environment modes are supported.
+
+  ```jsonc
+  // wrangler.json
+  {
+    "ai_search_namespaces": [
+      { "binding": "AI_SEARCH", "namespace": "production" }
+    ],
+    "ai_search": [
+      { "binding": "BLOG_SEARCH", "instance_name": "cloudflare-blog" }
+    ]
+  }
+  ```
+
+  ```typescript
+  // Generated by `wrangler types`
+  interface Env {
+    AI_SEARCH: AiSearchNamespace;
+    BLOG_SEARCH: AiSearchInstance;
+  }
+  ```
+
+- [#13011](https://github.com/cloudflare/workers-sdk/pull/13011) [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Add experimental headful browser rendering support for local development
+
+  > **Experimental:** This feature may be removed or changed without notice.
+
+  When developing locally with the Browser Rendering API, you can enable headful (visible) mode via the `X_BROWSER_HEADFUL` environment variable to see the browser while debugging:
+
+  ```sh
+  X_BROWSER_HEADFUL=true wrangler dev
+  X_BROWSER_HEADFUL=true vite dev
+  ```
+
+  **Note:** when using `@cloudflare/playwright`, two Chrome windows may appear — the initial blank page and the one created by `browser.newPage()`. This is expected behavior due to how Playwright handles browser contexts via CDP.
+
+- [#12992](https://github.com/cloudflare/workers-sdk/pull/12992) [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87) Thanks [@RiscadoA](https://github.com/RiscadoA)! - Add `vpc_networks` binding support for routing Worker traffic through a Cloudflare Tunnel or network.
+
+  ```jsonc
+  {
+    "vpc_networks": [
+      // Route through a specific Cloudflare Tunnel
+      { "binding": "MY_FIRST_VPC", "tunnel_id": "<tunnel-id>" },
+      // Route through the Cloudflare One mesh network
+      { "binding": "MY_SECOND_VPC", "network_id": "cf1:network" }
+    ]
+  }
+  ```
+
+### Patch Changes
+
+- [#13155](https://github.com/cloudflare/workers-sdk/pull/13155) [`5d29055`](https://github.com/cloudflare/workers-sdk/commit/5d29055edf482bd51c3728b26594b5e4ac54f0a9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260329.1 | 1.20260331.1 |
+
+- [#13162](https://github.com/cloudflare/workers-sdk/pull/13162) [`fb67a18`](https://github.com/cloudflare/workers-sdk/commit/fb67a18aa2b4a34c292737591e6d5a3401f8d742) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260331.1 | 1.20260401.1 |
+
+- [#13136](https://github.com/cloudflare/workers-sdk/pull/13136) [`ab44870`](https://github.com/cloudflare/workers-sdk/commit/ab448708ba725b74927aff4d6e3f1f97dc9c2135) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Display build errors for auxiliary workers in multi-worker mode
+
+  Previously, when running `wrangler dev` with multiple `-c` config flags (multi-worker mode), build errors from auxiliary/secondary workers were only logged at debug level, causing Wrangler to silently hang. Build errors from all workers are now displayed at error level so you can see what went wrong and fix it.
+
+- [#12992](https://github.com/cloudflare/workers-sdk/pull/12992) [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87) Thanks [@RiscadoA](https://github.com/RiscadoA)! - Fix remote proxy worker not catching errors thrown by bindings during `wrangler dev`
+
+- [#13238](https://github.com/cloudflare/workers-sdk/pull/13238) [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad) Thanks [@guybedford](https://github.com/guybedford)! - Fix source phase imports in bundled and non-bundled Workers
+
+  Wrangler now preserves `import source` syntax when it runs esbuild, including module format detection and bundled deploy output. This fixes both `--no-bundle` and bundled deployments for Workers that import WebAssembly using source phase imports.
+
+- [#10126](https://github.com/cloudflare/workers-sdk/pull/10126) [`14e72eb`](https://github.com/cloudflare/workers-sdk/commit/14e72eb523a5a2dd6b7d332d81148e46cfae16d7) Thanks [@nekoze1210](https://github.com/nekoze1210)! - fix: Sort D1 migration files to ensure consistent chronological ordering
+
+  `wrangler d1 migrations list` and `wrangler d1 migrations apply` previously returned migration files in an order dependent on the filesystem, which could vary across operating systems. Migration filenames are now sorted alphabetically before being returned, ensuring consistent chronological ordering.
+
+- [#13150](https://github.com/cloudflare/workers-sdk/pull/13150) [`4dc94fd`](https://github.com/cloudflare/workers-sdk/commit/4dc94fd5209d17663fac32ac99f7f20d17f1f07f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Polish Cloudflare Vite plugin installation during autoconfig
+
+  Projects using Vite 6.0.x were rejected by auto-configuration because the minimum supported version was set to 6.1.0 (the `@cloudflare/vite-plugin` peer dependency). The minimum version check is now 6.0.0, and when a project has Vite in the [6.0.0, 6.1.0) range, auto-configuration will automatically upgrade it to the latest 6.x before installing `@cloudflare/vite-plugin`.
+
+- [#13051](https://github.com/cloudflare/workers-sdk/pull/13051) [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use today's date as the default compatibility date
+
+  Previously, when generating a compatibility date for new projects or when no compatibility date was configured, the date was resolved by loading the locally installed `workerd` package via `miniflare`. This approach was unreliable in some package manager environments (notably `pnpm`). The logic now simply uses today's date instead, which is always correct and works reliably across all environments.
+
+- Updated dependencies [[`5d29055`](https://github.com/cloudflare/workers-sdk/commit/5d29055edf482bd51c3728b26594b5e4ac54f0a9), [`fb67a18`](https://github.com/cloudflare/workers-sdk/commit/fb67a18aa2b4a34c292737591e6d5a3401f8d742), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87)]:
+  - miniflare@4.20260401.0
+
+## 4.79.0
+
+### Minor Changes
+
+- [#12868](https://github.com/cloudflare/workers-sdk/pull/12868) [`ffbc268`](https://github.com/cloudflare/workers-sdk/commit/ffbc268520b2c63cbabbdd1c52ff6d8ee64f4ee9) Thanks [@danielgek](https://github.com/danielgek)! - Add `wrangler ai-search` command namespace for managing Cloudflare AI Search instances
+
+  Introduces a CLI surface for the Cloudflare AI Search API (open beta), including:
+
+  - Instance management: `ai-search list`, `create`, `get`, `update`, `delete`
+  - Semantic search: `ai-search search` with repeatable `--filter key=value` flags
+  - Instance stats: `ai-search stats`
+
+  The `create` command uses an interactive wizard to guide configuration. All commands require authentication via `wrangler login`.
+
+- [#13097](https://github.com/cloudflare/workers-sdk/pull/13097) [`cd0e971`](https://github.com/cloudflare/workers-sdk/commit/cd0e971c603ef8e9fccfc7861aa71d4f116fc96b) Thanks [@pombosilva](https://github.com/pombosilva)! - Add `--local` flag to Workflows commands for interacting with local dev
+
+  All Workflows CLI commands now support a `--local` flag that targets a running `wrangler dev` session instead of the Cloudflare production API. This uses the `/cdn-cgi/explorer/api/workflows` endpoints served by the local dev server.
+
+  ```
+  wrangler workflows list --local
+  wrangler workflows trigger my-workflow '{"key":"value"}' --local
+  wrangler workflows instances describe my-workflow latest --local
+  wrangler workflows instances pause my-workflow <id> --local --port 9000
+  ```
+
+  By default, commands continue to hit remote (production). Pass `--local` to opt in, and optionally `--port` to specify a custom dev server port (defaults to 8787).
+
+### Patch Changes
+
+- [#13050](https://github.com/cloudflare/workers-sdk/pull/13050) [`ed20a9b`](https://github.com/cloudflare/workers-sdk/commit/ed20a9bb090b87496328006a02bdc331cf9f7b97) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add minimum and maximum version checks for frameworks during auto-configuration
+
+  When Wrangler automatically configures a project, it now validates the installed version of the detected framework before proceeding:
+
+  - If the version is below the minimum known-good version, the command exits with an error asking the user to upgrade the framework.
+  - If the version is above the maximum known major version, a warning is emitted to let the user know the framework version has not been officially tested with this feature, and the command continues.
+
+- [#13111](https://github.com/cloudflare/workers-sdk/pull/13111) [`f214760`](https://github.com/cloudflare/workers-sdk/commit/f2147605e1081ebdec29e76c4b04e3af503d282e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260317.1 | 1.20260329.1 |
+
+- [#13079](https://github.com/cloudflare/workers-sdk/pull/13079) [`746858a`](https://github.com/cloudflare/workers-sdk/commit/746858a349c6f322e8a222876671b8ceaadd5bc4) Thanks [@penalosa](https://github.com/penalosa)! - Fix `getPlatformProxy` and `unstable_getMiniflareWorkerOptions` crashing when `assets` is configured without a `directory`
+
+  `getPlatformProxy` and `unstable_getMiniflareWorkerOptions` now skip asset setup when the config has an `assets` block but no `directory` — instead of throwing "missing required `directory` property". This happens when an external tool like `@cloudflare/vite-plugin` handles asset serving independently.
+
+- [#13112](https://github.com/cloudflare/workers-sdk/pull/13112) [`9aad27f`](https://github.com/cloudflare/workers-sdk/commit/9aad27f9da34f5723b936b8dcf5c9699c9e1d74c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix autoconfig failing on `waku` projects that use `hono`
+
+  Waku has a tight integration with Hono, causing both to be detected simultaneously and triggering a "multiple frameworks found" error. Hono is now filtered out when Waku is also detected.
+
+- [#13113](https://github.com/cloudflare/workers-sdk/pull/13113) [`1fc5518`](https://github.com/cloudflare/workers-sdk/commit/1fc5518526bc214b193b6818cef7365fe52a2b42) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Skip lock file warning for static projects during autoconfig
+
+  Previously, running autoconfig on a static project (one with no framework detected) would emit a misleading warning about a missing lock file, suggesting the project might be in a workspace. Since static projects don't require a lock file, this warning is now suppressed for them.
+
+- [#13072](https://github.com/cloudflare/workers-sdk/pull/13072) [`b539dc7`](https://github.com/cloudflare/workers-sdk/commit/b539dc79d8aa727018b5b58d43aa62b3e414b636) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - Skip unnecessary `GET /versions?deployable=true` API call in `wrangler versions deploy` when all version IDs are explicitly provided and `--yes` is passed
+
+  When deploying a specific version non-interactively (e.g. `wrangler versions deploy <id> --yes`), Wrangler previously always fetched the full list of deployable versions to populate the interactive selection prompt — even though the prompt is skipped entirely when `--yes` is used and all versions are already specified. The deployable-versions list is now only fetched when actually needed (i.e. when no version IDs are provided, or when running interactively).
+
+- [#13115](https://github.com/cloudflare/workers-sdk/pull/13115) [`2565b1d`](https://github.com/cloudflare/workers-sdk/commit/2565b1d194bb8e9533d58f629ac3f3c2220c472e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve error message when the assets directory path points to a file instead of a directory
+
+  Previously, if the path provided as the assets directory (via `--assets` flag or `assets.directory` config) pointed to an existing file rather than a directory, Wrangler would throw an unhelpful `ENOTDIR` system error when trying to read the `_redirects` file inside it. Now Wrangler detects this condition earlier and throws a clear user error.
+
+- Updated dependencies [[`9eff028`](https://github.com/cloudflare/workers-sdk/commit/9eff0285cb2e5d94b9d0788dceb855119e596707), [`f214760`](https://github.com/cloudflare/workers-sdk/commit/f2147605e1081ebdec29e76c4b04e3af503d282e), [`9282493`](https://github.com/cloudflare/workers-sdk/commit/9282493b11ba07bcadb981c2cfc255e8eb5b9b15), [`a532eea`](https://github.com/cloudflare/workers-sdk/commit/a532eeabfd445e80ce597612da15e3e020ef03c6), [`d4c6158`](https://github.com/cloudflare/workers-sdk/commit/d4c61587094a2a2ceee35acfb3619c95e0a993fe)]:
+  - miniflare@4.20260329.0
+
 ## 4.78.0
 
 ### Minor Changes

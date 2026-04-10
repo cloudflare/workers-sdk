@@ -1,7 +1,6 @@
 import ci from "ci-info";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-/* eslint-disable no-restricted-imports */
 import {
 	afterAll,
 	afterEach,
@@ -9,10 +8,9 @@ import {
 	beforeAll,
 	beforeEach,
 	describe,
-	expect,
+	type ExpectStatic,
 	it,
 } from "vitest";
-/* eslint-enable no-restricted-imports */
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -225,7 +223,11 @@ function generateInitialAssets(workerName: string) {
 	};
 }
 
-async function checkAssets(testCases: AssetTestCase[], deployedUrl: string) {
+async function checkAssets(
+	expect: ExpectStatic,
+	testCases: AssetTestCase[],
+	deployedUrl: string
+) {
 	for (const testCase of testCases) {
 		await waitForLong(
 			async () => {
@@ -288,7 +290,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/index.html",
 				"/[boop].html",
@@ -313,7 +315,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 					redirect: "/%5Bboop%5D",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 
 			// Test 404 handling:
 			// even though 404.html has been uploaded, because not_found_handling is set to "none"
@@ -360,7 +362,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/index.html",
 				"/[boop].html",
@@ -386,7 +388,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 					content: "Hello World!",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 
 			// unlike before, not_found_handling has been set to "404-page" instead of the default "none"
 			// note that with a user worker, the request must be passed back to the asset worker via the ASSET binding
@@ -424,6 +426,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			});
 
 			validateAssetUploadLogs(
+				expect,
 				output,
 				["/404.html", "/index.html", "/[boop].html"],
 				{ includeDebug: true }
@@ -448,7 +451,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 					redirect: "/%5Bboop%5D",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 
 			// Test 404 handling:
 			// even though 404.html has been uploaded, because not_found_handling is set to "none"
@@ -490,7 +493,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/index.html",
 				"/[boop].html",
@@ -512,7 +515,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 					content: "Hello World from User Worker!",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 		});
 
 		it("runs the user Worker ahead of matching assets for matching run_worker_first routes", async ({
@@ -544,7 +547,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
 
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/api/index.html",
 				"/index.html",
@@ -563,7 +566,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 				{ path: "/api/assets/test.html", content: "api/assets/test.html" },
 			];
 
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 		});
 	});
 
@@ -633,7 +636,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			output = await helper.run(
 				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
 			);
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/index.html",
 				"/[boop].html",
@@ -672,7 +675,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 					redirect: "/%5Bboop%5D",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 
 			// Test 404 handling:
 			// even though 404.html has been uploaded, because not_found_handling is set to "none"
@@ -730,7 +733,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			output = await helper.run(
 				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
 			);
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/index.html",
 				"/[boop].html",
@@ -770,7 +773,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 					content: "Hello World!",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 
 			// unlike before, not_found_handling has been set to "404-page"
 			// instead of the default "none"
@@ -828,7 +831,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			output = await helper.run(
 				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
 			);
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/index.html",
 				"/[boop].html",
@@ -864,7 +867,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 					content: "Hello World from User Worker!",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 		});
 	});
 });
@@ -946,7 +949,7 @@ describe.skipIf(skipContainersTest)("containers", () => {
                   this.ctx = ctx;
                 }
 
-                async fetch(_: Request) {
+                async fetch(_request: Request) {
                   if (!this.ctx.container) {
                     return new Response('this.ctx.container not defined', { status: 500 });
                   }

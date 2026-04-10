@@ -3,7 +3,8 @@
 
 import { Hono } from "hono/tiny";
 import mime from "mime";
-import { CoreBindings, CorePaths } from "../core";
+import { CorePaths } from "../core";
+import { fetchFromPeer, getPeerUrlsIfAggregating } from "./aggregation";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import { wrapResponse } from "./common";
 import {
@@ -18,6 +19,7 @@ import {
 	zWorkersKvNamespaceListNamespacesData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
+import openApiSpec from "./openapi.local.json";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {
@@ -46,8 +48,12 @@ import {
 	listWorkflows,
 	sendWorkflowInstanceEvent,
 } from "./resources/workflows";
-import type { BindingIdMap } from "../../plugins/core/types";
+import type {
+	BindingIdMap,
+	ExplorerWorkerOpts,
+} from "../../plugins/core/types";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
+import type { CoreBindings } from "../core";
 import type { LocalExplorerWorker } from "./generated";
 
 export type Env = {
@@ -60,6 +66,8 @@ export type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	// Worker names for this instance, used to filter self from dev registry during aggregation
 	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
+	// Per-worker resource bindings for the /local/workers endpoint
+	[CoreBindings.JSON_EXPLORER_WORKER_OPTS]: ExplorerWorkerOpts;
 };
 
 export type AppBindings = { Bindings: Env };
@@ -88,7 +96,8 @@ app.use("/api/*", async (c, next) => {
 			status: 204,
 			headers: {
 				"Access-Control-Allow-Origin": origin ?? "*",
-				"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+				"Access-Control-Allow-Methods":
+					"GET, POST, PUT, PATCH, DELETE, OPTIONS",
 				"Access-Control-Allow-Headers":
 					"Content-Type, cf-metadata-only, cf-r2-custom-metadata",
 				"Access-Control-Max-Age": "86400",
@@ -155,6 +164,12 @@ app.get("/*", async (c, next) => {
 
 	return c.notFound();
 });
+
+// ============================================================================
+// OpenAPI Spec Endpoint
+// ============================================================================
+
+app.get("/api", (c) => c.json(openApiSpec));
 
 // ============================================================================
 // KV Endpoints
@@ -324,29 +339,53 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 );
 
 // ============================================================================
-// Workers Registry Endpoint
+// Local Workers / Dev Registry Endpoint
 // ============================================================================
 
-app.get("/api/workers", async (c) => {
+app.get("/api/local/workers", async (c) => {
 	const loopback = c.env.MINIFLARE_LOOPBACK;
 	const selfWorkerNames = c.env.LOCAL_EXPLORER_WORKER_NAMES;
-	const selfSet = new Set(selfWorkerNames);
+	const explorerWorkerOpts = c.env.MINIFLARE_EXPLORER_WORKER_OPTS;
 
 	try {
 		const response = await loopback.fetch("http://localhost/core/dev-registry");
 		const registry = await response.json<WorkerRegistry>();
 
-		const workers: LocalExplorerWorker[] = Object.entries(registry).map(
-			([name, def]) => ({
-				host: def.host,
-				isSelf: selfSet.has(name),
-				name,
-				port: def.port,
-				protocol: def.protocol,
+		// Build local workers with their bindings
+		const localWorkers: LocalExplorerWorker[] = selfWorkerNames
+			.filter((name) => registry[name])
+			.map((name) => {
+				const def = registry[name];
+				return {
+					host: def.host,
+					isSelf: true,
+					name,
+					port: def.port,
+					protocol: def.protocol,
+					bindings: explorerWorkerOpts[name],
+				};
+			});
+
+		// Aggregate with peer workers (each peer provides its own workers with bindings)
+		const peerUrls = await getPeerUrlsIfAggregating(c);
+		const peerResults = await Promise.all(
+			peerUrls.map(async (url) => {
+				const peerResponse = await fetchFromPeer(url, "/local/workers");
+				if (!peerResponse?.ok) return [];
+				try {
+					const data = (await peerResponse.json()) as {
+						result?: LocalExplorerWorker[];
+					};
+					// Mark peer workers as not self
+					return (data.result ?? []).map((w) => ({ ...w, isSelf: false }));
+				} catch {
+					return [];
+				}
 			})
 		);
 
-		return c.json(wrapResponse(workers));
+		const allWorkers = [...localWorkers, ...peerResults.flat()];
+		return c.json(wrapResponse(allWorkers));
 	} catch (err) {
 		const message =
 			err instanceof Error ? err.message : "Failed to fetch dev registry";

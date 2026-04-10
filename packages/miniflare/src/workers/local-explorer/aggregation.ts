@@ -71,7 +71,7 @@ export async function fetchFromPeer(
 				Host: "localhost",
 			},
 		});
-		return response;
+		return new Response(response.body, response);
 	} catch {
 		return null;
 	}

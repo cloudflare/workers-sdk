@@ -1,5 +1,9 @@
 import { Button, Dialog } from "@cloudflare/kumo";
-import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	getRouteApi,
+	useRouterState,
+} from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	workersKvNamespaceDeleteKeyValuePair,
@@ -12,11 +16,14 @@ import KVIcon from "../../assets/icons/kv.svg?react";
 import { AddKVForm } from "../../components/AddKVForm";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { KVTable } from "../../components/KVTable";
+import { ResourceError } from "../../components/ResourceError";
 import { SearchForm } from "../../components/SearchForm";
+import { getSelectedWorker } from "../../components/WorkerSelector";
 import type { KVEntry } from "../../api";
 
 export const Route = createFileRoute("/kv/$namespaceId")({
 	component: NamespaceView,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		const keysResponse = await workersKvNamespaceListANamespace_SKeys({
 			path: { namespace_id: params.namespaceId },
@@ -54,6 +61,9 @@ export const Route = createFileRoute("/kv/$namespaceId")({
 			hasMore: !!cursor,
 		};
 	},
+	validateSearch: (search: Record<string, unknown>): { worker?: string } => ({
+		worker: typeof search.worker === "string" ? search.worker : undefined,
+	}),
 });
 
 // Helper functions for optimistic entry state updates
@@ -81,12 +91,17 @@ function NamespaceView() {
 	const { namespaceId } = Route.useParams();
 	const loaderData = Route.useLoaderData();
 	const rootData = rootRoute.useLoaderData();
+	const routerState = useRouterState();
 
-	// Get namespace title (binding name) from root loader data
+	// Get namespace binding name from selected worker's bindings
 	const namespaceTitle = useMemo(() => {
-		const namespace = rootData.kvNamespaces.find((ns) => ns.id === namespaceId);
-		return namespace?.title;
-	}, [rootData.kvNamespaces, namespaceId]);
+		const worker = getSelectedWorker(
+			rootData.workers,
+			routerState.location.searchStr
+		);
+		const binding = worker?.bindings?.kv?.find((ns) => ns.id === namespaceId);
+		return binding?.bindingName;
+	}, [rootData.workers, routerState.location.searchStr, namespaceId]);
 
 	const [entries, setEntries] = useState<KVEntry[]>(loaderData.entries);
 	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);
@@ -372,7 +387,7 @@ function NamespaceView() {
 						{namespaceTitle && namespaceTitle !== namespaceId ? (
 							<>
 								{namespaceTitle}
-								<span className="text-text-secondary">({namespaceId})</span>
+								<span className="text-kumo-subtle">({namespaceId})</span>
 							</>
 						) : (
 							namespaceId
@@ -383,7 +398,7 @@ function NamespaceView() {
 
 			<div className="px-6 py-6">
 				{error && (
-					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
+					<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
 						{error}
 					</div>
 				)}
@@ -394,14 +409,14 @@ function NamespaceView() {
 					disabled={loading}
 				/>
 
-				<hr className="my-4 border-border" />
+				<hr className="my-4 border-kumo-fill" />
 
 				<AddKVForm onAdd={handleAdd} clearSignal={clearAddForm} />
 
 				{loading ? (
-					<div className="p-12 text-center text-text-secondary">Loading...</div>
+					<div className="p-12 text-center text-kumo-subtle">Loading...</div>
 				) : entries.length === 0 ? (
-					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
+					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-kumo-subtle">
 						{prefix ? (
 							<p className="text-sm font-light">{`No keys found matching prefix "${prefix}".`}</p>
 						) : (
@@ -449,7 +464,7 @@ function NamespaceView() {
 							Delete key?
 						</Dialog.Title>
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Description className="mb-2 text-text-secondary">
+						<Dialog.Description className="mb-2 text-kumo-subtle">
 							Are you sure you want to delete &ldquo;{deleteTarget}&rdquo;? This
 							cannot be undone.
 						</Dialog.Description>
@@ -483,7 +498,7 @@ function NamespaceView() {
 							Overwrite key?
 						</Dialog.Title>
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Description className="mb-2 text-text-secondary">
+						<Dialog.Description className="mb-2 text-kumo-subtle">
 							Key &ldquo;{overwriteConfirm?.key}&rdquo; already exists. Do you
 							want to overwrite its value?
 						</Dialog.Description>

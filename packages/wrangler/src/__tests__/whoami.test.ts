@@ -341,9 +341,14 @@ describe("whoami", () => {
 			  - queues:write
 			  - pipelines:write
 			  - secrets_store:write
+			  - artifacts:write
+			  - flagship:read
+			  - flagship:write
 			  - containers:write
 			  - cloudchamber:write
 			  - connectivity:admin
+			  - email_routing:write
+			  - email_sending:write
 
 
 			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
@@ -404,9 +409,14 @@ describe("whoami", () => {
 			  - queues:write
 			  - pipelines:write
 			  - secrets_store:write
+			  - artifacts:write
+			  - flagship:read
+			  - flagship:write
 			  - containers:write
 			  - cloudchamber:write
 			  - connectivity:admin
+			  - email_routing:write
+			  - email_sending:write
 
 
 			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
@@ -513,9 +523,14 @@ describe("whoami", () => {
 			  - queues:write
 			  - pipelines:write
 			  - secrets_store:write
+			  - artifacts:write
+			  - flagship:read
+			  - flagship:write
 			  - containers:write
 			  - cloudchamber:write
 			  - connectivity:admin
+			  - email_routing:write
+			  - email_sending:write
 
 
 			🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"

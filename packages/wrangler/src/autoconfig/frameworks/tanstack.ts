@@ -1,7 +1,6 @@
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { installPackages } from "@cloudflare/cli/packages";
 import { Framework } from "./framework-class";
 import { transformViteConfig } from "./utils/vite-config";
+import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -15,13 +14,10 @@ export class TanstackStart extends Framework {
 		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			await installPackages(packageManager.type, ["@cloudflare/vite-plugin"], {
-				dev: true,
-				startText: "Installing the Cloudflare Vite plugin",
-				doneText: `${brandColor(`installed`)} ${dim(
-					"@cloudflare/vite-plugin"
-				)}`,
+			await installCloudflareVitePlugin({
+				packageManager: packageManager.type,
 				isWorkspaceRoot,
+				projectPath,
 			});
 
 			transformViteConfig(projectPath, { viteEnvironmentName: "ssr" });

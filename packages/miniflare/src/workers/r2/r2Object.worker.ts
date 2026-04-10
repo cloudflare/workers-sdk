@@ -1,5 +1,5 @@
 import { HEX_REGEXP } from "miniflare:zod";
-import {
+import type {
 	ObjectRow,
 	R2HeadResponse,
 	R2HttpFields,

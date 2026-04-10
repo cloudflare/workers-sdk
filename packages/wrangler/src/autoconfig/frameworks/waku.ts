@@ -9,6 +9,7 @@ import { transformFile } from "@cloudflare/codemod";
 import * as recast from "recast";
 import dedent from "ts-dedent";
 import { Framework } from "./framework-class";
+import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -26,16 +27,18 @@ export class Waku extends Framework {
 		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			await installPackages(
-				packageManager.type,
-				["hono", "@cloudflare/vite-plugin"],
-				{
-					dev: true,
-					startText: "Installing additional dependencies",
-					doneText: `${brandColor("installed")}`,
-					isWorkspaceRoot,
-				}
-			);
+			await installPackages(packageManager.type, ["hono"], {
+				dev: true,
+				startText: "Installing hono dependency",
+				doneText: `${brandColor("installed")}`,
+				isWorkspaceRoot,
+			});
+
+			await installCloudflareVitePlugin({
+				packageManager: packageManager.type,
+				projectPath,
+				isWorkspaceRoot,
+			});
 
 			await createWakuServerFile(projectPath);
 			await updateWakuConfig(projectPath);

@@ -1,11 +1,11 @@
 import assert from "node:assert";
 import fs from "node:fs/promises";
 import { type D1Database } from "@cloudflare/workers-types/experimental";
-import { Miniflare, MiniflareOptions } from "miniflare";
-// eslint-disable-next-line no-restricted-imports
-import { beforeEach, expect, onTestFinished, test } from "vitest";
+import { Miniflare } from "miniflare";
+import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import { useDispose, useTmp, utf8Encode } from "../../test-shared";
 import { binding, ctx, getDatabase, opts } from "./test";
+import type { MiniflareOptions } from "miniflare";
 
 export const SCHEMA = (
 	tableColours: string,
@@ -626,7 +626,7 @@ test("dumpSql exports and imports complete database structure and content correc
 	await mirrorDb.exec(dump);
 
 	// Verify that the schema and data in both databases are equal
-	await isDatabaseEqual(originalDb, mirrorDb);
+	await isDatabaseEqual(expect, originalDb, mirrorDb);
 });
 
 /**
@@ -700,7 +700,11 @@ async function fillDummyData(db: D1Database) {
  * It retrieves the schema of both databases, compares the tables, and then
  * checks if the data in each table is identical.
  */
-async function isDatabaseEqual(db: D1Database, db2: D1Database) {
+async function isDatabaseEqual(
+	expect: ExpectStatic,
+	db: D1Database,
+	db2: D1Database
+) {
 	// SQL to select schema excluding internal tables
 	const selectSchemaSQL =
 		"SELECT * FROM sqlite_master WHERE type = 'table' AND (name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%')";
@@ -716,7 +720,10 @@ async function isDatabaseEqual(db: D1Database, db2: D1Database) {
 		const tableName = table.name as string;
 
 		// Escape and ORDER BY to ensure consistent ordering
-		const selectTableSQL = `SELECT * FROM "${tableName.replace(/"/g, '""')}" ORDER BY id ASC`;
+		const selectTableSQL = `SELECT * FROM "${tableName.replace(
+			/"/g,
+			'""'
+		)}" ORDER BY id ASC`;
 
 		const originalData = (await db.prepare(selectTableSQL).all()).results;
 		const mirrorData = (await db2.prepare(selectTableSQL).all()).results;

@@ -1,7 +1,6 @@
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -22,7 +21,7 @@ describe("cloudchamber image", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("cloudchamber registries --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -46,7 +45,9 @@ describe("cloudchamber image", () => {
 		`);
 	});
 
-	it("should create an image registry (no interactivity)", async () => {
+	it("should create an image registry (no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -78,7 +79,9 @@ describe("cloudchamber image", () => {
 		`);
 	});
 
-	it("should create an image registry (no interactivity)", async () => {
+	it("should create an image registry (no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -102,7 +105,9 @@ describe("cloudchamber image", () => {
 		expect(std.out).toMatchInlineSnapshot(`"jwt"`);
 	});
 
-	it("should remove an image registry (no interactivity)", async () => {
+	it("should remove an image registry (no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -120,7 +125,7 @@ describe("cloudchamber image", () => {
 		expect(std.out).toMatchInlineSnapshot(`"{}"`);
 	});
 
-	it("should list registries (no interactivity)", async () => {
+	it("should list registries (no interactivity)", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -172,7 +177,7 @@ describe("cloudchamber image list", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await runWrangler("cloudchamber images list --help");
@@ -196,7 +201,7 @@ describe("cloudchamber image list", () => {
 		`);
 	});
 
-	it("should list images", async () => {
+	it("should list images", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -232,7 +237,7 @@ describe("cloudchamber image list", () => {
 		`);
 	});
 
-	it("should list images with a filter", async () => {
+	it("should list images with a filter", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -264,7 +269,7 @@ describe("cloudchamber image list", () => {
 		`);
 	});
 
-	it("should filter out repos with no non-sha tags", async () => {
+	it("should filter out repos with no non-sha tags", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -302,7 +307,9 @@ describe("cloudchamber image list", () => {
 		`);
 	});
 
-	it("should list repos as valid json with json flag set", async () => {
+	it("should list repos as valid json with json flag set", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -354,7 +361,9 @@ describe("cloudchamber image list", () => {
 		`);
 	});
 
-	it("should filter out repos with no non-sha tags in valid json output", async () => {
+	it("should filter out repos with no non-sha tags in valid json output", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -423,7 +432,7 @@ describe("cloudchamber image delete", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await runWrangler("cloudchamber images delete --help");
@@ -446,7 +455,7 @@ describe("cloudchamber image delete", () => {
 		`);
 	});
 
-	it("should delete images", async () => {
+	it("should delete images", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 
@@ -489,7 +498,7 @@ describe("cloudchamber image delete", () => {
 		);
 	});
 
-	it("should error when provided a repo without a tag", async () => {
+	it("should error when provided a repo without a tag", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 

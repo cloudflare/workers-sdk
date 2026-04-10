@@ -1,5 +1,65 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.14.3
+
+### Patch Changes
+
+- Updated dependencies [[`42c7ef0`](https://github.com/cloudflare/workers-sdk/commit/42c7ef04385094c77f0c2830134fc38b2dc39b02), [`c510494`](https://github.com/cloudflare/workers-sdk/commit/c510494e522927f60fa4915358a881cf73e31a39), [`8b71eca`](https://github.com/cloudflare/workers-sdk/commit/8b71ecae4fed8f0bebf5789f1a617db26c0e4365), [`a42e0e8`](https://github.com/cloudflare/workers-sdk/commit/a42e0e8b52df128513f85025f50eb985bc7f5748), [`7ca6f6e`](https://github.com/cloudflare/workers-sdk/commit/7ca6f6e98ff84e68e901ae35028435f4916ae1c2)]:
+  - miniflare@4.20260409.0
+  - wrangler@4.81.1
+
+## 0.14.2
+
+### Patch Changes
+
+- [#13095](https://github.com/cloudflare/workers-sdk/pull/13095) [`65e6684`](https://github.com/cloudflare/workers-sdk/commit/65e668494affaa6383e27a1c262d628485a7cc5b) Thanks [@penalosa](https://github.com/penalosa)! - Reject V8 coverage provider with a clear error message
+
+  V8 native code coverage (`@vitest/coverage-v8`) requires `node:inspector` to collect profiling data from V8's runtime. workerd only provides `node:inspector` as a non-functional stub, so V8 coverage would silently fail or crash with a confusing `No such module "node:inspector"` error.
+
+  The pool now detects this configuration early — during Vite plugin setup, before Vitest tries to load the coverage provider — and throws a clear error directing users to use Istanbul coverage instead, which works by instrumenting source code at build time and runs on any JavaScript runtime.
+
+- Updated dependencies [[`a3e3b57`](https://github.com/cloudflare/workers-sdk/commit/a3e3b57f2aa47b6655af7baaa784d55117368abc), [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e), [`fa6d84f`](https://github.com/cloudflare/workers-sdk/commit/fa6d84fe4f07143522e4d41a2934c486d1c4b6d1), [`96ee5d4`](https://github.com/cloudflare/workers-sdk/commit/96ee5d465833f4887653078115acea40de2893c0), [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e), [`7a60d4b`](https://github.com/cloudflare/workers-sdk/commit/7a60d4bd33b03a55f687869378dfd06143247239), [`78cbe37`](https://github.com/cloudflare/workers-sdk/commit/78cbe37a3a2ed0c5213fca603f61e3acd4d807e4), [`6fa5dfd`](https://github.com/cloudflare/workers-sdk/commit/6fa5dfddcbad1520db7c3d1bb12233001fe00e45)]:
+  - miniflare@4.20260405.0
+  - wrangler@4.81.0
+
+## 0.14.1
+
+### Patch Changes
+
+- [#13131](https://github.com/cloudflare/workers-sdk/pull/13131) [`65acf66`](https://github.com/cloudflare/workers-sdk/commit/65acf6658efde6eb7ad28f858fef9e656db80385) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use miniflare's `handleStructuredLogs` option instead of `handleRuntimeStdio` for processing workerd output
+
+  Previously, `vitest-pool-workers` manually processed raw stdout/stderr streams from the workerd runtime via `handleRuntimeStdio`, with its own filtering of known noisy messages (e.g. LLVM symbolizer warnings). This switches to miniflare's `handleStructuredLogs` option, which parses workerd's structured JSON log output and automatically filters known unhelpful messages. This aligns with how both `wrangler` and `vite-plugin-cloudflare` handle workerd logs.
+
+- Updated dependencies [[`9c4035b`](https://github.com/cloudflare/workers-sdk/commit/9c4035b6e48418d9bccf9791354f54a083af5108), [`5d29055`](https://github.com/cloudflare/workers-sdk/commit/5d29055edf482bd51c3728b26594b5e4ac54f0a9), [`fb67a18`](https://github.com/cloudflare/workers-sdk/commit/fb67a18aa2b4a34c292737591e6d5a3401f8d742), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`ab44870`](https://github.com/cloudflare/workers-sdk/commit/ab448708ba725b74927aff4d6e3f1f97dc9c2135), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41), [`14e72eb`](https://github.com/cloudflare/workers-sdk/commit/14e72eb523a5a2dd6b7d332d81148e46cfae16d7), [`4dc94fd`](https://github.com/cloudflare/workers-sdk/commit/4dc94fd5209d17663fac32ac99f7f20d17f1f07f), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87)]:
+  - wrangler@4.80.0
+  - miniflare@4.20260401.0
+
+## 0.14.0
+
+### Minor Changes
+
+- [#12858](https://github.com/cloudflare/workers-sdk/pull/12858) [`f05f2da`](https://github.com/cloudflare/workers-sdk/commit/f05f2dac299acd8377954c5816a21c849cb48775) Thanks [@repository](https://github.com/repository)! - Add `disableRetryDelays()` to `WorkflowInstanceModifier` to skip retry backoff delays in tests
+
+  When testing Workflows with retry configurations, the backoff delays between retry attempts of a failing `step.do()` caused real wall-clock waiting (e.g., 35 seconds for 3 retries with 5-second exponential backoff), even when step results were fully mocked. The new `disableRetryDelays()` method eliminates these delays while preserving retry behavior — all attempts still execute, just without waiting between them.
+
+### Patch Changes
+
+- [#13091](https://github.com/cloudflare/workers-sdk/pull/13091) [`6d58f0f`](https://github.com/cloudflare/workers-sdk/commit/6d58f0fc557402821e7602a1174e305a67df3c12) Thanks [@penalosa](https://github.com/penalosa)! - Use today's date for the RTTI compat date query instead of a hardcoded `"2023-12-01"`, so newly added Node.js builtin modules are recognized by the module fallback service.
+
+- [#13070](https://github.com/cloudflare/workers-sdk/pull/13070) [`cdb9c88`](https://github.com/cloudflare/workers-sdk/commit/cdb9c88d11fe7aac0c13ed46c6fd37a8037b7be6) Thanks [@penalosa](https://github.com/penalosa)! - Suppress `CODE_MOVED for unknown code block` log spam from workerd
+
+  These are internal workerd diagnostic messages not relevant to application developers. Miniflare's structured log handler already filters them, but `vitest-pool-workers` uses a custom `handleRuntimeStdio` that bypasses that pipeline. This adds the pattern to the pool's own ignore list.
+
+- [#13069](https://github.com/cloudflare/workers-sdk/pull/13069) [`6d0e329`](https://github.com/cloudflare/workers-sdk/commit/6d0e329cc26b6ac70b30f413168169bc7cc9fff4) Thanks [@penalosa](https://github.com/penalosa)! - fix: suppress `outputGateBroken` stderr noise when testing Workflows
+
+- [#13075](https://github.com/cloudflare/workers-sdk/pull/13075) [`b8df076`](https://github.com/cloudflare/workers-sdk/commit/b8df076a26d73e814b87e7e85bdb850f6e1a1d8c) Thanks [@penalosa](https://github.com/penalosa)! - Support `@voidzero-dev/vite-plus-test` as an alternative to `vitest`
+
+  Users running tests via [Vite+](https://github.com/voidzero-dev/vite-plus) (`@voidzero-dev/vite-plus-test`) with the [recommended pnpm overrides](https://github.com/voidzero-dev/vite-plus/blob/main/packages/test/BUNDLING.md) no longer hit spurious version warnings or `Disallowed operation called within global scope` errors.
+
+- Updated dependencies [[`ffbc268`](https://github.com/cloudflare/workers-sdk/commit/ffbc268520b2c63cbabbdd1c52ff6d8ee64f4ee9), [`9eff028`](https://github.com/cloudflare/workers-sdk/commit/9eff0285cb2e5d94b9d0788dceb855119e596707), [`ed20a9b`](https://github.com/cloudflare/workers-sdk/commit/ed20a9bb090b87496328006a02bdc331cf9f7b97), [`f214760`](https://github.com/cloudflare/workers-sdk/commit/f2147605e1081ebdec29e76c4b04e3af503d282e), [`746858a`](https://github.com/cloudflare/workers-sdk/commit/746858a349c6f322e8a222876671b8ceaadd5bc4), [`9aad27f`](https://github.com/cloudflare/workers-sdk/commit/9aad27f9da34f5723b936b8dcf5c9699c9e1d74c), [`1fc5518`](https://github.com/cloudflare/workers-sdk/commit/1fc5518526bc214b193b6818cef7365fe52a2b42), [`b539dc7`](https://github.com/cloudflare/workers-sdk/commit/b539dc79d8aa727018b5b58d43aa62b3e414b636), [`9282493`](https://github.com/cloudflare/workers-sdk/commit/9282493b11ba07bcadb981c2cfc255e8eb5b9b15), [`a532eea`](https://github.com/cloudflare/workers-sdk/commit/a532eeabfd445e80ce597612da15e3e020ef03c6), [`cd0e971`](https://github.com/cloudflare/workers-sdk/commit/cd0e971c603ef8e9fccfc7861aa71d4f116fc96b), [`d4c6158`](https://github.com/cloudflare/workers-sdk/commit/d4c61587094a2a2ceee35acfb3619c95e0a993fe), [`2565b1d`](https://github.com/cloudflare/workers-sdk/commit/2565b1d194bb8e9533d58f629ac3f3c2220c472e)]:
+  - wrangler@4.79.0
+  - miniflare@4.20260329.0
+
 ## 0.13.5
 
 ### Patch Changes

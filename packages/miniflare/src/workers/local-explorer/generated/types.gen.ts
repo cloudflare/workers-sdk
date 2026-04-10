@@ -71,6 +71,10 @@ export type WorkersObject = {
 	 * ID of the Durable Object.
 	 */
 	readonly id?: string;
+	/**
+	 * Name of the Durable Object instance, if created via idFromName().
+	 */
+	readonly name?: string;
 };
 
 /**
@@ -588,6 +592,111 @@ export type LocalExplorerWorker = {
 	 * Protocol (http or https)
 	 */
 	protocol: string;
+	bindings?: LocalExplorerWorkerBindings;
+};
+
+/**
+ * Resource bindings for a worker
+ */
+export type LocalExplorerWorkerBindings = {
+	/**
+	 * KV namespace bindings
+	 */
+	kv?: Array<LocalExplorerResourceBinding>;
+	/**
+	 * D1 database bindings
+	 */
+	d1?: Array<LocalExplorerResourceBinding>;
+	/**
+	 * R2 bucket bindings
+	 */
+	r2?: Array<LocalExplorerResourceBinding>;
+	/**
+	 * Durable Object bindings
+	 */
+	do?: Array<LocalExplorerDoBinding>;
+	/**
+	 * Workflow bindings
+	 */
+	workflows?: Array<LocalExplorerWorkflowBinding>;
+};
+
+export type LocalExplorerResourceBinding = {
+	/**
+	 * Unique identifier for the resource
+	 */
+	id: string;
+	/**
+	 * Name of the binding in the worker's env
+	 */
+	bindingName: string;
+};
+
+export type LocalExplorerDoBinding = {
+	/**
+	 * Unique identifier (scriptName-className)
+	 */
+	id: string;
+	/**
+	 * Name of the binding in the worker's env
+	 */
+	bindingName: string;
+	/**
+	 * Durable Object class name
+	 */
+	className: string;
+	/**
+	 * Script containing the Durable Object
+	 */
+	scriptName: string;
+	/**
+	 * Whether the Durable Object uses SQLite storage
+	 */
+	useSqlite: boolean;
+};
+
+export type LocalExplorerWorkflowBinding = {
+	/**
+	 * Workflow name
+	 */
+	id: string;
+	/**
+	 * Name of the binding in the worker's env
+	 */
+	bindingName: string;
+	/**
+	 * Workflow entrypoint class name
+	 */
+	className: string;
+	/**
+	 * Script containing the workflow
+	 */
+	scriptName: string;
+};
+
+/**
+ * The name of the workflow.
+ */
+export type WorkflowsWorkflowName = string;
+
+/**
+ * The unique identifier of a workflow instance.
+ */
+export type WorkflowsInstanceId = string;
+
+export type WorkflowsWorkflow = {
+	/**
+	 * The name of the workflow.
+	 */
+	name: string;
+	/**
+	 * The entrypoint class name of the workflow.
+	 */
+	class_name?: string;
+	/**
+	 * The script name containing the workflow.
+	 */
+	script_name?: string;
 };
 
 export type WorkflowsWorkflowDetails = {
@@ -616,31 +725,6 @@ export type WorkflowsWorkflowDetails = {
 		waiting?: number;
 		waitingForPause?: number;
 	};
-};
-
-/**
- * The name of the workflow.
- */
-export type WorkflowsWorkflowName = string;
-
-/**
- * The unique identifier of a workflow instance.
- */
-export type WorkflowsInstanceId = string;
-
-export type WorkflowsWorkflow = {
-	/**
-	 * The name of the workflow.
-	 */
-	name: string;
-	/**
-	 * The entrypoint class name of the workflow.
-	 */
-	class_name?: string;
-	/**
-	 * The script name containing the workflow.
-	 */
-	script_name?: string;
 };
 
 export type WorkflowsInstance = {
@@ -1361,7 +1445,7 @@ export type LocalExplorerListWorkersData = {
 	body?: never;
 	path?: never;
 	query?: never;
-	url: "/workers";
+	url: "/local/workers";
 };
 
 export type LocalExplorerListWorkersErrors = {

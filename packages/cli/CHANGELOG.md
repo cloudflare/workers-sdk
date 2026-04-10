@@ -1,5 +1,21 @@
 # @cloudflare/cli
 
+## 1.4.0
+
+### Minor Changes
+
+- [#13144](https://github.com/cloudflare/workers-sdk/pull/13144) [`db60b94`](https://github.com/cloudflare/workers-sdk/commit/db60b94d9620e7608df3e98876d5df4fde952ecf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add gitignore helpers for appending Wrangler-related entries
+
+  New `maybeAppendWranglerToGitIgnore` and `maybeAppendWranglerToGitIgnoreLikeFile` functions that automatically append Wrangler-related entries (`.wrangler`, `.dev.vars*`, `.env*`, and their negated example patterns) to `.gitignore` or similar ignore files. Existing entries are detected and skipped to avoid duplicates.
+
+## 1.3.0
+
+### Minor Changes
+
+- [#13068](https://github.com/cloudflare/workers-sdk/pull/13068) [`e631a94`](https://github.com/cloudflare/workers-sdk/commit/e631a946466ded834763497d094da9e93d3d3721) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `runCommand` and `quoteShellArgs`, `installPackages` and `installWrangler` utilities to `@cloudflare/cli/command`
+
+  These utilities are now available from `@cloudflare/cli` as dedicated sub-path exports: `runCommand` and `quoteShellArgs` via `@cloudflare/cli/command`, and `installPackages` and `installWrangler` via `@cloudflare/cli/packages`. This makes them reusable across packages in the SDK without duplication.
+
 ## 1.2.1
 
 ### Patch Changes

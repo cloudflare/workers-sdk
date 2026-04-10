@@ -1,5 +1,4 @@
-// eslint-disable-next-line no-restricted-imports
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
 // Import the mocked functions so we can set their behavior
@@ -167,7 +166,7 @@ describe("RemoteRuntimeController", () => {
 	});
 
 	describe("preview token refresh", () => {
-		it("should handle missing state gracefully", async () => {
+		it("should handle missing state gracefully", async ({ expect }) => {
 			const { controller } = setup();
 
 			const expiredEvent: PreviewTokenExpiredEvent = {
@@ -195,7 +194,9 @@ describe("RemoteRuntimeController", () => {
 			});
 		});
 
-		it("should call API with stored config/bundle when refreshing", async () => {
+		it("should call API with stored config/bundle when refreshing", async ({
+			expect,
+		}) => {
 			const { controller, bus } = setup();
 			const config = makeConfig({ name: "my-worker" });
 			const bundle = makeBundle();
@@ -245,7 +246,9 @@ describe("RemoteRuntimeController", () => {
 			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
 		});
 
-		it("should emit reloadComplete event with fresh token when refreshing", async () => {
+		it("should emit reloadComplete event with fresh token when refreshing", async ({
+			expect,
+		}) => {
 			const { controller, bus } = setup();
 			const config = makeConfig();
 			const bundle = makeBundle();

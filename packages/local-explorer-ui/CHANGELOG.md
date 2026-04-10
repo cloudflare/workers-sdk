@@ -1,5 +1,32 @@
 # @cloudflare/local-explorer-ui
 
+## 0.11.0
+
+### Minor Changes
+
+- [#13331](https://github.com/cloudflare/workers-sdk/pull/13331) [`a066e24`](https://github.com/cloudflare/workers-sdk/commit/a066e245ef5357c33609d19797123ec9b6c294f7) Thanks [@NuroDev](https://github.com/NuroDev)! - Add animated Cloudflare logo to local explorer homepage
+
+  The local explorer now displays an animated Cloudflare logo on the homepage,
+  providing a more engaging visual experience when viewing local resources.
+
+- [#13133](https://github.com/cloudflare/workers-sdk/pull/13133) [`42c7ef0`](https://github.com/cloudflare/workers-sdk/commit/42c7ef04385094c77f0c2830134fc38b2dc39b02) Thanks [@emily-shen](https://github.com/emily-shen)! - explorer: list DO instances with name where possible
+
+  Note: The local explorer is a WIP experimental feature.
+
+- [#13336](https://github.com/cloudflare/workers-sdk/pull/13336) [`a42e0e8`](https://github.com/cloudflare/workers-sdk/commit/a42e0e8b52df128513f85025f50eb985bc7f5748) Thanks [@emily-shen](https://github.com/emily-shen)! - local explorer: fix handling on resources that are bound to multiple workers
+
+  Note the local explorer is a experimental feature still.
+
+## 0.10.0
+
+### Minor Changes
+
+- [#13161](https://github.com/cloudflare/workers-sdk/pull/13161) [`f071008`](https://github.com/cloudflare/workers-sdk/commit/f07100810d6d8c00e7d1977f0b760b369b52aed0) Thanks [@NuroDev](https://github.com/NuroDev)! - Overhaul local explorer UI color palette.
+
+  The core styles of the local explorer has been overhauled to remove all custom styles in favour of using Kumo styles / colors when possible.
+
+  This is the first part of improving the local explorer UI to kumo-ify it all.
+
 ## 0.9.0
 
 ### Minor Changes

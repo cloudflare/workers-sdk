@@ -227,9 +227,7 @@ for (const source of imageSource) {
 				);
 			}
 		});
-		it(`will build or pull containers when miniflare starts`, async ({
-			expect,
-		}) => {
+		it(`will build or pull containers when miniflare starts`, async () => {
 			const worker = helper.runLongLived("wrangler dev");
 			await worker.readUntil(/Preparing container/);
 			if (source === "pull") {

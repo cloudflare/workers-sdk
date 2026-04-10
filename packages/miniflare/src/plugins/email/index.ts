@@ -1,14 +1,13 @@
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
-import { Service, Worker_Binding } from "../../runtime";
 import {
 	getUserBindingServiceName,
-	Plugin,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import type { Service, Worker_Binding } from "../../runtime";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 // Define the mutually exclusive schema
 const EmailBindingOptionsSchema = z

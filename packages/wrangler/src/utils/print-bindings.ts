@@ -97,6 +97,7 @@ export function printBindings(
 	);
 	const services = extractBindingsOfType("service", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
+	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
 	const analytics_engine_datasets = extractBindingsOfType(
 		"analytics_engine",
 		bindings
@@ -135,6 +136,7 @@ export function printBindings(
 		"unsafe_hello_world",
 		bindings
 	);
+	const flagship = extractBindingsOfType("flagship", bindings);
 	const media = extractBindingsOfType("media", bindings);
 	const worker_loaders = extractBindingsOfType("worker_loader", bindings);
 
@@ -380,6 +382,22 @@ export function printBindings(
 		);
 	}
 
+	if (vpc_networks.length > 0) {
+		output.push(
+			...vpc_networks.map(({ binding, tunnel_id, network_id, remote }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("vpc_network"),
+					value: tunnel_id ?? network_id,
+					mode: getMode({
+						isSimulatedLocally:
+							remote && !context.remoteBindingsDisabled ? false : undefined,
+					}),
+				};
+			})
+		);
+	}
+
 	if (r2_buckets.length > 0) {
 		output.push(
 			...r2_buckets.map(({ binding, bucket_name, jurisdiction, remote }) => {
@@ -436,6 +454,21 @@ export function printBindings(
 					type: getBindingTypeFriendlyName("unsafe_hello_world"),
 					value: enable_timer ? `Timer enabled` : `Timer disabled`,
 					mode: getMode({ isSimulatedLocally: true }),
+				};
+			})
+		);
+	}
+
+	if (flagship.length > 0) {
+		output.push(
+			...flagship.map(({ binding, app_id, remote }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("flagship"),
+					value: app_id,
+					mode: getMode({
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					}),
 				};
 			})
 		);

@@ -566,9 +566,7 @@ describe("multiworker", () => {
 			);
 		});
 
-		it("should error if multiple pages configs are provided", async ({
-			expect,
-		}) => {
+		it("should error if multiple pages configs are provided", async () => {
 			const pages = helper.runLongLived(
 				`wrangler pages dev -c wrangler.toml -c wrangler.toml`,
 				{ cwd: a }

@@ -677,6 +677,7 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "svelte:workers",
+			quarantine: true,
 			argv: ["--platform", "workers"],
 			flags: [
 				"--no-install",

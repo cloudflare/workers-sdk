@@ -1,10 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { supportedCompatibilityDate } from "miniflare";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -12,13 +11,14 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { ExpectStatic } from "vitest";
 
 async function readNormalizedWranglerToml() {
 	return (await readFile("wrangler.toml", "utf8"))
 		.split("\n")
 		.slice(1)
 		.join("\n")
-		.replace(supportedCompatibilityDate, "LATEST-SUPPORTED");
+		.replace(getTodaysCompatDate(), "LATEST-SUPPORTED");
 }
 function makePagesProject(
 	previewOverride: Record<string, unknown> = {},
@@ -225,7 +225,10 @@ function makePagesProject(
 	};
 }
 
-function mockSupportingDashRequests(expectedAccountId: string) {
+function mockSupportingDashRequests(
+	expect: ExpectStatic,
+	expectedAccountId: string
+) {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/pages/projects/NOT_REAL`,
@@ -333,8 +336,8 @@ describe("pages download config", () => {
 	const MOCK_PROJECT_NAME = "MOCK_PROJECT_NAME";
 	mockAccountId({ accountId: MOCK_ACCOUNT_ID });
 
-	beforeEach(() => {
-		mockSupportingDashRequests(MOCK_ACCOUNT_ID);
+	beforeEach(({ expect }) => {
+		mockSupportingDashRequests(expect, MOCK_ACCOUNT_ID);
 		setIsTTY(true);
 	});
 	afterAll(() => {

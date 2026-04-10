@@ -3,8 +3,7 @@ import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import {
@@ -29,6 +28,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { ExpectStatic } from "vitest";
 
 vi.mock("am-i-vibing");
 vi.mock("../metrics/helpers");
@@ -96,7 +96,7 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should send a request to the default URL", async () => {
+			it("should send a request to the default URL", async ({ expect }) => {
 				const requests = mockMetricRequest();
 
 				const dispatcher = getMetricsDispatcher({
@@ -113,7 +113,9 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should include parsed wrangler version components in events", async () => {
+			it("should include parsed wrangler version components in events", async ({
+				expect,
+			}) => {
 				const requests = mockMetricRequest();
 
 				const dispatcher = getMetricsDispatcher({
@@ -128,7 +130,9 @@ describe("metrics", () => {
 				expect(std.debug).toContain('"wranglerPatchVersion":3');
 			});
 
-			it("should write a debug log if the dispatcher is disabled", async () => {
+			it("should write a debug log if the dispatcher is disabled", async ({
+				expect,
+			}) => {
 				const requests = mockMetricRequest();
 				const dispatcher = getMetricsDispatcher({
 					sendMetrics: false,
@@ -144,7 +148,9 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should write a debug log if the request fails", async () => {
+			it("should write a debug log if the request fails", async ({
+				expect,
+			}) => {
 				msw.use(
 					http.post("*/event", async () => {
 						return HttpResponse.error();
@@ -165,7 +171,9 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should write a warning log if no source key has been provided", async () => {
+			it("should write a warning log if no source key has been provided", async ({
+				expect,
+			}) => {
 				vi.stubEnv("SPARROW_SOURCE_KEY", undefined);
 
 				const requests = mockMetricRequest();
@@ -183,7 +191,7 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should include agent ID when detected", async () => {
+			it("should include agent ID when detected", async ({ expect }) => {
 				vi.mocked(detectAgenticEnvironment).mockReturnValue({
 					isAgentic: true,
 					id: "claude-code",
@@ -202,7 +210,7 @@ describe("metrics", () => {
 				expect(std.debug).toContain('"agent":"claude-code"');
 			});
 
-			it("should set agent to null if detection throws", async () => {
+			it("should set agent to null if detection throws", async ({ expect }) => {
 				vi.mocked(detectAgenticEnvironment).mockImplementation(() => {
 					throw new Error("Detection failed");
 				});
@@ -277,7 +285,7 @@ describe("metrics", () => {
 				delete globalThis.ALGOLIA_PUBLIC_KEY;
 			});
 
-			it("should send a started and completed event", async () => {
+			it("should send a started and completed event", async ({ expect }) => {
 				writeWranglerConfig();
 				const requests = mockMetricRequest();
 
@@ -285,7 +293,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 
-				expectLogToContainPostedData(std.debug, {
+				expectLogToContainPostedData(expect, std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command started",
 					timestamp: 1733961600000,
@@ -296,7 +304,7 @@ describe("metrics", () => {
 					},
 				});
 
-				expectLogToContainPostedData(std.debug, {
+				expectLogToContainPostedData(expect, std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command completed",
 					timestamp: 1733961606000,
@@ -320,7 +328,7 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should send a started and errored event", async () => {
+			it("should send a started and errored event", async ({ expect }) => {
 				writeWranglerConfig();
 				const requests = mockMetricRequest();
 				msw.use(
@@ -340,7 +348,7 @@ describe("metrics", () => {
 				);
 				expect(requests.count).toBe(2);
 
-				expectLogToContainPostedData(std.debug, {
+				expectLogToContainPostedData(expect, std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command started",
 					timestamp: 1733961600000,
@@ -351,7 +359,7 @@ describe("metrics", () => {
 					},
 				});
 
-				expectLogToContainPostedData(std.debug, {
+				expectLogToContainPostedData(expect, std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command errored",
 					timestamp: 1733961606000,
@@ -366,7 +374,7 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should mark isCI as true if running in CI", async () => {
+			it("should mark isCI as true if running in CI", async ({ expect }) => {
 				vi.mocked(ci).isCI = true;
 				const requests = mockMetricRequest();
 
@@ -376,7 +384,9 @@ describe("metrics", () => {
 				expect(std.debug).toContain('isCI":true');
 			});
 
-			it("should mark isPagesCI as true if running in Pages CI", async () => {
+			it("should mark isPagesCI as true if running in Pages CI", async ({
+				expect,
+			}) => {
 				vi.mocked(ci).CLOUDFLARE_PAGES = true;
 				const requests = mockMetricRequest();
 
@@ -386,7 +396,9 @@ describe("metrics", () => {
 				expect(std.debug).toContain('isPagesCI":true');
 			});
 
-			it("should mark isWorkersCI as true if running in Workers CI", async () => {
+			it("should mark isWorkersCI as true if running in Workers CI", async ({
+				expect,
+			}) => {
 				vi.mocked(ci).CLOUDFLARE_WORKERS = true;
 				const requests = mockMetricRequest();
 
@@ -396,7 +408,7 @@ describe("metrics", () => {
 				expect(std.debug).toContain('isWorkersCI":true');
 			});
 
-			it("should capture Workers + Assets projects", async () => {
+			it("should capture Workers + Assets projects", async ({ expect }) => {
 				writeWranglerConfig({ assets: { directory: "./public" } });
 
 				// set up empty static assets directory
@@ -407,7 +419,7 @@ describe("metrics", () => {
 				await runWrangler("docs arg");
 				expect(requests.count).toBe(2);
 
-				expectLogToContainPostedData(std.debug, {
+				expectLogToContainPostedData(expect, std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command started",
 					timestamp: 1733961600000,
@@ -418,7 +430,7 @@ describe("metrics", () => {
 					},
 				});
 
-				expectLogToContainPostedData(std.debug, {
+				expectLogToContainPostedData(expect, std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command completed",
 					timestamp: 1733961606000,
@@ -442,7 +454,9 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should not send arguments with wrangler login", async () => {
+			it("should not send arguments with wrangler login", async ({
+				expect,
+			}) => {
 				const requests = mockMetricRequest();
 
 				await expect(
@@ -456,7 +470,7 @@ describe("metrics", () => {
 				expect(std.debug).toContain('"sanitizedCommand":""');
 			});
 
-			it("should include args provided by the user", async () => {
+			it("should include args provided by the user", async ({ expect }) => {
 				const requests = mockMetricRequest();
 
 				await runWrangler("docs arg --search 'some search term'");
@@ -466,7 +480,9 @@ describe("metrics", () => {
 				expect(std.debug).toContain('argsCombination":"search"');
 			});
 
-			it("should mark as non-interactive if running in non-interactive environment", async () => {
+			it("should mark as non-interactive if running in non-interactive environment", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 				const requests = mockMetricRequest();
 
@@ -476,7 +492,9 @@ describe("metrics", () => {
 				expect(std.debug).toContain('"isInteractive":false,');
 			});
 
-			it("should include an error message if the specific error has been allow-listed with {telemetryMessage:true}", async () => {
+			it("should include an error message if the specific error has been allow-listed with {telemetryMessage:true}", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 				const requests = mockMetricRequest();
 
@@ -489,7 +507,9 @@ describe("metrics", () => {
 				expect(std.debug).toContain('"errorMessage":"yargs validation error"');
 			});
 
-			it("should include an error message if the specific error has been allow-listed with a custom telemetry message", async () => {
+			it("should include an error message if the specific error has been allow-listed with a custom telemetry message", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 				const requests = mockMetricRequest();
 
@@ -502,7 +522,9 @@ describe("metrics", () => {
 				expect(std.debug).toContain('"errorMessage":"yargs validation error"');
 			});
 
-			it("should include agent ID in command events when detected", async () => {
+			it("should include agent ID in command events when detected", async ({
+				expect,
+			}) => {
 				vi.mocked(detectAgenticEnvironment).mockReturnValue({
 					isAgentic: true,
 					id: "cursor-agent",
@@ -523,7 +545,9 @@ describe("metrics", () => {
 				beforeEach(() => {
 					vi.mocked(getWranglerVersion).mockReturnValue("1.2.3");
 				});
-				it("should print the banner if current version is different to the stored version", async () => {
+				it("should print the banner if current version is different to the stored version", async ({
+					expect,
+				}) => {
 					writeMetricsConfig({
 						permission: {
 							enabled: true,
@@ -546,7 +570,9 @@ describe("metrics", () => {
 
 					expect(requests.count).toBe(2);
 				});
-				it("should not print the banner if current version is the same as the stored version", async () => {
+				it("should not print the banner if current version is the same as the stored version", async ({
+					expect,
+				}) => {
 					writeMetricsConfig({
 						permission: {
 							enabled: true,
@@ -561,7 +587,9 @@ describe("metrics", () => {
 					);
 					expect(requests.count).toBe(2);
 				});
-				it("should print the banner if nothing is stored under bannerLastShown and then store the current version", async () => {
+				it("should print the banner if nothing is stored under bannerLastShown and then store the current version", async ({
+					expect,
+				}) => {
 					writeMetricsConfig({
 						permission: {
 							enabled: true,
@@ -582,7 +610,9 @@ describe("metrics", () => {
 					const { permission } = readMetricsConfig();
 					expect(permission?.bannerLastShown).toEqual("1.2.3");
 				});
-				it("should not print the banner if telemetry permission is disabled", async () => {
+				it("should not print the banner if telemetry permission is disabled", async ({
+					expect,
+				}) => {
 					writeMetricsConfig({
 						permission: {
 							enabled: false,
@@ -599,7 +629,9 @@ describe("metrics", () => {
 					expect(permission?.bannerLastShown).toBeUndefined();
 				});
 
-				it("should *not* print the banner if command is not dev/deploy/docs", async () => {
+				it("should *not* print the banner if command is not dev/deploy/docs", async ({
+					expect,
+				}) => {
 					writeMetricsConfig({
 						permission: {
 							enabled: true,
@@ -633,7 +665,9 @@ describe("metrics", () => {
 
 	describe("getMetricsConfig()", () => {
 		describe("enabled", () => {
-			it("should return the WRANGLER_SEND_METRICS environment variable for enabled if it is defined", async () => {
+			it("should return the WRANGLER_SEND_METRICS environment variable for enabled if it is defined", async ({
+				expect,
+			}) => {
 				vi.stubEnv("WRANGLER_SEND_METRICS", "false");
 				expect(await getMetricsConfig({})).toMatchObject({
 					enabled: false,
@@ -644,7 +678,9 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should return the sendMetrics argument for enabled if it is defined", async () => {
+			it("should return the sendMetrics argument for enabled if it is defined", async ({
+				expect,
+			}) => {
 				expect(await getMetricsConfig({ sendMetrics: false })).toMatchObject({
 					enabled: false,
 				});
@@ -653,7 +689,9 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should return enabled true if the user on this device previously agreed to send metrics", async () => {
+			it("should return enabled true if the user on this device previously agreed to send metrics", async ({
+				expect,
+			}) => {
 				writeMetricsConfig({
 					permission: {
 						enabled: true,
@@ -669,7 +707,9 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should return enabled false if the user on this device previously refused to send metrics", async () => {
+			it("should return enabled false if the user on this device previously refused to send metrics", async ({
+				expect,
+			}) => {
 				writeMetricsConfig({
 					permission: {
 						enabled: false,
@@ -685,7 +725,9 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should print a message if the permission date is older than the current metrics date", async () => {
+			it("should print a message if the permission date is older than the current metrics date", async ({
+				expect,
+			}) => {
 				vi.useFakeTimers({
 					toFake: ["setTimeout", "clearTimeout", "Date"],
 				});
@@ -714,7 +756,9 @@ describe("metrics", () => {
 		});
 
 		describe("deviceId", () => {
-			it("should return a deviceId found in the config file", async () => {
+			it("should return a deviceId found in the config file", async ({
+				expect,
+			}) => {
 				writeMetricsConfig({ deviceId: "XXXX-YYYY-ZZZZ" });
 				const { deviceId } = await getMetricsConfig({
 					sendMetrics: true,
@@ -723,7 +767,9 @@ describe("metrics", () => {
 				expect(readMetricsConfig().deviceId).toEqual(deviceId);
 			});
 
-			it("should create and store a new deviceId if none is found in the config file", async () => {
+			it("should create and store a new deviceId if none is found in the config file", async ({
+				expect,
+			}) => {
 				writeMetricsConfig({});
 				const { deviceId } = await getMetricsConfig({
 					sendMetrics: true,
@@ -747,7 +793,9 @@ describe("metrics", () => {
 			vi.useRealTimers();
 		});
 		describe(`${cmd} status`, () => {
-			it("prints the current telemetry status based on the cached metrics config", async () => {
+			it("prints the current telemetry status based on the cached metrics config", async ({
+				expect,
+			}) => {
 				writeMetricsConfig({
 					permission: {
 						enabled: true,
@@ -768,7 +816,9 @@ describe("metrics", () => {
 				expect(std.out).toContain("Status: Disabled");
 			});
 
-			it("shows wrangler.toml as the source with send_metrics is present", async () => {
+			it("shows wrangler.toml as the source with send_metrics is present", async ({
+				expect,
+			}) => {
 				writeMetricsConfig({
 					permission: {
 						enabled: true,
@@ -780,7 +830,9 @@ describe("metrics", () => {
 				expect(std.out).toContain("Status: Disabled (set by wrangler.toml)");
 			});
 
-			it("shows environment variable as the source if used", async () => {
+			it("shows environment variable as the source if used", async ({
+				expect,
+			}) => {
 				writeMetricsConfig({
 					permission: {
 						enabled: true,
@@ -794,13 +846,17 @@ describe("metrics", () => {
 				);
 			});
 
-			it("defaults to enabled if metrics config is not set", async () => {
+			it("defaults to enabled if metrics config is not set", async ({
+				expect,
+			}) => {
 				writeMetricsConfig({});
 				await runWrangler(`${cmd} status`);
 				expect(std.out).toContain("Status: Enabled");
 			});
 
-			it("prioritises environment variable over send_metrics", async () => {
+			it("prioritises environment variable over send_metrics", async ({
+				expect,
+			}) => {
 				writeMetricsConfig({
 					permission: {
 						enabled: true,
@@ -816,7 +872,9 @@ describe("metrics", () => {
 			});
 		});
 
-		it(`disables telemetry when "wrangler ${cmd} disable" is run`, async () => {
+		it(`disables telemetry when "wrangler ${cmd} disable" is run`, async ({
+			expect,
+		}) => {
 			writeMetricsConfig({
 				permission: {
 					enabled: true,
@@ -835,7 +893,9 @@ Wrangler is no longer collecting telemetry about your usage.`);
 			});
 		});
 
-		it(`doesn't send telemetry when running "wrangler ${cmd} disable"`, async () => {
+		it(`doesn't send telemetry when running "wrangler ${cmd} disable"`, async ({
+			expect,
+		}) => {
 			const requests = mockMetricRequest();
 			writeMetricsConfig({
 				permission: {
@@ -848,7 +908,9 @@ Wrangler is no longer collecting telemetry about your usage.`);
 			expect(std.debug).not.toContain("Metrics dispatcher: Posting data");
 		});
 
-		it(`does send telemetry when running "wrangler ${cmd} enable"`, async () => {
+		it(`does send telemetry when running "wrangler ${cmd} enable"`, async ({
+			expect,
+		}) => {
 			const requests = mockMetricRequest();
 			writeMetricsConfig({
 				permission: {
@@ -861,7 +923,9 @@ Wrangler is no longer collecting telemetry about your usage.`);
 			expect(std.debug).toContain("Metrics dispatcher: Posting data");
 		});
 
-		it(`enables telemetry when "wrangler ${cmd} enable" is run`, async () => {
+		it(`enables telemetry when "wrangler ${cmd} enable" is run`, async ({
+			expect,
+		}) => {
 			writeMetricsConfig({
 				permission: {
 					enabled: false,
@@ -880,7 +944,7 @@ Wrangler is now collecting telemetry about your usage. Thank you for helping mak
 			});
 		});
 
-		it("doesn't overwrite c3 telemetry config", async () => {
+		it("doesn't overwrite c3 telemetry config", async ({ expect }) => {
 			writeMetricsConfig({
 				c3permission: {
 					enabled: false,
@@ -925,6 +989,7 @@ function mockMetricRequest() {
  * @param expectedProperties The expected properties
  */
 function expectLogToContainPostedData(
+	expect: ExpectStatic,
 	output: string,
 	expectedProperties: Record<string, unknown>
 ) {

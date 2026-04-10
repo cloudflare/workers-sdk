@@ -209,6 +209,16 @@ const config = {
 
 	// Local-only extensions (not in upstream Cloudflare API)
 	extensions: {
+		addSchemaProperties: {
+			workers_object: {
+				name: {
+					type: "string",
+					description:
+						"Name of the Durable Object instance, if created via idFromName().",
+					readOnly: true,
+				},
+			},
+		},
 		paths: {
 			// R2 object operations (not in public API, uses S3 API in production)
 			// Response shapes match stratus dashboard API
@@ -572,7 +582,7 @@ const config = {
 					tags: ["Durable Objects Namespace"],
 				},
 			},
-			"/workers": {
+			"/local/workers": {
 				get: {
 					description: "List all workers in the local dev registry.",
 					operationId: "local-explorer-list-workers",
@@ -617,6 +627,640 @@ const config = {
 					tags: ["Local Explorer"],
 				},
 			},
+
+			// Workflows endpoints (local-only, not pulling from upstream API)
+			"/workflows": {
+				get: {
+					description:
+						"Returns the workflows configured for local development.",
+					operationId: "workflows-list-workflows",
+					parameters: [],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														items: {
+															$ref: "#/components/schemas/workflows_workflow",
+														},
+														type: "array",
+													},
+													result_info: {
+														properties: {
+															count: {
+																type: "number",
+															},
+														},
+														type: "object",
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "List Workflows response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "List Workflows response failure.",
+						},
+					},
+					summary: "List Workflows",
+					tags: ["Workflows"],
+				},
+			},
+			"/workflows/{workflow_name}": {
+				get: {
+					description:
+						"Returns details of a specific workflow including instance status counts.",
+					operationId: "workflows-get-workflow-details",
+					parameters: [
+						{
+							in: "path",
+							name: "workflow_name",
+							required: true,
+							schema: {
+								$ref: "#/components/schemas/workflows_workflow-name",
+							},
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														$ref: "#/components/schemas/workflows_workflow-details",
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "Get Workflow Details response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Get Workflow Details response failure.",
+						},
+					},
+					summary: "Get Workflow Details",
+					tags: ["Workflows"],
+				},
+				delete: {
+					description:
+						"Deletes all instances of a workflow by removing their persistence files.",
+					operationId: "workflows-delete-workflow",
+					parameters: [
+						{
+							in: "path",
+							name: "workflow_name",
+							required: true,
+							schema: {
+								$ref: "#/components/schemas/workflows_workflow-name",
+							},
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														type: "object",
+														properties: {
+															status: {
+																type: "string",
+															},
+															success: {
+																type: "boolean",
+															},
+														},
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "Delete Workflow response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Delete Workflow response failure.",
+						},
+					},
+					summary: "Delete Workflow (all instances)",
+					tags: ["Workflows"],
+				},
+			},
+			"/workflows/{workflow_name}/instances": {
+				get: {
+					description: "Returns the instances of a workflow.",
+					operationId: "workflows-list-instances",
+					parameters: [
+						{
+							in: "path",
+							name: "workflow_name",
+							required: true,
+							schema: {
+								$ref: "#/components/schemas/workflows_workflow-name",
+							},
+						},
+						{
+							in: "query",
+							name: "page",
+							schema: {
+								default: 1,
+								description: "Page number (1-indexed).",
+								minimum: 1,
+								type: "number",
+							},
+						},
+						{
+							in: "query",
+							name: "per_page",
+							schema: {
+								default: 25,
+								description: "Number of instances per page.",
+								maximum: 100,
+								minimum: 1,
+								type: "number",
+							},
+						},
+						{
+							in: "query",
+							name: "status",
+							schema: {
+								type: "string",
+								enum: [
+									"queued",
+									"running",
+									"paused",
+									"errored",
+									"terminated",
+									"complete",
+									"waitingForPause",
+									"waiting",
+								],
+								description: "Filter instances by status.",
+							},
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														items: {
+															$ref: "#/components/schemas/workflows_instance",
+														},
+														type: "array",
+													},
+													result_info: {
+														properties: {
+															page: {
+																type: "number",
+															},
+															per_page: {
+																type: "number",
+															},
+															total_count: {
+																type: "number",
+															},
+															total_pages: {
+																type: "number",
+															},
+														},
+														type: "object",
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "List Workflow Instances response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "List Workflow Instances response failure.",
+						},
+					},
+					summary: "List Workflow Instances",
+					tags: ["Workflows"],
+				},
+				post: {
+					description: "Creates a new workflow instance.",
+					operationId: "workflows-create-instance",
+					parameters: [
+						{
+							in: "path",
+							name: "workflow_name",
+							required: true,
+							schema: {
+								$ref: "#/components/schemas/workflows_workflow-name",
+							},
+						},
+					],
+					requestBody: {
+						content: {
+							"application/json": {
+								schema: {
+									type: "object",
+									properties: {
+										id: {
+											type: "string",
+											description:
+												"Optional instance ID. If not provided, a UUID is generated.",
+										},
+										params: {
+											description:
+												"Optional JSON payload to pass to the workflow.",
+										},
+									},
+								},
+							},
+						},
+					},
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														type: "object",
+														properties: {
+															id: {
+																type: "string",
+																description:
+																	"The instance ID of the newly created workflow instance.",
+															},
+														},
+														required: ["id"],
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "Create Workflow Instance response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Create Workflow Instance response failure.",
+						},
+					},
+					summary: "Create Workflow Instance",
+					tags: ["Workflows"],
+				},
+			},
+			"/workflows/{workflow_name}/instances/{instance_id}": {
+				get: {
+					description: "Returns the status details of a workflow instance.",
+					operationId: "workflows-get-instance-details",
+					parameters: [
+						{
+							in: "path",
+							name: "workflow_name",
+							required: true,
+							schema: {
+								$ref: "#/components/schemas/workflows_workflow-name",
+							},
+						},
+						{
+							in: "path",
+							name: "instance_id",
+							required: true,
+							schema: {
+								$ref: "#/components/schemas/workflows_instance-id",
+							},
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														$ref: "#/components/schemas/workflows_instance-details",
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "Get Workflow Instance Details response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Get Workflow Instance Details response failure.",
+						},
+					},
+					summary: "Get Workflow Instance Details",
+					tags: ["Workflows"],
+				},
+				delete: {
+					description:
+						"Deletes a workflow instance by removing its persistence files.",
+					operationId: "workflows-delete-instance",
+					parameters: [
+						{
+							in: "path",
+							name: "workflow_name",
+							required: true,
+							schema: {
+								$ref: "#/components/schemas/workflows_workflow-name",
+							},
+						},
+						{
+							in: "path",
+							name: "instance_id",
+							required: true,
+							schema: {
+								$ref: "#/components/schemas/workflows_instance-id",
+							},
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														type: "object",
+														properties: {
+															success: {
+																type: "boolean",
+															},
+														},
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "Delete Workflow Instance response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Delete Workflow Instance response failure.",
+						},
+					},
+					summary: "Delete Workflow Instance",
+					tags: ["Workflows"],
+				},
+			},
+			"/workflows/{workflow_name}/instances/{instance_id}/status": {
+				patch: {
+					description:
+						"Changes the status of a workflow instance (pause, resume, restart, terminate).",
+					operationId: "workflows-change-instance-status",
+					parameters: [
+						{
+							in: "path",
+							name: "workflow_name",
+							required: true,
+							schema: {
+								$ref: "#/components/schemas/workflows_workflow-name",
+							},
+						},
+						{
+							in: "path",
+							name: "instance_id",
+							required: true,
+							schema: {
+								$ref: "#/components/schemas/workflows_instance-id",
+							},
+						},
+					],
+					requestBody: {
+						required: true,
+						content: {
+							"application/json": {
+								schema: {
+									type: "object",
+									required: ["action"],
+									properties: {
+										action: {
+											type: "string",
+											enum: ["pause", "resume", "restart", "terminate"],
+											description:
+												"The action to perform on the workflow instance.",
+										},
+									},
+								},
+							},
+						},
+					},
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														type: "object",
+														properties: {
+															success: {
+																type: "boolean",
+															},
+														},
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "Change Workflow Instance Status response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Change Workflow Instance Status response failure.",
+						},
+					},
+					summary: "Change Workflow Instance Status",
+					tags: ["Workflows"],
+				},
+			},
+			"/workflows/{workflow_name}/instances/{instance_id}/events/{event_type}":
+				{
+					post: {
+						description: "Sends an event to a workflow instance.",
+						operationId: "workflows-send-instance-event",
+						parameters: [
+							{
+								in: "path",
+								name: "workflow_name",
+								required: true,
+								schema: {
+									$ref: "#/components/schemas/workflows_workflow-name",
+								},
+							},
+							{
+								in: "path",
+								name: "instance_id",
+								required: true,
+								schema: {
+									$ref: "#/components/schemas/workflows_instance-id",
+								},
+							},
+							{
+								in: "path",
+								name: "event_type",
+								required: true,
+								schema: {
+									type: "string",
+									description: "The event type to send.",
+								},
+							},
+						],
+						requestBody: {
+							content: {
+								"application/json": {
+									schema: {
+										description: "Optional JSON payload for the event.",
+									},
+								},
+							},
+						},
+						responses: {
+							"200": {
+								content: {
+									"application/json": {
+										schema: {
+											$ref: "#/components/schemas/workers_api-response-common",
+										},
+									},
+								},
+								description: "Send Event response.",
+							},
+							"4XX": {
+								content: {
+									"application/json": {
+										schema: {
+											$ref: "#/components/schemas/workers_api-response-common-failure",
+										},
+									},
+								},
+								description: "Send Event response failure.",
+							},
+						},
+						summary: "Send Event to Workflow Instance",
+						tags: ["Workflows"],
+					},
+				},
 		},
 		schemas: {
 			// R2 schemas - matches stratus dashboard API shapes
@@ -825,7 +1469,241 @@ const config = {
 						type: "string",
 						description: "Protocol (http or https)",
 					},
+					bindings: {
+						$ref: "#/components/schemas/local-explorer_worker-bindings",
+						description: "Resource bindings for this worker",
+					},
 				},
+			},
+			"local-explorer_worker-bindings": {
+				type: "object",
+				description: "Resource bindings for a worker",
+				properties: {
+					kv: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/local-explorer_resource-binding",
+						},
+						description: "KV namespace bindings",
+					},
+					d1: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/local-explorer_resource-binding",
+						},
+						description: "D1 database bindings",
+					},
+					r2: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/local-explorer_resource-binding",
+						},
+						description: "R2 bucket bindings",
+					},
+					do: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/local-explorer_do-binding",
+						},
+						description: "Durable Object bindings",
+					},
+					workflows: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/local-explorer_workflow-binding",
+						},
+						description: "Workflow bindings",
+					},
+				},
+			},
+			"local-explorer_resource-binding": {
+				type: "object",
+				required: ["id", "bindingName"],
+				properties: {
+					id: {
+						type: "string",
+						description: "Unique identifier for the resource",
+					},
+					bindingName: {
+						type: "string",
+						description: "Name of the binding in the worker's env",
+					},
+				},
+			},
+			"local-explorer_do-binding": {
+				type: "object",
+				required: ["id", "bindingName", "className", "scriptName", "useSqlite"],
+				properties: {
+					id: {
+						type: "string",
+						description: "Unique identifier (scriptName-className)",
+					},
+					bindingName: {
+						type: "string",
+						description: "Name of the binding in the worker's env",
+					},
+					className: {
+						type: "string",
+						description: "Durable Object class name",
+					},
+					scriptName: {
+						type: "string",
+						description: "Script containing the Durable Object",
+					},
+					useSqlite: {
+						type: "boolean",
+						description: "Whether the Durable Object uses SQLite storage",
+					},
+				},
+			},
+			"local-explorer_workflow-binding": {
+				type: "object",
+				required: ["id", "bindingName", "className", "scriptName"],
+				properties: {
+					id: {
+						type: "string",
+						description: "Workflow name",
+					},
+					bindingName: {
+						type: "string",
+						description: "Name of the binding in the worker's env",
+					},
+					className: {
+						type: "string",
+						description: "Workflow entrypoint class name",
+					},
+					scriptName: {
+						type: "string",
+						description: "Script containing the workflow",
+					},
+				},
+			},
+
+			// Workflows schemas (local-only, not pulling from upstream API)
+			"workflows_workflow-name": {
+				description: "The name of the workflow.",
+				example: "my-workflow",
+				type: "string",
+			},
+			"workflows_instance-id": {
+				description: "The unique identifier of a workflow instance.",
+				example: "my-instance-id",
+				type: "string",
+			},
+			workflows_workflow: {
+				type: "object",
+				properties: {
+					name: {
+						type: "string",
+						description: "The name of the workflow.",
+					},
+					class_name: {
+						type: "string",
+						description: "The entrypoint class name of the workflow.",
+					},
+					script_name: {
+						type: "string",
+						description: "The script name containing the workflow.",
+					},
+				},
+				required: ["name"],
+			},
+			"workflows_workflow-details": {
+				type: "object",
+				properties: {
+					name: {
+						type: "string",
+						description: "The name of the workflow.",
+					},
+					class_name: {
+						type: "string",
+						description: "The entrypoint class name.",
+					},
+					script_name: {
+						type: "string",
+						description: "The script containing the workflow.",
+					},
+					instances: {
+						type: "object",
+						description: "Instance counts by status.",
+						properties: {
+							complete: { type: "number" },
+							errored: { type: "number" },
+							paused: { type: "number" },
+							queued: { type: "number" },
+							running: { type: "number" },
+							terminated: { type: "number" },
+							waiting: { type: "number" },
+							waitingForPause: { type: "number" },
+						},
+					},
+				},
+				required: ["name", "class_name", "script_name", "instances"],
+			},
+			workflows_instance: {
+				type: "object",
+				properties: {
+					id: {
+						type: "string",
+						description: "The unique identifier of the workflow instance.",
+					},
+					status: {
+						type: "string",
+						enum: [
+							"queued",
+							"running",
+							"paused",
+							"errored",
+							"terminated",
+							"complete",
+							"waitingForPause",
+							"waiting",
+							"unknown",
+						],
+						description: "The current status of the instance.",
+					},
+					created_on: {
+						type: "string",
+						description: "ISO 8601 timestamp of when the instance was created.",
+					},
+				},
+				required: ["id"],
+			},
+			"workflows_instance-details": {
+				type: "object",
+				properties: {
+					id: {
+						type: "string",
+						description: "The unique identifier of the workflow instance.",
+					},
+					status: {
+						type: "string",
+						enum: [
+							"queued",
+							"running",
+							"paused",
+							"errored",
+							"terminated",
+							"complete",
+							"waitingForPause",
+							"waiting",
+							"unknown",
+						],
+						description: "The current status of the instance.",
+					},
+					output: {
+						description: "Output value if the workflow completed successfully.",
+					},
+					error: {
+						type: "object",
+						properties: {
+							name: { type: "string" },
+							message: { type: "string" },
+						},
+						description: "Error details if the workflow errored.",
+					},
+				},
+				required: ["id", "status"],
 			},
 		},
 	},

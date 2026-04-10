@@ -1,5 +1,66 @@
 # @cloudflare/vite-plugin
 
+## 1.31.2
+
+### Patch Changes
+
+- Updated dependencies [[`42c7ef0`](https://github.com/cloudflare/workers-sdk/commit/42c7ef04385094c77f0c2830134fc38b2dc39b02), [`c510494`](https://github.com/cloudflare/workers-sdk/commit/c510494e522927f60fa4915358a881cf73e31a39), [`8b71eca`](https://github.com/cloudflare/workers-sdk/commit/8b71ecae4fed8f0bebf5789f1a617db26c0e4365), [`a42e0e8`](https://github.com/cloudflare/workers-sdk/commit/a42e0e8b52df128513f85025f50eb985bc7f5748), [`7ca6f6e`](https://github.com/cloudflare/workers-sdk/commit/7ca6f6e98ff84e68e901ae35028435f4916ae1c2)]:
+  - miniflare@4.20260409.0
+  - wrangler@4.81.1
+
+## 1.31.1
+
+### Patch Changes
+
+- Updated dependencies [[`a3e3b57`](https://github.com/cloudflare/workers-sdk/commit/a3e3b57f2aa47b6655af7baaa784d55117368abc), [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e), [`fa6d84f`](https://github.com/cloudflare/workers-sdk/commit/fa6d84fe4f07143522e4d41a2934c486d1c4b6d1), [`96ee5d4`](https://github.com/cloudflare/workers-sdk/commit/96ee5d465833f4887653078115acea40de2893c0), [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e), [`7a60d4b`](https://github.com/cloudflare/workers-sdk/commit/7a60d4bd33b03a55f687869378dfd06143247239), [`78cbe37`](https://github.com/cloudflare/workers-sdk/commit/78cbe37a3a2ed0c5213fca603f61e3acd4d807e4), [`6fa5dfd`](https://github.com/cloudflare/workers-sdk/commit/6fa5dfddcbad1520db7c3d1bb12233001fe00e45)]:
+  - miniflare@4.20260405.0
+  - wrangler@4.81.0
+
+## 1.31.0
+
+### Minor Changes
+
+- [#13011](https://github.com/cloudflare/workers-sdk/pull/13011) [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Add experimental headful browser rendering support for local development
+
+  > **Experimental:** This feature may be removed or changed without notice.
+
+  When developing locally with the Browser Rendering API, you can enable headful (visible) mode via the `X_BROWSER_HEADFUL` environment variable to see the browser while debugging:
+
+  ```sh
+  X_BROWSER_HEADFUL=true wrangler dev
+  X_BROWSER_HEADFUL=true vite dev
+  ```
+
+  **Note:** when using `@cloudflare/playwright`, two Chrome windows may appear — the initial blank page and the one created by `browser.newPage()`. This is expected behavior due to how Playwright handles browser contexts via CDP.
+
+- [#13051](https://github.com/cloudflare/workers-sdk/pull/13051) [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update `getLocalWorkerdCompatibilityDate` to return today's date
+
+  The re-exported `getLocalWorkerdCompatibilityDate` function from `@cloudflare/vite-plugin` previously resolved the workerd compatibility date by traversing the local `miniflare` installation, which was unreliable in some package manager setups. It now simply returns today's date. The function is also marked as deprecated — callers should just use today's date instead, for example like so: `new Date().toISOString().slice(0, 10)`
+
+### Patch Changes
+
+- [#13125](https://github.com/cloudflare/workers-sdk/pull/13125) [`f76652c`](https://github.com/cloudflare/workers-sdk/commit/f76652c09453090c7b40da7d916929ec45f3ca8d) Thanks [@kayluhb](https://github.com/kayluhb)! - Fix SyntaxError when SSR-transformed module ends with a single-line comment
+
+  When module code ends with a `//` comment (e.g. `//# sourceMappingURL=...` preserved by vite-plus), the closing `}` of the async wrapper in `runInlinedModule` was absorbed into the comment, causing `SyntaxError: Unexpected end of input`. Adding a newline before the closing brace prevents this.
+
+- [#13188](https://github.com/cloudflare/workers-sdk/pull/13188) [`110002c`](https://github.com/cloudflare/workers-sdk/commit/110002ce0d227a0b411d7749365ea5057a216d67) Thanks [@shulaoda](https://github.com/shulaoda)! - Normalize the return value of `getAssetsDirectory()` with `vite.normalizePath()` to ensure `assets.directory` in the output `wrangler.json` always uses forward slashes
+
+- Updated dependencies [[`9c4035b`](https://github.com/cloudflare/workers-sdk/commit/9c4035b6e48418d9bccf9791354f54a083af5108), [`5d29055`](https://github.com/cloudflare/workers-sdk/commit/5d29055edf482bd51c3728b26594b5e4ac54f0a9), [`fb67a18`](https://github.com/cloudflare/workers-sdk/commit/fb67a18aa2b4a34c292737591e6d5a3401f8d742), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`ab44870`](https://github.com/cloudflare/workers-sdk/commit/ab448708ba725b74927aff4d6e3f1f97dc9c2135), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41), [`14e72eb`](https://github.com/cloudflare/workers-sdk/commit/14e72eb523a5a2dd6b7d332d81148e46cfae16d7), [`4dc94fd`](https://github.com/cloudflare/workers-sdk/commit/4dc94fd5209d17663fac32ac99f7f20d17f1f07f), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87)]:
+  - wrangler@4.80.0
+  - miniflare@4.20260401.0
+
+## 1.30.3
+
+### Patch Changes
+
+- [#13111](https://github.com/cloudflare/workers-sdk/pull/13111) [`f214760`](https://github.com/cloudflare/workers-sdk/commit/f2147605e1081ebdec29e76c4b04e3af503d282e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Add missing `connect` key to `WorkerEntrypoint` and `DurableObject` key lists in the runner worker
+
+  The `connect` method was added to the `WorkerEntrypoint` and `DurableObject` types in workerd 1.20260329.1 but was missing from the `WORKER_ENTRYPOINT_KEYS` and `DURABLE_OBJECT_KEYS` arrays used for RPC property access in the Vite plugin runner worker. This caused the compile-time exhaustiveness check to fail with the updated workers-types.
+
+- Updated dependencies [[`ffbc268`](https://github.com/cloudflare/workers-sdk/commit/ffbc268520b2c63cbabbdd1c52ff6d8ee64f4ee9), [`9eff028`](https://github.com/cloudflare/workers-sdk/commit/9eff0285cb2e5d94b9d0788dceb855119e596707), [`ed20a9b`](https://github.com/cloudflare/workers-sdk/commit/ed20a9bb090b87496328006a02bdc331cf9f7b97), [`f214760`](https://github.com/cloudflare/workers-sdk/commit/f2147605e1081ebdec29e76c4b04e3af503d282e), [`746858a`](https://github.com/cloudflare/workers-sdk/commit/746858a349c6f322e8a222876671b8ceaadd5bc4), [`9aad27f`](https://github.com/cloudflare/workers-sdk/commit/9aad27f9da34f5723b936b8dcf5c9699c9e1d74c), [`1fc5518`](https://github.com/cloudflare/workers-sdk/commit/1fc5518526bc214b193b6818cef7365fe52a2b42), [`b539dc7`](https://github.com/cloudflare/workers-sdk/commit/b539dc79d8aa727018b5b58d43aa62b3e414b636), [`9282493`](https://github.com/cloudflare/workers-sdk/commit/9282493b11ba07bcadb981c2cfc255e8eb5b9b15), [`a532eea`](https://github.com/cloudflare/workers-sdk/commit/a532eeabfd445e80ce597612da15e3e020ef03c6), [`cd0e971`](https://github.com/cloudflare/workers-sdk/commit/cd0e971c603ef8e9fccfc7861aa71d4f116fc96b), [`d4c6158`](https://github.com/cloudflare/workers-sdk/commit/d4c61587094a2a2ceee35acfb3619c95e0a993fe), [`2565b1d`](https://github.com/cloudflare/workers-sdk/commit/2565b1d194bb8e9533d58f629ac3f3c2220c472e)]:
+  - wrangler@4.79.0
+  - miniflare@4.20260329.0
+
 ## 1.30.2
 
 ### Patch Changes

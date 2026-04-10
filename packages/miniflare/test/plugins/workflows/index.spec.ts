@@ -1,8 +1,9 @@
 import * as fs from "node:fs/promises";
 import { scheduler } from "node:timers/promises";
-import { Miniflare, MiniflareOptions } from "miniflare";
+import { Miniflare } from "miniflare";
 import { describe, test } from "vitest";
 import { useDispose, useTmp } from "../../test-shared";
+import type { MiniflareOptions } from "miniflare";
 
 const WORKFLOW_SCRIPT = () => `
 import { WorkflowEntrypoint } from "cloudflare:workers";

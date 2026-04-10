@@ -73,7 +73,7 @@ export function DropTableConfirmationModal({
 							<input
 								autoComplete="off"
 								autoFocus
-								className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm"
+								className="w-full rounded-md border border-kumo-fill bg-transparent px-3 py-2 text-sm"
 								onChange={(e) => setChallengeInput(e.target.value)}
 								value={challengeInput}
 							/>
