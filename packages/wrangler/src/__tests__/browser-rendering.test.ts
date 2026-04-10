@@ -142,7 +142,7 @@ describe("wrangler browser", () => {
 		});
 	});
 
-	describe("live", () => {
+	describe("view", () => {
 		it("should open DevTools for a session with single target (interactive)", async () => {
 			setIsTTY(true);
 			vi.mocked(ci).isCI = false;
