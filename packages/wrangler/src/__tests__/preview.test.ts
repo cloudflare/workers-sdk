@@ -1,9 +1,10 @@
 import * as childProcess from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { stripVTControlCharacters } from "node:util";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-import { afterAll, beforeEach, describe, test, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
+import { clearOutputFilePath } from "../output";
 import { extractConfigBindings, getBranchName } from "../preview/shared";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -14,6 +15,7 @@ import {
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
+import type { OutputEntry } from "../output";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
 vi.mock("node:child_process", async () => {
@@ -37,6 +39,10 @@ describe("wrangler preview", () => {
 	runInTempDir();
 	mockApiToken();
 	mockAccountId();
+	afterEach(() => {
+		clearOutputFilePath();
+	});
+
 	describe("getBranchName", () => {
 		beforeEach(() => {
 			vi.unstubAllEnvs();
@@ -502,6 +508,7 @@ describe("wrangler preview", () => {
 		test("should output preview and deployment JSON with --json", async ({
 			expect,
 		}) => {
+			const outputFile = "./output.json";
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -554,7 +561,10 @@ describe("wrangler preview", () => {
 				)
 			);
 
-			await runWrangler("preview --name test-preview --json");
+			await runWrangler("preview --name test-preview --json", {
+				...process.env,
+				WRANGLER_OUTPUT_FILE_PATH: outputFile,
+			});
 
 			expect(std.out).toContain('"preview"');
 			expect(std.out).toContain('"deployment"');
@@ -562,6 +572,24 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain('"id": "deployment-id-json"');
 			expect(std.out).not.toContain("Preview: test-preview");
 			expect(std.out).not.toContain("Deployment:");
+
+			const outputEntries = readFileSync(outputFile, "utf8")
+				.split("\n")
+				.filter(Boolean)
+				.map((line) => JSON.parse(line)) as OutputEntry[];
+
+			expect(outputEntries).toContainEqual(
+				expect.objectContaining({
+					type: "preview",
+					worker_name: "test-worker",
+					preview_id: "preview-id-json",
+					preview_name: "test-preview",
+					preview_slug: "test-preview",
+					preview_urls: ["https://test-preview.test-worker.cloudflare.app"],
+					deployment_id: "deployment-id-json",
+					deployment_urls: ["https://json123.test-worker.cloudflare.app"],
+				})
+			);
 		});
 
 		test("should build correctly when using a redirected config", async ({

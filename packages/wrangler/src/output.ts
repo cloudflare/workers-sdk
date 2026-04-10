@@ -69,6 +69,7 @@ interface OutputEntryBase<T extends string> {
 export type OutputEntry =
 	| OutputEntrySession
 	| OutputEntryDeployment
+	| OutputEntryPreview
 	| OutputEntryPagesDeployment
 	| OutputEntryVersionUpload
 	| OutputEntryVersionDeployment
@@ -100,6 +101,24 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	worker_name_overridden: boolean;
 	/** wrangler environment used */
 	wrangler_environment: string | undefined;
+}
+
+interface OutputEntryPreview extends OutputEntryBase<"preview"> {
+	version: 1;
+	/** The name of the Worker. */
+	worker_name: string | null;
+	/** The ID of the Preview resource. */
+	preview_id: string;
+	/** The human-readable name of the Preview resource. */
+	preview_name: string;
+	/** The slug of the Preview resource. */
+	preview_slug: string;
+	/** A list of URLs associated with the Preview resource. */
+	preview_urls: string[] | undefined;
+	/** The ID of the Preview deployment resource. */
+	deployment_id: string;
+	/** A list of URLs associated with the Preview deployment. */
+	deployment_urls: string[] | undefined;
 }
 
 interface OutputEntryAutoConfig extends OutputEntryBase<"autoconfig"> {
