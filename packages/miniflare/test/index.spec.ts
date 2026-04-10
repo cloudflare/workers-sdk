@@ -1918,6 +1918,58 @@ test("Miniflare: other /cdn-cgi/ routes", async ({ expect }) => {
 	expect(res.status).toBe(200);
 });
 
+test("Miniflare: blocks non-local Host headers from reaching /cdn-cgi/ routes", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+			export default {
+				fetch() {
+					return new Response("Hello world");
+				}
+			}
+		`,
+		unsafeTriggerHandlers: true,
+	});
+	useDispose(mf);
+
+	const url = await mf.ready;
+	const directUrlStatus = await new Promise<number>((resolve, reject) => {
+		const req = http.get(
+			`${url.origin}/cdn-cgi/foo`,
+			{ setHost: false, headers: { Host: "example.trycloudflare.com" } },
+			(res) => {
+				res.resume();
+				resolve(res.statusCode ?? 0);
+			}
+		);
+		req.on("error", reject);
+	});
+
+	expect(directUrlStatus).toBe(403);
+
+	const originalUrlStatus = await new Promise<number>((resolve, reject) => {
+		const req = http.get(
+			`${url.origin}/foo`,
+			{
+				setHost: false,
+				headers: {
+					Host: "example.trycloudflare.com",
+					"MF-Original-URL": "http://localhost/cdn-cgi/handler/scheduled",
+				},
+			},
+			(res) => {
+				res.resume();
+				resolve(res.statusCode ?? 0);
+			}
+		);
+		req.on("error", reject);
+	});
+
+	expect(originalUrlStatus).toBe(403);
+});
+
 test("Miniflare: listens on ipv6", async ({ expect }) => {
 	const log = new TestLog();
 
