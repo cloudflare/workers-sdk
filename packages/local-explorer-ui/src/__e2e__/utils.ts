@@ -203,10 +203,13 @@ export async function waitForBreadcrumbText(
 	const desktopBreadcrumb = page.locator(
 		'nav[aria-label="breadcrumb"] > .hidden.sm\\:contents'
 	);
-	await desktopBreadcrumb.getByText(text).first().waitFor({
-		state: "visible",
-		timeout: options?.timeout ?? WAIT_OPTIONS.timeout,
-	});
+	await desktopBreadcrumb
+		.getByText(text)
+		.first()
+		.waitFor({
+			state: "visible",
+			timeout: options?.timeout ?? WAIT_OPTIONS.timeout,
+		});
 }
 
 /**
