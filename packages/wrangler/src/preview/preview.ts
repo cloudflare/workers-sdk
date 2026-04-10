@@ -23,6 +23,7 @@ import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { isNavigatorDefined } from "../navigator-user-agent";
+import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import {
 	drawBox,
@@ -844,6 +845,18 @@ export async function handlePreviewCommand(
 		deploymentRequest,
 		{ ignoreDefaults }
 	);
+
+	writeOutput({
+		type: "preview",
+		version: 1,
+		worker_name: workerName,
+		preview_id: preview.id,
+		preview_name: preview.name,
+		preview_slug: preview.slug,
+		preview_urls: preview.urls,
+		deployment_id: deployment.id,
+		deployment_urls: deployment.urls,
+	});
 
 	if (args.json) {
 		logger.log(JSON.stringify({ preview, deployment }, null, 2));
