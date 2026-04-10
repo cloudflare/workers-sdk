@@ -1,4 +1,4 @@
-import { UserError } from "@cloudflare/workers-utils";
+import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -7,6 +7,15 @@ import openInBrowser from "../open-in-browser";
 import { requireAuth } from "../user";
 import { fetchBrowserRendering } from "./utils";
 import type { BrowserSession, BrowserTarget } from "./types";
+
+function throwIfNonInteractive(message: string, json: boolean): void {
+	if (json) {
+		throw new JsonFriendlyFatalError(JSON.stringify({ error: message }));
+	}
+	if (isNonInteractiveOrCI()) {
+		throw new UserError(message);
+	}
+}
 
 /**
  * Find a target by selector. Matches in order:
@@ -131,11 +140,10 @@ export const browserConnectCommand = createCommand({
 				sessionId = sessions[0].sessionId;
 			} else {
 				// Multiple sessions - need to select
-				if (json || isNonInteractiveOrCI()) {
-					throw new UserError(
-						"Multiple sessions found. Provide a session ID explicitly."
-					);
-				}
+				throwIfNonInteractive(
+					"Multiple sessions found. Provide a session ID explicitly.",
+					json
+				);
 				sessionId = await select<string>("Select a session:", {
 					choices: sessions.map((s) => ({
 						title: formatSessionForDisplay(s),
@@ -187,11 +195,10 @@ export const browserConnectCommand = createCommand({
 			selectedTarget = selectableTargets[0];
 		} else {
 			// Multiple targets, need to select
-			if (json || isNonInteractiveOrCI()) {
-				throw new UserError(
-					"Multiple targets found. Use --target <selector> to specify which one."
-				);
-			}
+			throwIfNonInteractive(
+				"Multiple targets found. Use --target <selector> to specify which one.",
+				json
+			);
 			const selectedId = await select<string>(
 				`Multiple targets found. Select a target:`,
 				{

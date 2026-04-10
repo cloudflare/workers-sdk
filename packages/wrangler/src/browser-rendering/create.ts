@@ -81,17 +81,17 @@ export const browserCreateCommand = createCommand({
 			);
 		}
 
-		// Get the first page target, or fall back to the first target
-		const pageTarget =
-			response.targets.find((t) => t.type === "page") ?? response.targets[0];
-
-		// Determine if we should open browser
-		// Default: true for interactive non-JSON mode, false otherwise
-		const shouldOpen = open ?? (!json && !isNonInteractiveOrCI());
-
 		if (json) {
 			logger.json(response);
 		} else {
+			// Get the first page target, or fall back to the first target
+			const pageTarget =
+				response.targets.find((t) => t.type === "page") ?? response.targets[0];
+
+			// Determine if we should open browser
+			// Default: true for interactive mode, false otherwise
+			const shouldOpen = open ?? !isNonInteractiveOrCI();
+
 			logger.log(`Session created: ${response.sessionId}`);
 			if (pageTarget.devtoolsFrontendUrl) {
 				if (shouldOpen) {
