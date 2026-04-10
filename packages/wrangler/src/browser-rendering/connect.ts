@@ -131,23 +131,9 @@ export const browserConnectCommand = createCommand({
 				sessionId = sessions[0].sessionId;
 			} else {
 				// Multiple sessions - need to select
-				if (json) {
-					// In JSON mode with multiple sessions, output all of them
-					logger.json(
-						sessions.map((s) => ({
-							sessionId: s.sessionId,
-							startTime: s.startTime,
-							connectionId: s.connectionId,
-							connectionStartTime: s.connectionStartTime,
-						}))
-					);
-					return;
-				}
-
-				// Interactive selection
-				if (isNonInteractiveOrCI()) {
+				if (json || isNonInteractiveOrCI()) {
 					throw new UserError(
-						"Multiple sessions found. Provide a session ID explicitly or use --json in non-interactive mode."
+						"Multiple sessions found. Provide a session ID explicitly."
 					);
 				}
 				sessionId = await select<string>("Select a session:", {
@@ -201,25 +187,9 @@ export const browserConnectCommand = createCommand({
 			selectedTarget = selectableTargets[0];
 		} else {
 			// Multiple targets, need to select
-			if (json) {
-				// In JSON mode with multiple targets, output all of them
-				logger.json(
-					selectableTargets.map((t) => ({
-						id: t.id,
-						title: t.title,
-						url: t.url,
-						type: t.type,
-						devtoolsUrl: t.devtoolsFrontendUrl,
-						webSocketUrl: t.webSocketDebuggerUrl,
-					}))
-				);
-				return;
-			}
-
-			// Interactive selection
-			if (isNonInteractiveOrCI()) {
+			if (json || isNonInteractiveOrCI()) {
 				throw new UserError(
-					"Multiple targets found. Use --target <selector> or --json in non-interactive mode."
+					"Multiple targets found. Use --target <selector> to specify which one."
 				);
 			}
 			const selectedId = await select<string>(

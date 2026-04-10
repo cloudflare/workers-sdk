@@ -339,7 +339,7 @@ describe("wrangler browser", () => {
 				);
 			});
 
-			it("should output all targets as JSON when multiple exist and no --target specified", async () => {
+			it("should error when multiple targets exist and no --target specified (non-interactive)", async () => {
 				const targets: BrowserTarget[] = [
 					{
 						id: "page-1",
@@ -362,28 +362,11 @@ describe("wrangler browser", () => {
 				];
 				mockGetSessionTargets("session-multi-json", targets);
 
-				await runWrangler("browser connect session-multi-json --json");
-
-				expect(std.out).toMatchInlineSnapshot(`
-					"[
-					    {
-					        "id": "page-1",
-					        "title": "Yahoo",
-					        "url": "https://www.yahoo.com/",
-					        "type": "page",
-					        "devtoolsUrl": "https://live.browser.run/inspector/page-1",
-					        "webSocketUrl": "wss://live.browser.run/page-1"
-					    },
-					    {
-					        "id": "page-2",
-					        "title": "Google",
-					        "url": "https://www.google.com/",
-					        "type": "page",
-					        "devtoolsUrl": "https://live.browser.run/inspector/page-2",
-					        "webSocketUrl": "wss://live.browser.run/page-2"
-					    }
-					]"
-				`);
+				await expect(
+					runWrangler("browser connect session-multi-json --json")
+				).rejects.toThrow(
+					"Multiple targets found. Use --target <selector> to specify which one."
+				);
 			});
 
 			it("should select target by exact id match", async () => {
@@ -654,7 +637,7 @@ describe("wrangler browser", () => {
 				);
 			});
 
-			it("should output all sessions as JSON when multiple exist and --json is used", async () => {
+			it("should error when multiple sessions exist and no session ID provided (non-interactive)", async () => {
 				const sessions: BrowserSession[] = [
 					{
 						sessionId: "session-x",
@@ -669,22 +652,9 @@ describe("wrangler browser", () => {
 				];
 				mockListSessions(sessions);
 
-				await runWrangler("browser connect --json");
-
-				expect(std.out).toMatchInlineSnapshot(`
-					"[
-					    {
-					        "sessionId": "session-x",
-					        "startTime": 1234567890000,
-					        "connectionId": "conn-1",
-					        "connectionStartTime": 1234567880000
-					    },
-					    {
-					        "sessionId": "session-y",
-					        "startTime": 1234567800000
-					    }
-					]"
-				`);
+				await expect(runWrangler("browser connect --json")).rejects.toThrow(
+					"Multiple sessions found. Provide a session ID explicitly."
+				);
 			});
 		});
 	});
