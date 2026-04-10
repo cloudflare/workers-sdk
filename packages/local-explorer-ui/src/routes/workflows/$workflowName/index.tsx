@@ -1,7 +1,6 @@
 import { Button, Dialog, DropdownMenu, Pagination } from "@cloudflare/kumo";
 import {
 	ArrowClockwiseIcon,
-	ArrowsCounterClockwiseIcon,
 	CaretDownIcon,
 	CaretUpDownIcon,
 	CheckCircleIcon,
@@ -41,6 +40,7 @@ import { CreateWorkflowInstanceDialog } from "../../../components/workflows/Crea
 import { timeAgo } from "../../../components/workflows/helpers";
 import { WorkflowStatusBadge } from "../../../components/workflows/StatusBadge";
 import { getAvailableActions } from "../../../components/workflows/types";
+import { withMinimumDelay } from "../../../utils/async";
 import type { WorkflowsInstance } from "../../../api";
 import type { Action } from "../../../components/workflows/types";
 
@@ -499,6 +499,7 @@ function WorkflowInstancesView() {
 			(loaderData.resultInfo.total_count ?? 0) === 0
 	);
 	const [fetching, setFetching] = useState<boolean>(false);
+	const [refreshing, setRefreshing] = useState<boolean>(false);
 	const [page, setPage] = useState<number>(loaderData.resultInfo.page ?? 1);
 	const [perPage, setPerPage] = useState<number>(
 		loaderData.resultInfo.per_page ?? 25
@@ -583,8 +584,10 @@ function WorkflowInstancesView() {
 		[params.workflowName, page, perPage, statusFilter]
 	);
 
-	const handleRefresh = useCallback(() => {
-		void fetchInstances(undefined, undefined, true);
+	const handleRefresh = useCallback(async () => {
+		setRefreshing(true);
+		await withMinimumDelay(fetchInstances(undefined, undefined, true));
+		setRefreshing(false);
 	}, [fetchInstances]);
 
 	// Auto-poll every 10s (quiet refresh — no opacity flash)
@@ -709,11 +712,12 @@ function WorkflowInstancesView() {
 
 				<Button
 					aria-label="Refresh"
-					onClick={() => void fetchInstances()}
+					icon={ArrowClockwiseIcon}
+					loading={refreshing}
+					onClick={() => void handleRefresh()}
 					shape="square"
-				>
-					<ArrowsCounterClockwiseIcon size={14} />
-				</Button>
+					variant="secondary"
+				></Button>
 
 				<DropdownMenu>
 					<DropdownMenu.Trigger
