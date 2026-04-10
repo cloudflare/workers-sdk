@@ -220,11 +220,12 @@ describe("wrangler browser", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
 				    "id": "page-1",
+				    "type": "page",
 				    "title": "Test Page",
 				    "url": "https://example.com",
-				    "type": "page",
-				    "devtoolsUrl": "https://live.browser.run/ui/inspector?wss=abc",
-				    "webSocketUrl": "wss://live.browser.run/api/devtools/abc"
+				    "description": "",
+				    "devtoolsFrontendUrl": "https://live.browser.run/ui/inspector?wss=abc",
+				    "webSocketDebuggerUrl": "wss://live.browser.run/api/devtools/abc"
 				}"
 			`);
 		});
@@ -492,11 +493,12 @@ describe("wrangler browser", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"{
 					    "id": "page-1",
+					    "type": "page",
 					    "title": "Yahoo",
 					    "url": "https://www.yahoo.com/",
-					    "type": "page",
-					    "devtoolsUrl": "https://live.browser.run/inspector/yahoo",
-					    "webSocketUrl": "wss://live.browser.run/yahoo"
+					    "description": "",
+					    "devtoolsFrontendUrl": "https://live.browser.run/inspector/yahoo",
+					    "webSocketDebuggerUrl": "wss://live.browser.run/yahoo"
 					}"
 				`);
 			});
@@ -854,14 +856,17 @@ describe("wrangler browser", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
 				    "sessionId": "json-session-789",
-				    "target": {
-				        "id": "page-1",
-				        "title": "Test Page",
-				        "url": "https://example.com",
-				        "type": "page",
-				        "devtoolsUrl": "https://live.browser.run/inspector/json",
-				        "webSocketUrl": "wss://live.browser.run/json"
-				    }
+				    "targets": [
+				        {
+				            "id": "page-1",
+				            "type": "page",
+				            "title": "Test Page",
+				            "url": "https://example.com",
+				            "description": "",
+				            "devtoolsFrontendUrl": "https://live.browser.run/inspector/json",
+				            "webSocketDebuggerUrl": "wss://live.browser.run/json"
+				        }
+				    ]
 				}"
 			`);
 		});

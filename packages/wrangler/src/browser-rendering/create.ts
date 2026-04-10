@@ -90,17 +90,7 @@ export const browserCreateCommand = createCommand({
 		const shouldOpen = open ?? (!json && !isNonInteractiveOrCI());
 
 		if (json) {
-			logger.json({
-				sessionId: response.sessionId,
-				target: {
-					id: pageTarget.id,
-					title: pageTarget.title,
-					url: pageTarget.url,
-					type: pageTarget.type,
-					devtoolsUrl: pageTarget.devtoolsFrontendUrl,
-					webSocketUrl: pageTarget.webSocketDebuggerUrl,
-				},
-			});
+			logger.json(response);
 		} else {
 			logger.log(`Session created: ${response.sessionId}`);
 			if (pageTarget.devtoolsFrontendUrl) {

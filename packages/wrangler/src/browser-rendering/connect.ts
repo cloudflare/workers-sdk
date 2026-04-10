@@ -214,14 +214,7 @@ export const browserConnectCommand = createCommand({
 		const shouldOpen = open ?? (!json && !isNonInteractiveOrCI());
 
 		if (json) {
-			logger.json({
-				id: selectedTarget.id,
-				title: selectedTarget.title,
-				url: selectedTarget.url,
-				type: selectedTarget.type,
-				devtoolsUrl: selectedTarget.devtoolsFrontendUrl,
-				webSocketUrl: selectedTarget.webSocketDebuggerUrl,
-			});
+			logger.json(selectedTarget);
 		} else if (selectedTarget.devtoolsFrontendUrl) {
 			if (shouldOpen) {
 				logger.log(`Opening DevTools for session "${sessionId}"...`);
