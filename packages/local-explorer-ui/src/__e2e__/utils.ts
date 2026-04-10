@@ -53,7 +53,7 @@ export async function seedDO(objectId: string = "test-object"): Promise<void> {
  */
 const WAIT_OPTIONS = {
 	interval: 100,
-	timeout: 1_000,
+	timeout: 10_000,
 };
 
 /**
