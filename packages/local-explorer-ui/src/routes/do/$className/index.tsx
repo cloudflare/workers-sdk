@@ -1,5 +1,10 @@
-import { Button, Link as KumoLink, Table } from "@cloudflare/kumo";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Button, Label, Link as KumoLink, Table } from "@cloudflare/kumo";
+import {
+	createFileRoute,
+	Link,
+	notFound,
+	useNavigate,
+} from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
 	durableObjectsNamespaceListNamespaces,
@@ -7,10 +12,13 @@ import {
 } from "../../../api";
 import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { NotFound } from "../../../components/NotFound";
+import { ResourceError } from "../../../components/ResourceError";
 import type { WorkersObject } from "../../../api";
 
 export const Route = createFileRoute("/do/$className/")({
 	component: NamespaceView,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		const response = await durableObjectsNamespaceListNamespaces();
 		const namespaces = response.data?.result ?? [];
@@ -21,7 +29,7 @@ export const Route = createFileRoute("/do/$className/")({
 				ns.id === params.className
 		);
 		if (!namespace?.id) {
-			throw new Error(`Durable Object class "${params.className}" not found`);
+			throw notFound();
 		}
 
 		const objectsResponse = await durableObjectsNamespaceListObjects({
@@ -43,12 +51,14 @@ export const Route = createFileRoute("/do/$className/")({
 			objects,
 		};
 	},
+	notFoundComponent: NotFound,
 });
 
 function NamespaceView() {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 	const { namespaceId } = loaderData;
+	const navigate = useNavigate();
 
 	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);
 	const [error, setError] = useState<string | null>(null);
@@ -56,6 +66,7 @@ function NamespaceView() {
 	const [loading, setLoading] = useState<boolean>(false);
 	const [loadingMore, setLoadingMore] = useState<boolean>(false);
 	const [objects, setObjects] = useState<WorkersObject[]>(loaderData.objects);
+	const [openInstanceInput, setOpenInstanceInput] = useState<string>("");
 
 	useEffect((): void => {
 		setObjects(loaderData.objects);
@@ -116,6 +127,22 @@ function NamespaceView() {
 		}
 	}
 
+	function handleOpenInstance(e: React.SyntheticEvent): void {
+		e.preventDefault();
+		const trimmed = openInstanceInput.trim();
+		if (!trimmed) {
+			return;
+		}
+		void navigate({
+			params: {
+				className: params.className,
+				objectId: trimmed,
+			},
+			search: { table: undefined },
+			to: "/do/$className/$objectId",
+		});
+	}
+
 	return (
 		<>
 			<Breadcrumbs
@@ -123,15 +150,40 @@ function NamespaceView() {
 				items={[
 					<span className="flex items-center gap-1.5" key="class-name">
 						{params.className}
-						{namespaceId !== params.className && (
-							<span className="text-kumo-subtle">({namespaceId})</span>
-						)}
 					</span>,
 				]}
 				title="Durable Objects"
 			/>
 
 			<div className="px-6 py-6">
+				<form
+					className="mb-6 flex items-end gap-2"
+					onSubmit={handleOpenInstance}
+				>
+					<div className="max-w-100 flex-1">
+						<Label
+							htmlFor="open-instance"
+							tooltip="Get an instance by its name (i.e. idFromName) or by its ID (Cloudflare-generated 64 digit hex ID)"
+						>
+							View specific DO instance
+						</Label>
+						<input
+							id="open-instance"
+							className="border-border bg-bg text-text ring-border focus:ring-primary mt-1.5 h-9 w-full rounded-lg border px-3 font-mono text-sm ring-1 focus:outline-none"
+							placeholder="Enter instance name or hex ID..."
+							value={openInstanceInput}
+							onChange={(e) => setOpenInstanceInput(e.target.value)}
+						/>
+					</div>
+					<Button
+						type="submit"
+						variant="secondary"
+						disabled={!openInstanceInput.trim()}
+					>
+						Open Studio
+					</Button>
+				</form>
+
 				{error && (
 					<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
 						{error}
@@ -155,6 +207,7 @@ function NamespaceView() {
 							<Table>
 								<Table.Header>
 									<Table.Row>
+										<Table.Head>Name</Table.Head>
 										<Table.Head>Object ID</Table.Head>
 										<Table.Head />
 									</Table.Row>
@@ -163,6 +216,9 @@ function NamespaceView() {
 									{objects.map((obj) => (
 										<Table.Row key={obj.id}>
 											<Table.Cell className="font-mono text-xs">
+												{obj.name ?? "—"}
+											</Table.Cell>
+											<Table.Cell className="text-text-secondary font-mono text-xs">
 												{obj.id}
 											</Table.Cell>
 											<Table.Cell className="text-right">

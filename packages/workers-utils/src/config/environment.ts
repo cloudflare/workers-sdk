@@ -650,6 +650,19 @@ interface EnvironmentInheritable {
 		 */
 		exclude: string[];
 	};
+
+	/**
+	 * Configuration for Worker Previews.
+	 *
+	 * Previews are branches of your Worker's main instance used to test features
+	 * in development outside of production. This block defines the settings
+	 * used when creating Preview deployments via `wrangler preview`.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+	 *
+	 * @inheritable
+	 */
+	previews: PreviewsConfig | undefined;
 }
 
 export type DurableObjectBindings = {
@@ -1337,6 +1350,26 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies Flagship feature flag bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	flagship: {
+		/** The binding name used to refer to the bound Flagship service. */
+		binding: string;
+
+		/** The Flagship app ID to bind to. */
+		app_id: string;
+
+		/** Whether to use the remote Flagship service for flag evaluation in local dev. */
+		remote?: boolean;
+	}[];
+
+	/**
 	 * Specifies rate limit bindings that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -1558,3 +1591,21 @@ export type ContainerEngine =
 			localDocker: DockerConfiguration;
 	  }
 	| string;
+
+/**
+ * Configuration for Worker Previews.
+ *
+ * This defines the settings used when creating Preview deployments.
+ * Previews are branches of your Worker's main instance used to test features
+ * during feature development outside of production.
+ *
+ * The `previews` block contains any intentionally divergent configuration intended solely for Previews, including:
+ * - All non-inheritable properties (environment variables and bindings like KV, D1, R2, etc.)
+ * - Select inheritable properties: `logpush`, `observability`, `limits`
+ *
+ * @inheritable
+ */
+export interface PreviewsConfig
+	extends
+		EnvironmentNonInheritable,
+		Pick<EnvironmentInheritable, "logpush" | "observability" | "limits"> {}

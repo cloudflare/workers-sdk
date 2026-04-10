@@ -1,5 +1,13 @@
 # @cloudflare/workflows-shared
 
+## 0.9.0
+
+### Minor Changes
+
+- [#13351](https://github.com/cloudflare/workers-sdk/pull/13351) [`3788983`](https://github.com/cloudflare/workers-sdk/commit/3788983378793781829798bb10ae710fb452f746) Thanks [@pombosilva](https://github.com/pombosilva)! - Add `step` and `config` properties to the workflow step context
+
+  The callback passed to `step.do()` now receives `ctx.step` (with `name` and `count`) and `ctx.config` (the fully resolved step configuration with defaults merged in), in addition to the existing `ctx.attempt`.
+
 ## 0.8.0
 
 ### Minor Changes

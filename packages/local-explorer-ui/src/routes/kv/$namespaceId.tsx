@@ -1,5 +1,9 @@
 import { Button, Dialog } from "@cloudflare/kumo";
-import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	getRouteApi,
+	useRouterState,
+} from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	workersKvNamespaceDeleteKeyValuePair,
@@ -12,11 +16,14 @@ import KVIcon from "../../assets/icons/kv.svg?react";
 import { AddKVForm } from "../../components/AddKVForm";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { KVTable } from "../../components/KVTable";
+import { ResourceError } from "../../components/ResourceError";
 import { SearchForm } from "../../components/SearchForm";
+import { getSelectedWorker } from "../../components/WorkerSelector";
 import type { KVEntry } from "../../api";
 
 export const Route = createFileRoute("/kv/$namespaceId")({
 	component: NamespaceView,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		const keysResponse = await workersKvNamespaceListANamespace_SKeys({
 			path: { namespace_id: params.namespaceId },
@@ -81,12 +88,17 @@ function NamespaceView() {
 	const { namespaceId } = Route.useParams();
 	const loaderData = Route.useLoaderData();
 	const rootData = rootRoute.useLoaderData();
+	const routerState = useRouterState();
 
-	// Get namespace title (binding name) from root loader data
+	// Get namespace binding name from selected worker's bindings
 	const namespaceTitle = useMemo(() => {
-		const namespace = rootData.kvNamespaces.find((ns) => ns.id === namespaceId);
-		return namespace?.title;
-	}, [rootData.kvNamespaces, namespaceId]);
+		const worker = getSelectedWorker(
+			rootData.workers,
+			routerState.location.searchStr
+		);
+		const binding = worker?.bindings?.kv?.find((ns) => ns.id === namespaceId);
+		return binding?.bindingName;
+	}, [rootData.workers, routerState.location.searchStr, namespaceId]);
 
 	const [entries, setEntries] = useState<KVEntry[]>(loaderData.entries);
 	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);

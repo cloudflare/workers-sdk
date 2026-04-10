@@ -64,7 +64,12 @@ export type StepState = {
 };
 
 export type WorkflowStepContext = {
+	step: {
+		name: string;
+		count: number;
+	};
 	attempt: number;
+	config: ResolvedStepConfig;
 };
 const PAUSE_DATETIME = "PAUSE_DATETIME";
 
@@ -508,7 +513,11 @@ export class Context extends RpcTarget {
 				} else {
 					timeoutTask = timeoutPromise();
 					result = await Promise.race([
-						doWrapperClosure({ attempt: stepState.attemptedCount }),
+						doWrapperClosure({
+							step: { name, count },
+							attempt: stepState.attemptedCount,
+							config: structuredClone(config),
+						}),
 						timeoutTask,
 					]);
 				}

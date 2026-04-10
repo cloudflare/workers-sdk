@@ -34,6 +34,7 @@ import {
 	BROWSER_RENDERING_PLUGIN_NAME,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
+	FLAGSHIP_PLUGIN_NAME,
 	getDirectSocketName,
 	getGlobalServices,
 	getPersistPath,
@@ -117,6 +118,8 @@ import type {
 	Plugin,
 	Plugins,
 	PluginServicesOptions,
+	PluginSharedOptions,
+	PluginWorkerOptions,
 	QueueConsumers,
 	QueueProducers,
 	ReplaceWorkersTypes,
@@ -139,13 +142,14 @@ import type {
 	Worker_Binding,
 	Worker_Module,
 } from "./runtime";
-import type { Log, OptionalZodTypeOf } from "./shared";
+import type { Log } from "./shared";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
 	CacheStorage,
 	D1Database,
 	DurableObjectNamespace,
 	Fetcher,
+	Flags,
 	ImagesBinding,
 	KVNamespace,
 	KVNamespaceListKey,
@@ -182,14 +186,6 @@ function getServerPort(server: http.Server) {
 // ===== `Miniflare` User Options =====
 export type MiniflareOptions = SharedOptions &
 	(WorkerOptions | { workers: WorkerOptions[] });
-
-// ===== `Miniflare` Validated Options =====
-type PluginWorkerOptions = {
-	[Key in keyof Plugins]: z.infer<Plugins[Key]["options"]>;
-};
-type PluginSharedOptions = {
-	[Key in keyof Plugins]: OptionalZodTypeOf<Plugins[Key]["sharedOptions"]>;
-};
 
 function hasMultipleWorkers(opts: unknown): opts is { workers: unknown[] } {
 	return (
@@ -2187,6 +2183,7 @@ export class Miniflare {
 			proxyBindings,
 			durableObjectClassNames,
 			workflowOptions: workflowOptions.size > 0 ? workflowOptions : undefined,
+			allWorkerOpts,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
@@ -2961,6 +2958,9 @@ export class Miniflare {
 		set: (value: string) => Promise<void>;
 	}> {
 		return this.#getProxy(HELLO_WORLD_PLUGIN_NAME, bindingName, workerName);
+	}
+	getFlagshipBinding(bindingName: string, workerName?: string): Promise<Flags> {
+		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName);
 	}
 	getStreamBinding(
 		bindingName: string,

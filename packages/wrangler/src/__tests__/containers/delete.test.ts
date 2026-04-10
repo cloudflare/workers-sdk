@@ -1,12 +1,12 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-cli-output";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { ExpectStatic } from "vitest";
 
 const testContainerID = "6925adea-c4ad-4aa6-bffd-d26783e9afbb";
 
@@ -23,7 +23,7 @@ describe("containers delete", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("containers delete --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -44,7 +44,7 @@ describe("containers delete", () => {
 		`);
 	});
 
-	it("should reject invalid container ID format", async () => {
+	it("should reject invalid container ID format", async ({ expect }) => {
 		setWranglerConfig({});
 		await expect(
 			runWrangler("containers delete invalid-id")
@@ -53,7 +53,7 @@ describe("containers delete", () => {
 		);
 	});
 
-	async function testStatusCode(code: number) {
+	async function testStatusCode(expect: ExpectStatic, code: number) {
 		setWranglerConfig({});
 		msw.use(
 			http.delete(
@@ -83,10 +83,12 @@ describe("containers delete", () => {
 		`);
 	}
 
-	it("should delete container with 400", () => testStatusCode(400));
-	it("should delete container with 404", () => testStatusCode(404));
+	it("should delete container with 400", ({ expect }) =>
+		testStatusCode(expect, 400));
+	it("should delete container with 404", ({ expect }) =>
+		testStatusCode(expect, 404));
 
-	it("should delete container with 500", async () => {
+	it("should delete container with 500", async ({ expect }) => {
 		setWranglerConfig({});
 		msw.use(
 			http.delete(
@@ -117,7 +119,7 @@ describe("containers delete", () => {
 		`);
 	});
 
-	it("should delete container", async () => {
+	it("should delete container", async ({ expect }) => {
 		setWranglerConfig({});
 		msw.use(
 			http.delete(

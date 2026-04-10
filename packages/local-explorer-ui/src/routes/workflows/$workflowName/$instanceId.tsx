@@ -20,7 +20,12 @@ import {
 	StopIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	notFound,
+	useNavigate,
+} from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
 	workflowsChangeInstanceStatus,
@@ -30,6 +35,8 @@ import {
 } from "../../../api";
 import WorkflowsIcon from "../../../assets/icons/workflows.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { NotFound } from "../../../components/NotFound";
+import { ResourceError } from "../../../components/ResourceError";
 import { CopyButton } from "../../../components/workflows/CopyButton";
 import {
 	formatDuration,
@@ -50,21 +57,33 @@ import type {
 
 export const Route = createFileRoute("/workflows/$workflowName/$instanceId")({
 	component: InstanceDetailView,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		const response = await workflowsGetInstanceDetails({
 			path: {
 				instance_id: params.instanceId,
 				workflow_name: params.workflowName,
 			},
+			throwOnError: false,
 		});
+		if (response.response?.status === 404) {
+			throw notFound();
+		}
+
+		if (response.error) {
+			throw new Error(
+				`Failed to fetch workflow instance "${params.instanceId}"`
+			);
+		}
 
 		const details = response.data?.result as InstanceDetails | undefined;
 		if (!details) {
-			throw new Error(`Workflow instance "${params.instanceId}" not found.`);
+			throw notFound();
 		}
 
 		return { details };
 	},
+	notFoundComponent: NotFound,
 });
 
 // ---------------------------------------------------------------------------
@@ -571,6 +590,7 @@ function InstanceDetailView() {
 											void navigate({
 												to: "/workflows/$workflowName",
 												params: { workflowName: params.workflowName },
+												search: (prev) => prev,
 											});
 										})
 										.finally(() => setDeleting(false));

@@ -17,7 +17,7 @@ import {
 	TrashIcon,
 	WarningCircleIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import {
 	memo,
 	useCallback,
@@ -35,6 +35,8 @@ import {
 } from "../../../api";
 import WorkflowsIcon from "../../../assets/icons/workflows.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { NotFound } from "../../../components/NotFound";
+import { ResourceError } from "../../../components/ResourceError";
 import { CreateWorkflowInstanceDialog } from "../../../components/workflows/CreateInstanceDialog";
 import { timeAgo } from "../../../components/workflows/helpers";
 import { WorkflowStatusBadge } from "../../../components/workflows/StatusBadge";
@@ -44,11 +46,22 @@ import type { Action } from "../../../components/workflows/types";
 
 export const Route = createFileRoute("/workflows/$workflowName/")({
 	component: WorkflowInstancesView,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		const response = await workflowsListInstances({
 			path: { workflow_name: params.workflowName },
 			query: { page: 1, per_page: 25 },
+			throwOnError: false,
 		});
+		if (response.response?.status === 404) {
+			throw notFound();
+		}
+
+		if (response.error) {
+			throw new Error(
+				`Failed to list instances for workflow "${params.workflowName}"`
+			);
+		}
 
 		return {
 			instances: response.data?.result ?? [],
@@ -60,6 +73,7 @@ export const Route = createFileRoute("/workflows/$workflowName/")({
 			},
 		};
 	},
+	notFoundComponent: NotFound,
 });
 
 // ---------------------------------------------------------------------------
@@ -287,6 +301,7 @@ const InstanceRow = memo(function InstanceRow({
 				instanceId: instance.id ?? "",
 				workflowName,
 			},
+			search: (prev) => prev,
 		});
 	}
 
