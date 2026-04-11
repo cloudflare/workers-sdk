@@ -4,6 +4,7 @@ import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getMetricsConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
@@ -100,6 +101,7 @@ export interface ConfigBundle {
 	enableContainers: boolean;
 	// Zone to use for the CF-Worker header in outbound fetches
 	zone: string | undefined;
+	sendMetrics: boolean | undefined;
 }
 
 export class WranglerLog extends Log {
@@ -1026,6 +1028,7 @@ export async function buildMiniflareOptions(
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+		telemetry: getMetricsConfig({ sendMetrics: config.sendMetrics }),
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,
 		//  - and one holding the user worker.

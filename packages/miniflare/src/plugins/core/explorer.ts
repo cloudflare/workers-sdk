@@ -27,6 +27,10 @@ export interface ExplorerServicesOptions {
 	hasDurableObjects: boolean;
 	workerNames: string[];
 	explorerWorkerOpts: ExplorerWorkerOpts;
+	telemetry: {
+		enabled: boolean;
+		deviceId?: string;
+	};
 }
 
 /**
@@ -42,6 +46,7 @@ export function getExplorerServices(
 		hasDurableObjects,
 		workerNames,
 		explorerWorkerOpts,
+		telemetry,
 	} = options;
 
 	const explorerBindings: Worker_Binding[] = [
@@ -68,6 +73,10 @@ export function getExplorerServices(
 		{
 			name: CoreBindings.JSON_EXPLORER_WORKER_OPTS,
 			json: JSON.stringify(explorerWorkerOpts),
+		},
+		{
+			name: CoreBindings.JSON_TELEMETRY_CONFIG,
+			json: JSON.stringify(telemetry),
 		},
 	];
 
