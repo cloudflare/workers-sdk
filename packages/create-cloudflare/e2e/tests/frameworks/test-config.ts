@@ -677,7 +677,6 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "svelte:workers",
-			quarantine: true,
 			argv: ["--platform", "workers"],
 			flags: [
 				"--no-install",
@@ -698,6 +697,7 @@ function getExperimentalFrameworkTestConfig(
 				previewArgs: ["--inspector-port=0"],
 				route: "/test",
 				expectedText: "C3_TEST",
+				generateTypes: true,
 			},
 			nodeCompat: false,
 			verifyTypes: false,
