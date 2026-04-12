@@ -260,6 +260,12 @@ export async function verifyPreviewScript(
 		"Expected a preview script is we are verifying the preview in " +
 			projectPath
 	);
+	if (verifyPreview.generateTypes) {
+		await runCommand([packageManager.name, "exec", "wrangler", "types"], {
+			cwd: projectPath,
+		});
+	}
+
 	if (verifyPreview.build) {
 		await runCommand([packageManager.name, "run", "build"], {
 			cwd: projectPath,
