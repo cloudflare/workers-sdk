@@ -1,4 +1,4 @@
-import { Bool, OpenAPIRoute, Str } from "chanfana";
+import { OpenAPIRoute } from "chanfana";
 import { z } from "zod";
 import { type AppContext, Task } from "../types";
 
@@ -8,7 +8,7 @@ export class TaskFetch extends OpenAPIRoute {
 		summary: "Get a single Task by slug",
 		request: {
 			params: z.object({
-				taskSlug: Str({ description: "Task slug" }),
+				taskSlug: z.string().describe("Task slug"),
 			}),
 		},
 		responses: {
@@ -18,7 +18,7 @@ export class TaskFetch extends OpenAPIRoute {
 					"application/json": {
 						schema: z.object({
 							series: z.object({
-								success: Bool(),
+								success: z.boolean(),
 								result: z.object({
 									task: Task,
 								}),
@@ -33,8 +33,8 @@ export class TaskFetch extends OpenAPIRoute {
 					"application/json": {
 						schema: z.object({
 							series: z.object({
-								success: Bool(),
-								error: Str(),
+								success: z.boolean(),
+								error: z.string(),
 							}),
 						}),
 					},

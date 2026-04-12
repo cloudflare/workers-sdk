@@ -6,12 +6,13 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
-		"cf-typegen": "wrangler types"
+		"cf-typegen": "wrangler types",
+		"openapi": "chanfana"
 	},
 	"dependencies": {
-		"chanfana": "^2.6.3",
+		"chanfana": "^3.3.0",
 		"hono": "^4.6.20",
-		"zod": "^3.24.1"
+		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250129.0",
