@@ -169,7 +169,7 @@ function NamespaceView() {
 						</Label>
 						<input
 							id="open-instance"
-							className="bg-bg text-text mt-1.5 h-9 w-full rounded-lg border border-kumo-line px-3 font-mono text-sm focus:ring focus:ring-kumo-ring focus:outline-none"
+							className="bg-bg text-text focus:ring-kumo-ring mt-1.5 h-9 w-full rounded-lg border border-kumo-line px-3 font-mono text-sm focus:ring focus:outline-none"
 							placeholder="Enter instance name or hex ID..."
 							value={openInstanceInput}
 							onChange={(e) => setOpenInstanceInput(e.target.value)}
