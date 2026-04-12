@@ -169,7 +169,9 @@ function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 	return (
 		<div className="space-y-4">
 			{/* Output/Error + Config side by side */}
-			<div className={configContent ? "grid grid-cols-2 gap-4" : ""}>
+			<div
+				className={configContent ? "grid grid-cols-1 gap-4 md:grid-cols-2" : ""}
+			>
 				<StepCodeCard label={leftLabel} content={leftContent} />
 				{configContent && (
 					<StepCodeCard label="Config" content={configContent} />
@@ -259,7 +261,9 @@ function WaitForEventDetails({ step }: { step: StepData }): JSX.Element {
 	return (
 		<div
 			className={
-				hasPayload && hasError ? "grid grid-cols-2 gap-4" : "space-y-4"
+				hasPayload && hasError
+					? "grid grid-cols-1 gap-4 md:grid-cols-2"
+					: "space-y-4"
 			}
 		>
 			{hasPayload && (
