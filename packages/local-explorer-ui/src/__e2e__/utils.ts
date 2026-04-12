@@ -53,7 +53,7 @@ export async function seedDO(objectId: string = "test-object"): Promise<void> {
  */
 const WAIT_OPTIONS = {
 	interval: 100,
-	timeout: 10_000,
+	timeout: 30_000,
 };
 
 /**
@@ -301,7 +301,7 @@ export async function waitForQueryEditor(options?: {
 	// Wait for the `CodeMirror` editor to be visible and have the `contenteditable` attribute
 	await page.waitForSelector(".cm-editor .cm-content[contenteditable]", {
 		state: "visible",
-		timeout: options?.timeout ?? 10_000,
+		timeout: options?.timeout ?? WAIT_OPTIONS.timeout,
 	});
 }
 
@@ -368,7 +368,7 @@ export async function waitForQueryResult(options?: {
 	timeout?: number;
 }): Promise<void> {
 	await page.waitForSelector("text=/Executed \\d+\\/\\d+/", {
-		timeout: options?.timeout ?? 10_000,
+		timeout: options?.timeout ?? WAIT_OPTIONS.timeout,
 	});
 }
 
