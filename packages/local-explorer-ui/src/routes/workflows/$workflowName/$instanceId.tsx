@@ -117,20 +117,22 @@ const StatsStrip = memo(function StatsStrip({
 	end?: string;
 }) {
 	return (
-		<div className="grid grid-cols-3 overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
-			<div className="flex items-center justify-between px-5 py-2">
-				<span className="text-base text-kumo-subtle">Status</span>
+		<div className="grid grid-cols-1 overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base md:grid-cols-3">
+			<div className="flex items-center justify-between px-3 py-2 md:px-5">
+				<span className="text-sm text-kumo-subtle md:text-base">Status</span>
 				<WorkflowStatusBadge status={status} />
 			</div>
-			<div className="flex items-center justify-between border-l border-kumo-fill px-5 py-2">
-				<span className="text-base text-kumo-subtle">Steps Completed</span>
-				<span className="text-base font-medium text-kumo-default">
+			<div className="flex items-center justify-between border-t border-kumo-fill px-3 py-2 md:border-t-0 md:border-l md:px-5">
+				<span className="text-sm text-kumo-subtle md:text-base">
+					Steps Completed
+				</span>
+				<span className="text-sm font-medium text-kumo-default md:text-base">
 					{stepCount}
 				</span>
 			</div>
-			<div className="flex items-center justify-between border-l border-kumo-fill px-5 py-2">
-				<span className="text-base text-kumo-subtle">Duration</span>
-				<span className="text-base font-medium text-kumo-default">
+			<div className="flex items-center justify-between border-t border-kumo-fill px-3 py-2 md:border-t-0 md:border-l md:px-5">
+				<span className="text-sm text-kumo-subtle md:text-base">Duration</span>
+				<span className="text-sm font-medium text-kumo-default md:text-base">
 					{formatDuration(start, end)}
 				</span>
 			</div>
@@ -147,20 +149,19 @@ const ParamsOutput = memo(function ParamsOutput({
 }) {
 	return (
 		<div className="overflow-hidden rounded-xl border border-kumo-fill bg-kumo-tint">
-			<div className="grid grid-cols-2 divide-x divide-kumo-fill">
-				{/* Input params header */}
+			{/* Desktop: side-by-side headers */}
+			<div className="hidden md:grid md:grid-cols-2 md:divide-x md:divide-kumo-fill">
 				<div className="px-4 py-2.5">
 					<span className="text-sm font-medium text-kumo-default">
 						Input params
 					</span>
 				</div>
-				{/* Output header */}
 				<div className="px-4 py-2.5">
 					<span className="text-sm font-medium text-kumo-default">Output</span>
 				</div>
 			</div>
-			{/* Content with rounded top corners to create the LayerCard effect */}
-			<div className="rounded-t-lg border-t border-kumo-fill bg-kumo-base">
+			{/* Desktop: side-by-side content */}
+			<div className="hidden rounded-t-lg border-t border-kumo-fill bg-kumo-base md:block">
 				<div className="grid grid-cols-2 divide-x divide-kumo-fill">
 					<div className="relative">
 						<ScrollableCodeBlock content={formatJson(params)} />
@@ -168,6 +169,33 @@ const ParamsOutput = memo(function ParamsOutput({
 							<CopyButton text={formatJson(params)} label="Copy params" />
 						</div>
 					</div>
+					<div className="relative">
+						<ScrollableCodeBlock content={formatJson(output)} />
+						<div className="absolute top-1.5 right-1.5">
+							<CopyButton text={formatJson(output)} label="Copy output" />
+						</div>
+					</div>
+				</div>
+			</div>
+			{/* Mobile: stacked layout */}
+			<div className="md:hidden">
+				<div className="px-4 py-2.5">
+					<span className="text-sm font-medium text-kumo-default">
+						Input params
+					</span>
+				</div>
+				<div className="rounded-t-lg border-t border-kumo-fill bg-kumo-base">
+					<div className="relative">
+						<ScrollableCodeBlock content={formatJson(params)} />
+						<div className="absolute top-1.5 right-1.5">
+							<CopyButton text={formatJson(params)} label="Copy params" />
+						</div>
+					</div>
+				</div>
+				<div className="border-t border-kumo-fill px-4 py-2.5">
+					<span className="text-sm font-medium text-kumo-default">Output</span>
+				</div>
+				<div className="border-t border-kumo-fill bg-kumo-base">
 					<div className="relative">
 						<ScrollableCodeBlock content={formatJson(output)} />
 						<div className="absolute top-1.5 right-1.5">
@@ -247,14 +275,14 @@ const StepHistory = memo(function StepHistory({
 
 			{/* Search + Filter controls */}
 			{stepList.length > 0 && (
-				<div className="mb-3 flex items-center gap-2">
+				<div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
 					<div className="relative flex-1">
 						<MagnifyingGlassIcon
 							size={14}
 							className="absolute top-1/2 left-3 -translate-y-1/2 text-kumo-subtle"
 						/>
 						<input
-							className="h-9 w-full rounded-lg border border-kumo-fill bg-kumo-base pr-3 pl-9 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+							className="focus-visible:ring-kumo-ring h-9 w-full rounded-lg border border-kumo-fill bg-kumo-base pr-3 pl-9 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 							onChange={(e) => setSearch(e.target.value)}
 							placeholder="Search steps..."
 							type="text"
@@ -264,7 +292,7 @@ const StepHistory = memo(function StepHistory({
 					<DropdownMenu>
 						<DropdownMenu.Trigger
 							render={
-								<button className="inline-flex h-9 w-44 cursor-pointer items-center justify-between rounded-lg border border-kumo-fill bg-kumo-base px-3 text-sm text-kumo-default transition-colors hover:bg-kumo-fill">
+								<button className="inline-flex h-9 w-full cursor-pointer items-center justify-between rounded-lg border border-kumo-fill bg-kumo-base px-3 text-sm text-kumo-default transition-colors hover:bg-kumo-fill sm:w-44">
 									<span className="flex items-center gap-2">
 										<ActiveIcon size={14} className="text-kumo-subtle" />
 										{activeFilter.label}
@@ -293,20 +321,22 @@ const StepHistory = memo(function StepHistory({
 				</div>
 			)}
 
-			<div className="overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
-				{stepList.length === 0 ? (
-					<div className="px-4 py-8 text-center text-sm text-kumo-subtle">
-						No steps recorded yet
-					</div>
-				) : filtered.length === 0 ? (
-					<div className="px-4 py-8 text-center text-sm text-kumo-subtle">
-						No steps match your search
-					</div>
-				) : (
-					filtered.map((step, i) => (
-						<StepRow key={`${step.name}-${i}`} step={step} />
-					))
-				)}
+			<div className="overflow-x-auto rounded-lg border border-kumo-fill bg-kumo-base">
+				<div className="min-w-150">
+					{stepList.length === 0 ? (
+						<div className="px-4 py-8 text-center text-sm text-kumo-subtle">
+							No steps recorded yet
+						</div>
+					) : filtered.length === 0 ? (
+						<div className="px-4 py-8 text-center text-sm text-kumo-subtle">
+							No steps match your search
+						</div>
+					) : (
+						filtered.map((step, i) => (
+							<StepRow key={`${step.name}-${i}`} step={step} />
+						))
+					)}
+				</div>
 			</div>
 		</div>
 	);
@@ -424,16 +454,19 @@ function InstanceDetailView() {
 
 			<div className="flex-1 overflow-auto">
 				{/* Header */}
-				<div className="px-32 pt-6">
+				<div className="px-4 pt-6 sm:px-6 lg:px-12 xl:px-20 2xl:px-32">
 					<div>
-						<header className="flex items-center justify-between pb-6">
-							<div className="flex items-center gap-3">
-								<h1 className="text-2xl font-semibold text-kumo-default">
+						<header className="flex flex-wrap items-center justify-between gap-2 pb-6 sm:gap-3">
+							<div className="flex min-w-0 items-center gap-2 sm:gap-3">
+								<h1 className="shrink-0 text-xl font-semibold text-kumo-default sm:text-2xl">
 									{params.workflowName}
 								</h1>
-								<Tooltip content={copied ? "Copied!" : "Copy instance ID"}>
+								<Tooltip
+									content={copied ? "Copied!" : "Copy instance ID"}
+									asChild
+								>
 									<button
-										className={`cursor-pointer font-mono text-2xl transition-colors ${copied ? "text-kumo-default" : "text-kumo-subtle hover:text-kumo-default"}`}
+										className={`min-w-0 cursor-pointer truncate font-mono text-base transition-colors sm:text-2xl ${copied ? "text-kumo-default" : "text-kumo-subtle hover:text-kumo-default"}`}
 										onClick={() => {
 											void navigator.clipboard.writeText(instanceId);
 											setCopied(true);
@@ -446,7 +479,7 @@ function InstanceDetailView() {
 								<StatusIcon status={status} />
 							</div>
 
-							<div className="flex shrink-0 items-center gap-2">
+							<div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
 								{availableActions.map((action) => {
 									const Icon = ACTION_ICONS[action];
 									const isTerminate = action === "terminate";
@@ -499,7 +532,7 @@ function InstanceDetailView() {
 				{/* Stats strip overlapping the divider line */}
 				<div className="relative">
 					<hr className="absolute top-1/2 w-full border-kumo-fill" />
-					<div className="relative px-32">
+					<div className="relative px-4 sm:px-6 lg:px-12 xl:px-20 2xl:px-32">
 						<StatsStrip
 							status={status}
 							stepCount={steps.length}
@@ -593,7 +626,7 @@ function InstanceDetailView() {
 									Event Type
 								</label>
 								<input
-									className="w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+									className="focus-visible:ring-kumo-ring w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 									onChange={(e) => setEventType(e.target.value)}
 									placeholder="my-event"
 									type="text"
@@ -608,7 +641,7 @@ function InstanceDetailView() {
 									</span>
 								</label>
 								<textarea
-									className="w-full resize-y rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+									className="focus-visible:ring-kumo-ring w-full resize-y rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 									onChange={(e) => setEventPayload(e.target.value)}
 									placeholder='{"key": "value"}'
 									rows={4}
@@ -663,7 +696,7 @@ function InstanceDetailView() {
 				</Dialog.Root>
 
 				{/* Content */}
-				<div className="space-y-8 px-32 py-6">
+				<div className="space-y-6 px-4 py-6 sm:space-y-8 sm:px-6 lg:px-12 xl:px-20 2xl:px-32">
 					{error && (
 						<div className="rounded-lg border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-sm text-kumo-danger">
 							{error}

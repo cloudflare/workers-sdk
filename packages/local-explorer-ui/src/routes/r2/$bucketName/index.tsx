@@ -509,7 +509,7 @@ function BucketView(): JSX.Element {
 							</label>
 							<input
 								type="text"
-								className="w-full rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+								className="focus-visible:ring-kumo-ring w-full rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 								value={newDirectoryName}
 								onChange={(e) => setNewDirectoryName(e.target.value)}
 								placeholder="my-directory"

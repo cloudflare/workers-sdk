@@ -114,7 +114,7 @@ export function CreateWorkflowInstanceDialog({
 							<span className="font-normal text-kumo-subtle">(optional)</span>
 						</label>
 						<input
-							className="w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+							className="focus-visible:ring-kumo-ring w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 							onChange={(e) => setInstanceId(e.target.value)}
 							placeholder="Auto-generated UUID if empty"
 							type="text"
@@ -128,7 +128,7 @@ export function CreateWorkflowInstanceDialog({
 							Params
 						</label>
 						<textarea
-							className={`w-full resize-y rounded-lg border bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring ${
+							className={`focus-visible:ring-kumo-ring w-full resize-y rounded-lg border bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:outline-none focus-visible:ring-2 ${
 								paramsError
 									? "border-kumo-danger focus:border-kumo-danger"
 									: "border-kumo-fill focus:border-kumo-brand"

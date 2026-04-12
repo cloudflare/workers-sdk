@@ -596,20 +596,14 @@ test("dumpSql exports and imports complete database structure and content correc
 	expect,
 }) => {
 	// Create a new Miniflare instance with D1 database
+	const tmp1 = await useTmp();
 	const originalMF = new Miniflare({
 		...opts,
+		d1Persist: tmp1,
 		d1Databases: { test: "test" },
 	});
-	const mirrorMF = new Miniflare({
-		...opts,
-		d1Databases: { test: "test" },
-	});
-
 	useDispose(originalMF);
-	useDispose(mirrorMF);
-
 	const originalDb = await originalMF.getD1Database("test");
-	const mirrorDb = await mirrorMF.getD1Database("test");
 
 	// Fill the original database with dummy data
 	await fillDummyData(originalDb);
@@ -619,10 +613,19 @@ test("dumpSql exports and imports complete database structure and content correc
 		.prepare("PRAGMA miniflare_d1_export(?,?,?);")
 		.bind(0, 0)
 		.raw();
-
 	const [dumpStatements] = result as [string[]];
 	const dump = dumpStatements.join("\n");
 
+	// Create a new Miniflare instance and import the dump into a new database
+	const tmp2 = await useTmp();
+	const mirrorMF = new Miniflare({
+		...opts,
+		d1Persist: tmp2,
+		d1Databases: { test: "test" },
+	});
+	useDispose(mirrorMF);
+
+	const mirrorDb = await mirrorMF.getD1Database("test");
 	await mirrorDb.exec(dump);
 
 	// Verify that the schema and data in both databases are equal

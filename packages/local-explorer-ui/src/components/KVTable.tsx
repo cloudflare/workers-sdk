@@ -165,7 +165,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 											<input
 												id={`edit-key-${entry.key.name}`}
 												className={cn(
-													"min-h-8 w-full rounded border border-kumo-brand bg-kumo-base px-2 py-1.5 font-mono text-[13px] text-kumo-default focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:bg-kumo-elevated disabled:text-kumo-subtle",
+													"focus-visible:ring-kumo-ring min-h-8 w-full rounded border border-kumo-brand bg-kumo-base px-2 py-1.5 font-mono text-[13px] text-kumo-default focus:outline-none focus-visible:ring-2 disabled:bg-kumo-elevated disabled:text-kumo-subtle",
 													{
 														"border-kumo-danger focus-visible:ring-2 focus-visible:ring-kumo-danger":
 															editData.keyError,
@@ -203,7 +203,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 											</label>
 											<textarea
 												id={`edit-value-${entry.key.name}`}
-												className="field-sizing-content max-h-50 min-h-8 w-full resize-none overflow-y-auto rounded border border-kumo-brand bg-kumo-base px-2 py-1.5 font-mono text-[13px] text-kumo-default focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:bg-kumo-elevated disabled:text-kumo-subtle"
+												className="focus-visible:ring-kumo-ring field-sizing-content max-h-50 min-h-8 w-full resize-none overflow-y-auto rounded border border-kumo-brand bg-kumo-base px-2 py-1.5 font-mono text-[13px] text-kumo-default focus:outline-none focus-visible:ring-2 disabled:bg-kumo-elevated disabled:text-kumo-subtle"
 												value={editData.value}
 												onChange={(e) =>
 													setEditData({ ...editData, value: e.target.value })
