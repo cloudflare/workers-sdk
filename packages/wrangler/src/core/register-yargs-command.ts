@@ -133,7 +133,11 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				(typeof shouldPrintBanner === "function" &&
 					shouldPrintBanner(args) === true)
 			) {
-				await printWranglerBanner();
+				const shouldContinue = await printWranglerBanner();
+				if (!shouldContinue) {
+					// User/agent chose to abort (e.g., to update Wrangler first)
+					return;
+				}
 			}
 
 			if (!getWranglerHideBanner()) {
