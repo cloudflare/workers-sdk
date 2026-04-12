@@ -32,10 +32,12 @@ describe("pages deployment delete", () => {
 		msw.use(
 			http.delete(
 				"*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId",
-				async ({ params }) => {
+				async ({ params, request }) => {
+					const url = new URL(request.url);
 					expect(params.accountId).toEqual("some-account-id");
 					expect(params.projectName).toEqual("my-project");
 					expect(params.deploymentId).toEqual("abc123");
+					expect(url.searchParams.get("force")).toEqual("false");
 					return HttpResponse.json(
 						{
 							result: null,
@@ -90,10 +92,12 @@ describe("pages deployment delete", () => {
 		msw.use(
 			http.delete(
 				"*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId",
-				async ({ params }) => {
+				async ({ params, request }) => {
+					const url = new URL(request.url);
 					expect(params.accountId).toEqual("some-account-id");
 					expect(params.projectName).toEqual("my-project");
 					expect(params.deploymentId).toEqual("abc123");
+					expect(url.searchParams.get("force")).toEqual("true");
 					return HttpResponse.json(
 						{
 							result: null,
@@ -119,7 +123,9 @@ describe("pages deployment delete", () => {
 		msw.use(
 			http.delete(
 				"*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId",
-				async () => {
+				async ({ request }) => {
+					const url = new URL(request.url);
+					expect(url.searchParams.get("force")).toEqual("true");
 					return HttpResponse.json(
 						{
 							result: null,
