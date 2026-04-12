@@ -432,7 +432,7 @@ const InstanceRow = memo(function InstanceRow({
 								Event Type
 							</label>
 							<input
-								className="w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+								className="focus-visible:ring-kumo-ring w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 								onChange={(e) => setEventType(e.target.value)}
 								placeholder="my-event"
 								type="text"
@@ -445,7 +445,7 @@ const InstanceRow = memo(function InstanceRow({
 								<span className="font-normal text-kumo-subtle">(optional)</span>
 							</label>
 							<textarea
-								className="w-full resize-y rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+								className="focus-visible:ring-kumo-ring w-full resize-y rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 								onChange={(e) => setEventPayload(e.target.value)}
 								placeholder='{"key": "value"}'
 								rows={4}

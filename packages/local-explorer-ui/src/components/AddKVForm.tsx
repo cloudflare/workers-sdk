@@ -63,7 +63,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 				<input
 					id="add-key"
 					className={cn(
-						"h-9 w-full rounded-md border border-kumo-fill bg-kumo-base px-3 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:bg-kumo-elevated disabled:text-kumo-subtle",
+						"focus-visible:ring-kumo-ring h-9 w-full rounded-md border border-kumo-fill bg-kumo-base px-3 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 disabled:bg-kumo-elevated disabled:text-kumo-subtle",
 						{
 							"border-kumo-danger focus-visible:ring-2 focus-visible:ring-kumo-danger":
 								keyError,
@@ -84,7 +84,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 				</label>
 				<textarea
 					id="add-value"
-					className="max-h-32 min-h-9 w-full resize-none overflow-y-auto rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:bg-kumo-elevated disabled:text-kumo-subtle lg:field-sizing-content"
+					className="focus-visible:ring-kumo-ring max-h-32 min-h-9 w-full resize-none overflow-y-auto rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 disabled:bg-kumo-elevated disabled:text-kumo-subtle lg:field-sizing-content"
 					placeholder="Value"
 					value={value}
 					onChange={(e) => setValue(e.target.value)}
