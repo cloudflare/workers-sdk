@@ -62,7 +62,9 @@ function IndexPage() {
 
 						<Button
 							icon={CopyIcon}
-							onClick={copyPrompt}
+							onClick={() => {
+								void copyPrompt();
+							}}
 							size="sm"
 							variant="ghost"
 						/>
