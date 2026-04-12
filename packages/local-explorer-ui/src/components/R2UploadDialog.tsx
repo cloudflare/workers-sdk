@@ -243,7 +243,7 @@ export function R2UploadDialog({
 						Object key
 					</label>
 					<input
-						className="w-full rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+						className="focus-visible:ring-kumo-ring w-full rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 						onChange={(e) => setObjectKey(e.target.value)}
 						placeholder={currentPrefix + "file.png"}
 						type="text"
@@ -260,7 +260,7 @@ export function R2UploadDialog({
 						Content-Type
 					</label>
 					<input
-						className="w-full rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+						className="focus-visible:ring-kumo-ring w-full rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 						onChange={(e) => setContentType(e.target.value)}
 						placeholder="image/png"
 						type="text"
@@ -289,7 +289,7 @@ export function R2UploadDialog({
 							{customMetadata.map((entry, index) => (
 								<div key={index} className="flex items-center gap-2">
 									<input
-										className="flex-1 rounded-md border border-kumo-fill bg-kumo-base px-2 py-1.5 font-mono text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+										className="focus-visible:ring-kumo-ring flex-1 rounded-md border border-kumo-fill bg-kumo-base px-2 py-1.5 font-mono text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 										onChange={(e) =>
 											handleMetadataChange(index, "key", e.target.value)
 										}
@@ -298,7 +298,7 @@ export function R2UploadDialog({
 										value={entry.key}
 									/>
 									<input
-										className="flex-1 rounded-md border border-kumo-fill bg-kumo-base px-2 py-1.5 font-mono text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
+										className="focus-visible:ring-kumo-ring flex-1 rounded-md border border-kumo-fill bg-kumo-base px-2 py-1.5 font-mono text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 										onChange={(e) =>
 											handleMetadataChange(index, "value", e.target.value)
 										}
