@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Enable flagship OAuth scopes
+Add Flagship OAuth scopes to `wrangler login`
