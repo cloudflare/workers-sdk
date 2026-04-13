@@ -40,10 +40,12 @@ export function handleWebSocket(
 			const headers = new Headers();
 			const rawHeaders = request.rawHeaders;
 			for (let i = 0; i < rawHeaders.length; i += 2) {
-				if (rawHeaders[i].startsWith(":")) {
+				// oxlint-disable-next-line typescript/no-non-null-assertion
+				if (rawHeaders[i]!.startsWith(":")) {
 					continue;
 				}
-				headers.append(rawHeaders[i], rawHeaders[i + 1]);
+				// oxlint-disable-next-line typescript/no-non-null-assertion
+				headers.append(rawHeaders[i]!, rawHeaders[i + 1]!);
 			}
 
 			if (entryWorkerName) {

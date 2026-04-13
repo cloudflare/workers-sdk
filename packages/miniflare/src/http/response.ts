@@ -70,6 +70,7 @@ export class Response extends BaseResponse {
 	}
 
 	// JSDoc comment so retained when bundling types with api-extractor
+	/** @ts-expect-error `clone` is actually defined as a method internally */
 	clone(): Response {
 		if (this[kWebSocket]) {
 			throw new TypeError("Cannot clone a response to a WebSocket handshake.");
