@@ -146,6 +146,7 @@ export async function convertToConfigBundle(
 		enableContainers: event.config.dev.enableContainers ?? true,
 		// Zone for CF-Worker header - extracted from routes/host configuration
 		zone: event.config.dev?.origin?.hostname,
+		sendMetrics: event.config.sendMetrics,
 	};
 }
 
