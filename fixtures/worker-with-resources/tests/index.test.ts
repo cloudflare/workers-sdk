@@ -59,6 +59,44 @@ describe("local explorer", () => {
 		expect(text).toBe("Hello World!");
 	});
 
+	it("bulk/get succeeds when combined value size exceeds 25 MB", async ({
+		expect,
+	}) => {
+		// Regression test for https://github.com/cloudflare/workers-sdk/issues/13459
+		// Seed 3 × 10 MB values (30 MB total) which exceeds the KV bulk-get
+		// aggregate limit of 25 MB.
+		const seedResponse = await fetch(
+			`http://${ip}:${port}/kv/seed-large?count=3&sizeMB=10`
+		);
+		expect(seedResponse.ok).toBe(true);
+
+		// Now hit the explorer bulk/get endpoint for those keys
+		const bulkResponse = await fetch(
+			`http://${ip}:${port}${EXPLORER_API_PATH}/storage/kv/namespaces/KV/bulk/get`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					keys: ["large-value-0", "large-value-1", "large-value-2"],
+				}),
+			}
+		);
+
+		expect(bulkResponse.status).toBe(200);
+		const json = (await bulkResponse.json()) as {
+			success: boolean;
+			result: { values: Record<string, string | null> };
+		};
+		expect(json.success).toBe(true);
+		expect(Object.keys(json.result.values)).toHaveLength(3);
+		// Each value should be 10 MB (10 * 1024 * 1024 chars)
+		for (const key of ["large-value-0", "large-value-1", "large-value-2"]) {
+			const value = json.result.values[key];
+			expect(value).not.toBeNull();
+			expect(value?.length).toBe(10 * 1024 * 1024);
+		}
+	});
+
 	it(`serves UI index.html at ${CorePaths.EXPLORER}`, async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}${CorePaths.EXPLORER}`);
 		expect(response.status).toBe(200);

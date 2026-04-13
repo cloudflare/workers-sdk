@@ -26,6 +26,20 @@ export default {
 				await Promise.all(SEED_DATA.map(([k, v]) => env.KV.put(k, v)));
 				return new Response(`Seeded ${SEED_DATA.length} KV entries`);
 			}
+			case "/kv/seed-large": {
+				// Seed large values whose combined size exceeds the KV bulk-get
+				// 25 MB aggregate limit. Used to reproduce / verify the fix for
+				// https://github.com/cloudflare/workers-sdk/issues/13459
+				const count = parseInt(url.searchParams.get("count") ?? "3");
+				const sizeMB = parseInt(url.searchParams.get("sizeMB") ?? "10");
+				const chunk = "x".repeat(sizeMB * 1024 * 1024);
+				for (let i = 0; i < count; i++) {
+					await env.KV.put(`large-value-${i}`, chunk);
+				}
+				return new Response(
+					`Seeded ${count} keys, each ${sizeMB} MB (total ${count * sizeMB} MB)`
+				);
+			}
 
 			// R2 routes
 			case "/r2/seed": {
