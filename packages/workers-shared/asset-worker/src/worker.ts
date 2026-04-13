@@ -361,6 +361,19 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
 		const startTimeMs = performance.now();
 		try {
+			if (this.env.COLO_METADATA && this.env.VERSION_METADATA && this.env.CONFIG) {
+				const url = new URL(request.url);
+				analytics.setData({
+					accountId: this.env.CONFIG.account_id,
+					scriptId: this.env.CONFIG.script_id,
+					coloId: this.env.COLO_METADATA.coloId,
+					metalId: this.env.COLO_METADATA.metalId,
+					coloTier: this.env.COLO_METADATA.coloTier,
+					coloRegion: this.env.COLO_METADATA.coloRegion,
+					hostname: url.hostname,
+					version: this.env.VERSION_METADATA.tag,
+				});
+			}
 			sentry = setupSentry(
 				request,
 				this.ctx,
