@@ -78,7 +78,7 @@ describe("R2 Bucket", () => {
 			await page.goto(
 				`${page.url().split("/r2/")[0]}/r2/my-bucket?prefix=nonexistent-prefix/`
 			);
-			await page.waitForLoadState("networkidle");
+			await page.waitForLoadState("domcontentloaded");
 
 			await waitForText("No objects in this directory");
 		});
