@@ -10,7 +10,6 @@ import {
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
-	getMetricsConfig,
 } from "@cloudflare/workers-utils";
 import {
 	getDefaultDevRegistryPath,
@@ -469,11 +468,7 @@ export async function getDevMiniflareOptions(
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
-			telemetry: getMetricsConfig({
-				sendMetrics:
-					// use entry worker's settings, if multiple exist (same behaviour as Wrangler)
-					resolvedPluginConfig.rawConfigs.entryWorker.raw.send_metrics,
-			}),
+			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
@@ -658,15 +653,6 @@ export async function getPreviewMiniflareOptions(
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
-	// Resolve telemetry configuration from the first worker config with send_metrics set,
-	// or fall back to env var / global config
-	const sendMetricsFromConfig = resolvedPluginConfig.workers.find(
-		(w) => w.send_metrics !== undefined
-	)?.send_metrics;
-	const metricsConfig = getMetricsConfig({
-		sendMetrics: sendMetricsFromConfig,
-	});
-
 	return {
 		miniflareOptions: {
 			log: logger,
@@ -676,7 +662,7 @@ export async function getPreviewMiniflareOptions(
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
-			telemetry: metricsConfig,
+			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
