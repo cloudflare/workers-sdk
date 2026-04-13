@@ -2,4 +2,7 @@
 "miniflare": patch
 ---
 
-fix: Local Explorer KV bulk/get no longer fails with 413 when namespace contains large values. The endpoint now fetches each key individually instead of using the KV bulk-get API, which has a 25 MB aggregate size limit.
+Fix local explorer KV bulk / get for large payloads.
+
+Previously when trying to view a KV namespace which contains large value payloads it would result in returning a 413 HTTP response.
+As such, the endpoint now fetches each key individually instead of using the KV bulk-get API, which has a 25 MB aggregate size limit.
