@@ -1,6 +1,5 @@
 import { createHeaders } from "@remix-run/node-fetch-server";
-import { CoreHeaders, coupleWebSocket } from "miniflare";
-import { Headers } from "undici";
+import { CoreHeaders, Headers, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
 import type { Miniflare } from "miniflare";
