@@ -361,7 +361,11 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
 		const startTimeMs = performance.now();
 		try {
-			if (this.env.COLO_METADATA && this.env.VERSION_METADATA && this.env.CONFIG) {
+			if (
+				this.env.COLO_METADATA &&
+				this.env.VERSION_METADATA &&
+				this.env.CONFIG
+			) {
 				const url = new URL(request.url);
 				analytics.setData({
 					accountId: this.env.CONFIG.account_id,
