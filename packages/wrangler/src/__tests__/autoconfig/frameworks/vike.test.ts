@@ -59,9 +59,7 @@ export default {
 			await framework.configure(getBaseOptions());
 
 			const result = await readFile(resolve("pages/+config.ts"), "utf8");
-			expect(result).toContain(
-				'import vikePhoton from "vike-photon/config";'
-			);
+			expect(result).toContain('import vikePhoton from "vike-photon/config";');
 			expect(result).toContain("extends: [vikeReact, vikePhoton]");
 		});
 
@@ -93,15 +91,11 @@ export default config;
 			await framework.configure(getBaseOptions());
 
 			const result = await readFile(resolve("pages/+config.ts"), "utf8");
-			expect(result).toContain(
-				'import vikePhoton from "vike-photon/config";'
-			);
+			expect(result).toContain('import vikePhoton from "vike-photon/config";');
 			expect(result).toContain("extends: [vikeReact, vikePhoton]");
 		});
 
-		it("handles plain format: `export default { ... }`", async ({
-			expect,
-		}) => {
+		it("handles plain format: `export default { ... }`", async ({ expect }) => {
 			await mkdir(resolve("pages"), { recursive: true });
 			await writeFile(
 				resolve("pages/+config.ts"),
@@ -118,9 +112,7 @@ export default {
 			await framework.configure(getBaseOptions());
 
 			const result = await readFile(resolve("pages/+config.ts"), "utf8");
-			expect(result).toContain(
-				'import vikePhoton from "vike-photon/config";'
-			);
+			expect(result).toContain('import vikePhoton from "vike-photon/config";');
 			expect(result).toContain("extends: [vikeReact, vikePhoton]");
 		});
 
@@ -144,9 +136,7 @@ export default {
 			await framework.configure(getBaseOptions());
 
 			const result = await readFile(resolve("pages/+config.ts"), "utf8");
-			expect(result).toContain(
-				'import vikePhoton from "vike-photon/config";'
-			);
+			expect(result).toContain('import vikePhoton from "vike-photon/config";');
 			expect(result).toContain("extends: [vikeReact, vikePhoton]");
 		});
 
@@ -166,9 +156,7 @@ export default {
 			await framework.configure(getBaseOptions());
 
 			const result = await readFile(resolve("pages/+config.ts"), "utf8");
-			expect(result).toContain(
-				'import vikePhoton from "vike-photon/config";'
-			);
+			expect(result).toContain('import vikePhoton from "vike-photon/config";');
 			expect(result).toContain("vikePhoton");
 		});
 
@@ -192,9 +180,7 @@ export default config;
 			await framework.configure(getBaseOptions());
 
 			const result = await readFile(resolve("pages/+config.ts"), "utf8");
-			expect(result).toContain(
-				'import vikePhoton from "vike-photon/config";'
-			);
+			expect(result).toContain('import vikePhoton from "vike-photon/config";');
 			expect(result).toContain("vikePhoton");
 		});
 
@@ -245,9 +231,7 @@ export default {
 			await framework.configure(getBaseOptions());
 
 			const result = await readFile(resolve("pages/+config.js"), "utf8");
-			expect(result).toContain(
-				'import vikePhoton from "vike-photon/config";'
-			);
+			expect(result).toContain('import vikePhoton from "vike-photon/config";');
 			expect(result).toContain("extends: [vikeReact, vikePhoton]");
 		});
 	});
