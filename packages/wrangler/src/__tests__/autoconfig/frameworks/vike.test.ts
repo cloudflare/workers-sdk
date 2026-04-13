@@ -157,7 +157,7 @@ export default {
 
 			const result = await readFile(resolve("pages/+config.ts"), "utf8");
 			expect(result).toContain('import vikePhoton from "vike-photon/config";');
-			expect(result).toContain("vikePhoton");
+			expect(result).toContain("extends: [vikePhoton]");
 		});
 
 		it("creates extends array on variable-referenced config if not present", async ({
@@ -181,7 +181,7 @@ export default config;
 
 			const result = await readFile(resolve("pages/+config.ts"), "utf8");
 			expect(result).toContain('import vikePhoton from "vike-photon/config";');
-			expect(result).toContain("vikePhoton");
+			expect(result).toContain("extends: [vikePhoton]");
 		});
 
 		it("does not duplicate import or extends entry on repeated calls", async ({
