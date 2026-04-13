@@ -120,14 +120,46 @@ function addVikePhotonToVikeConfigExportObject(
 
 	assert(configTargetProp && t.ArrayExpression.check(configTargetProp.value));
 
+	// Determine the local import name for "vike-photon/config" (defaults to "vikePhoton").
+	// This handles cases where the user already imported it under a different name.
+	const vikePhotonLocalName =
+		getVikePhotonImportLocalName(programNode) ?? "vikePhoton";
+
 	// Only add vikePhoton if it's not already present
 	if (
 		!configTargetProp.value.elements.some(
-			(el) => el?.type === "Identifier" && el.name === "vikePhoton"
+			(el) => el?.type === "Identifier" && el.name === vikePhotonLocalName
 		)
 	) {
-		configTargetProp.value.elements.push(b.identifier("vikePhoton"));
+		configTargetProp.value.elements.push(b.identifier(vikePhotonLocalName));
 	}
+}
+
+/**
+ * Finds the local name used for the default import from "vike-photon/config".
+ * e.g. `import vikePhoton from "vike-photon/config"` returns "vikePhoton",
+ *      `import photon from "vike-photon/config"` returns "photon".
+ */
+function getVikePhotonImportLocalName(
+	programNode?: types.namedTypes.Program
+): string | undefined {
+	if (!programNode) {
+		return undefined;
+	}
+	for (const stmt of programNode.body) {
+		if (
+			t.ImportDeclaration.check(stmt) &&
+			stmt.source.value === "vike-photon/config"
+		) {
+			const defaultSpec = stmt.specifiers?.find((s) =>
+				t.ImportDefaultSpecifier.check(s)
+			);
+			if (defaultSpec && t.Identifier.check(defaultSpec.local)) {
+				return defaultSpec.local.name;
+			}
+		}
+	}
+	return undefined;
 }
 
 /**

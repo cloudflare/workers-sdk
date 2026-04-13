@@ -214,6 +214,37 @@ export default {
 			expect(result).toContain("extends: [vikeReact, vikePhoton]");
 		});
 
+		it("does not duplicate extends entry when vike-photon is imported under a different name", async ({
+			expect,
+		}) => {
+			await mkdir(resolve("pages"), { recursive: true });
+			await writeFile(
+				resolve("pages/+config.ts"),
+				`import vikeReact from "vike-react/config";
+import photon from "vike-photon/config";
+
+export default {
+  title: "My Vike App",
+  extends: [vikeReact, photon],
+};
+`
+			);
+
+			const framework = new Vike({ id: "vike", name: "Vike" });
+			await framework.configure(getBaseOptions());
+
+			const result = await readFile(resolve("pages/+config.ts"), "utf8");
+
+			// Should not add a second import
+			const importCount = (result.match(/from "vike-photon\/config"/g) || [])
+				.length;
+			expect(importCount).toBe(1);
+
+			// Should not duplicate the extends entry under any name
+			expect(result).toContain("extends: [vikeReact, photon]");
+			expect(result).not.toContain("vikePhoton");
+		});
+
 		it("uses .js config file as fallback", async ({ expect }) => {
 			await mkdir(resolve("pages"), { recursive: true });
 			await writeFile(
