@@ -26,7 +26,6 @@ import type {
 	R2ListOptions,
 	R2Object,
 	R2ObjectBody,
-	R2Objects,
 } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ReplaceWorkersTypes } from "miniflare";
 
