@@ -49,7 +49,7 @@ describe.sequential("DevRegistry", () => {
 				const res = await local.dispatchFetch("http://placeholder");
 
 				expect(await res.text()).toBe(
-					`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+					`Worker "remote-worker" not found. Make sure it is running locally.`
 				);
 				expect(res.status).toBe(503);
 			},
@@ -86,7 +86,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://example.com?name=World");
 		expect(await res.text()).toBe(
-			`Response from remote worker: Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+			`Response from remote worker: Worker "remote-worker" not found. Make sure it is running locally.`
 		);
 		expect(res.status).toBe(503);
 
@@ -239,7 +239,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+			`Worker "remote-worker" not found. Make sure it is running locally.`
 		);
 		expect(res.status).toBe(500);
 
@@ -272,7 +272,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe(
-					`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+					`Worker "remote-worker" not found. Make sure it is running locally.`
 				);
 				expect(res.status).toBe(500);
 			},
@@ -310,7 +310,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Cannot access "ping" as we couldn't find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
+			`Worker "remote-worker" not found. Make sure it is running locally.`
 		);
 		expect(res.status).toBe(500);
 
@@ -342,7 +342,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe(
-					`Cannot access "ping" as we couldn't find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
+					`Worker "remote-worker" not found. Make sure it is running locally.`
 				);
 				expect(res.status).toBe(500);
 			},
@@ -380,7 +380,7 @@ describe.sequential("DevRegistry", () => {
 					"http://example.com?name=World"
 				);
 				expect(await res.text()).toBe(
-					`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+					`Worker "remote-worker" not found. Make sure it is running locally.`
 				);
 				expect(res.status).toBe(503);
 			},
@@ -424,7 +424,7 @@ describe.sequential("DevRegistry", () => {
 					"http://example.com?name=World"
 				);
 				expect(await res.text()).toBe(
-					`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+					`Worker "remote-worker" not found. Make sure it is running locally.`
 				);
 				expect(res.status).toBe(503);
 			},
@@ -463,7 +463,7 @@ describe.sequential("DevRegistry", () => {
 					throw new Error(`Expected error, got result: ${result}`);
 				} catch (e) {
 					expect(e instanceof Error ? e.message : `${e}`).toBe(
-						`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+						`Worker "remote-worker" not found. Make sure it is running locally.`
 					);
 				}
 			},
@@ -501,7 +501,7 @@ describe.sequential("DevRegistry", () => {
 					throw new Error(`Expected error, got result: ${result}`);
 				} catch (e) {
 					expect(e instanceof Error ? e.message : `${e}`).toBe(
-						`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+						`Worker "remote-worker" not found. Make sure it is running locally.`
 					);
 				}
 			},
@@ -674,7 +674,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Couldn\'t find a local dev session for Durable Object "MyDurableObject" of service "remote-worker" to proxy to`
+			`Worker "remote-worker" not found. Make sure it is running locally.`
 		);
 		expect(res.status).toBe(503);
 
@@ -752,7 +752,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toContain(
-			`couldn't find a local dev session for Durable Object "MyDurableObject" of service "remote-worker" to proxy to.`
+			`Worker "remote-worker" not found. Make sure it is running locally.`
 		);
 		expect(res.status).toBe(500);
 
@@ -1133,7 +1133,7 @@ describe.sequential("DevRegistry", () => {
 		const result2 = await res2.text();
 
 		expect(result2).toEqual(
-			`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+			`Worker "remote-worker" not found. Make sure it is running locally.`
 		);
 	});
 
@@ -1182,7 +1182,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+			`Worker "remote-worker" not found. Make sure it is running locally.`
 		);
 		expect(res.status).toBe(500);
 
@@ -1211,7 +1211,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe(
-					`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+					`Worker "remote-worker" not found. Make sure it is running locally.`
 				);
 				expect(res.status).toBe(500);
 			},
@@ -1263,7 +1263,7 @@ describe.sequential("DevRegistry", () => {
 		const res = await local.dispatchFetch("https://example.com?name=World");
 
 		expect(await res.text()).toBe(
-			`Response from remote worker: Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+			`Response from remote worker: Worker "remote-worker" not found. Make sure it is running locally.`
 		);
 		expect(res.status).toBe(503);
 
@@ -1330,7 +1330,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Couldn\'t find a local dev session for Durable Object "MyDurableObject" of service "remote-worker" to proxy to`
+			`Worker "remote-worker" not found. Make sure it is running locally.`
 		);
 		expect(res.status).toBe(503);
 
