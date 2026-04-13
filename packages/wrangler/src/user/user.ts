@@ -376,8 +376,8 @@ const DefaultScopes = {
 		"See and change secrets + stores within the Secrets Store",
 	"artifacts:write":
 		"See and change Cloudflare Artifacts data such as registries and artifacts",
-	"flagship:read": "See Flagship feature flags and apps",
-	"flagship:write": "See and change Flagship feature flags and apps",
+	// "flagship:read": "See Flagship feature flags and apps",
+	// "flagship:write": "See and change Flagship feature flags and apps",
 	"containers:write": "Manage Workers Containers",
 	"cloudchamber:write": "Manage Cloudchamber",
 	"connectivity:admin":
