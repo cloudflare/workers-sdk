@@ -1,6 +1,6 @@
 import http from "node:http";
 import net from "node:net";
-import { DeferredPromise, Miniflare, Response } from "miniflare";
+import { DeferredPromise, Miniflare, Response, Headers } from "miniflare";
 import { afterEach, assert, beforeEach, describe, test, vi } from "vitest";
 import { handleWebSocket } from "../websockets";
 import type { AddressInfo } from "node:net";
