@@ -410,10 +410,7 @@ describe("Python modules", () => {
 			"export function helper() {}"
 		);
 		await writeFile("./python_modules/workers/__init__.py", "");
-		await writeFile(
-			"./python_modules/otherpkg/util.mjs",
-			"export const x = 1"
-		);
+		await writeFile("./python_modules/otherpkg/util.mjs", "export const x = 1");
 
 		const modules = await findAdditionalModules(
 			{

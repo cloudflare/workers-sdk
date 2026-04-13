@@ -177,20 +177,20 @@ export async function findAdditionalModules(
 					}
 					return true; // Include this file
 				})
-			.map((m) => {
-				// Always use forward slashes for module names, regardless of platform.
-				// path.join() uses backslashes on Windows, but module names must use
-				// forward slashes for proper directory structure when deployed.
-				const prefixedPath = `python_modules/${m.name}`;
-				return {
-					...m,
-					name: prefixedPath,
-					// JavaScript files from Python workers sdk (workers-runtime-sdk)
-					// are registered as esModule, so that they can be dynamically
-					// imported via import_from_javascript() at runtime.
-					type: getVendoredModuleType(m.name, m.type),
-				};
-			});
+				.map((m) => {
+					// Always use forward slashes for module names, regardless of platform.
+					// path.join() uses backslashes on Windows, but module names must use
+					// forward slashes for proper directory structure when deployed.
+					const prefixedPath = `python_modules/${m.name}`;
+					return {
+						...m,
+						name: prefixedPath,
+						// JavaScript files from Python workers sdk (workers-runtime-sdk)
+						// are registered as esModule, so that they can be dynamically
+						// imported via import_from_javascript() at runtime.
+						type: getVendoredModuleType(m.name, m.type),
+					};
+				});
 
 			modules.push(...vendoredModules);
 		} else {
