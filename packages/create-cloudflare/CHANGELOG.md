@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.66.5
+
+### Patch Changes
+
+- [#13438](https://github.com/cloudflare/workers-sdk/pull/13438) [`dd4e888`](https://github.com/cloudflare/workers-sdk/commit/dd4e8882c854301c4e984989956f1aa337177637) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.599 | 0.0.616 |
+
 ## 2.66.4
 
 ### Patch Changes

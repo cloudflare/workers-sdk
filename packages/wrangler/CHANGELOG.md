@@ -1,5 +1,17 @@
 # wrangler
 
+## 4.82.1
+
+### Patch Changes
+
+- [#13453](https://github.com/cloudflare/workers-sdk/pull/13453) [`6b11b07`](https://github.com/cloudflare/workers-sdk/commit/6b11b072d35e438e81e133a1c37e4e94a7a9c9a8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Disable flagship OAuth scopes that are not yet valid in the Cloudflare backend
+
+  The `flagship:read` and `flagship:write` OAuth scopes have been temporarily commented out from the default scopes requested during login, as they are not yet recognized by the Cloudflare backend.
+
+- [#13438](https://github.com/cloudflare/workers-sdk/pull/13438) [`dd4e888`](https://github.com/cloudflare/workers-sdk/commit/dd4e8882c854301c4e984989956f1aa337177637) Thanks [@dependabot](https://github.com/apps/dependabot)! - fix: handle Vike config files that use a variable-referenced default export
+
+  Newer versions of `create-vike` (0.0.616+) generate `pages/+config.ts` files using `const config: Config = { ... }; export default config;` instead of the previous `export default { ... } satisfies Config;`. The Wrangler autoconfig AST transformation now resolves `Identifier` exports to their variable declarations, supporting both old and new Vike config file formats.
+
 ## 4.82.0
 
 ### Minor Changes
