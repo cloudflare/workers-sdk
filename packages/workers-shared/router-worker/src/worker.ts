@@ -54,9 +54,47 @@ export default {
 		// resolve structurally. Keep this narrow cast so loopback typechecks in both
 		// compilation contexts without changing runtime behavior.
 		const loopbackCtx = ctx as LoopbackExecutionContext;
-		return loopbackCtx.exports
-			.RouterInnerEntrypoint({ props: {} })
-			.fetch(request);
+
+		const analytics = new Analytics(env.ANALYTICS);
+		let inner;
+		try {
+			if (env.COLO_METADATA && env.VERSION_METADATA && env.CONFIG) {
+				const url = new URL(request.url);
+				analytics.setData({
+					accountId: env.CONFIG.account_id,
+					scriptId: env.CONFIG.script_id,
+					coloId: env.COLO_METADATA.coloId,
+					metalId: env.COLO_METADATA.metalId,
+					coloTier: env.COLO_METADATA.coloTier,
+					coloRegion: env.COLO_METADATA.coloRegion,
+					hostname: url.hostname,
+					version: env.VERSION_METADATA.tag,
+				});
+			}
+			inner = loopbackCtx.exports.RouterInnerEntrypoint({ props: {} });
+		} catch (err) {
+			const sentry = setupSentry(
+				request,
+				ctx,
+				env.SENTRY_DSN,
+				env.SENTRY_ACCESS_CLIENT_ID,
+				env.SENTRY_ACCESS_CLIENT_SECRET,
+				env.COLO_METADATA,
+				env.VERSION_METADATA,
+				env.CONFIG?.account_id,
+				env.CONFIG?.script_id
+			);
+			sentry?.captureException(err);
+
+			if (err instanceof Error) {
+				analytics.setData({ error: err.message });
+			}
+			analytics.write();
+
+			throw err;
+		}
+
+		return inner.fetch(request);
 	},
 };
 
