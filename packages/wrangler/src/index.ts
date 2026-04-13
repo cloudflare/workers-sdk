@@ -463,7 +463,7 @@ if (proxy) {
 	setGlobalDispatcher(
 		new EnvHttpProxyAgent({ noProxy: noProxy || "localhost,127.0.0.1,::1" })
 	);
-	logger.log(
+	logger.warn(
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
 }
