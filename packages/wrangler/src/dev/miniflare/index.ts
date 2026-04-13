@@ -4,7 +4,6 @@ import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
-	getMetricsConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
@@ -15,6 +14,7 @@ import {
 import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
 import { withSourceURLs } from "../../deployment-bundle/source-url";
 import { logger } from "../../logger";
+import { getMetricsConfig } from "../../metrics";
 import { getSourceMappedString } from "../../sourcemap";
 import { updateCheck } from "../../update-check";
 import { warnOrError } from "../../utils/print-bindings";

@@ -32,7 +32,7 @@ describe("getRouteName", () => {
 		);
 	});
 
-	test("eturns unknown for unrecognized paths", ({ expect }) => {
+	test("returns unknown for unrecognized paths", ({ expect }) => {
 		expect(getRouteName("/cdn-cgi/explorer/api/unknown/path")).toBe("unknown");
 	});
 });
