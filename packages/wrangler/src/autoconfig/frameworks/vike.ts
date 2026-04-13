@@ -78,14 +78,16 @@ export class Vike extends Framework {
  */
 function addVikePhotonToConfigFile(projectPath: string) {
 	const filePath = getConfigPath(projectPath);
+	let programNode: types.namedTypes.Program | undefined;
 
 	transformFile(filePath, {
 		visitProgram(n) {
+			programNode = n.node;
 			addVikePhotonImportToConfigFile(n);
 			return this.traverse(n);
 		},
 		visitExportDefaultDeclaration(n) {
-			addVikePhotonToVikeConfigExportObject(n);
+			addVikePhotonToVikeConfigExportObject(n, programNode);
 			return this.traverse(n);
 		},
 	});
@@ -100,9 +102,10 @@ const vikeConfigExtendsPropName = "extends";
  * @param n node path for the vike config file's default export
  */
 function addVikePhotonToVikeConfigExportObject(
-	n: Parameters<NonNullable<types.Visitor["visitExportDefaultDeclaration"]>>[0]
+	n: Parameters<NonNullable<types.Visitor["visitExportDefaultDeclaration"]>>[0],
+	programNode?: types.namedTypes.Program
 ) {
-	const configObject = getVikeConfigObjectExpression(n);
+	const configObject = getVikeConfigObjectExpression(n, programNode);
 
 	let configTargetProp = configObject.properties.find((prop) =>
 		isExtendsProp(prop)
@@ -117,17 +120,46 @@ function addVikePhotonToVikeConfigExportObject(
 
 	assert(configTargetProp && t.ArrayExpression.check(configTargetProp.value));
 
+	// Determine the local import name for "vike-photon/config" (defaults to "vikePhoton").
+	// This handles cases where the user already imported it under a different name.
+	const vikePhotonLocalName =
+		getVikePhotonImportLocalName(programNode) ?? "vikePhoton";
+
 	// Only add vikePhoton if it's not already present
 	if (
 		!configTargetProp.value.elements.some(
-			(el) =>
-				el?.type === "CallExpression" &&
-				el.callee.type === "Identifier" &&
-				el.callee.name === vikeConfigExtendsPropName
+			(el) => el?.type === "Identifier" && el.name === vikePhotonLocalName
 		)
 	) {
-		configTargetProp.value.elements.push(b.identifier("vikePhoton"));
+		configTargetProp.value.elements.push(b.identifier(vikePhotonLocalName));
 	}
+}
+
+/**
+ * Finds the local name used for the default import from "vike-photon/config".
+ * e.g. `import vikePhoton from "vike-photon/config"` returns "vikePhoton",
+ *      `import photon from "vike-photon/config"` returns "photon".
+ */
+function getVikePhotonImportLocalName(
+	programNode?: types.namedTypes.Program
+): string | undefined {
+	if (!programNode) {
+		return undefined;
+	}
+	for (const stmt of programNode.body) {
+		if (
+			t.ImportDeclaration.check(stmt) &&
+			stmt.source.value === "vike-photon/config"
+		) {
+			const defaultSpec = stmt.specifiers?.find((s) =>
+				t.ImportDefaultSpecifier.check(s)
+			);
+			if (defaultSpec && t.Identifier.check(defaultSpec.local)) {
+				return defaultSpec.local.name;
+			}
+		}
+	}
+	return undefined;
 }
 
 /**
@@ -136,7 +168,8 @@ function addVikePhotonToVikeConfigExportObject(
  * @param n node path for the vike config file's default export
  */
 function getVikeConfigObjectExpression(
-	n: Parameters<NonNullable<types.Visitor["visitExportDefaultDeclaration"]>>[0]
+	n: Parameters<NonNullable<types.Visitor["visitExportDefaultDeclaration"]>>[0],
+	programNode?: types.namedTypes.Program
 ): types.namedTypes.ObjectExpression {
 	if (n.node.declaration.type === "ObjectExpression") {
 		// The export is a simple object expression
@@ -148,12 +181,57 @@ function getVikeConfigObjectExpression(
 			n.node.declaration.type === "TSSatisfiesExpression") &&
 		n.node.declaration.expression.type === "ObjectExpression"
 	) {
-		// The export is an `as Config` or `satisfied Config` expression, so we go a level
+		// The export is an `as Config` or `satisfies Config` expression, so we go a level
 		// deeper to get the object expression
 		return n.node.declaration.expression;
 	}
 
+	if (n.node.declaration.type === "Identifier" && programNode) {
+		// The export is a variable reference, e.g., `const config: Config = { ... }; export default config;`
+		const objectExpression = resolveIdentifierToObjectExpression(
+			n.node.declaration.name,
+			programNode
+		);
+		if (objectExpression) {
+			return objectExpression;
+		}
+	}
+
 	throw new Error("Could not determine Vike default object export");
+}
+
+/**
+ * Resolves a variable name to its ObjectExpression initializer by searching the program body.
+ * Handles both plain object initializers and those wrapped in TSAsExpression/TSSatisfiesExpression.
+ */
+function resolveIdentifierToObjectExpression(
+	varName: string,
+	programNode: types.namedTypes.Program
+): types.namedTypes.ObjectExpression | undefined {
+	for (const stmt of programNode.body) {
+		if (t.VariableDeclaration.check(stmt)) {
+			for (const declarator of stmt.declarations) {
+				if (
+					t.VariableDeclarator.check(declarator) &&
+					t.Identifier.check(declarator.id) &&
+					declarator.id.name === varName &&
+					declarator.init
+				) {
+					if (t.ObjectExpression.check(declarator.init)) {
+						return declarator.init;
+					}
+					if (
+						(t.TSAsExpression.check(declarator.init) ||
+							t.TSSatisfiesExpression.check(declarator.init)) &&
+						t.ObjectExpression.check(declarator.init.expression)
+					) {
+						return declarator.init.expression;
+					}
+				}
+			}
+		}
+	}
+	return undefined;
 }
 
 /**
