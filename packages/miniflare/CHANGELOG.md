@@ -1,5 +1,175 @@
 # miniflare
 
+## 4.20260410.0
+
+### Minor Changes
+
+- [#13139](https://github.com/cloudflare/workers-sdk/pull/13139) [`79fd529`](https://github.com/cloudflare/workers-sdk/commit/79fd529e62b715405aacc0e643a20ce1af3df9f2) Thanks [@roerohan](https://github.com/roerohan)! - feat: add Flagship feature flag binding support
+
+  Adds end-to-end support for the Flagship feature flag binding, which allows Workers to evaluate feature flags from Cloudflare's Flagship service. Configure it in `wrangler.json` with a `flagship` array containing `binding` and `app_id` entries. In local dev, the binding returns default values for all flag evaluations; use `"remote": true` in the binding to evaluate flags against the live Flagship service.
+
+- [#13392](https://github.com/cloudflare/workers-sdk/pull/13392) [`2589395`](https://github.com/cloudflare/workers-sdk/commit/2589395a0890bad9bf78e9d10aa680f448259716) Thanks [@emily-shen](https://github.com/emily-shen)! - Add telemetry to local REST API
+
+  The local REST API (used by the local explorer) now collects anonymous usage telemetry. This respects any existing telemetry preferences, which can be disabled by running the command `wrangler telemetry disable`.
+
+  This only applies when the dev session is started via Wrangler, and not via the Vite plugin or standalone Miniflare.
+
+  No actual data values, keys, query contents, or resource IDs are collected.
+
+  **Event schema:**
+
+  ```json
+  {
+    "event": "localapi.<route>.<method>", // e.g. localapi.kv.keys.get
+    "deviceId": "<uuid>",
+    "timestamp": 1234567890,
+    "properties": {
+      "userAgent": "Mozilla/5.0 ...",
+      // Only for localapi.local.workers.get:
+      "workerCount": 2,
+      "kvCount": 3,
+      "d1Count": 1,
+      "r2Count": 0,
+      "doCount": 1,
+      "workflowsCount": 0
+    }
+  }
+  ```
+
+  Note: the Local Explorer and corresponding local REST API is still an experimental feature.
+
+### Patch Changes
+
+- [#13393](https://github.com/cloudflare/workers-sdk/pull/13393) [`c50cb5b`](https://github.com/cloudflare/workers-sdk/commit/c50cb5b4038d8107c4131af1b086ea3261f53518) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260409.1 | 1.20260410.1 |
+
+- [#13335](https://github.com/cloudflare/workers-sdk/pull/13335) [`5eff8c1`](https://github.com/cloudflare/workers-sdk/commit/5eff8c14f08696e5a832875a35e214969aa55b9b) Thanks [@KennethRuan](https://github.com/KennethRuan)! - Return metadata in queue broker response
+
+  The queue broker's `/message` and `/batch` endpoints now return a JSON response body containing queue metrics (`backlogCount`, `backlogBytes`, `oldestMessageTimestamp`) instead of an empty response. A new `GET /metrics` endpoint is also added to support the `metrics()` API.
+
+## 4.20260409.0
+
+### Minor Changes
+
+- [#13133](https://github.com/cloudflare/workers-sdk/pull/13133) [`42c7ef0`](https://github.com/cloudflare/workers-sdk/commit/42c7ef04385094c77f0c2830134fc38b2dc39b02) Thanks [@emily-shen](https://github.com/emily-shen)! - explorer: list DO instances with name where possible
+
+  Note: The local explorer is a WIP experimental feature.
+
+- [#13336](https://github.com/cloudflare/workers-sdk/pull/13336) [`a42e0e8`](https://github.com/cloudflare/workers-sdk/commit/a42e0e8b52df128513f85025f50eb985bc7f5748) Thanks [@emily-shen](https://github.com/emily-shen)! - local explorer: fix handling on resources that are bound to multiple workers
+
+  Note the local explorer is a experimental feature still.
+
+### Patch Changes
+
+- [#13337](https://github.com/cloudflare/workers-sdk/pull/13337) [`c510494`](https://github.com/cloudflare/workers-sdk/commit/c510494e522927f60fa4915358a881cf73e31a39) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260405.1 | 1.20260408.1 |
+
+- [#13362](https://github.com/cloudflare/workers-sdk/pull/13362) [`8b71eca`](https://github.com/cloudflare/workers-sdk/commit/8b71ecae4fed8f0bebf5789f1a617db26c0e4365) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260408.1 | 1.20260409.1 |
+
+## 4.20260405.0
+
+### Minor Changes
+
+- [#13240](https://github.com/cloudflare/workers-sdk/pull/13240) [`a3e3b57`](https://github.com/cloudflare/workers-sdk/commit/a3e3b57f2aa47b6655af7baaa784d55117368abc) Thanks [@emily-shen](https://github.com/emily-shen)! - local explorer: serve the local explorer's OpenAPI spec at /cdn-cgi/explorer/api
+
+  The local explorer is supported by a REST API served from the worker's local address. It can be accessed independently of the UI, (e.g. by an AI agent) and is thus documented at this endpoint.
+
+- [#13314](https://github.com/cloudflare/workers-sdk/pull/13314) [`7a60d4b`](https://github.com/cloudflare/workers-sdk/commit/7a60d4bd33b03a55f687869378dfd06143247239) Thanks [@Ltadrian](https://github.com/Ltadrian)! - Fix hyperdrive local dev binding tls configuration bug
+
+### Patch Changes
+
+- [#13241](https://github.com/cloudflare/workers-sdk/pull/13241) [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260401.1 | 1.20260402.1 |
+
+- [#13305](https://github.com/cloudflare/workers-sdk/pull/13305) [`fa6d84f`](https://github.com/cloudflare/workers-sdk/commit/fa6d84fe4f07143522e4d41a2934c486d1c4b6d1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260402.1 | 1.20260405.1 |
+
+- [#13241](https://github.com/cloudflare/workers-sdk/pull/13241) [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update Images binding local mock to use chainable handle pattern
+
+  `hosted.image(imageId)` now returns a handle with `details()`, `bytes()`, `update()`, and `delete()` methods, aligning with the updated workerd API (https://github.com/cloudflare/workerd/pull/6288).
+
+## 4.20260401.0
+
+### Minor Changes
+
+- [#13051](https://github.com/cloudflare/workers-sdk/pull/13051) [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Deprecate `supportedCompatibilityDate` export
+
+  The `supportedCompatibilityDate` export is now deprecated. Instead of relying on the workerd-derived compatibility date, callers should just use today's date directly, e.g. `new Date().toISOString().slice(0, 10)`.
+
+- [#13011](https://github.com/cloudflare/workers-sdk/pull/13011) [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Add experimental headful browser rendering support for local development
+
+  > **Experimental:** This feature may be removed or changed without notice.
+
+  When developing locally with the Browser Rendering API, you can enable headful (visible) mode via the `X_BROWSER_HEADFUL` environment variable to see the browser while debugging:
+
+  ```sh
+  X_BROWSER_HEADFUL=true wrangler dev
+  X_BROWSER_HEADFUL=true vite dev
+  ```
+
+  **Note:** when using `@cloudflare/playwright`, two Chrome windows may appear — the initial blank page and the one created by `browser.newPage()`. This is expected behavior due to how Playwright handles browser contexts via CDP.
+
+- [#12992](https://github.com/cloudflare/workers-sdk/pull/12992) [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87) Thanks [@RiscadoA](https://github.com/RiscadoA)! - Add `vpc_networks` binding support for routing Worker traffic through a Cloudflare Tunnel or network.
+
+  ```jsonc
+  {
+    "vpc_networks": [
+      // Route through a specific Cloudflare Tunnel
+      { "binding": "MY_FIRST_VPC", "tunnel_id": "<tunnel-id>" },
+      // Route through the Cloudflare One mesh network
+      { "binding": "MY_SECOND_VPC", "network_id": "cf1:network" }
+    ]
+  }
+  ```
+
+### Patch Changes
+
+- [#13155](https://github.com/cloudflare/workers-sdk/pull/13155) [`5d29055`](https://github.com/cloudflare/workers-sdk/commit/5d29055edf482bd51c3728b26594b5e4ac54f0a9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260329.1 | 1.20260331.1 |
+
+- [#13162](https://github.com/cloudflare/workers-sdk/pull/13162) [`fb67a18`](https://github.com/cloudflare/workers-sdk/commit/fb67a18aa2b4a34c292737591e6d5a3401f8d742) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260331.1 | 1.20260401.1 |
+
+- [#13238](https://github.com/cloudflare/workers-sdk/pull/13238) [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad) Thanks [@guybedford](https://github.com/guybedford)! - Fix source phase imports parsing in Miniflare
+
+  Miniflare now uses the `acorn-import-phases` plugin to parse `import source` syntax when analyzing module dependencies. This fixes `ERR_MODULE_PARSE` errors when running Workers that use source phase imports for WebAssembly modules in local development.
+
 ## 4.20260329.0
 
 ### Minor Changes

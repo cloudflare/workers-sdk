@@ -124,7 +124,7 @@ export function createProxyDurableObjectClass({
 					if (Reflect.has(target, prop)) {
 						return Reflect.get(target, prop);
 					}
-				const fetcher = target._resolve();
+					const fetcher = target._resolve();
 					if (!fetcher) {
 						return () => {
 							throw new Error(
@@ -142,8 +142,8 @@ export function createProxyDurableObjectClass({
 			if (!fetcher) {
 				return Promise.resolve(
 					new Response(
-					`Worker "${scriptName}" not found. Make sure it is running locally.`,
-					{ status: 503 }
+						`Worker "${scriptName}" not found. Make sure it is running locally.`,
+						{ status: 503 }
 					)
 				);
 			}

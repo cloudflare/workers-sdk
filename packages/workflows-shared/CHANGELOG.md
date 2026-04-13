@@ -1,5 +1,21 @@
 # @cloudflare/workflows-shared
 
+## 0.9.0
+
+### Minor Changes
+
+- [#13351](https://github.com/cloudflare/workers-sdk/pull/13351) [`3788983`](https://github.com/cloudflare/workers-sdk/commit/3788983378793781829798bb10ae710fb452f746) Thanks [@pombosilva](https://github.com/pombosilva)! - Add `step` and `config` properties to the workflow step context
+
+  The callback passed to `step.do()` now receives `ctx.step` (with `name` and `count`) and `ctx.config` (the fully resolved step configuration with defaults merged in), in addition to the existing `ctx.attempt`.
+
+## 0.8.0
+
+### Minor Changes
+
+- [#13145](https://github.com/cloudflare/workers-sdk/pull/13145) [`5b60405`](https://github.com/cloudflare/workers-sdk/commit/5b60405954a2866a67920f5a7a48748861f58a60) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Add support for ReadableStream on workflow steps. This allows users to overcome the 1MB limit per step output.
+
+  `ReadableStream<Uint8Array>` is already serializable on the workers platform. This feature makes it native to workflows as well by persisting each chunk and replaying it if needed
+
 ## 0.7.2
 
 ### Patch Changes

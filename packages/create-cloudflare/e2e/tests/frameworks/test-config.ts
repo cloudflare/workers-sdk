@@ -697,6 +697,7 @@ function getExperimentalFrameworkTestConfig(
 				previewArgs: ["--inspector-port=0"],
 				route: "/test",
 				expectedText: "C3_TEST",
+				generateTypes: true,
 			},
 			nodeCompat: false,
 			verifyTypes: false,

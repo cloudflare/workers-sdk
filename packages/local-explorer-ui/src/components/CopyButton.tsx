@@ -20,7 +20,7 @@ export function CopyButton({ text }: CopyButtonProps) {
 			className={cn(
 				"h-6 w-6 p-0 opacity-0 transition-[opacity,background-color,color] group-hover/cell:opacity-100",
 				{
-					"text-success opacity-100": copied,
+					"text-kumo-success opacity-100": copied,
 				}
 			)}
 			onClick={handleCopy}

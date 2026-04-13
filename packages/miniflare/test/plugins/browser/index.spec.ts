@@ -1,6 +1,7 @@
-import { Miniflare, MiniflareOptions } from "miniflare";
+import { Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { useDispose } from "../../test-shared";
+import type { MiniflareOptions } from "miniflare";
 
 async function sendMessage(ws: WebSocket, message: unknown) {
 	// adapted from https://github.com/cloudflare/puppeteer/blob/b4984452165437e26dd1c8e516581cec2a02b4cd/packages/puppeteer-core/src/cloudflare/chunking.ts#L6-L30

@@ -1,16 +1,17 @@
 import assert from "node:assert";
-import {
+import { base64Decode, base64Encode } from "./data";
+import { all, drain, get } from "./sql.worker";
+import type {
 	BlobId,
 	BlobStore,
 	MultipartOptions,
 	MultipartReadableStream,
 } from "./blob.worker";
-import { base64Decode, base64Encode } from "./data";
-import { MiniflareDurableObject } from "./object.worker";
-import { InclusiveRange } from "./range";
-import { all, drain, get, TypedSql } from "./sql.worker";
-import { Timers } from "./timers.worker";
-import { Awaitable } from "./types";
+import type { MiniflareDurableObject } from "./object.worker";
+import type { InclusiveRange } from "./range";
+import type { TypedSql } from "./sql.worker";
+import type { Timers } from "./timers.worker";
+import type { Awaitable } from "./types";
 
 export interface KeyEntry<Metadata = unknown> {
 	key: string;

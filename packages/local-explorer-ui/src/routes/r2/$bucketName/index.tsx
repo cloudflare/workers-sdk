@@ -13,7 +13,12 @@ import {
 	ListIcon,
 	UploadIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	notFound,
+	useNavigate,
+} from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
 	r2BucketDeleteObjects,
@@ -22,8 +27,10 @@ import {
 } from "../../../api";
 import R2Icon from "../../../assets/icons/r2.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { NotFound } from "../../../components/NotFound";
 import { R2ObjectTable } from "../../../components/R2ObjectTable";
 import { R2UploadDialog } from "../../../components/R2UploadDialog";
+import { ResourceError } from "../../../components/ResourceError";
 import { withMinimumDelay } from "../../../utils/async";
 import type { R2Object } from "../../../api";
 
@@ -34,10 +41,7 @@ export interface R2BucketSearch {
 
 export const Route = createFileRoute("/r2/$bucketName/")({
 	component: BucketView,
-	validateSearch: (search: Record<string, unknown>): R2BucketSearch => ({
-		prefix: typeof search.prefix === "string" ? search.prefix : undefined,
-		delimiter: search.delimiter === false ? false : true,
-	}),
+	errorComponent: ResourceError,
 	loaderDeps: ({ search }) => ({
 		prefix: search.prefix,
 		delimiter: search.delimiter,
@@ -52,7 +56,17 @@ export const Route = createFileRoute("/r2/$bucketName/")({
 				per_page: 100,
 				prefix: deps.prefix || undefined,
 			},
+			throwOnError: false,
 		});
+		if (response.response?.status === 404) {
+			throw notFound();
+		}
+
+		if (response.error) {
+			throw new Error(
+				`Failed to list objects in bucket "${params.bucketName}"`
+			);
+		}
 
 		return {
 			objects: response.data?.result ?? [],
@@ -62,6 +76,11 @@ export const Route = createFileRoute("/r2/$bucketName/")({
 			delimiterEnabled: deps.delimiter !== false,
 		};
 	},
+	notFoundComponent: NotFound,
+	validateSearch: (search: Record<string, unknown>): R2BucketSearch => ({
+		delimiter: search.delimiter === false ? false : true,
+		prefix: typeof search.prefix === "string" ? search.prefix : undefined,
+	}),
 });
 
 function BucketView(): JSX.Element {
@@ -171,10 +190,11 @@ function BucketView(): JSX.Element {
 			params: {
 				bucketName: params.bucketName,
 			},
-			search: {
+			search: (prev) => ({
+				...prev,
 				prefix: search.prefix && checked ? search.prefix : undefined,
 				delimiter: checked ? undefined : false,
-			},
+			}),
 			to: "/r2/$bucketName",
 		});
 	}
@@ -184,7 +204,7 @@ function BucketView(): JSX.Element {
 			params: {
 				bucketName: params.bucketName,
 			},
-			search: { prefix: newPrefix || undefined },
+			search: (prev) => ({ ...prev, prefix: newPrefix || undefined }),
 			to: "/r2/$bucketName",
 		});
 	}
@@ -302,7 +322,7 @@ function BucketView(): JSX.Element {
 		: [];
 	const breadcrumbItems = [
 		<Link
-			className="text-text no-underline hover:text-primary"
+			className="text-kumo-default no-underline hover:text-kumo-link"
 			key="bucket"
 			params={{ bucketName: params.bucketName }}
 			search={{}}
@@ -315,7 +335,7 @@ function BucketView(): JSX.Element {
 
 			return (
 				<Link
-					className="text-text no-underline hover:text-primary"
+					className="text-kumo-default no-underline hover:text-kumo-link"
 					key={segmentPrefix}
 					params={{ bucketName: params.bucketName }}
 					search={{ prefix: segmentPrefix }}
@@ -428,7 +448,7 @@ function BucketView(): JSX.Element {
 						</Dialog.Title>
 
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Description className="mb-2 text-text-secondary">
+						<Dialog.Description className="mb-2 text-kumo-subtle">
 							{deleteTargets.length === 1 ? (
 								<>
 									Are you sure you want to delete &ldquo;{deleteTargets[0]}
@@ -479,24 +499,24 @@ function BucketView(): JSX.Element {
 						</Dialog.Title>
 
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Description className="mb-4 text-text-secondary">
+						<Dialog.Description className="mb-4 text-kumo-subtle">
 							Enter a name for the new directory.
 						</Dialog.Description>
 
 						<div className="mb-4">
-							<label className="mb-1 block text-sm font-medium text-text">
+							<label className="mb-1 block text-sm font-medium text-kumo-default">
 								Directory name
 							</label>
 							<input
 								type="text"
-								className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
+								className="focus-visible:ring-kumo-ring w-full rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus-visible:ring-2"
 								value={newDirectoryName}
 								onChange={(e) => setNewDirectoryName(e.target.value)}
 								placeholder="my-directory"
 								autoFocus
 							/>
 							{search.prefix && (
-								<p className="mt-1 text-xs text-text-secondary">
+								<p className="mt-1 text-xs text-kumo-subtle">
 									Will be created at: {search.prefix}
 									{newDirectoryName || "..."}/
 								</p>

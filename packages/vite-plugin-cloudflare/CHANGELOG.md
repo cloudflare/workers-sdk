@@ -1,5 +1,68 @@
 # @cloudflare/vite-plugin
 
+## 1.32.0
+
+### Minor Changes
+
+- [#13137](https://github.com/cloudflare/workers-sdk/pull/13137) [`1313275`](https://github.com/cloudflare/workers-sdk/commit/13132753130bcba9eb03bc4e662911685962c04e) Thanks [@emily-shen](https://github.com/emily-shen)! - Add `e` hotkey to open local explorer during dev
+
+  Press `e` during `vite dev` to open the local explorer UI at `/cdn-cgi/explorer`, which allows you to inspect the state of your D1, R2, KV, DO and Workflow bindings.
+
+### Patch Changes
+
+- Updated dependencies [[`5338bb6`](https://github.com/cloudflare/workers-sdk/commit/5338bb687e9933702744771fc89850a7471ee1cc), [`79fd529`](https://github.com/cloudflare/workers-sdk/commit/79fd529e62b715405aacc0e643a20ce1af3df9f2), [`28bc2be`](https://github.com/cloudflare/workers-sdk/commit/28bc2be6c51e93aa8df75ad223435df35f1981d6), [`4fd138b`](https://github.com/cloudflare/workers-sdk/commit/4fd138b8e4d46567419c0202e68423e89cd3d813), [`bafb96b`](https://github.com/cloudflare/workers-sdk/commit/bafb96bccc97325c3d9dac54af96212cb30e605a), [`c50cb5b`](https://github.com/cloudflare/workers-sdk/commit/c50cb5b4038d8107c4131af1b086ea3261f53518), [`2589395`](https://github.com/cloudflare/workers-sdk/commit/2589395a0890bad9bf78e9d10aa680f448259716), [`525a46b`](https://github.com/cloudflare/workers-sdk/commit/525a46bca7c9a8a57972ac152ab9c400df0bf186), [`5eff8c1`](https://github.com/cloudflare/workers-sdk/commit/5eff8c14f08696e5a832875a35e214969aa55b9b), [`1313275`](https://github.com/cloudflare/workers-sdk/commit/13132753130bcba9eb03bc4e662911685962c04e)]:
+  - wrangler@4.82.0
+  - miniflare@4.20260410.0
+
+## 1.31.2
+
+### Patch Changes
+
+- Updated dependencies [[`42c7ef0`](https://github.com/cloudflare/workers-sdk/commit/42c7ef04385094c77f0c2830134fc38b2dc39b02), [`c510494`](https://github.com/cloudflare/workers-sdk/commit/c510494e522927f60fa4915358a881cf73e31a39), [`8b71eca`](https://github.com/cloudflare/workers-sdk/commit/8b71ecae4fed8f0bebf5789f1a617db26c0e4365), [`a42e0e8`](https://github.com/cloudflare/workers-sdk/commit/a42e0e8b52df128513f85025f50eb985bc7f5748), [`7ca6f6e`](https://github.com/cloudflare/workers-sdk/commit/7ca6f6e98ff84e68e901ae35028435f4916ae1c2)]:
+  - miniflare@4.20260409.0
+  - wrangler@4.81.1
+
+## 1.31.1
+
+### Patch Changes
+
+- Updated dependencies [[`a3e3b57`](https://github.com/cloudflare/workers-sdk/commit/a3e3b57f2aa47b6655af7baaa784d55117368abc), [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e), [`fa6d84f`](https://github.com/cloudflare/workers-sdk/commit/fa6d84fe4f07143522e4d41a2934c486d1c4b6d1), [`96ee5d4`](https://github.com/cloudflare/workers-sdk/commit/96ee5d465833f4887653078115acea40de2893c0), [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e), [`7a60d4b`](https://github.com/cloudflare/workers-sdk/commit/7a60d4bd33b03a55f687869378dfd06143247239), [`78cbe37`](https://github.com/cloudflare/workers-sdk/commit/78cbe37a3a2ed0c5213fca603f61e3acd4d807e4), [`6fa5dfd`](https://github.com/cloudflare/workers-sdk/commit/6fa5dfddcbad1520db7c3d1bb12233001fe00e45)]:
+  - miniflare@4.20260405.0
+  - wrangler@4.81.0
+
+## 1.31.0
+
+### Minor Changes
+
+- [#13011](https://github.com/cloudflare/workers-sdk/pull/13011) [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Add experimental headful browser rendering support for local development
+
+  > **Experimental:** This feature may be removed or changed without notice.
+
+  When developing locally with the Browser Rendering API, you can enable headful (visible) mode via the `X_BROWSER_HEADFUL` environment variable to see the browser while debugging:
+
+  ```sh
+  X_BROWSER_HEADFUL=true wrangler dev
+  X_BROWSER_HEADFUL=true vite dev
+  ```
+
+  **Note:** when using `@cloudflare/playwright`, two Chrome windows may appear — the initial blank page and the one created by `browser.newPage()`. This is expected behavior due to how Playwright handles browser contexts via CDP.
+
+- [#13051](https://github.com/cloudflare/workers-sdk/pull/13051) [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update `getLocalWorkerdCompatibilityDate` to return today's date
+
+  The re-exported `getLocalWorkerdCompatibilityDate` function from `@cloudflare/vite-plugin` previously resolved the workerd compatibility date by traversing the local `miniflare` installation, which was unreliable in some package manager setups. It now simply returns today's date. The function is also marked as deprecated — callers should just use today's date instead, for example like so: `new Date().toISOString().slice(0, 10)`
+
+### Patch Changes
+
+- [#13125](https://github.com/cloudflare/workers-sdk/pull/13125) [`f76652c`](https://github.com/cloudflare/workers-sdk/commit/f76652c09453090c7b40da7d916929ec45f3ca8d) Thanks [@kayluhb](https://github.com/kayluhb)! - Fix SyntaxError when SSR-transformed module ends with a single-line comment
+
+  When module code ends with a `//` comment (e.g. `//# sourceMappingURL=...` preserved by vite-plus), the closing `}` of the async wrapper in `runInlinedModule` was absorbed into the comment, causing `SyntaxError: Unexpected end of input`. Adding a newline before the closing brace prevents this.
+
+- [#13188](https://github.com/cloudflare/workers-sdk/pull/13188) [`110002c`](https://github.com/cloudflare/workers-sdk/commit/110002ce0d227a0b411d7749365ea5057a216d67) Thanks [@shulaoda](https://github.com/shulaoda)! - Normalize the return value of `getAssetsDirectory()` with `vite.normalizePath()` to ensure `assets.directory` in the output `wrangler.json` always uses forward slashes
+
+- Updated dependencies [[`9c4035b`](https://github.com/cloudflare/workers-sdk/commit/9c4035b6e48418d9bccf9791354f54a083af5108), [`5d29055`](https://github.com/cloudflare/workers-sdk/commit/5d29055edf482bd51c3728b26594b5e4ac54f0a9), [`fb67a18`](https://github.com/cloudflare/workers-sdk/commit/fb67a18aa2b4a34c292737591e6d5a3401f8d742), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`ab44870`](https://github.com/cloudflare/workers-sdk/commit/ab448708ba725b74927aff4d6e3f1f97dc9c2135), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41), [`14e72eb`](https://github.com/cloudflare/workers-sdk/commit/14e72eb523a5a2dd6b7d332d81148e46cfae16d7), [`4dc94fd`](https://github.com/cloudflare/workers-sdk/commit/4dc94fd5209d17663fac32ac99f7f20d17f1f07f), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87)]:
+  - wrangler@4.80.0
+  - miniflare@4.20260401.0
+
 ## 1.30.3
 
 ### Patch Changes

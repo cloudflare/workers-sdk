@@ -10,11 +10,12 @@ import {
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import { FSWatcher, watch } from "chokidar";
-import { Log } from "./log";
+import { watch } from "chokidar";
 import { getGlobalWranglerConfigPath } from "./wrangler";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 export type { WorkerDefinition, WorkerRegistry };
+import type { Log } from "./log";
+import type { FSWatcher } from "chokidar";
 
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();

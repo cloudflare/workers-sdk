@@ -89,8 +89,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 			return new Response(
 				`Worker "${this.ctx.props.service}" not found. Make sure it is running locally.`,
 				{ status: 503 }
-				)
-
+			);
 		}
 		return this._fetcher.fetch(request);
 	}

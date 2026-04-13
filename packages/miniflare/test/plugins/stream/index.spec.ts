@@ -1,4 +1,3 @@
-import http from "node:http";
 import { pathToFileURL } from "node:url";
 import {
 	Miniflare,
@@ -20,6 +19,7 @@ import type {
 	StreamWatermark as Watermark,
 } from "@cloudflare/workers-types";
 import type { MiniflareOptions } from "miniflare";
+import type http from "node:http";
 
 // Mock image / video bytes
 const TEST_VIDEO_BYTES = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]);

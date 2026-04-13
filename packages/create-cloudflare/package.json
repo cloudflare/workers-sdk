@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.66.1",
+	"version": "2.66.4",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -16,8 +16,9 @@
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/create-cloudflare"
 	},
-	"bin": "./dist/cli.js",
+	"bin": "./bin/c3.js",
 	"files": [
+		"bin",
 		"dist",
 		"templates",
 		"templates-experimental"
@@ -72,7 +73,7 @@
 		"indent-string": "^5.0.0",
 		"jsonc-parser": "catalog:default",
 		"magic-string": "^0.30.5",
-		"open": "^8.4.0",
+		"open": "catalog:default",
 		"recast": "^0.23.11",
 		"semver": "^7.7.1",
 		"smol-toml": "catalog:default",
@@ -89,7 +90,7 @@
 		"yargs": "^17.7.2"
 	},
 	"engines": {
-		"node": ">=18.14.1"
+		"node": ">=20.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

@@ -52,7 +52,7 @@
 		"no-unused-vars": [
 			"error",
 			{
-				"argsIgnorePattern": ".*",
+				"argsIgnorePattern": "^_",
 				"varsIgnorePattern": "^_",
 				"ignoreRestSiblings": true,
 				"fix": { "imports": "fix" },
@@ -127,7 +127,6 @@
 				"curly": "off",
 				"@typescript-eslint/no-explicit-any": "off",
 				"@typescript-eslint/ban-ts-comment": "off",
-				"@typescript-eslint/consistent-type-imports": "off",
 				"@typescript-eslint/no-floating-promises": "off",
 				"no-shadow": "off",
 				"no-useless-escape": "off",

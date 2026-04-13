@@ -1,5 +1,64 @@
 # @cloudflare/local-explorer-ui
 
+## 0.12.0
+
+### Minor Changes
+
+- [#13330](https://github.com/cloudflare/workers-sdk/pull/13330) [`b30eb67`](https://github.com/cloudflare/workers-sdk/commit/b30eb67130e9b7f7ac30d4e62f16d27f4ea37c8e) Thanks [@NuroDev](https://github.com/NuroDev)! - Update local explorer sidebar with collapsible groups, theme persistence, and Kumo v1.17
+
+  Adds localStorage persistence for sidebar group expansion states and theme mode (light/dark/system). The sidebar now uses Kumo v1.17 primitives with collapsible groups and a theme toggle in the footer.
+
+  Users can now cycle between light, dark, and system theme modes, and their preference will be persisted across sessions.
+
+  Sidebar groups (D1, Durable Objects, KV, R2, Workflows) also remember their collapsed/expanded state.
+
+### Patch Changes
+
+- [#13361](https://github.com/cloudflare/workers-sdk/pull/13361) [`a4f1d5c`](https://github.com/cloudflare/workers-sdk/commit/a4f1d5cf9a49b45f1dcc054858f85e7c9bff85ff) Thanks [@NuroDev](https://github.com/NuroDev)! - Cleaned up local explorer workflows page design.
+
+  The core design & layout of the workflows page(s) in the local explorer has been tweaked to make it more uniform and consistent with all other resource pages.
+
+- [#13407](https://github.com/cloudflare/workers-sdk/pull/13407) [`496c5d5`](https://github.com/cloudflare/workers-sdk/commit/496c5d5bab56b59d11fc02fa077c1a246681416c) Thanks [@NuroDev](https://github.com/NuroDev)! - Add new "Copy prompt for agent" button.
+
+  This adds a clipboard copy field to the Local Explorer homepage for sharing an agent/LLM Local Explorer API prompt.
+
+- [#13158](https://github.com/cloudflare/workers-sdk/pull/13158) [`67be6b0`](https://github.com/cloudflare/workers-sdk/commit/67be6b0ab97b0b5f85f9fbae93655ab390e8dbf9) Thanks [@NuroDev](https://github.com/NuroDev)! - Improves local explorer invalid route error handling.
+
+  Visiting a route either as a 404 or 500 error now has dedicated components to handle as such, rather than the generic TanStack error UI.
+
+  Additionally, it also fixes route loaders to correctly throw a 404 error if a resource is not found, rather than showing a generic error.
+
+- [#13407](https://github.com/cloudflare/workers-sdk/pull/13407) [`496c5d5`](https://github.com/cloudflare/workers-sdk/commit/496c5d5bab56b59d11fc02fa077c1a246681416c) Thanks [@NuroDev](https://github.com/NuroDev)! - Updates the Local Explorer homepage prompt to use the current runtime origin for the Explorer API endpoint.
+
+  This ensures copied prompt text points to the correct local URL instead of a placeholder localhost port.
+
+## 0.11.0
+
+### Minor Changes
+
+- [#13331](https://github.com/cloudflare/workers-sdk/pull/13331) [`a066e24`](https://github.com/cloudflare/workers-sdk/commit/a066e245ef5357c33609d19797123ec9b6c294f7) Thanks [@NuroDev](https://github.com/NuroDev)! - Add animated Cloudflare logo to local explorer homepage
+
+  The local explorer now displays an animated Cloudflare logo on the homepage,
+  providing a more engaging visual experience when viewing local resources.
+
+- [#13133](https://github.com/cloudflare/workers-sdk/pull/13133) [`42c7ef0`](https://github.com/cloudflare/workers-sdk/commit/42c7ef04385094c77f0c2830134fc38b2dc39b02) Thanks [@emily-shen](https://github.com/emily-shen)! - explorer: list DO instances with name where possible
+
+  Note: The local explorer is a WIP experimental feature.
+
+- [#13336](https://github.com/cloudflare/workers-sdk/pull/13336) [`a42e0e8`](https://github.com/cloudflare/workers-sdk/commit/a42e0e8b52df128513f85025f50eb985bc7f5748) Thanks [@emily-shen](https://github.com/emily-shen)! - local explorer: fix handling on resources that are bound to multiple workers
+
+  Note the local explorer is a experimental feature still.
+
+## 0.10.0
+
+### Minor Changes
+
+- [#13161](https://github.com/cloudflare/workers-sdk/pull/13161) [`f071008`](https://github.com/cloudflare/workers-sdk/commit/f07100810d6d8c00e7d1977f0b760b369b52aed0) Thanks [@NuroDev](https://github.com/NuroDev)! - Overhaul local explorer UI color palette.
+
+  The core styles of the local explorer has been overhauled to remove all custom styles in favour of using Kumo styles / colors when possible.
+
+  This is the first part of improving the local explorer UI to kumo-ify it all.
+
 ## 0.9.0
 
 ### Minor Changes

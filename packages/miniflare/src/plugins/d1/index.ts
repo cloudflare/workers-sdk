@@ -2,11 +2,6 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
 import { z } from "zod";
-import {
-	Service,
-	Worker_Binding,
-	Worker_Binding_DurableObjectNamespaceDesignator,
-} from "../../runtime";
 import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
@@ -17,12 +12,16 @@ import {
 	namespaceKeys,
 	objectEntryWorker,
 	PersistenceSchema,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 	SERVICE_LOOPBACK,
 } from "../shared";
+import type {
+	Service,
+	Worker_Binding,
+	Worker_Binding_DurableObjectNamespaceDesignator,
+} from "../../runtime";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const D1OptionsSchema = z.object({
 	d1Databases: z

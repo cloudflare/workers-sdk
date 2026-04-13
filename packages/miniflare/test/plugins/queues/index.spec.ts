@@ -2,7 +2,6 @@ import {
 	DeferredPromise,
 	LogLevel,
 	Miniflare,
-	MiniflareCoreError,
 	QUEUES_PLUGIN_NAME,
 	QueuesError,
 	Response,
@@ -10,11 +9,12 @@ import {
 import { test } from "vitest";
 import { z } from "zod";
 import {
-	LogEntry,
 	MiniflareDurableObjectControlStub,
 	TestLog,
 	useDispose,
 } from "../../test-shared";
+import type { LogEntry } from "../../test-shared";
+import type { MiniflareCoreError } from "miniflare";
 
 const StringArraySchema = z.string().array();
 const MessageArraySchema = z
@@ -945,6 +945,96 @@ test("supports message contentTypes", async ({ expect }) => {
 			body: { $type: "Date", value: 1600000000000 },
 		},
 	]);
+});
+
+test("supports metadata in send() response", async ({ expect }) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "producer",
+				queueProducers: ["QUEUE"],
+				compatibilityFlags: ["experimental"],
+				modules: true,
+				script: `export default {
+					async fetch(request, env, ctx) {
+						const resp = await env.QUEUE.send("msg");
+						return Response.json(resp);
+					}
+				}`,
+			},
+			{
+				name: "consumer",
+				queueConsumers: ["QUEUE"],
+				modules: true,
+				script: `export default {
+					async queue(batch, env, ctx) {}
+				}`,
+			},
+		],
+	});
+	useDispose(mf);
+	const object = await getControlStub(mf, "QUEUE");
+
+	const first = await mf.dispatchFetch("http://localhost");
+	await first.arrayBuffer();
+	await object.waitForFakeTasks();
+
+	const res = await mf.dispatchFetch("http://localhost");
+	const body = await res.json();
+	expect(body).toEqual({
+		metadata: {
+			metrics: {
+				backlogCount: 1,
+				backlogBytes: expect.any(Number),
+				oldestMessageTimestamp: new Date(1_000_000).toISOString(),
+			},
+		},
+	});
+});
+
+test("supports metadata in sendBatch() response", async ({ expect }) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "producer",
+				queueProducers: ["QUEUE"],
+				compatibilityFlags: ["experimental"],
+				modules: true,
+				script: `export default {
+					async fetch(request, env, ctx) {
+						const resp = await env.QUEUE.sendBatch([{ body: "msg1" }, { body: "msg2" }]);
+						return Response.json(resp);
+					}
+				}`,
+			},
+			{
+				name: "consumer",
+				queueConsumers: ["QUEUE"],
+				modules: true,
+				script: `export default {
+					async queue(batch, env, ctx) {}
+				}`,
+			},
+		],
+	});
+	useDispose(mf);
+	const object = await getControlStub(mf, "QUEUE");
+
+	const first = await mf.dispatchFetch("http://localhost");
+	await first.arrayBuffer();
+	await object.waitForFakeTasks();
+
+	const res = await mf.dispatchFetch("http://localhost");
+	const body = await res.json();
+	expect(body).toEqual({
+		metadata: {
+			metrics: {
+				backlogCount: 2,
+				backlogBytes: expect.any(Number),
+				oldestMessageTimestamp: new Date(1_000_000).toISOString(),
+			},
+		},
+	});
 });
 
 test("validates message size", async ({ expect }) => {

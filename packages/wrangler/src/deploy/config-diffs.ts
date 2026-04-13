@@ -33,6 +33,7 @@ const reorderableBindings = {
 	ratelimits: true,
 	analytics_engine_datasets: true,
 	unsafe_hello_world: true,
+	flagship: true,
 	worker_loaders: true,
 	vpc_services: true,
 	vpc_networks: true,
@@ -218,6 +219,25 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 
 	if (normalizedConfig.send_email) {
 		normalizedConfig.send_email = normalizedConfig.send_email.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.ai_search_namespaces?.length) {
+		normalizedConfig.ai_search_namespaces =
+			normalizedConfig.ai_search_namespaces.map(
+				({ remote: _, ...binding }) => binding
+			);
+	}
+
+	if (normalizedConfig.ai_search?.length) {
+		normalizedConfig.ai_search = normalizedConfig.ai_search.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.flagship?.length) {
+		normalizedConfig.flagship = normalizedConfig.flagship.map(
 			({ remote: _, ...binding }) => binding
 		);
 	}

@@ -92,6 +92,11 @@ const miniflareZodExtensionPath = path.join(
 	"shared",
 	"zod.worker.ts"
 );
+const localExplorerWorkerPath = path.join(
+	workersRoot,
+	"local-explorer",
+	"explorer.worker.ts"
+);
 
 /**
  * Test fixtures that need to be transpiled by esbuild as part of the build.
@@ -193,6 +198,15 @@ const embedWorkersPlugin = {
 						args.path === miniflareZodExtensionPath
 							? [rewriteNodeToInternalPlugin]
 							: [],
+					// Inject SPARROW_SOURCE_KEY for the local explorer telemetry
+					define:
+						args.path === localExplorerWorkerPath
+							? {
+									SPARROW_SOURCE_KEY: JSON.stringify(
+										process.env.SPARROW_SOURCE_KEY ?? ""
+									),
+								}
+							: {},
 				});
 			}
 

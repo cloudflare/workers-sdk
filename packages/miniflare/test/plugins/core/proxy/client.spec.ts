@@ -8,15 +8,14 @@ import {
 	CorePaths,
 	DeferredPromise,
 	fetch,
-	MessageEvent,
 	Miniflare,
-	ReplaceWorkersTypes,
 	Response,
 	WebSocketPair,
 } from "miniflare";
 import { describe, onTestFinished, test } from "vitest";
 import { useDispose } from "../../../test-shared";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
+import type { MessageEvent, ReplaceWorkersTypes } from "miniflare";
 
 // This file tests API proxy edge cases. Cache, D1, Durable Object and R2 tests
 // make extensive use of the API proxy, testing their specific special cases.

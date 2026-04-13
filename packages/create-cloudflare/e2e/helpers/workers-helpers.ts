@@ -3,17 +3,17 @@ import getPort from "get-port";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { fetch } from "undici";
-// eslint-disable-next-line no-restricted-imports
-import { expect } from "vitest";
 import { isExperimental, runDeployTests } from "./constants";
 import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging, waitForExit } from "./spawn";
 import type { WorkerTestConfig } from "../tests/workers/test-config";
 import type { Writable } from "node:stream";
+import type { ExpectStatic } from "vitest";
 
 const { name: pm } = detectPackageManager();
 
 export async function runC3ForWorkerTest(
+	expect: ExpectStatic,
 	{ argv, promptHandlers, template }: WorkerTestConfig,
 	projectPath: string,
 	logStream: Writable
@@ -70,6 +70,7 @@ export async function verifyDeployment(
 }
 
 export async function verifyLocalDev(
+	expect: ExpectStatic,
 	{ verifyDeploy }: WorkerTestConfig,
 	projectPath: string,
 	logStream: Writable

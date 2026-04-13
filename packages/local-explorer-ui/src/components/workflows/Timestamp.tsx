@@ -36,7 +36,7 @@ export function Timestamp({
 	value: string | undefined | null;
 }): JSX.Element {
 	if (!value) {
-		return <span className="text-sm text-text-secondary">—</span>;
+		return <span className="text-sm text-kumo-subtle">—</span>;
 	}
 
 	const short = formatShort(value);
@@ -48,11 +48,11 @@ export function Timestamp({
 			content={
 				<div className="space-y-1 text-xs">
 					<div>{full}</div>
-					<div className="text-text-secondary">{relative}</div>
+					<div className="text-kumo-subtle">{relative}</div>
 				</div>
 			}
 		>
-			<span className="text-sm whitespace-nowrap text-text-secondary">
+			<span className="text-sm whitespace-nowrap text-kumo-subtle">
 				{short}
 			</span>
 		</Tooltip>

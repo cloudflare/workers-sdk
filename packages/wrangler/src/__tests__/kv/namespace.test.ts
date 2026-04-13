@@ -1,8 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -12,6 +11,7 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { wranglerKVConfig } from "./constant";
 import type { KVNamespaceInfo } from "../../kv/helpers";
+import type { ExpectStatic } from "vitest";
 
 describe("kv", () => {
 	mockAccountId();
@@ -30,7 +30,7 @@ describe("kv", () => {
 
 	describe("namespace", () => {
 		describe("create", () => {
-			function mockCreateRequest(expectedTitle: string) {
+			function mockCreateRequest(expect: ExpectStatic, expectedTitle: string) {
 				msw.use(
 					http.post(
 						"*/accounts/:accountId/storage/kv/namespaces",
@@ -49,7 +49,7 @@ describe("kv", () => {
 				);
 			}
 
-			it("should error if no namespace is given", async () => {
+			it("should error if no namespace is given", async ({ expect }) => {
 				await expect(
 					runWrangler("kv namespace create")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -85,7 +85,9 @@ describe("kv", () => {
 		        `);
 			});
 
-			it("should error if the namespace to create contains spaces", async () => {
+			it("should error if the namespace to create contains spaces", async ({
+				expect,
+			}) => {
 				await expect(
 					runWrangler("kv namespace create abc def ghi")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -121,7 +123,7 @@ describe("kv", () => {
 		        `);
 			});
 
-			it("should error if the namespace already exists", async () => {
+			it("should error if the namespace already exists", async ({ expect }) => {
 				msw.use(
 					http.post(
 						"*/accounts/:accountId/storage/kv/namespaces",
@@ -158,9 +160,9 @@ describe("kv", () => {
 			});
 
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
-				it("should create a namespace", async () => {
+				it("should create a namespace", async ({ expect }) => {
 					writeWranglerConfig({ name: "worker" }, configPath);
-					mockCreateRequest("UnitTestNamespace");
+					mockCreateRequest(expect, "UnitTestNamespace");
 
 					await runWrangler(
 						"kv namespace create UnitTestNamespace --binding MY_NS"
@@ -169,9 +171,11 @@ describe("kv", () => {
 					expect(await readFile(configPath, "utf8")).toMatchSnapshot();
 				});
 
-				it("should create a namespace with custom binding name", async () => {
+				it("should create a namespace with custom binding name", async ({
+					expect,
+				}) => {
 					writeWranglerConfig({ name: "worker" }, configPath);
-					mockCreateRequest("UnitTestNamespace");
+					mockCreateRequest(expect, "UnitTestNamespace");
 					if (configPath === "wrangler.json") {
 						mockConfirm({
 							text: "Would you like Wrangler to add it on your behalf?",
@@ -191,18 +195,22 @@ describe("kv", () => {
 					expect(await readFile(configPath, "utf8")).toMatchSnapshot();
 				});
 
-				it("should create a preview namespace if configured to do so", async () => {
+				it("should create a preview namespace if configured to do so", async ({
+					expect,
+				}) => {
 					writeWranglerConfig({ name: "worker" }, configPath);
 
-					mockCreateRequest("UnitTestNamespace_preview");
+					mockCreateRequest(expect, "UnitTestNamespace_preview");
 					await runWrangler("kv namespace create UnitTestNamespace --preview");
 					expect(std.out).toMatchSnapshot();
 				});
 
-				it("should create a namespace using configured worker name", async () => {
+				it("should create a namespace using configured worker name", async ({
+					expect,
+				}) => {
 					writeWranglerConfig({ name: "other-worker" }, configPath);
 
-					mockCreateRequest("UnitTestNamespace");
+					mockCreateRequest(expect, "UnitTestNamespace");
 					if (configPath === "wrangler.json") {
 						mockConfirm({
 							text: "Would you like Wrangler to add it on your behalf?",
@@ -220,7 +228,9 @@ describe("kv", () => {
 					expect(await readFile(configPath, "utf8")).toMatchSnapshot();
 				});
 
-				it("should create a namespace in an environment if configured to do so", async () => {
+				it("should create a namespace in an environment if configured to do so", async ({
+					expect,
+				}) => {
 					writeWranglerConfig(
 						{
 							name: "worker",
@@ -233,7 +243,7 @@ describe("kv", () => {
 						configPath
 					);
 
-					mockCreateRequest("customEnv-UnitTestNamespace");
+					mockCreateRequest(expect, "customEnv-UnitTestNamespace");
 					if (configPath === "wrangler.json") {
 						mockConfirm({
 							text: "Would you like Wrangler to add it on your behalf?",
@@ -258,7 +268,10 @@ describe("kv", () => {
 		});
 
 		describe("list", () => {
-			function mockListRequest(namespaces: KVNamespaceInfo[]) {
+			function mockListRequest(
+				expect: ExpectStatic,
+				namespaces: KVNamespaceInfo[]
+			) {
 				const requests = { count: 0 };
 				msw.use(
 					http.get(
@@ -284,25 +297,27 @@ describe("kv", () => {
 				return requests;
 			}
 
-			it("should list namespaces", async () => {
+			it("should list namespaces", async ({ expect }) => {
 				const kvNamespaces: KVNamespaceInfo[] = [
 					{ title: "title-1", id: "id-1" },
 					{ title: "title-2", id: "id-2" },
 				];
-				mockListRequest(kvNamespaces);
+				mockListRequest(expect, kvNamespaces);
 				await runWrangler("kv namespace list");
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(JSON.parse(std.out)).toEqual(kvNamespaces);
 			});
 
-			it("should make multiple requests for paginated results", async () => {
+			it("should make multiple requests for paginated results", async ({
+				expect,
+			}) => {
 				// Create a lot of mock namespaces, so that the fetch requests will be paginated
 				const kvNamespaces: KVNamespaceInfo[] = [];
 				for (let i = 0; i < 550; i++) {
 					kvNamespaces.push({ title: "title-" + i, id: "id-" + i });
 				}
-				const requests = mockListRequest(kvNamespaces);
+				const requests = mockListRequest(expect, kvNamespaces);
 				await runWrangler("kv namespace list");
 
 				expect(JSON.parse(std.out)).toEqual(kvNamespaces);
@@ -311,7 +326,10 @@ describe("kv", () => {
 		});
 
 		describe("delete", () => {
-			function mockDeleteRequest(expectedNamespaceId: string) {
+			function mockDeleteRequest(
+				expect: ExpectStatic,
+				expectedNamespaceId: string
+			) {
 				const requests = { count: 0 };
 				msw.use(
 					http.delete(
@@ -329,8 +347,8 @@ describe("kv", () => {
 				return requests;
 			}
 
-			it("should delete a namespace specified by id", async () => {
-				const requests = mockDeleteRequest("some-namespace-id");
+			it("should delete a namespace specified by id", async ({ expect }) => {
+				const requests = mockDeleteRequest(expect, "some-namespace-id");
 
 				mockConfirm({
 					text: "Ok to proceed?",
@@ -342,8 +360,10 @@ describe("kv", () => {
 
 				expect(requests.count).toEqual(1);
 			});
-			it("should not ask for confirmation in non-interactive contexts", async () => {
-				const requests = mockDeleteRequest("some-namespace-id");
+			it("should not ask for confirmation in non-interactive contexts", async ({
+				expect,
+			}) => {
+				const requests = mockDeleteRequest(expect, "some-namespace-id");
 
 				setIsTTY(false);
 				await runWrangler(
@@ -353,33 +373,39 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should delete a namespace specified by binding name", async () => {
+			it("should delete a namespace specified by binding name", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "Ok to proceed?",
 					result: true,
 				});
 				writeWranglerConfig(wranglerKVConfig);
-				const requests = mockDeleteRequest("bound-id");
+				const requests = mockDeleteRequest(expect, "bound-id");
 				await runWrangler(
 					`kv namespace delete --binding someBinding --preview false`
 				);
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should delete a preview namespace specified by binding name", async () => {
+			it("should delete a preview namespace specified by binding name", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "Ok to proceed?",
 					result: true,
 				});
 				writeWranglerConfig(wranglerKVConfig);
-				const requests = mockDeleteRequest("preview-bound-id");
+				const requests = mockDeleteRequest(expect, "preview-bound-id");
 				await runWrangler(
 					`kv namespace delete --binding someBinding --preview`
 				);
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should error if a given binding name is not in the configured kv namespaces", async () => {
+			it("should error if a given binding name is not in the configured kv namespaces", async ({
+				expect,
+			}) => {
 				writeWranglerConfig(wranglerKVConfig);
 				await expect(runWrangler("kv namespace delete --binding otherBinding"))
 					.rejects.toThrowErrorMatchingInlineSnapshot(`
@@ -395,9 +421,11 @@ describe("kv", () => {
 				`);
 			});
 
-			it("should delete a namespace specified by binding name in a given environment", async () => {
+			it("should delete a namespace specified by binding name in a given environment", async ({
+				expect,
+			}) => {
 				writeWranglerConfig(wranglerKVConfig);
-				const requests = mockDeleteRequest("env-bound-id");
+				const requests = mockDeleteRequest(expect, "env-bound-id");
 				mockConfirm({
 					text: "Ok to proceed?",
 					result: true,
@@ -422,9 +450,11 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should delete a preview namespace specified by binding name in a given environment", async () => {
+			it("should delete a preview namespace specified by binding name in a given environment", async ({
+				expect,
+			}) => {
 				writeWranglerConfig(wranglerKVConfig);
-				const requests = mockDeleteRequest("preview-env-bound-id");
+				const requests = mockDeleteRequest(expect, "preview-env-bound-id");
 				mockConfirm({
 					text: "Ok to proceed?",
 					result: true,
@@ -435,7 +465,10 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			function mockListRequestForDelete(namespaces: KVNamespaceInfo[]) {
+			function mockListRequestForDelete(
+				expect: ExpectStatic,
+				namespaces: KVNamespaceInfo[]
+			) {
 				const requests = { count: 0 };
 				msw.use(
 					http.get(
@@ -458,12 +491,12 @@ describe("kv", () => {
 				return requests;
 			}
 
-			it("should delete a namespace specified by name", async () => {
-				const listRequests = mockListRequestForDelete([
+			it("should delete a namespace specified by name", async ({ expect }) => {
+				const listRequests = mockListRequestForDelete(expect, [
 					{ id: "some-namespace-id", title: "my-namespace" },
 					{ id: "other-namespace-id", title: "other-namespace" },
 				]);
-				const deleteRequests = mockDeleteRequest("some-namespace-id");
+				const deleteRequests = mockDeleteRequest(expect, "some-namespace-id");
 
 				mockConfirm({
 					text: "Ok to proceed?",
@@ -479,8 +512,8 @@ describe("kv", () => {
 				);
 			});
 
-			it("should error if namespace name is not found", async () => {
-				mockListRequestForDelete([
+			it("should error if namespace name is not found", async ({ expect }) => {
+				mockListRequestForDelete(expect, [
 					{ id: "other-namespace-id", title: "other-namespace" },
 				]);
 
@@ -494,7 +527,9 @@ describe("kv", () => {
 				);
 			});
 
-			it("should error if both namespace name and --namespace-id are provided", async () => {
+			it("should error if both namespace name and --namespace-id are provided", async ({
+				expect,
+			}) => {
 				await expect(
 					runWrangler("kv namespace delete my-namespace --namespace-id some-id")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -502,7 +537,9 @@ describe("kv", () => {
 				);
 			});
 
-			it("should error if both namespace name and --binding are provided", async () => {
+			it("should error if both namespace name and --binding are provided", async ({
+				expect,
+			}) => {
 				writeWranglerConfig(wranglerKVConfig);
 				await expect(
 					runWrangler("kv namespace delete my-namespace --binding someBinding")
@@ -511,11 +548,13 @@ describe("kv", () => {
 				);
 			});
 
-			it("should delete namespace by name with --skip-confirmation flag", async () => {
-				const listRequests = mockListRequestForDelete([
+			it("should delete namespace by name with --skip-confirmation flag", async ({
+				expect,
+			}) => {
+				const listRequests = mockListRequestForDelete(expect, [
 					{ id: "some-namespace-id", title: "my-namespace" },
 				]);
-				const deleteRequests = mockDeleteRequest("some-namespace-id");
+				const deleteRequests = mockDeleteRequest(expect, "some-namespace-id");
 
 				await runWrangler("kv namespace delete my-namespace -y");
 
@@ -523,7 +562,9 @@ describe("kv", () => {
 				expect(deleteRequests.count).toEqual(1);
 			});
 
-			it("should error if no namespace identifier is provided", async () => {
+			it("should error if no namespace identifier is provided", async ({
+				expect,
+			}) => {
 				await expect(
 					runWrangler("kv namespace delete")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -534,6 +575,7 @@ describe("kv", () => {
 
 		describe("rename", () => {
 			function mockUpdateRequest(
+				expect: ExpectStatic,
 				expectedNamespaceId: string,
 				expectedTitle: string
 			) {
@@ -561,7 +603,10 @@ describe("kv", () => {
 				return requests;
 			}
 
-			function mockListRequestForRename(namespaces: KVNamespaceInfo[]) {
+			function mockListRequestForRename(
+				expect: ExpectStatic,
+				namespaces: KVNamespaceInfo[]
+			) {
 				const requests = { count: 0 };
 				msw.use(
 					http.get(
@@ -588,7 +633,7 @@ describe("kv", () => {
 				return requests;
 			}
 
-			it("should display help for rename command", async () => {
+			it("should display help for rename command", async ({ expect }) => {
 				await expect(
 					runWrangler("kv namespace rename --help")
 				).resolves.toBeUndefined();
@@ -615,7 +660,9 @@ describe("kv", () => {
 				`);
 			});
 
-			it("should error if neither name nor namespace-id is provided", async () => {
+			it("should error if neither name nor namespace-id is provided", async ({
+				expect,
+			}) => {
 				await expect(
 					runWrangler("kv namespace rename --new-name new-name")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -623,7 +670,7 @@ describe("kv", () => {
 				);
 			});
 
-			it("should error if new-name is not provided", async () => {
+			it("should error if new-name is not provided", async ({ expect }) => {
 				await expect(
 					runWrangler("kv namespace rename")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -631,8 +678,9 @@ describe("kv", () => {
 				);
 			});
 
-			it("should rename namespace by ID", async () => {
+			it("should rename namespace by ID", async ({ expect }) => {
 				const requests = mockUpdateRequest(
+					expect,
 					"some-namespace-id",
 					"new-namespace-name"
 				);
@@ -651,12 +699,13 @@ describe("kv", () => {
 				`);
 			});
 
-			it("should rename namespace by old name", async () => {
-				const listRequests = mockListRequestForRename([
+			it("should rename namespace by old name", async ({ expect }) => {
+				const listRequests = mockListRequestForRename(expect, [
 					{ id: "some-namespace-id", title: "old-namespace-name" },
 					{ id: "other-namespace-id", title: "other-namespace" },
 				]);
 				const updateRequests = mockUpdateRequest(
+					expect,
 					"some-namespace-id",
 					"new-namespace-name"
 				);
@@ -678,8 +727,10 @@ describe("kv", () => {
 				`);
 			});
 
-			it("should error if namespace with old name is not found", async () => {
-				mockListRequestForRename([
+			it("should error if namespace with old name is not found", async ({
+				expect,
+			}) => {
+				mockListRequestForRename(expect, [
 					{ id: "other-namespace-id", title: "other-namespace" },
 				]);
 
@@ -692,7 +743,7 @@ describe("kv", () => {
 				);
 			});
 
-			it("should error if namespace ID does not exist", async () => {
+			it("should error if namespace ID does not exist", async ({ expect }) => {
 				// Mock a 404 response for the namespace ID
 				msw.use(
 					http.put(

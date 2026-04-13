@@ -1,14 +1,12 @@
 import {
 	getMiniflareObjectBindings,
 	kVoid,
-	Plugin,
 	ProxyNodeBinding,
-	Service,
 	SERVICE_LOOPBACK,
 	SharedBindings,
-	Worker_Binding,
 } from "miniflare";
 import { z } from "miniflare:zod";
+import type { Plugin, Service, Worker_Binding } from "miniflare";
 
 const MODULE_SCRIPTS = {
 	DO_CLASS: "UnsafeBindingObject",

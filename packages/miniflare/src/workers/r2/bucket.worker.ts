@@ -5,18 +5,13 @@ import {
 	all,
 	base64Decode,
 	base64Encode,
-	BlobId,
 	DeferredPromise,
 	GET,
 	get,
-	InclusiveRange,
 	maybeApply,
 	MiniflareDurableObject,
-	MiniflareDurableObjectEnv,
 	PUT,
 	readPrefix,
-	RouteHandler,
-	TypedSql,
 	WaitGroup,
 } from "miniflare:shared";
 import { R2Headers, R2Limits } from "./constants";
@@ -30,33 +25,35 @@ import {
 	NoSuchUpload,
 	PreconditionFailed,
 } from "./errors.worker";
+import { InternalR2Object, InternalR2ObjectBody } from "./r2Object.worker";
 import {
-	EncodedMetadata,
-	InternalR2Object,
-	InternalR2ObjectBody,
-	InternalR2Objects,
-} from "./r2Object.worker";
-import {
+	MultipartUploadState,
+	R2BindingRequestSchema,
+	SQL_SCHEMA,
+} from "./schemas.worker";
+import { R2_HASH_ALGORITHMS, Validator } from "./validator.worker";
+import type { EncodedMetadata, InternalR2Objects } from "./r2Object.worker";
+import type {
 	InternalR2CreateMultipartUploadOptions,
 	InternalR2GetOptions,
 	InternalR2ListOptions,
 	InternalR2PutOptions,
 	MultipartPartRow,
 	MultipartUploadRow,
-	MultipartUploadState,
 	ObjectRow,
-	R2BindingRequestSchema,
 	R2Conditional,
 	R2CreateMultipartUploadResponse,
 	R2PublishedPart,
 	R2UploadPartResponse,
-	SQL_SCHEMA,
 } from "./schemas.worker";
-import {
-	DigestAlgorithm,
-	R2_HASH_ALGORITHMS,
-	Validator,
-} from "./validator.worker";
+import type { DigestAlgorithm } from "./validator.worker";
+import type {
+	BlobId,
+	InclusiveRange,
+	MiniflareDurableObjectEnv,
+	RouteHandler,
+	TypedSql,
+} from "miniflare:shared";
 
 // This file implements Miniflare's R2 simulator, supporting both single and
 // multipart uploads.

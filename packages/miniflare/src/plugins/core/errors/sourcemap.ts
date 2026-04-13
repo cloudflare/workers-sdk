@@ -12,6 +12,7 @@ import type { Options } from "@cspotcode/source-map-support";
 //
 // ...load a fresh copy, by resetting then restoring the `require` cache, and
 // overriding `Symbol.for()` to return a unique symbol.
+// eslint-disable-next-line typescript/consistent-type-imports
 export function getFreshSourceMapSupport(): typeof import("@cspotcode/source-map-support") {
 	const resolvedSupportPath = require.resolve("@cspotcode/source-map-support");
 

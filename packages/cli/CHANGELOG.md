@@ -1,5 +1,13 @@
 # @cloudflare/cli
 
+## 1.4.0
+
+### Minor Changes
+
+- [#13144](https://github.com/cloudflare/workers-sdk/pull/13144) [`db60b94`](https://github.com/cloudflare/workers-sdk/commit/db60b94d9620e7608df3e98876d5df4fde952ecf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add gitignore helpers for appending Wrangler-related entries
+
+  New `maybeAppendWranglerToGitIgnore` and `maybeAppendWranglerToGitIgnoreLikeFile` functions that automatically append Wrangler-related entries (`.wrangler`, `.dev.vars*`, `.env*`, and their negated example patterns) to `.gitignore` or similar ignore files. Existing entries are detected and skipped to avoid duplicates.
+
 ## 1.3.0
 
 ### Minor Changes

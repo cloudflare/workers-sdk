@@ -1,5 +1,5 @@
 import globToRegexp from "glob-to-regexp";
-import { MatcherRegExps } from "../workers";
+import type { MatcherRegExps } from "../workers";
 
 export function globsToRegExps(
 	globs: string[] = [],

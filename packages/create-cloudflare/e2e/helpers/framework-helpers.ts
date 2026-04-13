@@ -15,8 +15,6 @@ import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import * as jsonc from "jsonc-parser";
 import { fetch } from "undici";
-// eslint-disable-next-line no-restricted-imports
-import { expect } from "vitest";
 import { version } from "../../package.json";
 import { getFrameworkMap } from "../../src/templates";
 import {
@@ -31,6 +29,7 @@ import { kill, spawnWithLogging } from "./spawn";
 import type { TemplateConfig } from "../../src/templates";
 import type { RunnerConfig } from "./run-c3";
 import type { Writable } from "node:stream";
+import type { ExpectStatic } from "vitest";
 
 export type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
@@ -44,6 +43,7 @@ export type FrameworkTestConfig = RunnerConfig & {
 const packageManager = detectPackageManager();
 
 export async function runC3ForFrameworkTest(
+	expect: ExpectStatic,
 	framework: string,
 	projectPath: string,
 	logStream: Writable,
@@ -139,6 +139,7 @@ export async function addTestVarsToWranglerToml(projectPath: string) {
 }
 
 export async function verifyDeployment(
+	expect: ExpectStatic,
 	{ testCommitMessage }: FrameworkTestConfig,
 	frameworkId: string,
 	projectName: string,
@@ -150,7 +151,7 @@ export async function verifyDeployment(
 	}
 
 	if (testCommitMessage && process.env.CLOUDFLARE_API_TOKEN) {
-		await testDeploymentCommitMessage(projectName, frameworkId);
+		await testDeploymentCommitMessage(expect, projectName, frameworkId);
 	}
 
 	await retry({ times: 5 }, async () => {
@@ -166,6 +167,7 @@ export async function verifyDeployment(
 }
 
 export async function verifyDevScript(
+	expect: ExpectStatic,
 	{ verifyDev }: FrameworkTestConfig,
 	{ devScript }: TemplateConfig,
 	projectPath: string,
@@ -243,6 +245,7 @@ export async function verifyDevScript(
 }
 
 export async function verifyPreviewScript(
+	expect: ExpectStatic,
 	{ verifyPreview }: FrameworkTestConfig,
 	{ previewScript }: TemplateConfig,
 	projectPath: string,
@@ -257,6 +260,12 @@ export async function verifyPreviewScript(
 		"Expected a preview script is we are verifying the preview in " +
 			projectPath
 	);
+	if (verifyPreview.generateTypes) {
+		await runCommand([packageManager.name, "exec", "wrangler", "types"], {
+			cwd: projectPath,
+		});
+	}
+
 	if (verifyPreview.build) {
 		await runCommand([packageManager.name, "run", "build"], {
 			cwd: projectPath,
@@ -308,6 +317,7 @@ export async function verifyPreviewScript(
 }
 
 export async function verifyTypes(
+	expect: ExpectStatic,
 	{ nodeCompat, verifyTypes: verify }: FrameworkTestConfig,
 	{
 		workersTypes,
@@ -362,6 +372,7 @@ export async function verifyTypes(
 }
 
 export async function verifyCloudflareVitePluginConfigured(
+	expect: ExpectStatic,
 	{ verifyCloudflareVitePluginConfigured: verify }: FrameworkTestConfig,
 	projectPath: string
 ) {
@@ -444,6 +455,7 @@ export function getFrameworkConfig(frameworkKey: string) {
  * Test that C3 added a git commit with the correct message.
  */
 export async function testGitCommitMessage(
+	expect: ExpectStatic,
 	projectName: string,
 	framework: string,
 	projectPath: string
@@ -465,6 +477,7 @@ export async function testGitCommitMessage(
  * Test that we pushed the commit message to the deployment correctly.
  */
 export async function testDeploymentCommitMessage(
+	expect: ExpectStatic,
 	projectName: string,
 	framework: string
 ) {

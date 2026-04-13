@@ -3,7 +3,7 @@
 //
 // NOTE: this function duplicates the logic inside SQLite's shell.c.in as close
 // as possible, with any deviations noted.
-import { SqlStorage } from "@cloudflare/workers-types/experimental";
+import type { SqlStorage } from "@cloudflare/workers-types/experimental";
 
 export function* dumpSql(
 	db: SqlStorage,

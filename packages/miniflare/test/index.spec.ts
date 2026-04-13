@@ -6,21 +6,11 @@ import { once } from "node:events";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import http from "node:http";
-import { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { Writable } from "node:stream";
 import { json, text } from "node:stream/consumers";
 import url from "node:url";
 import util from "node:util";
-import {
-	D1Database,
-	DurableObjectNamespace,
-	Fetcher,
-	KVNamespace,
-	Queue,
-	R2Bucket,
-} from "@cloudflare/workers-types/experimental";
 import {
 	_forceColour,
 	_transformsForContentEncodingAndContentType,
@@ -28,24 +18,15 @@ import {
 	DeferredPromise,
 	fetch,
 	kCurrentWorker,
-	MessageEvent,
 	Miniflare,
 	MiniflareCoreError,
-	MiniflareOptions,
 	parseWithRootPath,
 	PLUGINS,
-	ReplaceWorkersTypes,
 	Response,
 	viewToBuffer,
-	Worker_Module,
-	WorkerOptions,
 } from "miniflare";
 import { onTestFinished, test } from "vitest";
-import {
-	CloseEvent as StandardCloseEvent,
-	MessageEvent as StandardMessageEvent,
-	WebSocketServer,
-} from "ws";
+import { WebSocketServer } from "ws";
 import {
 	FIXTURES_PATH,
 	TestLog,
@@ -55,6 +36,27 @@ import {
 	useTmp,
 	utf8Encode,
 } from "./test-shared";
+import type {
+	D1Database,
+	DurableObjectNamespace,
+	Fetcher,
+	KVNamespace,
+	Queue,
+	R2Bucket,
+} from "@cloudflare/workers-types/experimental";
+import type {
+	MessageEvent,
+	MiniflareOptions,
+	ReplaceWorkersTypes,
+	Worker_Module,
+	WorkerOptions,
+} from "miniflare";
+import type { AddressInfo } from "node:net";
+import type { Writable } from "node:stream";
+import type {
+	CloseEvent as StandardCloseEvent,
+	MessageEvent as StandardMessageEvent,
+} from "ws";
 
 // (base64 encoded module containing a single `add(i32, i32): i32` export)
 const ADD_WASM_MODULE = Buffer.from(

@@ -4,16 +4,18 @@ import {
 	GET,
 	HttpError,
 	MiniflareDurableObject,
-	MiniflareDurableObjectCf,
-	MiniflareDurableObjectEnv,
 	POST,
 	PUT,
-	RouteHandler,
 	Router,
 	SharedBindings,
-	TimerHandle,
 } from "miniflare:shared";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
+import type {
+	MiniflareDurableObjectCf,
+	MiniflareDurableObjectEnv,
+	RouteHandler,
+	TimerHandle,
+} from "miniflare:shared";
 
 interface BrowserSessionEnv extends MiniflareDurableObjectEnv {
 	[SharedBindings.MAYBE_SERVICE_LOOPBACK]: Fetcher;
@@ -223,7 +225,7 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 	};
 
 	@GET("/v1/devtools/browser/:sessionId")
-	connect: RouteHandler = async (req) => {
+	connect: RouteHandler = async (_req) => {
 		assert(
 			this.sessionInfo !== undefined,
 			"sessionInfo must be set before connecting"

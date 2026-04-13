@@ -24,7 +24,7 @@ it("produces queue message with mocked send", async ({ expect }) => {
 				metrics: {
 					backlogCount: 0,
 					backlogBytes: 0,
-					oldestMessageTimestamp: 0,
+					oldestMessageTimestamp: new Date(0),
 				},
 			},
 		}));

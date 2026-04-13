@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { FatalError, UserError } from "@cloudflare/workers-utils";
@@ -285,33 +284,28 @@ function maybeFindDetectedFramework(
 	}
 
 	if (settingsForOnlyKnownFrameworks.length === 2) {
-		const frameworkIdsFound = new Set<string>(
-			settings.map(({ framework }) => framework.id)
+		const settingsForOnlyKnownFrameworksIds = new Set<string>(
+			settingsForOnlyKnownFrameworks.map(({ framework }) => framework.id)
 		);
 
-		const viteId = "vite";
+		// Some frameworks (e.g. Vite, Hono) can serve as auxiliary tooling for a primary
+		// framework (e.g. Vite with React, Hono with Waku). When exactly two frameworks
+		// are detected and one is auxiliary, we discard it and return the primary one.
+		const idsOfAuxiliaryFrameworks = ["vite", "hono"];
 
-		if (frameworkIdsFound.has(viteId)) {
-			const knownNonViteSettings = settingsForOnlyKnownFrameworks.find(
-				({ framework }) => framework.id !== viteId
-			);
+		for (const auxiliaryFrameworkId of idsOfAuxiliaryFrameworks) {
+			if (settingsForOnlyKnownFrameworksIds.has(auxiliaryFrameworkId)) {
+				const nonAuxiliaryFrameworkSettings =
+					settingsForOnlyKnownFrameworks.find(
+						({ framework }) => framework.id !== auxiliaryFrameworkId
+					);
 
-			// Here knownNonViteSettings should always be defined, it only could be undefined if the detected frameworks are both Vite.
-			if (knownNonViteSettings) {
-				// If we've found a known framework and Vite, then most likely the Vite is there only either as an extra build tool
-				// or as part of a Vitest installation, so it's pretty safe to ignore it in this case
-				return knownNonViteSettings;
+				// Note: here nonAuxiliaryFrameworkSettings should always be defined, it could be undefined only if the
+				//       same framework is actually detected twice (which shouldn't be possible).
+				if (nonAuxiliaryFrameworkSettings) {
+					return nonAuxiliaryFrameworkSettings;
+				}
 			}
-		}
-
-		if (frameworkIdsFound.has("waku") && frameworkIdsFound.has("hono")) {
-			// The waku framework has a tight integration with hono, so it's likely that hono can also
-			// be detected in waku projects, if that's the case let's filter hono out
-			const wakuSettings = settingsForOnlyKnownFrameworks.find(
-				({ framework }) => framework.id === "waku"
-			);
-			assert(wakuSettings);
-			return wakuSettings;
 		}
 	}
 

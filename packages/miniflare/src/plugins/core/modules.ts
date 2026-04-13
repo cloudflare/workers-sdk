@@ -9,10 +9,12 @@ import importPhases from "acorn-import-phases";
 import { simple } from "acorn-walk";
 import { dim } from "kleur/colors";
 import { z } from "zod";
-import { Worker_Module } from "../../runtime";
 import { globsToRegExps, MiniflareCoreError, PathSchema } from "../../shared";
-import { MatcherRegExps, testRegExps } from "../../workers";
-import { getNodeCompat, NodeJSCompatMode } from "./node-compat";
+import { testRegExps } from "../../workers";
+import { getNodeCompat } from "./node-compat";
+import type { Worker_Module } from "../../runtime";
+import type { MatcherRegExps } from "../../workers";
+import type { NodeJSCompatMode } from "./node-compat";
 import type estree from "estree";
 
 const ExtendedParser = Parser.extend(importPhases());

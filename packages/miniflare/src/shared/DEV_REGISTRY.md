@@ -133,10 +133,10 @@ The proxy is only configured when `devRegistry.isEnabled()` returns `true` and t
 
 The `defaultEntrypointService` in `WorkerDefinition` varies by worker type:
 
-| Worker Type     | defaultEntrypointService   | Why                               |
-| --------------- | -------------------------- | --------------------------------- |
-| Plain worker    | `core:user:<name>`         | Direct access                     |
-| Worker + Assets | `assets:rpc-proxy:<name>`  | Routes through asset handler      |
-| Vite worker     | `core:user:<overrideName>` | `unsafeOverrideFetchWorker`       |
+| Worker Type     | defaultEntrypointService   | Why                          |
+| --------------- | -------------------------- | ---------------------------- |
+| Plain worker    | `core:user:<name>`         | Direct access                |
+| Worker + Assets | `assets:rpc-proxy:<name>`  | Routes through asset handler |
+| Vite worker     | `core:user:<overrideName>` | `unsafeOverrideFetchWorker`  |
 
 Named entrypoints and DO access always use `userWorkerService` (`core:user:<name>`) to bypass any asset/vite proxy layer.

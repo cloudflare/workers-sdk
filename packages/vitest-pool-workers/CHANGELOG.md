@@ -1,5 +1,47 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.14.4
+
+### Patch Changes
+
+- Updated dependencies [[`5338bb6`](https://github.com/cloudflare/workers-sdk/commit/5338bb687e9933702744771fc89850a7471ee1cc), [`79fd529`](https://github.com/cloudflare/workers-sdk/commit/79fd529e62b715405aacc0e643a20ce1af3df9f2), [`28bc2be`](https://github.com/cloudflare/workers-sdk/commit/28bc2be6c51e93aa8df75ad223435df35f1981d6), [`4fd138b`](https://github.com/cloudflare/workers-sdk/commit/4fd138b8e4d46567419c0202e68423e89cd3d813), [`bafb96b`](https://github.com/cloudflare/workers-sdk/commit/bafb96bccc97325c3d9dac54af96212cb30e605a), [`c50cb5b`](https://github.com/cloudflare/workers-sdk/commit/c50cb5b4038d8107c4131af1b086ea3261f53518), [`2589395`](https://github.com/cloudflare/workers-sdk/commit/2589395a0890bad9bf78e9d10aa680f448259716), [`525a46b`](https://github.com/cloudflare/workers-sdk/commit/525a46bca7c9a8a57972ac152ab9c400df0bf186), [`5eff8c1`](https://github.com/cloudflare/workers-sdk/commit/5eff8c14f08696e5a832875a35e214969aa55b9b), [`1313275`](https://github.com/cloudflare/workers-sdk/commit/13132753130bcba9eb03bc4e662911685962c04e)]:
+  - wrangler@4.82.0
+  - miniflare@4.20260410.0
+
+## 0.14.3
+
+### Patch Changes
+
+- Updated dependencies [[`42c7ef0`](https://github.com/cloudflare/workers-sdk/commit/42c7ef04385094c77f0c2830134fc38b2dc39b02), [`c510494`](https://github.com/cloudflare/workers-sdk/commit/c510494e522927f60fa4915358a881cf73e31a39), [`8b71eca`](https://github.com/cloudflare/workers-sdk/commit/8b71ecae4fed8f0bebf5789f1a617db26c0e4365), [`a42e0e8`](https://github.com/cloudflare/workers-sdk/commit/a42e0e8b52df128513f85025f50eb985bc7f5748), [`7ca6f6e`](https://github.com/cloudflare/workers-sdk/commit/7ca6f6e98ff84e68e901ae35028435f4916ae1c2)]:
+  - miniflare@4.20260409.0
+  - wrangler@4.81.1
+
+## 0.14.2
+
+### Patch Changes
+
+- [#13095](https://github.com/cloudflare/workers-sdk/pull/13095) [`65e6684`](https://github.com/cloudflare/workers-sdk/commit/65e668494affaa6383e27a1c262d628485a7cc5b) Thanks [@penalosa](https://github.com/penalosa)! - Reject V8 coverage provider with a clear error message
+
+  V8 native code coverage (`@vitest/coverage-v8`) requires `node:inspector` to collect profiling data from V8's runtime. workerd only provides `node:inspector` as a non-functional stub, so V8 coverage would silently fail or crash with a confusing `No such module "node:inspector"` error.
+
+  The pool now detects this configuration early — during Vite plugin setup, before Vitest tries to load the coverage provider — and throws a clear error directing users to use Istanbul coverage instead, which works by instrumenting source code at build time and runs on any JavaScript runtime.
+
+- Updated dependencies [[`a3e3b57`](https://github.com/cloudflare/workers-sdk/commit/a3e3b57f2aa47b6655af7baaa784d55117368abc), [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e), [`fa6d84f`](https://github.com/cloudflare/workers-sdk/commit/fa6d84fe4f07143522e4d41a2934c486d1c4b6d1), [`96ee5d4`](https://github.com/cloudflare/workers-sdk/commit/96ee5d465833f4887653078115acea40de2893c0), [`7d318e1`](https://github.com/cloudflare/workers-sdk/commit/7d318e1b7e5af62c0ed09d3e5a51af84294c372e), [`7a60d4b`](https://github.com/cloudflare/workers-sdk/commit/7a60d4bd33b03a55f687869378dfd06143247239), [`78cbe37`](https://github.com/cloudflare/workers-sdk/commit/78cbe37a3a2ed0c5213fca603f61e3acd4d807e4), [`6fa5dfd`](https://github.com/cloudflare/workers-sdk/commit/6fa5dfddcbad1520db7c3d1bb12233001fe00e45)]:
+  - miniflare@4.20260405.0
+  - wrangler@4.81.0
+
+## 0.14.1
+
+### Patch Changes
+
+- [#13131](https://github.com/cloudflare/workers-sdk/pull/13131) [`65acf66`](https://github.com/cloudflare/workers-sdk/commit/65acf6658efde6eb7ad28f858fef9e656db80385) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use miniflare's `handleStructuredLogs` option instead of `handleRuntimeStdio` for processing workerd output
+
+  Previously, `vitest-pool-workers` manually processed raw stdout/stderr streams from the workerd runtime via `handleRuntimeStdio`, with its own filtering of known noisy messages (e.g. LLVM symbolizer warnings). This switches to miniflare's `handleStructuredLogs` option, which parses workerd's structured JSON log output and automatically filters known unhelpful messages. This aligns with how both `wrangler` and `vite-plugin-cloudflare` handle workerd logs.
+
+- Updated dependencies [[`9c4035b`](https://github.com/cloudflare/workers-sdk/commit/9c4035b6e48418d9bccf9791354f54a083af5108), [`5d29055`](https://github.com/cloudflare/workers-sdk/commit/5d29055edf482bd51c3728b26594b5e4ac54f0a9), [`fb67a18`](https://github.com/cloudflare/workers-sdk/commit/fb67a18aa2b4a34c292737591e6d5a3401f8d742), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`ab44870`](https://github.com/cloudflare/workers-sdk/commit/ab448708ba725b74927aff4d6e3f1f97dc9c2135), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41), [`14e72eb`](https://github.com/cloudflare/workers-sdk/commit/14e72eb523a5a2dd6b7d332d81148e46cfae16d7), [`4dc94fd`](https://github.com/cloudflare/workers-sdk/commit/4dc94fd5209d17663fac32ac99f7f20d17f1f07f), [`b2f53ea`](https://github.com/cloudflare/workers-sdk/commit/b2f53eaab314eaf395860525b4c0baf28dfd5fad), [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e), [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87)]:
+  - wrangler@4.80.0
+  - miniflare@4.20260401.0
+
 ## 0.14.0
 
 ### Minor Changes

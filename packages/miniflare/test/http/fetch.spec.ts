@@ -1,17 +1,12 @@
 import { Blob } from "node:buffer";
 import http from "node:http";
-import { AddressInfo } from "node:net";
 import { URLSearchParams } from "node:url";
-import {
-	CloseEvent,
-	DeferredPromise,
-	fetch,
-	FormData,
-	MessageEvent,
-} from "miniflare";
+import { DeferredPromise, fetch, FormData } from "miniflare";
 import { assert, onTestFinished, test } from "vitest";
 import { WebSocketServer } from "ws";
 import { useServer } from "../test-shared";
+import type { CloseEvent, MessageEvent } from "miniflare";
+import type { AddressInfo } from "node:net";
 
 const noop = () => {};
 

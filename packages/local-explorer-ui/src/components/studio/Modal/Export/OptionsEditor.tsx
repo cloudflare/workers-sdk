@@ -51,7 +51,7 @@ export function StudioExportOptionEditor({
 				<SettingLabel>Filename</SettingLabel>
 				<SettingOption>
 					<input
-						className="w-full rounded-md border border-border px-3 py-2 font-mono text-sm"
+						className="w-full rounded-md border border-kumo-fill px-3 py-2 font-mono text-sm"
 						onChange={(e): void => {
 							onChange((prev) => ({
 								...prev,
@@ -82,7 +82,7 @@ function SQLExportEditor({
 				<SettingLabel>Batch Size</SettingLabel>
 				<SettingOption>
 					<input
-						className="w-full rounded-md border border-border px-3 py-2 text-right font-mono text-sm"
+						className="w-full rounded-md border border-kumo-fill px-3 py-2 text-right font-mono text-sm"
 						onChange={(e): void => {
 							const batchSize = Number(e.target.value);
 							if (isNaN(batchSize) || batchSize < 1) {
@@ -111,7 +111,7 @@ function SQLExportEditor({
 				</SettingLabel>
 				<SettingOption>
 					<input
-						className="w-full rounded-md border border-border px-3 py-2 text-right font-mono text-sm"
+						className="w-full rounded-md border border-kumo-fill px-3 py-2 text-right font-mono text-sm"
 						onChange={(e): void => {
 							const maxStatementLength = Number(e.target.value);
 							if (isNaN(maxStatementLength) || maxStatementLength < 1) {
@@ -135,7 +135,7 @@ function SQLExportEditor({
 				<SettingLabel>Table Name</SettingLabel>
 				<SettingOption>
 					<input
-						className="w-full rounded-md border border-border px-3 py-2 font-mono text-sm"
+						className="w-full rounded-md border border-kumo-fill px-3 py-2 font-mono text-sm"
 						onChange={(e): void => {
 							onChange((prev) => ({
 								...prev,
@@ -248,7 +248,7 @@ function SettingItem({ children, lastItem }: SettingItemProps): JSX.Element {
 		<div
 			className={cn(
 				"flex min-h-14 items-center justify-between gap-4 px-4",
-				lastItem ? "" : "border-b border-border"
+				lastItem ? "" : "border-b border-kumo-fill"
 			)}
 		>
 			{children}
@@ -277,7 +277,7 @@ function SettingOptionDropdown({
 }: SettingOptionDropdownProps): JSX.Element {
 	return (
 		<select
-			className="cursor-pointer rounded-md border border-border bg-transparent px-3 py-2 text-sm"
+			className="cursor-pointer rounded-md border border-kumo-fill bg-transparent px-3 py-2 text-sm"
 			onChange={(e: ChangeEvent<HTMLSelectElement>): void => {
 				onChange(e.target.value);
 			}}

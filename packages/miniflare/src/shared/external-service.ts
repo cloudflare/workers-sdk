@@ -1,6 +1,7 @@
-import { z } from "zod";
-import { kCurrentWorker, ServiceDesignatorSchema } from "../plugins/core";
-import { RemoteProxyConnectionString } from "../plugins/shared";
+import { kCurrentWorker } from "../plugins/core";
+import type { ServiceDesignatorSchema } from "../plugins/core";
+import type { RemoteProxyConnectionString } from "../plugins/shared";
+import type { z } from "zod";
 
 export function normaliseServiceDesignator(
 	service: z.infer<typeof ServiceDesignatorSchema>

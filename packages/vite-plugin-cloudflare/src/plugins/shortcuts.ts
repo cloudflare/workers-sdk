@@ -1,4 +1,9 @@
-import { getDefaultDevRegistryPath, getWorkerRegistry } from "miniflare";
+import {
+	CorePaths,
+	getDefaultDevRegistryPath,
+	getWorkerRegistry,
+} from "miniflare";
+import open from "open";
 import colors from "picocolors";
 import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
@@ -19,6 +24,7 @@ export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
 
 			assertIsNotPreview(ctx);
 			addBindingsShortcut(viteDevServer, ctx);
+			addExplorerShortcut(viteDevServer);
 		},
 		async configurePreviewServer(vitePreviewServer) {
 			if (!isCustomShortcutsSupported) {
@@ -27,6 +33,7 @@ export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
 
 			assertIsPreview(ctx);
 			addBindingsShortcut(vitePreviewServer, ctx);
+			addExplorerShortcut(vitePreviewServer);
 		},
 	};
 });
@@ -105,5 +112,62 @@ export function addBindingsShortcut(
 	// Add the custom binding shortcut
 	server.bindCLIShortcuts({
 		customShortcuts: [printBindingsShortcut],
+	});
+}
+
+export function addExplorerShortcut(
+	server: vite.ViteDevServer | vite.PreviewServer
+) {
+	if (!process.stdin.isTTY) {
+		return;
+	}
+
+	const openExplorerShortcut = {
+		key: "e",
+		description: "open local explorer",
+		action: async (viteServer) => {
+			const url = viteServer.resolvedUrls?.local[0];
+			if (!url) {
+				viteServer.config.logger.warn("No local URL available");
+				return;
+			}
+
+			const explorerUrl = new URL(CorePaths.EXPLORER, url).href;
+			const childProcess = await open(explorerUrl);
+			childProcess.on("error", () => {
+				viteServer.config.logger.warn(
+					"Failed to open browser, the local explorer can be accessed at " +
+						explorerUrl
+				);
+			});
+		},
+	} satisfies vite.CLIShortcut<vite.ViteDevServer | vite.PreviewServer>;
+
+	// Wrap bindCLIShortcuts to print our shortcut hint
+	const bindCLIShortcuts = server.bindCLIShortcuts.bind(server);
+	server.bindCLIShortcuts = (
+		options?: vite.BindCLIShortcutsOptions<
+			vite.ViteDevServer | vite.PreviewServer
+		>
+	) => {
+		if (
+			server.httpServer &&
+			process.stdin.isTTY &&
+			!process.env.CI &&
+			options?.print
+		) {
+			server.config.logger.info(
+				colors.dim(colors.green("  ➜")) +
+					colors.dim("  press ") +
+					colors.bold(`${openExplorerShortcut.key} + enter`) +
+					colors.dim(` to ${openExplorerShortcut.description}`)
+			);
+		}
+
+		bindCLIShortcuts(options);
+	};
+
+	server.bindCLIShortcuts({
+		customShortcuts: [openExplorerShortcut],
 	});
 }
