@@ -5,10 +5,10 @@ export default defineConfig({
 	test: {
 		fileParallelism: false,
 		globalSetup: ["./src/__e2e__/global-setup.ts"],
-		hookTimeout: 60_000,
+		hookTimeout: process.env.CI ? 120_000 : 60_000,
 		include: ["src/__e2e__/**/*.spec.ts"],
 		reporters: ["dot"],
 		setupFiles: ["./src/__e2e__/setup.ts"],
-		testTimeout: 30_000,
+		testTimeout: process.env.CI ? 60_000 : 30_000,
 	},
 });
