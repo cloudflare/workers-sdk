@@ -137,6 +137,8 @@ jobs:
           filters: |
             everything_but_markdown:
               - '!**/*.md'
+            framework_deps:
+              - 'packages/create-cloudflare/src/frameworks/package.json'
 
       - name: Check if frameworks tests should run
         id: check-frameworks
@@ -147,9 +149,11 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          FRAMEWORK_DEPS_CHANGED: ${{ steps.changes.outputs.framework_deps }}
         run: |
           if [ "$EVENT_NAME" = "merge_group" ] || \
-             [ "$HEAD_REF" = "changeset-release/main" ]; then
+             [ "$HEAD_REF" = "changeset-release/main" ] || \
+             [ "$FRAMEWORK_DEPS_CHANGED" = "true" ]; then
             echo "run_frameworks=true" >> "$GITHUB_OUTPUT"
           elif [ "$EVENT_NAME" = "pull_request" ]; then
             HAS_LABEL=$(gh pr view "$PR_NUMBER" \
