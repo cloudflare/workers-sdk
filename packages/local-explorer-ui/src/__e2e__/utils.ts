@@ -14,10 +14,10 @@ async function navigateTo(path: string): Promise<void> {
 }
 
 /**
- * Wait for the page to finish loading (no pending network requests).
+ * Wait for the page to finish loading.
  */
 async function waitForPageLoad(): Promise<void> {
-	await page.waitForLoadState("networkidle");
+	await page.waitForLoadState("domcontentloaded");
 }
 
 /**
