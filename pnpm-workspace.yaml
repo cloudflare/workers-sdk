@@ -107,6 +107,7 @@ catalog:
   "capnp-es": "^0.0.14"
   "capnweb": "^0.5.0"
   "ci-info": "^4.4.0"
+  "open": "^11.0.0"
   # CAUTION: Most usage of @cloudflare/vitest-pool-workers in this monorepo should use workspace:* instead of this catalog version
   # However, some packages (pages-shared, workers-shared, etc...) need to be tested using vitest-pool-workers but are themselves
   # ultimately included in vitest-pool-workers (through Wrangler), causing a circular dependency.
