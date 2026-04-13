@@ -12,11 +12,6 @@ import type { Result } from "update-check";
 const UPDATE_CHECK_TIMEOUT_MS = 3000;
 
 async function doUpdateCheck(): Promise<string | undefined> {
-	// Allow users to disable the update check entirely via environment variable
-	if (process.env.WRANGLER_UPDATE_CHECK?.toLowerCase() === "false") {
-		return undefined;
-	}
-
 	let update: Result | null = null;
 	const pkg = { name: wranglerName, version: wranglerVersion };
 	try {
