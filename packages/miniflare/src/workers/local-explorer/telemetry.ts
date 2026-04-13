@@ -53,7 +53,8 @@ export async function telemetryMiddleware(
 		!SPARROW_SOURCE_KEY ||
 		!c.env.MINIFLARE_TELEMETRY_CONFIG.enabled ||
 		// Skip telemetry for aggregation calls between instances
-		c.req.raw.headers.has(NO_AGGREGATE_HEADER)
+		c.req.raw.headers.has(NO_AGGREGATE_HEADER) ||
+		!c.env.MINIFLARE_TELEMETRY_CONFIG.deviceId
 	) {
 		return;
 	}

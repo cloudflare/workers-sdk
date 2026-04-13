@@ -1,5 +1,4 @@
 ---
-"@cloudflare/vite-plugin": patch
 "create-cloudflare": patch
 "@cloudflare/workers-utils": patch
 "miniflare": patch

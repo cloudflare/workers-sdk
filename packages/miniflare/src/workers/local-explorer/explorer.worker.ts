@@ -69,7 +69,7 @@ export type Env = {
 	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
 	// Per-worker resource bindings for the /local/workers endpoint
 	[CoreBindings.JSON_EXPLORER_WORKER_OPTS]: ExplorerWorkerOpts;
-	[CoreBindings.JSON_TELEMETRY_CONFIG]: { enabled: boolean; deviceId: string };
+	[CoreBindings.JSON_TELEMETRY_CONFIG]: { enabled: boolean; deviceId?: string };
 };
 
 export type AppBindings = { Bindings: Env };

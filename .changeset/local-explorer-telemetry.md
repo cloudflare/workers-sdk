@@ -1,10 +1,11 @@
 ---
 "miniflare": minor
+"wrangler": minor
 ---
 
 Add telemetry to local REST API
 
-The local REST API (used by the local explorer) now collects anonymous usage telemetry. This respects any existing global telemetry preferences, which can be disabled by running the command `wrangler telemetry disable`.
+The local REST API (used by the local explorer) now collects anonymous usage telemetry. This respects any existing telemetry preferences, which can be disabled by running the command `wrangler telemetry disable`.
 
 No actual data values, keys, query contents, or resource IDs are collected.
 
