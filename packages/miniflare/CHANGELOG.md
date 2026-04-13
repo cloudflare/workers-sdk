@@ -1,5 +1,57 @@
 # miniflare
 
+## 4.20260410.0
+
+### Minor Changes
+
+- [#13139](https://github.com/cloudflare/workers-sdk/pull/13139) [`79fd529`](https://github.com/cloudflare/workers-sdk/commit/79fd529e62b715405aacc0e643a20ce1af3df9f2) Thanks [@roerohan](https://github.com/roerohan)! - feat: add Flagship feature flag binding support
+
+  Adds end-to-end support for the Flagship feature flag binding, which allows Workers to evaluate feature flags from Cloudflare's Flagship service. Configure it in `wrangler.json` with a `flagship` array containing `binding` and `app_id` entries. In local dev, the binding returns default values for all flag evaluations; use `"remote": true` in the binding to evaluate flags against the live Flagship service.
+
+- [#13392](https://github.com/cloudflare/workers-sdk/pull/13392) [`2589395`](https://github.com/cloudflare/workers-sdk/commit/2589395a0890bad9bf78e9d10aa680f448259716) Thanks [@emily-shen](https://github.com/emily-shen)! - Add telemetry to local REST API
+
+  The local REST API (used by the local explorer) now collects anonymous usage telemetry. This respects any existing telemetry preferences, which can be disabled by running the command `wrangler telemetry disable`.
+
+  This only applies when the dev session is started via Wrangler, and not via the Vite plugin or standalone Miniflare.
+
+  No actual data values, keys, query contents, or resource IDs are collected.
+
+  **Event schema:**
+
+  ```json
+  {
+    "event": "localapi.<route>.<method>", // e.g. localapi.kv.keys.get
+    "deviceId": "<uuid>",
+    "timestamp": 1234567890,
+    "properties": {
+      "userAgent": "Mozilla/5.0 ...",
+      // Only for localapi.local.workers.get:
+      "workerCount": 2,
+      "kvCount": 3,
+      "d1Count": 1,
+      "r2Count": 0,
+      "doCount": 1,
+      "workflowsCount": 0
+    }
+  }
+  ```
+
+  Note: the Local Explorer and corresponding local REST API is still an experimental feature.
+
+### Patch Changes
+
+- [#13393](https://github.com/cloudflare/workers-sdk/pull/13393) [`c50cb5b`](https://github.com/cloudflare/workers-sdk/commit/c50cb5b4038d8107c4131af1b086ea3261f53518) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260409.1 | 1.20260410.1 |
+
+- [#13335](https://github.com/cloudflare/workers-sdk/pull/13335) [`5eff8c1`](https://github.com/cloudflare/workers-sdk/commit/5eff8c14f08696e5a832875a35e214969aa55b9b) Thanks [@KennethRuan](https://github.com/KennethRuan)! - Return metadata in queue broker response
+
+  The queue broker's `/message` and `/batch` endpoints now return a JSON response body containing queue metrics (`backlogCount`, `backlogBytes`, `oldestMessageTimestamp`) instead of an empty response. A new `GET /metrics` endpoint is also added to support the `metrics()` API.
+
 ## 4.20260409.0
 
 ### Minor Changes
