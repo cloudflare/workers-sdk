@@ -302,8 +302,7 @@ export const CoreSharedOptionsSchema = z
 		// This option is useful in combination with a custom handleRuntimeStdio.
 		structuredWorkerdLogs: z.boolean().optional(),
 
-		// Enable telemetry for the local explorer. Defaults to false when miniflare
-		// is used standalone, but defaults to true in wrangler and vite.
+		// Enable telemetry for the local explorer.
 		telemetry: z
 			.object({
 				enabled: z.boolean().default(false),

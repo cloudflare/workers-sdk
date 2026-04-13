@@ -7,6 +7,8 @@ Add telemetry to local REST API
 
 The local REST API (used by the local explorer) now collects anonymous usage telemetry. This respects any existing telemetry preferences, which can be disabled by running the command `wrangler telemetry disable`.
 
+This only applies when the dev session is started via Wrangler, and not via the Vite plugin or standalone Miniflare.
+
 No actual data values, keys, query contents, or resource IDs are collected.
 
 **Event schema:**
