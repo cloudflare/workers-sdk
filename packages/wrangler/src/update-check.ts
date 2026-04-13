@@ -22,10 +22,7 @@ async function doUpdateCheck(): Promise<string | undefined> {
 				distTag: pkg.version.startsWith("0.0.0") ? "beta" : "latest",
 			}),
 			new Promise<null>((resolve) => {
-				const timer = setTimeout(
-					() => resolve(null),
-					UPDATE_CHECK_TIMEOUT_MS
-				);
+				const timer = setTimeout(() => resolve(null), UPDATE_CHECK_TIMEOUT_MS);
 				// Don't let the orphaned timer prevent process exit
 				timer.unref();
 			}),
