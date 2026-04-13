@@ -1,22 +1,22 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
-import type AssetWorker from "../../asset-worker";
 import { generateStaticRoutingRuleMatcher } from "../../asset-worker/src/utils/rules-engine";
 import { PerformanceTimer } from "../../utils/performance";
 import { TemporaryRedirectResponse } from "../../utils/responses";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
-import type {
-	EyeballRouterConfig,
-	JaegerTracing,
-	RouterConfig,
-	UnsafePerformanceTimer,
-} from "../../utils/types";
 import { Analytics, DISPATCH_TYPE, STATIC_ROUTING_DECISION } from "./analytics";
 import {
 	applyEyeballConfigDefaults,
 	applyRouterConfigDefaults,
 } from "./configuration";
 import { renderLimitedResponse } from "./limited-response";
+import type AssetWorker from "../../asset-worker";
+import type {
+	EyeballRouterConfig,
+	JaegerTracing,
+	RouterConfig,
+	UnsafePerformanceTimer,
+} from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
 export interface Env {
