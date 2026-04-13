@@ -1,5 +1,6 @@
 import { createHeaders } from "@remix-run/node-fetch-server";
 import { CoreHeaders, coupleWebSocket } from "miniflare";
+import { Headers } from "undici";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
 import type { Miniflare } from "miniflare";
@@ -44,16 +45,15 @@ export function handleWebSocket(
 				headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 			}
 
-			// Convert to a plain record to avoid type incompatibility between
-			// @remix-run/node-fetch-server's Headers and undici's Headers
-			// (IterableIterator vs SpecIterableIterator).
-			const headerRecord: Record<string, string> = {};
+			// Construct a new undici Headers from the remix Headers to avoid
+			// type incompatibility (IterableIterator vs SpecIterableIterator).
+			const undiciHeaders = new Headers();
 			headers.forEach((value, key) => {
-				headerRecord[key] = value;
+				undiciHeaders.set(key, value);
 			});
 
 			const response = await miniflare.dispatchFetch(url, {
-				headers: headerRecord,
+				headers: undiciHeaders,
 				method: request.method,
 			});
 			const workerWebSocket = response.webSocket;
