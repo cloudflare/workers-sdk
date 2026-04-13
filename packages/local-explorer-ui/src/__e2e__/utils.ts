@@ -6,14 +6,6 @@ import { page, viteUrl, workerUrl } from "./setup";
 export { page, viteUrl };
 
 /**
- * Common wait options for `vi.waitFor`
- */
-const WAIT_OPTIONS = {
-	interval: 100,
-	timeout: 30_000,
-};
-
-/**
  * Navigate to a specific path in the app.
  */
 async function navigateTo(path: string): Promise<void> {
@@ -28,36 +20,41 @@ async function waitForPageLoad(): Promise<void> {
 	await page.waitForLoadState("domcontentloaded");
 }
 
-async function seedFetch(url: string): Promise<void> {
-	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), WAIT_OPTIONS.timeout);
-	try {
-		const response = await fetch(url, { signal: controller.signal });
-		if (!response.ok) {
-			throw new Error(
-				`Seed request failed with status ${response.status}: ${await response.text()}`
-			);
-		}
-	} finally {
-		clearTimeout(timeout);
-	}
-}
-
+/**
+ * Seed the KV namespace with test data.
+ */
 export async function seedKV(): Promise<void> {
-	await seedFetch(`${workerUrl}/kv/seed`);
+	await fetch(`${workerUrl}/kv/seed`);
 }
 
+/**
+ * Seed the R2 bucket with test data.
+ */
 export async function seedR2(): Promise<void> {
-	await seedFetch(`${workerUrl}/r2/seed`);
+	await fetch(`${workerUrl}/r2/seed`);
 }
 
+/**
+ * Seed the D1 database with test data.
+ */
 export async function seedD1(): Promise<void> {
-	await seedFetch(`${workerUrl}/d1`);
+	await fetch(`${workerUrl}/d1`);
 }
 
+/**
+ * Seed a Durable Object with test data.
+ */
 export async function seedDO(objectId: string = "test-object"): Promise<void> {
-	await seedFetch(`${workerUrl}/do?id=${objectId}`);
+	await fetch(`${workerUrl}/do?id=${objectId}`);
 }
+
+/**
+ * Common wait options for `vi.waitFor`
+ */
+const WAIT_OPTIONS = {
+	interval: 100,
+	timeout: 30_000,
+};
 
 /**
  * Navigate to a KV namespace.
