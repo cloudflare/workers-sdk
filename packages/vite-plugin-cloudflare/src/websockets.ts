@@ -44,8 +44,16 @@ export function handleWebSocket(
 				headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 			}
 
+			// Convert to a plain record to avoid type incompatibility between
+			// @remix-run/node-fetch-server's Headers and undici's Headers
+			// (IterableIterator vs SpecIterableIterator).
+			const headerRecord: Record<string, string> = {};
+			headers.forEach((value, key) => {
+				headerRecord[key] = value;
+			});
+
 			const response = await miniflare.dispatchFetch(url, {
-				headers,
+				headers: headerRecord,
 				method: request.method,
 			});
 			const workerWebSocket = response.webSocket;
