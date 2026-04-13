@@ -177,10 +177,11 @@ const CoreOptionsSchemaInput = z.intersection(
 		 * However, @cloudflare/vite-plugin bypasses Miniflare's native Assets handling
 		 * and does everything itself. We still want service bindings to a Vite app to
 		 * serve Assets in front of the worker when appropriate though, and so we let
-		 * the caller override the default entrypoint and provide their own Assets handling
-		 * user worker.
+		 * the caller specify an alternative worker name whose service handles
+		 * default-entrypoint requests from the dev registry (e.g. a proxy worker
+		 * that serves assets in front of the user worker).
 		 */
-		unsafeOverrideDefaultEntrypoint: z.string().optional(),
+		unsafeOverrideFetchWorker: z.string().optional(),
 
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),

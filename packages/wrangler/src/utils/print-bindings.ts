@@ -171,9 +171,7 @@ export function printBindings(
 						hasConnectionStatus = true;
 						if (
 							registryDefinition &&
-							registryDefinition.durableObjects.some(
-								(d) => d.className === class_name
-							)
+							registryDefinition.debugPortAddress
 						) {
 							value += `, defined in ${script_name}`;
 							mode = getMode({ isSimulatedLocally: true, connected: true });

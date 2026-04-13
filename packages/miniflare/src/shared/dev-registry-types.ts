@@ -24,5 +24,4 @@ export type WorkerDefinition = {
 	 * Used by the local explorer for cross-instance aggregation.
 	 */
 	loopbackAddress: string;
-	durableObjects: { name: string; className: string }[];
 };

@@ -1,6 +1,6 @@
 # Dev Registry Architecture
 
-The dev registry enables cross-process communication between multiple `wrangler dev` / Vite dev sessions running locally. When Worker A has a service binding to Worker B, and both are running in separate processes, the dev registry coordinates the connection.
+The dev registry enables cross-process communication between multiple `wrangler dev` / `vite dev` sessions running locally. When Worker A has a service binding to Worker B, and both are running in separate processes, the dev registry coordinates the connection.
 
 ## Overview
 
@@ -52,7 +52,6 @@ type WorkerDefinition = {
 	defaultEntrypointService: string; // workerd service name for default entrypoint
 	userWorkerService: string; // workerd service name bypassing asset proxies
 	loopbackAddress: string; // e.g. "127.0.0.1:8787"
-	durableObjects: { name: string; className: string }[];
 };
 ```
 
@@ -138,6 +137,6 @@ The `defaultEntrypointService` in `WorkerDefinition` varies by worker type:
 | --------------- | -------------------------- | --------------------------------- |
 | Plain worker    | `core:user:<name>`         | Direct access                     |
 | Worker + Assets | `assets:rpc-proxy:<name>`  | Routes through asset handler      |
-| Vite worker     | `core:user:<overrideName>` | `unsafeOverrideDefaultEntrypoint` |
+| Vite worker     | `core:user:<overrideName>` | `unsafeOverrideFetchWorker`       |
 
 Named entrypoints and DO access always use `userWorkerService` (`core:user:<name>`) to bypass any asset/vite proxy layer.

@@ -76,11 +76,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 
 				if (!target._fetcher) {
 					throw new Error(
-						`Cannot access "${String(
-							prop
-						)}" as we couldn't find a local dev session for the "${
-							ctx.props.entrypoint ?? "default"
-						}" entrypoint of service "${ctx.props.service}" to proxy to.`
+						`Worker "${ctx.props.service}" not found. Make sure it is running locally.`
 					);
 				}
 				return Reflect.get(target._fetcher, prop);
@@ -88,14 +84,13 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 		});
 	}
 
-	async fetch(request: Request): Promise<Response> {
+	fetch(request: Request): Promise<Response> | Response {
 		if (!this._fetcher) {
 			return new Response(
-				`Couldn't find a local dev session for the "${
-					this.ctx.props.entrypoint ?? "default"
-				}" entrypoint of service "${this.ctx.props.service}" to proxy to`,
+				`Worker "${this.ctx.props.service}" not found. Make sure it is running locally.`,
 				{ status: 503 }
-			);
+				)
+
 		}
 		return this._fetcher.fetch(request);
 	}
@@ -103,9 +98,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	async scheduled(controller: ScheduledController) {
 		if (!this._entryFetcher) {
 			throw new Error(
-				`Couldn't find a local dev session for the "${
-					this.ctx.props.entrypoint ?? "default"
-				}" entrypoint of service "${this.ctx.props.service}" to proxy to`
+				`Worker "${this.ctx.props.service}" not found. Make sure it is running locally.`
 			);
 		}
 		const params = new URLSearchParams();
@@ -128,7 +121,9 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 		}
 	}
 
-	// Filter rpcMethod==="tail" to prevent infinite recursion.
+	// Forward tail events to the remote worker via RPC.
+	// Events with rpcMethod==="tail" are filtered out to prevent infinite
+	// recursion (the remote tail() call would itself produce a tail event).
 	tail(events: TraceItem[]) {
 		if (!this._fetcher) {
 			return;

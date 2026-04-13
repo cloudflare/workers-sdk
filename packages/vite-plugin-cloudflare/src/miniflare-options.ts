@@ -387,7 +387,7 @@ export async function getDevMiniflareOptions(
 									// Route dev registry requests through the vite Assets proxy worker,
 									...(environmentName ===
 										resolvedPluginConfig.entryWorkerEnvironmentName && {
-										unsafeOverrideDefaultEntrypoint: VITE_PROXY_WORKER_NAME,
+										unsafeOverrideFetchWorker: VITE_PROXY_WORKER_NAME,
 									}),
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 									serviceBindings: {

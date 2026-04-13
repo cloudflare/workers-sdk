@@ -28,8 +28,6 @@ export function normaliseServiceDesignator(
 	};
 }
 
-export const OUTBOUND_DO_PROXY_SERVICE_NAME = "dev-registry-proxy";
-
 const unsafeVariableCharRegex = /[^0-9a-zA-Z_\$]/g;
 
 export function getOutboundDoProxyClassName(

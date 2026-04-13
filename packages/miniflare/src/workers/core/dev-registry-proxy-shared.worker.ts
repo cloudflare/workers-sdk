@@ -124,11 +124,11 @@ export function createProxyDurableObjectClass({
 					if (Reflect.has(target, prop)) {
 						return Reflect.get(target, prop);
 					}
-					const fetcher = target._resolve();
+				const fetcher = target._resolve();
 					if (!fetcher) {
 						return () => {
 							throw new Error(
-								`Cannot access "${String(prop)}" as we couldn't find a local dev session for Durable Object "${className}" of service "${scriptName}" to proxy to.`
+								`Worker "${scriptName}" not found. Make sure it is running locally.`
 							);
 						};
 					}
@@ -137,12 +137,14 @@ export function createProxyDurableObjectClass({
 			});
 		}
 
-		async fetch(request: Request): Promise<Response> {
+		fetch(request: Request): Promise<Response> {
 			const fetcher = this._resolve();
 			if (!fetcher) {
-				return new Response(
-					`Couldn't find a local dev session for Durable Object "${className}" of service "${scriptName}" to proxy to`,
+				return Promise.resolve(
+					new Response(
+					`Worker "${scriptName}" not found. Make sure it is running locally.`,
 					{ status: 503 }
+					)
 				);
 			}
 			return fetcher.fetch(request);

@@ -131,7 +131,6 @@ import {
 import {
 	getOutboundDoProxyClassName,
 	normaliseServiceDesignator,
-	OUTBOUND_DO_PROXY_SERVICE_NAME,
 } from "./shared/external-service";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
 import {
@@ -508,7 +507,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 				) {
 					getEntrypoints(serviceName).entrypoints.add(entrypoint);
 					workerOpts.core.serviceBindings[name] = {
-						name: OUTBOUND_DO_PROXY_SERVICE_NAME,
+						name: SERVICE_DEV_REGISTRY_PROXY,
 						entrypoint: "ExternalServiceProxy",
 						props: { service: serviceName, entrypoint: entrypoint ?? null },
 					};
@@ -538,7 +537,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 					// Point it to the outbound do proxy service instead
 					workerOpts.do.durableObjects[bindingName] = {
 						className: getOutboundDoProxyClassName(scriptName, className),
-						scriptName: OUTBOUND_DO_PROXY_SERVICE_NAME,
+						scriptName: SERVICE_DEV_REGISTRY_PROXY,
 						useSQLite,
 						// Matches the unique key Miniflare will generate for this object in
 						// the target session. We need to do this so workerd generates the
@@ -571,7 +570,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 				) {
 					getEntrypoints(serviceName).entrypoints.add(entrypoint);
 					workerOpts.core.tails[i] = {
-						name: OUTBOUND_DO_PROXY_SERVICE_NAME,
+						name: SERVICE_DEV_REGISTRY_PROXY,
 						entrypoint: "ExternalServiceProxy",
 						props: { service: serviceName, entrypoint: entrypoint ?? null },
 					};
@@ -2163,6 +2162,7 @@ export class Miniflare {
 					bindings: [
 						{
 							name: "DEV_REGISTRY_DEBUG_PORT",
+							// workerdDebugPort bindings don't have any additional configuration
 							workerdDebugPort: kVoid,
 						},
 					],
@@ -2548,33 +2548,10 @@ export class Miniflare {
 				continue;
 			}
 
-			const internalObjects = Object.entries(
-				workerOpts.do.durableObjects ?? {}
-			).reduce<WorkerDefinition["durableObjects"]>(
-				(internalObjects, [bindingName, designator]) => {
-					const { className, scriptName, remoteProxyConnectionString } =
-						normaliseDurableObject(designator);
-
-					if (
-						scriptName === undefined ||
-						allWorkerNames.includes(scriptName) ||
-						remoteProxyConnectionString === undefined
-					) {
-						internalObjects.push({
-							name: bindingName,
-							className,
-						});
-					}
-
-					return internalObjects;
-				},
-				[]
-			);
-
 			let defaultEntrypointService: string;
-			if (workerOpts.core.unsafeOverrideDefaultEntrypoint) {
+			if (workerOpts.core.unsafeOverrideFetchWorker) {
 				defaultEntrypointService = getUserServiceName(
-					workerOpts.core.unsafeOverrideDefaultEntrypoint
+					workerOpts.core.unsafeOverrideFetchWorker
 				);
 			} else if (workerOpts.assets.assets) {
 				defaultEntrypointService = `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`;
@@ -2589,7 +2566,6 @@ export class Miniflare {
 					defaultEntrypointService,
 					userWorkerService: getUserServiceName(workerOpts.core.name),
 					loopbackAddress,
-					durableObjects: internalObjects,
 				},
 			]);
 		}
