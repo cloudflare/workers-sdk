@@ -34,6 +34,7 @@ import {
 	BROWSER_RENDERING_PLUGIN_NAME,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
+	FLAGSHIP_PLUGIN_NAME,
 	getDirectSocketName,
 	getGlobalServices,
 	getPersistPath,
@@ -148,6 +149,7 @@ import type {
 	D1Database,
 	DurableObjectNamespace,
 	Fetcher,
+	Flags,
 	ImagesBinding,
 	KVNamespace,
 	KVNamespaceListKey,
@@ -2956,6 +2958,9 @@ export class Miniflare {
 		set: (value: string) => Promise<void>;
 	}> {
 		return this.#getProxy(HELLO_WORLD_PLUGIN_NAME, bindingName, workerName);
+	}
+	getFlagshipBinding(bindingName: string, workerName?: string): Promise<Flags> {
+		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName);
 	}
 	getStreamBinding(
 		bindingName: string,

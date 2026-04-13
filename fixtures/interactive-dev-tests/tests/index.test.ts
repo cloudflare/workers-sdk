@@ -266,6 +266,7 @@ if (process.platform === "win32") {
 				expect(wrangler.stdout).toContain("open devtools");
 				expect(wrangler.stdout).toContain("clear console");
 				expect(wrangler.stdout).toContain("to exit");
+				expect(wrangler.stdout).toContain("open local explorer");
 				expect(wrangler.stdout).not.toContain("rebuild container");
 			});
 			it("should not show hotkeys with --show-interactive-dev-session=false", async () => {
@@ -279,11 +280,6 @@ if (process.platform === "win32") {
 				expect(wrangler.stdout).not.toContain("clear console");
 				expect(wrangler.stdout).not.toContain("to exit");
 				expect(wrangler.stdout).not.toContain("rebuild container");
-			});
-			// TODO: update this when we release properly
-			it("should not show local explorer hotkey by default", async () => {
-				const wrangler = await startWranglerDev(args);
-				wrangler.pty.kill();
 				expect(wrangler.stdout).not.toContain("open local explorer");
 			});
 		});

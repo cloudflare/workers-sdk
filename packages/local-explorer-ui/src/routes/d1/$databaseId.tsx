@@ -14,6 +14,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from "react";
 import D1Icon from "../../assets/icons/d1.svg?react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
+import { ResourceError } from "../../components/ResourceError";
 import { Studio } from "../../components/studio";
 import { DropTableConfirmationModal } from "../../components/studio/Modal/DropTableConfirmation";
 import { StudioTableActionsDropdown } from "../../components/studio/Table/ActionsDropdown";
@@ -25,6 +26,7 @@ import type { StudioResource } from "../../types/studio";
 
 export const Route = createFileRoute("/d1/$databaseId")({
 	component: DatabaseView,
+	errorComponent: ResourceError,
 	loader: async (ctx) => {
 		const driver = new LocalD1Driver(ctx.params.databaseId);
 		const schemas = await driver.schemas();
@@ -38,8 +40,9 @@ export const Route = createFileRoute("/d1/$databaseId")({
 			tables,
 		};
 	},
-	validateSearch: (search) => ({
+	validateSearch: (search): { table?: string; worker?: string } => ({
 		table: typeof search.table === "string" ? search.table : undefined,
+		worker: typeof search.worker === "string" ? search.worker : undefined,
 	}),
 });
 

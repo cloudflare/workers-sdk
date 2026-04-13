@@ -1,5 +1,10 @@
 import { Button, Label, Link as KumoLink, Table } from "@cloudflare/kumo";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	notFound,
+	useNavigate,
+} from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
 	durableObjectsNamespaceListNamespaces,
@@ -7,10 +12,13 @@ import {
 } from "../../../api";
 import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { NotFound } from "../../../components/NotFound";
+import { ResourceError } from "../../../components/ResourceError";
 import type { WorkersObject } from "../../../api";
 
 export const Route = createFileRoute("/do/$className/")({
 	component: NamespaceView,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		const response = await durableObjectsNamespaceListNamespaces();
 		const namespaces = response.data?.result ?? [];
@@ -21,7 +29,7 @@ export const Route = createFileRoute("/do/$className/")({
 				ns.id === params.className
 		);
 		if (!namespace?.id) {
-			throw new Error(`Durable Object class "${params.className}" not found`);
+			throw notFound();
 		}
 
 		const objectsResponse = await durableObjectsNamespaceListObjects({
@@ -43,6 +51,7 @@ export const Route = createFileRoute("/do/$className/")({
 			objects,
 		};
 	},
+	notFoundComponent: NotFound,
 });
 
 function NamespaceView() {
@@ -160,7 +169,7 @@ function NamespaceView() {
 						</Label>
 						<input
 							id="open-instance"
-							className="border-border bg-bg text-text ring-border focus:ring-primary mt-1.5 h-9 w-full rounded-lg border px-3 font-mono text-sm ring-1 focus:outline-none"
+							className="bg-bg text-text focus:ring-kumo-ring mt-1.5 h-9 w-full rounded-lg border border-kumo-line px-3 font-mono text-sm focus:ring focus:outline-none"
 							placeholder="Enter instance name or hex ID..."
 							value={openInstanceInput}
 							onChange={(e) => setOpenInstanceInput(e.target.value)}

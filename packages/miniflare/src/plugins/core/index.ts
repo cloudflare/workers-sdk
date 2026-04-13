@@ -301,6 +301,14 @@ export const CoreSharedOptionsSchema = z
 		// `handleStructuredLogs` is set, to `false` otherwise)
 		// This option is useful in combination with a custom handleRuntimeStdio.
 		structuredWorkerdLogs: z.boolean().optional(),
+
+		// Enable telemetry for the local explorer.
+		telemetry: z
+			.object({
+				enabled: z.boolean().default(false),
+				deviceId: z.string().optional(),
+			})
+			.default({ enabled: false }),
 	})
 	.refine(
 		({ structuredWorkerdLogs, handleStructuredLogs }) => {
@@ -1132,6 +1140,7 @@ export function getGlobalServices({
 				hasDurableObjects,
 				workerNames,
 				explorerWorkerOpts,
+				telemetry: sharedOptions.telemetry,
 			})
 		);
 	}
