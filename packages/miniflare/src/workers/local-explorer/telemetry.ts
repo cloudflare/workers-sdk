@@ -21,7 +21,7 @@ function sendTelemetryEvent(
 	deviceId: string,
 	event: string,
 	properties: Record<string, unknown>
-): void {
+): Promise<void> {
 	const body: TelemetryEvent = {
 		event,
 		deviceId,
@@ -29,17 +29,18 @@ function sendTelemetryEvent(
 		properties,
 	};
 
-	// Fire and forget
-	fetch(`${SPARROW_URL}/api/v1/event`, {
+	return fetch(`${SPARROW_URL}/api/v1/event`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
 			"Sparrow-Source-Key": SPARROW_SOURCE_KEY,
 		},
 		body: JSON.stringify(body),
-	}).catch(() => {
-		// Silent failure
-	});
+	}).then(
+		() => {},
+		// fail silently
+		() => {}
+	);
 }
 
 export async function telemetryMiddleware(
@@ -99,9 +100,12 @@ export async function telemetryMiddleware(
 		} catch {}
 	}
 
-	sendTelemetryEvent(
+	const telemetryPromise = sendTelemetryEvent(
 		c.env.MINIFLARE_TELEMETRY_CONFIG.deviceId,
 		`localapi.${route}`,
 		properties
 	);
+
+	// Use waitUntil to keep the Worker alive until the telemetry fetch completes
+	c.executionCtx.waitUntil(telemetryPromise);
 }
