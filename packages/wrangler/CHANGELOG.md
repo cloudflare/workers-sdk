@@ -1,5 +1,11 @@
 # wrangler
 
+## 4.82.2
+
+### Patch Changes
+
+- [#13457](https://github.com/cloudflare/workers-sdk/pull/13457) [`9b2b6ba`](https://github.com/cloudflare/workers-sdk/commit/9b2b6ba55c7e94533a2cddbe8ff8f5122ed7de17) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add Flagship OAuth scopes to `wrangler login`
+
 ## 4.82.1
 
 ### Patch Changes
