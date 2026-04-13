@@ -48,8 +48,7 @@ export default function registerDevHotKeys(
 			},
 			{
 				keys: ["e"],
-				// This makes the label hidden but still enabled
-				// label: "open local explorer",
+				label: "open local explorer",
 				handler: async () => {
 					const { url } = await primaryDevEnv.proxy.ready.promise;
 					const explorerUrl = new URL(CorePaths.EXPLORER, url);

@@ -15,7 +15,7 @@ const EXPLORER_API_PATH = `${CorePaths.EXPLORER}/api`;
  * Header that indicates a request should not trigger further aggregation.
  * Used to prevent infinite recursion when instance A fetches from instance B.
  */
-const NO_AGGREGATE_HEADER = "X-Miniflare-Explorer-No-Aggregate";
+export const NO_AGGREGATE_HEADER = "X-Miniflare-Explorer-No-Aggregate";
 
 /**
  * Get the unique base URLs of peer instances from the dev registry,

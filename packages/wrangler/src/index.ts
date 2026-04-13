@@ -21,6 +21,13 @@ import { aiSearchUpdateCommand } from "./ai-search/update";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
 import { aiModelsCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
+import {
+	browserCloseCommand,
+	browserCreateCommand,
+	browserListCommand,
+	browserViewCommand,
+	browserNamespace,
+} from "./browser-rendering";
 import { buildCommand } from "./build";
 import {
 	certDeleteCommand,
@@ -456,7 +463,7 @@ if (proxy) {
 	setGlobalDispatcher(
 		new EnvHttpProxyAgent({ noProxy: noProxy || "localhost,127.0.0.1,::1" })
 	);
-	logger.log(
+	logger.warn(
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
 }
@@ -1736,6 +1743,16 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("ai");
+
+	// browser rendering
+	registry.define([
+		{ command: "wrangler browser", definition: browserNamespace },
+		{ command: "wrangler browser create", definition: browserCreateCommand },
+		{ command: "wrangler browser close", definition: browserCloseCommand },
+		{ command: "wrangler browser list", definition: browserListCommand },
+		{ command: "wrangler browser view", definition: browserViewCommand },
+	]);
+	registry.registerNamespace("browser");
 
 	// secrets store
 	registry.define([

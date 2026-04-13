@@ -9,4 +9,7 @@ export const Route = createFileRoute("/workflows/$workflowName")({
 			workflowName: params.workflowName,
 		};
 	},
+	validateSearch: (search: Record<string, unknown>): { worker?: string } => ({
+		worker: typeof search.worker === "string" ? search.worker : undefined,
+	}),
 });

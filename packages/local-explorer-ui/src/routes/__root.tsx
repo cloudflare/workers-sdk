@@ -1,18 +1,29 @@
-import { Toasty } from "@cloudflare/kumo";
+import { Sidebar, Toasty } from "@cloudflare/kumo";
 import {
 	createRootRoute,
 	Outlet,
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { localExplorerListWorkers } from "../api";
 import { NotFound } from "../components/NotFound";
-import { Sidebar } from "../components/Sidebar";
+import { AppSidebar } from "../components/Sidebar";
 import {
 	filterVisibleWorkers,
 	getSelectedWorker,
 } from "../components/WorkerSelector";
+import {
+	loadSidebarOpenState,
+	saveSidebarOpenState,
+} from "../utils/sidebar-state";
+import {
+	applyThemeMode,
+	getNextThemeMode,
+	loadThemeMode,
+	saveThemeMode,
+} from "../utils/theme-state";
+import type { ThemeMode } from "../utils/theme-state";
 
 export const Route = createRootRoute({
 	component: RootLayout,
@@ -30,6 +41,25 @@ function RootLayout() {
 	const currentPath = routerState.location.pathname;
 	const router = useRouter();
 
+	const [sidebarOpen, setSidebarOpen] = useState<boolean>(loadSidebarOpenState);
+	const [themeMode, setThemeMode] = useState<ThemeMode>(loadThemeMode);
+
+	const handleSidebarOpenChange = useCallback((open: boolean) => {
+		setSidebarOpen(open);
+		saveSidebarOpenState(open);
+	}, []);
+
+	const handleCycleTheme = useCallback(() => {
+		const next = getNextThemeMode(themeMode);
+		saveThemeMode(next);
+		applyThemeMode(
+			next,
+			window.matchMedia("(prefers-color-scheme: dark)").matches
+		);
+		setThemeMode(next);
+	}, [themeMode]);
+
+	// Filter out internal workers (like __asset-worker__, __router-worker__, etc.)
 	const visibleWorkers = useMemo(
 		() => filterVisibleWorkers(loaderData.workers),
 		[loaderData.workers]
@@ -55,17 +85,25 @@ function RootLayout() {
 
 	return (
 		<Toasty>
-			<div className="flex min-h-screen">
-				<Sidebar
-					currentPath={currentPath}
-					bindings={selectedWorkerObj?.bindings}
-					workers={visibleWorkers}
-					selectedWorker={selectedWorker}
-					onWorkerChange={handleWorkerChange}
-				/>
-				<main className="flex flex-1 flex-col overflow-y-auto">
-					<Outlet />
-				</main>
+			<div className="flex h-screen">
+				<Sidebar.Provider
+					onOpenChange={handleSidebarOpenChange}
+					open={sidebarOpen}
+					resizable={true}
+				>
+					<AppSidebar
+						bindings={selectedWorkerObj?.bindings}
+						currentPath={currentPath}
+						onCycleTheme={handleCycleTheme}
+						onWorkerChange={handleWorkerChange}
+						selectedWorker={selectedWorker}
+						themeMode={themeMode}
+						workers={visibleWorkers}
+					/>
+					<main className="flex flex-1 flex-col overflow-y-auto">
+						<Outlet />
+					</main>
+				</Sidebar.Provider>
 			</div>
 		</Toasty>
 	);
