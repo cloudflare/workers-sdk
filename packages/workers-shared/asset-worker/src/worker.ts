@@ -356,7 +356,28 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 				this.unstable_getByETag.bind(this)
 			);
 		}
-		return this.getInnerEntrypoint().fetch(request);
+		let sentry: ReturnType<typeof setupSentry> | undefined;
+		const analytics = new Analytics(this.env.ANALYTICS);
+		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
+		const startTimeMs = performance.now();
+		try {
+			sentry = setupSentry(
+				request,
+				this.ctx,
+				this.env.SENTRY_DSN,
+				this.env.SENTRY_ACCESS_CLIENT_ID,
+				this.env.SENTRY_ACCESS_CLIENT_SECRET,
+				this.env.COLO_METADATA,
+				this.env.VERSION_METADATA,
+				this.env.CONFIG?.account_id,
+				this.env.CONFIG?.script_id
+			);
+			return await this.getInnerEntrypoint().fetch(request);
+		} catch (err) {
+			const response = handleError(sentry, analytics, err);
+			submitMetrics(analytics, performance, startTimeMs);
+			return response;
+		}
 	}
 
 	async unstable_canFetch(request: Request): Promise<boolean> {
