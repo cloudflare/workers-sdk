@@ -223,6 +223,9 @@ export default {
 				result.match(/import vikePhoton from "vike-photon\/config"/g) || []
 			).length;
 			expect(importCount).toBe(1);
+
+			// Verify the extends array wasn't duplicated either
+			expect(result).toContain("extends: [vikeReact, vikePhoton]");
 		});
 
 		it("uses .js config file as fallback", async ({ expect }) => {

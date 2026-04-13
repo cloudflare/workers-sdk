@@ -123,10 +123,7 @@ function addVikePhotonToVikeConfigExportObject(
 	// Only add vikePhoton if it's not already present
 	if (
 		!configTargetProp.value.elements.some(
-			(el) =>
-				el?.type === "CallExpression" &&
-				el.callee.type === "Identifier" &&
-				el.callee.name === vikeConfigExtendsPropName
+			(el) => el?.type === "Identifier" && el.name === "vikePhoton"
 		)
 	) {
 		configTargetProp.value.elements.push(b.identifier("vikePhoton"));
