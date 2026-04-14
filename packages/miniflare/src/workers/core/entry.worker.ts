@@ -479,11 +479,11 @@ export default <ExportedHandler<Env>>{
 				};
 		request = new Request(request, { cf });
 
-		// Block /cdn-cgi/* requests from non-local origins.
-		// These endpoints (platform-proxy, scheduled handlers, live-reload, explorer)
-		// are for local development only and must not be reachable through a tunnel.
-		// This must happen BEFORE getUserRequest() to check the actual browser-sent
-		// headers, not Miniflare-rewritten ones.
+		// Restrict /cdn-cgi/* requests to allowed hostnames.
+		// These endpoints should be served only when the browser-sent Host and
+		// Origin headers match localhost, a configured route, or the configured upstream.
+		// This must happen before getUserRequest() so we validate the
+		// original browser-sent headers, not Miniflare-rewritten ones.
 		const requestUrl = new URL(request.url);
 		try {
 			validateCdnCgiRequest(
