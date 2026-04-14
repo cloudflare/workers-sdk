@@ -482,10 +482,11 @@ describe("KV API", () => {
 			// namespaces should not trigger a 413 error.
 			const kv = await mf.getKVNamespace("TEST_KV");
 
-			// Seed two values whose combined size is >25 MiB.
-			const largeValue = "x".repeat(13 * 1024 * 1024);
+			// Seed 3 × 10 MB values (30 MB total).
+			const largeValue = "x".repeat(10 * 1024 * 1024);
 			await kv.put("large-key-1", largeValue);
 			await kv.put("large-key-2", largeValue);
+			await kv.put("large-key-3", largeValue);
 
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/get`,
@@ -493,7 +494,7 @@ describe("KV API", () => {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						keys: ["large-key-1", "large-key-2"],
+						keys: ["large-key-1", "large-key-2", "large-key-3"],
 					}),
 				}
 			);
@@ -509,6 +510,7 @@ describe("KV API", () => {
 				values: {
 					"large-key-1": largeValue,
 					"large-key-2": largeValue,
+					"large-key-3": largeValue,
 				},
 			});
 		});
