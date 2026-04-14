@@ -154,17 +154,6 @@ export async function navigateToWorkflow(workflowName: string): Promise<void> {
 }
 
 /**
- * Navigate to a Workflow instance detail page.
- */
-export async function navigateToWorkflowInstance(
-	workflowName: string,
-	instanceId: string
-): Promise<void> {
-	await navigateTo(`/cdn-cgi/explorer/workflows/${workflowName}/${instanceId}`);
-	await waitForPageLoad();
-}
-
-/**
  * Navigate to a specific Durable Object instance by hex ID.
  *
  * Note: The API requires the actual hex object ID, not a string name.
