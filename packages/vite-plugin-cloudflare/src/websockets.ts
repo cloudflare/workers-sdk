@@ -2,7 +2,7 @@ import { createHeaders } from "@remix-run/node-fetch-server";
 import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
-import type { Miniflare } from "miniflare";
+import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import type * as vite from "vite";
@@ -45,7 +45,7 @@ export function handleWebSocket(
 			}
 
 			const response = await miniflare.dispatchFetch(url, {
-				headers,
+				headers: headers as unknown as Headers,
 				method: request.method,
 			});
 			const workerWebSocket = response.webSocket;

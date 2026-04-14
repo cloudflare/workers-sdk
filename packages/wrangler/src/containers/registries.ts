@@ -541,7 +541,7 @@ async function registryCredentialsCommand(credentialsArgs: {
 export const containersRegistriesNamespace = createNamespace({
 	metadata: {
 		description: "Configure and manage non-Cloudflare registries",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 });
@@ -550,7 +550,7 @@ export const containersRegistriesConfigureCommand = createCommand({
 	metadata: {
 		description:
 			"Configure credentials for a non-Cloudflare container registry",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	args: registryConfigureArgs,
@@ -575,7 +575,7 @@ export const containersRegistriesConfigureCommand = createCommand({
 export const containersRegistriesListCommand = createCommand({
 	metadata: {
 		description: "List all configured container registries",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
@@ -591,7 +591,7 @@ export const containersRegistriesListCommand = createCommand({
 export const containersRegistriesDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a configured container registry",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	args: registryDeleteArgs,
@@ -605,7 +605,7 @@ export const containersRegistriesDeleteCommand = createCommand({
 export const containersRegistriesCredentialsCommand = createCommand({
 	metadata: {
 		description: "Get a temporary password for a specific domain",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
