@@ -138,7 +138,7 @@ jobs:
             everything_but_markdown:
               - '!**/*.md'
             framework_deps:
-              - 'packages/create-cloudflare/src/frameworks/package.json'
+              - 'packages/create-cloudflare/**'
 
       - name: Check if frameworks tests should run
         id: check-frameworks
