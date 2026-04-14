@@ -11,7 +11,9 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 	fetch(request: Request): Promise<Response> {
 		return makeFetch(
 			this.env.remoteProxyConnectionString,
-			this.env.binding
+			this.env.binding,
+			undefined,
+			this.env.cfTraceId
 		)(request);
 	}
 
@@ -19,7 +21,12 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 		super(ctx, env);
 
 		const stub = env.remoteProxyConnectionString
-			? makeRemoteProxyStub(env.remoteProxyConnectionString, env.binding)
+			? makeRemoteProxyStub(
+					env.remoteProxyConnectionString,
+					env.binding,
+					undefined,
+					env.cfTraceId
+				)
 			: undefined;
 
 		return new Proxy(this, {
