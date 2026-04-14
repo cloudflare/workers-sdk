@@ -18,7 +18,7 @@ import type {
 export const containersBuildCommand = createCommand({
 	metadata: {
 		description: "Build a container image",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	args: {
@@ -65,7 +65,7 @@ export const containersBuildCommand = createCommand({
 export const containersPushCommand = createCommand({
 	metadata: {
 		description: "Push a local image to the Cloudflare managed registry",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	args: {
