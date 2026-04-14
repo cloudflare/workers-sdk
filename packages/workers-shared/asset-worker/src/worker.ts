@@ -70,8 +70,7 @@ type GetByETagFn = (
 /**
  * Interface defining the public API methods that both the outer and inner
  * entrypoints implement. The outer entrypoint (AssetWorkerOuter) routes to
- * the inner entrypoint (AssetWorkerInner) via ctx.exports, except when
- * subclassed for local development (e.g., Vite's CustomAssetWorker).
+ * the inner entrypoint (AssetWorkerInner) via ctx.exports.
  */
 interface AssetWorkerMethods {
 	fetch(request: Request): Promise<Response>;
@@ -309,24 +308,13 @@ async function runFetchRequest(
  * naming convention for all of the aforementioned methods, to indicate that
  * they are still in flux and that they are not an established API contract.
  *
- * AssetWorkerOuter serves as the dispatch layer. When not subclassed, it
- * forwards all method calls to AssetWorkerInner via ctx.exports. When
- * subclassed (e.g., by Vite's CustomAssetWorker for local development),
- * it executes methods locally to preserve polymorphic dispatch.
+ * AssetWorkerOuter serves as the dispatch layer. It forwards all method
+ * calls to AssetWorkerInner via ctx.exports.
  */
 export default class AssetWorkerOuter<TEnv extends Env = Env>
 	extends WorkerEntrypoint<TEnv>
 	implements AssetWorkerMethods
 {
-	/**
-	 * True when a subclass (e.g., Vite's CustomAssetWorker) extends AssetWorkerOuter
-	 * for local development. Subclasses override methods with dev-server-backed
-	 * implementations, so loopback must be skipped to preserve polymorphic dispatch.
-	 */
-	private isSubclassedForLocalDev(): boolean {
-		return this.constructor !== AssetWorkerOuter;
-	}
-
 	/**
 	 * Gets the inner entrypoint from ctx.exports to forward requests to.
 	 */
@@ -347,15 +335,6 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 
 	override async fetch(request: Request): Promise<Response> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		if (this.isSubclassedForLocalDev()) {
-			return runFetchRequest(
-				request,
-				this.env,
-				this.ctx,
-				this.unstable_exists.bind(this),
-				this.unstable_getByETag.bind(this)
-			);
-		}
 		let sentry: ReturnType<typeof setupSentry> | undefined;
 		const analytics = new Analytics(this.env.ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
@@ -399,14 +378,6 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 
 	async unstable_canFetch(request: Request): Promise<boolean> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		if (this.isSubclassedForLocalDev()) {
-			return canFetch(
-				request,
-				this.env,
-				normalizeConfiguration(this.env.CONFIG),
-				this.unstable_exists.bind(this)
-			);
-		}
 		return this.getInnerEntrypoint().unstable_canFetch(request);
 	}
 
@@ -415,9 +386,6 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		request?: Request
 	): Promise<GetByETagResult> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		if (this.isSubclassedForLocalDev()) {
-			return unstableGetByETagImpl(this.env, eTag, request);
-		}
 		return this.getInnerEntrypoint().unstable_getByETag(eTag, request);
 	}
 
@@ -426,15 +394,6 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		request?: Request
 	): Promise<GetByETagResult | null> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		if (this.isSubclassedForLocalDev()) {
-			return unstableGetByPathnameImpl(
-				this.env,
-				this.unstable_exists.bind(this),
-				this.unstable_getByETag.bind(this),
-				pathname,
-				request
-			);
-		}
 		return this.getInnerEntrypoint().unstable_getByPathname(pathname, request);
 	}
 
@@ -443,9 +402,6 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		request?: Request
 	): Promise<string | null> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		if (this.isSubclassedForLocalDev()) {
-			return unstableExistsImpl(this.env, pathname, request);
-		}
 		return this.getInnerEntrypoint().unstable_exists(pathname, request);
 	}
 }
@@ -456,11 +412,13 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 
 /*
  * AssetWorkerInner contains the actual implementation logic for all asset
- * worker methods. It is instantiated by AssetWorkerOuter via ctx.exports
- * when the outer entrypoint is not subclassed (i.e., in production).
+ * worker methods. In production, it is instantiated by AssetWorkerOuter via
+ * ctx.exports. For local development, tools such as the Vite plugin can
+ * subclass AssetWorkerInner directly to override methods like unstable_exists
+ * and unstable_getByETag with dev-server-backed implementations.
  */
-export class AssetWorkerInner
-	extends WorkerEntrypoint<Env>
+export class AssetWorkerInner<TEnv extends Env = Env>
+	extends WorkerEntrypoint<TEnv>
 	implements AssetWorkerMethods
 {
 	override async fetch(request: Request): Promise<Response> {
