@@ -160,7 +160,7 @@ Your database may not be available to serve requests during the migration, conti
 			}
 		} else {
 			logger.log(
-				`--force passed, applying ${unappliedMigrations.length} migration(s) without prompt`
+				`--force passed, applying ${unappliedMigrations.length} migration(s) without prompt.`
 			);
 		}
 
