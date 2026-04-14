@@ -198,7 +198,9 @@ export async function setupCf(
 	} catch {}
 
 	try {
-		const res = await fetch(defaultCfFetchEndpoint);
+		const res = await fetch(defaultCfFetchEndpoint, {
+			signal: AbortSignal.timeout(3000),
+		});
 		const cfText = await res.text();
 		const storedCf = JSON.parse(cfText);
 		// Write cf so we can reuse it later

@@ -7,6 +7,7 @@ const ALLOWED_PARENT_ORIGINS = [
 	"https://workers.cloudflare.com",
 	"https://workers-playground.pages.dev",
 	"https://workers-playground.workers.dev",
+	"http://localhost:7445",
 ];
 
 // Origin patterns using wildcards, for preview deployments etc.
