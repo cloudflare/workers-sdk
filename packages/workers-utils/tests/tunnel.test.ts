@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import { afterEach, describe, it, vi } from "vitest";
 import { spawnCloudflared } from "../src/cloudflared";
+import { UserError } from "../src/errors";
 import { startTunnel } from "../src/tunnel";
 
 vi.mock("../src/cloudflared", () => {
@@ -113,7 +114,7 @@ describe("startTunnel", () => {
 
 		await emitNextTick(proc, "exit", 1, null);
 
-		await expect(tunnel.ready()).rejects.toThrow(
+		await expect(() => tunnel.ready()).rejects.toThrow(
 			"cloudflared exited with code 1 before the tunnel was ready"
 		);
 	});
@@ -223,5 +224,31 @@ describe("startTunnel", () => {
 		await emitNextTick(proc, "exit", 1, null);
 
 		await expect(tunnel.ready()).rejects.toThrow("some debug info");
+	});
+
+	it("should surface rate limiting guidance for quick tunnels", async ({
+		expect,
+	}) => {
+		const proc = createMockProcess();
+		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
+
+		const tunnel = startTunnel({
+			origin: new URL("http://localhost:8787"),
+			timeoutMs: TEST_TIMEOUT_MS,
+		});
+
+		await emitStderrNextTick(
+			proc,
+			'ERR Error unmarshaling QuickTunnel response: error code: 1015 status_code="429 Too Many Requests"\n'
+		);
+		await emitNextTick(proc, "exit", 1, null);
+
+		await expect(() => tunnel.ready()).rejects.toThrow(
+			"Cloudflare Quick Tunnel creation was rate limited."
+		);
+		await expect(() => tunnel.ready()).rejects.toThrow(
+			"The local dev server started at http://localhost:8787/."
+		);
+		await expect(() => tunnel.ready()).rejects.toBeInstanceOf(UserError);
 	});
 });

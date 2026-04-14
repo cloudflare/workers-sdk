@@ -3,6 +3,7 @@ import path from "node:path";
 import { bold, dim, green } from "@cloudflare/cli/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { getRegistryPath, startTunnel } from "@cloudflare/workers-utils";
+import chalk from "chalk";
 import dedent from "ts-dedent";
 import { DevEnv } from "../api";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
@@ -130,8 +131,11 @@ export async function startDev(args: StartDevOptions) {
 			const protocol = config?.dev?.server?.secure ? "https" : "http";
 			const hostname = config?.dev?.server?.hostname ?? "localhost";
 			const port = config?.dev?.server?.port ?? 8787;
-			const origin = new URL(`${protocol}://${hostname}:${port}`);
+			const origin = new URL(
+				`${protocol}://${formatHostname(hostname)}:${port}`
+			);
 
+			logger.log(dim("⎔ Starting tunnel (usually takes a few seconds)..."));
 			tunnel = startTunnel({ origin, logger });
 		}
 
@@ -140,8 +144,10 @@ export async function startDev(args: StartDevOptions) {
 			void tunnel?.dispose();
 		});
 
-		// The ProxyWorker will have a stable host and port, so only listen for the first update
-		void primaryDevEnv.proxy.ready.promise.then(async ({ url }) => {
+		try {
+			// The ProxyWorker will have a stable host and port, so only listen for the first update.
+			const { url } = await primaryDevEnv.proxy.ready.promise;
+
 			if (args.onReady) {
 				args.onReady(url.hostname, parseInt(url.port));
 			}
@@ -168,32 +174,34 @@ export async function startDev(args: StartDevOptions) {
 					false
 			);
 			maybePrintScheduledWorkerWarning(hasCrons, !!args.testScheduled, url);
+		} catch (error) {
+			logger.error("Local dev server failed to start", error);
+		}
 
-			// Wait for tunnel after local server is ready, so logs appear in order
-			if (tunnel) {
-				try {
-					logger.log(dim("⎔ Starting tunnel (usually takes 5-15s)..."));
-					const { publicUrl } = await tunnel.ready();
-					logger.warn(
-						"Your local dev server will be publicly accessible.\n" +
-							"Anyone with the URL can interact with your app, e.g.:\n" +
-							"- Call ungated endpoints in your app\n" +
-							"- Trigger app logic that reads or writes through remote bindings\n" +
-							"- Reach internal services if your Worker proxies requests\n" +
-							"\n" +
-							"Consider restricting access with a named tunnel + Cloudflare Access."
-					);
-					logger.log(
-						`⬣ Sharing your dev server via Cloudflare Tunnel\n` +
-							`  ${publicUrl.origin}`
-					);
-				} catch (error) {
-					logger.error(
-						`Failed to start tunnel: ${error instanceof Error ? error.message : String(error)}`
-					);
-				}
+		if (tunnel) {
+			try {
+				const { publicUrl } = await tunnel.ready();
+				logger.log(
+					`⬣ Sharing via Cloudflare Tunnel: ` +
+						`${chalk.green(publicUrl.origin)}\n`
+				);
+				logger.warn(
+					chalk.dim("This URL is ") +
+						"publicly accessible" +
+						chalk.dim(". Anyone with it can:\n") +
+						chalk.dim(
+							"- Call ungated endpoints\n" +
+								"- Trigger logic that uses remote bindings\n" +
+								"- Reach internal services if your Worker proxies requests\n" +
+								"\n" +
+								"Consider using a named tunnel with Cloudflare Access to restrict access."
+						)
+				);
+			} catch (e) {
+				// The user explicitly requested tunnel sharing, so tunnel startup failure is fatal.
+				throw new Error("Failed to start a tunnel", { cause: e });
 			}
-		});
+		}
 
 		return {
 			devEnv: primaryDevEnv,
@@ -375,12 +383,7 @@ function maybePrintScheduledWorkerWarning(
 		return;
 	}
 
-	const host =
-		url.hostname === "0.0.0.0" || url.hostname === "::"
-			? "localhost"
-			: url.hostname.includes(":")
-				? `[${url.hostname}]`
-				: url.hostname;
+	const host = formatHostname(url.hostname);
 	const port = url.port;
 
 	logger.once.warn(
@@ -389,4 +392,12 @@ function maybePrintScheduledWorkerWarning(
 			`  curl "http://${host}:${port}/cdn-cgi/handler/scheduled"\n` +
 			`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
 	);
+}
+
+export function formatHostname(hostname: string): string {
+	if (hostname === "0.0.0.0" || hostname === "::") {
+		return "localhost";
+	}
+
+	return hostname.includes(":") ? `[${hostname}]` : hostname;
 }

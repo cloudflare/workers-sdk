@@ -1,4 +1,5 @@
 import { spawnCloudflared } from "./cloudflared";
+import { UserError } from "./errors";
 import type { Logger } from "./cloudflared";
 import type { ChildProcess } from "node:child_process";
 
@@ -61,7 +62,10 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 	});
 
 	const readyPromise = cloudflaredPromise.then((process) =>
-		waitForQuickTunnelReady(process, timeoutMs, { logger })
+		waitForQuickTunnelReady(process, timeoutMs, {
+			logger,
+			origin: options.origin,
+		})
 	);
 
 	return {
@@ -94,21 +98,22 @@ function terminateCloudflared(cloudflared: ChildProcess) {
 function waitForQuickTunnelReady(
 	cloudflared: ChildProcess,
 	timeoutMs: number,
-	options?: { logger?: Logger }
+	options: { logger?: Logger; origin: URL }
 ): Promise<TunnelResult> {
 	return new Promise<TunnelResult>((resolve, reject) => {
 		let resolved = false;
 		let stderrOutput = "";
 		const logger = options?.logger;
+		const origin = options?.origin;
 		const timeoutId = setTimeout(() => {
 			if (!resolved) {
 				resolved = true;
 				terminateCloudflared(cloudflared);
 				reject(
-					new Error(
-						`Timed out waiting for cloudflared to start (${timeoutMs / 1_000}s).\n` +
-							`cloudflared output:\n${stderrOutput || "(no output)"}\n\n` +
-							`This may indicate network issues. Try again or check your connection.`
+					createTunnelStartupError(
+						`Timed out waiting for cloudflared to start (${timeoutMs / 1_000}s).`,
+						stderrOutput,
+						origin
 					)
 				);
 			}
@@ -148,13 +153,36 @@ function waitForQuickTunnelReady(
 					: `exited with code ${code}`;
 
 				reject(
-					new Error(
-						`cloudflared ${reason} before the tunnel was ready.\n` +
-							`cloudflared output:\n${stderrOutput || "(no output)"}\n\n` +
-							`Make sure your local dev server is running and reachable.`
+					createTunnelStartupError(
+						`cloudflared ${reason} before the tunnel was ready.`,
+						stderrOutput,
+						origin
 					)
 				);
 			}
 		});
 	});
+}
+
+function createTunnelStartupError(
+	message: string,
+	stderrOutput: string,
+	origin: URL
+): Error {
+	const isQuickTunnelRateLimited = stderrOutput.includes(
+		"429 Too Many Requests"
+	);
+	const errorMessage =
+		`${message}\n` +
+		`cloudflared output:\n${stderrOutput || "(no output)"}\n\n` +
+		`The local dev server started at ${origin.href}.\n` +
+		(isQuickTunnelRateLimited
+			? "Cloudflare Quick Tunnel creation was rate limited. Try again in a few minutes, or use a named tunnel if you need more reliable access."
+			: `Check the cloudflared output above for more details, and verify that ${origin.href} is reachable from this machine if this keeps happening.`);
+
+	if (isQuickTunnelRateLimited) {
+		return new UserError(errorMessage);
+	}
+
+	return new Error(errorMessage);
 }
