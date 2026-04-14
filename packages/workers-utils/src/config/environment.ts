@@ -692,6 +692,8 @@ export type WorkflowBinding = {
 		/** Maximum number of steps a Workflow instance can execute */
 		steps?: number;
 	};
+	/** Optional cron schedule(s) for automatically triggering workflow instances */
+	schedule?: string | string[];
 };
 
 /**

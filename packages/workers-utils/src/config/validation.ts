@@ -2657,6 +2657,24 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (hasProperty(value, "schedule") && value.schedule !== undefined) {
+		if (typeof value.schedule === "string") {
+			// valid single cron expression - no further validation needed
+		} else if (
+			Array.isArray(value.schedule) &&
+			value.schedule.every((s: unknown) => typeof s === "string")
+		) {
+			// valid array of cron expressions - no further validation needed
+		} else {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have a string or array of strings "schedule" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		}
+	}
+
 	if (hasProperty(value, "limits") && value.limits !== undefined) {
 		if (
 			typeof value.limits !== "object" ||
@@ -2705,6 +2723,7 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		"script_name",
 		"remote",
 		"limits",
+		"schedule",
 	]);
 
 	return isValid;
