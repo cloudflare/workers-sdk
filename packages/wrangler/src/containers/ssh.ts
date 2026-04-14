@@ -340,7 +340,7 @@ function buildSshArgs(sshArgs: SshArgs): string[] {
 export const containersSshCommand = createCommand({
 	metadata: {
 		description: "SSH into a container",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 		hidden: true,
 	},

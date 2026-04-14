@@ -69,3 +69,52 @@ jobs:
               && echo "Re-triggered ${workflow} (run ${run_id})" \
               || echo "Failed to re-run ${workflow} (run ${run_id})"
           done
+
+  rerun-c3-frameworks:
+    name: "Rerun C3 Frameworks E2E Tests"
+    if: github.event.label.name == 'run-c3-frameworks-tests'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: "Re-run C3 E2E workflow"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          workflow=c3-e2e.yml
+          run=$(gh api "repos/${REPO}/actions/workflows/${workflow}/runs?head_sha=${HEAD_SHA}&per_page=1" \
+            --jq '.workflow_runs[0] | "\(.id) \(.status)"' || true)
+
+          run_id=$(echo "$run" | awk '{print $1}')
+          status=$(echo "$run" | awk '{print $2}')
+
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "No run found for ${workflow} at SHA ${HEAD_SHA}"
+            exit 0
+          fi
+
+          if [ "$status" != "completed" ] && [ "$status" != "in_progress" ]; then
+            echo "${workflow} run ${run_id} is ${status} — not yet started, skipping."
+            exit 0
+          fi
+
+          if [ "$status" = "in_progress" ]; then
+            echo "Cancelling in-progress ${workflow} run ${run_id}..."
+            gh api "repos/${REPO}/actions/runs/${run_id}/cancel" --method POST || true
+
+            for i in $(seq 1 30); do
+              current=$(gh api "repos/${REPO}/actions/runs/${run_id}" --jq '.status')
+              if [ "$current" = "completed" ]; then
+                echo "Run ${run_id} is now completed (cancelled)."
+                break
+              fi
+              echo "  Waiting for cancellation to finish (${i}/30, status: ${current})..."
+              sleep 2
+            done
+          fi
+
+          gh api "repos/${REPO}/actions/runs/${run_id}/rerun" --method POST \
+            && echo "Re-triggered ${workflow} (run ${run_id})" \
+            || echo "Failed to re-run ${workflow} (run ${run_id})"

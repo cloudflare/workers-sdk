@@ -31,6 +31,7 @@ type Env = {
 };
 
 const encoder = new TextEncoder();
+
 function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
 	env: Env,
@@ -146,16 +147,33 @@ function getTargetService(request: Request, url: URL, env: Env) {
 
 const LOCALHOST_HOSTNAMES = ["localhost", "127.0.0.1", "[::1]"];
 
+function isCdnCgiRequest(url: string | null): boolean {
+	if (url === null) return false;
+
+	try {
+		return new URL(url).pathname.startsWith("/cdn-cgi/");
+	} catch {
+		return false;
+	}
+}
+
 /**
- * Validates that a request to the local explorer API is a same-origin request.
+ * Validates that a request to a /cdn-cgi/* endpoint originates from an allowed host.
  * This check must happen BEFORE any header rewriting (getUserRequest) to ensure
  * we're checking the actual browser-sent headers, not Miniflare rewritten ones.
  */
-function validateLocalExplorerRequest(
+function validateCdnCgiRequest(
 	request: Request,
 	routes: WorkerRoute[],
 	upstreamUrl: string | undefined
 ): void {
+	if (
+		!isCdnCgiRequest(request.url) &&
+		!isCdnCgiRequest(request.headers.get(CoreHeaders.ORIGINAL_URL))
+	) {
+		return;
+	}
+
 	// Build allowed hostnames set from localhost + user configured routes
 	const allowedHostnames = new Set<string>();
 	for (const route of routes) {
@@ -461,8 +479,27 @@ export default <ExportedHandler<Env>>{
 				};
 		request = new Request(request, { cf });
 
+		// Restrict /cdn-cgi/* requests to allowed hostnames.
+		// These endpoints should be served only when the browser-sent Host and
+		// Origin headers match localhost, a configured route, or the configured upstream.
+		// This must happen before getUserRequest() so we validate the
+		// original browser-sent headers, not Miniflare-rewritten ones.
+		const requestUrl = new URL(request.url);
+		try {
+			validateCdnCgiRequest(
+				request,
+				env[CoreBindings.JSON_ROUTES],
+				env[CoreBindings.TEXT_UPSTREAM_URL]
+			);
+		} catch (e) {
+			if (e instanceof HttpError) {
+				return e.toResponse();
+			}
+			throw e;
+		}
+
 		// The magic proxy client (used by getPlatformProxy)
-		if (new URL(request.url).pathname === CorePaths.PLATFORM_PROXY) {
+		if (requestUrl.pathname === CorePaths.PLATFORM_PROXY) {
 			if (request.headers.get(CoreHeaders.OP) !== null) {
 				return handleProxy(request, env);
 			}
@@ -479,22 +516,6 @@ export default <ExportedHandler<Env>>{
 		const clientAcceptEncoding = request.headers.get("Accept-Encoding");
 
 		try {
-			// Security check for local explorer API - must happen BEFORE getUserRequest()
-			// to check the original headers before any rewriting (e.g., for custom routes/upstream).
-			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
-				const preRewriteUrl = new URL(request.url);
-				if (
-					preRewriteUrl.pathname === CorePaths.EXPLORER ||
-					preRewriteUrl.pathname.startsWith(`${CorePaths.EXPLORER}/`)
-				) {
-					validateLocalExplorerRequest(
-						request,
-						env[CoreBindings.JSON_ROUTES],
-						env[CoreBindings.TEXT_UPSTREAM_URL]
-					);
-				}
-			}
-
 			request = getUserRequest(request, env, clientIp);
 		} catch (e) {
 			if (e instanceof HttpError) {

@@ -1,4 +1,4 @@
-import AssetWorker from "@cloudflare/workers-shared/asset-worker";
+import { AssetWorkerInner } from "@cloudflare/workers-shared/asset-worker";
 import { UNKNOWN_HOST } from "../../shared";
 import type { Env as _Env } from "@cloudflare/workers-shared/asset-worker";
 import type { ResolvedConfig } from "vite";
@@ -9,7 +9,7 @@ interface Env extends _Env {
 	__VITE_HEADERS__: string;
 }
 
-export default class CustomAssetWorker extends AssetWorker<Env> {
+export default class CustomAssetWorker extends AssetWorkerInner<Env> {
 	override async fetch(request: Request) {
 		const response = await super.fetch(request);
 		const modifiedResponse = new Response(response.body, response);
