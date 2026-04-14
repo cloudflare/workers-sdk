@@ -1607,5 +1607,5 @@ export type ContainerEngine =
  */
 export interface PreviewsConfig
 	extends
-		EnvironmentNonInheritable,
-		Pick<EnvironmentInheritable, "logpush" | "observability" | "limits"> {}
+		Partial<EnvironmentNonInheritable>,
+		Partial<Pick<EnvironmentInheritable, "logpush" | "observability" | "limits">> {}
