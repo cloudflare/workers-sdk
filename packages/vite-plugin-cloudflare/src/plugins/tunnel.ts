@@ -253,7 +253,7 @@ export const tunnelPlugin = createPlugin("tunnel", (ctx) => {
 					await setupTunnel(server, ctx, tunnelManager);
 					return result;
 				} catch (error) {
-					await Promise.all([stopTunnel(), server.close()]);
+					await Promise.allSettled([stopTunnel(), server.close()]);
 
 					// The user explicitly requested tunnel sharing, so tunnel startup failure is fatal.
 					throw error;

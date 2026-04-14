@@ -31,7 +31,7 @@ import type { Config, Tunnel } from "@cloudflare/workers-utils";
  */
 export async function startDev(args: StartDevOptions) {
 	let devEnv: DevEnv | DevEnv[] | undefined;
-
+	let tunnel: Tunnel | undefined;
 	let unregisterHotKeys: (() => void) | undefined;
 	try {
 		if (args.logLevel) {
@@ -122,32 +122,8 @@ export async function startDev(args: StartDevOptions) {
 			? devEnv
 			: [devEnv];
 
-		// Start tunnel early, before the proxy is ready.
-		// The port is already resolved by ConfigController, so we can build the
-		// origin URL now and let cloudflared connect as soon as the server binds.
-		let tunnel: Tunnel | undefined;
-		if (args.tunnel) {
-			const config = primaryDevEnv.config.latestConfig;
-			const protocol = config?.dev?.server?.secure ? "https" : "http";
-			const hostname = config?.dev?.server?.hostname ?? "localhost";
-			const port = config?.dev?.server?.port ?? 8787;
-			const origin = new URL(
-				`${protocol}://${formatHostname(hostname)}:${port}`
-			);
-
-			logger.log(dim("⎔ Starting tunnel (usually takes a few seconds)..."));
-			tunnel = startTunnel({ origin, logger });
-		}
-
-		// Clean up tunnel on teardown
-		primaryDevEnv.on("teardown", () => {
-			void tunnel?.dispose();
-		});
-
-		try {
-			// The ProxyWorker will have a stable host and port, so only listen for the first update.
-			const { url } = await primaryDevEnv.proxy.ready.promise;
-
+		// The ProxyWorker will have a stable host and port, so only listen for the first update
+		void primaryDevEnv.proxy.ready.promise.then(({ url }) => {
 			if (args.onReady) {
 				args.onReady(url.hostname, parseInt(url.port));
 			}
@@ -174,33 +150,48 @@ export async function startDev(args: StartDevOptions) {
 					false
 			);
 			maybePrintScheduledWorkerWarning(hasCrons, !!args.testScheduled, url);
-		} catch (error) {
-			logger.error("Local dev server failed to start", error);
-		}
+		});
 
-		if (tunnel) {
-			try {
-				const { publicUrl } = await tunnel.ready();
-				logger.log(
-					`⬣ Sharing via Cloudflare Tunnel: ` +
-						`${chalk.green(publicUrl.origin)}\n`
-				);
-				logger.warn(
-					chalk.dim("This URL is ") +
-						"publicly accessible" +
-						chalk.dim(". Anyone with it can:\n") +
-						chalk.dim(
-							"- Call ungated endpoints\n" +
-								"- Trigger logic that uses remote bindings\n" +
-								"- Reach internal services if your Worker proxies requests\n" +
-								"\n" +
-								"Consider using a named tunnel with Cloudflare Access to restrict access."
-						)
-				);
-			} catch (e) {
-				// The user explicitly requested tunnel sharing, so tunnel startup failure is fatal.
-				throw new Error("Failed to start a tunnel", { cause: e });
-			}
+		// Start tunnel early, before the proxy is ready.
+		// The port is already resolved by ConfigController, so we can build the
+		// origin URL now and let cloudflared connect as soon as the server binds.
+		if (args.tunnel) {
+			const config = primaryDevEnv.config.latestConfig;
+			const protocol = config?.dev?.server?.secure ? "https" : "http";
+			const hostname = config?.dev?.server?.hostname ?? "localhost";
+			const port = config?.dev?.server?.port ?? 8787;
+			const origin = new URL(
+				`${protocol}://${formatHostname(hostname)}:${port}`
+			);
+
+			logger.log(dim("⎔ Starting tunnel (usually takes a few seconds)..."));
+			tunnel = startTunnel({ origin, logger });
+
+			// Clean up tunnel on teardown
+			primaryDevEnv.on("teardown", () => {
+				void tunnel?.dispose();
+			});
+
+			// User requested tunnel sharing explicitly. If it fails, let it throw
+			// and prevent dev server from starting without a tunnel.
+			const { publicUrl } = await tunnel.ready();
+
+			logger.log(
+				`⬣ Sharing via Cloudflare Tunnel: ` +
+					`${chalk.green(publicUrl.origin)}\n`
+			);
+			logger.warn(
+				chalk.dim("This URL is ") +
+					"publicly accessible" +
+					chalk.dim(". Anyone with it can:\n") +
+					chalk.dim(
+						"- Call ungated endpoints\n" +
+							"- Trigger logic that uses remote bindings\n" +
+							"- Reach internal services if your Worker proxies requests\n" +
+							"\n" +
+							"Consider using a named tunnel with Cloudflare Access to restrict access."
+					)
+			);
 		}
 
 		return {
@@ -216,6 +207,7 @@ export async function startDev(args: StartDevOptions) {
 			(async () => {
 				unregisterHotKeys?.();
 			})(),
+			tunnel?.dispose(),
 		]);
 		throw e;
 	}
