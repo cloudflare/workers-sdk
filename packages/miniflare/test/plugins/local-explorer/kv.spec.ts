@@ -482,9 +482,8 @@ describe("KV API", () => {
 			// namespaces should not trigger a 413 error.
 			const kv = await mf.getKVNamespace("TEST_KV");
 
-			// In test mode the KV bulk limit is only 1 KiB, so two 1 KiB values
-			// are enough to exceed it.
-			const largeValue = "x".repeat(1024);
+			// Seed two values whose combined size is >25 MiB.
+			const largeValue = "x".repeat(13 * 1024 * 1024);
 			await kv.put("large-key-1", largeValue);
 			await kv.put("large-key-2", largeValue);
 
