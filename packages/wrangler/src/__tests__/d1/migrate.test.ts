@@ -7,6 +7,7 @@ import {
 import { http, HttpResponse } from "msw";
 import { describe, it, vi } from "vitest";
 import * as d1Execute from "../../d1/execute";
+import { logger } from "../../logger";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
@@ -338,7 +339,7 @@ Your database may not be available to serve requests during the migration, conti
 			expect,
 		}) => {
 			setIsTTY(false);
-			const std = mockConsoleMethods();
+
 			msw.use(
 				http.post(
 					"*/accounts/:accountId/d1/database/:databaseId/query",
@@ -644,8 +645,9 @@ Your database may not be available to serve requests during the migration, conti
 		});
 
 		it("should not prompt when --force is passed", async ({ expect }) => {
+			vi.stubEnv("WRANGLER_LOG", "debug");
+			logger.loggerLevel = "debug";
 			setIsTTY(false);
-			const std = mockConsoleMethods();
 
 			msw.use(
 				http.post(
@@ -699,21 +701,19 @@ Your database may not be available to serve requests during the migration, conti
 						migrations_dir: "migrations",
 					},
 				],
-				account_id: "nx01",
 			});
 
 			// Ensure account selection works in non-interactive mode
 			mockGetMemberships([
 				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-				{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
 			]);
 
 			await runWrangler("d1 migrations create db test");
 
 			await runWrangler("d1 migrations apply db --remote --force");
 
-			expect(std.out).toContain(
-				"--force passed, applying 1 migration(s) without prompt"
+			expect(mockStd.out).toContain(
+				"--force passed, applying 1 migration(s) without prompt."
 			);
 		});
 	});
