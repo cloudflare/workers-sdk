@@ -35,11 +35,13 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 					name: getUserBindingServiceName(
 						FLAGSHIP_PLUGIN_NAME,
 						name,
-						config.remoteProxyConnectionString
+						config.remoteProxyConnectionString,
 					),
-					entrypoint: "FlagshipBinding",
+					entrypoint: config.remoteProxyConnectionString
+						? undefined
+						: "FlagshipBinding",
 				},
-			})
+			}),
 		);
 	},
 	getNodeBindings(options: z.infer<typeof FlagshipOptionsSchema>) {
@@ -50,7 +52,7 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 			Object.keys(options.flagship).map((name) => [
 				name,
 				new ProxyNodeBinding(),
-			])
+			]),
 		);
 	},
 	async getServices({ options }) {
@@ -64,7 +66,7 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 					name: getUserBindingServiceName(
 						FLAGSHIP_PLUGIN_NAME,
 						name,
-						remoteProxyConnectionString
+						remoteProxyConnectionString,
 					),
 					worker: remoteProxyConnectionString
 						? remoteProxyClientWorker(remoteProxyConnectionString, name)
@@ -78,7 +80,7 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 								],
 							},
 				};
-			}
+			},
 		);
 	},
 };

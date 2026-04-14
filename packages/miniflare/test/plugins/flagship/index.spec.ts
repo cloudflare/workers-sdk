@@ -96,7 +96,7 @@ test("flagship", async ({ expect }) => {
 	});
 
 	const strDetailsRes = await mf.dispatchFetch(
-		"http://placeholder/string-details"
+		"http://placeholder/string-details",
 	);
 	expect(await strDetailsRes.json()).toEqual({
 		flagKey: "variant",
@@ -105,7 +105,7 @@ test("flagship", async ({ expect }) => {
 	});
 
 	const numDetailsRes = await mf.dispatchFetch(
-		"http://placeholder/number-details"
+		"http://placeholder/number-details",
 	);
 	expect(await numDetailsRes.json()).toEqual({
 		flagKey: "rate-limit",
@@ -114,7 +114,7 @@ test("flagship", async ({ expect }) => {
 	});
 
 	const objDetailsRes = await mf.dispatchFetch(
-		"http://placeholder/object-details"
+		"http://placeholder/object-details",
 	);
 	expect(await objDetailsRes.json()).toEqual({
 		flagKey: "config",
