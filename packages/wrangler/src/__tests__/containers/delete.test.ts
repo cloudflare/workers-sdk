@@ -29,7 +29,7 @@ describe("containers delete", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers delete <ID>
 
-			Delete a container [open beta]
+			Delete a container
 
 			POSITIONALS
 			  ID  ID of the container to delete  [string] [required]
