@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	publicDir: false,
 	test: {
-		fileParallelism: false,
+		fileParallelism: !process.env.CI,
 		globalSetup: ["./src/__e2e__/global-setup.ts"],
 		hookTimeout: process.env.CI ? 120_000 : 60_000,
 		include: ["src/__e2e__/**/*.spec.ts"],
