@@ -133,7 +133,6 @@
 				"no-unsafe-optional-chaining": "off",
 				"no-control-regex": "off",
 				"no-case-declarations": "off",
-				"no-empty-pattern": "off",
 				"turbo/no-undeclared-env-vars": "off",
 			},
 		},

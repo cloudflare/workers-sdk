@@ -1,4 +1,4 @@
-import { Bool, Num, OpenAPIRoute } from "chanfana";
+import { OpenAPIRoute } from "chanfana";
 import { z } from "zod";
 import { type AppContext, Task } from "../types";
 
@@ -8,14 +8,11 @@ export class TaskList extends OpenAPIRoute {
 		summary: "List Tasks",
 		request: {
 			query: z.object({
-				page: Num({
-					description: "Page number",
-					default: 0,
-				}),
-				isCompleted: Bool({
-					description: "Filter by completed flag",
-					required: false,
-				}),
+				page: z.number().default(0).describe("Page number"),
+				isCompleted: z
+					.boolean()
+					.optional()
+					.describe("Filter by completed flag"),
 			}),
 		},
 		responses: {
@@ -24,12 +21,8 @@ export class TaskList extends OpenAPIRoute {
 				content: {
 					"application/json": {
 						schema: z.object({
-							series: z.object({
-								success: Bool(),
-								result: z.object({
-									tasks: Task.array(),
-								}),
-							}),
+							success: z.boolean(),
+							tasks: Task.array(),
 						}),
 					},
 				},
@@ -52,7 +45,7 @@ export class TaskList extends OpenAPIRoute {
 				{
 					name: "Clean my room",
 					slug: "clean-room",
-					description: null,
+					description: undefined,
 					completed: false,
 					due_date: "2025-01-05",
 				},

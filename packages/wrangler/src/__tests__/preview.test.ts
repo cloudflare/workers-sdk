@@ -27,10 +27,10 @@ vi.mock("node:child_process", async () => {
 	};
 });
 
-function configWithPreviews(previews: Partial<PreviewsConfig>): Config {
+function configWithPreviews(previews: PreviewsConfig): Config {
 	return {
 		...defaultWranglerConfig,
-		previews: previews as PreviewsConfig,
+		previews,
 	};
 }
 

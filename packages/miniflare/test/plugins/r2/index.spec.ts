@@ -26,7 +26,6 @@ import type {
 	R2ListOptions,
 	R2Object,
 	R2ObjectBody,
-	R2Objects,
 } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ReplaceWorkersTypes } from "miniflare";
 
@@ -916,9 +915,9 @@ test("list: returns correct delimitedPrefixes for delimiter and prefix", async (
 	const allKeys = Object.keys(values);
 	for (const [key, value] of Object.entries(values)) await r2.put(key, value);
 
-	const keys = (result: R2Objects) =>
+	const keys = (result: Awaited<ReturnType<typeof r2.list>>) =>
 		result.objects.map(({ key }) => key.substring(ns.length));
-	const delimitedPrefixes = (result: R2Objects) =>
+	const delimitedPrefixes = (result: Awaited<ReturnType<typeof r2.list>>) =>
 		result.delimitedPrefixes.map((prefix) => prefix.substring(ns.length));
 	const allKeysWithout = (...exclude: string[]) =>
 		allKeys.filter((value) => !exclude.includes(value));
