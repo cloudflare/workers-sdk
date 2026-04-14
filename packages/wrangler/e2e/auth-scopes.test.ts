@@ -1,3 +1,4 @@
+import { fetch } from "undici";
 import { describe, it } from "vitest";
 import {
 	getAuthUrlFromEnv,
