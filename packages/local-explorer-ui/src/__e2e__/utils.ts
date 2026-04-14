@@ -49,6 +49,42 @@ export async function seedDO(objectId: string = "test-object"): Promise<void> {
 }
 
 /**
+ * Seed a Workflow instance by triggering via the explorer API.
+ */
+export async function seedWorkflow(workflowName: string): Promise<{
+	id: string;
+}> {
+	const workflowId = `e2e-test-${Date.now()}`;
+
+	await fetch(
+		`${workerUrl}/cdn-cgi/explorer/api/workflows/${workflowName}/instances`,
+		{
+			body: JSON.stringify({
+				id: workflowId,
+				params: { name: "E2E Test" },
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+			method: "POST",
+		}
+	);
+
+	return {
+		id: workflowId,
+	};
+}
+
+/**
+ * Delete all instances of a workflow via the explorer API.
+ */
+export async function cleanupWorkflow(workflowName: string): Promise<void> {
+	await fetch(`${workerUrl}/cdn-cgi/explorer/api/workflows/${workflowName}`, {
+		method: "DELETE",
+	});
+}
+
+/**
  * Common wait options for `vi.waitFor`
  */
 const WAIT_OPTIONS = {
@@ -106,6 +142,25 @@ export async function navigateToD1(
  */
 export async function navigateToDOClass(className: string): Promise<void> {
 	await navigateTo(`/cdn-cgi/explorer/do/${className}`);
+	await waitForPageLoad();
+}
+
+/**
+ * Navigate to a Workflow instances list page.
+ */
+export async function navigateToWorkflow(workflowName: string): Promise<void> {
+	await navigateTo(`/cdn-cgi/explorer/workflows/${workflowName}`);
+	await waitForPageLoad();
+}
+
+/**
+ * Navigate to a Workflow instance detail page.
+ */
+export async function navigateToWorkflowInstance(
+	workflowName: string,
+	instanceId: string
+): Promise<void> {
+	await navigateTo(`/cdn-cgi/explorer/workflows/${workflowName}/${instanceId}`);
 	await waitForPageLoad();
 }
 
