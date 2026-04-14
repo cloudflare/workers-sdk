@@ -25,7 +25,7 @@ const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
 		ctx.project.name,
 		"--router",
-		lang === "ts" ? "--ts" : "--no-ts",
+		...(lang === "ts" ? ["--ts"] : []),
 	]);
 	logRaw("");
 };

@@ -32,6 +32,31 @@ describe.skipIf(isBuild)("denies access to sensitive files in dev", () => {
 		expect(response.status()).toBe(403);
 	});
 
+	test("denies access to .env in subdirectory", async ({ expect }) => {
+		const response = await getResponse("/worker-b/.env");
+		expect(response.status()).toBe(403);
+	});
+
+	test("denies access to .env.* in subdirectory", async ({ expect }) => {
+		const response = await getResponse("/worker-b/.env.staging");
+		expect(response.status()).toBe(403);
+	});
+
+	test("denies access to root wrangler config", async ({ expect }) => {
+		const response = await getResponse("/wrangler.jsonc");
+		expect(response.status()).toBe(403);
+	});
+
+	test("denies access to auxiliary wrangler config", async ({ expect }) => {
+		const response = await getResponse("/worker-b/wrangler.jsonc");
+		expect(response.status()).toBe(403);
+	});
+
+	test("denies access to vite config", async ({ expect }) => {
+		const response = await getResponse("/vite.config.ts");
+		expect(response.status()).toBe(403);
+	});
+
 	test("denies access to custom-sensitive-file", async ({ expect }) => {
 		const response = await getResponse("/custom-sensitive-file");
 		expect(response.status()).toBe(403);
@@ -56,6 +81,31 @@ describe.runIf(isBuild)("doesn't serve sensitive files in preview", () => {
 
 	test("doesn't serve .dev.vars.*", async ({ expect }) => {
 		const response = await getTextResponse("/.dev.vars.staging");
+		expect(response).toBe("Worker A response");
+	});
+
+	test("doesn't serve .env in subdirectory", async ({ expect }) => {
+		const response = await getTextResponse("/worker-b/.env");
+		expect(response).toBe("Worker A response");
+	});
+
+	test("doesn't serve .env.* in subdirectory", async ({ expect }) => {
+		const response = await getTextResponse("/worker-b/.env.staging");
+		expect(response).toBe("Worker A response");
+	});
+
+	test("doesn't serve root wrangler config", async ({ expect }) => {
+		const response = await getTextResponse("/wrangler.jsonc");
+		expect(response).toBe("Worker A response");
+	});
+
+	test("doesn't serve auxiliary wrangler config", async ({ expect }) => {
+		const response = await getTextResponse("/worker-b/wrangler.jsonc");
+		expect(response).toBe("Worker A response");
+	});
+
+	test("doesn't serve vite config", async ({ expect }) => {
+		const response = await getTextResponse("/vite.config.ts");
 		expect(response).toBe("Worker A response");
 	});
 

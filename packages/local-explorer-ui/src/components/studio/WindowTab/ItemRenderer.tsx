@@ -31,10 +31,10 @@ export function StudioWindowTabItemRenderer({
 	return (
 		<div
 			className={cn(
-				"relative flex h-10 max-w-75 min-w-42.5 cursor-pointer items-center gap-2 border-r border-b border-kumo-fill px-2 text-left text-xs select-none hover:bg-kumo-elevated hover:text-kumo-default",
+				"relative flex h-10 max-w-75 min-w-42.5 cursor-pointer items-center gap-2 border-r border-b border-kumo-fill bg-kumo-elevated px-2 text-left text-xs select-none hover:text-kumo-default",
 				selected
-					? "border-b-kumo-brand bg-kumo-base text-kumo-default"
-					: "border-b-kumo-fill bg-kumo-elevated text-kumo-subtle",
+					? "border-b-kumo-brand text-kumo-default"
+					: "border-b-kumo-fill text-kumo-subtle",
 				isTemp && "italic",
 				isDirty && "not-italic"
 			)}

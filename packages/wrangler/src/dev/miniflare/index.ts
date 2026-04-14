@@ -14,6 +14,7 @@ import {
 import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
 import { withSourceURLs } from "../../deployment-bundle/source-url";
 import { logger } from "../../logger";
+import { getMetricsConfig } from "../../metrics";
 import { getSourceMappedString } from "../../sourcemap";
 import { updateCheck } from "../../update-check";
 import { warnOrError } from "../../utils/print-bindings";
@@ -100,6 +101,7 @@ export interface ConfigBundle {
 	enableContainers: boolean;
 	// Zone to use for the CF-Worker header in outbound fetches
 	zone: string | undefined;
+	sendMetrics: boolean | undefined;
 }
 
 export class WranglerLog extends Log {
@@ -422,6 +424,7 @@ type WorkerOptionsBindings = Pick<
 	| "dispatchNamespaces"
 	| "mtlsCertificates"
 	| "helloWorld"
+	| "flagship"
 	| "workerLoaders"
 	| "unsafeBindings"
 	| "additionalUnboundDurableObjects"
@@ -494,6 +497,7 @@ export function buildMiniflareBindingOptions(
 		"unsafe_hello_world",
 		bindings
 	);
+	const flagshipBindings = extractBindingsOfType("flagship", bindings);
 	const workerLoaders = extractBindingsOfType("worker_loader", bindings);
 	const sendEmailBindings = extractBindingsOfType("send_email", bindings);
 	// Extract both regular and unsafe ratelimit bindings
@@ -783,6 +787,18 @@ export function buildMiniflareBindingOptions(
 		helloWorld: Object.fromEntries(
 			helloWorldBindings.map((binding) => [binding.binding, binding])
 		),
+		flagship: Object.fromEntries(
+			flagshipBindings.map((binding) => [
+				binding.binding,
+				{
+					app_id: binding.app_id,
+					remoteProxyConnectionString:
+						binding.remote && remoteProxyConnectionString
+							? remoteProxyConnectionString
+							: undefined,
+				},
+			])
+		),
 		workerLoaders: Object.fromEntries(
 			workerLoaders.map(({ binding }) => [binding, {}])
 		),
@@ -1012,6 +1028,7 @@ export async function buildMiniflareOptions(
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+		telemetry: getMetricsConfig({ sendMetrics: config.sendMetrics }),
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,
 		//  - and one holding the user worker.

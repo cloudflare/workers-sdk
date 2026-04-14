@@ -40,8 +40,9 @@ export const Route = createFileRoute("/d1/$databaseId")({
 			tables,
 		};
 	},
-	validateSearch: (search) => ({
+	validateSearch: (search): { table?: string; worker?: string } => ({
 		table: typeof search.table === "string" ? search.table : undefined,
+		worker: typeof search.worker === "string" ? search.worker : undefined,
 	}),
 });
 

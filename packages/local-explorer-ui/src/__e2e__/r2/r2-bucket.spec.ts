@@ -8,6 +8,7 @@ import {
 	navigateToR2Object,
 	page,
 	seedR2,
+	waitForBreadcrumbText,
 	waitForDialog,
 	waitForTableRows,
 	waitForText,
@@ -77,7 +78,7 @@ describe("R2 Bucket", () => {
 			await page.goto(
 				`${page.url().split("/r2/")[0]}/r2/my-bucket?prefix=nonexistent-prefix/`
 			);
-			await page.waitForLoadState("networkidle");
+			await page.waitForLoadState("domcontentloaded");
 
 			await waitForText("No objects in this directory");
 		});
@@ -88,8 +89,8 @@ describe("R2 Bucket", () => {
 			await navigateToR2Bucket("my-bucket");
 			await waitForTableRows(1);
 
-			await waitForText("R2");
-			await waitForText("my-bucket");
+			await waitForBreadcrumbText("R2");
+			await waitForBreadcrumbText("my-bucket");
 		});
 
 		test("navigates into a directory and updates breadcrumbs", async () => {
@@ -102,11 +103,8 @@ describe("R2 Bucket", () => {
 				.filter({ hasText: "images/" });
 			await imagesButton.click();
 
-			// Wait for the directory contents to load
-			await waitForTableRows(1);
-
 			// Breadcrumbs should now include the directory
-			await waitForText("images");
+			await waitForBreadcrumbText("images");
 
 			// Should show files inside the images directory
 			await waitForText("logo.svg");
@@ -122,12 +120,13 @@ describe("R2 Bucket", () => {
 				.locator("button")
 				.filter({ hasText: "images/" });
 			await imagesButton.click();
-			await waitForTableRows(1);
+			await waitForBreadcrumbText("images");
+			await waitForText("icons/");
 
 			// Navigate into "icons/" subdirectory
 			const iconsButton = page.locator("button").filter({ hasText: "icons/" });
 			await iconsButton.click();
-			await waitForTableRows(1);
+			await waitForBreadcrumbText("icons");
 
 			// Should show nested files
 			await waitForText("home.svg");
@@ -143,14 +142,14 @@ describe("R2 Bucket", () => {
 				.locator("button")
 				.filter({ hasText: "images/" });
 			await imagesButton.click();
-			await waitForTableRows(1);
+			await waitForBreadcrumbText("images");
 
 			// Click the bucket name breadcrumb to go back to root
 			const bucketBreadcrumb = page
+				.locator('nav[aria-label="breadcrumb"]')
 				.getByRole("link", { name: "my-bucket" })
 				.first();
 			await bucketBreadcrumb.click();
-			await waitForTableRows(1);
 
 			// Should be back at root showing directories
 			await waitForText("images/");
@@ -273,10 +272,10 @@ describe("R2 Bucket", () => {
 			await navigateToR2Object("my-bucket", "documents/report.txt");
 
 			// Breadcrumbs should show: R2 > my-bucket > documents > report.txt
-			await waitForText("R2");
-			await waitForText("my-bucket");
-			await waitForText("documents");
-			await waitForText("report.txt");
+			await waitForBreadcrumbText("R2");
+			await waitForBreadcrumbText("my-bucket");
+			await waitForBreadcrumbText("documents");
+			await waitForBreadcrumbText("report.txt");
 		});
 	});
 
@@ -358,7 +357,11 @@ describe("R2 Bucket", () => {
 
 			await waitForDialog();
 			await waitForText("Delete object?");
-			await waitForText("readme.txt");
+
+			// "readme.txt" appears in multiple places (sidebar, breadcrumbs, heading),
+			// so scope the assertion to the dialog.
+			const dialog = page.getByRole("dialog");
+			await dialog.getByText("readme.txt").waitFor({ state: "visible" });
 		});
 
 		test("deletes object from detail page and navigates back", async () => {

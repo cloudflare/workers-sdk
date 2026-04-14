@@ -48,6 +48,7 @@ import {
 	listWorkflows,
 	sendWorkflowInstanceEvent,
 } from "./resources/workflows";
+import { telemetryMiddleware } from "./telemetry";
 import type {
 	BindingIdMap,
 	ExplorerWorkerOpts,
@@ -68,6 +69,7 @@ export type Env = {
 	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
 	// Per-worker resource bindings for the /local/workers endpoint
 	[CoreBindings.JSON_EXPLORER_WORKER_OPTS]: ExplorerWorkerOpts;
+	[CoreBindings.JSON_TELEMETRY_CONFIG]: { enabled: boolean; deviceId?: string };
 };
 
 export type AppBindings = { Bindings: Env };
@@ -111,6 +113,8 @@ app.use("/api/*", async (c, next) => {
 		c.res.headers.set("Access-Control-Allow-Origin", origin);
 	}
 });
+
+app.use("/api/*", telemetryMiddleware);
 
 // ============================================================================
 // Static Asset Serving
