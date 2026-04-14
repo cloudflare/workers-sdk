@@ -54,7 +54,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 							...defaultDeniedFiles,
 							...Array.from(
 								ctx.resolvedPluginConfig.configPaths,
-								normalizePath
+								(configPath) => normalizePath(configPath)
 							),
 						],
 					},
