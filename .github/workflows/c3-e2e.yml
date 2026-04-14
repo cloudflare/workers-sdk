@@ -111,19 +111,24 @@ jobs:
           include-hidden-files: true
 
   frameworks-e2e:
-    # Runs the C3 frameworks E2E tests only in the merge queue, on the release branch, or when explicitly requested via label.
+    # Runs the C3 frameworks E2E tests only in the merge queue, on the release branch, if create-cloudflare has changed, or when explicitly requested via label.
     timeout-minutes: 45
     concurrency:
-      group: ${{ github.workflow }}-frameworks-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
+      group: ${{ github.workflow }}-frameworks${{ matrix.experimental && '-experimental' || '' }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
       cancel-in-progress: true
-    name: ${{ format('C3 E2E ({0}, {1}) - frameworks', matrix.pm.name, matrix.os.description) }}
+    name: ${{ format('C3 E2E ({0}, {1}{2}) - frameworks', matrix.pm.name, matrix.os.description, matrix.experimental && ', experimental' || '') }}
     strategy:
       fail-fast: false
       matrix:
+        experimental: [false]
         os: [{ name: ubuntu-latest, description: Linux }]
         pm:
           - { name: pnpm, version: "10.33.0" }
           - { name: npm, version: "0.0.0" }
+        include:
+          - os: { name: ubuntu-latest, description: Linux }
+            pm: { name: pnpm, version: "10.33.0" }
+            experimental: true
     runs-on: ${{ matrix.os.name }}
     steps:
       - name: Checkout Repo
@@ -196,7 +201,7 @@ jobs:
         run: pnpm run test:e2e:c3
         env:
           NODE_VERSION: ${{ env.NODE_VERSION }}
-          E2E_EXPERIMENTAL: false
+          E2E_EXPERIMENTAL: ${{ matrix.experimental }}
           E2E_TEST_PM: ${{ matrix.pm.name }}
           E2E_TEST_PM_VERSION: ${{ matrix.pm.version }}
           E2E_TEST_FILTER: frameworks
@@ -207,14 +212,14 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
-          name: ${{ format('e2e-logs-{0}-{1}-normal-frameworks', matrix.pm.name, matrix.os.description) }}
-          path: packages/create-cloudflare/.e2e-logs/${{ matrix.pm.name }}/frameworks
+          name: ${{ format('e2e-logs-{0}-{1}-{2}-frameworks', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
+          path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}/${{ matrix.pm.name }}/frameworks
           include-hidden-files: true
 
       - name: Upload Turbo Summary
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
-          name: ${{ format('turbo-runs-{0}-{1}-normal-frameworks', matrix.pm.name, matrix.os.description) }}
+          name: ${{ format('turbo-runs-{0}-{1}-{2}-frameworks', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
           path: .turbo/runs
           include-hidden-files: true
