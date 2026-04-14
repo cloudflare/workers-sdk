@@ -7,22 +7,26 @@ import type { Tunnel } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
 export const PUBLIC_EXPOSURE_WARNING = [
-	"Your local dev server will be publicly accessible.",
-	"Anyone with the URL can interact with your app, e.g.:",
-	"- Call ungated endpoints in your app",
-	"- Trigger app logic that reads or writes through remote bindings",
-	"- Reach internal services if your Worker proxies requests",
-	"- Access HMR messages and request module source",
 	"",
-	"Consider disabling HMR with `server.hmr = false` or restricting access with a named tunnel + Cloudflare Access.",
+	`     ${colors.dim("This URL is ")}publicly accessible${colors.dim(". Anyone with it can:")}`,
+	colors.dim("     • Call ungated endpoints"),
+	colors.dim("     • Trigger logic that uses remote bindings"),
+	colors.dim("     • Reach internal services if your Worker proxies requests"),
+	colors.dim("     • Access HMR messages and request module source"),
+	"",
+	colors.dim(
+		"     Consider using a named tunnel with Cloudflare Access to restrict access."
+	),
+	"",
 ].join("\n");
 
 export const QUICK_TUNNEL_SSE_WARNING =
-	'Quick tunnels do not support Server-Sent Events (SSE). For SSE support, set `tunnel: "<hostname>"` in your `cloudflare()` Vite plugin config.';
+	"Quick tunnels do not support Server-Sent Events (SSE). Use a named Cloudflare Tunnel if you need SSE over a public URL.";
 
 export class TunnelManager {
 	#logger: vite.Logger;
 	#origin?: string;
+	#publicUrl?: string;
 	#tunnel?: Tunnel;
 	#hasWarnedAboutSse = false;
 
@@ -40,11 +44,13 @@ export class TunnelManager {
 		}
 
 		const previousTunnel = this.#tunnel;
+
 		if (previousTunnel) {
 			void this.dispose();
 		}
 
 		this.#origin = origin;
+		this.#publicUrl = undefined;
 
 		const tunnel = startTunnel({
 			origin: new URL(origin),
@@ -63,18 +69,29 @@ export class TunnelManager {
 		try {
 			const { publicUrl } = await tunnel.ready();
 			if (this.#tunnel !== tunnel) {
+				debuglog(
+					"Tunnel was restarted before it finished starting. Ignoring this tunnel's public URL:",
+					publicUrl
+				);
 				return null;
 			}
 
+			debuglog("Tunnel is ready with public URL:", publicUrl);
+			this.#publicUrl = publicUrl.toString();
 			return publicUrl.toString();
 		} catch (error) {
 			if (this.#tunnel !== tunnel) {
 				return null;
 			}
 
+			this.#publicUrl = undefined;
 			this.#tunnel = undefined;
 			throw error;
 		}
+	}
+
+	get publicUrl(): string | undefined {
+		return this.#publicUrl;
 	}
 
 	warnIfQuickTunnelSseResponse(contentType: string | null) {
@@ -94,8 +111,11 @@ export class TunnelManager {
 		const tunnel = this.#tunnel;
 
 		this.#origin = undefined;
+		this.#publicUrl = undefined;
 		this.#tunnel = undefined;
 		this.#hasWarnedAboutSse = false;
+
+		debuglog("Disposing tunnel...");
 
 		if (tunnel) {
 			await tunnel.dispose();
@@ -103,9 +123,11 @@ export class TunnelManager {
 	}
 }
 
-let tunnelManager: TunnelManager | undefined = undefined;
+let tunnelManager: TunnelManager;
 
 process.on("exit", () => {
+	// We can't await this since the process is exiting. This is just a best-effort
+	// fallback; normal tunnel cleanup happens during Vite server shutdown.
 	void tunnelManager?.dispose();
 });
 
@@ -136,47 +158,43 @@ export async function setupTunnel(
 	server: vite.ViteDevServer,
 	ctx: PluginContext,
 	manager: TunnelManager
-): Promise<string | null> {
+): Promise<void> {
+	const origin = await getTunnelOrigin(server);
+
+	if (manager.isStarted(origin)) {
+		debuglog("Tunnel is already started on", origin);
+		return;
+	}
+
 	try {
-		const origin = await getTunnelOrigin(server);
-
-		if (manager.isStarted(origin)) {
-			return null;
-		}
-
 		server.config.logger.info(
-			colors.dim("  ➜") +
-				colors.dim("  Starting tunnel (usually takes 5-15s)...")
+			colors.dim("\n  ➜  Starting tunnel (usually takes a few seconds)...\n")
 		);
 
-		const publicURL = await manager.startTunnel(origin);
+		const publicUrl = await manager.startTunnel(origin);
 
-		if (!publicURL) {
+		if (!publicUrl) {
 			// This happens if the tunnel was restarted with a different origin before the first tunnel finished starting.
 			// In this case, we don't want to log anything since the new tunnel will log its own URL once it's ready.
-			return null;
+			return;
 		}
 
-		const tunnelHostname = new URL(publicURL).hostname;
-		if (!ctx.tunnelHostnames.has(tunnelHostname)) {
-			ctx.tunnelHostnames.clear();
-			ctx.tunnelHostnames.add(tunnelHostname);
+		const allowedHosts = server.config.server.allowedHosts;
+		const tunnelHostnames = [new URL(publicUrl).hostname];
+
+		ctx.replaceTunnelHostnames(tunnelHostnames);
+
+		if (
+			allowedHosts !== true &&
+			tunnelHostnames.some((hostname) => !allowedHosts.includes(hostname))
+		) {
 			await server.restart();
 		}
-
-		server.config.logger.warn(PUBLIC_EXPOSURE_WARNING);
-		server.config.logger.info(
-			`  ${colors.green("➜")}  ${colors.bold("Tunnel")}:  ${colors.dim(
-				colors.yellow(publicURL)
-			)}`
-		);
-
-		return publicURL;
 	} catch (error) {
-		server.config.logger.error(
-			`Failed to start tunnel: ${error instanceof Error ? error.message : String(error)}`
+		throw new Error(
+			`Failed to start tunnel: ${error instanceof Error ? error.message : String(error)}`,
+			{ cause: error }
 		);
-		return null;
 	}
 }
 
@@ -188,25 +206,59 @@ export function isSseContentType(contentType: string | null): boolean {
 }
 
 export const tunnelPlugin = createPlugin("tunnel", (ctx) => {
+	async function stopTunnel() {
+		ctx.clearTunnelHostnames();
+		await tunnelManager?.dispose();
+	}
+
 	return {
+		/**
+		 * Vite runs `buildEnd` when the dev server restarts or closes.
+		 */
 		async buildEnd() {
 			if (!ctx.isRestartingDevServer) {
-				ctx.tunnelHostnames.clear();
-				await tunnelManager?.dispose();
+				await stopTunnel();
 			}
 		},
 		async configureServer(server) {
 			assertIsNotPreview(ctx);
 
 			if (!ctx.resolvedPluginConfig.tunnel) {
-				ctx.tunnelHostnames.clear();
-				await tunnelManager?.dispose();
+				await stopTunnel();
 				return;
 			}
 
 			tunnelManager ??= new TunnelManager(server.config.logger);
 
-			await setupTunnel(server, ctx, tunnelManager);
+			const serverPrintUrls = server.printUrls.bind(server);
+			server.printUrls = () => {
+				serverPrintUrls();
+
+				const publicUrl = tunnelManager?.publicUrl;
+				if (!publicUrl) {
+					return;
+				}
+
+				server.config.logger.info(
+					`${colors.green("  ➜")}  ${colors.bold("Tunnel:")}  ${colors.cyan(publicUrl)}`
+				);
+				server.config.logger.warnOnce(PUBLIC_EXPOSURE_WARNING);
+			};
+
+			const serverListen = server.listen.bind(server);
+			server.listen = async (...args) => {
+				const result = await serverListen(...args);
+
+				try {
+					await setupTunnel(server, ctx, tunnelManager);
+					return result;
+				} catch (error) {
+					await Promise.all([stopTunnel(), server.close()]);
+
+					// The user explicitly requested tunnel sharing, so tunnel startup failure is fatal.
+					throw error;
+				}
+			};
 		},
 	};
 });

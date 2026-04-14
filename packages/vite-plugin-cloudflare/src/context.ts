@@ -26,7 +26,7 @@ export interface SharedContext {
 	hasShownWorkerConfigWarnings: boolean;
 	/** Tracks the number of in-flight dev server restarts (0 means no restart in progress) */
 	restartingDevServerCount: number;
-	/** allowed hostnames for tunnel connections */
+	/** Allowed hostnames for tunnel connections */
 	tunnelHostnames: Set<string>;
 }
 
@@ -122,8 +122,19 @@ export class PluginContext {
 		return this.#sharedContext.restartingDevServerCount > 0;
 	}
 
-	get tunnelHostnames(): Set<string> {
-		return this.#sharedContext.tunnelHostnames;
+	getTunnelHostnames(): string[] {
+		return Array.from(this.#sharedContext.tunnelHostnames);
+	}
+
+	replaceTunnelHostnames(tunnelHostnames: string[]): void {
+		this.#sharedContext.tunnelHostnames.clear();
+		for (const tunnelHostname of tunnelHostnames) {
+			this.#sharedContext.tunnelHostnames.add(tunnelHostname);
+		}
+	}
+
+	clearTunnelHostnames(): void {
+		this.#sharedContext.tunnelHostnames.clear();
 	}
 
 	setResolvedPluginConfig(resolvedPluginConfig: ResolvedPluginConfig): void {

@@ -234,12 +234,11 @@ function getAllowedHosts(
 	userConfig: UserConfig
 ): true | string[] | undefined {
 	const userAllowedHosts = userConfig.server?.allowedHosts;
+	const tunnelHostnames = ctx.getTunnelHostnames();
 
-	if (ctx.tunnelHostnames.size === 0 || userAllowedHosts === true) {
+	if (tunnelHostnames.length === 0 || userAllowedHosts === true) {
 		return userAllowedHosts;
 	}
 
-	return Array.from(
-		new Set([...(userAllowedHosts ?? []), ...ctx.tunnelHostnames])
-	);
+	return Array.from(new Set([...(userAllowedHosts ?? []), ...tunnelHostnames]));
 }
