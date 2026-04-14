@@ -151,7 +151,8 @@ const unsafeParseBooleanString = (value: unknown): boolean => {
  */
 export const checkTypesUpToDate = async (
 	primaryConfig: Config,
-	typesPath: string = DEFAULT_WORKERS_TYPES_FILE_PATH
+	typesPath: string = DEFAULT_WORKERS_TYPES_FILE_PATH,
+	secondaryEntries: Map<string, Entry> = new Map()
 ): Promise<boolean> => {
 	let typesFileLines = new Array<string>();
 	try {
@@ -215,7 +216,7 @@ export const checkTypesUpToDate = async (
 				args.envInterface,
 				typesPath,
 				entrypoint,
-				new Map(),
+				secondaryEntries,
 				false // don't log anything
 			);
 			const newHash = envHeader?.match(/hash: (?<hash>.*)\)/)?.groups?.hash;
