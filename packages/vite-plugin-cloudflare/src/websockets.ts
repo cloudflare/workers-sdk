@@ -1,7 +1,8 @@
-import { CoreHeaders, Headers, coupleWebSocket } from "miniflare";
+import { createHeaders } from "@remix-run/node-fetch-server";
+import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
-import type { Miniflare } from "miniflare";
+import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import type * as vite from "vite";
@@ -37,23 +38,14 @@ export function handleWebSocket(
 				return;
 			}
 
-			const headers = new Headers();
-			const rawHeaders = request.rawHeaders;
-			for (let i = 0; i < rawHeaders.length; i += 2) {
-				// oxlint-disable-next-line typescript/no-non-null-assertion
-				if (rawHeaders[i]!.startsWith(":")) {
-					continue;
-				}
-				// oxlint-disable-next-line typescript/no-non-null-assertion
-				headers.append(rawHeaders[i]!, rawHeaders[i + 1]!);
-			}
+			const headers = createHeaders(request);
 
 			if (entryWorkerName) {
 				headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 			}
 
 			const response = await miniflare.dispatchFetch(url, {
-				headers,
+				headers: headers as unknown as Headers,
 				method: request.method,
 			});
 			const workerWebSocket = response.webSocket;
