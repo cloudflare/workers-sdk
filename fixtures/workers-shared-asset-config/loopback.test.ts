@@ -2,8 +2,8 @@ import Worker, {
 	AssetWorkerInner,
 } from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
-import { setupSentry } from "@cloudflare/workers-shared/utils/sentry";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
+import { setupSentry } from "@cloudflare/workers-shared/utils/sentry";
 import { SELF } from "cloudflare:test";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import type { AssetMetadata } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
@@ -69,13 +69,12 @@ describe("[Asset Worker] loopback", () => {
 describe("[Asset Worker] observability", () => {
 	const mockCaptureException = vi.fn();
 	const mockEnterSpan = vi.fn((_name: string, fn: () => unknown) => fn());
-	const mockRunWithSpanContext = vi.fn(
-		(_ctx: unknown, fn: () => unknown) => fn()
+	const mockRunWithSpanContext = vi.fn((_ctx: unknown, fn: () => unknown) =>
+		fn()
 	);
 
 	/**
-	 * Builds mock env/ctx and instantiates the outer entrypoint directly,
-	 * following the same pattern as deploy-and-config-workers/preview-dispatcher.
+	 * Builds mock env/ctx and instantiates the outer entrypoint directly.
 	 * This bypasses SELF (which doesn't support RPC in vitest-pool-workers)
 	 * and lets us call outer RPC methods directly.
 	 */
@@ -123,10 +122,7 @@ describe("[Asset Worker] observability", () => {
 			},
 		};
 
-		const outer = new Worker(
-			mockCtx as unknown as ExecutionContext,
-			env
-		);
+		const outer = new Worker(mockCtx as unknown as ExecutionContext, env);
 
 		return { outer, env, ctx: mockCtx };
 	}

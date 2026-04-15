@@ -360,10 +360,7 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 				)
 			: undefined;
 		try {
-			return await this.env.JAEGER.enterSpan(
-				`outer.${methodName}`,
-				() => fn()
-			);
+			return await this.env.JAEGER.enterSpan(`outer.${methodName}`, () => fn());
 		} catch (err) {
 			sentry?.captureException(err);
 			throw err;
@@ -438,8 +435,7 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 	): Promise<GetByETagResult | null> {
 		return this.withObservability(
 			"unstable_getByPathname",
-			() =>
-				this.getInnerEntrypoint().unstable_getByPathname(pathname, request),
+			() => this.getInnerEntrypoint().unstable_getByPathname(pathname, request),
 			request
 		);
 	}
