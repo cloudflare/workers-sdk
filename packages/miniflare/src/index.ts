@@ -166,6 +166,11 @@ const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
 	return net.isIPv6(host) ? `[${host}]` : host;
 }
+
+function resolveLocalhost(host: string) {
+	return host === "localhost" ? "127.0.0.1" : undefined;
+}
+
 function maybeGetLocallyAccessibleHost(
 	h: string
 ): "localhost" | "127.0.0.1" | "[::1]" | undefined {
@@ -1676,7 +1681,8 @@ export class Miniflare {
 		// Start loopback server (how the runtime accesses Node.js) using the same
 		// host as the main runtime server. This means we can use the loopback
 		// server for live reload updates too.
-		const loopbackHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
+		const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
+		const loopbackHost = resolveLocalhost(configuredHost) ?? configuredHost;
 		// If we've already started the loopback server...
 		if (this.#loopbackServer !== undefined) {
 			// ...and it's using the correct host, reuse it
@@ -1782,6 +1788,7 @@ export class Miniflare {
 	}
 
 	async #assembleConfig(
+		loopbackHost: string,
 		loopbackPort: number,
 		proxyAddress: string | null
 	): Promise<Config> {
@@ -1972,6 +1979,7 @@ export class Miniflare {
 				tmpPath: this.#tmpPath,
 				defaultPersistRoot: sharedOpts.core.defaultPersistRoot,
 				workerNames,
+				loopbackHost,
 				loopbackPort,
 				unsafeStickyBlobs,
 				wrappedBindingNames,
@@ -2230,12 +2238,21 @@ export class Miniflare {
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
 		const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
+		// For internal loopback communication with workerd, always use 127.0.0.1
+		// when localhost is configured. This prevents IPv6/IPv4 mismatch issues
+		// where Node.js binds to [::1] but workerd resolves localhost to 127.0.0.1.
+		// See: https://github.com/cloudflare/workers-sdk/issues/12910
 		const loopbackHost =
+			resolveLocalhost(configuredHost) ??
 			maybeGetLocallyAccessibleHost(configuredHost) ??
 			getURLSafeHost(configuredHost);
 		const loopbackPort = await this.#getLoopbackPort();
 		const proxyAddress = await this.#devRegistry.initializeProxyWorker();
-		const config = await this.#assembleConfig(loopbackPort, proxyAddress);
+		const config = await this.#assembleConfig(
+			loopbackHost,
+			loopbackPort,
+			proxyAddress
+		);
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
