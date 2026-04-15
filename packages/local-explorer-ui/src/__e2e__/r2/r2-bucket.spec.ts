@@ -532,6 +532,57 @@ describe("R2 Bucket", () => {
 				.getByRole("button", { name: "Bulk actions" });
 			expect(await bulkActionsButton.isDisabled()).toBe(false);
 		});
+
+		test("shift-click selects a contiguous range of rows", async ({
+			expect,
+		}) => {
+			await navigateToR2Bucket("my-bucket");
+			await waitForTableRows(4);
+
+			const checkboxes = page.locator("tbody tr").getByRole("checkbox");
+			const count = await checkboxes.count();
+
+			expect(count).toBeGreaterThanOrEqual(4);
+
+			await checkboxes.nth(0).click();
+			expect(await checkboxes.nth(0).isChecked()).toBe(true);
+
+			// Shift-click the fourth row checkbox
+			await checkboxes.nth(3).click({ modifiers: ["Shift"] });
+
+			expect(await checkboxes.nth(0).isChecked()).toBe(true);
+			expect(await checkboxes.nth(1).isChecked()).toBe(true);
+			expect(await checkboxes.nth(2).isChecked()).toBe(true);
+			expect(await checkboxes.nth(3).isChecked()).toBe(true);
+		});
+
+		test("shift-click deselects a contiguous range of rows", async ({
+			expect,
+		}) => {
+			await navigateToR2Bucket("my-bucket");
+			await waitForTableRows(4);
+
+			const checkboxes = page.locator("tbody tr").getByRole("checkbox");
+			const count = await checkboxes.count();
+			expect(count).toBeGreaterThanOrEqual(4);
+
+			// Click the first row (sets anchor), then shift-click the fourth to select range
+			await checkboxes.nth(0).click();
+			await checkboxes.nth(3).click({ modifiers: ["Shift"] });
+
+			expect(await checkboxes.nth(0).isChecked()).toBe(true);
+			expect(await checkboxes.nth(1).isChecked()).toBe(true);
+			expect(await checkboxes.nth(2).isChecked()).toBe(true);
+			expect(await checkboxes.nth(3).isChecked()).toBe(true);
+
+			// Shift-click the fourth row again to deselect the range
+			await checkboxes.nth(3).click({ modifiers: ["Shift"] });
+
+			expect(await checkboxes.nth(0).isChecked()).toBe(false);
+			expect(await checkboxes.nth(1).isChecked()).toBe(false);
+			expect(await checkboxes.nth(2).isChecked()).toBe(false);
+			expect(await checkboxes.nth(3).isChecked()).toBe(false);
+		});
 	});
 
 	describe("refresh", () => {
