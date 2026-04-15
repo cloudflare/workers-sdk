@@ -9,9 +9,6 @@
 		"resolveJsonModule": true,
 		"moduleDetection": "force",
 		/* Strictness */
-		"noImplicitAny": false,
-		"noImplicitThis": true,
-		"strictNullChecks": false,
 		"strict": true,
 		"noUncheckedIndexedAccess": true,
 		/* If NOT transpiling with TypeScript: */
@@ -20,8 +17,7 @@
 		"noEmit": true,
 		"lib": ["es2024"],
 		"types": [
-			"@types/node",
-			"@types/service-worker-mock",
+			"@types/node"
 		]
 	},
 	"exclude": ["node_modules", "dist", "tests"],

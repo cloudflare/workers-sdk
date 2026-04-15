@@ -3745,3 +3745,60 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 	expect(existsSync(configFilePath)).toBe(true);
 	await mf.dispose();
 });
+
+// https://github.com/cloudflare/workers-sdk/issues/13013
+test("Miniflare: dispatchFetch handles POST/PUT with non-2xx status", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `export default {
+			async fetch(request) {
+				const url = new URL(request.url);
+				const status = parseInt(url.searchParams.get("status") ?? "200");
+				return Response.json(
+					{ method: request.method, status },
+					{ status }
+				);
+			}
+		}`,
+	});
+	useDispose(mf);
+
+	// GET + non-2xx (worked before the fix too)
+	for (const status of [400, 401, 403, 404, 500]) {
+		const res = await mf.dispatchFetch(`http://localhost/?status=${status}`);
+		expect(res.status).toBe(status);
+		expect(await res.json()).toEqual({ method: "GET", status });
+	}
+
+	// POST + 2xx
+	for (const status of [200, 201]) {
+		const res = await mf.dispatchFetch(`http://localhost/?status=${status}`, {
+			method: "POST",
+			body: JSON.stringify({ data: "test" }),
+		});
+		expect(res.status).toBe(status);
+		expect(await res.json()).toEqual({ method: "POST", status });
+	}
+
+	// POST + non-2xx (previously threw "fetch failed" due to undici bug)
+	for (const status of [400, 401, 403, 404, 500]) {
+		const res = await mf.dispatchFetch(`http://localhost/?status=${status}`, {
+			method: "POST",
+			body: JSON.stringify({ data: "test" }),
+		});
+		expect(res.status).toBe(status);
+		expect(await res.json()).toEqual({ method: "POST", status });
+	}
+
+	// PUT + non-2xx (also affected by the same bug)
+	for (const status of [400, 401, 403, 404, 500]) {
+		const res = await mf.dispatchFetch(`http://localhost/?status=${status}`, {
+			method: "PUT",
+			body: JSON.stringify({ data: "test" }),
+		});
+		expect(res.status).toBe(status);
+		expect(await res.json()).toEqual({ method: "PUT", status });
+	}
+});

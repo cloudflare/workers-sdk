@@ -178,7 +178,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			worker: {
 				// TODO: read these from the wrangler.toml
 				compatibilityDate: "2024-07-31",
-				compatibilityFlags: ["nodejs_compat"],
+				compatibilityFlags: ["nodejs_compat", "enable_ctx_exports"],
 				modules: [
 					{
 						name: "asset-worker.mjs",

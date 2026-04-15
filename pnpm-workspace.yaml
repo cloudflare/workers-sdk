@@ -75,7 +75,6 @@ patchedDependencies:
   "youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch"
   "@netlify/build-info": "patches/@netlify__build-info.patch"
   "buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
-  "undici@7.24.4": "patches/undici@7.24.4.patch"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Catalog
@@ -89,17 +88,17 @@ catalog:
   "@vitest/snapshot": 4.1.0
   "@vitest/ui": 4.1.0
   typescript: "~5.8.3"
-  undici: "7.24.4"
+  undici: "7.24.8"
   # Override undici-types from @types/node so that the Cloudflare SDK typings match our installed
   # version of Undici
-  undici-types: "7.24.4"
+  undici-types: "7.24.8"
   vitest: "4.1.0"
   vite: "^8.0.0"
   "ws": "8.18.0"
   esbuild: "0.27.3"
   playwright-chromium: "^1.56.1"
-  "@cloudflare/workers-types": "^4.20260410.1"
-  workerd: "1.20260410.1"
+  "@cloudflare/workers-types": "^4.20260413.1"
+  workerd: "1.20260413.1"
   jsonc-parser: "^3.2.0"
   smol-toml: "^1.5.2"
   msw: 2.12.4
