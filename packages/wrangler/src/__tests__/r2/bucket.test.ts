@@ -3604,6 +3604,48 @@ describe("r2", () => {
 				});
 			});
 			describe("set", () => {
+				it("should reject AWS S3 format with CORSRules key", async () => {
+					const filePath = "cors-s3-format.json";
+					const s3Config = {
+						CORSRules: [
+							{
+								AllowedOrigins: ["*"],
+								AllowedMethods: ["GET"],
+							},
+						],
+					};
+
+					fs.writeFileSync(filePath, JSON.stringify(s3Config));
+
+					await expect(
+						runWrangler(
+							`r2 bucket cors set my-bucket --file ${filePath} --force`
+						)
+					).rejects.toThrowError(
+						/Wrangler detected an AWS S3 CORS configuration format/
+					);
+				});
+
+				it("should reject AWS S3 style PascalCase keys in rules", async () => {
+					const filePath = "cors-s3-keys.json";
+					const s3StyleConfig = {
+						rules: [
+							{
+								AllowedOrigins: ["*"],
+								AllowedMethods: ["GET"],
+							},
+						],
+					};
+
+					fs.writeFileSync(filePath, JSON.stringify(s3StyleConfig));
+
+					await expect(
+						runWrangler(
+							`r2 bucket cors set my-bucket --file ${filePath} --force`
+						)
+					).rejects.toThrowError(/Wrangler detected AWS S3 style keys/);
+				});
+
 				it("should set CORS configuration from a JSON file", async () => {
 					const bucketName = "my-bucket";
 					const filePath = "cors-configuration.json";

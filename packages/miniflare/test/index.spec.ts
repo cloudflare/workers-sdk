@@ -280,6 +280,31 @@ const localInterface = (interfaces["en0"] ?? interfaces["eth0"])?.find(
 		expect(await res.text()).toBe("body");
 	}
 );
+
+test("Miniflare: can use localhost as host", async ({ expect }) => {
+	const mf = new Miniflare({
+		host: "localhost",
+		modules: true,
+		script: `export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`,
+		serviceBindings: {
+			SERVICE() {
+				return new Response("body");
+			},
+		},
+	});
+	useDispose(mf);
+
+	const url = await mf.ready;
+	expect(url.hostname).toBe("localhost");
+
+	let res = await mf.dispatchFetch("https://example.com");
+	expect(await res.text()).toBe("body");
+
+	const worker = await mf.getWorker();
+	res = await worker.fetch("https://example.com");
+	expect(await res.text()).toBe("body");
+});
+
 test("Miniflare: can use IPv6 loopback as host", async ({ expect }) => {
 	const mf = new Miniflare({
 		host: "::1",
@@ -3407,6 +3432,7 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 	};
 
 	const mf = new Miniflare({
+		host: "localhost",
 		unsafeModuleFallbackService(request) {
 			const resolveMethod = request.headers.get("X-Resolve-Method");
 			assert(resolveMethod === "import" || resolveMethod === "require");
