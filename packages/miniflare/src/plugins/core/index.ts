@@ -991,7 +991,7 @@ export interface GlobalServicesOptions {
 	workflowOptions?: Map<string, WorkflowOption>;
 	/** All worker options for building per-worker resource bindings */
 	allWorkerOpts?: PluginWorkerOptions[];
-	/** If set, the stream service is enabled and requests to /cdn-cgi/stream/ will be forwarded to this service */
+	/** If set, the stream service is enabled and requests to /cdn-cgi/mf/stream/ will be forwarded to this service */
 	streamServiceName?: string;
 }
 export function getGlobalServices({

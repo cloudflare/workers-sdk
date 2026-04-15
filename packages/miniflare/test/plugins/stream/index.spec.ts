@@ -646,7 +646,7 @@ describe("Stream videos list", () => {
 });
 
 describe("Stream video serving", () => {
-	test("serve video via /cdn-cgi/stream/:id/video.mp4", async ({ expect }) => {
+	test("serve video via /cdn-cgi/mf/stream/:id/watch", async ({ expect }) => {
 		const mf = createMiniflare();
 		useDispose(mf);
 		const { http: videoUrl } = await useServer(

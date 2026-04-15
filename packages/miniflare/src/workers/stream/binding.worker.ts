@@ -31,9 +31,7 @@ function rowsToDownloadResponse(
 export class StreamBinding extends WorkerEntrypoint<Env> {
 	async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);
-		const match = url.pathname.match(
-			/^\/cdn-cgi\/stream\/([^/]+)\/video\.mp4$/
-		);
+		const match = url.pathname.match(/^\/cdn-cgi\/mf\/stream\/([^/]+)\/watch$/);
 		if (!match) {
 			return new Response("Not found", { status: 404 });
 		}

@@ -18,7 +18,7 @@ export const CorePaths = {
 	/** Legacy way to trigger scheduled event handlers */
 	LEGACY_SCHEDULED: "/cdn-cgi/mf/scheduled",
 	/** Stream video serving endpoint */
-	STREAM_VIDEO: "/cdn-cgi/stream",
+	STREAM_VIDEO: "/cdn-cgi/mf/stream",
 } as const;
 
 export const CoreHeaders = {
