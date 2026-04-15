@@ -36,7 +36,7 @@ interface Props {
 function resolve(props: Props, env: Env): Fetcher | null {
 	const { service, entrypoint } = props;
 	const target = resolveTarget(service);
-	if (!target) {
+	if (!target || !target.debugPortAddress) {
 		return null;
 	}
 	const serviceName =

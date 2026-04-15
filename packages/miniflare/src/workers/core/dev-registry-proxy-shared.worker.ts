@@ -62,7 +62,7 @@ export function connectToActor(
 	actorId: string
 ): Fetcher | null {
 	const target = resolveTarget(scriptName);
-	if (!target) {
+	if (!target || !target.debugPortAddress) {
 		return null;
 	}
 	const client = debugPort.connect(target.debugPortAddress);
