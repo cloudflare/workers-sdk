@@ -454,7 +454,7 @@ export function printBindings(
 					name: binding,
 					type: getBindingTypeFriendlyName("artifacts"),
 					value: namespace,
-					mode: getMode({ isSimulatedLocally: true }),
+					mode: getMode({ isSimulatedLocally: false }),
 				};
 			})
 		);

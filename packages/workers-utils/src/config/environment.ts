@@ -1348,6 +1348,9 @@ export interface EnvironmentNonInheritable {
 
 		/** The namespace to use. */
 		namespace: string;
+
+		/** Whether to use the remote Artifacts service in local dev. */
+		remote?: boolean;
 	}[];
 
 	/**

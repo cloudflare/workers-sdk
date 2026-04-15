@@ -251,6 +251,7 @@ export interface CfSecretsStoreSecrets {
 export interface CfArtifacts {
 	binding: string;
 	namespace: string;
+	remote?: boolean;
 }
 
 export interface CfHelloWorld {
