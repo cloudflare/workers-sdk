@@ -1,0 +1,37 @@
+name: "Rerun Code Owners"
+
+# Trigger: a review is submitted or dismissed on a pull request.
+#
+# Goal: re-run the "Run Codeowners Plus" check from the main codeowners.yml
+# workflow (which is triggered by pull_request_target) so it re-evaluates
+# approval status after the review change.
+#
+# Why a two-workflow design?
+# -------------------------
+# For fork PRs, pull_request_review gives a read-only GITHUB_TOKEN and no
+# access to secrets, so this workflow CANNOT call the Actions API to re-run
+# jobs. Instead it saves the PR context as an artifact and exits. The
+# companion workflow (rerun-codeowners-privileged.yml) is triggered by the
+# workflow_run event when THIS workflow completes. workflow_run always runs
+# from the default branch with full permissions, so it can perform the
+# re-run even for fork PRs.
+on:
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions: {}
+
+jobs:
+  trigger:
+    name: "Save PR Context"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save PR head SHA
+        run: echo "${{ github.event.pull_request.head.sha }}" > head_sha.txt
+
+      - name: Upload PR context
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-context
+          path: head_sha.txt
+          retention-days: 1
