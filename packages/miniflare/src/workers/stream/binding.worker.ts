@@ -10,6 +10,7 @@ import type { StreamObject } from "./object.worker";
 
 interface Env {
 	store: DurableObjectNamespace<StreamObject>;
+	MF_STREAM_DEV_SERVER_URL: string;
 }
 
 function getStub(env: Env): DurableObjectStub<StreamObject> {
@@ -28,6 +29,32 @@ function rowsToDownloadResponse(
 }
 
 export class StreamBinding extends WorkerEntrypoint<Env> {
+	async fetch(request: Request): Promise<Response> {
+		const url = new URL(request.url);
+		const match = url.pathname.match(
+			/^\/cdn-cgi\/stream\/([^/]+)\/video\.mp4$/
+		);
+		if (!match) {
+			return new Response("Not found", { status: 404 });
+		}
+
+		const videoId = match[1];
+		const stub = getStub(this.env);
+
+		// Get video blob from Durable Object
+		const result = await stub.getVideoBlob(videoId);
+		if (result === null) {
+			return new Response("Video not found", { status: 404 });
+		}
+
+		return new Response(result.stream, {
+			headers: {
+				"Content-Type": "video/mp4",
+				"Content-Length": result.size.toString(),
+			},
+		});
+	}
+
 	async upload(
 		urlOrBody: string | ReadableStream<Uint8Array>,
 		params?: StreamUrlUploadParams
@@ -46,7 +73,7 @@ export class StreamBinding extends WorkerEntrypoint<Env> {
 		}
 		const stub = getStub(this.env);
 		const row = await stub.createVideo(body, params ?? {});
-		return rowToStreamVideo(row);
+		return rowToStreamVideo(row, this.env.MF_STREAM_DEV_SERVER_URL);
 	}
 
 	// Not supported in local mode yet
@@ -85,10 +112,12 @@ class StreamScopedCaptionsImpl
 	}
 
 	async upload(
-		_language: string,
-		_input: ReadableStream
+		language: string,
+		input: ReadableStream
 	): Promise<StreamCaption> {
-		throw new BadRequestError("caption upload is not supported in local mode");
+		const stub = getStub(this.#env);
+		const row = await stub.uploadCaption(this.#videoId, language, input);
+		return rowToStreamCaption(row);
 	}
 
 	async generate(language: string): Promise<StreamCaption> {
@@ -155,13 +184,13 @@ class StreamVideoHandleImpl extends RpcTarget implements StreamVideoHandle {
 	async details(): Promise<StreamVideo> {
 		const stub = getStub(this.#env);
 		const row = await stub.getVideo(this.id);
-		return rowToStreamVideo(row);
+		return rowToStreamVideo(row, this.#env.MF_STREAM_DEV_SERVER_URL);
 	}
 
 	async update(params: StreamUpdateVideoParams): Promise<StreamVideo> {
 		const stub = getStub(this.#env);
 		const row = await stub.updateVideo(this.id, params);
-		return rowToStreamVideo(row);
+		return rowToStreamVideo(row, this.#env.MF_STREAM_DEV_SERVER_URL);
 	}
 
 	async delete(): Promise<void> {
@@ -194,7 +223,9 @@ class StreamVideosImpl extends RpcTarget implements StreamVideos {
 	async list(params?: StreamVideosListParams): Promise<StreamVideo[]> {
 		const stub = getStub(this.#env);
 		const rows = await stub.listVideos(params);
-		return rows.map(rowToStreamVideo);
+		return rows.map((row) =>
+			rowToStreamVideo(row, this.#env.MF_STREAM_DEV_SERVER_URL)
+		);
 	}
 }
 

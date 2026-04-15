@@ -60,6 +60,7 @@ import {
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
 	STREAM_PLUGIN_NAME,
+	STREAM_SERVICE_NAME,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
@@ -1576,6 +1577,25 @@ export class Miniflare {
 				const registryPath = this.#devRegistry.getRegistryPath();
 				const registry = registryPath ? getWorkerRegistry(registryPath) : {};
 				response = Response.json(registry);
+			} else if (
+				url.pathname === CorePaths.STREAM_VIDEO ||
+				url.pathname.startsWith(`${CorePaths.STREAM_VIDEO}/`)
+			) {
+				// Forward stream video requests to the runtime entry worker,
+				// since preview urls use loopbackPort but the route is handled
+				// by the entry worker on the entry socket.
+				if (this.#runtimeEntryURL) {
+					const entryUrl = new URL(
+						url.pathname + url.search,
+						this.#runtimeEntryURL
+					);
+					response = await fetch(entryUrl, {
+						method: request.method,
+						headers: request.headers,
+						body: request.body,
+						duplex: "half",
+					});
+				}
 			}
 		} catch (e: any) {
 			this.#log.error(e);
@@ -2231,6 +2251,13 @@ export class Miniflare {
 			durableObjectClassNames,
 			workflowOptions: workflowOptions.size > 0 ? workflowOptions : undefined,
 			allWorkerOpts,
+			streamServiceName: this.#workerOpts.some(
+				(worker) =>
+					worker.stream?.stream !== undefined &&
+					!worker.stream.stream.remoteProxyConnectionString
+			)
+				? STREAM_SERVICE_NAME
+				: undefined,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names

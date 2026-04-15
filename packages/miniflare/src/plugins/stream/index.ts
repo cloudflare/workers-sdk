@@ -33,6 +33,7 @@ export const STREAM_PLUGIN_NAME = "stream";
 const STREAM_STORAGE_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:storage`;
 const STREAM_OBJECT_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:object`;
 export const STREAM_OBJECT_CLASS_NAME = "StreamObject";
+export const STREAM_SERVICE_NAME = "miniflare:stream";
 
 export const STREAM_COMPAT_DATE = "2026-03-23";
 
@@ -46,6 +47,14 @@ export const STREAM_PLUGIN: Plugin<
 		if (!options.stream) {
 			return [];
 		}
+
+		const serviceName = options.stream.remoteProxyConnectionString
+			? getUserBindingServiceName(
+					STREAM_PLUGIN_NAME,
+					options.stream.binding,
+					options.stream.remoteProxyConnectionString
+				)
+			: STREAM_SERVICE_NAME;
 
 		return [
 			{
@@ -77,18 +86,18 @@ export const STREAM_PLUGIN: Plugin<
 		tmpPath,
 		defaultPersistRoot,
 		unsafeStickyBlobs,
+		loopbackPort,
 	}) {
 		if (!options.stream) {
 			return [];
 		}
 
-		const serviceName = getUserBindingServiceName(
-			STREAM_PLUGIN_NAME,
-			options.stream.binding,
-			options.stream.remoteProxyConnectionString
-		);
-
 		if (options.stream.remoteProxyConnectionString) {
+			const serviceName = getUserBindingServiceName(
+				STREAM_PLUGIN_NAME,
+				options.stream.binding,
+				options.stream.remoteProxyConnectionString
+			);
 			return [
 				{
 					name: serviceName,
@@ -148,7 +157,7 @@ export const STREAM_PLUGIN: Plugin<
 
 		// Entrypoint with RPC
 		const bindingService = {
-			name: serviceName,
+			name: STREAM_SERVICE_NAME,
 			worker: {
 				compatibilityDate: STREAM_COMPAT_DATE,
 				compatibilityFlags: ["nodejs_compat", "experimental"],
@@ -165,6 +174,10 @@ export const STREAM_PLUGIN: Plugin<
 							className: STREAM_OBJECT_CLASS_NAME,
 							serviceName: STREAM_OBJECT_SERVICE_NAME,
 						},
+					},
+					{
+						name: "MF_STREAM_DEV_SERVER_URL",
+						json: JSON.stringify(`http://localhost:${loopbackPort}`),
 					},
 				],
 				// Allow the binding worker to send outbound HTTP requests
