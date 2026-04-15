@@ -3044,7 +3044,12 @@ export class Miniflare {
 			// runtime. This must happen after the runtime is disposed, so that
 			// in-flight connections are broken and close immediately. Without this,
 			// lingering sockets in the Pool can keep the Node.js event loop alive.
-			await this.#runtimeDispatcher?.close();
+			// The Pool may already be destroyed (e.g., if workerd was SIGKILL'd and
+			// all connections broke), so ignore ClientDestroyedError.
+			try {
+				await this.#runtimeDispatcher?.close();
+			} catch {}
+
 
 			await this.#stopLoopbackServer();
 			// Best-effort cleanup: on Windows, workerd may not release file handles
