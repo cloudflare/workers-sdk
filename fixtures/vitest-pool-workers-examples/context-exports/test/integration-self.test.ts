@@ -1,9 +1,8 @@
-import { SELF } from "cloudflare:test";
 import { exports } from "cloudflare:workers";
 import { it, vi } from "vitest";
 
-it("can use context exports on the SELF worker", async ({ expect }) => {
-	const response = await SELF.fetch("http://example.com");
+it("can use context exports on the exports.default worker", async ({ expect }) => {
+	const response = await exports.default.fetch("http://example.com");
 	expect(await response.text()).toBe(
 		"👋 Hello MainWorker from Main NamedEntryPoint!"
 	);
