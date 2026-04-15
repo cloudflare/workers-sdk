@@ -81,7 +81,6 @@ export interface PluginServicesOptions<
 	workerNames: string[];
 	loopbackHost: string;
 	loopbackPort: number;
-	loopbackHost: string;
 	unsafeStickyBlobs: boolean;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)

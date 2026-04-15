@@ -2027,10 +2027,6 @@ export class Miniflare {
 			const unsafeStickyBlobs = sharedOpts.core.unsafeStickyBlobs ?? false;
 			const unsafeEphemeralDurableObjects =
 				workerOpts.core.unsafeEphemeralDurableObjects ?? false;
-			const configuredHost = sharedOpts.core.host ?? DEFAULT_HOST;
-			const loopbackHost =
-				maybeGetLocallyAccessibleHost(configuredHost) ??
-				getURLSafeHost(configuredHost);
 			const pluginServicesOptionsBase: Omit<
 				PluginServicesOptions<z.ZodTypeAny, undefined>,
 				"options" | "sharedOptions"
@@ -2044,7 +2040,6 @@ export class Miniflare {
 				workerNames,
 				loopbackHost,
 				loopbackPort,
-				loopbackHost,
 				unsafeStickyBlobs,
 				wrappedBindingNames,
 				durableObjectClassNames,

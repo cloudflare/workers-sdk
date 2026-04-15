@@ -48,23 +48,17 @@ export const STREAM_PLUGIN: Plugin<
 			return [];
 		}
 
-		const serviceName = options.stream.remoteProxyConnectionString
-			? getUserBindingServiceName(
-					STREAM_PLUGIN_NAME,
-					options.stream.binding,
-					options.stream.remoteProxyConnectionString
-				)
-			: STREAM_SERVICE_NAME;
-
 		return [
 			{
 				name: options.stream.binding,
 				service: {
-					name: getUserBindingServiceName(
-						STREAM_PLUGIN_NAME,
-						options.stream.binding,
-						options.stream.remoteProxyConnectionString
-					),
+					name: options.stream.remoteProxyConnectionString
+						? getUserBindingServiceName(
+								STREAM_PLUGIN_NAME,
+								options.stream.binding,
+								options.stream.remoteProxyConnectionString
+							)
+						: STREAM_SERVICE_NAME,
 					entrypoint: options.stream.remoteProxyConnectionString
 						? undefined
 						: "StreamBinding",
@@ -93,12 +87,13 @@ export const STREAM_PLUGIN: Plugin<
 			return [];
 		}
 
+		const serviceName = getUserBindingServiceName(
+			STREAM_PLUGIN_NAME,
+			options.stream.binding,
+			options.stream.remoteProxyConnectionString
+		);
+
 		if (options.stream.remoteProxyConnectionString) {
-			const serviceName = getUserBindingServiceName(
-				STREAM_PLUGIN_NAME,
-				options.stream.binding,
-				options.stream.remoteProxyConnectionString
-			);
 			return [
 				{
 					name: serviceName,
