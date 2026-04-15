@@ -102,11 +102,11 @@ export interface JaegerTracing {
 		...args: T
 	): R;
 	getSpanContext(): SpanContext | null;
-	runWithSpanContext<T extends unknown[]>(
+	runWithSpanContext<R, T extends unknown[]>(
 		spanContext: SpanContext | null,
-		callback: (...args: T) => unknown,
+		callback: (...args: T) => R,
 		...args: T
-	): unknown;
+	): R;
 
 	readonly traceId: string | null;
 	readonly spanId: string | null;

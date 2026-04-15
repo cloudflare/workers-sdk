@@ -109,7 +109,7 @@ async function unstableExistsImpl(
 	const analytics = new ExperimentAnalytics(env.EXPERIMENT_ANALYTICS);
 	const performance = new PerformanceTimer(env.UNSAFE_PERFORMANCE);
 	const jaeger = env.JAEGER ?? mockJaegerBinding();
-	return jaeger.enterSpan("unstable_exists", async (span) => {
+	return jaeger.enterSpan("inner.unstable_exists", async (span) => {
 		if (env.COLO_METADATA && env.VERSION_METADATA && env.CONFIG) {
 			analytics.setData({
 				accountId: env.CONFIG.account_id,
@@ -145,7 +145,7 @@ async function unstableGetByETagImpl(
 ): Promise<GetByETagResult> {
 	const performance = new PerformanceTimer(env.UNSAFE_PERFORMANCE);
 	const jaeger = env.JAEGER ?? mockJaegerBinding();
-	return jaeger.enterSpan("unstable_getByETag", async (span) => {
+	return jaeger.enterSpan("inner.unstable_getByETag", async (span) => {
 		const startTime = performance.now();
 		const asset = await getAssetWithMetadataFromKV(
 			env.ASSETS_KV_NAMESPACE,
@@ -193,7 +193,7 @@ async function unstableGetByPathnameImpl(
 	request?: Request
 ): Promise<GetByETagResult | null> {
 	const jaeger = env.JAEGER ?? mockJaegerBinding();
-	return jaeger.enterSpan("unstable_getByPathname", async (span) => {
+	return jaeger.enterSpan("inner.unstable_getByPathname", async (span) => {
 		const eTag = await exists(pathname, request);
 
 		span.setTags({
@@ -333,6 +333,43 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		});
 	}
 
+	/**
+	 * Wraps an RPC method call with Jaeger tracing and Sentry error reporting.
+	 * Creates an outer Jaeger span so that the inner entrypoint's spans are
+	 * connected to the outer's trace via ctx.props.traceContext. If the call
+	 * throws, the error is reported to Sentry (when a request is available for
+	 * context) and then re-thrown to the caller.
+	 */
+	private async withObservability<T>(
+		methodName: string,
+		fn: () => Promise<T>,
+		request?: Request
+	): Promise<T> {
+		this.env.JAEGER ??= mockJaegerBinding();
+		const sentry = request
+			? setupSentry(
+					request,
+					this.ctx,
+					this.env.SENTRY_DSN,
+					this.env.SENTRY_ACCESS_CLIENT_ID,
+					this.env.SENTRY_ACCESS_CLIENT_SECRET,
+					this.env.COLO_METADATA,
+					this.env.VERSION_METADATA,
+					this.env.CONFIG?.account_id,
+					this.env.CONFIG?.script_id
+				)
+			: undefined;
+		try {
+			return await this.env.JAEGER.enterSpan(
+				`outer.${methodName}`,
+				() => fn()
+			);
+		} catch (err) {
+			sentry?.captureException(err);
+			throw err;
+		}
+	}
+
 	override async fetch(request: Request): Promise<Response> {
 		this.env.JAEGER ??= mockJaegerBinding();
 		let sentry: ReturnType<typeof setupSentry> | undefined;
@@ -377,32 +414,45 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 	}
 
 	async unstable_canFetch(request: Request): Promise<boolean> {
-		this.env.JAEGER ??= mockJaegerBinding();
-		return this.getInnerEntrypoint().unstable_canFetch(request);
+		return this.withObservability(
+			"unstable_canFetch",
+			() => this.getInnerEntrypoint().unstable_canFetch(request),
+			request
+		);
 	}
 
 	async unstable_getByETag(
 		eTag: string,
 		request?: Request
 	): Promise<GetByETagResult> {
-		this.env.JAEGER ??= mockJaegerBinding();
-		return this.getInnerEntrypoint().unstable_getByETag(eTag, request);
+		return this.withObservability(
+			"unstable_getByETag",
+			() => this.getInnerEntrypoint().unstable_getByETag(eTag, request),
+			request
+		);
 	}
 
 	async unstable_getByPathname(
 		pathname: string,
 		request?: Request
 	): Promise<GetByETagResult | null> {
-		this.env.JAEGER ??= mockJaegerBinding();
-		return this.getInnerEntrypoint().unstable_getByPathname(pathname, request);
+		return this.withObservability(
+			"unstable_getByPathname",
+			() =>
+				this.getInnerEntrypoint().unstable_getByPathname(pathname, request),
+			request
+		);
 	}
 
 	async unstable_exists(
 		pathname: string,
 		request?: Request
 	): Promise<string | null> {
-		this.env.JAEGER ??= mockJaegerBinding();
-		return this.getInnerEntrypoint().unstable_exists(pathname, request);
+		return this.withObservability(
+			"unstable_exists",
+			() => this.getInnerEntrypoint().unstable_exists(pathname, request),
+			request
+		);
 	}
 }
 
@@ -449,12 +499,16 @@ export class AssetWorkerInner<TEnv extends Env = Env>
 	async unstable_canFetch(request: Request): Promise<boolean> {
 		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
+		const loopbackCtx = this.ctx as AssetWorkerContext;
+		const traceContext = loopbackCtx.props?.traceContext ?? null;
 
-		return canFetch(
-			request,
-			this.env,
-			normalizeConfiguration(this.env.CONFIG),
-			this.unstable_exists.bind(this)
+		return this.env.JAEGER.runWithSpanContext(traceContext, () =>
+			canFetch(
+				request,
+				this.env,
+				normalizeConfiguration(this.env.CONFIG),
+				this.unstable_exists.bind(this)
+			)
 		);
 	}
 
@@ -462,19 +516,31 @@ export class AssetWorkerInner<TEnv extends Env = Env>
 		eTag: string,
 		request?: Request
 	): Promise<GetByETagResult> {
-		return unstableGetByETagImpl(this.env, eTag, request);
+		this.env.JAEGER ??= mockJaegerBinding();
+		const loopbackCtx = this.ctx as AssetWorkerContext;
+		const traceContext = loopbackCtx.props?.traceContext ?? null;
+
+		return this.env.JAEGER.runWithSpanContext(traceContext, () =>
+			unstableGetByETagImpl(this.env, eTag, request)
+		);
 	}
 
 	async unstable_getByPathname(
 		pathname: string,
 		request?: Request
 	): Promise<GetByETagResult | null> {
-		return unstableGetByPathnameImpl(
-			this.env,
-			this.unstable_exists.bind(this),
-			this.unstable_getByETag.bind(this),
-			pathname,
-			request
+		this.env.JAEGER ??= mockJaegerBinding();
+		const loopbackCtx = this.ctx as AssetWorkerContext;
+		const traceContext = loopbackCtx.props?.traceContext ?? null;
+
+		return this.env.JAEGER.runWithSpanContext(traceContext, () =>
+			unstableGetByPathnameImpl(
+				this.env,
+				this.unstable_exists.bind(this),
+				this.unstable_getByETag.bind(this),
+				pathname,
+				request
+			)
 		);
 	}
 
@@ -482,6 +548,12 @@ export class AssetWorkerInner<TEnv extends Env = Env>
 		pathname: string,
 		request?: Request
 	): Promise<string | null> {
-		return unstableExistsImpl(this.env, pathname, request);
+		this.env.JAEGER ??= mockJaegerBinding();
+		const loopbackCtx = this.ctx as AssetWorkerContext;
+		const traceContext = loopbackCtx.props?.traceContext ?? null;
+
+		return this.env.JAEGER.runWithSpanContext(traceContext, () =>
+			unstableExistsImpl(this.env, pathname, request)
+		);
 	}
 }
