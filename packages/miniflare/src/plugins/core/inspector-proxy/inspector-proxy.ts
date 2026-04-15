@@ -163,7 +163,9 @@ export class InspectorProxy {
 	async dispose(): Promise<void> {
 		clearInterval(this.#runtimeKeepAliveInterval);
 
-		this.#runtimeWs?.close();
+		// Close devtools first: its close handler sends Debugger.disable to
+		// the runtime WS, so the runtime WS must still be open at that point.
 		this.#devtoolsWs?.close();
+		this.#runtimeWs?.close();
 	}
 }
