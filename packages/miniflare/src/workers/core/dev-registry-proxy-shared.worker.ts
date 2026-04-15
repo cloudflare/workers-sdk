@@ -126,9 +126,14 @@ export function createProxyDurableObjectClass({
 					}
 					const fetcher = target._resolve();
 					if (!fetcher) {
-						throw new Error(
-							`Worker "${scriptName}" not found. Make sure it is running locally.`
-						);
+						// Return a function-that-throws rather than throwing immediately:
+						// workerd probes DO properties (fetch, alarm, etc.) via the get
+						// trap, and throwing here would crash those internal checks.
+						return () => {
+							throw new Error(
+								`Worker "${scriptName}" not found. Make sure it is running locally.`
+							);
+						};
 					}
 					return Reflect.get(fetcher, prop);
 				},
