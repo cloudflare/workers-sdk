@@ -3051,6 +3051,12 @@ export class Miniflare {
 			} catch {}
 
 			await this.#stopLoopbackServer();
+			// Close WebSocket servers so any connected clients are disconnected
+			// and their sockets don't keep the event loop alive. These use
+			// `noServer: true` so they don't own an HTTP server, but connected
+			// WebSocket clients still hold open sockets.
+			this.#liveReloadServer.close();
+			this.#webSocketServer.close();
 			// Best-effort cleanup: on Windows, workerd may not release file handles
 			// immediately after disposal, causing EBUSY errors. The temp directory
 			// lives in os.tmpdir() so the OS will clean it up eventually.

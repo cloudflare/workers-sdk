@@ -94,6 +94,7 @@ export function runBuild(
 	onErr: (err: Error) => void
 ) {
 	let stopWatching: (() => Promise<void>) | undefined = undefined;
+	let buildPromise: Promise<void> | undefined = undefined;
 
 	const entryDirectory = path.dirname(entry.file);
 	const moduleCollector = noBundle
@@ -226,12 +227,21 @@ export function runBuild(
 		}));
 	}
 
-	build().catch((err) => {
+	buildPromise = build().catch((err) => {
 		// If esbuild fails on first run, we want to quit the process
 		// since we can't recover from here
 		// related: https://github.com/evanw/esbuild/issues/1037
 		onErr(err);
 	});
 
-	return () => stopWatching?.();
+	return async () => {
+		// Wait for the initial build to complete so that `stopWatching` is
+		// assigned before we try to call it. Without this, if teardown races
+		// with the initial build, `stopWatching` would still be `undefined`
+		// and the esbuild context would never be disposed — leaving the
+		// esbuild child process alive and preventing the Node.js event loop
+		// from exiting.
+		await buildPromise;
+		await stopWatching?.();
+	};
 }
