@@ -24,4 +24,4 @@ export type Teams =
 	| "Product: WVPC"
 	| "Product: Tunnels"
 	| "Product: Email Service"
-	| "Product: Browser Rendering";
+	| "Product: Browser Run";

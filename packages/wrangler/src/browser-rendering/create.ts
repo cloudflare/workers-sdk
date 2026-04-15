@@ -12,9 +12,9 @@ const MAX_KEEP_ALIVE_SECONDS = 600;
 
 export const browserCreateCommand = createCommand({
 	metadata: {
-		description: "Create a new browser rendering session",
+		description: "Create a new Browser Run session",
 		status: "open beta",
-		owner: "Product: Browser Rendering",
+		owner: "Product: Browser Run",
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

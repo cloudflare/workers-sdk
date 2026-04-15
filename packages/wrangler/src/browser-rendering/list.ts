@@ -6,9 +6,9 @@ import type { BrowserSession } from "./types";
 
 export const browserListCommand = createCommand({
 	metadata: {
-		description: "List active browser rendering sessions",
+		description: "List active Browser Run sessions",
 		status: "open beta",
-		owner: "Product: Browser Rendering",
+		owner: "Product: Browser Run",
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
@@ -33,7 +33,7 @@ export const browserListCommand = createCommand({
 		}
 
 		if (sessions.length === 0) {
-			logger.log("No active browser rendering sessions found.");
+			logger.log("No active Browser Run sessions found.");
 			return;
 		}
 
