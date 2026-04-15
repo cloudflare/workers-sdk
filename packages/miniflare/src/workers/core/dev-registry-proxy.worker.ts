@@ -58,7 +58,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 		// Separate connection for scheduled: the debug port's EventDispatcher
 		// doesn't support runScheduled/runAlarm/queue, so we forward via HTTP.
 		const target = resolveTarget(ctx.props.service);
-		if (target) {
+		if (target && target.debugPortAddress) {
 			const client = env.DEV_REGISTRY_DEBUG_PORT.connect(
 				target.debugPortAddress
 			);
