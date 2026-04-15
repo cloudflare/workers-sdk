@@ -163,6 +163,7 @@ export class InspectorProxy {
 	async dispose(): Promise<void> {
 		clearInterval(this.#runtimeKeepAliveInterval);
 
+		this.#runtimeWs?.close();
 		this.#devtoolsWs?.close();
 	}
 }
