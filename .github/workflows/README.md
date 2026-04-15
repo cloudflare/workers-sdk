@@ -106,9 +106,19 @@ See below for a summary of this repo's Actions
   - Runs the E2E tests for C3.
   - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
 
-### Rerun Remote Tests (rerun-remote-tests.yml)
+### Rerun Code Owners (rerun-codeowners.yml + rerun-codeowners-privileged.yml)
 
 - Triggers
-  - The `run-remote-tests` label is added to a PR.
+  - A review is submitted or dismissed on a PR.
 - Actions
-  - Re-runs the Wrangler, Vite, and C3 E2E workflows for the PR so they pick up the label and pass API credentials to the test steps.
+  - Re-runs the "Run Codeowners Plus" check so it re-evaluates approval status after the review change.
+  - Uses the `workflow_run` pattern: the trigger workflow saves PR context as an artifact, then the privileged companion workflow (which has full permissions) performs the re-run. This is necessary because `pull_request_review` gives a read-only token for fork PRs.
+
+### Rerun Remote Tests (rerun-remote-tests.yml + rerun-remote-tests-privileged.yml)
+
+- Triggers
+  - The `run-remote-tests` or `run-c3-frameworks-tests` label is added to or removed from a PR.
+- Actions
+  - Re-runs the E2E workflows for the PR so they pick up the label change and pass (or withhold) API credentials to the test steps.
+  - `run-remote-tests` re-runs Wrangler, Vite, and C3 E2E workflows; `run-c3-frameworks-tests` re-runs only C3 E2E.
+  - Uses the same `workflow_run` pattern as the codeowners rerun above to support fork PRs.
