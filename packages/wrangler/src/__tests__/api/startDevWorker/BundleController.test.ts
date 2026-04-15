@@ -257,7 +257,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 
 		test("custom build failures are recoverable", async ({ expect }) => {
 			await seed({
-				"build.js": dedent/* javascript */ `
+				"build.js": dedent /* javascript */ `
 					const fs = require("node:fs");
 					const input = fs.readFileSync("random_dir/index.ts", "utf8");
 					if (input.includes("FAIL_BUILD")) {
@@ -265,7 +265,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					}
 					fs.writeFileSync("out.ts", input);
 				`,
-				"random_dir/index.ts": dedent/* javascript */ `
+				"random_dir/index.ts": dedent /* javascript */ `
 					export default {
 						fetch() {
 							return new Response("hello custom build")
@@ -288,8 +288,9 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			const initialBundle = bus.waitFor("bundleComplete");
 			controller.onConfigUpdate({ type: "configUpdate", config });
 
-			expect(findSourceFile((await initialBundle).bundle.entrypointSource, "out.ts"))
-				.toContain(`return new Response("hello custom build")`);
+			expect(
+				findSourceFile((await initialBundle).bundle.entrypointSource, "out.ts")
+			).toContain(`return new Response("hello custom build")`);
 
 			await vi.waitFor(
 				async () => {
@@ -300,7 +301,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 							event.reason === "Custom build failed"
 					);
 					await seed({
-						"random_dir/index.ts": dedent/* javascript */ `
+						"random_dir/index.ts": dedent /* javascript */ `
 							// FAIL_BUILD
 							export default {
 								fetch() {
@@ -323,7 +324,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				async () => {
 					const recoveryPromise = bus.waitFor("bundleComplete");
 					await seed({
-						"random_dir/index.ts": dedent/* javascript */ `
+						"random_dir/index.ts": dedent /* javascript */ `
 							export default {
 								fetch() {
 									return new Response("hello custom build again")
@@ -333,7 +334,10 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					});
 
 					expect(
-						findSourceFile((await recoveryPromise).bundle.entrypointSource, "out.ts")
+						findSourceFile(
+							(await recoveryPromise).bundle.entrypointSource,
+							"out.ts"
+						)
 					).toContain(`return new Response("hello custom build again")`);
 				},
 				{ timeout: 5_000, interval: 500 }
