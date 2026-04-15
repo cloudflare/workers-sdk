@@ -2408,6 +2408,9 @@ export class Miniflare {
 		}
 
 		if (previousEntryURL?.toString() !== this.#runtimeEntryURL.toString()) {
+			// Close the previous dispatcher if the entry URL changed, to avoid
+			// leaking sockets from the old Pool.
+			void this.#runtimeDispatcher?.close();
 			this.#runtimeDispatcher = new Pool(this.#runtimeEntryURL, {
 				connect: { rejectUnauthorized: false },
 				// Disable timeouts for local dev — long-running responses (streaming,
@@ -3037,6 +3040,11 @@ export class Miniflare {
 			// Cleanup as much as possible even if `#init()` threw
 			await this.#proxyClient?.dispose();
 			await this.#runtime?.dispose();
+			// Close the undici Pool used for dispatching fetch requests to the
+			// runtime. This must happen after the runtime is disposed, so that
+			// in-flight connections are broken and close immediately. Without this,
+			// lingering sockets in the Pool can keep the Node.js event loop alive.
+			await this.#runtimeDispatcher?.close();
 
 			await this.#stopLoopbackServer();
 			// Best-effort cleanup: on Windows, workerd may not release file handles
