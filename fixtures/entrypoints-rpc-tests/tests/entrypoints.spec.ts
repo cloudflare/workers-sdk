@@ -709,7 +709,7 @@ describe("entrypoints", () => {
 		let response = await fetch(url);
 		expect(response.status).toBe(503);
 		expect(await response.text()).toBe(
-			'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
+			'Worker "bound" not found. Make sure it is running locally.'
 		);
 
 		await writeFile(
@@ -730,7 +730,7 @@ describe("entrypoints", () => {
 			let response = await fetch(url);
 			expect(response.status).toBe(503);
 			expect(await response.text()).toBe(
-				'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
+				'Worker "bound" not found. Make sure it is running locally.'
 			);
 		});
 	});
@@ -761,7 +761,7 @@ describe("entrypoints", () => {
 		});
 		let response = await fetch(url);
 		expect(await response.text()).toBe(
-			'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
+			'Worker "bound" not found. Make sure it is running locally.'
 		);
 
 		// Start up the bound worker without the expected entrypoint
@@ -785,7 +785,7 @@ describe("entrypoints", () => {
 		await waitFor(async () => {
 			let response = await fetch(url);
 			expect(await response.text()).toBe(
-				'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
+				'Worker "bound" not found. Make sure it is running locally.'
 			);
 		});
 	});
@@ -815,7 +815,7 @@ describe("entrypoints", () => {
 		});
 		let response = await fetch(url);
 		expect(await response.text()).toBe(
-			'Couldn\'t find a local dev session for the "default" entrypoint of service "bound" to proxy to'
+			'Worker "bound" not found. Make sure it is running locally.'
 		);
 
 		// Start up the bound worker using HTTPS
@@ -866,7 +866,7 @@ describe("entrypoints", () => {
 		});
 		let response = await fetch(url);
 		expect(await response.text()).toBe(
-			'Couldn\'t find a local dev session for the "default" entrypoint of service "bound" to proxy to'
+			'Worker "bound" not found. Make sure it is running locally.'
 		);
 
 		const boundWorker = new Miniflare({
@@ -923,8 +923,8 @@ describe("entrypoints", () => {
 		const errors = await response.json();
 		expect(errors).toMatchInlineSnapshot(`
 			[
-			  "Error: Cannot access "property" as we couldn't find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to.",
-			  "Error: Cannot access "method" as we couldn't find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to.",
+			  "Error: Worker "bound" not found. Make sure it is running locally.",
+			  "Error: Worker "bound" not found. Make sure it is running locally.",
 			]
 		`);
 	});
