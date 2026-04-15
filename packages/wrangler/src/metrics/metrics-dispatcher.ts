@@ -38,7 +38,7 @@ const pendingRequests = new Set<Promise<void>>();
  * The returned promise should be awaited before the process exits to ensure we don't drop any metrics.
  */
 export function allMetricsDispatchesCompleted(): Promise<void> {
-	return Promise.allSettled(pendingRequests).then(() => {});
+	return Promise.allSettled(pendingRequests).then(() => { });
 }
 
 export function getMetricsDispatcher(options: MetricsConfigOptions) {
@@ -58,7 +58,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	// is sufficient for identifying most agentic environments.
 	let agent: string | null = null;
 	try {
-		const agentDetection = detectAgenticEnvironment(process.env, []);
+		const agentDetection = detectAgenticEnvironment(process.env);
 		agent = agentDetection.id;
 	} catch {
 		// Silent failure - agent remains null
