@@ -33,7 +33,7 @@ export const browserListCommand = createCommand({
 		}
 
 		if (sessions.length === 0) {
-			logger.log("No active browser rendering sessions found.");
+			logger.log("No active Browser Run sessions found.");
 			return;
 		}
 

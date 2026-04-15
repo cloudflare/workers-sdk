@@ -108,7 +108,7 @@ describe("wrangler browser", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				No active browser rendering sessions found."
+				No active Browser Run sessions found."
 			`);
 		});
 
@@ -560,7 +560,7 @@ describe("wrangler browser", () => {
 				mockListSessions([]);
 
 				await expect(runWrangler("browser view")).rejects.toThrowError(
-					"No active browser rendering sessions found. Use `wrangler browser create` to create one."
+					"No active Browser Run sessions found. Use `wrangler browser create` to create one."
 				);
 			});
 

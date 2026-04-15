@@ -129,7 +129,7 @@ export const browserViewCommand = createCommand({
 
 			if (sessions.length === 0) {
 				throw new UserError(
-					"No active browser rendering sessions found. Use `wrangler browser create` to create one."
+					"No active Browser Run sessions found. Use `wrangler browser create` to create one."
 				);
 			}
 
