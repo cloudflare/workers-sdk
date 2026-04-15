@@ -324,6 +324,10 @@ export class InspectorProxyController {
 		await Promise.all(this.#proxies.map((proxy) => proxy.dispose()));
 
 		const server = await this.#server;
+		// Force-close active connections so server.close() resolves immediately.
+		// Without this, active HTTP keep-alive or WebSocket connections prevent
+		// the close callback from firing, hanging the dispose.
+		server.closeAllConnections();
 		return new Promise((resolve, reject) => {
 			server.close((err) => (err ? reject(err) : resolve()));
 		});
