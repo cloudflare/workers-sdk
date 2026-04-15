@@ -330,7 +330,7 @@ export const listCertificates = async () => {
 };
 
 export const deleteCertificate = async (id: string) => {
-	await apiFetch(`/mtls_certificates/${id}`, "DELETE");
+	return await apiFetch(`/mtls_certificates/${id}`, "DELETE");
 };
 
 // Note: the container images functions below don't directly use the REST API since

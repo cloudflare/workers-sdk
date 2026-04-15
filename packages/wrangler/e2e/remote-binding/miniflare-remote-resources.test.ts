@@ -859,7 +859,14 @@ function useTeardown(options: { timeout?: number } = {}) {
 	}
 	afterAll(async () => {
 		for (const fn of tearDownCallbacks.reverse()) {
-			await fn();
+			try {
+				await fn();
+			} catch (e) {
+				console.warn(
+					"Teardown callback failed:",
+					e instanceof Error ? e.message : e
+				);
+			}
 		}
 		tearDownCallbacks.length = 0;
 	}, options.timeout);
