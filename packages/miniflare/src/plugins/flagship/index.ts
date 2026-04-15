@@ -37,7 +37,9 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 						name,
 						config.remoteProxyConnectionString
 					),
-					entrypoint: "FlagshipBinding",
+					entrypoint: config.remoteProxyConnectionString
+						? undefined
+						: "FlagshipBinding",
 				},
 			})
 		);

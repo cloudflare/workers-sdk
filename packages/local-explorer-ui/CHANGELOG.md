@@ -1,5 +1,13 @@
 # @cloudflare/local-explorer-ui
 
+## 0.13.0
+
+### Minor Changes
+
+- [#13429](https://github.com/cloudflare/workers-sdk/pull/13429) [`54ceb95`](https://github.com/cloudflare/workers-sdk/commit/54ceb950c38d9b09f18de2e7a3db18c8d9fa2827) Thanks [@NuroDev](https://github.com/NuroDev)! - Add shift-click multi-select to R2 object list
+
+  Shift-clicking a checkbox in the R2 object list now selects or deselects a contiguous range of rows between the last individually clicked row (the anchor) and the shift-clicked row. This matches standard shift-select behavior in file managers and data tables.
+
 ## 0.12.0
 
 ### Minor Changes

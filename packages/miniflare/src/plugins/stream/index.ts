@@ -56,7 +56,9 @@ export const STREAM_PLUGIN: Plugin<
 						options.stream.binding,
 						options.stream.remoteProxyConnectionString
 					),
-					entrypoint: "StreamBinding",
+					entrypoint: options.stream.remoteProxyConnectionString
+						? undefined
+						: "StreamBinding",
 				},
 			},
 		];
