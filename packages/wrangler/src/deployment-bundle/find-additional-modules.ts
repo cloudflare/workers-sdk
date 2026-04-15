@@ -67,7 +67,7 @@ function getVendoredModuleType(
 	if (!name.startsWith("workers/")) {
 		return fallback;
 	}
-	const ext = name.slice(name.lastIndexOf("."));
+	const ext = path.extname(name);
 	if (VENDORED_JS_EXTENSIONS.has(ext)) {
 		return "esm";
 	}
