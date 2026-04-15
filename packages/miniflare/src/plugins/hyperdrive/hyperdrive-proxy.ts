@@ -124,7 +124,7 @@ export class HyperdriveProxyController {
 	async dispose(): Promise<void> {
 		await Promise.allSettled(
 			Array.from(this.#servers.values()).map((server) => {
-				new Promise<void>((resolve, reject) => {
+				return new Promise<void>((resolve, reject) => {
 					server.close((err) => (err ? reject(err) : resolve()));
 				});
 			})
