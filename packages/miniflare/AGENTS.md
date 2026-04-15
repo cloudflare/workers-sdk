@@ -46,6 +46,11 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - `useServer()` — temp HTTP server with auto-cleanup
 - `TestLog` — captures log entries by level
 
+## Generated Files
+
+- `src/runtime/config/generated/workerd.ts` — generated Cap'n Proto types, do not edit directly
+- `src/workers/local-explorer/openapi.local.json` — generated from `scripts/openapi-filter-config.ts`, modify the config not the output
+
 ## Version Pinning
 
 - Miniflare minor version must match workerd minor version
