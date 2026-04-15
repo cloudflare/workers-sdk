@@ -87,6 +87,7 @@ export const STREAM_PLUGIN: Plugin<
 		defaultPersistRoot,
 		unsafeStickyBlobs,
 		loopbackPort,
+		loopbackHost,
 	}) {
 		if (!options.stream) {
 			return [];
@@ -177,7 +178,7 @@ export const STREAM_PLUGIN: Plugin<
 					},
 					{
 						name: "MF_STREAM_DEV_SERVER_URL",
-						json: JSON.stringify(`http://localhost:${loopbackPort}`),
+						json: JSON.stringify(`http://${loopbackHost}:${loopbackPort}`),
 					},
 				],
 				// Allow the binding worker to send outbound HTTP requests
