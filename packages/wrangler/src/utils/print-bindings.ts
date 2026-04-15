@@ -95,6 +95,7 @@ export function printBindings(
 		"secrets_store_secret",
 		bindings
 	);
+	const artifacts = extractBindingsOfType("artifacts", bindings);
 	const services = extractBindingsOfType("service", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
 	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
@@ -441,6 +442,19 @@ export function printBindings(
 					type: getBindingTypeFriendlyName("secrets_store_secret"),
 					value: `${store_id}/${secret_name}`,
 					mode: getMode({ isSimulatedLocally: true }),
+				};
+			})
+		);
+	}
+
+	if (artifacts.length > 0) {
+		output.push(
+			...artifacts.map(({ binding, namespace }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("artifacts"),
+					value: namespace,
+					mode: getMode({ isSimulatedLocally: false }),
 				};
 			})
 		);
