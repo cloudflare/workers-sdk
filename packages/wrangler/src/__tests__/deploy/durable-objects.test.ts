@@ -860,7 +860,7 @@ describe("deploy", () => {
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
 				Binding               Resource
-				env.MYBROWSER         Browser
+				env.MYBROWSER         Browser Run
 				env.AI_BIND           AI
 
 				Uploaded test-name (TIMINGS)

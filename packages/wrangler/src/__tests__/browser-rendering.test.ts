@@ -43,7 +43,7 @@ describe("wrangler browser", () => {
 			http.get(
 				`*/accounts/:accountId/browser-rendering/devtools/session`,
 				() => {
-					// Browser Rendering API returns raw JSON, not wrapped in { success, result }
+					// Browser Run API returns raw JSON, not wrapped in { success, result }
 					return HttpResponse.json(sessions);
 				},
 				{ once: true }
@@ -59,7 +59,7 @@ describe("wrangler browser", () => {
 			http.get(
 				`*/accounts/:accountId/browser-rendering/devtools/browser/${sessionId}/json`,
 				() => {
-					// Browser Rendering API returns raw JSON, not wrapped in { success, result }
+					// Browser Run API returns raw JSON, not wrapped in { success, result }
 					return HttpResponse.json(targets);
 				},
 				{ once: true }
@@ -1002,7 +1002,7 @@ describe("wrangler browser", () => {
 
 			await expect(
 				runWrangler("browser close nonexistent")
-			).rejects.toThrowError("Browser Rendering API error: Session not found");
+			).rejects.toThrowError("Browser Run API error: Session not found");
 		});
 	});
 });

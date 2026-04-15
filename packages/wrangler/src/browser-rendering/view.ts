@@ -82,7 +82,7 @@ export const browserViewCommand = createCommand({
 	metadata: {
 		description: "View a live browser session",
 		status: "open beta",
-		owner: "Product: Browser Rendering",
+		owner: "Product: Browser Run",
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
