@@ -262,7 +262,7 @@ export class WranglerE2ETestHelper {
 		const certificateId = match?.groups?.certId;
 		assert(certificateId, `Cannot find ID in ${JSON.stringify(output)}`);
 		this.onTeardown(async () => {
-			await this.run(`wrangler cert delete --name ${name}`);
+			await this.bestEffortRun(`wrangler cert delete --name ${name}`);
 		});
 		return certificateId;
 	}
