@@ -30,6 +30,7 @@ const reorderableBindings = {
 	mtls_certificates: true,
 	pipelines: true,
 	secrets_store_secrets: true,
+	artifacts: true,
 	ratelimits: true,
 	analytics_engine_datasets: true,
 	unsafe_hello_world: true,
