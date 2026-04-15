@@ -13,13 +13,13 @@ jobs:
     timeout-minutes: 45
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}${{ matrix.experimental && '-experimental' || '' }}-${{ matrix.filter }}
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
     name: ${{ format('C3 E2E ({0}, {1}{2}) - {3}', matrix.pm.name, matrix.os.description, matrix.experimental && ', experimental' || '', matrix.filter) }}
     strategy:
       fail-fast: false
       matrix:
         experimental: [false]
-        filter: ["cli", "workers", "frameworks"]
+        filter: ["cli", "workers"]
         os: [{ name: ubuntu-latest, description: Linux }]
         pm:
           - { name: pnpm, version: "10.33.0" }
@@ -29,9 +29,18 @@ jobs:
         include:
           - os: { name: windows-latest, description: Windows }
             pm: { name: pnpm, version: "10.33.0" }
+            filter: "cli"
+          - os: { name: windows-latest, description: Windows }
+            pm: { name: pnpm, version: "10.33.0" }
+            filter: "workers"
           - os: { name: ubuntu-latest, description: Linux }
             pm: { name: pnpm, version: "10.33.0" }
             experimental: true
+            filter: "cli"
+          - os: { name: ubuntu-latest, description: Linux }
+            pm: { name: pnpm, version: "10.33.0" }
+            experimental: true
+            filter: "workers"
     runs-on: ${{ matrix.os.name }}
     steps:
       - name: Checkout Repo
@@ -98,5 +107,119 @@ jobs:
         if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
           name: ${{ format('turbo-runs-{0}-{1}-{2}-{3}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
+          path: .turbo/runs
+          include-hidden-files: true
+
+  frameworks-e2e:
+    # Runs the C3 frameworks E2E tests only in the merge queue, on the release branch, if create-cloudflare has changed, or when explicitly requested via label.
+    timeout-minutes: 45
+    concurrency:
+      group: ${{ github.workflow }}-frameworks${{ matrix.experimental && '-experimental' || '' }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
+      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
+    name: ${{ format('C3 E2E ({0}, {1}{2}) - frameworks', matrix.pm.name, matrix.os.description, matrix.experimental && ', experimental' || '') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        experimental: [false]
+        os: [{ name: ubuntu-latest, description: Linux }]
+        pm:
+          - { name: pnpm, version: "10.33.0" }
+          - { name: npm, version: "0.0.0" }
+        include:
+          - os: { name: ubuntu-latest, description: Linux }
+            pm: { name: pnpm, version: "10.33.0" }
+            experimental: true
+    runs-on: ${{ matrix.os.name }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        id: changes
+        with:
+          filters: |
+            everything_but_markdown:
+              - '!**/*.md'
+            framework_deps:
+              - 'packages/create-cloudflare/**'
+
+      - name: Check if frameworks tests should run
+        id: check-frameworks
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          FRAMEWORK_DEPS_CHANGED: ${{ steps.changes.outputs.framework_deps }}
+        run: |
+          if [ "$EVENT_NAME" = "merge_group" ] || \
+             [ "$HEAD_REF" = "changeset-release/main" ] || \
+             [ "$FRAMEWORK_DEPS_CHANGED" = "true" ]; then
+            echo "run_frameworks=true" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "pull_request" ]; then
+            HAS_LABEL=$(gh pr view "$PR_NUMBER" \
+              --repo "$REPO" --json labels \
+              --jq '[.labels[].name] | any(. == "run-c3-frameworks-tests")')
+            echo "run_frameworks=${HAS_LABEL}" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_frameworks=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Dependencies
+        if: steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Install Python uv
+        if: steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'
+        uses: ./.github/actions/install-python-uv
+
+      - name: Bump package versions
+        if: steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'
+        run: node .github/changeset-version.js
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Configure Git
+        if: steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'
+        shell: bash
+        run: |
+          git config --global user.email wrangler@cloudflare.com
+          git config --global user.name 'Wrangler Tester'
+
+      - id: run-e2e
+        if: steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'
+        shell: bash
+        run: pnpm run test:e2e:c3
+        env:
+          NODE_VERSION: ${{ env.NODE_VERSION }}
+          E2E_EXPERIMENTAL: ${{ matrix.experimental }}
+          E2E_TEST_PM: ${{ matrix.pm.name }}
+          E2E_TEST_PM_VERSION: ${{ matrix.pm.version }}
+          E2E_TEST_FILTER: frameworks
+          CI_OS: ${{ runner.os }}
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Upload Logs
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true' }}
+        with:
+          name: ${{ format('e2e-logs-{0}-{1}-{2}-frameworks', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
+          path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}/${{ matrix.pm.name }}/frameworks
+          include-hidden-files: true
+
+      - name: Upload Turbo Summary
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true' }}
+        with:
+          name: ${{ format('turbo-runs-{0}-{1}-{2}-frameworks', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
           path: .turbo/runs
           include-hidden-files: true

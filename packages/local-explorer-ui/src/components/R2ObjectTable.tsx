@@ -7,6 +7,7 @@ import {
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
+import { useRef } from "react";
 import { formatDate, formatSize } from "../utils/format";
 import type { R2Object } from "../api";
 
@@ -206,9 +207,21 @@ export function R2ObjectTable({
 
 	const someItemsSelected = selectableKeys.some((key) => selectedKeys.has(key));
 
+	// Track the last non-shift-clicked item for range selection
+	const selectionAnchorRef = useRef<string | null>(null);
+
+	// Clear anchor when it refers to a key no longer in the visible list
+	if (
+		selectionAnchorRef.current !== null &&
+		!selectableKeys.includes(selectionAnchorRef.current)
+	) {
+		selectionAnchorRef.current = null;
+	}
+
 	function handleSelectAll(): void {
 		// Deselect all
 		if (allItemsSelected) {
+			selectionAnchorRef.current = null;
 			onSelectionChange(new Set());
 			return;
 		}
@@ -217,7 +230,40 @@ export function R2ObjectTable({
 		onSelectionChange(new Set(selectableKeys));
 	}
 
-	function handleSelectItem(key: string): void {
+	function handleSelectItem(key: string, shiftKey: boolean): void {
+		if (shiftKey && selectionAnchorRef.current !== null) {
+			const anchorIndex = selectableKeys.indexOf(selectionAnchorRef.current);
+			const targetIndex = selectableKeys.indexOf(key);
+
+			if (anchorIndex !== -1 && targetIndex !== -1) {
+				const start = Math.min(anchorIndex, targetIndex);
+				const end = Math.max(anchorIndex, targetIndex);
+				const rangeKeys = selectableKeys.slice(start, end + 1);
+
+				// Determine whether to select or deselect the range based on
+				// the clicked item's current state: if it is currently selected
+				// the intent is to deselect the range, otherwise select it.
+				const selecting = !selectedKeys.has(key);
+
+				const newSelection = new Set(selectedKeys);
+				for (const rangeKey of rangeKeys) {
+					if (selecting) {
+						newSelection.add(rangeKey);
+						continue;
+					}
+
+					newSelection.delete(rangeKey);
+				}
+
+				onSelectionChange(newSelection);
+
+				// Do not move the anchor on shift-click so repeated
+				// shift-clicks stay anchored to the original row.
+				return;
+			}
+		}
+
+		// Plain click: toggle the single item and set the anchor
 		const newSelection = new Set(selectedKeys);
 		if (newSelection.has(key)) {
 			newSelection.delete(key);
@@ -225,6 +271,7 @@ export function R2ObjectTable({
 			newSelection.add(key);
 		}
 
+		selectionAnchorRef.current = key;
 		onSelectionChange(newSelection);
 	}
 
@@ -280,12 +327,23 @@ export function R2ObjectTable({
 							const displayName = getDisplayName(item.prefix, currentPrefix);
 							return (
 								<Table.Row key={item.prefix} className="group">
-									<Table.Cell>
+									<Table.Cell
+										onClick={(e) => {
+											// Only handle clicks on the checkbox itself
+											const target = e.target as HTMLElement;
+											if (
+												target.closest("button[role='checkbox']") ||
+												target.closest("input[type='checkbox']")
+											) {
+												e.preventDefault();
+												handleSelectItem(item.prefix, e.shiftKey);
+											}
+										}}
+									>
 										<Checkbox
 											aria-label={`Select ${displayName}`}
 											checked={selectedKeys.has(item.prefix)}
 											className="hover:cursor-pointer"
-											onCheckedChange={() => handleSelectItem(item.prefix)}
 										/>
 									</Table.Cell>
 									<Table.Cell>
@@ -319,12 +377,22 @@ export function R2ObjectTable({
 
 						return (
 							<Table.Row key={key} className="group">
-								<Table.Cell>
+								<Table.Cell
+									onClick={(e) => {
+										const target = e.target as HTMLElement;
+										if (
+											target.closest("button[role='checkbox']") ||
+											target.closest("input[type='checkbox']")
+										) {
+											e.preventDefault();
+											handleSelectItem(key, e.shiftKey);
+										}
+									}}
+								>
 									<Checkbox
 										aria-label={`Select ${displayName}`}
 										checked={selectedKeys.has(key)}
 										className="hover:cursor-pointer"
-										onCheckedChange={() => handleSelectItem(key)}
 									/>
 								</Table.Cell>
 								<Table.Cell>

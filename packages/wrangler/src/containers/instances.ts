@@ -334,7 +334,7 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 export const containersInstancesCommand = createCommand({
 	metadata: {
 		description: "List container instances for an application",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {

@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.node_version }}-test-other-node-versions
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
     name: ${{ format('Tests ({0})', matrix.description) }}
     strategy:
       fail-fast: false

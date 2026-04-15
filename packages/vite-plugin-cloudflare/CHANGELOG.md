@@ -1,5 +1,31 @@
 # @cloudflare/vite-plugin
 
+## 1.32.3
+
+### Patch Changes
+
+- [#13427](https://github.com/cloudflare/workers-sdk/pull/13427) [`c4deb1d`](https://github.com/cloudflare/workers-sdk/commit/c4deb1da6d8cdad1f928456a0f22cbe4c3ff0fd0) Thanks [@edmundhung](https://github.com/edmundhung)! - Harden file serving for Vite dev
+
+  The Vite plugin now includes Wrangler config files, Vite config files, and `.wrangler` state files in `server.fs.deny` so they cannot be fetched directly from the Vite dev server.
+
+- Updated dependencies [[`854d66c`](https://github.com/cloudflare/workers-sdk/commit/854d66c30428cb3fe9ad8629089d9307c33d8b61), [`6f63eaa`](https://github.com/cloudflare/workers-sdk/commit/6f63eaa8931d2a33cd0fce95f88cc0dcff998d85), [`aef9825`](https://github.com/cloudflare/workers-sdk/commit/aef9825350e0da3f50231deb4892f1747f37cb66), [`eaaa728`](https://github.com/cloudflare/workers-sdk/commit/eaaa72839a4f7872766597a5467db769c5d50a97), [`58292f6`](https://github.com/cloudflare/workers-sdk/commit/58292f6957819a3e4a0b0917558b0bf9925d08a8), [`5e5bbc1`](https://github.com/cloudflare/workers-sdk/commit/5e5bbc1026b1219e4e9ec36951ed7d5b4188d5a2), [`d5ff5a4`](https://github.com/cloudflare/workers-sdk/commit/d5ff5a4699955bc52733e759f68d762aef00c641), [`07a918c`](https://github.com/cloudflare/workers-sdk/commit/07a918c2638de1483468bcd01c829dad0a9c02e8), [`89c7829`](https://github.com/cloudflare/workers-sdk/commit/89c782964deb6baf1fa88075a3225726e620560d), [`60565dd`](https://github.com/cloudflare/workers-sdk/commit/60565dd1ac984b68319c087ea491171c3d64ecb2), [`6cbcdeb`](https://github.com/cloudflare/workers-sdk/commit/6cbcdeb65559a3fdf776210f43846fd3f786181a), [`90aee27`](https://github.com/cloudflare/workers-sdk/commit/90aee27f67fd148b43d1447a321df1e26f0438ec)]:
+  - miniflare@4.20260415.0
+  - wrangler@4.83.0
+
+## 1.32.2
+
+### Patch Changes
+
+- Updated dependencies [[`9b2b6ba`](https://github.com/cloudflare/workers-sdk/commit/9b2b6ba55c7e94533a2cddbe8ff8f5122ed7de17)]:
+  - wrangler@4.82.2
+
+## 1.32.1
+
+### Patch Changes
+
+- Updated dependencies [[`6b11b07`](https://github.com/cloudflare/workers-sdk/commit/6b11b072d35e438e81e133a1c37e4e94a7a9c9a8), [`dd4e888`](https://github.com/cloudflare/workers-sdk/commit/dd4e8882c854301c4e984989956f1aa337177637)]:
+  - wrangler@4.82.1
+
 ## 1.32.0
 
 ### Minor Changes
