@@ -1595,6 +1595,11 @@ export class Miniflare {
 						body: request.body,
 						duplex: "half",
 					});
+				} else {
+					response = new Response(
+						"Attempted fetch before runtime entry worker startup",
+						{ status: 500 }
+					);
 				}
 			}
 		} catch (e: any) {
