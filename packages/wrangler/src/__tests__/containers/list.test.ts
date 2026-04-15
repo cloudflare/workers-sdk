@@ -45,7 +45,7 @@ describe("containers list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers list
 
-			List containers [open beta]
+			List containers
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]

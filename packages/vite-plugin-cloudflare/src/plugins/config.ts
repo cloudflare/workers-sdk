@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import * as path from "node:path";
+import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp, removeAssetsField } from "../build";
 import {
@@ -39,13 +40,23 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				".env.*",
 				"*.{crt,pem}",
 				"**/.git/**",
+				"vite.config.*",
+				".dev.vars",
+				".dev.vars.*",
+				"**/.wrangler/**",
 			];
 
 			return {
 				appType: "custom",
 				server: {
 					fs: {
-						deny: [...defaultDeniedFiles, ".dev.vars", ".dev.vars.*"],
+						deny: [
+							...defaultDeniedFiles,
+							...Array.from(
+								ctx.resolvedPluginConfig.configPaths,
+								(configPath) => normalizePath(configPath)
+							),
+						],
 					},
 				},
 				environments: getEnvironmentsConfig(ctx, userConfig, env.mode),

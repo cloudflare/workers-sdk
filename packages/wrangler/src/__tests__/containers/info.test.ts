@@ -28,7 +28,7 @@ describe("containers info", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers info <ID>
 
-			Get information about a specific container [open beta]
+			Get information about a specific container
 
 			POSITIONALS
 			  ID  ID of the container to view  [string] [required]

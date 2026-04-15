@@ -221,7 +221,7 @@ export async function listCommand(args: ListArgs): Promise<void> {
 export const containersListCommand = createCommand({
 	metadata: {
 		description: "List containers",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {

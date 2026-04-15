@@ -342,7 +342,6 @@ describe("whoami", () => {
 			  - pipelines:write
 			  - secrets_store:write
 			  - artifacts:write
-			  - flagship:read
 			  - flagship:write
 			  - containers:write
 			  - cloudchamber:write
@@ -411,7 +410,6 @@ describe("whoami", () => {
 			  - pipelines:write
 			  - secrets_store:write
 			  - artifacts:write
-			  - flagship:read
 			  - flagship:write
 			  - containers:write
 			  - cloudchamber:write
@@ -526,7 +524,6 @@ describe("whoami", () => {
 			  - pipelines:write
 			  - secrets_store:write
 			  - artifacts:write
-			  - flagship:read
 			  - flagship:write
 			  - containers:write
 			  - cloudchamber:write

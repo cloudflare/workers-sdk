@@ -26,13 +26,13 @@ describe("containers registries --help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers registries
 
-			Configure and manage non-Cloudflare registries [open beta]
+			Configure and manage non-Cloudflare registries
 
 			COMMANDS
-			  wrangler containers registries configure <DOMAIN>    Configure credentials for a non-Cloudflare container registry [open beta]
-			  wrangler containers registries list                  List all configured container registries [open beta]
-			  wrangler containers registries delete <DOMAIN>       Delete a configured container registry [open beta]
-			  wrangler containers registries credentials [DOMAIN]  Get a temporary password for a specific domain [open beta]
+			  wrangler containers registries configure <DOMAIN>    Configure credentials for a non-Cloudflare container registry
+			  wrangler containers registries list                  List all configured container registries
+			  wrangler containers registries delete <DOMAIN>       Delete a configured container registry
+			  wrangler containers registries credentials [DOMAIN]  Get a temporary password for a specific domain
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -46,6 +46,7 @@ describe("containers registries --help", () => {
 });
 
 describe("containers registries configure", () => {
+	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 	const cliStd = mockCLIOutput();
 	mockAccountId();
@@ -57,6 +58,13 @@ describe("containers registries configure", () => {
 	afterEach(() => {
 		clearDialogs();
 	});
+
+	it("should not show beta labels in top level help", async ({ expect }) => {
+		await runWrangler("containers --help");
+		expect(std.out).toContain("📦 Manage Containers");
+		expect(std.out).not.toContain("[open beta]");
+	});
+
 	it("should reject unsupported registry domains", async ({ expect }) => {
 		await expect(
 			runWrangler(
