@@ -254,6 +254,91 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				{ timeout: 5_000, interval: 500 }
 			);
 		});
+
+		test("custom build failures are recoverable", async ({ expect }) => {
+			await seed({
+				"build.js": dedent/* javascript */ `
+					const fs = require("node:fs");
+					const input = fs.readFileSync("random_dir/index.ts", "utf8");
+					if (input.includes("FAIL_BUILD")) {
+						process.exit(1);
+					}
+					fs.writeFileSync("out.ts", input);
+				`,
+				"random_dir/index.ts": dedent/* javascript */ `
+					export default {
+						fetch() {
+							return new Response("hello custom build")
+						}
+					} satisfies ExportedHandler
+				`,
+			});
+			const config = configDefaults({
+				entrypoint: path.resolve("out.ts"),
+				projectRoot: path.resolve("."),
+				build: {
+					custom: {
+						command: "node build.js",
+						watch: "random_dir",
+					},
+					moduleRoot: path.resolve("."),
+				},
+			});
+
+			const initialBundle = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({ type: "configUpdate", config });
+
+			expect(findSourceFile((await initialBundle).bundle.entrypointSource, "out.ts"))
+				.toContain(`return new Response("hello custom build")`);
+
+			await vi.waitFor(
+				async () => {
+					const errorPromise = bus.waitFor(
+						"error",
+						(event) =>
+							event.source === "BundlerController" &&
+							event.reason === "Custom build failed"
+					);
+					await seed({
+						"random_dir/index.ts": dedent/* javascript */ `
+							// FAIL_BUILD
+							export default {
+								fetch() {
+									return new Response("broken custom build")
+								}
+							} satisfies ExportedHandler
+						`,
+					});
+
+					const error = await errorPromise;
+					expect(error.cause).toBeInstanceOf(Error);
+					expect(error.cause.message).toContain(
+						"Running custom build `node build.js` failed."
+					);
+				},
+				{ timeout: 5_000, interval: 500 }
+			);
+
+			await vi.waitFor(
+				async () => {
+					const recoveryPromise = bus.waitFor("bundleComplete");
+					await seed({
+						"random_dir/index.ts": dedent/* javascript */ `
+							export default {
+								fetch() {
+									return new Response("hello custom build again")
+								}
+							} satisfies ExportedHandler
+						`,
+					});
+
+					expect(
+						findSourceFile((await recoveryPromise).bundle.entrypointSource, "out.ts")
+					).toContain(`return new Response("hello custom build again")`);
+				},
+				{ timeout: 5_000, interval: 500 }
+			);
+		});
 	});
 
 	test("module aliasing", async ({ expect }) => {

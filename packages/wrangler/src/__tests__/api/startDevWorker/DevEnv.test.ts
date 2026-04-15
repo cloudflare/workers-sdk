@@ -1,4 +1,6 @@
-import { describe, test } from "vitest";
+import { once } from "node:events";
+import { setImmediate as waitForImmediate } from "node:timers/promises";
+import { describe, expect, test } from "vitest";
 import { DevEnv } from "../../../api/startDevWorker/DevEnv";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 
@@ -11,7 +13,6 @@ describe("DevEnv", () => {
 		}) => {
 			const devEnv = new DevEnv();
 
-			// Create an esbuild-like BuildFailure with errors and warnings arrays
 			const buildFailure = Object.assign(new Error("Build failed"), {
 				errors: [
 					{
@@ -45,7 +46,6 @@ describe("DevEnv", () => {
 		}) => {
 			const devEnv = new DevEnv();
 
-			// Create an esbuild-like BuildFailure nested in cause
 			const innerFailure = Object.assign(new Error("Build failed"), {
 				errors: [
 					{
@@ -94,6 +94,29 @@ describe("DevEnv", () => {
 			expect(std.err).toContain("Custom build command failed");
 
 			void devEnv.teardown();
+		});
+
+		test("should keep custom build failures recoverable while waiting for teardown", async () => {
+			const devEnv = new DevEnv();
+			const teardownPromise = once(devEnv, "teardown");
+
+			devEnv.dispatch({
+				type: "error",
+				reason: "Custom build failed",
+				cause: new Error("Custom build command failed"),
+				source: "BundlerController",
+				data: { config: undefined, filePath: "src/index.ts" },
+			});
+
+			await expect(
+				Promise.race([
+					teardownPromise.then(() => "teardown"),
+					waitForImmediate().then(() => "waiting"),
+				])
+			).resolves.toBe("waiting");
+
+			void devEnv.teardown();
+			await expect(teardownPromise).resolves.toEqual([]);
 		});
 	});
 });
