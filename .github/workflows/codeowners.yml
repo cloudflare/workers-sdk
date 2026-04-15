@@ -14,7 +14,7 @@ on:
 
 concurrency:
   group: codeowners-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
 
 permissions:
   contents: read

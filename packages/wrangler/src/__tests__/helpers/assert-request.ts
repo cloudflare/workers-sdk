@@ -1,6 +1,6 @@
-// eslint-disable-next-line no-restricted-imports
-import { assert, beforeEach, expect, vi } from "vitest";
+import { assert, beforeEach, vi } from "vitest";
 import type { mockConsoleMethods } from "./mock-console";
+import type { ExpectStatic } from "vitest";
 
 /**
  * Assert that Wrangler has made a request matching a certain pattern. Unlike MSW (which mocks the return value of the request),
@@ -18,6 +18,7 @@ export function makeApiRequestAsserter(
 		vi.stubEnv("WRANGLER_LOG_SANITIZE", "false");
 	});
 	return function assertApiRequest(
+		expect: ExpectStatic,
 		url: RegExp,
 		{ method, body }: { method?: string; body?: RegExp }
 	) {

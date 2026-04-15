@@ -3,7 +3,7 @@
 	"dependencies": {
 		"@angular/create": "21.2.6",
 		"@tanstack/create-start": "0.59.8",
-		"create-analog": "2.3.1",
+		"create-analog": "2.4.7",
 		"create-astro": "5.0.5",
 		"create-docusaurus": "3.10.0",
 		"create-hono": "0.19.4",

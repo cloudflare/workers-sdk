@@ -107,7 +107,7 @@ describe("deploy", () => {
 	});
 
 	describe("routes", () => {
-		it("should deploy the worker to a route", async () => {
+		it("should deploy the worker to a route", async ({ expect }) => {
 			writeWranglerConfig({
 				routes: ["example.com/some-route/*"],
 			});
@@ -116,8 +116,8 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZones("example.com", [{ id: "example-com-id" }]);
-			mockGetZoneWorkerRoutes("example-com-id");
+			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-com-id");
 			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 			mockPublishRoutesRequest({ routes: ["example.com/some-route/*"] });
 			await runWrangler("deploy ./index");
@@ -176,7 +176,7 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZonesMulti({
+			mockGetZonesMulti(expect, {
 				"some-example.com": {
 					accountId: "some-account-id",
 					zones: [{ id: "some-example-com-id" }],
@@ -202,7 +202,7 @@ describe("deploy", () => {
 					zones: [{ id: "more-examples-id" }],
 				},
 			});
-			mockGetZoneWorkerRoutesMulti({
+			mockGetZoneWorkerRoutesMulti(expect, {
 				"some-example-com-id": [],
 				"a-boring-website-id": [],
 				"another-boring-website-id": [],
@@ -260,8 +260,8 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUploadWorkerRequest();
 			mockGetWorkerSubdomain({ enabled: false });
-			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
-			mockGetZoneWorkerRoutes("owned-zone-id-1");
+			mockGetZones(expect, "owned-zone.com", [{ id: "owned-zone-id-1" }]);
+			mockGetZoneWorkerRoutes(expect, "owned-zone-id-1");
 			mockPublishRoutesRequest({
 				routes: [
 					{
@@ -303,8 +303,8 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUploadWorkerRequest();
 			mockGetWorkerSubdomain({ enabled: false });
-			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
-			mockGetZoneWorkerRoutes("owned-zone-id-1");
+			mockGetZones(expect, "owned-zone.com", [{ id: "owned-zone-id-1" }]);
+			mockGetZoneWorkerRoutes(expect, "owned-zone-id-1");
 			mockPublishRoutesRequest({
 				routes: [
 					{
@@ -373,7 +373,7 @@ describe("deploy", () => {
 			});
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZonesMulti({
+			mockGetZonesMulti(expect, {
 				"some-example.com": {
 					accountId: "some-account-id",
 					zones: [{ id: "some-example-com-id" }],
@@ -399,7 +399,7 @@ describe("deploy", () => {
 					zones: [{ id: "more-examples-id" }],
 				},
 			});
-			mockGetZoneWorkerRoutesMulti({
+			mockGetZoneWorkerRoutesMulti(expect, {
 				"some-example-com-id": [],
 				"a-boring-website-id": [],
 				"another-boring-website-id": [],
@@ -451,7 +451,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should deploy to legacy environment specific routes", async () => {
+		it("should deploy to legacy environment specific routes", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				routes: ["example.com/some-route/*"],
 				env: {
@@ -473,7 +475,7 @@ describe("deploy", () => {
 			});
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZonesMulti({
+			mockGetZonesMulti(expect, {
 				"example.com": {
 					accountId: "some-account-id",
 					zones: [{ id: "example-com-id" }],
@@ -483,7 +485,7 @@ describe("deploy", () => {
 					zones: [{ id: "dev-example-com-id" }],
 				},
 			});
-			mockGetZoneWorkerRoutesMulti({
+			mockGetZoneWorkerRoutesMulti(expect, {
 				"example-com-id": [],
 				"dev-example-com-id": [],
 			});
@@ -496,7 +498,9 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index --env dev --legacy-env true");
 		});
 
-		it("services: should deploy to service environment specific routes", async () => {
+		it("services: should deploy to service environment specific routes", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				routes: ["example.com/some-route/*"],
 				env: {
@@ -513,7 +517,7 @@ describe("deploy", () => {
 			});
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZonesMulti({
+			mockGetZonesMulti(expect, {
 				"example.com": {
 					accountId: "some-account-id",
 					zones: [{ id: "example-com-id" }],
@@ -523,7 +527,7 @@ describe("deploy", () => {
 					zones: [{ id: "dev-example-com-id" }],
 				},
 			});
-			mockGetZoneWorkerRoutesMulti({
+			mockGetZoneWorkerRoutesMulti(expect, {
 				"example-com-id": [],
 				"dev-example-com-id": [],
 			});
@@ -546,8 +550,8 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZones("example.com", [{ id: "example-com-id" }]);
-			mockGetZoneWorkerRoutes("example-com-id", [
+			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-com-id", [
 				// Simulate that the worker has already been deployed to another route.
 				{
 					pattern: "foo.example.com/other-route",
@@ -604,8 +608,8 @@ describe("deploy", () => {
 			mockUpdateWorkerSubdomain({ env: "staging", enabled: false });
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZones("example.com", [{ id: "example-com-id" }]);
-			mockGetZoneWorkerRoutes("example-com-id", [
+			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-com-id", [
 				// Simulate that the worker has already been deployed to another route.
 				{
 					pattern: "foo.example.com/other-route",
@@ -638,8 +642,8 @@ describe("deploy", () => {
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
-				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({});
 				mockPublishCustomDomainsRequest({
@@ -665,8 +669,8 @@ describe("deploy", () => {
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
-				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
 					originConflicts: [
@@ -717,8 +721,8 @@ Update them to point to this script instead?`,
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
-				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
 					dnsRecordConflicts: [
@@ -761,8 +765,8 @@ Update them to point to this script instead?`,
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
-				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
 					originConflicts: [
@@ -862,8 +866,8 @@ Update them to point to this script instead?`,
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
-				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
 					originConflicts: [
@@ -958,7 +962,7 @@ Update them to point to this script instead?`,
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZonesMulti({
+				mockGetZonesMulti(expect, {
 					"example.com": {
 						accountId: "some-account-id",
 						zones: [{ id: "example-com-id" }],
@@ -968,7 +972,7 @@ Update them to point to this script instead?`,
 						zones: [{ id: "api-example-com-id" }],
 					},
 				});
-				mockGetZoneWorkerRoutesMulti({
+				mockGetZoneWorkerRoutesMulti(expect, {
 					"example-com-id": [],
 					"api-example-com-id": [],
 				});
@@ -1047,7 +1051,7 @@ Update them to point to this script instead?`,
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZonesMulti({
+				mockGetZonesMulti(expect, {
 					"config.com": {
 						accountId: "some-account-id",
 						zones: [{ id: "config-com-id" }],
@@ -1061,7 +1065,7 @@ Update them to point to this script instead?`,
 						zones: [{ id: "cli-com-id" }],
 					},
 				});
-				mockGetZoneWorkerRoutesMulti({
+				mockGetZoneWorkerRoutesMulti(expect, {
 					"config-com-id": [],
 					"api-example-com-id": [],
 					"cli-com-id": [],
@@ -1163,7 +1167,7 @@ Update them to point to this script instead?`,
 				});
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZonesMulti({
+				mockGetZonesMulti(expect, {
 					"simple.co.uk": {
 						accountId: "some-account-id",
 						zones: [{ id: "simple-co-uk-id" }],
@@ -1173,7 +1177,7 @@ Update them to point to this script instead?`,
 						zones: [{ id: "example-com-id" }],
 					},
 				});
-				mockGetZoneWorkerRoutesMulti({
+				mockGetZoneWorkerRoutesMulti(expect, {
 					"simple-co-uk-id": [],
 					"example-com-id": [],
 				});
@@ -1270,8 +1274,8 @@ Update them to point to this script instead?`,
 				});
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("example.com", [{ id: "example-com-id" }]);
-				mockGetZoneWorkerRoutes("example-com-id", []);
+				mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockPublishRoutesRequest({
 					routes: [
@@ -1344,8 +1348,8 @@ Update them to point to this script instead?`,
 				});
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("example.com", [{ id: "example-com-id" }]);
-				mockGetZoneWorkerRoutes("example-com-id", []);
+				mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockPublishRoutesRequest({
 					routes: [
@@ -1425,7 +1429,7 @@ Update them to point to this script instead?`,
 				});
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZonesMulti({
+				mockGetZonesMulti(expect, {
 					"simple.co.uk": {
 						accountId: "some-account-id",
 						zones: [{ id: "simple-co-uk-id" }],
@@ -1435,7 +1439,7 @@ Update them to point to this script instead?`,
 						zones: [{ id: "example-com-id" }],
 					},
 				});
-				mockGetZoneWorkerRoutesMulti({
+				mockGetZoneWorkerRoutesMulti(expect, {
 					"simple-co-uk-id": [],
 					"example-com-id": [],
 				});
