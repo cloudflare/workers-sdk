@@ -2410,7 +2410,7 @@ export class Miniflare {
 		if (previousEntryURL?.toString() !== this.#runtimeEntryURL.toString()) {
 			// Close the previous dispatcher if the entry URL changed, to avoid
 			// leaking sockets from the old Pool.
-			void this.#runtimeDispatcher?.close();
+			void this.#runtimeDispatcher?.close().catch(() => {});
 			this.#runtimeDispatcher = new Pool(this.#runtimeEntryURL, {
 				connect: { rejectUnauthorized: false },
 				// Disable timeouts for local dev — long-running responses (streaming,
