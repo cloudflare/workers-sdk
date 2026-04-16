@@ -306,7 +306,6 @@ async function getMiniflareOptionsFromConfig(args: {
 		modules: true,
 		...miniflareOptions,
 		unsafeDevRegistryPath: getRegistryPath(),
-		unsafeDevRegistryDurableObjectProxy: true,
 	};
 }
 
