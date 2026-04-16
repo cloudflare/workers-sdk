@@ -934,7 +934,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual(
-				`Worker "worker-entrypoint-with-assets" not found. Make sure it is running locally.`
+				`Worker "service-worker" is not compatible with this version of the dev server. Please update all Worker instances to the same version.`
 			);
 		}, waitForTimeout);
 
