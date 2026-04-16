@@ -4,4 +4,6 @@
 
 Fix local explorer KV bulk / get for large payloads.
 
-Keep Miniflare local explorer KV bulk get behavior aligned with the Cloudflare API by enforcing the aggregate payload size limit. Instead now the local explorer UI KV namespace view to fetch values per-key, so large namespaces still load successfully without relying on bulk get for table hydration.
+Fixes an issue where the local explorer UI would crash when fetching large KV payloads.
+
+Additionally, the local KV bulk get API endpoint now enforces a total 25MB payload limit, in alignment with the remote Cloudflare API.
