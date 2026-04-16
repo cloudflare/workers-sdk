@@ -27,7 +27,13 @@ async function getEntryUrl(env: Env): Promise<URL> {
 	const resp = await env.MINIFLARE_LOOPBACK.fetch(
 		"http://localhost/core/entry-url"
 	);
-	return new URL(await resp.text());
+	const entryUrl = (await resp.json()) as string | null;
+	if (!entryUrl) {
+		throw new Error(
+			"Runtime entry URL is not available. This may be because the worker is not yet ready to accept requests."
+		);
+	}
+	return new URL(entryUrl);
 }
 
 function rowsToDownloadResponse(

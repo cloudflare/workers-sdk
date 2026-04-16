@@ -1580,13 +1580,7 @@ export class Miniflare {
 			} else if (url.pathname === "/core/entry-url") {
 				// Returns the user-facing runtime entry URL so that workers
 				// (e.g. the stream binding) can construct externally-reachable URLs.
-				if (this.#runtimeEntryURL) {
-					response = new Response(this.#runtimeEntryURL.toString());
-				} else {
-					response = new Response("Runtime entry URL not yet available", {
-						status: 503,
-					});
-				}
+				response = Response.json(this.#runtimeEntryURL ?? null);
 			}
 		} catch (e: any) {
 			this.#log.error(e);
