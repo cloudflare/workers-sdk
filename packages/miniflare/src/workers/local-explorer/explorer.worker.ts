@@ -359,9 +359,13 @@ app.get("/api/local/workers", async (c) => {
 		const localWorkers: LocalExplorerWorker[] = selfWorkerNames
 			.filter((name) => registry[name])
 			.map((name) => {
+				const def = registry[name];
 				return {
+					host: def.host,
 					isSelf: true,
 					name,
+					port: def.port,
+					protocol: def.protocol,
 					bindings: explorerWorkerOpts[name],
 				};
 			});

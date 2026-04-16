@@ -170,7 +170,12 @@ export function printBindings(
 						const registryDefinition = context.registry?.[script_name];
 
 						hasConnectionStatus = true;
-						if (registryDefinition && registryDefinition.debugPortAddress) {
+						if (
+							registryDefinition &&
+							registryDefinition.durableObjects.some(
+								(d) => d.className === class_name
+							)
+						) {
 							value += `, defined in ${script_name}`;
 							mode = getMode({ isSimulatedLocally: true, connected: true });
 						} else {
@@ -491,7 +496,11 @@ export function printBindings(
 						const registryDefinition = context.registry?.[service];
 						hasConnectionStatus = true;
 
-						if (registryDefinition && registryDefinition.debugPortAddress) {
+						if (
+							registryDefinition &&
+							(!entrypoint ||
+								registryDefinition.entrypointAddresses?.[entrypoint])
+						) {
 							mode = getMode({ isSimulatedLocally: true, connected: true });
 						} else {
 							mode = getMode({ isSimulatedLocally: true, connected: false });

@@ -1003,7 +1003,7 @@ export async function buildMiniflareOptions(
 			? `${config.upstreamProtocol}://${config.localUpstream}`
 			: undefined;
 
-	const { sourceOptions } = await buildSourceOptions(config);
+	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		config,
 		remoteProxyConnectionString
@@ -1023,6 +1023,7 @@ export async function buildMiniflareOptions(
 		liveReload: config.liveReload,
 		upstream,
 		unsafeDevRegistryPath: config.devRegistry,
+		unsafeDevRegistryDurableObjectProxy: true,
 		unsafeHandleDevRegistryUpdate: onDevRegistryUpdate,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
@@ -1049,6 +1050,13 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
+				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
+				unsafeDirectSockets: entrypointNames.map((name) => ({
+					host: "127.0.0.1",
+					port: 0,
+					entrypoint: name,
+					proxy: true,
+				})),
 				containerEngine: config.containerEngine,
 				zone: config.zone,
 			},

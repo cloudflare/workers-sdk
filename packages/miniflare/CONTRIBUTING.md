@@ -45,7 +45,8 @@ may create an `entry:local` socket if the configured `host` doesn't permit
 access over the local loopback address. Miniflare also supports opening sockets
 directly to user Workers (`core:user:*`) using the `unsafeDirectSockets` option.
 Wrangler uses this option to listen on the well-known inspector port for its
-inspector proxy service.
+inspector proxy service, and to expose Cap'n-Proto-over-http-capable sockets for
+RPC between `wrangler dev` sessions.
 
 ![Miniflare Services Architecture](./miniflare.drawio.svg)
 
@@ -327,16 +328,6 @@ for more details. Bindings implemented as Durable Objects extend
 `MiniflareDurableObject` which provides a `db` property for accessing a typed
 SQLite database, and a `blobs` property for accessing a `BlobStore` as described
 by the links above.
-
-## How does the dev registry work?
-
-Refer to [`src/shared/DEV_REGISTRY.md`](./src/shared/DEV_REGISTRY.md) for the
-full architecture. In short: when multiple `wrangler dev` sessions run
-simultaneously, they advertise their workerd debug port address via JSON files in
-`~/.wrangler/registry/`. A synthetic proxy worker inside workerd uses the
-`workerdDebugPort` binding to connect to remote workers' debug ports via native
-Cap'n Proto RPC, enabling cross-process service bindings, Durable Object access,
-RPC, and tail forwarding without any HTTP proxying.
 
 ## How does Miniflare's magic proxy work?
 

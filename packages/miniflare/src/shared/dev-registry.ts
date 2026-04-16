@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import {
 	existsSync,
 	mkdirSync,
@@ -10,15 +9,18 @@ import {
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import { Worker } from "node:worker_threads";
 import { watch } from "chokidar";
+import { getProxyFallbackServiceSocketName } from "./external-service";
 import { getGlobalWranglerConfigPath } from "./wrangler";
+import type { SocketPorts } from "../runtime";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
-export type { WorkerDefinition, WorkerRegistry };
 import type { Log } from "./log";
 import type { FSWatcher } from "chokidar";
 
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
+	private registry: WorkerRegistry = {};
 	private registeredWorkers: Set<string> = new Set();
 	private externalServices: Map<
 		string,
@@ -28,9 +30,12 @@ export class DevRegistry {
 		}
 	> = new Map();
 	private watcher: FSWatcher | undefined;
+	private proxyWorker: Worker | undefined;
+	private proxyAddress: string | undefined;
 
 	constructor(
 		private registryPath: string | undefined,
+		private enableDurableObjectProxy: boolean,
 		private onUpdate: ((registry: WorkerRegistry) => void) | undefined,
 		private log: Log
 	) {}
@@ -51,15 +56,50 @@ export class DevRegistry {
 			return;
 		}
 
+		// Keep track of external services we are depending on
+		// To pre-populate the proxy server with the fallback service addresses
 		this.externalServices = new Map(services);
 
-		mkdirSync(this.registryPath, { recursive: true });
-
 		if (!this.watcher) {
-			this.watcher = watch(this.registryPath).on("all", () => {
-				this.refresh();
-			});
+			this.watcher = watch(this.registryPath).on("all", () => this.refresh());
+			this.refresh();
 		}
+	}
+
+	/**
+	 * Initialize the worker thread proxy server
+	 */
+	public async initializeProxyWorker(): Promise<string | null> {
+		if (!this.isEnabled()) {
+			return null;
+		}
+
+		if (this.proxyAddress !== undefined) {
+			this.log.debug("Dev registry proxy is already running");
+			return this.proxyAddress;
+		}
+
+		const worker = new Worker(
+			path.join(__dirname, "shared", "dev-registry.worker.js")
+		);
+
+		// Wait for the worker to signal it's ready and provide the port
+		const address = await new Promise<string>((resolve, reject) => {
+			worker.once("message", (message) => {
+				if (message.type === "ready") {
+					resolve(message.address);
+				} else if (message.type === "error") {
+					reject(new Error(message.error));
+				}
+			});
+			worker.once("error", reject);
+		});
+
+		this.proxyWorker = worker;
+		this.proxyAddress = address;
+		this.log.debug(`Dev registry proxy started on http://${address}`);
+
+		return address;
 	}
 
 	/**
@@ -69,11 +109,20 @@ export class DevRegistry {
 	 */
 	public dispose(): Promise<void> | undefined {
 		this.unregisterWorkers();
+		this.registry = {};
 
 		// Only this step is async and could be awaited
-		return this.watcher?.close().finally(() => {
-			this.watcher = undefined;
-		});
+		return Promise.all([this.watcher?.close(), this.proxyWorker?.terminate()])
+			.then(() => {
+				// Typescript complains that the return type is
+				// not compatible with `Promise<void>` without this.
+				return;
+			})
+			.finally(() => {
+				this.watcher = undefined;
+				this.proxyWorker = undefined;
+				this.proxyAddress = undefined;
+			});
 	}
 
 	private unregisterWorkers() {
@@ -109,11 +158,8 @@ export class DevRegistry {
 		return this.registryPath !== undefined && this.registryPath !== "";
 	}
 
-	public getRegistry(): WorkerRegistry {
-		if (!this.registryPath) {
-			return {};
-		}
-		return getWorkerRegistry(this.registryPath);
+	public isDurableObjectProxyEnabled(): boolean {
+		return this.isEnabled() && this.enableDurableObjectProxy;
 	}
 
 	public getRegistryPath(): string | undefined {
@@ -122,10 +168,12 @@ export class DevRegistry {
 
 	public async updateRegistryPath(
 		registryPath: string | undefined,
+		enableDurableObjectProxy: boolean,
 		onUpdate?: (registry: WorkerRegistry) => void
 	): Promise<void> {
 		// Unregister all registered workers
 		this.unregisterWorkers();
+		this.enableDurableObjectProxy = enableDurableObjectProxy;
 		this.onUpdate = onUpdate;
 
 		if (registryPath !== this.registryPath) {
@@ -136,6 +184,42 @@ export class DevRegistry {
 			this.watcher = undefined;
 			this.registryPath = registryPath;
 		}
+	}
+
+	public configureProxyWorker(
+		runtimeEntryURL: string,
+		socketPorts: SocketPorts
+	) {
+		if (!this.proxyWorker) {
+			return;
+		}
+
+		const fallbackServicePorts: Record<string, Record<string, number>> = {};
+
+		for (const [service, { entrypoints }] of this.externalServices) {
+			for (const entrypoint of entrypoints) {
+				const port = socketPorts.get(
+					getProxyFallbackServiceSocketName(service, entrypoint)
+				);
+
+				if (!port) {
+					throw new Error(
+						`There is no socket opened for "${service}" with the "${entrypoint ?? "default"}" entrypoint`
+					);
+				}
+
+				fallbackServicePorts[service] ??= {};
+				fallbackServicePorts[service][entrypoint ?? "default"] = port;
+			}
+		}
+
+		// Send updated config to the proxy worker
+		this.proxyWorker.postMessage({
+			type: "setup",
+			runtimeEntryURL,
+			fallbackServicePorts,
+			logLevel: this.log.level,
+		});
 	}
 
 	public register(workers: Record<string, WorkerDefinition>) {
@@ -153,6 +237,11 @@ export class DevRegistry {
 				clearInterval(existingHeartbeat);
 			}
 
+			// Skip the durable objects in the definition if the proxy is not enabled
+			if (!this.enableDurableObjectProxy) {
+				definition.durableObjects = [];
+			}
+
 			writeFileSync(definitionPath, JSON.stringify(definition, null, 2));
 			this.registeredWorkers.add(name);
 			this.heartbeats.set(
@@ -164,42 +253,58 @@ export class DevRegistry {
 				}, 30_000)
 			);
 		}
-		this.refresh();
 	}
 
-	private previousJSON = "{}";
 	private refresh(): void {
-		if (!this.onUpdate) {
+		if (!this.registryPath) {
 			return;
 		}
 
-		assert(this.registryPath);
-		const registry = getWorkerRegistry(this.registryPath);
-		const json = JSON.stringify(registry);
-		if (json === this.previousJSON) {
-			return;
-		}
-		const previousRegistry = JSON.parse(this.previousJSON);
-		this.previousJSON = json;
-		for (const [service] of this.externalServices) {
-			if (
-				JSON.stringify(registry[service]) !==
-				JSON.stringify(previousRegistry[service])
-			) {
-				this.onUpdate(registry);
-				break;
+		const registry = getWorkerRegistry(this.registryPath, (workerName) => {
+			this.unregister(workerName);
+		});
+
+		// Only trigger callback if there are actual changes to services we care about
+		if (this.onUpdate) {
+			// Check only external services (ones we're bound to) for changes
+			// This prevents unnecessary callback triggers for unrelated registry updates
+			for (const [service] of this.externalServices) {
+				if (
+					JSON.stringify(registry[service]) !==
+					JSON.stringify(this.registry[service])
+				) {
+					// A service we depend on has changed, notify listeners
+					// Provide a deep copy to prevent accidental mutations by consumers
+					this.onUpdate(JSON.parse(JSON.stringify(registry)));
+					break;
+				}
 			}
 		}
+
+		// Send updated workers to the proxy worker
+		if (this.proxyWorker) {
+			this.proxyWorker.postMessage({
+				type: "update",
+				workers: registry,
+			});
+		}
+
+		// Update our cached registry state
+		this.registry = registry;
 	}
 }
 
 /**
  * Read the worker registry from the specified path.
  *
- * Skips stale workers that haven't sent a heartbeat in over 5 minutes,
- * and removes their files from disk.
+ * This function reads the worker definitions from the registry directory, and skips any stale
+ * workers that have not been updated in the last 5 minutes. If a worker is stale, it will call
+ * the `unregisterStaleWorker` callback if provided.
  */
-export function getWorkerRegistry(registryPath: string): WorkerRegistry {
+export function getWorkerRegistry(
+	registryPath: string,
+	unregisterStaleWorker?: (workerName: string) => void
+): WorkerRegistry {
 	const registry: WorkerRegistry = {};
 
 	if (!existsSync(registryPath)) {
@@ -213,9 +318,7 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 
 			// Cleanup old workers that have not sent a heartbeat in over 5 minutes
 			if (stats === undefined || stats.mtime.getTime() < Date.now() - 300_000) {
-				try {
-					unlinkSync(definitionPath);
-				} catch {}
+				unregisterStaleWorker?.(workerName);
 				continue;
 			}
 

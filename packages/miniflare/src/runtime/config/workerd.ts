@@ -117,7 +117,6 @@ export type Worker_Binding = {
 	| { hyperdrive?: Worker_Binding_Hyperdrive }
 	| { unsafeEval?: Void }
 	| { workerLoader?: Worker_Binding_WorkerLoader }
-	| { workerdDebugPort?: Void }
 );
 
 export interface Worker_Binding_Parameter {

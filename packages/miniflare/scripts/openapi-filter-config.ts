@@ -1447,8 +1447,12 @@ const config = {
 			// Local Explorer worker schema (from dev registry)
 			"local-explorer_worker": {
 				type: "object",
-				required: ["isSelf", "name"],
+				required: ["host", "isSelf", "name", "port", "protocol"],
 				properties: {
+					host: {
+						type: "string",
+						description: "Hostname the worker is running on",
+					},
 					isSelf: {
 						type: "boolean",
 						description: "Whether this worker is the one hosting the explorer",

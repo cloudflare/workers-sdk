@@ -265,7 +265,7 @@ describe("multiworker", () => {
 			await waitForLong(
 				async () =>
 					await expect(fetchText(url)).resolves.toBe(
-						`Worker "${service}" not found. Make sure it is running locally.`
+						`Couldn't find a local dev session for the "default" entrypoint of service "${service}" to proxy to`
 					)
 			);
 		});

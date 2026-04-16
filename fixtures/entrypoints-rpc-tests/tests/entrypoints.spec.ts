@@ -530,6 +530,8 @@ describe("entrypoints", () => {
 		dev,
 		expect,
 	}) => {
+		// RPC isn't supported in this case yet :(
+
 		await dev({
 			"wrangler.toml": dedent`
 			name = "bound"
@@ -575,10 +577,10 @@ describe("entrypoints", () => {
 
 					const { pathname } = new URL(request.url);
 					if (pathname === "/rpc") {
-						const results = [];
-						results.push(await stub.property)
-						results.push(await stub.method())
-						return Response.json(results.map(String));
+						const errors = [];
+						try { await stub.property; } catch (e) { errors.push(e); }
+						try { await stub.method(); } catch (e) { errors.push(e); }
+						return Response.json(errors.map(String));
 					}
 
 					return stub.fetch("https://placeholder:9999/", {
@@ -597,16 +599,14 @@ describe("entrypoints", () => {
 			expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
 		});
 
-		await waitFor(async () => {
-			const rpcResponse = await fetch(new URL("/rpc", url));
-			const errors = await rpcResponse.json();
-			expect(errors).toMatchInlineSnapshot(`
-				[
-				  "property:ping",
-				  "method:ping",
-				]
-			`);
-		});
+		const rpcResponse = await fetch(new URL("/rpc", url));
+		const errors = await rpcResponse.json();
+		expect(errors).toMatchInlineSnapshot(`
+			[
+			  "Error: Cannot access "ThingObject#property" as Durable Object RPC is not yet supported between multiple dev sessions.",
+			  "Error: Cannot access "ThingObject#method" as Durable Object RPC is not yet supported between multiple dev sessions.",
+			]
+		`);
 	});
 
 	test("should support binding to Durable Object in same worker", async ({
@@ -709,7 +709,7 @@ describe("entrypoints", () => {
 		let response = await fetch(url);
 		expect(response.status).toBe(503);
 		expect(await response.text()).toBe(
-			'Worker "bound" not found. Make sure it is running locally.'
+			'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
 		);
 
 		await writeFile(
@@ -730,7 +730,7 @@ describe("entrypoints", () => {
 			let response = await fetch(url);
 			expect(response.status).toBe(503);
 			expect(await response.text()).toBe(
-				'Worker "bound" not found. Make sure it is running locally.'
+				'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
 			);
 		});
 	});
@@ -761,7 +761,7 @@ describe("entrypoints", () => {
 		});
 		let response = await fetch(url);
 		expect(await response.text()).toBe(
-			'Worker "bound" not found. Make sure it is running locally.'
+			'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
 		);
 
 		// Start up the bound worker without the expected entrypoint
@@ -785,7 +785,7 @@ describe("entrypoints", () => {
 		await waitFor(async () => {
 			let response = await fetch(url);
 			expect(await response.text()).toBe(
-				'Worker "bound" not found. Make sure it is running locally.'
+				'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
 			);
 		});
 	});
@@ -815,7 +815,7 @@ describe("entrypoints", () => {
 		});
 		let response = await fetch(url);
 		expect(await response.text()).toBe(
-			'Worker "bound" not found. Make sure it is running locally.'
+			'Couldn\'t find a local dev session for the "default" entrypoint of service "bound" to proxy to'
 		);
 
 		// Start up the bound worker using HTTPS
@@ -866,7 +866,7 @@ describe("entrypoints", () => {
 		});
 		let response = await fetch(url);
 		expect(await response.text()).toBe(
-			'Worker "bound" not found. Make sure it is running locally.'
+			'Couldn\'t find a local dev session for the "default" entrypoint of service "bound" to proxy to'
 		);
 
 		const boundWorker = new Miniflare({
@@ -923,8 +923,8 @@ describe("entrypoints", () => {
 		const errors = await response.json();
 		expect(errors).toMatchInlineSnapshot(`
 			[
-			  "Error: Worker "bound" not found. Make sure it is running locally.",
-			  "Error: Worker "bound" not found. Make sure it is running locally.",
+			  "Error: Cannot access "property" as we couldn't find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to.",
+			  "Error: Cannot access "method" as we couldn't find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to.",
 			]
 		`);
 	});
