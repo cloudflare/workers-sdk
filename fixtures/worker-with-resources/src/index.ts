@@ -26,6 +26,15 @@ export default {
 				await Promise.all(SEED_DATA.map(([k, v]) => env.KV.put(k, v)));
 				return new Response(`Seeded ${SEED_DATA.length} KV entries`);
 			}
+			case "/kv/seed-large": {
+				const largeValue = "x".repeat(10 * 1024 * 1024);
+				await Promise.all(
+					["large-key-1", "large-key-2", "large-key-3"].map((key) =>
+						env.KV.put(key, largeValue)
+					)
+				);
+				return new Response("Seeded 3 large KV entries");
+			}
 
 			// R2 routes
 			case "/r2/seed": {

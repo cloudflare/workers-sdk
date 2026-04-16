@@ -7,6 +7,7 @@ import {
 	navigateToKV,
 	page,
 	seedKV,
+	seedKVLarge,
 	waitForSelector,
 	waitForTableRows,
 	waitForText,
@@ -26,6 +27,13 @@ describe("KV Namespace", () => {
 			const greetingRow = page.locator("tr").filter({ hasText: "greeting" });
 			const rowText = await greetingRow.textContent();
 			expect(rowText).toContain("Hello, World!");
+		});
+
+		test("loads namespace values when aggregate payload exceeds bulk limit", async () => {
+			await seedKVLarge();
+			await navigateToKV("KV");
+			await waitForTableRows(5);
+			await waitForText("large-key-1");
 		});
 
 		test("shows column headers", async () => {

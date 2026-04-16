@@ -28,6 +28,13 @@ export async function seedKV(): Promise<void> {
 }
 
 /**
+ * Seed the KV namespace with large test data.
+ */
+export async function seedKVLarge(): Promise<void> {
+	await fetch(`${workerUrl}/kv/seed-large`);
+}
+
+/**
  * Seed the R2 bucket with test data.
  */
 export async function seedR2(): Promise<void> {

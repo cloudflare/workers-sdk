@@ -7,7 +7,6 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	workersKvNamespaceDeleteKeyValuePair,
-	workersKvNamespaceGetMultipleKeyValuePairs,
 	workersKvNamespaceListANamespace_SKeys,
 	workersKvNamespaceReadKeyValuePair,
 	workersKvNamespaceWriteKeyValuePairWithMetadata,
@@ -19,7 +18,7 @@ import { KVTable } from "../../components/KVTable";
 import { ResourceError } from "../../components/ResourceError";
 import { SearchForm } from "../../components/SearchForm";
 import { getSelectedWorker } from "../../components/WorkerSelector";
-import type { KVEntry } from "../../api";
+import type { KVEntry, WorkersKvKey } from "../../api";
 
 export const Route = createFileRoute("/kv/$namespaceId")({
 	component: NamespaceView,
@@ -31,27 +30,16 @@ export const Route = createFileRoute("/kv/$namespaceId")({
 		});
 		const keys = keysResponse.data?.result ?? [];
 
-		let values: Record<string, string | null> = {};
+		let values = new Map<WorkersKvKey, string | null>();
 		if (keys.length > 0) {
-			const valuesResponse = await workersKvNamespaceGetMultipleKeyValuePairs({
-				path: {
-					namespace_id: params.namespaceId,
-				},
-				body: {
-					keys: keys.map((k) => k.name),
-				},
-			});
-			values = (valuesResponse.data?.result?.values ?? {}) as Record<
-				string,
-				string | null
-			>;
+			values = await readKVValues(params.namespaceId, keys);
 		}
 
 		const cursor = keysResponse.data?.result_info?.cursor ?? null;
 		const entries = keys.map(
 			(key): KVEntry => ({
 				key,
-				value: values[key.name] ?? null,
+				value: values.get(key) ?? null,
 			})
 		);
 
@@ -86,6 +74,49 @@ const entryVisible = (entries: KVEntry[], key: string): boolean =>
 	entries.some((e) => e.key.name === key);
 
 const rootRoute = getRouteApi("__root__");
+
+function isKeyNotFoundError(error: unknown): boolean {
+	if (typeof error !== "object" || error === null || !("errors" in error)) {
+		return false;
+	}
+
+	const { errors } = error as {
+		errors?: Array<{
+			code?: number;
+		}>;
+	};
+
+	return errors?.some((entry) => entry.code === 10009) ?? false;
+}
+
+async function readKVValues(
+	namespaceId: string,
+	keys: WorkersKvKey[]
+): Promise<Map<WorkersKvKey, string | null>> {
+	const data = new Map<WorkersKvKey, string | null>();
+
+	await Promise.all(
+		keys.map(async (key) => {
+			try {
+				const response = await workersKvNamespaceReadKeyValuePair({
+					path: { namespace_id: namespaceId, key_name: key.name },
+					parseAs: "text",
+				});
+
+				data.set(key, response.data ?? null);
+			} catch (error) {
+				if (isKeyNotFoundError(error)) {
+					data.set(key, null);
+					return;
+				}
+
+				throw error;
+			}
+		})
+	);
+
+	return data;
+}
 
 function NamespaceView() {
 	const { namespaceId } = Route.useParams();
@@ -158,22 +189,14 @@ function NamespaceView() {
 				});
 				const keys = keysResponse.data?.result ?? [];
 
-				let values: Record<string, string | null> = {};
+				let values = new Map<WorkersKvKey, string | null>();
 				if (keys.length > 0) {
-					const valuesResponse =
-						await workersKvNamespaceGetMultipleKeyValuePairs({
-							path: { namespace_id: namespaceId },
-							body: { keys: keys.map((k) => k.name) },
-						});
-					values = (valuesResponse.data?.result?.values ?? {}) as Record<
-						string,
-						string | null
-					>;
+					values = await readKVValues(namespaceId, keys);
 				}
 
 				const newEntries: KVEntry[] = keys.map((key) => ({
 					key,
-					value: values[key.name] ?? null,
+					value: values.get(key) ?? null,
 				}));
 
 				if (nextCursor) {
