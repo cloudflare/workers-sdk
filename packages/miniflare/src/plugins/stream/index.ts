@@ -87,13 +87,13 @@ export const STREAM_PLUGIN: Plugin<
 			return [];
 		}
 
-		const serviceName = getUserBindingServiceName(
-			STREAM_PLUGIN_NAME,
-			options.stream.binding,
-			options.stream.remoteProxyConnectionString
-		);
-
 		if (options.stream.remoteProxyConnectionString) {
+			const serviceName = getUserBindingServiceName(
+				STREAM_PLUGIN_NAME,
+				options.stream.binding,
+				options.stream.remoteProxyConnectionString
+			);
+
 			return [
 				{
 					name: serviceName,
