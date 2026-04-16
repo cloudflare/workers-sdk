@@ -1,6 +1,5 @@
 ---
 "@cloudflare/local-explorer-ui": patch
-"miniflare": patch
 ---
 
 Fix local explorer KV bulk / get for large payloads.
