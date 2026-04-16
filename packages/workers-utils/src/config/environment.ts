@@ -212,16 +212,31 @@ export type ContainerApp = {
 	};
 
 	/**
-	 * Scheduling constraints
-	 * @hidden
+	 * Scheduling constraints for container placement.
 	 */
 	constraints?: {
+		/**
+		 * Limit container placement to specific geographic regions.
+		 * Valid values: "ENAM", "WNAM", "EEUR", "WEUR", "ME", "OC", "AFR"
+		 */
 		regions?: string[];
+		/**
+		 * Restrict containers to compliance boundaries.
+		 * Valid values: "eu", "fedramp"
+		 */
+		jurisdiction?: string;
+		/**
+		 * @hidden
+		 */
 		cities?: string[];
 		/**
 		 * @deprecated Use `tiers` instead
+		 * @hidden
 		 */
 		tier?: number;
+		/**
+		 * @hidden
+		 */
 		tiers?: number[];
 	};
 

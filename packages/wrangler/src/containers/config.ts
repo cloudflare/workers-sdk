@@ -22,7 +22,7 @@ import type { Config, ContainerApp } from "@cloudflare/workers-utils";
  * Perform type conversion of affinities so that they can be fed to the API.
  */
 function convertContainerAffinitiesForApi(
-	container: ContainerApp
+	container: ContainerApp,
 ): ApplicationAffinities | undefined {
 	if (container.affinities === undefined) {
 		return undefined;
@@ -51,7 +51,7 @@ export const getNormalizedContainerOptions = async (
 		/** set by args.containersRollout */
 		containersRollout?: "gradual" | "immediate";
 		dryRun?: boolean;
-	}
+	},
 ): Promise<ContainerNormalizedConfig[]> => {
 	if (!config.containers || config.containers.length === 0) {
 		return [];
@@ -66,16 +66,16 @@ export const getNormalizedContainerOptions = async (
 		if (
 			!allDOs.has(container.class_name) &&
 			config.durable_objects.bindings.find(
-				(doBinding) => doBinding.class_name === container.class_name
+				(doBinding) => doBinding.class_name === container.class_name,
 			) === undefined
 		) {
 			throw new UserError(
 				`The container class_name ${container.class_name} does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.`,
-				{ telemetryMessage: "no DO defined that matches container class_name" }
+				{ telemetryMessage: "no DO defined that matches container class_name" },
 			);
 		}
 		const maybeBoundDO = config.durable_objects.bindings.find(
-			(durableObject) => durableObject.class_name === container.class_name
+			(durableObject) => durableObject.class_name === container.class_name,
 		);
 		if (maybeBoundDO && maybeBoundDO.script_name !== undefined) {
 			throw new UserError(
@@ -83,7 +83,7 @@ export const getNormalizedContainerOptions = async (
 				{
 					telemetryMessage:
 						"contaienr class_name refers to an external durable object",
-				}
+				},
 			);
 		}
 
@@ -113,10 +113,11 @@ export const getNormalizedContainerOptions = async (
 			constraints: {
 				tiers,
 				regions: container.constraints?.regions?.map((region) =>
-					region.toUpperCase()
+					region.toUpperCase(),
 				),
+				jurisdiction: container.constraints?.jurisdiction?.toLowerCase(),
 				cities: container.constraints?.cities?.map((city) =>
-					city.toLowerCase()
+					city.toLowerCase(),
 				),
 			},
 			affinities: convertContainerAffinitiesForApi(container),
@@ -174,13 +175,13 @@ export const getNormalizedContainerOptions = async (
 			// these should have been resolved to absolute paths by the config validation
 			assert(
 				path.isAbsolute(container.image),
-				"Dockerfile path should be absolute"
+				"Dockerfile path should be absolute",
 			);
 			const imageBuildContext =
 				container.image_build_context ?? dirname(container.image);
 			assert(
 				path.isAbsolute(imageBuildContext),
-				"resolved image_build_context should be defined"
+				"resolved image_build_context should be defined",
 			);
 			normalizedContainers.push({
 				...shared,
