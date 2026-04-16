@@ -260,6 +260,19 @@ describe("KV API", () => {
 			expect(response.status).toBe(200);
 			expect(await response.text()).toBe("special-value");
 		});
+
+		test("returns raw bytes for ArrayBuffer values", async ({ expect }) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			const bytes = Uint8Array.from([0, 1, 2, 127, 128, 254, 255]);
+			await kv.put("binary-get-key", bytes.buffer);
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/binary-get-key`
+			);
+
+			expect(response.status).toBe(200);
+			expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes);
+		});
 	});
 
 	describe("PUT /storage/kv/namespaces/:namespaceId/values/:keyName", () => {

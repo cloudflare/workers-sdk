@@ -117,6 +117,20 @@ test("get: returns value", async ({ expect }) => {
 	expect(result).toBe("value");
 });
 
+test("get: returns ArrayBuffer values", async ({ expect }) => {
+	const { kv } = ctx;
+	const bytes = Uint8Array.from([0, 1, 2, 127, 128, 254, 255]);
+	await kv.put("array-buffer-key", bytes.buffer);
+
+	const result = await kv.get("array-buffer-key", "arrayBuffer");
+	expect(result).not.toBeNull();
+	if (result === null) {
+		throw new Error("Expected array-buffer-key to be present in KV");
+	}
+
+	expect(new Uint8Array(result)).toEqual(bytes);
+});
+
 test("bulk get: returns value", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key1", "value1");
