@@ -329,6 +329,33 @@ describe("KV API", () => {
 				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
+
+		test("writes streamed binary values", async ({ expect }) => {
+			const bytes = Uint8Array.from([255, 0, 10, 20, 30, 200]);
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/put-stream-key`,
+				{
+					body: new Blob([bytes]).stream(),
+					duplex: "half",
+					headers: {
+						"Content-Type": "application/octet-stream",
+					},
+					method: "PUT",
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({ success: true });
+
+			const kv = await mf.getKVNamespace("TEST_KV");
+			const stored = await kv.get("put-stream-key", { type: "arrayBuffer" });
+
+			expect(stored).not.toBeNull();
+			if (stored === null) {
+				throw new Error("Expected put-stream-key to be stored in KV");
+			}
+			expect(new Uint8Array(stored)).toEqual(bytes);
+		});
 	});
 
 	describe("DELETE /storage/kv/namespaces/:namespaceId/values/:keyName", () => {

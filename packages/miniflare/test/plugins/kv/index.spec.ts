@@ -131,6 +131,22 @@ test("get: returns ArrayBuffer values", async ({ expect }) => {
 	expect(new Uint8Array(result)).toEqual(bytes);
 });
 
+test("get: returns stream values", async ({ expect }) => {
+	const { kv } = ctx;
+	const bytes = Uint8Array.from([255, 0, 10, 20, 30, 200]);
+	await kv.put("stream-key", new Blob([bytes]).stream());
+
+	const result = await kv.get("stream-key", "stream");
+	expect(result).not.toBeNull();
+	if (result === null) {
+		throw new Error("Expected stream-key to be present in KV");
+	}
+
+	expect(new Uint8Array(await new Response(result).arrayBuffer())).toEqual(
+		bytes
+	);
+});
+
 test("bulk get: returns value", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key1", "value1");
