@@ -1,6 +1,12 @@
 import assert from "node:assert";
 import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
+import {
+	kVoid,
+	type Service,
+	type Worker_Binding,
+	type Worker_Module,
+} from "../../runtime";
 import { CoreBindings } from "../../workers";
 import { normaliseDurableObject } from "../do";
 import {
@@ -14,7 +20,6 @@ import {
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
 import type { PluginWorkerOptions } from "..";
-import type { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import type { DurableObjectClassNames, WorkflowOption } from "../shared";
 import type {
 	BindingIdMap,
@@ -80,6 +85,11 @@ export function getExplorerServices(
 		{
 			name: CoreBindings.JSON_TELEMETRY_CONFIG,
 			json: JSON.stringify(telemetry),
+		},
+		{
+			name: CoreBindings.DEV_REGISTRY_DEBUG_PORT,
+			// workerdDebugPort bindings don't have any additional configuration
+			workerdDebugPort: kVoid,
 		},
 	];
 

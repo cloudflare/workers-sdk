@@ -5,6 +5,7 @@
  * any one instance can aggregate data from all instances.
  */
 
+import { env } from "cloudflare:workers";
 import { CorePaths } from "../core";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { AppContext } from "./common";
@@ -28,7 +29,7 @@ function getPeerUrls(
 	const selfSet = new Set(selfWorkerNames);
 	const urls = Object.entries(registry)
 		.filter(([name]) => !selfSet.has(name))
-		.map(([, def]) => `http://${def.loopbackAddress}`);
+		.map(([, def]) => def.debugPortAddress);
 	// A single Miniflare process with multiple workers registers multiple
 	// entries in the registry, all sharing the same host:port. We deduplicate
 	// to avoid fetching from the same peer multiple times.
@@ -62,8 +63,12 @@ export async function fetchFromPeer(
 	init?: RequestInit
 ): Promise<Response | null> {
 	try {
-		const url = new URL(`${EXPLORER_API_PATH}${apiPath}`, peerUrl);
-		const response = await fetch(url.toString(), {
+		const client = (env as AppContext["env"]).DEV_REGISTRY_DEBUG_PORT.connect(
+			peerUrl
+		);
+		const fetcher = client.getEntrypoint("core:entry");
+		const url = new URL(`http://localhost${EXPLORER_API_PATH}${apiPath}`);
+		const response = await fetcher.fetch(url.toString(), {
 			...init,
 			headers: {
 				...(init?.headers as Record<string, string> | undefined),
