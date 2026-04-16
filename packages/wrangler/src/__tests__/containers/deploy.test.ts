@@ -1884,7 +1884,7 @@ describe("wrangler deploy with containers", () => {
 			│   image = "registry.cloudflare.com/some-account-id/hello:world"
 			│   instance_type = "lite"
 			│
-			│   [containers.configuration.wrangler_ssh]
+			│   [containers.configuration.ssh]
 			│   enabled = true
 			│   port = 1010
 			│
@@ -1994,7 +1994,7 @@ describe("wrangler deploy with containers", () => {
 			│ + [[containers.configuration.authorized_keys]]
 			│ + name = "jeff"
 			│ + public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm"
-			│ + [containers.configuration.wrangler_ssh]
+			│ + [containers.configuration.ssh]
 			│ + enabled = true
 			│   [containers.durable_objects]
 			│   namespace_id = "1"
