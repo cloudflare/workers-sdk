@@ -294,14 +294,6 @@ async function buildPackage() {
 	const pkg = getPackage(pkgRoot);
 
 	const indexPath = path.join(pkgRoot, "src", "index.ts");
-	// The dev registry proxy runs in a Node.js worker thread (instead of workerd)
-	// and requires a separate entry point so it can be loaded independently
-	const devRegistryProxyPath = path.join(
-		pkgRoot,
-		"src",
-		"shared",
-		"dev-registry.worker.ts"
-	);
 	const outPath = path.join(pkgRoot, "dist");
 
 	const buildOptions = {
@@ -327,7 +319,7 @@ async function buildPackage() {
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,
-		entryPoints: [indexPath, devRegistryProxyPath, ...fixtureBuilds],
+		entryPoints: [indexPath, ...fixtureBuilds],
 	};
 
 	if (watch) {
