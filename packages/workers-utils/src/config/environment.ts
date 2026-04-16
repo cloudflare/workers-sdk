@@ -217,14 +217,22 @@ export type ContainerApp = {
 	constraints?: {
 		/**
 		 * Limit container placement to specific geographic regions.
-		 * Valid values: "ENAM", "WNAM", "EEUR", "WEUR", "ME", "OC", "AFR"
 		 */
-		regions?: string[];
+		regions?: (
+			| "ENAM"
+			| "WNAM"
+			| "EEUR"
+			| "WEUR"
+			| "APAC"
+			| "SAM"
+			| "ME"
+			| "OC"
+			| "AFR"
+		)[];
 		/**
 		 * Restrict containers to compliance boundaries.
-		 * Valid values: "eu", "fedramp"
 		 */
-		jurisdiction?: string;
+		jurisdiction?: "eu" | "fedramp";
 		/**
 		 * @hidden
 		 */
