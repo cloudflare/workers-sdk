@@ -685,6 +685,7 @@ export const CORE_PLUGIN: Plugin<
 		wrappedBindingNames,
 		durableObjectClassNames,
 		additionalModules,
+		loopbackHost,
 		loopbackPort,
 	}) {
 		// Define regular user worker
@@ -862,7 +863,7 @@ export const CORE_PLUGIN: Plugin<
 					moduleFallback:
 						options.unsafeUseModuleFallbackService &&
 						sharedOptions.unsafeModuleFallbackService !== undefined
-							? `localhost:${loopbackPort}`
+							? `${loopbackHost}:${loopbackPort}`
 							: undefined,
 					tails: options.tails?.map<ServiceDesignator>((service) => {
 						return getCustomServiceDesignator(

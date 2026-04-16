@@ -6,9 +6,9 @@ import type { BrowserCloseResponse } from "./types";
 
 export const browserCloseCommand = createCommand({
 	metadata: {
-		description: "Close a browser rendering session",
+		description: "Close a Browser Run session",
 		status: "open beta",
-		owner: "Product: Browser Rendering",
+		owner: "Product: Browser Run",
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
