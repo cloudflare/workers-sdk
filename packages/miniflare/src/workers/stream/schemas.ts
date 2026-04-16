@@ -128,9 +128,9 @@ export type DownloadRow = {
 	url: string | null;
 };
 
-export function rowToStreamVideo(row: VideoRow, baseUrl: string): StreamVideo {
+export function rowToStreamVideo(row: VideoRow, entryUrl: URL): StreamVideo {
 	const placeholderUrl = `https://customer-placeholder.cloudflarestream.com/${row.id}`;
-	const videoUrl = `${baseUrl}/cdn-cgi/mf/stream/${row.id}/watch`;
+	const videoUrl = `${entryUrl.origin}/cdn-cgi/mf/stream/${row.id}/watch`;
 	return {
 		id: row.id,
 		creator: row.creator,

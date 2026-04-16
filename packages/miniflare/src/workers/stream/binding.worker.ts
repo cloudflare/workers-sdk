@@ -10,12 +10,19 @@ import type { StreamObject } from "./object.worker";
 
 interface Env {
 	store: DurableObjectNamespace<StreamObject>;
-	MF_STREAM_DEV_SERVER_URL: string;
+	MINIFLARE_LOOPBACK: Fetcher;
 }
 
 function getStub(env: Env): DurableObjectStub<StreamObject> {
 	const id = env.store.idFromName("stream-data");
 	return env.store.get(id);
+}
+
+async function getEntryUrl(env: Env): Promise<URL> {
+	const resp = await env.MINIFLARE_LOOPBACK.fetch(
+		"http://localhost/core/entry-url"
+	);
+	return new URL(await resp.text());
 }
 
 function rowsToDownloadResponse(
@@ -71,7 +78,8 @@ export class StreamBinding extends WorkerEntrypoint<Env> {
 		}
 		const stub = getStub(this.env);
 		const row = await stub.createVideo(body, params ?? {});
-		return rowToStreamVideo(row, this.env.MF_STREAM_DEV_SERVER_URL);
+		const entryUrl = await getEntryUrl(this.env);
+		return rowToStreamVideo(row, entryUrl);
 	}
 
 	// Not supported in local mode yet
@@ -182,13 +190,15 @@ class StreamVideoHandleImpl extends RpcTarget implements StreamVideoHandle {
 	async details(): Promise<StreamVideo> {
 		const stub = getStub(this.#env);
 		const row = await stub.getVideo(this.id);
-		return rowToStreamVideo(row, this.#env.MF_STREAM_DEV_SERVER_URL);
+		const entryUrl = await getEntryUrl(this.#env);
+		return rowToStreamVideo(row, entryUrl);
 	}
 
 	async update(params: StreamUpdateVideoParams): Promise<StreamVideo> {
 		const stub = getStub(this.#env);
 		const row = await stub.updateVideo(this.id, params);
-		return rowToStreamVideo(row, this.#env.MF_STREAM_DEV_SERVER_URL);
+		const entryUrl = await getEntryUrl(this.#env);
+		return rowToStreamVideo(row, entryUrl);
 	}
 
 	async delete(): Promise<void> {
@@ -221,9 +231,8 @@ class StreamVideosImpl extends RpcTarget implements StreamVideos {
 	async list(params?: StreamVideosListParams): Promise<StreamVideo[]> {
 		const stub = getStub(this.#env);
 		const rows = await stub.listVideos(params);
-		return rows.map((row) =>
-			rowToStreamVideo(row, this.#env.MF_STREAM_DEV_SERVER_URL)
-		);
+		const entryUrl = await getEntryUrl(this.#env);
+		return rows.map((row) => rowToStreamVideo(row, entryUrl));
 	}
 }
 

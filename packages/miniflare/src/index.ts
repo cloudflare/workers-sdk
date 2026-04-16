@@ -1577,29 +1577,15 @@ export class Miniflare {
 				const registryPath = this.#devRegistry.getRegistryPath();
 				const registry = registryPath ? getWorkerRegistry(registryPath) : {};
 				response = Response.json(registry);
-			} else if (
-				url.pathname === CorePaths.STREAM_VIDEO ||
-				url.pathname.startsWith(`${CorePaths.STREAM_VIDEO}/`)
-			) {
-				// Forward stream video requests to the runtime entry worker,
-				// since preview urls use loopbackPort but the route is handled
-				// by the entry worker on the entry socket.
+			} else if (url.pathname === "/core/entry-url") {
+				// Returns the user-facing runtime entry URL so that workers
+				// (e.g. the stream binding) can construct externally-reachable URLs.
 				if (this.#runtimeEntryURL) {
-					const entryUrl = new URL(
-						url.pathname + url.search,
-						this.#runtimeEntryURL
-					);
-					response = await fetch(entryUrl, {
-						method: request.method,
-						headers: request.headers,
-						body: request.body,
-						duplex: "half",
-					});
+					response = new Response(this.#runtimeEntryURL.toString());
 				} else {
-					response = new Response(
-						"Attempted fetch before runtime entry worker startup",
-						{ status: 500 }
-					);
+					response = new Response("Runtime entry URL not yet available", {
+						status: 503,
+					});
 				}
 			}
 		} catch (e: any) {

@@ -10,6 +10,7 @@ import {
 	PersistenceSchema,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
@@ -80,8 +81,6 @@ export const STREAM_PLUGIN: Plugin<
 		tmpPath,
 		defaultPersistRoot,
 		unsafeStickyBlobs,
-		loopbackPort,
-		loopbackHost,
 	}) {
 		if (!options.stream) {
 			return [];
@@ -171,10 +170,7 @@ export const STREAM_PLUGIN: Plugin<
 							serviceName: STREAM_OBJECT_SERVICE_NAME,
 						},
 					},
-					{
-						name: "MF_STREAM_DEV_SERVER_URL",
-						json: JSON.stringify(`http://${loopbackHost}:${loopbackPort}`),
-					},
+					WORKER_BINDING_SERVICE_LOOPBACK,
 				],
 				// Allow the binding worker to send outbound HTTP requests
 				// (e.g. fetching video from URL in upload fn)
