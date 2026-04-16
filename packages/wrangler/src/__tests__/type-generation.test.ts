@@ -3294,6 +3294,207 @@ describe("generate types", () => {
 		});
 	});
 
+	describe("--check", () => {
+		it("should report up to date when types match", async ({ expect }) => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					vars: { MY_VAR: "my-value" },
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+			await runWrangler("types --check --include-runtime=false");
+			expect(std.out).toContain("up to date");
+		});
+
+		it("should report out of date when config changes", async ({ expect }) => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					vars: { MY_VAR: "my-value" },
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					vars: { MY_VAR: "my-value", NEW_VAR: "new-value" },
+				}),
+				"utf-8"
+			);
+
+			await expect(
+				runWrangler("types --check --include-runtime=false")
+			).rejects.toThrow(/out of date/);
+		});
+
+		describe("--env-interface", () => {
+			it("should report up to date when --check uses same --env-interface as generation", async ({
+				expect,
+			}) => {
+				fs.writeFileSync(
+					"./wrangler.jsonc",
+					JSON.stringify({
+						vars: { MY_VAR: "my-value" },
+					}),
+					"utf-8"
+				);
+
+				await runWrangler(
+					"types --include-runtime=false --env-interface MyEnv"
+				);
+				await runWrangler(
+					"types --check --include-runtime=false --env-interface MyEnv"
+				);
+				expect(std.out).toContain("up to date");
+			});
+
+			it("should report out of date when --check uses different --env-interface than generation", async ({
+				expect,
+			}) => {
+				fs.writeFileSync(
+					"./wrangler.jsonc",
+					JSON.stringify({
+						vars: { MY_VAR: "my-value" },
+					}),
+					"utf-8"
+				);
+
+				await runWrangler(
+					"types --include-runtime=false --env-interface MyEnv"
+				);
+				await expect(
+					runWrangler(
+						"types --check --include-runtime=false --env-interface DifferentEnv"
+					)
+				).rejects.toThrow(/out of date/);
+			});
+
+			it("should report out of date when --check uses --env-interface but types were generated with default", async ({
+				expect,
+			}) => {
+				fs.writeFileSync(
+					"./wrangler.jsonc",
+					JSON.stringify({
+						vars: { MY_VAR: "my-value" },
+					}),
+					"utf-8"
+				);
+
+				await runWrangler("types --include-runtime=false");
+				await expect(
+					runWrangler(
+						"types --check --include-runtime=false --env-interface CustomEnv"
+					)
+				).rejects.toThrow(/out of date/);
+			});
+		});
+
+		describe("multiple --config (secondary configs)", () => {
+			function seedMultiWorkerSetup() {
+				fs.mkdirSync("primary");
+				fs.writeFileSync(
+					"./primary/index.ts",
+					"export default { async fetch() {} };"
+				);
+				fs.writeFileSync(
+					"./primary/wrangler.jsonc",
+					JSON.stringify({
+						compatibility_date: "2022-01-12",
+						name: "primary-worker",
+						main: "./index.ts",
+						services: [
+							{
+								binding: "SECONDARY_SERVICE",
+								service: "secondary-worker",
+							},
+						],
+					}),
+					"utf-8"
+				);
+
+				fs.mkdirSync("secondary");
+				fs.writeFileSync(
+					"./secondary/index.ts",
+					"export default { async fetch() {} };"
+				);
+				fs.writeFileSync(
+					"./secondary/wrangler.jsonc",
+					JSON.stringify({
+						compatibility_date: "2022-01-12",
+						name: "secondary-worker",
+						main: "./index.ts",
+						vars: { WORKER_B_VAR: "worker b var" },
+					}),
+					"utf-8"
+				);
+			}
+
+			it("should report up to date when --check includes same secondary configs", async ({
+				expect,
+			}) => {
+				seedMultiWorkerSetup();
+
+				await runWrangler(
+					"types --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts"
+				);
+				await runWrangler(
+					"types --check --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts"
+				);
+				expect(std.out).toContain("up to date");
+			});
+
+			it("should report out of date when secondary config changes", async ({
+				expect,
+			}) => {
+				seedMultiWorkerSetup();
+
+				await runWrangler(
+					"types --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts"
+				);
+
+				// Change secondary worker name — this affects how service bindings resolve
+				fs.writeFileSync(
+					"./secondary/wrangler.jsonc",
+					JSON.stringify({
+						compatibility_date: "2022-01-12",
+						name: "renamed-secondary-worker",
+						main: "./index.ts",
+						vars: { WORKER_B_VAR: "worker b var" },
+					}),
+					"utf-8"
+				);
+
+				await expect(
+					runWrangler(
+						"types --check --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts"
+					)
+				).rejects.toThrow(/out of date/);
+			});
+
+			it("should report out of date when --check omits secondary configs that were used during generation", async ({
+				expect,
+			}) => {
+				seedMultiWorkerSetup();
+
+				await runWrangler(
+					"types --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts"
+				);
+
+				await expect(
+					runWrangler(
+						"types --check --include-runtime=false -c primary/wrangler.jsonc --path primary/worker-configuration.d.ts"
+					)
+				).rejects.toThrow(/out of date/);
+			});
+		});
+	});
+
 	describe("runtime types output", () => {
 		beforeEach(() => {
 			fs.writeFileSync(
