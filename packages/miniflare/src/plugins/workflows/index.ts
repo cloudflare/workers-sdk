@@ -23,6 +23,7 @@ export const WorkflowsOptionsSchema = z.object({
 					.custom<RemoteProxyConnectionString>()
 					.optional(),
 				stepLimit: z.number().int().min(1).optional(),
+				compatibilityFlags: z.string().array().optional(),
 			})
 		)
 		.optional(),
@@ -156,6 +157,14 @@ export const WORKFLOWS_PLUGIN: Plugin<
 										{
 											name: "STEP_LIMIT",
 											json: JSON.stringify(workflow.stepLimit),
+										},
+									]
+								: []),
+							...(workflow.compatibilityFlags !== undefined
+								? [
+										{
+											name: "COMPATIBILITY_FLAGS",
+											json: JSON.stringify(workflow.compatibilityFlags),
 										},
 									]
 								: []),
