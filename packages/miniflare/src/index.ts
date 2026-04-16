@@ -149,7 +149,7 @@ import type {
 	D1Database,
 	DurableObjectNamespace,
 	Fetcher,
-	Flags,
+	Flagship,
 	ImagesBinding,
 	KVNamespace,
 	KVNamespaceListKey,
@@ -2976,7 +2976,10 @@ export class Miniflare {
 	}> {
 		return this.#getProxy(HELLO_WORLD_PLUGIN_NAME, bindingName, workerName);
 	}
-	getFlagshipBinding(bindingName: string, workerName?: string): Promise<Flags> {
+	getFlagshipBinding(
+		bindingName: string,
+		workerName?: string
+	): Promise<Flagship> {
 		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName);
 	}
 	getStreamBinding(
