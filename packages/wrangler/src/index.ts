@@ -1744,7 +1744,7 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("ai");
 
-	// browser rendering
+	// browser run
 	registry.define([
 		{ command: "wrangler browser", definition: browserNamespace },
 		{ command: "wrangler browser create", definition: browserCreateCommand },
