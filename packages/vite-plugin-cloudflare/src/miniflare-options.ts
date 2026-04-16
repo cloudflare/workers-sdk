@@ -92,6 +92,26 @@ const MODULE_RUNNER_LEGACY_PATH =
 	"./workers/runner-worker/module-runner-legacy.js";
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 
+/**
+ * Maps wildcard/all-interfaces listen addresses to a locally-accessible
+ * equivalent. Returns the input unchanged if it is already reachable.
+ * Mirrors the `maybeGetLocallyAccessibleHost` logic in Miniflare.
+ */
+function getLocallyAccessibleHost(host: string): string {
+	if (
+		host === "127.0.0.1" ||
+		host === "*" ||
+		host === "0.0.0.0" ||
+		host === "::"
+	) {
+		return "127.0.0.1";
+	}
+	if (host === "::1") {
+		return "[::1]";
+	}
+	return host;
+}
+
 /** Map that maps worker configPaths to their existing remote proxy session data (if any) */
 const remoteProxySessionsDataMap = new Map<
 	string,
@@ -446,8 +466,9 @@ export async function getDevMiniflareOptions(
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	const serverConfig = viteDevServer.config.server;
-	const publicHost =
-		typeof serverConfig.host === "string" ? serverConfig.host : "localhost";
+	const publicHost = getLocallyAccessibleHost(
+		typeof serverConfig.host === "string" ? serverConfig.host : "localhost"
+	);
 	const publicUrl = `${serverConfig.https ? "https" : "http"}://${publicHost}:${serverConfig.port}`;
 
 	return {
@@ -643,8 +664,9 @@ export async function getPreviewMiniflareOptions(
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	const serverConfig = vitePreviewServer.config.preview;
-	const publicHost =
-		typeof serverConfig.host === "string" ? serverConfig.host : "localhost";
+	const publicHost = getLocallyAccessibleHost(
+		typeof serverConfig.host === "string" ? serverConfig.host : "localhost"
+	);
 	const publicUrl = `${serverConfig.https ? "https" : "http"}://${publicHost}:${serverConfig.port}`;
 
 	return {

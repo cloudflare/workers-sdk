@@ -1610,3 +1610,82 @@ describe("Stream deletes clean up properly", () => {
 		expect(downloadsB.default).toBeDefined();
 	});
 });
+
+describe("Stream publicUrl", () => {
+	test("preview URLs use publicUrl when set", async ({ expect }) => {
+		const mf = createMiniflare({
+			publicUrl: "http://my-proxy.example.com:8080",
+		});
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		expect(video.preview).toBe(
+			`http://my-proxy.example.com:8080/cdn-cgi/mf/stream/${video.id}/watch`
+		);
+	});
+
+	test("preview URLs use runtime entry URL when publicUrl is not set", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		// Without publicUrl, the preview URL should use the runtime entry URL
+		// (http://127.0.0.1:<port>) rather than any external proxy URL
+		expect(video.preview).toMatch(
+			new RegExp(
+				`^http://127\\.0\\.0\\.1:\\d+/cdn-cgi/mf/stream/${video.id}/watch$`
+			)
+		);
+	});
+
+	test("preview URLs update when publicUrl changes via setOptions", async ({
+		expect,
+	}) => {
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+		const opts = {
+			compatibilityDate: STREAM_COMPAT_DATE,
+			stream: { binding: "STREAM" },
+			streamPersist: false,
+			modules: true,
+			script: WORKER_SCRIPT,
+			publicUrl: "http://first-proxy.example.com:3000",
+		} satisfies MiniflareOptions;
+		const mf = new Miniflare(opts);
+		useDispose(mf);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+		expect(video.preview).toMatch(/^http:\/\/first-proxy\.example\.com:3000\//);
+
+		// Change publicUrl via setOptions
+		await mf.setOptions({
+			...opts,
+			publicUrl: "http://second-proxy.example.com:4000",
+			script: `${WORKER_SCRIPT}\n// reload`,
+		});
+
+		const details = (await sendCmdToWorker(mf, "video.details", {
+			id: video.id,
+		})) as Video;
+		expect(details.preview).toMatch(
+			/^http:\/\/second-proxy\.example\.com:4000\//
+		);
+	});
+});
