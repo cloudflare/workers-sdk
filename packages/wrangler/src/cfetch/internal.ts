@@ -193,6 +193,18 @@ export async function fetchInternal<ResponseType>(
 		};
 	}
 
+	// Detect Cloudflare WAF block pages that return HTML instead of JSON.
+	// Without this check, the JSON parser throws a confusing "malformed response" error.
+	if (isWAFBlockResponse(jsonText)) {
+		throwWAFBlockError(
+			jsonText,
+			method,
+			resource,
+			response.status,
+			response.statusText
+		);
+	}
+
 	try {
 		const json = parseJSON(jsonText) as ResponseType;
 		return { response: json, status: response.status };
@@ -218,6 +230,70 @@ export function truncate(text: string, maxLength: number): string {
 		return text;
 	}
 	return `${text.substring(0, maxLength)}... (length = ${length})`;
+}
+
+/**
+ * Checks whether the response body looks like a Cloudflare WAF block page.
+ * These are HTML pages returned when the WAF rejects a request, and will
+ * never parse as JSON.
+ *
+ * @param body - The raw response body text to check.
+ * @returns `true` if the body appears to be a Cloudflare WAF block page.
+ */
+export function isWAFBlockResponse(body: string): boolean {
+	return (
+		body.includes("<html") && body.includes("Sorry, you have been blocked")
+	);
+}
+
+/**
+ * Extracts the Cloudflare Ray ID from a WAF block page, if present.
+ * The Ray ID is a hex string typically shown at the bottom of the page.
+ *
+ * @param html - The HTML body of a WAF block page.
+ * @returns The Ray ID hex string, or `undefined` if not found.
+ */
+export function extractWAFBlockRayId(html: string): string | undefined {
+	const match = html.match(/Cloudflare Ray ID:\s*([0-9a-f]+)/i);
+	return match?.[1];
+}
+
+/**
+ * Throws a descriptive {@link APIError} for a WAF block response.
+ *
+ * @param body - The raw HTML body of the WAF block page.
+ * @param method - The HTTP method of the blocked request.
+ * @param resource - The URL or path that was requested.
+ * @param status - The HTTP status code returned.
+ * @param statusText - The HTTP status text returned.
+ * @throws {APIError} Always — this function never returns.
+ */
+function throwWAFBlockError(
+	body: string,
+	method: string,
+	resource: string,
+	status: number,
+	statusText: string
+): never {
+	const rayId = extractWAFBlockRayId(body);
+	throw new APIError({
+		text: "The Cloudflare API responded with a WAF block page instead of the expected JSON response",
+		notes: [
+			{
+				text: "Cloudflare's firewall (WAF) blocked this API request. This is usually a false positive.",
+			},
+			...(rayId ? [{ text: `Cloudflare Ray ID: ${rayId}` }] : []),
+			{
+				text: rayId
+					? "If the issue persists, please open a Cloudflare Support ticket and include the Ray ID above."
+					: "If the issue persists, please open a Cloudflare Support ticket. You can find the Cloudflare Ray ID on the block page in your browser.",
+			},
+			{
+				text: `${method} ${resource} -> ${status} ${statusText}`,
+			},
+		],
+		status,
+	});
 }
 
 function cloneHeaders(headers: HeadersInit | undefined): Headers {
