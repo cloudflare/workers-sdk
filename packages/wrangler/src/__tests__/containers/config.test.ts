@@ -74,10 +74,10 @@ describe("getNormalizedContainerOptions", () => {
 		} as Partial<Config> as Config;
 
 		await expect(getNormalizedContainerOptions(config, {})).rejects.toThrow(
-			UserError,
+			UserError
 		);
 		await expect(getNormalizedContainerOptions(config, {})).rejects.toThrow(
-			"The container class_name TestContainer does not match any durable object class_name defined in your Wrangler config file",
+			"The container class_name TestContainer does not match any durable object class_name defined in your Wrangler config file"
 		);
 	});
 
@@ -109,12 +109,12 @@ describe("getNormalizedContainerOptions", () => {
 		} as Partial<Config> as Config;
 
 		await expect(getNormalizedContainerOptions(config, {})).rejects.toThrow(
-			UserError,
+			UserError
 		);
 		await expect(
-			getNormalizedContainerOptions(config, {}),
+			getNormalizedContainerOptions(config, {})
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: The container test-container is referencing the durable object TestContainer, which appears to be defined on the other-script Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.]`,
+			`[Error: The container test-container is referencing the durable object TestContainer, which appears to be defined on the other-script Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.]`
 		);
 	});
 
