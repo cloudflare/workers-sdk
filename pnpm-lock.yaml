@@ -184,7 +184,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/browser-rendering:
+  fixtures/browser-run:
     devDependencies:
       '@cloudflare/playwright':
         specifier: ^1.0.0
