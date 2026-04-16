@@ -216,7 +216,6 @@ export async function unstable_dev(
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
-		experimentalAutoCreate: false,
 		enableIpc: options?.experimental?.enableIpc,
 		nodeCompat: undefined,
 		enableContainers: options?.experimental?.enableContainers ?? false,
@@ -231,7 +230,6 @@ export async function unstable_dev(
 			// TODO: can we make this work?
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
-			AUTOCREATE_RESOURCES: false,
 		},
 		() => startDev(devOptions)
 	);

@@ -1,41 +1,38 @@
 import assert from "node:assert";
-import {
-	APIError,
-	experimental_patchConfig,
-	experimental_readRawConfig,
-	INHERIT_SYMBOL,
-	PatchConfigError,
-	UserError,
-} from "@cloudflare/workers-utils";
-import { createAISearchNamespace, getAISearchNamespace } from "../ai-search";
+import { UserError } from "@cloudflare/workers-utils";
 import { convertConfigToBindings } from "../api/startDevWorker/utils";
 import { fetchResult } from "../cfetch";
-import { createD1Database } from "../d1/create";
-import { listDatabases } from "../d1/list";
-import { getDatabaseInfoFromIdOrName } from "../d1/utils";
-import { prompt, select } from "../dialogs";
+import { prompt, search } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
-import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import {
-	createR2Bucket,
-	getR2Bucket,
-	listR2Buckets,
-} from "../r2/helpers/bucket";
 import { printBindings } from "../utils/print-bindings";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import { AISearchNamespaceHandler } from "./provision/ai-search";
+import { D1Handler } from "./provision/d1";
+import { DispatchNamespaceHandler } from "./provision/dispatch-namespace";
+import { HyperdriveHandler } from "./provision/hyperdrive";
+import {
+	generateDefaultName,
+	type NormalisedResourceInfo,
+	type ProvisionableBinding,
+	type Settings,
+} from "./provision/index";
+import { KVHandler } from "./provision/kv";
+import { MtlsCertificateHandler } from "./provision/mtls-certificate";
+import { PipelineHandler } from "./provision/pipeline";
+import { QueueHandler } from "./provision/queue";
+import { R2Handler } from "./provision/r2";
+import { VectorizeHandler } from "./provision/vectorize";
+import { VpcServiceHandler } from "./provision/vpc-service";
 import type { Binding, StartDevWorkerInput } from "../api/startDevWorker/types";
 import type {
-	CfAISearchNamespace,
-	CfD1Database,
-	CfKvNamespace,
-	CfR2Bucket,
-	ComplianceConfig,
-	Config,
-	RawConfig,
-	WorkerMetadataBinding,
-} from "@cloudflare/workers-utils";
+	HandlerStatics,
+	ProvisionResourceHandler,
+} from "./provision/index";
+import type { Config, WorkerMetadataBinding } from "@cloudflare/workers-utils";
+
+export type { Settings } from "./provision/index";
 
 export function getBindings(
 	config: Config | undefined,
@@ -52,462 +49,27 @@ export function getBindings(
 	});
 }
 
-export type Settings = {
-	bindings: Array<WorkerMetadataBinding>;
-};
-
-abstract class ProvisionResourceHandler<
-	T extends WorkerMetadataBinding["type"],
-	B extends ProvisionableBinding,
-> {
-	constructor(
-		public type: T,
-		public bindingName: string,
-		public binding: B,
-		public idField: keyof B,
-		public complianceConfig: ComplianceConfig,
-		public accountId: string
-	) {}
-
-	// Does this resource already exist in the currently deployed version of the Worker?
-	// If it does, that means we can inherit from it.
-	abstract canInherit(
-		settings: Settings | undefined
-	): boolean | Promise<boolean>;
-
-	inherit(): void {
-		// @ts-expect-error idField is a key of this.binding
-		this.binding[this.idField] = INHERIT_SYMBOL;
-	}
-	connect(id: string): void {
-		// @ts-expect-error idField is a key of this.binding
-		this.binding[this.idField] = id;
-	}
-
-	abstract create(name: string): Promise<string>;
-
-	abstract get name(): string | undefined;
-
-	async provision(name: string): Promise<void> {
-		const id = await this.create(name);
-		this.connect(id);
-	}
-
-	// This binding is fully specified and can't/shouldn't be provisioned
-	// This is usually when it has an id (e.g. D1 `database_id`)
-	isFullySpecified(): boolean {
-		return false;
-	}
-
-	// Does this binding need to be provisioned?
-	// Some bindings are not fully specified, but don't need provisioning
-	// (e.g. R2 binding, with a bucket_name that already exists)
-	async isConnectedToExistingResource(): Promise<boolean | string> {
-		return false;
-	}
-
-	// Should this resource be provisioned?
-	async shouldProvision(settings: Settings | undefined) {
-		// If the resource is fully specified, don't provision
-		if (!this.isFullySpecified()) {
-			// If we can inherit, do that and don't provision
-			if (await this.canInherit(settings)) {
-				this.inherit();
-			} else {
-				// If the resource is connected to a remote resource that _exists_
-				// (see comments on the individual functions for why this is different to isFullySpecified())
-				const connected = await this.isConnectedToExistingResource();
-				if (connected) {
-					if (typeof connected === "string") {
-						// Basically a special case for D1: the resource is specified by name in config
-						// and exists, but needs to be specified by ID for the first deploy to work
-						this.connect(connected);
-					}
-					return false;
-				}
-				return true;
-			}
-		}
-		return false;
-	}
-}
-
-class R2Handler extends ProvisionResourceHandler<
-	"r2_bucket",
-	Extract<Binding, { type: "r2_bucket" }>
-> {
-	get name(): string | undefined {
-		return this.binding.bucket_name as string;
-	}
-
-	async create(name: string) {
-		await createR2Bucket(
-			this.complianceConfig,
-			this.accountId,
-			name,
-			undefined,
-			this.binding.jurisdiction
-		);
-		return name;
-	}
-	constructor(
-		bindingName: string,
-		binding: Extract<Binding, { type: "r2_bucket" }>,
-		complianceConfig: ComplianceConfig,
-		accountId: string
-	) {
-		super(
-			"r2_bucket",
-			bindingName,
-			binding,
-			"bucket_name",
-			complianceConfig,
-			accountId
-		);
-	}
-
-	/**
-	 * Inheriting an R2 binding replaces the id property (bucket_name for R2) with the inheritance symbol.
-	 * This works when deploying (and is appropriate for all other binding types), but it means that the
-	 * bucket_name for an R2 bucket is not displayed when deploying. As such, only use the inheritance symbol
-	 * if the R2 binding has no `bucket_name`.
-	 */
-	override inherit(): void {
-		this.binding.bucket_name ??= INHERIT_SYMBOL;
-	}
-
-	/**
-	 * R2 bindings can be inherited if the binding name and jurisdiction match.
-	 * Additionally, if the user has specified a bucket_name in config, make sure that matches
-	 */
-	canInherit(settings: Settings | undefined): boolean {
-		return !!settings?.bindings.find(
-			(existing) =>
-				existing.type === this.type &&
-				existing.name === this.bindingName &&
-				existing.jurisdiction === this.binding.jurisdiction &&
-				(this.binding.bucket_name
-					? this.binding.bucket_name === existing.bucket_name
-					: true)
-		);
-	}
-	async isConnectedToExistingResource(): Promise<boolean> {
-		assert(typeof this.binding.bucket_name !== "symbol");
-
-		// If the user hasn't specified a bucket_name in config, we always provision
-		if (!this.binding.bucket_name) {
-			return false;
-		}
-		try {
-			await getR2Bucket(
-				this.complianceConfig,
-				this.accountId,
-				this.binding.bucket_name,
-				this.binding.jurisdiction
-			);
-			// This bucket_name exists! We don't need to provision it
-			return true;
-		} catch (e) {
-			if (!(e instanceof APIError && e.code === 10006)) {
-				// this is an error that is not "bucket not found", so we do want to throw
-				throw e;
-			}
-
-			// This bucket_name doesn't exist—let's provision
-			return false;
-		}
-	}
-}
-
-class AISearchNamespaceHandler extends ProvisionResourceHandler<
-	"ai_search_namespace",
-	Extract<Binding, { type: "ai_search_namespace" }>
-> {
-	get name(): string | undefined {
-		return this.binding.namespace as string;
-	}
-
-	async create(name: string) {
-		await createAISearchNamespace(this.complianceConfig, this.accountId, name);
-		return name;
-	}
-
-	constructor(
-		bindingName: string,
-		binding: Extract<Binding, { type: "ai_search_namespace" }>,
-		complianceConfig: ComplianceConfig,
-		accountId: string
-	) {
-		super(
-			"ai_search_namespace",
-			bindingName,
-			binding,
-			"namespace",
-			complianceConfig,
-			accountId
-		);
-	}
-
-	canInherit(settings: Settings | undefined): boolean {
-		return !!settings?.bindings.find(
-			(existing) =>
-				existing.type === this.type &&
-				existing.name === this.bindingName &&
-				(this.binding.namespace
-					? this.binding.namespace === existing.namespace
-					: true)
-		);
-	}
-
-	async isConnectedToExistingResource(): Promise<boolean> {
-		assert(typeof this.binding.namespace !== "symbol");
-
-		if (!this.binding.namespace) {
-			return false;
-		}
-
-		const namespace = await getAISearchNamespace(
-			this.complianceConfig,
-			this.accountId,
-			this.binding.namespace
-		);
-
-		return namespace !== null;
-	}
-}
-
-class KVHandler extends ProvisionResourceHandler<
-	"kv_namespace",
-	Extract<Binding, { type: "kv_namespace" }>
-> {
-	get name(): string | undefined {
-		return undefined;
-	}
-	async create(name: string) {
-		return await createKVNamespace(this.complianceConfig, this.accountId, name);
-	}
-	constructor(
-		bindingName: string,
-		binding: Extract<Binding, { type: "kv_namespace" }>,
-		complianceConfig: ComplianceConfig,
-		accountId: string
-	) {
-		super(
-			"kv_namespace",
-			bindingName,
-			binding,
-			"id",
-			complianceConfig,
-			accountId
-		);
-	}
-	canInherit(settings: Settings | undefined): boolean {
-		return !!settings?.bindings.find(
-			(existing) =>
-				existing.type === this.type && existing.name === this.bindingName
-		);
-	}
-	isFullySpecified(): boolean {
-		return !!this.binding.id;
-	}
-}
-
-class D1Handler extends ProvisionResourceHandler<
-	"d1",
-	Extract<Binding, { type: "d1" }>
-> {
-	get name(): string | undefined {
-		return this.binding.database_name as string;
-	}
-	async create(name: string) {
-		const db = await createD1Database(
-			this.complianceConfig,
-			this.accountId,
-			name
-		);
-		return db.uuid;
-	}
-	constructor(
-		bindingName: string,
-		binding: Extract<Binding, { type: "d1" }>,
-		complianceConfig: ComplianceConfig,
-		accountId: string
-	) {
-		super(
-			"d1",
-			bindingName,
-			binding,
-			"database_id",
-			complianceConfig,
-			accountId
-		);
-	}
-	async canInherit(settings: Settings | undefined): Promise<boolean> {
-		const maybeInherited = settings?.bindings.find(
-			(existing) =>
-				existing.type === this.type && existing.name === this.bindingName
-		) as Extract<WorkerMetadataBinding, { type: "d1" }> | undefined;
-		// A D1 binding with the same binding name exists is already present on the worker...
-		if (maybeInherited) {
-			// ...and the user hasn't specified a name in their config, so we don't need to check if the database_name matches
-			if (!this.binding.database_name) {
-				return true;
-			}
-
-			// ...and the user HAS specified a name in their config, so we need to check if the database_name they provided
-			// matches the database_name of the existing binding (which isn't present in settings, so we'll need to make an API call to check)
-			const dbFromId = await getDatabaseInfoFromIdOrName(
-				this.complianceConfig,
-				this.accountId,
-				maybeInherited.id
-			);
-			if (this.binding.database_name === dbFromId.name) {
-				return true;
-			}
-		}
-		return false;
-	}
-	async isConnectedToExistingResource(): Promise<boolean | string> {
-		assert(typeof this.binding.database_name !== "symbol");
-
-		// If the user hasn't specified a database_name in config, we always provision
-		if (!this.binding.database_name) {
-			return false;
-		}
-		try {
-			const db = await getDatabaseInfoFromIdOrName(
-				this.complianceConfig,
-				this.accountId,
-				this.binding.database_name
-			);
-
-			// This database_name exists! We don't need to provision it
-			return db.uuid;
-		} catch (e) {
-			if (!(e instanceof APIError && e.code === 7404)) {
-				// this is an error that is not "database not found", so we do want to throw
-				throw e;
-			}
-
-			// This database_name doesn't exist—let's provision
-			return false;
-		}
-	}
-	isFullySpecified(): boolean {
-		return !!this.binding.database_id;
-	}
-}
-
-type ProvisionableBinding =
-	| Extract<Binding, { type: "kv_namespace" }>
-	| Extract<Binding, { type: "d1" }>
-	| Extract<Binding, { type: "r2_bucket" }>
-	| Extract<Binding, { type: "ai_search_namespace" }>;
-
-const HANDLERS = {
-	kv_namespace: {
-		Handler: KVHandler,
-		sort: 0,
-		name: "KV Namespace",
-		keyDescription: "title or id",
-		configField: "kv_namespaces" as const,
-		load: async (complianceConfig: ComplianceConfig, accountId: string) => {
-			const preExistingKV = await listKVNamespaces(
-				complianceConfig,
-				accountId,
-				true
-			);
-			return preExistingKV.map((ns) => ({ title: ns.title, value: ns.id }));
-		},
-		toConfig: (
-			bindingName: string,
-			binding: Extract<Binding, { type: "kv_namespace" }>
-		): CfKvNamespace => {
-			const { type: _, ...rest } = binding;
-			return {
-				...rest,
-				binding: bindingName,
-			};
-		},
-	},
-	d1: {
-		Handler: D1Handler,
-		sort: 1,
-		name: "D1 Database",
-		keyDescription: "name or id",
-		configField: "d1_databases" as const,
-		load: async (complianceConfig: ComplianceConfig, accountId: string) => {
-			const preExisting = await listDatabases(
-				complianceConfig,
-				accountId,
-				true,
-				1000
-			);
-			return preExisting.map((db) => ({ title: db.name, value: db.uuid }));
-		},
-		toConfig: (
-			bindingName: string,
-			binding: Extract<Binding, { type: "d1" }>
-		): CfD1Database => {
-			const { type: _, ...rest } = binding;
-			return {
-				...rest,
-				binding: bindingName,
-			};
-		},
-	},
-	r2_bucket: {
-		Handler: R2Handler,
-		sort: 2,
-		name: "R2 Bucket",
-		keyDescription: "name",
-		configField: "r2_buckets" as const,
-		load: async (complianceConfig: ComplianceConfig, accountId: string) => {
-			const preExisting = await listR2Buckets(complianceConfig, accountId);
-			return preExisting.map((bucket) => ({
-				title: bucket.name,
-				value: bucket.name,
-			}));
-		},
-		toConfig: (
-			bindingName: string,
-			binding: Extract<Binding, { type: "r2_bucket" }>
-		): CfR2Bucket => {
-			const { type: _, ...rest } = binding;
-			return {
-				...rest,
-				binding: bindingName,
-			};
-		},
-	},
-	ai_search_namespace: {
-		Handler: AISearchNamespaceHandler,
-		sort: 3,
-		name: "AI Search Namespace",
-		keyDescription: "namespace name",
-		configField: "ai_search_namespaces" as const,
-		load: async (_complianceConfig: ComplianceConfig, _accountId: string) => {
-			// AI Search namespaces don't have a general list API in this context.
-			// The provisioning system will create them if they don't exist.
-			return [];
-		},
-		toConfig: (
-			bindingName: string,
-			binding: Extract<Binding, { type: "ai_search_namespace" }>
-		): CfAISearchNamespace => {
-			const { type: _, ...rest } = binding;
-			return {
-				...rest,
-				binding: bindingName,
-			};
-		},
-	},
+const HANDLERS: Record<string, HandlerStatics> = {
+	[KVHandler.bindingType]: KVHandler,
+	[D1Handler.bindingType]: D1Handler,
+	[R2Handler.bindingType]: R2Handler,
+	[AISearchNamespaceHandler.bindingType]: AISearchNamespaceHandler,
+	[QueueHandler.bindingType]: QueueHandler,
+	[DispatchNamespaceHandler.bindingType]: DispatchNamespaceHandler,
+	[VectorizeHandler.bindingType]: VectorizeHandler,
+	[HyperdriveHandler.bindingType]: HyperdriveHandler,
+	[PipelineHandler.bindingType]: PipelineHandler,
+	[VpcServiceHandler.bindingType]: VpcServiceHandler,
+	[MtlsCertificateHandler.bindingType]: MtlsCertificateHandler,
 };
 
 type PendingResource = {
 	binding: string;
-	resourceType: "kv_namespace" | "d1" | "r2_bucket" | "ai_search_namespace";
-	handler: KVHandler | D1Handler | R2Handler | AISearchNamespaceHandler;
+	resourceType: string;
+	handler: ProvisionResourceHandler<
+		WorkerMetadataBinding["type"],
+		ProvisionableBinding
+	>;
 };
 
 function isProvisionableBinding(
@@ -519,44 +81,17 @@ function isProvisionableBinding(
 function createHandler(
 	bindingName: string,
 	binding: ProvisionableBinding,
-	complianceConfig: ComplianceConfig,
+	config: Config,
 	accountId: string
-): KVHandler | D1Handler | R2Handler | AISearchNamespaceHandler {
-	switch (binding.type) {
-		case "kv_namespace":
-			return new KVHandler(bindingName, binding, complianceConfig, accountId);
-		case "d1":
-			return new D1Handler(bindingName, binding, complianceConfig, accountId);
-		case "r2_bucket":
-			return new R2Handler(bindingName, binding, complianceConfig, accountId);
-		case "ai_search_namespace":
-			return new AISearchNamespaceHandler(
-				bindingName,
-				binding,
-				complianceConfig,
-				accountId
-			);
-	}
-}
-
-function toConfigBinding(
-	bindingName: string,
-	binding: ProvisionableBinding
-): CfKvNamespace | CfR2Bucket | CfD1Database | CfAISearchNamespace {
-	switch (binding.type) {
-		case "kv_namespace":
-			return HANDLERS.kv_namespace.toConfig(bindingName, binding);
-		case "d1":
-			return HANDLERS.d1.toConfig(bindingName, binding);
-		case "r2_bucket":
-			return HANDLERS.r2_bucket.toConfig(bindingName, binding);
-		case "ai_search_namespace":
-			return HANDLERS.ai_search_namespace.toConfig(bindingName, binding);
-	}
+): ProvisionResourceHandler<
+	WorkerMetadataBinding["type"],
+	ProvisionableBinding
+> {
+	return HANDLERS[binding.type].create(bindingName, binding, config, accountId);
 }
 
 async function collectPendingResources(
-	complianceConfig: ComplianceConfig,
+	config: Config,
 	accountId: string,
 	scriptName: string,
 	bindings: StartDevWorkerInput["bindings"],
@@ -565,12 +100,15 @@ async function collectPendingResources(
 	let settings: Settings | undefined;
 
 	try {
-		settings = await getSettings(complianceConfig, accountId, scriptName);
+		settings = await getSettings(config, accountId, scriptName);
 	} catch {
 		logger.debug("No settings found");
 	}
 
 	const pendingResources: PendingResource[] = [];
+
+	// Track provisioned queue names for de-duplication with consumers
+	const provisionedQueueNames = new Set<string>();
 
 	for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
 		if (!isProvisionableBinding(binding)) {
@@ -581,7 +119,7 @@ async function collectPendingResources(
 			continue;
 		}
 
-		const h = createHandler(bindingName, binding, complianceConfig, accountId);
+		const h = createHandler(bindingName, binding, config, accountId);
 
 		if (await h.shouldProvision(settings)) {
 			pendingResources.push({
@@ -590,10 +128,55 @@ async function collectPendingResources(
 				handler: h,
 			});
 		}
+
+		// Track queue names (both provisioned and already-existing) for de-duplication
+		if (binding.type === "queue" && typeof binding.queue_name === "string") {
+			provisionedQueueNames.add(binding.queue_name);
+		}
 	}
 
+	// Also provision queues referenced by consumers that aren't already
+	// covered by a producer binding. Consumers are triggers, not bindings,
+	// so they don't appear in the bindings map above.
+	for (const consumer of config.queues?.consumers ?? []) {
+		if (!consumer.queue || provisionedQueueNames.has(consumer.queue)) {
+			continue;
+		}
+		provisionedQueueNames.add(consumer.queue);
+
+		const syntheticBinding: ProvisionableBinding = {
+			type: "queue",
+			queue_name: consumer.queue,
+		};
+		const syntheticName = `__consumer_${consumer.queue}`;
+		const h = createHandler(syntheticName, syntheticBinding, config, accountId);
+
+		if (await h.shouldProvision(settings)) {
+			pendingResources.push({
+				binding: syntheticName,
+				resourceType: "queue",
+				handler: h,
+			});
+		}
+	}
+
+	// Sort by the order handlers appear in the HANDLERS registry
+	const handlerOrder = Object.keys(HANDLERS);
 	return pendingResources.sort(
-		(a, b) => HANDLERS[a.resourceType].sort - HANDLERS[b.resourceType].sort
+		(a, b) =>
+			handlerOrder.indexOf(a.resourceType) -
+			handlerOrder.indexOf(b.resourceType)
+	);
+}
+
+export function getSettings(
+	config: Config,
+	accountId: string,
+	scriptName: string
+) {
+	return fetchResult<Settings>(
+		config,
+		`/accounts/${accountId}/workers/scripts/${scriptName}/settings`
 	);
 }
 
@@ -601,7 +184,6 @@ export async function provisionBindings(
 	bindings: StartDevWorkerInput["bindings"],
 	accountId: string,
 	scriptName: string,
-	autoCreate: boolean,
 	config: Config,
 	requireRemote = false
 ): Promise<void> {
@@ -614,202 +196,132 @@ export async function provisionBindings(
 		requireRemote
 	);
 
-	if (pendingResources.length > 0) {
-		assert(
-			configPath,
-			"Provisioning resources is not possible without a config file"
-		);
-
-		if (useServiceEnvironments(config)) {
-			throw new UserError(
-				"Provisioning resources is not supported with a service environment"
-			);
-		}
-		logger.log();
-
-		printBindings(
-			Object.fromEntries(
-				pendingResources.map((r) => [r.binding, { type: r.resourceType }])
-			) as Record<string, Binding>,
-			config.tail_consumers,
-			config.streaming_tail_consumers,
-			config.containers,
-			{ provisioning: true }
-		);
-		logger.log();
-
-		const existingResources: Record<string, NormalisedResourceInfo[]> = {};
-
-		for (const resource of pendingResources) {
-			existingResources[resource.resourceType] ??= await HANDLERS[
-				resource.resourceType
-			].load(config, accountId);
-
-			await runProvisioningFlow(
-				resource,
-				existingResources[resource.resourceType],
-				HANDLERS[resource.resourceType].name,
-				scriptName,
-				autoCreate
-			);
-		}
-
-		const patch: RawConfig = {};
-
-		const existingBindingNames = new Set<string>();
-
-		const isUsingRedirectedConfig =
-			config.userConfigPath && config.userConfigPath !== config.configPath;
-
-		// If we're using a redirected config, then the redirected config potentially has injected
-		// bindings that weren't originally in the user config. These can be provisioned, but we
-		// should not write the IDs back to the user config file (because the bindings weren't there in the first place)
-		if (isUsingRedirectedConfig) {
-			const { rawConfig: unredirectedConfig } =
-				await experimental_readRawConfig(
-					{ config: config.userConfigPath },
-					{ useRedirectIfAvailable: false }
-				);
-			for (const resourceType of Object.keys(
-				HANDLERS
-			) as (keyof typeof HANDLERS)[]) {
-				const configField = HANDLERS[resourceType].configField;
-				for (const binding of unredirectedConfig[configField] ?? []) {
-					existingBindingNames.add(binding.binding);
-				}
-			}
-		}
-
-		for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
-			if (!isProvisionableBinding(binding)) {
-				continue;
-			}
-
-			// See above for why we skip writing back some bindings to the config file
-			if (isUsingRedirectedConfig && !existingBindingNames.has(bindingName)) {
-				continue;
-			}
-
-			const resourceType = HANDLERS[binding.type].configField;
-
-			patch[resourceType] ??= [];
-
-			const bindingToWrite = toConfigBinding(bindingName, binding);
-
-			(patch[resourceType] as unknown as Array<Record<string, string>>).push(
-				Object.fromEntries(
-					Object.entries(bindingToWrite).filter(
-						// Make sure all the values are JSON serialisable.
-						// Otherwise we end up with "undefined" in the config
-						([_, value]) => typeof value === "string"
-					)
-				)
-			);
-		}
-
-		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
-		// This is not necessary, as future deploys can use inherited resources, but it can help with
-		// portability of the config file, and adds robustness to bindings being renamed.
-		if (!isNonInteractiveOrCI()) {
-			try {
-				await experimental_patchConfig(configPath, patch, false);
-				logger.log(
-					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work."
-				);
-			} catch (e) {
-				// no-op — if the user is using TOML config we can't update it.
-				if (!(e instanceof PatchConfigError)) {
-					throw e;
-				}
-			}
-		}
-
-		const resourceCount = pendingResources.reduce(
-			(acc, resource) => {
-				acc[resource.resourceType] ??= 0;
-				acc[resource.resourceType]++;
-				return acc;
-			},
-			{} as Record<string, number>
-		);
-		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
-
-		metrics.sendMetricsEvent("provision resources", resourceCount, {
-			sendMetrics: config.send_metrics,
-		});
+	if (pendingResources.length === 0) {
+		return;
 	}
-}
 
-export function getSettings(
-	complianceConfig: ComplianceConfig,
-	accountId: string,
-	scriptName: string
-) {
-	return fetchResult<Settings>(
-		complianceConfig,
-		`/accounts/${accountId}/workers/scripts/${scriptName}/settings`
+	assert(
+		configPath,
+		"Provisioning resources is not possible without a config file"
 	);
-}
 
-function printDivider() {
+	if (useServiceEnvironments(config)) {
+		throw new UserError(
+			"Provisioning resources is not supported with a service environment"
+		);
+	}
 	logger.log();
+
+	printBindings(
+		Object.fromEntries(
+			pendingResources.map((r) => [r.binding, { type: r.resourceType }])
+		) as Record<string, Binding>,
+		config.tail_consumers,
+		config.streaming_tail_consumers,
+		config.containers,
+		{ provisioning: true }
+	);
+	logger.log();
+
+	// Pre-flight: identify any bindings that will fail BEFORE creating anything.
+	// This avoids orphaned resources when some bindings can auto-provision but others can't.
+	if (isNonInteractiveOrCI()) {
+		const blocked = pendingResources.filter(
+			(r) => !r.handler.name && !r.handler.ciSafe
+		);
+		if (blocked.length > 0) {
+			const provisionable = pendingResources.filter(
+				(r) => r.handler.name || r.handler.ciSafe
+			);
+			reportProvisioningFailures(
+				blocked.map((r) => ({
+					binding: r.binding,
+					type: r.resourceType,
+					friendlyName: HANDLERS[r.resourceType].friendlyName,
+					hint:
+						r.handler.provisioningHint ??
+						"Provide the resource ID in your configuration file.",
+				})),
+				provisionable.map((r) => ({
+					binding: r.binding,
+					friendlyName: HANDLERS[r.resourceType].friendlyName,
+				}))
+			);
+		}
+	}
+
+	const existingResources: Record<string, NormalisedResourceInfo[]> = {};
+
+	for (const resource of pendingResources) {
+		existingResources[resource.resourceType] ??= await HANDLERS[
+			resource.resourceType
+		].load(config, accountId);
+
+		await runProvisioningFlow(
+			resource,
+			existingResources[resource.resourceType],
+			HANDLERS[resource.resourceType].friendlyName,
+			scriptName
+		);
+	}
+
+	const resourceCount = pendingResources.reduce(
+		(acc, resource) => {
+			acc[resource.resourceType] ??= 0;
+			acc[resource.resourceType]++;
+			return acc;
+		},
+		{} as Record<string, number>
+	);
+	logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
+
+	metrics.sendMetricsEvent("provision resources", resourceCount, {
+		sendMetrics: config.send_metrics,
+	});
 }
 
-type NormalisedResourceInfo = {
-	/** The name of the resource */
-	title: string;
-	/** The id of the resource */
-	value: string;
+type ProvisioningFailure = {
+	binding: string;
+	type: string;
+	friendlyName: string;
+	hint: string;
 };
 
+/**
+ * Provision a single resource. In non-interactive mode, the pre-flight
+ * in provisionBindings guarantees this is only called for resources
+ * that can succeed (ciSafe or name provided).
+ */
 async function runProvisioningFlow(
 	item: PendingResource,
 	preExisting: NormalisedResourceInfo[],
 	friendlyBindingName: string,
-	scriptName: string,
-	autoCreate: boolean
-) {
+	scriptName: string
+): Promise<void> {
 	const NEW_OPTION_VALUE = "__WRANGLER_INTERNAL_NEW";
-	const SEARCH_OPTION_VALUE = "__WRANGLER_INTERNAL_SEARCH";
-	const MAX_OPTIONS = 4;
-	// NB preExisting does not actually contain all resources on the account - we max out at ~30 d1 databases, ~100 kv, and ~20 r2.
-	const options = preExisting.slice(0, MAX_OPTIONS - 1);
-	if (options.length < preExisting.length) {
-		options.push({
-			title: "Other (too many to list)",
-			value: SEARCH_OPTION_VALUE,
-		});
-	}
-
-	const defaultName = `${scriptName}-${item.binding.toLowerCase().replaceAll("_", "-")}`;
+	const defaultName = generateDefaultName(scriptName, item.binding);
 	logger.log("Provisioning", item.binding, `(${friendlyBindingName})...`);
 
+	// Path 1: Name found in config -- create non-interactively
 	if (item.handler.name) {
 		logger.log("Resource name found in config:", item.handler.name);
 		logger.log(
 			`🌀 Creating new ${friendlyBindingName} "${item.handler.name}"...`
 		);
 		await item.handler.provision(item.handler.name);
-	} else if (autoCreate) {
-		logger.log(`🌀 Creating new ${friendlyBindingName} "${defaultName}"...`);
-		await item.handler.provision(defaultName);
-	} else {
-		let action: string = NEW_OPTION_VALUE;
+	} else if (!isNonInteractiveOrCI()) {
+		// Path 2: Interactive terminal -- searchable list of existing + create new
+		const choices = [
+			{ title: "Create new", value: NEW_OPTION_VALUE },
+			...preExisting,
+		];
 
-		if (options.length > 0) {
-			action = await select(
-				`Would you like to connect an existing ${friendlyBindingName} or create a new one?`,
-				{
-					choices: options.concat([
-						{ title: "Create new", value: NEW_OPTION_VALUE },
-					]),
-					defaultOption: options.length,
-					fallbackOption: options.length,
-				}
-			);
-		}
+		const action = await search(
+			`Select an existing ${friendlyBindingName} or create a new one`,
+			{ choices }
+		);
 
-		if (action === NEW_OPTION_VALUE) {
+		if (!action || action === NEW_OPTION_VALUE) {
 			const name = await prompt(
 				`Enter a name for your new ${friendlyBindingName}`,
 				{
@@ -817,30 +329,47 @@ async function runProvisioningFlow(
 				}
 			);
 			logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
-			await item.handler.provision(name);
-		} else if (action === SEARCH_OPTION_VALUE) {
-			// search through pre-existing resources that weren't listed
-			let foundResource: NormalisedResourceInfo | undefined;
-			while (foundResource === undefined) {
-				const input = await prompt(
-					`Enter the ${HANDLERS[item.resourceType].keyDescription} for an existing ${friendlyBindingName}`
-				);
-				foundResource = preExisting.find(
-					(r) => r.title === input || r.value === input
-				);
-				if (foundResource) {
-					item.handler.connect(foundResource.value);
-				} else {
-					logger.log(
-						`No ${friendlyBindingName} with that ${HANDLERS[item.resourceType].keyDescription} "${input}" found. Please try again.`
-					);
-				}
-			}
+			await item.handler.interactiveCreate(name);
 		} else {
 			item.handler.connect(action);
 		}
+	} else if (item.handler.ciSafe) {
+		// Path 3: CI + safe binding -- auto-create with generated name
+		logger.log(`🌀 Creating new ${friendlyBindingName} "${defaultName}"...`);
+		await item.handler.provision(defaultName);
+	} else {
+		// Safety net — pre-flight should have caught this
+		throw new UserError(
+			`Cannot auto-provision ${friendlyBindingName} "${item.binding}" in non-interactive mode.`
+		);
 	}
 
-	logger.log(`✨ ${item.binding} provisioned 🎉`);
-	printDivider();
+	logger.log(`✨ ${item.binding} provisioned`);
+	logger.log();
+}
+
+/**
+ * Report all provisioning failures at once.
+ *
+ * Nothing is created before this is called — the check is a pre-flight
+ * so we never orphan resources.
+ */
+function reportProvisioningFailures(
+	failures: ProvisioningFailure[],
+	wouldSucceed: { binding: string; friendlyName: string }[] = []
+): never {
+	const lines = failures.map(
+		(f) => `  - ${f.binding} (${f.friendlyName}): ${f.hint}`
+	);
+
+	let msg = `Could not auto-provision the following bindings:\n${lines.join("\n")}`;
+	msg += `\n\nAlternatively, run wrangler deploy interactively in a terminal to provision these resources via a guided wizard.`;
+	if (wouldSucceed.length > 0) {
+		const names = wouldSucceed
+			.map((r) => `${r.binding} (${r.friendlyName})`)
+			.join(", ");
+		msg += `\n\nOnce resolved, these bindings will be auto-provisioned on deploy: ${names}`;
+	}
+
+	throw new UserError(msg);
 }

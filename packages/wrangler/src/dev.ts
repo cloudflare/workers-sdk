@@ -33,7 +33,6 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		printMetricsBanner: true,
 	},

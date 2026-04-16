@@ -141,6 +141,49 @@ interface MultiSelectOptions<Values> {
 	defaultOptions?: number[];
 }
 
+interface SearchOptions<Values> {
+	choices: SelectOption<Values>[];
+	fallbackValue?: Values;
+}
+
+export async function search<Values extends string>(
+	text: string,
+	options: SearchOptions<Values>
+): Promise<Values> {
+	if (isNonInteractiveOrCI()) {
+		if (options.fallbackValue === undefined) {
+			throw new NoDefaultValueProvided();
+		}
+		logger.log(`? ${text}`);
+		logger.log(
+			`🤖 ${chalk.dim(
+				"Using fallback value in non-interactive context:"
+			)} ${chalk.white.bold(String(options.fallbackValue))}`
+		);
+		return options.fallbackValue;
+	}
+	const { value } = await prompts({
+		type: "autocomplete",
+		name: "value",
+		message: `${text} ${chalk.dim("(type to filter)")}`,
+		choices: options.choices,
+		suggest: (input: string, choices: prompts.Choice[]) =>
+			Promise.resolve(
+				choices.filter((c) =>
+					c.title.toLowerCase().includes(input.toLowerCase())
+				)
+			),
+		onState: (state) => {
+			if (state.aborted) {
+				process.nextTick(() => {
+					process.exit(1);
+				});
+			}
+		},
+	});
+	return value;
+}
+
 export async function multiselect<Values extends string>(
 	text: string,
 	options: MultiSelectOptions<Values>

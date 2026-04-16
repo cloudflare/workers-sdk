@@ -104,8 +104,6 @@ type Props = {
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
 	projectRoot: string | undefined;
-	experimentalAutoCreate: boolean;
-
 	tag: string | undefined;
 	message: string | undefined;
 	previewAlias: string | undefined;
@@ -265,13 +263,6 @@ export const versionsUploadCommand = createCommand({
 			describe: "Compile a project without actually uploading the version.",
 			type: "boolean",
 		},
-		"experimental-auto-create": {
-			describe: "Automatically provision draft bindings with new resources",
-			type: "boolean",
-			default: true,
-			hidden: true,
-			alias: "x-auto-create",
-		},
 		"secrets-file": {
 			describe:
 				"Path to a file containing secrets to upload with the version (JSON or .env format). Secrets from previous deployments will not be deleted - see `--keep-secrets`",
@@ -284,7 +275,6 @@ export const versionsUploadCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
@@ -401,7 +391,6 @@ export const versionsUploadCommand = createCommand({
 				tag: args.tag,
 				message: args.message,
 				previewAlias: previewAlias,
-				experimentalAutoCreate: args.experimentalAutoCreate,
 				outFile: args.outfile,
 				secretsFile: args.secretsFile,
 			});
@@ -792,19 +781,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		} else {
 			assert(accountId, "Missing accountId");
 			if (getFlag("RESOURCES_PROVISION")) {
-				await provisionBindings(
-					bindings,
-					accountId,
-					scriptName,
-					props.experimentalAutoCreate,
-					props.config
-				);
+				await provisionBindings(bindings, accountId, scriptName, props.config);
 			}
 			workerBundle = createWorkerUploadForm(worker, bindings, {
 				unsafe: config.unsafe,
 			});
 
-			await ensureQueuesExistByConfig(config);
+			if (!getFlag("RESOURCES_PROVISION")) {
+				await ensureQueuesExistByConfig(config);
+			}
 			let bindingsPrinted = false;
 
 			// Upload the version.
