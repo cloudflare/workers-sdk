@@ -321,6 +321,12 @@ export const CoreSharedOptionsSchema = z
 				deviceId: z.string().optional(),
 			})
 			.default({ enabled: false }),
+
+		// The stable, externally-reachable URL for this Miniflare instance
+		// (e.g. the Wrangler proxy URL or Vite dev server URL). Used by
+		// plugins like Stream to generate preview URLs that outlive runtime
+		// restarts. If not set, plugins fall back to the runtime entry URL.
+		publicUrl: z.string().url().optional(),
 	})
 	.refine(
 		({ structuredWorkerdLogs, handleStructuredLogs }) => {

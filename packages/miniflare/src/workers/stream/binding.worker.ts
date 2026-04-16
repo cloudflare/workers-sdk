@@ -11,6 +11,7 @@ import type { StreamObject } from "./object.worker";
 interface Env {
 	store: DurableObjectNamespace<StreamObject>;
 	MINIFLARE_LOOPBACK: Fetcher;
+	MF_STREAM_PUBLIC_URL?: string;
 }
 
 function getStub(env: Env): DurableObjectStub<StreamObject> {
@@ -19,6 +20,10 @@ function getStub(env: Env): DurableObjectStub<StreamObject> {
 }
 
 async function getEntryUrl(env: Env): Promise<URL> {
+	if (env.MF_STREAM_PUBLIC_URL) {
+		return new URL(env.MF_STREAM_PUBLIC_URL);
+	}
+	// Fallback for direct Miniflare usage without a proxy in front
 	const resp = await env.MINIFLARE_LOOPBACK.fetch(
 		"http://localhost/core/entry-url"
 	);

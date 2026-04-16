@@ -2026,6 +2026,7 @@ export class Miniflare {
 				workerNames,
 				loopbackHost,
 				loopbackPort,
+				publicUrl: sharedOpts.core.publicUrl,
 				unsafeStickyBlobs,
 				wrappedBindingNames,
 				durableObjectClassNames,

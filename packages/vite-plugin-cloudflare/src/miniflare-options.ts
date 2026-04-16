@@ -445,9 +445,15 @@ export async function getDevMiniflareOptions(
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
+	const serverConfig = viteDevServer.config.server;
+	const publicHost =
+		typeof serverConfig.host === "string" ? serverConfig.host : "localhost";
+	const publicUrl = `${serverConfig.https ? "https" : "http"}://${publicHost}:${serverConfig.port}`;
+
 	return {
 		miniflareOptions: {
 			log: logger,
+			publicUrl,
 			unsafeProxySharedSecret: PROXY_SHARED_SECRET,
 			logRequests: false,
 			inspectorPort:
@@ -636,9 +642,15 @@ export async function getPreviewMiniflareOptions(
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
+	const serverConfig = vitePreviewServer.config.preview;
+	const publicHost =
+		typeof serverConfig.host === "string" ? serverConfig.host : "localhost";
+	const publicUrl = `${serverConfig.https ? "https" : "http"}://${publicHost}:${serverConfig.port}`;
+
 	return {
 		miniflareOptions: {
 			log: logger,
+			publicUrl,
 			unsafeProxySharedSecret: PROXY_SHARED_SECRET,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,
