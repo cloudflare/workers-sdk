@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.16.1
+
+### Patch Changes
+
+- [#13468](https://github.com/cloudflare/workers-sdk/pull/13468) [`051db1f`](https://github.com/cloudflare/workers-sdk/commit/051db1fed10091bfd83b30975fbb7f8f00ea1484) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Make all properties in `previews` optional
+
+  All properties in `previews` were previously incorrectly typed as required.
+
 ## 0.16.0
 
 ### Minor Changes

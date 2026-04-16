@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { expect } from "vitest";
+import { assert } from "vitest";
 import { createFetchResult } from "../index";
 
 const latestDeployment = (scriptTag: string) => ({
@@ -131,7 +130,7 @@ export const mswSuccessDeploymentDetails = [
 				];
 			}
 
-			expect(url.toString().includes("1701-E"));
+			assert(url.toString().includes("1701-E"));
 			return HttpResponse.json(
 				createFetchResult({
 					id: "1701-E",
