@@ -11,7 +11,6 @@ import util from "node:util";
 import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli";
 import { removeDir, removeDirSync } from "@cloudflare/workers-utils";
-import exitHook from "exit-hook";
 import { $ as colors$, green } from "kleur/colors";
 import stoppable from "stoppable";
 import { getGlobalDispatcher, Pool } from "undici";
@@ -21,6 +20,7 @@ import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { fallbackCf, setupCf } from "./cf";
+import { exitHook } from "./exit-hook";
 import {
 	coupleWebSocket,
 	DispatchFetchDispatcher,
@@ -3048,6 +3048,10 @@ export class Miniflare {
 			// all connections broke), so ignore ClientDestroyedError.
 			try {
 				await this.#runtimeDispatcher?.close();
+			} catch {}
+			// Also close the dev-registry dispatcher (same issue as above).
+			try {
+				await this.#devRegistryDispatcher?.close();
 			} catch {}
 
 			await this.#stopLoopbackServer();
