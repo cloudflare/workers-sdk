@@ -5,6 +5,7 @@ import {
 	Link,
 	notFound,
 	useNavigate,
+	useRouterState,
 } from "@tanstack/react-router";
 import { useState } from "react";
 import { r2BucketDeleteObjects, r2BucketGetObject } from "../../../api";
@@ -181,14 +182,22 @@ function ObjectDetailView(): JSX.Element {
 	}
 
 	// Build breadcrumb items - bucket, parent folders, and object name
-	const pathSegments = search.objectKey.split("/").filter(Boolean);
-	const fileName = pathSegments.pop() || search.objectKey;
+	const routerState = useRouterState();
+	const urlParams = new URLSearchParams(routerState.location.searchStr);
+	const directoryView = urlParams.get("delimiter") !== "false";
+
+	const pathSegments = directoryView
+		? search.objectKey.split("/").filter(Boolean)
+		: [];
+	const fileName = directoryView
+		? pathSegments.pop() || search.objectKey
+		: search.objectKey;
 	const breadcrumbItems = [
 		<Link
 			className="text-kumo-default no-underline hover:text-kumo-link"
 			key="bucket"
 			params={{ bucketName: params.bucketName }}
-			search={{}}
+			search={(prev) => ({ ...prev, prefix: undefined })}
 			to="/r2/$bucketName"
 		>
 			{params.bucketName}
@@ -200,10 +209,10 @@ function ObjectDetailView(): JSX.Element {
 					className="text-kumo-default no-underline hover:text-kumo-link"
 					key={segmentPrefix}
 					params={{ bucketName: params.bucketName }}
-					search={{ prefix: segmentPrefix }}
+					search={(prev) => ({ ...prev, prefix: segmentPrefix })}
 					to="/r2/$bucketName"
 				>
-					{segment}
+					{segment}/
 				</Link>
 			);
 		}),
