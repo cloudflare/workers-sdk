@@ -315,6 +315,36 @@ function containerConfigToCreateRequest(
 	};
 }
 
+function formatContainerSnippetForDisplay<
+	T extends {
+		configuration?: ModifyApplicationRequestBody["configuration"];
+	},
+>(container: T, configPath: Config["configPath"]) {
+	// Normalize field names from the API into the Wrangler specific format
+	// Example: `container.configuration.wrangler_ssh` (API) => `container.configuration.ssh` (Wrangler)
+	const configurationForDisplay =
+		container.configuration === undefined
+			? undefined
+			: Object.fromEntries(
+					Object.entries(container.configuration).map(([key, value]) => [
+						key === "wrangler_ssh" ? "ssh" : key,
+						value,
+					])
+				);
+
+	return formatConfigSnippet(
+		{
+			containers: [
+				{
+					...container,
+					configuration: configurationForDisplay,
+				} as unknown as ContainerApp,
+			],
+		},
+		configPath
+	);
+}
+
 export async function apply(
 	args: {
 		imageRef: ImageRef;
@@ -404,15 +434,13 @@ export async function apply(
 			sortObjectRecursive<ModifyApplicationRequestBody>(modifyReq)
 		);
 
-		const prev = formatConfigSnippet(
-			// note this really is a CreateApplicationRequest, not a ContainerApp
-			// but this function doesn't actually care about the type
-			{ containers: [normalisedPrevApp as ContainerApp] },
+		const prev = formatContainerSnippetForDisplay(
+			normalisedPrevApp,
 			config.configPath
 		);
 
-		const now = formatConfigSnippet(
-			{ containers: [nowContainer as ContainerApp] },
+		const now = formatContainerSnippetForDisplay(
+			nowContainer,
 			config.configPath
 		);
 		const diff = new Diff(prev, now);
@@ -453,8 +481,8 @@ export async function apply(
 		// print the header of the app
 		updateStatus(bold.underline(green.underline("NEW")) + ` ${appConfig.name}`);
 
-		const configStr = formatConfigSnippet(
-			{ containers: [appConfig as ContainerApp] },
+		const configStr = formatContainerSnippetForDisplay(
+			appConfig,
 			config.configPath
 		);
 
