@@ -472,47 +472,5 @@ describe("KV API", () => {
 				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
-
-		test("succeeds when combined value size exceeds KV bulk-get limit", async ({
-			expect,
-		}) => {
-			// Regression test for https://github.com/cloudflare/workers-sdk/issues/13459
-			// The KV bulk-get endpoint has a 25 MB aggregate size limit. The local
-			// explorer avoids this by fetching each key individually, so large
-			// namespaces should not trigger a 413 error.
-			const kv = await mf.getKVNamespace("TEST_KV");
-
-			// Seed 3 × 10 MB values (30 MB total).
-			const largeValue = "x".repeat(10 * 1024 * 1024);
-			await kv.put("large-key-1", largeValue);
-			await kv.put("large-key-2", largeValue);
-			await kv.put("large-key-3", largeValue);
-
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/get`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						keys: ["large-key-1", "large-key-2", "large-key-3"],
-					}),
-				}
-			);
-
-			expect(response.status).toBe(200);
-			const data = await expectValidResponse(
-				response,
-				zWorkersKvNamespaceGetMultipleKeyValuePairsResponse,
-				expect
-			);
-			expect(data.success).toBe(true);
-			expect(data.result).toMatchObject({
-				values: {
-					"large-key-1": largeValue,
-					"large-key-2": largeValue,
-					"large-key-3": largeValue,
-				},
-			});
-		});
 	});
 });

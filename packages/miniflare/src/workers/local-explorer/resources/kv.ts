@@ -408,21 +408,16 @@ export async function bulkGetKVValues(c: AppContext, body: BulkGetBody) {
 	// Try local first
 	const kv = getKVBinding(c.env, namespace_id);
 	if (kv) {
-		// Fetch each key individually to avoid the KV bulk-get aggregate size
-		// limit (25 MB). The explorer UI requests values for a page of keys at a
-		// time, so the number of concurrent fetches is bounded by the page size.
-		const valueEntries = await Promise.all(
-			keys.map(async (key) => {
-				const value = await kv.get(key);
-				return [key, value ?? null];
-			})
-		);
+		// Fetch all keys at once - returns Map<string, string | null>
+		const results = await kv.get(keys);
 
-		return c.json(
-			wrapResponse({
-				values: Object.fromEntries(valueEntries),
-			})
-		);
+		// Build result object with null for missing keys
+		const values: Record<string, string | null> = {};
+		for (const key of keys) {
+			values[key] = results?.get(key) ?? null;
+		}
+
+		return c.json(wrapResponse({ values }));
 	}
 
 	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
