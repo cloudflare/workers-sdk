@@ -211,7 +211,7 @@ describe("Stream videos", () => {
 		expect(video.hlsPlaybackUrl).toContain(video.id);
 		expect(video.dashPlaybackUrl).toContain(video.id);
 		expect(video.preview).toMatch(
-			new RegExp(`^http://.*?/cdn-cgi/stream/${video.id}/video\\.mp4$`)
+			new RegExp(`^http://.*?/cdn-cgi/mf/stream/${video.id}/watch$`)
 		);
 
 		const details = (await sendCmdToWorker(mf, "video.details", {
@@ -659,7 +659,7 @@ describe("Stream video serving", () => {
 
 		// Fetch the video via the preview URL path and consume body immediately
 		const resp = await mf.dispatchFetch(
-			`http://placeholder/cdn-cgi/stream/${video.id}/video.mp4`
+			`http://placeholder/cdn-cgi/mf/stream/${video.id}/watch`
 		);
 		const bytes = new Uint8Array(await resp.arrayBuffer());
 		expect(resp.status).toBe(200);
@@ -671,7 +671,7 @@ describe("Stream video serving", () => {
 		useDispose(mf);
 
 		const resp = await mf.dispatchFetch(
-			"http://placeholder/cdn-cgi/stream/00000000-0000-0000-0000-000000000000/video.mp4"
+			"http://placeholder/cdn-cgi/mf/stream/00000000-0000-0000-0000-000000000000/watch"
 		);
 		await resp.arrayBuffer(); // consume body to avoid dispatchFetch error
 		expect(resp.status).toBe(404);
