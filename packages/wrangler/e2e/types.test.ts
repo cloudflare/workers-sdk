@@ -313,5 +313,122 @@ describe("types", () => {
 			expect(output.stderr).toContain("non-Wrangler");
 			expect(output.status).toBe(1);
 		});
+
+		describe("--env-interface", () => {
+			it("should not error when --check uses same --env-interface as generation", async ({
+				expect,
+			}) => {
+				await helper.run(
+					`wrangler types --include-runtime=false --env-interface MyEnv`
+				);
+				const output = await helper.run(
+					`wrangler types --check --include-runtime=false --env-interface MyEnv`
+				);
+				expect(output.stderr).toBeFalsy();
+				expect(output.stdout).toContain("up to date");
+				expect(output.status).toBe(0);
+			});
+
+			it("should error when --check uses different --env-interface than generation", async ({
+				expect,
+			}) => {
+				await helper.run(
+					`wrangler types --include-runtime=false --env-interface MyEnv`
+				);
+				const output = await helper.run(
+					`wrangler types --check --include-runtime=false --env-interface DifferentEnv`
+				);
+				expect(output.stderr).toContain("out of date");
+				expect(output.status).toBe(1);
+			});
+
+			it("should error when --check uses --env-interface but types were generated with default", async ({
+				expect,
+			}) => {
+				await helper.run(`wrangler types --include-runtime=false`);
+				const output = await helper.run(
+					`wrangler types --check --include-runtime=false --env-interface CustomEnv`
+				);
+				expect(output.stderr).toContain("out of date");
+				expect(output.status).toBe(1);
+			});
+		});
+
+		describe("multiple --config (secondary configs)", () => {
+			beforeEach(async () => {
+				await helper.seed({
+					"primary/index.ts":
+						"export default { async fetch() { return new Response('ok'); } };",
+					"primary/wrangler.jsonc": JSON.stringify({
+						compatibility_date: "2022-01-12",
+						name: "primary-worker",
+						main: "./index.ts",
+						services: [
+							{
+								binding: "SECONDARY_SERVICE",
+								service: "secondary-worker",
+							},
+						],
+					}),
+					"secondary/index.ts":
+						"export default { async fetch() { return new Response('ok'); } };",
+					"secondary/wrangler.jsonc": JSON.stringify({
+						compatibility_date: "2022-01-12",
+						name: "secondary-worker",
+						main: "./index.ts",
+						vars: { WORKER_B_VAR: "worker b var" },
+					}),
+				});
+			});
+
+			it("should not error when --check includes same secondary configs", async ({
+				expect,
+			}) => {
+				await helper.run(
+					`wrangler types --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts`
+				);
+				const output = await helper.run(
+					`wrangler types --check --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts`
+				);
+				expect(output.stderr).toBeFalsy();
+				expect(output.stdout).toContain("up to date");
+				expect(output.status).toBe(0);
+			});
+
+			it("should error when secondary config changes", async ({ expect }) => {
+				await helper.run(
+					`wrangler types --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts`
+				);
+
+				await helper.seed({
+					"secondary/wrangler.jsonc": JSON.stringify({
+						compatibility_date: "2022-01-12",
+						name: "renamed-secondary-worker",
+						main: "./index.ts",
+						vars: { WORKER_B_VAR: "worker b var" },
+					}),
+				});
+
+				const output = await helper.run(
+					`wrangler types --check --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts`
+				);
+				expect(output.stderr).toContain("out of date");
+				expect(output.status).toBe(1);
+			});
+
+			it("should error when --check omits secondary configs that were used during generation", async ({
+				expect,
+			}) => {
+				await helper.run(
+					`wrangler types --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts`
+				);
+
+				const output = await helper.run(
+					`wrangler types --check --include-runtime=false -c primary/wrangler.jsonc --path primary/worker-configuration.d.ts`
+				);
+				expect(output.stderr).toContain("out of date");
+				expect(output.status).toBe(1);
+			});
+		});
 	});
 });
