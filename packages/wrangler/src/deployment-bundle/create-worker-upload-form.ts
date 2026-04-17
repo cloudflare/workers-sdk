@@ -382,11 +382,21 @@ export function createWorkerUploadForm(
 	});
 
 	hyperdrive.forEach(({ binding, id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "hyperdrive",
-			id: id,
-		});
+		if (options?.dryRun) {
+			id ??= INHERIT_SYMBOL;
+		}
+		if (id === undefined) {
+			throw new UserError(`${binding} bindings must have an "id" field`);
+		}
+		if (id === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "hyperdrive",
+				id,
+			});
+		}
 	});
 
 	secrets_store_secrets.forEach(({ binding, store_id, secret_name }) => {

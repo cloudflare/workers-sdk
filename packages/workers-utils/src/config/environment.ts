@@ -1016,7 +1016,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the project in the Worker. */
 		binding: string;
 		/** The id of the database. */
-		id: string;
+		id?: string;
 		/** The local database connection string for `wrangler dev` */
 		localConnectionString?: string;
 	}[];

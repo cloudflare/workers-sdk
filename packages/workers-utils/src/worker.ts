@@ -268,7 +268,7 @@ export interface CfRateLimit {
 
 export interface CfHyperdrive {
 	binding: string;
-	id: string;
+	id?: string | typeof INHERIT_SYMBOL;
 	localConnectionString?: string;
 }
 

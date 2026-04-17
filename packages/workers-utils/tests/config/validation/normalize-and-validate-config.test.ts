@@ -3534,9 +3534,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "hyperdrive[0]" bindings should have a string "binding" field but got {}.
-					  - "hyperdrive[0]" bindings must have a "id" field but got {}.
-					  - "hyperdrive[2]" bindings should have a string "binding" field but got {"binding":2000,"project":2111}.
-					  - "hyperdrive[2]" bindings must have a "id" field but got {"binding":2000,"project":2111}."
+					  - "hyperdrive[2]" bindings should have a string "binding" field but got {"binding":2000,"project":2111}."
 				`);
 			});
 		});
