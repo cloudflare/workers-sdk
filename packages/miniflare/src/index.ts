@@ -2423,6 +2423,7 @@ export class Miniflare {
 		// Set up a direct dispatcher to the dev-registry-proxy socket so we can
 		// push registry updates without routing through the entry worker.
 		const devRegistryPort = maybeSocketPorts.get(SOCKET_DEV_REGISTRY);
+		void this.#devRegistryDispatcher?.close().catch(() => {});
 		if (devRegistryPort !== undefined) {
 			this.#devRegistryDispatcher = new Pool(
 				new URL(`http://127.0.0.1:${devRegistryPort}`)
