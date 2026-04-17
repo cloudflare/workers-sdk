@@ -9,12 +9,15 @@ name: "Rerun Code Owners"
 # Why a two-workflow design?
 # -------------------------
 # For fork PRs, pull_request_review gives a read-only GITHUB_TOKEN and no
-# access to secrets, so this workflow CANNOT call the Actions API to re-run
-# jobs. Instead it saves the PR context as an artifact and exits. The
-# companion workflow (rerun-codeowners-privileged.yml) is triggered by the
-# workflow_run event when THIS workflow completes. workflow_run always runs
-# from the default branch with full permissions, so it can perform the
-# re-run even for fork PRs.
+# access to secrets. Unlike labeled/unlabeled events there is no
+# pull_request_review variant of pull_request_target, so we cannot get a
+# privileged token in a single workflow. Instead this workflow simply needs
+# to *exist and succeed* — the companion workflow
+# (rerun-codeowners-privileged.yml) is triggered by the workflow_run event
+# when THIS workflow completes. workflow_run always runs from the default
+# branch with full permissions, and it reads the PR head SHA directly from
+# github.event.workflow_run.head_sha (GitHub-provided metadata, not
+# controllable by fork code).
 on:
   pull_request_review:
     types: [submitted, dismissed]
@@ -23,15 +26,8 @@ permissions: {}
 
 jobs:
   trigger:
-    name: "Save PR Context"
+    name: "Trigger Privileged Rerun"
     runs-on: ubuntu-latest
     steps:
-      - name: Save PR head SHA
-        run: echo "${{ github.event.pull_request.head.sha }}" > head_sha.txt
-
-      - name: Upload PR context
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-context
-          path: head_sha.txt
-          retention-days: 1
+      - name: Log trigger
+        run: echo "Review event on ${{ github.event.pull_request.html_url }} — privileged rerun will follow."

@@ -8,6 +8,10 @@ name: "Rerun Code Owners (Privileged)"
 # original event (pull_request_review) came from a fork PR, where the
 # GITHUB_TOKEN would otherwise be read-only.
 #
+# The PR head SHA is read from github.event.workflow_run.head_sha — this is
+# GitHub-provided metadata and cannot be manipulated by fork code (unlike
+# the previous artifact-based approach).
+#
 # Strategy: CHECK-NAME LOOKUP
 # ----------------------------
 # The codeowners.yml workflow uses pull_request_target, which means its
@@ -26,11 +30,6 @@ name: "Rerun Code Owners (Privileged)"
 #
 # From the check run's details_url we extract the Actions job ID, then
 # re-run that specific job.
-#
-# This approach would NOT work well for workflows with matrix-expanded job
-# names (e.g. "Wrangler E2E (Linux, shard 1/4)") because the names are
-# dynamic. For those, see rerun-remote-tests-privileged.yml which uses the
-# workflow-file lookup strategy instead.
 on:
   workflow_run:
     workflows: ["Rerun Code Owners"]
@@ -47,20 +46,12 @@ jobs:
       actions: write
       checks: read
     steps:
-      - name: Download PR context
-        uses: actions/download-artifact@v4
-        with:
-          name: pr-context
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Re-run Codeowners check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           REPO: ${{ github.repository }}
         run: |
-          HEAD_SHA=$(cat head_sha.txt)
-
           # Find the "Run Codeowners Plus" check run on the PR head commit
           # and extract the Actions job ID from the check run's details URL
           # (the last path segment before any query string).

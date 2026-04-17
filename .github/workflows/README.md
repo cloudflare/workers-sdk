@@ -112,13 +112,13 @@ See below for a summary of this repo's Actions
   - A review is submitted or dismissed on a PR.
 - Actions
   - Re-runs the "Run Codeowners Plus" check so it re-evaluates approval status after the review change.
-  - Uses the `workflow_run` pattern: the trigger workflow saves PR context as an artifact, then the privileged companion workflow (which has full permissions) performs the re-run. This is necessary because `pull_request_review` gives a read-only token for fork PRs.
+  - Uses the `workflow_run` pattern: the trigger workflow exists solely to fire a `workflow_run` event; the privileged companion workflow (which has full permissions) reads the PR head SHA from `github.event.workflow_run.head_sha` and performs the re-run. This is necessary because `pull_request_review` gives a read-only token for fork PRs and has no `_target` variant.
 
-### Rerun Remote Tests (rerun-remote-tests.yml + rerun-remote-tests-privileged.yml)
+### Rerun Remote Tests (rerun-remote-tests.yml)
 
 - Triggers
   - The `run-remote-tests` or `run-c3-frameworks-tests` label is added to or removed from a PR.
 - Actions
   - Re-runs the E2E workflows for the PR so they pick up the label change and pass (or withhold) API credentials to the test steps.
   - `run-remote-tests` re-runs Wrangler, Vite, and C3 E2E workflows; `run-c3-frameworks-tests` re-runs only C3 E2E.
-  - Uses the same `workflow_run` pattern as the codeowners rerun above to support fork PRs.
+  - Uses `pull_request_target` to get a privileged token even for fork PRs (safe because no untrusted code is checked out).
