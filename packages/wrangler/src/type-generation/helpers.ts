@@ -148,9 +148,9 @@ const unsafeParseBooleanString = (value: unknown): boolean => {
  * the original options used for generation, ensuring accurate comparison.
  *
  * @param primaryConfig - The primary Wrangler configuration
- * @param typesPath - Path to the generated types file
  * @param envInterface - Override for the env interface name; when provided, takes
  *   precedence over the value recorded in the file header
+ * @param typesPath - Path to the generated types file
  * @param serviceEntries - Map of secondary worker names to their entry points,
  *   used for cross-worker type resolution (service/DO bindings)
  *
@@ -158,8 +158,8 @@ const unsafeParseBooleanString = (value: unknown): boolean => {
  */
 export const checkTypesUpToDate = async (
 	primaryConfig: Config,
-	typesPath: string = DEFAULT_WORKERS_TYPES_FILE_PATH,
 	envInterface?: string,
+	typesPath: string = DEFAULT_WORKERS_TYPES_FILE_PATH,
 	serviceEntries: Map<string, Entry> = new Map()
 ): Promise<boolean> => {
 	let typesFileLines = new Array<string>();

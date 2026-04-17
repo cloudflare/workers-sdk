@@ -212,8 +212,8 @@ export const typesCommand = createCommand({
 		if (args.check) {
 			const outOfDate = await checkTypesUpToDate(
 				config,
-				outputPath,
 				envInterface,
+				outputPath,
 				secondaryEntries
 			);
 			if (outOfDate) {
