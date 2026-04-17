@@ -4090,7 +4090,7 @@ const validateVpcServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "service_id", "string")) {
+	if (!isOptionalProperty(value, "service_id", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a "service_id" field but got ${JSON.stringify(
 				value

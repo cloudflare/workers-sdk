@@ -426,11 +426,21 @@ export function createWorkerUploadForm(
 	});
 
 	vpc_services.forEach(({ binding, service_id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "vpc_service",
-			service_id,
-		});
+		if (options?.dryRun) {
+			service_id ??= INHERIT_SYMBOL;
+		}
+		if (service_id === undefined) {
+			throw new UserError(`${binding} bindings must have a "service_id" field`);
+		}
+		if (service_id === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "vpc_service",
+				service_id,
+			});
+		}
 	});
 
 	vpc_networks.forEach(({ binding, tunnel_id, network_id }) => {

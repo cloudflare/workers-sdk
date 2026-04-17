@@ -284,7 +284,7 @@ export interface CfService {
 
 export interface CfVpcService {
 	binding: string;
-	service_id: string;
+	service_id?: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
 }
 

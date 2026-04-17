@@ -863,7 +863,7 @@ export function buildMiniflareBindingOptions(
 				return [
 					vpc.binding,
 					{
-						service_id: vpc.service_id,
+						service_id: vpc.service_id as string,
 						remoteProxyConnectionString,
 					},
 				];

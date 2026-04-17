@@ -1386,7 +1386,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the VPC service in the Worker. */
 		binding: string;
 		/** The service ID of the VPC connectivity service. */
-		service_id: string;
+		service_id?: string;
 		/** Whether the VPC service is remote or not */
 		remote?: boolean;
 	}[];

@@ -4851,7 +4851,6 @@ describe("normalizeAndValidateConfig()", () => {
 								service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
 							},
 							{ binding: null, service_id: 123, invalid: true },
-							{ binding: "MISSING_SERVICE_ID" },
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -4863,10 +4862,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "vpc_services[0]" bindings should have a string "binding" field but got {}.
-					  - "vpc_services[0]" bindings must have a "service_id" field but got {}.
 					  - "vpc_services[2]" bindings should have a string "binding" field but got {"binding":null,"service_id":123,"invalid":true}.
-					  - "vpc_services[2]" bindings must have a "service_id" field but got {"binding":null,"service_id":123,"invalid":true}.
-					  - "vpc_services[3]" bindings must have a "service_id" field but got {"binding":"MISSING_SERVICE_ID"}."
+					  - "vpc_services[2]" bindings must have a "service_id" field but got {"binding":null,"service_id":123,"invalid":true}."
 				`);
 			});
 		});
