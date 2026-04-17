@@ -11,7 +11,6 @@ import type { StreamObject } from "./object.worker";
 interface Env {
 	store: DurableObjectNamespace<StreamObject>;
 	MINIFLARE_LOOPBACK: Fetcher;
-	MF_STREAM_PUBLIC_URL?: string;
 }
 
 function getStub(env: Env): DurableObjectStub<StreamObject> {
@@ -20,20 +19,21 @@ function getStub(env: Env): DurableObjectStub<StreamObject> {
 }
 
 async function getEntryUrl(env: Env): Promise<URL> {
-	if (env.MF_STREAM_PUBLIC_URL) {
-		return new URL(env.MF_STREAM_PUBLIC_URL);
-	}
-	// Fallback for direct Miniflare usage without a proxy in front
+	// Fetches the public URL from the Miniflare loopback. This returns
+	// the publicUrl if one was set (e.g. Vite dev server URL), otherwise
+	// falls back to the runtime entry URL. Using the loopback means the
+	// stream binding always sees the latest value — even if the URL was
+	// updated after workerd started (e.g. when Vite bumps the port).
 	const resp = await env.MINIFLARE_LOOPBACK.fetch(
-		"http://localhost/core/entry-url"
+		"http://localhost/core/public-url"
 	);
-	const entryUrl = (await resp.json()) as string | null;
-	if (!entryUrl) {
+	const url = (await resp.json()) as string | null;
+	if (!url) {
 		throw new Error(
 			"Runtime entry URL is not available. This may be because the worker is not yet ready to accept requests."
 		);
 	}
-	return new URL(entryUrl);
+	return new URL(url);
 }
 
 function rowsToDownloadResponse(

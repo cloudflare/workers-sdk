@@ -912,6 +912,7 @@ export class Miniflare {
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
+	publicUrl?: string;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
@@ -1577,10 +1578,14 @@ export class Miniflare {
 				const registryPath = this.#devRegistry.getRegistryPath();
 				const registry = registryPath ? getWorkerRegistry(registryPath) : {};
 				response = Response.json(registry);
-			} else if (url.pathname === "/core/entry-url") {
-				// Returns the user-facing runtime entry URL so that workers
-				// (e.g. the stream binding) can construct externally-reachable URLs.
-				response = Response.json(this.#runtimeEntryURL ?? null);
+			} else if (url.pathname === "/core/public-url") {
+				// Returns the public URL for this Miniflare instance. If a publicUrl
+				// has been set (e.g. the Vite dev server URL), use that; otherwise
+				// fall back to the runtime entry URL. This allows workers (e.g. the
+				// stream binding) to construct externally-reachable URLs.
+				response = Response.json(
+					this.publicUrl ?? this.#runtimeEntryURL?.toString() ?? null
+				);
 			}
 		} catch (e: any) {
 			this.#log.error(e);
@@ -2007,6 +2012,11 @@ export class Miniflare {
 			const unsafeStickyBlobs = sharedOpts.core.unsafeStickyBlobs ?? false;
 			const unsafeEphemeralDurableObjects =
 				workerOpts.core.unsafeEphemeralDurableObjects ?? false;
+			// Store publicUrl so the /core/public-url loopback route can return it.
+			// This is set here (rather than only via the setter) so that the initial
+			// value from MiniflareOptions is picked up on first startup.
+			this.publicUrl = sharedOpts.core.publicUrl;
+
 			const pluginServicesOptionsBase: Omit<
 				PluginServicesOptions<z.ZodTypeAny, undefined>,
 				"options" | "sharedOptions"

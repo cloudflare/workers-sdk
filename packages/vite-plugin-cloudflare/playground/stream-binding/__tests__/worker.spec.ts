@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import { fetchJson, viteTestUrl } from "../../__test-utils__";
+import { CONFIGURED_PORT } from "./serve";
 
 test("stream upload returns a valid preview URL", async ({ expect }) => {
 	const result = (await fetchJson("/upload")) as {
@@ -11,15 +12,18 @@ test("stream upload returns a valid preview URL", async ({ expect }) => {
 	expect(result.preview).toContain("/watch");
 });
 
-test("stream preview URL host and port match the Vite dev server", async ({
+test("stream preview URL port matches actual server port after port bump", async ({
 	expect,
 }) => {
+	// Verify that Vite actually bumped the port (the blocker occupies CONFIGURED_PORT)
+	const serverUrl = new URL(viteTestUrl);
+	expect(Number(serverUrl.port)).not.toBe(CONFIGURED_PORT);
+
 	const result = (await fetchJson("/upload")) as {
 		preview: string;
 		id: string;
 	};
 	const previewUrl = new URL(result.preview);
-	const serverUrl = new URL(viteTestUrl);
 
 	expect(previewUrl.hostname).toBe(serverUrl.hostname);
 	expect(previewUrl.port).toBe(serverUrl.port);

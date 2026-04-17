@@ -3,7 +3,10 @@ import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import colors from "picocolors";
 import { getDockerPath } from "../containers";
 import { assertIsPreview } from "../context";
-import { getPreviewMiniflareOptions } from "../miniflare-options";
+import {
+	buildPublicUrl,
+	getPreviewMiniflareOptions,
+} from "../miniflare-options";
 import { createPlugin, createRequestHandler } from "../utils";
 import { handleWebSocket } from "../websockets";
 
@@ -32,6 +35,21 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 				await getPreviewMiniflareOptions(ctx, vitePreviewServer);
 
 			await ctx.startOrUpdateMiniflare(miniflareOptions);
+
+			// Once the HTTP server is listening, update Miniflare's publicUrl with
+			// the actual address. This ensures "Cloudflare Stream" preview URLs always reflect
+			// the real server URL — even if Vite bumped the port.
+			if (vitePreviewServer.httpServer) {
+				vitePreviewServer.httpServer.on("listening", () => {
+					const addr = vitePreviewServer.httpServer?.address();
+					if (typeof addr === "object" && addr !== null) {
+						ctx.miniflare.publicUrl = buildPublicUrl(
+							vitePreviewServer.config.preview,
+							addr.port
+						);
+					}
+				});
+			}
 
 			if (containerTagToOptionsMap.size) {
 				const dockerPath = getDockerPath();

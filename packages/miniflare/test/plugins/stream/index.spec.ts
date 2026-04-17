@@ -1652,21 +1652,15 @@ describe("Stream publicUrl", () => {
 		);
 	});
 
-	test("preview URLs update when publicUrl changes via setOptions", async ({
+	test("preview URLs update when publicUrl is changed via setter", async ({
 		expect,
 	}) => {
 		const { http: videoUrl } = await useServer(
 			staticBytesListener(TEST_VIDEO_BYTES)
 		);
-		const opts = {
-			compatibilityDate: STREAM_COMPAT_DATE,
-			stream: { binding: "STREAM" },
-			streamPersist: false,
-			modules: true,
-			script: WORKER_SCRIPT,
+		const mf = createMiniflare({
 			publicUrl: "http://first-proxy.example.com:3000",
-		} satisfies MiniflareOptions;
-		const mf = new Miniflare(opts);
+		});
 		useDispose(mf);
 
 		const video = (await sendCmdToWorker(mf, "upload", {
@@ -1674,12 +1668,8 @@ describe("Stream publicUrl", () => {
 		})) as Video;
 		expect(video.preview).toMatch(/^http:\/\/first-proxy\.example\.com:3000\//);
 
-		// Change publicUrl via setOptions
-		await mf.setOptions({
-			...opts,
-			publicUrl: "http://second-proxy.example.com:4000",
-			script: `${WORKER_SCRIPT}\n// reload`,
-		});
+		// Update publicUrl via the lightweight setter (no workerd restart)
+		mf.publicUrl = "http://second-proxy.example.com:4000";
 
 		const details = (await sendCmdToWorker(mf, "video.details", {
 			id: video.id,

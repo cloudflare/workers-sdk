@@ -81,7 +81,6 @@ export const STREAM_PLUGIN: Plugin<
 		tmpPath,
 		defaultPersistRoot,
 		unsafeStickyBlobs,
-		publicUrl,
 	}) {
 		if (!options.stream) {
 			return [];
@@ -172,14 +171,6 @@ export const STREAM_PLUGIN: Plugin<
 						},
 					},
 					WORKER_BINDING_SERVICE_LOOPBACK,
-					...(publicUrl
-						? [
-								{
-									name: "MF_STREAM_PUBLIC_URL",
-									json: JSON.stringify(publicUrl),
-								},
-							]
-						: []),
 				],
 				// Allow the binding worker to send outbound HTTP requests
 				// (e.g. fetching video from URL in upload fn)

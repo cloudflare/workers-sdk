@@ -112,6 +112,22 @@ function getLocallyAccessibleHost(host: string): string {
 	return host;
 }
 
+/**
+ * Builds a public URL from a server config's host/https settings and an
+ * explicit port. Normalises wildcard listen addresses to locally-accessible
+ * equivalents via {@link getLocallyAccessibleHost}.
+ */
+export function buildPublicUrl(
+	serverConfig: { host?: string | boolean; https?: boolean | object },
+	port: number
+): string {
+	const host = getLocallyAccessibleHost(
+		typeof serverConfig.host === "string" ? serverConfig.host : "localhost"
+	);
+	const protocol = serverConfig.https ? "https" : "http";
+	return `${protocol}://${host}:${port}`;
+}
+
 /** Map that maps worker configPaths to their existing remote proxy session data (if any) */
 const remoteProxySessionsDataMap = new Map<
 	string,
@@ -466,10 +482,7 @@ export async function getDevMiniflareOptions(
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	const serverConfig = viteDevServer.config.server;
-	const publicHost = getLocallyAccessibleHost(
-		typeof serverConfig.host === "string" ? serverConfig.host : "localhost"
-	);
-	const publicUrl = `${serverConfig.https ? "https" : "http"}://${publicHost}:${serverConfig.port}`;
+	const publicUrl = buildPublicUrl(serverConfig, serverConfig.port);
 
 	return {
 		miniflareOptions: {
@@ -664,10 +677,7 @@ export async function getPreviewMiniflareOptions(
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	const serverConfig = vitePreviewServer.config.preview;
-	const publicHost = getLocallyAccessibleHost(
-		typeof serverConfig.host === "string" ? serverConfig.host : "localhost"
-	);
-	const publicUrl = `${serverConfig.https ? "https" : "http"}://${publicHost}:${serverConfig.port}`;
+	const publicUrl = buildPublicUrl(serverConfig, serverConfig.port);
 
 	return {
 		miniflareOptions: {
