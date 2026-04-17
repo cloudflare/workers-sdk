@@ -1,0 +1,19 @@
+{
+	"name": "@playground/stream-binding",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"cf-typegen": "wrangler types --include-runtime=false",
+		"check:type": "tsc --build",
+		"dev": "vite dev",
+		"preview": "vite preview"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"typescript": "catalog:default",
+		"vite": "catalog:default",
+		"wrangler": "workspace:*"
+	}
+}
