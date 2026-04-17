@@ -164,5 +164,6 @@ export class InspectorProxy {
 		clearInterval(this.#runtimeKeepAliveInterval);
 
 		this.#devtoolsWs?.close();
+		this.#runtimeWs?.close();
 	}
 }
