@@ -115,6 +115,7 @@ export const getNormalizedContainerOptions = async (
 				regions: container.constraints?.regions?.map((region) =>
 					region.toUpperCase()
 				),
+				jurisdiction: container.constraints?.jurisdiction?.toLowerCase(),
 				cities: container.constraints?.cities?.map((city) =>
 					city.toLowerCase()
 				),

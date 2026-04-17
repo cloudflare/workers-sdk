@@ -3530,6 +3530,53 @@ function validateContainerApp(
 					constraints.tiers,
 					"number"
 				);
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.constraints`,
+					"jurisdiction",
+					constraints.jurisdiction,
+					"string"
+				);
+				if (
+					constraints.jurisdiction &&
+					!["eu", "fedramp"].includes(constraints.jurisdiction)
+				) {
+					diagnostics.errors.push(
+						`${field}.constraints.jurisdiction must be one of: "eu", "fedramp"`
+					);
+				}
+				if (
+					validateOptionalTypedArray(
+						diagnostics,
+						`${field}.constraints.regions`,
+						constraints.regions,
+						"string"
+					) &&
+					constraints.regions &&
+					Array.isArray(constraints.regions)
+				) {
+					const validRegions = [
+						"ENAM",
+						"WNAM",
+						"EEUR",
+						"WEUR",
+						"APAC",
+						"SAM",
+						"ME",
+						"OC",
+						"AFR",
+					];
+					for (const region of constraints.regions) {
+						if (
+							typeof region === "string" &&
+							!validRegions.includes(region.toUpperCase())
+						) {
+							diagnostics.errors.push(
+								`${field}.constraints.regions contains invalid region "${region}". Valid regions are: ${validRegions.join(", ")}`
+							);
+						}
+					}
+				}
 			}
 
 			// Instance Type validation: When present, the instance type should be either (1) a string

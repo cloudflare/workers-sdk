@@ -221,16 +221,39 @@ export type ContainerApp = {
 	};
 
 	/**
-	 * Scheduling constraints
-	 * @hidden
+	 * Scheduling constraints for container placement.
 	 */
 	constraints?: {
-		regions?: string[];
+		/**
+		 * Limit container placement to specific geographic regions.
+		 */
+		regions?: (
+			| "ENAM"
+			| "WNAM"
+			| "EEUR"
+			| "WEUR"
+			| "APAC"
+			| "SAM"
+			| "ME"
+			| "OC"
+			| "AFR"
+		)[];
+		/**
+		 * Restrict containers to compliance boundaries.
+		 */
+		jurisdiction?: "eu" | "fedramp";
+		/**
+		 * @hidden
+		 */
 		cities?: string[];
 		/**
 		 * @deprecated Use `tiers` instead
+		 * @hidden
 		 */
 		tier?: number;
+		/**
+		 * @hidden
+		 */
 		tiers?: number[];
 	};
 

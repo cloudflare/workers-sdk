@@ -191,6 +191,10 @@ describe("wrangler deploy with containers", () => {
 				{
 					...DEFAULT_CONTAINER_FROM_REGISTRY,
 					rollout_active_grace_period: 600,
+					constraints: {
+						regions: ["ENAM", "WNAM"],
+						jurisdiction: "fedramp",
+					},
 				},
 			],
 		});
@@ -246,6 +250,8 @@ describe("wrangler deploy with containers", () => {
 			│
 			│   [containers.constraints]
 			│   tiers = [ 1, 2 ]
+			│   regions = [ "ENAM", "WNAM" ]
+			│   jurisdiction = "fedramp"
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = "1"

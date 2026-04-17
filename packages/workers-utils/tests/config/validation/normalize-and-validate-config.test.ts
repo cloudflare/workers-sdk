@@ -3183,6 +3183,88 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
+
+			it("should error when constraints.jurisdiction is invalid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									jurisdiction: "invalid",
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.constraints.jurisdiction must be one of: "eu", "fedramp""
+				`);
+			});
+
+			it("should error when constraints.regions contains invalid region", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									regions: ["INVALID", "ENAM"],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.constraints.regions contains invalid region "INVALID". Valid regions are: ENAM, WNAM, EEUR, WEUR, APAC, SAM, ME, OC, AFR"
+				`);
+			});
+
+			it("should allow valid constraints.regions and constraints.jurisdiction", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									regions: ["ENAM", "WNAM"],
+									jurisdiction: "fedramp",
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
 		});
 
 		describe("[kv_namespaces]", () => {
