@@ -1107,6 +1107,7 @@ export class Miniflare {
 	 * Called when the dev registry detects changes to external services.
 	 */
 	#devRegistryDispatcher?: Dispatcher;
+	#devRegistryPort?: number;
 
 	async #pushRegistryUpdate(retries = 3): Promise<void> {
 		if (this.#disposeController.signal.aborted) return;
@@ -2422,14 +2423,19 @@ export class Miniflare {
 
 		// Set up a direct dispatcher to the dev-registry-proxy socket so we can
 		// push registry updates without routing through the entry worker.
+		// Only close/recreate when the port actually changes, to avoid tearing
+		// down the connection pool while a #pushRegistryUpdate is in-flight.
 		const devRegistryPort = maybeSocketPorts.get(SOCKET_DEV_REGISTRY);
-		void this.#devRegistryDispatcher?.close().catch(() => {});
-		if (devRegistryPort !== undefined) {
-			this.#devRegistryDispatcher = new Pool(
-				new URL(`http://127.0.0.1:${devRegistryPort}`)
-			);
-		} else {
-			this.#devRegistryDispatcher = undefined;
+		if (devRegistryPort !== this.#devRegistryPort) {
+			void this.#devRegistryDispatcher?.close().catch(() => {});
+			this.#devRegistryPort = devRegistryPort;
+			if (devRegistryPort !== undefined) {
+				this.#devRegistryDispatcher = new Pool(
+					new URL(`http://127.0.0.1:${devRegistryPort}`)
+				);
+			} else {
+				this.#devRegistryDispatcher = undefined;
+			}
 		}
 		if (this.#proxyClient === undefined) {
 			this.#proxyClient = new ProxyClient(
