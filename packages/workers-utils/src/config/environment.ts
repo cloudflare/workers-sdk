@@ -1232,7 +1232,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the certificate in the Worker */
 		binding: string;
 		/** The uuid of the uploaded mTLS certificate */
-		certificate_id: string;
+		certificate_id?: string;
 		/** Whether the mtls fetcher should be remote or not in local development */
 		remote?: boolean;
 	}[];

@@ -927,7 +927,7 @@ export function buildMiniflareBindingOptions(
 							mtlsCertificate.remote && remoteProxyConnectionString
 								? remoteProxyConnectionString
 								: undefined,
-						certificate_id: mtlsCertificate.certificate_id,
+						certificate_id: mtlsCertificate.certificate_id as string,
 					},
 				];
 			})

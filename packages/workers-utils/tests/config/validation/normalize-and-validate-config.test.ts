@@ -4298,11 +4298,8 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "mtls_certificates" bindings should be objects, but got 123
 					  - "mtls_certificates" bindings should be objects, but got false
 					  - "mtls_certificates[3]" bindings should have a string "binding" field but got {"binding":123,"namespace":123}.
-					  - "mtls_certificates[3]" bindings should have a string "certificate_id" field but got {"binding":123,"namespace":123}.
-					  - "mtls_certificates[4]" bindings should have a string "certificate_id" field but got {"binding":"CERT_ONE","id":"1234"}.
 					  - "mtls_certificates[5]" bindings should have a string "certificate_id" field but got {"binding":"CERT_TWO","certificate_id":1234}.
-					  - "mtls_certificates[7]" bindings should have a string "binding" field but got {"binding":true,"service":"1234"}.
-					  - "mtls_certificates[7]" bindings should have a string "certificate_id" field but got {"binding":true,"service":"1234"}."
+					  - "mtls_certificates[7]" bindings should have a string "binding" field but got {"binding":true,"service":"1234"}."
 				`);
 			});
 		});

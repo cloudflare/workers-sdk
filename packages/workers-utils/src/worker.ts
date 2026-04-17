@@ -313,7 +313,7 @@ export interface CfDispatchNamespace {
 
 export interface CfMTlsCertificate {
 	binding: string;
-	certificate_id: string;
+	certificate_id?: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
 }
 

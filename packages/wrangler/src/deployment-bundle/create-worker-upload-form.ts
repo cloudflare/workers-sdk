@@ -508,11 +508,23 @@ export function createWorkerUploadForm(
 	});
 
 	mtls_certificates.forEach(({ binding, certificate_id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "mtls_certificate",
-			certificate_id,
-		});
+		if (options?.dryRun) {
+			certificate_id ??= INHERIT_SYMBOL;
+		}
+		if (certificate_id === undefined) {
+			throw new UserError(
+				`${binding} bindings must have a "certificate_id" field`
+			);
+		}
+		if (certificate_id === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "mtls_certificate",
+				certificate_id,
+			});
+		}
 	});
 
 	pipelines.forEach(({ binding, pipeline }) => {

@@ -716,7 +716,7 @@ export function printBindings(
 					name: binding,
 					type: getBindingTypeFriendlyName("dispatch_namespace"),
 					value: outbound
-						? `${namespace} (outbound -> ${outbound.service})`
+						? `${String(namespace)} (outbound -> ${outbound.service})`
 						: namespace,
 					mode: getMode({
 						isSimulatedLocally:

@@ -4478,8 +4478,9 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 		isValid = false;
 	}
 	if (
-		!isRequiredProperty(value, "certificate_id", "string") ||
-		(value as { certificate_id: string }).certificate_id.length === 0
+		!isOptionalProperty(value, "certificate_id", "string") ||
+		((value as { certificate_id?: string }).certificate_id !== undefined &&
+			(value as { certificate_id: string }).certificate_id.length === 0)
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "certificate_id" field but got ${JSON.stringify(
