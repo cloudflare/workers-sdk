@@ -1,5 +1,67 @@
 # create-cloudflare
 
+## 2.67.0
+
+### Minor Changes
+
+- [#13454](https://github.com/cloudflare/workers-sdk/pull/13454) [`bac2311`](https://github.com/cloudflare/workers-sdk/commit/bac23113841d7f1c889a0d9797d5a49abc7542cc) Thanks [@G4brym](https://github.com/G4brym)! - Upgrade OpenAPI template to chanfana 3 and Zod v4
+
+  The OpenAPI worker template has been upgraded to use chanfana v3.3 (from v2.6) and Zod v4 (from v3). All removed chanfana parameter helpers (`Str`, `Bool`, `Num`, `DateTime`) have been replaced with native Zod v4 equivalents. Other dependency updates include hono v4.12, wrangler v4, and @cloudflare/workers-types.
+
+  Additional template improvements:
+
+  - Fix response schemas to match actual handler return values
+  - Use `NotFoundException` for 404 responses instead of raw `Response.json()`
+  - Use HTTP 201 status for the create endpoint
+  - Enable full `strict` mode in tsconfig (previously silently overridden)
+  - Remove unused `@types/service-worker-mock` dependency
+
+### Patch Changes
+
+- [#12563](https://github.com/cloudflare/workers-sdk/pull/12563) [`a25270e`](https://github.com/cloudflare/workers-sdk/commit/a25270ead94bca51c9d2206b885a63fa9bc9c8e4) Thanks [@irvinebroque](https://github.com/irvinebroque)! - Add best practices documentation links to generated AGENTS.md
+
+  The AGENTS.md file generated for new Workers projects now directs AI coding agents to
+  fetch and understand the latest best practices before writing code, including Workers
+  best practices, Durable Objects rules, and Workflows rules.
+
+- [#12906](https://github.com/cloudflare/workers-sdk/pull/12906) [`7cf5095`](https://github.com/cloudflare/workers-sdk/commit/7cf509560a482799bdde823d0795e0c6fc7d5910) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 8.3.0 | 9.0.4 |
+
+- [#13277](https://github.com/cloudflare/workers-sdk/pull/13277) [`44dc73a`](https://github.com/cloudflare/workers-sdk/commit/44dc73abba30a9b5576a7e177ec823ad99b28a5b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.3.1 | 2.4.7 |
+
+- [#13437](https://github.com/cloudflare/workers-sdk/pull/13437) [`fe4101c`](https://github.com/cloudflare/workers-sdk/commit/fe4101c0c441131e56a69198ffd26bf2ddc346f5) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From                   | To                     |
+  | ----------- | ---------------------- | ---------------------- |
+  | create-waku | 0.12.5-1.0.0-alpha.6-0 | 0.12.5-1.0.0-alpha.7-0 |
+
+- [#13316](https://github.com/cloudflare/workers-sdk/pull/13316) [`21d0b53`](https://github.com/cloudflare/workers-sdk/commit/21d0b5386568cfa4724e436d2c000cf090db1473) Thanks [@emily-shen](https://github.com/emily-shen)! - Fix Vue project scaffolding failing when `javascript` is selected
+
+## 2.66.5
+
+### Patch Changes
+
+- [#13438](https://github.com/cloudflare/workers-sdk/pull/13438) [`dd4e888`](https://github.com/cloudflare/workers-sdk/commit/dd4e8882c854301c4e984989956f1aa337177637) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.599 | 0.0.616 |
+
 ## 2.66.4
 
 ### Patch Changes

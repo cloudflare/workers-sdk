@@ -164,6 +164,20 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
 
+		/**
+		 * When sending a request over the dev registry to a Worker's default entrypoint,
+		 * Miniflare _actually_ serves the request from the associated Assets proxy, so
+		 * that Assets can be served in front of the user-worker when configured.
+		 *
+		 * However, @cloudflare/vite-plugin bypasses Miniflare's native Assets handling
+		 * and does everything itself. We still want service bindings to a Vite app to
+		 * serve Assets in front of the worker when appropriate though, and so we let
+		 * the caller specify an alternative worker name whose service handles
+		 * default-entrypoint requests from the dev registry (e.g. a proxy worker
+		 * that serves assets in front of the user worker).
+		 */
+		unsafeOverrideFetchWorker: z.string().optional(),
+
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
 
@@ -271,8 +285,6 @@ export const CoreSharedOptionsSchema = z
 
 		// Enable auto service / durable objects discovery with the dev registry
 		unsafeDevRegistryPath: z.string().optional(),
-		// Enable External Durable Objects Proxy / Internal DOs registration
-		unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
 		// Called when external workers this instance depends on are updated in the dev registry
 		unsafeHandleDevRegistryUpdate: z
 			.function(z.tuple([z.custom<WorkerRegistry>()]))
@@ -301,6 +313,14 @@ export const CoreSharedOptionsSchema = z
 		// `handleStructuredLogs` is set, to `false` otherwise)
 		// This option is useful in combination with a custom handleRuntimeStdio.
 		structuredWorkerdLogs: z.boolean().optional(),
+
+		// Enable telemetry for the local explorer.
+		telemetry: z
+			.object({
+				enabled: z.boolean().default(false),
+				deviceId: z.string().optional(),
+			})
+			.default({ enabled: false }),
 	})
 	.refine(
 		({ structuredWorkerdLogs, handleStructuredLogs }) => {
@@ -677,6 +697,7 @@ export const CORE_PLUGIN: Plugin<
 		wrappedBindingNames,
 		durableObjectClassNames,
 		additionalModules,
+		loopbackHost,
 		loopbackPort,
 	}) {
 		// Define regular user worker
@@ -854,7 +875,7 @@ export const CORE_PLUGIN: Plugin<
 					moduleFallback:
 						options.unsafeUseModuleFallbackService &&
 						sharedOptions.unsafeModuleFallbackService !== undefined
-							? `localhost:${loopbackPort}`
+							? `${loopbackHost}:${loopbackPort}`
 							: undefined,
 					tails: options.tails?.map<ServiceDesignator>((service) => {
 						return getCustomServiceDesignator(
@@ -1055,6 +1076,7 @@ export function getGlobalServices({
 			data: encoder.encode(liveReloadScript),
 		});
 	}
+
 	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,
@@ -1132,6 +1154,7 @@ export function getGlobalServices({
 				hasDurableObjects,
 				workerNames,
 				explorerWorkerOpts,
+				telemetry: sharedOptions.telemetry,
 			})
 		);
 	}

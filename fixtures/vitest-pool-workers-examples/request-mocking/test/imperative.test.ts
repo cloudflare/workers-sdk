@@ -1,5 +1,5 @@
 import events from "node:events";
-import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { afterEach, assert, it, vi } from "vitest";
 
 afterEach(() => {
@@ -23,12 +23,12 @@ it("mocks GET requests", async ({ expect }) => {
 	});
 
 	// Host `example.com` will be rewritten to `cloudflare.com` by the Worker
-	let response = await SELF.fetch("https://example.com/path");
+	let response = await exports.default.fetch("https://example.com/path");
 	expect(response.status).toBe(200);
 	expect(await response.text()).toBe("✅");
 
 	// Invalid paths shouldn't match
-	response = await SELF.fetch("https://example.com/bad");
+	response = await exports.default.fetch("https://example.com/bad");
 	expect(response.status).toBe(500);
 	expect(await response.text()).toMatch("No mock found");
 });
@@ -51,7 +51,7 @@ it("mocks POST requests", async ({ expect }) => {
 		throw new Error("No mock found");
 	});
 
-	const response = await SELF.fetch("https://example.com/path", {
+	const response = await exports.default.fetch("https://example.com/path", {
 		method: "POST",
 		body: "✨",
 	});
@@ -86,7 +86,7 @@ it("mocks WebSocket requests", async ({ expect }) => {
 	});
 
 	// Send WebSocket request and assert WebSocket response received...
-	const response = await SELF.fetch("https://example.com/ws", {
+	const response = await exports.default.fetch("https://example.com/ws", {
 		headers: { Upgrade: "websocket" },
 	});
 	expect(response.status).toBe(101);

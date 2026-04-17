@@ -9,14 +9,13 @@
 		"cf-typegen": "wrangler types"
 	},
 	"dependencies": {
-		"chanfana": "^2.6.3",
-		"hono": "^4.6.20",
-		"zod": "^3.24.1"
+		"chanfana": "^3.3.0",
+		"hono": "^4.12.12",
+		"zod": "^4.3.6"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20250129.0",
-		"@types/node": "22.13.0",
-		"@types/service-worker-mock": "^2.0.4",
-		"wrangler": "^3.107.2"
+		"@cloudflare/workers-types": "^4.20260413.1",
+		"@types/node": "^25.6.0",
+		"wrangler": "^4.81.1"
 	}
 }

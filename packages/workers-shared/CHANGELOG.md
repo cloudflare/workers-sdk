@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.19.2
+
+### Patch Changes
+
+- [#13354](https://github.com/cloudflare/workers-sdk/pull/13354) [`854d66c`](https://github.com/cloudflare/workers-sdk/commit/854d66c30428cb3fe9ad8629089d9307c33d8b61) Thanks [@courtney-sims](https://github.com/courtney-sims)! - Prepares asset-worker for a more gradual rollout by refactoring and separating out the invocation from the business logic. In the future, this will provide space for us to route requests to new versions of asset-worker based on their plan, but should make no functional difference today.
+
 ## 0.19.1
 
 ### Patch Changes

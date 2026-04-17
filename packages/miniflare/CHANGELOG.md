@@ -1,5 +1,102 @@
 # miniflare
 
+## 4.20260415.0
+
+### Patch Changes
+
+- [#13354](https://github.com/cloudflare/workers-sdk/pull/13354) [`854d66c`](https://github.com/cloudflare/workers-sdk/commit/854d66c30428cb3fe9ad8629089d9307c33d8b61) Thanks [@courtney-sims](https://github.com/courtney-sims)! - Prepares asset-worker for a more gradual rollout by refactoring and separating out the invocation from the business logic. In the future, this will provide space for us to route requests to new versions of asset-worker based on their plan, but should make no functional difference today.
+
+- [#13450](https://github.com/cloudflare/workers-sdk/pull/13450) [`6f63eaa`](https://github.com/cloudflare/workers-sdk/commit/6f63eaa8931d2a33cd0fce95f88cc0dcff998d85) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix POST/PUT requests with non-2xx responses throwing "fetch failed"
+
+  Previously, sending a POST or PUT request that received a non-2xx response (e.g. 401, 400, 403) would throw a `TypeError: fetch failed` error. This was caused by an undici bug where `isTraversableNavigable()` incorrectly returned `true`, causing the 401 credential-retry block to execute in Node.js and fail on stream-backed request bodies. This has been fixed upstream in undici v7.24.8, so we've bumped our dependency and removed the previous pnpm patch workaround.
+
+- [#13447](https://github.com/cloudflare/workers-sdk/pull/13447) [`aef9825`](https://github.com/cloudflare/workers-sdk/commit/aef9825350e0da3f50231deb4892f1747f37cb66) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260410.1 | 1.20260413.1 |
+
+- [#13475](https://github.com/cloudflare/workers-sdk/pull/13475) [`eaaa728`](https://github.com/cloudflare/workers-sdk/commit/eaaa72839a4f7872766597a5467db769c5d50a97) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260413.1 | 1.20260415.1 |
+
+- [#13472](https://github.com/cloudflare/workers-sdk/pull/13472) [`58292f6`](https://github.com/cloudflare/workers-sdk/commit/58292f6957819a3e4a0b0917558b0bf9925d08a8) Thanks [@roerohan](https://github.com/roerohan)! - Fix `wrangler dev` crash when using a Flagship binding with `remote: true`
+
+  In remote mode, the flagship binding is backed by a generic proxy worker that only has a default export. The plugin was requesting a named entrypoint `"FlagshipBinding"` which doesn't exist on it, causing workerd to reject the binding at startup. The named entrypoint is now omitted in remote mode so workerd routes to the default export, which correctly proxies all RPC calls to the remote Flagship service.
+
+- [#13386](https://github.com/cloudflare/workers-sdk/pull/13386) [`5e5bbc1`](https://github.com/cloudflare/workers-sdk/commit/5e5bbc1026b1219e4e9ec36951ed7d5b4188d5a2) Thanks [@mksglu](https://github.com/mksglu)! - Make startup network requests non-blocking on slow connections
+
+  Wrangler makes network requests during startup (npm update check, `request.cf` data fetch) that previously blocked the CLI indefinitely on slow or degraded connections (airplane wifi, trains), causing 10+ second delays.
+
+  - **Update check**: The banner now races the update check against a 100ms grace period. On a cache hit (most runs) the result resolves in <1ms via the I/O poll phase; on a cache miss the banner prints immediately without blocking. A 3s safety-net timeout caps the `update-check` library's auth-retry path.
+  - **`request.cf` fetch**: The fetch to `workers.cloudflare.com/cf.json` now uses `AbortSignal.timeout(3000)`, falling back to cached/default data on timeout.
+
+- [#13476](https://github.com/cloudflare/workers-sdk/pull/13476) [`d5ff5a4`](https://github.com/cloudflare/workers-sdk/commit/d5ff5a4699955bc52733e759f68d762aef00c641) Thanks [@roerohan](https://github.com/roerohan)! - Fix `wrangler dev` crash when using a Stream binding with `remote: true`
+
+  In remote mode, the Stream binding is backed by a generic proxy worker that only has a default export. The plugin was requesting a named entrypoint `"StreamBinding"` which doesn't exist on it, causing workerd to reject the binding at startup. The named entrypoint is now omitted in remote mode so workerd routes to the default export, which correctly proxies all RPC calls to the remote Stream service.
+
+- [#13426](https://github.com/cloudflare/workers-sdk/pull/13426) [`89c7829`](https://github.com/cloudflare/workers-sdk/commit/89c782964deb6baf1fa88075a3225726e620560d) Thanks [@edmundhung](https://github.com/edmundhung)! - Reject non-local `/cdn-cgi/*` requests in Miniflare
+
+  Miniflare now validates `Host` and `Origin` on `/cdn-cgi/*` requests before request rewriting. Requests are still allowed for localhost, configured route hostnames, and the configured upstream hostname, but non-local hostnames can no longer reach internal development endpoints such as platform-proxy, handler routes, live reload, and the local explorer.
+
+## 4.20260410.0
+
+### Minor Changes
+
+- [#13139](https://github.com/cloudflare/workers-sdk/pull/13139) [`79fd529`](https://github.com/cloudflare/workers-sdk/commit/79fd529e62b715405aacc0e643a20ce1af3df9f2) Thanks [@roerohan](https://github.com/roerohan)! - feat: add Flagship feature flag binding support
+
+  Adds end-to-end support for the Flagship feature flag binding, which allows Workers to evaluate feature flags from Cloudflare's Flagship service. Configure it in `wrangler.json` with a `flagship` array containing `binding` and `app_id` entries. In local dev, the binding returns default values for all flag evaluations; use `"remote": true` in the binding to evaluate flags against the live Flagship service.
+
+- [#13392](https://github.com/cloudflare/workers-sdk/pull/13392) [`2589395`](https://github.com/cloudflare/workers-sdk/commit/2589395a0890bad9bf78e9d10aa680f448259716) Thanks [@emily-shen](https://github.com/emily-shen)! - Add telemetry to local REST API
+
+  The local REST API (used by the local explorer) now collects anonymous usage telemetry. This respects any existing telemetry preferences, which can be disabled by running the command `wrangler telemetry disable`.
+
+  This only applies when the dev session is started via Wrangler, and not via the Vite plugin or standalone Miniflare.
+
+  No actual data values, keys, query contents, or resource IDs are collected.
+
+  **Event schema:**
+
+  ```json
+  {
+    "event": "localapi.<route>.<method>", // e.g. localapi.kv.keys.get
+    "deviceId": "<uuid>",
+    "timestamp": 1234567890,
+    "properties": {
+      "userAgent": "Mozilla/5.0 ...",
+      // Only for localapi.local.workers.get:
+      "workerCount": 2,
+      "kvCount": 3,
+      "d1Count": 1,
+      "r2Count": 0,
+      "doCount": 1,
+      "workflowsCount": 0
+    }
+  }
+  ```
+
+  Note: the Local Explorer and corresponding local REST API is still an experimental feature.
+
+### Patch Changes
+
+- [#13393](https://github.com/cloudflare/workers-sdk/pull/13393) [`c50cb5b`](https://github.com/cloudflare/workers-sdk/commit/c50cb5b4038d8107c4131af1b086ea3261f53518) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260409.1 | 1.20260410.1 |
+
+- [#13335](https://github.com/cloudflare/workers-sdk/pull/13335) [`5eff8c1`](https://github.com/cloudflare/workers-sdk/commit/5eff8c14f08696e5a832875a35e214969aa55b9b) Thanks [@KennethRuan](https://github.com/KennethRuan)! - Return metadata in queue broker response
+
+  The queue broker's `/message` and `/batch` endpoints now return a JSON response body containing queue metrics (`backlogCount`, `backlogBytes`, `oldestMessageTimestamp`) instead of an empty response. A new `GET /metrics` endpoint is also added to support the `metrics()` API.
+
 ## 4.20260409.0
 
 ### Minor Changes

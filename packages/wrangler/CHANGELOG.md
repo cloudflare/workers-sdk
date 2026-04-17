@@ -1,5 +1,157 @@
 # wrangler
 
+## 4.83.0
+
+### Minor Changes
+
+- [#13391](https://github.com/cloudflare/workers-sdk/pull/13391) [`60565dd`](https://github.com/cloudflare/workers-sdk/commit/60565dd1ac984b68319c087ea491171c3d64ecb2) Thanks [@mikenomitch](https://github.com/mikenomitch)! - Mark `wrangler containers` commands as stable
+
+  This changes the status of the Containers CLI from open beta to stable. Wrangler no longer shows `[open beta]` labels or beta warning text for `wrangler containers` commands, so the help output matches the feature's current availability.
+
+- [#13311](https://github.com/cloudflare/workers-sdk/pull/13311) [`6cbcdeb`](https://github.com/cloudflare/workers-sdk/commit/6cbcdeb65559a3fdf776210f43846fd3f786181a) Thanks [@ryanking13](https://github.com/ryanking13)! - JS files imported by the Python Workers runtime SDK are now handled as ESM modules.
+
+  This is not a user-facing change, but Python Workers users should update their wrangler version to make sure to get Python workers SDK working properly.
+
+### Patch Changes
+
+- [#13450](https://github.com/cloudflare/workers-sdk/pull/13450) [`6f63eaa`](https://github.com/cloudflare/workers-sdk/commit/6f63eaa8931d2a33cd0fce95f88cc0dcff998d85) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix POST/PUT requests with non-2xx responses throwing "fetch failed"
+
+  Previously, sending a POST or PUT request that received a non-2xx response (e.g. 401, 400, 403) would throw a `TypeError: fetch failed` error. This was caused by an undici bug where `isTraversableNavigable()` incorrectly returned `true`, causing the 401 credential-retry block to execute in Node.js and fail on stream-backed request bodies. This has been fixed upstream in undici v7.24.8, so we've bumped our dependency and removed the previous pnpm patch workaround.
+
+- [#13447](https://github.com/cloudflare/workers-sdk/pull/13447) [`aef9825`](https://github.com/cloudflare/workers-sdk/commit/aef9825350e0da3f50231deb4892f1747f37cb66) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260410.1 | 1.20260413.1 |
+
+- [#13475](https://github.com/cloudflare/workers-sdk/pull/13475) [`eaaa728`](https://github.com/cloudflare/workers-sdk/commit/eaaa72839a4f7872766597a5467db769c5d50a97) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260413.1 | 1.20260415.1 |
+
+- [#13386](https://github.com/cloudflare/workers-sdk/pull/13386) [`5e5bbc1`](https://github.com/cloudflare/workers-sdk/commit/5e5bbc1026b1219e4e9ec36951ed7d5b4188d5a2) Thanks [@mksglu](https://github.com/mksglu)! - Make startup network requests non-blocking on slow connections
+
+  Wrangler makes network requests during startup (npm update check, `request.cf` data fetch) that previously blocked the CLI indefinitely on slow or degraded connections (airplane wifi, trains), causing 10+ second delays.
+
+  - **Update check**: The banner now races the update check against a 100ms grace period. On a cache hit (most runs) the result resolves in <1ms via the I/O poll phase; on a cache miss the banner prints immediately without blocking. A 3s safety-net timeout caps the `update-check` library's auth-retry path.
+  - **`request.cf` fetch**: The fetch to `workers.cloudflare.com/cf.json` now uses `AbortSignal.timeout(3000)`, falling back to cached/default data on timeout.
+
+- [#13469](https://github.com/cloudflare/workers-sdk/pull/13469) [`07a918c`](https://github.com/cloudflare/workers-sdk/commit/07a918c2638de1483468bcd01c829dad0a9c02e8) Thanks [@1000hz](https://github.com/1000hz)! - `wrangler preview` no longer warns on inheritable binding types being missing from `previews` config.
+
+- [#13463](https://github.com/cloudflare/workers-sdk/pull/13463) [`90aee27`](https://github.com/cloudflare/workers-sdk/commit/90aee27f67fd148b43d1447a321df1e26f0438ec) Thanks [@roerohan](https://github.com/roerohan)! - Remove unnecessary `flagship:read` OAuth scope
+
+  The `flagship:read` scope is not needed since `flagship:write` already implies read access. This reduces the OAuth permissions requested during login to only what is required.
+
+- Updated dependencies [[`854d66c`](https://github.com/cloudflare/workers-sdk/commit/854d66c30428cb3fe9ad8629089d9307c33d8b61), [`6f63eaa`](https://github.com/cloudflare/workers-sdk/commit/6f63eaa8931d2a33cd0fce95f88cc0dcff998d85), [`aef9825`](https://github.com/cloudflare/workers-sdk/commit/aef9825350e0da3f50231deb4892f1747f37cb66), [`eaaa728`](https://github.com/cloudflare/workers-sdk/commit/eaaa72839a4f7872766597a5467db769c5d50a97), [`58292f6`](https://github.com/cloudflare/workers-sdk/commit/58292f6957819a3e4a0b0917558b0bf9925d08a8), [`5e5bbc1`](https://github.com/cloudflare/workers-sdk/commit/5e5bbc1026b1219e4e9ec36951ed7d5b4188d5a2), [`d5ff5a4`](https://github.com/cloudflare/workers-sdk/commit/d5ff5a4699955bc52733e759f68d762aef00c641), [`89c7829`](https://github.com/cloudflare/workers-sdk/commit/89c782964deb6baf1fa88075a3225726e620560d)]:
+  - miniflare@4.20260415.0
+
+## 4.82.2
+
+### Patch Changes
+
+- [#13457](https://github.com/cloudflare/workers-sdk/pull/13457) [`9b2b6ba`](https://github.com/cloudflare/workers-sdk/commit/9b2b6ba55c7e94533a2cddbe8ff8f5122ed7de17) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add Flagship OAuth scopes to `wrangler login`
+
+## 4.82.1
+
+### Patch Changes
+
+- [#13453](https://github.com/cloudflare/workers-sdk/pull/13453) [`6b11b07`](https://github.com/cloudflare/workers-sdk/commit/6b11b072d35e438e81e133a1c37e4e94a7a9c9a8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Disable flagship OAuth scopes that are not yet valid in the Cloudflare backend
+
+  The `flagship:read` and `flagship:write` OAuth scopes have been temporarily commented out from the default scopes requested during login, as they are not yet recognized by the Cloudflare backend.
+
+- [#13438](https://github.com/cloudflare/workers-sdk/pull/13438) [`dd4e888`](https://github.com/cloudflare/workers-sdk/commit/dd4e8882c854301c4e984989956f1aa337177637) Thanks [@dependabot](https://github.com/apps/dependabot)! - fix: handle Vike config files that use a variable-referenced default export
+
+  Newer versions of `create-vike` (0.0.616+) generate `pages/+config.ts` files using `const config: Config = { ... }; export default config;` instead of the previous `export default { ... } satisfies Config;`. The Wrangler autoconfig AST transformation now resolves `Identifier` exports to their variable declarations, supporting both old and new Vike config file formats.
+
+## 4.82.0
+
+### Minor Changes
+
+- [#13353](https://github.com/cloudflare/workers-sdk/pull/13353) [`5338bb6`](https://github.com/cloudflare/workers-sdk/commit/5338bb687e9933702744771fc89850a7471ee1cc) Thanks [@mattzcarey](https://github.com/mattzcarey)! - Add `artifacts:write` to Wrangler's default OAuth scopes, enabling `wrangler login` to request access to Cloudflare Artifacts (registries and artifacts).
+
+- [#13139](https://github.com/cloudflare/workers-sdk/pull/13139) [`79fd529`](https://github.com/cloudflare/workers-sdk/commit/79fd529e62b715405aacc0e643a20ce1af3df9f2) Thanks [@roerohan](https://github.com/roerohan)! - feat: add Flagship feature flag binding support
+
+  Adds end-to-end support for the Flagship feature flag binding, which allows Workers to evaluate feature flags from Cloudflare's Flagship service. Configure it in `wrangler.json` with a `flagship` array containing `binding` and `app_id` entries. In local dev, the binding returns default values for all flag evaluations; use `"remote": true` in the binding to evaluate flags against the live Flagship service.
+
+- [#12983](https://github.com/cloudflare/workers-sdk/pull/12983) [`28bc2be`](https://github.com/cloudflare/workers-sdk/commit/28bc2be6c51e93aa8df75ad223435df35f1981d6) Thanks [@1000hz](https://github.com/1000hz)! - Added the `wrangler preview` command family for creating Preview deployments (currently in private beta).
+
+- [#13197](https://github.com/cloudflare/workers-sdk/pull/13197) [`4fd138b`](https://github.com/cloudflare/workers-sdk/commit/4fd138b8e4d46567419c0202e68423e89cd3d813) Thanks [@shahsimpson](https://github.com/shahsimpson)! - Add `preview` output-file entries for `wrangler preview` deployments
+
+  `wrangler preview` now writes a `preview` entry to the Wrangler output file when `WRANGLER_OUTPUT_FILE_PATH` or `WRANGLER_OUTPUT_FILE_DIRECTORY` is configured. The entry includes the Worker name, preview metadata (`preview_id`, `preview_name`, `preview_slug`, `preview_urls`) and deployment metadata (`deployment_id`, `deployment_urls`).
+
+  This makes preview command runs machine-readable in the same output stream as other Wrangler commands, which helps CI integrations consume preview URLs and IDs directly.
+
+- [#13159](https://github.com/cloudflare/workers-sdk/pull/13159) [`bafb96b`](https://github.com/cloudflare/workers-sdk/commit/bafb96bccc97325c3d9dac54af96212cb30e605a) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Add `wrangler browser` commands for managing Browser Rendering sessions
+
+  New commands for Browser Rendering DevTools:
+
+  - `wrangler browser create [--lab] [--keepAlive <seconds>] [--open]` - Create a new session
+  - `wrangler browser close <sessionId>` - Close a session
+  - `wrangler browser list` - List active sessions
+  - `wrangler browser view [sessionId] [--target <selector>] [--open]` - View a live browser session
+
+  The `view` command auto-selects when only one session exists, or prompts for selection when multiple are available.
+
+  The `--open` flag controls whether to open DevTools in browser (default: true in interactive mode, false in CI/scripts). Use `--no-open` to just print the DevTools URL.
+
+  All commands support `--json` for programmatic output. Also adds `browser:write` OAuth scope to `wrangler login`.
+
+- [#13392](https://github.com/cloudflare/workers-sdk/pull/13392) [`2589395`](https://github.com/cloudflare/workers-sdk/commit/2589395a0890bad9bf78e9d10aa680f448259716) Thanks [@emily-shen](https://github.com/emily-shen)! - Add telemetry to local REST API
+
+  The local REST API (used by the local explorer) now collects anonymous usage telemetry. This respects any existing telemetry preferences, which can be disabled by running the command `wrangler telemetry disable`.
+
+  This only applies when the dev session is started via Wrangler, and not via the Vite plugin or standalone Miniflare.
+
+  No actual data values, keys, query contents, or resource IDs are collected.
+
+  **Event schema:**
+
+  ```json
+  {
+    "event": "localapi.<route>.<method>", // e.g. localapi.kv.keys.get
+    "deviceId": "<uuid>",
+    "timestamp": 1234567890,
+    "properties": {
+      "userAgent": "Mozilla/5.0 ...",
+      // Only for localapi.local.workers.get:
+      "workerCount": 2,
+      "kvCount": 3,
+      "d1Count": 1,
+      "r2Count": 0,
+      "doCount": 1,
+      "workflowsCount": 0
+    }
+  }
+  ```
+
+  Note: the Local Explorer and corresponding local REST API is still an experimental feature.
+
+- [#13137](https://github.com/cloudflare/workers-sdk/pull/13137) [`1313275`](https://github.com/cloudflare/workers-sdk/commit/13132753130bcba9eb03bc4e662911685962c04e) Thanks [@emily-shen](https://github.com/emily-shen)! - explorer: expose the local explorer hotkey
+
+  List the local explorer's hotkey `[e]` in wrangler dev output.
+
+### Patch Changes
+
+- [#13393](https://github.com/cloudflare/workers-sdk/pull/13393) [`c50cb5b`](https://github.com/cloudflare/workers-sdk/commit/c50cb5b4038d8107c4131af1b086ea3261f53518) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260409.1 | 1.20260410.1 |
+
+- [#13424](https://github.com/cloudflare/workers-sdk/pull/13424) [`525a46b`](https://github.com/cloudflare/workers-sdk/commit/525a46bca7c9a8a57972ac152ab9c400df0bf186) Thanks [@paulelliotco](https://github.com/paulelliotco)! - Keep proxy notices off stdout for JSON Wrangler commands
+
+  Wrangler now writes the startup notice for `HTTP_PROXY` and `HTTPS_PROXY` to stderr instead of stdout. This keeps commands like `wrangler auth token --json` machine-readable when a proxy is configured.
+
+- Updated dependencies [[`79fd529`](https://github.com/cloudflare/workers-sdk/commit/79fd529e62b715405aacc0e643a20ce1af3df9f2), [`c50cb5b`](https://github.com/cloudflare/workers-sdk/commit/c50cb5b4038d8107c4131af1b086ea3261f53518), [`2589395`](https://github.com/cloudflare/workers-sdk/commit/2589395a0890bad9bf78e9d10aa680f448259716), [`5eff8c1`](https://github.com/cloudflare/workers-sdk/commit/5eff8c14f08696e5a832875a35e214969aa55b9b)]:
+  - miniflare@4.20260410.0
+
 ## 4.81.1
 
 ### Patch Changes

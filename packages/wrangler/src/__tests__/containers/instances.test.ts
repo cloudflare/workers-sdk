@@ -100,7 +100,7 @@ describe("containers instances", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers instances <ID>
 
-			List container instances for an application [open beta]
+			List container instances for an application
 
 			POSITIONALS
 			  ID  ID of the application to list instances for  [string] [required]

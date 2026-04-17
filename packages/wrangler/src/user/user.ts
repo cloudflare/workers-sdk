@@ -376,7 +376,6 @@ const DefaultScopes = {
 		"See and change secrets + stores within the Secrets Store",
 	"artifacts:write":
 		"See and change Cloudflare Artifacts data such as registries and artifacts",
-	"flagship:read": "See Flagship feature flags and apps",
 	"flagship:write": "See and change Flagship feature flags and apps",
 	"containers:write": "Manage Workers Containers",
 	"cloudchamber:write": "Manage Cloudchamber",
@@ -386,7 +385,7 @@ const DefaultScopes = {
 		"See and change Email Routing settings, rules, and destination addresses.",
 	"email_sending:write":
 		"See and change Email Sending settings and configuration.",
-	"browser:write": "See and manage Browser Rendering sessions",
+	"browser:write": "See and manage Browser Run sessions",
 } as const;
 
 /**

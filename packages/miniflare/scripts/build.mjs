@@ -92,6 +92,11 @@ const miniflareZodExtensionPath = path.join(
 	"shared",
 	"zod.worker.ts"
 );
+const localExplorerWorkerPath = path.join(
+	workersRoot,
+	"local-explorer",
+	"explorer.worker.ts"
+);
 
 /**
  * Test fixtures that need to be transpiled by esbuild as part of the build.
@@ -193,6 +198,15 @@ const embedWorkersPlugin = {
 						args.path === miniflareZodExtensionPath
 							? [rewriteNodeToInternalPlugin]
 							: [],
+					// Inject SPARROW_SOURCE_KEY for the local explorer telemetry
+					define:
+						args.path === localExplorerWorkerPath
+							? {
+									SPARROW_SOURCE_KEY: JSON.stringify(
+										process.env.SPARROW_SOURCE_KEY ?? ""
+									),
+								}
+							: {},
 				});
 			}
 
@@ -280,14 +294,6 @@ async function buildPackage() {
 	const pkg = getPackage(pkgRoot);
 
 	const indexPath = path.join(pkgRoot, "src", "index.ts");
-	// The dev registry proxy runs in a Node.js worker thread (instead of workerd)
-	// and requires a separate entry point so it can be loaded independently
-	const devRegistryProxyPath = path.join(
-		pkgRoot,
-		"src",
-		"shared",
-		"dev-registry.worker.ts"
-	);
 	const outPath = path.join(pkgRoot, "dist");
 
 	const buildOptions = {
@@ -313,7 +319,7 @@ async function buildPackage() {
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,
-		entryPoints: [indexPath, devRegistryProxyPath, ...fixtureBuilds],
+		entryPoints: [indexPath, ...fixtureBuilds],
 	};
 
 	if (watch) {

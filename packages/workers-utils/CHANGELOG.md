@@ -1,5 +1,21 @@
 # @cloudflare/workers-utils
 
+## 0.16.1
+
+### Patch Changes
+
+- [#13468](https://github.com/cloudflare/workers-sdk/pull/13468) [`051db1f`](https://github.com/cloudflare/workers-sdk/commit/051db1fed10091bfd83b30975fbb7f8f00ea1484) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Make all properties in `previews` optional
+
+  All properties in `previews` were previously incorrectly typed as required.
+
+## 0.16.0
+
+### Minor Changes
+
+- [#13139](https://github.com/cloudflare/workers-sdk/pull/13139) [`79fd529`](https://github.com/cloudflare/workers-sdk/commit/79fd529e62b715405aacc0e643a20ce1af3df9f2) Thanks [@roerohan](https://github.com/roerohan)! - feat: add Flagship feature flag binding support
+
+  Adds end-to-end support for the Flagship feature flag binding, which allows Workers to evaluate feature flags from Cloudflare's Flagship service. Configure it in `wrangler.json` with a `flagship` array containing `binding` and `app_id` entries. In local dev, the binding returns default values for all flag evaluations; use `"remote": true` in the binding to evaluate flags against the live Flagship service.
+
 ## 0.15.0
 
 ### Minor Changes

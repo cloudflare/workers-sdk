@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
-import open from "open";
+import open, { apps } from "open";
 import {
 	isAllowedSourceMapPath,
 	isAllowedSourcePath,
@@ -276,16 +276,16 @@ export const openInspector = async (
 	const childProcess = await open(url, {
 		app: [
 			{
-				name: open.apps.chrome,
+				name: apps.chrome,
 			},
 			{
 				name: braveBrowser,
 			},
 			{
-				name: open.apps.edge,
+				name: apps.edge,
 			},
 			{
-				name: open.apps.firefox,
+				name: apps.firefox,
 			},
 		],
 	});

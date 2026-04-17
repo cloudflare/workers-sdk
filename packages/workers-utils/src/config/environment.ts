@@ -171,7 +171,7 @@ export type ContainerApp = {
 				disk_mb?: number;
 		  };
 
-	wrangler_ssh?: {
+	ssh?: {
 		/**
 		 * If enabled, those with write access to a container will be able to SSH into it through Wrangler.
 		 * @default false
@@ -181,6 +181,15 @@ export type ContainerApp = {
 		 * Port that the SSH service is running on
 		 * @defaults to 22
 		 */
+		port?: number;
+	};
+
+	/**
+	 * @deprecated Use `ssh` instead.
+	 * @hidden
+	 */
+	wrangler_ssh?: {
+		enabled: boolean;
 		port?: number;
 	};
 
@@ -1607,5 +1616,7 @@ export type ContainerEngine =
  */
 export interface PreviewsConfig
 	extends
-		EnvironmentNonInheritable,
-		Pick<EnvironmentInheritable, "logpush" | "observability" | "limits"> {}
+		Partial<EnvironmentNonInheritable>,
+		Partial<
+			Pick<EnvironmentInheritable, "logpush" | "observability" | "limits">
+		> {}

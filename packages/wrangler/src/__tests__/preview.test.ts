@@ -27,10 +27,10 @@ vi.mock("node:child_process", async () => {
 	};
 });
 
-function configWithPreviews(previews: Partial<PreviewsConfig>): Config {
+function configWithPreviews(previews: PreviewsConfig): Config {
 	return {
 		...defaultWranglerConfig,
-		previews: previews as PreviewsConfig,
+		previews,
 	};
 }
 
@@ -503,6 +503,92 @@ describe("wrangler preview", () => {
 			await runWrangler("preview --name test-preview");
 
 			expect(std.warn).not.toContain("IMPORTANT_BINDING");
+		});
+
+		test("should not warn about inheritable top-level bindings missing from previews", async ({
+			expect,
+		}) => {
+			mkdirSync("public", { recursive: true });
+			writeFileSync("public/index.html", "<h1>Hello</h1>");
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					assets: {
+						binding: "ASSETS",
+						directory: "public",
+					},
+				})
+			);
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-assets",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:workerId/assets-upload-session`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: { buckets: [], jwt: "assets-jwt-from-session" },
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-assets",
+								preview_id: "preview-id-assets",
+								preview_name: "test-preview",
+								urls: ["https://assets123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							preview_defaults: {},
+						},
+					})
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(std.warn).not.toContain("Your configuration has diverged.");
+			expect(std.warn).not.toContain("ASSETS");
 		});
 
 		test("should output preview and deployment JSON with --json", async ({
