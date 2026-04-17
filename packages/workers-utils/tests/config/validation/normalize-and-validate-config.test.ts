@@ -20,7 +20,7 @@ describe("normalizeAndValidateConfig()", () => {
 			undefined,
 			{
 				env: undefined,
-			},
+			}
 		);
 
 		expect(config).toEqual({
@@ -159,7 +159,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expectedConfig,
 				undefined,
 				undefined,
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -187,7 +187,7 @@ describe("normalizeAndValidateConfig()", () => {
 				undefined,
 				undefined,
 
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config).toEqual(
@@ -195,7 +195,7 @@ describe("normalizeAndValidateConfig()", () => {
 					...expectedConfig,
 					main: undefined,
 					legacy_env: true,
-				}),
+				})
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -224,7 +224,7 @@ describe("normalizeAndValidateConfig()", () => {
 				undefined,
 				undefined,
 
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect("unexpected" in config).toBe(false);
@@ -249,7 +249,7 @@ describe("normalizeAndValidateConfig()", () => {
 				undefined,
 				undefined,
 
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect("miniflare" in config).toBe(false);
@@ -270,7 +270,7 @@ describe("normalizeAndValidateConfig()", () => {
 				undefined,
 				undefined,
 
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config.route).toBeUndefined();
@@ -295,7 +295,7 @@ describe("normalizeAndValidateConfig()", () => {
 				undefined,
 				undefined,
 
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config.account_id).toBeUndefined();
@@ -319,7 +319,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					undefined,
 
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -338,7 +338,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					{
 						env: undefined,
-					},
+					}
 				);
 
 				expect(result.config).toEqual(expect.objectContaining(expectedConfig));
@@ -363,7 +363,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					{
 						env: undefined,
-					},
+					}
 				);
 
 				expect(result.config).toEqual(expect.objectContaining(expectedConfig));
@@ -387,7 +387,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					undefined,
 
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -413,7 +413,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					{
 						env: undefined,
-					},
+					}
 				);
 
 				expect(result.config).toEqual(expect.objectContaining(expectedConfig));
@@ -447,7 +447,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					undefined,
 
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -480,7 +480,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					undefined,
 
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -518,7 +518,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					undefined,
 
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -556,7 +556,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					undefined,
 
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config.site).toMatchInlineSnapshot(`
@@ -591,7 +591,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					undefined,
 
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -613,7 +613,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					undefined,
 
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -635,7 +635,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					undefined,
 
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -664,7 +664,7 @@ describe("normalizeAndValidateConfig()", () => {
 				"project/wrangler.toml",
 				"project/wrangler.toml",
 
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config).toEqual(
@@ -673,7 +673,7 @@ describe("normalizeAndValidateConfig()", () => {
 						MODULE_1: path.normalize("project/path/to/module_1.mjs"),
 						MODULE_2: path.normalize("project/module_2.mjs"),
 					},
-				}),
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(false);
@@ -693,7 +693,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expectedConfig,
 				"project/wrangler.toml",
 				"project/wrangler.toml",
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config).toEqual(
@@ -702,7 +702,7 @@ describe("normalizeAndValidateConfig()", () => {
 						crons: ["1 * * * *"],
 						someOtherfield: 123,
 					},
-				}),
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(true);
@@ -726,13 +726,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expectedConfig as unknown as RawConfig,
 				"project/wrangler.toml",
 				"project/wrangler.toml",
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config).toEqual(
 				expect.objectContaining({
 					wasm_modules: {},
-				}),
+				})
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
@@ -756,7 +756,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expectedConfig,
 				"project/wrangler.toml",
 				"project/wrangler.toml",
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config).toEqual(
@@ -765,7 +765,7 @@ describe("normalizeAndValidateConfig()", () => {
 						BLOB_1: path.normalize("project/path/to/text1.txt"),
 						BLOB_2: path.normalize("project/text2.md"),
 					},
-				}),
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(false);
@@ -783,13 +783,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expectedConfig as unknown as RawConfig,
 				"project/wrangler.toml",
 				"project/wrangler.toml",
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config).toEqual(
 				expect.objectContaining({
 					text_blobs: {},
-				}),
+				})
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
@@ -813,7 +813,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expectedConfig,
 				"project/wrangler.toml",
 				"project/wrangler.toml",
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config).toEqual(
@@ -822,7 +822,7 @@ describe("normalizeAndValidateConfig()", () => {
 						BLOB_1: path.normalize("project/path/to/data1.bin"),
 						BLOB_2: path.normalize("project/data2.bin"),
 					},
-				}),
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(false);
@@ -840,13 +840,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expectedConfig as unknown as RawConfig,
 				"project/wrangler.toml",
 				"project/wrangler.toml",
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config).toEqual(
 				expect.objectContaining({
 					data_blobs: {},
-				}),
+				})
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
@@ -867,13 +867,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expectedConfig,
 				"project/wrangler.toml",
 				"project/wrangler.toml",
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config).toEqual(
 				expect.objectContaining({
 					tsconfig: path.normalize("project/path/to/some-tsconfig.json"),
-				}),
+				})
 			);
 
 			expect(diagnostics.hasErrors()).toBe(false);
@@ -896,7 +896,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expectedConfig,
 				"project/wrangler.toml",
 				"project/wrangler.toml",
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config).toEqual(
@@ -909,7 +909,7 @@ describe("normalizeAndValidateConfig()", () => {
 							},
 						],
 					},
-				}),
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(true);
@@ -1062,7 +1062,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expectedConfig,
 				"wrangler.toml",
 				"wrangler.toml",
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -1071,7 +1071,7 @@ describe("normalizeAndValidateConfig()", () => {
 					...expectedConfig,
 					main: resolvedMain,
 					topLevelName: expectedConfig.name,
-				}),
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -1162,7 +1162,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expectedConfig,
 				undefined,
 				undefined,
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1252,7 +1252,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1273,7 +1273,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1292,7 +1292,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1314,7 +1314,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1335,7 +1335,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 					undefined,
 					undefined,
-					{ env: undefined, "dispatch-namespace": "test-namespace" },
+					{ env: undefined, "dispatch-namespace": "test-namespace" }
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -1356,14 +1356,14 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config.build).toEqual(
 					expect.objectContaining({
 						command: "execute some --build",
 						watch_dir: "./src",
-					}),
+					})
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -1384,14 +1384,14 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					"project/wrangler.toml",
 					"project/wrangler.toml",
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config.build).toEqual(
 					expect.objectContaining({
 						command: "execute some --build",
 						watch_dir: path.normalize("project/some/path"),
-					}),
+					})
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -1410,7 +1410,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					"project/wrangler.toml",
 					"project/wrangler.toml",
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config.build).toEqual(
@@ -1421,7 +1421,7 @@ describe("normalizeAndValidateConfig()", () => {
 							path.normalize("project/some/path/b"),
 							path.normalize("project/some/path/c"),
 						],
-					}),
+					})
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -1450,7 +1450,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					"project/wrangler.toml",
 					"project/wrangler.toml",
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config.build).toEqual(
@@ -1463,7 +1463,7 @@ describe("normalizeAndValidateConfig()", () => {
 							path.normalize("project/some/path/c"),
 							path.normalize("project/false"),
 						],
-					}),
+					})
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1484,7 +1484,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ durable_objects: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1499,7 +1499,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ durable_objects: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1514,7 +1514,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ durable_objects: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1529,7 +1529,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ durable_objects: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1546,7 +1546,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ durable_objects: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1563,7 +1563,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ durable_objects: { bindings: {} } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1580,7 +1580,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ durable_objects: { bindings: "BAD" } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1597,7 +1597,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ durable_objects: { bindings: 999 } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1612,7 +1612,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ durable_objects: { bindings: null } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1658,7 +1658,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1726,7 +1726,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1756,7 +1756,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1814,7 +1814,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1846,7 +1846,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1866,7 +1866,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1894,7 +1894,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1923,7 +1923,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1944,7 +1944,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -1962,7 +1962,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ browser: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1977,7 +1977,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ browser: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -1992,7 +1992,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ browser: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2007,7 +2007,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ browser: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2025,7 +2025,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ vectorize: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2051,7 +2051,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2070,7 +2070,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ vectorize: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2085,7 +2085,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ vectorize: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2100,7 +2100,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ vectorize: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2117,7 +2117,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ ai_search_namespaces: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2144,7 +2144,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2170,7 +2170,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2190,7 +2190,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toContain("extra_field");
@@ -2203,7 +2203,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ ai_search: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2228,7 +2228,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2254,7 +2254,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2274,7 +2274,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toContain("extra_field");
@@ -2288,7 +2288,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ ai: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2303,7 +2303,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ ai: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2318,7 +2318,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ ai: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2333,7 +2333,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ ai: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2351,7 +2351,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ images: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2366,7 +2366,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ images: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2381,7 +2381,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ images: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2396,7 +2396,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ images: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2414,7 +2414,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ media: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2429,7 +2429,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ media: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2444,7 +2444,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ media: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2459,7 +2459,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ media: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2477,7 +2477,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ stream: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2492,7 +2492,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ stream: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2507,7 +2507,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ stream: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2522,7 +2522,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ stream: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2540,7 +2540,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ version_metadata: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2555,7 +2555,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ version_metadata: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2570,7 +2570,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ version_metadata: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2585,7 +2585,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ version_metadata: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2602,7 +2602,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ cloudchamber: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2617,7 +2617,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ cloudchamber: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2632,7 +2632,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ cloudchamber: "test" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2647,7 +2647,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ cloudchamber: 22 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2672,7 +2672,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2693,7 +2693,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ containers: "test" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2710,7 +2710,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ containers: { something: "here" } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2725,7 +2725,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ containers: "test" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2740,7 +2740,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ containers: 22 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2763,7 +2763,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -2788,7 +2788,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -2803,7 +2803,7 @@ describe("normalizeAndValidateConfig()", () => {
 				]);
 				if (config.containers) {
 					expect(config.containers[0].name).toEqual(
-						"test-worker-name-test-class",
+						"test-worker-name-test-class"
 					);
 				}
 			});
@@ -2830,7 +2830,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -2869,7 +2869,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -2900,7 +2900,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -2936,7 +2936,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -2962,12 +2962,12 @@ describe("normalizeAndValidateConfig()", () => {
 						} as unknown as RawConfig,
 						undefined,
 						undefined,
-						{ env: undefined },
+						{ env: undefined }
 					);
 
 					expect(diagnostics.hasWarnings()).toBe(false);
 					expect(diagnostics.hasErrors()).toBe(false);
-				},
+				}
 			);
 
 			it("should error for invalid rollout_step_percentage number values", ({
@@ -2986,7 +2986,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3012,7 +3012,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3050,7 +3050,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -3088,7 +3088,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -3116,7 +3116,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -3147,7 +3147,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3176,7 +3176,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3201,7 +3201,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3229,7 +3229,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3258,7 +3258,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3272,7 +3272,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ kv_namespaces: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3287,7 +3287,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ kv_namespaces: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3302,7 +3302,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ kv_namespaces: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3317,7 +3317,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ kv_namespaces: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3346,7 +3346,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3369,7 +3369,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3397,7 +3397,7 @@ describe("normalizeAndValidateConfig()", () => {
 				} as unknown as RawConfig,
 				undefined,
 				undefined,
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(diagnostics.hasWarnings()).toBe(false);
@@ -3417,7 +3417,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ d1_databases: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3432,7 +3432,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ d1_databases: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3447,7 +3447,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ d1_databases: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3462,7 +3462,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ d1_databases: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3491,7 +3491,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -3516,7 +3516,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3530,7 +3530,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ hyperdrive: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3545,7 +3545,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ hyperdrive: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3560,7 +3560,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ hyperdrive: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3575,7 +3575,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ hyperdrive: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3594,7 +3594,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -3612,7 +3612,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -3635,11 +3635,11 @@ describe("normalizeAndValidateConfig()", () => {
 					{ queues: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(
-					expect.not.objectContaining({ queues: expect.anything }),
+					expect.not.objectContaining({ queues: expect.anything })
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -3665,13 +3665,13 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(
 					expect.not.objectContaining({
 						queues: { producers: expect.anything },
-					}),
+					})
 				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -3704,7 +3704,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -3725,7 +3725,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -3753,13 +3753,13 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(
 					expect.not.objectContaining({
 						queues: { producers: expect.anything },
-					}),
+					})
 				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -3787,7 +3787,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ r2_buckets: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3802,7 +3802,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ r2_buckets: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3817,7 +3817,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ r2_buckets: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3832,7 +3832,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ r2_buckets: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3865,7 +3865,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3890,7 +3890,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3904,7 +3904,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ services: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3924,7 +3924,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ services: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3944,7 +3944,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ services: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3964,7 +3964,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ services: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4013,7 +4013,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4052,7 +4052,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ analytics_engine_datasets: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4069,7 +4069,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ analytics_engine_datasets: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4086,7 +4086,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ analytics_engine_datasets: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4101,7 +4101,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ analytics_engine_datasets: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4128,7 +4128,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4153,7 +4153,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4195,7 +4195,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -4296,7 +4296,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -4331,7 +4331,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4374,7 +4374,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -4407,7 +4407,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ pipelines: {} },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4423,7 +4423,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ pipelines: "BAD" },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4439,7 +4439,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ pipelines: 999 },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4455,7 +4455,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ pipelines: null },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4477,7 +4477,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -4497,7 +4497,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -4521,7 +4521,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ secrets_store_secrets: {} },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4537,7 +4537,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ secrets_store_secrets: null },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4560,7 +4560,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -4588,7 +4588,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(true);
@@ -4616,7 +4616,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ worker_loaders: {} },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4632,7 +4632,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ worker_loaders: null },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4653,7 +4653,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -4679,7 +4679,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(true);
@@ -4703,7 +4703,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe_hello_world: {} },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4719,7 +4719,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe_hello_world: null },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4741,7 +4741,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -4768,7 +4768,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(true);
@@ -4793,7 +4793,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ flagship: {} },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4809,7 +4809,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ flagship: "bad" },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4825,7 +4825,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ flagship: 999 },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4841,7 +4841,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ flagship: null },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4863,7 +4863,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -4888,7 +4888,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4916,7 +4916,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -4935,7 +4935,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ workflows: {} },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4951,7 +4951,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ workflows: "BAD" },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4967,7 +4967,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ workflows: 999 },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -4983,7 +4983,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ workflows: null },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5006,7 +5006,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -5031,7 +5031,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -5053,7 +5053,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5082,7 +5082,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -5107,7 +5107,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -5132,7 +5132,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -5158,7 +5158,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -5182,7 +5182,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -5207,7 +5207,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -5236,7 +5236,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -5253,7 +5253,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ logfwdr: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5268,7 +5268,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ logfwdr: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5283,7 +5283,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ logfwdr: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5298,7 +5298,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ logfwdr: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5313,7 +5313,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ logfwdr: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5328,7 +5328,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ logfwdr: { bindings: {} } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5343,7 +5343,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ logfwdr: { bindings: "BAD" } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5358,7 +5358,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ logfwdr: { bindings: 999 } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5373,7 +5373,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ logfwdr: { bindings: null } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5397,7 +5397,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -5417,7 +5417,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5452,7 +5452,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -5479,7 +5479,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -5500,7 +5500,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ ratelimits: {} },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5516,7 +5516,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ ratelimits: null },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -5542,7 +5542,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -5584,7 +5584,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(true);
@@ -5625,7 +5625,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config.vpc_services).toEqual([
@@ -5658,7 +5658,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -5690,7 +5690,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config.vpc_networks).toEqual([
@@ -5718,7 +5718,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config.vpc_networks).toEqual([
@@ -5745,7 +5745,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -5772,7 +5772,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -5793,7 +5793,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -5811,7 +5811,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: "BAD" } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -5829,7 +5829,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: 999 } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -5847,7 +5847,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: null } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -5865,7 +5865,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: {} } satisfies RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -5889,7 +5889,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -5908,7 +5908,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: { bindings: {} } } as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -5926,7 +5926,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: { bindings: "BAD" } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -5944,7 +5944,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: { bindings: 999 } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -5962,7 +5962,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: { bindings: null } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -5995,7 +5995,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -6023,7 +6023,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: { metadata: [] } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -6041,7 +6041,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: { metadata: "BAD" } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -6059,7 +6059,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: { metadata: 999 } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -6077,7 +6077,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: { metadata: null } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -6099,7 +6099,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ unsafe: { bindings: [] } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -6123,7 +6123,7 @@ describe("normalizeAndValidateConfig()", () => {
 				} as unknown as RawConfig,
 				undefined,
 				undefined,
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -6144,7 +6144,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ placement: { mode: "off", hint: "wnam" } },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -6160,7 +6160,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ placement: { mode: "smart", hint: "wnam" } },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -6175,7 +6175,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -6192,7 +6192,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ placement: { hostname: "example.com" } },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -6205,7 +6205,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ placement: { host: "example.com:5432" } },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -6218,7 +6218,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ placement: { region: "aws:us-east-1" } },
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -6229,7 +6229,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ placement: { shoeSize: 13 } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -6249,7 +6249,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -6279,24 +6279,24 @@ describe("normalizeAndValidateConfig()", () => {
 				rawConfig,
 				undefined,
 				undefined,
-				{ env: "dev" },
+				{ env: "dev" }
 			);
 			expect(configDev).toEqual(
 				expect.objectContaining({
 					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
-				}),
+				})
 			);
 
 			const { config: configProd } = normalizeAndValidateConfig(
 				rawConfig,
 				undefined,
 				undefined,
-				{ env: "prod" },
+				{ env: "prod" }
 			);
 			expect(configProd).toEqual(
 				expect.objectContaining({
 					kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
-				}),
+				})
 			);
 		});
 
@@ -6319,12 +6319,12 @@ describe("normalizeAndValidateConfig()", () => {
 				rawConfig,
 				undefined,
 				undefined,
-				{},
+				{}
 			);
 			expect(configDev).toEqual(
 				expect.objectContaining({
 					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
-				}),
+				})
 			);
 
 			vi.stubEnv("CLOUDFLARE_ENV", "prod");
@@ -6332,12 +6332,12 @@ describe("normalizeAndValidateConfig()", () => {
 				rawConfig,
 				undefined,
 				undefined,
-				{},
+				{}
 			);
 			expect(configProd).toEqual(
 				expect.objectContaining({
 					kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
-				}),
+				})
 			);
 		});
 
@@ -6360,12 +6360,12 @@ describe("normalizeAndValidateConfig()", () => {
 				rawConfig,
 				undefined,
 				undefined,
-				{ env: "prod" },
+				{ env: "prod" }
 			);
 			expect(config).toEqual(
 				expect.objectContaining({
 					kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
-				}),
+				})
 			);
 		});
 
@@ -6382,13 +6382,13 @@ describe("normalizeAndValidateConfig()", () => {
 				undefined,
 				{
 					env: "dev",
-				},
+				}
 			);
 			expect(config).toEqual(
 				expect.objectContaining({
 					name: "my-worker-dev",
 					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
-				}),
+				})
 			);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			        "Processing wrangler configuration:
@@ -6423,8 +6423,8 @@ describe("normalizeAndValidateConfig()", () => {
 						"./original-config.jsonc",
 						{
 							env: "dev",
-						},
-					),
+						}
+					)
 				).toThrowErrorMatchingInlineSnapshot(`
 					[Error: You have specified the environment "dev" via the \`--env/-e\` CLI argument.
 					This does not match the target environment "prod" that was used when building the application.
@@ -6446,8 +6446,8 @@ describe("normalizeAndValidateConfig()", () => {
 						rawConfig,
 						"./redirected-config.jsonc",
 						"./original-config.jsonc",
-						{},
-					),
+						{}
+					)
 				).toThrowErrorMatchingInlineSnapshot(`
 					[Error: You have specified the environment "dev" via the CLOUDFLARE_ENV environment variable.
 					This does not match the target environment "prod" that was used when building the application.
@@ -6471,8 +6471,8 @@ describe("normalizeAndValidateConfig()", () => {
 						"./original-config.jsonc",
 						{
 							env: "dev",
-						},
-					),
+						}
+					)
 				).toThrowErrorMatchingInlineSnapshot(`
 					[Error: You have specified the environment "dev" via the \`--env/-e\` CLI argument.
 					This does not match the target environment "prod" that was used when building the application.
@@ -6491,7 +6491,7 @@ describe("normalizeAndValidateConfig()", () => {
 				undefined,
 				{
 					env: "DEV",
-				},
+				}
 			);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
@@ -6548,7 +6548,7 @@ describe("normalizeAndValidateConfig()", () => {
 				{ ...rawConfig, env: { dev: {} } },
 				undefined,
 				undefined,
-				{ env: "dev" },
+				{ env: "dev" }
 			);
 
 			expect(config).toEqual(
@@ -6557,7 +6557,7 @@ describe("normalizeAndValidateConfig()", () => {
 					main: resolvedMain,
 					name: "mock-name-dev",
 					topLevelName: "mock-name",
-				}),
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(false);
@@ -6628,7 +6628,7 @@ describe("normalizeAndValidateConfig()", () => {
 				rawConfig,
 				undefined,
 				undefined,
-				{ env: "ENV1" },
+				{ env: "ENV1" }
 			);
 
 			expect(config).toEqual(
@@ -6636,7 +6636,7 @@ describe("normalizeAndValidateConfig()", () => {
 					...rawEnv,
 					main: resolvedMain,
 					topLevelName: "mock-name",
-				}),
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(false);
@@ -6654,7 +6654,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: "DEV" },
+					{ env: "DEV" }
 				);
 
 				expect(config.name).toEqual("mock-name");
@@ -6683,7 +6683,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: "DEV" },
+					{ env: "DEV" }
 				);
 
 				expect(config.name).toBeUndefined();
@@ -6719,7 +6719,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: "DEV" },
+					{ env: "DEV" }
 				);
 
 				expect(config.name).toEqual("mock-name");
@@ -6754,7 +6754,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: "DEV" },
+					{ env: "DEV" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(true);
@@ -6789,7 +6789,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: "DEV" },
+					{ env: "DEV" }
 				);
 
 				expect(config.account_id).toEqual("ACCOUNT_ID");
@@ -6846,7 +6846,7 @@ describe("normalizeAndValidateConfig()", () => {
 				rawConfig,
 				undefined,
 				undefined,
-				{ env: "ENV1" },
+				{ env: "ENV1" }
 			);
 
 			expect(config).toEqual(
@@ -6858,7 +6858,7 @@ describe("normalizeAndValidateConfig()", () => {
 					r2_buckets,
 					analytics_engine_datasets,
 					unsafe,
-				}),
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -6900,7 +6900,7 @@ describe("normalizeAndValidateConfig()", () => {
 				rawConfig,
 				undefined,
 				undefined,
-				{ env: undefined },
+				{ env: undefined }
 			);
 
 			expect(diagnostics.hasErrors()).toBe(true);
@@ -6923,7 +6923,7 @@ describe("normalizeAndValidateConfig()", () => {
 				rawConfig,
 				undefined,
 				undefined,
-				{ env: "production" },
+				{ env: "production" }
 			);
 
 			expect(diagnostics.hasErrors()).toBe(true);
@@ -6941,7 +6941,7 @@ describe("normalizeAndValidateConfig()", () => {
 				{ env: { ENV1: { node_compat: true } } },
 				undefined,
 				undefined,
-				{ env: "ENV1" },
+				{ env: "ENV1" }
 			);
 			expect(diagnostics.hasErrors()).toBe(true);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -6983,7 +6983,7 @@ describe("normalizeAndValidateConfig()", () => {
 				{ env: { ENV1: expectedConfig } },
 				undefined,
 				undefined,
-				{ env: "ENV1" },
+				{ env: "ENV1" }
 			);
 
 			expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -7024,7 +7024,7 @@ describe("normalizeAndValidateConfig()", () => {
 				{ env: { ENV1: { bla: "haj" } } },
 				undefined,
 				undefined,
-				{ env: "ENV1" },
+				{ env: "ENV1" }
 			);
 			expect(diagnostics.hasWarnings()).toBe(true);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -7047,7 +7047,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(rawConfig));
@@ -7064,7 +7064,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(rawConfig));
@@ -7099,7 +7099,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config).toEqual(expect.objectContaining(rawConfig));
@@ -7136,7 +7136,7 @@ describe("normalizeAndValidateConfig()", () => {
 						rawConfig,
 						undefined,
 						undefined,
-						{ env: "ENV1" },
+						{ env: "ENV1" }
 					);
 
 					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -7164,7 +7164,7 @@ describe("normalizeAndValidateConfig()", () => {
 						rawConfig,
 						undefined,
 						undefined,
-						{ env: "ENV1" },
+						{ env: "ENV1" }
 					);
 
 					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -7202,7 +7202,7 @@ describe("normalizeAndValidateConfig()", () => {
 						rawConfig,
 						undefined,
 						undefined,
-						{ env: "ENV1" },
+						{ env: "ENV1" }
 					);
 
 					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -7254,7 +7254,7 @@ describe("normalizeAndValidateConfig()", () => {
 						rawConfig,
 						undefined,
 						undefined,
-						{ env: "ENV1" },
+						{ env: "ENV1" }
 					);
 
 					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -7285,7 +7285,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(config.secrets).toEqual({
@@ -7295,7 +7295,7 @@ describe("normalizeAndValidateConfig()", () => {
 				// Expect experimental warning
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toContain(
-					'"secrets" fields are experimental',
+					'"secrets" fields are experimental'
 				);
 			});
 
@@ -7308,12 +7308,12 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toContain(
-					'The field "secrets" should be an object',
+					'The field "secrets" should be an object'
 				);
 			});
 
@@ -7326,12 +7326,12 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toContain(
-					'Expected "secrets.required" to be an array of strings',
+					'Expected "secrets.required" to be an array of strings'
 				);
 			});
 
@@ -7346,15 +7346,15 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toContain(
-					'Expected "secrets.required.[1]" to be of type string',
+					'Expected "secrets.required.[1]" to be of type string'
 				);
 				expect(diagnostics.renderErrors()).toContain(
-					'Expected "secrets.required.[2]" to be of type string',
+					'Expected "secrets.required.[2]" to be of type string'
 				);
 			});
 
@@ -7366,12 +7366,12 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toContain(
-					"API_KEY assigned to multiple Secret bindings",
+					"API_KEY assigned to multiple Secret bindings"
 				);
 			});
 
@@ -7384,12 +7384,12 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toContain(
-					"API_KEY assigned to Environment Variable and Secret bindings",
+					"API_KEY assigned to Environment Variable and Secret bindings"
 				);
 			});
 
@@ -7406,7 +7406,7 @@ describe("normalizeAndValidateConfig()", () => {
 						rawConfig,
 						undefined,
 						undefined,
-						{ env: "production" },
+						{ env: "production" }
 					);
 
 					expect(config.secrets).toEqual({ required: ["PROD_API_KEY"] });
@@ -7426,12 +7426,12 @@ describe("normalizeAndValidateConfig()", () => {
 						rawConfig,
 						undefined,
 						undefined,
-						{ env: "production" },
+						{ env: "production" }
 					);
 
 					expect(diagnostics.hasErrors()).toBe(false);
 					expect(diagnostics.renderWarnings()).toContain(
-						'"secrets" exists at the top level, but not on "env.production"',
+						'"secrets" exists at the top level, but not on "env.production"'
 					);
 				});
 			});
@@ -7443,7 +7443,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { durable_objects: [] } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7460,7 +7460,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { durable_objects: "BAD" } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7477,7 +7477,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { durable_objects: 999 } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7494,7 +7494,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { durable_objects: null } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7513,7 +7513,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { durable_objects: {} } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7534,7 +7534,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7555,7 +7555,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7576,7 +7576,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7595,7 +7595,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7631,7 +7631,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7684,7 +7684,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: expectedConfig } },
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -7714,7 +7714,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: expectedConfig as unknown as RawConfig } },
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -7762,7 +7762,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: expectedConfig as unknown as RawConfig } },
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
@@ -7788,7 +7788,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { kv_namespaces: {} } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7805,7 +7805,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { kv_namespaces: "BAD" } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7822,7 +7822,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { kv_namespaces: 999 } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7839,7 +7839,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { kv_namespaces: null } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7873,7 +7873,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7895,7 +7895,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { r2_buckets: {} } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7912,7 +7912,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { r2_buckets: "BAD" } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7929,7 +7929,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { r2_buckets: 999 } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7946,7 +7946,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { r2_buckets: null } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -7978,7 +7978,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8005,7 +8005,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8026,7 +8026,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8047,7 +8047,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8066,7 +8066,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8099,7 +8099,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8122,7 +8122,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { unsafe: [] } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8144,7 +8144,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { unsafe: "BAD" } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8166,7 +8166,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { unsafe: 999 } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8188,7 +8188,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { unsafe: null } } } as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8210,7 +8210,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: { ENV1: { unsafe: {} } } } as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8234,7 +8234,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8255,7 +8255,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8278,7 +8278,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8302,7 +8302,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8326,7 +8326,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8350,7 +8350,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8389,7 +8389,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8423,7 +8423,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8447,7 +8447,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8471,7 +8471,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8495,7 +8495,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -8521,7 +8521,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8554,7 +8554,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8580,7 +8580,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8611,7 +8611,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8639,7 +8639,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(true);
@@ -8679,7 +8679,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8696,7 +8696,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8725,7 +8725,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8750,7 +8750,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8777,7 +8777,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8798,7 +8798,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} satisfies RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8820,7 +8820,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(true);
@@ -8840,7 +8840,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8858,7 +8858,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8876,7 +8876,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8896,7 +8896,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8918,7 +8918,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8937,7 +8937,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -8955,7 +8955,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(true);
@@ -8980,7 +8980,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "production" },
+					{ env: "production" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -9006,7 +9006,7 @@ describe("normalizeAndValidateConfig()", () => {
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
-					{ env: "staging" },
+					{ env: "staging" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -9050,7 +9050,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(config).toEqual(expect.objectContaining(environment));
@@ -9099,7 +9099,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(config).toEqual(expect.objectContaining(environment));
@@ -9145,7 +9145,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(config).toEqual(expect.objectContaining(environment));
@@ -9186,7 +9186,7 @@ describe("normalizeAndValidateConfig()", () => {
 					expectedConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(config).toEqual(expect.objectContaining(environment));
@@ -9241,7 +9241,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					{
 						env: "ENV1",
-					},
+					}
 				);
 
 				expect(result1.config).toEqual(expect.objectContaining(environment1));
@@ -9254,7 +9254,7 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					{
 						env: "ENV2",
-					},
+					}
 				);
 
 				expect(result2.config).toEqual(expect.objectContaining(environment2));
@@ -9279,7 +9279,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(config).toEqual(
@@ -9288,7 +9288,7 @@ describe("normalizeAndValidateConfig()", () => {
 							directory: "dist",
 							binding: "ASSETS",
 						},
-					}),
+					})
 				);
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -9317,7 +9317,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: "ENV1" },
+					{ env: "ENV1" }
 				);
 
 				expect(config).toEqual(
@@ -9327,7 +9327,7 @@ describe("normalizeAndValidateConfig()", () => {
 							binding: "ASSETS",
 							run_worker_first: true,
 						},
-					}),
+					})
 				);
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -9352,7 +9352,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -9373,7 +9373,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -9394,7 +9394,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -9415,7 +9415,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
@@ -9434,7 +9434,7 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: undefined },
+					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -9458,15 +9458,15 @@ describe("normalizeAndValidateConfig()", () => {
 					rawConfig,
 					undefined,
 					undefined,
-					{ env: "staging" },
+					{ env: "staging" }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toContain(
-					'"env.staging" environment configuration',
+					'"env.staging" environment configuration'
 				);
 				expect(diagnostics.renderErrors()).toContain(
-					'The field "previews.browser" should be an object',
+					'The field "previews.browser" should be an object'
 				);
 			});
 		});
