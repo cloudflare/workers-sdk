@@ -49,7 +49,7 @@ describe("wrangler deploy with containers", () => {
 		setupCommonMocks();
 		fs.writeFileSync(
 			"index.js",
-			`export class ExampleDurableObject {}; export default{};`,
+			`export class ExampleDurableObject {}; export default{};`
 		);
 		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 	});
@@ -68,12 +68,12 @@ describe("wrangler deploy with containers", () => {
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
 
 		await expect(
-			runWrangler("deploy index.js"),
+			runWrangler("deploy index.js")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`
 			[Error: The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.
 			Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with DOCKER_HOST.]
-		`,
+		`
 		);
 	});
 	it("should fail early if the account id doesn't match the account id in the image uri", async ({
@@ -486,14 +486,14 @@ describe("wrangler deploy with containers", () => {
 					},
 				],
 			},
-			"src/wrangler.json",
+			"src/wrangler.json"
 		);
 
 		fs.writeFileSync("Dockerfile", "FROM scratch");
 		fs.mkdirSync("src/worker", { recursive: true });
 		fs.writeFileSync(
 			"src/worker/index.js",
-			`export class ExampleDurableObject {}; export default{};`,
+			`export class ExampleDurableObject {}; export default{};`
 		);
 		mockGetApplications([]);
 
@@ -552,7 +552,7 @@ describe("wrangler deploy with containers", () => {
 		fs.writeFileSync("Dockerfile", "FROM alpine");
 		fs.writeFileSync(
 			"nested/src/index.js",
-			`export class ExampleDurableObject {}; export default{};`,
+			`export class ExampleDurableObject {}; export default{};`
 		);
 
 		writeWranglerConfig(
@@ -568,7 +568,7 @@ describe("wrangler deploy with containers", () => {
 					},
 				],
 			},
-			"nested/wrangler.json",
+			"nested/wrangler.json"
 		);
 
 		mockGetApplications([]);
@@ -768,7 +768,7 @@ describe("wrangler deploy with containers", () => {
 		});
 		fs.writeFileSync(
 			"index.js",
-			`export class DurableObjectClass2 {}; export class ExampleDurableObject {}; export default{};`,
+			`export class DurableObjectClass2 {}; export class ExampleDurableObject {}; export default{};`
 		);
 
 		mockGetApplications([
@@ -946,9 +946,9 @@ describe("wrangler deploy with containers", () => {
 		});
 
 		await expect(
-			runWrangler("deploy index.js"),
+			runWrangler("deploy index.js")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: You need 'containers:write', try logging in again or creating an appropiate API token]`,
+			`[Error: You need 'containers:write', try logging in again or creating an appropiate API token]`
 		);
 	});
 
@@ -981,7 +981,7 @@ describe("wrangler deploy with containers", () => {
 
 			fs.writeFileSync(
 				"index.js",
-				`export class ExampleDurableObject {}; export default{};`,
+				`export class ExampleDurableObject {}; export default{};`
 			);
 			await runWrangler("deploy index.js");
 
@@ -1087,7 +1087,7 @@ describe("wrangler deploy with containers", () => {
 
 			fs.writeFileSync(
 				"index.js",
-				`export class ExampleDurableObject {}; export default{};`,
+				`export class ExampleDurableObject {}; export default{};`
 			);
 			await runWrangler("deploy index.js --containers-rollout=immediate");
 
@@ -1123,7 +1123,7 @@ describe("wrangler deploy with containers", () => {
 
 			fs.writeFileSync(
 				"index.js",
-				`export class ExampleDurableObject {}; export default{};`,
+				`export class ExampleDurableObject {}; export default{};`
 			);
 			await runWrangler("deploy index.js --containers-rollout=gradual");
 
@@ -1719,24 +1719,24 @@ describe("wrangler deploy with containers", () => {
 					containerName,
 					tag,
 					"FROM scratch",
-					process.cwd(),
-				),
+					process.cwd()
+				)
 			)
 			.mockImplementationOnce(
 				mockDockerImageInspectDigestsWithRepoDigest(
 					expect,
 					containerName,
 					tag,
-					"sha256:three",
-				),
+					"sha256:three"
+				)
 			)
 			.mockImplementationOnce(
-				mockDockerImageInspectSize(expect, containerName, tag),
+				mockDockerImageInspectSize(expect, containerName, tag)
 			)
 			.mockImplementationOnce(mockDockerLogin(expect, "mockpassword"))
 			// Mock docker image rm call since we skip the push
 			.mockImplementationOnce(
-				mockDockerImageDelete(expect, containerName, tag),
+				mockDockerImageDelete(expect, containerName, tag)
 			);
 		// // Add fallback mocks in case we fall through to push (for debugging)
 		// .mockImplementationOnce(
@@ -1754,7 +1754,7 @@ describe("wrangler deploy with containers", () => {
 				if (args && args[0] === "manifest" && args[1] === "inspect") {
 					// Verify the format: registry.cloudflare.com/account-id/image@hash
 					expect(args[3]).toBe(
-						`${getCloudflareContainerRegistry()}/some-account-id/${containerName}@sha256:three`,
+						`${getCloudflareContainerRegistry()}/some-account-id/${containerName}@sha256:three`
 					);
 					// Return a manifest that matches the sha, indicating the image exists remotely
 					return JSON.stringify({
@@ -1764,7 +1764,7 @@ describe("wrangler deploy with containers", () => {
 					});
 				}
 				return "";
-			},
+			}
 		);
 
 		writeWranglerConfig({
@@ -2031,7 +2031,7 @@ describe("wrangler deploy with containers", () => {
 					},
 				],
 			},
-			"./wrangler.jsonc",
+			"./wrangler.jsonc"
 		);
 
 		mockGetApplications([]);
@@ -2091,7 +2091,7 @@ describe("wrangler deploy with containers", () => {
 
 		expect(std.warn).toContain("Processing wrangler.toml configuration:");
 		expect(std.warn).toContain(
-			'"containers.wrangler_ssh" is deprecated. Use "containers.ssh" instead.',
+			'"containers.wrangler_ssh" is deprecated. Use "containers.ssh" instead.'
 		);
 		expect(std.err).toBe("");
 	});
@@ -2112,7 +2112,7 @@ describe("wrangler deploy with containers", () => {
 		});
 
 		await expect(runWrangler("deploy index.js")).rejects.toThrow(
-			/containers\.ssh\.enabled must be a boolean[\s\S]*containers\.ssh\.port must be a number between 1 and 65535 inclusive/,
+			/containers\.ssh\.enabled must be a boolean[\s\S]*containers\.ssh\.port must be a number between 1 and 65535 inclusive/
 		);
 	});
 
@@ -2267,9 +2267,9 @@ describe("wrangler deploy with containers", () => {
 			});
 
 			await expect(
-				runWrangler("deploy index.js"),
+				runWrangler("deploy index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: There is already an application with the name my-container deployed that is associated with a different durable object namespace (something-else). Either change the container name or delete the existing application first.]`,
+				`[Error: There is already an application with the name my-container deployed that is associated with a different durable object namespace (something-else). Either change the container name or delete the existing application first.]`
 			);
 		});
 
@@ -2401,14 +2401,14 @@ describe("wrangler deploy with containers dry run", () => {
 					"my-container",
 					"worker",
 					"FROM scratch",
-					process.cwd(),
-				),
+					process.cwd()
+				)
 			);
 		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
 		fs.writeFileSync(
 			"index.js",
-			`export class ExampleDurableObject {}; export default{};`,
+			`export class ExampleDurableObject {}; export default{};`
 		);
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
@@ -2439,7 +2439,7 @@ describe("wrangler deploy with containers dry run", () => {
 
 		fs.writeFileSync(
 			"index.js",
-			`export class ExampleDurableObject {}; export default{};`,
+			`export class ExampleDurableObject {}; export default{};`
 		);
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
@@ -2475,7 +2475,7 @@ describe("containers.unsafe configuration", () => {
 		setupCommonMocks();
 		fs.writeFileSync(
 			"index.js",
-			`export class ExampleDurableObject {}; export default{};`,
+			`export class ExampleDurableObject {}; export default{};`
 		);
 	});
 
@@ -2596,7 +2596,7 @@ function createDockerMockChain(
 	containerName: string,
 	tag: string,
 	dockerfilePath?: string,
-	buildContext?: string,
+	buildContext?: string
 ) {
 	const mocks = [
 		mockDockerInfo(expect),
@@ -2605,7 +2605,7 @@ function createDockerMockChain(
 			containerName,
 			tag,
 			dockerfilePath || "FROM scratch",
-			buildContext || process.cwd(),
+			buildContext || process.cwd()
 		),
 		mockDockerImageInspectDigests(expect, containerName, tag),
 		mockDockerImageInspectSize(expect, containerName, tag),
@@ -2615,7 +2615,7 @@ function createDockerMockChain(
 			expect,
 			containerName,
 			"some-account-id/" + containerName,
-			tag,
+			tag
 		),
 		mockDockerPush(expect, "some-account-id/" + containerName, tag),
 	];
@@ -2628,14 +2628,14 @@ function setupDockerMocks(
 	containerName: string,
 	tag: string,
 	dockerfilePath?: string,
-	buildContext?: string,
+	buildContext?: string
 ) {
 	const mocks = createDockerMockChain(
 		expect,
 		containerName,
 		tag,
 		dockerfilePath,
-		buildContext,
+		buildContext
 	);
 
 	// Clear any existing mock state
@@ -2657,7 +2657,7 @@ function setupDockerMocks(
 				return "i promise I am an unsuccessful docker manifest call";
 			}
 			return "";
-		},
+		}
 	);
 }
 
@@ -2726,10 +2726,10 @@ function mockGetVersion(versionId: string, bindings = [defaultDOBinding]) {
 						resources: {
 							bindings,
 						},
-					}),
+					})
 				);
-			},
-		),
+			}
+		)
 	);
 }
 
@@ -2749,7 +2749,7 @@ function defaultChildProcess() {
 
 function mockCreateApplication(
 	expect: ExpectStatic,
-	expected?: Partial<Application>,
+	expected?: Partial<Application>
 ) {
 	msw.use(
 		http.post("*/applications", async ({ request }) => {
@@ -2759,13 +2759,13 @@ function mockCreateApplication(
 			}
 
 			return HttpResponse.json({ success: true, result: json });
-		}),
+		})
 	);
 }
 
 function mockModifyApplication(
 	expect: ExpectStatic,
-	expected?: Partial<Application>,
+	expected?: Partial<Application>
 ) {
 	msw.use(
 		http.patch("*/applications/:id", async ({ request }) => {
@@ -2782,13 +2782,13 @@ function mockModifyApplication(
 					...(json as Record<string, unknown>),
 				},
 			});
-		}),
+		})
 	);
 }
 
 function mockCreateApplicationRollout(
 	expect: ExpectStatic,
-	expected?: Record<string, unknown>,
+	expected?: Record<string, unknown>
 ) {
 	msw.use(
 		http.post("*/applications/:id/rollouts", async ({ request }) => {
@@ -2804,7 +2804,7 @@ function mockCreateApplicationRollout(
 					...(json as Record<string, unknown>),
 				},
 			});
-		}),
+		})
 	);
 }
 
@@ -2827,15 +2827,15 @@ function mockGenerateImageRegistryCredentials(expect: ExpectStatic) {
 					} as AccountRegistryToken,
 				});
 			},
-			{ once: true },
-		),
+			{ once: true }
+		)
 	);
 }
 function mockGetApplications(applications: Application[]) {
 	msw.use(
 		http.get("*/applications", async () => {
 			return HttpResponse.json({ success: true, result: applications });
-		}),
+		})
 	);
 }
 
@@ -2845,15 +2845,15 @@ function mockListDurableObjects(
 		name: string;
 		script: string;
 		class: string;
-	}>,
+	}>
 ) {
 	msw.use(
 		http.get(
 			"*/accounts/:accountId/workers/durable_objects/namespaces",
 			async () => {
 				return HttpResponse.json(createFetchResult(durableObjects));
-			},
-		),
+			}
+		)
 	);
 }
 
@@ -2870,7 +2870,7 @@ function mockDockerBuild(
 	containerName: string,
 	tag: string,
 	expectedDockerfile: string,
-	buildContext: string,
+	buildContext: string
 ) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
@@ -2916,7 +2916,7 @@ function mockDockerBuild(
 function mockDockerImageInspectDigests(
 	expect: ExpectStatic,
 	containerName: string,
-	tag: string,
+	tag: string
 ) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
@@ -2945,7 +2945,7 @@ function mockDockerImageInspectDigests(
 		setImmediate(() => {
 			stdout.emit(
 				"data",
-				`["${getCloudflareContainerRegistry()}/${containerName}@sha256:three"] config-sha`,
+				`["${getCloudflareContainerRegistry()}/${containerName}@sha256:three"] config-sha`
 			);
 		});
 
@@ -2957,7 +2957,7 @@ function mockDockerImageInspectDigestsWithRepoDigest(
 	expect: ExpectStatic,
 	containerName: string,
 	tag: string,
-	imageId: string,
+	imageId: string
 ) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
@@ -2987,7 +2987,7 @@ function mockDockerImageInspectDigestsWithRepoDigest(
 			// Include account-id in the digest to match the managed registry format
 			stdout.emit(
 				"data",
-				`["${getCloudflareContainerRegistry()}/some-account-id/${containerName}@sha256:three"] ${imageId}`,
+				`["${getCloudflareContainerRegistry()}/some-account-id/${containerName}@sha256:three"] ${imageId}`
 			);
 		});
 
@@ -2998,7 +2998,7 @@ function mockDockerImageInspectDigestsWithRepoDigest(
 function mockDockerImageInspectSize(
 	expect: ExpectStatic,
 	containerName: string,
-	tag: string,
+	tag: string
 ) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
@@ -3035,7 +3035,7 @@ function mockDockerImageInspectSize(
 function mockDockerImageDelete(
 	expect: ExpectStatic,
 	containerName: string,
-	tag: string,
+	tag: string
 ) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
@@ -3071,7 +3071,7 @@ function mockDockerLogin(expect: ExpectStatic, expectedPassword: string) {
 function mockDockerPush(
 	expect: ExpectStatic,
 	containerName: string,
-	tag: string,
+	tag: string
 ) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
@@ -3087,7 +3087,7 @@ function mockDockerTag(
 	expect: ExpectStatic,
 	from: string,
 	to: string,
-	tag: string,
+	tag: string
 ) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
