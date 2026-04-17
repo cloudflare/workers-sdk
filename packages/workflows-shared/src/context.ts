@@ -6,6 +6,8 @@ import {
 	ABORT_REASONS,
 	InvalidStepReadableStreamError,
 	OversizedStreamChunkError,
+	PreservedNonRetryableError,
+	shouldPreserveNonRetryableError,
 	StreamOutputStorageLimitError,
 	UnsupportedStreamChunkError,
 	WorkflowFatalError,
@@ -698,25 +700,11 @@ export class Context extends RpcTarget {
 					(error.name === "NonRetryableError" ||
 						error.message.startsWith("NonRetryableError"))
 				) {
-					const preserveErrorMessage = this.#engine.compatibilityFlags.includes(
-						"workflows_preserve_non_retryable_error_message"
-					);
-
-					let attemptError: WorkflowFatalError;
-					if (preserveErrorMessage) {
-						const originalMessage =
-							e.name === "NonRetryableError"
-								? e.message
-								: e.message.replace(/^NonRetryableError:\s*/, "");
-						attemptError = Object.assign(
-							new WorkflowFatalError(originalMessage),
-							{ name: "NonRetryableError" }
-						);
-					} else {
-						attemptError = new WorkflowFatalError(
-							`Step threw a NonRetryableError with message "${e.message}"`
-						);
-					}
+					const attemptError = shouldPreserveNonRetryableError()
+						? new PreservedNonRetryableError(e)
+						: new WorkflowFatalError(
+								`Step threw a NonRetryableError with message "${e.message}"`
+							);
 
 					this.#engine.writeLog(
 						InstanceEvent.ATTEMPT_FAILURE,

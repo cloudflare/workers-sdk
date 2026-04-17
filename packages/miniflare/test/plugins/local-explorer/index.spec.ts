@@ -522,87 +522,80 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 		expect(res.status).toBe(200);
 
 		const data = await res.json();
-		expect(data).toEqual({
-			errors: [],
-			messages: [],
-			result: [
-				{
-					bindings: {
-						d1: [
-							{
-								bindingName: "MY_DB",
-								id: "d1-database-id",
-							},
-						],
-						do: [
-							{
-								bindingName: "MY_DO",
-								className: "TestDO",
-								id: "worker-a1-TestDO",
-								scriptName: "worker-a1",
-								useSqlite: false,
-							},
-						],
-						kv: [
-							{
-								bindingName: "MY_KV",
-								id: "kv-namespace-id",
-							},
-						],
-						r2: [
-							{
-								bindingName: "MY_BUCKET",
-								id: "r2-bucket-name",
-							},
-						],
-						workflows: [],
-					},
-					host: "127.0.0.1",
-					isSelf: true,
-					name: "worker-a1",
-					port: expect.any(Number),
-					protocol: "http",
-				},
-				{
-					bindings: {
-						d1: [],
-						do: [],
-						kv: [
-							{
-								bindingName: "KV_A2",
-								id: "kv-a2",
-							},
-						],
-						r2: [],
-						workflows: [],
-					},
-					host: "127.0.0.1",
-					isSelf: true,
-					name: "worker-a2",
-					port: expect.any(Number),
-					protocol: "http",
-				},
-				{
-					bindings: {
-						d1: [
-							{
-								bindingName: "DB_B",
-								id: "db-b",
-							},
-						],
-						do: [],
-						kv: [],
-						r2: [],
-						workflows: [],
-					},
-					host: "127.0.0.1",
-					isSelf: false,
-					name: "worker-b",
-					port: expect.any(Number),
-					protocol: "http",
-				},
-			],
-			success: true,
-		});
+		expect(data).toMatchInlineSnapshot(`
+			{
+			  "errors": [],
+			  "messages": [],
+			  "result": [
+			    {
+			      "bindings": {
+			        "d1": [
+			          {
+			            "bindingName": "MY_DB",
+			            "id": "d1-database-id",
+			          },
+			        ],
+			        "do": [
+			          {
+			            "bindingName": "MY_DO",
+			            "className": "TestDO",
+			            "id": "worker-a1-TestDO",
+			            "scriptName": "worker-a1",
+			            "useSqlite": false,
+			          },
+			        ],
+			        "kv": [
+			          {
+			            "bindingName": "MY_KV",
+			            "id": "kv-namespace-id",
+			          },
+			        ],
+			        "r2": [
+			          {
+			            "bindingName": "MY_BUCKET",
+			            "id": "r2-bucket-name",
+			          },
+			        ],
+			        "workflows": [],
+			      },
+			      "isSelf": true,
+			      "name": "worker-a1",
+			    },
+			    {
+			      "bindings": {
+			        "d1": [],
+			        "do": [],
+			        "kv": [
+			          {
+			            "bindingName": "KV_A2",
+			            "id": "kv-a2",
+			          },
+			        ],
+			        "r2": [],
+			        "workflows": [],
+			      },
+			      "isSelf": true,
+			      "name": "worker-a2",
+			    },
+			    {
+			      "bindings": {
+			        "d1": [
+			          {
+			            "bindingName": "DB_B",
+			            "id": "db-b",
+			          },
+			        ],
+			        "do": [],
+			        "kv": [],
+			        "r2": [],
+			        "workflows": [],
+			      },
+			      "isSelf": false,
+			      "name": "worker-b",
+			    },
+			  ],
+			  "success": true,
+			}
+		`);
 	});
 });

@@ -1,15 +1,15 @@
-import { env, SELF } from "cloudflare:test";
+import { env, exports } from "cloudflare:workers";
 import { it } from "vitest";
-import { upsertPost } from "../src";
+import { upsertPost } from "../src/utils";
 
 it("should create and read post", async ({ expect }) => {
-	let response = await SELF.fetch("https://example.com/hello", {
+	let response = await exports.default.fetch("https://example.com/hello", {
 		method: "PUT",
 		body: "👋",
 	});
 	expect(response.status).toBe(204);
 
-	response = await SELF.fetch("https://example.com/hello");
+	response = await exports.default.fetch("https://example.com/hello");
 	expect(response.status).toBe(200);
 	expect(await response.text()).toBe("👋");
 });
@@ -19,7 +19,7 @@ it("should list posts", async ({ expect }) => {
 	await upsertPost(env, "/two", "2");
 	await upsertPost(env, "/three", "3");
 
-	const response = await SELF.fetch("https://example.com/");
+	const response = await exports.default.fetch("https://example.com/");
 	expect(response.status).toBe(200);
 	expect(await response.text()).toMatchInlineSnapshot(`
 		"https://example.com/hello
@@ -40,7 +40,7 @@ it("should list posts", async ({ expect }) => {
 });
 
 it("should reject invalid method", async ({ expect }) => {
-	const response = await SELF.fetch("https://example.com/hello", {
+	const response = await exports.default.fetch("https://example.com/hello", {
 		method: "POST",
 		body: "👋",
 	});
@@ -48,12 +48,12 @@ it("should reject invalid method", async ({ expect }) => {
 });
 
 it("should respond with not found for invalid slugs", async ({ expect }) => {
-	const response = await SELF.fetch("https://example.com/bad");
+	const response = await exports.default.fetch("https://example.com/bad");
 	expect(response.status).toBe(404);
 });
 
 it("shouldn't allow creating post at root", async ({ expect }) => {
-	const response = await SELF.fetch("https://example.com/", {
+	const response = await exports.default.fetch("https://example.com/", {
 		method: "PUT",
 		body: "👋",
 	});

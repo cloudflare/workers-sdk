@@ -66,10 +66,10 @@ describe("Engine", () => {
 		const engineId = env.ENGINE.idFromName(instanceId);
 		const engineStub = env.ENGINE.get(engineId);
 
-		await runInDurableObject(engineStub, (engine) => {
-			engine.compatibilityFlags = [
-				"workflows_preserve_non_retryable_error_message",
-			];
+		vi.stubGlobal("Cloudflare", {
+			compatibilityFlags: {
+				workflows_preserve_non_retryable_error_message: true,
+			},
 		});
 
 		setTestWorkflowCallback(async (_event, step) => {
@@ -124,6 +124,8 @@ describe("Engine", () => {
 			name: "NonRetryableError",
 			message: "my custom error message",
 		});
+
+		vi.unstubAllGlobals();
 	});
 
 	it("should not error out if step fails but is try-catched", async ({

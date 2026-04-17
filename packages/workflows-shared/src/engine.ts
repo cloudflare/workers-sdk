@@ -13,6 +13,8 @@ import {
 	ABORT_REASONS,
 	createWorkflowError,
 	isAbortError,
+	PreservedNonRetryableError,
+	shouldPreserveNonRetryableError,
 	WorkflowFatalError,
 } from "./lib/errors";
 import {
@@ -41,7 +43,6 @@ interface Env {
 	ENGINE: DurableObjectNamespace<Engine>;
 	USER_WORKFLOW: WorkflowEntrypoint;
 	STEP_LIMIT?: string; // JSON-encoded number from miniflare binding
-	COMPATIBILITY_FLAGS?: string[]; // JSON-parsed string[] from miniflare json binding
 }
 
 export type DatabaseWorkflow = {
@@ -107,7 +108,6 @@ export class Engine extends DurableObject<Env> {
 	timeoutHandler: GracePeriodSemaphore;
 	priorityQueue: TimePriorityQueue | undefined;
 	stepLimit: number;
-	compatibilityFlags: string[];
 	engineAbortController: AbortController = new AbortController();
 	pauseController: AbortController = new AbortController();
 
@@ -125,8 +125,6 @@ export class Engine extends DurableObject<Env> {
 		this.stepLimit = env.STEP_LIMIT
 			? JSON.parse(env.STEP_LIMIT)
 			: DEFAULT_STEP_LIMIT;
-
-		this.compatibilityFlags = env.COMPATIBILITY_FLAGS ?? [];
 
 		void this.ctx.blockConcurrencyWhile(async () => {
 			this.ctx.storage.transactionSync(() => {
@@ -1128,28 +1126,11 @@ export class Engine extends DurableObject<Env> {
 					err.name === "NonRetryableError" ||
 					err.message.startsWith("NonRetryableError")
 				) {
-					const preserveErrorMessage = this.compatibilityFlags.includes(
-						"workflows_preserve_non_retryable_error_message"
-					);
-
-					let fatalError: WorkflowFatalError;
-					if (preserveErrorMessage) {
-						// When the error crosses an RPC boundary, the name gets
-						// prepended to the message (e.g. "NonRetryableError: msg").
-						// Parse it back out so we surface the original name + message.
-						const originalMessage =
-							err.name === "NonRetryableError"
-								? err.message
-								: err.message.replace(/^NonRetryableError:\s*/, "");
-						fatalError = Object.assign(
-							new WorkflowFatalError(originalMessage),
-							{ name: "NonRetryableError" }
-						);
-					} else {
-						fatalError = new WorkflowFatalError(
-							`The execution of the Workflow instance was terminated, as a step threw an NonRetryableError and it was not handled`
-						);
-					}
+					const fatalError = shouldPreserveNonRetryableError()
+						? new PreservedNonRetryableError(err)
+						: new WorkflowFatalError(
+								`The execution of the Workflow instance was terminated, as a step threw an NonRetryableError and it was not handled`
+							);
 
 					this.writeLog(InstanceEvent.WORKFLOW_FAILURE, null, null, {
 						error: fatalError,

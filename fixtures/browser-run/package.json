@@ -1,5 +1,5 @@
 {
-	"name": "@fixture/browser-rendering",
+	"name": "@fixture/browser-run",
 	"private": true,
 	"scripts": {
 		"cf-typegen": "wrangler types",

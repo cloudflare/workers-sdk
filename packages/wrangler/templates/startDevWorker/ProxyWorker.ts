@@ -155,8 +155,9 @@ export class ProxyWorker implements DurableObject {
 					res = new Response(res.body, res);
 					rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
 
+					await checkForPreviewTokenError(res, this.env, proxyData);
+
 					if (isHtmlResponse(res)) {
-						await checkForPreviewTokenError(res, this.env, proxyData);
 						res = insertLiveReloadScript(request, res, this.env, proxyData);
 					}
 
@@ -256,8 +257,15 @@ async function checkForPreviewTokenError(
 	// so we clone and read the text instead.
 	const clone = response.clone();
 	const text = await clone.text();
-	// Naive string match should be good enough when combined with status code check
-	if (text.includes("Invalid Workers Preview configuration")) {
+	// Naive string match should be good enough when combined with status code check.
+	// "Invalid Workers Preview configuration" is the HTML error returned when the
+	// preview token has expired. "error code: 1031" is a text/plain error returned
+	// by remote bindings (e.g. Workers AI) when their underlying session has timed out.
+	// Both indicate the preview session needs to be refreshed.
+	if (
+		text.includes("Invalid Workers Preview configuration") ||
+		text.includes("error code: 1031")
+	) {
 		void sendMessageToProxyController(env, {
 			type: "previewTokenExpired",
 			proxyData,
