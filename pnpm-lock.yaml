@@ -3409,7 +3409,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20260416.2
+        version: 4.20260417.1
       typescript:
         specifier: catalog:default
         version: 5.8.3
