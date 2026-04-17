@@ -3597,11 +3597,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "queues.producers[0]" bindings should have a string "binding" field but got {}.
-					  - "queues.producers[0]" bindings should have a string "queue" field but got {}.
-					  - "queues.producers[1]" bindings should have a string "queue" field but got {"binding":"QUEUE_BINDING_1"}.
 					  - "queues.producers[2]" bindings should have a string "binding" field but got {"binding":2333,"queue":2444}.
-					  - "queues.producers[2]" bindings should have a string "queue" field but got {"binding":2333,"queue":2444}.
-					  - "queues.producers[3]" bindings should have a string "queue" field but got {"binding":"QUEUE_BINDING_3","queue":""}."
+					  - "queues.producers[2]" bindings should, optionally, have a string "queue" field but got {"binding":2333,"queue":2444}.
+					  - "queues.producers[3]" bindings should, optionally, have a string "queue" field but got {"binding":"QUEUE_BINDING_3","queue":""}."
 				`);
 			});
 

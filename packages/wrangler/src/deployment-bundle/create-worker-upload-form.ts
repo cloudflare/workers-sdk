@@ -257,13 +257,23 @@ export function createWorkerUploadForm(
 	});
 
 	queues.forEach(({ binding, queue_name, delivery_delay, raw }) => {
-		metadataBindings.push({
-			type: "queue",
-			name: binding,
-			queue_name,
-			delivery_delay,
-			raw,
-		});
+		if (options?.dryRun) {
+			queue_name ??= INHERIT_SYMBOL;
+		}
+		if (queue_name === undefined) {
+			throw new UserError(`${binding} bindings must have a "queue_name" field`);
+		}
+		if (queue_name === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				type: "queue",
+				name: binding,
+				queue_name,
+				delivery_delay,
+				raw,
+			});
+		}
 	});
 
 	r2_buckets.forEach(({ binding, bucket_name, jurisdiction, raw }) => {

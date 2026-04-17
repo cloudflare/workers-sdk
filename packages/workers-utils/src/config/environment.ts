@@ -848,8 +848,8 @@ export interface EnvironmentNonInheritable {
 			/** The binding name used to refer to the Queue in the Worker. */
 			binding: string;
 
-			/** The name of this Queue. */
-			queue: string;
+			/** The name of this Queue. Omit to auto-provision. */
+			queue?: string;
 
 			/** The number of seconds to wait before delivering a message */
 			delivery_delay?: number;

@@ -3751,11 +3751,12 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	if (
-		!isRequiredProperty(value, "queue", "string") ||
-		(value as { queue: string }).queue.length === 0
+		!isOptionalProperty(value, "queue", "string") ||
+		(isRequiredProperty(value, "queue", "string") &&
+			(value as { queue: string }).queue.length === 0)
 	) {
 		diagnostics.errors.push(
-			`"${field}" bindings should have a string "queue" field but got ${JSON.stringify(
+			`"${field}" bindings should, optionally, have a string "queue" field but got ${JSON.stringify(
 				value
 			)}.`
 		);

@@ -196,7 +196,7 @@ export interface CfWorkflow {
 
 export interface CfQueue {
 	binding: string;
-	queue_name: string;
+	queue_name?: string | typeof INHERIT_SYMBOL;
 	delivery_delay?: number;
 	remote?: boolean;
 	raw?: boolean;

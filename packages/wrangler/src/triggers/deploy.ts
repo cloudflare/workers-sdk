@@ -13,6 +13,7 @@ import {
 	updateQueueConsumers,
 	validateRoutes,
 } from "../deploy/deploy";
+import { getFlag } from "../experimental-flags";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
@@ -75,7 +76,7 @@ export default async function triggersDeploy(
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-	if (!props.dryRun) {
+	if (!props.dryRun && !getFlag("RESOURCES_PROVISION")) {
 		await ensureQueuesExistByConfig(config);
 	}
 
@@ -239,9 +240,9 @@ export default async function triggersDeploy(
 
 	if (config.queues.producers && config.queues.producers.length) {
 		deployments.push(
-			...config.queues.producers.map((producer) =>
-				Promise.resolve([`Producer for ${producer.queue}`])
-			)
+			...config.queues.producers
+				.filter((producer) => producer.queue)
+				.map((producer) => Promise.resolve([`Producer for ${producer.queue}`]))
 		);
 	}
 

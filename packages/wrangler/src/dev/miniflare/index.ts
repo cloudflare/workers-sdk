@@ -272,10 +272,17 @@ function queueProducerEntry(
 	},
 ] {
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { queueName, deliveryDelay }];
+		return [binding, { queueName: queueName as string, deliveryDelay }];
 	}
 
-	return [binding, { queueName, deliveryDelay, remoteProxyConnectionString }];
+	return [
+		binding,
+		{
+			queueName: queueName as string,
+			deliveryDelay,
+			remoteProxyConnectionString,
+		},
+	];
 }
 function pipelineEntry(
 	pipeline: CfPipeline,

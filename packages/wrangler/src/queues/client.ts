@@ -201,9 +201,9 @@ export async function getQueue(
 }
 
 export async function ensureQueuesExistByConfig(config: Config) {
-	const producers = (config.queues.producers || []).map(
-		(producer) => producer.queue
-	);
+	const producers = (config.queues.producers || [])
+		.map((producer) => producer.queue)
+		.filter((q): q is string => typeof q === "string");
 	const consumers = (config.queues.consumers || []).map(
 		(consumer) => consumer.queue
 	);
