@@ -1216,7 +1216,9 @@ describe("Dev Registry: error handling", () => {
 		);
 
 		// The old-format entry has no debugPortAddress, so the proxy should
-		// return a 503 (not connected) rather than crashing.
+		// return a 503 with the incompatible version message rather than crashing.
+		// We wait specifically for the incompatible message (not the generic "not
+		// found" message) to ensure the file watcher has picked up the entry.
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "service-worker",
@@ -1226,7 +1228,7 @@ describe("Dev Registry: error handling", () => {
 
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual(
-				`Worker "service-worker" not found. Make sure it is running locally.`
+				`Worker "service-worker" is not compatible with this version of the dev server. Please update all Worker instances to the same version.`
 			);
 		}, waitForTimeout);
 	});
