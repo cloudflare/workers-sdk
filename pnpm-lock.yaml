@@ -2135,9 +2135,6 @@ importers:
       esbuild:
         specifier: catalog:default
         version: 0.27.3
-      exit-hook:
-        specifier: 2.2.1
-        version: 2.2.1
       expect-type:
         specifier: ^0.15.0
         version: 0.15.0

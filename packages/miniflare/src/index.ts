@@ -11,7 +11,6 @@ import util from "node:util";
 import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli";
 import { removeDir, removeDirSync } from "@cloudflare/workers-utils";
-import exitHook from "exit-hook";
 import { $ as colors$, green } from "kleur/colors";
 import stoppable from "stoppable";
 import { getGlobalDispatcher, Pool } from "undici";
@@ -21,6 +20,7 @@ import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { fallbackCf, setupCf } from "./cf";
+import { exitHook } from "./exit-hook";
 import {
 	coupleWebSocket,
 	DispatchFetchDispatcher,
@@ -2408,6 +2408,9 @@ export class Miniflare {
 		}
 
 		if (previousEntryURL?.toString() !== this.#runtimeEntryURL.toString()) {
+			// Close the previous dispatcher if the entry URL changed, to avoid
+			// leaking sockets from the old Pool.
+			void this.#runtimeDispatcher?.close().catch(() => {});
 			this.#runtimeDispatcher = new Pool(this.#runtimeEntryURL, {
 				connect: { rejectUnauthorized: false },
 				// Disable timeouts for local dev — long-running responses (streaming,
@@ -2420,6 +2423,7 @@ export class Miniflare {
 		// Set up a direct dispatcher to the dev-registry-proxy socket so we can
 		// push registry updates without routing through the entry worker.
 		const devRegistryPort = maybeSocketPorts.get(SOCKET_DEV_REGISTRY);
+		void this.#devRegistryDispatcher?.close().catch(() => {});
 		if (devRegistryPort !== undefined) {
 			this.#devRegistryDispatcher = new Pool(
 				new URL(`http://127.0.0.1:${devRegistryPort}`)
@@ -3037,8 +3041,27 @@ export class Miniflare {
 			// Cleanup as much as possible even if `#init()` threw
 			await this.#proxyClient?.dispose();
 			await this.#runtime?.dispose();
+			// Close the undici Pool used for dispatching fetch requests to the
+			// runtime. This must happen after the runtime is disposed, so that
+			// in-flight connections are broken and close immediately. Without this,
+			// lingering sockets in the Pool can keep the Node.js event loop alive.
+			// The Pool may already be destroyed (e.g., if workerd was SIGKILL'd and
+			// all connections broke), so ignore ClientDestroyedError.
+			try {
+				await this.#runtimeDispatcher?.close();
+			} catch {}
+			// Also close the dev-registry dispatcher (same issue as above).
+			try {
+				await this.#devRegistryDispatcher?.close();
+			} catch {}
 
 			await this.#stopLoopbackServer();
+			// Close WebSocket servers so any connected clients are disconnected
+			// and their sockets don't keep the event loop alive. These use
+			// `noServer: true` so they don't own an HTTP server, but connected
+			// WebSocket clients still hold open sockets.
+			this.#liveReloadServer.close();
+			this.#webSocketServer.close();
 			// Best-effort cleanup: on Windows, workerd may not release file handles
 			// immediately after disposal, causing EBUSY errors. The temp directory
 			// lives in os.tmpdir() so the OS will clean it up eventually.
