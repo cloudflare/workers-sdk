@@ -10,7 +10,11 @@ import { isLocal } from "../../utils/is-local";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig } from "../utils";
-import { getMigrationsPath, getUnappliedMigrations, initMigrationsTable } from "./helpers";
+import {
+	getMigrationsPath,
+	getUnappliedMigrations,
+	initMigrationsTable,
+} from "./helpers";
 import type { ParseError } from "@cloudflare/workers-utils";
 
 export const d1MigrationsApplyCommand = createCommand({
