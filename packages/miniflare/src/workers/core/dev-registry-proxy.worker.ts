@@ -3,6 +3,7 @@ import {
 	resolveTarget,
 	tailEventsReplacer,
 	tailEventsReviver,
+	workerNotFoundMessage,
 } from "./dev-registry-proxy-shared.worker";
 import type { WorkerdDebugPortConnector } from "./dev-registry-proxy-shared.worker";
 
@@ -75,9 +76,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 				}
 
 				if (!target._fetcher) {
-					throw new Error(
-						`Worker "${ctx.props.service}" not found. Make sure it is running locally.`
-					);
+					throw new Error(workerNotFoundMessage(ctx.props.service));
 				}
 				return Reflect.get(target._fetcher, prop);
 			},
@@ -86,19 +85,16 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 
 	fetch(request: Request): Promise<Response> | Response {
 		if (!this._fetcher) {
-			return new Response(
-				`Worker "${this.ctx.props.service}" not found. Make sure it is running locally.`,
-				{ status: 503 }
-			);
+			return new Response(workerNotFoundMessage(this.ctx.props.service), {
+				status: 503,
+			});
 		}
 		return this._fetcher.fetch(request);
 	}
 
 	async scheduled(controller: ScheduledController) {
 		if (!this._entryFetcher) {
-			throw new Error(
-				`Worker "${this.ctx.props.service}" not found. Make sure it is running locally.`
-			);
+			throw new Error(workerNotFoundMessage(this.ctx.props.service));
 		}
 		const params = new URLSearchParams();
 		if (controller.cron) {

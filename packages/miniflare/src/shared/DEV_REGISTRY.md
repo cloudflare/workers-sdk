@@ -51,7 +51,6 @@ type WorkerDefinition = {
 	debugPortAddress: string; // e.g. "127.0.0.1:12345"
 	defaultEntrypointService: string; // workerd service name for default entrypoint
 	userWorkerService: string; // workerd service name bypassing asset proxies
-	loopbackAddress: string; // e.g. "127.0.0.1:8787"
 };
 ```
 
