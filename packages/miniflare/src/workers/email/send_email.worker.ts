@@ -283,7 +283,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 
 			// The builder path doesn't assemble MIME locally, so there's no real
 			// Message-ID to surface. Synthesize one in the same shape the
-			// production runtime returns: 36 characters followed by a domain.
+			// production runtime returns: 32 hex characters followed by a domain.
 			const uuid = crypto.randomUUID().replaceAll("-", "");
 			return { messageId: `${uuid}@example.com` };
 		}
