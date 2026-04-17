@@ -12,14 +12,16 @@ let blocker: http.Server;
 export const CONFIGURED_PORT = 15_173;
 
 export async function preServe() {
-	// Occupy the port that Vite is configured to use.
-	// Bind on all interfaces so it genuinely conflicts with Vite's listen.
+	// Occupy the port that Vite is configured to use on 127.0.0.1.
+	// The Vite server config below also specifies host: "127.0.0.1" so
+	// both compete for the exact same address, guaranteeing a conflict
+	// regardless of platform or IPv4/IPv6 dual-stack behaviour.
 	blocker = http.createServer((_req, res) => {
 		res.writeHead(200);
 		res.end();
 	});
 	await new Promise<void>((resolve) =>
-		blocker.listen(CONFIGURED_PORT, "0.0.0.0", resolve)
+		blocker.listen(CONFIGURED_PORT, "127.0.0.1", resolve)
 	);
 }
 
@@ -31,7 +33,8 @@ export async function serve() {
 		logLevel: "silent",
 		configFile: false,
 		server: {
-			// Request the same port as the blocker — Vite will have to bump
+			// Pin to the same address as the blocker so Vite must bump the port
+			host: "127.0.0.1",
 			port: CONFIGURED_PORT,
 			strictPort: false,
 		},
