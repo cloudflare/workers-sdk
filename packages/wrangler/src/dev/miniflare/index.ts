@@ -425,6 +425,7 @@ type WorkerOptionsBindings = Pick<
 	| "mtlsCertificates"
 	| "helloWorld"
 	| "flagship"
+	| "artifacts"
 	| "workerLoaders"
 	| "unsafeBindings"
 	| "additionalUnboundDurableObjects"
@@ -498,6 +499,7 @@ export function buildMiniflareBindingOptions(
 		bindings
 	);
 	const flagshipBindings = extractBindingsOfType("flagship", bindings);
+	const artifactsBindings = extractBindingsOfType("artifacts", bindings);
 	const workerLoaders = extractBindingsOfType("worker_loader", bindings);
 	const sendEmailBindings = extractBindingsOfType("send_email", bindings);
 	// Extract both regular and unsafe ratelimit bindings
@@ -622,6 +624,10 @@ export function buildMiniflareBindingOptions(
 
 	for (const media of mediaBindings) {
 		warnOrError("media", media.remote, "always-remote");
+	}
+
+	for (const artifact of artifactsBindings) {
+		warnOrError("artifacts", artifact.remote, "always-remote");
 	}
 
 	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
@@ -796,6 +802,15 @@ export function buildMiniflareBindingOptions(
 						binding.remote && remoteProxyConnectionString
 							? remoteProxyConnectionString
 							: undefined,
+				},
+			])
+		),
+		artifacts: Object.fromEntries(
+			artifactsBindings.map((binding) => [
+				binding.binding,
+				{
+					namespace: binding.namespace,
+					remoteProxyConnectionString,
 				},
 			])
 		),
@@ -1003,7 +1018,7 @@ export async function buildMiniflareOptions(
 			? `${config.upstreamProtocol}://${config.localUpstream}`
 			: undefined;
 
-	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
+	const { sourceOptions } = await buildSourceOptions(config);
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		config,
 		remoteProxyConnectionString
@@ -1023,7 +1038,6 @@ export async function buildMiniflareOptions(
 		liveReload: config.liveReload,
 		upstream,
 		unsafeDevRegistryPath: config.devRegistry,
-		unsafeDevRegistryDurableObjectProxy: true,
 		unsafeHandleDevRegistryUpdate: onDevRegistryUpdate,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
@@ -1050,13 +1064,6 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
-				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
-				unsafeDirectSockets: entrypointNames.map((name) => ({
-					host: "127.0.0.1",
-					port: 0,
-					entrypoint: name,
-					proxy: true,
-				})),
 				containerEngine: config.containerEngine,
 				zone: config.zone,
 			},

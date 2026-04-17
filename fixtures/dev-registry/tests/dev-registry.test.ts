@@ -128,7 +128,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				body: await response.text(),
 			}).toEqual({
 				status: 503,
-				body: `Couldn't find a local dev session for the "default" entrypoint of service "service-worker" to proxy to`,
+				body: `Worker "service-worker" not found. Make sure it is running locally.`,
 			});
 		}, waitForTimeout);
 
@@ -168,7 +168,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				body: await response.text(),
 			}).toEqual({
 				status: 503,
-				body: `Couldn't find a local dev session for the "default" entrypoint of service "exported-handler" to proxy to`,
+				body: `Worker "exported-handler" not found. Make sure it is running locally.`,
 			});
 		}, waitForTimeout);
 
@@ -252,7 +252,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(response.status).toBe(500);
 			expect(await response.text()).toEqual(
-				`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "worker-entrypoint-with-assets" to proxy to.`
+				`Worker "worker-entrypoint-with-assets" not found. Make sure it is running locally.`
 			);
 		}, waitForTimeout);
 
@@ -327,7 +327,9 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			const response = await fetch(`${externalDurableObject}?${searchParams}`);
 
 			expect(response.status).toBe(503);
-			expect(await response.text()).toEqual("Service Unavailable");
+			expect(await response.text()).toEqual(
+				`Worker "internal-durable-object" not found. Make sure it is running locally.`
+			);
 		}, waitForTimeout);
 
 		await runWranglerDev(
@@ -369,13 +371,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			});
 			const response = await fetch(`${externalDurableObject}?${searchParams}`);
 
-			expect({
-				status: response.status,
-				body: await response.text(),
-			}).toEqual({
-				status: 500,
-				body: 'Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.',
-			});
+			expect(response.status).toBe(500);
+			expect(await response.text()).toContain(
+				`Worker "internal-durable-object" not found. Make sure it is running locally.`
+			);
 		}, waitForTimeout);
 
 		await runWranglerDev(
@@ -383,7 +382,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			devRegistryPath
 		);
 
-		// Test RPC after internal durable object is started (should still fail)
+		// Test RPC after internal durable object is started
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "durable-object",
@@ -391,10 +390,8 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			});
 			const response = await fetch(`${externalDurableObject}?${searchParams}`);
 
-			expect(response.status).toBe(500);
-			expect(await response.text()).toEqual(
-				'Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.'
-			);
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong");
 		}, waitForTimeout);
 	});
 
@@ -490,7 +487,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual(
-				`Couldn't find a local dev session for the "default" entrypoint of service "exported-handler" to proxy to`
+				`Worker "exported-handler" not found. Make sure it is running locally.`
 			);
 		}, waitForTimeout);
 
@@ -575,7 +572,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(response.status).toBe(500);
 			expect(await response.text()).toEqual(
-				`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "worker-entrypoint-with-assets" to proxy to.`
+				`Worker "worker-entrypoint-with-assets" not found. Make sure it is running locally.`
 			);
 		}, waitForTimeout);
 
@@ -669,7 +666,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 					[["[exported-handler]"], ["some other log"]],
 				]),
 			});
-		});
+		}, waitForTimeout);
 
 		await vi.waitFor(async () => {
 			// Trigger tail handler of exported-handler via worker-entrypoint
@@ -744,7 +741,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 
 			expect(await response.text()).toEqual(
-				`Couldn't find a local dev session for the "default" entrypoint of service "exported-handler" to proxy to`
+				`Worker "exported-handler" not found. Make sure it is running locally.`
 			);
 			expect(response.status).toBe(503);
 		}, waitForTimeout);
@@ -795,7 +792,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual(
-				`Couldn't find a local dev session for the "default" entrypoint of service "service-worker" to proxy to`
+				`Worker "service-worker" not found. Make sure it is running locally.`
 			);
 		}, waitForTimeout);
 
@@ -830,7 +827,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 			expect(response.status).toBe(500);
 			expect(await response.text()).toEqual(
-				`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "worker-entrypoint-with-assets" to proxy to.`
+				`Worker "worker-entrypoint-with-assets" not found. Make sure it is running locally.`
 			);
 		}, waitForTimeout);
 
@@ -937,7 +934,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual(
-				`Couldn't find a local dev session for the "default" entrypoint of service "worker-entrypoint-with-assets" to proxy to`
+				`Worker "worker-entrypoint-with-assets" not found. Make sure it is running locally.`
 			);
 		}, waitForTimeout);
 
@@ -946,7 +943,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual(
-				`Couldn't find a local dev session for the "default" entrypoint of service "exported-handler" to proxy to`
+				`Worker "exported-handler" not found. Make sure it is running locally.`
 			);
 		}, waitForTimeout);
 
@@ -968,7 +965,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual(
-				`Couldn't find a local dev session for the "default" entrypoint of service "exported-handler" to proxy to`
+				`Worker "exported-handler" not found. Make sure it is running locally.`
 			);
 		}, waitForTimeout);
 
@@ -999,13 +996,13 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		expect(() =>
 			env.WORKER_ENTRYPOINT.ping()
 		).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "worker-entrypoint" to proxy to.]`
+			`[Error: Worker "worker-entrypoint" not found. Make sure it is running locally.]`
 		);
 
 		expect(() =>
 			env.WORKER_ENTRYPOINT_WITH_ASSETS.ping()
 		).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "worker-entrypoint-with-assets" to proxy to.]`
+			`[Error: Worker "worker-entrypoint-with-assets" not found. Make sure it is running locally.]`
 		);
 
 		await runViteDev("vite.worker-entrypoint.config.ts", devRegistryPath);
@@ -1043,7 +1040,9 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		await vi.waitFor(async () => {
 			const response = await stub.fetch("http://localhost");
 			expect(response.status).toBe(503);
-			expect(await response.text()).toEqual("Service Unavailable");
+			expect(await response.text()).toEqual(
+				`Worker "internal-durable-object" not found. Make sure it is running locally.`
+			);
 		}, waitForTimeout);
 
 		await runWranglerDev(
@@ -1066,19 +1065,171 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 			"wrangler.external-durable-object.jsonc",
 			devRegistryPath
 		);
-		const id = env.DURABLE_OBJECT.newUniqueId();
-		const stub = env.DURABLE_OBJECT.get(id);
 
-		expect(() => stub.ping()).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
-		);
+		await vi.waitFor(async () => {
+			const id = env.DURABLE_OBJECT.newUniqueId();
+			const stub = env.DURABLE_OBJECT.get(id);
+
+			await expect(stub.ping()).rejects.toThrow();
+		}, waitForTimeout);
+
 		await runWranglerDev(
 			"wrangler.internal-durable-object.jsonc",
 			devRegistryPath
 		);
 
-		expect(() => stub.ping()).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
+		await vi.waitFor(async () => {
+			const id = env.DURABLE_OBJECT.newUniqueId();
+			const stub = env.DURABLE_OBJECT.get(id);
+
+			const result = await stub.ping();
+			expect(result).toEqual("Pong");
+		}, waitForTimeout);
+	});
+});
+
+describe("Dev Registry: error handling", () => {
+	it("returns an error when fetching a non-existent DO class on a running worker", async ({
+		devRegistryPath,
+	}) => {
+		await runWranglerDev(
+			"wrangler.internal-durable-object.jsonc",
+			devRegistryPath
 		);
+		const nonexistentDO = await runWranglerDev(
+			"wrangler.nonexistent-durable-object.jsonc",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "durable-object",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${nonexistentDO}?${searchParams}`);
+			const body = await response.text();
+
+			expect(response.status).toBe(500);
+			expect(body).toContain(
+				`Worker does not export a Durable Object class named "NonExistentObject"`
+			);
+		}, waitForTimeout);
+	});
+
+	it("returns an error when calling RPC on a non-existent DO class on a running worker", async ({
+		devRegistryPath,
+	}) => {
+		await runWranglerDev(
+			"wrangler.internal-durable-object.jsonc",
+			devRegistryPath
+		);
+		const nonexistentDO = await runWranglerDev(
+			"wrangler.nonexistent-durable-object.jsonc",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "durable-object",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${nonexistentDO}?${searchParams}`);
+
+			expect(response.status).toBe(500);
+			expect(await response.text()).toContain(
+				`Worker does not export a Durable Object class named "NonExistentObject"`
+			);
+		}, waitForTimeout);
+	});
+
+	it("returns an error when fetching a non-existent entrypoint on a running worker", async ({
+		devRegistryPath,
+	}) => {
+		await runWranglerDev("wrangler.worker-entrypoint.jsonc", devRegistryPath);
+		const nonexistentEntrypoint = await runWranglerDev(
+			"wrangler.nonexistent-entrypoint.jsonc",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${nonexistentEntrypoint}?${searchParams}`);
+			const body = await response.text();
+
+			expect(response.status).toBe(500);
+			expect(body).toContain(
+				`Worker does not export an entrypoint named "NonExistentEntrypoint"`
+			);
+		}, waitForTimeout);
+	});
+
+	it("returns an error when calling RPC on a non-existent entrypoint on a running worker", async ({
+		devRegistryPath,
+	}) => {
+		await runWranglerDev("wrangler.worker-entrypoint.jsonc", devRegistryPath);
+		const nonexistentEntrypoint = await runWranglerDev(
+			"wrangler.nonexistent-entrypoint.jsonc",
+			devRegistryPath
+		);
+
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${nonexistentEntrypoint}?${searchParams}`);
+
+			expect(response.status).toBe(500);
+			expect(await response.text()).toContain(
+				`Worker does not export an entrypoint named "NonExistentEntrypoint"`
+			);
+		}, waitForTimeout);
+	});
+
+	it("gracefully handles a stale registry entry from a prior wrangler version", async ({
+		devRegistryPath,
+	}) => {
+		// Start a worker that has a service binding to "service-worker"
+		const exportedHandler = await runWranglerDev(
+			"wrangler.exported-handler.jsonc",
+			devRegistryPath
+		);
+
+		// Write an old-format registry entry (pre-native-registry) under the
+		// "service-worker" name. The old format used protocol/host/port/
+		// entrypointAddresses instead of debugPortAddress/defaultEntrypointService.
+		await fs.mkdir(devRegistryPath, { recursive: true });
+		await fs.writeFile(
+			path.join(devRegistryPath, "service-worker"),
+			JSON.stringify({
+				protocol: "http",
+				host: "127.0.0.1",
+				port: 8787,
+				entrypointAddresses: {
+					default: { host: "127.0.0.1", port: 8787 },
+				},
+				durableObjects: [],
+			})
+		);
+
+		// The old-format entry has no debugPortAddress, so the proxy should
+		// return a 503 with the incompatible version message rather than crashing.
+		// We wait specifically for the incompatible message (not the generic "not
+		// found" message) to ensure the file watcher has picked up the entry.
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "service-worker",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
+
+			expect(response.status).toBe(503);
+			expect(await response.text()).toEqual(
+				`Worker "service-worker" is not compatible with this version of the dev server. Please update all Worker instances to the same version.`
+			);
+		}, waitForTimeout);
 	});
 });

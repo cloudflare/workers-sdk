@@ -73,7 +73,7 @@ jobs:
         run: node packages/wrangler/src/__tests__/test-old-node-version.js error
 
   test:
-    timeout-minutes: 60
+    timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.suite }}-test
       cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
@@ -149,8 +149,8 @@ jobs:
 
       - name: Run tests (fixtures)
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
-        # Browser rendering is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
-        run: pnpm run test:ci --concurrency 1 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-rendering"' || '' }}
+        # Browser Run fixture is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
+        run: pnpm run test:ci --concurrency 1 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-run"' || '' }}
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/

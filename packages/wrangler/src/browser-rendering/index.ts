@@ -2,9 +2,9 @@ import { createNamespace } from "../core/create-command";
 
 export const browserNamespace = createNamespace({
 	metadata: {
-		description: "🌐 Manage Browser Rendering sessions",
+		description: "🌐 Manage Browser Run sessions",
 		status: "open beta",
-		owner: "Product: Browser Rendering",
+		owner: "Product: Browser Run",
 		category: "Compute & AI",
 	},
 });

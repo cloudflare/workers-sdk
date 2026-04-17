@@ -136,6 +136,7 @@ export function createWorkerUploadForm(
 		"secrets_store_secret",
 		bindings
 	);
+	const artifacts = extractBindingsOfType("artifacts", bindings);
 	const unsafe_hello_world = extractBindingsOfType(
 		"unsafe_hello_world",
 		bindings
@@ -374,6 +375,14 @@ export function createWorkerUploadForm(
 			type: "secrets_store_secret",
 			store_id,
 			secret_name,
+		});
+	});
+
+	artifacts.forEach(({ binding, namespace }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "artifacts",
+			namespace,
 		});
 	});
 

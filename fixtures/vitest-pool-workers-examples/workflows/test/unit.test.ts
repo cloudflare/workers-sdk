@@ -1,4 +1,5 @@
-import { env, introspectWorkflowInstance } from "cloudflare:test";
+import { introspectWorkflowInstance } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { it } from "vitest";
 
 const INSTANCE_ID = "12345678910";

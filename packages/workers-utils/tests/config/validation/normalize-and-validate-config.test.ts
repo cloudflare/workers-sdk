@@ -74,6 +74,7 @@ describe("normalizeAndValidateConfig()", () => {
 			},
 			r2_buckets: [],
 			secrets_store_secrets: [],
+			artifacts: [],
 			unsafe_hello_world: [],
 			flagship: [],
 			ratelimits: [],
@@ -4523,6 +4524,138 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "secrets_store_secrets[2]" bindings must have a string "binding" field but got {"binding":null,"invalid":true,"store_id":123,"secret_name":null}.
 					  - "secrets_store_secrets[2]" bindings must have a string "store_id" field but got {"binding":null,"invalid":true,"store_id":123,"secret_name":null}.
 					  - "secrets_store_secrets[2]" bindings must have a string "secret_name" field but got {"binding":null,"invalid":true,"store_id":123,"secret_name":null}."
+				`);
+			});
+		});
+
+		describe("[artifacts]", () => {
+			it("should error if artifacts is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ artifacts: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "artifacts" should be an array but got {}."
+				`);
+			});
+
+			it("should error if artifacts is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ artifacts: null },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "artifacts" should be an array but got null."
+				`);
+			});
+
+			it("should accept valid bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						artifacts: [
+							{
+								binding: "MY_ARTIFACTS",
+								namespace: "default",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept valid bindings with remote set to true", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						artifacts: [
+							{
+								binding: "MY_ARTIFACTS",
+								namespace: "default",
+								remote: true,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if remote is not a boolean", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						artifacts: [
+							{
+								binding: "MY_ARTIFACTS",
+								namespace: "default",
+								remote: "yes",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - "artifacts[0]" should, optionally, have a boolean "remote" field but got {"binding":"MY_ARTIFACTS","namespace":"default","remote":"yes"}."
+			`);
+			});
+
+			it("should error if artifacts bindings are not valid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						artifacts: [
+							{},
+							{
+								binding: "VALID",
+								namespace: "default",
+							},
+							{
+								binding: null,
+								invalid: true,
+								namespace: 123,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in artifacts[2] field: "invalid""
+				`);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "artifacts[0]" bindings must have a string "binding" field but got {}.
+					  - "artifacts[0]" bindings must have a string "namespace" field but got {}.
+					  - "artifacts[2]" bindings must have a string "binding" field but got {"binding":null,"invalid":true,"namespace":123}.
+					  - "artifacts[2]" bindings must have a string "namespace" field but got {"binding":null,"invalid":true,"namespace":123}."
 				`);
 			});
 		});

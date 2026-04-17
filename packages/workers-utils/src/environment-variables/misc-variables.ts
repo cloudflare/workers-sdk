@@ -348,7 +348,7 @@ export const getLocalExplorerEnabledFromEnv =
 
 /**
  * `X_BROWSER_HEADFUL` opens the browser in headful (visible) mode when using the
- * Browser Rendering API in local development.
+ * Browser Run API in local development.
  *
  * Set to "true" to enable:
  *

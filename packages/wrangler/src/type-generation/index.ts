@@ -1797,6 +1797,21 @@ function collectCoreBindings(
 			);
 		}
 
+		for (const [index, artifact] of (env.artifacts ?? []).entries()) {
+			if (!artifact.binding) {
+				throwMissingBindingError({
+					binding: artifact,
+					bindingType: "artifacts",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(artifact.binding, "Artifacts", "artifacts", envName);
+		}
+
 		for (const [index, helloWorld] of (
 			env.unsafe_hello_world ?? []
 		).entries()) {
@@ -2773,6 +2788,25 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "secrets_store_secrets",
 				name: secret.binding,
 				type: "SecretsStoreSecret",
+			});
+		}
+
+		for (const [index, artifact] of (env.artifacts ?? []).entries()) {
+			if (!artifact.binding) {
+				throwMissingBindingError({
+					binding: artifact,
+					bindingType: "artifacts",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "artifacts",
+				name: artifact.binding,
+				type: "Artifacts",
 			});
 		}
 
