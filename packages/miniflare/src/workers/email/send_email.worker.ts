@@ -9,6 +9,15 @@ import type { EmailAddress, MessageBuilder } from "./types";
 import type { Email } from "postal-mime";
 
 /**
+ * Trim a leading `<` and trailing `>` off a Message-ID. Production returns the
+ * bare token; postal-mime preserves the angle brackets as they appear in the
+ * header.
+ */
+function unwrapMessageId(messageId: string): string {
+	return messageId.replace(/^<(.*)>$/, "$1");
+}
+
+/**
  * Extracts email address from string or EmailAddress object
  */
 function extractEmailAddress(addr: string | EmailAddress): string {
@@ -168,7 +177,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 
 	async send(
 		emailMessageOrBuilder: EmailMessage | MessageBuilder
-	): Promise<void> {
+	): Promise<EmailSendResult> {
 		// Check if this is an EmailMessage (has RAW_EMAIL symbol) or MessageBuilder
 		if (this.isEmailMessage(emailMessageOrBuilder)) {
 			// Original EmailMessage API - validate and parse MIME
@@ -217,6 +226,8 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			this.log(
 				`${blue("send_email binding called with the following message:")}\n  ${file}`
 			);
+
+			return { messageId: unwrapMessageId(parsedEmail.messageId) };
 		} else {
 			// New MessageBuilder API - just validate and log
 			const builder = emailMessageOrBuilder;
@@ -269,6 +280,12 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			this.log(
 				`${blue("send_email binding called with MessageBuilder:")}\n${formatted}${fileInfo}`
 			);
+
+			// The builder path doesn't assemble MIME locally, so there's no real
+			// Message-ID to surface. Synthesize one in the same shape the
+			// production runtime returns: 36 characters followed by a domain.
+			const uuid = crypto.randomUUID().replaceAll("-", "");
+			return { messageId: `${uuid}@example.com` };
 		}
 	}
 }
