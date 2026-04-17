@@ -102,6 +102,7 @@ export type ConfigBindingFieldName =
 	| "workflows"
 	| "pipelines"
 	| "secrets_store_secrets"
+	| "artifacts"
 	| "ratelimits"
 	| "assets"
 	| "unsafe_hello_world"
@@ -143,6 +144,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	workflows: "Workflow",
 	pipelines: "Pipeline",
 	secrets_store_secrets: "Secrets Store Secret",
+	artifacts: "Artifacts",
 	ratelimits: "Rate Limit",
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
@@ -187,6 +189,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	mtls_certificate: "mTLS Certificate",
 	pipeline: "Pipeline",
 	secrets_store_secret: "Secrets Store Secret",
+	artifacts: "Artifacts",
 	logfwdr: "logfwdr",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
@@ -1878,6 +1881,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateSecretsStoreSecretBinding),
 			[]
 		),
+		artifacts: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"artifacts",
+			validateBindingArray(envName, validateArtifactsBinding),
+			[]
+		),
 		unsafe_hello_world: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2997,6 +3010,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"vpc_network",
 			"stream",
 			"media",
+			"artifacts",
 		];
 
 		if (safeBindings.includes(value.type)) {
@@ -4826,6 +4840,45 @@ const validateSecretsStoreSecretBinding: ValidatorFn = (
 	return isValid;
 };
 
+const validateArtifactsBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"artifacts" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "namespace" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"namespace",
+		"remote",
+	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	return isValid;
+};
+
 const validateHelloWorldBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -5082,6 +5135,7 @@ const validatePreviewsConfig =
 				"media",
 				"pipelines",
 				"secrets_store_secrets",
+				"artifacts",
 				"unsafe_hello_world",
 				"worker_loaders",
 				"ratelimits",
@@ -5304,6 +5358,14 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.secrets_store_secrets`,
 				previews.secrets_store_secrets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateArtifactsBinding)(
+				diagnostics,
+				`${field}.artifacts`,
+				previews.artifacts,
 				undefined
 			) && isValid;
 
