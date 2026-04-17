@@ -2161,7 +2161,7 @@ export class Miniflare {
 					],
 					bindings: [
 						{
-							name: "DEV_REGISTRY_DEBUG_PORT",
+							name: CoreBindings.DEV_REGISTRY_DEBUG_PORT,
 							// workerdDebugPort bindings don't have any additional configuration
 							workerdDebugPort: kVoid,
 						},
@@ -2540,11 +2540,6 @@ export class Miniflare {
 			this.#runtimeEntryURL !== undefined,
 			"Runtime entry URL must be set before registering workers"
 		);
-		// The loopback address is the workerd entry URL (host:port), used by the
-		// local explorer for cross-instance HTTP aggregation.
-		const loopbackAddress = `${this.#runtimeEntryURL.hostname}:${
-			this.#runtimeEntryURL.port
-		}`;
 
 		const entries: [string, WorkerDefinition][] = [];
 		for (const workerOpts of this.#workerOpts) {
@@ -2569,7 +2564,6 @@ export class Miniflare {
 					debugPortAddress,
 					defaultEntrypointService,
 					userWorkerService: getUserServiceName(workerOpts.core.name),
-					loopbackAddress,
 				},
 			]);
 		}
