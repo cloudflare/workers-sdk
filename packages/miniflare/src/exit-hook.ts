@@ -1,16 +1,16 @@
 /**
  * Lightweight replacement for the `exit-hook` npm package.
  *
- * The third-party `exit-hook` registers a permanent `process.on("message")`
- * listener (for PM2 cluster-shutdown support) that is never removed.  In
- * Node.js, having a `"message"` listener refs the IPC channel handle, which
- * keeps the event loop alive.  When Miniflare runs inside a `node --test`
- * child process (which communicates with its parent over IPC), this prevents
- * the process from exiting after all tests complete.
+ * The third-party `exit-hook` registers process listeners (`exit`, `SIGINT`,
+ * `SIGTERM`, and `message`) that are never removed — even after every
+ * callback has been unregistered.  Those dangling listeners are harmless in
+ * long-running processes, but in short-lived child processes (e.g. those
+ * spawned by `node --test`) they can prevent clean exit by holding refs on
+ * handles such as the IPC channel.
  *
  * This module tracks the number of active registrations and removes **all**
- * process listeners once the last registration is unregistered, allowing the
- * process to exit cleanly.
+ * process listeners once the last registration is unregistered, so they
+ * cannot keep the event loop alive after dispose.
  */
 
 const callbacks = new Set<() => void>();
