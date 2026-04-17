@@ -9,12 +9,18 @@ import type { EmailAddress, MessageBuilder } from "./types";
 import type { Email } from "postal-mime";
 
 /**
- * Trim a leading `<` and trailing `>` off a Message-ID. Production returns the
- * bare token; postal-mime preserves the angle brackets as they appear in the
- * header.
+ * Build a Message-ID in the shape the production `send_email` binding returns:
+ * `<{36 alphanumeric chars}@{sender domain}>`, brackets included. The body is
+ * random — production synthesizes its own id rather than echoing any header
+ * present in the submitted email.
  */
-function unwrapMessageId(messageId: string): string {
-	return messageId.replace(/^<(.*)>$/, "$1");
+function synthesizeMessageId(senderEmail: string): string {
+	const alphabet =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	const bytes = crypto.getRandomValues(new Uint8Array(36));
+	const id = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+	const domain = senderEmail.slice(senderEmail.lastIndexOf("@") + 1);
+	return `<${id}@${domain}>`;
 }
 
 /**
@@ -227,7 +233,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				`${blue("send_email binding called with the following message:")}\n  ${file}`
 			);
 
-			return { messageId: unwrapMessageId(parsedEmail.messageId) };
+			return { messageId: synthesizeMessageId(emailMessage.from) };
 		} else {
 			// New MessageBuilder API - just validate and log
 			const builder = emailMessageOrBuilder;
@@ -281,11 +287,9 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				`${blue("send_email binding called with MessageBuilder:")}\n${formatted}${fileInfo}`
 			);
 
-			// The builder path doesn't assemble MIME locally, so there's no real
-			// Message-ID to surface. Synthesize one in the same shape the
-			// production runtime returns: 32 hex characters followed by a domain.
-			const uuid = crypto.randomUUID().replaceAll("-", "");
-			return { messageId: `${uuid}@example.com` };
+			return {
+				messageId: synthesizeMessageId(extractEmailAddress(builder.from)),
+			};
 		}
 	}
 }

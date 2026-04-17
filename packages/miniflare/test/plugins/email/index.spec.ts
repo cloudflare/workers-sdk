@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { LogLevel, Miniflare } from "miniflare";
 import dedent from "ts-dedent";
-import { test, vi } from "vitest";
+import { type ExpectStatic, test, vi } from "vitest";
 import { TestLog, useDispose } from "../../test-shared";
 
 const SEND_EMAIL_WORKER = dedent /* javascript */ `
@@ -1525,7 +1525,15 @@ const SEND_EMAIL_RETURNS_RESULT_WORKER = dedent /* javascript */ `
 	};
 `;
 
-test("send() on an EmailMessage returns the parsed Message-ID", async ({
+// Both branches return an id in the shape production returns:
+// `<{36 alphanumeric chars}@{sender domain}>`, angle brackets included.
+function synthesizedMessageId(expect: ExpectStatic, domain: string) {
+	return expect.stringMatching(
+		new RegExp(`^<[A-Za-z0-9]{36}@${domain.replace(/\./g, "\\.")}>$`)
+	);
+}
+
+test("send() on an EmailMessage returns a synthesized messageId", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
@@ -1539,11 +1547,10 @@ test("send() on an EmailMessage returns the parsed Message-ID", async ({
 
 	useDispose(mf);
 
-	const messageId = "a-message-id-to-echo-back@example.com";
 	const email = dedent`
-		From: someone <someone@example.com>
+		From: someone <someone@sender.domain>
 		To: someone else <someone-else@example.com>
-		Message-ID: <${messageId}>
+		Message-ID: <do-not-echo-this@example.com>
 		MIME-Version: 1.0
 		Content-Type: text/plain
 
@@ -1552,14 +1559,16 @@ test("send() on an EmailMessage returns the parsed Message-ID", async ({
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
 			new URLSearchParams({
-				from: "someone@example.com",
+				from: "someone@sender.domain",
 				to: "someone-else@example.com",
 			}).toString(),
 		{ body: email, method: "POST" }
 	);
 
 	expect(res.status).toBe(200);
-	expect(await res.json()).toEqual({ messageId });
+	expect(await res.json()).toEqual({
+		messageId: synthesizedMessageId(expect, "sender.domain"),
+	});
 });
 
 test("send() on a MessageBuilder returns a synthesized messageId", async ({
@@ -1587,7 +1596,7 @@ test("send() on a MessageBuilder returns a synthesized messageId", async ({
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
 		body: JSON.stringify({
-			from: "sender@example.com",
+			from: "sender@sender.domain",
 			to: "recipient@example.com",
 			subject: "s",
 			text: "t",
@@ -1595,8 +1604,7 @@ test("send() on a MessageBuilder returns a synthesized messageId", async ({
 	});
 
 	expect(res.status).toBe(200);
-	// Synthesized shape matches production: 32-hex-char ID followed by a domain.
 	expect(await res.json()).toEqual({
-		messageId: expect.stringMatching(/^[0-9a-f]{32}@example\.com$/),
+		messageId: synthesizedMessageId(expect, "sender.domain"),
 	});
 });
