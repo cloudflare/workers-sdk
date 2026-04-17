@@ -958,7 +958,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the Vectorize index in the Worker. */
 		binding: string;
 		/** The name of the index. */
-		index_name: string;
+		index_name?: string;
 		/** Whether the Vectorize index should be remote or not in local development */
 		remote?: boolean;
 	}[];

@@ -2038,7 +2038,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						vectorize: [
 							{},
-							{ binding: "VALID" },
 							{ binding: 2000, index_name: 2111 },
 							{
 								binding: "BINDING_2",
@@ -2056,10 +2055,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "vectorize[0]" bindings should have a string "binding" field but got {}.
-					  - "vectorize[0]" bindings must have an "index_name" field but got {}.
-					  - "vectorize[1]" bindings must have an "index_name" field but got {"binding":"VALID"}.
-					  - "vectorize[2]" bindings should have a string "binding" field but got {"binding":2000,"index_name":2111}.
-					  - "vectorize[2]" bindings must have an "index_name" field but got {"binding":2000,"index_name":2111}."
+					  - "vectorize[1]" bindings should have a string "binding" field but got {"binding":2000,"index_name":2111}.
+					  - "vectorize[1]" bindings must have an "index_name" field but got {"binding":2000,"index_name":2111}."
 				`);
 			});
 

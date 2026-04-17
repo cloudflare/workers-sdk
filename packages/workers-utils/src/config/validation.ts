@@ -3941,7 +3941,7 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "index_name", "string")) {
+	if (!isOptionalProperty(value, "index_name", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have an "index_name" field but got ${JSON.stringify(
 				value

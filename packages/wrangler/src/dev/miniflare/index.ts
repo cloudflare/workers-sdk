@@ -848,7 +848,7 @@ export function buildMiniflareBindingOptions(
 				return [
 					vectorize.binding,
 					{
-						index_name: vectorize.index_name,
+						index_name: vectorize.index_name as string,
 						remoteProxyConnectionString:
 							vectorize.remote && remoteProxyConnectionString
 								? remoteProxyConnectionString

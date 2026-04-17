@@ -331,12 +331,24 @@ export function createWorkerUploadForm(
 	);
 
 	vectorize.forEach(({ binding, index_name, raw }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "vectorize",
-			index_name: index_name,
-			raw,
-		});
+		if (options?.dryRun) {
+			index_name ??= INHERIT_SYMBOL;
+		}
+		if (index_name === undefined) {
+			throw new UserError(
+				`${binding} bindings must have an "index_name" field`
+			);
+		}
+		if (index_name === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "vectorize",
+				index_name,
+				raw,
+			});
+		}
 	});
 
 	ai_search_namespaces.forEach(({ binding, namespace }) => {

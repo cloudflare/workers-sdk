@@ -225,7 +225,7 @@ export interface CfD1Database {
 
 export interface CfVectorize {
 	binding: string;
-	index_name: string;
+	index_name?: string | typeof INHERIT_SYMBOL;
 	raw?: boolean;
 	remote?: boolean;
 }
