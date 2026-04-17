@@ -1294,7 +1294,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the bound service. */
 		binding: string;
 		/** Name of the Pipeline to bind */
-		pipeline: string;
+		pipeline?: string;
 		/** Whether the pipeline should be remote or not in local development */
 		remote?: boolean;
 	}[];

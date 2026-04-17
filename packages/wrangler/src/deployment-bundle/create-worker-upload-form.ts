@@ -506,11 +506,21 @@ export function createWorkerUploadForm(
 	});
 
 	pipelines.forEach(({ binding, pipeline }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "pipelines",
-			pipeline: pipeline,
-		});
+		if (options?.dryRun) {
+			pipeline ??= INHERIT_SYMBOL;
+		}
+		if (pipeline === undefined) {
+			throw new UserError(`${binding} bindings must have a "pipeline" field`);
+		}
+		if (pipeline === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "pipelines",
+				pipeline,
+			});
+		}
 	});
 
 	worker_loaders.forEach(({ binding }) => {

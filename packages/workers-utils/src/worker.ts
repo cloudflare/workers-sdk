@@ -332,7 +332,7 @@ export interface CfAssetsBinding {
 
 export interface CfPipeline {
 	binding: string;
-	pipeline: string;
+	pipeline?: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
 }
 

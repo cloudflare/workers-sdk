@@ -4667,7 +4667,7 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "pipeline", "string")) {
+	if (!isOptionalProperty(value, "pipeline", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a string "pipeline" field but got ${JSON.stringify(
 				value
