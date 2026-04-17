@@ -18,7 +18,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import { cloudchamberScope, fillOpenAPIConfiguration } from "./common";
 import { ensureContainerLimits } from "./limits";
 import { loadAccount } from "./locations";
@@ -296,7 +296,7 @@ export async function pushCommand(
 			getCloudflareContainerRegistry()
 		);
 
-		const accountId = await getAccountId(config);
+		const accountId = await getOrSelectAccountId(config);
 		const newTag = resolveImageName(accountId, args.TAG);
 		const dockerPath = args.pathToDocker ?? getDockerPath();
 		await checkImagePlatform(dockerPath, args.TAG);

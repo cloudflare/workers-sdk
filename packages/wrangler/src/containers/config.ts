@@ -7,7 +7,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { isDockerfile, UserError } from "@cloudflare/workers-utils";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import type {
 	ApplicationAffinities,
 	ApplicationAffinityColocation,
@@ -195,7 +195,10 @@ export const getNormalizedContainerOptions = async (
 				...instanceTypeOrLimits,
 				image_uri: args.dryRun
 					? container.image
-					: resolveImageName(await getAccountId(config), container.image), // if it is not a dockerfile, it must be an image uri or have thrown an error
+					: resolveImageName(
+							await getOrSelectAccountId(config),
+							container.image
+						), // if it is not a dockerfile, it must be an image uri or have thrown an error
 			});
 		}
 	}
