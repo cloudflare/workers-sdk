@@ -95,13 +95,6 @@ export const COMMAND_ARG_ALLOW_LIST: AllowList = {
 	dev: {
 		localProtocol: ["http", "https"],
 		upstreamProtocol: ["http", "https"],
-	dev: {
-		localProtocol: ["http", "https"],
-		upstreamProtocol: ["http", "https"],
-	},
-	"pages dev": {
-		localProtocol: ["http", "https"],
-		upstreamProtocol: ["http", "https"],
 	},
 	deploy: {
 		containersRollout: ["immediate", "gradual"],
