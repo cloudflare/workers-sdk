@@ -458,8 +458,8 @@ describe("getNormalizedContainerOptions", () => {
 					instance_type: "basic",
 					constraints: {
 						tier: 2,
-						regions: ["us-east-1", "us-west-2"],
-						jurisdiction: "EU",
+						regions: ["ENAM", "WNAM"],
+						jurisdiction: "eu",
 						cities: ["NYC", "SF"],
 					},
 					affinities: {
@@ -492,7 +492,7 @@ describe("getNormalizedContainerOptions", () => {
 			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
 			constraints: {
 				tiers: [2],
-				regions: ["US-EAST-1", "US-WEST-2"],
+				regions: ["ENAM", "WNAM"],
 				jurisdiction: "eu",
 				cities: ["nyc", "sf"],
 			},
