@@ -29,6 +29,7 @@ import type {
 	CfQueue,
 	CfR2Bucket,
 	CfRateLimit,
+	CfArtifacts,
 	CfSecretsStoreSecrets,
 	CfSendEmailBindings,
 	CfService,
@@ -154,6 +155,11 @@ export type WorkerMetadataBinding =
 			name: string;
 			store_id: string;
 			secret_name: string;
+	  }
+	| {
+			type: "artifacts";
+			name: string;
+			namespace: string;
 	  }
 	| {
 			type: "unsafe_hello_world";
@@ -336,6 +342,7 @@ export type Binding =
 	| ({ type: "mtls_certificate" } & BindingOmit<CfMTlsCertificate>)
 	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
+	| ({ type: "artifacts" } & BindingOmit<CfArtifacts>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
 	| ({ type: "flagship" } & BindingOmit<CfFlagship>)

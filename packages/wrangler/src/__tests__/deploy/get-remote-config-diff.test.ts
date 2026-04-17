@@ -405,6 +405,12 @@ describe("getRemoteConfigsDiff", () => {
 						instance_name: "my-instance",
 					},
 				],
+				artifacts: [
+					{
+						binding: "MY_ARTIFACTS",
+						namespace: "default",
+					},
+				],
 			},
 			{
 				name: "my-worker-id",
@@ -531,6 +537,13 @@ describe("getRemoteConfigsDiff", () => {
 					{
 						binding: "MY_AI_SEARCH",
 						instance_name: "my-instance",
+						remote: true,
+					},
+				],
+				artifacts: [
+					{
+						binding: "MY_ARTIFACTS",
+						namespace: "default",
 						remote: true,
 					},
 				],

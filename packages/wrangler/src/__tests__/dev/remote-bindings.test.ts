@@ -456,6 +456,33 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			],
 		},
 		{
+			name: "artifacts",
+			config: {
+				artifacts: [
+					{
+						binding: "MY_ARTIFACTS",
+						namespace: "default",
+					},
+				],
+			},
+			expectedProxyWorkerBindings: {
+				MY_ARTIFACTS: {
+					namespace: "default",
+					type: "artifacts",
+				},
+			},
+			expectedWorkerOptions: [
+				expect.objectContaining({
+					artifacts: {
+						MY_ARTIFACTS: {
+							namespace: "default",
+							remoteProxyConnectionString,
+						},
+					},
+				}),
+			],
+		},
+		{
 			name: "email",
 			config: {
 				send_email: [
