@@ -147,7 +147,7 @@ export async function convertToConfigBundle(
 		// Zone for CF-Worker header - extracted from routes/host configuration
 		zone: event.config.dev?.origin?.hostname,
 		sendMetrics: event.config.sendMetrics,
-		publicUrl: event.config.dev?.server
+		publicUrl: event.config.dev?.server?.port
 			? `${event.config.dev.server.secure ? "https" : "http"}://${event.config.dev.server.hostname ?? "localhost"}:${event.config.dev.server.port}`
 			: undefined,
 	};
