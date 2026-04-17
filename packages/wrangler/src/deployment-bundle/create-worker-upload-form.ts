@@ -449,20 +449,30 @@ export function createWorkerUploadForm(
 	});
 
 	dispatch_namespaces.forEach(({ binding, namespace, outbound }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "dispatch_namespace",
-			namespace,
-			...(outbound && {
-				outbound: {
-					worker: {
-						service: outbound.service,
-						environment: outbound.environment,
+		if (options?.dryRun) {
+			namespace ??= INHERIT_SYMBOL;
+		}
+		if (namespace === undefined) {
+			throw new UserError(`${binding} bindings must have a "namespace" field`);
+		}
+		if (namespace === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "dispatch_namespace",
+				namespace,
+				...(outbound && {
+					outbound: {
+						worker: {
+							service: outbound.service,
+							environment: outbound.environment,
+						},
+						params: outbound.parameters?.map((p) => ({ name: p })),
 					},
-					params: outbound.parameters?.map((p) => ({ name: p })),
-				},
-			}),
-		});
+				}),
+			});
+		}
 	});
 
 	mtls_certificates.forEach(({ binding, certificate_id }) => {

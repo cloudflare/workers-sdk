@@ -4120,8 +4120,7 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "dispatch_namespaces[2]" should have a string "namespace" field but got {"binding":123,"namespace":456}.
 					  - "dispatch_namespaces[3]" should have a string "namespace" field but got {"binding":"DISPATCH_NAMESPACE_BINDING_1","namespace":456}.
 					  - "dispatch_namespaces[5]" should have a string "binding" field but got {"binding":123,"namespace":"DISPATCH_NAMESPACE_BINDING_SERVICE_1"}.
-					  - "dispatch_namespaces[6]" should have a string "binding" field but got {"binding":123,"service":456}.
-					  - "dispatch_namespaces[6]" should have a string "namespace" field but got {"binding":123,"service":456}."
+					  - "dispatch_namespaces[6]" should have a string "binding" field but got {"binding":123,"service":456}."
 				`);
 			});
 

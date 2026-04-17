@@ -302,7 +302,7 @@ export interface CfAnalyticsEngineDataset {
 
 export interface CfDispatchNamespace {
 	binding: string;
-	namespace: string;
+	namespace?: string | typeof INHERIT_SYMBOL;
 	outbound?: {
 		service: string;
 		environment?: string;

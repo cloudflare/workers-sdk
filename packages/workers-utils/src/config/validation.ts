@@ -4382,7 +4382,7 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "namespace", "string")) {
+	if (!isOptionalProperty(value, "namespace", "string")) {
 		diagnostics.errors.push(
 			`"${field}" should have a string "namespace" field but got ${JSON.stringify(
 				value

@@ -376,9 +376,9 @@ function dispatchNamespaceEntry(
 	},
 ] {
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { namespace }];
+		return [binding, { namespace: namespace as string }];
 	}
-	return [binding, { namespace, remoteProxyConnectionString }];
+	return [binding, { namespace: namespace as string, remoteProxyConnectionString }];
 }
 function ratelimitEntry<T extends { name: string }>(ratelimit: T): [string, T] {
 	return [ratelimit.name, ratelimit];

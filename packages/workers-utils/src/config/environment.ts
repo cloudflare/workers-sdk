@@ -1274,7 +1274,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the bound service. */
 		binding: string;
 		/** The namespace to bind to. */
-		namespace: string;
+		namespace?: string;
 		/** Details about the outbound Worker which will handle outbound requests from your namespace */
 		outbound?: DispatchNamespaceOutbound;
 		/** Whether the Dispatch Namespace should be remote or not in local development */
