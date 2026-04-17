@@ -431,7 +431,11 @@ export const processArgument = async <Key extends keyof C3Args>(
 		disableTelemetry: args[key] !== undefined,
 		async promise() {
 			const value = args[key];
-			const error = promptConfig.validate?.(value) ?? null;
+			const validationResult = promptConfig.validate?.(value);
+			const error =
+				validationResult instanceof Error
+					? validationResult.message
+					: (validationResult ?? null);
 			const result = await inputPrompt<Required<C3Args>[Key]>({
 				...promptConfig,
 				// Accept the default value if the arg is already set
