@@ -224,6 +224,7 @@ describe("Context", () => {
 			}
 		);
 
+		// Needs extra headroom: 3 sequential step.do calls + cold DO startup on Windows
 		await vi.waitUntil(
 			async () => {
 				const logs = (await engineStub.readLogs()) as EngineLogs;
@@ -231,7 +232,7 @@ describe("Context", () => {
 					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
 				);
 			},
-			{ timeout: 5000 }
+			{ timeout: 10000 }
 		);
 
 		expect(receivedContexts[0]).toMatchObject({
