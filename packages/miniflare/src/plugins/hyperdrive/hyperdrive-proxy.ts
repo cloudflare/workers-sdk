@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import net from "node:net";
 import tls from "node:tls";
 
@@ -12,6 +13,8 @@ export interface HyperdriveProxyConfig {
 	scheme: string;
 	// The sslmode of the target database
 	sslmode: string;
+	// The path to the SSL root certificate, or "system" to use the system CA store
+	sslrootcert?: string;
 }
 
 const schemes = {
@@ -25,11 +28,85 @@ export const POSTGRES_SSL_REQUEST_PACKET = Buffer.from([
 	0x00, 0x00, 0x00, 0x08, 0x04, 0xd2, 0x16, 0x2f,
 ]);
 
+interface TlsConfig {
+	rejectUnauthorized: boolean;
+	ca?: Buffer<ArrayBuffer>;
+	checkServerIdentity?: () => undefined;
+}
+
+/**
+ * Builds TLS configuration based on sslmode and sslrootcert settings.
+ *
+ * - verify-full: validates the server certificate against CA and checks hostname
+ * - verify-ca: validates the server certificate against CA but skips hostname check
+ * - require/prefer: connects with TLS but does not validate the server certificate
+ * - sslrootcert=system: uses Node.js default system CA store
+ * - sslrootcert=<path>: reads the CA certificate from the specified file path
+ */
+function buildTlsConfig(
+	sslmodeVerifyFull: boolean,
+	sslmodeVerifyCa: boolean,
+	sslrootcert?: string
+): TlsConfig {
+	if (!sslmodeVerifyFull && !sslmodeVerifyCa) {
+		return { rejectUnauthorized: false };
+	}
+
+	const config: TlsConfig = { rejectUnauthorized: true };
+
+	// Load custom CA certificate if sslrootcert is a file path (not "system")
+	if (sslrootcert && sslrootcert !== "system") {
+		config.ca = fs.readFileSync(sslrootcert);
+	}
+	// When sslrootcert=system (or omitted for verify modes), Node.js uses its
+	// default system CA store automatically, so no explicit ca is needed.
+
+	if (sslmodeVerifyCa) {
+		// verify-ca validates the certificate chain but does not check the hostname
+		config.checkServerIdentity = () => undefined;
+	}
+
+	return config;
+}
+
+/**
+ * Assembles a complete `tls.ConnectionOptions` from the base socket/host info
+ * and the verification policy captured in `TlsConfig`.
+ *
+ * Keeping this separate from `buildTlsConfig` lets each protocol handler
+ * (Postgres, MySQL) call it with their own socket without duplicating the
+ * CA / hostname-verification logic inline.
+ */
+function buildTlsConnectionOptions(
+	dbSocket: net.Socket,
+	targetHost: string,
+	tlsConfig: TlsConfig,
+	extra?: Partial<tls.ConnectionOptions>
+): tls.ConnectionOptions {
+	const options: tls.ConnectionOptions = {
+		socket: dbSocket,
+		host: targetHost,
+		servername: targetHost,
+		rejectUnauthorized: tlsConfig.rejectUnauthorized,
+		...extra,
+	};
+
+	if (tlsConfig.ca) {
+		options.ca = tlsConfig.ca;
+	}
+
+	if (tlsConfig.checkServerIdentity) {
+		options.checkServerIdentity = tlsConfig.checkServerIdentity;
+	}
+
+	return options;
+}
+
 /**
  * HyperdriveProxyController establishes TLS-enabled connections between workerd
  * and external Postgres/MySQL databases. Supports PostgreSQL sslmode options
- * ('require', 'prefer', 'disable') by proxying each Hyperdrive binding through
- * a randomly assigned local port.
+ * ('require', 'prefer', 'disable', 'verify-full', 'verify-ca') by proxying
+ * each Hyperdrive binding through a randomly assigned local port.
  */
 export class HyperdriveProxyController {
 	// Map hyperdrive binding name to proxy server
@@ -42,14 +119,16 @@ export class HyperdriveProxyController {
 	 * @returns A promise that resolves to the port number of the proxy server.
 	 */
 	async createProxyServer(config: HyperdriveProxyConfig): Promise<number> {
-		const { name, targetHost, targetPort, scheme, sslmode } = config;
+		const { name, targetHost, targetPort, scheme, sslmode, sslrootcert } =
+			config;
 		const server = net.createServer((clientSocket) => {
 			this.#handleConnection(
 				clientSocket,
 				targetHost,
 				Number.parseInt(targetPort),
 				scheme,
-				sslmode
+				sslmode,
+				sslrootcert
 			);
 		});
 		const port = await new Promise<number>((resolve, reject) => {
@@ -74,27 +153,40 @@ export class HyperdriveProxyController {
 	 * @param targetPort - The port of the target database.
 	 * @param scheme - The scheme of the target database.
 	 * @param sslmode - The sslmode of the target database.
+	 * @param sslrootcert - Path to the SSL root certificate, or "system" to use the system CA store.
 	 */
 	async #handleConnection(
 		clientSocket: net.Socket,
 		targetHost: string,
 		targetPort: number,
 		scheme: string,
-		sslmode: string
+		sslmode: string,
+		sslrootcert?: string
 	) {
 		// Connect to real database
 		const dbSocket = net.connect({ host: targetHost, port: targetPort });
 		const sslmodeRequire = sslmode === "require";
 		const sslmodePrefer = sslmode === "prefer";
-		if (sslmodePrefer || sslmodeRequire) {
+		const sslmodeVerifyFull = sslmode === "verify-full";
+		const sslmodeVerifyCa = sslmode === "verify-ca";
+		// verify-full and verify-ca are strict modes that must always attempt TLS
+		const sslmodeStrict = sslmodeVerifyFull || sslmodeVerifyCa;
+
+		if (sslmodePrefer || sslmodeRequire || sslmodeStrict) {
 			try {
+				const tlsConfig = buildTlsConfig(
+					sslmodeVerifyFull,
+					sslmodeVerifyCa,
+					sslrootcert
+				);
 				if (scheme === schemes.postgres || scheme === schemes.postgresql) {
 					return await handlePostgresTlsConnection(
 						dbSocket,
 						clientSocket,
 						targetHost,
 						targetPort,
-						sslmodeRequire
+						sslmodeRequire || sslmodeStrict,
+						tlsConfig
 					);
 				} else if (scheme === schemes.mysql) {
 					return await handleMySQLTlsConnection(
@@ -102,11 +194,12 @@ export class HyperdriveProxyController {
 						clientSocket,
 						targetHost,
 						targetPort,
-						sslmodeRequire
+						sslmodeRequire || sslmodeStrict,
+						tlsConfig
 					);
 				}
 			} catch (e) {
-				if (sslmodeRequire) {
+				if (sslmodeRequire || sslmodeStrict) {
 					// Write error to client so worker can read it
 					clientSocket.write(`${e}\n`);
 					clientSocket.end();
@@ -139,7 +232,8 @@ async function handlePostgresTlsConnection(
 	clientSocket: net.Socket,
 	targetHost: string,
 	targetPort: number,
-	sslmodeRequire: boolean
+	sslmodeRequire: boolean,
+	tlsConfig: TlsConfig
 ) {
 	// Send Postgres sslrequest bytes
 	await writeAsync(dbSocket, POSTGRES_SSL_REQUEST_PACKET);
@@ -148,12 +242,11 @@ async function handlePostgresTlsConnection(
 	// Read first byte ssl flag
 	const sslResponseFlag = response.toString("utf8", 0, 1);
 	if (sslResponseFlag === "S") {
-		const tlsOptions: tls.ConnectionOptions = {
-			socket: dbSocket,
-			host: targetHost,
-			servername: targetHost,
-			rejectUnauthorized: false,
-		};
+		const tlsOptions = buildTlsConnectionOptions(
+			dbSocket,
+			targetHost,
+			tlsConfig
+		);
 		try {
 			const tlsSocket = await tlsConnect(tlsOptions);
 			setupTLSConnection(clientSocket, tlsSocket);
@@ -187,7 +280,8 @@ async function handleMySQLTlsConnection(
 	clientSocket: net.Socket,
 	targetHost: string,
 	targetPort: number,
-	sslmodeRequire: boolean
+	sslmodeRequire: boolean,
+	tlsConfig: TlsConfig
 ) {
 	const initPacketChunk = await readAsync(dbSocket);
 	// Little-endian parse payload header length
@@ -238,13 +332,12 @@ async function handleMySQLTlsConnection(
 		await writeAsync(dbSocket, sslRequestPacket);
 
 		// Upgrade server connection to TLS
-		const tlsOptions: tls.ConnectionOptions = {
-			socket: dbSocket,
-			host: targetHost,
-			servername: targetHost,
-			minVersion: "TLSv1.2",
-			rejectUnauthorized: false,
-		};
+		const tlsOptions = buildTlsConnectionOptions(
+			dbSocket,
+			targetHost,
+			tlsConfig,
+			{ minVersion: "TLSv1.2" }
+		);
 
 		try {
 			const tlsSocket = await tlsConnect(tlsOptions);
@@ -270,7 +363,7 @@ async function handleMySQLTlsConnection(
 			setupTLSConnection(clientSocket, tlsSocket);
 			return;
 		} catch (e) {
-			if (!sslmodeRequire) {
+			if (sslmodeRequire) {
 				throw e;
 			}
 			// Attempt to fall back to plain TCP
