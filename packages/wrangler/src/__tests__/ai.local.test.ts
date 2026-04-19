@@ -71,7 +71,9 @@ describe("ai", () => {
 		});
 
 		describe("403 auth error handling", () => {
-			it("should log error on 403 with auth error code 1031", async ({ expect }) => {
+			it("should log error on 403 with auth error code 1031", async ({
+				expect,
+			}) => {
 				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
 				vi.spyOn(internal, "performApiFetch").mockImplementation(async () => {
 					return new Response(
@@ -93,7 +95,9 @@ describe("ai", () => {
 				);
 			});
 
-			it("should not log error on 403 without auth error code 1031", async ({ expect }) => {
+			it("should not log error on 403 without auth error code 1031", async ({
+				expect,
+			}) => {
 				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
 				vi.spyOn(internal, "performApiFetch").mockImplementation(async () => {
 					return new Response(
@@ -113,7 +117,9 @@ describe("ai", () => {
 				expect(errorSpy).not.toHaveBeenCalled();
 			});
 
-			it("should not throw on 403 with unparseable body", async ({ expect }) => {
+			it("should not throw on 403 with unparseable body", async ({
+				expect,
+			}) => {
 				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
 				vi.spyOn(internal, "performApiFetch").mockImplementation(async () => {
 					return new Response("not json", { status: 403 });
