@@ -1,15 +1,19 @@
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
-import { defineConfig } from "vitest/config";
+import { defineConfig, mergeConfig } from "vitest/config";
+import configShared from "../../vitest.shared";
 
-export default defineConfig({
-	plugins: [
-		cloudflareTest({
-			miniflare: {
-				compatibilityFlags: ["service_binding_extra_handlers"],
-			},
-			wrangler: {
-				configPath: "./wrangler.jsonc",
-			},
-		}),
-	],
-});
+export default mergeConfig(
+	configShared,
+	defineConfig({
+		plugins: [
+			cloudflareTest({
+				miniflare: {
+					compatibilityFlags: ["service_binding_extra_handlers"],
+				},
+				wrangler: {
+					configPath: "./wrangler.jsonc",
+				},
+			}),
+		],
+	})
+);
