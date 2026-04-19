@@ -68,7 +68,7 @@ export function structuredSerializableParse(value: string): unknown {
 }
 
 // Log for pool info/warnings/errors (user-actionable messages only)
-const log = new Log(LogLevel.INFO, { prefix: "" });
+const log = new Log(LogLevel.INFO, { prefix: "vpw" });
 // Debug log gated behind NODE_DEBUG=vitest-pool-workers
 const debug = util.debuglog("vitest-pool-workers");
 // Log for Miniflare instances, used for user code warnings/errors
