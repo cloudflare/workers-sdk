@@ -1,5 +1,5 @@
 {
-	"name": "pages-functions-test",
+	"name": "pages-functions-build-cli",
 	"main": "dist/worker.js",
 	"compatibility_date": "2026-01-20",
 }
