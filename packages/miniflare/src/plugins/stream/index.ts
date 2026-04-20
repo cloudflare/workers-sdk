@@ -34,7 +34,7 @@ export const STREAM_PLUGIN_NAME = "stream";
 const STREAM_STORAGE_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:storage`;
 const STREAM_OBJECT_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:object`;
 export const STREAM_OBJECT_CLASS_NAME = "StreamObject";
-export const STREAM_SERVICE_NAME = "miniflare:stream";
+export const STREAM_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:service`;
 
 export const STREAM_COMPAT_DATE = "2026-03-23";
 
