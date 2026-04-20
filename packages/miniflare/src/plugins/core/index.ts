@@ -26,6 +26,7 @@ import {
 	SERVICE_LOOPBACK,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import { STREAM_SERVICE_NAME } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -997,8 +998,6 @@ export interface GlobalServicesOptions {
 	workflowOptions?: Map<string, WorkflowOption>;
 	/** All worker options for building per-worker resource bindings */
 	allWorkerOpts?: PluginWorkerOptions[];
-	/** If set, the stream service is enabled and requests to /cdn-cgi/mf/stream/ will be forwarded to this service */
-	streamServiceName?: string;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -1010,7 +1009,6 @@ export function getGlobalServices({
 	durableObjectClassNames,
 	workflowOptions,
 	allWorkerOpts,
-	streamServiceName,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1066,11 +1064,16 @@ export function getGlobalServices({
 			},
 		});
 	}
-	if (streamServiceName !== undefined) {
+	const streamServiceEnabled = allWorkerOpts?.some(
+		(worker) =>
+			worker.stream?.stream !== undefined &&
+			!worker.stream.stream.remoteProxyConnectionString
+	);
+	if (streamServiceEnabled) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_STREAM,
 			service: {
-				name: streamServiceName,
+				name: STREAM_SERVICE_NAME,
 				entrypoint: "StreamBinding",
 			},
 		});
