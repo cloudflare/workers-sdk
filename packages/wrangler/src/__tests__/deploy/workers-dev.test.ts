@@ -928,8 +928,8 @@ describe("deploy", () => {
 			mockUploadWorkerRequest();
 			mockGetWorkerSubdomain({ enabled: false });
 			// no set-subdomain call
-			mockGetZones("example.com", [{ id: "example-id" }]);
-			mockGetZoneWorkerRoutes("example-id");
+			mockGetZones(expect, "example.com", [{ id: "example-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-id");
 			mockPublishRoutesRequest({ routes: ["http://example.com/*"] });
 			await runWrangler("deploy index.js");
 
@@ -969,8 +969,8 @@ describe("deploy", () => {
 				env: "production",
 				useServiceEnvironments: false,
 			});
-			mockGetZones("production.example.com", [{ id: "example-id" }]);
-			mockGetZoneWorkerRoutes("example-id");
+			mockGetZones(expect, "production.example.com", [{ id: "example-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
@@ -1014,8 +1014,8 @@ describe("deploy", () => {
 				env: "production",
 				useServiceEnvironments: false,
 			});
-			mockGetZones("production.example.com", [{ id: "example-id" }]);
-			mockGetZoneWorkerRoutes("example-id");
+			mockGetZones(expect, "production.example.com", [{ id: "example-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
@@ -1200,8 +1200,8 @@ describe("deploy", () => {
 				env: "production",
 				useServiceEnvironments: false,
 			});
-			mockGetZones("production.example.com", [{ id: "example-id" }]);
-			mockGetZoneWorkerRoutes("example-id");
+			mockGetZones(expect, "production.example.com", [{ id: "example-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
@@ -1246,8 +1246,8 @@ describe("deploy", () => {
 				env: "production",
 				useServiceEnvironments: false,
 			});
-			mockGetZones("production.example.com", [{ id: "example-id" }]);
-			mockGetZoneWorkerRoutes("example-id");
+			mockGetZones(expect, "production.example.com", [{ id: "example-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",

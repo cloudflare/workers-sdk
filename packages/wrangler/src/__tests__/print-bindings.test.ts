@@ -99,3 +99,18 @@ describe("printBindings — AI Search bindings", () => {
 		expect(output).toContain("cloudflare-blog");
 	});
 });
+
+describe("printBindings -- Artifacts bindings", () => {
+	it("shows Artifacts bindings", ({ expect }) => {
+		const output = callPrintBindings({
+			MY_ARTIFACTS: {
+				type: "artifacts",
+				namespace: "default",
+			},
+		});
+
+		expect(output).toContain("MY_ARTIFACTS");
+		expect(output).toContain("Artifacts");
+		expect(output).toContain("default");
+	});
+});

@@ -14,8 +14,9 @@ export default defineConfig({
 		hookTimeout: 50_000,
 		teardownTimeout: 50_000,
 		restoreMocks: true,
-		// A lot of the fixture tests are extremely flaky because of the dev registry
-		// Retry tests by default so that only real errors are reported
-		retry: 2,
+		// The old network-based dev registry caused widespread flakiness, but it was
+		// replaced with a file-based registry in late 2024. Keep one retry as a safety
+		// net for general CI flakiness (resource pressure, timing, etc.).
+		retry: 1,
 	},
 });

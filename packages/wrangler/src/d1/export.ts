@@ -9,6 +9,7 @@ import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
+import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
@@ -41,6 +42,12 @@ export const d1ExportCommand = createCommand({
 			type: "boolean",
 			description: "Export from a remote D1 database",
 			conflicts: "local",
+		},
+		"skip-confirmation": {
+			type: "boolean",
+			description: "Skip confirmation",
+			alias: "y",
+			default: false,
 		},
 		output: {
 			type: "string",
@@ -78,7 +85,8 @@ export const d1ExportCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
-		const { remote, name, output, schema, data, table } = args;
+		const { remote, name, output, schema, data, table, skipConfirmation } =
+			args;
 
 		if (!schema && !data) {
 			throw new UserError(`You cannot specify both --no-schema and --no-data`);
@@ -95,6 +103,16 @@ export const d1ExportCommand = createCommand({
 		const tables = table ?? [];
 
 		if (remote) {
+			if (!skipConfirmation) {
+				const response = await confirm(
+					`⚠️ This process may take some time, during which your D1 database will be unavailable to serve queries.\n  Ok to proceed?`
+				);
+				if (!response) {
+					logger.log(`Not exporting.`);
+					return;
+				}
+			}
+
 			return await exportRemotely(config, name, output, tables, !schema, !data);
 		} else {
 			return await exportLocal(config, name, output, tables, !schema, !data);

@@ -135,7 +135,7 @@ export const pagesDeploymentDeleteCommand = createCommand({
 		force: {
 			type: "boolean",
 			alias: "f",
-			description: "Skip confirmation",
+			description: "Delete even if the deployment has an active alias",
 			default: false,
 		},
 	},
@@ -173,7 +173,8 @@ export const pagesDeploymentDeleteCommand = createCommand({
 		await fetchResult(
 			COMPLIANCE_REGION_CONFIG_PUBLIC,
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}`,
-			{ method: "DELETE" }
+			{ method: "DELETE" },
+			new URLSearchParams({ force: force.toString() })
 		);
 
 		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {

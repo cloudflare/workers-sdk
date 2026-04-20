@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { describe, it } from "vitest";
 
 // Regression test for https://github.com/cloudflare/workers-sdk/issues/9381
@@ -12,7 +12,7 @@ describe("workers-assets-no-dir", () => {
 	it("worker starts and responds when assets binding has no directory configured", async ({
 		expect,
 	}) => {
-		const response = await SELF.fetch("http://example.com/");
+		const response = await exports.default.fetch("http://example.com/");
 		expect(response.status).toBe(200);
 		expect(await response.text()).toBe("Hello from worker!");
 	});

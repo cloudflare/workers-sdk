@@ -9,6 +9,10 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - `src/index.ts` — Main `Miniflare` class, server setup, plugin orchestration, all exports
 - `src/workers/` — ~30 embedded worker scripts (D1, KV, R2, caches, etc.), built via `worker:` virtual import scheme
 - `src/workers/shared/` — Shared utilities across embedded workers
+- `src/workers/core/dev-registry-proxy.worker.ts` — Proxy worker for cross-process service bindings via debug port RPC
+- `src/workers/core/dev-registry-proxy-shared.worker.ts` — Shared proxy logic (registry Map, DO proxy class, tail serializers)
+- `src/shared/dev-registry.ts` — Filesystem-based worker registry (chokidar watch, heartbeat, stale cleanup)
+- `src/shared/DEV_REGISTRY.md` — Full architecture doc for the dev registry
 - `src/runtime/config/generated/workerd.ts` — Generated workerd Cap'n Proto config types
 - `test/` — Tests (`.spec.ts` naming, NOT `.test.ts`)
 - `test/test-shared/` — Shared test utilities
@@ -45,6 +49,11 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - `useDispose(mf)` / `disposeWithRetry()` — exponential backoff for Windows EPERM file locking
 - `useServer()` — temp HTTP server with auto-cleanup
 - `TestLog` — captures log entries by level
+
+## Generated Files
+
+- `src/runtime/config/generated/workerd.ts` — generated Cap'n Proto types, do not edit directly
+- `src/workers/local-explorer/openapi.local.json` — generated from `scripts/openapi-filter-config.ts`, modify the config not the output
 
 ## Version Pinning
 

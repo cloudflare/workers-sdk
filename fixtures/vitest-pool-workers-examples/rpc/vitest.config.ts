@@ -5,7 +5,7 @@ export default defineConfig({
 	plugins: [
 		cloudflareTest({
 			miniflare: {
-				// Required to use `SELF.scheduled()`. This is an experimental
+				// Required to use `exports.default.scheduled()`. This is an experimental
 				// compatibility flag, and cannot be enabled in production.
 				compatibilityFlags: ["service_binding_extra_handlers", "nodejs_compat"],
 			},

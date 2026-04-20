@@ -8,6 +8,40 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { ExpectStatic } from "vitest";
+
+/** Create a mock handler for the request to delete a Pages deployment. */
+function mockDeleteDeploymentRequest(
+	expect: ExpectStatic,
+	options: { force?: boolean } = {}
+) {
+	msw.use(
+		http.delete(
+			"*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId",
+			({ request, params }) => {
+				const url = new URL(request.url);
+
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.projectName).toEqual("my-project");
+				expect(params.deploymentId).toEqual("abc123");
+				expect(url.searchParams.get("force")).toEqual(
+					options.force ? "true" : "false"
+				);
+
+				return HttpResponse.json(
+					{
+						result: null,
+						success: true,
+						errors: [],
+						messages: [],
+					},
+					{ status: 200 }
+				);
+			},
+			{ once: true }
+		)
+	);
+}
 
 describe("pages deployment delete", () => {
 	const std = mockConsoleMethods();
@@ -29,26 +63,7 @@ describe("pages deployment delete", () => {
 	});
 
 	it("should delete a deployment with the given ID", async ({ expect }) => {
-		msw.use(
-			http.delete(
-				"*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId",
-				async ({ params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.projectName).toEqual("my-project");
-					expect(params.deploymentId).toEqual("abc123");
-					return HttpResponse.json(
-						{
-							result: null,
-							success: true,
-							errors: [],
-							messages: [],
-						},
-						{ status: 200 }
-					);
-				},
-				{ once: true }
-			)
-		);
+		mockDeleteDeploymentRequest(expect);
 
 		mockConfirm({
 			text: `Are you sure you want to delete deployment "abc123" in project "my-project"? This action cannot be undone.`,
@@ -87,26 +102,7 @@ describe("pages deployment delete", () => {
 	it("should delete without asking if --force is provided", async ({
 		expect,
 	}) => {
-		msw.use(
-			http.delete(
-				"*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId",
-				async ({ params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.projectName).toEqual("my-project");
-					expect(params.deploymentId).toEqual("abc123");
-					return HttpResponse.json(
-						{
-							result: null,
-							success: true,
-							errors: [],
-							messages: [],
-						},
-						{ status: 200 }
-					);
-				},
-				{ once: true }
-			)
-		);
+		mockDeleteDeploymentRequest(expect, { force: true });
 
 		await runWrangler(
 			"pages deployment delete abc123 --project-name=my-project --force"
@@ -116,23 +112,7 @@ describe("pages deployment delete", () => {
 	});
 
 	it("should support -f alias for --force", async ({ expect }) => {
-		msw.use(
-			http.delete(
-				"*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId",
-				async () => {
-					return HttpResponse.json(
-						{
-							result: null,
-							success: true,
-							errors: [],
-							messages: [],
-						},
-						{ status: 200 }
-					);
-				},
-				{ once: true }
-			)
-		);
+		mockDeleteDeploymentRequest(expect, { force: true });
 
 		await runWrangler(
 			"pages deployment delete abc123 --project-name=my-project -f"

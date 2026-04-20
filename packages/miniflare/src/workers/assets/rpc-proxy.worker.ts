@@ -1,4 +1,8 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import {
+	tailEventsReplacer,
+	tailEventsReviver,
+} from "../core/dev-registry-proxy-shared.worker";
 import type RouterWorker from "@cloudflare/workers-shared/asset-worker";
 
 interface Env {
@@ -58,23 +62,4 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 			},
 		});
 	}
-}
-
-const serializedDate = "___serialized_date___";
-
-function tailEventsReplacer(_: string, value: any) {
-	// The tail events might contain Date objects which will not be restored directly
-	if (value instanceof Date) {
-		return { [serializedDate]: value.toISOString() };
-	}
-	return value;
-}
-
-function tailEventsReviver(_: string, value: any) {
-	// To restore Date objects from the serialized events
-	if (value && typeof value === "object" && serializedDate in value) {
-		return new Date(value[serializedDate]);
-	}
-
-	return value;
 }

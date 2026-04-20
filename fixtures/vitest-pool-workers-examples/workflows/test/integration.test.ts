@@ -1,4 +1,5 @@
-import { env, introspectWorkflow, SELF } from "cloudflare:test";
+import { introspectWorkflow } from "cloudflare:test";
+import { env, exports } from "cloudflare:workers";
 import { describe, it } from "vitest";
 
 const STATUS_COMPLETE = "complete";
@@ -16,7 +17,7 @@ it("workflow should be able to reach the end and be successful", async ({
 		await m.mockStepResult({ name: STEP_NAME }, mockResult);
 	});
 
-	await SELF.fetch(`https://mock-worker.local/moderate`);
+	await exports.default.fetch(`https://mock-worker.local/moderate`);
 
 	const instances = introspector.get();
 	expect(instances.length).toBe(1);
@@ -46,7 +47,7 @@ it("workflow batch should be able to reach the end and be successful", async ({
 			await m.mockStepResult({ name: STEP_NAME }, mockResult);
 		});
 
-		await SELF.fetch(`https://mock-worker.local/moderate-batch`);
+		await exports.default.fetch(`https://mock-worker.local/moderate-batch`);
 
 		const instances = introspector.get();
 		expect(instances.length).toBe(3);
@@ -80,7 +81,9 @@ describe("workflow instance lifecycle methods", () => {
 			await m.mockStepResult({ name: STEP_NAME }, { violationScore: 50 });
 		});
 
-		const res = await SELF.fetch("https://mock-worker.local/moderate");
+		const res = await exports.default.fetch(
+			"https://mock-worker.local/moderate"
+		);
 		const data = (await res.json()) as { id: string; details: unknown };
 
 		const instances = introspector.get();
@@ -112,7 +115,9 @@ describe("workflow instance lifecycle methods", () => {
 			});
 		});
 
-		const res = await SELF.fetch("https://mock-worker.local/moderate");
+		const res = await exports.default.fetch(
+			"https://mock-worker.local/moderate"
+		);
 		const data = (await res.json()) as { id: string; details: unknown };
 
 		const instances = introspector.get();
@@ -143,7 +148,9 @@ describe("workflow instance lifecycle methods", () => {
 			await m.mockStepResult({ name: STEP_NAME }, { violationScore: 50 });
 		});
 
-		const res = await SELF.fetch("https://mock-worker.local/moderate");
+		const res = await exports.default.fetch(
+			"https://mock-worker.local/moderate"
+		);
 		const data = (await res.json()) as { id: string; details: unknown };
 
 		const instances = introspector.get();

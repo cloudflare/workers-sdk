@@ -1,9 +1,8 @@
 import {
 	createExecutionContext,
-	env,
-	SELF,
 	waitOnExecutionContext,
 } from "cloudflare:test";
+import { env, exports } from "cloudflare:workers";
 import { describe, it, vi } from "vitest";
 import worker from "../src/index";
 
@@ -75,7 +74,7 @@ describe("Tests that do not hit the AI binding", () => {
 	});
 
 	it("responds with Hello World! (integration style)", async ({ expect }) => {
-		const response = await SELF.fetch("https://example.com");
+		const response = await exports.default.fetch("https://example.com");
 		expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
 	});
 });
