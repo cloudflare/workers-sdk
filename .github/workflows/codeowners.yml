@@ -1,7 +1,7 @@
 name: "Code Owners"
 
 # Re-evaluate when PRs are opened/updated.
-# When reviews are submitted/dismissed, the separate rerun_codeowners.yml workflow
+# When reviews are submitted/dismissed, the separate rerun-codeowners.yml workflow
 # re-runs this check (rather than creating a second check context).
 # Using pull_request_target (not pull_request) so the workflow has access to secrets
 # for fork PRs. This is safe because:

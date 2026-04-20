@@ -74,6 +74,7 @@ describe("normalizeAndValidateConfig()", () => {
 			},
 			r2_buckets: [],
 			secrets_store_secrets: [],
+			artifacts: [],
 			unsafe_hello_world: [],
 			flagship: [],
 			ratelimits: [],
@@ -3182,6 +3183,88 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
+
+			it("should error when constraints.jurisdiction is invalid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									jurisdiction: "invalid",
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.constraints.jurisdiction must be one of: "eu", "fedramp""
+				`);
+			});
+
+			it("should error when constraints.regions contains invalid region", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									regions: ["INVALID", "ENAM"],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.constraints.regions contains invalid region "INVALID". Valid regions are: ENAM, WNAM, EEUR, WEUR, APAC, SAM, ME, OC, AFR"
+				`);
+			});
+
+			it("should allow valid constraints.regions and constraints.jurisdiction", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									regions: ["ENAM", "WNAM"],
+									jurisdiction: "fedramp",
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
 		});
 
 		describe("[kv_namespaces]", () => {
@@ -4523,6 +4606,138 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "secrets_store_secrets[2]" bindings must have a string "binding" field but got {"binding":null,"invalid":true,"store_id":123,"secret_name":null}.
 					  - "secrets_store_secrets[2]" bindings must have a string "store_id" field but got {"binding":null,"invalid":true,"store_id":123,"secret_name":null}.
 					  - "secrets_store_secrets[2]" bindings must have a string "secret_name" field but got {"binding":null,"invalid":true,"store_id":123,"secret_name":null}."
+				`);
+			});
+		});
+
+		describe("[artifacts]", () => {
+			it("should error if artifacts is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ artifacts: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "artifacts" should be an array but got {}."
+				`);
+			});
+
+			it("should error if artifacts is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ artifacts: null },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "artifacts" should be an array but got null."
+				`);
+			});
+
+			it("should accept valid bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						artifacts: [
+							{
+								binding: "MY_ARTIFACTS",
+								namespace: "default",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept valid bindings with remote set to true", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						artifacts: [
+							{
+								binding: "MY_ARTIFACTS",
+								namespace: "default",
+								remote: true,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if remote is not a boolean", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						artifacts: [
+							{
+								binding: "MY_ARTIFACTS",
+								namespace: "default",
+								remote: "yes",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - "artifacts[0]" should, optionally, have a boolean "remote" field but got {"binding":"MY_ARTIFACTS","namespace":"default","remote":"yes"}."
+			`);
+			});
+
+			it("should error if artifacts bindings are not valid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						artifacts: [
+							{},
+							{
+								binding: "VALID",
+								namespace: "default",
+							},
+							{
+								binding: null,
+								invalid: true,
+								namespace: 123,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in artifacts[2] field: "invalid""
+				`);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "artifacts[0]" bindings must have a string "binding" field but got {}.
+					  - "artifacts[0]" bindings must have a string "namespace" field but got {}.
+					  - "artifacts[2]" bindings must have a string "binding" field but got {"binding":null,"invalid":true,"namespace":123}.
+					  - "artifacts[2]" bindings must have a string "namespace" field but got {"binding":null,"invalid":true,"namespace":123}."
 				`);
 			});
 		});

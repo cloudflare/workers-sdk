@@ -353,6 +353,12 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "artifacts": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "artifacts", ...x };
+				}
+				break;
+			}
 			case "unsafe_hello_world": {
 				if (pages) {
 					break;
