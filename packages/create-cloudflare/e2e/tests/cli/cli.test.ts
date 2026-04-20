@@ -773,7 +773,28 @@ describe("Create Cloudflare CLI", () => {
 				logStream
 			);
 			expect(errors).toContain(
-				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc'
+				'Unknown variant "invalid-variant". Valid variants are: react-ts, react'
+			);
+		});
+
+		test("error when using deprecated SWC --variant for React Workers framework", async ({
+			expect,
+			logStream,
+		}) => {
+			const { errors } = await runC3(
+				[
+					"my-app",
+					"--framework=react",
+					"--platform=workers",
+					"--variant=react-swc-ts",
+					"--no-deploy",
+					"--git=false",
+				],
+				[],
+				logStream
+			);
+			expect(errors).toContain(
+				'The React variant "react-swc-ts" is no longer available. Use "react-ts" instead.'
 			);
 		});
 
