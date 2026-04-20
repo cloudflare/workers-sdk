@@ -19,6 +19,7 @@ import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
+	getUserBindingServiceName,
 	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
 	ProxyNodeBinding,
@@ -26,7 +27,7 @@ import {
 	SERVICE_LOOPBACK,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
-import { STREAM_SERVICE_NAME } from "../stream";
+import { STREAM_PLUGIN_NAME } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -1073,7 +1074,7 @@ export function getGlobalServices({
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_STREAM,
 			service: {
-				name: STREAM_SERVICE_NAME,
+				name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
 				entrypoint: "StreamBinding",
 			},
 		});

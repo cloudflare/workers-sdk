@@ -34,7 +34,6 @@ export const STREAM_PLUGIN_NAME = "stream";
 const STREAM_STORAGE_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:storage`;
 const STREAM_OBJECT_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:object`;
 export const STREAM_OBJECT_CLASS_NAME = "StreamObject";
-export const STREAM_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:service`;
 
 export const STREAM_COMPAT_DATE = "2026-03-23";
 
@@ -53,13 +52,11 @@ export const STREAM_PLUGIN: Plugin<
 			{
 				name: options.stream.binding,
 				service: {
-					name: options.stream.remoteProxyConnectionString
-						? getUserBindingServiceName(
-								STREAM_PLUGIN_NAME,
-								options.stream.binding,
-								options.stream.remoteProxyConnectionString
-							)
-						: STREAM_SERVICE_NAME,
+					name: getUserBindingServiceName(
+						STREAM_PLUGIN_NAME,
+						"service",
+						options.stream.remoteProxyConnectionString
+					),
 					entrypoint: options.stream.remoteProxyConnectionString
 						? undefined
 						: "StreamBinding",
@@ -89,7 +86,7 @@ export const STREAM_PLUGIN: Plugin<
 		if (options.stream.remoteProxyConnectionString) {
 			const serviceName = getUserBindingServiceName(
 				STREAM_PLUGIN_NAME,
-				options.stream.binding,
+				"service",
 				options.stream.remoteProxyConnectionString
 			);
 
@@ -152,7 +149,11 @@ export const STREAM_PLUGIN: Plugin<
 
 		// Entrypoint with RPC
 		const bindingService = {
-			name: STREAM_SERVICE_NAME,
+			name: getUserBindingServiceName(
+				STREAM_PLUGIN_NAME,
+				"service",
+				options.stream.remoteProxyConnectionString
+			),
 			worker: {
 				compatibilityDate: STREAM_COMPAT_DATE,
 				compatibilityFlags: ["nodejs_compat", "experimental"],
