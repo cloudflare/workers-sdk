@@ -1,5 +1,5 @@
 import { describe, it } from "vitest";
-import { isValidIdentifier, normalizeIdentifier } from "../src/identifiers.js";
+import { isValidIdentifier, normalizeIdentifier } from "../src/identifiers";
 
 describe("identifiers", () => {
 	describe("isValidIdentifier", () => {

@@ -2,12 +2,13 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, beforeEach, describe, expect, it, test } from "vitest";
+import { removeDirSync } from "@cloudflare/workers-utils";
+import { afterEach, beforeEach, describe, it, test } from "vitest";
 import {
 	compareRoutes,
 	generateConfigFromFileTree,
-} from "../src/filepath-routing.js";
-import type { RouteConfig, UrlPath } from "../src/types.js";
+} from "../src/filepath-routing";
+import type { RouteConfig, UrlPath } from "../src/types";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -21,7 +22,7 @@ function routeConfig(routePath: string, method?: string): RouteConfig {
 
 describe("filepath-routing", () => {
 	describe("compareRoutes()", () => {
-		test("routes / last", () => {
+		test("routes / last", ({ expect }) => {
 			expect(
 				compareRoutes(routeConfig("/"), routeConfig("/foo"))
 			).toBeGreaterThanOrEqual(1);
@@ -33,7 +34,9 @@ describe("filepath-routing", () => {
 			).toBeGreaterThanOrEqual(1);
 		});
 
-		test("routes with fewer segments come after those with more segments", () => {
+		test("routes with fewer segments come after those with more segments", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo"), routeConfig("/foo/bar"))
 			).toBeGreaterThanOrEqual(1);
@@ -42,36 +45,48 @@ describe("filepath-routing", () => {
 			).toBeGreaterThanOrEqual(1);
 		});
 
-		test("routes with wildcard segments come after those without", () => {
+		test("routes with wildcard segments come after those without", ({
+			expect,
+		}) => {
 			expect(compareRoutes(routeConfig("/:foo*"), routeConfig("/foo"))).toBe(1);
 			expect(compareRoutes(routeConfig("/:foo*"), routeConfig("/:foo"))).toBe(
 				1
 			);
 		});
 
-		test("routes with dynamic segments come after those without", () => {
+		test("routes with dynamic segments come after those without", ({
+			expect,
+		}) => {
 			expect(compareRoutes(routeConfig("/:foo"), routeConfig("/foo"))).toBe(1);
 		});
 
-		test("routes with dynamic segments occurring earlier come after those with dynamic segments in later positions", () => {
+		test("routes with dynamic segments occurring earlier come after those with dynamic segments in later positions", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo/:id/bar"), routeConfig("/foo/bar/:id"))
 			).toBe(1);
 		});
 
-		test("routes with no HTTP method come after those specifying a method", () => {
+		test("routes with no HTTP method come after those specifying a method", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo"), routeConfig("/foo", "GET"))
 			).toBe(1);
 		});
 
-		test("two equal routes are sorted according to their original position in the list", () => {
+		test("two equal routes are sorted according to their original position in the list", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo", "GET"), routeConfig("/foo", "GET"))
 			).toBe(0);
 		});
 
-		test("it returns -1 if the first argument should appear first in the list", () => {
+		test("it returns -1 if the first argument should appear first in the list", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo", "GET"), routeConfig("/foo"))
 			).toBe(-1);
@@ -86,10 +101,12 @@ describe("filepath-routing", () => {
 		});
 
 		afterEach(() => {
-			fs.rmSync(tmpDir, { recursive: true, force: true });
+			removeDirSync(tmpDir);
 		});
 
-		it("should generate a route entry for each file in the tree", async () => {
+		it("should generate a route entry for each file in the tree", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				path.join(tmpDir, "foo.ts"),
 				`
@@ -193,7 +210,9 @@ describe("filepath-routing", () => {
 			expect(authorsTodosIndex).toBeLessThan(fooIndex);
 		});
 
-		it("should display an error if a simple route param name is invalid", async () => {
+		it("should display an error if a simple route param name is invalid", async ({
+			expect,
+		}) => {
 			fs.mkdirSync(path.join(tmpDir, "foo"));
 			fs.writeFileSync(
 				path.join(tmpDir, "foo/[hyphen-not-allowed].ts"),
@@ -210,7 +229,9 @@ describe("filepath-routing", () => {
 			);
 		});
 
-		it("should display an error if a catch-all route param name is invalid", async () => {
+		it("should display an error if a catch-all route param name is invalid", async ({
+			expect,
+		}) => {
 			fs.mkdirSync(path.join(tmpDir, "foo"));
 			fs.writeFileSync(
 				path.join(tmpDir, "foo/[[hyphen-not-allowed]].ts"),
@@ -227,7 +248,7 @@ describe("filepath-routing", () => {
 			);
 		});
 
-		it("should handle middleware files", async () => {
+		it("should handle middleware files", async ({ expect }) => {
 			fs.writeFileSync(
 				path.join(tmpDir, "_middleware.ts"),
 				"export function onRequest() {}"
@@ -250,7 +271,7 @@ describe("filepath-routing", () => {
 			expect(indexRoute).toBeDefined();
 		});
 
-		it("should handle index files", async () => {
+		it("should handle index files", async ({ expect }) => {
 			fs.mkdirSync(path.join(tmpDir, "api"));
 			fs.writeFileSync(
 				path.join(tmpDir, "api/index.ts"),
@@ -266,7 +287,7 @@ describe("filepath-routing", () => {
 			expect(apiRoute).toBeDefined();
 		});
 
-		it("should support various file extensions", async () => {
+		it("should support various file extensions", async ({ expect }) => {
 			fs.writeFileSync(
 				path.join(tmpDir, "a.js"),
 				"export function onRequest() {}"
@@ -303,7 +324,7 @@ describe("filepath-routing", () => {
 			"fixtures/basic-project/functions"
 		);
 
-		it("generates routes from a functions directory", async () => {
+		it("generates routes from a functions directory", async ({ expect }) => {
 			const config = await generateConfigFromFileTree({
 				baseDir: functionsDir,
 			});
@@ -335,7 +356,9 @@ describe("filepath-routing", () => {
 			expect(putRoute).toBeDefined();
 		});
 
-		it("converts bracket params to path-to-regexp format", async () => {
+		it("converts bracket params to path-to-regexp format", async ({
+			expect,
+		}) => {
 			const config = await generateConfigFromFileTree({
 				baseDir: functionsDir,
 			});
@@ -348,7 +371,7 @@ describe("filepath-routing", () => {
 			expect(apiRoute?.routePath).not.toContain("[id]");
 		});
 
-		it("respects baseURL option", async () => {
+		it("respects baseURL option", async ({ expect }) => {
 			const config = await generateConfigFromFileTree({
 				baseDir: functionsDir,
 				baseURL: "/prefix" as UrlPath,
@@ -360,7 +383,7 @@ describe("filepath-routing", () => {
 			}
 		});
 
-		it("sorts routes by specificity", async () => {
+		it("sorts routes by specificity", async ({ expect }) => {
 			const config = await generateConfigFromFileTree({
 				baseDir: functionsDir,
 			});

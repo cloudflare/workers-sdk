@@ -2208,6 +2208,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20260420.1
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@types/node':
         specifier: ^22.10.1
         version: 22.15.17

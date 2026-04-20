@@ -50,6 +50,7 @@
 		"@cloudflare/vitest-pool-workers": "catalog:default",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
 		"path-to-regexp": "^6.3.0",
 		"tsup": "8.3.0",

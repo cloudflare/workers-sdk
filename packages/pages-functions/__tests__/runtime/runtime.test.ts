@@ -1,5 +1,5 @@
 import { SELF } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 
 // These tests exercise the runtime (see worker.ts) against handlers imported
 // directly from the `basic-project` fixture. Response bodies and headers here

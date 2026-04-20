@@ -1,15 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import {
 	consolidateRoutes,
 	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
 	shortenRoute,
-} from "../src/routes-consolidation.js";
+} from "../src/routes-consolidation";
 
 const maxRuleLength = MAX_FUNCTIONS_ROUTES_RULE_LENGTH;
 
 describe("routes-consolidation", () => {
 	describe("consolidateRoutes()", () => {
-		it("should consolidate redundant routes", () => {
+		it("should consolidate redundant routes", ({ expect }) => {
 			expect(consolidateRoutes(["/api/foo", "/api/*"])).toEqual(["/api/*"]);
 			expect(
 				consolidateRoutes([
@@ -26,7 +26,7 @@ describe("routes-consolidation", () => {
 			).toEqual(["/api/*", "/foo", "/foo/bar", "/bar/*"]);
 		});
 
-		it("should consolidate thousands of redundant routes", () => {
+		it("should consolidate thousands of redundant routes", ({ expect }) => {
 			// Test to make sure the consolidator isn't horribly slow
 			const routes: string[] = [];
 			const limit = 1000;
@@ -45,7 +45,7 @@ describe("routes-consolidation", () => {
 			).toEqual(true);
 		});
 
-		it("should consolidate many redundant sub-routes", () => {
+		it("should consolidate many redundant sub-routes", ({ expect }) => {
 			const routes: string[] = [];
 			const limit = 15;
 
@@ -71,7 +71,9 @@ describe("routes-consolidation", () => {
 			).toEqual(true);
 		});
 
-		it("should truncate long single-level path into catch-all path, removing other paths", () => {
+		it("should truncate long single-level path into catch-all path, removing other paths", ({
+			expect,
+		}) => {
 			expect(
 				consolidateRoutes([
 					"/" + "a".repeat(maxRuleLength * 2),
@@ -82,48 +84,52 @@ describe("routes-consolidation", () => {
 			).toEqual(["/*"]);
 		});
 
-		it("should truncate long nested path, removing other paths", () => {
+		it("should truncate long nested path, removing other paths", ({
+			expect,
+		}) => {
 			expect(
 				consolidateRoutes(["/foo/" + "a".repeat(maxRuleLength * 2), "/foo/bar"])
 			).toEqual(["/foo/*"]);
 		});
 
-		it("keeps non-redundant routes", () => {
+		it("keeps non-redundant routes", ({ expect }) => {
 			const routes = ["/api/foo", "/other/bar"];
 			expect(consolidateRoutes(routes)).toEqual(["/api/foo", "/other/bar"]);
 		});
 
-		it("deduplicates routes", () => {
+		it("deduplicates routes", ({ expect }) => {
 			const routes = ["/api/foo", "/api/foo", "/api/foo"];
 			expect(consolidateRoutes(routes)).toEqual(["/api/foo"]);
 		});
 
-		it("keeps wildcard routes that don't overlap", () => {
+		it("keeps wildcard routes that don't overlap", ({ expect }) => {
 			const routes = ["/api/*", "/other/*"];
 			expect(consolidateRoutes(routes)).toEqual(["/api/*", "/other/*"]);
 		});
 	});
 
 	describe("shortenRoute()", () => {
-		it("should allow max length path", () => {
+		it("should allow max length path", ({ expect }) => {
 			const route = "/" + "a".repeat(maxRuleLength - 1);
 			expect(route.length).toEqual(maxRuleLength);
 			expect(shortenRoute(route)).toEqual(route);
 		});
 
-		it("should allow max length path (with slash)", () => {
+		it("should allow max length path (with slash)", ({ expect }) => {
 			const route = "/" + "a".repeat(maxRuleLength - 2) + "/";
 			expect(route.length).toEqual(maxRuleLength);
 			expect(shortenRoute(route)).toEqual(route);
 		});
 
-		it("should allow max length wildcard path", () => {
+		it("should allow max length wildcard path", ({ expect }) => {
 			const route = "/" + "a".repeat(maxRuleLength - 3) + "/*";
 			expect(route.length).toEqual(maxRuleLength);
 			expect(shortenRoute(route)).toEqual(route);
 		});
 
-		it("should truncate long specific path to shorter wildcard path", () => {
+		it("should truncate long specific path to shorter wildcard path", ({
+			expect,
+		}) => {
 			const short = shortenRoute(
 				"/" +
 					"a".repeat(maxRuleLength * 0.6) +
@@ -134,7 +140,9 @@ describe("routes-consolidation", () => {
 			expect(short.length).toBeLessThanOrEqual(maxRuleLength);
 		});
 
-		it("should truncate long specific path (with slash) to shorter wildcard path", () => {
+		it("should truncate long specific path (with slash) to shorter wildcard path", ({
+			expect,
+		}) => {
 			const short = shortenRoute(
 				"/" +
 					"a".repeat(maxRuleLength * 0.6) +
@@ -146,7 +154,9 @@ describe("routes-consolidation", () => {
 			expect(short.length).toBeLessThanOrEqual(maxRuleLength);
 		});
 
-		it("should truncate long wildcard path to shorter wildcard path", () => {
+		it("should truncate long wildcard path to shorter wildcard path", ({
+			expect,
+		}) => {
 			const short = shortenRoute(
 				"/" +
 					"a".repeat(maxRuleLength * 0.6) +
@@ -158,41 +168,51 @@ describe("routes-consolidation", () => {
 			expect(short.length).toBeLessThanOrEqual(maxRuleLength);
 		});
 
-		it("should truncate long single-level specific path to catch-all path", () => {
+		it("should truncate long single-level specific path to catch-all path", ({
+			expect,
+		}) => {
 			expect(shortenRoute("/" + "a".repeat(maxRuleLength * 2))).toEqual("/*");
 		});
 
-		it("should truncate long single-level specific path (with slash) to catch-all path", () => {
+		it("should truncate long single-level specific path (with slash) to catch-all path", ({
+			expect,
+		}) => {
 			expect(shortenRoute("/" + "a".repeat(maxRuleLength * 2) + "/")).toEqual(
 				"/*"
 			);
 		});
 
-		it("should truncate long single-level wildcard path to catch-all path", () => {
+		it("should truncate long single-level wildcard path to catch-all path", ({
+			expect,
+		}) => {
 			expect(shortenRoute("/" + "a".repeat(maxRuleLength * 2) + "/*")).toEqual(
 				"/*"
 			);
 		});
 
-		it("should truncate many single-character segments", () => {
+		it("should truncate many single-character segments", ({ expect }) => {
 			const short = shortenRoute("/a".repeat(maxRuleLength));
 			expect(short).toEqual("/a".repeat(maxRuleLength / 2 - 1) + "/*");
 			expect(short.length).toEqual(maxRuleLength);
 		});
 
-		it("should truncate many double-character segments", () => {
+		it("should truncate many double-character segments", ({ expect }) => {
 			const short = shortenRoute("/aa".repeat(maxRuleLength));
 			expect(short).toEqual("/aa".repeat(maxRuleLength / 3 - 1) + "/*");
 			expect(short.length).toEqual(maxRuleLength - 2);
 		});
 
-		it("should truncate many single-character segments with wildcard", () => {
+		it("should truncate many single-character segments with wildcard", ({
+			expect,
+		}) => {
 			const short = shortenRoute("/a".repeat(maxRuleLength) + "/*");
 			expect(short).toEqual("/a".repeat(maxRuleLength / 2 - 1) + "/*");
 			expect(short.length).toEqual(maxRuleLength);
 		});
 
-		it("should truncate many double-character segments with wildcard", () => {
+		it("should truncate many double-character segments with wildcard", ({
+			expect,
+		}) => {
 			const short = shortenRoute("/aa".repeat(maxRuleLength) + "/*");
 			expect(short).toEqual("/aa".repeat(maxRuleLength / 3 - 1) + "/*");
 			expect(short.length).toEqual(maxRuleLength - 2);
@@ -200,7 +220,9 @@ describe("routes-consolidation", () => {
 
 		// Test variable-length segments to ensure it's always able to shorten rules
 		for (const suffix of ["", "/", "/*"]) {
-			it(`should truncate many variable-character segments (suffix="${suffix}") without truncating to /*`, () => {
+			it(`should truncate many variable-character segments (suffix="${suffix}") without truncating to /*`, ({
+				expect,
+			}) => {
 				for (let i = 1; i < maxRuleLength - 2; i++) {
 					const segment = "/" + "a".repeat(i);
 					expect(segment.length).toBeLessThanOrEqual(maxRuleLength);

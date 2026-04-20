@@ -1,13 +1,13 @@
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
-import { compileFunctions, FunctionsNoRoutesError } from "../src/index.js";
+import { describe, it } from "vitest";
+import { compileFunctions, FunctionsNoRoutesError } from "../src/index";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturesDir = path.join(__dirname, "fixtures");
 
 describe("compileFunctions", () => {
-	it("compiles a project to worker code", async () => {
+	it("compiles a project to worker code", async ({ expect }) => {
 		const projectDir = path.join(fixturesDir, "basic-project");
 		const result = await compileFunctions(projectDir);
 
@@ -28,7 +28,7 @@ describe("compileFunctions", () => {
 		expect(Array.isArray(result.routesJson.include)).toBe(true);
 	});
 
-	it("uses custom fallbackService", async () => {
+	it("uses custom fallbackService", async ({ expect }) => {
 		const projectDir = path.join(fixturesDir, "basic-project");
 		const result = await compileFunctions(projectDir, {
 			fallbackService: "CUSTOM_ASSETS",
@@ -37,7 +37,7 @@ describe("compileFunctions", () => {
 		expect(result.code).toContain('"CUSTOM_ASSETS"');
 	});
 
-	it("uses custom baseURL", async () => {
+	it("uses custom baseURL", async ({ expect }) => {
 		const projectDir = path.join(fixturesDir, "basic-project");
 		const result = await compileFunctions(projectDir, {
 			baseURL: "/v1",
@@ -49,7 +49,7 @@ describe("compileFunctions", () => {
 		}
 	});
 
-	it("throws FunctionsNoRoutesError for empty project", async () => {
+	it("throws FunctionsNoRoutesError for empty project", async ({ expect }) => {
 		const projectDir = path.join(fixturesDir, "empty-project");
 
 		await expect(compileFunctions(projectDir)).rejects.toThrow(
@@ -57,7 +57,7 @@ describe("compileFunctions", () => {
 		);
 	});
 
-	it("generates valid _routes.json", async () => {
+	it("generates valid _routes.json", async ({ expect }) => {
 		const projectDir = path.join(fixturesDir, "basic-project");
 		const result = await compileFunctions(projectDir);
 

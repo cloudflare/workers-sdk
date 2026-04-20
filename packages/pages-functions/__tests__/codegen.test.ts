@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { generateWorkerEntrypoint } from "../src/codegen.js";
-import type { RouteConfig } from "../src/types.js";
+import { describe, it } from "vitest";
+import { generateWorkerEntrypoint } from "../src/codegen";
+import type { RouteConfig } from "../src/types";
 
 describe("codegen", () => {
 	describe("generateWorkerEntrypoint", () => {
-		it("generates imports and routes array", () => {
+		it("generates imports and routes array", ({ expect }) => {
 			const routes: RouteConfig[] = [
 				{
 					routePath: "/api/:id",
@@ -30,7 +30,7 @@ describe("codegen", () => {
 			);
 		});
 
-		it("handles middleware routes", () => {
+		it("handles middleware routes", ({ expect }) => {
 			const routes: RouteConfig[] = [
 				{
 					routePath: "/",
@@ -48,7 +48,9 @@ describe("codegen", () => {
 			expect(code).toContain("modules: [");
 		});
 
-		it("generates unique identifiers for duplicate export names", () => {
+		it("generates unique identifiers for duplicate export names", ({
+			expect,
+		}) => {
 			const routes: RouteConfig[] = [
 				{
 					routePath: "/a",
@@ -71,7 +73,7 @@ describe("codegen", () => {
 			expect(matches).toHaveLength(2);
 		});
 
-		it("includes runtime code", () => {
+		it("includes runtime code", ({ expect }) => {
 			const routes: RouteConfig[] = [
 				{
 					routePath: "/",
