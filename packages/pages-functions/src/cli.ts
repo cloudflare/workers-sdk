@@ -74,6 +74,7 @@ async function main() {
 
 		// Write _routes.json if requested
 		if (routesJson) {
+			await fs.mkdir(path.dirname(routesJson), { recursive: true });
 			await fs.writeFile(
 				routesJson,
 				JSON.stringify(result.routesJson, null, "\t")
