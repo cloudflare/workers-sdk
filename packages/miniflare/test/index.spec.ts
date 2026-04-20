@@ -3507,6 +3507,7 @@ test("Miniflare: can use module fallback service with V2 protocol", async ({
 	expect,
 }) => {
 	// V2 protocol uses file:// URLs instead of paths
+	// Module keys are paths (without the /bundle prefix that workerd adds)
 	const modules: Record<string, Omit<Worker_Module, "name">> = {
 		"/virtual/a.mjs": {
 			esModule: `
@@ -3547,7 +3548,11 @@ test("Miniflare: can use module fallback service with V2 protocol", async ({
 				`V2 specifier should be a file:// URL, got "${body.specifier}"`
 			);
 
-			const maybeModule = modules[body.specifier];
+			// V2 specifier is a file:// URL like "file:///bundle/virtual/a.mjs"
+			// Extract the path and strip the "/bundle" prefix to match our modules map
+			const specifierUrl = new URL(body.specifier);
+			const modulePath = specifierUrl.pathname.replace(/^\/bundle/, "");
+			const maybeModule = modules[modulePath];
 			if (maybeModule === undefined) {
 				return new Response(null, { status: 404 });
 			}

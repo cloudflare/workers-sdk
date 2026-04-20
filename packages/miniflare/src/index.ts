@@ -73,6 +73,7 @@ import {
 	reviveError,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
+import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import { imagesLocalFetcher } from "./plugins/images/fetcher";
 import {
@@ -1525,7 +1526,7 @@ export class Miniflare {
 				);
 			} else if (
 				this.#sharedOpts.core.unsafeModuleFallbackService !== undefined &&
-				request.headers.has("X-Resolve-Method") &&
+				isModuleFallbackRequest(request) &&
 				originalUrl === null
 			) {
 				response = await this.#sharedOpts.core.unsafeModuleFallbackService(
@@ -3171,3 +3172,9 @@ export {
 	getDefaultDevRegistryPath,
 	getWorkerRegistry,
 } from "./shared/dev-registry";
+export { parseModuleFallbackRequest } from "./plugins/core/module-fallback";
+export type {
+	V1ModuleFallbackRequest,
+	V2ModuleFallbackRequest,
+	ParsedModuleFallbackRequest,
+} from "./plugins/core/module-fallback";

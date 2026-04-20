@@ -17,6 +17,7 @@ import {
 	kUnsafeEphemeralUniqueKey,
 	Log,
 	LogLevel,
+	parseModuleFallbackRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
 import { globSync } from "tinyglobby";
@@ -474,8 +475,16 @@ export async function getDevMiniflareOptions(
 			),
 			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
-				const url = new URL(request.url);
-				const rawSpecifier = url.searchParams.get("rawSpecifier");
+				// Parse the request using the protocol-aware parser
+				// This handles both V1 (GET with query params) and V2 (POST with JSON body)
+				const parsed = await parseModuleFallbackRequest(request);
+				if (!parsed) {
+					return new MiniflareResponse("Invalid module fallback request", {
+						status: 400,
+					});
+				}
+
+				const rawSpecifier = parsed.rawSpecifier;
 				assert(
 					rawSpecifier,
 					`Unexpected error: no specifier in request to module fallback service.`
