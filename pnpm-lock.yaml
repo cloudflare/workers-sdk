@@ -653,11 +653,17 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/pages-functions-test:
+  fixtures/pages-functions-build-cli:
     devDependencies:
       '@cloudflare/pages-functions':
         specifier: workspace:*
         version: link:../../packages/pages-functions
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20260420.1
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -2191,35 +2197,32 @@ importers:
     dependencies:
       esbuild:
         specifier: catalog:default
-        version: 0.27.0
+        version: 0.27.3
     devDependencies:
-      '@cloudflare/eslint-config-shared':
-        specifier: workspace:*
-        version: link:../eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: catalog:default
-        version: 0.10.15(@cloudflare/workers-types@4.20260123.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
+        version: 0.13.3(@cloudflare/workers-types@4.20260420.1)(@vitest/runner@4.1.0)(@vitest/snapshot@4.1.0)(vitest@4.1.0)
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20260123.0
+        version: 4.20260420.1
       '@types/node':
-        specifier: ^20.19.9
-        version: 20.19.9
-      eslint:
-        specifier: catalog:default
-        version: 9.39.1(jiti@2.6.0)
+        specifier: ^22.10.1
+        version: 22.15.17
       path-to-regexp:
         specifier: ^6.3.0
         version: 6.3.0
+      tsup:
+        specifier: 8.3.0
+        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.8)(supports-color@9.2.2)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.8.1)
       typescript:
         specifier: catalog:default
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/pages-shared:
     dependencies:

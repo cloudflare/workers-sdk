@@ -1,8 +1,9 @@
 {
-	"extends": "@cloudflare/workers-tsconfig",
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
-		"module": "NodeNext",
-		"moduleResolution": "NodeNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"incremental": false,
 		"types": ["node"]
 	},
 	"include": ["src/**/*.ts", "__tests__/**/*.ts", "vitest.config.ts"],
