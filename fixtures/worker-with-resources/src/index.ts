@@ -27,7 +27,6 @@ export default {
 				return new Response(`Seeded ${SEED_DATA.length} KV entries`);
 			}
 
-
 			// R2 routes
 			case "/r2/seed": {
 				await Promise.all(
