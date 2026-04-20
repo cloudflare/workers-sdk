@@ -1,7 +1,10 @@
-import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
+import {
+	createFatalError,
+	getCloudflareComplianceRegion,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
-import { isAuthenticationError } from "../deploy/deploy";
+import { isAuthenticationError } from "../core/handle-errors";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchMembershipRoles } from "./membership";
@@ -10,17 +13,50 @@ import type { ApiCredentials, Scope } from ".";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
+ * Represents the JSON output of `wrangler whoami --json`.
+ */
+export type WhoamiResult =
+	| { loggedIn: false }
+	| {
+			loggedIn: true;
+			authType: AuthType;
+			email: string | undefined;
+			accounts: AccountInfo[];
+			tokenPermissions: string[] | undefined;
+	  };
+
+/**
  * Displays information about the currently authenticated user, including their
  * email, accounts, token permissions, and membership roles.
  *
  * When called with `accountFilter` and `configAccountId`, also checks for potential
  * `account_id` mismatches that could cause authentication errors.
+ *
+ * When `json` is true, outputs structured JSON to stdout and exits with a
+ * non-zero status if the user is not authenticated.
  */
 export async function whoami(
 	complianceConfig: ComplianceConfig,
 	accountFilter?: string,
-	configAccountId?: string
+	configAccountId?: string,
+	json?: boolean
 ) {
+	if (json) {
+		const user = await getUserInfo(complianceConfig);
+		if (!user) {
+			throw createFatalError({ loggedIn: false } satisfies WhoamiResult, true);
+		}
+		const result: WhoamiResult = {
+			loggedIn: true,
+			authType: user.authType,
+			email: user.email,
+			accounts: user.accounts,
+			tokenPermissions: user.tokenPermissions,
+		};
+		logger.json(result);
+		return;
+	}
+
 	logger.log("Getting User settings...");
 	const user = await getUserInfo(complianceConfig);
 	if (!user) {

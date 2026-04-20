@@ -2,12 +2,12 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Miniflare, MiniflareCoreError, stripAnsi } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { useCwd, useDispose, useTmp, utf8Encode } from "../../test-shared";
 
 const ROOT = path.resolve(__dirname, "../../fixtures/modules");
 
-test("Miniflare: accepts manually defined modules", async () => {
+test("Miniflare: accepts manually defined modules", async ({ expect }) => {
 	// Check with just `path`
 	const mf = new Miniflare({
 		compatibilityDate: "2023-08-01",
@@ -98,7 +98,7 @@ test("Miniflare: accepts manually defined modules", async () => {
 		number: -1,
 	});
 });
-test("Miniflare: automatically collects modules", async () => {
+test("Miniflare: automatically collects modules", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		modulesRoot: ROOT,
@@ -136,7 +136,9 @@ test("Miniflare: automatically collects modules", async () => {
 	expect(error).toBeInstanceOf(MiniflareCoreError);
 	expect(error?.code).toBe("ERR_VALIDATION");
 });
-test("Miniflare: automatically collects modules with cycles", async () => {
+test("Miniflare: automatically collects modules with cycles", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		compatibilityDate: "2023-08-01",
@@ -146,7 +148,9 @@ test("Miniflare: automatically collects modules with cycles", async () => {
 	const res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("pong");
 });
-test("Miniflare: includes location in parse errors when automatically collecting modules", async () => {
+test("Miniflare: includes location in parse errors when automatically collecting modules", async ({
+	expect,
+}) => {
 	const scriptPath = path.join(ROOT, "syntax-error", "index.mjs");
 	const mf = new Miniflare({
 		modules: true,
@@ -163,7 +167,9 @@ test("Miniflare: includes location in parse errors when automatically collecting
 		)
 	);
 });
-test("Miniflare: cannot automatically collect modules without script path", async () => {
+test("Miniflare: cannot automatically collect modules without script path", async ({
+	expect,
+}) => {
 	const script = `export default {
     async fetch() {
       return new Response("body");
@@ -194,7 +200,9 @@ test("Miniflare: cannot automatically collect modules without script path", asyn
 		)
 	);
 });
-test("Miniflare: cannot automatically collect modules from dynamic import expressions", async () => {
+test("Miniflare: cannot automatically collect modules from dynamic import expressions", async ({
+	expect,
+}) => {
 	// Check with dynamic import
 	const scriptPath = path.join(ROOT, "index-dynamic.mjs");
 	let mf = new Miniflare({
@@ -228,12 +236,12 @@ You must manually define your modules when constructing Miniflare:
     ...,
     modules: [
       { type: "ESModule", path: "index-dynamic.mjs" },
-      { type: "CommonJS", path: "index.cjs" },
-      { type: "CommonJS", path: "index.node.cjs" },
       { type: "ESModule", path: "blobs-indirect.mjs" },
       { type: "ESModule", path: "blobs.mjs" },
       { type: "Text", path: "blobs/text.txt" },
       { type: "Data", path: "blobs/data.bin" },
+      { type: "CommonJS", path: "index.cjs" },
+      { type: "CommonJS", path: "index.node.cjs" },
       { type: "CompiledWasm", path: "add.wasm" },
       ...
     ]
@@ -273,7 +281,9 @@ You must manually define your modules when constructing Miniflare:
   })
     at ${depPath}:2:8`);
 });
-test("Miniflare: collects modules outside of working directory", async () => {
+test("Miniflare: collects modules outside of working directory", async ({
+	expect,
+}) => {
 	// https://github.com/cloudflare/workers-sdk/issues/4721
 	const tmp = await useTmp();
 	const child = path.join(tmp, "child");
@@ -294,7 +304,7 @@ test("Miniflare: collects modules outside of working directory", async () => {
 	const res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("body");
 });
-test("Miniflare: suggests bundling on unknown module", async () => {
+test("Miniflare: suggests bundling on unknown module", async ({ expect }) => {
 	// Try with npm-package-like import
 	// (please don't try bundle `miniflare` into a Worker script, you'll hurt its feelings)
 	let mf = new Miniflare({
@@ -328,4 +338,45 @@ If you're trying to import an npm package, you'll need to bundle your Worker fir
 	expect(error?.message).toMatch(
 		/^Unable to resolve "index\.mjs" dependency "node:assert": no matching module rules\.\nIf you're trying to import a Node\.js built-in module, or an npm package that uses Node\.js built-ins, you'll either need to:/
 	);
+});
+test("Miniflare: parses source phase imports without error", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const wasmPath = path.join(tmp, "module.wasm");
+	const workerPath = path.join(tmp, "index.mjs");
+
+	// Create a minimal wasm file
+	await fs.writeFile(
+		wasmPath,
+		Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])
+	);
+
+	// Create a worker that uses source phase import syntax
+	await fs.writeFile(
+		workerPath,
+		`import source wasmModule from "./module.wasm";
+export default {
+  async fetch() {
+    return new Response("source phase import parsed successfully");
+  }
+};`
+	);
+
+	// Verify the worker can be loaded without parse errors
+	// Note: workerd doesn't actually support source phase imports at runtime,
+	// but we need to ensure the parser doesn't fail on the syntax
+	const mf = new Miniflare({
+		modules: true,
+		modulesRoot: tmp,
+		modulesRules: [{ type: "CompiledWasm", include: ["**/*.wasm"] }],
+		compatibilityDate: "2023-08-01",
+		scriptPath: workerPath,
+	});
+	useDispose(mf);
+
+	// The worker should be able to load (even if the source phase import
+	// is not fully functional at runtime)
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("source phase import parsed successfully");
 });

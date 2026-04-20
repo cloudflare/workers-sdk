@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { findAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -18,10 +18,10 @@ describe("traverse module graph", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it("should not detect JS without module rules", async () => {
+	it("should not detect JS without module rules", async ({ expect }) => {
 		await writeFile(
 			"./index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "./other.js"
 			export default {
 				async fetch(request) {
@@ -32,7 +32,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -52,13 +52,13 @@ describe("traverse module graph", () => {
 		expect(modules).toStrictEqual([]);
 	});
 
-	it.each([
+	it.for([
 		["ESModule", "esm"],
 		["CommonJS", "commonjs"],
-	])("should detect JS as %s", async (type, format) => {
+	])("should detect JS as %s", async ([type, format], { expect }) => {
 		await writeFile(
 			"./index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "./other.js"
 			export default {
 				async fetch(request) {
@@ -69,7 +69,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -89,11 +89,11 @@ describe("traverse module graph", () => {
 		expect(modules[0].type).toStrictEqual(format);
 	});
 
-	it("should not resolve JS outside the module root", async () => {
+	it("should not resolve JS outside the module root", async ({ expect }) => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "../other.js"
 			export default {
 				async fetch(request) {
@@ -104,7 +104,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -125,11 +125,11 @@ describe("traverse module graph", () => {
 		expect(modules).toStrictEqual([]);
 	});
 
-	it("should resolve JS with module root", async () => {
+	it("should resolve JS with module root", async ({ expect }) => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "../other.js"
 			export default {
 				async fetch(request) {
@@ -140,7 +140,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -161,11 +161,11 @@ describe("traverse module graph", () => {
 		expect(modules[0].name).toStrictEqual("other.js");
 	});
 
-	it("should ignore files not matched by glob", async () => {
+	it("should ignore files not matched by glob", async ({ expect }) => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "../other.js"
 			export default {
 				async fetch(request) {
@@ -176,7 +176,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -197,11 +197,11 @@ describe("traverse module graph", () => {
 		expect(modules.length).toStrictEqual(0);
 	});
 
-	it("should ignore Wrangler files", async () => {
+	it("should ignore Wrangler files", async ({ expect }) => {
 		await mkdir("./src", { recursive: true });
 		await writeFile(
 			"./src/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "./other.js"
 			export default {
 				async fetch(request) {
@@ -212,7 +212,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/wrangler.jsonc",
-			dedent/* jsonc */ `
+			dedent /* jsonc */ `
 			{
 				"compatibility_date": "2025/01/01"
 			}
@@ -243,14 +243,16 @@ describe("traverse module graph", () => {
 			]
 		);
 
-		expect(modules.map((m) => m.name)).toMatchInlineSnapshot(`Array []`);
+		expect(modules.map((m) => m.name)).toMatchInlineSnapshot(`[]`);
 	});
 
-	it("should resolve files that match the default rules", async () => {
+	it("should resolve files that match the default rules", async ({
+		expect,
+	}) => {
 		await mkdir("./src", { recursive: true });
 		await writeFile(
 			"./src/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import HELLO from "../other.txt"
 			export default {
 				async fetch(request) {
@@ -261,7 +263,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.txt",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -282,11 +284,13 @@ describe("traverse module graph", () => {
 		expect(modules[0].name).toStrictEqual("other.txt");
 	});
 
-	it("should error if a rule is ignored because the previous was not marked 'fall-through'", async () => {
+	it("should error if a rule is ignored because the previous was not marked 'fall-through'", async ({
+		expect,
+	}) => {
 		await mkdir("./src", { recursive: true });
 		await writeFile(
 			"./src/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export default {
 				async fetch(request) {
 					return new Response(HELLO)
@@ -296,7 +300,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.txt",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -320,5 +324,124 @@ describe("traverse module graph", () => {
 		).rejects.toMatchInlineSnapshot(
 			`[Error: The file other.txt matched a module rule in your configuration ({"type":"Text","globs":["other.txt"]}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.]`
 		);
+	});
+});
+
+describe("Python modules", () => {
+	runInTempDir();
+	mockConsoleMethods();
+
+	it("should find python_modules with forward slashes (for cross-platform deploy)", async ({
+		expect,
+	}) => {
+		await mkdir("./python_modules/pkg/subpkg", { recursive: true });
+		await writeFile("./index.py", "def fetch(request): pass");
+		await writeFile("./python_modules/pkg/__init__.py", "");
+		await writeFile("./python_modules/pkg/subpkg/mod.py", "x = 1");
+
+		const modules = await findAdditionalModules(
+			{
+				file: path.join(process.cwd(), "./index.py"),
+				projectRoot: process.cwd(),
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: process.cwd(),
+				exports: [],
+			},
+			[]
+		);
+
+		const pythonModules = modules.filter((m) =>
+			m.name.startsWith("python_modules/")
+		);
+		expect(pythonModules.map((m) => m.name)).toEqual(
+			expect.arrayContaining([
+				"python_modules/pkg/__init__.py",
+				"python_modules/pkg/subpkg/mod.py",
+			])
+		);
+		// This assertion catches Windows path.join() regression
+		pythonModules.forEach((m) => {
+			expect(m.name).not.toContain("\\");
+		});
+	});
+
+	it("should exclude files matching pythonModulesExcludes patterns", async ({
+		expect,
+	}) => {
+		await mkdir("./python_modules", { recursive: true });
+		await writeFile("./index.py", "def fetch(request): pass");
+		await writeFile("./python_modules/module.py", "x = 1");
+		await writeFile("./python_modules/module.pyc", "compiled");
+		await writeFile("./python_modules/test_module.py", "def test(): pass");
+
+		const modules = await findAdditionalModules(
+			{
+				file: path.join(process.cwd(), "./index.py"),
+				projectRoot: process.cwd(),
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: process.cwd(),
+				exports: [],
+			},
+			[],
+			false,
+			["**/*.pyc", "**/test_*.py"]
+		);
+
+		const moduleNames = modules.map((m) => m.name);
+		expect(moduleNames).toContain("python_modules/module.py");
+		expect(moduleNames).not.toContain("python_modules/module.pyc");
+		expect(moduleNames).not.toContain("python_modules/test_module.py");
+	});
+
+	it("should register .mjs and .js files in workers/ as esm type", async ({
+		expect,
+	}) => {
+		await mkdir("./python_modules/workers", { recursive: true });
+		await mkdir("./python_modules/otherpkg", { recursive: true });
+		await writeFile("./index.py", "def fetch(request): pass");
+		await writeFile(
+			"./python_modules/workers/sdk.mjs",
+			"export function patchWaitUntil(ctx) {}"
+		);
+		await writeFile(
+			"./python_modules/workers/helper.js",
+			"export function helper() {}"
+		);
+		await writeFile("./python_modules/workers/__init__.py", "");
+		await writeFile("./python_modules/otherpkg/util.mjs", "export const x = 1");
+
+		const modules = await findAdditionalModules(
+			{
+				file: path.join(process.cwd(), "./index.py"),
+				projectRoot: process.cwd(),
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: process.cwd(),
+				exports: [],
+			},
+			[]
+		);
+
+		const vendored = modules.filter((m) =>
+			m.name.startsWith("python_modules/")
+		);
+
+		const findModule = (name: string) => vendored.find((m) => m.name === name);
+
+		const sdkModule = findModule("python_modules/workers/sdk.mjs");
+		const helperModule = findModule("python_modules/workers/helper.js");
+		const initModule = findModule("python_modules/workers/__init__.py");
+		const utilModule = findModule("python_modules/otherpkg/util.mjs");
+
+		expect(sdkModule).toBeDefined();
+		expect(sdkModule?.type).toBe("esm");
+		expect(helperModule).toBeDefined();
+		expect(helperModule?.type).toBe("esm");
+		expect(initModule).toBeDefined();
+		expect(initModule?.type).toBe("buffer");
+		expect(utilModule).toBeDefined();
+		expect(utilModule?.type).toBe("buffer");
 	});
 });

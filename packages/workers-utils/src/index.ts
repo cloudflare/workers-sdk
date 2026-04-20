@@ -26,7 +26,7 @@ export * from "./types";
 export {
 	type Message,
 	type Location,
-	type File,
+	type ParseFile,
 	ParseError,
 	APIError,
 	parseTOML,
@@ -44,14 +44,18 @@ export {
 } from "./parse";
 export {
 	friendlyBindingNames,
+	getBindingTypeFriendlyName,
 	isPagesConfig,
 	normalizeAndValidateConfig,
 	type NormalizeAndValidateConfigArgs,
+	type ConfigBindingFieldName,
 	isValidR2BucketName,
 	bucketFormatMessage,
 } from "./config/validation";
 
 export { validatePagesConfig } from "./config/validation-pages";
+
+export { Diagnostics } from "./config/diagnostics";
 
 export {
 	hasProperty,
@@ -81,9 +85,12 @@ export * from "./environment-variables/misc-variables";
 
 export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 
-export {
-	getLocalWorkerdCompatibilityDate,
-	formatCompatibilityDate,
-	isCompatDate,
-} from "./compatibility-date";
+export { isCompatDate, getTodaysCompatDate } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
+
+export { isDockerfile } from "./config/validation";
+
+export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
+
+export { MetricsRegistry } from "./prometheus-metrics";
+export type { Counter } from "./prometheus-metrics";

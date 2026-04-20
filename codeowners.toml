@@ -1,0 +1,28 @@
+# Codeowners Plus - Advanced Configuration
+# See: https://github.com/multimediallc/codeowners-plus
+# See: CODEOWNERS.md for full documentation
+
+# Directories to ignore (no ownership checks, reduces review noise)
+ignore = [".changeset", "fixtures"]
+
+# Show detailed file-to-owner mapping in PR comments
+detailed_reviewers = true
+
+# Don't dismiss stale reviews when new changes are pushed
+disable_smart_dismissal = true
+
+# Suppress warnings for intentionally unowned files (e.g. pnpm-lock.yaml)
+suppress_unowned_warning = true
+
+[enforcement]
+# The bot (@workers-devprod) approves PRs when all ownership rules are satisfied,
+# unblocking the native GitHub CODEOWNERS requirement in branch protection.
+# The check still runs for visibility (PR comments, review requests) but does not
+# fail — enforcement is via the bot's CODEOWNERS approval only.
+approval = true
+fail_check = false
+
+[admin_bypass]
+# Allow repo admins to bypass codeowner requirements in emergencies
+# by submitting an approval review containing "Codeowners Bypass" text
+enabled = true

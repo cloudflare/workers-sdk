@@ -10,39 +10,6 @@ class BindingNotFoundError extends Error {
 }
 
 /**
- * Here be dragons! capnweb does not currently support ReadableStreams, which Media
- * bindings use for input. As such, Media Bindings cannot be directly used via capnweb,
- * and need to be special cased.
- */
-
-function isSpecialCaseMediaBindingRequest(headers: Headers): boolean {
-	return headers.has("x-cf-media-input-options");
-}
-async function evaluateMediaBinding(
-	headers: Headers,
-	stream: ReadableStream,
-	binding: MediaBinding
-): Promise<Response> {
-	const inputOptions = JSON.parse(
-		headers.get("x-cf-media-input-options") as string
-	);
-	const outputOptions = JSON.parse(
-		headers.get("x-cf-media-output-options") as string
-	);
-
-	const result = await binding
-		.input(stream)
-		.transform(inputOptions)
-		.output(outputOptions);
-
-	return new Response(await result.media(), {
-		headers: {
-			"x-cf-media-content-type": await result.contentType(),
-		},
-	});
-}
-
-/**
  * For most bindings, we expose them as
  *  - RPC stubs directly to capnweb, or
  *  - HTTP based fetchers
@@ -141,7 +108,7 @@ export default {
 	async fetch(request, env) {
 		try {
 			if (isJSRPCBinding(request)) {
-				return newWorkersRpcResponse(
+				return await newWorkersRpcResponse(
 					request,
 					getExposedJSRPCBinding(request, env)
 				);
@@ -157,15 +124,8 @@ export default {
 						originalHeaders.set(name, value);
 					}
 				}
-				if (isSpecialCaseMediaBindingRequest(originalHeaders)) {
-					return evaluateMediaBinding(
-						originalHeaders,
-						request.body as ReadableStream,
-						fetcher as unknown as MediaBinding
-					);
-				}
 
-				return fetcher.fetch(
+				return await fetcher.fetch(
 					request.headers.get("MF-URL") ?? "http://example.com",
 					new Request(request, {
 						redirect: "manual",

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { removeDir } from "@cloudflare/workers-utils";
 import {
 	Browser,
 	CDP_WEBSOCKET_ENDPOINT_REGEX,
@@ -14,22 +15,22 @@ import { dim } from "kleur/colors";
 import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
-import { Log } from "../../shared";
 import { getGlobalWranglerCachePath } from "../../shared/wrangler";
 import {
 	getUserBindingServiceName,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import type { Log } from "../../shared";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const BrowserRenderingSchema = z.object({
 	binding: z.string(),
 	remoteProxyConnectionString: z
 		.custom<RemoteProxyConnectionString>()
 		.optional(),
+	headful: z.boolean().optional(),
 });
 
 export const BrowserRenderingOptionsSchema = z.object({
@@ -117,10 +118,12 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 
 export async function launchBrowser({
 	browserVersion,
+	headful,
 	log,
 	tmpPath,
 }: {
 	browserVersion: string;
+	headful?: boolean;
 	log: Log;
 	tmpPath: string;
 }) {
@@ -199,9 +202,7 @@ export async function launchBrowser({
 		"--password-store=basic",
 		"--use-mock-keychain",
 		`--disable-features=${disabledFeatures.join(",")}`,
-		"--headless=new",
-		"--hide-scrollbars",
-		"--mute-audio",
+		...(headful ? [] : ["--headless=new", "--hide-scrollbars", "--mute-audio"]),
 		"--disable-extensions",
 		"about:blank",
 		"--remote-debugging-port=0",
@@ -215,17 +216,11 @@ export async function launchBrowser({
 		dumpio: false,
 		pipe: false,
 		onExit: async () => {
-			await fs.promises
-				.rm(tempUserData, {
-					recursive: true,
-					force: true,
-					maxRetries: 5, // In case of Windows file locks
-				})
-				.catch((e) => {
-					log.debug(
-						`Unable to remove Chrome user data directory: ${String(e)}`
-					);
-				});
+			try {
+				await removeDir(tempUserData);
+			} catch (e) {
+				log.debug(`Unable to remove Chrome user data directory: ${e}`);
+			}
 		},
 	});
 	const wsEndpoint = await browserProcess.waitForLineOutput(

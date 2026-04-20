@@ -1,6 +1,7 @@
 name: Vite plugin playgrounds
 
 on:
+  merge_group:
   pull_request:
 
 permissions:
@@ -8,7 +9,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
 
 env:
   # We run `playwright install` manually instead
@@ -22,18 +23,18 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        vite: ["vite-7"]
+        vite: ["vite-8"]
         include:
           - os: ubuntu-latest
             vite: "vite-6"
-          # - os: ubuntu-latest
-          #   vite: vite-8-beta
+          - os: ubuntu-latest
+            vite: "vite-7"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
       - name: Filter changed paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
         id: changes
         with:
           filters: |
@@ -54,22 +55,23 @@ jobs:
       - name: Build plugin with initial Vite version
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: |
-          pnpm turbo build --filter @cloudflare/vite-plugin
+          pnpm dotenv -- pnpm turbo build --filter @cloudflare/vite-plugin
       - name: Downgrade to Vite 6
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-6'
         run: |
-          pnpm update -r --no-save vite@6.4.1
-      - name: Upgrade to Vite 8 beta
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-8-beta'
+          pnpm update -r --no-save vite@^6.1.0
+      - name: Downgrade to Vite 7
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-7'
         run: |
-          pnpm update -r --no-save vite@beta
+          pnpm update -r --no-save vite@^7.0.0
       - name: Run dev playground tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
         # We use `--only` to prevent TurboRepo from rebuilding dependencies
         # This ensures the Vite plugin is not rebuilt using a different Vite version
         run: |
-          pnpm turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only
+          pnpm dotenv -- pnpm turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only
         env:
+          VITE_VERSION: ${{ matrix.vite }}
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
@@ -80,8 +82,9 @@ jobs:
         # We use `--only` to prevent TurboRepo from rebuilding dependencies
         # This ensures the Vite plugin is not rebuilt using a different Vite version
         run: |
-          pnpm turbo test:ci:build --filter @vite-plugin-cloudflare/playground --only
+          pnpm dotenv -- pnpm turbo test:ci:build --filter @vite-plugin-cloudflare/playground --only
         env:
+          VITE_VERSION: ${{ matrix.vite }}
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html

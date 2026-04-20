@@ -3,15 +3,17 @@ import {
 	get,
 	HttpError,
 	MiniflareDurableObject,
-	MiniflareDurableObjectEnv,
 	POST,
-	RouteHandler,
-	TypedSqlStorage,
-	TypedValue,
 	viewToBuffer,
 } from "miniflare:shared";
 import { z } from "miniflare:zod";
 import { dumpSql } from "./dumpSql";
+import type {
+	MiniflareDurableObjectEnv,
+	RouteHandler,
+	TypedSqlStorage,
+	TypedValue,
+} from "miniflare:shared";
 
 const D1ValueSchema = z.union([
 	z.number(),

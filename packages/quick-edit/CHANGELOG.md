@@ -1,5 +1,26 @@
 # @cloudflare/quick-edit
 
+## 0.4.6
+
+### Patch Changes
+
+- [#12823](https://github.com/cloudflare/workers-sdk/pull/12823) [`784c5cb`](https://github.com/cloudflare/workers-sdk/commit/784c5cb1ab7397110362e74f4632151ae8bab8fc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add frame-ancestors CSP and postMessage origin validation to quick-edit
+
+  Mitigate `postMessage` origin bypass:
+
+  - Add Content-Security-Policy frame-ancestors header to quick-edit Worker responses, restricting which origins can embed the editor iframe
+  - Add client-side origin validation to the window.onmessage handler in workbench.ts, rejecting PORT messages from untrusted origins
+  - Inject allowed parent origins from server into HTML for client-side use
+  - Localhost origins are conditionally included when running via wrangler dev
+
+## 0.4.5
+
+### Patch Changes
+
+- [#12154](https://github.com/cloudflare/workers-sdk/pull/12154) [`e36c0c9`](https://github.com/cloudflare/workers-sdk/commit/e36c0c9f70041bea4abc4ee4e4e462e2dc11e9cc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use `X-Forwarded-Host` header for extension authority when behind a proxy
+
+  When Quick Edit is accessed through a proxy, the `X-Forwarded-Host` header is now used to determine the authority for loading builtin extensions. This ensures extensions load correctly when the Worker is behind a reverse proxy. The header value is only used if it matches `*.devprod.cloudflare.dev` for security.
+
 ## 0.4.4
 
 ### Patch Changes

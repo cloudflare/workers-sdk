@@ -1,6 +1,7 @@
-import { cp } from "fs/promises";
-import { build, BuildOptions, context } from "esbuild";
-import * as glob from "glob";
+import { cp } from "node:fs/promises";
+import { build, context } from "esbuild";
+import { globSync } from "tinyglobby";
+import type { BuildOptions } from "esbuild";
 
 const run = async () => {
 	const argv = process.argv.slice(2);
@@ -16,7 +17,7 @@ const run = async () => {
 		format: "cjs",
 		define: {
 			"process.env.SPARROW_SOURCE_KEY": JSON.stringify(
-				process.env.SPARROW_SOURCE_KEY ?? "",
+				process.env.SPARROW_SOURCE_KEY ?? ""
 			),
 		},
 	};
@@ -28,13 +29,13 @@ const run = async () => {
 		// The latter has been added to the project's .gitignore file
 		// This renaming will be reversed when each template is used
 		// We can continue to author ".gitignore" files in each template
-		for (const filepath of glob.sync("templates*/**/.gitignore")) {
+		for (const filepath of globSync("templates*/**/.gitignore")) {
 			await cp(filepath, filepath.replace(".gitignore", "__dot__gitignore"));
 		}
 	};
 
 	const runWatch = async () => {
-		let ctx = await context(config);
+		const ctx = await context(config);
 		await ctx.watch();
 		console.log("Watching...");
 	};

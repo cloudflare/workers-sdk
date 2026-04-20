@@ -7,7 +7,7 @@ import dedent from "ts-dedent";
 import { DevEnv } from "../api";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
-import { convertCfWorkerInitBindingsToBindings } from "../api/startDevWorker/utils";
+import { convertStartDevOptionsToBindings } from "../api/startDevWorker/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
 import isInteractive from "../is-interactive";
@@ -19,22 +19,17 @@ import {
 	collectPlainTextVars,
 } from "../utils/collectKeyValues";
 import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
+import type { StartDevOptionsBindings } from "../api/startDevWorker/utils";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
 import type { Config } from "@cloudflare/workers-utils";
-import type { watch } from "chokidar";
 
 /**
  * Starts one (primary) or more (secondary) DevEnv environments given the `args`.
  */
 export async function startDev(args: StartDevOptions) {
-	let configFileWatcher: ReturnType<typeof watch> | undefined;
-	let assetsWatcher: ReturnType<typeof watch> | undefined;
 	let devEnv: DevEnv | DevEnv[] | undefined;
-	let teardownRegistryPromise:
-		| Promise<(name?: string) => Promise<void>>
-		| undefined;
 
 	let unregisterHotKeys: (() => void) | undefined;
 	try {
@@ -102,6 +97,7 @@ export async function startDev(args: StartDevOptions) {
 							proxyFactory: (d) => new NoOpProxyController(d),
 						});
 						return setupDevEnv(auxDevEnv, c, authHook, {
+							env: args.env,
 							disableDevRegistry: args.disableDevRegistry,
 							multiworkerPrimary: false,
 						});
@@ -159,21 +155,13 @@ export async function startDev(args: StartDevOptions) {
 			devEnv: primaryDevEnv,
 			secondary,
 			unregisterHotKeys,
-			teardownRegistryPromise,
 		};
 	} catch (e) {
 		await Promise.allSettled([
-			configFileWatcher?.close(),
-			assetsWatcher?.close(),
 			...(Array.isArray(devEnv)
 				? devEnv.map((d) => d.teardown())
 				: [devEnv?.teardown()]),
 			(async () => {
-				if (teardownRegistryPromise) {
-					assert(devEnv === undefined || !Array.isArray(devEnv));
-					const teardownRegistry = await teardownRegistryPromise;
-					await teardownRegistry(devEnv?.config.latestConfig?.name);
-				}
 				unregisterHotKeys?.();
 			})(),
 		]);
@@ -223,36 +211,9 @@ async function setupDevEnv(
 			bindings: {
 				...(await getPagesAssetsFetcher(args.enablePagesAssetsServiceBinding)),
 				...collectPlainTextVars(args.var),
-				...convertCfWorkerInitBindingsToBindings({
-					kv_namespaces: args.kv,
-					vars: args.vars,
-					send_email: undefined,
-					wasm_modules: undefined,
-					text_blobs: undefined,
-					browser: undefined,
-					ai: args.ai,
-					images: undefined,
-					version_metadata: args.version_metadata,
-					data_blobs: undefined,
-					durable_objects: { bindings: args.durableObjects ?? [] },
-					workflows: undefined,
-					queues: undefined,
-					r2_buckets: args.r2,
-					d1_databases: args.d1Databases,
-					vectorize: undefined,
-					hyperdrive: undefined,
-					secrets_store_secrets: undefined,
-					unsafe_hello_world: undefined,
-					services: args.services,
-					analytics_engine_datasets: undefined,
-					dispatch_namespaces: undefined,
-					mtls_certificates: undefined,
-					pipelines: undefined,
-					logfwdr: undefined,
-					unsafe: undefined,
-					assets: undefined,
-				}),
+				...convertStartDevOptionsToBindings(args as StartDevOptionsBindings),
 			},
+			defaultBindings: args.defaultBindings,
 			dev: {
 				auth,
 				remote: args.enablePagesAssetsServiceBinding
@@ -282,7 +243,7 @@ async function setupDevEnv(
 							? undefined
 							: args.upstreamProtocol === "https",
 				},
-				persist: args.persistTo,
+				persist: args.persist === false ? false : args.persistTo,
 				liveReload: args.liveReload,
 				testScheduled: args.testScheduled,
 				logLevel: args.logLevel,
@@ -311,9 +272,6 @@ async function setupDevEnv(
 				useServiceEnvironments: !(args.legacyEnv ?? true),
 			},
 			assets: args.assets,
-			experimental: {
-				tailLogs: !!args.experimentalTailLogs,
-			},
 		} satisfies StartDevWorkerInput,
 		true
 	);

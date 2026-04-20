@@ -1,0 +1,16 @@
+{
+	"$schema": "http://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				"../miniflare/src/workers/local-explorer/openapi.local.json"
+			],
+			"outputs": ["dist/**", "src/api/generated/**"]
+		},
+		"check:type": {
+			"dependsOn": ["build"]
+		}
+	}
+}

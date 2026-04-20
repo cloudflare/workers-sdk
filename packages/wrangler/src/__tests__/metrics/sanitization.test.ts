@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import {
 	ALLOW,
 	getAllowedArgs,
@@ -9,7 +9,7 @@ import {
 import type { AllowedArgs, AllowList } from "../../../src/metrics/sanitization";
 
 describe("sanitizeArgKeys", () => {
-	it("should sanitize arg keys based on argv", () => {
+	it("should sanitize arg keys based on argv", ({ expect }) => {
 		const args = {
 			config: "wrangler.toml",
 			env: "production",
@@ -43,7 +43,9 @@ describe("sanitizeArgKeys", () => {
 });
 
 describe("sanitizeArgValues", () => {
-	it("should redact and allow arg values based on allowedArgs", () => {
+	it("should redact and allow arg values based on allowedArgs", ({
+		expect,
+	}) => {
 		const sanitizedArgs = {
 			config: "wrangler.toml",
 			env: "production",
@@ -65,35 +67,70 @@ describe("sanitizeArgValues", () => {
 });
 
 describe("getAllowedArgs", () => {
-	it("should return allowed args for a given command", () => {
+	it("should return allowed args for a given command", ({ expect }) => {
 		const commandArgAllowList: AllowList = {
-			"wrangler deploy": {
+			deploy: {
 				config: REDACT,
 				force: ALLOW,
 			},
-			"wrangler *": {
+			"*": {
 				env: ["production", "staging", "development"],
 			},
-			"wrangler deploy *": {
+			"deploy *": {
 				subArg: ALLOW,
 			},
 		};
 
-		expect(getAllowedArgs(commandArgAllowList, "wrangler dev")).toEqual({
+		expect(getAllowedArgs(commandArgAllowList, "dev")).toEqual({
 			env: ["production", "staging", "development"],
 		});
 
-		expect(getAllowedArgs(commandArgAllowList, "wrangler deploy")).toEqual({
+		expect(getAllowedArgs(commandArgAllowList, "deploy")).toEqual({
 			config: REDACT,
 			force: ALLOW,
 			env: ["production", "staging", "development"],
 		});
 
-		expect(getAllowedArgs(commandArgAllowList, "wrangler deploy sub")).toEqual({
+		expect(getAllowedArgs(commandArgAllowList, "deploy sub")).toEqual({
 			config: REDACT,
 			force: ALLOW,
 			env: ["production", "staging", "development"],
 			subArg: ALLOW,
 		});
+	});
+
+	it("should allow more specific command rules to override less specific ones", ({
+		expect,
+	}) => {
+		const commandArgAllowList: AllowList = {
+			"*": { global: ALLOW, sharedArg: REDACT },
+			"r2 bucket create": { sharedArg: REDACT, createOnly: ALLOW },
+			"r2 bucket": { sharedArg: ALLOW, bucketOnly: ALLOW },
+			r2: { sharedArg: ALLOW, r2Only: ALLOW },
+		};
+
+		// Most specific rule ("r2 bucket create") should win for sharedArg
+		const createResult = getAllowedArgs(
+			commandArgAllowList,
+			"r2 bucket create"
+		);
+		expect(createResult.sharedArg).toBe(REDACT);
+		expect(createResult.createOnly).toBe(ALLOW);
+		expect(createResult.bucketOnly).toBe(ALLOW);
+		expect(createResult.r2Only).toBe(ALLOW);
+		expect(createResult.global).toBe(ALLOW);
+
+		// "r2 bucket" should use its own rule for sharedArg
+		const bucketResult = getAllowedArgs(commandArgAllowList, "r2 bucket");
+		expect(bucketResult.sharedArg).toBe(ALLOW);
+		expect(bucketResult.bucketOnly).toBe(ALLOW);
+		expect(bucketResult.r2Only).toBe(ALLOW);
+		expect(bucketResult.global).toBe(ALLOW);
+
+		// "r2" should use its own rule for sharedArg
+		const r2Result = getAllowedArgs(commandArgAllowList, "r2");
+		expect(r2Result.sharedArg).toBe(ALLOW);
+		expect(r2Result.r2Only).toBe(ALLOW);
+		expect(r2Result.global).toBe(ALLOW);
 	});
 });

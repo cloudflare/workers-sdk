@@ -1,25 +1,19 @@
-import {
-	blue,
-	bold,
-	Colorize,
-	green,
-	grey,
-	red,
-	reset,
-	yellow,
-} from "kleur/colors";
+import { blue, bold, green, grey, red, reset, yellow } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
-import { CoreBindings, CoreHeaders } from "./constants";
+import { CoreBindings, CoreHeaders, CorePaths } from "./constants";
 import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";
-import { matchRoutes, WorkerRoute } from "./routing";
+import { matchRoutes } from "./routing";
 import { handleScheduled } from "./scheduled";
+import type { WorkerRoute } from "./routing";
+import type { Colorize } from "kleur/colors";
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
 	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
+
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
@@ -38,6 +32,7 @@ type Env = {
 };
 
 const encoder = new TextEncoder();
+
 function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
 	env: Env,
@@ -149,6 +144,109 @@ function getTargetService(request: Request, url: URL, env: Env) {
 		service = env[`${CoreBindings.SERVICE_USER_ROUTE_PREFIX}${route}`];
 	}
 	return service;
+}
+
+const LOCALHOST_HOSTNAMES = ["localhost", "127.0.0.1", "[::1]"];
+
+function isCdnCgiRequest(url: string | null): boolean {
+	if (url === null) return false;
+
+	try {
+		return new URL(url).pathname.startsWith("/cdn-cgi/");
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Validates that a request to a /cdn-cgi/* endpoint originates from an allowed host.
+ * This check must happen BEFORE any header rewriting (getUserRequest) to ensure
+ * we're checking the actual browser-sent headers, not Miniflare rewritten ones.
+ */
+function validateCdnCgiRequest(
+	request: Request,
+	routes: WorkerRoute[],
+	upstreamUrl: string | undefined
+): void {
+	if (
+		!isCdnCgiRequest(request.url) &&
+		!isCdnCgiRequest(request.headers.get(CoreHeaders.ORIGINAL_URL))
+	) {
+		return;
+	}
+
+	// Build allowed hostnames set from localhost + user configured routes
+	const allowedHostnames = new Set<string>();
+	for (const route of routes) {
+		// route.hostname has already had the leading "*" stripped by parseRoutes,
+		// but may have a leading "." for wildcard routes (e.g., "*.example.com" -> ".example.com")
+		const hostname = route.hostname.replace(/^\./, "");
+		if (hostname) {
+			allowedHostnames.add(hostname);
+		}
+	}
+	// Add upstream hostname if configured (e.g., from --host or --local-upstream)
+	if (upstreamUrl) {
+		try {
+			const upstreamHostname = new URL(upstreamUrl).hostname;
+			if (upstreamHostname) {
+				allowedHostnames.add(upstreamHostname);
+			}
+		} catch {
+			// Ignore invalid upstream URL
+		}
+	}
+
+	const hostHeader = request.headers.get("Host");
+	let hostHostname: string;
+	if (hostHeader) {
+		try {
+			hostHostname = new URL(`http://${hostHeader}`).hostname;
+		} catch {
+			throw new HttpError(403, "Invalid Host header");
+		}
+		if (!isHostnameAllowed(hostHostname, allowedHostnames)) {
+			throw new HttpError(403, "Invalid Host header");
+		}
+	}
+
+	const origin = request.headers.get("Origin");
+	if (origin) {
+		let originHostname: string;
+		try {
+			originHostname = new URL(origin).hostname;
+		} catch {
+			throw new HttpError(403, "Invalid Origin header");
+		}
+		if (!isHostnameAllowed(originHostname, allowedHostnames)) {
+			throw new HttpError(403, "Invalid Origin header");
+		}
+	}
+}
+
+/**
+ * Check if a hostname is allowed.
+ * - exactHostnames: must match exactly (localhost, upstream, non-wildcard routes)
+ * - wildcardHostnames: allow subdomain matching (for wildcard routes like *.example.com)
+ */
+function isHostnameAllowed(
+	hostname: string,
+	allowedHostnames: Set<string>
+): boolean {
+	// Direct match against exact hostnames
+	if (LOCALHOST_HOSTNAMES.includes(hostname)) {
+		return true;
+	}
+
+	// Check for subdomain matches only against wildcard hostnames
+	for (const allowed of allowedHostnames) {
+		// Match the base domain or any subdomain
+		if (hostname === allowed || hostname.endsWith(`.${allowed}`)) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 function maybePrettifyError(request: Request, response: Response, env: Env) {
@@ -382,9 +480,33 @@ export default <ExportedHandler<Env>>{
 				};
 		request = new Request(request, { cf });
 
-		// The magic proxy client (used by getPlatformProxy) will always specify an operation
-		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
-		if (isProxy) return handleProxy(request, env);
+		// Restrict /cdn-cgi/* requests to allowed hostnames.
+		// These endpoints should be served only when the browser-sent Host and
+		// Origin headers match localhost, a configured route, or the configured upstream.
+		// This must happen before getUserRequest() so we validate the
+		// original browser-sent headers, not Miniflare-rewritten ones.
+		const requestUrl = new URL(request.url);
+		try {
+			validateCdnCgiRequest(
+				request,
+				env[CoreBindings.JSON_ROUTES],
+				env[CoreBindings.TEXT_UPSTREAM_URL]
+			);
+		} catch (e) {
+			if (e instanceof HttpError) {
+				return e.toResponse();
+			}
+			throw e;
+		}
+
+		// The magic proxy client (used by getPlatformProxy)
+		if (requestUrl.pathname === CorePaths.PLATFORM_PROXY) {
+			if (request.headers.get(CoreHeaders.OP) !== null) {
+				return handleProxy(request, env);
+			}
+
+			return new Response("Invalid proxy request", { status: 400 });
+		}
 
 		// `dispatchFetch()` will always inject this header. When
 		// calling this function, we never want to display the pretty-error page.
@@ -410,19 +532,19 @@ export default <ExportedHandler<Env>>{
 
 		try {
 			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
-				if (url.pathname.startsWith("/cdn-cgi/explorer/api")) {
+				if (
+					url.pathname === CorePaths.EXPLORER ||
+					url.pathname.startsWith(`${CorePaths.EXPLORER}/`)
+				) {
 					return await env[CoreBindings.SERVICE_LOCAL_EXPLORER].fetch(request);
-				} else if (url.pathname.startsWith("/cdn-cgi/explorer")) {
-					return new Response("Pretend this is an asset");
-					// TODO: serve assets using disk service
 				}
 			}
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
 				if (
-					url.pathname === "/cdn-cgi/handler/scheduled" ||
-					/* legacy URL path */ url.pathname === "/cdn-cgi/mf/scheduled"
+					url.pathname === CorePaths.SCHEDULED ||
+					/* legacy URL path */ url.pathname === CorePaths.LEGACY_SCHEDULED
 				) {
-					if (url.pathname === "/cdn-cgi/mf/scheduled") {
+					if (url.pathname === CorePaths.LEGACY_SCHEDULED) {
 						ctx.waitUntil(
 							env[CoreBindings.SERVICE_LOOPBACK].fetch(
 								"http://localhost/core/log",
@@ -431,7 +553,7 @@ export default <ExportedHandler<Env>>{
 									headers: {
 										[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
 									},
-									body: `Triggering scheduled handlers via a request to \`/cdn-cgi/mf/scheduled\` is deprecated, and will be removed in a future version of Miniflare. Instead, send a request to \`/cdn-cgi/handler/scheduled\``,
+									body: `Triggering scheduled handlers via a request to \`${CorePaths.LEGACY_SCHEDULED}\` is deprecated, and will be removed in a future version of Miniflare. Instead, send a request to \`${CorePaths.SCHEDULED}\``,
 								}
 							)
 						);
@@ -439,7 +561,7 @@ export default <ExportedHandler<Env>>{
 					return await handleScheduled(url.searchParams, service);
 				}
 
-				if (url.pathname === "/cdn-cgi/handler/email") {
+				if (url.pathname === CorePaths.EMAIL) {
 					return await handleEmail(
 						url.searchParams,
 						request,
@@ -449,9 +571,9 @@ export default <ExportedHandler<Env>>{
 					);
 				}
 
-				if (url.pathname.startsWith("/cdn-cgi/handler/")) {
+				if (url.pathname.startsWith(CorePaths.HANDLER_PREFIX)) {
 					return new Response(
-						`"${url.pathname}" is not a valid handler. Did you mean to use "/cdn-cgi/handler/scheduled" or "/cdn-cgi/handler/email"?`,
+						`"${url.pathname}" is not a valid handler. Did you mean to use "${CorePaths.SCHEDULED}" or "${CorePaths.EMAIL}"?`,
 						{ status: 404 }
 					);
 				}

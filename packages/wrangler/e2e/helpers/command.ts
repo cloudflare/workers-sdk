@@ -150,7 +150,7 @@ export class LongLivedCommand {
 	}
 
 	async stop() {
-		return new Promise<void>((resolve) => {
+		await new Promise<void>((resolve) => {
 			assert(
 				this.commandProcess.pid,
 				`Command "${this.command}" had no process id`
@@ -169,6 +169,10 @@ export class LongLivedCommand {
 				resolve();
 			});
 		});
+		// Wait for the process to actually exit so that ports are fully released
+		// before the next test starts. Without this, the next test may encounter
+		// EADDRINUSE because the dying process still holds the port.
+		await this.exitPromise.catch(() => {});
 	}
 
 	async signal(signal: NodeJS.Signals) {

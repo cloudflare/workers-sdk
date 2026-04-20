@@ -7,7 +7,10 @@ import {
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
-import { getLocalExplorerFromEnv } from "@cloudflare/workers-utils";
+import {
+	getBrowserRenderingHeadfulFromEnv,
+	getLocalExplorerEnabledFromEnv,
+} from "@cloudflare/workers-utils";
 import {
 	getDefaultDevRegistryPath,
 	kUnsafeEphemeralUniqueKey,
@@ -21,6 +24,7 @@ import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
 	kRequestType,
+	PROXY_SHARED_SECRET,
 	ROUTER_WORKER_NAME,
 	VITE_PROXY_WORKER_NAME,
 } from "./constants";
@@ -28,7 +32,7 @@ import { getContainerOptions, getDockerPath } from "./containers";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
-import { withTrailingSlash } from "./utils";
+import { satisfiesMinimumViteVersion, withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
 import type {
@@ -79,10 +83,13 @@ function getPersistenceRoot(
 // to paths ensures correct names. This requires us to specify `contents` in
 // the miniflare module definitions though, as the new paths don't exist.
 const miniflareModulesRoot = process.platform === "win32" ? "Z:\\" : "/";
-const ROUTER_WORKER_PATH = "./workers/router-worker.js";
-const ASSET_WORKER_PATH = "./workers/asset-worker.js";
-const VITE_PROXY_WORKER_PATH = "./workers/vite-proxy-worker.js";
-const RUNNER_PATH = "./workers/runner-worker.js";
+const ROUTER_WORKER_PATH = "./workers/router-worker/index.js";
+const ASSET_WORKER_PATH = "./workers/asset-worker/index.js";
+const VITE_PROXY_WORKER_PATH = "./workers/vite-proxy-worker/index.js";
+const RUNNER_PATH = "./workers/runner-worker/index.js";
+const MODULE_RUNNER_PATH = "./workers/runner-worker/module-runner.js";
+const MODULE_RUNNER_LEGACY_PATH =
+	"./workers/runner-worker/module-runner-legacy.js";
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 
 /** Map that maps worker configPaths to their existing remote proxy session data (if any) */
@@ -310,6 +317,13 @@ export async function getDevMiniflareOptions(
 
 							const { externalWorkers, workerOptions } = miniflareWorkerOptions;
 
+							if (
+								workerOptions.browserRendering &&
+								getBrowserRenderingHeadfulFromEnv()
+							) {
+								workerOptions.browserRendering.headful = true;
+							}
+
 							const wrappers = [
 								`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from "${RUNNER_PATH}";`,
 								`export { __VITE_RUNNER_OBJECT__ } from "${RUNNER_PATH}";`,
@@ -346,27 +360,35 @@ export async function getDevMiniflareOptions(
 												fileURLToPath(new URL(RUNNER_PATH, import.meta.url))
 											),
 										},
+										// A breaking change to the module runner was introduced in
+										// https://github.com/vitejs/vite/pull/20924 and released in Vite 7.2.0.
+										// We ship two bundled copies of vite/module-runner and select the
+										// appropriate one based on the user's installed Vite version.
+										{
+											type: "ESModule",
+											path: path.join(
+												miniflareModulesRoot,
+												"workers/runner-worker/vite/module-runner"
+											),
+											contents: fs.readFileSync(
+												fileURLToPath(
+													new URL(
+														satisfiesMinimumViteVersion("7.2.0")
+															? MODULE_RUNNER_PATH
+															: MODULE_RUNNER_LEGACY_PATH,
+														import.meta.url
+													)
+												)
+											),
+										},
 									],
 									unsafeUseModuleFallbackService: true,
 									unsafeInspectorProxy: inputInspectorPort !== false,
-									unsafeDirectSockets:
-										environmentName ===
-										resolvedPluginConfig.entryWorkerEnvironmentName
-											? [
-													{
-														// This exposes the default entrypoint of the asset proxy worker
-														// on the dev registry with the name of the entry worker
-														serviceName: VITE_PROXY_WORKER_NAME,
-														proxy: true,
-													},
-													...Object.entries(exportTypes)
-														.filter(([_, type]) => type === "WorkerEntrypoint")
-														.map(([entrypoint]) => ({
-															entrypoint,
-															proxy: true,
-														})),
-												]
-											: [],
+									// Route dev registry requests through the vite Assets proxy worker,
+									...(environmentName ===
+										resolvedPluginConfig.entryWorkerEnvironmentName && {
+										unsafeOverrideFetchWorker: VITE_PROXY_WORKER_NAME,
+									}),
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 									serviceBindings: {
 										...workerOptions.serviceBindings,
@@ -426,12 +448,14 @@ export async function getDevMiniflareOptions(
 	return {
 		miniflareOptions: {
 			log: logger,
+			unsafeProxySharedSecret: PROXY_SHARED_SECRET,
 			logRequests: false,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
-			unsafeLocalExplorer: getLocalExplorerFromEnv(),
+			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
@@ -534,7 +558,7 @@ export async function getPreviewMiniflareOptions(
 
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
-			resolvedPluginConfig.workers.map(async (workerConfig, i) => {
+			resolvedPluginConfig.workers.map(async (workerConfig) => {
 				const bindings =
 					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
 						workerConfig
@@ -600,10 +624,6 @@ export async function getPreviewMiniflareOptions(
 						...workerOptions,
 						name: workerOptions.name ?? workerConfig.name,
 						unsafeInspectorProxy: inputInspectorPort !== false,
-						unsafeDirectSockets:
-							// This exposes the default entrypoint of the entry worker on the dev registry
-							// Assuming that the first worker config to be the entry worker.
-							i === 0 ? [{ entrypoint: undefined, proxy: true }] : [],
 						...(miniflareWorkerOptions.main
 							? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
 							: { modules: true, script: "" }),
@@ -619,11 +639,13 @@ export async function getPreviewMiniflareOptions(
 	return {
 		miniflareOptions: {
 			log: logger,
+			unsafeProxySharedSecret: PROXY_SHARED_SECRET,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
-			unsafeLocalExplorer: getLocalExplorerFromEnv(),
+			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,

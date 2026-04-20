@@ -13,22 +13,26 @@ import {
 	ImageRegistryNotAllowedError,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+import { createCommand, createNamespace } from "../../core/create-command";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { pollRegistriesUntilCondition } from "../cli";
-import { checkEverythingIsSet, handleFailure, promiseSpinner } from "../common";
+import {
+	checkEverythingIsSet,
+	cloudchamberScope,
+	fillOpenAPIConfiguration,
+	promiseSpinner,
+} from "../common";
 import { wrap } from "../helpers/wrap";
-import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgv,
 	CommonYargsArgvSanitized,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
-import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 
-function configureImageRegistryOptionalYargs(yargs: CommonYargsArgv) {
+function _configureImageRegistryOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.option("domain", {
 			description:
@@ -42,140 +46,74 @@ function configureImageRegistryOptionalYargs(yargs: CommonYargsArgv) {
 		});
 }
 
-export const registriesCommand = (
-	yargs: CommonYargsArgv,
-	scope: typeof containersScope | typeof cloudchamberScope
-) => {
-	return yargs
-		.command(
-			"configure",
-			"Configure Cloudchamber to pull from specific registries",
-			(args) => configureImageRegistryOptionalYargs(args),
-			(args) =>
-				handleFailure(
-					`wrangler cloudchamber registries configure`,
-					async (
-						imageArgs: StrictYargsOptionsToInterface<
-							typeof configureImageRegistryOptionalYargs
-						>,
-						config
-					) => {
-						// check we are in CI or if the user wants to just use JSON
-						if (isNonInteractiveOrCI()) {
-							const body = checkEverythingIsSet(imageArgs, [
-								"domain",
-								"public",
-							]);
-							const registry = await ImageRegistriesService.createImageRegistry(
-								{
-									domain: body.domain,
-									is_public: body.public,
-								}
-							);
-							logger.log(JSON.stringify(registry, null, 4));
-							return;
-						}
+async function registriesConfigureHandler(
+	imageArgs: StrictYargsOptionsToInterface<
+		typeof _configureImageRegistryOptionalYargs
+	>,
+	config: Config
+) {
+	// check we are in CI or if the user wants to just use JSON
+	if (isNonInteractiveOrCI()) {
+		const body = checkEverythingIsSet(imageArgs, ["domain", "public"]);
+		const registry = await ImageRegistriesService.createImageRegistry({
+			domain: body.domain,
+			is_public: body.public,
+		});
+		logger.log(JSON.stringify(registry, null, 4));
+		return;
+	}
 
-						await handleConfigureImageRegistryCommand(args, config);
-					},
-					scope
-				)(args)
-		)
-		.command(
-			"credentials [domain]",
-			"get a temporary password for a specific domain",
-			(args) =>
-				args
-					.positional("domain", {
-						type: "string",
-						demandOption: true,
-					})
-					.option("expiration-minutes", {
-						type: "number",
-						default: 15,
-					})
-					.option("push", {
-						type: "boolean",
-						description: "If you want these credentials to be able to push",
-					})
-					.option("pull", {
-						type: "boolean",
-						description: "If you want these credentials to be able to pull",
-					}),
-			(args) => {
-				// we don't want any kind of spinners
-				args.json = true;
-				return handleFailure(
-					`wrangler cloudchamber registries credentials`,
-					async (imageArgs: typeof args, _config) => {
-						if (!imageArgs.pull && !imageArgs.push) {
-							throw new UserError(
-								"You have to specify either --push or --pull in the command."
-							);
-						}
+	await handleConfigureImageRegistryCommand(imageArgs, config);
+}
 
-						const credentials =
-							await ImageRegistriesService.generateImageRegistryCredentials(
-								imageArgs.domain,
-								{
-									expiration_minutes: imageArgs.expirationMinutes,
-									permissions: [
-										...(imageArgs.push ? ["push"] : []),
-										...(imageArgs.pull ? ["pull"] : []),
-									] as ImageRegistryPermissions[],
-								}
-							);
-						logger.log(credentials.password);
-					},
-					scope
-				)(args);
-			}
-		)
-		.command(
-			"remove [domain]",
-			"removes the registry at the given domain",
-			(args) => removeImageRegistryYargs(args),
-			(args) => {
-				args.json = true;
-				return handleFailure(
-					`wrangler cloudchamber registries remove`,
-					async (
-						imageArgs: StrictYargsOptionsToInterface<
-							typeof removeImageRegistryYargs
-						>,
-						_config
-					) => {
-						const registry = await ImageRegistriesService.deleteImageRegistry(
-							imageArgs.domain
-						);
-						logger.log(JSON.stringify(registry, null, 4));
-					},
-					scope
-				)(args);
-			}
-		)
-		.command(
-			"list",
-			"list registries configured for this account",
-			(args) => args,
-			(args) =>
-				handleFailure(
-					`wrangler cloudchamber registries list`,
-					async (_: CommonYargsArgvSanitized, config) => {
-						if (isNonInteractiveOrCI()) {
-							const registries =
-								await ImageRegistriesService.listImageRegistries();
-							logger.log(JSON.stringify(registries, null, 4));
-							return;
-						}
-						await handleListImageRegistriesCommand(args, config);
-					},
-					scope
-				)(args)
+async function registriesCredentialsHandler(imageArgs: {
+	domain: string;
+	expirationMinutes: number;
+	push?: boolean;
+	pull?: boolean;
+}) {
+	if (!imageArgs.pull && !imageArgs.push) {
+		throw new UserError(
+			"You have to specify either --push or --pull in the command."
 		);
-};
+	}
 
-function removeImageRegistryYargs(yargs: CommonYargsArgv) {
+	const credentials =
+		await ImageRegistriesService.generateImageRegistryCredentials(
+			imageArgs.domain,
+			{
+				expiration_minutes: imageArgs.expirationMinutes,
+				permissions: [
+					...(imageArgs.push ? ["push"] : []),
+					...(imageArgs.pull ? ["pull"] : []),
+				] as ImageRegistryPermissions[],
+			}
+		);
+	logger.log(credentials.password);
+}
+
+async function registriesRemoveHandler(
+	imageArgs: StrictYargsOptionsToInterface<typeof _removeImageRegistryYargs>
+) {
+	const registry = await ImageRegistriesService.deleteImageRegistry(
+		imageArgs.domain
+	);
+	logger.log(JSON.stringify(registry, null, 4));
+}
+
+async function registriesListHandler(
+	_args: CommonYargsArgvSanitized,
+	config: Config
+) {
+	if (isNonInteractiveOrCI()) {
+		const registries = await ImageRegistriesService.listImageRegistries();
+		logger.log(JSON.stringify(registries, null, 4));
+		return;
+	}
+	await handleListImageRegistriesCommand(_args, config);
+}
+
+function _removeImageRegistryYargs(yargs: CommonYargsArgv) {
 	return yargs.positional("domain", {
 		type: "string",
 		demandOption: true,
@@ -219,7 +157,7 @@ async function handleListImageRegistriesCommand(
 
 async function handleConfigureImageRegistryCommand(
 	args: StrictYargsOptionsToInterface<
-		typeof configureImageRegistryOptionalYargs
+		typeof _configureImageRegistryOptionalYargs
 	>,
 	_config: Config
 ) {
@@ -281,3 +219,115 @@ async function handleConfigureImageRegistryCommand(
 				registry?.public_key
 	);
 }
+
+export const cloudchamberRegistriesNamespace = createNamespace({
+	metadata: {
+		description: "Configure registries via Cloudchamber",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+});
+
+export const cloudchamberRegistriesConfigureCommand = createCommand({
+	metadata: {
+		description: "Configure Cloudchamber to pull from specific registries",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {
+		domain: {
+			description:
+				"Domain of your registry. Don't include the proto part of the URL, like 'http://'",
+			type: "string",
+		},
+		public: {
+			description:
+				"If the registry is public and you don't want credentials configured, set this to true",
+			type: "boolean",
+		},
+	},
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await registriesConfigureHandler(args, config);
+	},
+});
+
+export const cloudchamberRegistriesCredentialsCommand = createCommand({
+	metadata: {
+		description: "Get a temporary password for a specific domain",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {
+		domain: {
+			type: "string",
+			demandOption: true,
+		},
+		"expiration-minutes": {
+			type: "number",
+			default: 15,
+		},
+		push: {
+			type: "boolean",
+			description: "If you want these credentials to be able to push",
+		},
+		pull: {
+			type: "boolean",
+			description: "If you want these credentials to be able to pull",
+		},
+	},
+	positionalArgs: ["domain"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await registriesCredentialsHandler(args);
+	},
+});
+
+export const cloudchamberRegistriesRemoveCommand = createCommand({
+	metadata: {
+		description: "Remove the registry at the given domain",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {
+		domain: {
+			type: "string",
+			demandOption: true,
+		},
+	},
+	positionalArgs: ["domain"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await registriesRemoveHandler(args);
+	},
+});
+
+export const cloudchamberRegistriesListCommand = createCommand({
+	metadata: {
+		description: "List registries configured for this account",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {},
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await registriesListHandler(args, config);
+	},
+});

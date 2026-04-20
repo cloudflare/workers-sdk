@@ -21,7 +21,7 @@ import type { Writable } from "node:stream";
 export const spawnWithLogging = (
 	args: string[],
 	opts: SpawnOptionsWithoutStdio,
-	logStream: Writable,
+	logStream: Writable
 ) => {
 	const [cmd, ...argv] = args;
 
@@ -61,7 +61,7 @@ export const spawnWithLogging = (
 
 export const waitForExit = async (
 	proc: ChildProcessWithoutNullStreams,
-	onData?: (chunk: string) => void,
+	onData?: (chunk: string) => void
 ) => {
 	const stdout: string[] = [];
 	const stderr: string[] = [];
@@ -113,6 +113,16 @@ export const waitForExit = async (
 
 export const testEnv = {
 	...process.env,
+	// Strip secrets that should never be accessible to spawned processes.
+	// These tests scaffold third-party framework projects and run their code
+	// (npm install, postinstall scripts, dev servers, etc.) which we do not control.
+	CLOUDFLARE_API_TOKEN: undefined,
+	CLOUDFLARE_ACCOUNT_ID: undefined,
+	GITHUB_TOKEN: undefined,
+	TURBO_API: undefined,
+	TURBO_TEAM: undefined,
+	TURBO_TOKEN: undefined,
+	TURBO_REMOTE_CACHE_SIGNATURE_KEY: undefined,
 	// The following env vars are set to ensure that package managers
 	// do not use the same global cache and accidentally hit race conditions.
 	YARN_CACHE_FOLDER: "./.yarn/cache",
@@ -125,6 +135,6 @@ export const testEnv = {
 
 export function kill(proc: ChildProcess) {
 	return new Promise<void>(
-		(resolve) => proc.pid && treeKill(proc.pid, "SIGINT", () => resolve()),
+		(resolve) => proc.pid && treeKill(proc.pid, "SIGINT", () => resolve())
 	);
 }

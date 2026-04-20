@@ -1,27 +1,31 @@
 {
 	"name": "@cloudflare/unenv-preset",
-	"version": "2.11.0",
+	"version": "2.16.0",
 	"description": "cloudflare preset for unenv",
 	"keywords": [
-		"cloudflare",
-		"workers",
-		"cloudflare workers",
 		"Node.js",
+		"cloudflare",
+		"cloudflare workers",
+		"polyfills",
 		"unenv",
-		"polyfills"
+		"workers"
 	],
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"license": "MIT OR Apache-2.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/unenv-preset"
 	},
-	"license": "MIT OR Apache-2.0",
-	"sideEffects": false,
+	"files": [
+		"dist"
+	],
 	"type": "module",
+	"sideEffects": false,
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -33,13 +37,11 @@
 		},
 		"./package.json": "./package.json"
 	},
-	"types": "./dist/index.d.ts",
-	"files": [
-		"dist"
-	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
 		"build": "unbuild",
-		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc --noEmit"
 	},
 	"devDependencies": {
@@ -49,15 +51,12 @@
 	},
 	"peerDependencies": {
 		"unenv": "2.0.0-rc.24",
-		"workerd": "^1.20260115.0"
+		"workerd": "1.20260301.1 || ~1.20260302.1 || ~1.20260303.1 || ~1.20260304.1 || >1.20260305.0 <2.0.0-0"
 	},
 	"peerDependenciesMeta": {
 		"workerd": {
 			"optional": true
 		}
-	},
-	"publishConfig": {
-		"access": "public"
 	},
 	"workers-sdk": {
 		"prerelease": true

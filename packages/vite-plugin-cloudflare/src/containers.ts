@@ -1,6 +1,6 @@
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared/src/knobs";
-import { isDockerfile } from "@cloudflare/containers-shared/src/utils";
+import { isDockerfile } from "@cloudflare/workers-utils";
 import type { ResolvedWorkerConfig } from "./plugin-config";
 
 /**

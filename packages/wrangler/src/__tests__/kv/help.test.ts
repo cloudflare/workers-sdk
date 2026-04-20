@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, test } from "vitest";
+import { afterEach, beforeEach, describe, it, test } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -23,7 +23,7 @@ describe("kv", () => {
 	});
 
 	describe("help", () => {
-		test("kv --help", async () => {
+		test("kv --help", async ({ expect }) => {
 			const result = runWrangler("kv --help");
 
 			await expect(result).resolves.toBeUndefined();
@@ -47,7 +47,7 @@ describe("kv", () => {
 			`);
 		});
 
-		it("should show help when no argument is passed", async () => {
+		it("should show help when no argument is passed", async ({ expect }) => {
 			await runWrangler("kv");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -70,7 +70,9 @@ describe("kv", () => {
 			`);
 		});
 
-		it("should show help when an invalid argument is passed", async () => {
+		it("should show help when an invalid argument is passed", async ({
+			expect,
+		}) => {
 			await expect(() => runWrangler("kv asdf")).rejects.toThrow(
 				"Unknown argument: asdf"
 			);

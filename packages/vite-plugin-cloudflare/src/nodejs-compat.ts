@@ -1,9 +1,13 @@
 import assert from "node:assert";
 import * as path from "node:path";
-import { getCloudflarePreset } from "@cloudflare/unenv-preset";
+import {
+	getCloudflarePreset,
+	nonPrefixedNodeModules,
+} from "@cloudflare/unenv-preset";
 import { getNodeCompat } from "miniflare";
 import { resolvePathSync } from "mlly";
 import { defineEnv } from "unenv";
+import { VIRTUAL_NODEJS_GLOBAL_INJECT_PREFIX } from "./plugins/virtual-modules";
 import type { ResolvedWorkerConfig } from "./plugin-config";
 import type { ResolvedEnvironment } from "unenv";
 import type * as vite from "vite";
@@ -88,7 +92,6 @@ export class NodeJsCompat {
 			{ injectedName: string; exportName: string; importName: string }[]
 		>();
 		const virtualModulePathToSpecifier = new Map<string, string>();
-		const virtualModulePrefix = `\0_nodejs_global_inject-`;
 
 		for (const [injectedName, moduleSpecifier] of Object.entries(
 			this.#env.inject
@@ -100,7 +103,7 @@ export class NodeJsCompat {
 			if (!injectsByModule.has(module)) {
 				injectsByModule.set(module, []);
 				virtualModulePathToSpecifier.set(
-					`${virtualModulePrefix}${module.replaceAll("/", "-")}`,
+					`${VIRTUAL_NODEJS_GLOBAL_INJECT_PREFIX}${module}`,
 					module
 				);
 			}
@@ -230,6 +233,10 @@ export function hasNodeJsAls(workerConfig: ResolvedWorkerConfig | undefined) {
 export function isNodeAlsModule(modulePath: string) {
 	return /^(?:node:)?async_hooks$/.test(modulePath);
 }
+
+export const nodeBuiltinsRE = new RegExp(
+	`^(${nonPrefixedNodeModules.join("|")}|node:.+)$`
+);
 
 export function assertHasNodeJsCompat(
 	nodeJsCompat: NodeJsCompat | undefined

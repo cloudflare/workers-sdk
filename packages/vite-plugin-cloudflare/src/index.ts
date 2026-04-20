@@ -1,7 +1,9 @@
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { assertWranglerVersion } from "./assert-wrangler-version";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
+import { cdnCgiPlugin } from "./plugins/cdn-cgi";
 import { configPlugin } from "./plugins/config";
 import { debugPlugin } from "./plugins/debug";
 import { devPlugin } from "./plugins/dev";
@@ -12,8 +14,8 @@ import {
 } from "./plugins/nodejs-compat";
 import { outputConfigPlugin } from "./plugins/output-config";
 import { previewPlugin } from "./plugins/preview";
+import { rscPlugin } from "./plugins/rsc";
 import { shortcutsPlugin } from "./plugins/shortcuts";
-import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
 import {
 	virtualClientFallbackPlugin,
 	virtualModulesPlugin,
@@ -22,16 +24,33 @@ import { wasmHelperPlugin } from "./plugins/wasm";
 import { debuglog } from "./utils";
 import type { SharedContext } from "./context";
 import type { PluginConfig } from "./plugin-config";
+import type { CompatDate } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
-export { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
+// TODO: simplify this function in the next major release (DEVX-2533)
+/**
+ * @deprecated Use today's date instead (as `YYYY-MM-DD`)
+ *
+ * Gets the compatibility date to use with the local workerd version.
+ *
+ * Note: the function's signature is as is because it needs to be backward compatibly with
+ *       a previous iteration of this, it will be simplified in the next major version of this package.
+ *
+ * @param _options Unused argument (present only for backward compatibility)
+ * @returns Object containing the compatibility date (this is not the date directly for backward compatibility)
+ */
+export function getLocalWorkerdCompatibilityDate(_options?: {
+	projectPath?: string;
+}): { date: CompatDate; source: "workerd" | "fallback" } {
+	return { date: getTodaysCompatDate(), source: "workerd" };
+}
 
 export type { PluginConfig } from "./plugin-config";
 export type { WorkerConfig } from "./workers-configs";
 
 const sharedContext: SharedContext = {
 	hasShownWorkerConfigWarnings: false,
-	isRestartingDevServer: false,
+	restartingDevServerCount: 0,
 };
 
 await assertWranglerVersion();
@@ -54,28 +73,33 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				ctx.setResolvedPluginConfig(
 					resolvePluginConfig(pluginConfig, userConfig, env)
 				);
+
+				if (env.command === "build") {
+					process.env.CLOUDFLARE_VITE_BUILD = "true";
+				}
 			},
 			async configureServer(viteDevServer) {
 				// Patch the `server.restart` method to track whether the server is restarting or not.
 				const restartServer = viteDevServer.restart.bind(viteDevServer);
 				viteDevServer.restart = async () => {
 					try {
-						ctx.setIsRestartingDevServer(true);
+						ctx.beginRestartingDevServer();
 						debuglog("From server.restart(): Restarting server...");
 						await restartServer();
 						debuglog("From server.restart(): Restarted server...");
 					} finally {
-						ctx.setIsRestartingDevServer(false);
+						ctx.endRestartingDevServer();
 					}
 				};
 			},
 		},
 		configPlugin(ctx),
+		rscPlugin(ctx),
 		devPlugin(ctx),
 		previewPlugin(ctx),
 		shortcutsPlugin(ctx),
 		debugPlugin(ctx),
-		triggerHandlersPlugin(ctx),
+		cdnCgiPlugin(ctx),
 		virtualModulesPlugin(ctx),
 		virtualClientFallbackPlugin(ctx),
 		outputConfigPlugin(ctx),

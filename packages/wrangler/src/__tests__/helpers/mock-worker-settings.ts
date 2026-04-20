@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { expect } from "vitest";
+import { assert } from "vitest";
 import { msw } from "./msw";
 import type { Settings } from "../../deployment-bundle/bindings";
 
@@ -15,11 +15,11 @@ export function mockGetSettings(
 			"*/accounts/:accountId/workers/scripts/:scriptName/settings",
 			async ({ params }) => {
 				if (options.assertAccountId) {
-					expect(params.accountId).toEqual(options.assertAccountId);
+					assert(params.accountId === options.assertAccountId);
 				}
 
 				if (options.assertScriptName) {
-					expect(params.scriptName).toEqual(options.assertScriptName);
+					assert(params.scriptName === options.assertScriptName);
 				}
 
 				if (!options.result) {

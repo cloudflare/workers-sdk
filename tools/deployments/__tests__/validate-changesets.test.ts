@@ -8,7 +8,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import {
 	findPackages,
 	readChangesets,
@@ -17,33 +17,37 @@ import {
 import type { PackageJSON } from "../validate-changesets";
 
 describe("findPackageNames()", () => {
-	it("should return all the private packages which contain deploy scripts", () => {
+	it("should return all the private packages which contain deploy scripts", ({
+		expect,
+	}) => {
 		expect(new Set(findPackages().keys())).toEqual(
 			new Set([
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli",
+				"@cloudflare/codemod",
+				"@cloudflare/containers-shared",
+				"@cloudflare/devprod-status-bot",
+				"@cloudflare/edge-preview-authenticated-proxy",
+				"@cloudflare/lint-config-shared",
+				"@cloudflare/format-errors",
 				"@cloudflare/kv-asset-handler",
+				"@cloudflare/local-explorer-ui",
 				"@cloudflare/pages-functions",
 				"@cloudflare/pages-shared",
+				"@cloudflare/playground-preview-worker",
 				"@cloudflare/quick-edit",
+				"@cloudflare/turbo-r2-archive",
 				"@cloudflare/unenv-preset",
+				"@cloudflare/vite-plugin",
 				"@cloudflare/vitest-pool-workers",
 				"@cloudflare/workers-editor-shared",
+				"@cloudflare/workers-playground",
 				"@cloudflare/workers-shared",
 				"@cloudflare/workers-utils",
 				"@cloudflare/workflows-shared",
-				"@cloudflare/eslint-config-shared",
-				"@cloudflare/containers-shared",
-				"@cloudflare/vite-plugin",
 				"create-cloudflare",
-				"@cloudflare/devprod-status-bot",
-				"@cloudflare/edge-preview-authenticated-proxy",
-				"@cloudflare/format-errors",
 				"miniflare",
-				"@cloudflare/playground-preview-worker",
 				"solarflare-theme",
-				"@cloudflare/turbo-r2-archive",
-				"@cloudflare/workers-playground",
 				"wrangler",
 			])
 		);
@@ -60,11 +64,14 @@ describe("readChangesets()", () => {
 
 	afterEach(() => {
 		if (existsSync(tmpDir)) {
+			// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- test cleanup
 			rmSync(tmpDir, { recursive: true });
 		}
 	});
 
-	it("should load files from the changeset directory that look like changesets", () => {
+	it("should load files from the changeset directory that look like changesets", ({
+		expect,
+	}) => {
 		writeFileSync(resolve(tmpDir, "README.md"), "Some text");
 		writeFileSync(resolve(tmpDir, ".hidden.md"), "Some text");
 		writeFileSync(resolve(tmpDir, "change-set-one.md"), "Some text");
@@ -89,13 +96,12 @@ describe("readChangesets()", () => {
 });
 
 describe("validateChangesets()", () => {
-	it("should report errors for any invalid changesets", () => {
+	it("should report errors for any invalid changesets", ({ expect }) => {
 		const errors = validateChangesets(
 			new Map<string, PackageJSON>([
 				["package-a", { name: "package-a" }],
 				["package-b", { name: "package-b" }],
 				["package-c", { name: "package-c" }],
-				["package-d", { name: "package-d", "workers-sdk": { deploy: true } }],
 			]),
 			[
 				{
@@ -153,15 +159,6 @@ describe("validateChangesets()", () => {
 
 						docs: test`,
 				},
-				{
-					file: "deployable-package.md",
-					contents: dedent`
-						---
-						"package-d": patch
-						---
-
-						fix: test`,
-				},
 			]
 		);
 		expect(errors).toMatchInlineSnapshot(`
@@ -169,12 +166,31 @@ describe("validateChangesets()", () => {
 			  "Error: could not parse changeset - invalid frontmatter: at file "invalid-frontmatter.md"",
 			  "Unknown package name "package-invalid" in changeset at "invalid-package.md".",
 			  "Invalid type "foo" for package "package-a" in changeset at "invalid-type.md".",
-			  "Currently we are not allowing changes to package "package-d" in changeset at "deployable-package.md" since it would trigger a Worker/Pages deployment.",
 			]
 		`);
 	});
 
-	it("should report errors for major bump changesets", () => {
+	it("should allow major bumps for private packages", ({ expect }) => {
+		const errors = validateChangesets(
+			new Map<string, PackageJSON>([
+				["package-b", { name: "package-b", private: true }],
+			]),
+			[
+				{
+					file: "major-private.md",
+					contents: dedent`
+					---
+					"package-b": major
+					---
+
+					breaking change for private pkg!`,
+				},
+			]
+		);
+		expect(errors).toMatchInlineSnapshot(`[]`);
+	});
+
+	it("should report errors for major bump changesets", ({ expect }) => {
 		const errors = validateChangesets(
 			new Map<string, PackageJSON>([
 				["package-a", { name: "package-a" }],
@@ -188,7 +204,7 @@ describe("validateChangesets()", () => {
 						---
 						"package-a": patch
 						---
-		  				refactor: test`,
+	  				refactor: test`,
 				},
 				{
 					file: "minor-two.md",
@@ -213,7 +229,6 @@ describe("validateChangesets()", () => {
 		expect(errors).toMatchInlineSnapshot(`
 			[
 			  "Major version bumps are not allowed for package "package-c" in changeset at "major-three.md".",
-			  "Invalid type "major" for package "package-c" in changeset at "major-three.md".",
 			]
 		`);
 	});

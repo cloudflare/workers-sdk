@@ -7,8 +7,7 @@ import type { Json } from "../types";
  * This could be the top-level default environment, or a specific named environment.
  */
 export interface Environment
-	extends EnvironmentInheritable,
-		EnvironmentNonInheritable {}
+	extends EnvironmentInheritable, EnvironmentNonInheritable {}
 
 type SimpleRoute = string;
 export type ZoneIdRoute = {
@@ -172,7 +171,7 @@ export type ContainerApp = {
 				disk_mb?: number;
 		  };
 
-	wrangler_ssh?: {
+	ssh?: {
 		/**
 		 * If enabled, those with write access to a container will be able to SSH into it through Wrangler.
 		 * @default false
@@ -182,6 +181,15 @@ export type ContainerApp = {
 		 * Port that the SSH service is running on
 		 * @defaults to 22
 		 */
+		port?: number;
+	};
+
+	/**
+	 * @deprecated Use `ssh` instead.
+	 * @hidden
+	 */
+	wrangler_ssh?: {
+		enabled: boolean;
 		port?: number;
 	};
 
@@ -213,16 +221,39 @@ export type ContainerApp = {
 	};
 
 	/**
-	 * Scheduling constraints
-	 * @hidden
+	 * Scheduling constraints for container placement.
 	 */
 	constraints?: {
-		regions?: string[];
+		/**
+		 * Limit container placement to specific geographic regions.
+		 */
+		regions?: (
+			| "ENAM"
+			| "WNAM"
+			| "EEUR"
+			| "WEUR"
+			| "APAC"
+			| "SAM"
+			| "ME"
+			| "OC"
+			| "AFR"
+		)[];
+		/**
+		 * Restrict containers to compliance boundaries.
+		 */
+		jurisdiction?: "eu" | "fedramp";
+		/**
+		 * @hidden
+		 */
 		cities?: string[];
 		/**
 		 * @deprecated Use `tiers` instead
+		 * @hidden
 		 */
 		tier?: number;
+		/**
+		 * @hidden
+		 */
 		tiers?: number[];
 	};
 
@@ -621,6 +652,14 @@ interface EnvironmentInheritable {
 	observability: Observability | undefined;
 
 	/**
+	 * Specify the cache behavior of the Worker.
+	 *
+	 * @inheritable
+	 * @hidden
+	 */
+	cache: CacheOptions | undefined;
+
+	/**
 	 * Specify the compliance region mode of the Worker.
 	 *
 	 * Although if the user does not specify a compliance region, the default is `public`,
@@ -643,6 +682,19 @@ interface EnvironmentInheritable {
 		 */
 		exclude: string[];
 	};
+
+	/**
+	 * Configuration for Worker Previews.
+	 *
+	 * Previews are branches of your Worker's main instance used to test features
+	 * in development outside of production. This block defines the settings
+	 * used when creating Preview deployments via `wrangler preview`.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+	 *
+	 * @inheritable
+	 */
+	previews: PreviewsConfig | undefined;
 }
 
 export type DurableObjectBindings = {
@@ -667,6 +719,11 @@ export type WorkflowBinding = {
 	script_name?: string;
 	/** Whether the Workflow should be remote or not in local development */
 	remote?: boolean;
+	/** Optional limits for the Workflow */
+	limits?: {
+		/** Maximum number of steps a Workflow instance can execute */
+		steps?: number;
+	};
 };
 
 /**
@@ -699,6 +756,24 @@ export interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	vars: Record<string, string | Json>;
+
+	/**
+	 * Secrets configuration (experimental).
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @nonInheritable
+	 */
+	secrets?: {
+		/**
+		 * List of secret names that are required by your Worker.
+		 * When defined, this property:
+		 * - Replaces .dev.vars/.env/process.env inference for type generation
+		 * - Enables local dev validation with warnings for missing secrets
+		 */
+		required?: string[];
+	};
 
 	/**
 	 * A list of durable objects that your Worker should be bound to.
@@ -833,8 +908,8 @@ export interface EnvironmentNonInheritable {
 			/** The name of the queue from which this consumer should consume. */
 			queue: string;
 
-			/** The consumer type, e.g., worker, http-pull, r2-bucket, etc. Default is worker. */
-			type?: string;
+			/** The consumer type. Only "worker" is supported in wrangler config. Default is "worker". */
+			type?: "worker";
 
 			/** The maximum number of messages per batch */
 			max_batch_size?: number;
@@ -930,6 +1005,44 @@ export interface EnvironmentNonInheritable {
 		/** The name of the index. */
 		index_name: string;
 		/** Whether the Vectorize index should be remote or not in local development */
+		remote?: boolean;
+	}[];
+
+	/**
+	 * Specifies AI Search namespace bindings that are bound to this Worker environment.
+	 * Each binding is scoped to a namespace and allows dynamic instance CRUD within it.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	ai_search_namespaces: {
+		/** The binding name used to refer to the AI Search namespace in the Worker. */
+		binding: string;
+		/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
+		namespace: string;
+		/** Whether the AI Search namespace binding should be remote in local development */
+		remote?: boolean;
+	}[];
+
+	/**
+	 * Specifies AI Search instance bindings that are bound to this Worker environment.
+	 * Each binding is bound directly to a single pre-existing instance within the "default" namespace.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	ai_search: {
+		/** The binding name used to refer to the AI Search instance in the Worker. */
+		binding: string;
+		/** The user-chosen instance name. Must exist in Cloudflare at deploy time. */
+		instance_name: string;
+		/** Whether the AI Search instance binding should be remote in local development */
 		remote?: boolean;
 	}[];
 
@@ -1079,6 +1192,23 @@ export interface EnvironmentNonInheritable {
 		| {
 				binding: string;
 				/** Whether the Media binding should be remote or not */
+				remote?: boolean;
+		  }
+		| undefined;
+
+	/**
+	 * Binding to Cloudflare Stream
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	stream:
+		| {
+				binding: string;
+				/** Whether the Stream binding should be remote or not in local development */
 				remote?: boolean;
 		  }
 		| undefined;
@@ -1235,6 +1365,27 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies Artifacts bindings that are bound to this Worker environment.
+	 * Artifacts provides git-compatible file storage on Cloudflare Workers.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	artifacts: {
+		/** The binding name used to refer to the Artifacts instance. */
+		binding: string;
+
+		/** The namespace to use. */
+		namespace: string;
+
+		/** Whether to use the remote Artifacts service in local dev. */
+		remote?: boolean;
+	}[];
+
+	/**
 	 * **DO NOT USE**. Hello World Binding Config to serve as an explanatory example.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -1249,6 +1400,26 @@ export interface EnvironmentNonInheritable {
 
 		/** Whether the timer is enabled */
 		enable_timer?: boolean;
+	}[];
+
+	/**
+	 * Specifies Flagship feature flag bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	flagship: {
+		/** The binding name used to refer to the bound Flagship service. */
+		binding: string;
+
+		/** The Flagship app ID to bind to. */
+		app_id: string;
+
+		/** Whether to use the remote Flagship service for flag evaluation in local dev. */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -1305,6 +1476,34 @@ export interface EnvironmentNonInheritable {
 		/** Whether the VPC service is remote or not */
 		remote?: boolean;
 	}[];
+
+	/**
+	 * Specifies VPC networks that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	vpc_networks: (
+		| {
+				/** The binding name used to refer to the VPC network in the Worker. */
+				binding: string;
+				/** The tunnel ID of the Cloudflare Tunnel to route traffic through. Mutually exclusive with network_id. */
+				tunnel_id: string;
+				/** Whether the VPC network is remote or not */
+				remote?: boolean;
+		  }
+		| {
+				/** The binding name used to refer to the VPC network in the Worker. */
+				binding: string;
+				/** The network ID to route traffic through. Mutually exclusive with tunnel_id. */
+				network_id: string;
+				/** Whether the VPC network is remote or not */
+				remote?: boolean;
+		  }
+	)[];
 }
 
 /**
@@ -1359,7 +1558,9 @@ export interface DispatchNamespaceOutbound {
 
 export interface UserLimits {
 	/** Maximum allowed CPU time for a Worker's invocation in milliseconds */
-	cpu_ms: number;
+	cpu_ms?: number;
+	/** Maximum allowed number of fetch requests that a Worker's invocation can execute */
+	subrequests?: number;
 }
 
 export type Assets = {
@@ -1426,9 +1627,16 @@ export interface Observability {
 	};
 }
 
+export interface CacheOptions {
+	/** If cache is enabled for this Worker */
+	enabled: boolean;
+}
+
 export type DockerConfiguration = {
 	/** Socket used by miniflare to communicate with Docker */
 	socketPath: string;
+	/** Docker image name for the container egress interceptor sidecar */
+	containerEgressInterceptorImage?: string;
 };
 
 export type ContainerEngine =
@@ -1436,3 +1644,23 @@ export type ContainerEngine =
 			localDocker: DockerConfiguration;
 	  }
 	| string;
+
+/**
+ * Configuration for Worker Previews.
+ *
+ * This defines the settings used when creating Preview deployments.
+ * Previews are branches of your Worker's main instance used to test features
+ * during feature development outside of production.
+ *
+ * The `previews` block contains any intentionally divergent configuration intended solely for Previews, including:
+ * - All non-inheritable properties (environment variables and bindings like KV, D1, R2, etc.)
+ * - Select inheritable properties: `logpush`, `observability`, `limits`
+ *
+ * @inheritable
+ */
+export interface PreviewsConfig
+	extends
+		Partial<EnvironmentNonInheritable>,
+		Partial<
+			Pick<EnvironmentInheritable, "logpush" | "observability" | "limits">
+		> {}

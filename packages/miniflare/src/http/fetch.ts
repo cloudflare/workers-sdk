@@ -1,13 +1,14 @@
 import assert from "node:assert";
-import http from "node:http";
-import { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import * as undici from "undici";
-import { UndiciHeaders } from "undici/types/dispatcher";
 import NodeWebSocket from "ws";
 import { CoreHeaders, DeferredPromise } from "../workers";
-import { Request, RequestInfo, RequestInit } from "./request";
+import { Request } from "./request";
 import { Response } from "./response";
 import { coupleWebSocket, WebSocketPair } from "./websocket";
+import type { RequestInfo, RequestInit } from "./request";
+import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
+import type http from "node:http";
+import type { UndiciHeaders } from "undici/types/dispatcher";
 
 const ignored = ["transfer-encoding", "connection", "keep-alive", "expect"];
 
@@ -57,6 +58,9 @@ export async function fetch(
 		});
 
 		const responsePromise = new DeferredPromise<Response>();
+		ws.once("error", (error) => {
+			responsePromise.reject(error);
+		});
 		ws.once("upgrade", (req) => {
 			const headers = convertUndiciHeadersToStandard(req.headers);
 			// Couple web socket with pair and resolve

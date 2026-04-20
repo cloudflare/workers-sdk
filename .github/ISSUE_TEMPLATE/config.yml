@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
+  - name: Feature Request
+    url: https://github.com/cloudflare/workers-sdk/discussions/new?category=feature-requests
+    about: "Have a suggestion? Open a discussion to share your idea!"
   - name: Support
     url: https://discord.cloudflare.com
     about: "Join us on Discord!"

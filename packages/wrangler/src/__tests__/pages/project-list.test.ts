@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
@@ -7,10 +7,11 @@ import { msw } from "./../helpers/msw";
 import { runInTempDir } from "./../helpers/run-in-tmp";
 import { runWrangler } from "./../helpers/run-wrangler";
 import type { Project } from "./../../pages/types";
+import type { ExpectStatic } from "vitest";
 
 describe("pages project list", () => {
 	runInTempDir();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 	mockAccountId();
 	mockApiToken();
 
@@ -22,7 +23,7 @@ describe("pages project list", () => {
 		msw.restoreHandlers();
 	});
 
-	it("should make request to list projects", async () => {
+	it("should make request to list projects", async ({ expect }) => {
 		const projects: Project[] = [
 			{
 				name: "dogs",
@@ -49,13 +50,15 @@ describe("pages project list", () => {
 			},
 		];
 
-		const requests = mockProjectListRequest(projects);
+		const requests = mockProjectListRequest(expect, projects);
 		await runWrangler("pages project list");
 
 		expect(requests.count).toBe(1);
 	});
 
-	it("should make multiple requests for paginated results", async () => {
+	it("should make multiple requests for paginated results", async ({
+		expect,
+	}) => {
 		const projects: Project[] = [];
 		for (let i = 0; i < 15; i++) {
 			projects.push({
@@ -72,12 +75,14 @@ describe("pages project list", () => {
 				production_branch: "main",
 			});
 		}
-		const requests = mockProjectListRequest(projects);
+		const requests = mockProjectListRequest(expect, projects);
 		await runWrangler("pages project list");
 		expect(requests.count).toEqual(2);
 	});
 
-	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async () => {
+	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async ({
+		expect,
+	}) => {
 		vi.mock("getConfigCache", () => {
 			return {
 				account_id: "original-account-id",
@@ -85,9 +90,63 @@ describe("pages project list", () => {
 			};
 		});
 		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "new-account-id");
-		const requests = mockProjectListRequest([], "new-account-id");
+		const requests = mockProjectListRequest(expect, [], "new-account-id");
 		await runWrangler("pages project list");
 		expect(requests.count).toBe(1);
+	});
+
+	it("should return JSON output when --json flag is provided", async ({
+		expect,
+	}) => {
+		const projects: Project[] = [
+			{
+				name: "dogs",
+				subdomain: "docs.pages.dev",
+				domains: ["dogs.pages.dev"],
+				source: {
+					type: "github",
+				},
+				latest_deployment: {
+					modified_on: "2021-11-17T14:52:26.133835Z",
+				},
+				created_on: "2021-11-17T14:52:26.133835Z",
+				production_branch: "main",
+			},
+			{
+				name: "cats",
+				subdomain: "cats.pages.dev",
+				domains: ["cats.pages.dev", "kitten.com"],
+				latest_deployment: {
+					modified_on: "2021-11-17T14:52:26.133835Z",
+				},
+				created_on: "2021-11-17T14:52:26.133835Z",
+				production_branch: "main",
+			},
+		];
+
+		const requests = mockProjectListRequest(expect, projects);
+		await runWrangler("pages project list --json");
+
+		expect(requests.count).toBe(1);
+
+		// Verify the output is valid JSON
+		const output = JSON.parse(std.out);
+		expect(output).toMatchInlineSnapshot(`
+			[
+			  {
+			    "Git Provider": "Yes",
+			    "Last Modified": "[mock-time-ago]",
+			    "Project Domains": "dogs.pages.dev",
+			    "Project Name": "dogs",
+			  },
+			  {
+			    "Git Provider": "No",
+			    "Last Modified": "[mock-time-ago]",
+			    "Project Domains": "cats.pages.dev, kitten.com",
+			    "Project Name": "cats",
+			  },
+			]
+		`);
 	});
 });
 
@@ -96,6 +155,7 @@ describe("pages project list", () => {
 /* -------------------------------------------------- */
 
 function mockProjectListRequest(
+	expect: ExpectStatic,
 	projects: unknown[],
 	accountId = "some-account-id"
 ) {

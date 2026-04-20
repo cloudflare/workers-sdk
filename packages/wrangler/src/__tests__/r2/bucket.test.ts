@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+// eslint-disable-next-line no-restricted-imports
 import { beforeEach, describe, expect, it } from "vitest";
 import { actionsForEventCategories } from "../../r2/helpers/notification";
 import { endEventLoop } from "../helpers/end-event-loop";
@@ -110,6 +111,7 @@ describe("r2", () => {
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
+				  wrangler r2 bucket local-uploads    Manage local uploads configuration for an R2 bucket
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 				  wrangler r2 bucket cors             Manage CORS configuration for an R2 bucket
 				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
@@ -152,6 +154,7 @@ describe("r2", () => {
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
+				  wrangler r2 bucket local-uploads    Manage local uploads configuration for an R2 bucket
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 				  wrangler r2 bucket cors             Manage CORS configuration for an R2 bucket
 				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
@@ -168,6 +171,60 @@ describe("r2", () => {
 
 		describe("list", () => {
 			it("should list buckets & check request inputs", async () => {
+				const mockBuckets = [
+					{
+						name: "bucket-1-local-once",
+						creation_date: "01-01-2001",
+					},
+					{
+						name: "bucket-2-local-once",
+						creation_date: "01-01-2001",
+					},
+				];
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/r2/buckets",
+						async ({ request, params }) => {
+							const { accountId } = params;
+							expect(accountId).toEqual("some-account-id");
+							expect(await request.text()).toEqual("");
+							return HttpResponse.json(
+								createFetchResult({
+									buckets: mockBuckets,
+								})
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler(`r2 bucket list`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Listing buckets...
+					name:           bucket-1-local-once
+					creation_date:  01-01-2001
+
+					name:           bucket-2-local-once
+					creation_date:  01-01-2001"
+				`);
+			});
+
+			it("should list buckets even if the local wrangler config is invalid", async () => {
+				writeWranglerConfig(
+					{
+						r2_buckets: [
+							{
+								binding: "BUCKET",
+								bucket_name: "Invalid_Bucket",
+							},
+						],
+					},
+					"./wrangler.jsonc"
+				);
+
 				const mockBuckets = [
 					{
 						name: "bucket-1-local-once",
@@ -290,7 +347,7 @@ describe("r2", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
+					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: "weur", "eeur", "apac", "wnam", "enam", "oc"]
 					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
 					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
 					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
@@ -328,7 +385,7 @@ describe("r2", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
+					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: "weur", "eeur", "apac", "wnam", "enam", "oc"]
 					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
 					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
 					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
@@ -416,7 +473,7 @@ describe("r2", () => {
 					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.]`
 				);
 				expect(std).toMatchInlineSnapshot(`
-					Object {
+					{
 					  "debug": "",
 					  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
 
@@ -800,7 +857,7 @@ describe("r2", () => {
 
 						OPTIONS
 						  -J, --jurisdiction              The jurisdiction where the bucket exists  [string]
-						      --provider  [choices: \\"AWS\\", \\"GCS\\"]
+						      --provider  [choices: "AWS", "GCS"]
 						      --bucket                    The name of the upstream bucket  [string]
 						      --region                    (AWS provider only) The region of the upstream bucket  [string]
 						      --access-key-id             (AWS provider only) The secret access key id for the upstream bucket  [string]
@@ -2566,7 +2623,7 @@ describe("r2", () => {
 						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
-						      --event-types, --event-type  The type of event(s) that will emit event notifications  [array] [required] [choices: \\"object-create\\", \\"object-delete\\"]
+						      --event-types, --event-type  The type of event(s) that will emit event notifications  [array] [required] [choices: "object-create", "object-delete"]
 						      --prefix                     The prefix that an object must match to emit event notifications (note: regular expressions not supported)  [string]
 						      --suffix                     The suffix that an object must match to emit event notifications (note: regular expressions not supported)  [string]
 						      --queue                      The name of the queue that will receive event notification messages  [string] [required]
@@ -2703,7 +2760,7 @@ describe("r2", () => {
 						"
 						 ⛅️ wrangler x.x.x
 						──────────────────
-						Deleting event notifications rule \\"rule123456789\\"...
+						Deleting event notifications rule "rule123456789"...
 						Event notification rule deleted successfully!"
 					`);
 				});
@@ -3412,7 +3469,7 @@ describe("r2", () => {
 						Lifecycle rule 'my-rule' removed from bucket 'my-bucket'."
 					`);
 				});
-				it("should handle removing non-existant rule ID as expected", async () => {
+				it("should handle removing non-existent rule ID as expected", async () => {
 					const bucketName = "my-bucket";
 					const ruleId = "my-rule";
 					const lifecycleRules = {
@@ -3547,6 +3604,48 @@ describe("r2", () => {
 				});
 			});
 			describe("set", () => {
+				it("should reject AWS S3 format with CORSRules key", async () => {
+					const filePath = "cors-s3-format.json";
+					const s3Config = {
+						CORSRules: [
+							{
+								AllowedOrigins: ["*"],
+								AllowedMethods: ["GET"],
+							},
+						],
+					};
+
+					fs.writeFileSync(filePath, JSON.stringify(s3Config));
+
+					await expect(
+						runWrangler(
+							`r2 bucket cors set my-bucket --file ${filePath} --force`
+						)
+					).rejects.toThrowError(
+						/Wrangler detected an AWS S3 CORS configuration format/
+					);
+				});
+
+				it("should reject AWS S3 style PascalCase keys in rules", async () => {
+					const filePath = "cors-s3-keys.json";
+					const s3StyleConfig = {
+						rules: [
+							{
+								AllowedOrigins: ["*"],
+								AllowedMethods: ["GET"],
+							},
+						],
+					};
+
+					fs.writeFileSync(filePath, JSON.stringify(s3StyleConfig));
+
+					await expect(
+						runWrangler(
+							`r2 bucket cors set my-bucket --file ${filePath} --force`
+						)
+					).rejects.toThrowError(/Wrangler detected AWS S3 style keys/);
+				});
+
 				it("should set CORS configuration from a JSON file", async () => {
 					const bucketName = "my-bucket";
 					const filePath = "cors-configuration.json";
@@ -4044,7 +4143,7 @@ describe("r2", () => {
 						Lock rule 'my-rule' removed from bucket 'my-bucket'."
 					`);
 				});
-				it("should handle removing non-existant rule ID as expected", async () => {
+				it("should handle removing non-existent rule ID as expected", async () => {
 					const bucketName = "my-bucket";
 					const ruleId = "my-rule";
 

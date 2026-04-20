@@ -1,6 +1,6 @@
 import { join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, test } from "vitest";
+import { assert, describe, test } from "vitest";
 import { getValidatedWranglerConfigPath } from "../workers-configs";
 
 const fixturesPath = fileURLToPath(new URL("fixtures", import.meta.url));
@@ -8,25 +8,25 @@ const fixturesPath = fileURLToPath(new URL("fixtures", import.meta.url));
 const isWindows = process.platform === "win32";
 
 describe("valid cases", () => {
-	test("should return the value of a found wrangler config", () => {
+	test("should return the value of a found wrangler config", ({ expect }) => {
 		const result = getValidatedWranglerConfigPath(fixturesPath, undefined);
-		expect(result).toBeDefined();
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		expect(normalize(result!)).toMatch(
+		assert(result, "Expected a wrangler config path to be found");
+		expect(normalize(result)).toMatch(
 			isWindows
 				? /\\__tests__\\fixtures\\wrangler\.jsonc/
 				: /\/__tests__\/fixtures\/wrangler\.jsonc/
 		);
 	});
 
-	test("should return the value of a requested wrangler config", () => {
+	test("should return the value of a requested wrangler config", ({
+		expect,
+	}) => {
 		const result = getValidatedWranglerConfigPath(
 			fixturesPath,
 			join(fixturesPath, "simple-wrangler.jsonc")
 		);
-		expect(result).toBeDefined();
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		expect(normalize(result!)).toMatch(
+		assert(result, "Expected a wrangler config path to be found");
+		expect(normalize(result)).toMatch(
 			isWindows
 				? /\\__tests__\\fixtures\\simple-wrangler\.jsonc/
 				: /\/__tests__\/fixtures\/simple-wrangler\.jsonc/
@@ -35,7 +35,9 @@ describe("valid cases", () => {
 });
 
 describe("zero-config cases", () => {
-	test("should return undefined when no wrangler config is found (zero-config mode)", () => {
+	test("should return undefined when no wrangler config is found (zero-config mode)", ({
+		expect,
+	}) => {
 		const result = getValidatedWranglerConfigPath(
 			join(fixturesPath, "empty-dir"),
 			undefined
@@ -49,7 +51,9 @@ describe("invalid cases", () => {
 		const testPrefix = forAuxiliaryWorker
 			? "[auxiliary worker]"
 			: "[main worker]";
-		test(`${testPrefix} should error if a requested path points to a file without an extension`, () => {
+		test(`${testPrefix} should error if a requested path points to a file without an extension`, ({
+			expect,
+		}) => {
 			expect(() => {
 				getValidatedWranglerConfigPath(
 					fixturesPath,
@@ -63,7 +67,9 @@ describe("invalid cases", () => {
 			);
 		});
 
-		test(`${testPrefix} should error if a requested path points to a file with an incorrect extension`, () => {
+		test(`${testPrefix} should error if a requested path points to a file with an incorrect extension`, ({
+			expect,
+		}) => {
 			expect(() => {
 				getValidatedWranglerConfigPath(
 					fixturesPath,
@@ -77,7 +83,9 @@ describe("invalid cases", () => {
 			);
 		});
 
-		test(`${testPrefix} should error if a requested path points to a directory`, () => {
+		test(`${testPrefix} should error if a requested path points to a directory`, ({
+			expect,
+		}) => {
 			expect(() => {
 				getValidatedWranglerConfigPath(
 					fixturesPath,
@@ -91,7 +99,9 @@ describe("invalid cases", () => {
 			);
 		});
 
-		test(`${testPrefix} should error if a requested path points to a non-existent file`, () => {
+		test(`${testPrefix} should error if a requested path points to a non-existent file`, ({
+			expect,
+		}) => {
 			expect(() => {
 				getValidatedWranglerConfigPath(
 					fixturesPath,

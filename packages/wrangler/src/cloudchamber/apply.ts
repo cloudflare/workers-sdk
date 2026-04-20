@@ -29,13 +29,18 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { configRolloutStepsToAPI } from "../containers/deploy";
+import { createCommand } from "../core/create-command";
 import { getAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
-import { promiseSpinner } from "./common";
+import {
+	cloudchamberScope,
+	fillOpenAPIConfiguration,
+	promiseSpinner,
+} from "./common";
 import { cleanForInstanceType } from "./instance-type/instance-type";
 import type {
 	CommonYargsArgv,
@@ -448,7 +453,7 @@ export async function apply(
 					name: application.name,
 					rollout_step_percentage:
 						application.durable_objects !== undefined
-							? appConfigNoDefaults.rollout_step_percentage ?? 25
+							? (appConfigNoDefaults.rollout_step_percentage ?? 25)
 							: appConfigNoDefaults.rollout_step_percentage,
 					rollout_kind:
 						appConfigNoDefaults.rollout_kind == "full_manual"
@@ -667,3 +672,28 @@ export async function applyCommand(
 		config
 	);
 }
+
+export const cloudchamberApplyCommand = createCommand({
+	metadata: {
+		description: "Apply the changes in the container applications to deploy",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: true,
+		deprecated: true,
+		deprecatedMessage:
+			"`wrangler cloudchamber apply` is deprecated and will be removed in the next major version.\n" +
+			"Please use `wrangler deploy` instead.",
+	},
+	args: {
+		"skip-defaults": {
+			requiresArg: true,
+			type: "boolean",
+			demandOption: false,
+			describe: "Skips recommended defaults added by apply",
+		},
+	},
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await applyCommand(args, config);
+	},
+});

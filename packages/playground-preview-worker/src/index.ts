@@ -1,6 +1,6 @@
+import { MetricsRegistry } from "@cloudflare/workers-utils/prometheus-metrics";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
-import prom from "promjs";
 import {
 	HttpError,
 	PreviewRequestFailed,
@@ -10,7 +10,6 @@ import {
 	UploadFailed,
 } from "./errors";
 import { handleException, setupSentry } from "./sentry";
-import type { RegistryType } from "promjs";
 import type { Toucan } from "toucan-js";
 
 function maybeParseUrl(url: string | undefined) {
@@ -26,7 +25,7 @@ function maybeParseUrl(url: string | undefined) {
 
 const app = new Hono<{
 	Bindings: Env;
-	Variables: { sentry: Toucan; prometheus: RegistryType };
+	Variables: { sentry: Toucan; prometheus: MetricsRegistry };
 }>({
 	// This replaces . with / in url hostnames, which allows for parameter matching in hostnames as well as paths
 	// e.g. https://something.example.com/hello/world -> something/example/com/hello/world
@@ -64,7 +63,7 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 
 	const headers = new Headers(request.headers);
 
-	// Fallback to the request method for backward compatiblility
+	// Fallback to the request method for backward compatibility
 	const method = request.headers.get("X-CF-Http-Method") ?? request.method;
 
 	headers.delete("X-CF-Http-Method");
@@ -117,11 +116,10 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 }
 
 app.use("*", async (c, next) => {
-	c.set("prometheus", prom());
+	c.set("prometheus", new MetricsRegistry());
 
 	const registry = c.get("prometheus");
-	const requestCounter = registry.create(
-		"counter",
+	const requestCounter = registry.createCounter(
 		"devprod_playground_preview_worker_request_total",
 		"Request counter for DevProd's playground-preview-worker service"
 	);
@@ -200,23 +198,6 @@ app.post(`${rootDomain}/api/worker`, async (c) => {
 	});
 });
 
-app.get(`${rootDomain}/api/inspector`, async (c) => {
-	const url = new URL(c.req.url);
-	const userId = url.searchParams.get("user");
-	if (!userId) {
-		throw new PreviewRequestFailed("", false);
-	}
-	let userObjectId: DurableObjectId;
-	try {
-		userObjectId = c.env.UserSession.idFromString(userId);
-	} catch {
-		throw new PreviewRequestFailed(userId, false);
-	}
-	const userObject = c.env.UserSession.get(userObjectId);
-
-	return userObject.fetch(c.req.raw);
-});
-
 /**
  * Given a preview session, the client should obtain a specific preview token
  * This endpoint takes in the URL parameters:
@@ -241,7 +222,10 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 		!(
 			referer.hostname === "workers.cloudflare.com" ||
 			referer.hostname === "localhost" ||
-			referer.hostname.endsWith("workers-playground.pages.dev")
+			referer.hostname.endsWith(".workers-playground.pages.dev") ||
+			referer.hostname === "workers-playground.pages.dev" ||
+			referer.hostname.endsWith(".workers-playground.workers.dev") ||
+			referer.hostname === "workers-playground.workers.dev"
 		)
 	) {
 		throw new PreviewRequestForbidden();
@@ -324,8 +308,7 @@ app.onError((e, c) => {
 
 	// Only include reportable `HttpError`s or any other error in error metrics
 	if (!(e instanceof HttpError) || e.reportable) {
-		const errorCounter = registry.create(
-			"counter",
+		const errorCounter = registry.createCounter(
 			"devprod_playground_preview_worker_error_total",
 			"Error counter for DevProd's playground-preview-worker service"
 		);

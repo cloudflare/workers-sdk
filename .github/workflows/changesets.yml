@@ -54,12 +54,20 @@ jobs:
 
       - name: Create Version PR or Publish to NPM
         id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf # v1
         with:
           version: node .github/changeset-version.js
           publish: pnpm exec changeset publish
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+
+      # Switch to Node 22 for non-npm package deployments because quick-edit
+      # builds native modules (tree-sitter) that are not compatible with
+      # Node 24's C++20 requirement for V8 headers.
+      - name: Switch to Node 22 for non-npm package deployments
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Deploy non-NPM Packages
         id: deploy
@@ -81,6 +89,7 @@ jobs:
         run: node -r esbuild-register tools/deployments/alert-on-error.ts
         env:
           PUBLISH_STATUS: ${{ steps.changesets.outcome }}
+          HAS_CHANGESETS: ${{ steps.changesets.outputs.hasChangesets }}
           DEPLOYMENT_STATUS: ${{ steps.deploy.outputs.status }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           TOKEN: ${{ secrets.STATUS_BOT_SECRET }}

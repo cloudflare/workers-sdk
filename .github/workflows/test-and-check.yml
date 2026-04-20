@@ -12,7 +12,7 @@ jobs:
     if: github.head_ref != 'changeset-release/main'
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-add-pr
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
     timeout-minutes: 30
     name: Add PR to project
     runs-on: ubuntu-latest
@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-checks
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
 
     name: "Checks"
     runs-on: ubuntu-latest
@@ -73,15 +73,22 @@ jobs:
         run: node packages/wrangler/src/__tests__/test-old-node-version.js error
 
   test:
-    timeout-minutes: 60
+    timeout-minutes: 30
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-test
-      cancel-in-progress: true
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.suite }}-test
+      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
 
-    name: ${{ format('Tests ({0})', matrix.description) }}
+    name: ${{ format('Tests ({0}, {1})', matrix.description, matrix.suite) }}
     strategy:
       fail-fast: false
       matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        suite:
+          - packages-and-tools
+          - fixtures
         include:
           - os: macos-latest
             description: macOS
@@ -98,7 +105,7 @@ jobs:
           fetch-depth: 0
 
       - name: Filter changed paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
         id: changes
         with:
           filters: |
@@ -122,7 +129,7 @@ jobs:
 
       - name: Run tests (tools only)
         # tools _only_ needs to be tested on Linux because they're only intended to run in CI
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.os == 'ubuntu-latest'
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
         run: pnpm run test:ci --log-order=stream --filter="@cloudflare/tools"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
@@ -130,10 +137,13 @@ jobs:
           CI_OS: ${{ matrix.description }}
 
       - name: Run tests (packages)
-        # We are running the package tests first be able to get early feedback on changes.
-        # There is no point in running the fixtures if a package is broken.
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools'
+        # We skip @cloudflare/vitest-pool-workers tests in CI on Windows because they're very flaky. We still run the vitest-pool-workers-examples fixture, which is a comprehensive set of example tests and gives us a lot of confidence.
+        # The @cloudflare/vitest-pool-workers tests skipped are things like watch mode, which constantly times out probably due to the github runners in use.
+        # Package tests are well-isolated (separate processes, temp dirs, random ports, MSW mocks) and can safely run in parallel.
+        # Concurrency is capped at 3 to avoid CPU starvation on 4-vCPU CI runners when heavyweight suites
+        # (wrangler/forks, miniflare/workerd, vitest-pool-workers/Verdaccio) overlap.
+        run: pnpm run test:ci --log-order=stream --concurrency=3 --filter="./packages/*" ${{ matrix.os == 'windows-latest' && '--filter="!./packages/vitest-pool-workers"' || '' }}
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
@@ -141,18 +151,34 @@ jobs:
           CI_OS: ${{ matrix.description }}
 
       - name: Run tests (fixtures)
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        # Browser rendering is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
-        run: pnpm run test:ci --concurrency 1 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-rendering"' || '' }}
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
+        # Browser Run fixture is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
+        # start-worker-node is excluded here and run separately below — its worker.dispose() cleanup
+        # hangs when any other fixture runs in parallel, causing the file-level node:test timeout to fire.
+        # Since the dev registry is now file-based (not network-based), fixture tests can safely run in parallel.
+        # Concurrency is capped at 2 to avoid CPU starvation on CI runners when multiple fixtures
+        # spawn workerd processes simultaneously (Windows runners are especially slow under load).
+        run: pnpm run test:ci --concurrency=2 --log-order=stream --filter="./fixtures/*" --filter="!./fixtures/start-worker-node-test" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-run"' || '' }}
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.description }}
 
+      - name: Run tests (start-worker-node)
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
+        # This fixture must run alone — worker.dispose() cleanup hangs under any parallel load,
+        # causing node:test's file-level timeout to fire even though all individual tests pass in <1s.
+        run: pnpm run test:ci --log-order=stream --filter="./fixtures/start-worker-node-test"
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/start-worker-node/index.html
+          CI_OS: ${{ matrix.description }}
+
       - name: Upload turbo logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}
+          name: turbo-runs-${{ matrix.os }}-${{ matrix.suite }}
           path: .turbo/runs

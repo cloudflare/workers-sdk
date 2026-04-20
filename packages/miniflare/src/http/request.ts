@@ -1,12 +1,12 @@
-import {
-	Request as BaseRequest,
-	RequestInfo as BaseRequestInfo,
-	RequestInit as BaseRequestInit,
-} from "undici";
+import { Request as BaseRequest } from "undici";
 import type {
 	IncomingRequestCfProperties,
 	RequestInitCfProperties,
 } from "@cloudflare/workers-types/experimental";
+import type {
+	RequestInfo as BaseRequestInfo,
+	RequestInit as BaseRequestInit,
+} from "undici";
 
 export type RequestInitCfType =
 	| Partial<IncomingRequestCfProperties>
@@ -41,10 +41,7 @@ export class Request<
 		return this[kCf];
 	}
 
-	// JSDoc comment so retained when bundling types with api-extractor
-	/** @ts-expect-error `clone` is actually defined as a method internally */
 	clone(): Request<CfType> {
-		// @ts-ignore
 		const request = super.clone() as Request<CfType>;
 		// Update prototype so cloning a clone clones `cf`
 		Object.setPrototypeOf(request, Request.prototype);

@@ -4,14 +4,16 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
-import type { GlobalSetupContext } from "vitest/node";
+import { removeDir } from "@cloudflare/workers-utils";
+import { version } from "../package.json";
+import type { TestProject } from "vitest/node";
 
 const repoRoot = path.resolve(__dirname, "../../..");
 const packagesRoot = path.resolve(repoRoot, "packages");
 
 // Using a global setup means we can modify tests without having to re-install
 // packages into our temporary directory
-export default async function ({ provide }: GlobalSetupContext) {
+export default async function ({ provide }: TestProject) {
 	const stop = await startMockNpmRegistry("@cloudflare/vitest-pool-workers");
 
 	// Create temporary directory
@@ -26,10 +28,7 @@ export default async function ({ provide }: GlobalSetupContext) {
 		await stop();
 
 		console.log("Cleaning up temporary directory...");
-		try {
-			await fs.rm(projectPath, { recursive: true, maxRetries: 10 });
-			// This sometimes fails on Windows with EBUSY
-		} catch {}
+		void removeDir(projectPath, { fireAndForget: true });
 	};
 }
 
@@ -43,16 +42,26 @@ async function createTestProject() {
 		await fs.mkdtemp(path.join(os.tmpdir(), "vitest-pool-workers temp-"))
 	);
 	const packageJsonPath = path.join(projectPath, "package.json");
+	const vitestPeerDep = await getVitestPeerDep();
 	const packageJson = {
 		name: "vitest-pool-workers-e2e-tests",
 		private: true,
 		type: "module",
 		devDependencies: {
-			"@cloudflare/vitest-pool-workers": "*",
-			vitest: await getVitestPeerDep(),
+			// Ensure we use the local version of vitest-pool-workers
+			"@cloudflare/vitest-pool-workers": version,
+			"@vitest/coverage-istanbul": vitestPeerDep,
+			vitest: vitestPeerDep,
 		},
 	};
 	await fs.writeFile(packageJsonPath, JSON.stringify(packageJson));
+	// pnpm 10 blocks lifecycle scripts by default. The transitive deps
+	// (workerd, esbuild) need their postinstall to download platform binaries.
+	const workspaceYamlPath = path.join(projectPath, "pnpm-workspace.yaml");
+	await fs.writeFile(
+		workspaceYamlPath,
+		["allowBuilds:", "  esbuild: true", "  workerd: true", ""].join("\n")
+	);
 	return projectPath;
 }
 

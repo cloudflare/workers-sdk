@@ -23,6 +23,9 @@ export const docs = createCommand({
 			describe: "Takes you to the docs, even if search fails",
 		},
 	},
+	behaviour: {
+		printMetricsBanner: true,
+	},
 	positionalArgs: ["search"],
 	async handler(args, { config }) {
 		//if no command is provided, open the docs homepage

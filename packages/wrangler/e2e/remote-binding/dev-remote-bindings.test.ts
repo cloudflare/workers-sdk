@@ -1,45 +1,40 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import getPort from "get-port";
 import dedent from "ts-dedent";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { fetchText } from "../helpers/fetch-text";
-import { generateResourceName } from "../helpers/generate-resource-name";
 import { normalizeOutput } from "../helpers/normalize";
 import { makeRoot, seed } from "../helpers/setup";
+import { waitFor, waitForLong } from "../helpers/wait-for";
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"wrangler dev - remote bindings",
 	() => {
-		const remoteWorkerName = generateResourceName();
-		const alternativeRemoteWorkerName = generateResourceName();
+		const remoteWorkerName = "preserve-e2e-wrangler-remote-worker";
+		const alternativeRemoteWorkerName =
+			"preserve-e2e-wrangler-remote-worker-alt";
 		const helper = new WranglerE2ETestHelper();
 
 		beforeAll(async () => {
 			await helper.seed(resolve(__dirname, "./workers"));
-			const cleanups = await Promise.all([
-				helper
-					.worker({
-						entryPoint: "remote-worker.js",
-						workerName: remoteWorkerName,
-						cleanOnTestFinished: false,
-					})
-					.then(({ cleanup }) => cleanup),
-				helper
-					.worker({
-						entryPoint: "alt-remote-worker.js",
-						workerName: alternativeRemoteWorkerName,
-						cleanOnTestFinished: false,
-					})
-					.then(({ cleanup }) => cleanup),
+			await Promise.all([
+				helper.ensureWorkerDeployed({
+					entryPoint: "remote-worker.js",
+					workerName: remoteWorkerName,
+				}),
+				helper.ensureWorkerDeployed({
+					entryPoint: "alt-remote-worker.js",
+					workerName: alternativeRemoteWorkerName,
+				}),
 			]);
-			return () => Promise.allSettled(cleanups.map((cleanup) => cleanup()));
 		}, 35_000);
 
-		it("handles both remote and local service bindings at the same time", async () => {
+		it("handles both remote and local service bindings at the same time", async ({
+			expect,
+		}) => {
 			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
@@ -68,7 +63,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		`);
 		});
 
-		it("allows code changes during development", async () => {
+		it("allows code changes during development", async ({ expect }) => {
 			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
@@ -125,7 +120,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			);
 		});
 
-		it("handles workers AI alongside a local service binding", async () => {
+		it("handles workers AI alongside a local service binding", async ({
+			expect,
+		}) => {
 			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
@@ -152,7 +149,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		`);
 		});
 
-		it("doesn't show any logs from startRemoteProxySession()", async () => {
+		it("doesn't show any logs from startRemoteProxySession()", async ({
+			expect,
+		}) => {
 			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
@@ -174,21 +173,23 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			);
 
 			// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
-			const normalizedOutput = normalizeOutput(worker.currentOutput);
-
-			expect(normalizedOutput).toMatchInlineSnapshot(`
-				"Your Worker has access to the following bindings:
-				Binding        Resource      Mode
-				env.AI         AI            remote
-				▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.
-				⎔ Starting local server...
-				[wrangler:info] Ready on http://<HOST>:<PORT>
-				[wrangler:info] GET / 200 OK (TIMINGS)"
-			`);
+			await waitFor(() =>
+				expect(normalizeOutput(worker.currentOutput)).toEqual(dedent`
+					Your Worker has access to the following bindings:
+					Binding        Resource      Mode
+					env.AI         AI            remote
+					▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.
+					⎔ Starting local server...
+					[wrangler:info] Ready on http://<HOST>:<PORT>
+					[wrangler:info] GET / 200 OK (TIMINGS)
+				`)
+			);
 		});
 
 		describe("shows helpful error logs", () => {
-			it("when a remote service binding is not properly configured", async () => {
+			it("when a remote service binding is not properly configured", async ({
+				expect,
+			}) => {
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
 						name: "remote-bindings-mixed-bindings-test",
@@ -206,16 +207,18 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				const worker = helper.runLongLived("wrangler dev");
 
-				await vi.waitFor(
-					() =>
-						expect(worker.currentOutput).toContain(
-							"Could not resolve service binding 'REMOTE_WORKER'. Target script 'non-existent-service-binding' not found."
-						),
-					7_000
+				// The error appears only after the remote proxy session validates
+				// the binding against the Cloudflare API, so use the longer timeout.
+				await waitForLong(() =>
+					expect(worker.currentOutput).toContain(
+						"Service binding 'REMOTE_WORKER' references Worker 'non-existent-service-binding' which was not found."
+					)
 				);
 			});
 
-			it("when a remote KV binding is not properly configured", async () => {
+			it("when a remote KV binding is not properly configured", async ({
+				expect,
+			}) => {
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
 						name: "remote-bindings-mixed-bindings-test",
@@ -233,18 +236,20 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				const worker = helper.runLongLived("wrangler dev");
 
-				await vi.waitFor(
-					() =>
-						expect(worker.currentOutput).toContain(
-							"KV namespace 'non-existent-kv' is not valid."
-						),
-					7_000
+				// The error appears only after the remote proxy session validates
+				// the binding against the Cloudflare API, so use the longer timeout.
+				await waitForLong(() =>
+					expect(worker.currentOutput).toContain(
+						"KV namespace 'non-existent-kv' is not valid."
+					)
 				);
 			});
 		});
 
 		describe("multi-worker", () => {
-			it("handles both remote and local service bindings at the same time in all workers", async () => {
+			it("handles both remote and local service bindings at the same time in all workers", async ({
+				expect,
+			}) => {
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
 						name: "remote-bindings-mixed-bindings-multi-worker-test",
@@ -292,7 +297,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`wrangler dev -c wrangler.json -c ${localTest}/wrangler.json`
 				);
 
-				const { url } = await worker.waitForReady();
+				// Multi-worker with remote bindings on both workers requires two
+				// serialised remote proxy sessions (API calls) before "Ready on"
+				// can appear, so give it more time than the default 15s.
+				const { url } = await worker.waitForReady(30_000);
 
 				await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
 				"LOCAL<WORKER>: [local-test-worker]REMOTE<WORKER>: Hello from an alternative remote worker
@@ -319,11 +327,6 @@ async function spawnLocalWorker(helper: WranglerE2ETestHelper): Promise<void> {
 							}
 						}`,
 	});
-	const localWorker = helper.runLongLived(
-		// Note: we use a random port here otherwise for some reason in CI windows
-		//       allows the default port to be overridden by other processes
-		`wrangler dev --port ${await getPort()}`,
-		{ cwd: local }
-	);
+	const localWorker = helper.runLongLived("wrangler dev", { cwd: local });
 	await localWorker.waitForReady();
 }

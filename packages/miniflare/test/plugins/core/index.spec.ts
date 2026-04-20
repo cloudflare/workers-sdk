@@ -2,18 +2,18 @@ import childProcess from "node:child_process";
 import { once } from "node:events";
 import fs from "node:fs/promises";
 import https from "node:https";
-import { AddressInfo } from "node:net";
 import path from "node:path";
 import { text } from "node:stream/consumers";
 import tls from "node:tls";
 import stoppable from "stoppable";
-import { expect, onTestFinished, test } from "vitest";
+import { onTestFinished, test } from "vitest";
 import which from "which";
 import { useTmp } from "../../test-shared";
+import type { AddressInfo } from "node:net";
 
 const opensslInstalled = which.sync("openssl", { nothrow: true });
 const opensslTest = opensslInstalled ? test : test.skip;
-opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async () => {
+opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
 	const tmp = await useTmp();
 
 	// Generate self-signed certificate

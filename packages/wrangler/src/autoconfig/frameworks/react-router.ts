@@ -2,16 +2,19 @@ import assert from "node:assert";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { installPackages } from "@cloudflare/cli/packages";
+import { transformFile } from "@cloudflare/codemod";
 import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
 import { logger } from "../../logger";
-import { transformFile } from "../c3-vendor/codemod";
-import { installPackages } from "../c3-vendor/packages";
-import { getInstalledPackageVersion } from "./utils/packages";
+import { Framework } from "./framework-class";
 import { transformViteConfig } from "./utils/vite-config";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import { installCloudflareVitePlugin } from "./utils/vite-plugin";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 
 const b = recast.types.builders;
 
@@ -124,12 +127,7 @@ function transformReactRouterConfig(
 	});
 }
 
-function configPropertyName(projectPath: string) {
-	const reactRouterVersion = getInstalledPackageVersion(
-		"react-router",
-		projectPath
-	);
-
+function configPropertyName(reactRouterVersion: string) {
 	if (!reactRouterVersion) {
 		return "v8_viteEnvironmentApi";
 	}
@@ -146,20 +144,22 @@ export class ReactRouter extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
+		packageManager,
+		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const viteEnvironmentKey = configPropertyName(projectPath);
+		const viteEnvironmentKey = configPropertyName(this.frameworkVersion);
 		if (!dryRun) {
-			await installPackages(["@cloudflare/vite-plugin"], {
-				dev: true,
-				startText: "Installing the Cloudflare Vite plugin",
-				doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
+			await installCloudflareVitePlugin({
+				packageManager: packageManager.type,
+				projectPath,
+				isWorkspaceRoot,
 			});
 
 			mkdirSync("workers");
 
 			writeFileSync(
 				"workers/app.ts",
-				dedent/* javascript */ `
+				dedent /* javascript */ `
 					import { createRequestHandler } from "react-router";
 
 					declare module "react-router" {
@@ -186,16 +186,17 @@ export class ReactRouter extends Framework {
 				`
 			);
 
-			await installPackages(["isbot"], {
+			await installPackages(packageManager.type, ["isbot"], {
 				dev: true,
 				startText: "Installing the isbot package",
 				doneText: `${brandColor(`installed`)} ${dim("isbot")}`,
+				isWorkspaceRoot,
 			});
 
 			if (!existsSync("app/entry.server.tsx")) {
 				writeFileSync(
 					`app/entry.server.tsx`,
-					dedent/* javascript */ `
+					dedent /* javascript */ `
 					import type { AppLoadContext, EntryContext } from "react-router";
 					import { ServerRouter } from "react-router";
 					import { isbot } from "isbot";

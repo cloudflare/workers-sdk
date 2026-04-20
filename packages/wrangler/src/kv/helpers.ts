@@ -29,6 +29,7 @@ export const BATCH_KEY_MAX = API_MAX / 10;
 export const BATCH_MAX_ERRORS_WARNINGS = 12;
 
 type KvArgs = {
+	namespace?: string;
 	binding?: string;
 	"namespace-id"?: string;
 	preview?: boolean;
@@ -419,14 +420,39 @@ async function getIdFromSettings(
 	return existingKV.namespace_id as string;
 }
 
+/**
+ * Result of resolving a KV namespace ID.
+ */
+export interface KVNamespaceIdResult {
+	namespaceId: string;
+	displayName: string;
+}
+
 export async function getKVNamespaceId(
-	{ preview, binding, "namespace-id": namespaceId }: KvArgs,
+	{ namespace, preview, binding, "namespace-id": namespaceId }: KvArgs,
 	config: Config,
 	isLocal: boolean
-): Promise<string> {
-	// nice
+): Promise<KVNamespaceIdResult> {
 	if (namespaceId) {
-		return namespaceId;
+		return { namespaceId, displayName: `id: "${namespaceId}"` };
+	}
+
+	// If namespace name is provided, look up the ID from the API
+	if (namespace) {
+		const accountId = await requireAuth(config);
+		const namespaces = await listKVNamespaces(config, accountId);
+		const found = namespaces.find((ns) => ns.title === namespace);
+
+		if (!found) {
+			throw new UserError(
+				`No namespace found with the name "${namespace}". ` +
+					`Use --namespace-id or --binding instead, or check available namespaces with "wrangler kv namespace list".`
+			);
+		}
+		return {
+			namespaceId: found.id,
+			displayName: `name: "${namespace}" (id: "${found.id}")`,
+		};
 	}
 
 	// begin pre-flight checks
@@ -451,10 +477,12 @@ export async function getKVNamespaceId(
 		);
 	}
 
-	const namespace = config.kv_namespaces.find((ns) => ns.binding === binding);
+	const configNamespace = config.kv_namespaces.find(
+		(ns) => ns.binding === binding
+	);
 
 	// we couldn't find a namespace with that binding
-	if (!namespace) {
+	if (!configNamespace) {
 		throw new UserError(
 			`A namespace with binding name "${binding}" was not found in the configured "kv_namespaces".`
 		);
@@ -462,11 +490,15 @@ export async function getKVNamespaceId(
 
 	// end pre-flight checks
 
+	// Helper to format displayName for binding-based lookups
+	const formatDisplayName = (nsId: string) =>
+		`binding: "${binding}" (id: "${nsId}")`;
+
 	// we're in preview mode, `--preview true` or `--preview` was passed
-	if (preview && namespace.preview_id) {
-		namespaceId = namespace.preview_id;
+	if (preview && configNamespace.preview_id) {
+		const nsId = configNamespace.preview_id;
 		// We don't want to execute code below if preview is set to true, so we just return. Otherwise we will get errors!
-		return namespaceId;
+		return { namespaceId: nsId, displayName: formatDisplayName(nsId) };
 	} else if (preview) {
 		throw new UserError(
 			`No preview ID found for ${binding}. Add one to your wrangler config file to use a separate namespace for previewing your worker.`
@@ -478,14 +510,15 @@ export async function getKVNamespaceId(
 	const previewIsDefined = typeof preview !== "undefined";
 
 	// --preview false was passed
-	if (previewIsDefined && namespace.id) {
-		namespaceId = namespace.id;
+	if (previewIsDefined && configNamespace.id) {
+		const nsId = configNamespace.id;
 		// We don't want to execute code below if preview is set to true, so we just return. Otherwise we can get error!
-		return namespaceId;
+		return { namespaceId: nsId, displayName: formatDisplayName(nsId) };
 	} else if (previewIsDefined) {
 		if (getFlag("RESOURCES_PROVISION")) {
 			assert(binding);
-			return getIdFromSettings(config, binding, isLocal);
+			const nsId = await getIdFromSettings(config, binding, isLocal);
+			return { namespaceId: nsId, displayName: formatDisplayName(nsId) };
 		}
 		throw new UserError(
 			`No namespace ID found for ${binding}. Add one to your wrangler config file or pass it via \`--namespace-id\`.`
@@ -494,33 +527,25 @@ export async function getKVNamespaceId(
 
 	// `--preview` wasn't passed
 	const bindingHasOnlyOneId =
-		(namespace.id && !namespace.preview_id) ||
-		(!namespace.id && namespace.preview_id);
+		(configNamespace.id && !configNamespace.preview_id) ||
+		(!configNamespace.id && configNamespace.preview_id);
 	if (bindingHasOnlyOneId) {
-		namespaceId = namespace.id || namespace.preview_id;
+		const nsId = configNamespace.id || configNamespace.preview_id;
+		assert(nsId);
+		return { namespaceId: nsId, displayName: formatDisplayName(nsId) };
 	} else if (
 		getFlag("RESOURCES_PROVISION") &&
-		!namespace.id &&
-		!namespace.preview_id
+		!configNamespace.id &&
+		!configNamespace.preview_id
 	) {
 		assert(binding);
-		return getIdFromSettings(config, binding, isLocal);
+		const nsId = await getIdFromSettings(config, binding, isLocal);
+		return { namespaceId: nsId, displayName: formatDisplayName(nsId) };
 	} else {
 		throw new UserError(
 			`${binding} has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.`
 		);
 	}
-
-	// shouldn't happen. we should be able to prove this with strong typing.
-	// TODO: when we add strongly typed commands, rewrite these checks so they're exhaustive
-	if (!namespaceId) {
-		throw new Error(
-			"Something went wrong trying to determine which namespace to upload to.\n" +
-				"Please create a github issue with the command you just ran along with your wrangler configuration."
-		);
-	}
-
-	return namespaceId;
 }
 
 // TODO(soon): once we upgrade to TypeScript 5.2, this should actually use `using`:

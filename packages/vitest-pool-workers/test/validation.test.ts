@@ -1,6 +1,7 @@
 import path from "node:path";
 import dedent from "ts-dedent";
-import { test } from "./helpers";
+import { describe } from "vitest";
+import { test, vitestConfig } from "./helpers";
 
 test(
 	"formats config validation errors",
@@ -10,81 +11,45 @@ test(
 
 		// Check top-level options validated
 		await seed({
-			"vitest.config.mts": dedent`
-			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
-			export default defineWorkersConfig({
-				test: {
-					poolOptions: {
-						workers: {
-							singleWorker: 42,
-							isolatedStorage: "yes please",
-							miniflare: [],
-							wrangler: "./wrangler.toml"
-						},
-					},
-				}
-			});
-		`,
+			"vitest.config.mts": vitestConfig({
+				miniflare: [],
+				wrangler: "./wrangler.toml",
+			}),
 			"index.test.ts": "",
 		});
 		let result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
 		let expected = dedent`
-		TypeError: Unexpected pool options in project ${path.join(tmpPathName, "vitest.config.mts")}:
-		{
-			test: {
-				poolOptions: {
-					workers: {
-						singleWorker: 42,
-													^ Expected boolean, received number
-						isolatedStorage: 'yes please',
-														 ^ Expected boolean, received string
-						miniflare: [],
-											 ^ Expected object, received array
-						wrangler: './wrangler.toml',
-											^ Expected object, received string
-					},
-				},
-			},
-		}
-	`.replaceAll("\t", "  ");
+			TypeError: Unexpected options in project ${path.join(tmpPathName, "vitest.config.mts")}:
+			{
+			  miniflare: [],
+			             ^ Expected object, received array
+			  wrangler: './wrangler.toml',
+			            ^ Expected object, received string
+			}
+		`;
 		expect(result.stderr).toMatch(expected);
 
 		// Check `miniflare` options validated with correct error paths
 		await seed({
-			"vitest.config.mts": dedent`
-			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
-			export default defineWorkersConfig({
-				test: {
-					poolOptions: {
-						workers: {
-							miniflare: {
-								compatibilityDate: { year: 2024, month: 1, day: 1 }
-							},
-						},
-					},
-				}
-			});
-		`,
+			"vitest.config.mts": vitestConfig({
+				miniflare: {
+					compatibilityDate: { year: 2024, month: 1, day: 1 },
+				},
+			}),
 			"index.test.ts": "",
 		});
 		result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
 		expected = dedent`
-		TypeError: Unexpected pool options in project ${path.join(tmpPathName, "vitest.config.mts")}:
-		{
-			test: {
-				poolOptions: {
-					workers: {
-						miniflare: {
-							compatibilityDate: { year: 2024, month: 1, day: 1 },
-																 ^ Expected string, received object
-						},
-					},
-				},
-			},
-		}
-	`.replaceAll("\t", "  ");
+			TypeError: Unexpected options in project ${path.join(tmpPathName, "vitest.config.mts")}:
+			{
+			  miniflare: {
+			    compatibilityDate: { year: 2024, month: 1, day: 1 },
+			                       ^ Expected string, received object
+			  },
+			}
+		`;
 		expect(result.stderr).toMatch(expected);
 	}
 );
@@ -97,69 +62,122 @@ test(
 
 		// Check with no entrypoint
 		await seed({
-			"vitest.config.mts": dedent`
-			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
-			export default defineWorkersConfig({
-				test: {
-					poolOptions: {
-						workers: {
-							singleWorker: true,
-							miniflare: {
-								compatibilityDate: "2024-01-01",
-								compatibilityFlags: ["nodejs_compat"],
-							},
-						},
-					},
-				}
-			});
-		`,
-			"index.test.ts": dedent`
-			import { SELF } from "cloudflare:test";
-			import { it, expect } from "vitest";
-			it("sends request", async () => {
-				const response = await SELF.fetch("https://example.com/");
-				expect(response.ok).toBe(true);
-			});
-		`,
+			"vitest.config.mts": vitestConfig({
+				miniflare: {
+					compatibilityDate: "2025-12-02",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
+			"index.test.ts": dedent /* javascript */ `
+				import { SELF } from "cloudflare:test";
+				import { it, expect } from "vitest";
+				it("sends request", async () => {
+					const response = await SELF.fetch("https://example.com/");
+					expect(response.ok).toBe(true);
+				});
+			`,
 		});
 		let result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
 		let expected = dedent`
-		Error: Using service bindings to the current worker requires \`poolOptions.workers.main\` to be set to your worker's entrypoint
-	`;
+			Error: Using service bindings to the current worker requires \`poolOptions.workers.main\` to be set to your worker's entrypoint
+		`;
 		expect(result.stderr).toMatch(expected);
 
 		// Check with service worker
 		await seed({
-			"vitest.config.mts": dedent`
-			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
-			export default defineWorkersConfig({
-				test: {
-					poolOptions: {
-						workers: {
-							main: "./index.ts",
-							singleWorker: true,
-							miniflare: {
-								compatibilityDate: "2024-01-01",
-								compatibilityFlags: ["nodejs_compat"],
-							},
-						},
-					},
-				}
-			});
-		`,
-			"index.ts": dedent`
-			addEventListener("fetch", (event) => {
-				event.respondWith(new Response("body"));
-			});
-		`,
+			"vitest.config.mts": vitestConfig({
+				main: "./index.ts",
+				miniflare: {
+					compatibilityDate: "2025-12-02",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
+			"index.ts": dedent /* javascript */ `
+				addEventListener("fetch", (event) => {
+					event.respondWith(new Response("body"));
+				});
+			`,
 		});
 		result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
 		expected = dedent`
-		${path.join(tmpPathName, "index.ts")} does not export a default entrypoint. \`@cloudflare/vitest-pool-workers\` does not support service workers or named entrypoints for \`SELF\`.
-		If you're using service workers, please migrate to the modules format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers.
-	`;
+			${path.join(tmpPathName, "index.ts")} does not export a default entrypoint. \`@cloudflare/vitest-pool-workers\` does not support service workers or named entrypoints for \`SELF\`.
+			If you're using service workers, please migrate to the modules format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers.
+		`;
 		expect(result.stderr).toMatch(expected);
 	}
 );
+
+describe("coverage provider validation", () => {
+	test(
+		"rejects v8 coverage provider with a clear error",
+		{ timeout: 45_000 },
+		async ({ expect, seed, vitestRun }) => {
+			await seed({
+				"vitest.config.mts": vitestConfig(
+					{},
+					{ coverage: { enabled: true, provider: "v8" } }
+				),
+				"index.test.ts": dedent /* javascript */ `
+				import { it, expect } from "vitest";
+				it("works", () => {
+					expect(1 + 1).toBe(2);
+				});
+			`,
+			});
+			const result = await vitestRun();
+			expect(await result.exitCode).toBe(1);
+			expect(result.stderr).toMatch(
+				'Coverage provider "v8" is not supported by `@cloudflare/vitest-pool-workers`'
+			);
+			expect(result.stderr).toMatch("Use Istanbul instead");
+		}
+	);
+
+	test(
+		"rejects default coverage provider (v8) with a clear error",
+		{ timeout: 45_000 },
+		async ({ expect, seed, vitestRun }) => {
+			// When no provider is specified, Vitest defaults to v8
+			await seed({
+				"vitest.config.mts": vitestConfig({}, { coverage: { enabled: true } }),
+				"index.test.ts": dedent /* javascript */ `
+				import { it, expect } from "vitest";
+				it("works", () => {
+					expect(1 + 1).toBe(2);
+				});
+			`,
+			});
+			const result = await vitestRun();
+			expect(await result.exitCode).toBe(1);
+			expect(result.stderr).toMatch(
+				'Coverage provider "v8" is not supported by `@cloudflare/vitest-pool-workers`'
+			);
+		}
+	);
+
+	test(
+		"allows istanbul coverage provider",
+		{ timeout: 60_000 },
+		async ({ expect, seed, vitestRun }) => {
+			await seed({
+				"vitest.config.mts": vitestConfig(
+					{},
+					{ coverage: { enabled: true, provider: "istanbul" } }
+				),
+				"index.test.ts": dedent /* javascript */ `
+				import { it, expect } from "vitest";
+				it("works", () => {
+					expect(1 + 1).toBe(2);
+				});
+			`,
+			});
+			const result = await vitestRun();
+			// Should not fail with a coverage provider error
+			expect(result.stderr).not.toMatch(
+				'Coverage provider "v8" is not supported'
+			);
+		}
+	);
+});

@@ -6,6 +6,7 @@ import {
 	deleteHyperdriveConfig,
 	deleteKVNamespace,
 	deleteProject,
+	deleteR2Bucket,
 	deleteWorker,
 	listCertificates,
 	listE2eContainerImages,
@@ -15,6 +16,7 @@ import {
 	listTmpE2EProjects,
 	listTmpE2EWorkers,
 	listTmpKVNamespaces,
+	listTmpR2Buckets,
 } from "./common";
 
 if (!process.env.CLOUDFLARE_API_TOKEN) {
@@ -37,6 +39,8 @@ async function run() {
 	// KV namespaces don't have a creation timestamp, but deletion will fail if there is a worker bound to it
 	// so delete these first to avoid interrupting running e2e jobs (unless you are very very unlucky)
 	await deleteKVNamespaces();
+
+	await deleteR2Buckets();
 
 	await deleteProjects();
 
@@ -156,14 +160,14 @@ async function deleteMtlsCertificates() {
 	const mtlsCertificates = await listCertificates();
 	for (const certificate of mtlsCertificates) {
 		console.log("Deleting mTLS certificate: " + certificate.id);
-		await deleteCertificate(certificate.id);
+		if (await deleteCertificate(certificate.id)) {
+			console.log(`Successfully deleted mTLS certificate ${certificate.id}`);
+		} else {
+			console.log(`Failed to delete mTLS certificate ${certificate.id}`);
+		}
 	}
 	if (mtlsCertificates.length === 0) {
 		console.log(`No mTLS certificates to delete.`);
-	} else {
-		console.log(
-			`Successfully deleted ${mtlsCertificates.length} mTLS certificates`
-		);
 	}
 }
 
@@ -172,5 +176,22 @@ async function deleteContainerApplications() {
 	for (const container of containers) {
 		await deleteContainerApplication(container);
 		console.log(`Deleted ${container.name} (${container.id})`);
+	}
+}
+
+async function deleteR2Buckets() {
+	const bucketsToDelete = await listTmpR2Buckets();
+
+	for (const bucket of bucketsToDelete) {
+		console.log("Deleting R2 bucket: " + bucket.name);
+		if (await deleteR2Bucket(bucket.name)) {
+			console.log(`Successfully deleted R2 bucket ${bucket.name}`);
+		} else {
+			console.log(`Failed to delete R2 bucket ${bucket.name}`);
+		}
+	}
+
+	if (bucketsToDelete.length === 0) {
+		console.log(`No R2 buckets to delete.`);
 	}
 }

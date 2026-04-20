@@ -11,17 +11,19 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"build": "dotenv -- turbo build",
-		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:package-deps && pnpm check:deployments && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
+		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:package-deps && pnpm check:catalog && pnpm check:deployments && pnpm check:workflows && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
+		"check:catalog": "node -r esbuild-register tools/deployments/validate-catalog-usage.ts",
 		"check:deployments": "node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts check",
 		"check:fixtures": "node -r esbuild-register tools/deployments/validate-fixtures.ts",
-		"check:format": "prettier . --check --ignore-unknown",
-		"check:lint": "dotenv -- turbo check:lint",
+		"check:format": "oxfmt --check",
+		"check:lint": "oxlint --deny-warnings --type-aware",
 		"check:package-deps": "node -r esbuild-register tools/deployments/validate-package-dependencies.ts",
 		"check:private-packages": "node -r esbuild-register tools/deployments/validate-private-packages.ts",
 		"check:type": "dotenv -- turbo check:type type:tests",
+		"check:workflows": "node -r esbuild-register tools/github-workflow-helpers/validate-action-pinning.ts",
 		"dev": "dotenv -- turbo dev",
-		"fix": "dotenv -- turbo check:lint -- --fix && pnpm run prettify",
-		"prettify": "prettier . --write --ignore-unknown",
+		"fix": "oxlint --fix --type-aware && pnpm run prettify",
+		"prettify": "oxfmt",
 		"test": "dotenv -- turbo test",
 		"test:ci": "dotenv -- turbo test:ci",
 		"test:e2e": "dotenv -- turbo test:e2e",
@@ -34,7 +36,6 @@
 		"@changesets/changelog-github": "^0.5.0",
 		"@changesets/cli": "^2.29.7",
 		"@changesets/parse": "^0.4.1",
-		"@ianvs/prettier-plugin-sort-imports": "4.2.1",
 		"@manypkg/cli": "^0.23.0",
 		"@types/node": "catalog:default",
 		"@vue/compiler-sfc": "^3.3.4",
@@ -42,48 +43,23 @@
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "catalog:default",
 		"esbuild-register": "^3.5.0",
-		"prettier": "^3.2.5",
-		"prettier-plugin-packagejson": "^2.2.18",
-		"tree-kill": "^1.2.2",
+		"eslint-plugin-turbo": "^2.8.17",
+		"jsonc-parser": "catalog:default",
+		"oxfmt": "^0.41.0",
+		"oxlint": "^1.56.0",
+		"oxlint-tsgolint": "^0.17.0",
+		"tree-kill": "catalog:default",
 		"turbo": "^2.7.2",
 		"typescript": "catalog:default",
-		"vite": "catalog:default",
 		"vitest": "catalog:default"
 	},
-	"packageManager": "pnpm@9.12.0",
 	"engines": {
-		"node": ">=18.20.0",
-		"pnpm": "^9.12.0"
+		"node": ">=20.0.0",
+		"pnpm": "^10.33.0"
 	},
 	"volta": {
 		"node": "20.19.3",
-		"pnpm": "9.12.0"
+		"pnpm": "10.33.0"
 	},
-	"pnpm": {
-		"peerDependencyRules": {
-			"allowedVersions": {
-				"react": "18",
-				"react-dom": "18",
-				"@types/react": "18",
-				"@types/react-dom": "18"
-			}
-		},
-		"overrides": {
-			"@types/react-dom@18>@types/react": "^18",
-			"@types/react-tabs>@types/react": "^18",
-			"@types/react-transition-group>@types/react": "^18",
-			"@cloudflare/elements>@types/react": "^18",
-			"@types/node": "$@types/node",
-			"vitest>vite": "^5.0.0",
-			"@types/node>undici-types": "catalog:default"
-		},
-		"patchedDependencies": {
-			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
-			"toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch",
-			"postal-mime": "patches/postal-mime.patch",
-			"youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch",
-			"@netlify/build-info": "patches/@netlify__build-info.patch",
-			"buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
-		}
-	}
+	"packageManager": "pnpm@10.33.0"
 }

@@ -1,4 +1,10 @@
 {
 	"extends": "../../tsconfig.workerd.json",
+	"compilerOptions": {
+		// @cloudflare/containers@0.0.25 has an alarm() signature incompatible
+		// with the updated DurableObject base type in @cloudflare/workers-types.
+		// Remove when https://github.com/cloudflare/containers/issues/167 is resolved.
+		"skipLibCheck": true
+	},
 	"include": ["./**/*.ts"]
 }

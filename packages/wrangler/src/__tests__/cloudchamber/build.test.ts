@@ -8,7 +8,7 @@ import {
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -54,7 +54,9 @@ describe("buildAndMaybePush", () => {
 		vi.clearAllMocks();
 	});
 
-	it("should be able to build image and push with test-app:tag", async () => {
+	it("should be able to build image and push with test-app:tag", async ({
+		expect,
+	}) => {
 		await runWrangler(
 			"containers build ./container-context -t test-app:tag -p"
 		);
@@ -99,7 +101,9 @@ describe("buildAndMaybePush", () => {
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 
-	it("should be able to build image and push with registry.cloudflare.com/test-app:tag", async () => {
+	it("should be able to build image and push with registry.cloudflare.com/test-app:tag", async ({
+		expect,
+	}) => {
 		await runWrangler(
 			"containers build ./container-context -t registry.cloudflare.com/test-app:tag -p"
 		);
@@ -143,7 +147,9 @@ describe("buildAndMaybePush", () => {
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 
-	it("should be able to build image and push with registry.cloudflare.com/some-account-id/test-app:tag", async () => {
+	it("should be able to build image and push with registry.cloudflare.com/some-account-id/test-app:tag", async ({
+		expect,
+	}) => {
 		await runWrangler(
 			"containers build ./container-context -t registry.cloudflare.com/some-account-id/test-app:tag -p"
 		);
@@ -187,7 +193,7 @@ describe("buildAndMaybePush", () => {
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 
-	it("should use a custom docker path if provided", async () => {
+	it("should use a custom docker path if provided", async ({ expect }) => {
 		vi.stubEnv("WRANGLER_DOCKER_BIN", "/custom/docker/path");
 		await runWrangler(
 			"containers build ./container-context -t test-app:tag -p"
@@ -234,7 +240,7 @@ describe("buildAndMaybePush", () => {
 		);
 	});
 
-	it("should be able to build image and push", async () => {
+	it("should be able to build image and push", async ({ expect }) => {
 		await runWrangler(
 			"containers build ./container-context -t test-app:tag -p"
 		);
@@ -278,7 +284,9 @@ describe("buildAndMaybePush", () => {
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 
-	it("should be able to build image and not push if it already exists in remote if config sha and digest both match", async () => {
+	it("should be able to build image and not push if it already exists in remote if config sha and digest both match", async ({
+		expect,
+	}) => {
 		vi.mocked(runDockerCmd).mockResolvedValueOnce({
 			abort: () => {},
 			ready: Promise.resolve({ aborted: false }),
@@ -331,7 +339,43 @@ describe("buildAndMaybePush", () => {
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 
-	it("should be able to build image and not push", async () => {
+	it("should match digests for images with registry ports", async ({
+		expect,
+	}) => {
+		vi.mocked(runDockerCmd).mockResolvedValueOnce({
+			abort: () => {},
+			ready: Promise.resolve({ aborted: false }),
+		});
+		vi.mocked(dockerImageInspect).mockReset();
+		vi.mocked(dockerImageInspect)
+			.mockResolvedValueOnce('["localhost:5000/test-app@sha256:three"]')
+			.mockResolvedValueOnce("53387881 2");
+		vi.mocked(runDockerCmdWithOutput).mockReset();
+		vi.mocked(runDockerCmdWithOutput).mockImplementationOnce(() => {
+			return '{"Descriptor":{"digest":"sha256:three"}}';
+		});
+
+		await runWrangler(
+			"containers build ./container-context -t localhost:5000/test-app:tag -p"
+		);
+
+		expect(runDockerCmdWithOutput).toHaveBeenCalledOnce();
+		expect(runDockerCmdWithOutput).toHaveBeenCalledWith("docker", [
+			"manifest",
+			"inspect",
+			"-v",
+			"localhost:5000/test-app@sha256:three",
+		]);
+		expect(runDockerCmd).toHaveBeenCalledTimes(1);
+		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
+			"image",
+			"rm",
+			"localhost:5000/test-app:tag",
+		]);
+		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
+	});
+
+	it("should be able to build image and not push", async ({ expect }) => {
 		await runWrangler("containers build ./container-context -t test-app");
 		expect(dockerBuild).toHaveBeenCalledTimes(1);
 		expect(dockerBuild).toHaveBeenCalledWith("docker", {
@@ -353,7 +397,9 @@ describe("buildAndMaybePush", () => {
 		expect(dockerLoginImageRegistry).not.toHaveBeenCalled();
 	});
 
-	it("should add --network=host flag if WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST is set", async () => {
+	it("should add --network=host flag if WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST is set", async ({
+		expect,
+	}) => {
 		vi.stubEnv("WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST", "true");
 		await runWrangler("containers build ./container-context -t test-app");
 		expect(dockerBuild).toHaveBeenCalledTimes(1);
@@ -376,7 +422,9 @@ describe("buildAndMaybePush", () => {
 		});
 	});
 
-	it("should be able to build image with platform specified", async () => {
+	it("should be able to build image with platform specified", async ({
+		expect,
+	}) => {
 		await runWrangler(
 			"containers build ./container-context -t test-app:tag -p --platform linux/amd64"
 		);
@@ -397,7 +445,7 @@ describe("buildAndMaybePush", () => {
 		});
 	});
 
-	it("should fail with an invalid platform", async () => {
+	it("should fail with an invalid platform", async ({ expect }) => {
 		await expect(
 			runWrangler(
 				"containers build ./container-context -t test-app:tag -p --platform linux/arm64"
@@ -405,7 +453,7 @@ describe("buildAndMaybePush", () => {
 		).rejects.toThrow("Unsupported platform");
 	});
 
-	it("should throw UserError when docker build fails", async () => {
+	it("should throw UserError when docker build fails", async ({ expect }) => {
 		const errorMessage = "Docker build failed";
 		vi.mocked(dockerBuild).mockReturnValue({
 			abort: () => {},
@@ -416,7 +464,7 @@ describe("buildAndMaybePush", () => {
 		).rejects.toThrow(new UserError(errorMessage));
 	});
 
-	it("should throw UserError when docker login fails", async () => {
+	it("should throw UserError when docker login fails", async ({ expect }) => {
 		const errorMessage = "Docker login failed";
 		vi.mocked(dockerBuild).mockRejectedValue(new Error(errorMessage));
 		vi.mocked(dockerLoginImageRegistry).mockRejectedValue(

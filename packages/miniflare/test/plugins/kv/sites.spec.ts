@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
-import { beforeAll, expect, test } from "vitest";
+import { beforeAll, type ExpectStatic, test } from "vitest";
 import { useDispose, useTmp } from "../../test-shared";
 
 const FIXTURES_PATH = path.resolve(__dirname, "../../fixtures/sites");
@@ -42,10 +42,13 @@ const routeContents = {
 	"/b/b.txt": "b",
 };
 
-async function testGet(opts: {
-	options: { siteInclude?: string[]; siteExclude?: string[] };
-	expectedRoutes: Set<Route>;
-}) {
+async function testGet(
+	expect: ExpectStatic,
+	opts: {
+		options: { siteInclude?: string[]; siteExclude?: string[] };
+		expectedRoutes: Set<Route>;
+	}
+) {
 	const tmp = await useTmp();
 	for (const [route, contents] of Object.entries(routeContents)) {
 		const routePath = path.join(tmp, route === "/" ? "index.html" : route);
@@ -69,33 +72,35 @@ async function testGet(opts: {
 	}
 }
 
-test("gets all assets with no filter", async () => {
-	await testGet({
+test("gets all assets with no filter", async ({ expect }) => {
+	await testGet(expect, {
 		options: {},
 		expectedRoutes: new Set<Route>(["/", "/a.txt", "/b/b.txt"]),
 	});
 });
-test("gets included assets with include filter", async () => {
-	await testGet({
+test("gets included assets with include filter", async ({ expect }) => {
+	await testGet(expect, {
 		options: { siteInclude: ["b"] },
 		expectedRoutes: new Set<Route>(["/b/b.txt"]),
 	});
 });
-test("gets all but excluded assets with include filter", async () => {
-	await testGet({
+test("gets all but excluded assets with include filter", async ({ expect }) => {
+	await testGet(expect, {
 		options: { siteExclude: ["b"] },
 		expectedRoutes: new Set<Route>(["/", "/a.txt"]),
 	});
 });
-test("gets included assets with include and exclude filters", async () => {
-	await testGet({
+test("gets included assets with include and exclude filters", async ({
+	expect,
+}) => {
+	await testGet(expect, {
 		options: { siteInclude: ["*.txt"], siteExclude: ["b"] },
 		expectedRoutes: new Set<Route>(["/a.txt", "/b/b.txt"]),
 	});
 });
 
 // Tests for checking different types of globs are matched correctly
-async function testMatch(include: string) {
+async function testMatch(expect: ExpectStatic, include: string) {
 	const tmp = await useTmp();
 	const dir = path.join(tmp, "a", "b", "c");
 	await fs.mkdir(dir, { recursive: true });
@@ -111,23 +116,23 @@ async function testMatch(include: string) {
 	await res.arrayBuffer();
 }
 
-test("matches file name pattern", async () => {
-	await testMatch("test.txt");
+test("matches file name pattern", async ({ expect }) => {
+	await testMatch(expect, "test.txt");
 });
-test("matches exact pattern", async () => {
-	await testMatch("a/b/c/test.txt");
+test("matches exact pattern", async ({ expect }) => {
+	await testMatch(expect, "a/b/c/test.txt");
 });
-test("matches extension patterns", async () => {
-	await testMatch("*.txt");
+test("matches extension patterns", async ({ expect }) => {
+	await testMatch(expect, "*.txt");
 });
-test("matches globstar patterns", async () => {
-	await testMatch("**/*.txt");
+test("matches globstar patterns", async ({ expect }) => {
+	await testMatch(expect, "**/*.txt");
 });
-test("matches wildcard directory patterns", async () => {
-	await testMatch("a/*/c/*.txt");
+test("matches wildcard directory patterns", async ({ expect }) => {
+	await testMatch(expect, "a/*/c/*.txt");
 });
 
-test("doesn't cache assets", async () => {
+test("doesn't cache assets", async ({ expect }) => {
 	const tmp = await useTmp();
 	const testPath = path.join(tmp, "test.txt");
 	await fs.writeFile(testPath, "1", "utf8");
@@ -148,7 +153,7 @@ test("doesn't cache assets", async () => {
 	expect(await res2.text()).toBe("2");
 });
 
-test("gets assets with module worker", async () => {
+test("gets assets with module worker", async ({ expect }) => {
 	const tmp = await useTmp();
 	const testPath = path.join(tmp, "test.txt");
 	await fs.writeFile(testPath, "test", "utf8");
@@ -164,7 +169,7 @@ test("gets assets with module worker", async () => {
 	expect(await res.text()).toBe("test");
 });
 
-test("gets assets with percent-encoded paths", async () => {
+test("gets assets with percent-encoded paths", async ({ expect }) => {
 	// https://github.com/cloudflare/miniflare/issues/326
 	const tmp = await useTmp();
 	const testPath = path.join(tmp, "ń.txt");
@@ -180,7 +185,7 @@ test("gets assets with percent-encoded paths", async () => {
 
 test.skipIf(process.platform === "win32")(
 	"static content namespace supports listing keys",
-	async () => {
+	async ({ expect }) => {
 		const tmp = await useTmp();
 		await fs.mkdir(path.join(tmp, "a", "b", "c"), { recursive: true });
 		await fs.writeFile(path.join(tmp, "1.txt"), "one");

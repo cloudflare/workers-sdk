@@ -1,8 +1,7 @@
-import assert from "node:assert";
 import path from "node:path";
 import * as Sentry from "@sentry/node";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, assert, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
@@ -42,12 +41,12 @@ describe("sentry", () => {
 	});
 	describe("non interactive", () => {
 		beforeEach(() => setIsTTY(false));
-		it("should not hit sentry in normal usage", async () => {
+		it("should not hit sentry in normal usage", async ({ expect }) => {
 			await runWrangler("--version");
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
-		it("should not hit sentry after error", async () => {
+		it("should not hit sentry after error", async ({ expect }) => {
 			// Trigger an API error
 			msw.use(
 				http.get(
@@ -85,12 +84,12 @@ describe("sentry", () => {
 			setIsTTY(false);
 		});
 
-		it("should not hit sentry in normal usage", async () => {
+		it("should not hit sentry in normal usage", async ({ expect }) => {
 			await runWrangler("--version");
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
-		it("should not hit sentry with user error", async () => {
+		it("should not hit sentry with user error", async ({ expect }) => {
 			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
 				`[Error: A worker name must be defined, either via --name, or in your Wrangler configuration file]`
 			);
@@ -103,7 +102,9 @@ describe("sentry", () => {
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
-		it("should not hit sentry after reportable error when permission denied", async () => {
+		it("should not hit sentry after reportable error when permission denied", async ({
+			expect,
+		}) => {
 			// Trigger an API error
 			msw.use(
 				http.get(
@@ -135,7 +136,9 @@ describe("sentry", () => {
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
-		it("should not hit sentry (or even ask) after reportable error if WRANGLER_SEND_ERROR_REPORTS is explicitly false", async () => {
+		it("should not hit sentry (or even ask) after reportable error if WRANGLER_SEND_ERROR_REPORTS is explicitly false", async ({
+			expect,
+		}) => {
 			// Trigger an API error
 			msw.use(
 				http.get(
@@ -163,7 +166,9 @@ describe("sentry", () => {
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
-		it("should hit sentry after reportable error when permission provided", async () => {
+		it("should hit sentry after reportable error when permission provided", async ({
+			expect,
+		}) => {
 			// Trigger an API error
 			msw.use(
 				http.get(
@@ -194,8 +199,8 @@ describe("sentry", () => {
 			`);
 
 			// Sentry sends multiple HTTP requests to capture breadcrumbs
-			expect(sentryRequests?.length).toBeGreaterThan(0);
-			assert(sentryRequests !== undefined);
+			assert(sentryRequests);
+			expect(sentryRequests.length).toBeGreaterThan(0);
 
 			// Check requests don't include PII
 			const envelopes = sentryRequests.map(({ envelope }) => {
@@ -204,7 +209,7 @@ describe("sentry", () => {
 				return { header: parts[0], type: parts[1], data: parts[2] };
 			});
 			const event = envelopes.find(({ type }) => type.type === "event");
-			assert(event !== undefined);
+			assert(event);
 
 			// Redact fields with random contents we know don't contain PII
 			event.header.event_id = "";
@@ -472,7 +477,9 @@ describe("sentry", () => {
 			});
 		});
 
-		it("should hit sentry after reportable error (without confirmation) if WRANGLER_SEND_ERROR_REPORTS is explicitly true", async () => {
+		it("should hit sentry after reportable error (without confirmation) if WRANGLER_SEND_ERROR_REPORTS is explicitly true", async ({
+			expect,
+		}) => {
 			// Trigger an API error
 			msw.use(
 				http.get(
@@ -499,8 +506,8 @@ describe("sentry", () => {
 			`);
 
 			// Sentry sends multiple HTTP requests to capture breadcrumbs
-			expect(sentryRequests?.length).toBeGreaterThan(0);
 			assert(sentryRequests !== undefined);
+			expect(sentryRequests.length).toBeGreaterThan(0);
 
 			// Check requests don't include PII
 			const envelopes = sentryRequests.map(({ envelope }) => {

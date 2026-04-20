@@ -1,18 +1,21 @@
 import path from "node:path";
-import stripAnsi from "strip-ansi";
-import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+import { stripVTControlCharacters } from "node:util";
+import { afterAll, beforeAll, describe, test, vi } from "vitest";
+import { PluginContext } from "../../../src/context";
+import { resolvePluginConfig } from "../../../src/plugin-config";
+import {
+	addBindingsShortcut,
+	addExplorerShortcut,
+} from "../../../src/plugins/shortcuts";
 import {
 	resetServerLogs,
 	satisfiesViteVersion,
 	serverLogs,
 	viteServer,
 } from "../../__test-utils__";
-import { PluginContext } from "../../../src/context";
-import { resolvePluginConfig } from "../../../src/plugin-config";
-import { addBindingsShortcut } from "../../../src/plugins/shortcuts";
 
 const normalize = (logs: string[]) =>
-	stripAnsi(logs.join("\n"))
+	stripVTControlCharacters(logs.join("\n"))
 		.split("\n")
 		.map((line: string) => line.trim())
 		.join("\n");
@@ -28,11 +31,11 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		process.stdin.isTTY = false;
 	});
 
-	test("display binding shortcut hint", () => {
+	test("display binding shortcut hint", ({ expect }) => {
 		// Set up the shortcut wrapper (after stubs are in place from beforeAll)
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
-			isRestartingDevServer: false,
+			restartingDevServerCount: 0,
 		});
 		mockContext.setResolvedPluginConfig(
 			resolvePluginConfig(
@@ -63,13 +66,13 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 			"press b + enter to list configured Cloudflare bindings"
 		);
 	});
-	test("prints bindings with a single Worker", () => {
+	test("prints bindings with a single Worker", ({ expect }) => {
 		// Create a test server with a spy on bindCLIShortcuts
 		const mockBindCLIShortcuts = vi.spyOn(viteServer, "bindCLIShortcuts");
 		// Create mock plugin context
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
-			isRestartingDevServer: false,
+			restartingDevServerCount: 0,
 		});
 
 		mockContext.setResolvedPluginConfig(
@@ -119,13 +122,13 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		`);
 	});
 
-	test("prints bindings with multi Workers", () => {
+	test("prints bindings with multi Workers", ({ expect }) => {
 		// Create a test server with a spy on bindCLIShortcuts
 		const mockBindCLIShortcuts = vi.spyOn(viteServer, "bindCLIShortcuts");
 		// Create mock plugin context
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
-			isRestartingDevServer: false,
+			restartingDevServerCount: 0,
 		});
 
 		mockContext.setResolvedPluginConfig(
@@ -185,5 +188,34 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 			env.SERVICE (primary-worker)      Worker
 			"
 		`);
+	});
+
+	test("registers explorer shortcut with correct URL", async ({ expect }) => {
+		const mockOpen = vi.hoisted(() => vi.fn(() => ({ on: vi.fn() })));
+		vi.mock("open", () => ({ default: mockOpen }));
+
+		const mockBindCLIShortcuts = vi.spyOn(viteServer, "bindCLIShortcuts");
+
+		addExplorerShortcut(viteServer);
+
+		expect(mockBindCLIShortcuts).toHaveBeenCalledWith({
+			customShortcuts: [
+				{
+					key: "e",
+					description: "open local explorer",
+					action: expect.any(Function),
+				},
+			],
+		});
+
+		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
+		const explorerShortcut = customShortcuts?.find((s) => s.key === "e");
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		await explorerShortcut?.action?.(viteServer as any);
+
+		expect(mockOpen).toHaveBeenCalledWith(
+			expect.stringMatching(/^http:\/\/localhost:\d+\/cdn-cgi\/explorer$/)
+		);
 	});
 });

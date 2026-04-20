@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { MissingConfigError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex } from "miniflare";
@@ -16,10 +17,11 @@ import {
 import { logger } from "../../logger";
 import { TRACE_VERSION } from "../../tail/createTail";
 import { realishPrintLogs } from "../../tail/printing";
-import { getAccessToken } from "../../user/access";
+import { getAccessHeaders } from "../../user/access";
+import { retryOnAPIFailure } from "../../utils/retry";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { convertBindingsToCfWorkerInitBindings, unwrapHook } from "./utils";
+import { PREVIEW_TOKEN_REFRESH_INTERVAL, unwrapHook } from "./utils";
 import type {
 	CfAccount,
 	CfPreviewSession,
@@ -29,6 +31,7 @@ import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
 	PreviewTokenExpiredEvent,
+	ProxyData,
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
@@ -50,22 +53,32 @@ export class RemoteRuntimeController extends RuntimeController {
 	#latestConfig?: StartDevWorkerOptions;
 	#latestBundle?: Bundle;
 	#latestRoutes?: Route[];
+	#latestProxyData?: ProxyData;
+
+	// Timer for proactive token refresh before the 1-hour expiry
+	#refreshTimer?: ReturnType<typeof setTimeout>;
 
 	async #previewSession(
 		props: Parameters<typeof getWorkerAccountAndContext>[0] & {
-			tail_logs: boolean;
+			name: string;
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
 			const { workerAccount, workerContext } =
 				await getWorkerAccountAndContext(props);
 
-			return await createPreviewSession(
-				props.complianceConfig,
-				workerAccount,
-				workerContext,
-				this.#abortController.signal,
-				props.tail_logs
+			return await retryOnAPIFailure(
+				() =>
+					createPreviewSession(
+						props.complianceConfig,
+						workerAccount,
+						workerContext,
+						this.#abortController.signal,
+						props.name
+					),
+				undefined,
+				undefined,
+				this.#abortController.signal
 			);
 		} catch (err: unknown) {
 			if (err instanceof Error && err.name == "AbortError") {
@@ -74,28 +87,23 @@ export class RemoteRuntimeController extends RuntimeController {
 
 			handlePreviewSessionCreationError(err, props.accountId);
 
-			this.emitErrorEvent({
-				type: "error",
-				reason: "Failed to create a preview token",
-				cause: castErrorCause(err),
-				source: "RemoteRuntimeController",
-				data: undefined,
-			});
+			throw err;
 		}
 	}
 
 	async #previewToken(
-		props: Omit<CreateRemoteWorkerInitProps, "name"> &
-			Partial<Pick<CreateRemoteWorkerInitProps, "name">> &
+		props: CreateRemoteWorkerInitProps &
 			Parameters<typeof getWorkerAccountAndContext>[0] & {
 				bundleId: number;
 				minimal_mode?: boolean;
-				tail_logs: boolean;
 			}
 	): Promise<CfPreviewToken | undefined> {
 		if (!this.#session) {
 			return;
 		}
+		// Capture session in a local variable so TypeScript can narrow
+		// the type inside the retryOnAPIFailure closure below.
+		const session = this.#session;
 
 		try {
 			/*
@@ -114,6 +122,9 @@ export class RemoteRuntimeController extends RuntimeController {
 			if (props.bundleId !== this.#currentBundleId) {
 				return;
 			}
+			// Suppress errors from terminating a WebSocket that hasn't connected yet
+			this.#activeTail?.removeAllListeners("error");
+			this.#activeTail?.on("error", () => {});
 			this.#activeTail?.terminate();
 			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
 				{
@@ -128,12 +139,6 @@ export class RemoteRuntimeController extends RuntimeController {
 				}
 			);
 
-			const scriptId =
-				props.name ||
-				(workerContext.zone
-					? this.#session.id
-					: this.#session.host.split(".")[0]);
-
 			// If we received a new `bundleComplete` event before we were able to
 			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 			if (props.bundleId !== this.#currentBundleId) {
@@ -144,7 +149,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				bundle: props.bundle,
 				modules: props.modules,
 				accountId: props.accountId,
-				name: scriptId,
+				name: props.name,
 				useServiceEnvironments: props.useServiceEnvironments,
 				env: props.env,
 				isWorkersSite: props.isWorkersSite,
@@ -161,17 +166,23 @@ export class RemoteRuntimeController extends RuntimeController {
 			if (props.bundleId !== this.#currentBundleId) {
 				return;
 			}
-			const workerPreviewToken = await createWorkerPreview(
-				props.complianceConfig,
-				init,
-				workerAccount,
-				workerContext,
-				this.#session,
-				this.#abortController.signal,
-				props.minimal_mode
+			const workerPreviewToken = await retryOnAPIFailure(
+				() =>
+					createWorkerPreview(
+						props.complianceConfig,
+						init,
+						workerAccount,
+						workerContext,
+						session,
+						this.#abortController.signal,
+						props.minimal_mode
+					),
+				undefined,
+				undefined,
+				this.#abortController.signal
 			);
 
-			if (props.tail_logs && workerPreviewToken.tailUrl) {
+			if (workerPreviewToken.tailUrl) {
 				this.#activeTail = new WebSocket(
 					workerPreviewToken.tailUrl,
 					TRACE_VERSION,
@@ -226,7 +237,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			routes,
 			sendMetrics: config.sendMetrics,
 			configPath: config.config,
-			tail_logs: !!config.experimental?.tailLogs,
+			name: config.name,
 		});
 	}
 
@@ -256,15 +267,11 @@ export class RemoteRuntimeController extends RuntimeController {
 		auth: CfAccount,
 		routes: Route[] | undefined,
 		bundleId: number
-	) {
-		const { bindings } = await convertBindingsToCfWorkerInitBindings(
-			config.bindings
-		);
-
+	): Promise<boolean> {
 		// If we received a new `bundleComplete` event before we were able to
 		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 		if (bundleId !== this.#currentBundleId) {
-			return;
+			return false;
 		}
 
 		const token = await this.#previewToken({
@@ -286,8 +293,7 @@ export class RemoteRuntimeController extends RuntimeController {
 					}
 				: undefined,
 			format: bundle.entry.format,
-			// TODO: Remove this passthrough
-			bindings: bindings,
+			bindings: config.bindings,
 			compatibilityDate: config.compatibilityDate,
 			compatibilityFlags: config.compatibilityFlags,
 			routes,
@@ -296,46 +302,54 @@ export class RemoteRuntimeController extends RuntimeController {
 			configPath: config.config,
 			bundleId,
 			minimal_mode: config.dev.remote === "minimal",
-			tail_logs: !!config.experimental?.tailLogs,
 		});
 		// If we received a new `bundleComplete` event before we were able to
 		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 		// If `token` is undefined, we've surfaced a relevant error to the user above, so ignore this bundle
 		if (bundleId !== this.#currentBundleId || !token) {
-			return;
+			return false;
 		}
 
-		const accessToken = await getAccessToken(token.host);
+		const accessHeaders = await getAccessHeaders(token.host);
+
+		const proxyData: ProxyData = {
+			userWorkerUrl: {
+				protocol: "https:",
+				hostname: token.host,
+				port: "443",
+			},
+			headers: {
+				"cf-workers-preview-token": token.value,
+				...accessHeaders,
+				"cf-connecting-ip": "",
+			},
+			liveReload: config.dev.liveReload,
+			proxyLogsToController: true,
+		};
+
+		this.#latestProxyData = proxyData;
 
 		this.emitReloadCompleteEvent({
 			type: "reloadComplete",
 			bundle,
 			config,
-			proxyData: {
-				userWorkerUrl: {
-					protocol: "https:",
-					hostname: token.host,
-					port: "443",
-				},
-				...(!config.experimental?.tailLogs && token.inspectorUrl
-					? {
-							userWorkerInspectorUrl: {
-								protocol: token.inspectorUrl.protocol,
-								hostname: token.inspectorUrl.hostname,
-								port: token.inspectorUrl.port.toString(),
-								pathname: token.inspectorUrl.pathname,
-							},
-						}
-					: {}),
-				headers: {
-					"cf-workers-preview-token": token.value,
-					...(accessToken ? { Cookie: `CF_Authorization=${accessToken}` } : {}),
-					"cf-connecting-ip": "",
-				},
-				liveReload: config.dev.liveReload,
-				proxyLogsToController: true,
-			},
+			proxyData,
 		});
+
+		this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_INTERVAL);
+		return true;
+	}
+
+	#scheduleRefresh(interval: number) {
+		clearTimeout(this.#refreshTimer);
+		this.#refreshTimer = setTimeout(() => {
+			if (this.#latestProxyData) {
+				this.onPreviewTokenExpired({
+					type: "previewTokenExpired",
+					proxyData: this.#latestProxyData,
+				});
+			}
+		}, interval);
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
@@ -348,15 +362,21 @@ export class RemoteRuntimeController extends RuntimeController {
 				throw new MissingConfigError("config.dev.auth");
 			}
 
+			assert(config.dev.auth);
 			const auth = await unwrapHook(config.dev.auth);
 
-			// Store for token refresh
 			this.#latestConfig = config;
 			this.#latestBundle = bundle;
 			this.#latestRoutes = routes;
 
 			if (this.#session) {
 				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
+			}
+
+			// Recreate session if the worker name changed, since the session
+			// host bakes in the name from creation time.
+			if (this.#session && config.name !== this.#session.name) {
+				this.#session = undefined;
 			}
 
 			this.#session ??= await this.#getPreviewSession(config, auth, routes);
@@ -384,34 +404,27 @@ export class RemoteRuntimeController extends RuntimeController {
 			return;
 		}
 
-		this.emitReloadStartEvent({
-			type: "reloadStart",
-			config: this.#latestConfig,
-			bundle: this.#latestBundle,
-		});
-
-		if (!this.#latestConfig.dev?.auth) {
-			// This shouldn't happen as it's checked earlier, but we guard against it anyway
-			throw new MissingConfigError("config.dev.auth");
-		}
-
-		const auth = await unwrapHook(this.#latestConfig.dev.auth);
-
 		try {
+			assert(this.#latestConfig.dev.auth);
+			const auth = await unwrapHook(this.#latestConfig.dev.auth);
+
 			this.#session = await this.#getPreviewSession(
 				this.#latestConfig,
 				auth,
 				this.#latestRoutes
 			);
 
-			await this.#updatePreviewToken(
+			const refreshed = await this.#updatePreviewToken(
 				this.#latestConfig,
 				this.#latestBundle,
 				auth,
 				this.#latestRoutes,
 				this.#currentBundleId
 			);
-			logger.log(chalk.green("✔ Preview token refreshed successfully"));
+
+			if (refreshed) {
+				logger.log(chalk.green("✔ Preview token refreshed successfully"));
+			}
 		} catch (error) {
 			if (error instanceof Error && error.name == "AbortError") {
 				return;
@@ -435,6 +448,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
 		this.#abortController = new AbortController();
+		clearTimeout(this.#refreshTimer);
 	}
 	onBundleComplete(ev: BundleCompleteEvent) {
 		const id = ++this.#currentBundleId;
@@ -453,7 +467,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		void this.#mutex.runWith(() => this.#onBundleComplete(ev, id));
 	}
 	onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void {
-		logger.log(chalk.dim("⎔ Preview token expired, refreshing..."));
+		logger.log(chalk.dim("⎔ Refreshing preview token..."));
 		void this.#mutex.runWith(() => this.#refreshPreviewToken());
 	}
 
@@ -464,7 +478,11 @@ export class RemoteRuntimeController extends RuntimeController {
 		}
 		logger.debug("RemoteRuntimeController teardown beginning...");
 		this.#session = undefined;
+		clearTimeout(this.#refreshTimer);
 		this.#abortController.abort();
+		// Suppress errors from terminating a WebSocket that hasn't connected yet
+		this.#activeTail?.removeAllListeners("error");
+		this.#activeTail?.on("error", () => {});
 		this.#activeTail?.terminate();
 		logger.debug("RemoteRuntimeController teardown complete");
 	}

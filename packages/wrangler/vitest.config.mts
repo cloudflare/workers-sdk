@@ -1,5 +1,5 @@
-import assert from "assert";
-import path from "path";
+import assert from "node:assert";
+import path from "node:path";
 import * as esbuild from "esbuild";
 import { dedent } from "ts-dedent";
 import { defineConfig } from "vitest/config";
@@ -49,7 +49,7 @@ function embedWorkersPlugin() {
 				this.addWatchFile(file);
 			}
 
-			return dedent/*javascript*/ `
+			return dedent /*javascript*/ `
 				export default ${absoluteScriptPath};
 			`;
 		},
@@ -69,10 +69,6 @@ export default defineConfig({
 		globalSetup: path.resolve(__dirname, "src/__tests__/vitest.global.ts"),
 		reporters: ["default", "html"],
 		globals: true,
-		snapshotFormat: {
-			escapeString: true,
-			printBasicPrototype: true,
-		},
 		unstubEnvs: true,
 	},
 });

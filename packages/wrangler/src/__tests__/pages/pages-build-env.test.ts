@@ -3,7 +3,7 @@ import {
 	normalizeString,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { logger } from "../../logger";
 import {
 	EXIT_CODE_INVALID_PAGES_CONFIG,
@@ -24,7 +24,7 @@ describe("pages build env", () => {
 		vi.stubEnv("PAGES_ENVIRONMENT", "production");
 	});
 
-	it("should render empty object", async () => {
+	it("should render empty object", async ({ expect }) => {
 		writeWranglerConfig({
 			pages_build_output_dir: "./dist",
 			vars: {},
@@ -41,11 +41,11 @@ describe("pages build env", () => {
 			Build environment variables: (none found)"
 		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
-			`"{\\"vars\\":{},\\"pages_build_output_dir\\":\\"dist\\"}"`
+			`"{"vars":{},"pages_build_output_dir":"dist"}"`
 		);
 	});
 
-	it("should fail with no project dir", async () => {
+	it("should fail with no project dir", async ({ expect }) => {
 		await expect(
 			runWrangler("pages functions build-env")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -53,7 +53,7 @@ describe("pages build env", () => {
 		);
 	});
 
-	it("should fail with no outfile", async () => {
+	it("should fail with no outfile", async ({ expect }) => {
 		await expect(
 			runWrangler("pages functions build-env .")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -61,7 +61,9 @@ describe("pages build env", () => {
 		);
 	});
 
-	it("should exit with specific exit code if no config file is found", async () => {
+	it("should exit with specific exit code if no config file is found", async ({
+		expect,
+	}) => {
 		logger.loggerLevel = "debug";
 		await runWrangler("pages functions build-env . --outfile out.json");
 
@@ -79,7 +81,9 @@ describe("pages build env", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should exit with specific code if a non-pages config file is found", async () => {
+	it("should exit with specific code if a non-pages config file is found", async ({
+		expect,
+	}) => {
 		logger.loggerLevel = "debug";
 		writeWranglerConfig({
 			vars: {
@@ -123,7 +127,9 @@ describe("pages build env", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should exit correctly with an unparseable non-pages config file", async () => {
+	it("should exit correctly with an unparseable non-pages config file", async ({
+		expect,
+	}) => {
 		logger.loggerLevel = "debug";
 
 		writeFileSync("./wrangler.toml", 'INVALID "FILE');
@@ -135,7 +141,7 @@ describe("pages build env", () => {
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid TOML document: incomplete key-value: cannot find end of key[0m
 
 			    <cwd>/wrangler.toml:1:0:
-			[37m      1 │ [32m[37mINVALID \\"FILE
+			[37m      1 │ [32m[37mINVALID "FILE
 			        ╵ [32m^[0m
 
 			"
@@ -151,7 +157,9 @@ describe("pages build env", () => {
 		expect(std.debug).toContain("wrangler.toml file is invalid. Exiting.");
 	});
 
-	it("should exit correctly with a non-pages config file w/ invalid environment", async () => {
+	it("should exit correctly with a non-pages config file w/ invalid environment", async ({
+		expect,
+	}) => {
 		logger.loggerLevel = "debug";
 		writeWranglerConfig({
 			vars: {
@@ -195,7 +203,9 @@ describe("pages build env", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should throw an error if an invalid pages confg file is found", async () => {
+	it("should throw an error if an invalid pages confg file is found", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({
 			pages_build_output_dir: "dist",
 			vars: {
@@ -219,7 +229,9 @@ describe("pages build env", () => {
 		`);
 	});
 
-	it("should exit if an unparseable pages confg file is found", async () => {
+	it("should exit if an unparseable pages confg file is found", async ({
+		expect,
+	}) => {
 		writeFileSync(
 			"./wrangler.toml",
 			`
@@ -243,7 +255,7 @@ describe("pages build env", () => {
 		`);
 	});
 
-	it("should return top-level by default", async () => {
+	it("should return top-level by default", async ({ expect }) => {
 		vi.stubEnv("PAGES_ENVIRONMENT", "");
 		writeWranglerConfig({
 			pages_build_output_dir: "./dist",
@@ -285,11 +297,11 @@ describe("pages build env", () => {
 			  - VAR2: VALUE2"
 		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
-			`"{\\"vars\\":{\\"VAR1\\":\\"VALUE1\\",\\"VAR2\\":\\"VALUE2\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
+			`"{"vars":{"VAR1":"VALUE1","VAR2":"VALUE2"},"pages_build_output_dir":"dist"}"`
 		);
 	});
 
-	it("should return top-level by default (json)", async () => {
+	it("should return top-level by default (json)", async ({ expect }) => {
 		vi.stubEnv("PAGES_ENVIRONMENT", "");
 		writeWranglerConfig(
 			{
@@ -334,11 +346,11 @@ describe("pages build env", () => {
 			  - VAR2: VALUE2"
 		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
-			`"{\\"vars\\":{\\"VAR1\\":\\"VALUE1\\",\\"VAR2\\":\\"VALUE2\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
+			`"{"vars":{"VAR1":"VALUE1","VAR2":"VALUE2"},"pages_build_output_dir":"dist"}"`
 		);
 	});
 
-	it("should return production", async () => {
+	it("should return production", async ({ expect }) => {
 		vi.stubEnv("PAGES_ENVIRONMENT", "production");
 		writeWranglerConfig({
 			pages_build_output_dir: "./dist",
@@ -381,11 +393,11 @@ describe("pages build env", () => {
 			  - PROD_VAR3: PROD_VALUE3"
 		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
-			`"{\\"vars\\":{\\"VAR1\\":\\"PROD_VALUE1\\",\\"VAR2\\":\\"PROD_VALUE2\\",\\"PROD_VAR3\\":\\"PROD_VALUE3\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
+			`"{"vars":{"VAR1":"PROD_VALUE1","VAR2":"PROD_VALUE2","PROD_VAR3":"PROD_VALUE3"},"pages_build_output_dir":"dist"}"`
 		);
 	});
 
-	it("should return preview", async () => {
+	it("should return preview", async ({ expect }) => {
 		vi.stubEnv("PAGES_ENVIRONMENT", "preview");
 		writeWranglerConfig({
 			pages_build_output_dir: "./dist",
@@ -428,11 +440,13 @@ describe("pages build env", () => {
 			  - PREVIEW_VAR3: PREVIEW_VALUE3"
 		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
-			`"{\\"vars\\":{\\"VAR1\\":\\"PREVIEW_VALUE1\\",\\"VAR2\\":\\"PREVIEW_VALUE2\\",\\"PREVIEW_VAR3\\":\\"PREVIEW_VALUE3\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
+			`"{"vars":{"VAR1":"PREVIEW_VALUE1","VAR2":"PREVIEW_VALUE2","PREVIEW_VAR3":"PREVIEW_VALUE3"},"pages_build_output_dir":"dist"}"`
 		);
 	});
 
-	it("should render output directory path relative to project directory, even if wrangler config is redirected", async () => {
+	it("should render output directory path relative to project directory, even if wrangler config is redirected", async ({
+		expect,
+	}) => {
 		vi.stubEnv("PAGES_ENVIRONMENT", "");
 		writeWranglerConfig(
 			{

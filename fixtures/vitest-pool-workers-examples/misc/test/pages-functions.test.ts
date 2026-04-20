@@ -1,19 +1,18 @@
 import {
 	createPagesEventContext,
-	env,
-	ProvidedEnv,
 	waitOnExecutionContext,
 } from "cloudflare:test";
-import { expect, it, onTestFinished } from "vitest";
+import { env } from "cloudflare:workers";
+import { it, onTestFinished } from "vitest";
 
 // This will improve in the next major version of `@cloudflare/workers-types`,
 // but for now you'll need to do something like this to get a correctly-typed
 // `Request` to pass to `createPagesEventContext()`.
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
-type BareFunction = PagesFunction<ProvidedEnv, never, Record<string, never>>;
+type BareFunction = PagesFunction<Cloudflare.Env, never, Record<string, never>>;
 
-it("can consume body in middleware and in next request", async () => {
+it("can consume body in middleware and in next request", async ({ expect }) => {
 	const fn: BareFunction = async (ctx) => {
 		const requestText = await ctx.request.text();
 		const nextResponse = await ctx.next();
@@ -39,7 +38,7 @@ it("can consume body in middleware and in next request", async () => {
 	});
 });
 
-it("can rewrite to absolute and relative urls in next", async () => {
+it("can rewrite to absolute and relative urls in next", async ({ expect }) => {
 	const fn: BareFunction = async (ctx) => {
 		const { pathname } = new URL(ctx.request.url);
 		if (pathname === "/absolute") {
@@ -80,7 +79,7 @@ it("can rewrite to absolute and relative urls in next", async () => {
 	);
 });
 
-it("requires next property to call next()", async () => {
+it("requires next property to call next()", async ({ expect }) => {
 	const fn: BareFunction = (ctx) => ctx.next();
 	const request = new IncomingRequest("https://example.com");
 	const ctx = createPagesEventContext<typeof fn>({ request });
@@ -89,12 +88,12 @@ it("requires next property to call next()", async () => {
 	);
 });
 
-it("requires ASSETS service binding", async () => {
+it("requires ASSETS service binding", async ({ expect }) => {
 	let originalASSETS = env.ASSETS;
 	onTestFinished(() => {
 		env.ASSETS = originalASSETS;
 	});
-	delete (env as Partial<ProvidedEnv>).ASSETS;
+	delete (env as Partial<Cloudflare.Env>).ASSETS;
 
 	const request = new IncomingRequest("https://example.com", {
 		method: "POST",
@@ -107,7 +106,7 @@ it("requires ASSETS service binding", async () => {
 	);
 });
 
-it("waits for waitUntil()ed promises", async () => {
+it("waits for waitUntil()ed promises", async ({ expect }) => {
 	const fn: BareFunction = (ctx) => {
 		ctx.waitUntil(ctx.env.KV_NAMESPACE.put("key", "value"));
 		return new Response();
@@ -119,12 +118,12 @@ it("waits for waitUntil()ed promises", async () => {
 	expect(await env.KV_NAMESPACE.get("key")).toBe("value");
 });
 
-it("correctly types parameters", async () => {
+it("correctly types parameters", async ({ expect }) => {
 	const request = new IncomingRequest("https://example.com");
 
 	// Check no params and no data required
 	{
-		type Fn = PagesFunction<ProvidedEnv, never, Record<string, never>>;
+		type Fn = PagesFunction<Cloudflare.Env, never, Record<string, never>>;
 		createPagesEventContext<Fn>({ request });
 		createPagesEventContext<Fn>({ request, params: {} });
 		// @ts-expect-error no params required
@@ -136,7 +135,7 @@ it("correctly types parameters", async () => {
 
 	// Check no params but data required
 	{
-		type Fn = PagesFunction<ProvidedEnv, never, { b: string }>;
+		type Fn = PagesFunction<Cloudflare.Env, never, { b: string }>;
 		// @ts-expect-error data required
 		createPagesEventContext<Fn>({ request });
 		// @ts-expect-error data required
@@ -150,7 +149,7 @@ it("correctly types parameters", async () => {
 
 	// Check no data but params required
 	{
-		type Fn = PagesFunction<ProvidedEnv, "a", Record<string, never>>;
+		type Fn = PagesFunction<Cloudflare.Env, "a", Record<string, never>>;
 		// @ts-expect-error params required
 		createPagesEventContext<Fn>({ request });
 		// @ts-expect-error params required
@@ -164,7 +163,7 @@ it("correctly types parameters", async () => {
 
 	// Check params and data required
 	{
-		type Fn = PagesFunction<ProvidedEnv, "a", { b: string }>;
+		type Fn = PagesFunction<Cloudflare.Env, "a", { b: string }>;
 		// @ts-expect-error params required
 		createPagesEventContext<Fn>({ request });
 		// @ts-expect-error params required

@@ -1,5 +1,15 @@
 # @cloudflare/chrome-devtools-patches
 
+## 0.1.5
+
+### Patch Changes
+
+- [#12928](https://github.com/cloudflare/workers-sdk/pull/12928) [`81ee98e`](https://github.com/cloudflare/workers-sdk/commit/81ee98e6a0c6be879757289ef6e34e1559d6ee2a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Migrate chrome-devtools-patches deployment from Cloudflare Pages to Workers + Assets
+
+  The DevTools frontend is now deployed as a Cloudflare Workers + Assets project instead of a Cloudflare Pages project. This uses `wrangler deploy` for production deployments and `wrangler versions upload` for PR preview deployments.
+
+  The inspector proxy origin allowlists in both wrangler and miniflare have been updated to accept connections from the new `workers.dev` domain patterns, while retaining the legacy `pages.dev` patterns for backward compatibility.
+
 ## 0.1.4
 
 ### Patch Changes
@@ -29,7 +39,6 @@
 ### Minor Changes
 
 - [#7137](https://github.com/cloudflare/workers-sdk/pull/7137) [`1b195bd`](https://github.com/cloudflare/workers-sdk/commit/1b195bd09aef282a8a205d341579cdb7e3755d89) Thanks [@andyjessop](https://github.com/andyjessop)! - feat: update devtools patches for release
-
   - rebases patches on top of latest devtools head
   - removes CPU profiling tab
   - adds performance tab

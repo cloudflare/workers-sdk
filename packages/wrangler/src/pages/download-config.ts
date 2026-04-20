@@ -3,10 +3,9 @@ import { writeFile } from "node:fs/promises";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { supportedCompatibilityDate } from "miniflare";
 import TOML from "smol-toml";
 import { fetchResult } from "../cfetch";
 import { getConfigCache } from "../config-cache";
@@ -74,11 +73,11 @@ async function toEnvironment(
 ): Promise<RawEnvironment> {
 	const configObj = {} as RawEnvironment;
 	configObj.compatibility_date =
-		deploymentConfig.compatibility_date ?? formatCompatibilityDate(new Date());
+		deploymentConfig.compatibility_date ?? getTodaysCompatDate();
 
 	// Find the latest supported compatibility date and use that
 	if (deploymentConfig.always_use_latest_compatibility_date) {
-		configObj.compatibility_date = supportedCompatibilityDate;
+		configObj.compatibility_date = getTodaysCompatDate();
 	}
 
 	if (deploymentConfig.compatibility_flags?.length) {

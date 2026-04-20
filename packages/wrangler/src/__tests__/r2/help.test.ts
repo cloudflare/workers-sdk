@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw, mswR2handlers } from "../helpers/msw";
@@ -12,7 +12,7 @@ describe("r2", () => {
 	runInTempDir();
 
 	describe("help", () => {
-		it("should show help when no argument is passed", async () => {
+		it("should show help when no argument is passed", async ({ expect }) => {
 			await runWrangler("r2");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -35,7 +35,9 @@ describe("r2", () => {
 			`);
 		});
 
-		it("should show help when an invalid argument is passed", async () => {
+		it("should show help when an invalid argument is passed", async ({
+			expect,
+		}) => {
 			await expect(() => runWrangler("r2 asdf")).rejects.toThrow(
 				"Unknown argument: asdf"
 			);

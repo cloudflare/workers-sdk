@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -57,7 +57,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			versionId0 = matchVersionId(deploy.stdout);
 		}, 30_000);
 
-		it("should upload 1st Worker version", async () => {
+		it("should upload 1st Worker version", async ({ expect }) => {
 			const upload = await helper.run(
 				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload"`
 			);
@@ -76,7 +76,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			`);
 		});
 
-		it("should list 1 version", async () => {
+		it("should list 1 version", async ({ expect }) => {
 			const list = await helper.run(`wrangler versions list`);
 
 			expect(normalize(list.stdout)).toMatchInlineSnapshot(`
@@ -98,48 +98,48 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			expect(list.stdout).toMatch(/Tag:\s+e2e-upload/);
 		});
 
-		it("should deploy 1st Worker version", async () => {
+		it("should deploy 1st Worker version", async ({ expect }) => {
 			const deploy = await helper.run(
 				`wrangler versions deploy ${versionId1}@100% --message "Deploy via e2e test" --yes`
 			);
 
 			expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			├ Fetching latest deployment
-			│
-			├ Your current deployment has 1 version(s):
-			│
-			│ (100%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			├ Fetching deployable versions
-			│
-			├ Which version(s) do you want to deploy?
-			├ 1 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  e2e-upload
-			│              Message:  Upload via e2e test
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 100% of traffic
-			├
-			├ Add a deployment message
-			│ Deployment message Deploy via e2e test
-			│
-			├ Deploying 1 version(s)
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Fetching latest deployment
+				│
+				├ Your current deployment has 1 version(s):
+				│
+				│ (100%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Fetching versions
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  e2e-upload
+				│              Message:  Upload via e2e test
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message
+				│ Deployment message Deploy via e2e test
+				│
+				├ Deploying 1 version(s)
+				│
+				│ No non-versioned settings to sync. Skipping...
+				│
+				╰  SUCCESS  Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
 		});
 
-		it("should list 1 deployment", async () => {
+		it("should list 1 deployment", async ({ expect }) => {
 			const list = await helper.run(`wrangler deployments list`);
 
 			expect(normalize(list.stdout)).toMatchInlineSnapshot(`
@@ -164,7 +164,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			expect(list.stdout).toContain(versionId1);
 		});
 
-		it("should modify & upload 2nd Worker version", async () => {
+		it("should modify & upload 2nd Worker version", async ({ expect }) => {
 			await helper.seed({
 				"src/index.ts": dedent`
 				export default {
@@ -220,7 +220,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			expect(versionsList.stdout).toMatch(/Tag:\s+e2e-upload-AGAIN/);
 		});
 
-		it("should deploy 2nd Worker version", async () => {
+		it("should deploy 2nd Worker version", async ({ expect }) => {
 			const deploy = await helper.run(
 				`wrangler versions deploy ${versionId2}@100% --message "Deploy AGAIN via e2e test" --yes`
 			);
@@ -228,39 +228,39 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const deploymentsList = await helper.run(`wrangler deployments list`);
 
 			expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			├ Fetching latest deployment
-			│
-			├ Your current deployment has 1 version(s):
-			│
-			│ (100%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  e2e-upload
-			│       Message:  Upload via e2e test
-			│
-			├ Fetching deployable versions
-			│
-			├ Which version(s) do you want to deploy?
-			├ 1 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  e2e-upload-AGAIN
-			│              Message:  Upload AGAIN via e2e test
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 100% of traffic
-			├
-			├ Add a deployment message
-			│ Deployment message Deploy AGAIN via e2e test
-			│
-			├ Deploying 1 version(s)
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Fetching latest deployment
+				│
+				├ Your current deployment has 1 version(s):
+				│
+				│ (100%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  e2e-upload
+				│       Message:  Upload via e2e test
+				│
+				├ Fetching versions
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  e2e-upload-AGAIN
+				│              Message:  Upload AGAIN via e2e test
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message
+				│ Deployment message Deploy AGAIN via e2e test
+				│
+				├ Deploying 1 version(s)
+				│
+				│ No non-versioned settings to sync. Skipping...
+				│
+				╰  SUCCESS  Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
 
 			// list 2 deployments (+ old deployment)
 			expect(normalize(deploymentsList.stdout)).toMatchInlineSnapshot(`
@@ -295,7 +295,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
 		});
 
-		it("should rollback to implicit Worker version (1st version)", async () => {
+		it("should rollback to implicit Worker version (1st version)", async ({
+			expect,
+		}) => {
 			const rollback = await helper.run(
 				`wrangler rollback --message "Rollback via e2e test" --yes`
 			);
@@ -405,7 +407,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
 		});
 
-		it("should rollback to specific Worker version (0th version)", async () => {
+		it("should rollback to specific Worker version (0th version)", async ({
+			expect,
+		}) => {
 			const rollback = await helper.run(
 				`wrangler rollback ${versionId0} --message "Rollback to old version" --yes`
 			);
@@ -520,7 +524,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
 		});
 
-		it("fails to upload if using Workers Sites", async () => {
+		it("fails to upload if using Workers Sites", async ({ expect }) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
                 name = "${workerName}"
@@ -554,7 +558,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		`);
 		});
 
-		it("should upload version of Worker with assets", async () => {
+		it("should upload version of Worker with assets", async ({ expect }) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 	            name = "${workerName}"
@@ -577,10 +581,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload-assets"`
 			);
 
-			validateAssetUploadLogs(upload, ["/asset.txt"]);
+			validateAssetUploadLogs(expect, upload, ["/asset.txt"]);
 		});
 
-		it("should upload version of Worker with assets only", async () => {
+		it("should upload version of Worker with assets only", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 					name = "${workerName}"
@@ -603,7 +609,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload-assets"`
 			);
 
-			validateAssetUploadLogs(upload, ["/asset.txt"]);
+			validateAssetUploadLogs(expect, upload, ["/asset.txt"]);
 
 			const versionsView = await helper.run(
 				`wrangler versions view ${matchVersionId(upload.stdout)}`
@@ -619,7 +625,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			`);
 		});
 
-		it("should upload version of Worker with preview_urls enabled", async () => {
+		it("should upload version of Worker with preview_urls enabled", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 					name = "${workerName}"
@@ -658,7 +666,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			`);
 		});
 
-		it("should include version preview url in output file", async () => {
+		it("should include version preview url in output file", async ({
+			expect,
+		}) => {
 			const outputFile = path.join(helper.tmpPath, "output.jsonnd");
 			const upload = await helper.run(
 				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload"`,
@@ -679,7 +689,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			});
 		});
 
-		it("should delete Worker", async () => {
+		it("should delete Worker", async ({ expect }) => {
 			const { stdout } = await helper.run(`wrangler delete`);
 
 			expect(normalize(stdout)).toMatchInlineSnapshot(`

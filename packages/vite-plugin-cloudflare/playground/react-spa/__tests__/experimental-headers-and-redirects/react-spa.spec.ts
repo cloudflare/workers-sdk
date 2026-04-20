@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, test, vi } from "vitest";
+import { describe, test, vi } from "vitest";
 import {
 	failsIf,
 	isBuild,
@@ -13,12 +13,12 @@ describe(
 	"react-spa (with experimental support)",
 	{ sequential: true, concurrent: false },
 	() => {
-		test("returns the correct home page", async () => {
+		test("returns the correct home page", async ({ expect }) => {
 			const content = await page.textContent("h1");
 			expect(content).toBe("Vite + React");
 		});
 
-		test("allows updating state", async () => {
+		test("allows updating state", async ({ expect }) => {
 			const button = page.getByRole("button", { name: "increment" });
 			const contentBefore = await button.innerText();
 			expect(contentBefore).toBe("count is 0");
@@ -27,7 +27,7 @@ describe(
 			expect(contentAfter).toBe("count is 1");
 		});
 
-		test("returns the home page for not found routes", async () => {
+		test("returns the home page for not found routes", async ({ expect }) => {
 			await page.goto(`${viteTestUrl}/random-page`);
 			const content = await page.textContent("h1");
 			expect(content).toBe("Vite + React");
@@ -35,22 +35,25 @@ describe(
 
 		// All these tests will fail without experimental support turned on
 		describe("_headers", () => {
-			test("applies _headers to HTML responses", async () => {
+			test("applies _headers to HTML responses", async ({ expect }) => {
 				const response = await fetch(viteTestUrl);
 				expect(response.headers.get("X-Header")).toBe("Custom-Value!!!");
 			});
 
 			// Since Vite will return static assets immediately without invoking the Worker at all
 			// such requests will not have _headers applied.
-			failsIf(!isBuild)("applies _headers to static assets", async () => {
-				const response = await fetch(`${viteTestUrl}/vite.svg`);
-				expect(response.headers.get("X-Header")).toBe("Custom-Value!!!");
-			});
+			failsIf(!isBuild)(
+				"applies _headers to static assets",
+				async ({ expect }) => {
+					const response = await fetch(`${viteTestUrl}/vite.svg`);
+					expect(response.headers.get("X-Header")).toBe("Custom-Value!!!");
+				}
+			);
 		});
 
 		// All these tests will fail without experimental support turned on
 		describe("_redirects", () => {
-			test("applies _redirects to HTML responses", async () => {
+			test("applies _redirects to HTML responses", async ({ expect }) => {
 				const response = await fetch(`${viteTestUrl}/foo`, {
 					redirect: "manual",
 				});
@@ -60,19 +63,22 @@ describe(
 
 			// Since Vite will return static assets immediately without invoking the Worker at all
 			// such requests will not have _redirects applied.
-			failsIf(!isBuild)("applies _redirects to static assets", async () => {
-				const response = await fetch(`${viteTestUrl}/redirect.svg`, {
-					redirect: "manual",
-				});
-				expect(response.status).toBe(302);
-				expect(response.headers.get("Location")).toBe("/target.svg");
-			});
+			failsIf(!isBuild)(
+				"applies _redirects to static assets",
+				async ({ expect }) => {
+					const response = await fetch(`${viteTestUrl}/redirect.svg`, {
+						redirect: "manual",
+					});
+					expect(response.status).toBe(302);
+					expect(response.headers.get("Location")).toBe("/target.svg");
+				}
+			);
 
 			// Since Vite will return static assets immediately without invoking the Worker at all
 			// such requests will not have _redirects applied.
 			failsIf(!isBuild)(
 				"supports proxying static assets to rewritten contents with _redirects",
-				async () => {
+				async ({ expect }) => {
 					const response = await fetch(`${viteTestUrl}/rewrite.svg`);
 					expect(response.status).toBe(200);
 					expect(await response.text()).toContain("target.svg");
@@ -85,7 +91,7 @@ describe(
 describe("reloading the server", () => {
 	test.skipIf(isBuild)(
 		"reloads config when the _headers or _redirects files change",
-		async ({ onTestFinished }) => {
+		async ({ expect, onTestFinished }) => {
 			const headersPath = join(__dirname, "../../public/_headers");
 			const originalHeaders = readFileSync(headersPath, "utf8");
 			const redirectsPath = join(__dirname, "../../public/_redirects");

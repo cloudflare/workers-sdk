@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { createBatches } from "../../utils/create-batches";
 
 // split a template string into an array of chars (convenience util to make writing inputs/outputs easier)
@@ -24,7 +24,7 @@ describe("createBatches", () => {
 	];
 
 	for (const { input, batchSize, output } of data) {
-		test(`${input} in batches of ${batchSize}`, () => {
+		test(`${input} in batches of ${batchSize}`, ({ expect }) => {
 			expect([...createBatches(input, batchSize)]).toEqual(output);
 		});
 	}

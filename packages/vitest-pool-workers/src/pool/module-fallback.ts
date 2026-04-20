@@ -10,7 +10,7 @@ import { ModuleRuleTypeSchema, Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { isFileNotFoundError } from "./helpers";
 import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
-import type { ViteDevServer } from "vite";
+import type { Vite } from "vitest/node";
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
 	"vitest-pool-workers:module-fallback",
@@ -68,25 +68,13 @@ const forceModuleTypeRegexp = new RegExp(
 );
 
 function isFile(filePath: string): boolean {
-	try {
-		return fs.statSync(filePath).isFile();
-	} catch (e) {
-		if (isFileNotFoundError(e)) {
-			return false;
-		}
-		throw e;
-	}
+	return fs.statSync(filePath, { throwIfNoEntry: false })?.isFile() ?? false;
 }
 
 function isDirectory(filePath: string): boolean {
-	try {
-		return fs.statSync(filePath).isDirectory();
-	} catch (e) {
-		if (isFileNotFoundError(e)) {
-			return false;
-		}
-		throw e;
-	}
+	return (
+		fs.statSync(filePath, { throwIfNoEntry: false })?.isDirectory() ?? false
+	);
 }
 
 function getParentPaths(filePath: string): string[] {
@@ -143,7 +131,7 @@ await cjsModuleLexer.init();
  * using the same package as Node.
  */
 async function getCjsNamedExports(
-	vite: ViteDevServer,
+	vite: Vite.ViteDevServer,
 	filePath: string,
 	contents: string,
 	seen = new Set()
@@ -162,14 +150,13 @@ async function getCjsNamedExports(
 		}
 		try {
 			const resolvedContents = fs.readFileSync(resolved, "utf8");
-			seen.add(filePath);
+			seen.add(resolved);
 			const resolvedNames = await getCjsNamedExports(
 				vite,
 				resolved,
 				resolvedContents,
 				seen
 			);
-			seen.delete(filePath);
 			for (const name of resolvedNames) {
 				result.add(name);
 			}
@@ -200,24 +187,31 @@ function withImportMetaUrl(contents: string, url: string | URL): string {
 	return contents.replaceAll("import.meta.url", JSON.stringify(url.toString()));
 }
 
-const jsExtensions = [".js", ".mjs", ".cjs"];
-function maybeGetTargetFilePath(target: string): string | undefined {
+// Extensions that Node's `require()` probes automatically but `workerd` won't.
+// ESM `import` requires explicit extensions; Vite's resolver handles those.
+const requireExtensions = [".js", ".mjs", ".cjs", ".json"];
+function maybeGetTargetFilePath(
+	target: string,
+	isRequire: boolean
+): string | undefined {
 	// Can't use `fs.existsSync()` here as `target` could be a directory
 	// (e.g. `node:fs` and `node:fs/promises`)
 	if (isFile(target)) {
 		return target;
 	}
-	for (const extension of jsExtensions) {
-		const targetWithExtension = target + extension;
-		if (fs.existsSync(targetWithExtension)) {
-			return targetWithExtension;
+	if (isRequire) {
+		for (const extension of requireExtensions) {
+			const targetWithExtension = target + extension;
+			if (fs.existsSync(targetWithExtension)) {
+				return targetWithExtension;
+			}
 		}
 	}
 	if (target.endsWith(disableCjsEsmShimSuffix)) {
 		return target;
 	}
 	if (isDirectory(target)) {
-		return maybeGetTargetFilePath(target + "/index");
+		return maybeGetTargetFilePath(target + "/index", isRequire);
 	}
 }
 
@@ -250,7 +244,7 @@ function getApproximateSpecifier(target: string, referrerDir: string): string {
 }
 
 async function viteResolve(
-	vite: ViteDevServer,
+	vite: Vite.ViteDevServer,
 	specifier: string,
 	referrer: string,
 	isRequire: boolean
@@ -308,7 +302,7 @@ async function viteResolve(
 
 type ResolveMethod = "import" | "require";
 async function resolve(
-	vite: ViteDevServer,
+	vite: Vite.ViteDevServer,
 	method: ResolveMethod,
 	target: string,
 	specifier: string,
@@ -316,7 +310,8 @@ async function resolve(
 ): Promise<string /* filePath */> {
 	const referrerDir = posixPath.dirname(referrer);
 
-	let filePath = maybeGetTargetFilePath(target);
+	const isRequire = method === "require";
+	let filePath = maybeGetTargetFilePath(target, isRequire);
 	if (filePath !== undefined) {
 		return filePath;
 	}
@@ -337,7 +332,8 @@ async function resolve(
 		libPath,
 		specifier.replaceAll(":", "/")
 	);
-	filePath = maybeGetTargetFilePath(specifierLibPath);
+	// Always probe extensions for pool-internal lib modules
+	filePath = maybeGetTargetFilePath(specifierLibPath, /* isRequire */ true);
 	if (filePath !== undefined) {
 		return filePath;
 	}
@@ -413,7 +409,7 @@ function buildModuleResponse(target: string, contents: ModuleContents) {
 }
 
 async function load(
-	vite: ViteDevServer,
+	vite: Vite.ViteDevServer,
 	logBase: string,
 	method: ResolveMethod,
 	target: string,
@@ -458,6 +454,16 @@ async function load(
 		filePath.endsWith(".mjs") ||
 		(filePath.endsWith(".js") && isWithinTypeModuleContext(filePath));
 
+	// JSON modules: CommonJS `require("./data.json")` is common in many widely
+	// used packages (e.g. mime-types). If we return raw JSON as a `commonJsModule`,
+	// `workerd` will try to parse it as JavaScript and fail with
+	// `SyntaxError: Unexpected token ':'`.
+	if (filePath.endsWith(".json")) {
+		const json = fs.readFileSync(filePath, "utf8");
+		debuglog(logBase, "json:", filePath);
+		return buildModuleResponse(target, { json });
+	}
+
 	let contents = fs.readFileSync(filePath, "utf8");
 	const targetUrl = pathToFileURL(target);
 	contents = withSourceUrl(contents, targetUrl);
@@ -494,7 +500,7 @@ async function load(
 }
 
 export async function handleModuleFallbackRequest(
-	vite: ViteDevServer,
+	vite: Vite.ViteDevServer,
 	request: Request
 ): Promise<Response> {
 	const method = request.headers.get("X-Resolve-Method");

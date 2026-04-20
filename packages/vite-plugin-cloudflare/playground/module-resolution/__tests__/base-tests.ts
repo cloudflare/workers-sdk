@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "vitest";
+import { afterAll, assert, describe, test } from "vitest";
 import {
 	getJsonResponse,
 	getTextResponse,
@@ -8,11 +8,18 @@ import {
 
 describe("module resolution", async () => {
 	afterAll(() => {
-		expect(serverLogs.errors).toEqual([]);
+		assert(
+			serverLogs.errors.length === 0,
+			`Unexpected server error logs remaining after tests:\n${serverLogs.errors
+				.map((error) => ` - ${error}`)
+				.join("\n")}\n`
+		);
 	});
 
 	describe("basic module resolution", () => {
-		test("`require` js/cjs files with specifying their file extension", async () => {
+		test("`require` js/cjs files with specifying their file extension", async ({
+			expect,
+		}) => {
 			const result = await getJsonResponse("/require-ext");
 			expect(result).toEqual({
 				"(requires/ext) hello.cjs (wrong-extension)": null,
@@ -21,14 +28,16 @@ describe("module resolution", async () => {
 			});
 		});
 
-		test("`require` js/cjs files without specifying their file extension", async () => {
+		test("`require` js/cjs files without specifying their file extension", async ({
+			expect,
+		}) => {
 			const result = await getJsonResponse("/require-no-ext");
 			expect(result).toEqual({
 				"(requires/no-ext) helloWorld": "hello (.js) world (.cjs)",
 			});
 		});
 
-		test("`require` json files", async () => {
+		test("`require` json files", async ({ expect }) => {
 			const result = await getJsonResponse("/require-json");
 			expect(result).toEqual({
 				"(requires/json) package name":
@@ -39,7 +48,7 @@ describe("module resolution", async () => {
 	});
 
 	describe("Cloudflare specific module resolution", () => {
-		test("internal imports from `cloudflare:*`", async () => {
+		test("internal imports from `cloudflare:*`", async ({ expect }) => {
 			const result = await getJsonResponse("/cloudflare-imports");
 
 			// Note: in some cases the DurableObject class name (erroneously) includes
@@ -53,7 +62,7 @@ describe("module resolution", async () => {
 			});
 		});
 
-		test("external imports from `cloudflare:*`", async () => {
+		test("external imports from `cloudflare:*`", async ({ expect }) => {
 			const result = await getJsonResponse("/external-cloudflare-imports");
 
 			// Note: in some cases the DurableObject class name (erroneously) includes
@@ -74,7 +83,7 @@ describe("module resolution", async () => {
 	 *  special meaning to us.
 	 */
 	describe("third party packages resolutions", () => {
-		test("react", async () => {
+		test("react", async ({ expect }) => {
 			const result = await getJsonResponse("/third-party/react");
 			expect(result).toEqual({
 				"(react) reactVersionsMatch": true,
@@ -83,7 +92,7 @@ describe("module resolution", async () => {
 			});
 		});
 
-		test("@remix-run/cloudflare", async () => {
+		test("@remix-run/cloudflare", async ({ expect }) => {
 			const result = await getJsonResponse("/third-party/remix");
 			expect(result).toEqual({
 				"(remix) remixRunCloudflareCookieName":
@@ -91,7 +100,7 @@ describe("module resolution", async () => {
 			});
 		});
 
-		test("discord-api-types/v10", async () => {
+		test("discord-api-types/v10", async ({ expect }) => {
 			const result = await getJsonResponse("/third-party/discord-api-types");
 			expect(result).toEqual({
 				"(discord-api-types/v10) RPCErrorCodes.InvalidUser": 4010,
@@ -99,26 +108,27 @@ describe("module resolution", async () => {
 			});
 		});
 
-		test("slash-create", async () => {
+		test("slash-create", async ({ expect }) => {
 			const result = await getJsonResponse("/third-party/slash-create");
 			expect(result).toEqual({
 				"(slash-create/web) VERSION": "6.2.1",
 				"(slash-create/web) myCollection.random()": 54321,
-				"(slash-create/web) slashCreatorInstance is instance of SlashCreator":
-					true,
+				"(slash-create/web) slashCreatorInstance is instance of SlashCreator": true,
 			});
 		});
 	});
 
 	describe("user aliases", () => {
-		test("imports from an aliased package", async () => {
+		test("imports from an aliased package", async ({ expect }) => {
 			const result = await getTextResponse("/@alias/test");
 			expect(result).toBe("OK!");
 		});
 	});
 
 	describe("optimizeDeps.exclude", () => {
-		test("supports excluded packages importing from virtual modules", async () => {
+		test("supports excluded packages importing from virtual modules", async ({
+			expect,
+		}) => {
 			const result = await getTextResponse("/optimize-deps/exclude");
 			expect(result).toBe("Export from virtual module");
 		});

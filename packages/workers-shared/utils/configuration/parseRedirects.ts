@@ -53,7 +53,9 @@ export function parseRedirects(
 			continue;
 		}
 
-		const tokens = line.split(/\s+/);
+		// Handle inline comments: strip off from the first `#` token that starts a comment, but not URL fragments.
+		// This allows `/a /b#fragment` but strips `/a /b # comment`
+		const tokens = line.replace(/\s+#.*$/, "").split(/\s+/);
 
 		if (tokens.length < 2 || tokens.length > 3) {
 			invalid.push({
@@ -133,8 +135,8 @@ export function parseRedirects(
 		// We only want to run this on relative URLs.
 		const hasRelativePath = !urlHasHost(to);
 		const hasWildcardToIndex =
-			/\/\*$/.test(from) && /\/index(.html)?$/.test(to);
-		const hasRootToIndex = /\/$/.test(from) && /\/index(.html)?$/.test(to);
+			from.endsWith("/*") && /\/index(.html)?$/.test(to);
+		const hasRootToIndex = from.endsWith("/") && /\/index(.html)?$/.test(to);
 		const hasHTMLHandling = htmlHandling !== "none"; // HTML handling is enabled by default.
 		if (
 			hasRelativePath &&

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { customizeWorkerConfig } from "../plugin-config";
 import type { ResolvedWorkerConfig } from "../plugin-config";
 
@@ -19,7 +19,9 @@ function createMockWorkerConfig(
 }
 
 describe("customizeWorkerConfig", () => {
-	test("should return the original config when config is undefined", () => {
+	test("should return the original config when config is undefined", ({
+		expect,
+	}) => {
 		const workerConfig = createMockWorkerConfig();
 		const result = customizeWorkerConfig({
 			workerConfig,
@@ -28,7 +30,7 @@ describe("customizeWorkerConfig", () => {
 		expect(result).toBe(workerConfig);
 	});
 
-	test("should merge object configuration into the config", () => {
+	test("should merge object configuration into the config", ({ expect }) => {
 		const workerConfig = createMockWorkerConfig({
 			compatibility_date: "2024-01-01",
 		});
@@ -42,7 +44,7 @@ describe("customizeWorkerConfig", () => {
 		expect(result.name).toBe("test-worker");
 	});
 
-	test("should merge function result into the config", () => {
+	test("should merge function result into the config", ({ expect }) => {
 		const workerConfig = createMockWorkerConfig();
 		const result = customizeWorkerConfig({
 			workerConfig,
@@ -55,7 +57,9 @@ describe("customizeWorkerConfig", () => {
 		expect(result.name).toBe("modified-test-worker");
 	});
 
-	test("should return original config when function returns undefined/void", () => {
+	test("should return original config when function returns undefined/void", ({
+		expect,
+	}) => {
 		const workerConfig = createMockWorkerConfig();
 		const result = customizeWorkerConfig({
 			workerConfig,
@@ -66,7 +70,7 @@ describe("customizeWorkerConfig", () => {
 		expect(result).toBe(workerConfig);
 	});
 
-	test("should allow function to mutate config in place", () => {
+	test("should allow function to mutate config in place", ({ expect }) => {
 		const workerConfig = createMockWorkerConfig({
 			compatibility_date: "2024-01-01",
 		});
@@ -83,7 +87,9 @@ describe("customizeWorkerConfig", () => {
 		expect(result.compatibility_date).toBe("2025-06-01");
 	});
 
-	test("should merge compatibility_flags arrays using defu semantics", () => {
+	test("should merge compatibility_flags arrays using defu semantics", ({
+		expect,
+	}) => {
 		const workerConfig = createMockWorkerConfig({
 			compatibility_flags: ["a"],
 		});
@@ -99,7 +105,9 @@ describe("customizeWorkerConfig", () => {
 		);
 	});
 
-	test("should preserve existing config values not specified in customize", () => {
+	test("should preserve existing config values not specified in customize", ({
+		expect,
+	}) => {
 		const workerConfig = createMockWorkerConfig({
 			name: "original-name",
 			compatibility_date: "2024-01-01",

@@ -2,19 +2,19 @@ import {
 	DeferredPromise,
 	LogLevel,
 	Miniflare,
-	MiniflareCoreError,
 	QUEUES_PLUGIN_NAME,
 	QueuesError,
 	Response,
 } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { z } from "zod";
 import {
-	LogEntry,
 	MiniflareDurableObjectControlStub,
 	TestLog,
 	useDispose,
 } from "../../test-shared";
+import type { LogEntry } from "../../test-shared";
+import type { MiniflareCoreError } from "miniflare";
 
 const StringArraySchema = z.string().array();
 const MessageArraySchema = z
@@ -42,7 +42,7 @@ async function getControlStub(
 	return stub;
 }
 
-test("maxBatchTimeout validation", async () => {
+test("maxBatchTimeout validation", async ({ expect }) => {
 	const mf = new Miniflare({
 		queueConsumers: {
 			QUEUE: { maxBatchTimeout: 60 },
@@ -67,7 +67,7 @@ test("maxBatchTimeout validation", async () => {
 	expect(error?.message).toMatch(/Number must be less than or equal to 60/);
 });
 
-test("flushes partial and full batches", async () => {
+test("flushes partial and full batches", async ({ expect }) => {
 	let batches: string[][] = [];
 
 	const mf = new Miniflare({
@@ -203,7 +203,9 @@ test("flushes partial and full batches", async () => {
 	batches = [];
 });
 
-test("supports declaring queue producers as a key-value pair -> queueProducers: { 'MY_QUEUE_BINDING': 'my-queue_name' }", async () => {
+test("supports declaring queue producers as a key-value pair -> queueProducers: { 'MY_QUEUE_BINDING': 'my-queue_name' }", async ({
+	expect,
+}) => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
 	const mf = new Miniflare({
 		queueProducers: { MY_QUEUE_PRODUCER: "MY_QUEUE" },
@@ -242,7 +244,9 @@ test("supports declaring queue producers as a key-value pair -> queueProducers: 
 	]);
 });
 
-test("supports declaring queue producers as an array -> queueProducers: ['MY_QUEUE_BINDING']", async () => {
+test("supports declaring queue producers as an array -> queueProducers: ['MY_QUEUE_BINDING']", async ({
+	expect,
+}) => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
 	const mf = new Miniflare({
 		queueProducers: ["MY_QUEUE"],
@@ -281,7 +285,9 @@ test("supports declaring queue producers as an array -> queueProducers: ['MY_QUE
 	]);
 });
 
-test("supports declaring queue producers as {MY_QUEUE_BINDING: {queueName: 'my-queue-name'}}", async () => {
+test("supports declaring queue producers as {MY_QUEUE_BINDING: {queueName: 'my-queue-name'}}", async ({
+	expect,
+}) => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
 	const mf = new Miniflare({
 		queueProducers: { MY_QUEUE_PRODUCER: { queueName: "MY_QUEUE" } },
@@ -320,7 +326,7 @@ test("supports declaring queue producers as {MY_QUEUE_BINDING: {queueName: 'my-q
 	]);
 });
 
-test("sends all structured cloneable types", async () => {
+test("sends all structured cloneable types", async ({ expect }) => {
 	const errorPromise = new DeferredPromise<string>();
 
 	const mf = new Miniflare({
@@ -437,7 +443,7 @@ function stripTimings(entries: LogEntry[]) {
 	});
 }
 
-test("retries messages", async () => {
+test("retries messages", async ({ expect }) => {
 	let batches: z.infer<typeof MessageArraySchema>[] = [];
 	const bodiesAttempts = () =>
 		batches.map((batch) =>
@@ -690,7 +696,7 @@ test("retries messages", async () => {
 	batches = [];
 });
 
-test("moves to dead letter queue", async () => {
+test("moves to dead letter queue", async ({ expect }) => {
 	const batches: z.infer<typeof MessageArraySchema>[] = [];
 	let retryMessages: string[] = [];
 
@@ -820,7 +826,7 @@ test("moves to dead letter queue", async () => {
 	);
 });
 
-test("operations permit strange queue names", async () => {
+test("operations permit strange queue names", async ({ expect }) => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
 	const id = "my/ Queue";
 	const mf = new Miniflare({
@@ -860,7 +866,7 @@ test("operations permit strange queue names", async () => {
 	]);
 });
 
-test("supports message contentTypes", async () => {
+test("supports message contentTypes", async ({ expect }) => {
 	const MessageContentTypeTestSchema = z
 		.object({ queue: z.string(), id: z.string(), body: z.any() })
 		.array();
@@ -941,7 +947,97 @@ test("supports message contentTypes", async () => {
 	]);
 });
 
-test("validates message size", async () => {
+test("supports metadata in send() response", async ({ expect }) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "producer",
+				queueProducers: ["QUEUE"],
+				compatibilityFlags: ["experimental"],
+				modules: true,
+				script: `export default {
+					async fetch(request, env, ctx) {
+						const resp = await env.QUEUE.send("msg");
+						return Response.json(resp);
+					}
+				}`,
+			},
+			{
+				name: "consumer",
+				queueConsumers: ["QUEUE"],
+				modules: true,
+				script: `export default {
+					async queue(batch, env, ctx) {}
+				}`,
+			},
+		],
+	});
+	useDispose(mf);
+	const object = await getControlStub(mf, "QUEUE");
+
+	const first = await mf.dispatchFetch("http://localhost");
+	await first.arrayBuffer();
+	await object.waitForFakeTasks();
+
+	const res = await mf.dispatchFetch("http://localhost");
+	const body = await res.json();
+	expect(body).toEqual({
+		metadata: {
+			metrics: {
+				backlogCount: 1,
+				backlogBytes: expect.any(Number),
+				oldestMessageTimestamp: new Date(1_000_000).toISOString(),
+			},
+		},
+	});
+});
+
+test("supports metadata in sendBatch() response", async ({ expect }) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "producer",
+				queueProducers: ["QUEUE"],
+				compatibilityFlags: ["experimental"],
+				modules: true,
+				script: `export default {
+					async fetch(request, env, ctx) {
+						const resp = await env.QUEUE.sendBatch([{ body: "msg1" }, { body: "msg2" }]);
+						return Response.json(resp);
+					}
+				}`,
+			},
+			{
+				name: "consumer",
+				queueConsumers: ["QUEUE"],
+				modules: true,
+				script: `export default {
+					async queue(batch, env, ctx) {}
+				}`,
+			},
+		],
+	});
+	useDispose(mf);
+	const object = await getControlStub(mf, "QUEUE");
+
+	const first = await mf.dispatchFetch("http://localhost");
+	await first.arrayBuffer();
+	await object.waitForFakeTasks();
+
+	const res = await mf.dispatchFetch("http://localhost");
+	const body = await res.json();
+	expect(body).toEqual({
+		metadata: {
+			metrics: {
+				backlogCount: 2,
+				backlogBytes: expect.any(Number),
+				oldestMessageTimestamp: new Date(1_000_000).toISOString(),
+			},
+		},
+	});
+});
+
+test("validates message size", async ({ expect }) => {
 	const mf = new Miniflare({
 		queueProducers: { QUEUE: "MY_QUEUE" },
 		queueConsumers: {

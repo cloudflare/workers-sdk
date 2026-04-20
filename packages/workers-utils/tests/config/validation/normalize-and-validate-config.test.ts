@@ -1,6 +1,6 @@
 import path from "node:path";
 import TOML from "smol-toml";
-import { describe, expect, it, test, vi } from "vitest";
+import { describe, it, test, vi } from "vitest";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
 import type {
@@ -13,7 +13,7 @@ import type {
 import type { RedirectedRawConfig } from "../../../src/config/config";
 
 describe("normalizeAndValidateConfig()", () => {
-	it("should use defaults for empty configuration", () => {
+	it("should use defaults for empty configuration", ({ expect }) => {
 		const { config, diagnostics } = normalizeAndValidateConfig(
 			{},
 			undefined,
@@ -35,6 +35,8 @@ describe("normalizeAndValidateConfig()", () => {
 			configPath: undefined,
 			d1_databases: [],
 			vectorize: [],
+			ai_search_namespaces: [],
+			ai_search: [],
 			hyperdrive: [],
 			dev: {
 				ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
@@ -72,9 +74,12 @@ describe("normalizeAndValidateConfig()", () => {
 			},
 			r2_buckets: [],
 			secrets_store_secrets: [],
+			artifacts: [],
 			unsafe_hello_world: [],
+			flagship: [],
 			ratelimits: [],
 			vpc_services: [],
+			vpc_networks: [],
 			services: [],
 			analytics_engine_datasets: [],
 			route: undefined,
@@ -125,16 +130,19 @@ describe("normalizeAndValidateConfig()", () => {
 			keep_names: undefined,
 			assets: undefined,
 			observability: undefined,
+			cache: undefined,
 			compliance_region: undefined,
 			images: undefined,
 			media: undefined,
+			stream: undefined,
+			previews: undefined,
 		} satisfies Config);
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);
 	});
 
 	describe("top-level non-environment configuration", () => {
-		it("should override config defaults with provided values", () => {
+		it("should override config defaults with provided values", ({ expect }) => {
 			const expectedConfig: Partial<ConfigFields<RawDevConfig>> = {
 				legacy_env: true,
 				send_metrics: false,
@@ -160,7 +168,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		it("should error on invalid top level fields", () => {
+		it("should error on invalid top level fields", ({ expect }) => {
 			const expectedConfig = {
 				legacy_env: "FOO",
 				send_metrics: "BAD",
@@ -192,18 +200,20 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - Expected \\"legacy_env\\" to be of type boolean but got \\"FOO\\".
-			  - Expected \\"send_metrics\\" to be of type boolean but got \\"BAD\\".
-			  - Expected \\"keep_vars\\" to be of type boolean but got \\"NEVER\\".
-			  - Expected \\"dev.ip\\" to be of type string but got 222.
-			  - Expected \\"dev.port\\" to be of type number but got \\"FOO\\".
-			  - Expected \\"dev.local_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"wss\\".
-			  - Expected \\"dev.upstream_protocol\\" field to be one of [\\"http\\",\\"https\\"] but got \\"ws\\"."
-		`);
+				"Processing wrangler configuration:
+				  - Expected "legacy_env" to be of type boolean but got "FOO".
+				  - Expected "send_metrics" to be of type boolean but got "BAD".
+				  - Expected "keep_vars" to be of type boolean but got "NEVER".
+				  - Expected "dev.ip" to be of type string but got 222.
+				  - Expected "dev.port" to be of type number but got "FOO".
+				  - Expected "dev.local_protocol" field to be one of ["http","https"] but got "wss".
+				  - Expected "dev.upstream_protocol" field to be one of ["http","https"] but got "ws"."
+			`);
 		});
 
-		it("should warn on and remove unexpected top level fields", () => {
+		it("should warn on and remove unexpected top level fields", ({
+			expect,
+		}) => {
 			const expectedConfig = {
 				unexpected: {
 					subkey: "some-value",
@@ -222,11 +232,13 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - Unexpected fields found in top-level field: \\"unexpected\\""
+				  - Unexpected fields found in top-level field: "unexpected""
 			`);
 		});
 
-		it("should report a deprecation warning if `miniflare` appears at the top level", () => {
+		it("should report a deprecation warning if `miniflare` appears at the top level", ({
+			expect,
+		}) => {
 			const expectedConfig = {
 				miniflare: {
 					host: "localhost",
@@ -245,11 +257,11 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - Unexpected fields found in top-level field: \\"miniflare\\""
+				  - Unexpected fields found in top-level field: "miniflare""
 			`);
 		});
 
-		it("should normalise a blank route value to be undefined", () => {
+		it("should normalise a blank route value to be undefined", ({ expect }) => {
 			const expectedConfig = {
 				route: "",
 			};
@@ -266,13 +278,15 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(true);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The \\"route\\" field in your configuration is an empty string and will be ignored.
-			    Please remove the \\"route\\" field from your configuration."
-		`);
+				"Processing wrangler configuration:
+				  - The "route" field in your configuration is an empty string and will be ignored.
+				    Please remove the "route" field from your configuration."
+			`);
 		});
 
-		it("should normalise a blank account_id value to be undefined", () => {
+		it("should normalise a blank account_id value to be undefined", ({
+			expect,
+		}) => {
 			const expectedConfig = {
 				account_id: "",
 			};
@@ -289,14 +303,14 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(true);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The \\"account_id\\" field in your configuration is an empty string and will be ignored.
-			    Please remove the \\"account_id\\" field from your configuration."
-		`);
+				"Processing wrangler configuration:
+				  - The "account_id" field in your configuration is an empty string and will be ignored.
+				    Please remove the "account_id" field from your configuration."
+			`);
 		});
 
 		describe("compatibility_date", () => {
-			it("should allow valid values", () => {
+			it("should allow valid values", ({ expect }) => {
 				const expectedConfig: RawConfig = {
 					compatibility_date: "2024-10-01",
 				};
@@ -314,7 +328,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error for en-dashes", () => {
+			it("should error for en-dashes", ({ expect }) => {
 				const expectedConfig: RawConfig = {
 					compatibility_date: "2024–10–01", // en-dash
 				};
@@ -335,11 +349,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(normalizeString(result.diagnostics.renderErrors()))
 					.toMatchInlineSnapshot(`
 						"Processing wrangler configuration:
-						  - \\"compatibility_date\\" field should use ISO-8601 accepted hyphens (-) rather than en-dashes (–) or em-dashes (—)."
+						  - "compatibility_date" field should use ISO-8601 accepted hyphens (-) rather than en-dashes (–) or em-dashes (—)."
 					`);
 			});
 
-			it("should error for em-dashes", () => {
+			it("should error for em-dashes", ({ expect }) => {
 				const expectedConfig = {
 					compatibility_date: "2024—10—01", // em-dash
 				};
@@ -360,11 +374,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(normalizeString(result.diagnostics.renderErrors()))
 					.toMatchInlineSnapshot(`
 						"Processing wrangler configuration:
-						  - \\"compatibility_date\\" field should use ISO-8601 accepted hyphens (-) rather than en-dashes (–) or em-dashes (—)."
+						  - "compatibility_date" field should use ISO-8601 accepted hyphens (-) rather than en-dashes (–) or em-dashes (—)."
 					`);
 			});
 
-			it("should error for invalid date values", () => {
+			it("should error for invalid date values", ({ expect }) => {
 				const expectedConfig: RawConfig = {
 					compatibility_date: "abc",
 				};
@@ -382,12 +396,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizeString(diagnostics.renderErrors()))
 					.toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - \\"compatibility_date\\" field should be a valid ISO-8601 date (YYYY-MM-DD), but got \\"abc\\"."
-				`);
+						"Processing wrangler configuration:
+						  - "compatibility_date" field should be a valid ISO-8601 date (YYYY-MM-DD), but got "abc"."
+					`);
 			});
 
-			it("should error for dates that are both invalid and include en/em dashes", () => {
+			it("should error for dates that are both invalid and include en/em dashes", ({
+				expect,
+			}) => {
 				const expectedConfig = {
 					compatibility_date: "2024—100—01", // invalid date + em-dash
 				};
@@ -408,14 +424,16 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(normalizeString(result.diagnostics.renderErrors()))
 					.toMatchInlineSnapshot(`
 						"Processing wrangler configuration:
-						  - \\"compatibility_date\\" field should use ISO-8601 accepted hyphens (-) rather than en-dashes (–) or em-dashes (—).
-						  - \\"compatibility_date\\" field should be a valid ISO-8601 date (YYYY-MM-DD), but got \\"2024—100—01\\"."
+						  - "compatibility_date" field should use ISO-8601 accepted hyphens (-) rather than en-dashes (–) or em-dashes (—).
+						  - "compatibility_date" field should be a valid ISO-8601 date (YYYY-MM-DD), but got "2024—100—01"."
 					`);
 			});
 		});
 
 		describe("[site]", () => {
-			it("should override `site` config defaults with provided values", () => {
+			it("should override `site` config defaults with provided values", ({
+				expect,
+			}) => {
 				const expectedConfig: RawConfig = {
 					site: {
 						bucket: "BUCKET",
@@ -439,16 +457,16 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizeString(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - [1mDeprecation[0m: \\"site.entry-point\\":
-			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
-			              \`\`\`
-			              main = \\"my-site/index.js\\"
-			              \`\`\`"
-		        `);
+						"Processing wrangler configuration:
+						  - [1mDeprecation[0m: "site.entry-point":
+						    Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+						    \`\`\`
+						    main = "my-site/index.js"
+						    \`\`\`"
+					`);
 			});
 
-			it("should error if `site` config is missing `bucket`", () => {
+			it("should error if `site` config is missing `bucket`", ({ expect }) => {
 				const expectedConfig: RawConfig = {
 					// @ts-expect-error we're intentionally passing an invalid configuration here
 					site: {
@@ -472,21 +490,21 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizeString(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - [1mDeprecation[0m: \\"site.entry-point\\":
-			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
-			              \`\`\`
-			              main = \\"workers-site/index.js\\"
-			              \`\`\`"
-		        `);
+						"Processing wrangler configuration:
+						  - [1mDeprecation[0m: "site.entry-point":
+						    Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+						    \`\`\`
+						    main = "workers-site/index.js"
+						    \`\`\`"
+					`);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"site.bucket\\" is a required field."
-		        `);
+					"Processing wrangler configuration:
+					  - "site.bucket" is a required field."
+				`);
 			});
 
-			it("should error on invalid `site` values", () => {
+			it("should error on invalid `site` values", ({ expect }) => {
 				const expectedConfig = {
 					site: {
 						bucket: "BUCKET",
@@ -507,26 +525,28 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected \\"sites.include.[0]\\" to be of type string but got 222.
-			            - Expected \\"sites.include.[1]\\" to be of type string but got 333.
-			            - Expected \\"sites.exclude.[0]\\" to be of type string but got 444.
-			            - Expected \\"sites.exclude.[1]\\" to be of type string but got 555.
-			            - Expected \\"site.entry-point\\" to be of type string but got 111."
-		        `);
+					"Processing wrangler configuration:
+					  - Expected "sites.include.[0]" to be of type string but got 222.
+					  - Expected "sites.include.[1]" to be of type string but got 333.
+					  - Expected "sites.exclude.[0]" to be of type string but got 444.
+					  - Expected "sites.exclude.[1]" to be of type string but got 555.
+					  - Expected "site.entry-point" to be of type string but got 111."
+				`);
 
 				expect(normalizeString(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - [1mDeprecation[0m: \\"site.entry-point\\":
-			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
-			              \`\`\`
-			              main = \\"111/index.js\\"
-			              \`\`\`"
-		        `);
+						"Processing wrangler configuration:
+						  - [1mDeprecation[0m: "site.entry-point":
+						    Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+						    \`\`\`
+						    main = "111/index.js"
+						    \`\`\`"
+					`);
 			});
 
-			it("should log a deprecation warning if entry-point is defined", async () => {
+			it("should log a deprecation warning if entry-point is defined", async ({
+				expect,
+			}) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
 						site: {
@@ -541,30 +561,30 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(config.site).toMatchInlineSnapshot(`
-			          Object {
-			            "bucket": "some/path",
-			            "entry-point": "some/other/script.js",
-			            "exclude": Array [],
-			            "include": Array [],
-			          }
-		        `);
+					{
+					  "bucket": "some/path",
+					  "entry-point": "some/other/script.js",
+					  "exclude": [],
+					  "include": [],
+					}
+				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(false);
 
 				expect(normalizeString(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - [1mDeprecation[0m: \\"site.entry-point\\":
-			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
-			              \`\`\`
-			              main = \\"some/other/script.js\\"
-			              \`\`\`"
-		        `);
+						"Processing wrangler configuration:
+						  - [1mDeprecation[0m: "site.entry-point":
+						    Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+						    \`\`\`
+						    main = "some/other/script.js"
+						    \`\`\`"
+					`);
 			});
 		});
 
 		describe("[alias]", () => {
-			it("errors with a non-object", () => {
+			it("errors with a non-object", ({ expect }) => {
 				const { config: _config, diagnostics } = normalizeAndValidateConfig(
 					{
 						alias: "some silly string",
@@ -584,7 +604,7 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("errors with non string values", () => {
+			it("errors with non string values", ({ expect }) => {
 				const { config: _config, diagnostics } = normalizeAndValidateConfig(
 					{
 						alias: {
@@ -602,11 +622,11 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Expected alias[\\"some-module\\"] to be a string, but got number"
+					  - Expected alias["some-module"] to be a string, but got number"
 				`);
 			});
 
-			it("returns the alias config when valid", () => {
+			it("returns the alias config when valid", ({ expect }) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
 						alias: {
@@ -623,14 +643,16 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 
 				expect(config.alias).toMatchInlineSnapshot(`
-					Object {
+					{
 					  "some-module": "./path/to/some-module",
 					}
 				`);
 			});
 		});
 
-		it("should map `wasm_module` paths from relative to the config path to relative to the cwd", () => {
+		it("should map `wasm_module` paths from relative to the config path to relative to the cwd", ({
+			expect,
+		}) => {
 			const expectedConfig: RawConfig = {
 				wasm_modules: {
 					MODULE_1: "path/to/module_1.mjs",
@@ -658,7 +680,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		it("should warn on unexpected fields on `triggers`", async () => {
+		it("should warn on unexpected fields on `triggers`", async ({ expect }) => {
 			const expectedConfig: RawConfig = {
 				triggers: {
 					crons: ["1 * * * *"],
@@ -689,11 +711,11 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(normalizePath(diagnostics.renderWarnings()))
 				.toMatchInlineSnapshot(`
 					"Processing project/wrangler.toml configuration:
-					  - Unexpected fields found in triggers field: \\"someOtherfield\\""
+					  - Unexpected fields found in triggers field: "someOtherfield""
 				`);
 		});
 
-		it("should error on invalid `wasm_modules` paths", () => {
+		it("should error on invalid `wasm_modules` paths", ({ expect }) => {
 			const expectedConfig = {
 				wasm_modules: {
 					MODULE_1: 111,
@@ -715,13 +737,15 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
-			        "Processing project/wrangler.toml configuration:
-			          - Expected \\"wasm_modules['MODULE_1']\\" to be of type string but got 111.
-			          - Expected \\"wasm_modules['MODULE_2']\\" to be of type string but got 222."
-		      `);
+				"Processing project/wrangler.toml configuration:
+				  - Expected "wasm_modules['MODULE_1']" to be of type string but got 111.
+				  - Expected "wasm_modules['MODULE_2']" to be of type string but got 222."
+			`);
 		});
 
-		it("should map `text_blobs` paths from relative to the config path to relative to the cwd", () => {
+		it("should map `text_blobs` paths from relative to the config path to relative to the cwd", ({
+			expect,
+		}) => {
 			const expectedConfig: RawConfig = {
 				text_blobs: {
 					BLOB_1: "path/to/text1.txt",
@@ -748,7 +772,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		it("should error on invalid `text_blob` paths", () => {
+		it("should error on invalid `text_blob` paths", ({ expect }) => {
 			const expectedConfig = {
 				text_blobs: {
 					MODULE_1: 111,
@@ -770,13 +794,15 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
-			        "Processing project/wrangler.toml configuration:
-			          - Expected \\"text_blobs['MODULE_1']\\" to be of type string but got 111.
-			          - Expected \\"text_blobs['MODULE_2']\\" to be of type string but got 222."
-		      `);
+				"Processing project/wrangler.toml configuration:
+				  - Expected "text_blobs['MODULE_1']" to be of type string but got 111.
+				  - Expected "text_blobs['MODULE_2']" to be of type string but got 222."
+			`);
 		});
 
-		it("should map `data_blobs` paths from relative to the config path to relative to the cwd", () => {
+		it("should map `data_blobs` paths from relative to the config path to relative to the cwd", ({
+			expect,
+		}) => {
 			const expectedConfig: RawConfig = {
 				data_blobs: {
 					BLOB_1: "path/to/data1.bin",
@@ -803,7 +829,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		it("should error on invalid `data_blob` paths", () => {
+		it("should error on invalid `data_blob` paths", ({ expect }) => {
 			const expectedConfig = {
 				data_blobs: {
 					MODULE_1: 111,
@@ -825,13 +851,15 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(normalizePath(diagnostics.renderErrors())).toMatchInlineSnapshot(`
-			        "Processing project/wrangler.toml configuration:
-			          - Expected \\"data_blobs['MODULE_1']\\" to be of type string but got 111.
-			          - Expected \\"data_blobs['MODULE_2']\\" to be of type string but got 222."
-		      `);
+				"Processing project/wrangler.toml configuration:
+				  - Expected "data_blobs['MODULE_1']" to be of type string but got 111.
+				  - Expected "data_blobs['MODULE_2']" to be of type string but got 222."
+			`);
 		});
 
-		it("should resolve tsconfig relative to wrangler.toml", async () => {
+		it("should resolve tsconfig relative to wrangler.toml", async ({
+			expect,
+		}) => {
 			const expectedConfig: RawEnvironment = {
 				tsconfig: "path/to/some-tsconfig.json",
 			};
@@ -853,7 +881,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		it("should warn on unsafe binding metadata usage", () => {
+		it("should warn on unsafe binding metadata usage", ({ expect }) => {
 			const expectedConfig: RawConfig = {
 				unsafe: {
 					bindings: [
@@ -889,16 +917,16 @@ describe("normalizeAndValidateConfig()", () => {
 
 			expect(normalizeString(diagnostics.renderWarnings()))
 				.toMatchInlineSnapshot(`
-"Processing project/wrangler.toml configuration:
-  - \\"unsafe\\" fields are experimental and may change or break at any time.
-  - \\"unsafe.bindings[0]\\": {\\"type\\":\\"metadata\\",\\"name\\":\\"METADATA\\"}
-    - The deployment object in the metadata binding is now deprecated. Please switch using the version_metadata binding for access to version specific fields: https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata"
-`);
+					"Processing project/wrangler.toml configuration:
+					  - "unsafe" fields are experimental and may change or break at any time.
+					  - "unsafe.bindings[0]": {"type":"metadata","name":"METADATA"}
+					    - The deployment object in the metadata binding is now deprecated. Please switch using the version_metadata binding for access to version specific fields: https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata"
+				`);
 		});
 	});
 
 	describe("top-level environment configuration", () => {
-		it("should override config defaults with provided values", () => {
+		it("should override config defaults with provided values", ({ expect }) => {
 			const main = "src/index.ts";
 			const resolvedMain = path.resolve(process.cwd(), main);
 
@@ -1049,13 +1077,13 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler.toml configuration:
-				  - \\"unsafe\\" fields are experimental and may change or break at any time.
+				  - "unsafe" fields are experimental and may change or break at any time.
 				  - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker (CLASS1), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your wrangler.toml file. Add the following configuration:
 
 				    \`\`\`
 				    [[migrations]]
-				    tag = \\"v1\\"
-				    new_classes = [ \\"CLASS1\\" ]
+				    tag = "v1"
+				    new_sqlite_classes = [ "CLASS1" ]
 
 				    \`\`\`
 
@@ -1063,7 +1091,7 @@ describe("normalizeAndValidateConfig()", () => {
 			`);
 		});
 
-		it("should error on invalid environment values", () => {
+		it("should error on invalid environment values", ({ expect }) => {
 			const expectedConfig: RawEnvironment = {
 				name: 111,
 				account_id: 222,
@@ -1142,81 +1170,81 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
-				  - Expected \\"account_id\\" to be of type string but got 222.
-				  - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
+				  - Expected "route" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
+				  - Expected "account_id" to be of type string but got 222.
+				  - Expected "routes" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
 				      666,
 				      777,
 				      {
-				        \\"pattern\\": 123,
-				        \\"zone_id\\": \\"zone_id_1\\"
+				        "pattern": 123,
+				        "zone_id": "zone_id_1"
 				      },
 				      {
-				        \\"pattern\\": \\"route_2\\",
-				        \\"zone_id\\": 123
+				        "pattern": "route_2",
+				        "zone_id": 123
 				      },
 				      {
-				        \\"pattern\\": \\"route_2\\",
-				        \\"zone_name\\": 123
+				        "pattern": "route_2",
+				        "zone_name": 123
 				      },
 				      {
-				        \\"pattern\\": \\"route_3\\"
+				        "pattern": "route_3"
 				      },
 				      {
-				        \\"zone_id\\": \\"zone_id_4\\"
+				        "zone_id": "zone_id_4"
 				      },
 				      {
-				        \\"zone_name\\": \\"zone_name_4\\"
+				        "zone_name": "zone_name_4"
 				      },
 				      {},
 				      {
-				        \\"pattern\\": \\"route_5\\",
-				        \\"zone_id\\": \\"zone_id_5\\",
-				        \\"some_other_key\\": 123
+				        "pattern": "route_5",
+				        "zone_id": "zone_id_5",
+				        "some_other_key": 123
 				      },
 				      {
-				        \\"pattern\\": \\"route_5\\",
-				        \\"zone_name\\": \\"zone_name_5\\",
-				        \\"some_other_key\\": 123
+				        "pattern": "route_5",
+				        "zone_name": "zone_name_5",
+				        "some_other_key": 123
 				      }
 				    ].
-				  - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
-				  - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
-				  - Expected \\"build.command\\" to be of type string but got 1444.
-				  - Expected \\"build.cwd\\" to be of type string but got 1555.
-				  - Expected \\"build.watch_dir\\" to be of type string but got 1666.
-				  - Expected \\"compatibility_date\\" to be of type string but got 333.
-				  - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
-				  - Expected \\"jsx_factory\\" to be of type string but got 999.
-				  - Expected \\"jsx_fragment\\" to be of type string but got 1000.
-				  - Expected \\"tsconfig\\" to be of type string but got true.
-				  - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
-				  - Expected \\"main\\" to be of type string but got 1333.
-				  - Expected \\"placement.mode\\" field to be one of [\\"off\\",\\"smart\\",\\"targeted\\"] but got \\"INVALID\\".
-				  - The field \\"define.DEF1\\" should be a string but got 1777.
-				  - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"observability.enabled\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"observability.logs.enabled\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"observability.traces.enabled\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"observability.head_sampling_rate\\" to be of type number but got \\"INVALID\\".
-				  - Expected \\"observability.logs.enabled\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"observability.logs.head_sampling_rate\\" to be of type number but got \\"INVALID\\".
-				  - Expected \\"observability.logs.invocation_logs\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"logs.destinations\\" to be an array of strings but got \\"INVALID\\"
-				  - Expected \\"observability.logs.persist\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"observability.traces.enabled\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"observability.traces.head_sampling_rate\\" to be of type number but got \\"INVALID\\".
-				  - Expected \\"traces.destinations\\" to be an array of strings but got \\"INVALID\\"
-				  - Expected \\"observability.traces.persist\\" to be of type boolean but got \\"INVALID\\"."
+				  - Expected exactly one of the following fields ["routes","route"].
+				  - Expected "workers_dev" to be of type boolean but got "BAD".
+				  - Expected "build.command" to be of type string but got 1444.
+				  - Expected "build.cwd" to be of type string but got 1555.
+				  - Expected "build.watch_dir" to be of type string but got 1666.
+				  - Expected "compatibility_date" to be of type string but got 333.
+				  - Expected "compatibility_flags" to be of type string array but got [444,555].
+				  - Expected "jsx_factory" to be of type string but got 999.
+				  - Expected "jsx_fragment" to be of type string but got 1000.
+				  - Expected "tsconfig" to be of type string but got true.
+				  - Expected "name" to be of type string, alphanumeric and lowercase with dashes only but got 111.
+				  - Expected "main" to be of type string but got 1333.
+				  - Expected "placement.mode" field to be one of ["off","smart","targeted"] but got "INVALID".
+				  - The field "define.DEF1" should be a string but got 1777.
+				  - Expected "no_bundle" to be of type boolean but got "INVALID".
+				  - Expected "minify" to be of type boolean but got "INVALID".
+				  - Expected "first_party_worker" to be of type boolean but got "INVALID".
+				  - Expected "logpush" to be of type boolean but got "INVALID".
+				  - Expected "upload_source_maps" to be of type boolean but got "INVALID".
+				  - Expected "observability.enabled" to be of type boolean but got "INVALID".
+				  - Expected "observability.logs.enabled" to be of type boolean but got "INVALID".
+				  - Expected "observability.traces.enabled" to be of type boolean but got "INVALID".
+				  - Expected "observability.head_sampling_rate" to be of type number but got "INVALID".
+				  - Expected "observability.logs.enabled" to be of type boolean but got "INVALID".
+				  - Expected "observability.logs.head_sampling_rate" to be of type number but got "INVALID".
+				  - Expected "observability.logs.invocation_logs" to be of type boolean but got "INVALID".
+				  - Expected "logs.destinations" to be an array of strings but got "INVALID"
+				  - Expected "observability.logs.persist" to be of type boolean but got "INVALID".
+				  - Expected "observability.traces.enabled" to be of type boolean but got "INVALID".
+				  - Expected "observability.traces.head_sampling_rate" to be of type number but got "INVALID".
+				  - Expected "traces.destinations" to be an array of strings but got "INVALID"
+				  - Expected "observability.traces.persist" to be of type boolean but got "INVALID"."
 			`);
 		});
 
 		describe("name", () => {
-			it("should error on invalid `name` value with spaces", () => {
+			it("should error on invalid `name` value with spaces", ({ expect }) => {
 				const expectedConfig: RawEnvironment = {
 					name: "this has spaces",
 				} as unknown as RawEnvironment;
@@ -1233,11 +1261,11 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"this has spaces\\"."
+					  - Expected "name" to be of type string, alphanumeric and lowercase with dashes only but got "this has spaces"."
 				`);
 			});
 
-			it("should be valid `name` with underscores", () => {
+			it("should be valid `name` with underscores", ({ expect }) => {
 				const expectedConfig: RawEnvironment = {
 					name: "enterprise_nx_01",
 				} as unknown as RawEnvironment;
@@ -1254,7 +1282,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error on invalid `name` value with special characters", () => {
+			it("should error on invalid `name` value with special characters", ({
+				expect,
+			}) => {
 				const expectedConfig: RawEnvironment = {
 					name: "Thy'lek-Shran",
 				} as unknown as RawEnvironment;
@@ -1269,12 +1299,14 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"Thy'lek-Shran\\"."
-		        `);
+					"Processing wrangler configuration:
+					  - Expected "name" to be of type string, alphanumeric and lowercase with dashes only but got "Thy'lek-Shran"."
+				`);
 			});
 
-			it("should error on invalid `name` value with only special characters", () => {
+			it("should error on invalid `name` value with only special characters", ({
+				expect,
+			}) => {
 				const expectedConfig: RawEnvironment = {
 					name: "!@#$%^&*(()",
 				} as unknown as RawEnvironment;
@@ -1289,12 +1321,14 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"!@#$%^&*(()\\"."
-		        `);
+					"Processing wrangler configuration:
+					  - Expected "name" to be of type string, alphanumeric and lowercase with dashes only but got "!@#$%^&*(()"."
+				`);
 			});
 
-			it("should accept any Worker name if the dispatch-namespace flag is used", () => {
+			it("should accept any Worker name if the dispatch-namespace flag is used", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "example.com",
@@ -1310,7 +1344,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[build]", () => {
-			it("should default custom build watch directories to src", () => {
+			it("should default custom build watch directories to src", ({
+				expect,
+			}) => {
 				const expectedConfig: RawEnvironment = {
 					build: {
 						command: "execute some --build",
@@ -1335,7 +1371,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should resolve custom build watch directories relative to wrangler.toml", async () => {
+			it("should resolve custom build watch directories relative to wrangler.toml", async ({
+				expect,
+			}) => {
 				const expectedConfig: RawEnvironment = {
 					build: {
 						command: "execute some --build",
@@ -1361,7 +1399,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should allow watch_dir to be an array of paths", () => {
+			it("should allow watch_dir to be an array of paths", ({ expect }) => {
 				const expectedConfig: RawEnvironment = {
 					build: {
 						command: "execute some --build",
@@ -1391,7 +1429,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should error when the watch_dir array isn't an array of strings", () => {
+			it("should error when the watch_dir array isn't an array of strings", ({
+				expect,
+			}) => {
 				const expectedConfig: RawEnvironment = {
 					build: {
 						command: "execute some --build",
@@ -1432,15 +1472,15 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizePath(diagnostics.renderErrors()))
 					.toMatchInlineSnapshot(`
-			          "Processing project/wrangler.toml configuration:
-			            - Expected \\"build.watch_dir.[2]\\" to be of type string but got 123.
-			            - Expected \\"build.watch_dir.[4]\\" to be of type string but got false."
-		        `);
+						"Processing project/wrangler.toml configuration:
+						  - Expected "build.watch_dir.[2]" to be of type string but got 123.
+						  - Expected "build.watch_dir.[4]" to be of type string but got false."
+					`);
 			});
 		});
 
 		describe("[durable_objects]", () => {
-			it("should error if durable_objects is an array", () => {
+			it("should error if durable_objects is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: [] } as unknown as RawConfig,
 					undefined,
@@ -1450,12 +1490,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"durable_objects\\" should be an object but got []."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "durable_objects" should be an object but got []."
+				`);
 			});
 
-			it("should error if durable_objects is a string", () => {
+			it("should error if durable_objects is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -1465,12 +1505,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"durable_objects\\" should be an object but got \\"BAD\\"."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "durable_objects" should be an object but got "BAD"."
+				`);
 			});
 
-			it("should error if durable_objects is a number", () => {
+			it("should error if durable_objects is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: 999 } as unknown as RawConfig,
 					undefined,
@@ -1480,12 +1520,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"durable_objects\\" should be an object but got 999."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "durable_objects" should be an object but got 999."
+				`);
 			});
 
-			it("should error if durable_objects is null", () => {
+			it("should error if durable_objects is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: null } as unknown as RawConfig,
 					undefined,
@@ -1495,12 +1535,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"durable_objects\\" should be an object but got null."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "durable_objects" should be an object but got null."
+				`);
 			});
 
-			it("should error if durable_objects.bindings is not defined", () => {
+			it("should error if durable_objects.bindings is not defined", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: {} } as unknown as RawConfig,
 					undefined,
@@ -1510,12 +1552,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"durable_objects\\" is missing the required \\"bindings\\" property."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "durable_objects" is missing the required "bindings" property."
+				`);
 			});
 
-			it("should error if durable_objects.bindings is an object", () => {
+			it("should error if durable_objects.bindings is an object", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: {} } } as unknown as RawConfig,
 					undefined,
@@ -1525,12 +1569,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"durable_objects.bindings\\" should be an array but got {}."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "durable_objects.bindings" should be an array but got {}."
+				`);
 			});
 
-			it("should error if durable_objects.bindings is a string", () => {
+			it("should error if durable_objects.bindings is a string", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: "BAD" } } as unknown as RawConfig,
 					undefined,
@@ -1540,12 +1586,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"durable_objects.bindings\\" should be an array but got \\"BAD\\"."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "durable_objects.bindings" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if durable_objects.bindings is a number", () => {
+			it("should error if durable_objects.bindings is a number", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: 999 } } as unknown as RawConfig,
 					undefined,
@@ -1555,12 +1603,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"durable_objects.bindings\\" should be an array but got 999."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "durable_objects.bindings" should be an array but got 999."
+				`);
 			});
 
-			it("should error if durable_objects.bindings is null", () => {
+			it("should error if durable_objects.bindings is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: null } } as unknown as RawConfig,
 					undefined,
@@ -1570,12 +1618,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"durable_objects.bindings\\" should be an array but got null."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "durable_objects.bindings" should be an array but got null."
+				`);
 			});
 
-			it("should error if durable_objects.bindings are not valid", () => {
+			it("should error if durable_objects.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						durable_objects: {
@@ -1616,44 +1666,46 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"durable_objects.bindings[0]\\": {}
-			              - binding should have a string \\"name\\" field.
-			              - binding should have a string \\"class_name\\" field.
+					  - "durable_objects.bindings[0]": {}
+					    - binding should have a string "name" field.
+					    - binding should have a string "class_name" field.
 
-			            - \\"durable_objects.bindings[1]\\": {\\"name\\":\\"MISSING_CLASS\\"}
-			              - binding should have a string \\"class_name\\" field.
+					  - "durable_objects.bindings[1]": {"name":"MISSING_CLASS"}
+					    - binding should have a string "class_name" field.
 
-			            - \\"durable_objects.bindings[2]\\": {\\"name\\":1555,\\"class_name\\":1666}
-			              - binding should have a string \\"name\\" field.
-			              - binding should have a string \\"class_name\\" field.
+					  - "durable_objects.bindings[2]": {"name":1555,"class_name":1666}
+					    - binding should have a string "name" field.
+					    - binding should have a string "class_name" field.
 
-			            - \\"durable_objects.bindings[3]\\": {\\"name\\":1777,\\"class_name\\":1888,\\"script_name\\":1999}
-			              - binding should have a string \\"name\\" field.
-			              - binding should have a string \\"class_name\\" field.
-			              - the field \\"script_name\\", when present, should be a string.
+					  - "durable_objects.bindings[3]": {"name":1777,"class_name":1888,"script_name":1999}
+					    - binding should have a string "name" field.
+					    - binding should have a string "class_name" field.
+					    - the field "script_name", when present, should be a string.
 
-			            - \\"durable_objects.bindings[4]\\": {\\"name\\":\\"SOMENAME\\",\\"class_name\\":\\"SomeClass\\",\\"environment\\":\\"staging\\"}
-			              - binding should have a \\"script_name\\" field if \\"environment\\" is present.
+					  - "durable_objects.bindings[4]": {"name":"SOMENAME","class_name":"SomeClass","environment":"staging"}
+					    - binding should have a "script_name" field if "environment" is present.
 
-			            - \\"durable_objects.bindings[5]\\": {\\"name\\":1778,\\"class_name\\":1889,\\"script_name\\":1992,\\"environment\\":2111}
-			              - binding should have a string \\"name\\" field.
-			              - binding should have a string \\"class_name\\" field.
-			              - the field \\"script_name\\", when present, should be a string.
-			              - the field \\"environment\\", when present, should be a string.
+					  - "durable_objects.bindings[5]": {"name":1778,"class_name":1889,"script_name":1992,"environment":2111}
+					    - binding should have a string "name" field.
+					    - binding should have a string "class_name" field.
+					    - the field "script_name", when present, should be a string.
+					    - the field "environment", when present, should be a string.
 
-			            - \\"durable_objects.bindings[6]\\": {\\"name\\":1772,\\"class_name\\":1883,\\"environment\\":2112}
-			              - binding should have a string \\"name\\" field.
-			              - binding should have a string \\"class_name\\" field.
-			              - the field \\"environment\\", when present, should be a string.
-			              - binding should have a \\"script_name\\" field if \\"environment\\" is present."
-		        `);
+					  - "durable_objects.bindings[6]": {"name":1772,"class_name":1883,"environment":2112}
+					    - binding should have a string "name" field.
+					    - binding should have a string "class_name" field.
+					    - the field "environment", when present, should be a string.
+					    - binding should have a "script_name" field if "environment" is present."
+				`);
 			});
 		});
 
 		describe("[migrations]", () => {
-			it("should override `migrations` config defaults with provided values", () => {
+			it("should override `migrations` config defaults with provided values", ({
+				expect,
+			}) => {
 				const expectedConfig: RawConfig = {
 					migrations: [
 						{
@@ -1683,7 +1735,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should error on invalid `migrations` values", () => {
+			it("should error on invalid `migrations` values", ({ expect }) => {
 				const expectedConfig = {
 					migrations: [
 						{
@@ -1711,19 +1763,21 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected \\"migrations[0].tag\\" to be of type string but got 111.
-			            - Expected \\"migrations[0].new_classes.[0]\\" to be of type string but got 222.
-			            - Expected \\"migrations[0].new_classes.[1]\\" to be of type string but got 333.
-			            - Expected \\"migrations[0].new_sqlite_classes.[0]\\" to be of type string but got 222.
-			            - Expected \\"migrations[0].new_sqlite_classes.[1]\\" to be of type string but got 333.
-			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
-			            - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
-			            - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."
-		        `);
+					"Processing wrangler configuration:
+					  - Expected "migrations[0].tag" to be of type string but got 111.
+					  - Expected "migrations[0].new_classes.[0]" to be of type string but got 222.
+					  - Expected "migrations[0].new_classes.[1]" to be of type string but got 333.
+					  - Expected "migrations[0].new_sqlite_classes.[0]" to be of type string but got 222.
+					  - Expected "migrations[0].new_sqlite_classes.[1]" to be of type string but got 333.
+					  - Expected "migrations[0].renamed_classes" to be an array of "{from: string, to: string}" objects but got [{"from":444,"to":555}].
+					  - Expected "migrations[0].deleted_classes.[0]" to be of type string but got 666.
+					  - Expected "migrations[0].deleted_classes.[1]" to be of type string but got 777."
+				`);
 			});
 
-			it("should warn/error on unexpected fields on `migrations`", async () => {
+			it("should warn/error on unexpected fields on `migrations`", async ({
+				expect,
+			}) => {
 				const expectedConfig = {
 					migrations: [
 						{
@@ -1768,18 +1822,20 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in migrations field: \\"unrecognized_field\\""
+					  - Unexpected fields found in migrations field: "unrecognized_field""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"},{\\"a\\":\\"something\\",\\"b\\":\\"someone\\"}].
-			            - Expected \\"migrations[0].transferred_classes\\" to be an array of \\"{from: string, from_script: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"from_script\\":\\"FROM_SCRIPT\\",\\"to\\":\\"TO_CLASS\\"},{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"}]."
-		        `);
+					"Processing wrangler configuration:
+					  - Expected "migrations[0].renamed_classes" to be an array of "{from: string, to: string}" objects but got [{"from":"FROM_CLASS","to":"TO_CLASS"},{"a":"something","b":"someone"}].
+					  - Expected "migrations[0].transferred_classes" to be an array of "{from: string, from_script: string, to: string}" objects but got [{"from":"FROM_CLASS","from_script":"FROM_SCRIPT","to":"TO_CLASS"},{"from":"FROM_CLASS","to":"TO_CLASS"}]."
+				`);
 			});
 		});
 
 		describe("[assets]", () => {
-			it("should override `assets` config defaults with provided values", () => {
+			it("should override `assets` config defaults with provided values", ({
+				expect,
+			}) => {
 				const expectedConfig: RawConfig = {
 					assets: {
 						directory: "public/",
@@ -1799,7 +1855,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should error on invalid `assets` values", () => {
+			it("should error on invalid `assets` values", ({ expect }) => {
 				const expectedConfig = {
 					assets: {
 						binding: 2,
@@ -1818,15 +1874,15 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in assets field: \\"notAField\\""
+					  - Unexpected fields found in assets field: "notAField""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Expected \\"assets.binding\\" to be of type string but got 2."
+					  - Expected "assets.binding" to be of type string but got 2."
 				`);
 			});
 
-			it("should error on invalid `assets` config values", () => {
+			it("should error on invalid `assets` config values", ({ expect }) => {
 				const expectedConfig = {
 					assets: {
 						directory: "./public",
@@ -1850,12 +1906,12 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Expected \\"assets.html_handling\\" field to be one of [\\"auto-trailing-slash\\",\\"force-trailing-slash\\",\\"drop-trailing-slash\\",\\"none\\"] but got \\"foo\\".
-					  - Expected \\"assets.not_found_handling\\" field to be one of [\\"single-page-application\\",\\"404-page\\",\\"none\\"] but got \\"bar\\"."
+					  - Expected "assets.html_handling" field to be one of ["auto-trailing-slash","force-trailing-slash","drop-trailing-slash","none"] but got "foo".
+					  - Expected "assets.not_found_handling" field to be one of ["single-page-application","404-page","none"] but got "bar"."
 				`);
 			});
 
-			it("should accept valid `assets` config values", () => {
+			it("should accept valid `assets` config values", ({ expect }) => {
 				const expectedConfig: RawConfig = {
 					assets: {
 						directory: "./public",
@@ -1876,7 +1932,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error on invalid additional fields", () => {
+			it("should error on invalid additional fields", ({ expect }) => {
 				const expectedConfig = {
 					assets: {
 						directory: "./public",
@@ -1895,14 +1951,14 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in assets field: \\"invalid_field_1\\",\\"invalid_field_2\\""
+					  - Unexpected fields found in assets field: "invalid_field_1","invalid_field_2""
 				`);
 				expect(diagnostics.hasErrors()).toBeFalsy();
 			});
 		});
 
 		describe("[browser]", () => {
-			it("should error if browser is an array", () => {
+			it("should error if browser is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ browser: [] } as unknown as RawConfig,
 					undefined,
@@ -1912,12 +1968,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"browser\\" should be an object but got []."
-		`);
+					"Processing wrangler configuration:
+					  - The field "browser" should be an object but got []."
+				`);
 			});
 
-			it("should error if browser is a string", () => {
+			it("should error if browser is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ browser: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -1927,12 +1983,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"browser\\" should be an object but got \\"BAD\\"."
-		`);
+					"Processing wrangler configuration:
+					  - The field "browser" should be an object but got "BAD"."
+				`);
 			});
 
-			it("should error if browser is a number", () => {
+			it("should error if browser is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ browser: 999 } as unknown as RawConfig,
 					undefined,
@@ -1942,12 +1998,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"browser\\" should be an object but got 999."
-		`);
+					"Processing wrangler configuration:
+					  - The field "browser" should be an object but got 999."
+				`);
 			});
 
-			it("should error if browser is null", () => {
+			it("should error if browser is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ browser: null } as unknown as RawConfig,
 					undefined,
@@ -1957,15 +2013,15 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"browser\\" should be an object but got null."
-		`);
+					"Processing wrangler configuration:
+					  - The field "browser" should be an object but got null."
+				`);
 			});
 		});
 
 		// Vectorize
 		describe("[vectorize]", () => {
-			it("should error if vectorize is an object", () => {
+			it("should error if vectorize is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ vectorize: {} } as unknown as RawConfig,
 					undefined,
@@ -1975,12 +2031,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"vectorize\\" should be an array but got {}."
-		`);
+					"Processing wrangler configuration:
+					  - The field "vectorize" should be an array but got {}."
+				`);
 			});
 
-			it("should error if vectorize bindings are not valid", () => {
+			it("should error if vectorize bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						vectorize: [
@@ -2001,16 +2057,16 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"vectorize[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			  - \\"vectorize[0]\\" bindings must have an \\"index_name\\" field but got {}.
-			  - \\"vectorize[1]\\" bindings must have an \\"index_name\\" field but got {\\"binding\\":\\"VALID\\"}.
-			  - \\"vectorize[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"index_name\\":2111}.
-			  - \\"vectorize[2]\\" bindings must have an \\"index_name\\" field but got {\\"binding\\":2000,\\"index_name\\":2111}."
-		`);
+					"Processing wrangler configuration:
+					  - "vectorize[0]" bindings should have a string "binding" field but got {}.
+					  - "vectorize[0]" bindings must have an "index_name" field but got {}.
+					  - "vectorize[1]" bindings must have an "index_name" field but got {"binding":"VALID"}.
+					  - "vectorize[2]" bindings should have a string "binding" field but got {"binding":2000,"index_name":2111}.
+					  - "vectorize[2]" bindings must have an "index_name" field but got {"binding":2000,"index_name":2111}."
+				`);
 			});
 
-			it("should error if vectorize is a string", () => {
+			it("should error if vectorize is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ vectorize: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -2020,12 +2076,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"vectorize\\" should be an array but got \\"BAD\\"."
-		`);
+					"Processing wrangler configuration:
+					  - The field "vectorize" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if vectorize is a number", () => {
+			it("should error if vectorize is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ vectorize: 999 } as unknown as RawConfig,
 					undefined,
@@ -2035,12 +2091,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"vectorize\\" should be an array but got 999."
-		`);
+					"Processing wrangler configuration:
+					  - The field "vectorize" should be an array but got 999."
+				`);
 			});
 
-			it("should error if vectorize is null", () => {
+			it("should error if vectorize is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ vectorize: null } as unknown as RawConfig,
 					undefined,
@@ -2050,15 +2106,185 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"vectorize\\" should be an array but got null."
-		`);
+					"Processing wrangler configuration:
+					  - The field "vectorize" should be an array but got null."
+				`);
+			});
+		});
+
+		describe("[ai_search_namespaces]", () => {
+			it("should error if ai_search_namespaces is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ ai_search_namespaces: {} } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "ai_search_namespaces" should be an array but got {}."
+				`);
+			});
+
+			it("should error if ai_search_namespaces bindings are not valid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ai_search_namespaces: [
+							{},
+							{ binding: "VALID" },
+							{ binding: 2000, namespace: 2111 },
+							{
+								binding: "BINDING_2",
+								namespace: "production",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "ai_search_namespaces[0]" bindings should have a string "binding" field but got {}.
+					  - "ai_search_namespaces[0]" bindings must have a "namespace" field but got {}.
+					  - "ai_search_namespaces[1]" bindings must have a "namespace" field but got {"binding":"VALID"}.
+					  - "ai_search_namespaces[2]" bindings should have a string "binding" field but got {"binding":2000,"namespace":2111}.
+					  - "ai_search_namespaces[2]" bindings must have a "namespace" field but got {"binding":2000,"namespace":2111}."
+				`);
+			});
+
+			it("should accept valid ai_search_namespaces bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ai_search_namespaces: [
+							{
+								binding: "AI_SEARCH",
+								namespace: "production",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error on additional properties", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ai_search_namespaces: [
+							{
+								binding: "AI_SEARCH",
+								namespace: "production",
+								extra_field: "unexpected",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain("extra_field");
+			});
+		});
+
+		describe("[ai_search]", () => {
+			it("should error if ai_search is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ ai_search: {} } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "ai_search" should be an array but got {}."
+				`);
+			});
+
+			it("should error if ai_search bindings are not valid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ai_search: [
+							{},
+							{ binding: "VALID" },
+							{ binding: 2000, instance_name: 2111 },
+							{
+								binding: "BINDING_2",
+								instance_name: "cloudflare-blog",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "ai_search[0]" bindings should have a string "binding" field but got {}.
+					  - "ai_search[0]" bindings must have an "instance_name" field but got {}.
+					  - "ai_search[1]" bindings must have an "instance_name" field but got {"binding":"VALID"}.
+					  - "ai_search[2]" bindings should have a string "binding" field but got {"binding":2000,"instance_name":2111}.
+					  - "ai_search[2]" bindings must have an "instance_name" field but got {"binding":2000,"instance_name":2111}."
+				`);
+			});
+
+			it("should accept valid ai_search bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ai_search: [
+							{
+								binding: "BLOG_SEARCH",
+								instance_name: "cloudflare-blog",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error on additional properties", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ai_search: [
+							{
+								binding: "BLOG_SEARCH",
+								instance_name: "cloudflare-blog",
+								extra_field: "unexpected",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain("extra_field");
 			});
 		});
 
 		// AI
 		describe("[ai]", () => {
-			it("should error if ai is an array", () => {
+			it("should error if ai is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ ai: [] } as unknown as RawConfig,
 					undefined,
@@ -2068,12 +2294,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"ai\\" should be an object but got []."
-		`);
+					"Processing wrangler configuration:
+					  - The field "ai" should be an object but got []."
+				`);
 			});
 
-			it("should error if ai is a string", () => {
+			it("should error if ai is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ ai: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -2083,12 +2309,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"ai\\" should be an object but got \\"BAD\\"."
-		`);
+					"Processing wrangler configuration:
+					  - The field "ai" should be an object but got "BAD"."
+				`);
 			});
 
-			it("should error if ai is a number", () => {
+			it("should error if ai is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ ai: 999 } as unknown as RawConfig,
 					undefined,
@@ -2098,12 +2324,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"ai\\" should be an object but got 999."
-		`);
+					"Processing wrangler configuration:
+					  - The field "ai" should be an object but got 999."
+				`);
 			});
 
-			it("should error if ai is null", () => {
+			it("should error if ai is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ ai: null } as unknown as RawConfig,
 					undefined,
@@ -2113,15 +2339,15 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"ai\\" should be an object but got null."
-		`);
+					"Processing wrangler configuration:
+					  - The field "ai" should be an object but got null."
+				`);
 			});
 		});
 
 		// Images
 		describe("[images]", () => {
-			it("should error if images is an array", () => {
+			it("should error if images is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ images: [] } as unknown as RawConfig,
 					undefined,
@@ -2131,12 +2357,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"images\\" should be an object but got []."
-		`);
+					"Processing wrangler configuration:
+					  - The field "images" should be an object but got []."
+				`);
 			});
 
-			it("should error if images is a string", () => {
+			it("should error if images is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ images: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -2146,12 +2372,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"images\\" should be an object but got \\"BAD\\"."
-		`);
+					"Processing wrangler configuration:
+					  - The field "images" should be an object but got "BAD"."
+				`);
 			});
 
-			it("should error if images is a number", () => {
+			it("should error if images is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ images: 999 } as unknown as RawConfig,
 					undefined,
@@ -2161,12 +2387,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"images\\" should be an object but got 999."
-		`);
+					"Processing wrangler configuration:
+					  - The field "images" should be an object but got 999."
+				`);
 			});
 
-			it("should error if ai is null", () => {
+			it("should error if ai is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ images: null } as unknown as RawConfig,
 					undefined,
@@ -2176,15 +2402,15 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"images\\" should be an object but got null."
-		`);
+					"Processing wrangler configuration:
+					  - The field "images" should be an object but got null."
+				`);
 			});
 		});
 
 		// Media
 		describe("[media]", () => {
-			it("should error if media is an array", () => {
+			it("should error if media is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ media: [] } as unknown as RawConfig,
 					undefined,
@@ -2194,12 +2420,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"media\\" should be an object but got []."
-		`);
+					"Processing wrangler configuration:
+					  - The field "media" should be an object but got []."
+				`);
 			});
 
-			it("should error if media is a string", () => {
+			it("should error if media is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ media: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -2209,12 +2435,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"media\\" should be an object but got \\"BAD\\"."
-		`);
+					"Processing wrangler configuration:
+					  - The field "media" should be an object but got "BAD"."
+				`);
 			});
 
-			it("should error if media is a number", () => {
+			it("should error if media is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ media: 999 } as unknown as RawConfig,
 					undefined,
@@ -2224,12 +2450,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"media\\" should be an object but got 999."
-		`);
+					"Processing wrangler configuration:
+					  - The field "media" should be an object but got 999."
+				`);
 			});
 
-			it("should error if media is null", () => {
+			it("should error if media is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ media: null } as unknown as RawConfig,
 					undefined,
@@ -2239,15 +2465,78 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"media\\" should be an object but got null."
-		`);
+					"Processing wrangler configuration:
+					  - The field "media" should be an object but got null."
+				`);
+			});
+		});
+
+		// Stream
+		describe("[stream]", () => {
+			it("should error if stream is an array", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ stream: [] } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "stream" should be an object but got []."
+				`);
+			});
+
+			it("should error if stream is a string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ stream: "BAD" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "stream" should be an object but got "BAD"."
+				`);
+			});
+
+			it("should error if stream is a number", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ stream: 999 } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "stream" should be an object but got 999."
+				`);
+			});
+
+			it("should error if stream is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ stream: null } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "stream" should be an object but got null."
+				`);
 			});
 		});
 
 		// Worker Version Metadata
 		describe("[version_metadata]", () => {
-			it("should error if version_metadata is an array", () => {
+			it("should error if version_metadata is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ version_metadata: [] } as unknown as RawConfig,
 					undefined,
@@ -2257,12 +2546,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"version_metadata\\" should be an object but got []."
-		`);
+					"Processing wrangler configuration:
+					  - The field "version_metadata" should be an object but got []."
+				`);
 			});
 
-			it("should error if version_metadata is a string", () => {
+			it("should error if version_metadata is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ version_metadata: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -2272,12 +2561,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"version_metadata\\" should be an object but got \\"BAD\\"."
-		`);
+					"Processing wrangler configuration:
+					  - The field "version_metadata" should be an object but got "BAD"."
+				`);
 			});
 
-			it("should error if version_metadata is a number", () => {
+			it("should error if version_metadata is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ version_metadata: 999 } as unknown as RawConfig,
 					undefined,
@@ -2287,12 +2576,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"version_metadata\\" should be an object but got 999."
-		`);
+					"Processing wrangler configuration:
+					  - The field "version_metadata" should be an object but got 999."
+				`);
 			});
 
-			it("should error if version_metadata is null", () => {
+			it("should error if version_metadata is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ version_metadata: null } as unknown as RawConfig,
 					undefined,
@@ -2302,14 +2591,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"version_metadata\\" should be an object but got null."
-		`);
+					"Processing wrangler configuration:
+					  - The field "version_metadata" should be an object but got null."
+				`);
 			});
 		});
 
 		describe("[cloudchamber]", () => {
-			it("should error if cloudchamber is null", () => {
+			it("should error if cloudchamber is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ cloudchamber: null } as unknown as RawConfig,
 					undefined,
@@ -2320,11 +2609,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"cloudchamber\\" should be an object, but got null"
+					  - "cloudchamber" should be an object, but got null"
 				`);
 			});
 
-			it("should error if cloudchamber is an array", () => {
+			it("should error if cloudchamber is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ cloudchamber: [] } as unknown as RawConfig,
 					undefined,
@@ -2335,11 +2624,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"cloudchamber\\" should be an object, but got []"
+					  - "cloudchamber" should be an object, but got []"
 				`);
 			});
 
-			it("should error if cloudchamber is a string", () => {
+			it("should error if cloudchamber is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ cloudchamber: "test" } as unknown as RawConfig,
 					undefined,
@@ -2350,11 +2639,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"cloudchamber\\" should be an object, but got \\"test\\""
+					  - "cloudchamber" should be an object, but got "test""
 				`);
 			});
 
-			it("should error if cloudchamber is a number", () => {
+			it("should error if cloudchamber is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ cloudchamber: 22 } as unknown as RawConfig,
 					undefined,
@@ -2365,11 +2654,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"cloudchamber\\" should be an object, but got 22"
+					  - "cloudchamber" should be an object, but got 22"
 				`);
 			});
 
-			it("should error if cloudchamber bindings are not valid", () => {
+			it("should error if cloudchamber bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						cloudchamber: {
@@ -2388,17 +2679,17 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"cloudchamber\\" bindings should, optionally, have a string \\"memory\\" field but got {\\"image\\":123,\\"location\\":123,\\"vcpu\\":\\"invalid\\",\\"memory\\":123,\\"ipv4\\":\\"invalid\\"}.
-					  - \\"cloudchamber\\" bindings should, optionally, have a string \\"image\\" field but got {\\"image\\":123,\\"location\\":123,\\"vcpu\\":\\"invalid\\",\\"memory\\":123,\\"ipv4\\":\\"invalid\\"}.
-					  - \\"cloudchamber\\" bindings should, optionally, have a string \\"location\\" field but got {\\"image\\":123,\\"location\\":123,\\"vcpu\\":\\"invalid\\",\\"memory\\":123,\\"ipv4\\":\\"invalid\\"}.
-					  - \\"cloudchamber\\" bindings should, optionally, have a boolean \\"ipv4\\" field but got {\\"image\\":123,\\"location\\":123,\\"vcpu\\":\\"invalid\\",\\"memory\\":123,\\"ipv4\\":\\"invalid\\"}.
-					  - \\"cloudchamber\\" bindings should, optionally, have a number \\"vcpu\\" field but got {\\"image\\":123,\\"location\\":123,\\"vcpu\\":\\"invalid\\",\\"memory\\":123,\\"ipv4\\":\\"invalid\\"}."
+					  - "cloudchamber" bindings should, optionally, have a string "memory" field but got {"image":123,"location":123,"vcpu":"invalid","memory":123,"ipv4":"invalid"}.
+					  - "cloudchamber" bindings should, optionally, have a string "image" field but got {"image":123,"location":123,"vcpu":"invalid","memory":123,"ipv4":"invalid"}.
+					  - "cloudchamber" bindings should, optionally, have a string "location" field but got {"image":123,"location":123,"vcpu":"invalid","memory":123,"ipv4":"invalid"}.
+					  - "cloudchamber" bindings should, optionally, have a boolean "ipv4" field but got {"image":123,"location":123,"vcpu":"invalid","memory":123,"ipv4":"invalid"}.
+					  - "cloudchamber" bindings should, optionally, have a number "vcpu" field but got {"image":123,"location":123,"vcpu":"invalid","memory":123,"ipv4":"invalid"}."
 				`);
 			});
 		});
 
 		describe("[containers]", () => {
-			it("should error if containers is not an object", () => {
+			it("should error if containers is not an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ containers: "test" } as unknown as RawConfig,
 					undefined,
@@ -2409,11 +2700,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers\\" field should be an array, but got \\"test\\""
+					  - "containers" field should be an array, but got "test""
 				`);
 			});
 
-			it("should error if containers is an object that is not an array", () => {
+			it("should error if containers is an object that is not an array", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ containers: { something: "here" } } as unknown as RawConfig,
 					undefined,
@@ -2424,11 +2717,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers\\" field should be an array, but got {\\"something\\":\\"here\\"}"
+					  - "containers" field should be an array, but got {"something":"here"}"
 				`);
 			});
 
-			it("should error if containers is a string", () => {
+			it("should error if containers is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ containers: "test" } as unknown as RawConfig,
 					undefined,
@@ -2439,11 +2732,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers\\" field should be an array, but got \\"test\\""
+					  - "containers" field should be an array, but got "test""
 				`);
 			});
 
-			it("should error if containers is a number", () => {
+			it("should error if containers is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ containers: 22 } as unknown as RawConfig,
 					undefined,
@@ -2454,11 +2747,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers\\" field should be an array, but got 22"
+					  - "containers" field should be an array, but got 22"
 				`);
 			});
 
-			it("should error if no containers name and no worker name are provided", () => {
+			it("should error if no containers name and no worker name are provided", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						containers: [
@@ -2474,12 +2769,14 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers.class_name\\" is a required field.
-					  - Must have either a top level \\"name\\" and \\"containers.class_name\\" field defined, or have field \\"containers.name\\" defined."
+					  - "containers.class_name" is a required field.
+					  - Must have either a top level "name" and "containers.class_name" field defined, or have field "containers.name" defined."
 				`);
 			});
 
-			it("should provide a name if no container name is provided and worker name exists", () => {
+			it("should provide a name if no container name is provided and worker name exists", ({
+				expect,
+			}) => {
 				const { diagnostics, config } = normalizeAndValidateConfig(
 					{
 						name: "test-worker-name",
@@ -2512,7 +2809,7 @@ describe("normalizeAndValidateConfig()", () => {
 				}
 			});
 
-			it("should error for invalid container app fields", () => {
+			it("should error for invalid container app fields", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "test-worker",
@@ -2539,24 +2836,26 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in containers field: \\"unknown_field\\""
+					  - Unexpected fields found in containers field: "unknown_field""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Expected \\"containers.image_build_context\\" to be of type string but got 123.
-					  - The image \\"something\\" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
+					  - Expected "containers.image_build_context" to be of type string but got 123.
+					  - The image "something" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
 					    If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)
-					  - \\"containers.rollout_step_percentage\\" must be a number or array of numbers, but got \\"invalid\\"
-					  - Expected \\"containers.rollout_kind\\" field to be one of [\\"full_auto\\",\\"full_manual\\",\\"none\\"] but got \\"invalid\\".
-					  - \\"containers.rollout_active_grace_period\\" field should be a positive number but got \\"60s\\"
-					  - Expected \\"containers.max_instances\\" to be of type number but got \\"invalid\\".
-					  - Expected \\"containers.image_vars\\" to be of type object but got \\"invalid\\".
-					  - Expected \\"containers.scheduling_policy\\" field to be one of [\\"regional\\",\\"moon\\",\\"default\\"] but got \\"invalid\\".
-					  - Expected \\"containers.instance_type\\" field to be one of [\\"lite\\",\\"basic\\",\\"standard-1\\",\\"standard-2\\",\\"standard-3\\",\\"standard-4\\",\\"dev\\",\\"standard\\"] but got \\"invalid\\"."
+					  - "containers.rollout_step_percentage" must be a number or array of numbers, but got "invalid"
+					  - Expected "containers.rollout_kind" field to be one of ["full_auto","full_manual","none"] but got "invalid".
+					  - "containers.rollout_active_grace_period" field should be a positive number but got "60s"
+					  - Expected "containers.max_instances" to be of type number but got "invalid".
+					  - Expected "containers.image_vars" to be of type object but got "invalid".
+					  - Expected "containers.scheduling_policy" field to be one of ["regional","moon","default"] but got "invalid".
+					  - Expected "containers.instance_type" field to be one of ["lite","basic","standard-1","standard-2","standard-3","standard-4","dev","standard"] but got "invalid"."
 				`);
 			});
 
-			it("should error if rollout_active_grace_period and rollout_step_percentage are out of range", () => {
+			it("should error if rollout_active_grace_period and rollout_step_percentage are out of range", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "test-worker",
@@ -2576,14 +2875,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - The image \\"blah\\" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
+					  - The image "blah" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
 					    If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)
-					  - \\"containers.rollout_step_percentage\\" must be one of [5, 10, 20, 25, 50, 100], but got 9
-					  - \\"containers.rollout_active_grace_period\\" field should be a positive number but got \\"-1\\""
+					  - "containers.rollout_step_percentage" must be one of [5, 10, 20, 25, 50, 100], but got 9
+					  - "containers.rollout_active_grace_period" field should be a positive number but got "-1""
 				`);
 			});
 
-			it("should warn for deprecated container fields", () => {
+			it("should warn for deprecated container fields", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "test-worker",
@@ -2607,13 +2906,15 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", limits should be set via \\"instance_type\\".
-					  - \\"containers.instances\\" is deprecated. Use \\"containers.max_instances\\" instead.
-					  - \\"containers.durable_objects\\" is deprecated. Use the \\"class_name\\" field instead."
+					  - "containers.configuration" is deprecated. Use top level "containers" fields instead. "configuration.image" should be "image", limits should be set via "instance_type".
+					  - "containers.instances" is deprecated. Use "containers.max_instances" instead.
+					  - "containers.durable_objects" is deprecated. Use the "class_name" field instead."
 				`);
 			});
 
-			it("should error for invalid containers.configuration fields", () => {
+			it("should error for invalid containers.configuration fields", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "test-worker",
@@ -2641,14 +2942,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", limits should be set via \\"instance_type\\".
-					  - Unexpected fields found in containers.configuration field: \\"memory\\",\\"invalid_field\\",\\"another_invalid\\""
+					  - "containers.configuration" is deprecated. Use top level "containers" fields instead. "configuration.image" should be "image", limits should be set via "instance_type".
+					  - Unexpected fields found in containers.configuration field: "memory","invalid_field","another_invalid""
 				`);
 			});
 
-			it.each([{ value: 25 }, { value: [20, 50, 100] }])(
+			it.for([{ value: 25 }, { value: [20, 50, 100] }])(
 				"should accept rollout_step_percentage set to $value",
-				(value) => {
+				(value, { expect }) => {
 					const { diagnostics } = normalizeAndValidateConfig(
 						{
 							name: "test-worker",
@@ -2670,7 +2971,9 @@ describe("normalizeAndValidateConfig()", () => {
 				}
 			);
 
-			it("should error for invalid rollout_step_percentage number values", () => {
+			it("should error for invalid rollout_step_percentage number values", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "test-worker",
@@ -2690,11 +2993,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers.rollout_step_percentage\\" must be one of [5, 10, 20, 25, 50, 100], but got 15"
+					  - "containers.rollout_step_percentage" must be one of [5, 10, 20, 25, 50, 100], but got 15"
 				`);
 			});
 
-			it("should error for rollout_step_percentage array with invalid items", () => {
+			it("should error for rollout_step_percentage array with invalid items", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "test-worker",
@@ -2714,13 +3019,15 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers.rollout_step_percentage\\" array elements must be in ascending order, but got \\"20,30,1,101\\"
-					  - The final step in \\"containers.rollout_step_percentage\\" must be 100, but got \\"101\\"
-					  - \\"containers.rollout_step_percentage\\" array elements must be between 10 and 100, but got \\"1, 101\\""
+					  - "containers.rollout_step_percentage" array elements must be in ascending order, but got "20,30,1,101"
+					  - The final step in "containers.rollout_step_percentage" must be 100, but got "101"
+					  - "containers.rollout_step_percentage" array elements must be between 10 and 100, but got "1, 101""
 				`);
 			});
 
-			it("should error when rollout_step_percentage has more steps than max_instances", () => {
+			it("should error when rollout_step_percentage has more steps than max_instances", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "test-worker",
@@ -2749,11 +3056,11 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"containers.rollout_step_percentage\\" cannot have more steps (4) than \\"max_instances\\" (2)"
+					  - "containers.rollout_step_percentage" cannot have more steps (4) than "max_instances" (2)"
 				`);
 			});
 
-			it("should warn when dev instance type is used", () => {
+			it("should warn when dev instance type is used", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "test-worker",
@@ -2787,11 +3094,13 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - The \\"dev\\" instance_type has been renamed to \\"lite\\" and will be removed in a subsequent version. Please update your configuration to use \\"lite\\" instead."
+					  - The "dev" instance_type has been renamed to "lite" and will be removed in a subsequent version. Please update your configuration to use "lite" instead."
 				`);
 			});
 
-			it("should error when both constraints.tier and constraints.tiers are set", () => {
+			it("should error when both constraints.tier and constraints.tiers are set", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "test-worker",
@@ -2813,7 +3122,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"constraints.tier\\" has been deprecated in favor of \\"constraints.tiers\\". Please update your configuration to use \\"constraints.tiers\\" instead."
+					  - "constraints.tier" has been deprecated in favor of "constraints.tiers". Please update your configuration to use "constraints.tiers" instead."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -2821,7 +3130,9 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error when constraints.tiers is not an array of numbers", () => {
+			it("should error when constraints.tiers is not an array of numbers", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "test-worker",
@@ -2843,12 +3154,14 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Expected \\"containers.constraints.tiers.[0]\\" to be of type number but got \\"a\\".
-					  - Expected \\"containers.constraints.tiers.[1]\\" to be of type number but got \\"b\\"."
+					  - Expected "containers.constraints.tiers.[0]" to be of type number but got "a".
+					  - Expected "containers.constraints.tiers.[1]" to be of type number but got "b"."
 				`);
 			});
 
-			it("should allow valid constraints.tiers array of numbers", () => {
+			it("should allow valid constraints.tiers array of numbers", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "test-worker",
@@ -2870,10 +3183,92 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
+
+			it("should error when constraints.jurisdiction is invalid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									jurisdiction: "invalid",
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.constraints.jurisdiction must be one of: "eu", "fedramp""
+				`);
+			});
+
+			it("should error when constraints.regions contains invalid region", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									regions: ["INVALID", "ENAM"],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.constraints.regions contains invalid region "INVALID". Valid regions are: ENAM, WNAM, EEUR, WEUR, APAC, SAM, ME, OC, AFR"
+				`);
+			});
+
+			it("should allow valid constraints.regions and constraints.jurisdiction", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									regions: ["ENAM", "WNAM"],
+									jurisdiction: "fedramp",
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
 		});
 
 		describe("[kv_namespaces]", () => {
-			it("should error if kv_namespaces is an object", () => {
+			it("should error if kv_namespaces is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: {} } as unknown as RawConfig,
 					undefined,
@@ -2883,12 +3278,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"kv_namespaces\\" should be an array but got {}."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "kv_namespaces" should be an array but got {}."
+				`);
 			});
 
-			it("should error if kv_namespaces is a string", () => {
+			it("should error if kv_namespaces is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -2898,12 +3293,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"kv_namespaces\\" should be an array but got \\"BAD\\"."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "kv_namespaces" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if kv_namespaces is a number", () => {
+			it("should error if kv_namespaces is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: 999 } as unknown as RawConfig,
 					undefined,
@@ -2913,12 +3308,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"kv_namespaces\\" should be an array but got 999."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "kv_namespaces" should be an array but got 999."
+				`);
 			});
 
-			it("should error if kv_namespaces is null", () => {
+			it("should error if kv_namespaces is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: null } as unknown as RawConfig,
 					undefined,
@@ -2928,12 +3323,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"kv_namespaces\\" should be an array but got null."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "kv_namespaces" should be an array but got null."
+				`);
 			});
 
-			it("should error if kv_namespaces.bindings are not valid", () => {
+			it("should error if kv_namespaces.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						kv_namespaces: [
@@ -2956,15 +3353,17 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
-					  - \\"kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-					  - \\"kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-					  - \\"kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}.
-					  - \\"kv_namespaces[4]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
+					  - "kv_namespaces[0]" bindings should have a string "binding" field but got {}.
+					  - "kv_namespaces[2]" bindings should have a string "binding" field but got {"binding":2000,"id":2111}.
+					  - "kv_namespaces[2]" bindings should have a string "id" field but got {"binding":2000,"id":2111}.
+					  - "kv_namespaces[3]" bindings should, optionally, have a string "preview_id" field but got {"binding":"KV_BINDING_2","id":"KV_ID_2","preview_id":2222}.
+					  - "kv_namespaces[4]" bindings should have a string "id" field but got {"binding":"VALID","id":""}."
 				`);
 			});
 
-			it("should allow the id field to be omitted (resource provisioning)", () => {
+			it("should allow the id field to be omitted (resource provisioning)", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						kv_namespaces: [{ binding: "VALID" }],
@@ -2979,7 +3378,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		it("should error if send_email.bindings are not valid", () => {
+		it("should error if send_email.bindings are not valid", ({ expect }) => {
 			const { diagnostics } = normalizeAndValidateConfig(
 				{
 					send_email: [
@@ -3004,17 +3403,17 @@ describe("normalizeAndValidateConfig()", () => {
 
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"send_email[0]\\" bindings should have a string \\"name\\" field but got {}.
-			            - \\"send_email[1]\\" bindings should have a string \\"name\\" field but got {\\"binding\\":\\"VALID\\"}.
-			            - \\"send_email[2]\\" bindings should, optionally, have a string \\"destination_address\\" field but got {\\"name\\":\\"SEB\\",\\"destination_address\\":123}.
-			            - \\"send_email[3]\\" bindings should, optionally, have a []string \\"allowed_destination_addresses\\" field but got {\\"name\\":\\"SEB2\\",\\"allowed_destination_addresses\\":123}.
-			            - \\"send_email[4]\\" bindings should have either a \\"destination_address\\" or \\"allowed_destination_addresses\\" field, but not both."
-		        `);
+				"Processing wrangler configuration:
+				  - "send_email[0]" bindings should have a string "name" field but got {}.
+				  - "send_email[1]" bindings should have a string "name" field but got {"binding":"VALID"}.
+				  - "send_email[2]" bindings should, optionally, have a string "destination_address" field but got {"name":"SEB","destination_address":123}.
+				  - "send_email[3]" bindings should, optionally, have a []string "allowed_destination_addresses" field but got {"name":"SEB2","allowed_destination_addresses":123}.
+				  - "send_email[4]" bindings should have either a "destination_address" or "allowed_destination_addresses" field, but not both."
+			`);
 		});
 
 		describe("[d1_databases]", () => {
-			it("should error if d1_databases is an object", () => {
+			it("should error if d1_databases is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: {} } as unknown as RawConfig,
 					undefined,
@@ -3024,12 +3423,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"d1_databases\\" should be an array but got {}."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "d1_databases" should be an array but got {}."
+				`);
 			});
 
-			it("should error if d1_databases is a string", () => {
+			it("should error if d1_databases is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -3039,12 +3438,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"d1_databases\\" should be an array but got \\"BAD\\"."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "d1_databases" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if d1_databases is a number", () => {
+			it("should error if d1_databases is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: 999 } as unknown as RawConfig,
 					undefined,
@@ -3054,12 +3453,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"d1_databases\\" should be an array but got 999."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "d1_databases" should be an array but got 999."
+				`);
 			});
 
-			it("should error if d1_databases is null", () => {
+			it("should error if d1_databases is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: null } as unknown as RawConfig,
 					undefined,
@@ -3069,12 +3468,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"d1_databases\\" should be an array but got null."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "d1_databases" should be an array but got null."
+				`);
 			});
 
-			it("should error if d1_databases.bindings are not valid", () => {
+			it("should error if d1_databases.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						d1_databases: [
@@ -3095,19 +3496,21 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in d1_databases[2] field: \\"id\\"
-					  - Unexpected fields found in d1_databases[3] field: \\"id\\",\\"preview_id\\"
-					  - Unexpected fields found in d1_databases[4] field: \\"id\\""
+					  - Unexpected fields found in d1_databases[2] field: "id"
+					  - Unexpected fields found in d1_databases[3] field: "id","preview_id"
+					  - Unexpected fields found in d1_databases[4] field: "id""
 				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"d1_databases[0]\\" bindings should have a string \\"binding\\" field but got {}.
-					  - \\"d1_databases[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}."
+					  - "d1_databases[0]" bindings should have a string "binding" field but got {}.
+					  - "d1_databases[2]" bindings should have a string "binding" field but got {"binding":2000,"id":2111}."
 				`);
 			});
 
-			it("should allow the database_id field to be omitted (resource provisioning)", () => {
+			it("should allow the database_id field to be omitted (resource provisioning)", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						d1_databases: [{ binding: "VALID" }],
@@ -3123,7 +3526,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[hyperdrive]", () => {
-			it("should error if hyperdrive is an object", () => {
+			it("should error if hyperdrive is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ hyperdrive: {} } as unknown as RawConfig,
 					undefined,
@@ -3133,12 +3536,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"hyperdrive\\" should be an array but got {}."
-		`);
+					"Processing wrangler configuration:
+					  - The field "hyperdrive" should be an array but got {}."
+				`);
 			});
 
-			it("should error if hyperdrive is a string", () => {
+			it("should error if hyperdrive is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ hyperdrive: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -3148,12 +3551,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"hyperdrive\\" should be an array but got \\"BAD\\"."
-		`);
+					"Processing wrangler configuration:
+					  - The field "hyperdrive" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if hyperdrive is a number", () => {
+			it("should error if hyperdrive is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ hyperdrive: 999 } as unknown as RawConfig,
 					undefined,
@@ -3163,12 +3566,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"hyperdrive\\" should be an array but got 999."
-		`);
+					"Processing wrangler configuration:
+					  - The field "hyperdrive" should be an array but got 999."
+				`);
 			});
 
-			it("should error if hyperdrive is null", () => {
+			it("should error if hyperdrive is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ hyperdrive: null } as unknown as RawConfig,
 					undefined,
@@ -3178,12 +3581,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"hyperdrive\\" should be an array but got null."
-		`);
+					"Processing wrangler configuration:
+					  - The field "hyperdrive" should be an array but got null."
+				`);
 			});
 
-			it("should accept valid bindings", () => {
+			it("should accept valid bindings", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						hyperdrive: [
@@ -3196,9 +3599,10 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should error if hyperdrive.bindings are not valid", () => {
+			it("should error if hyperdrive.bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						hyperdrive: [
@@ -3213,21 +3617,21 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in hyperdrive[2] field: \\"project\\""
+					  - Unexpected fields found in hyperdrive[2] field: "project""
 				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"hyperdrive[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			  - \\"hyperdrive[0]\\" bindings must have a \\"id\\" field but got {}.
-			  - \\"hyperdrive[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"project\\":2111}.
-			  - \\"hyperdrive[2]\\" bindings must have a \\"id\\" field but got {\\"binding\\":2000,\\"project\\":2111}."
-		`);
+					"Processing wrangler configuration:
+					  - "hyperdrive[0]" bindings should have a string "binding" field but got {}.
+					  - "hyperdrive[0]" bindings must have a "id" field but got {}.
+					  - "hyperdrive[2]" bindings should have a string "binding" field but got {"binding":2000,"project":2111}.
+					  - "hyperdrive[2]" bindings must have a "id" field but got {"binding":2000,"project":2111}."
+				`);
 			});
 		});
 
 		describe("[queues]", () => {
-			it("should error if queues is not an object", () => {
+			it("should error if queues is not an object", ({ expect }) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ queues: [] } as unknown as RawConfig,
 					undefined,
@@ -3240,12 +3644,14 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"queues\\" should be an object but got []."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "queues" should be an object but got []."
+				`);
 			});
 
-			it("should error if queues producer bindings are not valid", () => {
+			it("should error if queues producer bindings are not valid", ({
+				expect,
+			}) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
 						queues: {
@@ -3271,21 +3677,62 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in queues field: \\"invalidField\\""
+					  - Unexpected fields found in queues field: "invalidField""
 				`);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"queues.producers[0]\\" bindings should have a string \\"binding\\" field but got {}.
-					  - \\"queues.producers[0]\\" bindings should have a string \\"queue\\" field but got {}.
-					  - \\"queues.producers[1]\\" bindings should have a string \\"queue\\" field but got {\\"binding\\":\\"QUEUE_BINDING_1\\"}.
-					  - \\"queues.producers[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"queue\\":2444}.
-					  - \\"queues.producers[2]\\" bindings should have a string \\"queue\\" field but got {\\"binding\\":2333,\\"queue\\":2444}.
-					  - \\"queues.producers[3]\\" bindings should have a string \\"queue\\" field but got {\\"binding\\":\\"QUEUE_BINDING_3\\",\\"queue\\":\\"\\"}."
+					  - "queues.producers[0]" bindings should have a string "binding" field but got {}.
+					  - "queues.producers[0]" bindings should have a string "queue" field but got {}.
+					  - "queues.producers[1]" bindings should have a string "queue" field but got {"binding":"QUEUE_BINDING_1"}.
+					  - "queues.producers[2]" bindings should have a string "binding" field but got {"binding":2333,"queue":2444}.
+					  - "queues.producers[2]" bindings should have a string "queue" field but got {"binding":2333,"queue":2444}.
+					  - "queues.producers[3]" bindings should have a string "queue" field but got {"binding":"QUEUE_BINDING_3","queue":""}."
 				`);
 			});
 
-			it("should error if queues consumers are not valid", () => {
+			it("should error if queues consumer type is not 'worker'", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						queues: {
+							consumers: [
+								{ queue: "myQueue", type: "http_pull" },
+								{ queue: "myQueue2", type: "r2_bucket" },
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "queues.consumers[0].type" has an invalid value "http_pull". Only "worker" consumers can be configured in your Wrangler configuration.
+					  - "queues.consumers[1].type" has an invalid value "r2_bucket". Only "worker" consumers can be configured in your Wrangler configuration."
+				`);
+			});
+
+			it("should allow queues consumer type 'worker' explicitly", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						queues: {
+							consumers: [{ queue: "myQueue", type: "worker" }],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if queues consumers are not valid", ({ expect }) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
 						queues: {
@@ -3318,25 +3765,25 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in queues field: \\"invalidField\\"
-					  - Unexpected fields found in queues.consumers[2] field: \\"invalidField\\""
+					  - Unexpected fields found in queues field: "invalidField"
+					  - Unexpected fields found in queues.consumers[2] field: "invalidField""
 				`);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"queues.consumers[0]\\" should have a string \\"queue\\" field but got {}.
-			  - \\"queues.consumers[1]\\" should have a string \\"queue\\" field but got {\\"queue\\":22}.
-			  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_batch_size\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"max_concurrency\\":\\"hello\\"}.
-			  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_batch_timeout\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"max_concurrency\\":\\"hello\\"}.
-			  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_retries\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"max_concurrency\\":\\"hello\\"}.
-			  - \\"queues.consumers[3]\\" should, optionally, have a string \\"dead_letter_queue\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"max_concurrency\\":\\"hello\\"}.
-			  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_concurrency\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"max_concurrency\\":\\"hello\\"}."
-		`);
+					"Processing wrangler configuration:
+					  - "queues.consumers[0]" should have a string "queue" field but got {}.
+					  - "queues.consumers[1]" should have a string "queue" field but got {"queue":22}.
+					  - "queues.consumers[3]" should, optionally, have a number "max_batch_size" field but got {"queue":"myQueue","max_batch_size":"3","max_batch_timeout":null,"max_retries":"hello","dead_letter_queue":5,"max_concurrency":"hello"}.
+					  - "queues.consumers[3]" should, optionally, have a number "max_batch_timeout" field but got {"queue":"myQueue","max_batch_size":"3","max_batch_timeout":null,"max_retries":"hello","dead_letter_queue":5,"max_concurrency":"hello"}.
+					  - "queues.consumers[3]" should, optionally, have a number "max_retries" field but got {"queue":"myQueue","max_batch_size":"3","max_batch_timeout":null,"max_retries":"hello","dead_letter_queue":5,"max_concurrency":"hello"}.
+					  - "queues.consumers[3]" should, optionally, have a string "dead_letter_queue" field but got {"queue":"myQueue","max_batch_size":"3","max_batch_timeout":null,"max_retries":"hello","dead_letter_queue":5,"max_concurrency":"hello"}.
+					  - "queues.consumers[3]" should, optionally, have a number "max_concurrency" field but got {"queue":"myQueue","max_batch_size":"3","max_batch_timeout":null,"max_retries":"hello","dead_letter_queue":5,"max_concurrency":"hello"}."
+				`);
 			});
 		});
 
 		describe("[r2_buckets]", () => {
-			it("should error if r2_buckets is an object", () => {
+			it("should error if r2_buckets is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: {} } as unknown as RawConfig,
 					undefined,
@@ -3346,12 +3793,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"r2_buckets\\" should be an array but got {}."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "r2_buckets" should be an array but got {}."
+				`);
 			});
 
-			it("should error if r2_buckets is a string", () => {
+			it("should error if r2_buckets is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -3361,12 +3808,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"r2_buckets\\" should be an array but got \\"BAD\\"."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "r2_buckets" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if r2_buckets is a number", () => {
+			it("should error if r2_buckets is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: 999 } as unknown as RawConfig,
 					undefined,
@@ -3376,12 +3823,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"r2_buckets\\" should be an array but got 999."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "r2_buckets" should be an array but got 999."
+				`);
 			});
 
-			it("should error if r2_buckets is null", () => {
+			it("should error if r2_buckets is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: null } as unknown as RawConfig,
 					undefined,
@@ -3391,12 +3838,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"r2_buckets\\" should be an array but got null."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "r2_buckets" should be an array but got null."
+				`);
 			});
 
-			it("should error if r2_buckets.bindings are not valid", () => {
+			it("should error if r2_buckets.bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						r2_buckets: [
@@ -3425,17 +3872,19 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-					  - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-					  - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-					  - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"r2-bucket-2\\",\\"preview_bucket_name\\":2555}.
-					  - r2_buckets[4].bucket_name=\\"INVALID-NAME\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
-					  - r2_buckets[5].preview_bucket_name= \\"INVALID-NAME\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
-					  - \\"r2_buckets[6]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_5\\",\\"bucket_name\\":\\"\\"}."
+					  - "r2_buckets[0]" bindings should have a string "binding" field but got {}.
+					  - "r2_buckets[2]" bindings should have a string "binding" field but got {"binding":2333,"bucket_name":2444}.
+					  - "r2_buckets[2]" bindings should have a string "bucket_name" field but got {"binding":2333,"bucket_name":2444}.
+					  - "r2_buckets[3]" bindings should, optionally, have a string "preview_bucket_name" field but got {"binding":"R2_BINDING_2","bucket_name":"r2-bucket-2","preview_bucket_name":2555}.
+					  - r2_buckets[4].bucket_name="INVALID-NAME" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
+					  - r2_buckets[5].preview_bucket_name= "INVALID-NAME" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
+					  - "r2_buckets[6]" bindings should have a string "bucket_name" field but got {"binding":"R2_BINDING_5","bucket_name":""}."
 				`);
 			});
 
-			it("should allow the bucket_name field to be omitted (resource provisioning)", () => {
+			it("should allow the bucket_name field to be omitted (resource provisioning)", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						d1_databases: [{ binding: "VALID" }],
@@ -3451,7 +3900,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[services]", () => {
-			it("should error if services is an object", () => {
+			it("should error if services is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: {} } as unknown as RawConfig,
 					undefined,
@@ -3466,12 +3915,12 @@ describe("normalizeAndValidateConfig()", () => {
 			"
 		`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - The field \\"services\\" should be an array but got {}."
-		        `);
+					"Processing wrangler configuration:
+					  - The field "services" should be an array but got {}."
+				`);
 			});
 
-			it("should error if services is a string", () => {
+			it("should error if services is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -3486,12 +3935,12 @@ describe("normalizeAndValidateConfig()", () => {
 			"
 		`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - The field \\"services\\" should be an array but got \\"BAD\\"."
-		        `);
+					"Processing wrangler configuration:
+					  - The field "services" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if services is a number", () => {
+			it("should error if services is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: 999 } as unknown as RawConfig,
 					undefined,
@@ -3506,12 +3955,12 @@ describe("normalizeAndValidateConfig()", () => {
 			"
 		`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - The field \\"services\\" should be an array but got 999."
-		        `);
+					"Processing wrangler configuration:
+					  - The field "services" should be an array but got 999."
+				`);
 			});
 
-			it("should error if services is null", () => {
+			it("should error if services is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: null } as unknown as RawConfig,
 					undefined,
@@ -3526,12 +3975,12 @@ describe("normalizeAndValidateConfig()", () => {
 			"
 		`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - The field \\"services\\" should be an array but got null."
-		        `);
+					"Processing wrangler configuration:
+					  - The field "services" should be an array but got null."
+				`);
 			});
 
-			it("should error if services bindings are not valid", () => {
+			it("should error if services bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						services: [
@@ -3575,29 +4024,31 @@ describe("normalizeAndValidateConfig()", () => {
 			"
 		`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"services[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			  - \\"services[0]\\" bindings should have a string \\"service\\" field but got {}.
-			  - \\"services[1]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\"}.
-			  - \\"services[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
-			  - \\"services[2]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456}.
-			  - \\"services[3]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
-			  - \\"services[3]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
-			  - \\"services[3]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
-			  - \\"services[4]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
-			  - \\"services[4]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
-			  - \\"services[5]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
-			  - \\"services[5]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
-			  - \\"services[6]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
-			  - \\"services[6]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
-			  - \\"services[7]\\" bindings should have a string \\"entrypoint\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\",\\"entrypoint\\":123}.
-			  - \\"services[8]\\" bindings should have a string \\"entrypoint\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"entrypoint\\":123}."
-		`);
+					"Processing wrangler configuration:
+					  - "services[0]" bindings should have a string "binding" field but got {}.
+					  - "services[0]" bindings should have a string "service" field but got {}.
+					  - "services[1]" bindings should have a string "service" field but got {"binding":"SERVICE_BINDING_1"}.
+					  - "services[2]" bindings should have a string "binding" field but got {"binding":123,"service":456}.
+					  - "services[2]" bindings should have a string "service" field but got {"binding":123,"service":456}.
+					  - "services[3]" bindings should have a string "binding" field but got {"binding":123,"service":456,"environment":789}.
+					  - "services[3]" bindings should have a string "service" field but got {"binding":123,"service":456,"environment":789}.
+					  - "services[3]" bindings should have a string "environment" field but got {"binding":123,"service":456,"environment":789}.
+					  - "services[4]" bindings should have a string "service" field but got {"binding":"SERVICE_BINDING_1","service":456,"environment":789}.
+					  - "services[4]" bindings should have a string "environment" field but got {"binding":"SERVICE_BINDING_1","service":456,"environment":789}.
+					  - "services[5]" bindings should have a string "binding" field but got {"binding":123,"service":"SERVICE_BINDING_SERVICE_1","environment":789}.
+					  - "services[5]" bindings should have a string "environment" field but got {"binding":123,"service":"SERVICE_BINDING_SERVICE_1","environment":789}.
+					  - "services[6]" bindings should have a string "binding" field but got {"binding":123,"service":456,"environment":"SERVICE_BINDING_ENVIRONMENT_1"}.
+					  - "services[6]" bindings should have a string "service" field but got {"binding":123,"service":456,"environment":"SERVICE_BINDING_ENVIRONMENT_1"}.
+					  - "services[7]" bindings should have a string "entrypoint" field but got {"binding":"SERVICE_BINDING_1","service":"SERVICE_BINDING_SERVICE_1","environment":"SERVICE_BINDING_ENVIRONMENT_1","entrypoint":123}.
+					  - "services[8]" bindings should have a string "entrypoint" field but got {"binding":"SERVICE_BINDING_1","service":"SERVICE_BINDING_SERVICE_1","entrypoint":123}."
+				`);
 			});
 		});
 
 		describe("[analytics_engine_datasets]", () => {
-			it("should error if analytics_engine_datasets is an object", () => {
+			it("should error if analytics_engine_datasets is an object", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ analytics_engine_datasets: {} } as unknown as RawConfig,
 					undefined,
@@ -3607,12 +4058,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"analytics_engine_datasets\\" should be an array but got {}."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "analytics_engine_datasets" should be an array but got {}."
+				`);
 			});
 
-			it("should error if analytics_engine_datasets is a string", () => {
+			it("should error if analytics_engine_datasets is a string", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ analytics_engine_datasets: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -3622,12 +4075,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"analytics_engine_datasets\\" should be an array but got \\"BAD\\"."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "analytics_engine_datasets" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if analytics_engine_datasets is a number", () => {
+			it("should error if analytics_engine_datasets is a number", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ analytics_engine_datasets: 999 } as unknown as RawConfig,
 					undefined,
@@ -3637,12 +4092,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"analytics_engine_datasets\\" should be an array but got 999."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "analytics_engine_datasets" should be an array but got 999."
+				`);
 			});
 
-			it("should error if analytics_engine_datasets is null", () => {
+			it("should error if analytics_engine_datasets is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ analytics_engine_datasets: null } as unknown as RawConfig,
 					undefined,
@@ -3652,12 +4107,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"analytics_engine_datasets\\" should be an array but got null."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "analytics_engine_datasets" should be an array but got null."
+				`);
 			});
 
-			it("should error if analytics_engine_datasets.bindings are not valid", () => {
+			it("should error if analytics_engine_datasets.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						analytics_engine_datasets: [
@@ -3677,18 +4134,20 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"analytics_engine_datasets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			            - \\"analytics_engine_datasets[1]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"dataset\\":2444}.
-			            - \\"analytics_engine_datasets[1]\\" bindings should, optionally, have a string \\"dataset\\" field but got {\\"binding\\":2333,\\"dataset\\":2444}.
-			            - \\"analytics_engine_datasets[2]\\" bindings should, optionally, have a string \\"dataset\\" field but got {\\"binding\\":\\"AE_BINDING_2\\",\\"dataset\\":2555}.
-			            - \\"analytics_engine_datasets[3]\\" bindings should, optionally, have a string \\"dataset\\" field but got {\\"binding\\":\\"AE_BINDING_1\\",\\"dataset\\":\\"\\"}."
-		        `);
+					"Processing wrangler configuration:
+					  - "analytics_engine_datasets[0]" bindings should have a string "binding" field but got {}.
+					  - "analytics_engine_datasets[1]" bindings should have a string "binding" field but got {"binding":2333,"dataset":2444}.
+					  - "analytics_engine_datasets[1]" bindings should, optionally, have a string "dataset" field but got {"binding":2333,"dataset":2444}.
+					  - "analytics_engine_datasets[2]" bindings should, optionally, have a string "dataset" field but got {"binding":"AE_BINDING_2","dataset":2555}.
+					  - "analytics_engine_datasets[3]" bindings should, optionally, have a string "dataset" field but got {"binding":"AE_BINDING_1","dataset":""}."
+				`);
 			});
 		});
 
 		describe("[dispatch_namespaces]", () => {
-			it("should error if dispatch_namespaces is not an array", () => {
+			it("should error if dispatch_namespaces is not an array", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						dispatch_namespaces: "just a string",
@@ -3701,12 +4160,12 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"dispatch_namespaces\\" should be an array but got \\"just a string\\"."
-		`);
+					"Processing wrangler configuration:
+					  - The field "dispatch_namespaces" should be an array but got "just a string"."
+				`);
 			});
 
-			it("should error on non valid dispatch_namespaces", () => {
+			it("should error on non valid dispatch_namespaces", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						dispatch_namespaces: [
@@ -3742,19 +4201,21 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"dispatch_namespaces[0]\\" binding should be objects, but got \\"a string\\"
-			  - \\"dispatch_namespaces[1]\\" binding should be objects, but got 123
-			  - \\"dispatch_namespaces[2]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"namespace\\":456}.
-			  - \\"dispatch_namespaces[2]\\" should have a string \\"namespace\\" field but got {\\"binding\\":123,\\"namespace\\":456}.
-			  - \\"dispatch_namespaces[3]\\" should have a string \\"namespace\\" field but got {\\"binding\\":\\"DISPATCH_NAMESPACE_BINDING_1\\",\\"namespace\\":456}.
-			  - \\"dispatch_namespaces[5]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"namespace\\":\\"DISPATCH_NAMESPACE_BINDING_SERVICE_1\\"}.
-			  - \\"dispatch_namespaces[6]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
-			  - \\"dispatch_namespaces[6]\\" should have a string \\"namespace\\" field but got {\\"binding\\":123,\\"service\\":456}."
-		`);
+					"Processing wrangler configuration:
+					  - "dispatch_namespaces[0]" binding should be objects, but got "a string"
+					  - "dispatch_namespaces[1]" binding should be objects, but got 123
+					  - "dispatch_namespaces[2]" should have a string "binding" field but got {"binding":123,"namespace":456}.
+					  - "dispatch_namespaces[2]" should have a string "namespace" field but got {"binding":123,"namespace":456}.
+					  - "dispatch_namespaces[3]" should have a string "namespace" field but got {"binding":"DISPATCH_NAMESPACE_BINDING_1","namespace":456}.
+					  - "dispatch_namespaces[5]" should have a string "binding" field but got {"binding":123,"namespace":"DISPATCH_NAMESPACE_BINDING_SERVICE_1"}.
+					  - "dispatch_namespaces[6]" should have a string "binding" field but got {"binding":123,"service":456}.
+					  - "dispatch_namespaces[6]" should have a string "namespace" field but got {"binding":123,"service":456}."
+				`);
 			});
 
-			test("should error on invalid outbounds for a namespace", () => {
+			test("should error on invalid outbounds for a namespace", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						dispatch_namespaces: [
@@ -3841,30 +4302,30 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"dispatch_namespaces[0].outbound\\" should be an object, but got \\"a string\\"
-			  - \\"dispatch_namespaces[0]\\" has an invalid outbound definition.
-			  - \\"dispatch_namespaces[1].outbound.service\\" is a required field.
-			  - \\"dispatch_namespaces[1]\\" has an invalid outbound definition.
-			  - Expected \\"dispatch_namespaces[2].outbound.service\\" to be of type string but got 123.
-			  - \\"dispatch_namespaces[2]\\" has an invalid outbound definition.
-			  - Expected \\"dispatch_namespaces[3].outbound.environment\\" to be of type string but got {\\"bad\\":\\"env\\"}.
-			  - \\"dispatch_namespaces[3]\\" has an invalid outbound definition.
-			  - \\"dispatch_namespaces[4].outbound.service\\" is a required field.
-			  - \\"dispatch_namespaces[4]\\" has an invalid outbound definition.
-			  - Expected \\"dispatch_namespaces[5].outbound.parameters\\" to be an array of strings but got \\"bad\\"
-			  - \\"dispatch_namespaces[5]\\" has an invalid outbound definition.
-			  - Expected \\"dispatch_namespaces[6].outbound.parameters\\" to be an array of strings but got false
-			  - \\"dispatch_namespaces[6]\\" has an invalid outbound definition.
-			  - Expected \\"dispatch_namespaces[7].outbound.parameters.[0]\\" to be of type string but got true.
-			  - Expected \\"dispatch_namespaces[7].outbound.parameters.[1]\\" to be of type string but got {\\"not\\":\\"good\\"}.
-			  - \\"dispatch_namespaces[7]\\" has an invalid outbound definition."
-		`);
+					"Processing wrangler configuration:
+					  - "dispatch_namespaces[0].outbound" should be an object, but got "a string"
+					  - "dispatch_namespaces[0]" has an invalid outbound definition.
+					  - "dispatch_namespaces[1].outbound.service" is a required field.
+					  - "dispatch_namespaces[1]" has an invalid outbound definition.
+					  - Expected "dispatch_namespaces[2].outbound.service" to be of type string but got 123.
+					  - "dispatch_namespaces[2]" has an invalid outbound definition.
+					  - Expected "dispatch_namespaces[3].outbound.environment" to be of type string but got {"bad":"env"}.
+					  - "dispatch_namespaces[3]" has an invalid outbound definition.
+					  - "dispatch_namespaces[4].outbound.service" is a required field.
+					  - "dispatch_namespaces[4]" has an invalid outbound definition.
+					  - Expected "dispatch_namespaces[5].outbound.parameters" to be an array of strings but got "bad"
+					  - "dispatch_namespaces[5]" has an invalid outbound definition.
+					  - Expected "dispatch_namespaces[6].outbound.parameters" to be an array of strings but got false
+					  - "dispatch_namespaces[6]" has an invalid outbound definition.
+					  - Expected "dispatch_namespaces[7].outbound.parameters.[0]" to be of type string but got true.
+					  - Expected "dispatch_namespaces[7].outbound.parameters.[1]" to be of type string but got {"not":"good"}.
+					  - "dispatch_namespaces[7]" has an invalid outbound definition."
+				`);
 			});
 		});
 
 		describe("[mtls_certificates]", () => {
-			it("should error if mtls_certificates is not an array", () => {
+			it("should error if mtls_certificates is not an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						mtls_certificates: "just a string",
@@ -3877,12 +4338,12 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"mtls_certificates\\" should be an array but got \\"just a string\\"."
-		`);
+					"Processing wrangler configuration:
+					  - The field "mtls_certificates" should be an array but got "just a string"."
+				`);
 			});
 
-			it("should error on non valid mtls_certificates", () => {
+			it("should error on non valid mtls_certificates", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						mtls_certificates: [
@@ -3919,29 +4380,29 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in mtls_certificates[3] field: \\"namespace\\"
-					  - Unexpected fields found in mtls_certificates[4] field: \\"id\\"
-					  - Unexpected fields found in mtls_certificates[7] field: \\"service\\""
+					  - Unexpected fields found in mtls_certificates[3] field: "namespace"
+					  - Unexpected fields found in mtls_certificates[4] field: "id"
+					  - Unexpected fields found in mtls_certificates[7] field: "service""
 				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"mtls_certificates\\" bindings should be objects, but got \\"a string\\"
-			  - \\"mtls_certificates\\" bindings should be objects, but got 123
-			  - \\"mtls_certificates\\" bindings should be objects, but got false
-			  - \\"mtls_certificates[3]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"namespace\\":123}.
-			  - \\"mtls_certificates[3]\\" bindings should have a string \\"certificate_id\\" field but got {\\"binding\\":123,\\"namespace\\":123}.
-			  - \\"mtls_certificates[4]\\" bindings should have a string \\"certificate_id\\" field but got {\\"binding\\":\\"CERT_ONE\\",\\"id\\":\\"1234\\"}.
-			  - \\"mtls_certificates[5]\\" bindings should have a string \\"certificate_id\\" field but got {\\"binding\\":\\"CERT_TWO\\",\\"certificate_id\\":1234}.
-			  - \\"mtls_certificates[7]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":true,\\"service\\":\\"1234\\"}.
-			  - \\"mtls_certificates[7]\\" bindings should have a string \\"certificate_id\\" field but got {\\"binding\\":true,\\"service\\":\\"1234\\"}."
-		`);
+					"Processing wrangler configuration:
+					  - "mtls_certificates" bindings should be objects, but got "a string"
+					  - "mtls_certificates" bindings should be objects, but got 123
+					  - "mtls_certificates" bindings should be objects, but got false
+					  - "mtls_certificates[3]" bindings should have a string "binding" field but got {"binding":123,"namespace":123}.
+					  - "mtls_certificates[3]" bindings should have a string "certificate_id" field but got {"binding":123,"namespace":123}.
+					  - "mtls_certificates[4]" bindings should have a string "certificate_id" field but got {"binding":"CERT_ONE","id":"1234"}.
+					  - "mtls_certificates[5]" bindings should have a string "certificate_id" field but got {"binding":"CERT_TWO","certificate_id":1234}.
+					  - "mtls_certificates[7]" bindings should have a string "binding" field but got {"binding":true,"service":"1234"}.
+					  - "mtls_certificates[7]" bindings should have a string "certificate_id" field but got {"binding":true,"service":"1234"}."
+				`);
 			});
 		});
 
 		describe("[pipelines]", () => {
-			it("should error if pipelines is an object", () => {
+			it("should error if pipelines is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ pipelines: {} },
@@ -3952,12 +4413,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"pipelines\\" should be an array but got {}."
-		`);
+					"Processing wrangler configuration:
+					  - The field "pipelines" should be an array but got {}."
+				`);
 			});
 
-			it("should error if pipelines is a string", () => {
+			it("should error if pipelines is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ pipelines: "BAD" },
@@ -3968,12 +4429,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"pipelines\\" should be an array but got \\"BAD\\"."
-		`);
+					"Processing wrangler configuration:
+					  - The field "pipelines" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if pipelines is a number", () => {
+			it("should error if pipelines is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ pipelines: 999 },
@@ -3984,12 +4445,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"pipelines\\" should be an array but got 999."
-		`);
+					"Processing wrangler configuration:
+					  - The field "pipelines" should be an array but got 999."
+				`);
 			});
 
-			it("should error if pipelines is null", () => {
+			it("should error if pipelines is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ pipelines: null },
@@ -4000,12 +4461,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"pipelines\\" should be an array but got null."
-		`);
+					"Processing wrangler configuration:
+					  - The field "pipelines" should be an array but got null."
+				`);
 			});
 
-			it("should accept valid bindings", () => {
+			it("should accept valid bindings", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						pipelines: [
@@ -4023,7 +4484,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if pipelines.bindings are not valid", () => {
+			it("should error if pipelines.bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						pipelines: [
@@ -4041,21 +4502,21 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in pipelines[2] field: \\"project\\""
+					  - Unexpected fields found in pipelines[2] field: "project""
 				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"pipelines[0]\\" bindings must have a string \\"binding\\" field but got {}.
-					  - \\"pipelines[0]\\" bindings must have a string \\"pipeline\\" field but got {}.
-					  - \\"pipelines[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":2000,\\"project\\":2111}.
-					  - \\"pipelines[2]\\" bindings must have a string \\"pipeline\\" field but got {\\"binding\\":2000,\\"project\\":2111}."
+					  - "pipelines[0]" bindings must have a string "binding" field but got {}.
+					  - "pipelines[0]" bindings must have a string "pipeline" field but got {}.
+					  - "pipelines[2]" bindings must have a string "binding" field but got {"binding":2000,"project":2111}.
+					  - "pipelines[2]" bindings must have a string "pipeline" field but got {"binding":2000,"project":2111}."
 				`);
 			});
 		});
 
 		describe("[secrets_store_secrets]", () => {
-			it("should error if secrets_store_secrets is an object", () => {
+			it("should error if secrets_store_secrets is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ secrets_store_secrets: {} },
@@ -4066,12 +4527,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"secrets_store_secrets\\" should be an array but got {}."
-		`);
+					"Processing wrangler configuration:
+					  - The field "secrets_store_secrets" should be an array but got {}."
+				`);
 			});
 
-			it("should error if secrets_store_secrets is null", () => {
+			it("should error if secrets_store_secrets is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ secrets_store_secrets: null },
@@ -4082,12 +4543,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"secrets_store_secrets\\" should be an array but got null."
-		`);
+					"Processing wrangler configuration:
+					  - The field "secrets_store_secrets" should be an array but got null."
+				`);
 			});
 
-			it("should accept valid bindings", () => {
+			it("should accept valid bindings", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						secrets_store_secrets: [
@@ -4106,7 +4567,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if secrets_store_secrets.bindings are not valid", () => {
+			it("should error if secrets_store_secrets.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						secrets_store_secrets: [
@@ -4132,23 +4595,155 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in secrets_store_secrets[2] field: \\"invalid\\""
+					  - Unexpected fields found in secrets_store_secrets[2] field: "invalid""
 				`);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"secrets_store_secrets[0]\\" bindings must have a string \\"binding\\" field but got {}.
-					  - \\"secrets_store_secrets[0]\\" bindings must have a string \\"store_id\\" field but got {}.
-					  - \\"secrets_store_secrets[0]\\" bindings must have a string \\"secret_name\\" field but got {}.
-					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}.
-					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"store_id\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}.
-					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"secret_name\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}."
+					  - "secrets_store_secrets[0]" bindings must have a string "binding" field but got {}.
+					  - "secrets_store_secrets[0]" bindings must have a string "store_id" field but got {}.
+					  - "secrets_store_secrets[0]" bindings must have a string "secret_name" field but got {}.
+					  - "secrets_store_secrets[2]" bindings must have a string "binding" field but got {"binding":null,"invalid":true,"store_id":123,"secret_name":null}.
+					  - "secrets_store_secrets[2]" bindings must have a string "store_id" field but got {"binding":null,"invalid":true,"store_id":123,"secret_name":null}.
+					  - "secrets_store_secrets[2]" bindings must have a string "secret_name" field but got {"binding":null,"invalid":true,"store_id":123,"secret_name":null}."
+				`);
+			});
+		});
+
+		describe("[artifacts]", () => {
+			it("should error if artifacts is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ artifacts: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "artifacts" should be an array but got {}."
+				`);
+			});
+
+			it("should error if artifacts is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ artifacts: null },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "artifacts" should be an array but got null."
+				`);
+			});
+
+			it("should accept valid bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						artifacts: [
+							{
+								binding: "MY_ARTIFACTS",
+								namespace: "default",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept valid bindings with remote set to true", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						artifacts: [
+							{
+								binding: "MY_ARTIFACTS",
+								namespace: "default",
+								remote: true,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if remote is not a boolean", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						artifacts: [
+							{
+								binding: "MY_ARTIFACTS",
+								namespace: "default",
+								remote: "yes",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - "artifacts[0]" should, optionally, have a boolean "remote" field but got {"binding":"MY_ARTIFACTS","namespace":"default","remote":"yes"}."
+			`);
+			});
+
+			it("should error if artifacts bindings are not valid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						artifacts: [
+							{},
+							{
+								binding: "VALID",
+								namespace: "default",
+							},
+							{
+								binding: null,
+								invalid: true,
+								namespace: 123,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in artifacts[2] field: "invalid""
+				`);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "artifacts[0]" bindings must have a string "binding" field but got {}.
+					  - "artifacts[0]" bindings must have a string "namespace" field but got {}.
+					  - "artifacts[2]" bindings must have a string "binding" field but got {"binding":null,"invalid":true,"namespace":123}.
+					  - "artifacts[2]" bindings must have a string "namespace" field but got {"binding":null,"invalid":true,"namespace":123}."
 				`);
 			});
 		});
 
 		describe("[worker_loaders]", () => {
-			it("should error if worker_loaders is an object", () => {
+			it("should error if worker_loaders is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ worker_loaders: {} },
@@ -4159,12 +4754,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"worker_loaders\\" should be an array but got {}."
-		`);
+					"Processing wrangler configuration:
+					  - The field "worker_loaders" should be an array but got {}."
+				`);
 			});
 
-			it("should error if worker_loaders is null", () => {
+			it("should error if worker_loaders is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ worker_loaders: null },
@@ -4175,12 +4770,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"worker_loaders\\" should be an array but got null."
-		`);
+					"Processing wrangler configuration:
+					  - The field "worker_loaders" should be an array but got null."
+				`);
 			});
 
-			it("should accept valid bindings", () => {
+			it("should accept valid bindings", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						worker_loaders: [
@@ -4197,7 +4792,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if worker_loaders bindings are not valid", () => {
+			it("should error if worker_loaders bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						worker_loaders: [
@@ -4221,19 +4818,19 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in worker_loaders[2] field: \\"invalid\\""
+					  - Unexpected fields found in worker_loaders[2] field: "invalid""
 				`);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"worker_loaders[0]\\" bindings must have a string \\"binding\\" field but got {}.
-					  - \\"worker_loaders[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true}."
+					  - "worker_loaders[0]" bindings must have a string "binding" field but got {}.
+					  - "worker_loaders[2]" bindings must have a string "binding" field but got {"binding":null,"invalid":true}."
 				`);
 			});
 		});
 
 		describe("[unsafe_hello_world]", () => {
-			it("should error if unsafe_hello_world is an object", () => {
+			it("should error if unsafe_hello_world is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ unsafe_hello_world: {} },
@@ -4244,12 +4841,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"unsafe_hello_world\\" should be an array but got {}."
-		`);
+					"Processing wrangler configuration:
+					  - The field "unsafe_hello_world" should be an array but got {}."
+				`);
 			});
 
-			it("should error if unsafe_hello_world is null", () => {
+			it("should error if unsafe_hello_world is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ unsafe_hello_world: null },
@@ -4260,12 +4857,12 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"unsafe_hello_world\\" should be an array but got null."
-		`);
+					"Processing wrangler configuration:
+					  - The field "unsafe_hello_world" should be an array but got null."
+				`);
 			});
 
-			it("should accept valid bindings", () => {
+			it("should accept valid bindings", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						unsafe_hello_world: [
@@ -4283,7 +4880,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if hello_world.bindings are not valid", () => {
+			it("should error if hello_world.bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						unsafe_hello_world: [
@@ -4310,20 +4907,727 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in unsafe_hello_world[2] field: \\"invalid\\""
+					  - Unexpected fields found in unsafe_hello_world[2] field: "invalid""
 				`);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"unsafe_hello_world[0]\\" bindings must have a string \\"binding\\" field but got {}.
-					  - \\"unsafe_hello_world[1]\\" bindings must have a boolean \\"enable_timer\\" field but got {\\"binding\\":\\"VALID\\",\\"enable_timer\\":\\"yes\\"}.
-					  - \\"unsafe_hello_world[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"enable_timer\\":false}."
+					  - "unsafe_hello_world[0]" bindings must have a string "binding" field but got {}.
+					  - "unsafe_hello_world[1]" bindings must have a boolean "enable_timer" field but got {"binding":"VALID","enable_timer":"yes"}.
+					  - "unsafe_hello_world[2]" bindings must have a string "binding" field but got {"binding":null,"invalid":true,"enable_timer":false}."
+				`);
+			});
+		});
+
+		describe("[flagship]", () => {
+			it("should error if flagship is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ flagship: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "flagship" should be an array but got {}."
+				`);
+			});
+
+			it("should error if flagship is a string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ flagship: "bad" },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "flagship" should be an array but got "bad"."
+				`);
+			});
+
+			it("should error if flagship is a number", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ flagship: 999 },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "flagship" should be an array but got 999."
+				`);
+			});
+
+			it("should error if flagship is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ flagship: null },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "flagship" should be an array but got null."
+				`);
+			});
+
+			it("should accept valid flagship bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						flagship: [
+							{
+								binding: "FLAGS",
+								app_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error if flagship bindings are not valid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						flagship: [
+							// @ts-expect-error purposely using an invalid value
+							{},
+							// @ts-expect-error purposely using an invalid value
+							{ binding: "VALID" },
+							// @ts-expect-error purposely using an invalid value
+							{ binding: 2000, app_id: 2111 },
+							{
+								binding: "BINDING_2",
+								app_id: "valid-app-id",
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "flagship[0]" bindings must have a string "binding" field but got {}.
+					  - "flagship[0]" bindings must have a string "app_id" field but got {}.
+					  - "flagship[1]" bindings must have a string "app_id" field but got {"binding":"VALID"}.
+					  - "flagship[2]" bindings must have a string "binding" field but got {"binding":2000,"app_id":2111}.
+					  - "flagship[2]" bindings must have a string "app_id" field but got {"binding":2000,"app_id":2111}."
+				`);
+			});
+
+			it("should warn on unexpected fields", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						flagship: [
+							{
+								binding: "FLAGS",
+								app_id: "valid-app-id",
+								// @ts-expect-error purposely using an invalid field
+								unknown_field: true,
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in flagship[0] field: "unknown_field""
+				`);
+			});
+		});
+
+		describe("[workflows]", () => {
+			it("should error if workflows is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ workflows: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "workflows" should be an array but got {}."
+				`);
+			});
+
+			it("should error if workflows is a string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ workflows: "BAD" },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "workflows" should be an array but got "BAD"."
+				`);
+			});
+
+			it("should error if workflows is a number", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ workflows: 999 },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "workflows" should be an array but got 999."
+				`);
+			});
+
+			it("should error if workflows is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ workflows: null },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "workflows" should be an array but got null."
+				`);
+			});
+
+			it("should accept valid workflow bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should accept valid workflow bindings with optional fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								script_name: "my-script",
+								remote: true,
+								limits: { steps: 100 },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error if workflow bindings are not valid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{},
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+							},
+							{ binding: 2000, name: 2111, class_name: 3000 },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings should have a string "binding" field but got {}.
+					  - "workflows[0]" bindings should have a string "name" field but got {}.
+					  - "workflows[0]" bindings should have a string "class_name" field but got {}.
+					  - "workflows[2]" bindings should have a string "binding" field but got {"binding":2000,"name":2111,"class_name":3000}.
+					  - "workflows[2]" bindings should have a string "name" field but got {"binding":2000,"name":2111,"class_name":3000}.
+					  - "workflows[2]" bindings should have a string "class_name" field but got {"binding":2000,"name":2111,"class_name":3000}."
+				`);
+			});
+
+			it("should error if workflow name has invalid format", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "invalid name with spaces",
+								class_name: "MyWorkflow",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" binding "name" field is invalid. Workflow names must be 1-64 characters long, start with a letter, number, or underscore, and may only contain letters, numbers, underscores, or hyphens."
+				`);
+			});
+
+			it("should error if optional fields have wrong types", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								script_name: 123,
+								remote: "yes",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings should, optionally, have a string "script_name" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","script_name":123,"remote":"yes"}.
+					  - "workflows[0]" bindings should, optionally, have a boolean "remote" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","script_name":123,"remote":"yes"}."
+				`);
+			});
+
+			it("should error if limits is not an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								limits: "bad",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings should, optionally, have an object "limits" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","limits":"bad"}."
+				`);
+			});
+
+			it("should error if limits.steps is not a positive integer", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								limits: { steps: -1 },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "limits.steps" field must be a positive integer but got -1."
+				`);
+			});
+
+			it("should warn if limits.steps exceeds 25000", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								limits: { steps: 30000 },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" has a step limit of 30000, which exceeds the production maximum of 25,000. This configuration may not work when deployed."
+				`);
+			});
+
+			it("should warn on unexpected fields", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								unknown_field: true,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in workflows[0] field: "unknown_field""
+				`);
+			});
+
+			it("should error on duplicate workflow names", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "WORKFLOW_1",
+								name: "my-workflow",
+								class_name: "MyWorkflow1",
+							},
+							{
+								binding: "WORKFLOW_2",
+								name: "my-workflow",
+								class_name: "MyWorkflow2",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows" bindings must have unique "name" values; duplicate(s) found: "my-workflow""
+				`);
+			});
+		});
+
+		describe("[logfwdr]", () => {
+			it("should error if logfwdr is an array", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ logfwdr: [] } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "logfwdr" should be an object but got []."
+				`);
+			});
+
+			it("should error if logfwdr is a string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ logfwdr: "BAD" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "logfwdr" should be an object but got "BAD"."
+				`);
+			});
+
+			it("should error if logfwdr is a number", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ logfwdr: 999 } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "logfwdr" should be an object but got 999."
+				`);
+			});
+
+			it("should error if logfwdr is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ logfwdr: null } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "logfwdr" should be an object but got null."
+				`);
+			});
+
+			it("should error if logfwdr.bindings is not defined", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ logfwdr: {} } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "logfwdr" is missing the required "bindings" property."
+				`);
+			});
+
+			it("should error if logfwdr.bindings is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ logfwdr: { bindings: {} } } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "logfwdr.bindings" should be an array but got {}."
+				`);
+			});
+
+			it("should error if logfwdr.bindings is a string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ logfwdr: { bindings: "BAD" } } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "logfwdr.bindings" should be an array but got "BAD"."
+				`);
+			});
+
+			it("should error if logfwdr.bindings is a number", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ logfwdr: { bindings: 999 } } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "logfwdr.bindings" should be an array but got 999."
+				`);
+			});
+
+			it("should error if logfwdr.bindings is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ logfwdr: { bindings: null } } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "logfwdr.bindings" should be an array but got null."
+				`);
+			});
+
+			it("should accept valid logfwdr bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						logfwdr: {
+							bindings: [
+								{
+									name: "httplogs",
+									destination: "httplogs",
+								},
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error if logfwdr.bindings are not valid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						logfwdr: {
+							bindings: [
+								{},
+								{ name: "VALID", destination: "valid-dest" },
+								{ name: 123, destination: 456 },
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+
+					  - "logfwdr.bindings[0]": {}
+					    - binding should have a string "name" field.
+					    - binding should have a string "destination" field.
+
+					  - "logfwdr.bindings[2]": {"name":123,"destination":456}
+					    - binding should have a string "name" field.
+					    - binding should have a string "destination" field."
+				`);
+			});
+
+			it("should error if logfwdr has deprecated schema property", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						logfwdr: {
+							bindings: [
+								{
+									name: "httplogs",
+									destination: "httplogs",
+								},
+							],
+							schema: "some-schema",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "logfwdr" binding "schema" property has been replaced with the "unsafe.capnp" object, which expects a "base_path" and an array of "source_schemas" to compile, or a "compiled_schema" property."
+				`);
+			});
+
+			it("should warn on unexpected fields in logfwdr bindings", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						logfwdr: {
+							bindings: [
+								{
+									name: "httplogs",
+									destination: "httplogs",
+									unknown_field: true,
+								},
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+
+					  - "logfwdr.bindings[0]": {"name":"httplogs","destination":"httplogs","unknown_field":true}
+					    - Unexpected fields found in logfwdr.bindings[0] field: "unknown_field""
 				`);
 			});
 		});
 
 		describe("[ratelimit]", () => {
-			it("should error if ratelimit is an object", () => {
+			it("should error if ratelimit is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ ratelimits: {} },
@@ -4335,11 +5639,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - The field \\"ratelimits\\" should be an array but got {}."
+					  - The field "ratelimits" should be an array but got {}."
 				`);
 			});
 
-			it("should error if ratelimit is null", () => {
+			it("should error if ratelimit is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ ratelimits: null },
@@ -4351,11 +5655,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - The field \\"ratelimits\\" should be an array but got null."
+					  - The field "ratelimits" should be an array but got null."
 				`);
 			});
 
-			it("should accept valid bindings", () => {
+			it("should accept valid bindings", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						ratelimits: [
@@ -4377,7 +5681,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if ratelimit bindings are not valid", () => {
+			it("should error if ratelimit bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						ratelimits: [
@@ -4419,26 +5723,26 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in ratelimits[2] field: \\"invalid\\""
+					  - Unexpected fields found in ratelimits[2] field: "invalid""
 				`);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"ratelimits[0]\\" bindings must have a string \\"name\\" field but got {}.
-					  - \\"ratelimits[0]\\" bindings must have a string \\"namespace_id\\" field but got {}.
-					  - \\"ratelimits[0]\\" bindings must have a \\"simple\\" configuration object but got {}.
-					  - \\"ratelimits[1]\\" bindings must have a \\"simple\\" configuration object but got {\\"name\\":\\"VALID\\",\\"namespace_id\\":\\"1001\\"}.
-					  - \\"ratelimits[2]\\" bindings must have a string \\"name\\" field but got {\\"name\\":null,\\"namespace_id\\":123,\\"simple\\":{\\"limit\\":\\"not a number\\",\\"period\\":90},\\"invalid\\":true}.
-					  - \\"ratelimits[2]\\" bindings must have a string \\"namespace_id\\" field but got {\\"name\\":null,\\"namespace_id\\":123,\\"simple\\":{\\"limit\\":\\"not a number\\",\\"period\\":90},\\"invalid\\":true}.
-					  - \\"ratelimits[2]\\" bindings \\"simple.limit\\" must be a number but got {\\"limit\\":\\"not a number\\",\\"period\\":90}.
-					  - \\"ratelimits[2]\\" bindings \\"simple.period\\" must be either 10 or 60 but got 90.
-					  - \\"ratelimits[3]\\" bindings \\"simple.period\\" is required and must be a number but got {\\"limit\\":10}."
+					  - "ratelimits[0]" bindings must have a string "name" field but got {}.
+					  - "ratelimits[0]" bindings must have a string "namespace_id" field but got {}.
+					  - "ratelimits[0]" bindings must have a "simple" configuration object but got {}.
+					  - "ratelimits[1]" bindings must have a "simple" configuration object but got {"name":"VALID","namespace_id":"1001"}.
+					  - "ratelimits[2]" bindings must have a string "name" field but got {"name":null,"namespace_id":123,"simple":{"limit":"not a number","period":90},"invalid":true}.
+					  - "ratelimits[2]" bindings must have a string "namespace_id" field but got {"name":null,"namespace_id":123,"simple":{"limit":"not a number","period":90},"invalid":true}.
+					  - "ratelimits[2]" bindings "simple.limit" must be a number but got {"limit":"not a number","period":90}.
+					  - "ratelimits[2]" bindings "simple.period" must be either 10 or 60 but got 90.
+					  - "ratelimits[3]" bindings "simple.period" is required and must be a number but got {"limit":10}."
 				`);
 			});
 		});
 
 		describe("[vpc_services]", () => {
-			it("should accept valid bindings", () => {
+			it("should accept valid bindings", ({ expect }) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
 						vpc_services: [
@@ -4470,7 +5774,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if vpc_services bindings are not valid", () => {
+			it("should error if vpc_services bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						vpc_services: [
@@ -4490,18 +5796,132 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					  "Processing wrangler configuration:
-					    - \\"vpc_services[0]\\" bindings should have a string \\"binding\\" field but got {}.
-					    - \\"vpc_services[0]\\" bindings must have a \\"service_id\\" field but got {}.
-					    - \\"vpc_services[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":null,\\"service_id\\":123,\\"invalid\\":true}.
-					    - \\"vpc_services[2]\\" bindings must have a \\"service_id\\" field but got {\\"binding\\":null,\\"service_id\\":123,\\"invalid\\":true}.
-					    - \\"vpc_services[3]\\" bindings must have a \\"service_id\\" field but got {\\"binding\\":\\"MISSING_SERVICE_ID\\"}."
+					"Processing wrangler configuration:
+					  - "vpc_services[0]" bindings should have a string "binding" field but got {}.
+					  - "vpc_services[0]" bindings must have a "service_id" field but got {}.
+					  - "vpc_services[2]" bindings should have a string "binding" field but got {"binding":null,"service_id":123,"invalid":true}.
+					  - "vpc_services[2]" bindings must have a "service_id" field but got {"binding":null,"service_id":123,"invalid":true}.
+					  - "vpc_services[3]" bindings must have a "service_id" field but got {"binding":"MISSING_SERVICE_ID"}."
+				`);
+			});
+		});
+
+		describe("[vpc_networks]", () => {
+			it("should accept valid bindings with tunnel_id", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						vpc_networks: [
+							{
+								binding: "MY_NETWORK",
+								tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+							},
+							{
+								binding: "MY_OTHER_NETWORK",
+								tunnel_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.vpc_networks).toEqual([
+					{
+						binding: "MY_NETWORK",
+						tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+					{
+						binding: "MY_OTHER_NETWORK",
+						tunnel_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+					},
+				]);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept valid bindings with network_id", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						vpc_networks: [
+							{
+								binding: "MY_MESH_NETWORK",
+								network_id: "some-network-id",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.vpc_networks).toEqual([
+					{
+						binding: "MY_MESH_NETWORK",
+						network_id: "some-network-id",
+					},
+				]);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if both tunnel_id and network_id are provided", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						vpc_networks: [
+							{
+								binding: "MY_NETWORK",
+								tunnel_id: "aaa",
+								network_id: "some-network-id",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - "vpc_networks[0]" bindings must have either a "tunnel_id" or "network_id", but not both."
+			`);
+			});
+
+			it("should error if vpc_networks bindings are not valid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						vpc_networks: [
+							{},
+							{
+								binding: "VALID",
+								tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+							},
+							{ binding: null, tunnel_id: 123, invalid: true },
+							{ binding: "MISSING_ID" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "vpc_networks[0]" bindings should have a string "binding" field but got {}.
+					  - "vpc_networks[0]" bindings must have either a "tunnel_id" or "network_id" field but got {}.
+					  - "vpc_networks[2]" bindings should have a string "binding" field but got {"binding":null,"tunnel_id":123,"invalid":true}.
+					  - "vpc_networks[2]" bindings must have a string "tunnel_id" field but got {"binding":null,"tunnel_id":123,"invalid":true}.
+					  - "vpc_networks[3]" bindings must have either a "tunnel_id" or "network_id" field but got {"binding":"MISSING_ID"}."
 				`);
 			});
 		});
 
 		describe("[unsafe.bindings]", () => {
-			it("should error if unsafe is an array", () => {
+			it("should error if unsafe is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: [] } as unknown as RawConfig,
 					undefined,
@@ -4510,16 +5930,16 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"unsafe\\" should be an object but got []."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "unsafe" should be an object but got []."
+				`);
 			});
 
-			it("should error if unsafe is a string", () => {
+			it("should error if unsafe is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -4528,16 +5948,16 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"unsafe\\" should be an object but got \\"BAD\\"."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "unsafe" should be an object but got "BAD"."
+				`);
 			});
 
-			it("should error if unsafe is a number", () => {
+			it("should error if unsafe is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: 999 } as unknown as RawConfig,
 					undefined,
@@ -4546,16 +5966,16 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"unsafe\\" should be an object but got 999."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "unsafe" should be an object but got 999."
+				`);
 			});
 
-			it("should error if unsafe is null", () => {
+			it("should error if unsafe is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: null } as unknown as RawConfig,
 					undefined,
@@ -4564,16 +5984,16 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"unsafe\\" should be an object but got null."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "unsafe" should be an object but got null."
+				`);
 			});
 
-			it("should not error if unsafe is an empty object", () => {
+			it("should not error if unsafe is an empty object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: {} } satisfies RawConfig,
 					undefined,
@@ -4582,16 +6002,18 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					"
 				`);
 			});
 
-			it("should error if unsafe contains unexpected properties", () => {
+			it("should error if unsafe contains unexpected properties", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						unsafe: {
@@ -4605,8 +6027,8 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"unsafe\\" fields are experimental and may change or break at any time.
-					  - Unexpected fields found in unsafe field: \\"invalid\\""
+					  - "unsafe" fields are experimental and may change or break at any time.
+					  - Unexpected fields found in unsafe field: "invalid""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -4614,7 +6036,7 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if unsafe.bindings is an object", () => {
+			it("should error if unsafe.bindings is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: {} } } as RawConfig,
 					undefined,
@@ -4623,16 +6045,16 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"unsafe.bindings\\" should be an array but got {}."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "unsafe.bindings" should be an array but got {}."
+				`);
 			});
 
-			it("should error if unsafe.bindings is a string", () => {
+			it("should error if unsafe.bindings is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: "BAD" } } as unknown as RawConfig,
 					undefined,
@@ -4641,16 +6063,16 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"unsafe.bindings\\" should be an array but got \\"BAD\\"."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "unsafe.bindings" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if unsafe.bindings is a number", () => {
+			it("should error if unsafe.bindings is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: 999 } } as unknown as RawConfig,
 					undefined,
@@ -4659,16 +6081,16 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"unsafe.bindings\\" should be an array but got 999."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "unsafe.bindings" should be an array but got 999."
+				`);
 			});
 
-			it("should error if unsafe.bindings is null", () => {
+			it("should error if unsafe.bindings is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: null } } as unknown as RawConfig,
 					undefined,
@@ -4677,16 +6099,18 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"unsafe.bindings\\" should be an array but got null."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "unsafe.bindings" should be an array but got null."
+				`);
 			});
 
-			it("should error if durable_objects.bindings are not valid", () => {
+			it("should error if durable_objects.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						unsafe: {
@@ -4708,26 +6132,26 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"unsafe.bindings[0]\\": {}
-			              - binding should have a string \\"name\\" field.
-			              - binding should have a string \\"type\\" field.
+					  - "unsafe.bindings[0]": {}
+					    - binding should have a string "name" field.
+					    - binding should have a string "type" field.
 
-			            - \\"unsafe.bindings[1]\\": {\\"name\\":\\"UNSAFE_BINDING_1\\"}
-			              - binding should have a string \\"type\\" field.
+					  - "unsafe.bindings[1]": {"name":"UNSAFE_BINDING_1"}
+					    - binding should have a string "type" field.
 
-			            - \\"unsafe.bindings[2]\\": {\\"name\\":2666,\\"type\\":2777}
-			              - binding should have a string \\"name\\" field.
-			              - binding should have a string \\"type\\" field."
-		        `);
+					  - "unsafe.bindings[2]": {"name":2666,"type":2777}
+					    - binding should have a string "name" field.
+					    - binding should have a string "type" field."
+				`);
 			});
 
-			it("should error if unsafe.metadata is an array", () => {
+			it("should error if unsafe.metadata is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: [] } } as unknown as RawConfig,
 					undefined,
@@ -4736,16 +6160,16 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"unsafe.metadata\\" should be an object but got []."
-		`);
+					"Processing wrangler configuration:
+					  - The field "unsafe.metadata" should be an object but got []."
+				`);
 			});
 
-			it("should error if unsafe.metadata is a string", () => {
+			it("should error if unsafe.metadata is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: "BAD" } } as unknown as RawConfig,
 					undefined,
@@ -4754,16 +6178,16 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"unsafe.metadata\\" should be an object but got \\"BAD\\"."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "unsafe.metadata" should be an object but got "BAD"."
+				`);
 			});
 
-			it("should error if unsafe.metadata is a number", () => {
+			it("should error if unsafe.metadata is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: 999 } } as unknown as RawConfig,
 					undefined,
@@ -4772,16 +6196,16 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"unsafe.metadata\\" should be an object but got 999."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "unsafe.metadata" should be an object but got 999."
+				`);
 			});
 
-			it("should error if unsafe.metadata is null", () => {
+			it("should error if unsafe.metadata is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: null } } as unknown as RawConfig,
 					undefined,
@@ -4790,16 +6214,18 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
+					"Processing wrangler configuration:
+					  - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"unsafe.metadata\\" should be an object but got null."
-		              `);
+					"Processing wrangler configuration:
+					  - The field "unsafe.metadata" should be an object but got null."
+				`);
 			});
 
-			it("should not provide an unsafe warning when the environment variable is specified", () => {
+			it("should not provide an unsafe warning when the environment variable is specified", ({
+				expect,
+			}) => {
 				vi.stubEnv("WRANGLER_DISABLE_EXPERIMENTAL_WARNING", "1");
 
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -4814,7 +6240,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		it("should accept unsafe fields under containers", () => {
+		it("should accept unsafe fields under containers", ({ expect }) => {
 			const { diagnostics } = normalizeAndValidateConfig(
 				{
 					containers: [
@@ -4844,7 +6270,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[placement]", () => {
-			it(`should error if placement hint is set with placement mode "off"`, () => {
+			it(`should error if placement hint is set with placement mode "off"`, ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ placement: { mode: "off", hint: "wnam" } },
 					undefined,
@@ -4854,11 +6282,13 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"placement.hint\\" can only be set when \\"placement.mode\\" is \\"smart\\""
+					  - "placement.hint" can only be set when "placement.mode" is "smart""
 				`);
 			});
 
-			it(`should not error if placement hint is set with placement mode "smart"`, () => {
+			it(`should not error if placement hint is set with placement mode "smart"`, ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ placement: { mode: "smart", hint: "wnam" } },
 					undefined,
@@ -4869,7 +6299,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it(`should error if placement hint object is set with placement mode "targeted"`, () => {
+			it(`should error if placement hint object is set with placement mode "targeted"`, ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						placement: { mode: "targeted", hint: "wnam" },
@@ -4881,12 +6313,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Expected \\"placement.mode\\" field to be one of [\\"off\\",\\"smart\\"] but got \\"targeted\\".
-					  - \\"placement.hint\\" can only be set when \\"placement.mode\\" is \\"smart\\""
+					  - Expected "placement.mode" field to be one of ["off","smart"] but got "targeted".
+					  - "placement.hint" can only be set when "placement.mode" is "smart""
 				`);
 			});
 
-			it(`should not error if hostname field is set with placement mode "targeted"`, () => {
+			it(`should not error if hostname field is set with placement mode "targeted"`, ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ placement: { hostname: "example.com" } },
 					undefined,
@@ -4897,7 +6331,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it(`should not error if host field is set with placement mode "targeted"`, () => {
+			it(`should not error if host field is set with placement mode "targeted"`, ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ placement: { host: "example.com:5432" } },
 					undefined,
@@ -4908,7 +6344,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it(`should not error if host field is set with placement mode "targeted"`, () => {
+			it(`should not error if host field is set with placement mode "targeted"`, ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ placement: { region: "aws:us-east-1" } },
 					undefined,
@@ -4919,7 +6357,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it(`should error if placement has an invalid field`, () => {
+			it(`should error if placement has an invalid field`, ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ placement: { shoeSize: 13 } } as unknown as RawConfig,
 					undefined,
@@ -4932,7 +6370,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("route & routes fields", () => {
-			it("should error if both route and routes are specified", () => {
+			it("should error if both route and routes are specified", ({
+				expect,
+			}) => {
 				const rawConfig: RawConfig = {
 					route: "route1",
 					routes: ["route2", "route3"],
@@ -4946,15 +6386,17 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
-		        `);
+					"Processing wrangler configuration:
+					  - Expected exactly one of the following fields ["routes","route"]."
+				`);
 			});
 		});
 	});
 
 	describe("named environments", () => {
-		it("should use --env CLI arg to select the active environment", () => {
+		it("should use --env CLI arg to select the active environment", ({
+			expect,
+		}) => {
 			const rawConfig: RawConfig = {
 				name: "my-worker",
 				env: {
@@ -4991,7 +6433,9 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 		});
 
-		it("should use CLOUDFLARE_ENV environment variable to select the active environment", () => {
+		it("should use CLOUDFLARE_ENV environment variable to select the active environment", ({
+			expect,
+		}) => {
 			const rawConfig: RawConfig = {
 				name: "my-worker",
 				env: {
@@ -5030,7 +6474,9 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 		});
 
-		it("should use the `--env` CLI arg over the CLOUDFLARE_ENV environment variable to select the active environment", () => {
+		it("should use the `--env` CLI arg over the CLOUDFLARE_ENV environment variable to select the active environment", ({
+			expect,
+		}) => {
 			const rawConfig: RawConfig = {
 				name: "my-worker",
 				env: {
@@ -5056,7 +6502,9 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 		});
 
-		it("should warn if we specify an environment but there are no named environments", () => {
+		it("should warn if we specify an environment but there are no named environments", ({
+			expect,
+		}) => {
 			const rawConfig: RawConfig = {
 				name: "my-worker",
 				kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
@@ -5081,7 +6529,7 @@ describe("normalizeAndValidateConfig()", () => {
 		      `);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - No environment found in configuration with name \\"dev\\".
+				  - No environment found in configuration with name "dev".
 				    Before using \`--env=dev\` there should be an equivalent environment section in the configuration.
 
 				    Consider adding an environment configuration section to the Wrangler configuration file:
@@ -5093,7 +6541,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("with redirected config", () => {
-			it("should error if we specify an environment via an argument that doesn't match the original target environment", () => {
+			it("should error if we specify an environment via an argument that doesn't match the original target environment", ({
+				expect,
+			}) => {
 				const rawConfig: RedirectedRawConfig = {
 					name: "my-worker",
 					targetEnvironment: "prod",
@@ -5115,7 +6565,9 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if we specify an environment via an environment variable that doesn't match the original target environment", () => {
+			it("should error if we specify an environment via an environment variable that doesn't match the original target environment", ({
+				expect,
+			}) => {
 				const rawConfig: RedirectedRawConfig = {
 					name: "my-worker",
 					targetEnvironment: "prod",
@@ -5136,7 +6588,9 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if we specify an environment via both an argument and CLOUDFLARE_ENV that doesn't match the original target environment", () => {
+			it("should error if we specify an environment via both an argument and CLOUDFLARE_ENV that doesn't match the original target environment", ({
+				expect,
+			}) => {
 				const rawConfig: RedirectedRawConfig = {
 					name: "my-worker",
 					targetEnvironment: "prod",
@@ -5160,7 +6614,9 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		it("should error if we specify an environment that does not match the named environments", () => {
+		it("should error if we specify an environment that does not match the named environments", ({
+			expect,
+		}) => {
 			const rawConfig: RawConfig = { env: { ENV1: {} } };
 			const { diagnostics } = normalizeAndValidateConfig(
 				rawConfig,
@@ -5172,9 +6628,9 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - No environment found in configuration with name \\"DEV\\".
+				  - No environment found in configuration with name "DEV".
 				    Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
-				    The available configured environment names are: [\\"ENV1\\"]
+				    The available configured environment names are: ["ENV1"]
 
 				    Consider adding an environment configuration section to the Wrangler configuration file:
 				    \`\`\`
@@ -5183,12 +6639,14 @@ describe("normalizeAndValidateConfig()", () => {
 				"
 			`);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			        "
-		      `);
+				"Processing wrangler configuration:
+				"
+			`);
 		});
 
-		it("should use top-level values for inheritable config fields", () => {
+		it("should use top-level values for inheritable config fields", ({
+			expect,
+		}) => {
 			const main = "src/index.ts";
 			const resolvedMain = path.resolve(process.cwd(), main);
 			const rawConfig: RawConfig = {
@@ -5238,7 +6696,9 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		it("should override top-level values for inheritable config fields", () => {
+		it("should override top-level values for inheritable config fields", ({
+			expect,
+		}) => {
 			const main = "src/index.ts";
 			const resolvedMain = path.resolve(process.cwd(), main);
 			const rawEnv: RawEnvironment = {
@@ -5316,7 +6776,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("non-legacy", () => {
-			it("should use top-level `name` field", () => {
+			it("should use top-level `name` field", ({ expect }) => {
 				const rawConfig: RawConfig = {
 					name: "mock-name",
 					legacy_env: false,
@@ -5340,7 +6800,9 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if named environment contains a `name` field, even if there is no top-level name", () => {
+			it("should error if named environment contains a `name` field, even if there is no top-level name", ({
+				expect,
+			}) => {
 				const rawConfig: RawConfig = {
 					legacy_env: false,
 					env: {
@@ -5365,15 +6827,17 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.DEV\\" environment configuration
-			              - The \\"name\\" field is not allowed in named service environments.
-			                Please remove the field from this environment."
-		        `);
+					  - "env.DEV" environment configuration
+					    - The "name" field is not allowed in named service environments.
+					      Please remove the field from this environment."
+				`);
 			});
 
-			it("should error if top-level config and a named environment both contain a `name` field", () => {
+			it("should error if top-level config and a named environment both contain a `name` field", ({
+				expect,
+			}) => {
 				const rawConfig: RawConfig = {
 					name: "mock-name",
 					legacy_env: false,
@@ -5399,15 +6863,17 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.DEV\\" environment configuration
-			              - The \\"name\\" field is not allowed in named service environments.
-			                Please remove the field from this environment."
-		        `);
+					  - "env.DEV" environment configuration
+					    - The "name" field is not allowed in named service environments.
+					      Please remove the field from this environment."
+				`);
 			});
 
-			it("should error if named environment contains a `account_id` field, even if there is no top-level name", () => {
+			it("should error if named environment contains a `account_id` field, even if there is no top-level name", ({
+				expect,
+			}) => {
 				const rawConfig: RawConfig = {
 					legacy_env: false,
 					env: {
@@ -5433,13 +6899,15 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 
-					  - \\"env.DEV\\" environment configuration
-					    - The \\"account_id\\" field is not allowed in named service environments.
+					  - "env.DEV" environment configuration
+					    - The "account_id" field is not allowed in named service environments.
 					      Please remove the field from this environment."
 				`);
 			});
 
-			it("should error if top-level config and a named environment both contain a `account_id` field", () => {
+			it("should error if top-level config and a named environment both contain a `account_id` field", ({
+				expect,
+			}) => {
 				const rawConfig: RawConfig = {
 					account_id: "ACCOUNT_ID",
 					legacy_env: false,
@@ -5467,14 +6935,16 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 
-					  - \\"env.DEV\\" environment configuration
-					    - The \\"account_id\\" field is not allowed in named service environments.
+					  - "env.DEV" environment configuration
+					    - The "account_id" field is not allowed in named service environments.
 					      Please remove the field from this environment."
 				`);
 			});
 		});
 
-		it("should warn for non-inherited fields that are missing in environments", () => {
+		it("should warn for non-inherited fields that are missing in environments", ({
+			expect,
+		}) => {
 			const define: RawConfig["define"] = {
 				abc: "123",
 			};
@@ -5526,33 +6996,33 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - \\"unsafe\\" fields are experimental and may change or break at any time.
-				  - \\"env.ENV1\\" environment configuration
-				    - \\"vars\\" exists at the top level, but not on \\"env.ENV1\\".
-				      This is not what you probably want, since \\"vars\\" is not inherited by environments.
-				      Please add \\"vars\\" to \\"env.ENV1\\".
-				    - \\"define\\" exists at the top level, but not on \\"env.ENV1\\".
-				      This is not what you probably want, since \\"define\\" is not inherited by environments.
-				      Please add \\"define\\" to \\"env.ENV1\\".
-				    - \\"durable_objects\\" exists at the top level, but not on \\"env.ENV1\\".
-				      This is not what you probably want, since \\"durable_objects\\" is not inherited by environments.
-				      Please add \\"durable_objects\\" to \\"env.ENV1\\".
-				    - \\"kv_namespaces\\" exists at the top level, but not on \\"env.ENV1\\".
-				      This is not what you probably want, since \\"kv_namespaces\\" is not inherited by environments.
-				      Please add \\"kv_namespaces\\" to \\"env.ENV1\\".
-				    - \\"r2_buckets\\" exists at the top level, but not on \\"env.ENV1\\".
-				      This is not what you probably want, since \\"r2_buckets\\" is not inherited by environments.
-				      Please add \\"r2_buckets\\" to \\"env.ENV1\\".
-				    - \\"analytics_engine_datasets\\" exists at the top level, but not on \\"env.ENV1\\".
-				      This is not what you probably want, since \\"analytics_engine_datasets\\" is not inherited by environments.
-				      Please add \\"analytics_engine_datasets\\" to \\"env.ENV1\\".
-				    - \\"unsafe\\" exists at the top level, but not on \\"env.ENV1\\".
-				      This is not what you probably want, since \\"unsafe\\" is not inherited by environments.
-				      Please add \\"unsafe\\" to \\"env.ENV1\\"."
+				  - "unsafe" fields are experimental and may change or break at any time.
+				  - "env.ENV1" environment configuration
+				    - "vars" exists at the top level, but not on "env.ENV1".
+				      This is not what you probably want, since "vars" is not inherited by environments.
+				      Please add "vars" to "env.ENV1".
+				    - "define" exists at the top level, but not on "env.ENV1".
+				      This is not what you probably want, since "define" is not inherited by environments.
+				      Please add "define" to "env.ENV1".
+				    - "durable_objects" exists at the top level, but not on "env.ENV1".
+				      This is not what you probably want, since "durable_objects" is not inherited by environments.
+				      Please add "durable_objects" to "env.ENV1".
+				    - "kv_namespaces" exists at the top level, but not on "env.ENV1".
+				      This is not what you probably want, since "kv_namespaces" is not inherited by environments.
+				      Please add "kv_namespaces" to "env.ENV1".
+				    - "r2_buckets" exists at the top level, but not on "env.ENV1".
+				      This is not what you probably want, since "r2_buckets" is not inherited by environments.
+				      Please add "r2_buckets" to "env.ENV1".
+				    - "analytics_engine_datasets" exists at the top level, but not on "env.ENV1".
+				      This is not what you probably want, since "analytics_engine_datasets" is not inherited by environments.
+				      Please add "analytics_engine_datasets" to "env.ENV1".
+				    - "unsafe" exists at the top level, but not on "env.ENV1".
+				      This is not what you probably want, since "unsafe" is not inherited by environments.
+				      Please add "unsafe" to "env.ENV1"."
 			`);
 		});
 
-		it("should error on Date values in vars (parsed by TOML)", () => {
+		it("should error on Date values in vars (parsed by TOML)", ({ expect }) => {
 			const rawConfig = TOML.parse(`
 				[vars]
 				VALID_VAR = "some string"
@@ -5569,11 +7039,13 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(true);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - The field \\"vars.DATE_VAR\\" is a TOML date, which is not supported. Please use a string instead, e.g. DATE_VAR = \\"2025-12-19\\"."
+				  - The field "vars.DATE_VAR" is a TOML date, which is not supported. Please use a string instead, e.g. DATE_VAR = "2025-12-19"."
 			`);
 		});
 
-		it("should error on Date values in env vars (parsed by TOML)", () => {
+		it("should error on Date values in env vars (parsed by TOML)", ({
+			expect,
+		}) => {
 			const rawConfig = TOML.parse(`
 				[env.production.vars]
 				VALID_VAR = "some string"
@@ -5591,12 +7063,12 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
 
-				  - \\"env.production\\" environment configuration
-				    - The field \\"env.production.vars.RELEASE_DATE\\" is a TOML date, which is not supported. Please use a string instead, e.g. RELEASE_DATE = \\"2025-12-19\\"."
+				  - "env.production" environment configuration
+				    - The field "env.production.vars.RELEASE_DATE" is a TOML date, which is not supported. Please use a string instead, e.g. RELEASE_DATE = "2025-12-19"."
 			`);
 		});
 
-		it("should error on node_compat", () => {
+		it("should error on node_compat", ({ expect }) => {
 			const { diagnostics } = normalizeAndValidateConfig(
 				// @ts-expect-error node_compat has been removed
 				{ env: { ENV1: { node_compat: true } } },
@@ -5608,13 +7080,13 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
 
-				  - \\"env.ENV1\\" environment configuration
-				    - [1mRemoved[0m: \\"node_compat\\":
-				      The \\"node_compat\\" field is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information."
+				  - "env.ENV1" environment configuration
+				    - [1mRemoved[0m: "node_compat":
+				      The "node_compat" field is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information."
 			`);
 		});
 
-		it("should error on invalid environment values", () => {
+		it("should error on invalid environment values", ({ expect }) => {
 			const expectedConfig: RawEnvironment = {
 				name: 111,
 				account_id: 222,
@@ -5652,35 +7124,52 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
 
-				  - \\"env.ENV1\\" environment configuration
-				    - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
-				    - Expected \\"account_id\\" to be of type string but got 222.
-				    - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
+				  - "env.ENV1" environment configuration
+				    - Expected "route" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
+				    - Expected "account_id" to be of type string but got 222.
+				    - Expected "routes" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
 				        666,
 				        777
 				      ].
-				    - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
-				    - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
-				    - Expected \\"build.command\\" to be of type string but got 1444.
-				    - Expected \\"build.cwd\\" to be of type string but got 1555.
-				    - Expected \\"build.watch_dir\\" to be of type string but got 1666.
-				    - Expected \\"compatibility_date\\" to be of type string but got 333.
-				    - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
-				    - Expected \\"jsx_factory\\" to be of type string but got 999.
-				    - Expected \\"jsx_fragment\\" to be of type string but got 1000.
-				    - Expected \\"tsconfig\\" to be of type string but got 123.
-				    - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
-				    - Expected \\"main\\" to be of type string but got 1333.
-				    - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
-				    - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
-				    - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
-				    - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
-				    - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\"."
+				    - Expected exactly one of the following fields ["routes","route"].
+				    - Expected "workers_dev" to be of type boolean but got "BAD".
+				    - Expected "build.command" to be of type string but got 1444.
+				    - Expected "build.cwd" to be of type string but got 1555.
+				    - Expected "build.watch_dir" to be of type string but got 1666.
+				    - Expected "compatibility_date" to be of type string but got 333.
+				    - Expected "compatibility_flags" to be of type string array but got [444,555].
+				    - Expected "jsx_factory" to be of type string but got 999.
+				    - Expected "jsx_fragment" to be of type string but got 1000.
+				    - Expected "tsconfig" to be of type string but got 123.
+				    - Expected "name" to be of type string, alphanumeric and lowercase with dashes only but got 111.
+				    - Expected "main" to be of type string but got 1333.
+				    - Expected "no_bundle" to be of type boolean but got "INVALID".
+				    - Expected "minify" to be of type boolean but got "INVALID".
+				    - Expected "first_party_worker" to be of type boolean but got "INVALID".
+				    - Expected "logpush" to be of type boolean but got "INVALID".
+				    - Expected "upload_source_maps" to be of type boolean but got "INVALID"."
+			`);
+		});
+
+		it("should warn on unexpected fields", ({ expect }) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				// @ts-expect-error purposely using an invalid field
+				{ env: { ENV1: { bla: "haj" } } },
+				undefined,
+				undefined,
+				{ env: "ENV1" }
+			);
+			expect(diagnostics.hasWarnings()).toBe(true);
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+
+				  - "env.ENV1" environment configuration
+				    - Unexpected fields found in env.ENV1 field: "bla""
 			`);
 		});
 
 		describe("[define]", () => {
-			it("should accept valid values for config.define", () => {
+			it("should accept valid values for config.define", ({ expect }) => {
 				const rawConfig: RawConfig = {
 					define: {
 						abc: "def",
@@ -5699,7 +7188,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if config.define is not an object", () => {
+			it("should error if config.define is not an object", ({ expect }) => {
 				const rawConfig: RawConfig = {
 					// @ts-expect-error purposely using an invalid value
 					define: 123,
@@ -5716,13 +7205,15 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - The field \\"define\\" should be an object but got 123.
-			          "
-		        `);
+					"Processing wrangler configuration:
+					  - The field "define" should be an object but got 123.
+					"
+				`);
 			});
 
-			it("should error if the values on config.define are not strings", () => {
+			it("should error if the values on config.define are not strings", ({
+				expect,
+			}) => {
 				const rawConfig: RawConfig = {
 					define: {
 						// @ts-expect-error purposely using an invalid value
@@ -5749,15 +7240,17 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - The field \\"define.abc\\" should be a string but got 123.
-			            - The field \\"define.ghi\\" should be a string but got true.
-			            - The field \\"define.jkl\\" should be a string but got {\\"nested\\":\\"value\\"}."
-		        `);
+					"Processing wrangler configuration:
+					  - The field "define.abc" should be a string but got 123.
+					  - The field "define.ghi" should be a string but got true.
+					  - The field "define.jkl" should be a string but got {"nested":"value"}."
+				`);
 			});
 
 			describe("named environments", () => {
-				it("should accept valid values for config.define inside an environment", () => {
+				it("should accept valid values for config.define inside an environment", ({
+					expect,
+				}) => {
 					const rawConfig: RawConfig = {
 						define: {
 							abc: "def",
@@ -5785,7 +7278,9 @@ describe("normalizeAndValidateConfig()", () => {
 					expect(diagnostics.hasErrors()).toBe(false);
 				});
 
-				it("should error if config.define is not an object inside an environment", () => {
+				it("should error if config.define is not an object inside an environment", ({
+					expect,
+				}) => {
 					const rawConfig: RawConfig = {
 						define: {
 							abc: "def",
@@ -5811,15 +7306,17 @@ describe("normalizeAndValidateConfig()", () => {
 					expect(diagnostics.hasErrors()).toBe(true);
 
 					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-				            "Processing wrangler configuration:
+						"Processing wrangler configuration:
 
-				              - \\"env.ENV1\\" environment configuration
-				                - The field \\"env.ENV1.define\\" should be an object but got 123.
-				            "
-			          `);
+						  - "env.ENV1" environment configuration
+						    - The field "env.ENV1.define" should be an object but got 123.
+						"
+					`);
 				});
 
-				it("should warn if if the shape of .define inside an environment doesn't match the shape of the top level .define", () => {
+				it("should warn if if the shape of .define inside an environment doesn't match the shape of the top level .define", ({
+					expect,
+				}) => {
 					const rawConfig: RawConfig = {
 						define: {
 							abc: "def",
@@ -5847,19 +7344,21 @@ describe("normalizeAndValidateConfig()", () => {
 					expect(diagnostics.hasErrors()).toBe(false);
 
 					expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-				            "Processing wrangler configuration:
+						"Processing wrangler configuration:
 
-				              - \\"env.ENV1\\" environment configuration
-				                - \\"define.ghi\\" exists at the top level, but not on \\"env.ENV1.define\\".
-				                  This is not what you probably want, since \\"define\\" configuration is not inherited by environments.
-				                  Please add \\"define.ghi\\" to \\"env.ENV1\\".
-				                - \\"xyz\\" exists on \\"env.ENV1\\", but not on the top level.
-				                  This is not what you probably want, since \\"define\\" configuration within environments can only override existing top level \\"define\\" configuration
-				                  Please remove \\"env.ENV1.define.xyz\\", or add \\"define.xyz\\"."
-			          `);
+						  - "env.ENV1" environment configuration
+						    - "define.ghi" exists at the top level, but not on "env.ENV1.define".
+						      This is not what you probably want, since "define" configuration is not inherited by environments.
+						      Please add "define.ghi" to "env.ENV1".
+						    - "xyz" exists on "env.ENV1", but not on the top level.
+						      This is not what you probably want, since "define" configuration within environments can only override existing top level "define" configuration
+						      Please remove "env.ENV1.define.xyz", or add "define.xyz"."
+					`);
 				});
 
-				it("should error if the values on config.define in an environment are not strings", () => {
+				it("should error if the values on config.define in an environment are not strings", ({
+					expect,
+				}) => {
 					const rawConfig: RawConfig = {
 						define: {
 							abc: "123",
@@ -5897,19 +7396,182 @@ describe("normalizeAndValidateConfig()", () => {
 					expect(diagnostics.hasErrors()).toBe(true);
 
 					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-				            "Processing wrangler configuration:
+						"Processing wrangler configuration:
 
-				              - \\"env.ENV1\\" environment configuration
-				                - The field \\"env.ENV1.define.abc\\" should be a string but got 123.
-				                - The field \\"env.ENV1.define.ghi\\" should be a string but got true.
-				                - The field \\"env.ENV1.define.jkl\\" should be a string but got {\\"nested\\":\\"value\\"}."
-			          `);
+						  - "env.ENV1" environment configuration
+						    - The field "env.ENV1.define.abc" should be a string but got 123.
+						    - The field "env.ENV1.define.ghi" should be a string but got true.
+						    - The field "env.ENV1.define.jkl" should be a string but got {"nested":"value"}."
+					`);
+				});
+			});
+		});
+
+		describe("[secrets]", () => {
+			it("should accept valid secrets config", ({ expect }) => {
+				const rawConfig: RawConfig = {
+					secrets: {
+						required: ["API_KEY", "DATABASE_PASSWORD"],
+					},
+				};
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.secrets).toEqual({
+					required: ["API_KEY", "DATABASE_PASSWORD"],
+				});
+				expect(diagnostics.hasErrors()).toBe(false);
+				// Expect experimental warning
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					'"secrets" fields are experimental'
+				);
+			});
+
+			it("should error if secrets is not an object", ({ expect }) => {
+				const rawConfig: RawConfig = {
+					// @ts-expect-error purposely using an invalid value
+					secrets: "invalid",
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'The field "secrets" should be an object'
+				);
+			});
+
+			it("should error if secrets.required is not an array", ({ expect }) => {
+				const rawConfig: RawConfig = {
+					// @ts-expect-error purposely using an invalid value
+					secrets: { required: "API_KEY" },
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "secrets.required" to be an array of strings'
+				);
+			});
+
+			it("should error if secrets.required contains non-strings", ({
+				expect,
+			}) => {
+				const rawConfig: RawConfig = {
+					// @ts-expect-error purposely using an invalid value
+					secrets: { required: ["VALID_KEY", 123, true] },
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "secrets.required.[1]" to be of type string'
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "secrets.required.[2]" to be of type string'
+				);
+			});
+
+			it("should error on duplicate secret names", ({ expect }) => {
+				const rawConfig: RawConfig = {
+					secrets: { required: ["API_KEY", "API_KEY"] },
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					"API_KEY assigned to multiple Secret bindings"
+				);
+			});
+
+			it("should error on secret name conflicting with var", ({ expect }) => {
+				const rawConfig: RawConfig = {
+					vars: { API_KEY: "not-a-secret" },
+					secrets: { required: ["API_KEY"] },
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					"API_KEY assigned to Environment Variable and Secret bindings"
+				);
+			});
+
+			describe("per-environment overrides", () => {
+				it("should accept valid secrets in environment", ({ expect }) => {
+					const rawConfig: RawConfig = {
+						env: {
+							production: {
+								secrets: { required: ["PROD_API_KEY"] },
+							},
+						},
+					};
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						rawConfig,
+						undefined,
+						undefined,
+						{ env: "production" }
+					);
+
+					expect(config.secrets).toEqual({ required: ["PROD_API_KEY"] });
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("should warn when secrets exists at top level but not in environment", ({
+					expect,
+				}) => {
+					const rawConfig: RawConfig = {
+						secrets: { required: ["API_KEY"] },
+						env: {
+							production: {},
+						},
+					};
+					const { diagnostics } = normalizeAndValidateConfig(
+						rawConfig,
+						undefined,
+						undefined,
+						{ env: "production" }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(false);
+					expect(diagnostics.renderWarnings()).toContain(
+						'"secrets" exists at the top level, but not on "env.production"'
+					);
 				});
 			});
 		});
 
 		describe("[durable_objects]", () => {
-			it("should error if durable_objects is an array", () => {
+			it("should error if durable_objects is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: [] } } } as unknown as RawConfig,
 					undefined,
@@ -5919,14 +7581,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.durable_objects\\" should be an object but got []."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.durable_objects" should be an object but got []."
+				`);
 			});
 
-			it("should error if durable_objects is a string", () => {
+			it("should error if durable_objects is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: "BAD" } } } as unknown as RawConfig,
 					undefined,
@@ -5936,14 +7598,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.durable_objects\\" should be an object but got \\"BAD\\"."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.durable_objects" should be an object but got "BAD"."
+				`);
 			});
 
-			it("should error if durable_objects is a number", () => {
+			it("should error if durable_objects is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: 999 } } } as unknown as RawConfig,
 					undefined,
@@ -5953,14 +7615,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.durable_objects\\" should be an object but got 999."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.durable_objects" should be an object but got 999."
+				`);
 			});
 
-			it("should error if durable_objects is null", () => {
+			it("should error if durable_objects is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: null } } } as unknown as RawConfig,
 					undefined,
@@ -5970,14 +7632,16 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.durable_objects\\" should be an object but got null."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.durable_objects" should be an object but got null."
+				`);
 			});
 
-			it("should error if durable_objects.bindings is not defined", () => {
+			it("should error if durable_objects.bindings is not defined", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: {} } } } as unknown as RawConfig,
 					undefined,
@@ -5987,14 +7651,16 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.durable_objects\\" is missing the required \\"bindings\\" property."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.durable_objects" is missing the required "bindings" property."
+				`);
 			});
 
-			it("should error if durable_objects.bindings is an object", () => {
+			it("should error if durable_objects.bindings is an object", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { durable_objects: { bindings: {} } } },
@@ -6006,14 +7672,16 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.durable_objects.bindings\\" should be an array but got {}."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.durable_objects.bindings" should be an array but got {}."
+				`);
 			});
 
-			it("should error if durable_objects.bindings is a string", () => {
+			it("should error if durable_objects.bindings is a string", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { durable_objects: { bindings: "BAD" } } },
@@ -6025,14 +7693,16 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.durable_objects.bindings\\" should be an array but got \\"BAD\\"."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.durable_objects.bindings" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if durable_objects.bindings is a number", () => {
+			it("should error if durable_objects.bindings is a number", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { durable_objects: { bindings: 999 } } },
@@ -6044,14 +7714,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.durable_objects.bindings\\" should be an array but got 999."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.durable_objects.bindings" should be an array but got 999."
+				`);
 			});
 
-			it("should error if durable_objects.bindings is null", () => {
+			it("should error if durable_objects.bindings is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { durable_objects: { bindings: null } } },
@@ -6063,14 +7733,16 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.durable_objects.bindings\\" should be an array but got null."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.durable_objects.bindings" should be an array but got null."
+				`);
 			});
 
-			it("should error if durable_objects.bindings are not valid", () => {
+			it("should error if durable_objects.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
@@ -6098,31 +7770,33 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
+					  - "env.ENV1" environment configuration
 
-			              - \\"env.ENV1.durable_objects.bindings[0]\\": {}
-			                - binding should have a string \\"name\\" field.
-			                - binding should have a string \\"class_name\\" field.
+					    - "env.ENV1.durable_objects.bindings[0]": {}
+					      - binding should have a string "name" field.
+					      - binding should have a string "class_name" field.
 
-			              - \\"env.ENV1.durable_objects.bindings[1]\\": {\\"name\\":\\"VALID\\"}
-			                - binding should have a string \\"class_name\\" field.
+					    - "env.ENV1.durable_objects.bindings[1]": {"name":"VALID"}
+					      - binding should have a string "class_name" field.
 
-			              - \\"env.ENV1.durable_objects.bindings[2]\\": {\\"name\\":1555,\\"class_name\\":1666}
-			                - binding should have a string \\"name\\" field.
-			                - binding should have a string \\"class_name\\" field.
+					    - "env.ENV1.durable_objects.bindings[2]": {"name":1555,"class_name":1666}
+					      - binding should have a string "name" field.
+					      - binding should have a string "class_name" field.
 
-			              - \\"env.ENV1.durable_objects.bindings[3]\\": {\\"name\\":1777,\\"class_name\\":1888,\\"script_name\\":1999}
-			                - binding should have a string \\"name\\" field.
-			                - binding should have a string \\"class_name\\" field.
-			                - the field \\"script_name\\", when present, should be a string."
-		        `);
+					    - "env.ENV1.durable_objects.bindings[3]": {"name":1777,"class_name":1888,"script_name":1999}
+					      - binding should have a string "name" field.
+					      - binding should have a string "class_name" field.
+					      - the field "script_name", when present, should be a string."
+				`);
 			});
 		});
 
 		describe("[migrations]", () => {
-			it("should override `migrations` config defaults with provided values", () => {
+			it("should override `migrations` config defaults with provided values", ({
+				expect,
+			}) => {
 				const expectedConfig: RawConfig = {
 					migrations: [
 						{
@@ -6151,7 +7825,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should error on invalid `migrations` values", () => {
+			it("should error on invalid `migrations` values", ({ expect }) => {
 				const expectedConfig = {
 					migrations: [
 						{
@@ -6181,19 +7855,21 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 
-					  - \\"env.ENV1\\" environment configuration
-					    - Expected \\"migrations[0].tag\\" to be of type string but got 111.
-					    - Expected \\"migrations[0].new_classes.[0]\\" to be of type string but got 222.
-					    - Expected \\"migrations[0].new_classes.[1]\\" to be of type string but got 333.
-					    - Expected \\"migrations[0].new_sqlite_classes.[0]\\" to be of type string but got 222.
-					    - Expected \\"migrations[0].new_sqlite_classes.[1]\\" to be of type string but got 333.
-					    - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
-					    - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
-					    - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."
+					  - "env.ENV1" environment configuration
+					    - Expected "migrations[0].tag" to be of type string but got 111.
+					    - Expected "migrations[0].new_classes.[0]" to be of type string but got 222.
+					    - Expected "migrations[0].new_classes.[1]" to be of type string but got 333.
+					    - Expected "migrations[0].new_sqlite_classes.[0]" to be of type string but got 222.
+					    - Expected "migrations[0].new_sqlite_classes.[1]" to be of type string but got 333.
+					    - Expected "migrations[0].renamed_classes" to be an array of "{from: string, to: string}" objects but got [{"from":444,"to":555}].
+					    - Expected "migrations[0].deleted_classes.[0]" to be of type string but got 666.
+					    - Expected "migrations[0].deleted_classes.[1]" to be of type string but got 777."
 				`);
 			});
 
-			it("should warn/error on unexpected fields on `migrations`", async () => {
+			it("should warn/error on unexpected fields on `migrations`", async ({
+				expect,
+			}) => {
 				const expectedConfig = {
 					migrations: [
 						{
@@ -6227,20 +7903,20 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 
-					  - \\"env.ENV1\\" environment configuration
-					    - Unexpected fields found in migrations field: \\"unrecognized_field\\""
+					  - "env.ENV1" environment configuration
+					    - Unexpected fields found in migrations field: "unrecognized_field""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 
-					  - \\"env.ENV1\\" environment configuration
-					    - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"},{\\"a\\":\\"something\\",\\"b\\":\\"someone\\"}]."
+					  - "env.ENV1" environment configuration
+					    - Expected "migrations[0].renamed_classes" to be an array of "{from: string, to: string}" objects but got [{"from":"FROM_CLASS","to":"TO_CLASS"},{"a":"something","b":"someone"}]."
 				`);
 			});
 		});
 
 		describe("[kv_namespaces]", () => {
-			it("should error if kv_namespaces is an object", () => {
+			it("should error if kv_namespaces is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: {} } } } as unknown as RawConfig,
 					undefined,
@@ -6250,14 +7926,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.kv_namespaces\\" should be an array but got {}."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.kv_namespaces" should be an array but got {}."
+				`);
 			});
 
-			it("should error if kv_namespaces is a string", () => {
+			it("should error if kv_namespaces is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: "BAD" } } } as unknown as RawConfig,
 					undefined,
@@ -6267,14 +7943,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.kv_namespaces\\" should be an array but got \\"BAD\\"."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.kv_namespaces" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if kv_namespaces is a number", () => {
+			it("should error if kv_namespaces is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: 999 } } } as unknown as RawConfig,
 					undefined,
@@ -6284,14 +7960,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.kv_namespaces\\" should be an array but got 999."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.kv_namespaces" should be an array but got 999."
+				`);
 			});
 
-			it("should error if kv_namespaces is null", () => {
+			it("should error if kv_namespaces is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: null } } } as unknown as RawConfig,
 					undefined,
@@ -6301,14 +7977,16 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.kv_namespaces\\" should be an array but got null."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.kv_namespaces" should be an array but got null."
+				`);
 			});
 
-			it("should error if kv_namespaces.bindings are not valid", () => {
+			it("should error if kv_namespaces.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
@@ -6335,17 +8013,17 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 
-					  - \\"env.ENV1\\" environment configuration
-					    - \\"env.ENV1.kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
-					    - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-					    - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-					    - \\"env.ENV1.kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}."
+					  - "env.ENV1" environment configuration
+					    - "env.ENV1.kv_namespaces[0]" bindings should have a string "binding" field but got {}.
+					    - "env.ENV1.kv_namespaces[2]" bindings should have a string "binding" field but got {"binding":2000,"id":2111}.
+					    - "env.ENV1.kv_namespaces[2]" bindings should have a string "id" field but got {"binding":2000,"id":2111}.
+					    - "env.ENV1.kv_namespaces[3]" bindings should, optionally, have a string "preview_id" field but got {"binding":"KV_BINDING_2","id":"KV_ID_2","preview_id":2222}."
 				`);
 			});
 		});
 
 		describe("[r2_buckets]", () => {
-			it("should error if r2_buckets is an object", () => {
+			it("should error if r2_buckets is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: {} } } } as unknown as RawConfig,
 					undefined,
@@ -6355,14 +8033,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.r2_buckets\\" should be an array but got {}."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.r2_buckets" should be an array but got {}."
+				`);
 			});
 
-			it("should error if r2_buckets is a string", () => {
+			it("should error if r2_buckets is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: "BAD" } } } as unknown as RawConfig,
 					undefined,
@@ -6372,14 +8050,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.r2_buckets\\" should be an array but got \\"BAD\\"."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.r2_buckets" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if r2_buckets is a number", () => {
+			it("should error if r2_buckets is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: 999 } } } as unknown as RawConfig,
 					undefined,
@@ -6389,14 +8067,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.r2_buckets\\" should be an array but got 999."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.r2_buckets" should be an array but got 999."
+				`);
 			});
 
-			it("should error if r2_buckets is null", () => {
+			it("should error if r2_buckets is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: null } } } as unknown as RawConfig,
 					undefined,
@@ -6406,14 +8084,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.r2_buckets\\" should be an array but got null."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.r2_buckets" should be an array but got null."
+				`);
 			});
 
-			it("should error if r2_buckets.bindings are not valid", () => {
+			it("should error if r2_buckets.bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
@@ -6440,18 +8118,20 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 
-					  - \\"env.ENV1\\" environment configuration
-					    - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-					    - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-					    - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-					    - env.ENV1.r2_buckets[3].bucket_name=\\"R2_BUCKET_2\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
-					    - \\"env.ENV1.r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
+					  - "env.ENV1" environment configuration
+					    - "env.ENV1.r2_buckets[0]" bindings should have a string "binding" field but got {}.
+					    - "env.ENV1.r2_buckets[2]" bindings should have a string "binding" field but got {"binding":2333,"bucket_name":2444}.
+					    - "env.ENV1.r2_buckets[2]" bindings should have a string "bucket_name" field but got {"binding":2333,"bucket_name":2444}.
+					    - env.ENV1.r2_buckets[3].bucket_name="R2_BUCKET_2" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
+					    - "env.ENV1.r2_buckets[3]" bindings should, optionally, have a string "preview_bucket_name" field but got {"binding":"R2_BINDING_2","bucket_name":"R2_BUCKET_2","preview_bucket_name":2555}."
 				`);
 			});
 		});
 
 		describe("[analytics_engine_datasets]", () => {
-			it("should error if analytics_engine_datasets is an object", () => {
+			it("should error if analytics_engine_datasets is an object", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { analytics_engine_datasets: {} } },
@@ -6463,14 +8143,16 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.analytics_engine_datasets\\" should be an array but got {}."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.analytics_engine_datasets" should be an array but got {}."
+				`);
 			});
 
-			it("should error if analytics_engine_datasets is a string", () => {
+			it("should error if analytics_engine_datasets is a string", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { analytics_engine_datasets: "BAD" } },
@@ -6482,14 +8164,16 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.analytics_engine_datasets\\" should be an array but got \\"BAD\\"."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.analytics_engine_datasets" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if analytics_engine_datasets is a number", () => {
+			it("should error if analytics_engine_datasets is a number", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { analytics_engine_datasets: 999 } },
@@ -6501,14 +8185,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.analytics_engine_datasets\\" should be an array but got 999."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.analytics_engine_datasets" should be an array but got 999."
+				`);
 			});
 
-			it("should error if analytics_engine_datasets is null", () => {
+			it("should error if analytics_engine_datasets is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { analytics_engine_datasets: null } },
@@ -6520,14 +8204,16 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.analytics_engine_datasets\\" should be an array but got null."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.analytics_engine_datasets" should be an array but got null."
+				`);
 			});
 
-			it("should error if analytics_engine_datasets.bindings are not valid", () => {
+			it("should error if analytics_engine_datasets.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
@@ -6551,20 +8237,20 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"env.ENV1.analytics_engine_datasets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			              - \\"env.ENV1.analytics_engine_datasets[1]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"dataset\\":2444}.
-			              - \\"env.ENV1.analytics_engine_datasets[1]\\" bindings should, optionally, have a string \\"dataset\\" field but got {\\"binding\\":2333,\\"dataset\\":2444}.
-			              - \\"env.ENV1.analytics_engine_datasets[2]\\" bindings should, optionally, have a string \\"dataset\\" field but got {\\"binding\\":\\"AE_BINDING_2\\",\\"dataset\\":2555}.
-			              - \\"env.ENV1.analytics_engine_datasets[3]\\" bindings should, optionally, have a string \\"dataset\\" field but got {\\"binding\\":\\"AE_BINDING_1\\",\\"dataset\\":\\"\\"}."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "env.ENV1.analytics_engine_datasets[0]" bindings should have a string "binding" field but got {}.
+					    - "env.ENV1.analytics_engine_datasets[1]" bindings should have a string "binding" field but got {"binding":2333,"dataset":2444}.
+					    - "env.ENV1.analytics_engine_datasets[1]" bindings should, optionally, have a string "dataset" field but got {"binding":2333,"dataset":2444}.
+					    - "env.ENV1.analytics_engine_datasets[2]" bindings should, optionally, have a string "dataset" field but got {"binding":"AE_BINDING_2","dataset":2555}.
+					    - "env.ENV1.analytics_engine_datasets[3]" bindings should, optionally, have a string "dataset" field but got {"binding":"AE_BINDING_1","dataset":""}."
+				`);
 			});
 		});
 
 		describe("[unsafe.bindings]", () => {
-			it("should error if unsafe is an array", () => {
+			it("should error if unsafe is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: [] } } } as unknown as RawConfig,
 					undefined,
@@ -6573,20 +8259,20 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.unsafe\\" should be an object but got []."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.unsafe" should be an object but got []."
+				`);
 			});
 
-			it("should error if unsafe is a string", () => {
+			it("should error if unsafe is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: "BAD" } } } as unknown as RawConfig,
 					undefined,
@@ -6595,20 +8281,20 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.unsafe\\" should be an object but got \\"BAD\\"."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.unsafe" should be an object but got "BAD"."
+				`);
 			});
 
-			it("should error if unsafe is a number", () => {
+			it("should error if unsafe is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: 999 } } } as unknown as RawConfig,
 					undefined,
@@ -6617,20 +8303,20 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.unsafe\\" should be an object but got 999."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.unsafe" should be an object but got 999."
+				`);
 			});
 
-			it("should error if unsafe is null", () => {
+			it("should error if unsafe is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: null } } } as unknown as RawConfig,
 					undefined,
@@ -6639,20 +8325,20 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.unsafe\\" should be an object but got null."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.unsafe" should be an object but got null."
+				`);
 			});
 
-			it("should not error if unsafe is an empty object", () => {
+			it("should not error if unsafe is an empty object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: {} } } } as RawConfig,
 					undefined,
@@ -6663,8 +8349,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 
-					  - \\"env.ENV1\\" environment configuration
-					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -6672,7 +8358,9 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should not error if at least unsafe.bindings is undefined", () => {
+			it("should not error if at least unsafe.bindings is undefined", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: [] } } },
@@ -6683,15 +8371,17 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if unsafe contains unexpected properties", () => {
+			it("should error if unsafe contains unexpected properties", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { invalid: true } } },
@@ -6704,9 +8394,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 
-					  - \\"env.ENV1\\" environment configuration
-					    - \\"unsafe\\" fields are experimental and may change or break at any time.
-					    - Unexpected fields found in unsafe field: \\"invalid\\""
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time.
+					    - Unexpected fields found in unsafe field: "invalid""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -6714,7 +8404,7 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if unsafe.bindings is an object", () => {
+			it("should error if unsafe.bindings is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: {} } } },
@@ -6725,20 +8415,20 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.unsafe.bindings\\" should be an array but got {}."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.unsafe.bindings" should be an array but got {}."
+				`);
 			});
 
-			it("should error if unsafe.bindings is a string", () => {
+			it("should error if unsafe.bindings is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: "BAD" } } },
@@ -6749,20 +8439,20 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.unsafe.bindings\\" should be an array but got \\"BAD\\"."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.unsafe.bindings" should be an array but got "BAD"."
+				`);
 			});
 
-			it("should error if unsafe.bindings is a number", () => {
+			it("should error if unsafe.bindings is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: 999 } } },
@@ -6773,20 +8463,20 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.unsafe.bindings\\" should be an array but got 999."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.unsafe.bindings" should be an array but got 999."
+				`);
 			});
 
-			it("should error if unsafe.bindings is null", () => {
+			it("should error if unsafe.bindings is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: null } } },
@@ -6797,20 +8487,20 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.unsafe.bindings\\" should be an array but got null."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.unsafe.bindings" should be an array but got null."
+				`);
 			});
 
-			it("should error if unsafe.bindings are not valid", () => {
+			it("should error if unsafe.bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
@@ -6836,30 +8526,30 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
+					  - "env.ENV1" environment configuration
 
-			              - \\"env.ENV1.unsafe.bindings[0]\\": {}
-			                - binding should have a string \\"name\\" field.
-			                - binding should have a string \\"type\\" field.
+					    - "env.ENV1.unsafe.bindings[0]": {}
+					      - binding should have a string "name" field.
+					      - binding should have a string "type" field.
 
-			              - \\"env.ENV1.unsafe.bindings[1]\\": {\\"name\\":\\"UNSAFE_BINDING_1\\"}
-			                - binding should have a string \\"type\\" field.
+					    - "env.ENV1.unsafe.bindings[1]": {"name":"UNSAFE_BINDING_1"}
+					      - binding should have a string "type" field.
 
-			              - \\"env.ENV1.unsafe.bindings[2]\\": {\\"name\\":2666,\\"type\\":2777}
-			                - binding should have a string \\"name\\" field.
-			                - binding should have a string \\"type\\" field."
-		        `);
+					    - "env.ENV1.unsafe.bindings[2]": {"name":2666,"type":2777}
+					      - binding should have a string "name" field.
+					      - binding should have a string "type" field."
+				`);
 			});
 
-			it("should error if unsafe.metadata is an array", () => {
+			it("should error if unsafe.metadata is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { metadata: [] } } },
@@ -6870,20 +8560,20 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.unsafe.metadata\\" should be an object but got []."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.unsafe.metadata" should be an object but got []."
+				`);
 			});
 
-			it("should error if unsafe.metadata is a string", () => {
+			it("should error if unsafe.metadata is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { metadata: "BAD" } } },
@@ -6894,20 +8584,20 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			  - \\"env.ENV1\\" environment configuration
-			    - The field \\"env.ENV1.unsafe.metadata\\" should be an object but got \\"BAD\\"."
-		`);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.unsafe.metadata" should be an object but got "BAD"."
+				`);
 			});
 
-			it("should error if unsafe.metadata is a number", () => {
+			it("should error if unsafe.metadata is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { metadata: 999 } } },
@@ -6918,20 +8608,20 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			  - \\"env.ENV1\\" environment configuration
-			    - The field \\"env.ENV1.unsafe.metadata\\" should be an object but got 999."
-		`);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.unsafe.metadata" should be an object but got 999."
+				`);
 			});
 
-			it("should error if unsafe.metadata is null", () => {
+			it("should error if unsafe.metadata is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { metadata: null } } },
@@ -6942,22 +8632,22 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - "unsafe" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			  - \\"env.ENV1\\" environment configuration
-			    - The field \\"env.ENV1.unsafe.metadata\\" should be an object but got null."
-		`);
+					  - "env.ENV1" environment configuration
+					    - The field "env.ENV1.unsafe.metadata" should be an object but got null."
+				`);
 			});
 		});
 
 		describe("[tail_consumers]", () => {
-			it("should error if tail_consumers is not an array", () => {
+			it("should error if tail_consumers is not an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						tail_consumers: "this sure isn't an array",
@@ -6970,12 +8660,12 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - Expected \\"tail_consumers\\" to be an array but got \\"this sure isn't an array\\"."
-		`);
+					"Processing wrangler configuration:
+					  - Expected "tail_consumers" to be an array but got "this sure isn't an array"."
+				`);
 			});
 
-			it("should error on invalid tail_consumers", () => {
+			it("should error on invalid tail_consumers", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						tail_consumers: [
@@ -7003,18 +8693,20 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"tail_consumers[0]\\" should be an object but got \\"some string\\".
-			  - \\"tail_consumers[1]\\" should be an object but got 456.
-			  - \\"tail_consumers[2].service\\" is a required field.
-			  - Expected \\"tail_consumers[3].service\\" to be of type string but got {}.
-			  - Expected \\"tail_consumers[4].service\\" to be of type string but got 123."
-		`);
+					"Processing wrangler configuration:
+					  - "tail_consumers[0]" should be an object but got "some string".
+					  - "tail_consumers[1]" should be an object but got 456.
+					  - "tail_consumers[2].service" is a required field.
+					  - Expected "tail_consumers[3].service" to be of type string but got {}.
+					  - Expected "tail_consumers[4].service" to be of type string but got 123."
+				`);
 			});
 		});
 
 		describe("[streaming_tail_consumers]", () => {
-			it("should error if streaming_tail_consumers is not an array", () => {
+			it("should error if streaming_tail_consumers is not an array", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						streaming_tail_consumers: "this sure isn't an array",
@@ -7027,12 +8719,12 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - Expected \\"streaming_tail_consumers\\" to be an array but got \\"this sure isn't an array\\"."
-		`);
+					"Processing wrangler configuration:
+					  - Expected "streaming_tail_consumers" to be an array but got "this sure isn't an array"."
+				`);
 			});
 
-			it("should error on invalid streaming_tail_consumers", () => {
+			it("should error on invalid streaming_tail_consumers", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						streaming_tail_consumers: [
@@ -7059,18 +8751,18 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"streaming_tail_consumers[0]\\" should be an object but got \\"some string\\".
-					  - \\"streaming_tail_consumers[1]\\" should be an object but got 456.
-					  - \\"streaming_tail_consumers[2].service\\" is a required field.
-					  - Expected \\"streaming_tail_consumers[3].service\\" to be of type string but got {}.
-					  - Expected \\"streaming_tail_consumers[4].service\\" to be of type string but got 123.
-					  - \\"streaming_tail_consumers[5]\\" should be an object but got [\\"some array\\"]."
+					  - "streaming_tail_consumers[0]" should be an object but got "some string".
+					  - "streaming_tail_consumers[1]" should be an object but got 456.
+					  - "streaming_tail_consumers[2].service" is a required field.
+					  - Expected "streaming_tail_consumers[3].service" to be of type string but got {}.
+					  - Expected "streaming_tail_consumers[4].service" to be of type string but got 123.
+					  - "streaming_tail_consumers[5]" should be an object but got ["some array"]."
 				`);
 			});
 		});
 
 		describe("[observability]", () => {
-			it("should error on invalid observability", () => {
+			it("should error on invalid observability", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						observability: {
@@ -7086,18 +8778,18 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in observability field: \\"notEnabled\\""
+					  - Unexpected fields found in observability field: "notEnabled""
 				`);
 
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"observability.enabled\\" or \\"observability.logs.enabled\\" or \\"observability.traces.enabled\\" is required.
-					  - Expected \\"observability.head_sampling_rate\\" to be of type number but got true."
+					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" is required.
+					  - Expected "observability.head_sampling_rate" to be of type number but got true."
 				`);
 			});
 
-			it("should not warn on full observability config", () => {
+			it("should not warn on full observability config", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						observability: {
@@ -7127,7 +8819,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error on invalid observability.logs", () => {
+			it("should error on invalid observability.logs", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						observability: {
@@ -7149,11 +8841,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Expected \\"observability.logs\\" to be of type object but got \\"enabled\\"."
+					  - Expected "observability.logs" to be of type object but got "enabled"."
 				`);
 			});
 
-			it("should not error on nested [observability.logs] config only", () => {
+			it("should not error on nested [observability.logs] config only", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						observability: {
@@ -7176,7 +8870,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should not error on nested [observability.traces] config only", () => {
+			it("should not error on nested [observability.traces] config only", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						observability: {
@@ -7199,7 +8895,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should not error on mixed observability config", () => {
+			it("should not error on mixed observability config", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						observability: {
@@ -7225,7 +8921,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
-			it("should error on a sampling rate out of range", () => {
+			it("should error on a sampling rate out of range", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						observability: {
@@ -7242,11 +8938,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"observability.head_sampling_rate\\" must be a value between 0 and 1."
+					  - "observability.head_sampling_rate" must be a value between 0 and 1."
 				`);
 			});
 
-			it("should error on invalid additional fields", () => {
+			it("should error on invalid additional fields", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						observability: {
@@ -7264,13 +8960,198 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in observability field: \\"invalid_key_1\\",\\"invalid_key_2\\""
+					  - Unexpected fields found in observability field: "invalid_key_1","invalid_key_2""
 				`);
 			});
 		});
 
+		describe("[cache]", () => {
+			it("should error when cache is not an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: "enabled",
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "cache" should be an object but got "enabled"."
+				`);
+			});
+
+			it("should error when cache is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: null,
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "cache" should be an object but got null."
+				`);
+			});
+
+			it("should error when cache.enabled is missing", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "cache.enabled" is a required field."
+				`);
+			});
+
+			it("should error when cache.enabled is not a boolean", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: "true",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "cache.enabled" to be of type boolean but got "true"."
+				`);
+			});
+
+			it("should not error on valid cache config with enabled true", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({ enabled: true });
+			});
+
+			it("should not error on valid cache config with enabled false", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: false,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({ enabled: false });
+			});
+
+			it("should warn on unexpected fields in cache config", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+							invalid_key: "hello",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in cache field: "invalid_key""
+				`);
+			});
+
+			it("should inherit cache from top-level config to environment", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+						},
+						env: {
+							production: {},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "production" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({ enabled: true });
+			});
+
+			it("should allow environment to override top-level cache", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+						},
+						env: {
+							staging: {
+								cache: {
+									enabled: false,
+								},
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({ enabled: false });
+			});
+		});
+
 		describe("route & routes fields", () => {
-			it("should error if both route and routes are specified in the same environment", () => {
+			it("should error if both route and routes are specified in the same environment", ({
+				expect,
+			}) => {
 				const environment: RawEnvironment = {
 					name: "mock-env-name",
 					account_id: "ENV_ACCOUNT_ID",
@@ -7310,14 +9191,16 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
-		        `);
+					  - "env.ENV1" environment configuration
+					    - Expected exactly one of the following fields ["routes","route"]."
+				`);
 			});
 
-			it("should error if both route and routes are specified in the top-level environment", () => {
+			it("should error if both route and routes are specified in the top-level environment", ({
+				expect,
+			}) => {
 				const environment: RawEnvironment = {
 					name: "mock-env-name",
 					account_id: "ENV_ACCOUNT_ID",
@@ -7357,12 +9240,14 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected exactly one of the following fields [\\"routes\\",\\"route\\"]."
-		        `);
+					"Processing wrangler configuration:
+					  - Expected exactly one of the following fields ["routes","route"]."
+				`);
 			});
 
-			it("should not error if <env>.route and <top-level>.routes are specified", () => {
+			it("should not error if <env>.route and <top-level>.routes are specified", ({
+				expect,
+			}) => {
 				const environment: RawEnvironment = {
 					name: "mock-env-name",
 					account_id: "ENV_ACCOUNT_ID",
@@ -7401,7 +9286,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should not error if <env>.routes and <top-level>.route are specified", () => {
+			it("should not error if <env>.routes and <top-level>.route are specified", ({
+				expect,
+			}) => {
 				const environment: RawEnvironment = {
 					name: "mock-env-name",
 					account_id: "ENV_ACCOUNT_ID",
@@ -7440,7 +9327,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should not error if <env1>.route and <env2>.routes are specified", () => {
+			it("should not error if <env1>.route and <env2>.routes are specified", ({
+				expect,
+			}) => {
 				const environment1: RawEnvironment = {
 					name: "mock-env-name",
 					account_id: "ENV_ACCOUNT_ID",
@@ -7508,7 +9397,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[assets]", () => {
-			it("should inherit from top-level assets", () => {
+			it("should inherit from top-level assets", ({ expect }) => {
 				const rawConfig: RawConfig = {
 					assets: {
 						directory: "dist",
@@ -7538,7 +9427,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should resolve assets in named env with top-level env also including assets", () => {
+			it("should resolve assets in named env with top-level env also including assets", ({
+				expect,
+			}) => {
 				const rawConfig: RawConfig = {
 					assets: {
 						directory: "dist",
@@ -7573,6 +9464,143 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+		});
+
+		describe("[previews]", () => {
+			it("should validate top-level previews config", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						vars: {
+							API_BASE_URL: "https://example.com",
+						},
+						kv_namespaces: [{ binding: "MY_KV", id: "preview-kv-id" }],
+						r2_buckets: [{ binding: "MY_R2", bucket_name: "preview-bucket" }],
+						observability: { enabled: true },
+						limits: { cpu_ms: 50 },
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.queues as an object with producers", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						queues: {
+							producers: [{ binding: "MY_QUEUE", queue: "my-queue" }],
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.stream as a named simple binding", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						stream: {
+							binding: "MY_STREAM",
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.limits with only subrequests", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						limits: {
+							subrequests: 123,
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject previews.queues when passed as a flat array", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						queues: [{ binding: "MY_QUEUE", queue: "my-queue" }],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain("should be an object");
+			});
+
+			it("should validate previews config inside named environments", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					env: {
+						staging: {
+							previews: {
+								browser: "not-an-object" as unknown as { binding: string },
+							},
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"env.staging" environment configuration'
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'The field "previews.browser" should be an object'
+				);
 			});
 		});
 	});

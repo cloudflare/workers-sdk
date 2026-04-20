@@ -1,8 +1,8 @@
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
 import { runFrameworkGenerator } from "frameworks/index";
-import { mergeObjectProperties, transformFile } from "helpers/codemod";
 import { writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
@@ -59,24 +59,24 @@ const updateNuxtConfig = () => {
 		b.objectExpression([
 			b.objectProperty(
 				b.identifier("preset"),
-				b.stringLiteral("cloudflare-pages"),
+				b.stringLiteral("cloudflare-pages")
 			),
 			b.objectProperty(
 				b.identifier("cloudflare"),
 				b.objectExpression([
 					b.objectProperty(
 						b.identifier("deployConfig"),
-						b.booleanLiteral(true),
+						b.booleanLiteral(true)
 					),
 					b.objectProperty(b.identifier("nodeCompat"), b.booleanLiteral(true)),
-				]),
+				])
 			),
-		]),
+		])
 	);
 
 	const moduleDef = b.objectProperty(
 		b.identifier("modules"),
-		b.arrayExpression([b.stringLiteral("nitro-cloudflare-dev")]),
+		b.arrayExpression([b.stringLiteral("nitro-cloudflare-dev")])
 	);
 
 	transformFile(configFile, {
@@ -85,7 +85,7 @@ const updateNuxtConfig = () => {
 			if (callee.name === "defineNuxtConfig") {
 				mergeObjectProperties(
 					n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
-					[presetDef, moduleDef],
+					[presetDef, moduleDef]
 				);
 			}
 

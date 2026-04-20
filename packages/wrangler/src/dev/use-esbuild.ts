@@ -196,19 +196,14 @@ export function runBuild(
 		// trigger "builds" when any change
 		if (noBundle) {
 			const watching = [path.resolve(entry.moduleRoot)];
-			// Check whether we need to watch a Python cf-requirements.txt file.
-			const watchPythonRequirements =
-				getBundleType(entry.format, entry.file) === "python"
-					? path.resolve(entry.projectRoot, "cf-requirements.txt")
-					: undefined;
-
-			if (watchPythonRequirements) {
-				watching.push(watchPythonRequirements);
-			}
-
 			const watcher = watch(watching, {
 				persistent: true,
-				ignored: [".git", "node_modules"],
+				// Ignore VCS dirs, dependencies, and the .wrangler dir (which
+				// contains miniflare state/cache files written by workerd at
+				// runtime — watching them causes an infinite reload loop).
+				// chokidar v4 normalises paths to forward slashes before
+				// matching, so a regex on path segments works cross-platform.
+				ignored: /[/\\](\.git|node_modules|\.wrangler)([/\\]|$)/,
 			}).on("change", async (_event) => {
 				await updateBundle();
 			});
@@ -231,12 +226,24 @@ export function runBuild(
 		}));
 	}
 
-	build().catch((err) => {
+	const buildPromise = build().catch((err) => {
 		// If esbuild fails on first run, we want to quit the process
 		// since we can't recover from here
 		// related: https://github.com/evanw/esbuild/issues/1037
 		onErr(err);
 	});
 
-	return () => stopWatching?.();
+	return () => {
+		// Stop watching immediately if the build has already completed
+		// and `stopWatching` is assigned.
+		const immediateStop = stopWatching?.();
+		if (immediateStop) {
+			return immediateStop;
+		}
+		// If the build is still in flight, `stopWatching` is undefined.
+		// Fire-and-forget: wait for the build to finish, then clean up.
+		// We intentionally don't block teardown on this — blocking would
+		// hang teardown if the build is slow (e.g. esbuild startup).
+		void buildPromise.then(() => stopWatching?.());
+	};
 }

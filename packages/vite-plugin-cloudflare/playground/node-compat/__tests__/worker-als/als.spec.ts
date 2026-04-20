@@ -1,11 +1,11 @@
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import {
 	getTextResponse,
 	serverLogs,
 	WAIT_FOR_OPTIONS,
 } from "../../../__test-utils__";
 
-test("supports Node.js ALS mode", async () => {
+test("supports Node.js ALS mode", async ({ expect }) => {
 	await vi.waitFor(
 		async () => expect(await getTextResponse()).toEqual("OK!"),
 		WAIT_FOR_OPTIONS

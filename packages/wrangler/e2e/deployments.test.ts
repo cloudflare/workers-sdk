@@ -1,22 +1,22 @@
-import assert from "node:assert";
-import isCI from "is-ci";
+import ci from "ci-info";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import {
 	afterAll,
 	afterEach,
+	assert,
 	beforeAll,
 	beforeEach,
 	describe,
-	expect,
+	type ExpectStatic,
 	it,
-	vi,
 } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput, validateAssetUploadLogs } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
+import { waitForLong } from "./helpers/wait-for";
 
 const TIMEOUT = 50_000;
 
@@ -32,10 +32,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 		afterAll(async () => {
 			// clean up user Worker after all tests
-			await helper.run(`wrangler delete`);
+			await helper.bestEffortRun(`wrangler delete`);
 		});
 
-		it("deploys a Worker", async () => {
+		it("deploys a Worker", async ({ expect }) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 						name = "${workerName}"
@@ -61,14 +61,16 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const deployedUrl = getDeployedUrl(output);
 
-			const response = await retry(
-				(resp) => !resp.ok,
-				async () => await fetch(deployedUrl)
+			await waitForLong(
+				async () => {
+					const response = await fetch(deployedUrl);
+					expect(await response.text()).toEqual("Hello World!");
+				},
+				{ timeout: 30_000 }
 			);
-			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
 
-		it("lists 1 deployment", async () => {
+		it("lists 1 deployment", async ({ expect }) => {
 			const output = await helper.run(`wrangler deployments list`);
 
 			expect(normalizeOutput(output.stdout)).toMatchInlineSnapshot(`
@@ -83,7 +85,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			`);
 		});
 
-		it("modifies & deploys a Worker", async () => {
+		it("modifies & deploys a Worker", async ({ expect }) => {
 			await helper.seed({
 				"src/index.ts": dedent`
         export default {
@@ -96,14 +98,16 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const deployedUrl = getDeployedUrl(output);
 
-			const response = await retry(
-				(resp) => !resp.ok,
-				async () => await fetch(deployedUrl)
+			await waitForLong(
+				async () => {
+					const response = await fetch(deployedUrl);
+					expect(await response.text()).toEqual("Updated Worker!");
+				},
+				{ timeout: 30_000 }
 			);
-			await expect(response.text()).resolves.toEqual("Updated Worker!");
 		});
 
-		it("lists 2 deployments", async () => {
+		it("lists 2 deployments", async ({ expect }) => {
 			const dep = await helper.run(`wrangler deployments list`);
 			expect(normalizeOutput(dep.stdout)).toMatchInlineSnapshot(`
 				"Created:     TIMESTAMP
@@ -125,7 +129,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			`);
 		});
 
-		it("rolls back", async () => {
+		it("rolls back", async ({ expect }) => {
 			const output = await helper.run(
 				`wrangler rollback --message "A test message"`
 			);
@@ -164,7 +168,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			`);
 		});
 
-		it("lists deployments", async () => {
+		it("lists deployments", async ({ expect }) => {
 			const dep = await helper.run(`wrangler deployments list`);
 			expect(normalizeOutput(dep.stdout)).toMatchInlineSnapshot(`
 				"Created:     TIMESTAMP
@@ -219,9 +223,13 @@ function generateInitialAssets(workerName: string) {
 	};
 }
 
-async function checkAssets(testCases: AssetTestCase[], deployedUrl: string) {
+async function checkAssets(
+	expect: ExpectStatic,
+	testCases: AssetTestCase[],
+	deployedUrl: string
+) {
 	for (const testCase of testCases) {
-		await vi.waitFor(
+		await waitForLong(
 			async () => {
 				const r = await fetch(new URL(testCase.path, deployedUrl));
 				const text = await r.text();
@@ -245,10 +253,7 @@ async function checkAssets(testCases: AssetTestCase[], deployedUrl: string) {
 					).toEqual(new URL(testCase.path, deployedUrl).pathname);
 				}
 			},
-			{
-				interval: 1_000,
-				timeout: 40_000,
-			}
+			{ timeout: 40_000 }
 		);
 	}
 }
@@ -267,10 +272,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 	describe("Workers", () => {
 		afterEach(async () => {
 			// clean up user Worker after each test
-			await helper.run(`wrangler delete`);
+			await helper.bestEffortRun(`wrangler delete`);
 		});
 
-		it("deploys a Workers + Assets project with assets only", async () => {
+		it("deploys a Workers + Assets project with assets only", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -283,7 +290,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/index.html",
 				"/[boop].html",
@@ -308,7 +315,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 					redirect: "/%5Bboop%5D",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 
 			// Test 404 handling:
 			// even though 404.html has been uploaded, because not_found_handling is set to "none"
@@ -324,7 +331,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			expect(text).toBeFalsy();
 		});
 
-		it("deploys a Worker with static assets and user Worker", async () => {
+		it("deploys a Worker with static assets and user Worker", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -353,7 +362,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/index.html",
 				"/[boop].html",
@@ -379,13 +388,16 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 					content: "Hello World!",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 
 			// unlike before, not_found_handling has been set to "404-page" instead of the default "none"
 			// note that with a user worker, the request must be passed back to the asset worker via the ASSET binding
 			// in order to return the 404 page
 			const { text } = await retry(
-				(s) => s.status !== 404,
+				// Retry while the status isn't 404 OR the content hasn't propagated yet.
+				// Before assets are live the platform may return its own 404 page (status 200)
+				// instead of the user's 404.html asset.
+				(s) => s.status !== 404 || !s.text.includes("<h1>404.html</h1>"),
 				async () => {
 					const r = await fetch(new URL("/try-404", deployedUrl));
 					const temp = { text: await r.text(), status: r.status };
@@ -395,7 +407,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			expect(text).toContain("<h1>404.html</h1>");
 		});
 
-		it("deploys a Workers + Assets project with helpful debug logs", async () => {
+		it("deploys a Workers + Assets project with helpful debug logs", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 					name = "${workerName}"
@@ -412,6 +426,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			});
 
 			validateAssetUploadLogs(
+				expect,
 				output,
 				["/404.html", "/index.html", "/[boop].html"],
 				{ includeDebug: true }
@@ -436,7 +451,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 					redirect: "/%5Bboop%5D",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 
 			// Test 404 handling:
 			// even though 404.html has been uploaded, because not_found_handling is set to "none"
@@ -452,7 +467,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			expect(text).toBeFalsy();
 		});
 
-		it("runs the user Worker ahead of matching assets when run_worker_first = true", async () => {
+		it("runs the user Worker ahead of matching assets when run_worker_first = true", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -476,7 +493,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/index.html",
 				"/[boop].html",
@@ -498,10 +515,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 					content: "Hello World from User Worker!",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 		});
 
-		it("runs the user Worker ahead of matching assets for matching run_worker_first routes", async () => {
+		it("runs the user Worker ahead of matching assets for matching run_worker_first routes", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -528,7 +547,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			// deploy user Worker && verify output
 			const output = await helper.run(`wrangler deploy`);
 
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/api/index.html",
 				"/index.html",
@@ -547,7 +566,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 				{ path: "/api/assets/test.html", content: "api/assets/test.html" },
 			];
 
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 		});
 	});
 
@@ -583,13 +602,17 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 		afterEach(async () => {
 			// clean up dispatch Worker
-			await helper.run(`wrangler delete -c dispatch-worker/wrangler.toml`);
-			await helper.run(
+			await helper.bestEffortRun(
+				`wrangler delete -c dispatch-worker/wrangler.toml`
+			);
+			await helper.bestEffortRun(
 				`wrangler dispatch-namespace delete ${dispatchNamespaceName}`
 			);
 		});
 
-		it("deploys a Workers + Assets project with assets only", async () => {
+		it("deploys a Workers + Assets project with assets only", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -613,7 +636,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			output = await helper.run(
 				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
 			);
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/index.html",
 				"/[boop].html",
@@ -652,7 +675,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 					redirect: "/%5Bboop%5D",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 
 			// Test 404 handling:
 			// even though 404.html has been uploaded, because not_found_handling is set to "none"
@@ -668,7 +691,9 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			expect(text).toBeFalsy();
 		});
 
-		it("deploys a Worker with static assets and user Worker", async () => {
+		it("deploys a Worker with static assets and user Worker", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -708,7 +733,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			output = await helper.run(
 				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
 			);
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/index.html",
 				"/[boop].html",
@@ -748,7 +773,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 					content: "Hello World!",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 
 			// unlike before, not_found_handling has been set to "404-page"
 			// instead of the default "none"
@@ -756,7 +781,10 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			// the asset worker via the ASSET binding in order to return the 404
 			// page
 			const { text } = await retry(
-				(s) => s.status !== 404,
+				// Retry while the status isn't 404 OR the content hasn't propagated yet.
+				// Before assets are live the platform may return its own 404 page (status 200)
+				// instead of the user's 404.html asset.
+				(s) => s.status !== 404 || !s.text.includes("<h1>404.html</h1>"),
 				async () => {
 					const r = await fetch(new URL("/try-404", deployedUrl));
 					const temp = { text: await r.text(), status: r.status };
@@ -766,7 +794,9 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			expect(text).toContain("<h1>404.html</h1>");
 		});
 
-		it("runs the user Worker ahead of matching assets when run_worker_first = true", async () => {
+		it("runs the user Worker ahead of matching assets when run_worker_first = true", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -801,7 +831,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			output = await helper.run(
 				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
 			);
-			validateAssetUploadLogs(output, [
+			validateAssetUploadLogs(expect, output, [
 				"/404.html",
 				"/index.html",
 				"/[boop].html",
@@ -837,13 +867,13 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 					content: "Hello World from User Worker!",
 				},
 			];
-			await checkAssets(testCases, deployedUrl);
+			await checkAssets(expect, testCases, deployedUrl);
 		});
 	});
 });
 
 const skipContainersTest =
-	!CLOUDFLARE_ACCOUNT_ID || (isCI && process.platform !== "linux");
+	!CLOUDFLARE_ACCOUNT_ID || (ci.isCI && process.platform !== "linux");
 describe.skipIf(skipContainersTest)("containers", () => {
 	let helper: WranglerE2ETestHelper;
 	let workerName: string;
@@ -919,7 +949,7 @@ describe.skipIf(skipContainersTest)("containers", () => {
                   this.ctx = ctx;
                 }
 
-                async fetch(_: Request) {
+                async fetch(_request: Request) {
                   if (!this.ctx.container) {
                     return new Response('this.ctx.container not defined', { status: 500 });
                   }
@@ -937,17 +967,17 @@ describe.skipIf(skipContainersTest)("containers", () => {
 
 	afterAll(async () => {
 		// clean up user Worker after each test
-		const deleteWorker = helper.run(`wrangler delete`);
-		const deleteContainer = helper.run(
+		const deleteWorker = helper.bestEffortRun(`wrangler delete`);
+		const deleteContainer = helper.bestEffortRun(
 			`wrangler containers delete ${applicationId}`
 		);
 		await Promise.allSettled([deleteWorker, deleteContainer]);
-	});
+	}, 30_000);
 
 	it(
 		"won't rebuild unchanged containers",
 		{ timeout: 60 * 2 * 1000 },
-		async () => {
+		async ({ expect }) => {
 			const outputOne = await helper.run(`wrangler deploy`);
 
 			deployedUrl = getDeployedUrl(outputOne);
@@ -963,26 +993,28 @@ describe.skipIf(skipContainersTest)("containers", () => {
 		}
 	);
 
-	it("can fetch DO container", { timeout: 60 * 2 * 1000 }, async () => {
-		await vi.waitFor(
-			async () => {
-				const response = await fetch(`${deployedUrl}/do`, {
-					signal: AbortSignal.timeout(5_000),
-				});
-				if (!response.ok) {
-					throw new Error(
-						"Durable object transient error: " + (await response.text())
-					);
-				}
+	it(
+		"can fetch DO container",
+		{ timeout: 60 * 2 * 1000 },
+		async ({ expect }) => {
+			await waitForLong(
+				async () => {
+					const response = await fetch(`${deployedUrl}/do`, {
+						signal: AbortSignal.timeout(5_000),
+					});
+					if (!response.ok) {
+						throw new Error(
+							"Durable object transient error: " + (await response.text())
+						);
+					}
 
-				expect(await response.text()).toEqual("hello from container");
-			},
-
-			// big timeout for containers
-			// (3m)
-			{ timeout: 60 * 2 * 1000, interval: 1000 }
-		);
-	});
+					expect(await response.text()).toEqual("hello from container");
+				},
+				// big timeout for containers (2m)
+				{ timeout: 60 * 2 * 1000, interval: 1000 }
+			);
+		}
+	);
 });
 
 /**

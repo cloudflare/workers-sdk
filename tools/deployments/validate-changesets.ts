@@ -24,35 +24,19 @@ export function validateChangesets(
 		try {
 			const changeset = parseChangeset(contents);
 			for (const release of changeset.releases) {
-				if (!packages.has(release.name)) {
+				const targetPackage = packages.get(release.name);
+				if (!targetPackage) {
 					errors.push(
 						`Unknown package name "${release.name}" in changeset at "${file}".`
 					);
 				}
 
-				// TEMPORARILY BLOCK PACKAGES THAT WOULD DEPLOY WORKERS
-				const ALLOWED_PRIVATE_PACKAGES = [
-					"@cloudflare/workers-shared",
-					"@cloudflare/quick-edit",
-					"@cloudflare/devprod-status-bot",
-				];
-				if (
-					packages.get(release.name)?.["workers-sdk"]?.deploy &&
-					// Exception: deployments for these workers are allowed now
-					!ALLOWED_PRIVATE_PACKAGES.includes(release.name)
-				) {
-					errors.push(
-						`Currently we are not allowing changes to package "${release.name}" in changeset at "${file}" since it would trigger a Worker/Pages deployment.`
-					);
-				}
-				// END TEMPORARILY BLOCK PACKAGES THAT WOULD DEPLOY WORKERS
-
-				if (release.type === "major") {
+				if (release.type === "major" && targetPackage?.private !== true) {
 					errors.push(
 						`Major version bumps are not allowed for package "${release.name}" in changeset at "${file}".`
 					);
 				}
-				if (!["minor", "patch", "none"].includes(release.type)) {
+				if (!["major", "minor", "patch", "none"].includes(release.type)) {
 					errors.push(
 						`Invalid type "${release.type}" for package "${release.name}" in changeset at "${file}".`
 					);

@@ -1,5 +1,4 @@
 {
-	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"cSpell.words": [
 		"Abortable",
 		"assetsignore",
@@ -45,6 +44,7 @@
 		"reinitialise",
 		"scandir",
 		"selfsigned",
+		"subrequests",
 		"textfile",
 		"tsbuildinfo",
 		"turborepo",
@@ -75,17 +75,13 @@
 	"files.trimTrailingWhitespace": true,
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"files.associations": {
+		"turbo.json": "jsonc",
 		"api-extractor.json": "jsonc",
 		"CODEOWNERS": "plaintext",
 		"*.template": "javascript",
 		"wrangler.json": "jsonc"
 	},
-	"[html]": {
-		"editor.defaultFormatter": "esbenp.prettier-vscode"
-	},
-	"[typescript]": {
-		"editor.defaultFormatter": "esbenp.prettier-vscode"
-	},
+
 	"[ignore]": {
 		"editor.defaultFormatter": "foxundermoon.shell-format"
 	},
@@ -94,5 +90,21 @@
 			"mode": "auto"
 		}
 	],
-	"editor.formatOnSave": true
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "oxc.oxc-vscode",
+	"[javascript]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	},
+	"[typescriptreact]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	},
+	"[javascriptreact]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	},
+	"[json]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	}
 }

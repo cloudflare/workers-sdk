@@ -1,9 +1,10 @@
 import { http, HttpResponse } from "msw";
-import { expect } from "vitest";
 import { msw } from "./msw";
 import type { RequestHandlerOptions } from "msw";
+import type { ExpectStatic } from "vitest";
 
 export function mockGetZonesMulti(
+	expect: ExpectStatic,
 	domains: {
 		[domain: string]: { accountId: string; zones: { id: string }[] };
 	} = {},
@@ -40,12 +41,14 @@ export function mockGetZonesMulti(
 }
 
 export function mockGetZones(
+	expect: ExpectStatic,
 	domain: string,
 	zones: { id: string }[] = [],
 	accountId = "some-account-id",
 	options: RequestHandlerOptions = {}
 ) {
 	return mockGetZonesMulti(
+		expect,
 		{
 			[domain]: { accountId, zones },
 		},

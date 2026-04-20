@@ -1,8 +1,8 @@
-import Worker from "@cloudflare/workers-shared/asset-worker";
+import { AssetWorkerInner } from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 import { SELF } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import type { AssetMetadata } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
@@ -10,20 +10,23 @@ const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 vi.mock("@cloudflare/workers-shared/asset-worker/src/utils/kv.ts");
 vi.mock("@cloudflare/workers-shared/asset-worker/src/configuration");
 const existsMock = (fileList: Set<string>) => {
-	vi.spyOn(Worker.prototype, "unstable_exists").mockImplementation(
-		async (pathname: string) => {
-			if (fileList.has(pathname)) {
-				return pathname;
-			}
-			return null;
+	const mockImplementation = async (pathname: string) => {
+		if (fileList.has(pathname)) {
+			return pathname;
 		}
+		return null;
+	};
+
+	vi.spyOn(AssetWorkerInner.prototype, "unstable_exists").mockImplementation(
+		mockImplementation
 	);
 };
 const BASE_URL = "http://example.com";
 
 describe("[Asset Worker] `test location rewrite`", () => {
 	afterEach(() => {
-		vi.mocked(getAssetWithMetadataFromKV).mockRestore();
+		vi.restoreAllMocks();
+		vi.mocked(getAssetWithMetadataFromKV).mockReset();
 	});
 	beforeEach(async () => {
 		vi.mocked(getAssetWithMetadataFromKV).mockImplementation(
@@ -50,7 +53,7 @@ describe("[Asset Worker] `test location rewrite`", () => {
 		}));
 	});
 
-	it("returns 404 for non matched encoded url", async () => {
+	it("returns 404 for non matched encoded url", async ({ expect }) => {
 		const files = ["/christmas/starts/november/first.html"];
 		const requestPath = "/%2f%2fbad.example.com%2f";
 
@@ -60,7 +63,7 @@ describe("[Asset Worker] `test location rewrite`", () => {
 		expect(response.status).toBe(404);
 	});
 
-	it("returns 200 for matched non encoded url", async () => {
+	it("returns 200 for matched non encoded url", async ({ expect }) => {
 		const files = ["/you/lost/the/game.bin"];
 		const requestPath = "/you/lost/the/game.bin";
 
@@ -70,7 +73,7 @@ describe("[Asset Worker] `test location rewrite`", () => {
 		expect(response.status).toBe(200);
 	});
 
-	it("returns redirect for matched encoded url", async () => {
+	it("returns redirect for matched encoded url", async ({ expect }) => {
 		const files = ["/awesome/file.bin"];
 		const requestPath = "/awesome/file%2ebin";
 		const finalPath = "/awesome/file.bin";
@@ -82,7 +85,7 @@ describe("[Asset Worker] `test location rewrite`", () => {
 		expect(response.headers.get("location")).toBe(finalPath);
 	});
 
-	it("returns 200 for matched non encoded url", async () => {
+	it("returns 200 for matched non encoded url", async ({ expect }) => {
 		const files = ["/mylittlepony.png"];
 		const requestPath = "/mylittlepony.png";
 

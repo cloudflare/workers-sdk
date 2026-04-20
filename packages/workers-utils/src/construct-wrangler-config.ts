@@ -1,4 +1,4 @@
-import { formatCompatibilityDate } from "./compatibility-date";
+import { getTodaysCompatDate } from "./compatibility-date";
 import { ENVIRONMENT_TAG_PREFIX, SERVICE_TAG_PREFIX } from "./constants";
 import { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 import type { RawConfig } from "./config";
@@ -40,7 +40,7 @@ interface APIWorkerConfig {
 	assets?: AssetConfig;
 	bindings: WorkerMetadata["bindings"];
 	observability: Cloudflare.Workers.Beta.Worker.Observability | undefined;
-	limits: { cpu_ms: number } | undefined;
+	limits: { cpu_ms?: number; subrequests?: number } | undefined;
 	placement: Cloudflare.Workers.Beta.Workers.Version.Placement | undefined;
 	subdomain: {
 		enabled: boolean;
@@ -78,8 +78,7 @@ function convertWorkerToWranglerConfig(config: APIWorkerConfig): RawConfig {
 		main: config.entrypoint,
 		workers_dev: config.subdomain.enabled,
 		preview_urls: config.subdomain.previews_enabled,
-		compatibility_date:
-			config.compatibility_date ?? formatCompatibilityDate(new Date()),
+		compatibility_date: config.compatibility_date ?? getTodaysCompatDate(),
 		compatibility_flags: config.compatibility_flags,
 		...(allRoutes.length ? { routes: allRoutes } : {}),
 		placement:

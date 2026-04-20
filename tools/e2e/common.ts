@@ -16,6 +16,11 @@ export type Project = {
 	created_on: string;
 };
 
+export type R2Bucket = {
+	name: string;
+	creation_date: string;
+};
+
 export type ContainerApplication = {
 	created_at: string;
 	id: string;
@@ -266,6 +271,30 @@ export const deleteKVNamespace = async (id: string) => {
 	);
 };
 
+export const listTmpR2Buckets = async () => {
+	const response = await apiFetchResponse(`/r2/buckets`, { method: "GET" });
+	if (!response || !response.ok) {
+		return [];
+	}
+	const json = (await response.json()) as {
+		result: { buckets: R2Bucket[] };
+	};
+	return json.result.buckets.filter(
+		(bucket) =>
+			bucket.name.startsWith("tmp-e2e-") &&
+			// Buckets are more than an hour old
+			Date.now() - new Date(bucket.creation_date).valueOf() > 1000 * 60 * 60
+	);
+};
+
+export const deleteR2Bucket = async (name: string) => {
+	return await apiFetch(
+		`/r2/buckets/${name}`,
+		"DELETE",
+		/* failSilently */ true
+	);
+};
+
 export const listTmpDatabases = async () => {
 	return (await apiFetchList<Database>(`/d1/database`)).filter(
 		(db) =>
@@ -301,7 +330,7 @@ export const listCertificates = async () => {
 };
 
 export const deleteCertificate = async (id: string) => {
-	await apiFetch(`/mtls_certificates/${id}`, "DELETE");
+	return await apiFetch(`/mtls_certificates/${id}`, "DELETE");
 };
 
 // Note: the container images functions below don't directly use the REST API since

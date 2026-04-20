@@ -1,8 +1,8 @@
-import Worker from "@cloudflare/workers-shared/asset-worker";
+import { AssetWorkerInner } from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 import { SELF } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { encodingTestCases } from "./test-cases/encoding-test-cases";
 import { htmlHandlingTestCases } from "./test-cases/html-handling-test-cases";
 import type { AssetMetadata } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
@@ -12,13 +12,15 @@ const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 vi.mock("@cloudflare/workers-shared/asset-worker/src/utils/kv.ts");
 vi.mock("@cloudflare/workers-shared/asset-worker/src/configuration");
 const existsMock = (fileList: Set<string>) => {
-	vi.spyOn(Worker.prototype, "unstable_exists").mockImplementation(
-		async (pathname: string) => {
-			if (fileList.has(pathname)) {
-				return pathname;
-			}
-			return null;
+	const mockImplementation = async (pathname: string) => {
+		if (fileList.has(pathname)) {
+			return pathname;
 		}
+		return null;
+	};
+
+	vi.spyOn(AssetWorkerInner.prototype, "unstable_exists").mockImplementation(
+		mockImplementation
 	);
 };
 const BASE_URL = "http://example.com";
@@ -57,7 +59,8 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 		);
 	});
 	afterEach(() => {
-		vi.mocked(getAssetWithMetadataFromKV).mockRestore();
+		vi.restoreAllMocks();
+		vi.mocked(getAssetWithMetadataFromKV).mockReset();
 	});
 	describe.each(suite)(`$html_handling`, ({ html_handling, cases }) => {
 		beforeEach(async () => {
@@ -72,9 +75,9 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 				not_found_handling: "none",
 			}));
 		});
-		it.each(cases)(
+		it.for(cases)(
 			"$title",
-			async ({ files, requestPath, matchedFile, finalPath }) => {
+			async ({ files, requestPath, matchedFile, finalPath }, { expect }) => {
 				existsMock(new Set(files));
 				const request = new IncomingRequest(BASE_URL + requestPath);
 				let response = await SELF.fetch(request);

@@ -1,12 +1,9 @@
-import {
-	env,
-	runDurableObjectAlarm,
-	runInDurableObject,
-} from "cloudflare:test";
-import { expect, it } from "vitest";
+import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
+import { it } from "vitest";
 import { Counter } from "../src/";
 
-it("immediately executes alarm", async () => {
+it("immediately executes alarm", async ({ expect }) => {
 	// Schedule alarm by directly calling instance method
 	const id = env.COUNTER.newUniqueId();
 	const stub = env.COUNTER.get(id);

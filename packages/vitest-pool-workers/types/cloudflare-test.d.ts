@@ -1,40 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare module "cloudflare:test" {
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-	interface ProvidedEnv {}
-
 	/**
-	 * 2nd argument passed to modules-format exported handlers. Contains bindings
-	 * configured in top-level `miniflare` pool options. To configure the type
-	 * of this value, use an ambient module type:
-	 *
-	 * ```ts
-	 * declare module "cloudflare:test" {
-	 *   interface ProvidedEnv {
-	 *     NAMESPACE: KVNamespace;
-	 *   }
-	 *
-	 *   // ...or if you have an existing `Env` type...
-	 *   interface ProvidedEnv extends Env {}
-	 * }
-	 * ```
+	 * @deprecated Instead, use `import { env } from "cloudflare:workers"`
 	 */
-	export const env: ProvidedEnv;
+	export const env: Cloudflare.Env;
 
 	/**
 	 * Service binding to the default export defined in the `main` worker. Note
 	 * this `main` worker runs in the same isolate/context as tests, so any global
 	 * mocks will apply to it too.
+	 * @deprecated Instead, use `import { exports } from "cloudflare:workers"` and `exports.default.fetch()`
 	 */
 	export const SELF: Fetcher;
-
-	/**
-	 * Declarative interface for mocking outbound `fetch()` requests. Deactivated
-	 * by default and reset before running each test file. Only mocks `fetch()`
-	 * requests for the current test runner worker. Auxiliary workers should mock
-	 * `fetch()`es with the Miniflare `fetchMock`/`outboundService` options.
-	 */
-	export const fetchMock: MockAgent;
 
 	/**
 	 * Runs `callback` inside the Durable Object pointed-to by `stub`'s context.
@@ -63,8 +40,6 @@ declare module "cloudflare:test" {
 	): Promise<boolean /* ran */>;
 	/**
 	 * Gets the IDs of all objects that have been created in the `namespace`.
-	 * Respects `isolatedStorage` if enabled, i.e. objects created in a different
-	 * test won't be returned.
 	 */
 	export function listDurableObjectIds<T>(
 		namespace: DurableObjectNamespace<T>
@@ -81,7 +56,7 @@ declare module "cloudflare:test" {
 	 * `EventContext`s return by `createPagesEventContext()`.
 	 */
 	export function waitOnExecutionContext(
-		ctx: ExecutionContext | EventContext<ProvidedEnv, string, any>
+		ctx: ExecutionContext | EventContext<Cloudflare.Env, string, any>
 	): Promise<void>;
 	/**
 	 * Creates an instance of `ScheduledController` for use as the 1st argument to
@@ -126,6 +101,44 @@ declare module "cloudflare:test" {
 		migrations: D1Migration[],
 		migrationsTableName?: string
 	): Promise<void>;
+
+	/**
+	 * Admin API for a secrets store binding. Returned by `adminSecretsStore()`.
+	 */
+	export interface SecretsStoreSecretAdmin {
+		/** Create a new secret with the given value. Returns the secret's ID. */
+		create(value: string): Promise<string>;
+		/** Update an existing secret (identified by ID) with a new value. Returns the secret's ID. */
+		update(value: string, id: string): Promise<string>;
+		/** Duplicate a secret (identified by ID) under a new name. Returns the new secret's ID. */
+		duplicate(id: string, newName: string): Promise<string>;
+		/** Delete a secret by ID. */
+		delete(id: string): Promise<void>;
+		/** List all secrets in the store. */
+		list(): Promise<{ name: string; metadata?: { uuid: string } }[]>;
+		/** Get a secret's name by ID. */
+		get(id: string): Promise<string>;
+	}
+
+	/**
+	 * Returns the admin API for a secrets store binding, allowing tests to
+	 * create, update, and delete secrets that would otherwise be read-only
+	 * via `binding.get()`.
+	 *
+	 * @example
+	 * ```ts
+	 * import { adminSecretsStore } from "cloudflare:test";
+	 * import { env } from "cloudflare:workers";
+	 *
+	 * const admin = adminSecretsStore(env.MY_SECRET);
+	 * await admin.create("my-secret-value");
+	 *
+	 * // Now env.MY_SECRET.get() will return "my-secret-value"
+	 * ```
+	 */
+	export function adminSecretsStore(binding: {
+		get(): Promise<string>;
+	}): SecretsStoreSecretAdmin;
 
 	/**
 	 * Creates an introspector for a specific Workflow instance, used to
@@ -313,6 +326,39 @@ declare module "cloudflare:test" {
 		 * Defaults to the first step found (`index: 1`).
 		 */
 		disableSleeps(steps?: { name: string; index?: number }[]): Promise<void>;
+
+		/**
+		 * Disables retry backoff delays, causing retry attempts of a failing
+		 * `step.do()` to execute immediately without waiting.
+		 *
+		 * By default, when a step fails and has retries configured, the engine
+		 * waits according to the retry config (e.g., exponential backoff).
+		 * This method eliminates those delays while preserving retry behavior
+		 * (all attempts still execute, just without waiting between them).
+		 *
+		 * @example Disable all retry delays:
+		 * ```ts
+		 * await instance.modify(m => {
+		 *   m.disableRetryDelays();
+		 * });
+		 * ```
+		 *
+		 * @example Disable retry delays for specific steps:
+		 * ```ts
+		 * await instance.modify(m => {
+		 *   m.disableRetryDelays([{ name: "fetch-data" }, { name: "call-api" }]);
+		 * });
+		 * ```
+		 *
+		 * @param steps - Optional array of specific steps to disable retry delays for.
+		 * If omitted, **all retry delays** in the Workflow will be disabled.
+		 * A step is an object specifying the step `name` and optional `index` (1-based).
+		 * If multiple steps share the same name, `index` targets a specific one.
+		 * Defaults to the first step found (`index: 1`).
+		 */
+		disableRetryDelays(
+			steps?: { name: string; index?: number }[]
+		): Promise<void>;
 
 		/**
 		 * Mocks the result of a `step.do()`, causing it to return a specified
@@ -566,7 +612,7 @@ declare module "cloudflare:test" {
 	 * Functions.
 	 */
 	export function createPagesEventContext<
-		F extends PagesFunction<ProvidedEnv, string, any>,
+		F extends PagesFunction<Cloudflare.Env, string, any>,
 	>(init: EventContextInit<Parameters<F>[0]>): Parameters<F>[0];
 
 	// Taken from `undici` (https://github.com/nodejs/undici/tree/main/types) with

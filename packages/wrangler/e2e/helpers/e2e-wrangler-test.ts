@@ -3,7 +3,8 @@ import crypto from "node:crypto";
 import { cp } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
-import { expect, onTestFinished, vi } from "vitest";
+import { onTestFinished } from "vitest";
+import { E2E_ACCOUNT_WORKERS_DEV_DOMAIN } from "./account-id";
 import {
 	generateLeafCertificate,
 	generateMtlsCertName,
@@ -11,6 +12,7 @@ import {
 } from "./cert";
 import { generateResourceName } from "./generate-resource-name";
 import { makeRoot, removeFiles, seed } from "./setup";
+import { waitForLong } from "./wait-for";
 import {
 	MINIFLARE_IMPORT,
 	runWrangler,
@@ -91,6 +93,28 @@ export class WranglerE2ETestHelper {
 		{ cwd = this.tmpPath, ...options }: WranglerCommandOptions = {}
 	) {
 		return runWrangler(wranglerCommand, { cwd, ...options });
+	}
+
+	/**
+	 * Run a Wrangler command as best-effort cleanup.
+	 *
+	 * Uses a short timeout (default 5s) and swallows errors, so that flaky or
+	 * slow backend responses during resource deletion don't cause test hooks to
+	 * time out and mask real test failures.
+	 */
+	async bestEffortRun(
+		wranglerCommand: string,
+		{ timeout = 5_000, ...options }: WranglerCommandOptions = {}
+	) {
+		try {
+			return await this.run(wranglerCommand, { timeout, ...options });
+		} catch (e) {
+			console.warn(
+				`Best-effort cleanup "${wranglerCommand}" failed:`,
+				e instanceof Error ? e.message : e
+			);
+			return undefined;
+		}
 	}
 
 	/** Create a KV namespace and clean it up during tear-down. */
@@ -182,20 +206,29 @@ export class WranglerE2ETestHelper {
 	}
 
 	/** Create a Hyperdrive connection and clean it up during tear-down. */
-	async hyperdrive(isLocal: boolean): Promise<{ id: string; name: string }> {
+	async hyperdrive(
+		isLocal: boolean,
+		scheme: "postgresql" | "mysql" = "postgresql"
+	): Promise<{ id: string; name: string }> {
 		const name = generateResourceName("hyperdrive");
 
 		if (isLocal) {
 			return { id: crypto.randomUUID(), name };
 		}
 
+		const envVar =
+			scheme === "mysql"
+				? "HYPERDRIVE_MYSQL_DATABASE_URL"
+				: "HYPERDRIVE_DATABASE_URL";
+		const connectionString = process.env[envVar];
+
 		assert(
-			process.env.HYPERDRIVE_DATABASE_URL,
-			"HYPERDRIVE_DATABASE_URL must be set in order to create a Hyperdrive resource for this test"
+			connectionString,
+			`${envVar} must be set in order to create a Hyperdrive resource for this test`
 		);
 
 		const result = await this.run(
-			`wrangler hyperdrive create ${name} --connection-string="${process.env.HYPERDRIVE_DATABASE_URL}"`
+			`wrangler hyperdrive create ${name} --connection-string="${connectionString}"`
 		);
 		const tomlMatch = /id = "([0-9a-f]{32})"/.exec(result.stdout);
 		const jsonMatch = /"id": "([0-9a-f]{32})"/.exec(result.stdout);
@@ -229,9 +262,52 @@ export class WranglerE2ETestHelper {
 		const certificateId = match?.groups?.certId;
 		assert(certificateId, `Cannot find ID in ${JSON.stringify(output)}`);
 		this.onTeardown(async () => {
-			await this.run(`wrangler cert delete --name ${name}`);
+			await this.bestEffortRun(`wrangler cert delete --name ${name}`);
 		});
 		return certificateId;
+	}
+
+	/**
+	 * Ensure a worker with a well-known `preserve-e2e-*` name is deployed.
+	 *
+	 * Checks whether the worker is already live by fetching its workers.dev
+	 * URL (controlled by `E2E_ACCOUNT_WORKERS_DEV_DOMAIN`). If it responds
+	 * with a non-404 status the deploy is skipped; otherwise `wrangler deploy`
+	 * is run and the helper waits for the worker to become available.
+	 *
+	 * No cleanup is registered — the worker is expected to persist across
+	 * test runs and is excluded from the periodic e2e cleanup job by its
+	 * `preserve-e2e-` prefix.
+	 */
+	async ensureWorkerDeployed({
+		workerName,
+		entryPoint = "",
+		configPath,
+	}: {
+		workerName: string;
+		entryPoint?: string;
+		configPath?: string;
+	}): Promise<void> {
+		const deployedUrl = `https://${workerName}.${E2E_ACCOUNT_WORKERS_DEV_DOMAIN}/`;
+		try {
+			const response = await fetch(deployedUrl);
+			if (response.status !== 404) {
+				return; // Worker already exists
+			}
+		} catch {
+			// Worker doesn't exist or is not reachable — fall through to deploy
+		}
+		const configOption = configPath ? `-c ${configPath}` : "";
+		await this.run(
+			`wrangler deploy ${entryPoint} --name ${workerName} ${configOption} --compatibility-date 2025-01-01`
+		);
+		await waitForLong(async () => {
+			const response = await fetch(deployedUrl);
+			assert(
+				response.status === 200,
+				`Expected status 200 but got ${response.status}`
+			);
+		});
 	}
 
 	/**
@@ -293,16 +369,16 @@ export class WranglerE2ETestHelper {
 		await setTimeout(2_000);
 
 		// Wait for the worker to become available
-		await vi.waitFor(
-			async () => {
-				const response = await fetch(deployedUrl);
-				expect(response.status).toBe(200);
-			},
-			{ timeout: 10_000, interval: 500 }
-		);
+		await waitForLong(async () => {
+			const response = await fetch(deployedUrl);
+			assert(
+				response.status === 200,
+				`Expected status 200 but got ${response.status}`
+			);
+		});
 
 		const cleanup = async () => {
-			await this.run(`wrangler delete --name ${workerName} --force`);
+			await this.bestEffortRun(`wrangler delete --name ${workerName} --force`);
 		};
 
 		if (cleanOnTestFinished) {
@@ -318,6 +394,62 @@ export class WranglerE2ETestHelper {
 		} else {
 			return { deployedUrl, stdout, cleanup };
 		}
+	}
+
+	/** Create an AI Search instance (backed by an R2 bucket) in the default namespace and clean both up during tear-down. */
+	async aiSearchInstance(): Promise<{
+		instanceId: string;
+		bucketName: string;
+	}> {
+		const instanceId = generateResourceName("ai-search");
+		const bucketName = generateResourceName("ai-search-r2");
+		const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+		assert(accountId, "CLOUDFLARE_ACCOUNT_ID environment variable is required");
+		const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+		assert(apiToken, "CLOUDFLARE_API_TOKEN environment variable is required");
+
+		// Create the R2 bucket first — must be torn down after the instance
+		await this.run(`wrangler r2 bucket create ${bucketName}`);
+		this.onTeardown(async () => {
+			await this.run(`wrangler r2 bucket delete ${bucketName}`);
+		});
+
+		// Create the AI Search instance backed by the R2 bucket
+		const resp = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai-search/namespaces/default/instances`,
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${apiToken}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					id: instanceId,
+					type: "r2",
+					source: bucketName,
+				}),
+			}
+		);
+		assert(
+			resp.ok,
+			`Failed to create AI Search instance: ${await resp.text()}`
+		);
+
+		this.onTeardown(async () => {
+			try {
+				await fetch(
+					`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai-search/namespaces/default/instances/${instanceId}`,
+					{
+						method: "DELETE",
+						headers: { Authorization: `Bearer ${apiToken}` },
+					}
+				);
+			} catch (e) {
+				console.warn(`Failed to delete AI Search instance ${instanceId}:`, e);
+			}
+		});
+
+		return { instanceId, bucketName };
 	}
 
 	/** Create a ZeroTrust tunnel and clean it up during tear-down. */

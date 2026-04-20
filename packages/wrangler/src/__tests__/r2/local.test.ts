@@ -1,5 +1,5 @@
 import * as fs from "node:fs";
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -14,7 +14,7 @@ describe("r2", () => {
 
 	describe("r2 object", () => {
 		describe("local", () => {
-			it("should put R2 object to a local bucket", async () => {
+			it("should put R2 object to a local bucket", async ({ expect }) => {
 				await expect(() =>
 					runWrangler(
 						`r2 object get bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
@@ -31,7 +31,7 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+					Downloading "wormhole-img.png" from "bucket-object-test".
 					"
 				`);
 
@@ -48,7 +48,7 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
+					Creating object "wormhole-img.png" in bucket "bucket-object-test".
 					Upload complete."
 				`);
 
@@ -63,12 +63,12 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+					Downloading "wormhole-img.png" from "bucket-object-test".
 					Download complete."
 				`);
 			});
 
-			it("should bulk put R2 objects to a local bucket", async () => {
+			it("should bulk put R2 objects to a local bucket", async ({ expect }) => {
 				await expect(() =>
 					runWrangler(
 						`r2 object get bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
@@ -85,7 +85,7 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+					Downloading "wormhole-img.png" from "bucket-object-test".
 					"
 				`);
 
@@ -105,7 +105,7 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Downloading \\"nebula-img.png\\" from \\"bucket-object-test\\".
+					Downloading "nebula-img.png" from "bucket-object-test".
 					"
 				`);
 
@@ -151,7 +151,7 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+					Downloading "wormhole-img.png" from "bucket-object-test".
 					Download complete."
 				`);
 
@@ -167,12 +167,12 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Downloading \\"nebula-img.png\\" from \\"bucket-object-test\\".
+					Downloading "nebula-img.png" from "bucket-object-test".
 					Download complete."
 				`);
 			});
 
-			it("should delete R2 object from local bucket", async () => {
+			it("should delete R2 object from local bucket", async ({ expect }) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
 					`r2 object put bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
@@ -186,7 +186,7 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
+					Creating object "wormhole-img.png" in bucket "bucket-object-test".
 					Upload complete."
 				`);
 
@@ -201,7 +201,7 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+					Downloading "wormhole-img.png" from "bucket-object-test".
 					Download complete."
 				`);
 
@@ -217,7 +217,7 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Deleting object \\"wormhole-img.png\\" from bucket \\"bucket-object-test\\".
+					Deleting object "wormhole-img.png" from bucket "bucket-object-test".
 					Delete complete."
 				`);
 
@@ -230,7 +230,7 @@ describe("r2", () => {
 				);
 			});
 
-			it("should follow persist-to for object bucket", async () => {
+			it("should follow persist-to for object bucket", async ({ expect }) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
 					`r2 object put bucket-object-test/file-one --file ./wormhole-img.png `
@@ -244,7 +244,7 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Creating object \\"file-one\\" in bucket \\"bucket-object-test\\".
+					Creating object "file-one" in bucket "bucket-object-test".
 					Upload complete."
 				`);
 
@@ -260,7 +260,7 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Creating object \\"file-two\\" in bucket \\"bucket-object-test\\".
+					Creating object "file-two" in bucket "bucket-object-test".
 					Upload complete."
 				`);
 
@@ -280,7 +280,7 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Downloading \\"file-one\\" from \\"bucket-object-test\\".
+					Downloading "file-one" from "bucket-object-test".
 					"
 				`);
 
@@ -296,7 +296,7 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Downloading \\"file-two\\" from \\"bucket-object-test\\".
+					Downloading "file-two" from "bucket-object-test".
 					Download complete."
 				`);
 			});

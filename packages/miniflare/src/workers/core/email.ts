@@ -1,11 +1,12 @@
 import assert from "node:assert";
-import { ForwardableEmailMessage } from "@cloudflare/workers-types/experimental";
 import { $, blue, red, reset, yellow } from "kleur/colors";
 import { LogLevel, SharedHeaders } from "miniflare:shared";
-import PostalMime, { Email } from "postal-mime";
-import { MiniflareEmailMessage } from "../email/email.worker";
+import PostalMime from "postal-mime";
 import { isEmailReplyable, validateReply } from "../email/validate";
 import { CoreBindings } from "./constants";
+import type { MiniflareEmailMessage } from "../email/email.worker";
+import type { ForwardableEmailMessage } from "@cloudflare/workers-types/experimental";
+import type { Email } from "postal-mime";
 
 // Force-enable colours, because kleur can't detect this setting correctly from within a Worker
 // The user setting should be respected (and ansi stripped out if needed) in https://github.com/cloudflare/workers-sdk/blob/2529848e9ff3ddb01ac8c73f96747f32b47aca3e/packages/miniflare/src/index.ts#L993

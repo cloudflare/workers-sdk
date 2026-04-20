@@ -6,7 +6,6 @@ import {
 	dockerImageInspect,
 	dockerLoginImageRegistry,
 	getCloudflareContainerRegistry,
-	isDir,
 	resolveImageName,
 	runDockerCmd,
 	runDockerCmdWithOutput,
@@ -14,10 +13,13 @@ import {
 import {
 	getCIOverrideNetworkModeHost,
 	getDockerPath,
+	isDirectory,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { getAccountId } from "../user";
+import { cloudchamberScope, fillOpenAPIConfiguration } from "./common";
 import { ensureContainerLimits } from "./limits";
 import { loadAccount } from "./locations";
 import type {
@@ -162,11 +164,10 @@ export async function buildAndMaybePush(
 					);
 				}
 
-				const repositoryOnly = resolveImageName(
-					account.external_account_id,
-					imageTag
-				).split(":")[0];
-
+				const imageUrl = new URL(
+					`http://${resolveImageName(account.external_account_id, imageTag)}`
+				);
+				const repositoryOnly = `${imageUrl.host}${imageUrl.pathname.split(":")[0]}`;
 				logger.debug("respositoryOnly:", repositoryOnly);
 
 				// make sure the repository + name provided in wrangler config
@@ -256,7 +257,7 @@ export async function buildCommand(
 	args: StrictYargsOptionsToInterface<typeof buildYargs>
 ) {
 	// TODO: merge args with Wrangler config if available
-	if (existsSync(args.PATH) && !isDir(args.PATH)) {
+	if (existsSync(args.PATH) && !isDirectory(args.PATH)) {
 		throw new UserError(
 			`${args.PATH} is not a directory. Please specify a valid directory path.`
 		);
@@ -327,3 +328,80 @@ async function checkImagePlatform(
 		);
 	}
 }
+
+// --- New createCommand-based commands ---
+
+export const cloudchamberBuildCommand = createCommand({
+	metadata: {
+		description: "Build a container image",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	args: {
+		PATH: {
+			type: "string",
+			describe: "Path for the directory containing the Dockerfile to build",
+			demandOption: true,
+		},
+		tag: {
+			alias: "t",
+			type: "string",
+			demandOption: true,
+			describe: 'Name and optionally a tag (format: "name:tag")',
+		},
+		"path-to-docker": {
+			type: "string",
+			default: "docker",
+			describe: "Path to your docker binary if it's not on $PATH",
+			demandOption: false,
+		},
+		push: {
+			alias: "p",
+			type: "boolean",
+			describe: "Push the built image to Cloudflare's managed registry",
+			default: false,
+		},
+		platform: {
+			type: "string",
+			default: "linux/amd64",
+			describe:
+				"Platform to build for. Defaults to the architecture support by Workers (linux/amd64)",
+			demandOption: false,
+			hidden: true,
+			deprecated: true,
+		},
+	},
+	positionalArgs: ["PATH"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await buildCommand(args);
+	},
+});
+
+export const cloudchamberPushCommand = createCommand({
+	metadata: {
+		description: "Push a local image to the Cloudflare managed registry",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	args: {
+		TAG: {
+			type: "string",
+			demandOption: true,
+			describe: "The tag of the local image to push",
+		},
+		"path-to-docker": {
+			type: "string",
+			default: "docker",
+			describe: "Path to your docker binary if it's not on $PATH",
+			demandOption: false,
+		},
+	},
+	positionalArgs: ["TAG"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await pushCommand(args, config);
+	},
+});

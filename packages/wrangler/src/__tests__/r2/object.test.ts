@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { MAX_UPLOAD_SIZE_BYTES } from "../../r2/constants";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -18,7 +18,9 @@ describe("r2", () => {
 	runInTempDir();
 
 	describe("object", () => {
-		it("should show help when the object command is passed", async () => {
+		it("should show help when the object command is passed", async ({
+			expect,
+		}) => {
 			await runWrangler("r2 object");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -45,7 +47,7 @@ describe("r2", () => {
 			mockAccountId();
 			mockApiToken();
 
-			it("should download R2 object from bucket", async () => {
+			it("should download R2 object from bucket", async ({ expect }) => {
 				await runWrangler(
 					`r2 object get --remote bucket-object-test/wormhole-img.png --file ./wormhole-img.png`
 				);
@@ -56,12 +58,14 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+					Downloading "wormhole-img.png" from "bucket-object-test".
 					Download complete."
 				`);
 			});
 
-			it("should download R2 object from bucket into directory", async () => {
+			it("should download R2 object from bucket into directory", async ({
+				expect,
+			}) => {
 				await runWrangler(
 					`r2 object get --remote bucket-object-test/wormhole-img.png --file ./a/b/c/wormhole-img.png`
 				);
@@ -70,7 +74,7 @@ describe("r2", () => {
 				);
 			});
 
-			it("should upload R2 object to bucket", async () => {
+			it("should upload R2 object to bucket", async ({ expect }) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
 					`r2 object put --remote bucket-object-test/wormhole-img.png --file ./wormhole-img.png`
@@ -82,12 +86,14 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
+					Creating object "wormhole-img.png" in bucket "bucket-object-test".
 					Upload complete."
 				`);
 			});
 
-			it("should upload R2 object with storage class to bucket", async () => {
+			it("should upload R2 object with storage class to bucket", async ({
+				expect,
+			}) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
 					`r2 object put --remote bucket-object-test/wormhole-img.png --file ./wormhole-img.png -s InfrequentAccess`
@@ -99,7 +105,7 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucket-object-test\\".
+					Creating object "wormhole-img.png" with InfrequentAccess storage class in bucket "bucket-object-test".
 					Upload complete."
 				`);
 			});
@@ -108,7 +114,7 @@ describe("r2", () => {
 				"should fail to upload R2 object to bucket if too large",
 				// Writing a large file could timeout on CI
 				{ timeout: 30_000 },
-				async () => {
+				async ({ expect }) => {
 					const TOO_BIG_FILE_SIZE = MAX_UPLOAD_SIZE_BYTES + 1024 * 1024;
 					await createBigFile("wormhole-img.png", TOO_BIG_FILE_SIZE);
 					await expect(
@@ -122,7 +128,9 @@ describe("r2", () => {
 				}
 			);
 
-			it("should fail to upload R2 object to bucket if the name is invalid", async () => {
+			it("should fail to upload R2 object to bucket if the name is invalid", async ({
+				expect,
+			}) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await expect(
 					runWrangler(
@@ -133,7 +141,9 @@ describe("r2", () => {
 				);
 			});
 
-			it("should pass all fetch option flags into requestInit & check request inputs", async () => {
+			it("should pass all fetch option flags into requestInit & check request inputs", async ({
+				expect,
+			}) => {
 				msw.use(
 					http.put(
 						"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
@@ -149,16 +159,17 @@ describe("r2", () => {
 							//This is removed because jest-fetch-mock does not support ReadableStream request bodies and has an incorrect body and content-length
 							delete headersObject["content-length"];
 							expect(headersObject).toMatchInlineSnapshot(`
-					Object {
-					  "authorization": "Bearer some-api-token",
-					  "cache-control": "cache-control-mock",
-					  "content-disposition": "content-disposition-mock",
-					  "content-encoding": "content-encoding-mock",
-					  "content-language": "content-lang-mock",
-					  "content-type": "content-type-mock",
-					  "expires": "expire-time-mock",
-					}
-				`);
+								{
+								  "authorization": "Bearer some-api-token",
+								  "cache-control": "cache-control-mock",
+								  "cf-r2-data-catalog-check": "true",
+								  "content-disposition": "content-disposition-mock",
+								  "content-encoding": "content-encoding-mock",
+								  "content-language": "content-lang-mock",
+								  "content-type": "content-type-mock",
+								  "expires": "expire-time-mock",
+								}
+							`);
 							return HttpResponse.json(
 								createFetchResult({
 									accountId: "some-account-id",
@@ -184,12 +195,12 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
+					Creating object "wormhole-img.png" in bucket "bucket-object-test".
 					Upload complete."
 				`);
 			});
 
-			it("should delete R2 object from bucket", async () => {
+			it("should delete R2 object from bucket", async ({ expect }) => {
 				await runWrangler(
 					`r2 object delete --remote bucket-object-test/wormhole-img.png`
 				);
@@ -200,12 +211,14 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Deleting object \\"wormhole-img.png\\" from bucket \\"bucket-object-test\\".
+					Deleting object "wormhole-img.png" from bucket "bucket-object-test".
 					Delete complete."
 				`);
 			});
 
-			it("should not allow `--pipe` & `--file` to run together", async () => {
+			it("should not allow `--pipe` & `--file` to run together", async ({
+				expect,
+			}) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await expect(
 					runWrangler(
@@ -222,7 +235,9 @@ describe("r2", () => {
 		`);
 			});
 
-			it("should allow --env and --expires to be used together without conflict", async () => {
+			it("should allow --env and --expires to be used together without conflict", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					env: {
 						production: {},

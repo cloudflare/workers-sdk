@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { getPlatformProxy } from "./shared";
 
 describe("getPlatformProxy - cf", () => {
-	it("should provide mock data", async () => {
+	it("should provide mock data", async ({ expect }) => {
 		const { cf, dispose } = await getPlatformProxy();
 		try {
 			expect(cf).toMatchObject({
@@ -15,7 +15,7 @@ describe("getPlatformProxy - cf", () => {
 		}
 	});
 
-	it("should match the production runtime cf object", async () => {
+	it("should match the production runtime cf object", async ({ expect }) => {
 		const { cf, dispose } = await getPlatformProxy();
 		try {
 			expect(cf.constructor.name).toBe("Object");

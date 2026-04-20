@@ -2,9 +2,10 @@ import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
+import { mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
@@ -14,23 +15,33 @@ import { runWrangler } from "../helpers/run-wrangler";
 describe("export", () => {
 	mockAccountId({ accountId: null });
 	mockApiToken();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
 
-	it("should throw if output is missing", async () => {
+	it("should throw if output is missing", async ({ expect }) => {
 		await expect(runWrangler("d1 export db")).rejects.toThrowError(
 			`Missing required argument: output`
 		);
 	});
 
-	it("should throw if local and remote are both set", async () => {
+	it("should throw if output is a directory", async ({ expect }) => {
+		fs.mkdirSync("test-dir");
+
+		await expect(
+			runWrangler("d1 export db --output test-dir")
+		).rejects.toThrowError(
+			`Please specify a file path for --output, not a directory.`
+		);
+	});
+
+	it("should throw if local and remote are both set", async ({ expect }) => {
 		await expect(
 			runWrangler("d1 export db --local --remote --output test-local.sql")
 		).rejects.toThrowError("Arguments local and remote are mutually exclusive");
 	});
 
-	it("should handle local", async () => {
+	it("should handle local", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -103,7 +114,7 @@ describe("export", () => {
 		);
 	});
 
-	it("should handle remote", async () => {
+	it("should handle remote", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -127,7 +138,84 @@ describe("export", () => {
 		expect(fs.readFileSync("test-remote.sql", "utf8")).toBe(mockSqlContent);
 	});
 
-	it("should handle remote presigned URL errors", async () => {
+	it("should prompt for confirmation when exporting remotely in interactive mode", async ({
+		expect,
+	}) => {
+		setIsTTY(true);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+		mockGetMemberships([
+			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+		]);
+		const mockSqlContent = "PRAGMA defer_foreign_keys=TRUE;";
+
+		mockConfirm({
+			text: `⚠️ This process may take some time, during which your D1 database will be unavailable to serve queries.\n  Ok to proceed?`,
+			result: true,
+		});
+
+		mockResponses();
+
+		msw.use(
+			http.get("https://example.com/xxxx-yyyy.sql", async () => {
+				return HttpResponse.text(mockSqlContent, { status: 200 });
+			})
+		);
+
+		await runWrangler("d1 export db --remote --output test-remote.sql");
+		expect(fs.readFileSync("test-remote.sql", "utf8")).toBe(mockSqlContent);
+	});
+
+	it("should not export when confirmation is rejected", async ({ expect }) => {
+		setIsTTY(true);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		mockConfirm({
+			text: `⚠️ This process may take some time, during which your D1 database will be unavailable to serve queries.\n  Ok to proceed?`,
+			result: false,
+		});
+
+		await runWrangler("d1 export db --remote --output test-remote.sql");
+		expect(std.out).toContain("Not exporting.");
+		expect(fs.existsSync("test-remote.sql")).toBe(false);
+	});
+
+	it("should skip confirmation when --skip-confirmation flag is used", async ({
+		expect,
+	}) => {
+		setIsTTY(true);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+		mockGetMemberships([
+			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+		]);
+		const mockSqlContent = "PRAGMA defer_foreign_keys=TRUE;";
+
+		mockResponses();
+
+		msw.use(
+			http.get("https://example.com/xxxx-yyyy.sql", async () => {
+				return HttpResponse.text(mockSqlContent, { status: 200 });
+			})
+		);
+
+		await runWrangler(
+			"d1 export db --remote --skip-confirmation --output test-remote.sql"
+		);
+		expect(fs.readFileSync("test-remote.sql", "utf8")).toBe(mockSqlContent);
+	});
+
+	it("should handle remote presigned URL errors", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -153,6 +241,72 @@ describe("export", () => {
 			runWrangler("d1 export db --remote --output test-remote.sql")
 		).rejects.toThrowError(
 			/There was an error while downloading from the presigned URL with status code: 403/
+		);
+	});
+
+	it("should export locally without database_id", async ({ expect }) => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [{ binding: "D1", database_name: "D1" }],
+		});
+
+		await runWrangler("d1 export D1 --output test-remote.sql");
+		expect(std.out).toContain("Exporting SQL to test-remote.sql...");
+	});
+
+	it("should not export remotely without database_id", async ({ expect }) => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [{ binding: "D1", database_name: "D1" }],
+		});
+		mockGetMemberships([
+			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+		]);
+
+		await expect(
+			runWrangler("d1 export D1 --output test-remote.sql --remote")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Found a database with name or binding D1 but it is missing a database_id, which is needed for operations on remote resources. Please create the remote D1 database by deploying your project or running 'wrangler d1 create D1'.]`
+		);
+	});
+
+	it("should handle multiple tables", async ({ expect }) => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		// Fill with data
+		fs.writeFileSync(
+			"data.sql",
+			`
+				CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);
+				CREATE TABLE bar(id INTEGER PRIMARY KEY, value TEXT);
+				CREATE TABLE baz(id INTEGER PRIMARY KEY, value TEXT);
+				INSERT INTO foo (value) VALUES ('xxx'),('yyy'),('zzz');
+				INSERT INTO bar (value) VALUES ('aaa'),('bbb'),('ccc');
+				INSERT INTO baz (value) VALUES ('111'),('222'),('333');
+			`
+		);
+		await runWrangler("d1 execute db --file data.sql");
+
+		await runWrangler(
+			"d1 export db --output test-multiple.sql --table foo --table baz"
+		);
+		expect(fs.readFileSync("test-multiple.sql", "utf8")).toBe(
+			[
+				"PRAGMA defer_foreign_keys=TRUE;",
+				"CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);",
+				"INSERT INTO \"foo\" VALUES(1,'xxx');",
+				"INSERT INTO \"foo\" VALUES(2,'yyy');",
+				"INSERT INTO \"foo\" VALUES(3,'zzz');",
+				"CREATE TABLE baz(id INTEGER PRIMARY KEY, value TEXT);",
+				"INSERT INTO \"baz\" VALUES(1,'111');",
+				"INSERT INTO \"baz\" VALUES(2,'222');",
+				"INSERT INTO \"baz\" VALUES(3,'333');",
+			].join("\n")
 		);
 	});
 });

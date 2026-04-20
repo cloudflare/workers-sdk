@@ -1,22 +1,21 @@
 {
 	"name": "@cloudflare/format-errors",
-	"version": "0.0.6",
+	"version": "0.0.8",
 	"private": true,
 	"scripts": {
 		"build": "wrangler build",
-		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
 		"deploy": "wrangler deploy",
-		"start": "wrangler dev"
+		"start": "wrangler dev",
+		"test:ci": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"eslint": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"mustache": "^4.2.0",
-		"promjs": "^0.4.2",
 		"toucan-js": "4.0.0",
 		"tsconfig": "*",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*",
 		"zod": "^3.22.3"
 	},

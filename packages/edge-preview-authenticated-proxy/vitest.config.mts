@@ -1,9 +1,16 @@
-import { defineProject, mergeConfig } from "vitest/config";
-import configShared from "../../vitest.shared";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineConfig } from "vitest/config";
 
-export default mergeConfig(
-	configShared,
-	defineProject({
-		test: {},
-	})
-);
+export default defineConfig({
+	plugins: [
+		cloudflareTest({
+			wrangler: {
+				configPath: "./wrangler.jsonc",
+			},
+		}),
+	],
+	test: {
+		retry: 2,
+		testTimeout: 50_000,
+	},
+});

@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -46,25 +46,29 @@ describe("list", () => {
 			})
 		);
 	});
-	it("should print as json if `--json` flag is specified, without wrangler banner", async () => {
+	it("should print valid json if `--json` flag is specified, without wrangler banner", async ({
+		expect,
+	}) => {
 		await runWrangler("d1 list --json");
-		expect(std.out).toMatchInlineSnapshot(`
-			"[
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			[
 			  {
-			    \\"uuid\\": \\"1\\",
-			    \\"name\\": \\"a\\",
-			    \\"binding\\": \\"A\\"
+			    "binding": "A",
+			    "name": "a",
+			    "uuid": "1",
 			  },
 			  {
-			    \\"uuid\\": \\"2\\",
-			    \\"name\\": \\"b\\",
-			    \\"binding\\": \\"B\\"
-			  }
-			]"
+			    "binding": "B",
+			    "name": "b",
+			    "uuid": "2",
+			  },
+			]
 		`);
 	});
 
-	it("should pretty print by default, including the wrangler banner", async () => {
+	it("should pretty print by default, including the wrangler banner", async ({
+		expect,
+	}) => {
 		await runWrangler("d1 list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"

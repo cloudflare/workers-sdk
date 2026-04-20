@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build --app",
+		"build:default": "vite build --app",
 		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"generate": "pnpm prisma generate",
@@ -16,11 +16,12 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@prisma/adapter-d1": "^7.0.0",
 		"@prisma/client": "^7.0.0",
 		"prisma": "^7.0.0",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }

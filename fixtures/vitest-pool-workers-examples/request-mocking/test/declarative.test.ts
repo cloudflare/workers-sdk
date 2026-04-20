@@ -1,62 +1,62 @@
-import { fetchMock, SELF } from "cloudflare:test";
-import { afterEach, beforeAll, expect, it } from "vitest";
-
-beforeAll(() => {
-	// Enable outbound request mocking...
-	fetchMock.activate();
-	// ...and throw errors if an outbound request isn't mocked
-	fetchMock.disableNetConnect();
-});
-
-// Ensure we matched every mock we defined
-afterEach(() => fetchMock.assertNoPendingInterceptors());
+import { exports } from "cloudflare:workers";
+import { http, HttpResponse } from "msw";
+import { expect, it } from "vitest";
+import { server } from "./server";
 
 it("mocks GET requests", async () => {
-	fetchMock
-		.get("https://cloudflare.com")
-		.intercept({ path: "/once" })
-		.reply(200, "😉");
-	fetchMock
-		.get("https://cloudflare.com")
-		.intercept({ path: "/persistent" })
-		.reply(200, "📌")
-		.persist();
+	server.use(
+		http.get(
+			"https://cloudflare.com/once",
+			() => {
+				return HttpResponse.text("😉");
+			},
+			{ once: true }
+		),
+		http.get("https://cloudflare.com/persistent", () => {
+			return HttpResponse.text("📌");
+		})
+	);
 
 	// Host `example.com` will be rewritten to `cloudflare.com` by the Worker
-	let response = await SELF.fetch("https://example.com/once");
+	let response = await exports.default.fetch("https://example.com/once");
 	expect(response.status).toBe(200);
 	expect(await response.text()).toBe("😉");
 
-	// By default, each mock only matches once, so subsequent `fetch()`es fail...
-	response = await SELF.fetch("https://example.com/once");
+	// Subsequent `fetch()`es fail...
+	response = await exports.default.fetch("https://example.com/once");
 	expect(response.status).toBe(500);
-	expect(await response.text()).toMatch("MockNotMatchedError");
+	expect(await response.text()).toMatch("Cannot bypass");
 
 	// ...but calling `.persist()` will match forever, with `.times(n)` matching
 	// `n` times
 	for (let i = 0; i < 3; i++) {
-		response = await SELF.fetch("https://example.com/persistent");
+		response = await exports.default.fetch("https://example.com/persistent");
 		expect(response.status).toBe(200);
 		expect(await response.text()).toBe("📌");
 	}
 });
 
 it("mocks POST requests", async () => {
-	fetchMock
-		.get("https://cloudflare.com")
-		.intercept({ method: "POST", path: "/path", body: "✨" })
-		.reply(200, "✅");
+	server.use(
+		http.post("https://cloudflare.com/path", async ({ request }) => {
+			const text = await request.text();
+			if (text !== "✨") {
+				return HttpResponse.text("Bad request body", { status: 400 });
+			}
+			return HttpResponse.text("✅");
+		})
+	);
 
-	// Sending a request without the expected body shouldn't match...
-	let response = await SELF.fetch("https://example.com/path", {
+	// Sending a request without the expected body returns an error response...
+	let response = await exports.default.fetch("https://example.com/path", {
 		method: "POST",
 		body: "🙃",
 	});
-	expect(response.status).toBe(500);
-	expect(await response.text()).toMatch("MockNotMatchedError");
+	expect(response.status).toBe(400);
+	expect(await response.text()).toBe("Bad request body");
 
-	// ...but the correct body should
-	response = await SELF.fetch("https://example.com/path", {
+	// ...but the correct body should succeed
+	response = await exports.default.fetch("https://example.com/path", {
 		method: "POST",
 		body: "✨",
 	});

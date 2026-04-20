@@ -1,10 +1,11 @@
 import crypto from "node:crypto";
-import { createServer, IncomingMessage, Server } from "node:http";
+import { createServer } from "node:http";
 import { DeferredPromise } from "miniflare:shared";
 import WebSocket, { WebSocketServer } from "ws";
 import { version as miniflareVersion } from "../../../../package.json";
-import { Log } from "../../../shared";
 import { InspectorProxy } from "./inspector-proxy";
+import type { Log } from "../../../shared";
+import type { IncomingMessage, Server } from "node:http";
 
 /**
  * An `InspectorProxyController` connects to the various runtime (/workerd) inspector servers and exposes through the user specified
@@ -323,6 +324,10 @@ export class InspectorProxyController {
 		await Promise.all(this.#proxies.map((proxy) => proxy.dispose()));
 
 		const server = await this.#server;
+		// Force-close active connections so server.close() resolves immediately.
+		// Without this, active HTTP keep-alive or WebSocket connections prevent
+		// the close callback from firing, hanging the dispose.
+		server.closeAllConnections();
 		return new Promise((resolve, reject) => {
 			server.close((err) => (err ? reject(err) : resolve()));
 		});
@@ -336,6 +341,10 @@ function getWebsocketURL(host: string, port: number): URL {
 const ALLOWED_HOST_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
 const ALLOWED_ORIGIN_HOSTNAMES = [
 	"devtools.devprod.cloudflare.dev",
+	// Workers + Assets (current deployment)
+	"cloudflare-devtools.devprod.workers.dev",
+	/^[a-z0-9]+-cloudflare-devtools\.devprod\.workers\.dev$/,
+	// Cloudflare Pages (legacy deployment)
 	"cloudflare-devtools.pages.dev",
 	/^[a-z0-9]+\.cloudflare-devtools\.pages\.dev$/,
 	"127.0.0.1",

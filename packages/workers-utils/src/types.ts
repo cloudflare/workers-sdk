@@ -1,9 +1,47 @@
-import type { Observability, TailConsumer } from "./config/environment";
+import type { Config } from "./config";
 import type {
+	CustomDomainRoute,
+	Observability,
+	TailConsumer,
+	ZoneIdRoute,
+	ZoneNameRoute,
+} from "./config/environment";
+import type {
+	CfAIBinding,
+	CfAISearch,
+	CfAISearchNamespace,
+	CfAnalyticsEngineDataset,
+	CfBrowserBinding,
+	CfD1Database,
+	CfDispatchNamespace,
+	CfDurableObject,
 	CfDurableObjectMigrations,
+	CfFlagship,
+	CfHelloWorld,
+	CfHyperdrive,
+	CfImagesBinding,
+	CfKvNamespace,
+	CfLogfwdrBinding,
+	CfMediaBinding,
+	CfMTlsCertificate,
+	CfPipeline,
 	CfPlacement,
+	CfQueue,
+	CfR2Bucket,
+	CfRateLimit,
+	CfArtifacts,
+	CfSecretsStoreSecrets,
+	CfSendEmailBindings,
+	CfService,
+	CfStreamBinding,
 	CfTailConsumer,
+	CfUnsafeBinding,
 	CfUserLimits,
+	CfVectorize,
+	CfVpcNetwork,
+	CfVpcService,
+	CfWorkerLoader,
+	CfWorkflow,
 } from "./worker";
 import type { AssetConfig } from "@cloudflare/workers-shared";
 
@@ -30,8 +68,11 @@ export type WorkerMetadataBinding =
 	| { type: "browser"; name: string; raw?: boolean }
 	| { type: "ai"; name: string; staging?: boolean; raw?: boolean }
 	| { type: "images"; name: string; raw?: boolean }
+	| { type: "stream"; name: string }
 	| { type: "version_metadata"; name: string }
 	| { type: "data_blob"; name: string; part: string }
+	| { type: "ai_search_namespace"; name: string; namespace: string }
+	| { type: "ai_search"; name: string; instance_name: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
 	| { type: "media"; name: string }
 	| {
@@ -116,9 +157,19 @@ export type WorkerMetadataBinding =
 			secret_name: string;
 	  }
 	| {
+			type: "artifacts";
+			name: string;
+			namespace: string;
+	  }
+	| {
 			type: "unsafe_hello_world";
 			name: string;
 			enable_timer?: boolean;
+	  }
+	| {
+			type: "flagship";
+			name: string;
+			app_id: string;
 	  }
 	| {
 			type: "ratelimit";
@@ -127,6 +178,12 @@ export type WorkerMetadataBinding =
 			simple: { limit: number; period: 10 | 60 };
 	  }
 	| { type: "vpc_service"; name: string; service_id: string }
+	| {
+			type: "vpc_network";
+			name: string;
+			tunnel_id?: string;
+			network_id?: string;
+	  }
 	| {
 			type: "worker_loader";
 			name: string;
@@ -174,6 +231,7 @@ type WorkerMetadataPut = {
 		config?: AssetConfigMetadata;
 	};
 	observability?: Observability | undefined;
+	containers?: { class_name: string }[];
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
 };
@@ -203,6 +261,7 @@ export type ServiceMetadataRes = {
 			usage_model: "bundled" | "unbound";
 			limits: {
 				cpu_ms: number;
+				subrequests: number;
 			};
 			compatibility_date: string;
 			compatibility_flags: string[];
@@ -223,3 +282,75 @@ export type ServiceMetadataRes = {
 		},
 	];
 };
+
+export type ServiceFetch = (request: Request) => Promise<Response> | Response;
+
+export type File<Contents = string, Path = string> =
+	| { path: Path } // `path` resolved relative to cwd
+	| { contents: Contents; path?: Path }; // `contents` used instead, `path` can be specified if needed e.g. for module resolution
+export type BinaryFile = File<Uint8Array>; // Note: Node's `Buffer`s are instances of `Uint8Array`
+
+type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
+
+export type Trigger =
+	| { type: "workers.dev" }
+	| { type: "route"; pattern: string } // SimpleRoute
+	| ({ type: "route" } & ZoneIdRoute)
+	| ({ type: "route" } & ZoneNameRoute)
+	| ({ type: "route" } & CustomDomainRoute)
+	| { type: "cron"; cron: string }
+	| ({ type: "queue-consumer" } & Omit<QueueConsumer, "type">);
+
+type BindingOmit<T> = Omit<T, "binding">;
+type NameOmit<T> = Omit<T, "name">;
+export type Binding =
+	| {
+			type: "plain_text";
+			value: string;
+			/**
+			 * Hide this environment variable in output as it may be sensitive
+			 * This is a @deprecated feature to support current Wrangler behaviour, and sensitive
+			 * variables should be marked as `type: secret_text` in future
+			 */
+			hidden?: boolean;
+	  }
+	| { type: "secret_text"; value: string }
+	| { type: "json"; value: Json }
+	| ({ type: "kv_namespace" } & BindingOmit<CfKvNamespace>)
+	| ({ type: "send_email" } & NameOmit<CfSendEmailBindings>)
+	| { type: "wasm_module"; source: BinaryFile }
+	| { type: "text_blob"; source: File }
+	| ({ type: "browser" } & BindingOmit<CfBrowserBinding>)
+	| ({ type: "ai" } & BindingOmit<CfAIBinding>)
+	| ({ type: "images" } & BindingOmit<CfImagesBinding>)
+	| ({ type: "stream" } & BindingOmit<CfStreamBinding>)
+	| { type: "version_metadata" }
+	| { type: "data_blob"; source: BinaryFile }
+	| ({ type: "durable_object_namespace" } & NameOmit<CfDurableObject>)
+	| ({ type: "workflow" } & BindingOmit<CfWorkflow>)
+	| ({ type: "queue" } & BindingOmit<CfQueue>)
+	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
+	| ({ type: "d1" } & BindingOmit<CfD1Database>)
+	| ({ type: "vectorize" } & BindingOmit<CfVectorize>)
+	| ({ type: "ai_search_namespace" } & BindingOmit<CfAISearchNamespace>)
+	| ({ type: "ai_search" } & BindingOmit<CfAISearch>)
+	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
+	| ({ type: "service" } & BindingOmit<CfService>)
+	| { type: "fetcher"; fetcher: ServiceFetch }
+	| ({ type: "analytics_engine" } & BindingOmit<CfAnalyticsEngineDataset>)
+	| ({ type: "dispatch_namespace" } & BindingOmit<CfDispatchNamespace>)
+	| ({ type: "mtls_certificate" } & BindingOmit<CfMTlsCertificate>)
+	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
+	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
+	| ({ type: "artifacts" } & BindingOmit<CfArtifacts>)
+	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
+	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
+	| ({ type: "flagship" } & BindingOmit<CfFlagship>)
+	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
+	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
+	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
+	| ({ type: "vpc_network" } & BindingOmit<CfVpcNetwork>)
+	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
+	| ({ type: `unsafe_${string}` } & Omit<CfUnsafeBinding, "name" | "type">)
+	| { type: "assets" }
+	| { type: "inherit" };

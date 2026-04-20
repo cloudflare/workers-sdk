@@ -1,16 +1,12 @@
 import path from "node:path";
-import {
-	Miniflare,
-	MiniflareCoreError,
-	MiniflareOptions,
-	WorkerOptions,
-} from "miniflare";
-import { expect, test } from "vitest";
+import { Miniflare, MiniflareCoreError } from "miniflare";
+import { test } from "vitest";
 import {
 	EXPORTED_FIXTURES,
 	FIXTURES_PATH,
 	useDispose,
 } from "../../test-shared";
+import type { MiniflareOptions, WorkerOptions } from "miniflare";
 
 /**
  * Use the plugin located in `test/fixtures/unsafe-plugin`
@@ -52,7 +48,9 @@ const PLUGIN_SCRIPT = /* javascript */ `export default {
 }
 `;
 
-test("A plugin that does not expose `plugins` will cause an error to be thrown", async () => {
+test("A plugin that does not expose `plugins` will cause an error to be thrown", async ({
+	expect,
+}) => {
 	const badPluginDir = path.resolve(FIXTURES_PATH, "unsafe-plugin-bad");
 	const [packageName, pluginName] = [
 		`${badPluginDir}/no-export.cjs`,
@@ -81,7 +79,9 @@ test("A plugin that does not expose `plugins` will cause an error to be thrown",
 	expect(error?.message).toMatch(/did not provide any plugins/);
 });
 
-test("A plugin that exposes a non-object `plugins` export will cause an error to be thrown", async () => {
+test("A plugin that exposes a non-object `plugins` export will cause an error to be thrown", async ({
+	expect,
+}) => {
 	const badPluginDir = path.resolve(FIXTURES_PATH, "unsafe-plugin-bad");
 	const [packageName, pluginName] = [
 		`${badPluginDir}/not-function.cjs`,
@@ -110,7 +110,9 @@ test("A plugin that exposes a non-object `plugins` export will cause an error to
 	expect(error?.message).toMatch(/did not provide the plugin 'unsafe-plugin'/);
 });
 
-test("Supports specifying an unsafe plugin will be loaded into Miniflare and will be usable in local dev", async () => {
+test("Supports specifying an unsafe plugin will be loaded into Miniflare and will be usable in local dev", async ({
+	expect,
+}) => {
 	const [packageName, pluginName] = [pluginEntrypoint, "unsafe-plugin"];
 	const opts: MiniflareOptions = {
 		name: "unsafe-plugin-worker",

@@ -1,10 +1,10 @@
 import path from "node:path";
-import getPort from "get-port";
 import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
+import type { LoggerLevel } from "../../logger";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker";
 import type { Config } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString } from "miniflare";
@@ -42,14 +42,10 @@ export async function startRemoteProxySession(
 			remote: "minimal",
 			auth: options?.auth,
 			server: {
-				port: await getPort(),
+				port: 0,
 			},
 			inspector: false,
-			logLevel:
-				// If the logger has a logLevel of "debug" it means that the user is likely trying to debug some issue,
-				// so we should respect that here as well for the remote proxy session. In any other case, to avoid noisy
-				// logs, we just simply fall back to "error"
-				logger.loggerLevel === "debug" ? "debug" : "error",
+			logLevel: getStartWorkerLogLevel(logger.loggerLevel),
 		},
 		bindings: rawBindings,
 	}).catch((startWorkerError) => {
@@ -114,3 +110,27 @@ export type RemoteProxySession = Pick<Worker, "ready" | "dispose"> & {
 	updateBindings: (bindings: StartDevWorkerInput["bindings"]) => Promise<void>;
 	remoteProxyConnectionString: RemoteProxyConnectionString;
 };
+
+/**
+ * Gets the log level to use for the remote worker.
+ *
+ * @param wranglerLogLevel The log level set for the Wrangler process.
+ * @returns The log level to use for the remove worker.
+ */
+function getStartWorkerLogLevel(wranglerLogLevel: LoggerLevel): LoggerLevel {
+	switch (wranglerLogLevel) {
+		case "debug":
+			// If the `logLevel` is "debug" it means that the user is likely trying to debug some issue,
+			// so we should respect that here as well for the remote proxy session.
+			return "debug";
+
+		case "none":
+			// If the `logLevel` is "none" it means that the user is trying to silence all output,
+			// so we should respect that here as well for the remote proxy session.
+			return "none";
+
+		default:
+			// In any other case we want to default to "error" to avoid noisy logs
+			return "error";
+	}
+}

@@ -68,65 +68,33 @@ async function createDraftWorker({
 			: `/accounts/${accountId}/workers/scripts/${scriptName}`,
 		{
 			method: "PUT",
-			body: createWorkerUploadForm({
-				name: scriptName,
-				main: {
+			body: createWorkerUploadForm(
+				{
 					name: scriptName,
-					filePath: undefined,
-					content: `export default { fetch() {} }`,
-					type: "esm",
-				},
-				bindings: {
-					kv_namespaces: [],
-					send_email: [],
-					vars: {},
-					durable_objects: { bindings: [] },
-					workflows: [],
-					queues: [],
-					r2_buckets: [],
-					d1_databases: [],
-					vectorize: [],
-					hyperdrive: [],
-					secrets_store_secrets: [],
-					services: [],
-					vpc_services: [],
-					analytics_engine_datasets: [],
-					wasm_modules: {},
-					browser: undefined,
-					ai: undefined,
-					images: undefined,
-					version_metadata: undefined,
-					text_blobs: {},
-					data_blobs: {},
-					dispatch_namespaces: [],
-					mtls_certificates: [],
-					pipelines: [],
-					logfwdr: { bindings: [] },
-					ratelimits: [],
-					assets: undefined,
-					unsafe: {
-						bindings: undefined,
-						metadata: undefined,
-						capnp: undefined,
+					main: {
+						name: scriptName,
+						filePath: undefined,
+						content: `export default { fetch() {} }`,
+						type: "esm",
 					},
-					unsafe_hello_world: [],
-					worker_loaders: [],
-					media: undefined,
+					modules: [],
+					migrations: undefined,
+					compatibility_date: undefined,
+					compatibility_flags: undefined,
+					keepVars: false, // this doesn't matter since it's a new script anyway
+					keepSecrets: false, // this doesn't matter since it's a new script anyway
+					logpush: false,
+					sourceMaps: undefined,
+					placement: undefined,
+					tail_consumers: undefined,
+					limits: undefined,
+					assets: undefined,
+					containers: undefined,
+					observability: undefined,
+					cache: undefined,
 				},
-				modules: [],
-				migrations: undefined,
-				compatibility_date: undefined,
-				compatibility_flags: undefined,
-				keepVars: false, // this doesn't matter since it's a new script anyway
-				keepSecrets: false, // this doesn't matter since it's a new script anyway
-				logpush: false,
-				sourceMaps: undefined,
-				placement: undefined,
-				tail_consumers: undefined,
-				limits: undefined,
-				assets: undefined,
-				observability: undefined,
-			}),
+				{}
+			),
 		}
 	);
 }
@@ -621,23 +589,17 @@ export async function parseBulkInputToObject(
 	if (input) {
 		secretSource = "file";
 		const jsonFilePath = path.resolve(input);
+		const fileContent = readFileSync(jsonFilePath);
 		try {
-			const fileContent = readFileSync(jsonFilePath);
-			try {
-				content = parseJSON(fileContent) as Record<string, string>;
-				secretFormat = "json";
-			} catch (e) {
-				content = dotenvParse(fileContent);
-				secretFormat = "dotenv";
-				// dotenvParse does not error unless fileContent is undefined, no keys === error
-				if (Object.keys(content).length === 0) {
-					throw e;
-				}
+			content = parseJSON(fileContent) as Record<string, string>;
+			secretFormat = "json";
+		} catch {
+			content = dotenvParse(fileContent);
+			secretFormat = "dotenv";
+			// dotenvParse does not error unless fileContent is undefined, no keys === error
+			if (Object.keys(content).length === 0) {
+				throw new UserError(`The contents of "${input}" is not valid.`);
 			}
-		} catch (e) {
-			throw new FatalError(
-				`The contents of "${input}" is not valid JSON: "${e}"`
-			);
 		}
 		validateFileSecrets(content, input);
 	} else {

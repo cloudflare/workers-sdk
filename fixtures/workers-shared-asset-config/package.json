@@ -1,6 +1,7 @@
 {
 	"name": "@fixture/workers-shared-assets-config",
 	"private": true,
+	"type": "module",
 	"scripts": {
 		"dev": "wrangler dev",
 		"test:ci": "run-script-os",

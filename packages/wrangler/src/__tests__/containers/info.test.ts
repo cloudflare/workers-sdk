@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as user from "../../user";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -20,20 +19,19 @@ describe("containers info", () => {
 	beforeEach(mockAccount);
 
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("containers info --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers info ID
+			"wrangler containers info <ID>
 
 			Get information about a specific container
 
 			POSITIONALS
-			  ID  id of the containers to view  [string] [required]
+			  ID  ID of the container to view  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -45,7 +43,7 @@ describe("containers info", () => {
 		`);
 	});
 
-	it("should show the correct authentication error", async () => {
+	it("should show the correct authentication error", async ({ expect }) => {
 		const spy = vi.spyOn(user, "getScopes");
 		spy.mockReset();
 		spy.mockImplementationOnce(() => []);
@@ -58,7 +56,9 @@ describe("containers info", () => {
 		);
 	});
 
-	it("should show a single container when given an ID (json)", async () => {
+	it("should show a single container when given an ID (json)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -75,10 +75,41 @@ describe("containers info", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler("containers info asdf");
-		expect(std.out).toMatchInlineSnapshot(`"{}"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    "id": "asdf",
+			    "created_at": "2025-02-14T18:03:13.268999936Z",
+			    "account_id": "test-account",
+			    "name": "app-test",
+			    "version": 1,
+			    "configuration": {
+			        "image": "registry.test.cfdata.org/test-app:v1",
+			        "network": {
+			            "mode": "private"
+			        }
+			    },
+			    "scheduling_policy": "regional",
+			    "instances": 2,
+			    "jobs": false,
+			    "constraints": {
+			        "region": "WNAM"
+			    },
+			    "durable_objects": {
+			        "namespace_id": "test-id"
+			    },
+			    "health": {
+			        "instances": {
+			            "healthy": 2,
+			            "failed": 0,
+			            "scheduling": 0,
+			            "starting": 0
+			        }
+			    }
+			}"
+		`);
 	});
 
-	it("should error when not given an ID", async () => {
+	it("should error when not given an ID", async ({ expect }) => {
 		await expect(
 			runWrangler("containers info")
 		).rejects.toThrowErrorMatchingInlineSnapshot(

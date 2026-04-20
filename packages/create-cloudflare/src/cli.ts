@@ -10,11 +10,13 @@ import {
 	logRaw,
 	startSection,
 } from "@cloudflare/cli";
+import { runCommand } from "@cloudflare/cli/command";
 import { CancelError } from "@cloudflare/cli/error";
+import { maybeAppendWranglerToGitIgnore } from "@cloudflare/cli/gitignore";
 import { isInteractive } from "@cloudflare/cli/interactive";
-import { cliDefinition, parseArgs } from "helpers/args";
-import { isUpdateAvailable } from "helpers/cli";
-import { runCommand } from "helpers/command";
+import { cliDefinition, parseArgs, processArgument } from "helpers/args";
+import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
+import { runWranglerCommand } from "helpers/command";
 import {
 	detectPackageManager,
 	rectifyPmMismatch,
@@ -28,11 +30,11 @@ import { showHelp } from "./help";
 import { reporter, runTelemetryCommand } from "./metrics";
 import { createProject } from "./pages";
 import {
-	addWranglerToGitIgnore,
 	copyTemplateFiles,
 	createContext,
 	updatePackageName,
 	updatePackageScripts,
+	writeAgentsMd,
 } from "./templates";
 import { validateProjectDirectory } from "./validators";
 import { addTypes } from "./workers";
@@ -153,13 +155,21 @@ const create = async (ctx: C3Context) => {
 	await npmInstall(ctx);
 	await rectifyPmMismatch(ctx);
 
+	// Offer AGENTS.md for Workers templates that don't use a framework
+	// Framework templates may need framework-specific agent guidance
+	if (ctx.template.platform === "workers" && !ctx.template.frameworkCli) {
+		await offerAgentsMd(ctx);
+	}
+
 	endSection(`Application created`);
 };
 
 const configure = async (ctx: C3Context) => {
 	startSection(
-		`Configuring your application for Cloudflare${ctx.args.experimental ? ` via \`wrangler setup\`` : ""}`,
-		"Step 2 of 3",
+		`Configuring your application for Cloudflare${
+			ctx.args.experimental ? ` via \`wrangler setup\`` : ""
+		}`,
+		"Step 2 of 3"
 	);
 
 	// This is kept even in the autoconfig case because autoconfig will ultimately end up installing Wrangler anyway
@@ -169,7 +179,7 @@ const configure = async (ctx: C3Context) => {
 	if (ctx.args.experimental) {
 		const { npx } = detectPackageManager();
 
-		await runCommand([
+		await runWranglerCommand([
 			npx,
 			"wrangler",
 			"setup",
@@ -187,7 +197,7 @@ const configure = async (ctx: C3Context) => {
 			await template.configure({ ...ctx });
 		}
 
-		addWranglerToGitIgnore(ctx);
+		maybeAppendWranglerToGitIgnore(ctx.project.path);
 
 		await updatePackageScripts(ctx);
 
@@ -215,6 +225,22 @@ const deploy = async (ctx: C3Context) => {
 const printBanner = (args: Partial<C3Args>) => {
 	printWelcomeMessage(version, reporter.isEnabled, args);
 	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
+};
+
+const offerAgentsMd = async (ctx: C3Context) => {
+	ctx.args.agents ??= await processArgument(ctx.args, "agents", {
+		type: "confirm",
+		question:
+			"Do you want to add an AGENTS.md file to help AI coding tools understand Cloudflare APIs?",
+		label: "agents",
+		defaultValue: C3_DEFAULTS.agents,
+	});
+
+	if (!ctx.args.agents) {
+		return;
+	}
+
+	writeAgentsMd(ctx.project.path);
 };
 
 main(process.argv)

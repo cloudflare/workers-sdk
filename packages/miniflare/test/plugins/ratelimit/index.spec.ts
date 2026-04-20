@@ -1,8 +1,8 @@
 import { Miniflare } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { useDispose } from "../../test-shared";
 
-test("ratelimit", async () => {
+test("ratelimit", async ({ expect }) => {
 	const mf = new Miniflare({
 		ratelimits: {
 			TESTRATE: {
@@ -42,7 +42,7 @@ test("ratelimit", async () => {
 	expect(await res.text()).toBe("rate limited");
 });
 
-test("ratelimit validation", async () => {
+test("ratelimit validation", async ({ expect }) => {
 	const mf = new Miniflare({
 		ratelimits: {
 			TESTRATE: {

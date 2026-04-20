@@ -6,8 +6,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, test } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-cli-output";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -21,6 +20,7 @@ import type {
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 } from "@cloudflare/containers-shared";
+import type { ExpectStatic } from "vitest";
 
 function mockGetApplications(applications: Application[]) {
 	msw.use(
@@ -35,6 +35,7 @@ function mockGetApplications(applications: Application[]) {
 }
 
 function mockCreateApplication(
+	expect: ExpectStatic,
 	response?: Partial<Application>,
 	expected?: Partial<CreateApplicationRequest>
 ) {
@@ -55,6 +56,7 @@ function mockCreateApplication(
 }
 
 function mockModifyApplication(
+	expect: ExpectStatic,
 	expected?: Application
 ): Promise<ModifyApplicationRequestBody> {
 	let response: (value: ModifyApplicationRequestBody) => void;
@@ -85,18 +87,43 @@ function mockModifyApplication(
 describe("cloudchamber apply", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockCLIOutput();
-	mockConsoleMethods();
+	const console = mockConsoleMethods();
 
 	mockAccountId();
 	mockApiToken();
 	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
-	test("can apply a simple application", async () => {
+	test("should show deprecation warning when running cloudchamber apply", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		mockGetApplications([]);
+		mockCreateApplication(expect, { id: "test-abc" });
+
+		await writeWranglerConfig({
+			name: "test-container",
+			containers: [
+				{
+					name: "test-app",
+					class_name: "TestDurableObject",
+					image: "registry.cloudflare.com/test:latest",
+					instances: 1,
+				},
+			],
+		});
+
+		await runWrangler("cloudchamber apply");
+
+		expect(console.warn).toContain("deprecated");
+		expect(console.warn).toContain("wrangler deploy");
+		expect(console.warn).toContain("next major version");
+	});
+
+	test("can apply a simple application", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -113,7 +140,7 @@ describe("cloudchamber apply", () => {
 			],
 		});
 		mockGetApplications([]);
-		mockCreateApplication({ id: "abc" });
+		mockCreateApplication(expect, { id: "abc" });
 		await runWrangler("cloudchamber apply");
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		expect(std.stdout).toMatchInlineSnapshot(`
@@ -124,16 +151,16 @@ describe("cloudchamber apply", () => {
 			├ NEW my-container-app
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app\\"
+			│   name = "my-container-app"
 			│   instances = 3
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.constraints]
 			│   tier = 2
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/something:hello\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/something:hello"
+			│   instance_type = "lite"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -144,7 +171,7 @@ describe("cloudchamber apply", () => {
 		`);
 	});
 
-	test("can apply a simple existing application", async () => {
+	test("can apply a simple existing application", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -184,7 +211,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		const applicationReqBodyPromise = mockModifyApplication();
+		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -196,12 +223,12 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"default\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "default"
 			│
 			│   ...
 			│
-			│   instance_type = \\"lite\\"
+			│   instance_type = "lite"
 			│   [containers.constraints]
 			│ - tier = 3
 			│ + tier = 2
@@ -219,7 +246,9 @@ describe("cloudchamber apply", () => {
 		expect(app.instances).toEqual(4);
 	});
 
-	test("can apply a simple existing application and create other (max_instances)", async () => {
+	test("can apply a simple existing application and create other (max_instances)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -263,8 +292,8 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		const res = mockModifyApplication();
-		mockCreateApplication({ id: "abc" });
+		const res = mockModifyApplication(expect);
+		mockCreateApplication(expect, { id: "abc" });
 		await runWrangler("cloudchamber apply");
 		const body = await res;
 		expect(body).not.toHaveProperty("instances");
@@ -279,19 +308,19 @@ describe("cloudchamber apply", () => {
 			│   instances = 0
 			│ - max_instances = 4
 			│ + max_instances = 3
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"default\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "default"
 			│
 			├ NEW my-container-app-2
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app-2\\"
+			│   name = "my-container-app-2"
 			│   max_instances = 3
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/other-app:boop\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/other-app:boop"
+			│   instance_type = "lite"
 			│
 			│   [containers.constraints]
 			│   tier = 1
@@ -308,7 +337,9 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can skip a simple existing application and create other", async () => {
+	test("can skip a simple existing application and create other", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -352,7 +383,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		mockCreateApplication({ id: "abc" });
+		mockCreateApplication(expect, { id: "abc" });
 		await runWrangler("cloudchamber apply");
 
 		expect(std.stdout).toMatchInlineSnapshot(`
@@ -365,21 +396,21 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"default\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "default"
 			│
 			│ Skipping application rollout
 			│
 			├ NEW my-container-app-2
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app-2\\"
+			│   name = "my-container-app-2"
 			│   instances = 1
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/other-app:boop\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/other-app:boop"
+			│   instance_type = "lite"
 			│
 			│   [containers.constraints]
 			│   tier = 1
@@ -394,7 +425,9 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can apply a simple existing application and create other", async () => {
+	test("can apply a simple existing application and create other", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -437,8 +470,8 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		const res = mockModifyApplication();
-		mockCreateApplication({ id: "abc" });
+		const res = mockModifyApplication(expect);
+		mockCreateApplication(expect, { id: "abc" });
 		await runWrangler("cloudchamber apply");
 		await res;
 		expect(std.stdout).toMatchInlineSnapshot(`
@@ -451,19 +484,19 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"default\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "default"
 			│
 			├ NEW my-container-app-2
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app-2\\"
+			│   name = "my-container-app-2"
 			│   instances = 1
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/other-app:boop\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/other-app:boop"
+			│   instance_type = "lite"
 			│
 			│   [containers.constraints]
 			│   tier = 1
@@ -480,7 +513,9 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can apply a simple existing application (labels)", async () => {
+	test("can apply a simple existing application (labels)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -572,7 +607,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		const res = mockModifyApplication();
+		const res = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		await res;
 		expect(std.stdout).toMatchInlineSnapshot(`
@@ -585,30 +620,30 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"default\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "default"
 			│
 			│   ...
 			│
-			│   value = \\"value\\"
+			│   value = "value"
 			│   [[containers.configuration.labels]]
-			│ + name = \\"name-1\\"
-			│ + value = \\"value-1\\"
+			│ + name = "name-1"
+			│ + value = "value-1"
 			│ + [[containers.configuration.labels]]
-			│   name = \\"name-2\\"
-			│   value = \\"value-2\\"
+			│   name = "name-2"
+			│   value = "value-2"
 			│
 			│   ...
 			│
-			│   type = \\"env\\"
+			│   type = "env"
 			│   [[containers.configuration.secrets]]
-			│ - name = \\"MY_SECRET_1\\"
-			│ - secret = \\"SECRET_NAME_1\\"
-			│ - type = \\"env\\"
+			│ - name = "MY_SECRET_1"
+			│ - secret = "SECRET_NAME_1"
+			│ - type = "env"
 			│ - [[containers.configuration.secrets]]
-			│   name = \\"MY_SECRET_2\\"
-			│   secret = \\"SECRET_NAME_2\\"
-			│   type = \\"env\\"
+			│   name = "MY_SECRET_2"
+			│   secret = "SECRET_NAME_2"
+			│   type = "env"
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -620,7 +655,9 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can apply an application, and there is no changes (retrocompatibility with regional scheduling policy)", async () => {
+	test("can apply an application, and there is no changes (retrocompatibility with regional scheduling policy)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -729,7 +766,9 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can apply an application, and there is no changes (two applications)", async () => {
+	test("can apply an application, and there is no changes (two applications)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		const app = {
 			name: "my-container-app",
@@ -843,7 +882,9 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can apply an application, and there is no changes", async () => {
+	test("can apply an application, and there is no changes", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -952,7 +993,9 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can enable observability logs (top-level field)", async () => {
+	test("can enable observability logs (top-level field)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -990,7 +1033,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		const applicationReqBodyPromise = mockModifyApplication();
+		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -999,8 +1042,8 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
+			│   instance_type = "lite"
 			│ + [containers.configuration.observability.logs]
 			│ + enabled = true
 			│   [containers.constraints]
@@ -1019,7 +1062,7 @@ describe("cloudchamber apply", () => {
 		expect(app.instances).toEqual(1);
 	});
 
-	test("can enable observability logs (logs field)", async () => {
+	test("can enable observability logs (logs field)", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -1057,7 +1100,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		const applicationReqBodyPromise = mockModifyApplication();
+		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -1066,8 +1109,8 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
+			│   instance_type = "lite"
 			│ + [containers.configuration.observability.logs]
 			│ + enabled = true
 			│   [containers.constraints]
@@ -1086,7 +1129,9 @@ describe("cloudchamber apply", () => {
 		expect(app.instances).toEqual(1);
 	});
 
-	test("can disable observability logs (top-level field)", async () => {
+	test("can disable observability logs (top-level field)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -1129,7 +1174,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		const applicationReqBodyPromise = mockModifyApplication();
+		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -1138,7 +1183,7 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   instance_type = \\"lite\\"
+			│   instance_type = "lite"
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
@@ -1158,7 +1203,7 @@ describe("cloudchamber apply", () => {
 		expect(app.instances).toEqual(1);
 	});
 
-	test("can disable observability logs (logs field)", async () => {
+	test("can disable observability logs (logs field)", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -1201,7 +1246,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		const applicationReqBodyPromise = mockModifyApplication();
+		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -1210,7 +1255,7 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   instance_type = \\"lite\\"
+			│   instance_type = "lite"
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
@@ -1230,7 +1275,7 @@ describe("cloudchamber apply", () => {
 		expect(app.instances).toEqual(1);
 	});
 
-	test("can disable observability logs (absent field)", async () => {
+	test("can disable observability logs (absent field)", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -1272,7 +1317,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		const applicationReqBodyPromise = mockModifyApplication();
+		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -1281,7 +1326,7 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   instance_type = \\"lite\\"
+			│   instance_type = "lite"
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
@@ -1301,7 +1346,7 @@ describe("cloudchamber apply", () => {
 		expect(app.instances).toEqual(1);
 	});
 
-	test("keeps observability logs enabled", async () => {
+	test("keeps observability logs enabled", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -1359,7 +1404,9 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("keeps observability logs disabled (undefined in the app)", async () => {
+	test("keeps observability logs disabled (undefined in the app)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -1411,7 +1458,9 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("keeps observability logs disabled (false in the app)", async () => {
+	test("keeps observability logs disabled (false in the app)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -1468,7 +1517,7 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can apply a simple application (instance type)", async () => {
+	test("can apply a simple application (instance type)", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -1486,7 +1535,7 @@ describe("cloudchamber apply", () => {
 			],
 		});
 		mockGetApplications([]);
-		mockCreateApplication({ id: "abc" });
+		mockCreateApplication(expect, { id: "abc" });
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -1496,16 +1545,16 @@ describe("cloudchamber apply", () => {
 			├ NEW my-container-app
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app\\"
+			│   name = "my-container-app"
 			│   instances = 3
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.constraints]
 			│   tier = 2
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
+			│   instance_type = "lite"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -1517,7 +1566,9 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can apply a simple application (custom instance type)", async () => {
+	test("can apply a simple application (custom instance type)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -1539,7 +1590,7 @@ describe("cloudchamber apply", () => {
 			],
 		});
 		mockGetApplications([]);
-		mockCreateApplication({ id: "abc" });
+		mockCreateApplication(expect, { id: "abc" });
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -1549,15 +1600,15 @@ describe("cloudchamber apply", () => {
 			├ NEW my-container-app
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app\\"
+			│   name = "my-container-app"
 			│   instances = 3
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.constraints]
 			│   tier = 2
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
 			│   vcpu = 1
 			│   memory_mib = 1024
 			│
@@ -1574,7 +1625,9 @@ describe("cloudchamber apply", () => {
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can apply a simple existing application (instance type)", async () => {
+	test("can apply a simple existing application (instance type)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -1615,7 +1668,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		const applicationReqBodyPromise = mockModifyApplication();
+		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -1627,12 +1680,12 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"regional\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "regional"
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
-			│ - instance_type = \\"lite\\"
-			│ + instance_type = \\"standard\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
+			│ - instance_type = "lite"
+			│ + instance_type = "standard"
 			│   [containers.constraints]
 			│ - tier = 3
 			│ + tier = 2
@@ -1649,7 +1702,9 @@ describe("cloudchamber apply", () => {
 		expect(app.configuration?.instance_type).toEqual("standard");
 	});
 
-	test("can apply a simple existing application (custom instance type)", async () => {
+	test("can apply a simple existing application (custom instance type)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -1694,7 +1749,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		const applicationReqBodyPromise = mockModifyApplication();
+		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -1706,17 +1761,17 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"regional\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "regional"
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
-			│   memory = \\"256MB\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
+			│   memory = "256MB"
 			│ - memory_mib = 256
 			│ + memory_mib = 1024
 			│ - vcpu = 0.0625
 			│ + vcpu = 1
 			│   [containers.configuration.disk]
-			│   size = \\"2GB\\"
+			│   size = "2GB"
 			│ - size_mb = 2000
 			│ + size_mb = 6000
 			│   [containers.constraints]
@@ -1735,7 +1790,9 @@ describe("cloudchamber apply", () => {
 		expect(app.configuration?.instance_type).toBeUndefined();
 	});
 
-	test("falls back on dev instance type when instance type is absent", async () => {
+	test("falls back on dev instance type when instance type is absent", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			name: "my-container",
@@ -1775,7 +1832,7 @@ describe("cloudchamber apply", () => {
 				},
 			},
 		]);
-		const applicationReqBodyPromise = mockModifyApplication();
+		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -1787,12 +1844,12 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"regional\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "regional"
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
-			│ - instance_type = \\"basic\\"
-			│ + instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
+			│ - instance_type = "basic"
+			│ + instance_type = "lite"
 			│   [containers.constraints]
 			│ - tier = 3
 			│ + tier = 2
@@ -1809,7 +1866,9 @@ describe("cloudchamber apply", () => {
 		expect(app.configuration?.instance_type).toEqual("lite");
 	});
 
-	test("expands image names from managed registry when creating an application", async () => {
+	test("expands image names from managed registry when creating an application", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		const registry = getCloudflareContainerRegistry();
 		writeWranglerConfig({
@@ -1829,6 +1888,7 @@ describe("cloudchamber apply", () => {
 
 		mockGetApplications([]);
 		mockCreateApplication(
+			expect,
 			{ id: "abc" },
 			{
 				configuration: {
@@ -1847,16 +1907,16 @@ describe("cloudchamber apply", () => {
 			├ NEW my-container-app
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app\\"
+			│   name = "my-container-app"
 			│   instances = 3
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.constraints]
 			│   tier = 2
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/hello:1.0"
+			│   instance_type = "lite"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -1867,7 +1927,9 @@ describe("cloudchamber apply", () => {
 		`);
 	});
 
-	test("expands image names from managed registry when modifying an application", async () => {
+	test("expands image names from managed registry when modifying an application", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		const registry = getCloudflareContainerRegistry();
 		writeWranglerConfig({
@@ -1911,7 +1973,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 
-		const applicationReqBodyPromise = mockModifyApplication();
+		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -1921,9 +1983,9 @@ describe("cloudchamber apply", () => {
 			├ EDIT my-container-app
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
-			│ - instance_type = \\"lite\\"
-			│ + instance_type = \\"standard\\"
+			│   image = "registry.cloudflare.com/some-account-id/hello:1.0"
+			│ - instance_type = "lite"
+			│ + instance_type = "standard"
 			│   [containers.constraints]
 			│ - tier = 3
 			│ + tier = 2
@@ -1940,7 +2002,7 @@ describe("cloudchamber apply", () => {
 		expect(app.configuration?.instance_type).toEqual("standard");
 	});
 
-	test("updates affinities", async () => {
+	test("updates affinities", async ({ expect }) => {
 		setIsTTY(false);
 		const registry = getCloudflareContainerRegistry();
 		writeWranglerConfig({
@@ -1990,7 +2052,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 
-		const applicationReqBodyPromise = mockModifyApplication();
+		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
@@ -1999,12 +2061,12 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   scheduling_policy = \\"regional\\"
+			│   scheduling_policy = "regional"
 			│   [containers.affinities]
-			│ - colocation = \\"datacenter\\"
-			│ + hardware_generation = \\"highest-overall-performance\\"
+			│ - colocation = "datacenter"
+			│ + hardware_generation = "highest-overall-performance"
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
+			│   image = "registry.cloudflare.com/some-account-id/hello:1.0"
 			│
 			│
 			│  SUCCESS  Modified application my-container-app

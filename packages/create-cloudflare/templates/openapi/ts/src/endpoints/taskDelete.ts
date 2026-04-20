@@ -1,4 +1,4 @@
-import { Bool, OpenAPIRoute, Str } from "chanfana";
+import { OpenAPIRoute } from "chanfana";
 import { z } from "zod";
 import { type AppContext, Task } from "../types";
 
@@ -8,7 +8,7 @@ export class TaskDelete extends OpenAPIRoute {
 		summary: "Delete a Task",
 		request: {
 			params: z.object({
-				taskSlug: Str({ description: "Task slug" }),
+				taskSlug: z.string().describe("Task slug"),
 			}),
 		},
 		responses: {
@@ -17,11 +17,9 @@ export class TaskDelete extends OpenAPIRoute {
 				content: {
 					"application/json": {
 						schema: z.object({
-							series: z.object({
-								success: Bool(),
-								result: z.object({
-									task: Task,
-								}),
+							success: z.boolean(),
+							result: z.object({
+								task: Task,
 							}),
 						}),
 					},

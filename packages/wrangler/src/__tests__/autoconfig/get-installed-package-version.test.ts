@@ -1,11 +1,11 @@
 import { seed } from "@cloudflare/workers-utils/test-helpers";
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { runInTempDir } from "../helpers/run-in-tmp";
 
 describe("getInstalledPackageVersion()", () => {
 	runInTempDir();
-	test("happy path", async () => {
+	test("happy path", async ({ expect }) => {
 		await seed({
 			"node_modules/react-router/package.json": JSON.stringify({
 				name: "react-router",
@@ -19,7 +19,7 @@ describe("getInstalledPackageVersion()", () => {
 		);
 	});
 
-	test("no node_modules", async () => {
+	test("no node_modules", async ({ expect }) => {
 		expect(
 			getInstalledPackageVersion("react-router", process.cwd())
 		).toBeUndefined();

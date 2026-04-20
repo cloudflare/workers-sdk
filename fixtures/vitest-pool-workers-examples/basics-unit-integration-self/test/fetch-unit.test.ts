@@ -1,17 +1,18 @@
 import {
 	createExecutionContext,
-	env,
 	waitOnExecutionContext,
 } from "cloudflare:test";
-import { expect, it } from "vitest";
-import worker, { greet } from "../src/index";
+import { env } from "cloudflare:workers";
+import { it } from "vitest";
+import { greet } from "../src/greet";
+import worker from "../src/index";
 
 // This will improve in the next major version of `@cloudflare/workers-types`,
 // but for now you'll need to do something like this to get a correctly-typed
 // `Request` to pass to `worker.fetch()`.
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
-it("dispatches fetch event", async () => {
+it("dispatches fetch event", async ({ expect }) => {
 	const request = new IncomingRequest("http://example.com");
 	const ctx = createExecutionContext();
 	const response = await worker.fetch(request, env, ctx);
@@ -19,7 +20,7 @@ it("dispatches fetch event", async () => {
 	expect(await response.text()).toBe("👋 http://example.com/");
 });
 
-it("calls arbitrary function", () => {
+it("calls arbitrary function", ({ expect }) => {
 	const request = new Request("http://example.com");
 	expect(greet(request)).toBe("👋 http://example.com/");
 });

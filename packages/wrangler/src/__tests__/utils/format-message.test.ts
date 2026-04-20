@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { formatMessage } from "../../utils/format-message";
 import type { Message } from "@cloudflare/workers-utils";
 
@@ -8,7 +8,7 @@ describe("formatMessage", () => {
 		return formatMessage(input, false).substring(2);
 	};
 
-	it("should format message without location", () => {
+	it("should format message without location", ({ expect }) => {
 		expect(
 			format({
 				text: "Invalid argument",
@@ -21,7 +21,7 @@ describe("formatMessage", () => {
     `);
 	});
 
-	it("should format message with location", () => {
+	it("should format message with location", ({ expect }) => {
 		expect(
 			format({
 				text: "Missing property: main",
@@ -44,7 +44,7 @@ describe("formatMessage", () => {
     `);
 	});
 
-	it("should format message with location and notes", () => {
+	it("should format message with location and notes", ({ expect }) => {
 		expect(
 			format({
 				text: "Invalid property: type",

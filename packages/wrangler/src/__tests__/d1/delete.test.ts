@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
@@ -8,6 +8,7 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { ExpectStatic } from "vitest";
 
 describe("delete", () => {
 	mockAccountId();
@@ -23,7 +24,9 @@ describe("delete", () => {
 		mockDatabaseList("test-db", "db-uuid-123");
 	});
 
-	it("should not delete database when confirmation is rejected", async () => {
+	it("should not delete database when confirmation is rejected", async ({
+		expect,
+	}) => {
 		setIsTTY(true);
 
 		mockConfirm({
@@ -46,7 +49,9 @@ describe("delete", () => {
 		`);
 	});
 
-	it("should delete database when confirmation is accepted", async () => {
+	it("should delete database when confirmation is accepted", async ({
+		expect,
+	}) => {
 		setIsTTY(true);
 
 		mockConfirm({
@@ -54,7 +59,7 @@ describe("delete", () => {
 			result: true,
 		});
 
-		mockDatabaseDelete("db-uuid-123");
+		mockDatabaseDelete(expect, "db-uuid-123");
 
 		await runWrangler("d1 delete test-db");
 
@@ -72,10 +77,12 @@ describe("delete", () => {
 		`);
 	});
 
-	it("should skip confirmation when --skip-confirmation flag is used", async () => {
+	it("should skip confirmation when --skip-confirmation flag is used", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 
-		mockDatabaseDelete("db-uuid-123");
+		mockDatabaseDelete(expect, "db-uuid-123");
 
 		await runWrangler("d1 delete test-db --skip-confirmation");
 
@@ -106,7 +113,7 @@ function mockDatabaseList(name: string, uuid: string) {
 	);
 }
 
-function mockDatabaseDelete(expectedUuid: string) {
+function mockDatabaseDelete(expect: ExpectStatic, expectedUuid: string) {
 	msw.use(
 		http.delete(
 			"*/accounts/:accountId/d1/database/:databaseId",

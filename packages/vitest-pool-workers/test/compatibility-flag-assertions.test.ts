@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { CompatibilityFlagAssertions } from "../src/pool/compatibility-flag-assertions";
 
 describe("FlagAssertions", () => {
@@ -7,7 +7,7 @@ describe("FlagAssertions", () => {
 		relativeProjectPath: "/path/to/project",
 	};
 	describe("assertDisableFlagNotPresent", () => {
-		it("returns error message when the flag is present", () => {
+		it("returns error message when the flag is present", ({ expect }) => {
 			const options = {
 				...baseOptions,
 				compatibilityFlags: ["disable-flag", "another-flag"],
@@ -23,7 +23,9 @@ describe("FlagAssertions", () => {
 			);
 		});
 
-		it("includes relativeWranglerConfigPath in error message when provided", () => {
+		it("includes relativeWranglerConfigPath in error message when provided", ({
+			expect,
+		}) => {
 			const options = {
 				...baseOptions,
 				compatibilityFlags: ["disable-flag"],
@@ -39,7 +41,9 @@ describe("FlagAssertions", () => {
 			);
 		});
 
-		it("correctly formats error message when relative Wrangler configPath is present", () => {
+		it("correctly formats error message when relative Wrangler configPath is present", ({
+			expect,
+		}) => {
 			const options = {
 				...baseOptions,
 				compatibilityFlags: ["disable-flag"],
@@ -58,7 +62,7 @@ describe("FlagAssertions", () => {
 	});
 
 	describe("assertEnableFlagOrCompatibilityDate", () => {
-		it("returns true when the flag is present", () => {
+		it("returns true when the flag is present", ({ expect }) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "2022-12-31",
@@ -73,7 +77,7 @@ describe("FlagAssertions", () => {
 			expect(result.isValid).toBe(true);
 		});
 
-		it("returns true when compatibility date is sufficient", () => {
+		it("returns true when compatibility date is sufficient", ({ expect }) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "2023-01-02",
@@ -88,7 +92,9 @@ describe("FlagAssertions", () => {
 			expect(result.isValid).toBe(true);
 		});
 
-		it("returns error message when neither flag is present nor date is sufficient", () => {
+		it("returns error message when neither flag is present nor date is sufficient", ({
+			expect,
+		}) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "2022-12-31",
@@ -106,7 +112,9 @@ describe("FlagAssertions", () => {
 			);
 		});
 
-		it("returns error message when compatibilityDate is undefined", () => {
+		it("returns error message when compatibilityDate is undefined", ({
+			expect,
+		}) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: undefined,
@@ -124,7 +132,7 @@ describe("FlagAssertions", () => {
 			);
 		});
 
-		it("throws error when defaultOnDate is invalid", () => {
+		it("throws error when defaultOnDate is invalid", ({ expect }) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "2023-01-02",
@@ -140,7 +148,7 @@ describe("FlagAssertions", () => {
 			}).toThrowError('Invalid date format: "invalid-date"');
 		});
 
-		it("throws error when compatibilityDate is invalid", () => {
+		it("throws error when compatibilityDate is invalid", ({ expect }) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "invalid-date",
@@ -158,7 +166,9 @@ describe("FlagAssertions", () => {
 	});
 
 	describe("assertAtLeastOneFlagExists", () => {
-		it("returns true when at least one of the flags is present", () => {
+		it("returns true when at least one of the flags is present", ({
+			expect,
+		}) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "2020-01-01",
@@ -169,7 +179,7 @@ describe("FlagAssertions", () => {
 			expect(result.isValid).toBe(true);
 		});
 
-		it("returns true when multiple flags are present", () => {
+		it("returns true when multiple flags are present", ({ expect }) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "2020-01-01",
@@ -183,7 +193,7 @@ describe("FlagAssertions", () => {
 			expect(result.isValid).toBe(true);
 		});
 
-		it("returns false when none of the flags are present", () => {
+		it("returns false when none of the flags are present", ({ expect }) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "2020-01-01",
@@ -200,7 +210,9 @@ describe("FlagAssertions", () => {
 			);
 		});
 
-		it("includes relativeWranglerConfigPath in error message when provided", () => {
+		it("includes relativeWranglerConfigPath in error message when provided", ({
+			expect,
+		}) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "2020-01-01",
@@ -218,7 +230,7 @@ describe("FlagAssertions", () => {
 			);
 		});
 
-		it("returns true when all flags are present", () => {
+		it("returns true when all flags are present", ({ expect }) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "2020-01-01",
@@ -233,7 +245,7 @@ describe("FlagAssertions", () => {
 			expect(result.isValid).toBe(true);
 		});
 
-		it("returns false when compatibilityFlags is empty", () => {
+		it("returns false when compatibilityFlags is empty", ({ expect }) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "2020-01-01",
@@ -250,7 +262,7 @@ describe("FlagAssertions", () => {
 			);
 		});
 
-		it("returns true when flags array is empty", () => {
+		it("returns true when flags array is empty", ({ expect }) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "2020-01-01",

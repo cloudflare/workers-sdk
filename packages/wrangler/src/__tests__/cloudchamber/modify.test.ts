@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -9,8 +8,9 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
+import type { ExpectStatic } from "vitest";
 
-function mockDeployment() {
+function mockDeployment(expect: ExpectStatic) {
 	msw.use(
 		http.patch(
 			"*/deployments/1234/v2",
@@ -25,30 +25,6 @@ function mockDeployment() {
 	);
 }
 
-const EXPECTED_RESULT = `
-		"{
-		    \\"id\\": \\"1\\",
-		    \\"type\\": \\"default\\",
-		    \\"created_at\\": \\"123\\",
-		    \\"account_id\\": \\"123\\",
-		    \\"vcpu\\": 4,
-		    \\"memory\\": \\"400MB\\",
-		    \\"memory_mib\\": 400,
-		    \\"version\\": 1,
-		    \\"image\\": \\"hello\\",
-		    \\"location\\": {
-		        \\"name\\": \\"sfo06\\",
-		        \\"enabled\\": true
-		    },
-		    \\"network\\": {
-		        \\"mode\\": \\"public\\",
-		        \\"ipv4\\": \\"1.1.1.1\\"
-		    },
-		    \\"placements_ref\\": \\"http://ref\\",
-		    \\"node_group\\": \\"metal\\"
-		}"
-	`;
-
 describe("cloudchamber modify", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -58,17 +34,16 @@ describe("cloudchamber modify", () => {
 	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("cloudchamber modify --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber modify [deploymentId]
 
-			Modify an existing deployment
+			Modify an existing deployment [alpha]
 
 			POSITIONALS
 			  deploymentId  The deployment you want to modify  [string]
@@ -87,26 +62,52 @@ describe("cloudchamber modify", () => {
 			      --ssh-public-key-id  Public SSH key IDs to include in this container. You can add one to your account with \`wrangler cloudchamber ssh create  [array]
 			      --image              The new image that the deployment will have from now on  [string]
 			      --location           The new location that the deployment will have from now on  [string]
-			      --instance-type      The new instance type that the deployment will have from now on  [choices: \\"dev\\", \\"basic\\", \\"standard\\"]
+			      --instance-type      The new instance type that the deployment will have from now on  [choices: "dev", "basic", "standard"]
 			      --vcpu               The new vcpu that the deployment will have from now on  [number]
 			      --memory             The new memory that the deployment will have from now on  [string]"
 		`);
 	});
 
-	it("should modify deployment (detects no interactivity)", async () => {
+	it("should modify deployment (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		mockDeployment();
+		mockDeployment(expect);
 		await runWrangler(
 			"cloudchamber modify 1234 --image hello:modify --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --label appname:helloworld --label region:wnam --vcpu 3 --memory 40MB"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
-		expect(std.out).toMatchInlineSnapshot(EXPECTED_RESULT);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    "id": "1",
+			    "type": "default",
+			    "created_at": "123",
+			    "account_id": "123",
+			    "vcpu": 4,
+			    "memory": "400MB",
+			    "memory_mib": 400,
+			    "version": 1,
+			    "image": "hello",
+			    "location": {
+			        "name": "sfo06",
+			        "enabled": true
+			    },
+			    "network": {
+			        "mode": "public",
+			        "ipv4": "1.1.1.1"
+			    },
+			    "placements_ref": "http://ref",
+			    "node_group": "metal"
+			}"
+		`);
 	});
 
-	it("should modify deployment with wrangler args (detects no interactivity)", async () => {
+	it("should modify deployment with wrangler args (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({
 			image: "hello:modify",
@@ -114,15 +115,39 @@ describe("cloudchamber modify", () => {
 			memory: "40MB",
 			location: "sfo06",
 		});
-		mockDeployment();
+		mockDeployment(expect);
 		await runWrangler(
 			"cloudchamber modify 1234 --var HELLO:WORLD --var YOU:CONQUERED --label appname:helloworld --label region:wnam"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(EXPECTED_RESULT);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    "id": "1",
+			    "type": "default",
+			    "created_at": "123",
+			    "account_id": "123",
+			    "vcpu": 4,
+			    "memory": "400MB",
+			    "memory_mib": 400,
+			    "version": 1,
+			    "image": "hello",
+			    "location": {
+			        "name": "sfo06",
+			        "enabled": true
+			    },
+			    "network": {
+			        "mode": "public",
+			        "ipv4": "1.1.1.1"
+			    },
+			    "placements_ref": "http://ref",
+			    "node_group": "metal"
+			}"
+		`);
 	});
 
-	it("can't modify deployment due to lack of deploymentId (json)", async () => {
+	it("can't modify deployment due to lack of deploymentId (json)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -134,8 +159,8 @@ describe("cloudchamber modify", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-	`);
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
 	});
 });

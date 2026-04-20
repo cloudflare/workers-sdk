@@ -1,6 +1,6 @@
-import assert from "assert";
-import { readFile } from "fs/promises";
-import path from "path";
+import assert from "node:assert";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import * as esbuild from "esbuild";
 
 type BuildFlags = {
@@ -19,7 +19,7 @@ async function buildMain(flags: BuildFlags = {}) {
 			{
 				name: "workers-types",
 				setup(build) {
-					build.onResolve({ filter: /^raw:.*/ }, async (args) => {
+					build.onResolve({ filter: /^raw:.*/ }, async () => {
 						const result = path.resolve(
 							"node_modules/@cloudflare/workers-types/experimental/index.d.ts"
 						);

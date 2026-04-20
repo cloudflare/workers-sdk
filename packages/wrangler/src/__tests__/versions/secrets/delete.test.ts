@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { afterEach, describe, expect, it, test } from "vitest";
+import { afterEach, describe, it, test } from "vitest";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../../helpers/mock-dialogs";
@@ -19,7 +19,7 @@ describe("versions secret delete", () => {
 		clearDialogs();
 	});
 
-	test("can delete a new secret (interactive)", async () => {
+	test("can delete a new secret (interactive)", async ({ expect }) => {
 		setIsTTY(true);
 
 		mockConfirm({
@@ -27,9 +27,9 @@ describe("versions secret delete", () => {
 			result: true,
 		});
 
-		mockSetupApiCalls();
-		mockGetVersion();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockGetVersion(expect);
+		mockPostVersion(expect, (metadata) => {
 			// We should have all secrets except the one being deleted
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
@@ -47,17 +47,17 @@ describe("versions secret delete", () => {
 			──────────────────
 			🌀 Deleting the secret SECRET on the Worker script-name
 			✨ Success! Created version id with deleted secret SECRET.
-			➡️  To deploy this version without the secret SECRET to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version without the secret SECRET to production traffic use the command "wrangler versions deploy"."
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can delete a secret (non-interactive)", async () => {
+	test("can delete a secret (non-interactive)", async ({ expect }) => {
 		setIsTTY(false);
 
-		mockSetupApiCalls();
-		mockGetVersion();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockGetVersion(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "inherit", name: "ANOTHER_SECRET" },
@@ -77,18 +77,20 @@ describe("versions secret delete", () => {
 			🤖 Using fallback value in non-interactive context: yes
 			🌀 Deleting the secret SECRET on the Worker script-name
 			✨ Success! Created version id with deleted secret SECRET.
-			➡️  To deploy this version without the secret SECRET to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version without the secret SECRET to production traffic use the command "wrangler versions deploy"."
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can delete a secret reading Worker name from wrangler.toml", async () => {
+	test("can delete a secret reading Worker name from wrangler.toml", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({ name: "script-name" });
 		setIsTTY(false);
 
-		mockSetupApiCalls();
-		mockGetVersion();
-		mockPostVersion((metadata) => {
+		mockSetupApiCalls(expect);
+		mockGetVersion(expect);
+		mockPostVersion(expect, (metadata) => {
 			expect(metadata.bindings).toStrictEqual([
 				{ type: "inherit", name: "do-binding" },
 				{ type: "inherit", name: "ANOTHER_SECRET" },
@@ -108,18 +110,18 @@ describe("versions secret delete", () => {
 			🤖 Using fallback value in non-interactive context: yes
 			🌀 Deleting the secret SECRET on the Worker script-name
 			✨ Success! Created version id with deleted secret SECRET.
-			➡️  To deploy this version without the secret SECRET to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version without the secret SECRET to production traffic use the command "wrangler versions deploy"."
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("no wrangler configuration warnings shown", async () => {
+	test("no wrangler configuration warnings shown", async ({ expect }) => {
 		await writeFile("wrangler.json", JSON.stringify({ invalid_field: true }));
 		setIsTTY(false);
 
-		mockSetupApiCalls();
-		mockGetVersion();
-		mockPostVersion();
+		mockSetupApiCalls(expect);
+		mockGetVersion(expect);
+		mockPostVersion(expect);
 
 		await runWrangler("versions secret delete SECRET --name script-name");
 
@@ -128,15 +130,17 @@ describe("versions secret delete", () => {
 	});
 
 	describe("multi-env warning", () => {
-		it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+		it("should warn if the wrangler config contains environments but none was specified in the command", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			writeWranglerConfig({
 				env: { test: {} },
 			});
-			mockSetupApiCalls();
-			mockGetVersion();
-			mockPostVersion();
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect);
+			mockPostVersion(expect);
 
 			await runWrangler("versions secret delete SECRET --name script-name");
 
@@ -146,21 +150,23 @@ describe("versions secret delete", () => {
 				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 				  the target environment using the \`-e|--env\` flag.
 				  If your intention is to use the top-level environment of your configuration simply pass an empty
-				  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+				  string to the flag to target such environment. For example \`--env=""\`.
 
 				"
 			`);
 		});
 
-		it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+		it("should not warn if the wrangler config contains environments and one was specified in the command", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			writeWranglerConfig({
 				env: { test: {} },
 			});
-			mockSetupApiCalls();
-			mockGetVersion();
-			mockPostVersion();
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect);
+			mockPostVersion(expect);
 
 			await runWrangler(
 				"versions secret delete SECRET --name script-name -e test"
@@ -169,13 +175,15 @@ describe("versions secret delete", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			writeWranglerConfig();
-			mockSetupApiCalls();
-			mockGetVersion();
-			mockPostVersion();
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect);
+			mockPostVersion(expect);
 
 			await runWrangler("versions secret delete SECRET --name script-name");
 

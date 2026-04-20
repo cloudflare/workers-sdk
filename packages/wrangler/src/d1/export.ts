@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { spinner, spinnerWhile } from "@cloudflare/cli/interactive";
@@ -8,6 +9,7 @@ import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
+import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
@@ -41,6 +43,12 @@ export const d1ExportCommand = createCommand({
 			description: "Export from a remote D1 database",
 			conflicts: "local",
 		},
+		"skip-confirmation": {
+			type: "boolean",
+			description: "Skip confirmation",
+			alias: "y",
+			default: false,
+		},
 		output: {
 			type: "string",
 			description: "Path to the SQL file for your export",
@@ -49,6 +57,7 @@ export const d1ExportCommand = createCommand({
 		table: {
 			type: "string",
 			description: "Specify which tables to include in export",
+			array: true,
 		},
 		"no-schema": {
 			type: "boolean",
@@ -76,20 +85,34 @@ export const d1ExportCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
-		const { remote, name, output, schema, data, table } = args;
+		const { remote, name, output, schema, data, table, skipConfirmation } =
+			args;
 
 		if (!schema && !data) {
 			throw new UserError(`You cannot specify both --no-schema and --no-data`);
 		}
 
+		const stats = statSync(output, { throwIfNoEntry: false });
+		if (stats?.isDirectory()) {
+			throw new UserError(
+				`Please specify a file path for --output, not a directory.`
+			);
+		}
+
 		// Allow multiple --table x --table y flags or none
-		const tables: string[] = table
-			? Array.isArray(table)
-				? table
-				: [table]
-			: [];
+		const tables = table ?? [];
 
 		if (remote) {
+			if (!skipConfirmation) {
+				const response = await confirm(
+					`⚠️ This process may take some time, during which your D1 database will be unavailable to serve queries.\n  Ok to proceed?`
+				);
+				if (!response) {
+					logger.log(`Not exporting.`);
+					return;
+				}
+			}
+
 			return await exportRemotely(config, name, output, tables, !schema, !data);
 		} else {
 			return await exportLocal(config, name, output, tables, !schema, !data);
@@ -105,7 +128,9 @@ async function exportLocal(
 	noSchema: boolean,
 	noData: boolean
 ) {
-	const localDB = getDatabaseInfoFromConfig(config, name);
+	const localDB = getDatabaseInfoFromConfig(config, name, {
+		requireDatabaseId: false,
+	});
 	if (!localDB) {
 		throw new UserError(
 			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`

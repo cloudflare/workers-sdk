@@ -6,6 +6,7 @@ export type C3Args = {
 	deploy?: boolean;
 	open?: boolean;
 	git?: boolean;
+	agents?: boolean;
 	autoUpdate?: boolean;
 	category?: string;
 	// frameworks specific

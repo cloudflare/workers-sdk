@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
@@ -24,20 +23,19 @@ describe("cloudchamber curl", () => {
 	beforeEach(mockAccount);
 
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("cloudchamber curl --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(helpStd.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber curl <path>
 
-			Send a request to an arbitrary Cloudchamber endpoint
+			Send a request to an arbitrary Cloudchamber endpoint [alpha]
 
 			POSITIONALS
-			  path  [string] [required] [default: \\"/\\"]
+			  path  [string] [required] [default: "/"]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -50,14 +48,14 @@ describe("cloudchamber curl", () => {
 			OPTIONS
 			  -H, --header              Add headers in the form of --header <name>:<value>  [array]
 			  -d, --data                Add a JSON body to the request  [string]
-			  -X, --method  [string] [default: \\"GET\\"]
+			  -X, --method  [string] [default: "GET"]
 			  -s, --silent              Only output response  [boolean]
 			  -v, --verbose             Show version number  [boolean]
 			      --use-stdin, --stdin  Equivalent of using --data-binary @- in curl  [boolean]"
 		`);
 	});
 
-	it("can send data with -d/--data", async () => {
+	it("can send data with -d/--data", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -109,31 +107,31 @@ describe("cloudchamber curl", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"{
-			    \\"id\\": \\"1\\",
-			    \\"type\\": \\"default\\",
-			    \\"created_at\\": \\"123\\",
-			    \\"account_id\\": \\"123\\",
-			    \\"vcpu\\": 4,
-			    \\"memory\\": \\"400MB\\",
-			    \\"memory_mib\\": 400,
-			    \\"version\\": 1,
-			    \\"image\\": \\"hello\\",
-			    \\"location\\": {
-			        \\"name\\": \\"sfo06\\",
-			        \\"enabled\\": true
+			    "id": "1",
+			    "type": "default",
+			    "created_at": "123",
+			    "account_id": "123",
+			    "vcpu": 4,
+			    "memory": "400MB",
+			    "memory_mib": 400,
+			    "version": 1,
+			    "image": "hello",
+			    "location": {
+			        "name": "sfo06",
+			        "enabled": true
 			    },
-			    \\"network\\": {
-			        \\"mode\\": \\"public\\",
-			        \\"ipv4\\": \\"1.1.1.1\\"
+			    "network": {
+			        "mode": "public",
+			        "ipv4": "1.1.1.1"
 			    },
-			    \\"placements_ref\\": \\"http://ref\\",
-			    \\"node_group\\": \\"metal\\"
+			    "placements_ref": "http://ref",
+			    "node_group": "metal"
 			}
 			"
 		`);
 	});
 
-	it("supports deprecated -D flag", async () => {
+	it("supports deprecated -D flag", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -185,31 +183,31 @@ describe("cloudchamber curl", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"{
-			    \\"id\\": \\"1\\",
-			    \\"type\\": \\"default\\",
-			    \\"created_at\\": \\"123\\",
-			    \\"account_id\\": \\"123\\",
-			    \\"vcpu\\": 4,
-			    \\"memory\\": \\"400MB\\",
-			    \\"memory_mib\\": 400,
-			    \\"version\\": 1,
-			    \\"image\\": \\"hello\\",
-			    \\"location\\": {
-			        \\"name\\": \\"sfo06\\",
-			        \\"enabled\\": true
+			    "id": "1",
+			    "type": "default",
+			    "created_at": "123",
+			    "account_id": "123",
+			    "vcpu": 4,
+			    "memory": "400MB",
+			    "memory_mib": 400,
+			    "version": 1,
+			    "image": "hello",
+			    "location": {
+			        "name": "sfo06",
+			        "enabled": true
 			    },
-			    \\"network\\": {
-			        \\"mode\\": \\"public\\",
-			        \\"ipv4\\": \\"1.1.1.1\\"
+			    "network": {
+			        "mode": "public",
+			        "ipv4": "1.1.1.1"
 			    },
-			    \\"placements_ref\\": \\"http://ref\\",
-			    \\"node_group\\": \\"metal\\"
+			    "placements_ref": "http://ref",
+			    "node_group": "metal"
 			}
 			"
 		`);
 	});
 
-	it("should set headers", async () => {
+	it("should set headers", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -227,12 +225,12 @@ describe("cloudchamber curl", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"\\"{}\\"
+			""{}"
 			"
 		`);
 	});
 
-	it("works", async () => {
+	it("works", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -356,7 +354,9 @@ describe("cloudchamber curl", () => {
 		]);
 	});
 
-	it("should give a response with headers and request-id when verbose flag is set", async () => {
+	it("should give a response with headers and request-id when verbose flag is set", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -379,7 +379,9 @@ describe("cloudchamber curl", () => {
 		expect(text).toContain("coordinator-request-id");
 	});
 
-	it("includes headers and request-id in JSON when used with --silent and --verbose", async () => {
+	it("includes headers and request-id in JSON when used with --silent and --verbose", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -401,7 +403,7 @@ describe("cloudchamber curl", () => {
 		expect(response.request_id.length).toBeGreaterThan(0);
 	});
 
-	it("should catch and report errors", async () => {
+	it("should catch and report errors", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await runWrangler(

@@ -1,22 +1,21 @@
 import assert from "node:assert";
 import childProcess, { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { Abortable, once } from "node:events";
+import { once } from "node:events";
 import path from "node:path";
 import rl from "node:readline";
 import { Readable, Transform } from "node:stream";
 import { $ as $colors, red } from "kleur/colors";
 import workerdPath, {
-	compatibilityDate as supportedCompatibilityDate,
+	compatibilityDate as workerdCompatibilityDate,
 } from "workerd";
 import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { MiniflareCoreError } from "../shared";
-import { Awaitable } from "../workers";
-import {
-	handleStructuredLogsFromStream,
-	StructuredLogsHandler,
-} from "./structured-logs";
+import { handleStructuredLogsFromStream } from "./structured-logs";
+import type { Awaitable } from "../workers";
+import type { StructuredLogsHandler } from "./structured-logs";
+import type { Abortable } from "node:events";
 
 const ControlMessageSchema = z.discriminatedUnion("event", [
 	z.object({
@@ -41,6 +40,7 @@ export interface RuntimeOptions {
 	loopbackAddress: string;
 	requiredSockets: SocketIdentifier[];
 	inspectorAddress?: string;
+	debugPortAddress?: string;
 	verbose?: boolean;
 	handleRuntimeStdio?: (stdout: Readable, stderr: Readable) => void;
 	handleStructuredLogs?: StructuredLogsHandler;
@@ -123,6 +123,9 @@ function getRuntimeArgs(options: RuntimeOptions) {
 	if (options.inspectorAddress !== undefined) {
 		// Required to enable the V8 inspector
 		args.push(`--inspector-addr=${options.inspectorAddress}`);
+	}
+	if (options.debugPortAddress !== undefined) {
+		args.push(`--debug-port=${options.debugPortAddress}`);
 	}
 	if (options.verbose) {
 		args.push("--verbose");
@@ -290,7 +293,9 @@ export class Runtime {
 							ipcAddress: info.inspectorIpc || "",
 							pid: String(this.#process.pid),
 							scriptName: name,
-							inspectorURL: `ws://127.0.0.1:${ports?.get(kInspectorSocket)}/core:user:${name}`,
+							inspectorURL: `ws://127.0.0.1:${ports?.get(
+								kInspectorSocket
+							)}/core:user:${name}`,
 							waitForDebugger: true,
 							ownId: randomBytes(12).toString("hex"),
 							openerId: info.openerId,
@@ -315,16 +320,55 @@ export class Runtime {
 	}
 
 	dispose(): Awaitable<void> {
+		const runtimeProcess = this.#process;
+		if (runtimeProcess === undefined) {
+			return;
+		}
+
+		// Clear reference to prevent potential race conditions
+		this.#process = undefined;
+
+		// Explicitly destroy all stdio streams to ensure file descriptors are
+		// properly released. This prevents EBADF errors when spawning a new
+		// process after restart.
+		// See https://github.com/cloudflare/workers-sdk/issues/11675
+		runtimeProcess.stdin?.destroy();
+		runtimeProcess.stdout?.destroy();
+		runtimeProcess.stderr?.destroy();
+		// The control pipe at stdio[3] could be a Readable stream
+		const controlPipe = runtimeProcess.stdio[3];
+		if (controlPipe instanceof Readable) {
+			controlPipe.destroy();
+		}
+
 		// `kill()` uses `SIGTERM` by default. In `workerd`, this waits for HTTP
 		// connections to close before exiting. Notably, Chrome sometimes keeps
 		// connections open for about 10s, blocking exit. We'd like `dispose()`/
 		// `setOptions()` to immediately terminate the existing process.
 		// Therefore, use `SIGKILL` which force closes all connections.
 		// See https://github.com/cloudflare/workerd/pull/244.
-		this.#process?.kill("SIGKILL");
+		runtimeProcess.kill("SIGKILL");
+
 		return this.#processExitPromise;
 	}
 }
 
 export * from "./config";
-export { supportedCompatibilityDate };
+
+/**
+ * Gets a safe compatibility date from workerd. If the workerd compatibility
+ * date is in the future, returns today's date instead. This handles the case
+ * where workerd releases set their compatibility date up to 7 days in the future.
+ */
+function getSafeCompatibilityDate(): string {
+	const today = new Date().toISOString().slice(0, 10);
+	if (workerdCompatibilityDate > today) {
+		return today;
+	}
+	return workerdCompatibilityDate;
+}
+
+/**
+ * @deprecated Use today's date as the compatibility date instead: `new Date().toISOString().slice(0, 10)`
+ */
+export const supportedCompatibilityDate = getSafeCompatibilityDate();

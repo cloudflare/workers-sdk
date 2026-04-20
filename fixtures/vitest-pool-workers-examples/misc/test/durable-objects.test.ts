@@ -1,12 +1,12 @@
 import {
-	env,
 	listDurableObjectIds,
 	runDurableObjectAlarm,
 	runInDurableObject,
 } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { env } from "cloudflare:workers";
+import { it } from "vitest";
 
-it("uses other object", async () => {
+it("uses other object", async ({ expect }) => {
 	const id = env.OTHER_OBJECT.idFromName("other-test");
 	const stub = env.OTHER_OBJECT.get(id);
 	const response = await stub.fetch("http://x");

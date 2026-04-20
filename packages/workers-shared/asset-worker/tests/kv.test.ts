@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { getAssetWithMetadataFromKV } from "../src/utils/kv";
 import type { AssetMetadata } from "../src/utils/kv";
 import type { MockInstance } from "vitest";
@@ -20,7 +20,9 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 			vi.restoreAllMocks();
 		});
 
-		it("should return the asset value and metadata, if asset was found in the KV store", async () => {
+		it("should return the asset value and metadata, if asset was found in the KV store", async ({
+			expect,
+		}) => {
 			spy.mockReturnValueOnce(
 				Promise.resolve({
 					value: "<html>Hello world</html>",
@@ -33,15 +35,17 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 			);
 
 			const asset = await getAssetWithMetadataFromKV(mockKVNamespace, "abcd");
-			expect(asset).toBeDefined();
-			expect(asset?.value).toEqual("<html>Hello world</html>");
-			expect(asset?.metadata).toEqual({
+			assert(asset);
+			expect(asset.value).toEqual("<html>Hello world</html>");
+			expect(asset.metadata).toEqual({
 				contentType: "text/html",
 			});
 			expect(spy).toHaveBeenCalledOnce();
 		});
 
-		it("should throw an error if something went wrong while fetching the asset", async () => {
+		it("should throw an error if something went wrong while fetching the asset", async ({
+			expect,
+		}) => {
 			spy.mockReturnValue(Promise.reject("Oeps! Something went wrong"));
 
 			await expect(() =>
@@ -49,7 +53,9 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 			).rejects.toThrowError("KV GET abcd failed.");
 		});
 
-		it("should retry once by default if something went wrong while fetching the asset", async () => {
+		it("should retry once by default if something went wrong while fetching the asset", async ({
+			expect,
+		}) => {
 			spy.mockReturnValue(Promise.reject("Oeps! Something went wrong"));
 
 			await expect(() =>
@@ -58,7 +64,7 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 			expect(spy).toHaveBeenCalledTimes(2);
 		});
 
-		it("should support custom number of retries", async () => {
+		it("should support custom number of retries", async ({ expect }) => {
 			spy.mockReturnValue(Promise.reject("Oeps! Something went wrong"));
 
 			await expect(() =>
@@ -67,7 +73,7 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 			expect(spy).toHaveBeenCalledTimes(3);
 		});
 
-		it("should inject message with error", async () => {
+		it("should inject message with error", async ({ expect }) => {
 			spy.mockReturnValue(
 				Promise.reject(new Error("Oeps! Something went wrong"))
 			);
@@ -78,7 +84,7 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 			expect(spy).toHaveBeenCalledTimes(2);
 		});
 
-		it("should retry on 404 and cache with 30s ttl", async () => {
+		it("should retry on 404 and cache with shorter ttl", async ({ expect }) => {
 			let attempts = 0;
 			spy.mockImplementation(() => {
 				if (attempts++ === 0) {

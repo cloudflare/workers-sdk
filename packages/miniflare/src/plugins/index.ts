@@ -1,10 +1,10 @@
-import { z } from "zod";
-import { ValueOf } from "../workers";
 import { AI_PLUGIN, AI_PLUGIN_NAME } from "./ai";
+import { AI_SEARCH_PLUGIN, AI_SEARCH_PLUGIN_NAME } from "./ai-search";
 import {
 	ANALYTICS_ENGINE_PLUGIN,
 	ANALYTICS_ENGINE_PLUGIN_NAME,
 } from "./analytics-engine";
+import { ARTIFACTS_PLUGIN, ARTIFACTS_PLUGIN_NAME } from "./artifacts";
 import { ASSETS_PLUGIN } from "./assets";
 import { ASSETS_PLUGIN_NAME } from "./assets/constants";
 import {
@@ -20,6 +20,7 @@ import {
 } from "./dispatch-namespace";
 import { DURABLE_OBJECTS_PLUGIN, DURABLE_OBJECTS_PLUGIN_NAME } from "./do";
 import { EMAIL_PLUGIN, EMAIL_PLUGIN_NAME } from "./email";
+import { FLAGSHIP_PLUGIN, FLAGSHIP_PLUGIN_NAME } from "./flagship";
 import { HELLO_WORLD_PLUGIN, HELLO_WORLD_PLUGIN_NAME } from "./hello-world";
 import { HYPERDRIVE_PLUGIN, HYPERDRIVE_PLUGIN_NAME } from "./hyperdrive";
 import { IMAGES_PLUGIN, IMAGES_PLUGIN_NAME } from "./images";
@@ -31,13 +32,22 @@ import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
 import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
 import { SECRET_STORE_PLUGIN, SECRET_STORE_PLUGIN_NAME } from "./secret-store";
+import { STREAM_PLUGIN, STREAM_PLUGIN_NAME } from "./stream";
 import { VECTORIZE_PLUGIN, VECTORIZE_PLUGIN_NAME } from "./vectorize";
+import {
+	VERSION_METADATA_PLUGIN,
+	VERSION_METADATA_PLUGIN_NAME,
+} from "./version-metadata";
+import { VPC_NETWORKS_PLUGIN, VPC_NETWORKS_PLUGIN_NAME } from "./vpc-networks";
 import { VPC_SERVICES_PLUGIN, VPC_SERVICES_PLUGIN_NAME } from "./vpc-services";
 import {
 	WORKER_LOADER_PLUGIN,
 	WORKER_LOADER_PLUGIN_NAME,
 } from "./worker-loader";
 import { WORKFLOWS_PLUGIN, WORKFLOWS_PLUGIN_NAME } from "./workflows";
+import type { OptionalZodTypeOf } from "../shared";
+import type { ValueOf } from "../workers";
+import type { z } from "zod";
 
 export const PLUGINS = {
 	[CORE_PLUGIN_NAME]: CORE_PLUGIN,
@@ -56,15 +66,21 @@ export const PLUGINS = {
 	[EMAIL_PLUGIN_NAME]: EMAIL_PLUGIN,
 	[ANALYTICS_ENGINE_PLUGIN_NAME]: ANALYTICS_ENGINE_PLUGIN,
 	[AI_PLUGIN_NAME]: AI_PLUGIN,
+	[AI_SEARCH_PLUGIN_NAME]: AI_SEARCH_PLUGIN,
 	[BROWSER_RENDERING_PLUGIN_NAME]: BROWSER_RENDERING_PLUGIN,
 	[DISPATCH_NAMESPACE_PLUGIN_NAME]: DISPATCH_NAMESPACE_PLUGIN,
 	[IMAGES_PLUGIN_NAME]: IMAGES_PLUGIN,
+	[STREAM_PLUGIN_NAME]: STREAM_PLUGIN,
 	[VECTORIZE_PLUGIN_NAME]: VECTORIZE_PLUGIN,
+	[VPC_NETWORKS_PLUGIN_NAME]: VPC_NETWORKS_PLUGIN,
 	[VPC_SERVICES_PLUGIN_NAME]: VPC_SERVICES_PLUGIN,
 	[MTLS_PLUGIN_NAME]: MTLS_PLUGIN,
 	[HELLO_WORLD_PLUGIN_NAME]: HELLO_WORLD_PLUGIN,
+	[FLAGSHIP_PLUGIN_NAME]: FLAGSHIP_PLUGIN,
+	[ARTIFACTS_PLUGIN_NAME]: ARTIFACTS_PLUGIN,
 	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
 	[MEDIA_PLUGIN_NAME]: MEDIA_PLUGIN,
+	[VERSION_METADATA_PLUGIN_NAME]: VERSION_METADATA_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -119,15 +135,21 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof SECRET_STORE_PLUGIN.options> &
 	z.input<typeof ANALYTICS_ENGINE_PLUGIN.options> &
 	z.input<typeof AI_PLUGIN.options> &
+	z.input<typeof AI_SEARCH_PLUGIN.options> &
 	z.input<typeof BROWSER_RENDERING_PLUGIN.options> &
 	z.input<typeof DISPATCH_NAMESPACE_PLUGIN.options> &
 	z.input<typeof IMAGES_PLUGIN.options> &
+	z.input<typeof STREAM_PLUGIN.options> &
 	z.input<typeof VECTORIZE_PLUGIN.options> &
+	z.input<typeof VPC_NETWORKS_PLUGIN.options> &
 	z.input<typeof VPC_SERVICES_PLUGIN.options> &
 	z.input<typeof MTLS_PLUGIN.options> &
 	z.input<typeof HELLO_WORLD_PLUGIN.options> &
+	z.input<typeof FLAGSHIP_PLUGIN.options> &
+	z.input<typeof ARTIFACTS_PLUGIN.options> &
 	z.input<typeof WORKER_LOADER_PLUGIN.options> &
-	z.input<typeof MEDIA_PLUGIN.options>;
+	z.input<typeof MEDIA_PLUGIN.options> &
+	z.input<typeof VERSION_METADATA_PLUGIN.options>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &
@@ -138,12 +160,22 @@ export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof WORKFLOWS_PLUGIN.sharedOptions> &
 	z.input<typeof SECRET_STORE_PLUGIN.sharedOptions> &
 	z.input<typeof ANALYTICS_ENGINE_PLUGIN.sharedOptions> &
+	z.input<typeof IMAGES_PLUGIN.sharedOptions> &
+	z.input<typeof STREAM_PLUGIN.sharedOptions> &
 	z.input<typeof HELLO_WORLD_PLUGIN.sharedOptions>;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 	keyof Plugins,
 	ValueOf<Plugins>,
 ][];
+
+// ===== `Miniflare` Validated Options =====
+export type PluginWorkerOptions = {
+	[Key in keyof Plugins]: z.infer<Plugins[Key]["options"]>;
+};
+export type PluginSharedOptions = {
+	[Key in keyof Plugins]: OptionalZodTypeOf<Plugins[Key]["sharedOptions"]>;
+};
 
 export * from "./shared";
 
@@ -167,6 +199,7 @@ export {
 	kCurrentWorker,
 	getNodeCompat,
 	WorkerdStructuredLogSchema as workerdStructuredLogSchema,
+	INTROSPECT_SQLITE_METHOD,
 } from "./core";
 export type {
 	CompiledModuleRule,
@@ -193,12 +226,18 @@ export * from "./secret-store";
 export * from "./email";
 export * from "./analytics-engine";
 export * from "./ai";
+export * from "./ai-search";
 export * from "./browser-rendering";
 export * from "./dispatch-namespace";
 export * from "./images";
+export * from "./stream";
 export * from "./vectorize";
+export * from "./vpc-networks";
 export * from "./vpc-services";
 export * from "./mtls";
 export * from "./hello-world";
+export * from "./flagship";
+export * from "./artifacts";
 export * from "./worker-loader";
 export * from "./media";
+export * from "./version-metadata";

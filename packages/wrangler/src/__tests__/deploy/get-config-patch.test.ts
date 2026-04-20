@@ -1,11 +1,11 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { getConfigPatch } from "../../deploy/config-diffs";
 
 // Note: __old (as well as *__deleted) is the value in the remote config, __new is the value in the local one, so we do want the
 //       __old one to override the __new
 
 describe("getConfigPatch", () => {
-	test("top level config updated", () => {
+	test("top level config updated", ({ expect }) => {
 		expect(
 			getConfigPatch({
 				preview_urls: {
@@ -18,7 +18,7 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	test("env var present remotely but deleted locally", () => {
+	test("env var present remotely but deleted locally", ({ expect }) => {
 		expect(
 			getConfigPatch({
 				vars: {
@@ -32,7 +32,7 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	test("updated value of env var", () => {
+	test("updated value of env var", ({ expect }) => {
 		expect(
 			getConfigPatch({
 				vars: {
@@ -49,7 +49,7 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	test("env var renamed", () => {
+	test("env var renamed", ({ expect }) => {
 		expect(
 			getConfigPatch({
 				vars: {
@@ -64,7 +64,7 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	test("deleted version metadata binding", () => {
+	test("deleted version metadata binding", ({ expect }) => {
 		expect(
 			getConfigPatch({
 				version_metadata: {
@@ -81,7 +81,7 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	test("deleted KV binding (only one KV)", () => {
+	test("deleted KV binding (only one KV)", ({ expect }) => {
 		expect(
 			getConfigPatch({
 				kv_namespaces: [
@@ -104,7 +104,7 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	test("deleted second KV binding in the kv_namespaces array", () => {
+	test("deleted second KV binding in the kv_namespaces array", ({ expect }) => {
 		expect(
 			getConfigPatch({
 				kv_namespaces: [
@@ -131,7 +131,7 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	test("modified KV binding", () => {
+	test("modified KV binding", ({ expect }) => {
 		expect(
 			getConfigPatch({
 				kv_namespaces: [
@@ -155,7 +155,9 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	test("deleted second KV binding in the kv_namespaces array and modified first one", () => {
+	test("deleted second KV binding in the kv_namespaces array and modified first one", ({
+		expect,
+	}) => {
 		expect(
 			getConfigPatch({
 				kv_namespaces: [
@@ -182,7 +184,9 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	test("deleted KV binding from the middle of the kv_namespaces array", () => {
+	test("deleted KV binding from the middle of the kv_namespaces array", ({
+		expect,
+	}) => {
 		expect(
 			getConfigPatch({
 				kv_namespaces: [
@@ -214,7 +218,9 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	test("flipped observability.logs.invocation_logs off (nested field)", () => {
+	test("flipped observability.logs.invocation_logs off (nested field)", ({
+		expect,
+	}) => {
 		expect(
 			getConfigPatch({
 				observability: {
@@ -235,7 +241,7 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	test("renamed version metadata binding", () => {
+	test("renamed version metadata binding", ({ expect }) => {
 		expect(
 			getConfigPatch({
 				version_metadata: {
@@ -252,7 +258,7 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	test("configs get added/set to a target environment", () => {
+	test("configs get added/set to a target environment", ({ expect }) => {
 		/*
 			Note: in the remote configuration we don't know if a value is actually there because
 			      inherited from the top level or not, so to be safe we just add it to the target

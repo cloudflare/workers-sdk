@@ -1,9 +1,13 @@
-import assert from "node:assert";
-import { describe, expect, it } from "vitest";
-import { convertConfigBindingsToStartWorkerBindings } from "../../../api/startDevWorker/utils";
+import { assert, describe, it } from "vitest";
+import {
+	convertConfigBindingsToStartWorkerBindings,
+	convertStartDevOptionsToBindings,
+} from "../../../api/startDevWorker/utils";
 
 describe("convertConfigBindingsToStartWorkerBindings", () => {
-	it("converts config bindings into startWorker bindings", async () => {
+	it("converts config bindings into startWorker bindings", async ({
+		expect,
+	}) => {
 		const result = convertConfigBindingsToStartWorkerBindings({
 			kv_namespaces: [
 				{
@@ -55,6 +59,7 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 					service: "my-service",
 				},
 			],
+			stream: { binding: "MY_STREAM" },
 			mtls_certificates: [
 				{
 					binding: "MTLS",
@@ -78,6 +83,16 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 				{
 					binding: "MY_VPC_SERVICE",
 					service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+				},
+			],
+			vpc_networks: [
+				{
+					binding: "MY_VPC_NETWORK",
+					tunnel_id: "0399295b-b3ac-7760-8246-bca40877b3e1",
+				},
+				{
+					binding: "MY_MESH_NETWORK",
+					network_id: "some-network-id",
 				},
 			],
 		});
@@ -122,6 +137,9 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 				service: "my-service",
 				type: "service",
 			},
+			MY_STREAM: {
+				type: "stream",
+			},
 			MY_VECTORIZE: {
 				index_name: "idx",
 				type: "vectorize",
@@ -135,10 +153,20 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 				service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
 				type: "vpc_service",
 			},
+			MY_VPC_NETWORK: {
+				tunnel_id: "0399295b-b3ac-7760-8246-bca40877b3e1",
+				type: "vpc_network",
+			},
+			MY_MESH_NETWORK: {
+				network_id: "some-network-id",
+				type: "vpc_network",
+			},
 		});
 	});
 
-	it("prioritizes preview values compared to their standard counterparts", async () => {
+	it("prioritizes preview values compared to their standard counterparts", async ({
+		expect,
+	}) => {
 		const result = convertConfigBindingsToStartWorkerBindings({
 			ai: undefined,
 			browser: undefined,
@@ -189,5 +217,18 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 		assert(result);
 		assert(result.MY_DB.type === "d1");
 		expect(result.MY_DB.database_id).toBe("staging-db-id");
+	});
+
+	it("converts programmatic dev stream bindings", ({ expect }) => {
+		const result = convertStartDevOptionsToBindings({
+			stream: { binding: "MY_STREAM", remote: true },
+		});
+
+		expect(result).toEqual({
+			MY_STREAM: {
+				remote: true,
+				type: "stream",
+			},
+		});
 	});
 });

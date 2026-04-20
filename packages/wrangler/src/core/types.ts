@@ -153,6 +153,12 @@ export type CommandDefinition<
 		printBanner?: boolean | ((args: HandlerArgs<NamedArgDefs>) => boolean);
 
 		/**
+		 * Opt-in to printing a metrics banner for this command.
+		 * @default false
+		 */
+		printMetricsBanner?: boolean;
+
+		/**
 		 * By default, wrangler will print warnings about the Wrangler configuration file.
 		 * Set this value to `false` to skip printing these warnings.
 		 */
@@ -190,6 +196,12 @@ export type CommandDefinition<
 		 * using the `-e|--env` cli flag, show a warning suggesting that one should instead be specified.
 		 */
 		warnIfMultipleEnvsConfiguredButNoneSpecified?: boolean;
+
+		/**
+		 * Opt out of sending metrics for this command
+		 * @default true
+		 */
+		sendMetrics?: boolean;
 	};
 
 	/**
@@ -232,10 +244,25 @@ export type AliasDefinition = {
 	metadata?: Partial<Metadata>;
 };
 
+export type InternalCommandDefinition = {
+	type: "command";
+	command: Command;
+} & CommandDefinition;
+
+export type InternalNamespaceDefinition = {
+	type: "namespace";
+	command: Command;
+} & NamespaceDefinition;
+
+export type InternalAliasDefinition = {
+	type: "alias";
+	command: Command;
+} & AliasDefinition;
+
 export type InternalDefinition =
-	| ({ type: "command"; command: Command } & CommandDefinition)
-	| ({ type: "namespace"; command: Command } & NamespaceDefinition)
-	| ({ type: "alias"; command: Command } & AliasDefinition);
+	| InternalCommandDefinition
+	| InternalNamespaceDefinition
+	| InternalAliasDefinition;
 export type DefinitionTreeNode = {
 	definition?: InternalDefinition;
 	subtree: DefinitionTree;

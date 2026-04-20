@@ -1,0 +1,33 @@
+name: "Rerun Code Owners"
+
+# Trigger: a review is submitted or dismissed on a pull request.
+#
+# Goal: re-run the "Run Codeowners Plus" check from the main codeowners.yml
+# workflow (which is triggered by pull_request_target) so it re-evaluates
+# approval status after the review change.
+#
+# Why a two-workflow design?
+# -------------------------
+# For fork PRs, pull_request_review gives a read-only GITHUB_TOKEN and no
+# access to secrets. Unlike labeled/unlabeled events there is no
+# pull_request_review variant of pull_request_target, so we cannot get a
+# privileged token in a single workflow. Instead this workflow simply needs
+# to *exist and succeed* — the companion workflow
+# (rerun-codeowners-privileged.yml) is triggered by the workflow_run event
+# when THIS workflow completes. workflow_run always runs from the default
+# branch with full permissions, and it reads the PR head SHA directly from
+# github.event.workflow_run.head_sha (GitHub-provided metadata, not
+# controllable by fork code).
+on:
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions: {}
+
+jobs:
+  trigger:
+    name: "Trigger Privileged Rerun"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log trigger
+        run: echo "Review event on ${{ github.event.pull_request.html_url }} — privileged rerun will follow."

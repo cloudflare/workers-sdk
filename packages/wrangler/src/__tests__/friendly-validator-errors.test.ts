@@ -1,7 +1,7 @@
 import { ParseError } from "@cloudflare/workers-utils";
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { FormData } from "undici";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import * as checkCommands from "../check/commands";
 import { logger } from "../logger";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
@@ -23,7 +23,9 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 		return () => (logger.loggerLevel = loggerLevel); // Restore original logger level after test
 	});
 
-	it("cleanly reports a startup error even if bundle analysis fails", async () => {
+	it("cleanly reports a startup error even if bundle analysis fails", async ({
+		expect,
+	}) => {
 		mockAnalyseBundle.mockRejectedValue(new Error("workerd profiling failed"));
 
 		expect(
@@ -45,7 +47,7 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 			`);
 
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "An error occurred while trying to locally profile the Worker: Error: workerd profiling failed",
 			  "err": "",
 			  "info": "",
@@ -55,7 +57,9 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 		`);
 	});
 
-	it("reports size errors even if bundle analysis would fail", async () => {
+	it("reports size errors even if bundle analysis would fail", async ({
+		expect,
+	}) => {
 		mockAnalyseBundle.mockRejectedValue(new Error("workerd profiling failed"));
 
 		expect(
@@ -78,7 +82,7 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 			"
 		`);
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
@@ -88,7 +92,9 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 		`);
 	});
 
-	it("includes profile information when bundle analysis succeeds", async () => {
+	it("includes profile information when bundle analysis succeeds", async ({
+		expect,
+	}) => {
 		mockAnalyseBundle.mockResolvedValue({ nodes: [], samples: [] });
 
 		const message = await helpIfErrorIsSizeOrScriptStartup(
@@ -110,7 +116,7 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 			A CPU Profile of your Worker's startup phase has been written to .wrangler/tmp/startup-profile-<HASH>/worker.cpuprofile - load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph."
 		`);
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",

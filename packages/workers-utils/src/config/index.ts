@@ -12,9 +12,28 @@ export type {
 	RawConfig,
 	RawDevConfig,
 } from "./config";
+
+export type ConfigBindingOptions = Pick<
+	Config,
+	| "ai"
+	| "browser"
+	| "d1_databases"
+	| "dispatch_namespaces"
+	| "durable_objects"
+	| "queues"
+	| "r2_buckets"
+	| "services"
+	| "kv_namespaces"
+	| "mtls_certificates"
+	| "vectorize"
+	| "workflows"
+	| "vpc_services"
+>;
 export type {
+	CacheOptions,
 	ConfigModuleRuleType,
 	Environment,
+	PreviewsConfig,
 	RawEnvironment,
 } from "./environment";
 
@@ -90,23 +109,6 @@ export type ReadConfigOptions = ResolveConfigPathOptions & {
 	// If set to `true`, the `main` field is not converted to an absolute path
 	preserveOriginalMain?: boolean;
 };
-
-export type ConfigBindingOptions = Pick<
-	Config,
-	| "ai"
-	| "browser"
-	| "d1_databases"
-	| "dispatch_namespaces"
-	| "durable_objects"
-	| "queues"
-	| "r2_buckets"
-	| "services"
-	| "kv_namespaces"
-	| "mtls_certificates"
-	| "vectorize"
-	| "workflows"
-	| "vpc_services"
->;
 
 const parseRawConfigFile = (configPath: string): RawConfig => {
 	if (configPath.endsWith(".toml")) {

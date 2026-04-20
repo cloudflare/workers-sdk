@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, test, vi } from "vitest";
 import * as files from "../files";
 import {
 	addJSONComment,
@@ -22,16 +22,16 @@ describe("json helpers", () => {
 	});
 
 	describe("readJSONWithComments", () => {
-		test("reads and parses JSON file with comments", () => {
+		test("reads and parses JSON file with comments", ({ expect }) => {
 			mockReadFile.mockReturnValue(
-				'{\n/* a comment */\n "name": "test"\n}\n// post-comment',
+				'{\n/* a comment */\n "name": "test"\n}\n// post-comment'
 			);
 			const result = readJSONWithComments("/path/to/file.json");
 			expect(mockReadFile).toHaveBeenCalledWith("/path/to/file.json");
 			expect(result).toEqual({ name: "test" });
 		});
 
-		test("using a reviver function", () => {
+		test("using a reviver function", ({ expect }) => {
 			mockReadFile.mockReturnValue(
 				JSON.stringify({
 					name: "test",
@@ -41,12 +41,11 @@ describe("json helpers", () => {
 						value: "<REPLACE_ME>",
 						list: [["<REPLACE_ME>"], "<DO_NOT_REPLACE_ME>"],
 					},
-				}),
+				})
 			);
 
-			const result = readJSONWithComments(
-				"/path/to/file.json",
-				(_key, value) => (value === "<REPLACE_ME>" ? "REPLACED" : value),
+			const result = readJSONWithComments("/path/to/file.json", (_key, value) =>
+				value === "<REPLACE_ME>" ? "REPLACED" : value
 			);
 			expect(mockReadFile).toHaveBeenCalledWith("/path/to/file.json");
 			expect(result).toEqual({
@@ -62,14 +61,14 @@ describe("json helpers", () => {
 	});
 
 	describe("writeJSONWithComments", () => {
-		test("stringifies and writes JSON object with comments", () => {
+		test("stringifies and writes JSON object with comments", ({ expect }) => {
 			mockReadFile.mockReturnValue(
-				'{\n\t/* a comment */\n\t"name": "test"\n}\n// post-comment',
+				'{\n\t/* a comment */\n\t"name": "test"\n}\n// post-comment'
 			);
 			const result = readJSONWithComments("/path/to/file.json");
 			writeJSONWithComments("/path/to/file.json", result);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -82,14 +81,14 @@ describe("json helpers", () => {
 	});
 
 	describe("addJSONComment", () => {
-		test("adds a string comment to JSON object", () => {
+		test("adds a string comment to JSON object", ({ expect }) => {
 			const jsonObject = { name: "foo" } as unknown as CommentObject;
 
 			addJSONComment(jsonObject, "before:name", " This is a comment ");
 
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -99,7 +98,7 @@ describe("json helpers", () => {
 			`);
 		});
 
-		test("adds multiple comments to JSON object", () => {
+		test("adds multiple comments to JSON object", ({ expect }) => {
 			const jsonObject = { name: "foo" } as unknown as CommentObject;
 
 			addJSONComment(jsonObject, "before:name", [
@@ -109,7 +108,7 @@ describe("json helpers", () => {
 
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -120,7 +119,7 @@ describe("json helpers", () => {
 			`);
 		});
 
-		test("appends to existing comments", () => {
+		test("appends to existing comments", ({ expect }) => {
 			const jsonObject = { name: "foo" } as unknown as CommentObject;
 			addJSONComment(jsonObject, "before:name", " This is a comment ");
 
@@ -128,7 +127,7 @@ describe("json helpers", () => {
 
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -141,16 +140,18 @@ describe("json helpers", () => {
 	});
 
 	describe("appendJSONProperty", () => {
-		test("appends property to JSON object, maintaining comments", () => {
+		test("appends property to JSON object, maintaining comments", ({
+			expect,
+		}) => {
 			mockReadFile.mockReturnValue(
-				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment',
+				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment'
 			);
 			let jsonObject = readJSONWithComments("/path/to/file.json");
 			jsonObject = appendJSONProperty(jsonObject, "newProp", "newValue");
 			expect(jsonObject).toEqual({ existing: "value", newProp: "newValue" });
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -164,16 +165,18 @@ describe("json helpers", () => {
 	});
 
 	describe("insertJSONProperty", () => {
-		test("inserts property at the beginning of JSON object, maintaining comments", () => {
+		test("inserts property at the beginning of JSON object, maintaining comments", ({
+			expect,
+		}) => {
 			mockReadFile.mockReturnValue(
-				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment',
+				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment'
 			);
 			let jsonObject = readJSONWithComments("/path/to/file.json");
 			jsonObject = insertJSONProperty(jsonObject, "newProp", "newValue");
 			expect(jsonObject).toEqual({ existing: "value", newProp: "newValue" });
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{

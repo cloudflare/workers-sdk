@@ -1,5 +1,106 @@
 # @cloudflare/workflows-shared
 
+## 0.9.0
+
+### Minor Changes
+
+- [#13351](https://github.com/cloudflare/workers-sdk/pull/13351) [`3788983`](https://github.com/cloudflare/workers-sdk/commit/3788983378793781829798bb10ae710fb452f746) Thanks [@pombosilva](https://github.com/pombosilva)! - Add `step` and `config` properties to the workflow step context
+
+  The callback passed to `step.do()` now receives `ctx.step` (with `name` and `count`) and `ctx.config` (the fully resolved step configuration with defaults merged in), in addition to the existing `ctx.attempt`.
+
+## 0.8.0
+
+### Minor Changes
+
+- [#13145](https://github.com/cloudflare/workers-sdk/pull/13145) [`5b60405`](https://github.com/cloudflare/workers-sdk/commit/5b60405954a2866a67920f5a7a48748861f58a60) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Add support for ReadableStream on workflow steps. This allows users to overcome the 1MB limit per step output.
+
+  `ReadableStream<Uint8Array>` is already serializable on the workers platform. This feature makes it native to workflows as well by persisting each chunk and replaying it if needed
+
+## 0.7.2
+
+### Patch Changes
+
+- [#13086](https://github.com/cloudflare/workers-sdk/pull/13086) [`d4c6158`](https://github.com/cloudflare/workers-sdk/commit/d4c61587094a2a2ceee35acfb3619c95e0a993fe) Thanks [@pombosilva](https://github.com/pombosilva)! - Add Workflows support to the local explorer UI.
+
+  The local explorer (`/cdn-cgi/explorer/`) now includes a full Workflows dashboard for viewing and managing workflow instances during local development.
+
+  UI features:
+
+  - Workflow instance list with status badges, creation time, action buttons, and pagination
+  - Status summary bar with instance counts per status
+  - Status filter dropdown and search
+  - Instance detail page with step history, params/output cards, error display, and expandable step details
+  - Create instance dialog with optional ID and JSON params
+
+## 0.7.1
+
+### Patch Changes
+
+- [#12985](https://github.com/cloudflare/workers-sdk/pull/12985) [`17a57e6`](https://github.com/cloudflare/workers-sdk/commit/17a57e641798dca0b298bd91dcdcef6be30d38b6) Thanks [@pombosilva](https://github.com/pombosilva)! - Fix `waitForEvent` delivering events to stale waiters after timeout.
+
+  When a `step.waitForEvent()` call timed out, its resolver was not removed from the workflow's internal waiters map. This meant the next `step.waitForEvent()` for the same event type would have its incoming event consumed by the dead resolver instead of the live one, causing the workflow to hang indefinitely.
+
+## 0.7.0
+
+### Minor Changes
+
+- [#12881](https://github.com/cloudflare/workers-sdk/pull/12881) [`8729f3d`](https://github.com/cloudflare/workers-sdk/commit/8729f3d0954c5325a0a28da6fa87129411819787) Thanks [@pombosilva](https://github.com/pombosilva)! - Workflow instances now support pause, resume, restart, and terminate in local dev.
+
+  ```js
+  const instance = await env.MY_WORKFLOW.create({
+    id: "my-instance",
+  });
+
+  await instance.pause(); // pauses after the current step completes
+  await instance.resume(); // resumes from where it left off
+  await instance.restart(); // restarts the workflow from the beginning
+  await instance.terminate(); // terminates the workflow immediately
+  ```
+
+## 0.6.0
+
+### Minor Changes
+
+- [#11970](https://github.com/cloudflare/workers-sdk/pull/11970) [`f235827`](https://github.com/cloudflare/workers-sdk/commit/f235827c10c36996c89f50af76aac48326f42b0c) Thanks [@pombosilva](https://github.com/pombosilva)! - Adds step context with attempt count to step.do() callbacks.
+
+  Workflow step callbacks now receive a context object containing the current attempt number (1-indexed).
+  This allows developers to access which retry attempt is currently executing.
+
+  Example:
+
+  ```ts
+  await step.do("my-step", async (ctx) => {
+    // ctx.attempt is 1 on first try, 2 on first retry, etc.
+    console.log(`Attempt ${ctx.attempt}`);
+  });
+  ```
+
+## 0.5.0
+
+### Minor Changes
+
+- [#12622](https://github.com/cloudflare/workers-sdk/pull/12622) [`bf9cb3d`](https://github.com/cloudflare/workers-sdk/commit/bf9cb3d32d4710dbefd7d3c412aefe1558ecd57e) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Add configurable step limits for Workflows
+
+  You can now set a maximum number of steps for a Workflow instance via the `limits.steps` configuration in your Wrangler config. When a Workflow instance exceeds this limit, it will fail with an error indicating the limit was reached.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+    "workflows": [
+      {
+        "binding": "MY_WORKFLOW",
+        "name": "my-workflow",
+        "class_name": "MyWorkflow",
+        "limits": {
+          "steps": 5000
+        }
+      }
+    ]
+  }
+  ```
+
+  The `steps` value must be an integer between 1 and 25,000. If not specified, the default limit of 10,000 steps is used. Step limits are also enforced in local development via `wrangler dev`.
+
 ## 0.4.0
 
 ### Minor Changes
@@ -14,7 +115,7 @@
   ```ts
   // First wait for the workflow instance to complete:
   await expect(
-  	instance.waitForStatus({ status: "complete" })
+    instance.waitForStatus({ status: "complete" })
   ).resolves.not.toThrow();
 
   // Then, get its output
@@ -22,7 +123,7 @@
 
   // Or for errored workflow instances, get their error:
   await expect(
-  	instance.waitForStatus({ status: "errored" })
+    instance.waitForStatus({ status: "errored" })
   ).resolves.not.toThrow();
   const error = await instance.getError();
   ```

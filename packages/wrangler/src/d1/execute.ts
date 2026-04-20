@@ -21,7 +21,7 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
-import splitSqlQuery from "./splitter";
+import { splitSqlQuery } from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type {
 	Database,
@@ -33,7 +33,7 @@ import type { D1Result } from "@cloudflare/workers-types/experimental";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export type QueryResult = {
-	results: Record<string, string | number | boolean>[];
+	results: Record<string, string | number | boolean | null>[];
 	success: boolean;
 	meta?: {
 		duration?: number;
@@ -91,7 +91,7 @@ export const d1ExecuteCommand = createCommand({
 		},
 		json: {
 			type: "boolean",
-			description: "Return output as clean JSON",
+			description: "Return output as JSON",
 			default: false,
 		},
 		preview: {
@@ -278,7 +278,9 @@ async function executeLocally({
 	input: ExecuteInput;
 	persistTo: string | undefined;
 }) {
-	const localDB = getDatabaseInfoFromConfig(config, name);
+	const localDB = getDatabaseInfoFromConfig(config, name, {
+		requireDatabaseId: false,
+	});
 	if (!localDB) {
 		throw new UserError(
 			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`
@@ -325,9 +327,6 @@ async function executeLocally({
 				Object.entries(row).map(([key, value]) => {
 					if (Array.isArray(value)) {
 						value = `[${value.join(", ")}]`;
-					}
-					if (value === null) {
-						value = "null";
 					}
 					return [key, value];
 				})
@@ -611,7 +610,7 @@ function logResult(r: QueryResult | QueryResult[]) {
 		? r
 				.map((d: QueryResult) => d.meta?.duration || 0)
 				.reduce((a, b) => a + b, 0)
-		: r.meta?.duration ?? 0;
+		: (r.meta?.duration ?? 0);
 
 	logger.log(`🚣 Executed ${commandsCount} in ${durationMs.toFixed(2)}ms`);
 }

@@ -12,7 +12,6 @@ import {
 	getContainerDevOptions,
 	LocalRuntimeController,
 } from "./LocalRuntimeController";
-import { convertCfWorkerInitBindingsToBindings } from "./utils";
 import type { RemoteProxySession } from "../remoteBindings";
 import type { ControllerBus } from "./BaseController";
 import type { BundleCompleteEvent } from "./events";
@@ -119,16 +118,13 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 			if (data.config.dev?.remote !== false) {
 				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
-				const { maybeStartOrUpdateRemoteProxySession } = await import(
-					"../remoteBindings"
-				);
+				const { maybeStartOrUpdateRemoteProxySession } =
+					await import("../remoteBindings");
 				const remoteProxySession = await maybeStartOrUpdateRemoteProxySession(
 					{
 						name: configBundle.name,
 						complianceRegion: configBundle.complianceRegion,
-						bindings:
-							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
-							{},
+						bindings: configBundle.bindings ?? {},
 					},
 					this.#remoteProxySessionsData.get(data.config.name) ?? null
 				);
@@ -175,6 +171,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;
 				}
+
 				this.#currentContainerBuildId = data.config.dev.containerBuildId;
 				// Miniflare will have logged 'Ready on...' before the containers are built, but that is actually the proxy server :/
 				// The actual user worker's miniflare instance is blocked until the containers are built

@@ -1,13 +1,13 @@
+import { runCommand } from "@cloudflare/cli/command";
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
-import { runCommand } from "helpers/command";
 import { readFile } from "helpers/files";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, test, vi } from "vitest";
 import { offerToDeploy, runDeploy } from "../deploy";
 import { chooseAccount, wranglerLogin } from "../wrangler/accounts";
 import { createTestContext } from "./helpers";
 
-vi.mock("helpers/command");
+vi.mock("@cloudflare/cli/command");
 vi.mock("../wrangler/accounts");
 vi.mock("@cloudflare/cli/interactive");
 vi.mock("which-pm-runs");
@@ -16,13 +16,13 @@ vi.mock("helpers/files");
 const mockInsideGitRepo = (isInside = true) => {
 	if (isInside) {
 		vi.mocked(runCommand).mockResolvedValueOnce(
-			"On branch master\nnothing to commit, working tree clean",
+			"On branch master\nnothing to commit, working tree clean"
 		);
 	} else {
 		vi.mocked(runCommand).mockRejectedValueOnce(
 			new Error(
-				"fatal: not a git repository (or any of the parent directories): .git",
-			),
+				"fatal: not a git repository (or any of the parent directories): .git"
+			)
 		);
 	}
 };
@@ -37,13 +37,13 @@ describe("deploy helpers", async () => {
 			}
 
 			throw new Error(
-				"If you don't want to accept the default, you must mock this function.",
+				"If you don't want to accept the default, you must mock this function."
 			);
 		});
 	});
 
 	describe("offerToDeploy", async () => {
-		test("user selects yes and succeeds", async () => {
+		test("user selects yes and succeeds", async ({ expect }) => {
 			const ctx = createTestContext();
 			ctx.template.platform = "pages";
 			// mock the user selecting yes when asked to deploy
@@ -54,7 +54,7 @@ describe("deploy helpers", async () => {
 			await expect(offerToDeploy(ctx)).resolves.toBe(true);
 		});
 
-		test("project is undeployable (simple binding)", async () => {
+		test("project is undeployable (simple binding)", async ({ expect }) => {
 			const ctx = createTestContext();
 			// Can't deploy things with bindings (yet!)
 			vi.mocked(readFile).mockReturnValue(`binding = "MY_QUEUE"`);
@@ -65,7 +65,7 @@ describe("deploy helpers", async () => {
 			expect(wranglerLogin).not.toHaveBeenCalled();
 		});
 
-		test("project is undeployable (complex binding)", async () => {
+		test("project is undeployable (complex binding)", async ({ expect }) => {
 			const ctx = createTestContext();
 			// Can't deploy things with bindings (yet!)
 			vi.mocked(readFile).mockReturnValue(`
@@ -82,7 +82,9 @@ describe("deploy helpers", async () => {
 			expect(wranglerLogin).not.toHaveBeenCalled();
 		});
 
-		test("assets project is deployable (no other bindings)", async () => {
+		test("assets project is deployable (no other bindings)", async ({
+			expect,
+		}) => {
 			const ctx = createTestContext();
 			vi.mocked(readFile).mockReturnValue(`
 				assets = { directory = "./dist", binding = "ASSETS" }
@@ -98,7 +100,7 @@ describe("deploy helpers", async () => {
 			expect(wranglerLogin).toHaveBeenCalled();
 		});
 
-		test("--no-deploy from command line", async () => {
+		test("--no-deploy from command line", async ({ expect }) => {
 			const ctx = createTestContext();
 			ctx.args.deploy = false;
 			ctx.template.platform = "pages";
@@ -109,7 +111,7 @@ describe("deploy helpers", async () => {
 			expect(wranglerLogin).not.toHaveBeenCalled();
 		});
 
-		test("wrangler login failure", async () => {
+		test("wrangler login failure", async ({ expect }) => {
 			const ctx = createTestContext();
 			ctx.template.platform = "pages";
 			vi.mocked(inputPrompt).mockResolvedValueOnce(true);
@@ -124,7 +126,7 @@ describe("deploy helpers", async () => {
 		const commitMsg = "initial commit";
 		const deployedUrl = "https://test-project-1234.pages.dev";
 
-		test("happy path", async () => {
+		test("happy path", async ({ expect }) => {
 			const ctx = createTestContext();
 			ctx.account = { id: "test1234", name: "Test Account" };
 			ctx.template.platform = "pages";
@@ -132,25 +134,25 @@ describe("deploy helpers", async () => {
 			mockInsideGitRepo(false);
 			vi.mocked(runCommand).mockResolvedValueOnce("");
 			vi.mocked(readFile).mockImplementationOnce(
-				() => `{"type":"deploy", "targets":["${deployedUrl}"]}`,
+				() => `{"type":"deploy", "targets":["${deployedUrl}"]}`
 			);
 			await runDeploy(ctx);
 			expect(runCommand).toHaveBeenCalledWith(
 				["npm", "run", "deploy", "--", "--commit-message", `"${commitMsg}"`],
-				expect.any(Object),
+				expect.any(Object)
 			);
 			expect(ctx.deployment.url).toBe(deployedUrl);
 		});
 
-		test("no account in ctx", async () => {
+		test("no account in ctx", async ({ expect }) => {
 			const ctx = createTestContext();
 			ctx.account = undefined;
 			await expect(() => runDeploy(ctx)).rejects.toThrow(
-				"Failed to read Cloudflare account.",
+				"Failed to read Cloudflare account."
 			);
 		});
 
-		test("Failed deployment", async () => {
+		test("Failed deployment", async ({ expect }) => {
 			const ctx = createTestContext();
 			ctx.account = { id: "test1234", name: "Test Account" };
 			ctx.template.platform = "pages";
@@ -159,7 +161,7 @@ describe("deploy helpers", async () => {
 			vi.mocked(runCommand).mockResolvedValueOnce("");
 
 			await expect(() => runDeploy(ctx)).rejects.toThrow(
-				"Failed to find deployment url.",
+				"Failed to find deployment url."
 			);
 		});
 	});

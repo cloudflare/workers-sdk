@@ -1,9 +1,9 @@
-import { SELF } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { exports } from "cloudflare:workers";
+import { it } from "vitest";
 
-it("sends message to pipeline", async () => {
+it("sends message to pipeline", async ({ expect }) => {
 	// Send data to the Pipeline
-	let response = await SELF.fetch("https://example.com/ingest", {
+	const response = await exports.default.fetch("https://example.com/ingest", {
 		method: "POST",
 		body: "value",
 	});

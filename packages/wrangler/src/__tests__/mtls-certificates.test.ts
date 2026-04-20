@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it, test } from "vitest";
+import { beforeEach, describe, it, test } from "vitest";
 import {
 	deleteMTlsCertificate,
 	getMTlsCertificate,
@@ -162,7 +162,9 @@ describe("wrangler", () => {
 	describe("mtls-certificates", () => {
 		describe("api", () => {
 			describe("uploadMTlsCertificate", () => {
-				it("should call mtls_certificates upload endpoint", async () => {
+				it("should call mtls_certificates upload endpoint", async ({
+					expect,
+				}) => {
 					const mock = mockPostMTlsCertificate({
 						id: "1234",
 						issuer: "example.com...",
@@ -189,7 +191,9 @@ describe("wrangler", () => {
 			});
 
 			describe("uploadMTlsCertificateFromFs", () => {
-				it("should fail to read cert and key files when missing", async () => {
+				it("should fail to read cert and key files when missing", async ({
+					expect,
+				}) => {
 					await expect(
 						uploadMTlsCertificateFromFs(
 							COMPLIANCE_REGION_CONFIG_UNKNOWN,
@@ -205,7 +209,9 @@ describe("wrangler", () => {
 					);
 				});
 
-				it("should read cert and key from disk and call mtls_certificates upload endpoint", async () => {
+				it("should read cert and key from disk and call mtls_certificates upload endpoint", async ({
+					expect,
+				}) => {
 					const mock = mockPostMTlsCertificate({
 						id: "1234",
 						issuer: "example.com...",
@@ -233,7 +239,9 @@ describe("wrangler", () => {
 			});
 
 			describe("listMTlsCertificates", () => {
-				it("should call mtls_certificates list endpoint", async () => {
+				it("should call mtls_certificates list endpoint", async ({
+					expect,
+				}) => {
 					const mock = mockGetMTlsCertificates([
 						{
 							id: "1234",
@@ -272,7 +280,7 @@ describe("wrangler", () => {
 			});
 
 			describe("getMTlsCertificate", () => {
-				it("calls get mtls_certificates endpoint", async () => {
+				it("calls get mtls_certificates endpoint", async ({ expect }) => {
 					const mock = mockGetMTlsCertificate({
 						id: "1234",
 						name: "cert one",
@@ -297,7 +305,9 @@ describe("wrangler", () => {
 			});
 
 			describe("getMTlsCertificateByName", () => {
-				it("calls list mtls_certificates endpoint with name", async () => {
+				it("calls list mtls_certificates endpoint with name", async ({
+					expect,
+				}) => {
 					const mock = mockGetMTlsCertificates([
 						{
 							id: "1234",
@@ -322,7 +332,7 @@ describe("wrangler", () => {
 					expect(mock.calls).toEqual(1);
 				});
 
-				it("errors when a certificate cannot be found", async () => {
+				it("errors when a certificate cannot be found", async ({ expect }) => {
 					const mock = mockGetMTlsCertificates([]);
 
 					await expect(
@@ -338,7 +348,9 @@ describe("wrangler", () => {
 					expect(mock.calls).toEqual(1);
 				});
 
-				it("errors when multiple certificates are found", async () => {
+				it("errors when multiple certificates are found", async ({
+					expect,
+				}) => {
 					const mock = mockGetMTlsCertificates([
 						{
 							id: "1234",
@@ -373,7 +385,7 @@ describe("wrangler", () => {
 			});
 
 			describe("deleteMTlsCertificate", () => {
-				test("calls delete mts_certificates endpoint", async () => {
+				test("calls delete mts_certificates endpoint", async ({ expect }) => {
 					const mock = mockDeleteMTlsCertificate();
 
 					await deleteMTlsCertificate(
@@ -389,7 +401,7 @@ describe("wrangler", () => {
 
 		describe("commands", () => {
 			describe("help", () => {
-				it("should show the correct help text", async () => {
+				it("should show the correct help text", async ({ expect }) => {
 					await runWrangler("mtls-certificate --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
@@ -414,7 +426,7 @@ describe("wrangler", () => {
 			});
 
 			describe("upload", () => {
-				test("uploads certificate and key from file", async () => {
+				test("uploads certificate and key from file", async ({ expect }) => {
 					writeFileSync("cert.pem", "BEGIN CERTIFICATE...");
 					writeFileSync("key.pem", "BEGIN PRIVATE KEY...");
 
@@ -439,7 +451,9 @@ describe("wrangler", () => {
 					);
 				});
 
-				test("uploads certificate and key from file with name", async () => {
+				test("uploads certificate and key from file with name", async ({
+					expect,
+				}) => {
 					writeFileSync("cert.pem", "BEGIN CERTIFICATE...");
 					writeFileSync("key.pem", "BEGIN PRIVATE KEY...");
 
@@ -466,7 +480,7 @@ describe("wrangler", () => {
 			});
 
 			describe("list", () => {
-				it("should list certificates", async () => {
+				it("should list certificates", async ({ expect }) => {
 					mockGetMTlsCertificates();
 
 					await runWrangler("mtls-certificate list");
@@ -497,7 +511,7 @@ describe("wrangler", () => {
 			});
 
 			describe("delete", () => {
-				it("should require --id or --name", async () => {
+				it("should require --id or --name", async ({ expect }) => {
 					await runWrangler("mtls-certificate delete");
 
 					expect(std.err).toMatchInlineSnapshot(`
@@ -512,7 +526,9 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should require not providing --id and --name", async () => {
+				it("should require not providing --id and --name", async ({
+					expect,
+				}) => {
 					await runWrangler("mtls-certificate delete --id 1234 --name mycert");
 
 					expect(std.err).toMatchInlineSnapshot(`
@@ -527,7 +543,7 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should delete certificate by id", async () => {
+				it("should delete certificate by id", async ({ expect }) => {
 					mockGetMTlsCertificate({ name: "my-cert" });
 					mockDeleteMTlsCertificate();
 
@@ -549,7 +565,7 @@ describe("wrangler", () => {
 					);
 				});
 
-				it("should delete certificate by name", async () => {
+				it("should delete certificate by name", async ({ expect }) => {
 					mockGetMTlsCertificates([{ id: "1234", name: "my-cert" }]);
 					mockDeleteMTlsCertificate();
 
@@ -571,7 +587,9 @@ describe("wrangler", () => {
 					);
 				});
 
-				it("should not delete when certificate cannot be found by name", async () => {
+				it("should not delete when certificate cannot be found by name", async ({
+					expect,
+				}) => {
 					mockGetMTlsCertificates([]);
 
 					await expect(
@@ -587,7 +605,9 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should not delete when many certificates are found by name", async () => {
+				it("should not delete when many certificates are found by name", async ({
+					expect,
+				}) => {
 					mockGetMTlsCertificates([
 						{
 							id: "1234",
@@ -620,7 +640,7 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should not delete when confirmation fails", async () => {
+				it("should not delete when confirmation fails", async ({ expect }) => {
 					mockGetMTlsCertificate({ id: "1234" });
 
 					mockConfirm({

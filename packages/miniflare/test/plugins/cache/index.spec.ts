@@ -3,24 +3,26 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import {
 	CACHE_PLUGIN_NAME,
-	HeadersInit,
 	LogLevel,
 	Miniflare,
-	MiniflareOptions,
-	ReplaceWorkersTypes,
 	Request,
-	RequestInit,
 	Response,
 } from "miniflare";
-import { beforeEach, expect, onTestFinished, test } from "vitest";
+import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
-	MiniflareTestContext,
 	useDispose,
 	useTmp,
 } from "../../test-shared";
+import type { MiniflareTestContext } from "../../test-shared";
 import type { CacheStorage } from "@cloudflare/workers-types/experimental";
+import type {
+	HeadersInit,
+	MiniflareOptions,
+	ReplaceWorkersTypes,
+	RequestInit,
+} from "miniflare";
 
 interface Context extends MiniflareTestContext {
 	caches: ReplaceWorkersTypes<CacheStorage>;
@@ -76,7 +78,7 @@ beforeEach(async () => {
 	ctx.defaultObject = await getControlStub(ctx.mf);
 });
 
-test("match returns cached responses", async () => {
+test("match returns cached responses", async ({ expect }) => {
 	const cache = ctx.caches.default;
 	const key = "http://localhost/cache-hit";
 
@@ -113,7 +115,7 @@ test("match returns cached responses", async () => {
 	expect(res.status).toBe(200);
 	expect(await res.text()).toBe("buffered");
 });
-test("match returns empty response", async () => {
+test("match returns empty response", async ({ expect }) => {
 	const cache = ctx.caches.default;
 	const key = "http://localhost/cache-empty";
 	const resToCache = new Response(null, {
@@ -125,13 +127,13 @@ test("match returns empty response", async () => {
 	expect(res.status).toBe(200);
 	expect(await res.text()).toBe("");
 });
-test("match returns nothing on cache miss", async () => {
+test("match returns nothing on cache miss", async ({ expect }) => {
 	const cache = ctx.caches.default;
 	const key = "http://localhost/cache-miss";
 	const res = await cache.match(key);
 	expect(res).toBeUndefined();
 });
-test("match respects If-None-Match header", async () => {
+test("match respects If-None-Match header", async ({ expect }) => {
 	const cache = ctx.caches.default;
 	const key = "http://localhost/cache-if-none-match";
 	const resToCache = new Response("body", {
@@ -158,7 +160,7 @@ test("match respects If-None-Match header", async () => {
 	res = await ifNoneMatch("    *   ");
 	expect(res?.status).toBe(304);
 });
-test("match respects If-Modified-Since header", async () => {
+test("match respects If-Modified-Since header", async ({ expect }) => {
 	const cache = ctx.caches.default;
 	const key = "http://localhost/cache-if-modified-since";
 	const resToCache = new Response("body", {
@@ -185,7 +187,7 @@ test("match respects If-Modified-Since header", async () => {
 	res = await ifModifiedSince("13 Sep 2022 13:00:00 GMT");
 	expect(res?.status).toBe(200);
 });
-test("match respects Range header", async () => {
+test("match respects Range header", async ({ expect }) => {
 	const cache = ctx.caches.default;
 	const key = "http://localhost/cache-range";
 	const resToCache = new Response("0123456789", {
@@ -243,7 +245,7 @@ test("match respects Range header", async () => {
 	assert(res !== undefined);
 	expect(res.status).toBe(416);
 });
-test("put overrides existing responses", async () => {
+test("put overrides existing responses", async ({ expect }) => {
 	const cache = ctx.caches.default;
 	const defaultObject = ctx.defaultObject;
 	const stmts = sqlStmts(defaultObject);
@@ -270,7 +272,10 @@ test("put overrides existing responses", async () => {
 });
 
 // Note this helper must be used with serial tests to avoid races.
-async function testExpire(opts: { headers: HeadersInit; expectedTtl: number }) {
+async function testExpire(
+	expect: ExpectStatic,
+	opts: { headers: HeadersInit; expectedTtl: number }
+) {
 	const cache = ctx.caches.default;
 	const defaultObject = ctx.defaultObject;
 
@@ -288,31 +293,34 @@ async function testExpire(opts: { headers: HeadersInit; expectedTtl: number }) {
 	res = await cache.match(key);
 	expect(res).toBeUndefined();
 }
-test("expires after Expires", async () => {
-	await testExpire({
+test("expires after Expires", async ({ expect }) => {
+	await testExpire(expect, {
 		headers: {
 			Expires: new Date(1_000_000 + 2_000).toUTCString(),
 		},
 		expectedTtl: 2000,
 	});
 });
-test("expires after Cache-Control's max-age", async () => {
-	await testExpire({
+test("expires after Cache-Control's max-age", async ({ expect }) => {
+	await testExpire(expect, {
 		headers: { "Cache-Control": "max-age=1" },
 		expectedTtl: 1000,
 	});
 });
-test("expires after Cache-Control's s-maxage", async () => {
-	await testExpire({
+test("expires after Cache-Control's s-maxage", async ({ expect }) => {
+	await testExpire(expect, {
 		headers: { "Cache-Control": "s-maxage=1, max-age=10" },
 		expectedTtl: 1000,
 	});
 });
 
-async function testIsCached(opts: {
-	headers: Record<string, string>;
-	cached: boolean;
-}) {
+async function testIsCached(
+	expect: ExpectStatic,
+	opts: {
+		headers: Record<string, string>;
+		cached: boolean;
+	}
+) {
 	const cache = ctx.caches.default;
 
 	// Use different key for each invocation of this helper
@@ -330,32 +338,34 @@ async function testIsCached(opts: {
 	const res = await cache.match(key);
 	expect(res?.status).toBe(opts.cached ? 200 : undefined);
 }
-test("put does not cache with private Cache-Control", async () => {
-	await testIsCached({
+test("put does not cache with private Cache-Control", async ({ expect }) => {
+	await testIsCached(expect, {
 		headers: { "Cache-Control": "private" },
 		cached: false,
 	});
 });
-test("put does not cache with no-store Cache-Control", async () => {
-	await testIsCached({
+test("put does not cache with no-store Cache-Control", async ({ expect }) => {
+	await testIsCached(expect, {
 		headers: { "Cache-Control": "no-store" },
 		cached: false,
 	});
 });
-test("put does not cache with no-cache Cache-Control", async () => {
-	await testIsCached({
+test("put does not cache with no-cache Cache-Control", async ({ expect }) => {
+	await testIsCached(expect, {
 		headers: { "Cache-Control": "no-cache" },
 		cached: false,
 	});
 });
-test("put does not cache with Set-Cookie", async () => {
-	await testIsCached({
+test("put does not cache with Set-Cookie", async ({ expect }) => {
+	await testIsCached(expect, {
 		headers: { "Set-Cookie": "key=value" },
 		cached: false,
 	});
 });
-test("put caches with Set-Cookie if Cache-Control private=set-cookie", async () => {
-	await testIsCached({
+test("put caches with Set-Cookie if Cache-Control private=set-cookie", async ({
+	expect,
+}) => {
+	await testIsCached(expect, {
 		headers: {
 			"Cache-Control": "private=set-cookie",
 			"Set-Cookie": "key=value",
@@ -364,7 +374,7 @@ test("put caches with Set-Cookie if Cache-Control private=set-cookie", async () 
 	});
 });
 
-test("delete returns if deleted", async () => {
+test("delete returns if deleted", async ({ expect }) => {
 	const cache = ctx.caches.default;
 	const key = "http://localhost/cache-delete";
 	const resToCache = new Response("body", {
@@ -381,7 +391,7 @@ test("delete returns if deleted", async () => {
 	expect(deleted).toBe(false);
 });
 
-test("operations respect cf.cacheKey", async () => {
+test("operations respect cf.cacheKey", async ({ expect }) => {
 	const cache = ctx.caches.default;
 	const key = "http://localhost/cache-cf-key-unused";
 
@@ -409,7 +419,7 @@ test("operations respect cf.cacheKey", async () => {
 	const deleted2 = await cache.delete(key2);
 	expect(deleted2).toBe(true);
 });
-test("operations log warning on workers.dev subdomain", async () => {
+test("operations log warning on workers.dev subdomain", async ({ expect }) => {
 	// Set option, then reset after test
 	await ctx.setOptions({ cacheWarnUsage: true });
 	onTestFinished(() => ctx.setOptions({}));
@@ -435,7 +445,7 @@ test("operations log warning on workers.dev subdomain", async () => {
 	await defaultObject.waitForFakeTasks();
 	expect(ctx.log.logsAtLevel(LogLevel.WARN)).toEqual([]);
 });
-test("operations persist cached data", async () => {
+test("operations persist cached data", async ({ expect }) => {
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp();
 	const opts: MiniflareOptions = {
@@ -474,7 +484,7 @@ test("operations persist cached data", async () => {
 	const deleted = await cache.delete(key);
 	expect(deleted).toBe(true);
 });
-test("operations are no-ops when caching disabled", async () => {
+test("operations are no-ops when caching disabled", async ({ expect }) => {
 	// Set option, then reset after test
 	await ctx.setOptions({ cache: false });
 	onTestFinished(() => ctx.setOptions({}));
@@ -497,7 +507,7 @@ test("operations are no-ops when caching disabled", async () => {
 	expect(deleted).toBe(false);
 });
 
-test("default and named caches are disjoint", async () => {
+test("default and named caches are disjoint", async ({ expect }) => {
 	const key = "http://localhost/cache-disjoint";
 	const defaultCache = ctx.caches.default;
 	const namedCache1 = await ctx.caches.open("1");
@@ -525,4 +535,66 @@ test("default and named caches are disjoint", async () => {
 	expect(deletedDefault).toBe(true);
 	expect(deleted1).toBe(true);
 	expect(deleted2).toBe(true);
+});
+
+test("purgeCache clears all default cache entries", async ({ expect }) => {
+	const cache = ctx.caches.default;
+	const headers = { "Cache-Control": "max-age=3600" };
+
+	// Add multiple items to cache with unique keys for this test
+	await cache.put(
+		"http://localhost/purge-test-key1",
+		new Response("body1", { headers })
+	);
+	await cache.put(
+		"http://localhost/purge-test-key2",
+		new Response("body2", { headers })
+	);
+	await cache.put(
+		"http://localhost/purge-test-key3",
+		new Response("body3", { headers })
+	);
+
+	// Verify items are cached
+	expect(await cache.match("http://localhost/purge-test-key1")).toBeDefined();
+	expect(await cache.match("http://localhost/purge-test-key2")).toBeDefined();
+	expect(await cache.match("http://localhost/purge-test-key3")).toBeDefined();
+
+	// Purge cache - there may be entries from previous tests as well
+	const result = await ctx.mf.purgeCache();
+	expect(result).toBeGreaterThanOrEqual(3);
+
+	// Verify our test entries are gone
+	expect(await cache.match("http://localhost/purge-test-key1")).toBeUndefined();
+	expect(await cache.match("http://localhost/purge-test-key2")).toBeUndefined();
+	expect(await cache.match("http://localhost/purge-test-key3")).toBeUndefined();
+});
+
+test("purgeCache clears specific named cache", async ({ expect }) => {
+	const defaultCache = ctx.caches.default;
+	const namedCache = await ctx.caches.open("my-cache");
+	const headers = { "Cache-Control": "max-age=3600" };
+
+	await defaultCache.put(
+		"http://localhost/default",
+		new Response("default", { headers })
+	);
+	await namedCache.put(
+		"http://localhost/named",
+		new Response("named", { headers })
+	);
+
+	// Purge only the named cache
+	await ctx.mf.purgeCache("my-cache");
+
+	// Default cache should be intact
+	expect(await defaultCache.match("http://localhost/default")).toBeDefined();
+	// Named cache should be cleared
+	expect(await namedCache.match("http://localhost/named")).toBeUndefined();
+});
+
+test("purgeCache returns 0 when cache is already empty", async ({ expect }) => {
+	// Use a unique named cache that hasn't been used by other tests
+	const result = await ctx.mf.purgeCache("empty-test-cache");
+	expect(result).toBe(0);
 });

@@ -1,13 +1,13 @@
 import { existsSync, rmSync } from "node:fs";
 import nodePath from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { runCommand } from "@cloudflare/cli/command";
 import semver from "semver";
 import whichPmRuns from "which-pm-runs";
 import {
 	testPackageManager,
 	testPackageManagerVersion,
 } from "../../e2e/helpers/constants";
-import { runCommand } from "./command";
 import type { C3Context } from "types";
 
 /**
@@ -39,7 +39,7 @@ export const detectPackageManager = () => {
 					npm: "pnpm",
 					npx: "pnpm",
 					dlx: ["pnpm", "dlx"],
-				};
+				} as const;
 			}
 			return {
 				name,
@@ -47,7 +47,7 @@ export const detectPackageManager = () => {
 				npm: "pnpm",
 				npx: "pnpx",
 				dlx: ["pnpx"],
-			};
+			} as const;
 		case "yarn":
 			if (semver.gt(version, "2.0.0")) {
 				return {
@@ -56,7 +56,7 @@ export const detectPackageManager = () => {
 					npm: "yarn",
 					npx: "yarn",
 					dlx: ["yarn", "dlx"],
-				};
+				} as const;
 			}
 			return {
 				name,
@@ -64,7 +64,7 @@ export const detectPackageManager = () => {
 				npm: "yarn",
 				npx: "yarn",
 				dlx: ["yarn"],
-			};
+			} as const;
 		case "bun":
 			return {
 				name,
@@ -72,7 +72,7 @@ export const detectPackageManager = () => {
 				npm: "bun",
 				npx: "bunx",
 				dlx: ["bunx"],
-			};
+			} as const;
 
 		case "npm":
 		default:
@@ -82,7 +82,7 @@ export const detectPackageManager = () => {
 				npm: "npm",
 				npx: "npx",
 				dlx: ["npx"],
-			};
+			} as const;
 	}
 };
 
@@ -105,7 +105,20 @@ export const rectifyPmMismatch = async (ctx: C3Context) => {
 
 	const nodeModulesPath = nodePath.join(ctx.project.path, "node_modules");
 	if (existsSync(nodeModulesPath)) {
-		rmSync(nodeModulesPath, { recursive: true });
+		// Note: this is intentionally inlined rather than importing `removeDirSync`
+		// from `@cloudflare/workers-utils`. That package's barrel export pulls in CJS
+		// dependencies (e.g. `xdg-app-paths`) that break when Vite bundles code into
+		// ESM — the shimmed `require()` calls throw "Dynamic require of 'path' is not
+		// supported". While the production build (esbuild → CJS) would handle this
+		// fine, the e2e tests import this file through Vitest which uses Vite's bundler.
+		// Keep aligned with `removeDirSync()` in `packages/workers-utils/src/fs-helpers.ts`.
+		// eslint-disable-next-line workers-sdk/no-direct-recursive-rm
+		rmSync(nodeModulesPath, {
+			recursive: true,
+			force: true,
+			maxRetries: 5,
+			retryDelay: 100,
+		});
 	}
 
 	const lockfilePath = nodePath.join(ctx.project.path, "package-lock.json");

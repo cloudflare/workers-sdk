@@ -1,40 +1,42 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.21.2",
+	"version": "1.32.3",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
-		"workers",
 		"cloudflare-workers",
 		"vite",
-		"vite-plugin"
+		"vite-plugin",
+		"workers"
 	],
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/vite-plugin-cloudflare#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"license": "MIT",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/vite-plugin-cloudflare"
 	},
-	"license": "MIT",
-	"sideEffects": false,
+	"files": [
+		"dist"
+	],
 	"type": "module",
+	"sideEffects": false,
+	"main": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.mts",
 			"import": "./dist/index.mjs"
 		}
 	},
-	"main": "./dist/index.mjs",
-	"types": "./dist/index.d.mts",
-	"files": [
-		"dist"
-	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
 		"build": "tsdown",
-		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc --build",
 		"dev": "tsdown --watch",
 		"test": "vitest run",
@@ -57,28 +59,27 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@remix-run/node-fetch-server": "^0.8.0",
-		"@types/node": "catalog:vite-plugin",
+		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
 		"@types/ws": "^8.5.13",
 		"defu": "^6.1.4",
 		"get-port": "^7.1.0",
 		"magic-string": "^0.30.12",
 		"mlly": "^1.7.4",
+		"open": "catalog:default",
 		"picocolors": "^1.1.1",
 		"semver": "^7.7.1",
-		"tinyglobby": "^0.2.12",
-		"tree-kill": "^1.2.2",
+		"tinyglobby": "catalog:default",
+		"tree-kill": "catalog:default",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
+		"vite-legacy": "npm:vite@7.1.12",
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"vite": "^6.1.0 || ^7.0.0",
+		"vite": "^6.1.0 || ^7.0.0 || ^8.0.0",
 		"wrangler": "workspace:^"
-	},
-	"publishConfig": {
-		"access": "public"
 	},
 	"workers-sdk": {
 		"prerelease": true

@@ -6,7 +6,7 @@ import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
 import {
 	configFileName,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	formatConfigSnippet,
 	getCIGeneratePreviewAlias,
 	getCIOverrideName,
@@ -34,6 +34,10 @@ import {
 } from "../deployment-bundle/module-collection";
 import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
+import {
+	addRequiredSecretsInheritBindings,
+	handleMissingSecretsError,
+} from "../deployment-bundle/secrets-validation";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -52,6 +56,7 @@ import { writeOutput } from "../output";
 import { getWranglerTmpDir } from "../paths";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
+import { parseBulkInputToObject } from "../secret";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -104,6 +109,7 @@ type Props = {
 	tag: string | undefined;
 	message: string | undefined;
 	previewAlias: string | undefined;
+	secretsFile: string | undefined;
 };
 
 export const versionsUploadCommand = createCommand({
@@ -266,6 +272,12 @@ export const versionsUploadCommand = createCommand({
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		"secrets-file": {
+			describe:
+				"Path to a file containing secrets to upload with the version (JSON or .env format). Secrets from previous deployments will not be deleted - see `--keep-secrets`",
+			type: "string",
+			requiresArg: true,
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -368,7 +380,7 @@ export const versionsUploadCommand = createCommand({
 				useServiceEnvironments: useServiceEnvironments(config),
 				env: args.env,
 				compatibilityDate: args.latest
-					? formatCompatibilityDate(new Date())
+					? getTodaysCompatDate()
 					: args.compatibilityDate,
 				compatibilityFlags: args.compatibilityFlags,
 				vars: cliVars,
@@ -391,6 +403,7 @@ export const versionsUploadCommand = createCommand({
 				previewAlias: previewAlias,
 				experimentalAutoCreate: args.experimentalAutoCreate,
 				outFile: args.outfile,
+				secretsFile: args.secretsFile,
 			});
 
 		writeOutput({
@@ -473,7 +486,7 @@ export default async function versionsUpload(props: Props): Promise<{
 		props.compatibilityFlags ?? config.compatibility_flags;
 
 	if (!compatibilityDate) {
-		const compatibilityDateStr = formatCompatibilityDate(new Date());
+		const compatibilityDateStr = getTodaysCompatDate();
 
 		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
@@ -579,6 +592,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const uploadSourceMaps =
 			props.uploadSourceMaps ?? config.upload_source_maps;
 
+		const bindings = getBindings(config);
+
+		// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
+		for (const [bindingName, value] of Object.entries(props.vars ?? {})) {
+			bindings[bindingName] = {
+				type: "plain_text",
+				value,
+				hidden: true,
+			};
+		}
+
 		const {
 			modules,
 			dependencies,
@@ -676,10 +700,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
-		const bindings = getBindings({
-			...config,
-			vars: { ...config.vars, ...props.vars },
-		});
+		if (props.secretsFile) {
+			const secretsResult = await parseBulkInputToObject(props.secretsFile);
+			if (secretsResult) {
+				for (const [secretName, secretValue] of Object.entries(
+					secretsResult.content
+				)) {
+					bindings[secretName] = {
+						type: "secret_text",
+						value: secretValue,
+					};
+				}
+			}
+		}
+
+		addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
 
 		const placement = parseConfigPlacement(config);
 
@@ -693,16 +728,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main,
-			bindings,
 			migrations,
 			modules,
+			containers: config.containers,
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
 			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars: props.keepVars ?? false,
-			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
+			// we never delete secret bindings when uploading, even if we are setting secrets from a file
+			// so inherit all unchanged secrets from the previous Worker Version
+			keepSecrets: true,
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
@@ -722,34 +759,35 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							run_worker_first: props.assetsOptions.run_worker_first,
 						}
 					: undefined,
-			logpush: undefined, // both logpush and observability are not supported in versions upload
+			logpush: undefined, // logpush and observability are non-versioned settings
 			observability: undefined,
+			cache: config.cache, // cache is a versioned setting
 		};
+
+		if (config.containers && config.containers.length > 0) {
+			logger.warn(
+				`Your Worker has Containers configured. Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions. These changes will only take effect after running \`wrangler deploy\`.`
+			);
+		}
 
 		await printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
 		);
 
-		// mask anything that was overridden in cli args
-		// so that we don't log potential secrets into the terminal
-		const maskedVars = { ...bindings.vars };
-		for (const key of Object.keys(maskedVars)) {
-			if (maskedVars[key] !== config.vars[key]) {
-				// This means it was overridden in cli args
-				// so let's mask it
-				maskedVars[key] = "(hidden)";
-			}
-		}
-
 		let workerBundle: FormData;
 
 		if (props.dryRun) {
-			workerBundle = createWorkerUploadForm(worker);
+			workerBundle = createWorkerUploadForm(worker, bindings, {
+				dryRun: true,
+				unsafe: config.unsafe,
+			});
 			printBindings(
-				{ ...bindings, vars: maskedVars },
+				bindings,
 				config.tail_consumers,
-				config.streaming_tail_consumers
+				config.streaming_tail_consumers,
+				undefined,
+				{ unsafeMetadata: config.unsafe?.metadata }
 			);
 		} else {
 			assert(accountId, "Missing accountId");
@@ -762,7 +800,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.config
 				);
 			}
-			workerBundle = createWorkerUploadForm(worker);
+			workerBundle = createWorkerUploadForm(worker, bindings, {
+				unsafe: config.unsafe,
+			});
 
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
@@ -776,28 +816,37 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						metadata: {
 							has_preview: boolean;
 						};
-					}>(config, `${workerUrl}/versions`, {
-						method: "POST",
-						body: workerBundle,
-						headers: await getMetricsUsageHeaders(config.send_metrics),
-					})
+					}>(
+						config,
+						`${workerUrl}/versions`,
+						{
+							method: "POST",
+							body: workerBundle,
+							headers: await getMetricsUsageHeaders(config.send_metrics),
+						},
+						new URLSearchParams({ bindings_inherit: "strict" })
+					)
 				);
 
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
 				printBindings(
-					{ ...bindings, vars: maskedVars },
+					bindings,
 					config.tail_consumers,
-					config.streaming_tail_consumers
+					config.streaming_tail_consumers,
+					undefined,
+					{ unsafeMetadata: config.unsafe?.metadata }
 				);
 				versionId = result.id;
 				hasPreview = result.metadata.has_preview;
 			} catch (err) {
 				if (!bindingsPrinted) {
 					printBindings(
-						{ ...bindings, vars: maskedVars },
+						bindings,
 						config.tail_consumers,
-						config.streaming_tail_consumers
+						config.streaming_tail_consumers,
+						undefined,
+						{ unsafeMetadata: config.unsafe?.metadata }
 					);
 				}
 
@@ -810,6 +859,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				if (message) {
 					logger.error(message);
 				}
+
+				handleMissingSecretsError(err, config, { type: "upload" });
 
 				// Apply source mapping to validation startup errors if possible
 				if (

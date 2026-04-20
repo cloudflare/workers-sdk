@@ -17,9 +17,7 @@ runs:
   using: "composite"
   steps:
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: 9.12.0
+      uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
 
     - name: Install Node.js ${{ inputs.node-version }}
       uses: actions/setup-node@v4
@@ -38,12 +36,11 @@ runs:
       if: inputs.turbo-api
       shell: bash
       run: |
-        touch .env
-        echo TURBO_API=${{ inputs.turbo-api }} >> .env
-        echo TURBO_TEAM=${{ inputs.turbo-team }} >> .env
-        echo TURBO_TOKEN=${{ inputs.turbo-token }} >> .env
-        echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ inputs.turbo-signature }} >> .env
-        echo TURBO_ENV_MODE=loose >> .env
+        echo "TURBO_API=${{ inputs.turbo-api }}" >> $GITHUB_ENV
+        echo "TURBO_TEAM=${{ inputs.turbo-team }}" >> $GITHUB_ENV
+        echo "TURBO_TOKEN=${{ inputs.turbo-token }}" >> $GITHUB_ENV
+        echo "TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ inputs.turbo-signature }}" >> $GITHUB_ENV
+        echo "TURBO_ENV_MODE=loose" >> $GITHUB_ENV
 
     - name: Install NPM Dependencies
       shell: bash

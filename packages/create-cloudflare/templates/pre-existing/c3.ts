@@ -3,8 +3,8 @@ import { cp, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { runCommand } from "@cloudflare/cli/command";
 import { processArgument } from "helpers/args";
-import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { chooseAccount, wranglerLogin } from "../../src/wrangler/accounts";
 import type { TemplateConfig } from "../../src/templates";
@@ -23,7 +23,7 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 					"Please specify the name of the existing worker in this account?",
 				label: "worker",
 				defaultValue: ctx.project.name,
-			},
+			}
 		);
 	}
 
@@ -46,16 +46,16 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 			env: { CLOUDFLARE_ACCOUNT_ID: ctx.account?.id },
 			startText: "Downloading existing worker files",
 			doneText: `${brandColor("downloaded")} ${dim(
-				`existing "${ctx.args.existingScript}" worker files`,
+				`existing "${ctx.args.existingScript}" worker files`
 			)}`,
-		},
+		}
 	);
 
 	// copy src/* files from the downloaded Worker
 	await cp(
 		join(tempdir, ctx.args.existingScript, "src"),
 		join(ctx.project.path, "src"),
-		{ recursive: true },
+		{ recursive: true }
 	);
 
 	// copy wrangler config file from the downloaded Worker
@@ -73,7 +73,7 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 
 	if (!configFileCopied) {
 		throw new Error(
-			`No wrangler configuration file found in downloaded worker. Expected one of: ${configFiles.join(", ")}`,
+			`No wrangler configuration file found in downloaded worker. Expected one of: ${configFiles.join(", ")}`
 		);
 	}
 }

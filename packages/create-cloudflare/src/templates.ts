@@ -10,8 +10,6 @@ import degit from "degit";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
 import {
-	appendFile,
-	directoryExists,
 	hasTsConfig,
 	readFile,
 	readJSON,
@@ -50,6 +48,7 @@ import vikeExperimentalTemplate from "templates/vike/experimental-c3";
 import vueTemplate from "templates/vue/c3";
 import wakuTemplate from "templates/waku/c3";
 import wakuExperimentalTemplate from "templates/waku/experimental-c3";
+import { getAgentsMd } from "./agents-md";
 import { isInsideGitRepo } from "./git";
 import { validateProjectDirectory, validateTemplateUrl } from "./validators";
 import type { Option } from "@cloudflare/cli/interactive";
@@ -135,7 +134,7 @@ export type TemplateConfig = {
 	 * */
 	transformPackageJson?: (
 		pkgJson: PackageJson,
-		ctx: C3Context,
+		ctx: C3Context
 	) => Promise<Record<string, string | object>>;
 
 	/** An array of compatibility flags to be specified when deploying to pages (unused for workers) */
@@ -190,7 +189,7 @@ const defaultSelectVariant = async (ctx: C3Context) => {
  */
 const templateSupportsLanguage = (
 	config: TemplateConfig,
-	lang: string,
+	lang: string
 ): boolean => {
 	const { copyFiles } = config;
 	// If the template has no copyFiles or uses a single path, it doesn't support variants.
@@ -212,7 +211,7 @@ const filterTemplatesByLanguage = <
 	T extends TemplateConfig | MultiPlatformTemplateConfig,
 >(
 	templates: Record<string, T>,
-	lang: string | undefined,
+	lang: string | undefined
 ): Record<string, T> => {
 	// If no language is specified, return all templates
 	if (!lang) {
@@ -228,7 +227,7 @@ const filterTemplatesByLanguage = <
 				);
 			}
 			return templateSupportsLanguage(config, lang);
-		}),
+		})
 	) as Record<string, T>;
 };
 
@@ -323,7 +322,7 @@ export function getHelloWorldTemplateMap({
 
 export function getNamesAndDescriptions(templateMap: TemplateMap) {
 	return Array.from(Object.entries(templateMap)).map(
-		([name, { description }]) => ({ name, description }),
+		([name, { description }]) => ({ name, description })
 	);
 }
 
@@ -355,7 +354,7 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 		case "webFramework":
 			// Add backwards compatibility for the older argument (webFramework)
 			warn(
-				"The `webFramework` type is deprecated and will be removed in a future version. Please use `web-framework` instead.",
+				"The `webFramework` type is deprecated and will be removed in a future version. Please use `web-framework` instead."
 			);
 			args.category ??= "web-framework";
 			args.type = "web-framework";
@@ -380,7 +379,7 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 
 		if (args.lang !== undefined) {
 			throw new Error(
-				"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
+				"The `--ts` argument cannot be specified in conjunction with the `--lang` argument"
 			);
 		}
 
@@ -395,7 +394,7 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
  */
 export const createContext = async (
 	args: Partial<C3Args>,
-	prevArgs?: Partial<C3Args>,
+	prevArgs?: Partial<C3Args>
 ): Promise<C3Context> => {
 	// Derive all correlated arguments first so we can skip some prompts
 	deriveCorrelatedArgs(args);
@@ -404,17 +403,17 @@ export const createContext = async (
 
 	const frameworkMap = filterTemplatesByLanguage(
 		getFrameworkMap({ experimental }),
-		args.lang,
+		args.lang
 	);
 	const helloWorldTemplateMap = filterTemplatesByLanguage(
 		getHelloWorldTemplateMap({
 			experimental,
 		}),
-		args.lang,
+		args.lang
 	);
 	const otherTemplateMap = filterTemplatesByLanguage(
 		getOtherTemplateMap({ experimental }),
-		args.lang,
+		args.lang
 	);
 
 	let linesPrinted = 0;
@@ -422,7 +421,7 @@ export const createContext = async (
 	// Allows the users to go back to the previous step
 	// By moving the cursor up to a certain line and clearing the screen
 	const goBack = async (
-		from: "category" | "type" | "framework" | "lang" | "platform",
+		from: "category" | "type" | "framework" | "lang" | "platform"
 	) => {
 		const currentArgs = { ...args };
 
@@ -509,7 +508,7 @@ export const createContext = async (
 		},
 		// This is used only if the type is `pre-existing`
 		{ label: "Others", value: "others", hidden: true },
-		backOption,
+		backOption
 	);
 
 	const category = await processArgument(args, "category", {
@@ -540,7 +539,7 @@ export const createContext = async (
 				}
 				return acc;
 			},
-			[],
+			[]
 		);
 
 		const framework = await processArgument(args, "framework", {
@@ -564,7 +563,7 @@ export const createContext = async (
 
 		if ("platformVariants" in frameworkConfig) {
 			const availableVariants = Object.entries(
-				frameworkConfig.platformVariants,
+				frameworkConfig.platformVariants
 			).filter(([, config]) => !config.hidden) as [
 				keyof typeof frameworkConfig.platformVariants,
 				TemplateConfig,
@@ -612,7 +611,7 @@ export const createContext = async (
 			frameworkConfig = frameworkConfig.platformVariants[platform];
 		} else if (args.platform && args.platform !== frameworkConfig.platform) {
 			throw new Error(
-				`The ${frameworkConfig.displayName} framework doesn't support the "${args.platform}" platform`,
+				`The ${frameworkConfig.displayName} framework doesn't support the "${args.platform}" platform`
 			);
 		}
 
@@ -634,13 +633,13 @@ export const createContext = async (
 					description,
 					hidden: hidden,
 				};
-			},
+			}
 		);
 
 		// If no templates are available for the specified language, throw an error
 		if (args.lang && templateOptions.length === 0) {
 			throw new Error(
-				`No templates available for language "${args.lang}" in the "${category}" category.`,
+				`No templates available for language "${args.lang}" in the "${category}" category.`
 			);
 		}
 
@@ -752,7 +751,7 @@ export async function copyTemplateFiles(ctx: C3Context) {
 
 		if (!variantInfo) {
 			throw new Error(
-				`Unknown variant provided: ${JSON.stringify(variant ?? "")}`,
+				`Unknown variant provided: ${JSON.stringify(variant ?? "")}`
 			);
 		}
 
@@ -775,6 +774,21 @@ export async function copyTemplateFiles(ctx: C3Context) {
 	}
 
 	s.stop(`${brandColor("files")} ${dim("copied to project directory")}`);
+}
+
+/**
+ * Writes AGENTS.md to the project directory if one doesn't already exist.
+ * This file provides AI coding agents with retrieval-led guidance for Cloudflare APIs.
+ * Remote templates may include their own AGENTS.md with custom guidance, which we preserve.
+ *
+ * @param projectPath - The path to the project directory
+ */
+export function writeAgentsMd(projectPath: string): void {
+	const agentsMdPath = join(projectPath, "AGENTS.md");
+	if (existsSync(agentsMdPath)) {
+		return;
+	}
+	writeFile(agentsMdPath, getAgentsMd());
 }
 
 export const processRemoteTemplate = async (args: Partial<C3Args>) => {
@@ -826,7 +840,7 @@ const validateTemplateSrcDirectory = (path: string, config: TemplateConfig) => {
 			!existsSync(wranglerJsoncPath)
 		) {
 			throw new Error(
-				`create-cloudflare templates must contain a "wrangler.toml" or "wrangler.json(c)" file.`,
+				`create-cloudflare templates must contain a "wrangler.toml" or "wrangler.json(c)" file.`
 			);
 		}
 	}
@@ -834,7 +848,7 @@ const validateTemplateSrcDirectory = (path: string, config: TemplateConfig) => {
 	const pkgJsonPath = resolve(path, "package.json");
 	if (!existsSync(pkgJsonPath)) {
 		throw new Error(
-			`create-cloudflare templates must contain a "package.json" file.`,
+			`create-cloudflare templates must contain a "package.json" file.`
 		);
 	}
 };
@@ -885,7 +899,7 @@ export async function downloadRemoteTemplate(
 	options: {
 		mode?: "git" | "tar";
 		intoFolder?: string;
-	} = {},
+	} = {}
 ) {
 	const ghRegex =
 		/^https:\/\/github\.com\/(?<user>[\w-]+)\/(?<repo>[\w.-]+)(?:\/(?<path>.*))?$/;
@@ -921,7 +935,9 @@ export async function downloadRemoteTemplate(
 					pathSegments.splice(0, 2); // Remove 'tree' and branch name
 				}
 
-				src = `github:${user}/${repo}${pathSegments.length > 0 ? `/${pathSegments.join("/")}` : ""}${branch ? `#${branch}` : ""}`;
+				src = `github:${user}/${repo}${
+					pathSegments.length > 0 ? `/${pathSegments.join("/")}` : ""
+				}${branch ? `#${branch}` : ""}`;
 			}
 		}
 
@@ -1019,13 +1035,13 @@ export const getTemplatePath = (ctx: C3Context) => {
 };
 
 export const isVariantInfo = (
-	copyFiles: CopyFiles,
+	copyFiles: CopyFiles
 ): copyFiles is VariantInfo => {
 	return "path" in (copyFiles as VariantInfo);
 };
 
 export const getCopyFilesDestinationDir = (
-	ctx: C3Context,
+	ctx: C3Context
 ): undefined | string => {
 	const { copyFiles } = ctx.template;
 
@@ -1038,103 +1054,4 @@ export const getCopyFilesDestinationDir = (
 	}
 
 	return copyFiles.destinationDir(ctx);
-};
-
-export const addWranglerToGitIgnore = (ctx: C3Context) => {
-	const gitIgnorePath = `${ctx.project.path}/.gitignore`;
-	const gitIgnorePreExisted = existsSync(gitIgnorePath);
-
-	const gitDirExists = directoryExists(`${ctx.project.path}/.git`);
-
-	if (!gitIgnorePreExisted && !gitDirExists) {
-		// if there is no .gitignore file and neither a .git directory
-		// then bail as the project is likely not targeting/using git
-		return;
-	}
-
-	if (!gitIgnorePreExisted) {
-		writeFile(gitIgnorePath, "");
-	}
-
-	const existingGitIgnoreContent = readFile(gitIgnorePath);
-	const wranglerGitIgnoreFilesToAdd: string[] = [];
-
-	const hasDotWrangler = existingGitIgnoreContent.match(
-		/^\/?\.wrangler(\/|\s|$)/m,
-	);
-	if (!hasDotWrangler) {
-		wranglerGitIgnoreFilesToAdd.push(".wrangler");
-	}
-
-	const hasDotDevDotVars = existingGitIgnoreContent.match(
-		/^\/?\.dev\.vars\*(\s|$)/m,
-	);
-	if (!hasDotDevDotVars) {
-		wranglerGitIgnoreFilesToAdd.push(".dev.vars*");
-	}
-
-	const hasDotDevVarsExample = existingGitIgnoreContent.match(
-		/^!\/?\.dev\.vars\.example(\s|$)/m,
-	);
-	if (!hasDotDevVarsExample) {
-		wranglerGitIgnoreFilesToAdd.push("!.dev.vars.example");
-	}
-
-	/**
-	 * We check for the following type of occurrences:
-	 *
-	 * ```
-	 * .env
-	 * .env*
-	 * .env.<local|production|staging|...>
-	 * .env*.<local|production|staging|...>
-	 * ```
-	 *
-	 * Any of these may alone on a line or be followed by a space and a trailing comment:
-	 *
-	 * ```
-	 * .env.<local|production|staging> # some trailing comment
-	 * ```
-	 */
-	const hasDotEnv = existingGitIgnoreContent.match(
-		/^\/?\.env\*?(\..*?)?(\s|$)/m,
-	);
-	if (!hasDotEnv) {
-		wranglerGitIgnoreFilesToAdd.push(".env*");
-	}
-
-	const hasDotEnvExample = existingGitIgnoreContent.match(
-		/^!\/?\.env\.example(\s|$)/m,
-	);
-	if (!hasDotEnvExample) {
-		wranglerGitIgnoreFilesToAdd.push("!.env.example");
-	}
-
-	if (wranglerGitIgnoreFilesToAdd.length === 0) {
-		return;
-	}
-
-	const s = spinner();
-	s.start("Adding Wrangler files to the .gitignore file");
-
-	const linesToAppend = [
-		"",
-		...(!existingGitIgnoreContent.match(/\n\s*$/) ? [""] : []),
-	];
-
-	if (!hasDotWrangler && wranglerGitIgnoreFilesToAdd.length > 1) {
-		linesToAppend.push("# wrangler files");
-	}
-
-	wranglerGitIgnoreFilesToAdd.forEach((line) => linesToAppend.push(line));
-
-	linesToAppend.push("");
-
-	appendFile(gitIgnorePath, linesToAppend.join("\n"));
-
-	s.stop(
-		`${brandColor(gitIgnorePreExisted ? "updated" : "created")} ${dim(
-			".gitignore file",
-		)}`,
-	);
 };

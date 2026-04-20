@@ -1,8 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, statSync } from "node:fs";
-import path from "node:path";
-import { UserError } from "./error";
+import { UserError } from "@cloudflare/workers-utils";
 import { dockerImageInspect } from "./inspect";
 import type { ContainerDevOptions } from "./types";
 import type { StdioOptions } from "node:child_process";
@@ -28,9 +26,14 @@ export const runDockerCmd = (
 	const child = spawn(dockerPath, args, {
 		stdio: stdio ?? "inherit",
 		// We need to set detached to true so that the child process
-		// will control all of its child processed and we can kill
-		// all of them in case we need to abort the build process
-		detached: true,
+		// will control all of its child processes and we can kill
+		// all of them in case we need to abort the build process.
+		// On Windows, detached: true opens a new console window per child
+		// process, so we only set it on non-Windows platforms.
+		detached: process.platform !== "win32",
+		// Prevent child processes from opening visible console windows on Windows.
+		// This is a no-op on non-Windows platforms.
+		windowsHide: true,
 	});
 	let errorHandled = false;
 
@@ -53,8 +56,15 @@ export const runDockerCmd = (
 			aborted = true;
 			child.unref();
 			if (child.pid !== undefined) {
-				// kill run on the negative PID kills the whole group controlled by the child process
-				process.kill(-child.pid);
+				if (process.platform === "win32") {
+					// On Windows, negative-PID process group kill is not supported.
+					// Kill the child process directly instead.
+					child.kill();
+				} else {
+					// Kill using the negative PID to terminate the whole process group
+					// controlled by the child process.
+					process.kill(-child.pid);
+				}
 			}
 		},
 		ready,
@@ -97,55 +107,6 @@ export const verifyDockerInstalled = async (
 				`${isDev ? "\nTo suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false." : ""}`
 		);
 	}
-};
-
-export function isDir(inputPath: string) {
-	const stats = statSync(inputPath);
-	return stats.isDirectory();
-}
-
-/** returns true if it is a dockerfile, false if it is a registry link, throws if neither */
-export const isDockerfile = (
-	image: string,
-	configPath: string | undefined
-): boolean => {
-	const baseDir = configPath ? path.dirname(configPath) : process.cwd();
-	const maybeDockerfile = path.resolve(baseDir, image);
-	if (existsSync(maybeDockerfile)) {
-		if (isDir(maybeDockerfile)) {
-			throw new UserError(
-				`${image} is a directory, you should specify a path to the Dockerfile`
-			);
-		}
-		return true;
-	}
-
-	const errorPrefix = `The image "${image}" does not appear to be a valid path to a Dockerfile, or a valid image registry path:\n`;
-	// not found, not a dockerfile, let's try parsing the image ref as an URL?
-	try {
-		new URL(`https://${image}`);
-	} catch (e) {
-		if (e instanceof Error) {
-			throw new UserError(errorPrefix + e.message);
-		}
-		throw e;
-	}
-	const imageParts = image.split("/");
-
-	if (!imageParts[imageParts.length - 1]?.includes(":")) {
-		throw new UserError(
-			errorPrefix +
-				`If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)`
-		);
-	}
-	// validate URL
-	if (image.includes("://")) {
-		throw new UserError(
-			errorPrefix +
-				`Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
-		);
-	}
-	return false;
 };
 
 /**
@@ -318,7 +279,7 @@ export function resolveDockerHost(dockerPath: string): string {
 export const getDockerHostFromEnv = (): string => {
 	const fromEnv = process.env.WRANGLER_DOCKER_HOST ?? process.env.DOCKER_HOST;
 
-	return fromEnv ?? process.platform === "win32"
+	return (fromEnv ?? process.platform === "win32")
 		? "//./pipe/docker_engine"
 		: "unix:///var/run/docker.sock";
 };

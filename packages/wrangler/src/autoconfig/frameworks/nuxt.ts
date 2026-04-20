@@ -1,10 +1,13 @@
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { installPackages } from "@cloudflare/cli/packages";
+import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
 import * as recast from "recast";
-import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
-import { installPackages } from "../c3-vendor/packages";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import { Framework } from "./framework-class";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 
 const updateNuxtConfig = (projectPath: string) => {
 	const configFile = path.join(projectPath, "nuxt.config.ts");
@@ -55,12 +58,15 @@ export class Nuxt extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
+		packageManager,
+		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			await installPackages(["nitro-cloudflare-dev"], {
+			await installPackages(packageManager.type, ["nitro-cloudflare-dev"], {
 				dev: true,
 				startText: "Installing the Cloudflare dev module",
 				doneText: `${brandColor(`installed`)} ${dim("nitro-cloudflare-dev")}`,
+				isWorkspaceRoot,
 			});
 			updateNuxtConfig(projectPath);
 		}

@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { getNormalizedContainerOptions } from "../../containers/config";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -17,7 +17,9 @@ describe("getNormalizedContainerOptions", () => {
 		vi.clearAllMocks();
 	});
 
-	it("should return empty array when no containers are configured", async () => {
+	it("should return empty array when no containers are configured", async ({
+		expect,
+	}) => {
 		const config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",
@@ -33,7 +35,9 @@ describe("getNormalizedContainerOptions", () => {
 		expect(result).toEqual([]);
 	});
 
-	it("should return empty array when containers is undefined", async () => {
+	it("should return empty array when containers is undefined", async ({
+		expect,
+	}) => {
 		const config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",
@@ -49,7 +53,9 @@ describe("getNormalizedContainerOptions", () => {
 		expect(result).toEqual([]);
 	});
 
-	it("should throw error when container class_name doesn't match any durable object", async () => {
+	it("should throw error when container class_name doesn't match any durable object", async ({
+		expect,
+	}) => {
 		const config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",
@@ -75,7 +81,9 @@ describe("getNormalizedContainerOptions", () => {
 		);
 	});
 
-	it("should throw error when durable object has script_name defined", async () => {
+	it("should throw error when durable object has script_name defined", async ({
+		expect,
+	}) => {
 		const config: Config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",
@@ -110,7 +118,9 @@ describe("getNormalizedContainerOptions", () => {
 		);
 	});
 
-	it("should normalize and set defaults for container with dockerfile", async () => {
+	it("should normalize and set defaults for container with dockerfile", async ({
+		expect,
+	}) => {
 		writeFileSync("Dockerfile", "FROM scratch");
 
 		const config: Config = {
@@ -157,7 +167,9 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
-	it("should normalize and set defaults for container with registry image", async () => {
+	it("should normalize and set defaults for container with registry image", async ({
+		expect,
+	}) => {
 		const config: Config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",
@@ -200,7 +212,9 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
-	it("should default max_instances and rollout_step_percentage accordingly", async () => {
+	it("should default max_instances and rollout_step_percentage accordingly", async ({
+		expect,
+	}) => {
 		writeFileSync("Dockerfile", "FROM scratch");
 
 		const config: Config = {
@@ -236,7 +250,7 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
-	it("should handle custom limit configuration", async () => {
+	it("should handle custom limit configuration", async ({ expect }) => {
 		// deprecated path for setting custom limits
 		const config: Config = {
 			name: "test-worker",
@@ -284,7 +298,9 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
-	it("should handle custom limit configuration through instance_type", async () => {
+	it("should handle custom limit configuration through instance_type", async ({
+		expect,
+	}) => {
 		// updated path for setting custom limits
 		const config: Config = {
 			name: "test-worker",
@@ -332,7 +348,9 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
-	it("should normalize and set defaults for custom limits to dev instance type", async () => {
+	it("should normalize and set defaults for custom limits to dev instance type", async ({
+		expect,
+	}) => {
 		const config: Config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",
@@ -377,7 +395,7 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
-	it("should handle instance type configuration", async () => {
+	it("should handle instance type configuration", async ({ expect }) => {
 		const config: Config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",
@@ -418,7 +436,7 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
-	it("should handle all custom configuration options", async () => {
+	it("should handle all custom configuration options", async ({ expect }) => {
 		const config: Config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",
@@ -440,7 +458,8 @@ describe("getNormalizedContainerOptions", () => {
 					instance_type: "basic",
 					constraints: {
 						tier: 2,
-						regions: ["us-east-1", "us-west-2"],
+						regions: ["ENAM", "WNAM"],
+						jurisdiction: "eu",
 						cities: ["NYC", "SF"],
 					},
 					affinities: {
@@ -473,7 +492,8 @@ describe("getNormalizedContainerOptions", () => {
 			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
 			constraints: {
 				tiers: [2],
-				regions: ["US-EAST-1", "US-WEST-2"],
+				regions: ["ENAM", "WNAM"],
+				jurisdiction: "eu",
 				cities: ["nyc", "sf"],
 			},
 			affinities: {
@@ -485,7 +505,9 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
-	it("should handle dockerfile with default build context", async () => {
+	it("should handle dockerfile with default build context", async ({
+		expect,
+	}) => {
 		mkdirSync("nested", { recursive: true });
 		writeFileSync("nested/Dockerfile", "FROM scratch");
 
@@ -532,7 +554,7 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
-	it("should handle multiple containers", async () => {
+	it("should handle multiple containers", async ({ expect }) => {
 		const config: Config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",
@@ -574,7 +596,7 @@ describe("getNormalizedContainerOptions", () => {
 		expect(result[1].class_name).toBe("Container2");
 	});
 
-	it("should handle config with no configPath", async () => {
+	it("should handle config with no configPath", async ({ expect }) => {
 		writeFileSync("Dockerfile", "FROM scratch");
 		const config: Config = {
 			name: "test-worker",
@@ -607,7 +629,7 @@ describe("getNormalizedContainerOptions", () => {
 		expect(result[0]).not.toHaveProperty("image_uri");
 	});
 
-	it("should be able to specify all tiers", async () => {
+	it("should be able to specify all tiers", async ({ expect }) => {
 		writeFileSync("Dockerfile", "FROM scratch");
 		const config: Config = {
 			name: "test-worker",
@@ -637,7 +659,7 @@ describe("getNormalizedContainerOptions", () => {
 		expect(result[0].constraints.tiers).toBeUndefined();
 	});
 
-	it("should convert deprecated tier to tiers array", async () => {
+	it("should convert deprecated tier to tiers array", async ({ expect }) => {
 		const config: Config = {
 			name: "test-worker",
 			containers: [
@@ -666,7 +688,9 @@ describe("getNormalizedContainerOptions", () => {
 		expect(result[0].constraints.tiers).toEqual([3]);
 	});
 
-	it("should default rollout_step_percentage to 100 when max_instances is 1", async () => {
+	it("should default rollout_step_percentage to 100 when max_instances is 1", async ({
+		expect,
+	}) => {
 		const config: Config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",
@@ -697,7 +721,7 @@ describe("getNormalizedContainerOptions", () => {
 	});
 
 	describe("image validation and resolution", async () => {
-		it("should allow any image registry", async () => {
+		it("should allow any image registry", async ({ expect }) => {
 			const config: Config = {
 				name: "test-worker",
 				configPath: "/test/wrangler.toml",
@@ -706,7 +730,7 @@ describe("getNormalizedContainerOptions", () => {
 				containers: [
 					{
 						class_name: "TestContainer",
-						image: "docker.io/test:latest",
+						image: "unsupported.domain/test:latest",
 						instance_type: "standard",
 						name: "test-container",
 						max_instances: 3,
@@ -725,10 +749,12 @@ describe("getNormalizedContainerOptions", () => {
 			const result = await getNormalizedContainerOptions(config, {});
 			expect(result).toHaveLength(1);
 			expect(result[0]).toMatchObject({
-				image_uri: "docker.io/test:latest",
+				image_uri: "unsupported.domain/test:latest",
 			});
 		});
-		it("should not try and add an account id to non containers registry uris", async () => {
+		it("should not try and add an account id to non containers registry uris", async ({
+			expect,
+		}) => {
 			const config: Config = {
 				name: "test-worker",
 				configPath: "/test/wrangler.toml",
@@ -760,7 +786,9 @@ describe("getNormalizedContainerOptions", () => {
 			});
 			vi.unstubAllEnvs();
 		});
-		it("should not try and add an account id during a dry run", async () => {
+		it("should not try and add an account id during a dry run", async ({
+			expect,
+		}) => {
 			const config: Config = {
 				name: "test-worker",
 				configPath: "/test/wrangler.toml",
@@ -795,7 +823,9 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
-	it("should handle valid ssh and authorized_keys config", async () => {
+	it("should handle valid ssh and authorized_keys config", async ({
+		expect,
+	}) => {
 		const config: Config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",

@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -14,7 +14,7 @@ describe("r2 sql", () => {
 	runInTempDir();
 
 	describe("help", () => {
-		it("should show help when no subcommand is passed", async () => {
+		it("should show help when no subcommand is passed", async ({ expect }) => {
 			await runWrangler("r2 sql");
 			await endEventLoop();
 			expect(std.out).toContain("wrangler r2 sql");
@@ -22,7 +22,7 @@ describe("r2 sql", () => {
 			expect(std.out).toContain("wrangler r2 sql query <warehouse> <query>");
 		});
 
-		it("should show help for query command", async () => {
+		it("should show help for query command", async ({ expect }) => {
 			await runWrangler("r2 sql query --help");
 			await endEventLoop();
 			expect(std.out).toContain("Execute SQL query against R2 Data Catalog");
@@ -42,7 +42,7 @@ describe("r2 sql", () => {
 			vi.stubEnv("WRANGLER_R2_SQL_AUTH_TOKEN", mockToken);
 		});
 
-		it("should require warehouse and query arguments", async () => {
+		it("should require warehouse and query arguments", async ({ expect }) => {
 			await expect(runWrangler("r2 sql query")).rejects.toThrow(
 				"Not enough non-option arguments: got 0, need at least 2"
 			);
@@ -52,9 +52,13 @@ describe("r2 sql", () => {
 			);
 		});
 
-		it("should require WRANGLER_R2_SQL_AUTH_TOKEN environment variable", async () => {
-			vi.stubEnv("WRANGLER_R2_SQL_AUTH_TOKEN", undefined);
-			vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
+		it("should require WRANGLER_R2_SQL_AUTH_TOKEN environment variable", async ({
+			expect,
+		}) => {
+			// Use delete directly because vi.stubEnv(name, undefined) doesn't
+			// propagate through Vitest 4's env proxy deleteProperty handler.
+			delete process.env.WRANGLER_R2_SQL_AUTH_TOKEN;
+			delete process.env.CLOUDFLARE_API_TOKEN;
 
 			await expect(
 				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
@@ -63,13 +67,15 @@ describe("r2 sql", () => {
 			);
 		});
 
-		it("should validate warehouse name format", async () => {
+		it("should validate warehouse name format", async ({ expect }) => {
 			await expect(
 				runWrangler(`r2 sql query invalidwarehouse "${mockQuery}"`)
 			).rejects.toThrow("Warehouse name has invalid format");
 		});
 
-		it("should execute a successful query and display results", async () => {
+		it("should execute a successful query and display results", async ({
+			expect,
+		}) => {
 			const mockResponse = {
 				success: true,
 				errors: [],
@@ -130,7 +136,7 @@ describe("r2 sql", () => {
 			// Not checking MB/s speed as it depends on timing.
 		});
 
-		it("should handle queries with no results", async () => {
+		it("should handle queries with no results", async ({ expect }) => {
 			const mockResponse = {
 				success: true,
 				errors: [],
@@ -160,7 +166,7 @@ describe("r2 sql", () => {
 			expect(std.out).toContain("Query executed successfully with no results");
 		});
 
-		it("should handle query failures", async () => {
+		it("should handle query failures", async ({ expect }) => {
 			const mockResponse = {
 				success: false,
 				errors: [
@@ -189,7 +195,7 @@ describe("r2 sql", () => {
 			expect(std.err).toContain("1002: Table not found");
 		});
 
-		it("should handle API connection errors", async () => {
+		it("should handle API connection errors", async ({ expect }) => {
 			msw.use(
 				http.post(
 					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
@@ -205,7 +211,7 @@ describe("r2 sql", () => {
 			).rejects.toThrow("Failed to connect to R2 SQL API");
 		});
 
-		it("should handle invalid JSON responses", async () => {
+		it("should handle invalid JSON responses", async ({ expect }) => {
 			msw.use(
 				http.post(
 					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
@@ -221,7 +227,86 @@ describe("r2 sql", () => {
 			).rejects.toThrow("Received a malformed response from the API");
 		});
 
-		it("should handle null values in query results", async () => {
+		it("should handle nested objects (as JSON with null converted to '') in query results", async ({
+			expect,
+		}) => {
+			const mockResponse = {
+				success: true,
+				errors: [],
+				messages: [],
+				result: {
+					request_id: "dqe-prod-test",
+					schema: [
+						{
+							name: "approx_top_k(value, Int64(3))",
+							descriptor: {
+								type: {
+									name: "list",
+									item: {
+										type: {
+											name: "struct",
+											fields: [
+												{
+													type: { name: "int64" },
+													nullable: true,
+													name: "value",
+												},
+												{
+													type: { name: "uint64" },
+													nullable: false,
+													name: "count",
+												},
+											],
+										},
+										nullable: true,
+									},
+								},
+								nullable: true,
+							},
+						},
+					],
+					rows: [
+						{
+							"approx_top_k(value, Int64(3))": [
+								{ value: 0, count: 961 },
+								{ value: 1, count: 485 },
+								{ value: 2, count: null },
+							],
+						},
+					],
+					metrics: {
+						r2_requests_count: 6,
+						files_scanned: 3,
+						bytes_scanned: 62878,
+					},
+				},
+			};
+
+			msw.use(
+				http.post(
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
+					async () => {
+						return HttpResponse.json(mockResponse);
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+
+			const startOfTable = std.out.indexOf("┌");
+			const endOfTable = std.out.indexOf("┘") + 1;
+
+			expect(std.out.slice(startOfTable, endOfTable)).toMatchInlineSnapshot(`
+				"┌─┐
+				│ approx_top_k(value, Int64(3)) │
+				├─┤
+				│ [{"value":0,"count":961},{"value":1,"count":485},{"value":2,"count":""}] │
+				└─┘"
+			`);
+		});
+
+		it("should handle null values in query results", async ({ expect }) => {
 			const mockResponse = {
 				success: true,
 				errors: [],

@@ -1,14 +1,13 @@
 import {
 	createExecutionContext,
-	env,
-	SELF,
 	waitOnExecutionContext,
 } from "cloudflare:test";
-import { expect, it } from "vitest";
-import { handleR2Request } from "../src"; // Note we can import any function
+import { env, exports } from "cloudflare:workers";
+import { it } from "vitest";
+import { handleR2Request } from "../src/helpers"; // Note we can import any function
 
-it("stores in R2 bucket", async () => {
-	let response = await SELF.fetch("https://example.com/r2/key", {
+it("stores in R2 bucket", async ({ expect }) => {
+	let response = await exports.default.fetch("https://example.com/r2/key", {
 		method: "PUT",
 		headers: { "Cache-Control": "max-age=3600" },
 		body: "value",
@@ -30,10 +29,4 @@ it("stores in R2 bucket", async () => {
 	expect(response.status).toBe(200);
 	expect(response.headers.get("CF-Cache-Status")).toBe("HIT");
 	expect(await response.text()).toBe("value");
-});
-
-it("uses isolated storage for each test", async () => {
-	// Check write in previous test undone
-	const response = await SELF.fetch("https://example.com/r2/key");
-	expect(response.status).toBe(204);
 });

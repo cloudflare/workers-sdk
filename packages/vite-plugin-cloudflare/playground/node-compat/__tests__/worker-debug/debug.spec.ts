@@ -1,11 +1,7 @@
-import { expect, test, vi } from "vitest";
-import {
-	getJsonResponse,
-	isVite8,
-	WAIT_FOR_OPTIONS,
-} from "../../../__test-utils__";
+import { test, vi } from "vitest";
+import { getJsonResponse, WAIT_FOR_OPTIONS } from "../../../__test-utils__";
 
-test.skipIf(isVite8)("debug is resolved correctly", async () => {
+test("debug is resolved correctly", async ({ expect }) => {
 	await vi.waitFor(async () => {
 		expect(await getJsonResponse()).toEqual([
 			"test Test import message 1",

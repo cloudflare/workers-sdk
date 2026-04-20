@@ -6,12 +6,13 @@ import { setTimeout } from "node:timers/promises";
 import {
 	configFileName,
 	FatalError,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { readConfig } from "../config";
+import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
@@ -26,7 +27,11 @@ import { getBasePath } from "../paths";
 import { debounce } from "../utils/debounce";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
-import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
+import {
+	PAGES_CONFIG_CACHE_FILENAME,
+	ROUTES_SPEC_VERSION,
+	SECONDS_TO_WAIT_FOR_PROXY,
+} from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import {
 	buildRawWorker,
@@ -37,7 +42,9 @@ import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
 import type { AdditionalDevProps } from "../dev";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
+import type { PagesConfigCache } from "./types";
 import type {
+	Binding,
 	CfModule,
 	Config,
 	DurableObjectBindings,
@@ -81,6 +88,58 @@ const SERVICE_BINDING_REGEXP = new RegExp(
 const DEFAULT_IP = process.platform === "win32" ? "127.0.0.1" : "localhost";
 const DEFAULT_PAGES_LOCAL_PORT = 8788;
 const DEFAULT_SCRIPT_PATH = "_worker.js";
+
+/**
+ * Generates Pages-specific environment variables for local development.
+ * These variables are normally injected by Cloudflare Pages CI during builds/deployments.
+ * @see https://developers.cloudflare.com/pages/configuration/build-configuration/#environment-variables
+ */
+function getPagesEnvironmentVariables(
+	projectName: string
+): Record<string, Extract<Binding, { type: "plain_text" }>> {
+	let branch = "local";
+
+	// Attempt to get actual git info to match what happens in Pages CI as accurately as possible.
+	try {
+		branch = execSync("git rev-parse --abbrev-ref HEAD", {
+			encoding: "utf-8",
+			stdio: "pipe",
+		}).trim();
+	} catch {
+		// Not a git repo or git not available, use default
+	}
+
+	let commitSha = "0000000000000000000000000000000000000000";
+	try {
+		commitSha = execSync("git rev-parse HEAD", {
+			encoding: "utf-8",
+			stdio: "pipe",
+		}).trim();
+	} catch {
+		// Not a git repo or git not available, use default
+	}
+
+	// Use short SHA (fallback to 8 characters of main commit) for preview URL format
+	let shortSha = commitSha.substring(0, 8);
+	try {
+		shortSha = execSync("git rev-parse --short HEAD", {
+			encoding: "utf-8",
+			stdio: "pipe",
+		}).trim();
+	} catch {
+		// Not a git repo or git not available, use default
+	}
+
+	return {
+		CF_PAGES: { type: "plain_text", value: "1" },
+		CF_PAGES_BRANCH: { type: "plain_text", value: branch },
+		CF_PAGES_COMMIT_SHA: { type: "plain_text", value: commitSha },
+		CF_PAGES_URL: {
+			type: "plain_text",
+			value: `https://${shortSha}.${projectName}.pages.dev`,
+		},
+	};
+}
 
 export const pagesDevCommand = createCommand({
 	metadata: {
@@ -335,7 +394,7 @@ export const pagesDevCommand = createCommand({
 		} = resolvePagesDevServerSettings(config, args);
 
 		const {
-			vars,
+			cliVars,
 			kv_namespaces,
 			do_bindings,
 			d1_databases,
@@ -355,7 +414,8 @@ export const pagesDevCommand = createCommand({
 				? join(directory, singleWorkerScriptPath)
 				: resolve(singleWorkerScriptPath);
 		const usingWorkerDirectory =
-			existsSync(workerScriptPath) && lstatSync(workerScriptPath).isDirectory();
+			lstatSync(workerScriptPath, { throwIfNoEntry: false })?.isDirectory() ??
+			false;
 		const usingWorkerScript = existsSync(workerScriptPath);
 		const enableBundling = args.bundle ?? !(args.noBundle ?? config.no_bundle);
 
@@ -873,6 +933,15 @@ export const pagesDevCommand = createCommand({
 			}
 		}
 
+		// Determine project name from config, cache, or directory name (matching deploy behavior)
+		const configCache = getConfigCache<PagesConfigCache>(
+			PAGES_CONFIG_CACHE_FILENAME
+		);
+		const projectName =
+			config.name ?? configCache.project_name ?? path.basename(process.cwd());
+
+		const pagesEnvVars = getPagesEnvironmentVariables(projectName);
+
 		const devServer = await run(
 			{
 				MULTIWORKER: Array.isArray(args.config),
@@ -907,7 +976,7 @@ export const pagesDevCommand = createCommand({
 					host: undefined,
 					localUpstream: undefined,
 					upstreamProtocol: undefined,
-					var: undefined,
+					var: cliVars,
 					define: undefined,
 					alias: undefined,
 					jsxFactory: undefined,
@@ -927,7 +996,9 @@ export const pagesDevCommand = createCommand({
 					compatibilityDate,
 					compatibilityFlags,
 					nodeCompat: undefined,
-					vars,
+					// CF_PAGES vars as defaults (can be overridden by config vars)
+					defaultBindings: pagesEnvVars,
+					vars: undefined,
 					kv: kv_namespaces,
 					durableObjects: do_bindings,
 					r2: r2_buckets,
@@ -952,7 +1023,6 @@ export const pagesDevCommand = createCommand({
 					siteInclude: undefined,
 					siteExclude: undefined,
 					enableContainers: false,
-					experimentalTailLogs: true,
 					types: false,
 				})
 		);
@@ -964,8 +1034,6 @@ export const pagesDevCommand = createCommand({
 		process.on("SIGTERM", CLEANUP);
 
 		await events.once(devServer.devEnv, "teardown");
-		const teardownRegistry = await devServer.teardownRegistryPromise;
-		await teardownRegistry?.(devServer.devEnv.config.latestConfig?.name);
 
 		devServer.unregisterHotKeys?.();
 		CLEANUP();
@@ -1132,7 +1200,7 @@ function resolvePagesDevServerSettings(
 	// resolve compatibility date
 	let compatibilityDate = args.compatibilityDate || config.compatibility_date;
 	if (!compatibilityDate) {
-		const currentDate = formatCompatibilityDate(new Date());
+		const currentDate = getTodaysCompatDate();
 		logger.warn(
 			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
 				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${currentDate}", or\n` +
@@ -1160,7 +1228,6 @@ function resolvePagesDevServerSettings(
 function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 	Pick<
 		EnvironmentNonInheritable,
-		| "vars"
 		| "kv_namespaces"
 		| "r2_buckets"
 		| "d1_databases"
@@ -1169,16 +1236,17 @@ function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 		| "version_metadata"
 	>
 > & {
+	cliVars?: string[];
 	do_bindings?: DurableObjectBindings;
 } {
-	// get environment variables from the [--vars] arg
-	let vars: EnvironmentNonInheritable["vars"] = {};
+	// get environment variables from the [--binding] arg
+	// These are formatted as KEY:VALUE strings (for collectPlainTextVars)
+	// so they will be marked as hidden in the output display
+	let cliVars: string[] | undefined;
 	if (args.binding?.length) {
-		vars = Object.fromEntries(
-			args.binding
-				.map((binding) => binding.toString().split("="))
-				.map(([key, ...values]) => [key, values.join("=")])
-		);
+		cliVars = args.binding
+			.map((binding) => binding.toString().split("="))
+			.map(([key, ...values]) => `${key}:${values.join("=")}`);
 	}
 
 	// get KV bindings from the [--kv] arg
@@ -1329,7 +1397,7 @@ function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 	 * that here
 	 */
 	return {
-		vars: vars,
+		cliVars,
 		kv_namespaces: kvNamespaces,
 		d1_databases: d1Databases,
 		r2_buckets: r2Buckets,

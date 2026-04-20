@@ -1,0 +1,89 @@
+@source "../../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+
+@import "@cloudflare/kumo/styles/tailwind";
+@import "tailwindcss";
+
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+@theme {
+	/* Local Explorer layout sizing */
+	--width-sidebar: 240px;
+
+	/* Studio/editor tokens mapped to stock Kumo/Tailwind palette */
+	--studio-editor-selection: color-mix(
+		in oklch,
+		var(--color-kumo-brand) 18%,
+		transparent
+	);
+	--studio-editor-active-line: color-mix(
+		in oklch,
+		var(--color-kumo-brand) 8%,
+		transparent
+	);
+	--studio-editor-caret: var(--text-color-kumo-default);
+	--studio-editor-gutter-bg: var(--color-kumo-elevated);
+	--studio-editor-gutter-text: var(--text-color-kumo-subtle);
+	--studio-editor-panel-bg: var(--color-kumo-base);
+	--studio-editor-panel-border: var(--color-kumo-fill);
+	--studio-editor-panel-hover: var(--color-kumo-overlay);
+	--studio-editor-panel-text: var(--text-color-kumo-default);
+	--studio-syntax-keyword: light-dark(#0000ff, #4078f2);
+	--studio-syntax-string: #d16969;
+	--studio-syntax-number: light-dark(#098658, #808080);
+	--studio-syntax-comment: #6a737d;
+	--studio-syntax-operator: light-dark(#5a5a5a, #bfbfbf);
+	--studio-syntax-table: light-dark(#e84393, #fd79a8);
+	--studio-statement-highlight-border: var(--color-kumo-brand);
+}
+
+@layer base {
+	body {
+		@apply bg-kumo-elevated text-kumo-default text-sm leading-normal;
+	}
+}
+
+/* TODO: Remove this once this PR is merged and release */
+/* https://github.com/cloudflare/kumo/pull/388 */
+[data-sidebar="sidebar"] [data-closed]:not([data-ending-style]) {
+	height: var(--collapsible-panel-height) !important;
+}
+
+/* Animated Cloudflare Logo keyframes */
+@keyframes animated-logo-container {
+	0% {
+		transform: scale(0);
+		opacity: 0;
+	}
+	20%,
+	100% {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes animated-logo-cloud {
+	0% {
+		stroke-dashoffset: 145;
+		fill-opacity: 0;
+	}
+	50% {
+		stroke-dashoffset: 0;
+		fill-opacity: 0;
+	}
+	80%,
+	100% {
+		stroke-dashoffset: 0;
+		fill-opacity: 1;
+	}
+}
+
+@keyframes animated-logo-cutout {
+	0%,
+	50% {
+		transform: scale(0);
+	}
+	80%,
+	100% {
+		transform: scale(1);
+	}
+}

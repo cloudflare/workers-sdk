@@ -2,6 +2,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { FatalError } from "@cloudflare/workers-utils";
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearOutputFilePath, writeOutput } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -94,7 +95,6 @@ describe("writeOutput()", () => {
 			targets: undefined,
 			worker_name_overridden: false,
 			wrangler_environment: undefined,
-			autoconfig_summary: undefined,
 		});
 
 		const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
@@ -114,7 +114,6 @@ describe("writeOutput()", () => {
 				version_id: "1234",
 				targets: undefined,
 				worker_name_overridden: false,
-				autoconfig_summary: undefined,
 				wrangler_environment: undefined,
 			},
 		]);
@@ -165,7 +164,6 @@ describe("writeOutput()", () => {
 			targets: undefined,
 			worker_name_overridden: false,
 			wrangler_environment: undefined,
-			autoconfig_summary: undefined,
 		});
 
 		const outputFilePaths = readdirSync("output");
@@ -189,7 +187,6 @@ describe("writeOutput()", () => {
 				targets: undefined,
 				worker_name_overridden: false,
 				wrangler_environment: undefined,
-				autoconfig_summary: undefined,
 			},
 		]);
 	});
@@ -246,6 +243,38 @@ describe("writeOutput()", () => {
 						commit_hash: "bc286bd30cf12b7fdbce046be6e53ce12ae1283d",
 					},
 				},
+			},
+		]);
+	});
+
+	it("should write preview outputs with separate preview and deployment URLs", () => {
+		const WRANGLER_OUTPUT_FILE_PATH = "output.json";
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "");
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", WRANGLER_OUTPUT_FILE_PATH);
+		writeOutput({
+			type: "preview",
+			version: 1,
+			worker_name: "worker",
+			preview_id: "preview-id",
+			preview_name: "branch-name",
+			preview_slug: "branch-name",
+			preview_urls: ["https://branch-name.worker.cloudflare.app"],
+			deployment_id: "deployment-id",
+			deployment_urls: ["https://abc12345.worker.cloudflare.app"],
+		});
+
+		const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
+		expect(outputFile).toContainEntries([
+			{
+				type: "preview",
+				version: 1,
+				worker_name: "worker",
+				preview_id: "preview-id",
+				preview_name: "branch-name",
+				preview_slug: "branch-name",
+				preview_urls: ["https://branch-name.worker.cloudflare.app"],
+				deployment_id: "deployment-id",
+				deployment_urls: ["https://abc12345.worker.cloudflare.app"],
 			},
 		]);
 	});

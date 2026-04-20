@@ -2,15 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-import { Request, Response } from "../../../http";
-import { Log, processStackTrace } from "../../../shared";
+import { Response } from "../../../http";
+import { processStackTrace } from "../../../shared";
 import { maybeParseURL } from "../../shared";
-import {
-	contentsToString,
-	maybeGetStringScriptPathIndex,
-	SourceOptions,
-} from "../modules";
+import { contentsToString, maybeGetStringScriptPathIndex } from "../modules";
 import { getSourceMapper } from "./sourcemap";
+import type { Request } from "../../../http";
+import type { Log } from "../../../shared";
+import type { SourceOptions } from "../modules";
 import type { RawSourceMap, UrlAndMap } from "@cspotcode/source-map-support";
 
 // Subset of core worker options that define Worker source code.
@@ -320,7 +319,7 @@ export async function handlePrettyErrorRequest(
 	}
 
 	// Lazily import `youch` when required
-	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	// eslint-disable-next-line typescript/consistent-type-imports, @typescript-eslint/no-require-imports
 	const { Youch }: typeof import("youch") = require("youch");
 	const youch = new Youch();
 

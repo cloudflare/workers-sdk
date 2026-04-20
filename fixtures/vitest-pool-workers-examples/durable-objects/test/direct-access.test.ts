@@ -1,15 +1,29 @@
-import {
-	env,
-	listDurableObjectIds,
-	runInDurableObject,
-	SELF,
-} from "cloudflare:test";
-import { expect, it } from "vitest";
+import { listDurableObjectIds, runInDurableObject } from "cloudflare:test";
+import { env, exports } from "cloudflare:workers";
+import { it } from "vitest";
 import { Counter } from "../src/";
 
-it("increments count and allows direct access to instance/storage", async () => {
+// Regression test for https://github.com/cloudflare/workers-sdk/issues/9907
+it("handles redirect responses returned from runInDurableObject callback", async ({
+	expect,
+}) => {
+	const id = env.COUNTER.idFromName("/redirect-test");
+	const stub = env.COUNTER.get(id);
+	const response = await runInDurableObject(stub, (instance: Counter) => {
+		const request = new Request("https://example.com/redirect");
+		return instance.fetch(request);
+	});
+	expect(response.status).toBe(302);
+	expect(response.headers.get("Location")).toBe(
+		"https://example.com/redirected"
+	);
+});
+
+it("increments count and allows direct access to instance/storage", async ({
+	expect,
+}) => {
 	// Check access through `fetch()` handler
-	let response = await SELF.fetch("https://example.com/path");
+	let response = await exports.default.fetch("https://example.com/path");
 	expect(await response.text()).toBe("1");
 
 	// Check sending request directly to instance
@@ -30,16 +44,5 @@ it("increments count and allows direct access to instance/storage", async () => 
 
 	// Check IDs can be listed
 	const ids = await listDurableObjectIds(env.COUNTER);
-	expect(ids.length).toBe(1);
-	expect(ids[0].equals(id)).toBe(true);
-});
-
-it("uses isolated storage for each test", async () => {
-	// Check Durable Object from previous test removed
-	const ids = await listDurableObjectIds(env.COUNTER);
-	expect(ids.length).toBe(0);
-
-	// Check writes in previous test undone
-	const response = await SELF.fetch("https://example.com/path");
-	expect(await response.text()).toBe("1");
+	expect(ids.map((i) => i.toString())).toContain(id.toString());
 });

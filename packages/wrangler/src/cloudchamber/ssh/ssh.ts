@@ -14,19 +14,22 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { SshPublicKeysService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+import { createCommand, createNamespace } from "../../core/create-command";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { pollSSHKeysUntilCondition } from "../cli";
-import { checkEverythingIsSet, handleFailure } from "../common";
+import {
+	checkEverythingIsSet,
+	cloudchamberScope,
+	fillOpenAPIConfiguration,
+} from "../common";
 import { wrap } from "../helpers/wrap";
 import { validatePublicSSHKeyCLI, validateSSHKey } from "./validate";
-import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgv,
 	CommonYargsArgvSanitized,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
-import type { cloudchamberScope } from "../common";
 import type {
 	ListSSHPublicKeys,
 	SSHPublicKeyID,
@@ -34,7 +37,7 @@ import type {
 } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 
-function createSSHPublicKeyOptionalYargs(yargs: CommonYargsArgv) {
+function _createSSHPublicKeyOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.option("name", {
 			type: "string",
@@ -105,66 +108,40 @@ export async function sshPrompts(
 	return key || undefined;
 }
 
-export const sshCommand = (
-	yargs: CommonYargsArgv,
-	scope: typeof cloudchamberScope | typeof containersScope
-) => {
-	return yargs
-		.command(
-			"list",
-			"list the ssh keys added to your account",
-			(args) => args,
-			(args) =>
-				handleFailure(
-					`wrangler cloudchamber ssh list`,
-					async (sshArgs: CommonYargsArgvSanitized, config) => {
-						// check we are in CI or if the user wants to just use JSON
-						if (isNonInteractiveOrCI()) {
-							const sshKeys = await SshPublicKeysService.listSshPublicKeys();
-							logger.json(sshKeys);
-							return;
-						}
+async function sshListHandler(
+	sshArgs: CommonYargsArgvSanitized,
+	config: Config
+) {
+	if (isNonInteractiveOrCI()) {
+		const sshKeys = await SshPublicKeysService.listSshPublicKeys();
+		logger.json(sshKeys);
+		return;
+	}
 
-						await handleListSSHKeysCommand(sshArgs, config);
-					},
-					scope
-				)(args)
-		)
-		.command(
-			"create",
-			"create an ssh key",
-			(args) => createSSHPublicKeyOptionalYargs(args),
-			(args) =>
-				handleFailure(
-					`wrangler cloudchamber ssh create`,
-					async (
-						sshArgs: StrictYargsOptionsToInterface<
-							typeof createSSHPublicKeyOptionalYargs
-						>,
-						_config
-					) => {
-						// check we are in CI or if the user wants to just use JSON
-						if (isNonInteractiveOrCI()) {
-							const body = checkEverythingIsSet(sshArgs, ["publicKey", "name"]);
-							const sshKey = await retrieveSSHKey(body.publicKey, {
-								json: true,
-							});
-							const addedSSHKey = await SshPublicKeysService.createSshPublicKey(
-								{
-									...body,
-									public_key: sshKey.trim(),
-								}
-							);
-							logger.json(addedSSHKey);
-							return;
-						}
+	await handleListSSHKeysCommand(sshArgs, config);
+}
 
-						await handleCreateSSHPublicKeyCommand(sshArgs);
-					},
-					scope
-				)(args)
-		);
-};
+async function sshCreateHandler(
+	sshArgs: StrictYargsOptionsToInterface<
+		typeof _createSSHPublicKeyOptionalYargs
+	>
+) {
+	// check we are in CI or if the user wants to just use JSON
+	if (isNonInteractiveOrCI()) {
+		const body = checkEverythingIsSet(sshArgs, ["publicKey", "name"]);
+		const sshKey = await retrieveSSHKey(body.publicKey, {
+			json: true,
+		});
+		const addedSSHKey = await SshPublicKeysService.createSshPublicKey({
+			...body,
+			public_key: sshKey.trim(),
+		});
+		logger.json(addedSSHKey);
+		return;
+	}
+
+	await handleCreateSSHPublicKeyCommand(sshArgs);
+}
 
 async function tryToRetrieveAllDefaultSSHKeyPaths(): Promise<string[]> {
 	const HOME = homedir();
@@ -305,7 +282,7 @@ async function handleListSSHKeysCommand(_args: unknown, _config: Config) {
  *
  */
 async function handleCreateSSHPublicKeyCommand(
-	args: StrictYargsOptionsToInterface<typeof createSSHPublicKeyOptionalYargs>
+	args: StrictYargsOptionsToInterface<typeof _createSSHPublicKeyOptionalYargs>
 ) {
 	startSection(
 		"Choose an ssh key to add",
@@ -324,7 +301,7 @@ async function handleCreateSSHPublicKeyCommand(
 }
 
 async function promptForSSHKey(
-	args: StrictYargsOptionsToInterface<typeof createSSHPublicKeyOptionalYargs>
+	args: StrictYargsOptionsToInterface<typeof _createSSHPublicKeyOptionalYargs>
 ): Promise<SSHPublicKeyItem> {
 	const { username } = userInfo();
 	const name = await inputPrompt({
@@ -390,3 +367,57 @@ async function promptForSSHKey(
 
 	return res;
 }
+
+export const cloudchamberSshNamespace = createNamespace({
+	metadata: {
+		description: "Manage the ssh keys of your account",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+});
+
+export const cloudchamberSshListCommand = createCommand({
+	metadata: {
+		description: "List the ssh keys added to your account",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {},
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await sshListHandler(args, config);
+	},
+});
+
+export const cloudchamberSshCreateCommand = createCommand({
+	metadata: {
+		description: "Create an ssh key",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {
+		name: {
+			type: "string",
+			describe:
+				"The alias to your ssh key, you can put a recognisable name for you here",
+		},
+		"public-key": {
+			type: "string",
+			describe:
+				"An SSH public key, you can specify either a path or the ssh key directly here",
+		},
+	},
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await sshCreateHandler(args);
+	},
+});

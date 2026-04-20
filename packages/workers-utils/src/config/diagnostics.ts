@@ -8,6 +8,8 @@ export class Diagnostics {
 	errors: string[] = [];
 	warnings: string[] = [];
 	children: Diagnostics[] = [];
+	/** Set to true when an unexpected/unknown field is encountered during validation. */
+	hasUnexpectedFields: boolean = false;
 
 	/**
 	 * Create a new Diagnostics object.
@@ -30,6 +32,15 @@ export class Diagnostics {
 			return true;
 		} else {
 			return this.children.some((child) => child.hasErrors());
+		}
+	}
+
+	/** Does this or any of its children have unexpected fields. */
+	hasUnexpectedFieldsInTree(): boolean {
+		if (this.hasUnexpectedFields) {
+			return true;
+		} else {
+			return this.children.some((child) => child.hasUnexpectedFieldsInTree());
 		}
 	}
 

@@ -1,6 +1,6 @@
-import stripAnsi from "strip-ansi";
-import { expect } from "vitest";
+import { stripVTControlCharacters } from "node:util";
 import { CLOUDFLARE_ACCOUNT_ID } from "./account-id";
+import type { ExpectStatic } from "vitest";
 
 export function normalizeOutput(
 	stdout: string,
@@ -22,7 +22,7 @@ export function normalizeOutput(
 		normalizeSlashes,
 		normalizeTempDirs,
 		stripTimings,
-		stripAnsi,
+		stripVTControlCharacters,
 		removeTimestamp,
 		stripDevTimings,
 		stripEmptyNewlines,
@@ -226,6 +226,7 @@ function normalizeAccountId(stdout: string) {
  * @param includeDebug Whether to check for debug logs as well. Default is false.
  */
 export function validateAssetUploadLogs(
+	expect: ExpectStatic,
 	output: { stdout: string },
 	files: string[],
 	{ includeDebug = false } = {}

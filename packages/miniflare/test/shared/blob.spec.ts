@@ -3,10 +3,11 @@ import { Blob } from "node:buffer";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { ReadableStream } from "node:stream/web";
-import { InclusiveRange, Miniflare, Response } from "miniflare";
-import { afterAll, beforeAll, expect, test } from "vitest";
+import { Miniflare } from "miniflare";
+import { afterAll, beforeAll, test } from "vitest";
 import { useTmp } from "../test-shared";
+import type { InclusiveRange, Response } from "miniflare";
+import type { ReadableStream } from "node:stream/web";
 
 class BlobStoreStub {
 	constructor(private readonly mf: Miniflare) {}
@@ -102,7 +103,7 @@ beforeAll(async () => {
 });
 afterAll(() => ctx.mf.dispose());
 
-test("BlobStore: put/get", async () => {
+test("BlobStore: put/get", async ({ expect }) => {
 	const { tmp, store } = ctx;
 
 	// Check put writes file to correct location
@@ -220,7 +221,7 @@ test("BlobStore: put/get", async () => {
 	await res.arrayBuffer(); // (drain)
 });
 
-test("BlobStore: delete", async () => {
+test("BlobStore: delete", async ({ expect }) => {
 	const { tmp, store } = ctx;
 
 	// Check delete removes blob

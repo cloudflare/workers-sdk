@@ -1,9 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
-import {
-	convertBindingsToCfWorkerInitBindings,
-	unwrapHook,
-} from "../../../api/startDevWorker/utils";
 // Import the mocked functions so we can set their behavior
 import {
 	createPreviewSession,
@@ -13,7 +9,7 @@ import {
 	createRemoteWorkerInit,
 	getWorkerAccountAndContext,
 } from "../../../dev/remote";
-import { getAccessToken } from "../../../user/access";
+import { getAccessHeaders } from "../../../user/access";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { useTeardown } from "../../helpers/teardown";
@@ -22,7 +18,6 @@ import type {
 	PreviewTokenExpiredEvent,
 	StartDevWorkerOptions,
 } from "../../../api";
-import type { CfWorkerInit } from "@cloudflare/workers-utils";
 
 // Mock the API modules
 vi.mock("../../../dev/create-worker-preview", () => ({
@@ -38,13 +33,8 @@ vi.mock("../../../dev/remote", () => ({
 }));
 
 vi.mock("../../../user/access", () => ({
-	getAccessToken: vi.fn(),
+	getAccessHeaders: vi.fn(),
 	domainUsesAccess: vi.fn(),
-}));
-
-vi.mock("../../../api/startDevWorker/utils", () => ({
-	convertBindingsToCfWorkerInitBindings: vi.fn(),
-	unwrapHook: vi.fn(),
 }));
 
 function makeConfig(
@@ -108,12 +98,6 @@ describe("RemoteRuntimeController", () => {
 	}
 
 	beforeEach(() => {
-		// Setup mock implementations
-		vi.mocked(unwrapHook).mockResolvedValue({
-			accountId: "test-account-id",
-			apiToken: { apiToken: "test-token" },
-		});
-
 		vi.mocked(getWorkerAccountAndContext).mockResolvedValue({
 			workerAccount: {
 				accountId: "test-account-id",
@@ -130,10 +114,9 @@ describe("RemoteRuntimeController", () => {
 		});
 
 		vi.mocked(createPreviewSession).mockResolvedValue({
-			id: "test-session-id",
 			value: "test-session-value",
 			host: "test.workers.dev",
-			prewarmUrl: new URL("https://test.workers.dev/prewarm"),
+			name: "test",
 		});
 
 		vi.mocked(createRemoteWorkerInit).mockResolvedValue({
@@ -145,7 +128,7 @@ describe("RemoteRuntimeController", () => {
 				content: "export default { fetch() { return new Response('hello'); } }",
 			},
 			modules: [],
-			bindings: {} as CfWorkerInit["bindings"],
+			bindings: {},
 			migrations: undefined,
 			compatibility_date: "2025-11-11",
 			compatibility_flags: [],
@@ -158,25 +141,115 @@ describe("RemoteRuntimeController", () => {
 			tail_consumers: undefined,
 			limits: undefined,
 			observability: undefined,
+			containers: undefined,
+			cache: undefined,
 		});
 
 		vi.mocked(createWorkerPreview).mockResolvedValue({
 			value: "test-preview-token",
 			host: "test.workers.dev",
-			prewarmUrl: new URL("https://test.workers.dev/prewarm"),
-			tailUrl: "wss://test.workers.dev/tail",
+			// No tailUrl — avoids real WebSocket connections in unit tests
 		});
 
-		vi.mocked(getAccessToken).mockResolvedValue(undefined);
+		vi.mocked(getAccessHeaders).mockResolvedValue({});
+	});
 
-		vi.mocked(convertBindingsToCfWorkerInitBindings).mockResolvedValue({
-			bindings: {} as CfWorkerInit["bindings"],
-			fetchers: {},
+	describe("proactive token refresh", () => {
+		afterEach(() => vi.useRealTimers());
+
+		it("should proactively refresh the token before expiry", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			vi.mocked(createWorkerPreview).mockClear();
+			vi.mocked(createRemoteWorkerInit).mockClear();
+			vi.mocked(createWorkerPreview).mockResolvedValue({
+				value: "proactively-refreshed-token",
+				host: "test.workers.dev",
+			});
+
+			// Register the waiter before advancing so it's in place when the
+			// event fires. Use a timeout larger than the advance window so the
+			// waiter's own faked setTimeout doesn't race the refresh timer.
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				60 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			const reloadEvent = await reloadPromise;
+
+			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
+			expect(reloadEvent).toMatchObject({
+				type: "reloadComplete",
+				proxyData: {
+					headers: {
+						"cf-workers-preview-token": "proactively-refreshed-token",
+					},
+				},
+			});
+		});
+
+		it("should cancel the proactive refresh timer on bundle start", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			vi.mocked(createWorkerPreview).mockClear();
+
+			// A new bundleStart cancels the old timer before it fires
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			vi.mocked(createWorkerPreview).mockClear();
+
+			// Advance to just before T2 would fire — no proactive refresh should occur
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 - 1);
+			expect(createWorkerPreview).not.toHaveBeenCalled();
+		});
+
+		it("should cancel the proactive refresh timer on teardown", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			vi.mocked(createWorkerPreview).mockClear();
+			await controller.teardown();
+
+			// Advance past where the timer would have fired
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			expect(createWorkerPreview).not.toHaveBeenCalled();
 		});
 	});
 
 	describe("preview token refresh", () => {
-		it("should handle missing state gracefully", async () => {
+		it("should handle missing state gracefully", async ({ expect }) => {
 			const { controller } = setup();
 
 			const expiredEvent: PreviewTokenExpiredEvent = {
@@ -204,7 +277,9 @@ describe("RemoteRuntimeController", () => {
 			});
 		});
 
-		it("should call API with stored config/bundle when refreshing", async () => {
+		it("should call API with stored config/bundle when refreshing", async ({
+			expect,
+		}) => {
 			const { controller, bus } = setup();
 			const config = makeConfig({ name: "my-worker" });
 			const bundle = makeBundle();
@@ -254,7 +329,9 @@ describe("RemoteRuntimeController", () => {
 			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
 		});
 
-		it("should emit reloadComplete event with fresh token when refreshing", async () => {
+		it("should emit reloadComplete event with fresh token when refreshing", async ({
+			expect,
+		}) => {
 			const { controller, bus } = setup();
 			const config = makeConfig();
 			const bundle = makeBundle();

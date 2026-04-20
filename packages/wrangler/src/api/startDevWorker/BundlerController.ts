@@ -18,7 +18,7 @@ import { getWranglerTmpDir } from "../../paths";
 import { debounce } from "../../utils/debounce";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
-import { convertBindingsToCfWorkerInitBindings } from "./utils";
+import { extractBindingsOfType } from "./utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
@@ -53,7 +53,8 @@ export class BundlerController extends Controller {
 					cwd: config.build?.custom?.workingDirectory,
 					command: config.build?.custom?.command,
 				},
-				config.config
+				config.config,
+				"dev"
 			);
 			if (buildAborter.signal.aborted) {
 				return;
@@ -90,9 +91,14 @@ export class BundlerController extends Controller {
 				rules: config.build.moduleRules,
 			});
 
-			const bindings = (
-				await convertBindingsToCfWorkerInitBindings(config.bindings)
-			).bindings;
+			const doBindings = extractBindingsOfType(
+				"durable_object_namespace",
+				config.bindings
+			);
+			const workflowBindings = extractBindingsOfType(
+				"workflow",
+				config.bindings
+			);
 			const bundleResult: Omit<BundleResult, "stop"> = !config.build?.bundle
 				? await noBundleWorker(
 						entry,
@@ -104,8 +110,8 @@ export class BundlerController extends Controller {
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						workflowBindings: bindings?.workflows ?? [],
-						doBindings: bindings?.durable_objects?.bindings ?? [],
+						doBindings,
+						workflowBindings,
 						jsxFactory: config.build.jsxFactory,
 						jsxFragment: config.build.jsxFactory,
 						tsconfig: config.build.tsconfig,
@@ -167,7 +173,6 @@ export class BundlerController extends Controller {
 				entrypointSource: readFileSync(entrypointPath, "utf8"),
 			});
 		} catch (err) {
-			logger.error("Custom build failed:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Custom build failed",
@@ -231,9 +236,15 @@ export class BundlerController extends Controller {
 			exports: config.build.exports,
 			name: config.name,
 		};
-		const { bindings } = await convertBindingsToCfWorkerInitBindings(
-			config.bindings
-		);
+
+		const durableObjects = {
+			bindings: extractBindingsOfType(
+				"durable_object_namespace",
+				config.bindings
+			),
+		};
+		const workflows = extractBindingsOfType("workflow", config.bindings);
+
 		this.#bundlerCleanup = runBuild(
 			{
 				entry,
@@ -253,8 +264,8 @@ export class BundlerController extends Controller {
 				alias: config.build.alias,
 				noBundle: !config.build?.bundle,
 				findAdditionalModules: config.build?.findAdditionalModules,
-				durableObjects: bindings?.durable_objects ?? { bindings: [] },
-				workflows: bindings?.workflows ?? [],
+				durableObjects,
+				workflows,
 				local: !config.dev?.remote,
 				// startDevWorker only applies to "dev"
 				targetConsumer: "dev",
@@ -323,9 +334,6 @@ export class BundlerController extends Controller {
 		try {
 			this.#tmpDir = getWranglerTmpDir(event.config.projectRoot, "dev");
 		} catch (e) {
-			logger.error(
-				"Failed to create temporary directory to store built files."
-			);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Failed to create temporary directory to store built files.",
@@ -336,7 +344,6 @@ export class BundlerController extends Controller {
 		}
 
 		void this.#startCustomBuild(event.config).catch((err) => {
-			logger.error("Failed to run custom build:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Failed to run custom build",
@@ -346,7 +353,6 @@ export class BundlerController extends Controller {
 			});
 		});
 		void this.#startBundle(event.config).catch((err) => {
-			logger.error("Failed to start bundler:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Failed to start bundler",
@@ -356,7 +362,6 @@ export class BundlerController extends Controller {
 			});
 		});
 		void this.#ensureWatchingAssets(event.config).catch((err) => {
-			logger.error("Failed to watch assets:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Failed to watch assets",

@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("[Workers + Assets] static-assets only site`", () => {
@@ -17,7 +17,7 @@ describe("[Workers + Assets] static-assets only site`", () => {
 		await stop?.();
 	});
 
-	it("should respond with static asset content", async () => {
+	it("should respond with static asset content", async ({ expect }) => {
 		let response = await fetch(`http://${ip}:${port}/index.html`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -29,7 +29,7 @@ describe("[Workers + Assets] static-assets only site`", () => {
 		expect(text).toContain(`<p>Learn more about Workers with Assets soon!</p>`);
 	});
 
-	it("should resolve '/' to '/index.html' ", async () => {
+	it("should resolve '/' to '/index.html' ", async ({ expect }) => {
 		let response = await fetch(`http://${ip}:${port}/`);
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain(
@@ -37,7 +37,9 @@ describe("[Workers + Assets] static-assets only site`", () => {
 		);
 	});
 
-	it("should 404 if asset is not found in the asset manifest", async () => {
+	it("should 404 if asset is not found in the asset manifest", async ({
+		expect,
+	}) => {
 		let response = await fetch(`http://${ip}:${port}/hello.html`);
 		expect(response.status).toBe(404);
 
@@ -45,7 +47,7 @@ describe("[Workers + Assets] static-assets only site`", () => {
 		expect(response.status).toBe(404);
 	});
 
-	it("should handle content types correctly", async () => {
+	it("should handle content types correctly", async ({ expect }) => {
 		let response = await fetch(`http://${ip}:${port}/index.html`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -74,7 +76,9 @@ describe("[Workers + Assets] static-assets only site`", () => {
 		expect(response.headers.get("Content-Type")).toBe("image/jpeg");
 	});
 
-	it("should return 405 for non-GET or HEAD requests if asset route exists", async () => {
+	it("should return 405 for non-GET or HEAD requests if asset route exists", async ({
+		expect,
+	}) => {
 		// as per https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
 		// excl. TRACE and CONNECT which are not supported
 
@@ -109,7 +113,9 @@ describe("[Workers + Assets] static-assets only site`", () => {
 		expect(response.statusText).toBe("Method Not Allowed");
 	});
 
-	it("should return 404 for non-GET requests if asset route does not exist", async () => {
+	it("should return 404 for non-GET requests if asset route does not exist", async ({
+		expect,
+	}) => {
 		// as per https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
 		// excl. TRACE and CONNECT which are not supported
 
@@ -144,7 +150,7 @@ describe("[Workers + Assets] static-assets only site`", () => {
 		expect(response.status).toBe(404);
 	});
 
-	it("should work with encoded path names", async () => {
+	it("should work with encoded path names", async ({ expect }) => {
 		let response = await fetch(`http://${ip}:${port}/about/[fünky].txt`);
 		let text = await response.text();
 		expect(response.status).toBe(200);

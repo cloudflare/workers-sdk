@@ -4,27 +4,23 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
-import {
+import { MiniflareCoreError, PathSchema } from "../../shared";
+import { sanitisePath } from "../../workers";
+import type {
 	Extension,
 	Service,
 	Worker_Binding,
 	Worker_Module,
 } from "../../runtime";
-import {
-	Log,
-	MiniflareCoreError,
-	OptionalZodTypeOf,
-	PathSchema,
-} from "../../shared";
-import {
+import type { Log, OptionalZodTypeOf } from "../../shared";
+import type {
 	Awaitable,
 	QueueConsumerSchema,
 	QueueProducerSchema,
-	sanitisePath,
 } from "../../workers";
-import { UnsafeUniqueKey } from "./constants";
 import type { DOContainerOptions } from "../do";
 import type { HyperdriveProxyController } from "../hyperdrive/hyperdrive-proxy";
+import type { UnsafeUniqueKey } from "./constants";
 
 export const DEFAULT_PERSIST_ROOT = ".mf";
 
@@ -39,6 +35,13 @@ export type Persistence = z.infer<typeof PersistenceSchema>;
 // Set of "worker" names that are being used as wrapped bindings and shouldn't
 // be added a regular worker services. These workers shouldn't be routable.
 export type WrappedBindingNames = Set<string>;
+
+// Maps workflow binding names to their workflow options
+export interface WorkflowOption {
+	name: string;
+	className: string;
+	scriptName?: string;
+}
 
 // Maps **service** names to the Durable Object class names exported by them
 export type DurableObjectClassNames = Map<
@@ -76,6 +79,7 @@ export interface PluginServicesOptions<
 	tmpPath: string;
 	defaultPersistRoot: string | undefined;
 	workerNames: string[];
+	loopbackHost: string;
 	loopbackPort: number;
 	unsafeStickyBlobs: boolean;
 
@@ -231,35 +235,45 @@ export function getPersistPath(
 	// keep Miniflare 2's behaviour, so persist to a temporary path which we
 	// destroy on `dispose()`.
 	const memoryishPath = path.join(tmpPath, pluginName);
+
+	let result: string;
 	if (persist === false) {
-		return memoryishPath;
-	}
-
-	// If `persist` is undefined, use either the default path or fallback to the tmpPath
-	if (persist === undefined) {
-		return defaultPersistRoot === undefined
-			? memoryishPath
-			: path.join(defaultPersistRoot, pluginName);
-	}
-
-	// Try parse `persist` as a URL
-	const url = maybeParseURL(persist);
-	if (url !== undefined) {
-		if (url.protocol === "memory:") {
-			return memoryishPath;
-		} else if (url.protocol === "file:") {
-			return fileURLToPath(url);
+		result = memoryishPath;
+	} else if (persist === undefined) {
+		// If `persist` is undefined, use either the default path or fallback to the tmpPath
+		result =
+			defaultPersistRoot === undefined
+				? memoryishPath
+				: path.join(defaultPersistRoot, pluginName);
+	} else {
+		// Try parse `persist` as a URL
+		const url = maybeParseURL(persist);
+		if (url !== undefined) {
+			if (url.protocol === "memory:") {
+				result = memoryishPath;
+			} else if (url.protocol === "file:") {
+				result = fileURLToPath(url);
+			} else {
+				throw new MiniflareCoreError(
+					"ERR_PERSIST_UNSUPPORTED",
+					`Unsupported "${url.protocol}" persistence protocol for storage: ${url.href}`
+				);
+			}
+		} else {
+			// Otherwise, fallback to file storage
+			result =
+				persist === true
+					? path.join(defaultPersistRoot ?? DEFAULT_PERSIST_ROOT, pluginName)
+					: persist;
 		}
-		throw new MiniflareCoreError(
-			"ERR_PERSIST_UNSUPPORTED",
-			`Unsupported "${url.protocol}" persistence protocol for storage: ${url.href}`
-		);
 	}
 
-	// Otherwise, fallback to file storage
-	return persist === true
-		? path.join(defaultPersistRoot ?? DEFAULT_PERSIST_ROOT, pluginName)
-		: persist;
+	// Normalize to forward slashes for workerd's disk service compatibility on
+	// Windows. workerd is a Unix-oriented C++ program and its disk service does
+	// not handle Windows backslash paths correctly, resulting in SQLITE_CANTOPEN
+	// errors. Forward slashes work for both Node.js fs APIs and workerd on all
+	// platforms.
+	return result.replaceAll("\\", "/");
 }
 
 // https://github.com/cloudflare/workerd/blob/81d97010e44f848bb95d0083e2677bca8d1658b7/src/workerd/server/workerd-api.c%2B%2B#L436

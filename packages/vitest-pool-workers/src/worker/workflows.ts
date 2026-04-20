@@ -2,8 +2,8 @@ import {
 	instanceStatusName,
 	InstanceStatus as InstanceStatusNumber,
 } from "@cloudflare/workflows-shared/src/instance";
+import { env } from "cloudflare:workers";
 import { runInRunnerObject } from "./durable-objects";
-import { env, internalEnv } from "./env";
 import type { WorkflowBinding } from "@cloudflare/workflows-shared/src/binding";
 import type {
 	StepSelector,
@@ -40,9 +40,7 @@ export async function introspectWorkflowInstance(
 	return new WorkflowInstanceIntrospectorHandle(workflow, instanceId);
 }
 
-class WorkflowInstanceIntrospectorHandle
-	implements WorkflowInstanceIntrospector
-{
+class WorkflowInstanceIntrospectorHandle implements WorkflowInstanceIntrospector {
 	#workflow: WorkflowBinding;
 	#instanceId: string;
 	#instanceModifier: WorkflowInstanceModifier | undefined;
@@ -86,15 +84,6 @@ class WorkflowInstanceIntrospectorHandle
 	}
 
 	async waitForStatus(status: InstanceStatus["status"]): Promise<void> {
-		if (
-			status === instanceStatusName(InstanceStatusNumber.Terminated) ||
-			status === instanceStatusName(InstanceStatusNumber.Paused)
-		) {
-			throw new Error(
-				`[WorkflowIntrospector] InstanceStatus '${status}' is not implemented yet and cannot be waited.`
-			);
-		}
-
 		if (status === instanceStatusName(InstanceStatusNumber.Queued)) {
 			// we currently don't have a queue mechanism, but it would happen before it
 			// starts running, so waiting for it to be queued should always return
@@ -148,12 +137,11 @@ export async function introspectWorkflow(
 	const instanceIntrospectors: WorkflowInstanceIntrospector[] = [];
 
 	const bindingName = await workflow.unsafeGetBindingName();
-	const internalOriginalWorkflow = internalEnv[bindingName] as Workflow;
-	const externalOriginalWorkflow = env[bindingName] as Workflow;
+	const originalWorkflow = env[bindingName] as Workflow;
 
 	const introspectAndModifyInstance = async (instanceId: string) => {
 		try {
-			await runInRunnerObject(internalEnv, async () => {
+			await runInRunnerObject(async () => {
 				const introspector = await introspectWorkflowInstance(
 					workflow,
 					instanceId
@@ -224,18 +212,15 @@ export async function introspectWorkflow(
 	};
 
 	const dispose = () => {
-		internalEnv[bindingName] = internalOriginalWorkflow;
-		env[bindingName] = externalOriginalWorkflow;
+		env[bindingName] = originalWorkflow;
 	};
 
 	// Create a single handler instance to be reused
 	const proxyGetHandler = createWorkflowProxyGetHandler();
 
 	// Apply the proxies using the shared handler logic
-	internalEnv[bindingName] = new Proxy(internalOriginalWorkflow, {
-		get: proxyGetHandler,
-	});
-	env[bindingName] = new Proxy(externalOriginalWorkflow, {
+
+	env[bindingName] = new Proxy(originalWorkflow, {
 		get: proxyGetHandler,
 	});
 

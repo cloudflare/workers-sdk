@@ -1,7 +1,7 @@
 import path from "node:path";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
 import { logger } from "../../../logger";
@@ -39,12 +39,14 @@ describe("ConfigController", () => {
 		logger.resetLoggerLevel();
 	});
 
-	it("should prompt user to update types if they're out of date", async () => {
+	it("should prompt user to update types if they're out of date", async ({
+		expect,
+	}) => {
 		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 				export default {}
 			`,
-			"wrangler.toml": dedent/* toml */ `
+			"wrangler.toml": dedent /* toml */ `
 				name = "my-worker"
 				main = "src/index.ts"
 				compatibility_date = \"2024-06-01\"
@@ -54,7 +56,7 @@ describe("ConfigController", () => {
 		await controller.set({ config: "./wrangler.toml" });
 
 		await seed({
-			"wrangler.toml": dedent/* toml */ `
+			"wrangler.toml": dedent /* toml */ `
 				name = "my-worker"
 				main = "src/index.ts"
 				compatibility_date = \"2025-06-01\"
@@ -67,12 +69,14 @@ describe("ConfigController", () => {
 		});
 	});
 
-	it("should use account_id from config file before env var", async () => {
+	it("should use account_id from config file before env var", async ({
+		expect,
+	}) => {
 		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
                 export default {}
             `,
-			"wrangler.toml": dedent/* toml */ `
+			"wrangler.toml": dedent /* toml */ `
                 name = "my-worker"
                 main = "src/index.ts"
 				compatibility_date = \"2024-06-01\"
@@ -88,7 +92,7 @@ describe("ConfigController", () => {
 		});
 
 		await seed({
-			"wrangler.toml": dedent/* toml */ `
+			"wrangler.toml": dedent /* toml */ `
                 name = "my-worker"
                 main = "src/index.ts"
 								compatibility_date = \"2024-06-01\"
@@ -104,10 +108,12 @@ describe("ConfigController", () => {
 		});
 	});
 
-	it("should emit configUpdate events with defaults applied", async () => {
+	it("should emit configUpdate events with defaults applied", async ({
+		expect,
+	}) => {
 		const event = bus.waitFor("configUpdate");
 		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						return new Response("hello world")
@@ -136,10 +142,12 @@ describe("ConfigController", () => {
 		});
 	});
 
-	it("should apply module root to parent if main is nested from base_dir", async () => {
+	it("should apply module root to parent if main is nested from base_dir", async ({
+		expect,
+	}) => {
 		const event = bus.waitFor("configUpdate");
 		await seed({
-			"some/base_dir/nested/index.js": dedent/* javascript */ `
+			"some/base_dir/nested/index.js": dedent /* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						return new Response("hello world")
@@ -170,10 +178,10 @@ describe("ConfigController", () => {
 		});
 	});
 
-	it("should shallow merge patched config", async () => {
+	it("should shallow merge patched config", async ({ expect }) => {
 		const event1 = bus.waitFor("configUpdate");
 		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						return new Response("hello world")
@@ -262,14 +270,16 @@ describe("ConfigController", () => {
 		});
 	});
 
-	it("should only log warnings once even with multiple config updates", async () => {
+	it("should only log warnings once even with multiple config updates", async ({
+		expect,
+	}) => {
 		await seed({
-			"src/index.js": dedent/* javascript */ `
+			"src/index.js": dedent /* javascript */ `
 				addEventListener('fetch', event => {
 					event.respondWith(new Response('hello world'))
 				})
 			`,
-			"wrangler.toml": dedent/* toml */ `
+			"wrangler.toml": dedent /* toml */ `
 				name = "my-worker"
 				main = "src/index.js"
 				compatibility_date = "2024-06-01"

@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { runCommand } from "helpers/command";
+import { runCommand } from "@cloudflare/cli/command";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, readJSON, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -96,7 +96,7 @@ const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
  */
 export async function updateTsConfig(
 	ctx: C3Context,
-	{ usesNodeCompat }: { usesNodeCompat: boolean },
+	{ usesNodeCompat }: { usesNodeCompat: boolean }
 ) {
 	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
 	if (!existsSync(tsconfigPath)) {
@@ -105,6 +105,13 @@ export async function updateTsConfig(
 	const tsconfig = readFile(tsconfigPath);
 	try {
 		const config = jsonc.parse(tsconfig);
+
+		// Skip if tsconfig uses project references
+		// Types should be defined in child tsconfigs (e.g., tsconfig.worker.json)
+		if (hasProjectReferences(config)) {
+			return;
+		}
+
 		const currentTypes: string[] = config.compilerOptions?.types ?? [];
 		let newTypes = new Set(currentTypes);
 		if (ctx.template.workersTypes === "installed") {
@@ -114,7 +121,7 @@ export async function updateTsConfig(
 			}
 			const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
 			const explicitEntrypoint = currentTypes.some((t) =>
-				t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/),
+				t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/)
 			);
 			// If a type declaration with an explicit entrypoint exists, leave the types as is.
 			// Otherwise, add the latest entrypoint
@@ -127,17 +134,17 @@ export async function updateTsConfig(
 
 			// if generated types include runtime types, remove @cloudflare/workers-types
 			const typegen = readFile(
-				ctx.template.typesPath ?? "./worker-configuration.d.ts",
+				ctx.template.typesPath ?? "./worker-configuration.d.ts"
 			).split("\n");
 			if (
 				typegen.some((line) =>
-					line.includes("// Runtime types generated with workerd"),
+					line.includes("// Runtime types generated with workerd")
 				)
 			) {
 				newTypes = new Set(
 					[...newTypes].filter(
-						(type) => !type.startsWith("@cloudflare/workers-types"),
-					),
+						(type) => !type.startsWith("@cloudflare/workers-types")
+					)
 				);
 			}
 		}
@@ -157,13 +164,23 @@ export async function updateTsConfig(
 			[...newTypes].sort(),
 			{
 				formattingOptions: { insertSpaces: useSpaces },
-			},
+			}
 		);
 		const updated = jsonc.applyEdits(tsconfig, edits);
 		writeFile(tsconfigPath, updated);
 	} catch {
 		warn("Failed to update `tsconfig.json`.");
 	}
+}
+
+function hasProjectReferences(config: unknown): boolean {
+	if (typeof config !== "object" || config === null) {
+		return false;
+	}
+
+	const tsconfig = config as Record<string, unknown>;
+
+	return Array.isArray(tsconfig.references) && tsconfig.references.length > 0;
 }
 
 /**

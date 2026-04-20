@@ -6,8 +6,7 @@
 	"r2_buckets": [
 		{
 			"binding": "R2_ARTIFACT_ARCHIVE",
-			"bucket_name": "turbo-cache",
-			"preview_bucket_name": "turbo-cache-preview"
+			"bucket_name": "turbo-cache-v2"
 		}
 	]
 }

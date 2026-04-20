@@ -1,8 +1,8 @@
-import Worker from "@cloudflare/workers-shared/asset-worker";
+import { AssetWorkerInner } from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 import { SELF } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it, Mock, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import type { AssetMetadata } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
@@ -10,20 +10,23 @@ const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 vi.mock("@cloudflare/workers-shared/asset-worker/src/utils/kv.ts");
 vi.mock("@cloudflare/workers-shared/asset-worker/src/configuration");
 const existsMock = (fileList: Set<string>) => {
-	vi.spyOn(Worker.prototype, "unstable_exists").mockImplementation(
-		async (pathname: string) => {
-			if (fileList.has(pathname)) {
-				return pathname;
-			}
-			return null;
+	const mockImplementation = async (pathname: string) => {
+		if (fileList.has(pathname)) {
+			return pathname;
 		}
+		return null;
+	};
+
+	vi.spyOn(AssetWorkerInner.prototype, "unstable_exists").mockImplementation(
+		mockImplementation
 	);
 };
 const BASE_URL = "http://example.com";
 
 describe("[Asset Worker] `test slash normalization`", () => {
 	afterEach(() => {
-		vi.mocked(getAssetWithMetadataFromKV).mockRestore();
+		vi.restoreAllMocks();
+		vi.mocked(getAssetWithMetadataFromKV).mockReset();
 	});
 	beforeEach(async () => {
 		vi.mocked(getAssetWithMetadataFromKV).mockImplementation(
@@ -50,7 +53,7 @@ describe("[Asset Worker] `test slash normalization`", () => {
 		}));
 	});
 
-	it("returns 200 leading encoded double slash", async () => {
+	it("returns 200 leading encoded double slash", async ({ expect }) => {
 		const files = ["/blog/index.html"];
 		const requestPath = "/%2fblog/index.html";
 
@@ -60,7 +63,7 @@ describe("[Asset Worker] `test slash normalization`", () => {
 		expect(response.status).toBe(200);
 	});
 
-	it("returns 200 leading non encoded double slash", async () => {
+	it("returns 200 leading non encoded double slash", async ({ expect }) => {
 		const files = ["/blog/index.html"];
 		const requestPath = "//blog/index.html";
 
@@ -70,7 +73,7 @@ describe("[Asset Worker] `test slash normalization`", () => {
 		expect(response.status).toBe(200);
 	});
 
-	it("returns 404 for non matched url", async () => {
+	it("returns 404 for non matched url", async ({ expect }) => {
 		const files = ["/blog/index.html"];
 		const requestPath = "/%2fexample.com/";
 

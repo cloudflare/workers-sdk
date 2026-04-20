@@ -1,8 +1,8 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import { runCommand } from "@cloudflare/cli/command";
+import { transformFile } from "@cloudflare/codemod";
 import { runFrameworkGenerator } from "frameworks/index";
-import { transformFile } from "helpers/codemod";
-import { runCommand } from "helpers/command";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
@@ -12,7 +12,15 @@ import type { C3Context, PackageJson } from "types";
 const { npx } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name, "--no-install"]);
+	// `--add cloudflare` could be used here because it invokes `astro` which is not installed (`--no-install`)
+	// The adapter is added in the `configure` step instead
+	await runFrameworkGenerator(ctx, [
+		ctx.project.name,
+		// c3 will later install the dependencies
+		"--no-install",
+		// c3 will later ask users if they want to use git
+		"--no-git",
+	]);
 
 	logRaw(""); // newline
 };
@@ -22,14 +30,11 @@ const configure = async () => {
 		silent: true,
 		startText: "Installing adapter",
 		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npx} astro add cloudflare\``,
+			`via \`${npx} astro add cloudflare\``
 		)}`,
 	});
 
-	updateAstroConfig();
-};
-
-const updateAstroConfig = () => {
+	// Update Astro config to enable platformProxy and imageService
 	const filePath = "astro.config.mjs";
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
@@ -51,12 +56,12 @@ const updateAstroConfig = () => {
 						b.identifier("platformProxy"),
 						b.objectExpression([
 							b.objectProperty(b.identifier("enabled"), b.booleanLiteral(true)),
-						]),
+						])
 					),
 					// imageService: "cloudflare",
 					b.objectProperty(
 						b.identifier("imageService"),
-						b.stringLiteral("cloudflare"),
+						b.stringLiteral("cloudflare")
 					),
 				]),
 			];

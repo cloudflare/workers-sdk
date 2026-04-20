@@ -221,6 +221,7 @@ import {
 	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
+import ci from "ci-info";
 import TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
@@ -238,7 +239,7 @@ import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
 	getClientIdFromEnv,
-	getCloudflareAccessToken,
+	getCloudflareAccessHeaders,
 	getCloudflareAccountIdFromEnv,
 	getCloudflareAPITokenFromEnv,
 	getCloudflareGlobalAuthEmailFromEnv,
@@ -366,15 +367,25 @@ const DefaultScopes = {
 	"zone:read": "Grants read level access to account zone.",
 	"ssl_certs:write": "See and manage mTLS certificates for your account",
 	"ai:write": "See and change Workers AI catalog and assets",
+	"ai-search:write": "See and change AI Search data",
+	"ai-search:run": "Run search queries on your AI Search instances",
 	"queues:write": "See and change Cloudflare Queues settings and data",
 	"pipelines:write":
 		"See and change Cloudflare Pipelines configurations and data",
 	"secrets_store:write":
 		"See and change secrets + stores within the Secrets Store",
+	"artifacts:write":
+		"See and change Cloudflare Artifacts data such as registries and artifacts",
+	"flagship:write": "See and change Flagship feature flags and apps",
 	"containers:write": "Manage Workers Containers",
 	"cloudchamber:write": "Manage Cloudchamber",
 	"connectivity:admin":
-		" See, change, and bind to Connectivity Directory services, including creating services targeting Cloudflare Tunnel.",
+		"See, change, and bind to Connectivity Directory services, including creating services targeting Cloudflare Tunnel.",
+	"email_routing:write":
+		"See and change Email Routing settings, rules, and destination addresses.",
+	"email_sending:write":
+		"See and change Email Sending settings and configuration.",
+	"browser:write": "See and manage Browser Run sessions",
 } as const;
 
 /**
@@ -1285,12 +1296,20 @@ export async function getAccountId(
 	} catch (e) {
 		// Did we try to select an account in CI or a non-interactive terminal?
 		if (e instanceof NoDefaultValueProvided) {
+			// Redact account names (which may contain email addresses) in CI
+			// to avoid leaking sensitive information in public CI logs.
+			// Non-interactive terminals (agents, piped commands) still need
+			// to see account names to identify which account to configure.
+			const redactAccountName = ci.isCI;
 			throw new UserError(
 				`More than one account available but unable to select one in non-interactive mode.
 Please set the appropriate \`account_id\` in your ${configFileName(undefined)} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
-	.map((account) => `  \`${account.name}\`: \`${account.id}\``)
+	.map(
+		(account) =>
+			`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${account.id}\``
+	)
 	.join("\n")}`
 			);
 		}
@@ -1390,8 +1409,9 @@ async function fetchAuthToken(body: URLSearchParams) {
 		logger.debug(
 			"Using Cloudflare Access to get an access token for the auth request"
 		);
-		// We are trying to access the staging API so we need an "access token".
-		headers["Cookie"] = `CF_Authorization=${await getCloudflareAccessToken()}`;
+		// We are trying to access a domain behind Access so we need auth headers.
+		const accessHeaders = await getCloudflareAccessHeaders();
+		Object.assign(headers, accessHeaders);
 	}
 	logger.debug("Fetching auth token from", getTokenUrlFromEnv());
 	try {

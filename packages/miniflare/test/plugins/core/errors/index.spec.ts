@@ -2,12 +2,12 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import Protocol from "devtools-protocol";
 import esbuild from "esbuild";
 import { DeferredPromise, fetch, Log, LogLevel, Miniflare } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import NodeWebSocket from "ws";
 import { useDispose, useTmp } from "../../../test-shared";
+import type Protocol from "devtools-protocol";
 import type { RawSourceMap } from "source-map";
 
 const FIXTURES_PATH = path.resolve(__dirname, "../../../fixtures/source-maps");
@@ -31,7 +31,7 @@ function pathOrUrlRegexp(filePath: string): `(${string}|${string})` {
 	)})`;
 }
 
-test("source maps workers", async () => {
+test("source maps workers", async ({ expect }) => {
 	// Build fixtures
 	const tmp = await useTmp();
 	await esbuild.build({
@@ -367,7 +367,7 @@ class CustomLog extends Log {
 	}
 }
 
-test("responds with pretty error page", async () => {
+test("responds with pretty error page", async ({ expect }) => {
 	const log = new CustomLog();
 	const mf = new Miniflare({
 		log,

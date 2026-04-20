@@ -1,11 +1,11 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { getWarningForWorkersConfigs } from "../workers-configs";
 import type { ResolvedWorkerConfig } from "../plugin-config";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
 
 describe("getWarningForWorkersConfigs", () => {
 	describe("no warning needed", () => {
-		test("entry worker only", () => {
+		test("entry worker only", ({ expect }) => {
 			const warning = getWarningForWorkersConfigs({
 				entryWorker: {
 					type: "worker",
@@ -21,7 +21,7 @@ describe("getWarningForWorkersConfigs", () => {
 			expect(warning).toBeUndefined();
 		});
 
-		test("multi workers", () => {
+		test("multi workers", ({ expect }) => {
 			const warning = getWarningForWorkersConfigs({
 				entryWorker: {
 					type: "worker",
@@ -56,7 +56,7 @@ describe("getWarningForWorkersConfigs", () => {
 		});
 	});
 
-	test("entry worker only", () => {
+	test("entry worker only", ({ expect }) => {
 		const warning = getWarningForWorkersConfigs({
 			entryWorker: {
 				type: "worker",
@@ -72,6 +72,7 @@ describe("getWarningForWorkersConfigs", () => {
 						"no_bundle",
 						"rules",
 					]),
+					notSupportedOnAuxiliary: new Set(),
 				},
 				raw: getEmptyRawConfig(),
 			},
@@ -89,7 +90,7 @@ describe("getWarningForWorkersConfigs", () => {
 		`);
 	});
 
-	test("multi workers", () => {
+	test("multi workers", ({ expect }) => {
 		const warning = getWarningForWorkersConfigs({
 			entryWorker: {
 				type: "worker",
@@ -100,6 +101,7 @@ describe("getWarningForWorkersConfigs", () => {
 				nonApplicable: {
 					replacedByVite: new Set(["alias"]),
 					notRelevant: new Set(["build"]),
+					notSupportedOnAuxiliary: new Set(),
 				},
 				raw: getEmptyRawConfig(),
 			},
@@ -113,6 +115,7 @@ describe("getWarningForWorkersConfigs", () => {
 					nonApplicable: {
 						replacedByVite: new Set([]),
 						notRelevant: new Set(["find_additional_modules", "no_bundle"]),
+						notSupportedOnAuxiliary: new Set(),
 					},
 					raw: getEmptyRawConfig(),
 				},
@@ -124,6 +127,7 @@ describe("getWarningForWorkersConfigs", () => {
 					nonApplicable: {
 						replacedByVite: new Set([]),
 						notRelevant: new Set(["site"]),
+						notSupportedOnAuxiliary: new Set(),
 					},
 					raw: getEmptyRawConfig(),
 				},
@@ -147,12 +151,69 @@ describe("getWarningForWorkersConfigs", () => {
 				"
 			`);
 	});
+	test("auxiliary worker with assets", ({ expect }) => {
+		const warning = getWarningForWorkersConfigs({
+			entryWorker: {
+				type: "worker",
+				config: {
+					name: "entry-worker",
+					configPath: "./wrangler.json",
+				} as Partial<ResolvedWorkerConfig> as ResolvedWorkerConfig,
+				nonApplicable: getEmptyNotApplicableMap(),
+				raw: getEmptyRawConfig(),
+			},
+			auxiliaryWorkers: [
+				{
+					type: "worker",
+					config: {
+						name: "worker-a",
+						configPath: "./a/wrangler.json",
+					} as Partial<ResolvedWorkerConfig> as ResolvedWorkerConfig,
+					nonApplicable: {
+						replacedByVite: new Set([]),
+						notRelevant: new Set([]),
+						notSupportedOnAuxiliary: new Set(["assets"]),
+					},
+					raw: getEmptyRawConfig(),
+				},
+			],
+		});
+		const normalizedWarning = warning?.replaceAll(
+			"\\wrangler.json",
+			"/wrangler.json"
+		);
+		expect(normalizedWarning).toMatchInlineSnapshot(`
+			"
+			[43mWARNING[0m: your workers configs contain configuration options which are ignored since they are not applicable when using Vite:
+			  - (auxiliary) worker "worker-a" (config at \`a/wrangler.json\`)
+			    - \`assets\` which is not supported for auxiliary workers
+			"
+		`);
+	});
+
+	test("entry worker with assets does not warn", ({ expect }) => {
+		const warning = getWarningForWorkersConfigs({
+			entryWorker: {
+				type: "worker",
+				config: {
+					name: "entry-worker",
+					configPath: "./wrangler.json",
+					assets: { directory: "./public" },
+				} as Partial<ResolvedWorkerConfig> as ResolvedWorkerConfig,
+				nonApplicable: getEmptyNotApplicableMap(),
+				raw: getEmptyRawConfig(),
+			},
+			auxiliaryWorkers: [],
+		});
+		expect(warning).toBeUndefined();
+	});
 });
 
 function getEmptyNotApplicableMap() {
 	return {
 		replacedByVite: new Set([]),
 		notRelevant: new Set([]),
+		notSupportedOnAuxiliary: new Set([]),
 	};
 }
 

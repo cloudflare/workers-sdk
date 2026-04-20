@@ -1,12 +1,12 @@
 import { setImmediate } from "node:timers/promises";
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runWrangler } from "../helpers/run-wrangler";
 
 describe("versions --help", () => {
 	const std = mockConsoleMethods();
 
-	test("shows versions help w/ --help", async () => {
+	test("shows versions help w/ --help", async ({ expect }) => {
 		const result = runWrangler("versions --help");
 
 		await expect(result).resolves.toBeUndefined();
@@ -37,7 +37,7 @@ describe("versions --help", () => {
 describe("versions subhelp", () => {
 	const std = mockConsoleMethods();
 
-	test("shows implicit subhelp", async () => {
+	test("shows implicit subhelp", async ({ expect }) => {
 		const result = runWrangler("versions");
 
 		await expect(result).resolves.toBeUndefined();

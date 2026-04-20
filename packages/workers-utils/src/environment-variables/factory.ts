@@ -24,6 +24,10 @@ type VariableNames =
 
 	// ## Development & Local Testing
 
+	/** Controls whether to fetch the cf.json file. Set to "false" or "0" to disable fetching and use fallback data. Defaults to "true". */
+	| "CLOUDFLARE_CF_FETCH_ENABLED"
+	/** Custom path for caching the cf.json file. Overrides the default node_modules/.mf/cf.json location. */
+	| "CLOUDFLARE_CF_FETCH_PATH"
 	/** Local database connection strings for Hyperdrive development. The * should be replaced with the Hyperdrive binding name in the Worker. */
 	| `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${string}`
 	/** Suppress Hyperdrive-related warnings during development. */
@@ -69,6 +73,13 @@ type VariableNames =
 	/** The Workers environment to target (equivalent to the `--env` CLI param) */
 	| "CLOUDFLARE_ENV"
 
+	// ## Directory Configuration
+
+	/** Custom directory for Wrangler's cache files (overrides `node_modules/.cache/wrangler`). */
+	| "WRANGLER_CACHE_DIR"
+	/** Custom path to cloudflared binary (overrides automatic binary management). */
+	| "CLOUDFLARED_PATH"
+
 	// ## Advanced Configuration
 
 	/** Set to "staging" to use staging APIs instead of production. */
@@ -86,14 +97,23 @@ type VariableNames =
 	/** Direct authorization token for API requests. */
 	| "WRANGLER_CF_AUTHORIZATION_TOKEN"
 
+	// ## Cloudflare Access Service Token (for CI/non-interactive environments)
+
+	/** Cloudflare Access Service Token Client ID. Used to authenticate with Access-protected domains in non-interactive environments (e.g. CI). */
+	| "CLOUDFLARE_ACCESS_CLIENT_ID"
+	/** Cloudflare Access Service Token Client Secret. Used with CLOUDFLARE_ACCESS_CLIENT_ID. */
+	| "CLOUDFLARE_ACCESS_CLIENT_SECRET"
+
 	// ## Experimental Feature Flags
 
 	/** Enable the local explorer UI at /cdn-cgi/explorer (experimental, default: false). */
 	| "X_LOCAL_EXPLORER"
+	/** Open the browser in headful (visible) mode when using the Browser Run API in local dev (default: false). */
+	| "X_BROWSER_HEADFUL"
 
 	// ## CI-specific Variables (Internal Use)
 
-	/** Override command used by `wrangler init` (default: "create cloudflare@^2.5.0"). */
+	/** Override command used by `wrangler init` (default: "create cloudflare"). */
 	| "WRANGLER_C3_COMMAND"
 	/** Enable/disable telemetry data collection. */
 	| "WRANGLER_SEND_METRICS"

@@ -24,9 +24,8 @@ export function nodejsHybridPlugin({
 		async setup(build) {
 			// `unenv` and `@cloudflare/unenv-preset` only publish esm
 			const { defineEnv } = await import("unenv");
-			const { getCloudflarePreset, nonPrefixedNodeModules } = await import(
-				"@cloudflare/unenv-preset"
-			);
+			const { getCloudflarePreset, nonPrefixedNodeModules } =
+				await import("@cloudflare/unenv-preset");
 			const { alias, inject, external, polyfill } = defineEnv({
 				presets: [
 					getCloudflarePreset({

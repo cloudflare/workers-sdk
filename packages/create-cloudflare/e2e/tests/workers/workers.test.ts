@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { readJSON, readToml } from "helpers/files";
-import { beforeAll, describe, expect } from "vitest";
+import { beforeAll, describe } from "vitest";
 import { deleteWorker } from "../../../scripts/common";
 import {
 	isWindows,
@@ -18,14 +18,16 @@ import {
 	verifyTestScript,
 } from "../../helpers/workers-helpers";
 import { getWorkerTests } from "./test-config";
+import type { RunnerTestSuite } from "vitest";
 
 const workerTests = getWorkerTests();
 
 describe
 	.skipIf(workerTests.length === 0 || isWindows)
 	.concurrent(`E2E: Workers templates`, () => {
-		beforeAll((ctx) => {
-			recreateLogFolder(ctx);
+		// eslint-disable-next-line no-empty-pattern
+		beforeAll(({}, ctx) => {
+			recreateLogFolder(ctx as RunnerTestSuite);
 
 			if (workerTemplateToTest) {
 				debuglog("Running worker tests with filter:", workerTemplateToTest);
@@ -40,12 +42,13 @@ describe
 			test(
 				name,
 				{ retry: 1, timeout: testConfig.timeout || TEST_TIMEOUT },
-				async ({ project, logStream }) => {
+				async ({ expect, project, logStream }) => {
 					try {
 						const deployedUrl = await runC3ForWorkerTest(
+							expect,
 							testConfig,
 							project.path,
-							logStream,
+							logStream
 						);
 
 						// Relevant project files should have been created
@@ -72,7 +75,7 @@ describe
 							}
 						} else {
 							expect.fail(
-								`Expected at least one of "${jsoncPath}" or "${tomlPath}" to exist.`,
+								`Expected at least one of "${jsoncPath}" or "${tomlPath}" to exist.`
 							);
 						}
 
@@ -81,7 +84,12 @@ describe
 							if (deployedUrl) {
 								await verifyDeployment(deployedUrl, verifyDeploy);
 							} else {
-								await verifyLocalDev(testConfig, project.path, logStream);
+								await verifyLocalDev(
+									expect,
+									testConfig,
+									project.path,
+									logStream
+								);
 							}
 						}
 
@@ -91,7 +99,7 @@ describe
 					} finally {
 						await deleteWorker(project.name);
 					}
-				},
+				}
 			);
 		});
 	});

@@ -1,4 +1,4 @@
-import { WorkerOptions } from "./plugins";
+import type { WorkerOptions } from "./plugins";
 
 // https://github.com/Rich-Harris/devalue/blob/50af63e2b2c648f6e6ea29904a14faac25a581fc/src/utils.js#L31-L51
 const objectProtoNames = Object.getOwnPropertyNames(Object.prototype)

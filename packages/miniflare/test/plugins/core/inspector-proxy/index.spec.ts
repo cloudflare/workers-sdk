@@ -1,15 +1,11 @@
 import events from "node:events";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
-import {
-	fetch,
-	Miniflare,
-	MiniflareCoreError,
-	MiniflareOptions,
-} from "miniflare";
-import { beforeAll, expect, test, vi } from "vitest";
+import { fetch, Miniflare, MiniflareCoreError } from "miniflare";
+import { beforeAll, test, vi } from "vitest";
 import WebSocket from "ws";
 import { useDispose } from "../../../test-shared";
+import type { MiniflareOptions } from "miniflare";
 
 const nullScript =
 	'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));';
@@ -21,7 +17,9 @@ beforeAll(() => {
 	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
 });
 
-test("InspectorProxy: /json/version should provide details about the inspector version", async () => {
+test("InspectorProxy: /json/version should provide details about the inspector version", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -44,7 +42,9 @@ test("InspectorProxy: /json/version should provide details about the inspector v
 	expect(versionDetails["Protocol-Version"]).toMatch(/^\d+\.\d+$/);
 });
 
-test("InspectorProxy: /json should provide a list of a single worker inspector", async () => {
+test("InspectorProxy: /json should provide a list of a single worker inspector", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -70,7 +70,7 @@ test("InspectorProxy: /json should provide a list of a single worker inspector",
 	expect(inspectors[0]["webSocketDebuggerUrl"]).toBe(`ws://localhost:${port}/`);
 });
 
-test("InspectorProxy: proxy port validation", async () => {
+test("InspectorProxy: proxy port validation", async ({ expect }) => {
 	expect(
 		() =>
 			new Miniflare({
@@ -89,7 +89,9 @@ test("InspectorProxy: proxy port validation", async () => {
 	);
 });
 
-test("InspectorProxy: /json should provide a list of a multiple worker inspector", async () => {
+test("InspectorProxy: /json should provide a list of a multiple worker inspector", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -135,7 +137,9 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 	);
 });
 
-test("InspectorProxy: /json should provide a list of a multiple worker inspector with some filtered out", async () => {
+test("InspectorProxy: /json should provide a list of a multiple worker inspector with some filtered out", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -175,7 +179,9 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 	);
 });
 
-test("InspectorProxy: should allow inspector port updating via miniflare#setOptions", async () => {
+test("InspectorProxy: should allow inspector port updating via miniflare#setOptions", async ({
+	expect,
+}) => {
 	const initialInspectorPort = await getPort();
 	const options: MiniflareOptions = {
 		workers: [
@@ -226,7 +232,9 @@ test("InspectorProxy: should allow inspector port updating via miniflare#setOpti
 	);
 });
 
-test("InspectorProxy: should keep the same inspector port on miniflare#setOptions calls with inspectorPort set to 0", async () => {
+test("InspectorProxy: should keep the same inspector port on miniflare#setOptions calls with inspectorPort set to 0", async ({
+	expect,
+}) => {
 	const options: MiniflareOptions = {
 		inspectorPort: 0,
 		workers: [
@@ -248,7 +256,9 @@ test("InspectorProxy: should keep the same inspector port on miniflare#setOption
 	expect(oldPort).toBe(newPort);
 });
 
-test("InspectorProxy: should not keep the same inspector port on miniflare#setOptions calls changing inspectorPort to 0", async () => {
+test("InspectorProxy: should not keep the same inspector port on miniflare#setOptions calls changing inspectorPort to 0", async ({
+	expect,
+}) => {
 	const initialInspectorPort = await getPort();
 	const options: MiniflareOptions = {
 		inspectorPort: initialInspectorPort,
@@ -277,7 +287,9 @@ test("InspectorProxy: should not keep the same inspector port on miniflare#setOp
 	).rejects.toThrow();
 });
 
-test("InspectorProxy: should allow debugging a single worker", async () => {
+test("InspectorProxy: should allow debugging a single worker", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -332,7 +344,9 @@ test("InspectorProxy: should allow debugging a single worker", async () => {
 	expect(await res.text()).toBe("body");
 });
 
-test("InspectorProxy: the devtools websocket communication should adapt to an inspector port changes in a miniflare#setOptions calls", async () => {
+test("InspectorProxy: the devtools websocket communication should adapt to an inspector port changes in a miniflare#setOptions calls", async ({
+	expect,
+}) => {
 	const options: MiniflareOptions = {
 		workers: [
 			{
@@ -392,7 +406,7 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 
 	await testDebuggingWorkerOn(initialInspectorPort);
 
-	mf.setOptions({ ...options, inspectorPort: await getPort() });
+	await mf.setOptions({ ...options, inspectorPort: await getPort() });
 
 	const newInspectorPort = await getInspectorPortReady(mf);
 
@@ -401,7 +415,9 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 	await testDebuggingWorkerOn(newInspectorPort);
 });
 
-test("InspectorProxy: should allow debugging multiple workers", async () => {
+test("InspectorProxy: should allow debugging multiple workers", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -528,7 +544,9 @@ test("InspectorProxy: should allow debugging multiple workers", async () => {
 	expect(await res.text()).toBe("worker-a -> worker-b");
 });
 
-test("InspectorProxy: should allow debugging workers created via setOptions", async () => {
+test("InspectorProxy: should allow debugging workers created via setOptions", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -683,7 +701,7 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 // through the InspectorProxy, we need to make sure that such proxying does not hit the limit.
 // By logging a large string we can verify that the inspector messages are being proxied successfully.
 // (This issue was encountered with the wrangler inspector proxy worker: https://github.com/cloudflare/workers-sdk/issues/5297)
-test("InspectorProxy: can proxy messages > 1MB", async () => {
+test("InspectorProxy: can proxy messages > 1MB", async ({ expect }) => {
 	const LARGE_STRING = "This is a large string => " + "z".repeat(2 ** 20);
 
 	const mf = new Miniflare({

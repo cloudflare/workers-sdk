@@ -1,9 +1,9 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { getPlatformProxy } from "wrangler";
 import type { Ai } from "@cloudflare/workers-types/experimental";
 
 describe("getPlatformProxy - remote bindings with remoteBindings: false", () => {
-	test("getPlatformProxy works with remote bindings", async () => {
+	test("getPlatformProxy works with remote bindings", async ({ expect }) => {
 		const { env, dispose } = await getPlatformProxy<{
 			AI: Ai;
 		}>({

@@ -1,8 +1,7 @@
 import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
 import * as TOML from "smol-toml";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -12,32 +11,9 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
 import type { SSHPublicKeyItem } from "@cloudflare/containers-shared";
+import type { ExpectStatic } from "vitest";
 
-const MOCK_DEPLOYMENTS_COMPLEX_RESPONSE = `
-			"{
-			    \\"id\\": \\"1\\",
-			    \\"type\\": \\"default\\",
-			    \\"created_at\\": \\"123\\",
-			    \\"account_id\\": \\"123\\",
-			    \\"vcpu\\": 4,
-			    \\"memory\\": \\"400MB\\",
-			    \\"memory_mib\\": 400,
-			    \\"version\\": 1,
-			    \\"image\\": \\"hello\\",
-			    \\"location\\": {
-			        \\"name\\": \\"sfo06\\",
-			        \\"enabled\\": true
-			    },
-			    \\"network\\": {
-			        \\"mode\\": \\"public\\",
-			        \\"ipv4\\": \\"1.1.1.1\\"
-			    },
-			    \\"placements_ref\\": \\"http://ref\\",
-			    \\"node_group\\": \\"metal\\"
-			}"
-		`;
-
-function mockDeploymentPost() {
+function mockDeploymentPost(expect: ExpectStatic) {
 	msw.use(
 		http.post(
 			"*/deployments/v2",
@@ -93,17 +69,16 @@ describe("cloudchamber create", () => {
 	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("cloudchamber create --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber create
 
-			Create a new deployment
+			Create a new deployment [alpha]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -120,14 +95,16 @@ describe("cloudchamber create", () => {
 			      --label          Deployment labels  [array]
 			      --all-ssh-keys   To add all SSH keys configured on your account to be added to this deployment, set this option to true  [boolean]
 			      --ssh-key-id     ID of the SSH key to add to the deployment  [array]
-			      --instance-type  Instance type to allocate to this deployment  [choices: \\"lite\\", \\"basic\\", \\"standard-1\\", \\"standard-2\\", \\"standard-3\\", \\"standard-4\\"]
+			      --instance-type  Instance type to allocate to this deployment  [choices: "lite", "basic", "standard-1", "standard-2", "standard-3", "standard-4"]
 			      --vcpu           Number of vCPUs to allocate to this deployment.  [number]
 			      --memory         Amount of memory (GiB, MiB...) to allocate to this deployment. Ex: 4GiB.  [string]
 			      --ipv4           Include an IPv4 in the deployment  [boolean]"
 		`);
 	});
 
-	it("should fail with a nice message when parameters are missing", async () => {
+	it("should fail with a nice message when parameters are missing", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await expect(
@@ -137,7 +114,9 @@ describe("cloudchamber create", () => {
 		);
 	});
 
-	it("should fail with a nice message when image is invalid", async () => {
+	it("should fail with a nice message when image is invalid", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await expect(
@@ -153,7 +132,9 @@ describe("cloudchamber create", () => {
 		);
 	});
 
-	it("should fail with a nice message when parameters are mistyped", async () => {
+	it("should fail with a nice message when parameters are mistyped", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		fs.writeFileSync(
 			"./wrangler.toml",
@@ -172,7 +153,9 @@ describe("cloudchamber create", () => {
 		);
 	});
 
-	it("should fail with a nice message when instance type is invalid", async () => {
+	it("should fail with a nice message when instance type is invalid", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		fs.writeFileSync(
 			"./wrangler.toml",
@@ -195,7 +178,9 @@ describe("cloudchamber create", () => {
 		);
 	});
 
-	it("should fail with a nice message when instance type is set with vcpu", async () => {
+	it("should fail with a nice message when instance type is set with vcpu", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		fs.writeFileSync(
 			"./wrangler.toml",
@@ -219,21 +204,47 @@ describe("cloudchamber create", () => {
 		);
 	});
 
-	it("should create deployment (detects no interactivity)", async () => {
+	it("should create deployment (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		mockGetKey();
-		mockDeploymentPost();
+		mockDeploymentPost(expect);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler(
 			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --vcpu 3 --memory 400GB --ipv4 true"
 		);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
-		expect(std.out).toMatchInlineSnapshot(MOCK_DEPLOYMENTS_COMPLEX_RESPONSE);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    "id": "1",
+			    "type": "default",
+			    "created_at": "123",
+			    "account_id": "123",
+			    "vcpu": 4,
+			    "memory": "400MB",
+			    "memory_mib": 400,
+			    "version": 1,
+			    "image": "hello",
+			    "location": {
+			        "name": "sfo06",
+			        "enabled": true
+			    },
+			    "network": {
+			        "mode": "public",
+			        "ipv4": "1.1.1.1"
+			    },
+			    "placements_ref": "http://ref",
+			    "node_group": "metal"
+			}"
+		`);
 	});
 
-	it("should create deployment with instance type (detects no interactivity)", async () => {
+	it("should create deployment with instance type (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		mockGetKey();
@@ -256,7 +267,7 @@ describe("cloudchamber create", () => {
 		expect(std.out).toMatchInlineSnapshot(`"{}"`);
 	});
 
-	it("properly reads wrangler config", async () => {
+	it("properly reads wrangler config", async ({ expect }) => {
 		// This is very similar to the previous tests except config
 		// is set in wrangler and not overridden by the CLI
 		setIsTTY(false);
@@ -270,15 +281,37 @@ describe("cloudchamber create", () => {
 		// if values are not read by wrangler, this mock won't work
 		// since the wrangler command wont get the right parameters
 		mockGetKey();
-		mockDeploymentPost();
+		mockDeploymentPost(expect);
 		await runWrangler(
 			"cloudchamber create --var HELLO:WORLD --var YOU:CONQUERED"
 		);
-		expect(std.out).toMatchInlineSnapshot(MOCK_DEPLOYMENTS_COMPLEX_RESPONSE);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    "id": "1",
+			    "type": "default",
+			    "created_at": "123",
+			    "account_id": "123",
+			    "vcpu": 4,
+			    "memory": "400MB",
+			    "memory_mib": 400,
+			    "version": 1,
+			    "image": "hello",
+			    "location": {
+			        "name": "sfo06",
+			        "enabled": true
+			    },
+			    "network": {
+			        "mode": "public",
+			        "ipv4": "1.1.1.1"
+			    },
+			    "placements_ref": "http://ref",
+			    "node_group": "metal"
+			}"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("properly reads wrangler config for instance type", async () => {
+	it("properly reads wrangler config for instance type", async ({ expect }) => {
 		// This is very similar to the previous tests except config
 		// is set in wrangler and not overridden by the CLI
 		setIsTTY(false);
@@ -310,7 +343,9 @@ describe("cloudchamber create", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should create deployment indicating ssh keys (detects no interactivity)", async () => {
+	it("should create deployment indicating ssh keys (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({
 			vcpu: 40,
@@ -349,10 +384,34 @@ describe("cloudchamber create", () => {
 		await runWrangler(
 			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --all-ssh-keys --ipv4"
 		);
-		expect(std.out).toMatchInlineSnapshot(MOCK_DEPLOYMENTS_COMPLEX_RESPONSE);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    "id": "1",
+			    "type": "default",
+			    "created_at": "123",
+			    "account_id": "123",
+			    "vcpu": 4,
+			    "memory": "400MB",
+			    "memory_mib": 400,
+			    "version": 1,
+			    "image": "hello",
+			    "location": {
+			        "name": "sfo06",
+			        "enabled": true
+			    },
+			    "network": {
+			        "mode": "public",
+			        "ipv4": "1.1.1.1"
+			    },
+			    "placements_ref": "http://ref",
+			    "node_group": "metal"
+			}"
+		`);
 	});
 
-	it("can't create deployment due to lack of fields (json)", async () => {
+	it("can't create deployment due to lack of fields (json)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -364,8 +423,8 @@ describe("cloudchamber create", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-	`);
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
 	});
 });

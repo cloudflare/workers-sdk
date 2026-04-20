@@ -12,7 +12,7 @@ import { parseRules } from "./rules";
 import { tryAttachSourcemapToModule } from "./source-maps";
 import type { Entry } from "./entry";
 import type { ParsedRules } from "./rules";
-import type { CfModule, Rule } from "@cloudflare/workers-utils";
+import type { CfModule, CfModuleType, Rule } from "@cloudflare/workers-utils";
 
 async function* getFiles(
 	configPath: string | undefined,
@@ -40,13 +40,38 @@ async function* getFiles(
 }
 
 /**
- * Checks if a given string is a valid Python package identifier.
- * See https://packaging.python.org/en/latest/specifications/name-normalization/
- * @param name The package name to validate
+ * Checks if a given module name is a Python vendor module.
+ * @param moduleName The module name to check
  */
-function isValidPythonPackageName(name: string): boolean {
-	const regex = /^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$/i;
-	return regex.test(name);
+function isPythonVendorModule(moduleName: string): boolean {
+	// separator should be forward slash, as we always use forward slash for module names
+	// see `getFiles()` for more details
+	return moduleName.startsWith("python_modules/");
+}
+
+const VENDORED_JS_EXTENSIONS = new Set([".mjs", ".js"]);
+
+/**
+ * Returns the module type for vendored modules in Python workers.
+ * This function is used to handle JavaScript files from the Python workers SDK package,
+ * which should be registered as ES modules so they can be dynamically imported at runtime.
+ * @param name The module name
+ * @param fallback The fallback module type
+ */
+function getVendoredModuleType(
+	name: string,
+	fallback: CfModuleType | undefined
+): CfModuleType | undefined {
+	// This is only enabled for python workers SDK package,
+	// which is under the `workers/` directory
+	if (!name.startsWith("workers/")) {
+		return fallback;
+	}
+	const ext = path.extname(name);
+	if (VENDORED_JS_EXTENSIONS.has(ext)) {
+		return "esm";
+	}
+	return fallback;
 }
 
 function removePythonVendorModules(
@@ -56,13 +81,11 @@ function removePythonVendorModules(
 	if (!isPythonEntrypoint) {
 		return modules;
 	}
-	return modules.filter((m) => !m.name.startsWith("python_modules" + path.sep));
+	return modules.filter((m) => !isPythonVendorModule(m.name));
 }
 
 function getPythonVendorModulesSize(modules: CfModule[]): number {
-	const vendorModules = modules.filter((m) =>
-		m.name.startsWith("python_modules" + path.sep)
-	);
+	const vendorModules = modules.filter((m) => isPythonVendorModule(m.name));
 	return vendorModules.reduce((total, m) => total + m.content.length, 0);
 }
 
@@ -96,47 +119,15 @@ export async function findAdditionalModules(
 			name: m.name,
 		}));
 
-	// Try to find a cf-requirements.txt file
 	const isPythonEntrypoint =
 		getBundleType(entry.format, entry.file) === "python";
 
 	if (isPythonEntrypoint) {
-		let pythonRequirements = "";
-		try {
-			pythonRequirements = await readFile(
-				path.resolve(entry.projectRoot, "cf-requirements.txt"),
-				"utf-8"
-			);
-		} catch {
-			// We don't care if a cf-requirements.txt isn't found
-			logger.debug(
-				"Python entrypoint detected, but no cf-requirements.txt file found."
-			);
-		}
-
-		// If a `requirements.txt` file is found, show a warning instructing user to use `cf-requirements.txt` instead.
-		if (existsSync(path.resolve(entry.projectRoot, "requirements.txt"))) {
+		// If a `cf-requirements.txt` file is found, show a warning instructing user to use pywrangler instead.
+		if (existsSync(path.resolve(entry.projectRoot, "cf-requirements.txt"))) {
 			logger.warn(
-				"Found a `requirements.txt` file. Python requirements should now be in a `cf-requirements.txt` file."
+				"Found a `cf-requirements.txt` file. cf-requirements.txt is no longer used, instead put your dependencies in pyproject.toml and use pywrangler."
 			);
-		}
-
-		for (const requirement of pythonRequirements.split("\n")) {
-			if (requirement === "") {
-				continue;
-			}
-			if (!isValidPythonPackageName(requirement)) {
-				throw new UserError(
-					`Invalid Python package name "${requirement}" found in cf-requirements.txt. Note that cf-requirements.txt should contain package names only, not version specifiers.`
-				);
-			}
-
-			modules.push({
-				type: "python-requirement",
-				name: requirement,
-				content: "",
-				filePath: undefined,
-			});
 		}
 
 		// Look for a `python_modules` directory in the root of the project and add all the .py and .so files in it
@@ -187,10 +178,17 @@ export async function findAdditionalModules(
 					return true; // Include this file
 				})
 				.map((m) => {
-					const prefixedPath = path.join("python_modules", m.name);
+					// Always use forward slashes for module names, regardless of platform.
+					// path.join() uses backslashes on Windows, but module names must use
+					// forward slashes for proper directory structure when deployed.
+					const prefixedPath = `python_modules/${m.name}`;
 					return {
 						...m,
 						name: prefixedPath,
+						// JavaScript files from Python workers sdk (workers-runtime-sdk)
+						// are registered as esModule, so that they can be dynamically
+						// imported via import_from_javascript() at runtime.
+						type: getVendoredModuleType(m.name, m.type),
 					};
 				});
 

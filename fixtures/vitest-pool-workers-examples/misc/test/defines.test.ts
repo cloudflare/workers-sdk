@@ -1,13 +1,13 @@
-import { expect, it } from "vitest";
+import { it } from "vitest";
 
-it("replaces defines from wrangler.toml", async () => {
+it("replaces defines from wrangler.toml", async ({ expect }) => {
 	expect(WRANGLER_DEFINED_THING).toBe("thing");
 	expect(WRANGLER_NESTED.DEFINED.THING).toStrictEqual([1, 2, 3]);
 	expect(WRANGLER_NESTED.DEFINED.THING).toBe(WRANGLER_NESTED.DEFINED.THING);
 });
 
-it("replaces defines from vitest.config.mts", async () => {
+it("replaces defines from vitest.config.mts", async ({ expect }) => {
 	expect(CONFIG_DEFINED_THING).toBe("thing");
 	expect(CONFIG_NESTED.DEFINED.THING).toStrictEqual([1, 2, 3]);
-	expect(CONFIG_NESTED.DEFINED.THING).toBe(CONFIG_NESTED.DEFINED.THING);
+	// Note that, unlike ESBuild, Oxc does not share object references when using `define` (https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#define)
 });

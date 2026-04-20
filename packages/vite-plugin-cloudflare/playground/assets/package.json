@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build",
+		"build:default": "vite build",
 		"build:no-client-entry": "vite build -c vite.config.no-client-entry.ts",
 		"build:public-dir-only": "vite build -c vite.config.public-dir-only.ts",
 		"check:type": "tsc --build",
@@ -17,7 +17,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }

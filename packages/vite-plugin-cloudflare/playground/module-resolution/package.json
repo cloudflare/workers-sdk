@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build --app",
+		"build:default": "vite build --app",
 		"build:nodejs-compat": "vite build --app -c ./vite.config.nodejs-compat.ts",
 		"check:type": "tsc --build",
 		"dev": "vite dev",
@@ -24,7 +24,7 @@
 		"react": "^19.2.1",
 		"slash-create": "6.2.1",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }

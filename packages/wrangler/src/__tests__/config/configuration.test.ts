@@ -1,22 +1,77 @@
 import * as fs from "node:fs";
 import { experimental_readRawConfig } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { describe, expect, it } from "vitest";
+import { describe, it, vi } from "vitest";
 import { readConfig } from "../../config";
+import { updateCheck } from "../../update-check";
+import { endEventLoop } from "../helpers/end-event-loop";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
+
+describe("readConfig() upgrade hint", () => {
+	runInTempDir();
+	const std = mockConsoleMethods();
+
+	it("should not show an upgrade hint when unexpected fields are found but no update is available", async ({
+		expect,
+	}) => {
+		vi.mocked(updateCheck).mockResolvedValue(undefined);
+		writeWranglerConfig({
+			// @ts-expect-error intentional unknown field for test
+			unknown_field: "some_value",
+		});
+		readConfig({ config: "wrangler.toml" });
+		await endEventLoop();
+		expect(std.warn).toContain("Unexpected fields found");
+		expect(std.out).not.toContain("newer version of Wrangler");
+	});
+
+	it("should show an upgrade hint when unexpected fields are found and an update is available", async ({
+		expect,
+	}) => {
+		vi.mocked(updateCheck).mockResolvedValue("9.9.9");
+		writeWranglerConfig({
+			// @ts-expect-error intentional unknown field for test
+			unknown_field: "some_value",
+		});
+		readConfig({ config: "wrangler.toml" });
+		await endEventLoop();
+		expect(std.warn).toContain("Unexpected fields found");
+		expect(std.out).toContain("There is a newer version of Wrangler available");
+		expect(std.out).toContain("9.9.9");
+		expect(std.out).toContain(
+			"Try upgrading, as it might support this configuration option."
+		);
+	});
+
+	it("should not show an upgrade hint when warnings are unrelated to unexpected fields", async ({
+		expect,
+	}) => {
+		vi.mocked(updateCheck).mockResolvedValue("9.9.9");
+		// legacy_env: false produces a "Service environments are deprecated" warning
+		// but does NOT trigger validateAdditionalProperties, so no upgrade hint
+		writeWranglerConfig({ legacy_env: false });
+		readConfig({ config: "wrangler.toml", "legacy-env": false });
+		await endEventLoop();
+		expect(std.warn).toContain("Service environments are deprecated");
+		expect(std.out).not.toContain("newer version of Wrangler");
+	});
+});
 
 describe("readConfig()", () => {
 	runInTempDir();
-	it("should not error if a python entrypoint is used with the right compatibility_flag", () => {
+	it("should not error if a python entrypoint is used with the right compatibility_flag", ({
+		expect,
+	}) => {
 		writeWranglerConfig({
 			main: "index.py",
 			compatibility_flags: ["python_workers"],
 		});
 		const config = readConfig({ config: "wrangler.toml" });
 		expect(config.rules).toMatchInlineSnapshot(`
-			Array [
-			  Object {
-			    "globs": Array [
+			[
+			  {
+			    "globs": [
 			      "**/*.py",
 			    ],
 			    "type": "PythonModule",
@@ -24,7 +79,9 @@ describe("readConfig()", () => {
 			]
 		`);
 	});
-	it("should error if a python entrypoint is used without the right compatibility_flag", () => {
+	it("should error if a python entrypoint is used without the right compatibility_flag", ({
+		expect,
+	}) => {
 		writeWranglerConfig({
 			main: "index.py",
 		});
@@ -44,7 +101,9 @@ describe("experimental_readRawConfig()", () => {
 		`with %s config files`,
 		(configType) => {
 			runInTempDir();
-			it(`should find a ${configType} config file given a specific path`, () => {
+			it(`should find a ${configType} config file given a specific path`, ({
+				expect,
+			}) => {
 				fs.mkdirSync("../folder", { recursive: true });
 				writeWranglerConfig(
 					{ name: "config-one" },
@@ -61,7 +120,7 @@ describe("experimental_readRawConfig()", () => {
 				);
 			});
 
-			it("should find a config file given a specific script", () => {
+			it("should find a config file given a specific script", ({ expect }) => {
 				fs.mkdirSync("./path/to", { recursive: true });
 				writeWranglerConfig(
 					{ name: "config-one" },
@@ -99,7 +158,7 @@ describe("experimental_readRawConfig()", () => {
 describe("BOM (Byte Order Marker) handling", () => {
 	runInTempDir();
 
-	it("should remove UTF-8 BOM from TOML config files", () => {
+	it("should remove UTF-8 BOM from TOML config files", ({ expect }) => {
 		const configContent = `name = "test-worker"
 compatibility_date = "2022-01-12"`;
 
@@ -116,7 +175,7 @@ compatibility_date = "2022-01-12"`;
 		expect(config.compatibility_date).toBe("2022-01-12");
 	});
 
-	it("should remove UTF-8 BOM from JSON config files", () => {
+	it("should remove UTF-8 BOM from JSON config files", ({ expect }) => {
 		const configContent = `{
 	"name": "test-worker",
 	"compatibility_date": "2022-01-12"
@@ -135,7 +194,7 @@ compatibility_date = "2022-01-12"`;
 		expect(config.compatibility_date).toBe("2022-01-12");
 	});
 
-	it("should error on UTF-16 BE BOM", () => {
+	it("should error on UTF-16 BE BOM", ({ expect }) => {
 		const bomBytes = Buffer.from([0xfe, 0xff]);
 		const configContent = Buffer.from('{"name": "test"}', "utf-8");
 		fs.writeFileSync("wrangler.json", Buffer.concat([bomBytes, configContent]));
@@ -145,7 +204,7 @@ compatibility_date = "2022-01-12"`;
 		);
 	});
 
-	it("should error on UTF-16 LE BOM", () => {
+	it("should error on UTF-16 LE BOM", ({ expect }) => {
 		const bomBytes = Buffer.from([0xff, 0xfe]);
 		const configContent = Buffer.from('{"name": "test"}', "utf-8");
 		fs.writeFileSync("wrangler.json", Buffer.concat([bomBytes, configContent]));
@@ -155,7 +214,7 @@ compatibility_date = "2022-01-12"`;
 		);
 	});
 
-	it("should error on UTF-32 BE BOM", () => {
+	it("should error on UTF-32 BE BOM", ({ expect }) => {
 		const bomBytes = Buffer.from([0x00, 0x00, 0xfe, 0xff]);
 		const configContent = Buffer.from('{"name": "test"}', "utf-8");
 		fs.writeFileSync("wrangler.json", Buffer.concat([bomBytes, configContent]));
@@ -165,7 +224,7 @@ compatibility_date = "2022-01-12"`;
 		);
 	});
 
-	it("should error on UTF-32 LE BOM", () => {
+	it("should error on UTF-32 LE BOM", ({ expect }) => {
 		const bomBytes = Buffer.from([0xff, 0xfe, 0x00, 0x00]);
 		const configContent = Buffer.from('{"name": "test"}', "utf-8");
 		fs.writeFileSync("wrangler.json", Buffer.concat([bomBytes, configContent]));
@@ -175,7 +234,7 @@ compatibility_date = "2022-01-12"`;
 		);
 	});
 
-	it("should handle files without BOM normally", () => {
+	it("should handle files without BOM normally", ({ expect }) => {
 		writeWranglerConfig({ name: "no-bom-test" });
 
 		const config = readConfig({ config: "wrangler.toml" });

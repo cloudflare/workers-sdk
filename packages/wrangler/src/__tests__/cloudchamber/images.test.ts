@@ -1,7 +1,6 @@
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -19,23 +18,22 @@ describe("cloudchamber image", () => {
 	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("cloudchamber registries --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber registries
 
-			Configure registries via Cloudchamber
+			Configure registries via Cloudchamber [alpha]
 
 			COMMANDS
-			  wrangler cloudchamber registries configure             Configure Cloudchamber to pull from specific registries
-			  wrangler cloudchamber registries credentials [domain]  get a temporary password for a specific domain
-			  wrangler cloudchamber registries remove [domain]       removes the registry at the given domain
-			  wrangler cloudchamber registries list                  list registries configured for this account
+			  wrangler cloudchamber registries configure             Configure Cloudchamber to pull from specific registries [alpha]
+			  wrangler cloudchamber registries credentials <domain>  Get a temporary password for a specific domain [alpha]
+			  wrangler cloudchamber registries remove <domain>       Remove the registry at the given domain [alpha]
+			  wrangler cloudchamber registries list                  List registries configured for this account [alpha]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -47,7 +45,9 @@ describe("cloudchamber image", () => {
 		`);
 	});
 
-	it("should create an image registry (no interactivity)", async () => {
+	it("should create an image registry (no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -73,13 +73,15 @@ describe("cloudchamber image", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
-		"{
-		    \\"domain\\": \\"docker.io\\"
-		}"
-	`);
+			"{
+			    "domain": "docker.io"
+			}"
+		`);
 	});
 
-	it("should create an image registry (no interactivity)", async () => {
+	it("should create an image registry (no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -103,7 +105,9 @@ describe("cloudchamber image", () => {
 		expect(std.out).toMatchInlineSnapshot(`"jwt"`);
 	});
 
-	it("should remove an image registry (no interactivity)", async () => {
+	it("should remove an image registry (no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -121,7 +125,7 @@ describe("cloudchamber image", () => {
 		expect(std.out).toMatchInlineSnapshot(`"{}"`);
 	});
 
-	it("should list registries (no interactivity)", async () => {
+	it("should list registries (no interactivity)", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -147,12 +151,12 @@ describe("cloudchamber image", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"[
 			    {
-			        \\"public_key\\": \\"\\",
-			        \\"domain\\": \\"docker.io\\"
+			        "public_key": "",
+			        "domain": "docker.io"
 			    },
 			    {
-			        \\"public_key\\": \\"some_public_key\\",
-			        \\"domain\\": \\"docker.io2\\"
+			        "public_key": "some_public_key",
+			        "domain": "docker.io2"
 			    }
 			]"
 		`);
@@ -170,11 +174,10 @@ describe("cloudchamber image list", () => {
 	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await runWrangler("cloudchamber images list --help");
@@ -182,7 +185,7 @@ describe("cloudchamber image list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber images list
 
-			List images in the Cloudflare managed registry
+			List images in the Cloudflare managed registry [alpha]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -198,7 +201,7 @@ describe("cloudchamber image list", () => {
 		`);
 	});
 
-	it("should list images", async () => {
+	it("should list images", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -234,7 +237,7 @@ describe("cloudchamber image list", () => {
 		`);
 	});
 
-	it("should list images with a filter", async () => {
+	it("should list images with a filter", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -266,7 +269,7 @@ describe("cloudchamber image list", () => {
 		`);
 	});
 
-	it("should filter out repos with no non-sha tags", async () => {
+	it("should filter out repos with no non-sha tags", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -304,7 +307,9 @@ describe("cloudchamber image list", () => {
 		`);
 	});
 
-	it("should list repos with json flag set", async () => {
+	it("should list repos as valid json with json flag set", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -329,34 +334,36 @@ describe("cloudchamber image list", () => {
 		);
 		await runWrangler("cloudchamber images list --json");
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"[
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			[
 			  {
-			    \\"name\\": \\"one\\",
-			    \\"tags\\": [
-			      \\"hundred\\",
-			      \\"ten\\"
-			    ]
+			    "name": "one",
+			    "tags": [
+			      "hundred",
+			      "ten",
+			    ],
 			  },
 			  {
-			    \\"name\\": \\"two\\",
-			    \\"tags\\": [
-			      \\"thousand\\",
-			      \\"twenty\\"
-			    ]
+			    "name": "two",
+			    "tags": [
+			      "thousand",
+			      "twenty",
+			    ],
 			  },
 			  {
-			    \\"name\\": \\"three\\",
-			    \\"tags\\": [
-			      \\"million\\",
-			      \\"thirty\\"
-			    ]
-			  }
-			]"
+			    "name": "three",
+			    "tags": [
+			      "million",
+			      "thirty",
+			    ],
+			  },
+			]
 		`);
 	});
 
-	it("should filter out repos with no non-sha tags in json output", async () => {
+	it("should filter out repos with no non-sha tags in valid json output", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -383,30 +390,30 @@ describe("cloudchamber image list", () => {
 		);
 		await runWrangler("cloudchamber images list --json");
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"[
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			[
 			  {
-			    \\"name\\": \\"one\\",
-			    \\"tags\\": [
-			      \\"hundred\\",
-			      \\"ten\\"
-			    ]
+			    "name": "one",
+			    "tags": [
+			      "hundred",
+			      "ten",
+			    ],
 			  },
 			  {
-			    \\"name\\": \\"two\\",
-			    \\"tags\\": [
-			      \\"thousand\\",
-			      \\"twenty\\"
-			    ]
+			    "name": "two",
+			    "tags": [
+			      "thousand",
+			      "twenty",
+			    ],
 			  },
 			  {
-			    \\"name\\": \\"three\\",
-			    \\"tags\\": [
-			      \\"million\\",
-			      \\"thirty\\"
-			    ]
-			  }
-			]"
+			    "name": "three",
+			    "tags": [
+			      "million",
+			      "thirty",
+			    ],
+			  },
+			]
 		`);
 	});
 });
@@ -422,11 +429,10 @@ describe("cloudchamber image delete", () => {
 	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await runWrangler("cloudchamber images delete --help");
@@ -434,7 +440,7 @@ describe("cloudchamber image delete", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber images delete <image>
 
-			Remove an image from the Cloudflare managed registry
+			Remove an image from the Cloudflare managed registry [alpha]
 
 			POSITIONALS
 			  image  Image and tag to delete, of the form IMAGE:TAG  [string] [required]
@@ -449,7 +455,7 @@ describe("cloudchamber image delete", () => {
 		`);
 	});
 
-	it("should delete images", async () => {
+	it("should delete images", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 
@@ -492,7 +498,7 @@ describe("cloudchamber image delete", () => {
 		);
 	});
 
-	it("should error when provided a repo without a tag", async () => {
+	it("should error when provided a repo without a tag", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 

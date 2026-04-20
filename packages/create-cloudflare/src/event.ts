@@ -67,16 +67,6 @@ export type Event =
 				 * The duration of the prompt since it started in milliseconds (ms)
 				 */
 				durationMs?: number;
-
-				/**
-				 * The duration of the prompt since it started in seconds
-				 */
-				durationSeconds?: number;
-
-				/**
-				 * The duration of the prompt since it started in minutes
-				 */
-				durationMinutes?: number;
 			};
 	  }
 	| {
@@ -121,16 +111,6 @@ export type Event =
 				 * The duration of the prompt since it started in milliseconds (ms)
 				 */
 				durationMs?: number;
-
-				/**
-				 * The duration of the prompt since it started in seconds
-				 */
-				durationSeconds?: number;
-
-				/**
-				 * The duration of the prompt since it started in minutes
-				 */
-				durationMinutes?: number;
 			};
 	  }
 	| {
@@ -167,16 +147,6 @@ export type Event =
 				 * The duration of the prompt since it started in milliseconds (ms)
 				 */
 				durationMs?: number;
-
-				/**
-				 * The duration of the prompt since it started in seconds
-				 */
-				durationSeconds?: number;
-
-				/**
-				 * The duration of the prompt since it started in minutes
-				 */
-				durationMinutes?: number;
 			};
 	  }
 	| {
@@ -264,16 +234,6 @@ export type Event =
 				 * The duration of the prompt since it started in milliseconds (ms)
 				 */
 				durationMs?: number;
-
-				/**
-				 * The duration of the prompt since it started in seconds
-				 */
-				durationSeconds?: number;
-
-				/**
-				 * The duration of the prompt since it started in minutes
-				 */
-				durationMinutes?: number;
 			};
 	  }
 	| {
@@ -320,16 +280,6 @@ export type Event =
 				 * The duration of the prompt since it started in milliseconds (ms)
 				 */
 				durationMs?: number;
-
-				/**
-				 * The duration of the prompt since it started in seconds
-				 */
-				durationSeconds?: number;
-
-				/**
-				 * The duration of the prompt since it started in minutes
-				 */
-				durationMinutes?: number;
 
 				/**
 				 * The error that caused the prompt to be crashed
@@ -384,16 +334,6 @@ export type Event =
 				 * The duration of the prompt since it started in milliseconds (ms)
 				 */
 				durationMs?: number;
-
-				/**
-				 * The duration of the prompt since it started in seconds
-				 */
-				durationSeconds?: number;
-
-				/**
-				 * The duration of the prompt since it started in minutes
-				 */
-				durationMinutes?: number;
 
 				/**
 				 *  The answer of the prompt. This could either be taken from the args provided or from the user input.
@@ -481,16 +421,6 @@ export type Event =
 				 * The duration of the prompt since it started in milliseconds (ms)
 				 */
 				durationMs?: number;
-
-				/**
-				 * The duration of the prompt since it started in seconds
-				 */
-				durationSeconds?: number;
-
-				/**
-				 * The duration of the prompt since it started in minutes
-				 */
-				durationMinutes?: number;
 			};
 	  }
 	| {
@@ -545,16 +475,6 @@ export type Event =
 				 * The duration of the prompt since it started in milliseconds (ms)
 				 */
 				durationMs?: number;
-
-				/**
-				 * The duration of the prompt since it started in seconds
-				 */
-				durationSeconds?: number;
-
-				/**
-				 * The duration of the prompt since it started in minutes
-				 */
-				durationMinutes?: number;
 			};
 	  }
 	| {
@@ -601,15 +521,5 @@ export type Event =
 				 * The duration of the prompt since it started in milliseconds (ms)
 				 */
 				durationMs?: number;
-
-				/**
-				 * The duration of the prompt since it started in seconds
-				 */
-				durationSeconds?: number;
-
-				/**
-				 * The duration of the prompt since it started in minutes
-				 */
-				durationMinutes?: number;
 			};
 	  };

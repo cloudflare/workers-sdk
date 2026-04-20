@@ -1,3 +1,6 @@
+import { UserError } from "@cloudflare/workers-utils";
+import { getErrorType } from "../core/handle-errors";
+
 /**
  * Sanitizes the non-positional args provided to the command for metrics reporting.
  *
@@ -33,18 +36,51 @@ export type AllowedArgs = {
 export type AllowList = Record<string, AllowedArgs>;
 
 /**
+ * A list of all the command args that are allowed.
+ *
+ * A wildcard "<command> *" applies to all sub-commands of `<command>`.
+ * The top level "*" applies to all commands.
+ * Specific commands can override or add to the allow list.
+ *
+ * Each arg can have one of three values:
+ * - an array of strings: only those specific values are allowed
+ * - REDACT: the arg value will always be redacted
+ * - ALLOW: all values for that arg are allowed
+ */
+export const COMMAND_ARG_ALLOW_LIST: AllowList = {
+	// * applies to all commands
+	"*": {
+		format: ALLOW,
+		logLevel: ALLOW,
+	},
+	tail: { status: ALLOW },
+	types: {
+		xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
+		path: ["worker-configuration.d.ts"],
+	},
+};
+
+/**
  * Returns the allowed args for a given command.
  *
- * This takes into account wildcard commands (e.g., "wrangler *").
+ * @param commandArgAllowList An object describing what args are allowed to be used in metrics.
+ * This takes into account:
+ * - Global "*" allow-list that applies to all commands
+ * - Wildcard commands (e.g., "deploy *" for subcommands)
+ * - Specific command entries that override less specific ones
+ * See `COMMAND_ARG_ALLOW_LIST` for more details.
+ * @param command The command being run (e.g., "deploy", "publish", etc.), which does not include the binary (e.g. `wrangler`).
  */
 export function getAllowedArgs(
 	commandArgAllowList: AllowList,
 	command: string
 ): AllowedArgs {
+	// Start with the global "*" allow list as a base
 	let allowedArgs: AllowedArgs = {};
 	const commandParts = command.split(" ");
 	while (commandParts.length > 0) {
 		const subCommand = commandParts.join(" ");
+		// Merge so that more specific command entries (already in allowedArgs) override less specific ones
 		allowedArgs = { ...commandArgAllowList[subCommand], ...allowedArgs };
 		commandParts.pop();
 		if (commandParts.length > 0) {
@@ -52,7 +88,7 @@ export function getAllowedArgs(
 			allowedArgs = { ...commandArgAllowList[wildcardCommand], ...allowedArgs };
 		}
 	}
-	return allowedArgs;
+	return { ...commandArgAllowList["*"], ...allowedArgs };
 }
 
 /**
@@ -85,4 +121,19 @@ export function canonicalArg(arg: string) {
 	const camelize = (str: string) =>
 		str.replace(/-./g, (x) => x[1].toUpperCase());
 	return camelize(arg.replace("experimental", "x"));
+}
+
+/**
+ * Returns an object containing sanitized error information for metrics reporting.
+ *
+ * @param error The error to sanitize.
+ * @returns An object with `errorType` (the error classification for telemetry) and
+ *          `errorMessage` (the telemetry message, only present for UserErrors).
+ */
+export function sanitizeError(error: unknown) {
+	return {
+		errorType: getErrorType(error),
+		errorMessage:
+			error instanceof UserError ? error.telemetryMessage : undefined,
+	};
 }

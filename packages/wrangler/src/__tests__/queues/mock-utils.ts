@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+// eslint-disable-next-line no-restricted-imports
 import { expect } from "vitest";
 import { EventSourceType } from "../../queues/subscription-types";
 import { msw } from "../helpers/msw";
