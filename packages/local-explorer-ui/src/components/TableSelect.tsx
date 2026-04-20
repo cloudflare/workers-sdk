@@ -51,7 +51,10 @@ export function TableSelect({
 				<CaretUpDownIcon className="h-3.5 w-3.5 text-kumo-subtle" />
 			</DropdownMenu.Trigger>
 
-			<DropdownMenu.Content className="max-h-72 overflow-y-auto" style={{ zIndex: 50 }}>
+			<DropdownMenu.Content
+				className="max-h-72 overflow-y-auto"
+				style={{ zIndex: 50 }}
+			>
 				<DropdownMenu.Item icon={PlusIcon} onClick={handleCreateTable}>
 					Create table
 				</DropdownMenu.Item>
