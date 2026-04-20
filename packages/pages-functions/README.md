@@ -30,15 +30,15 @@ pages-functions --help
 Usage: pages-functions [options] [project-dir]
 
 Arguments:
-  project-dir              Path to the project root (default: ".")
+  project-dir               Path to the project root (default: ".")
 
 Options:
-  -o, --outfile <path>     Output file for the worker entrypoint (default: "dist/worker.js")
-  --routes-json <path>     Output path for _routes.json (default: "_routes.json")
-  --no-routes-json         Don't generate _routes.json
-  --base-url <url>         Base URL for routes (default: "/")
+  -o, --outfile <path>      Output file for the worker entrypoint (default: "dist/worker.js")
+  --routes-json <path>      Output path for _routes.json (default: "_routes.json")
+  --no-routes-json          Don't generate _routes.json
+  --base-url <url>          Base URL for routes (default: "/")
   --fallback-service <name> Fallback service binding name (default: "ASSETS")
-  -h, --help               Show this help message
+  -h, --help                Show this help message
 ```
 
 ## Programmatic API
