@@ -1,5 +1,10 @@
 /**
  * JavaScript identifier validation and normalization utilities.
+ *
+ * Mirrors `packages/wrangler/src/pages/functions/identifiers.ts`. That file
+ * still backs wrangler's own Pages build path and will be removed when
+ * wrangler is migrated to consume this package directly. Keep the two in
+ * sync until then.
  */
 
 const RESERVED_KEYWORDS = [

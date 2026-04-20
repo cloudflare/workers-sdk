@@ -1,13 +1,16 @@
 /**
  * Transform route configurations into _routes.json format for Pages deployment.
+ *
+ * Mirrors `packages/wrangler/src/pages/functions/routes-transformation.ts`.
+ * Keep the two in sync until wrangler consumes this package.
  */
 
 import { join as pathJoin } from "node:path";
 import {
 	consolidateRoutes,
 	MAX_FUNCTIONS_ROUTES_RULES,
-} from "./routes-consolidation.js";
-import type { RouteConfig, RoutesJSONSpec, UrlPath } from "./types.js";
+} from "./routes-consolidation";
+import type { RouteConfig, RoutesJSONSpec, UrlPath } from "./types";
 
 /** Version of the _routes.json specification */
 export const ROUTES_SPEC_VERSION = 1;

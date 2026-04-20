@@ -3,6 +3,10 @@
  *
  * This module contains the runtime code that gets inlined into the generated
  * worker entrypoint. It handles route matching and middleware execution.
+ *
+ * Mirrors the runtime string in
+ * `packages/wrangler/src/pages/functions/buildWorker.ts`. Keep the two in
+ * sync until wrangler consumes this package.
  */
 
 /**

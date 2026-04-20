@@ -3,6 +3,10 @@
  *
  * Scans a functions directory and generates route configuration from the
  * file structure and exported handlers.
+ *
+ * Mirrors `packages/wrangler/src/pages/functions/filepath-routing.ts`. That
+ * file still powers wrangler's legacy Pages build path and will be removed
+ * once wrangler consumes this package. Keep the two in sync until then.
  */
 
 import * as fs from "node:fs/promises";
@@ -13,7 +17,7 @@ import type {
 	HTTPMethod,
 	RouteConfig,
 	UrlPath,
-} from "./types.js";
+} from "./types";
 
 /**
  * Error thrown when building/parsing a function file fails.

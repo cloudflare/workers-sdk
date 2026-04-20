@@ -1,3 +1,7 @@
+// Mirrored at `packages/pages-functions/src/identifiers.ts`. This file will be
+// removed once wrangler consumes `@cloudflare/pages-functions` directly. Keep
+// the two in sync until then.
+
 const RESERVED_KEYWORDS = [
 	"do",
 	"if",

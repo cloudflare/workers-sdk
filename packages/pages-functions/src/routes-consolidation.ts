@@ -1,5 +1,10 @@
 /**
  * Route consolidation utilities for optimizing _routes.json.
+ *
+ * Mirrors `packages/wrangler/src/pages/functions/routes-consolidation.ts` as
+ * well as the route-length/route-count constants in
+ * `packages/wrangler/src/pages/constants.ts`. Keep the two in sync until
+ * wrangler consumes this package.
  */
 
 /** Max char length of each rule in _routes.json */

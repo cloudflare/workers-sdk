@@ -1,3 +1,7 @@
+// Mirrored at `packages/pages-functions/src/routes-consolidation.ts`. This
+// file will be removed once wrangler consumes `@cloudflare/pages-functions`
+// directly. Keep the two in sync until then.
+
 import { MAX_FUNCTIONS_ROUTES_RULE_LENGTH } from "../constants";
 
 /**

@@ -1,3 +1,7 @@
+// Mirrored at `packages/pages-functions/src/filepath-routing.ts`. This file
+// will be removed once wrangler consumes `@cloudflare/pages-functions`
+// directly. Keep the two in sync until then.
+
 import fs from "node:fs/promises";
 import path from "node:path";
 import { FatalError } from "@cloudflare/workers-utils";

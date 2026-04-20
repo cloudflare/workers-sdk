@@ -2,12 +2,16 @@
  * Code generation for Pages Functions.
  *
  * Generates a worker entrypoint from route configuration.
+ *
+ * Mirrors the codegen portion of
+ * `packages/wrangler/src/pages/functions/buildWorker.ts`. Keep the two in
+ * sync until wrangler consumes this package.
  */
 
 import * as path from "node:path";
-import { isValidIdentifier, normalizeIdentifier } from "./identifiers.js";
-import { generateRuntimeCode } from "./runtime.js";
-import type { RouteConfig } from "./types.js";
+import { isValidIdentifier, normalizeIdentifier } from "./identifiers";
+import { generateRuntimeCode } from "./runtime";
+import type { RouteConfig } from "./types";
 
 /**
  * Internal representation of routes with resolved identifiers.
