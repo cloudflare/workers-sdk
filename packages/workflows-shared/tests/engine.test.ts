@@ -104,8 +104,7 @@ describe("Engine", () => {
 		).toHaveLength(1);
 	});
 
-	// eslint-disable-next-line jest/expect-expect
-	it("waitForEvent should receive events while active", async () => {
+	it("waitForEvent should receive events while active", async ({ expect }) => {
 		const engineStub = await runWorkflow(
 			"MOCK-INSTANCE-ID-WAIT-FOR-EVENT",
 			async (_, step) => {
@@ -119,7 +118,7 @@ describe("Engine", () => {
 		await vi.waitUntil(
 			async () => {
 				const logs = (await engineStub.readLogs()) as EngineLogs;
-				return logs.logs.filter((val) => val.event == InstanceEvent.WAIT_START);
+				return logs.logs.some((val) => val.event === InstanceEvent.WAIT_START);
 			},
 			{ timeout: 5000 }
 		);
@@ -133,16 +132,25 @@ describe("Engine", () => {
 		await vi.waitUntil(
 			async () => {
 				const logs = (await engineStub.readLogs()) as EngineLogs;
-				return logs.logs.filter(
-					(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
 				);
 			},
 			{ timeout: 5000 }
 		);
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(logs.logs.some((v) => v.event === InstanceEvent.WAIT_START)).toBe(
+			true
+		);
+		expect(
+			logs.logs.some((v) => v.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
 	});
 
-	// eslint-disable-next-line jest/expect-expect
-	it("waitForEvent should receive events even if not active", async () => {
+	it("waitForEvent should receive events even if not active", async ({
+		expect,
+	}) => {
 		const engineStub = await runWorkflow(
 			"MOCK-INSTANCE-ID-WAIT-FOR-EVENT-NOT-ACTIVE",
 			async (_, step) => {
@@ -156,7 +164,7 @@ describe("Engine", () => {
 		await vi.waitUntil(
 			async () => {
 				const logs = (await engineStub.readLogs()) as EngineLogs;
-				return logs.logs.filter((val) => val.event == InstanceEvent.WAIT_START);
+				return logs.logs.some((val) => val.event === InstanceEvent.WAIT_START);
 			},
 			{ timeout: 5000 }
 		);
@@ -183,12 +191,20 @@ describe("Engine", () => {
 		await vi.waitUntil(
 			async () => {
 				const logs = (await newStub.readLogs()) as EngineLogs;
-				return logs.logs.filter(
-					(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
 				);
 			},
 			{ timeout: 5000 }
 		);
+
+		const logs = (await newStub.readLogs()) as EngineLogs;
+		expect(logs.logs.some((v) => v.event === InstanceEvent.WAIT_START)).toBe(
+			true
+		);
+		expect(
+			logs.logs.some((v) => v.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
 	});
 
 	it("waitForEvent should not deliver events to timed-out events with the same type", async ({
