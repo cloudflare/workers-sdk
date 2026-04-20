@@ -1,5 +1,17 @@
 # @cloudflare/local-explorer-ui
 
+## 0.13.1
+
+### Patch Changes
+
+- [#13466](https://github.com/cloudflare/workers-sdk/pull/13466) [`c4461ff`](https://github.com/cloudflare/workers-sdk/commit/c4461ff25ec9cb6266ad0da240bed8a755de7d08) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix local explorer KV bulk / get for large payloads.
+
+  Fixes an issue where the local explorer UI would crash when fetching large KV payloads.
+
+  Additionally, the local KV bulk get API endpoint now enforces a total 25MB payload limit, in alignment with the remote Cloudflare API.
+
+- [#13543](https://github.com/cloudflare/workers-sdk/pull/13543) [`39a5f04`](https://github.com/cloudflare/workers-sdk/commit/39a5f04792f5e0ec12ff727fe9cb07e1f4516094) Thanks [@SAY-5](https://github.com/SAY-5)! - Fix `occured` -> `occurred` typo in the `ResourceError` fallback message rendered by the local explorer UI when a worker resource fails to load.
+
 ## 0.13.0
 
 ### Minor Changes
