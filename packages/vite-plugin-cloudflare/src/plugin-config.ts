@@ -298,9 +298,11 @@ export function resolvePluginConfig(
 	const configPaths = new Set<string>();
 	const cloudflareEnv = prefixedEnv.CLOUDFLARE_ENV;
 	const validateAndAddEnvironmentName = createEnvironmentNameValidator();
+	const requestedEntryWorkerConfigPath =
+		pluginConfig.configPath ?? prefixedEnv.CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH;
 	const configPath = getValidatedWranglerConfigPath(
 		root,
-		pluginConfig.configPath
+		requestedEntryWorkerConfigPath
 	);
 
 	// Build entry worker config: defaults → file config → config()
