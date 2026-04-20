@@ -1,7 +1,7 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
-import { updateInstance } from "./client";
+import { DEFAULT_NAMESPACE, updateInstance } from "./client";
 
 export const aiSearchUpdateCommand = createCommand({
 	metadata: {
@@ -17,6 +17,12 @@ export const aiSearchUpdateCommand = createCommand({
 			type: "string",
 			demandOption: true,
 			description: "The name of the AI Search instance to update.",
+		},
+		namespace: {
+			type: "string",
+			alias: "n",
+			default: DEFAULT_NAMESPACE,
+			description: "The namespace the instance belongs to.",
 		},
 		"embedding-model": {
 			type: "string",
@@ -115,7 +121,12 @@ export const aiSearchUpdateCommand = createCommand({
 		if (!args.json) {
 			logger.log(`Updating AI Search instance "${args.name}"...`);
 		}
-		const instance = await updateInstance(config, args.name, body);
+		const instance = await updateInstance(
+			config,
+			args.namespace,
+			args.name,
+			body
+		);
 
 		if (args.json) {
 			logger.log(JSON.stringify(instance, null, 2));

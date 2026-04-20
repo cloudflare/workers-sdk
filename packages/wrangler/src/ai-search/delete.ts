@@ -1,7 +1,7 @@
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
-import { deleteInstance } from "./client";
+import { DEFAULT_NAMESPACE, deleteInstance } from "./client";
 
 export const aiSearchDeleteCommand = createCommand({
 	metadata: {
@@ -15,6 +15,12 @@ export const aiSearchDeleteCommand = createCommand({
 			demandOption: true,
 			description: "The name of the AI Search instance to delete.",
 		},
+		namespace: {
+			type: "string",
+			alias: "n",
+			default: DEFAULT_NAMESPACE,
+			description: "The namespace the instance belongs to.",
+		},
 		force: {
 			type: "boolean",
 			alias: "y",
@@ -23,7 +29,7 @@ export const aiSearchDeleteCommand = createCommand({
 		},
 	},
 	positionalArgs: ["name"],
-	async handler({ name, force }, { config }) {
+	async handler({ name, namespace, force }, { config }) {
 		if (!force) {
 			const confirmedDeletion = await confirm(
 				`OK to delete the AI Search instance "${name}"?`
@@ -35,7 +41,7 @@ export const aiSearchDeleteCommand = createCommand({
 		}
 
 		logger.log(`Deleting AI Search instance "${name}"...`);
-		await deleteInstance(config, name);
+		await deleteInstance(config, namespace, name);
 		logger.log(`Successfully deleted AI Search instance "${name}"`);
 	},
 });

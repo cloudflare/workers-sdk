@@ -7,6 +7,7 @@ export interface AiSearchInstance {
 	modified_at: string;
 	source: string;
 	type: "r2" | "web-crawler";
+	namespace?: string;
 	vectorize_name?: string;
 	ai_gateway_id?: string;
 	ai_search_model?: string;
@@ -146,4 +147,13 @@ export interface AiSearchToken {
 export interface AiSearchMessage {
 	role: "system" | "user" | "assistant";
 	content: string;
+}
+
+/**
+ * Represents an AI Search namespace.
+ */
+export interface AiSearchNamespace {
+	name: string;
+	created_at: string;
+	description?: string;
 }

@@ -3,6 +3,7 @@ import { requireAuth } from "../user";
 import type {
 	AiSearchInstance,
 	AiSearchMessage,
+	AiSearchNamespace,
 	AiSearchSearchResponse,
 	AiSearchStats,
 	AiSearchToken,
@@ -11,8 +12,15 @@ import type { Config } from "@cloudflare/workers-utils";
 
 const jsonContentType = "application/json; charset=utf-8;";
 
-function baseInstanceUrl(accountId: string): string {
-	return `/accounts/${accountId}/ai-search/instances`;
+/** Default namespace used when the caller does not specify one. */
+export const DEFAULT_NAMESPACE = "default";
+
+function baseNamespaceUrl(accountId: string): string {
+	return `/accounts/${accountId}/ai-search/namespaces`;
+}
+
+function baseInstanceUrl(accountId: string, namespace: string): string {
+	return `${baseNamespaceUrl(accountId)}/${namespace}/instances`;
 }
 
 function baseTokenUrl(accountId: string): string {
@@ -23,12 +31,13 @@ function baseTokenUrl(accountId: string): string {
 
 export async function listInstances(
 	config: Config,
+	namespace: string,
 	queryParams?: URLSearchParams
 ): Promise<AiSearchInstance[]> {
 	const accountId = await requireAuth(config);
 	return await fetchResult<AiSearchInstance[]>(
 		config,
-		baseInstanceUrl(accountId),
+		baseInstanceUrl(accountId, namespace),
 		{ method: "GET" },
 		queryParams
 	);
@@ -37,11 +46,12 @@ export async function listInstances(
 export async function createInstance(
 	config: Config,
 	accountId: string,
+	namespace: string,
 	body: Record<string, unknown>
 ): Promise<AiSearchInstance> {
 	return await fetchResult<AiSearchInstance>(
 		config,
-		baseInstanceUrl(accountId),
+		baseInstanceUrl(accountId, namespace),
 		{
 			method: "POST",
 			headers: { "content-type": jsonContentType },
@@ -52,25 +62,27 @@ export async function createInstance(
 
 export async function getInstance(
 	config: Config,
+	namespace: string,
 	name: string
 ): Promise<AiSearchInstance> {
 	const accountId = await requireAuth(config);
 	return await fetchResult<AiSearchInstance>(
 		config,
-		`${baseInstanceUrl(accountId)}/${name}`,
+		`${baseInstanceUrl(accountId, namespace)}/${name}`,
 		{ method: "GET" }
 	);
 }
 
 export async function updateInstance(
 	config: Config,
+	namespace: string,
 	name: string,
 	body: Record<string, unknown>
 ): Promise<AiSearchInstance> {
 	const accountId = await requireAuth(config);
 	return await fetchResult<AiSearchInstance>(
 		config,
-		`${baseInstanceUrl(accountId)}/${name}`,
+		`${baseInstanceUrl(accountId, namespace)}/${name}`,
 		{
 			method: "PUT",
 			headers: { "content-type": jsonContentType },
@@ -81,30 +93,33 @@ export async function updateInstance(
 
 export async function deleteInstance(
 	config: Config,
+	namespace: string,
 	name: string
 ): Promise<AiSearchInstance> {
 	const accountId = await requireAuth(config);
 	return await fetchResult<AiSearchInstance>(
 		config,
-		`${baseInstanceUrl(accountId)}/${name}`,
+		`${baseInstanceUrl(accountId, namespace)}/${name}`,
 		{ method: "DELETE" }
 	);
 }
 
 export async function getInstanceStats(
 	config: Config,
+	namespace: string,
 	name: string
 ): Promise<AiSearchStats> {
 	const accountId = await requireAuth(config);
 	return await fetchResult<AiSearchStats>(
 		config,
-		`${baseInstanceUrl(accountId)}/${name}/stats`,
+		`${baseInstanceUrl(accountId, namespace)}/${name}/stats`,
 		{ method: "GET" }
 	);
 }
 
 export async function searchInstance(
 	config: Config,
+	namespace: string,
 	name: string,
 	body: {
 		messages: AiSearchMessage[];
@@ -117,13 +132,83 @@ export async function searchInstance(
 	const accountId = await requireAuth(config);
 	return await fetchResult<AiSearchSearchResponse>(
 		config,
-		`${baseInstanceUrl(accountId)}/${name}/search`,
+		`${baseInstanceUrl(accountId, namespace)}/${name}/search`,
 		{
 			method: "POST",
 			headers: { "content-type": jsonContentType },
 			body: JSON.stringify(body),
 		}
 	);
+}
+
+// ── Namespaces ─────────────────────────────────────────────────────────────────
+
+export async function listNamespaces(
+	config: Config,
+	queryParams?: URLSearchParams
+): Promise<AiSearchNamespace[]> {
+	const accountId = await requireAuth(config);
+	return await fetchResult<AiSearchNamespace[]>(
+		config,
+		baseNamespaceUrl(accountId),
+		{ method: "GET" },
+		queryParams
+	);
+}
+
+export async function createNamespace(
+	config: Config,
+	accountId: string,
+	body: { name: string; description?: string }
+): Promise<AiSearchNamespace> {
+	return await fetchResult<AiSearchNamespace>(
+		config,
+		baseNamespaceUrl(accountId),
+		{
+			method: "POST",
+			headers: { "content-type": jsonContentType },
+			body: JSON.stringify(body),
+		}
+	);
+}
+
+export async function getNamespace(
+	config: Config,
+	name: string
+): Promise<AiSearchNamespace> {
+	const accountId = await requireAuth(config);
+	return await fetchResult<AiSearchNamespace>(
+		config,
+		`${baseNamespaceUrl(accountId)}/${name}`,
+		{ method: "GET" }
+	);
+}
+
+export async function updateNamespace(
+	config: Config,
+	name: string,
+	body: { description?: string }
+): Promise<AiSearchNamespace> {
+	const accountId = await requireAuth(config);
+	return await fetchResult<AiSearchNamespace>(
+		config,
+		`${baseNamespaceUrl(accountId)}/${name}`,
+		{
+			method: "PUT",
+			headers: { "content-type": jsonContentType },
+			body: JSON.stringify(body),
+		}
+	);
+}
+
+export async function deleteNamespace(
+	config: Config,
+	name: string
+): Promise<void> {
+	const accountId = await requireAuth(config);
+	await fetchResult<unknown>(config, `${baseNamespaceUrl(accountId)}/${name}`, {
+		method: "DELETE",
+	});
 }
 
 // ── Tokens ─────────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
-import { getInstanceStats } from "./client";
+import { DEFAULT_NAMESPACE, getInstanceStats } from "./client";
 
 export const aiSearchStatsCommand = createCommand({
 	metadata: {
@@ -17,6 +17,12 @@ export const aiSearchStatsCommand = createCommand({
 			demandOption: true,
 			description: "The name of the AI Search instance.",
 		},
+		namespace: {
+			type: "string",
+			alias: "n",
+			default: DEFAULT_NAMESPACE,
+			description: "The namespace the instance belongs to.",
+		},
 		json: {
 			type: "boolean",
 			default: false,
@@ -24,8 +30,8 @@ export const aiSearchStatsCommand = createCommand({
 		},
 	},
 	positionalArgs: ["name"],
-	async handler({ name, json }, { config }) {
-		const stats = await getInstanceStats(config, name);
+	async handler({ name, namespace, json }, { config }) {
+		const stats = await getInstanceStats(config, namespace, name);
 
 		if (json) {
 			logger.log(JSON.stringify(stats, null, 2));
