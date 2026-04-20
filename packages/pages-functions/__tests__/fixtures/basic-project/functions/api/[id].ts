@@ -1,5 +1,10 @@
 export const onRequestGet = (context: { params: { id: string } }) =>
-	new Response(`GET item ${context.params.id}`);
+	Response.json({ id: context.params.id, method: "GET" });
 
-export const onRequestPost = (context: { params: { id: string } }) =>
-	new Response(`POST item ${context.params.id}`);
+export const onRequestPut = async (context: {
+	params: { id: string };
+	request: Request;
+}) => {
+	const body = await context.request.json();
+	return Response.json({ id: context.params.id, method: "PUT", body });
+};

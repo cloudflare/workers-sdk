@@ -1,47 +1,31 @@
 /**
  * Test worker for runtime tests.
  *
- * This worker defines simple Pages function handlers that can be tested
- * against the generated runtime code.
+ * This worker re-implements the runtime shipped in `src/runtime.ts` but binds
+ * it to handlers imported directly from the `basic-project` fixture. The goal
+ * is that any change to a fixture response body or header must be reflected in
+ * the assertions in `runtime.test.ts` (and vice versa), so the fixture files
+ * act as the real source of truth for route handlers.
+ *
+ * The runtime itself is generated as a string in `src/runtime.ts` and inlined
+ * into `compileFunctions()` output. End-to-end codegen is covered by
+ * `compile.test.ts`; this file exercises the same runtime logic in workerd so
+ * we can assert on actual request/response behaviour.
  */
 
-// Import path-to-regexp (will be resolved at bundle time)
 import { match } from "path-to-regexp";
+import { onRequest as middleware } from "../fixtures/basic-project/functions/_middleware";
+import {
+	onRequestGet as apiIdGet,
+	onRequestPut as apiIdPut,
+} from "../fixtures/basic-project/functions/api/[id]";
+import {
+	onRequestGet as apiHelloGet,
+	onRequestPost as apiHelloPost,
+} from "../fixtures/basic-project/functions/api/hello";
+import { onRequest as indexHandler } from "../fixtures/basic-project/functions/index";
 
-// Simple handler functions for testing
-const indexHandler = () => {
-	return new Response("Hello from index");
-};
-
-const apiHelloGet = () => {
-	return Response.json({ message: "Hello from GET /api/hello" });
-};
-
-const apiHelloPost = async (context: { request: Request }) => {
-	const body = await context.request.json();
-	return Response.json({ message: "Hello from POST", received: body });
-};
-
-const apiIdGet = (context: { params: Record<string, string> }) => {
-	return Response.json({ id: context.params.id, method: "GET" });
-};
-
-const apiIdPut = async (context: {
-	params: Record<string, string>;
-	request: Request;
-}) => {
-	const body = await context.request.json();
-	return Response.json({ id: context.params.id, method: "PUT", body });
-};
-
-const middleware = async (context: { next: () => Promise<Response> }) => {
-	const response = await context.next();
-	const newResponse = new Response(response.body, response);
-	newResponse.headers.set("X-Middleware", "active");
-	return newResponse;
-};
-
-// Route configuration (similar to what codegen produces)
+// Route configuration mirroring what codegen would produce for the fixture.
 const routes = [
 	{
 		routePath: "/api/hello",
@@ -80,7 +64,8 @@ const routes = [
 	},
 ];
 
-// Runtime code (copied from runtime.ts output)
+// Runtime code mirrors the output of `src/runtime.ts#generateRuntimeCode`.
+// Keep these implementations in sync when tweaking runtime behaviour.
 const escapeRegex = /[.+?^${}()|[\]\\]/g;
 
 type RouteHandler = (context: RouteContext) => Response | Promise<Response>;
@@ -107,7 +92,6 @@ interface RouteContext {
 function* executeRequest(request: Request, routeList: Route[]) {
 	const requestPath = new URL(request.url).pathname;
 
-	// First, iterate through the routes (backwards) and execute "middlewares" on partial route matches
 	for (const route of [...routeList].reverse()) {
 		if (route.method && route.method !== request.method) {
 			continue;
@@ -132,7 +116,6 @@ function* executeRequest(request: Request, routeList: Route[]) {
 		}
 	}
 
-	// Then look for the first exact route match and execute its "modules"
 	for (const route of routeList) {
 		if (route.method && route.method !== request.method) {
 			continue;
@@ -256,5 +239,4 @@ const cloneResponse = (response: Response) =>
 		response
 	);
 
-// Export the handler
 export default createPagesHandler(routes, "ASSETS");

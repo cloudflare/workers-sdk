@@ -329,10 +329,10 @@ describe("filepath-routing", () => {
 			);
 			expect(getRoute).toBeDefined();
 
-			const postRoute = config.routes.find(
-				(r) => r.routePath === "/api/:id" && r.method === "POST"
+			const putRoute = config.routes.find(
+				(r) => r.routePath === "/api/:id" && r.method === "PUT"
 			);
-			expect(postRoute).toBeDefined();
+			expect(putRoute).toBeDefined();
 		});
 
 		it("converts bracket params to path-to-regexp format", async () => {
@@ -341,7 +341,9 @@ describe("filepath-routing", () => {
 			});
 
 			// [id] should become :id
-			const apiRoute = config.routes.find((r) => r.routePath.includes("/api/"));
+			const apiRoute = config.routes.find((r) =>
+				r.routePath.includes("/api/:")
+			);
 			expect(apiRoute?.routePath).toContain(":id");
 			expect(apiRoute?.routePath).not.toContain("[id]");
 		});
