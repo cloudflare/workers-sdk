@@ -16,9 +16,16 @@ import { ResourceError } from "../../../components/ResourceError";
 import { formatDate, formatSize } from "../../../utils/format";
 import type { R2HeadObjectResult } from "../../../api";
 
+export interface ObjectDetailSearch {
+	delimiter?: boolean;
+}
+
 export const Route = createFileRoute("/r2/$bucketName/object/$")({
 	component: ObjectDetailView,
 	errorComponent: ResourceError,
+	validateSearch: (search: Record<string, unknown>): ObjectDetailSearch => ({
+		delimiter: search.delimiter === false ? false : true,
+	}),
 	loader: async ({ params }) => {
 		const objectKey = params._splat;
 		if (!objectKey) {
@@ -132,7 +139,8 @@ function CustomMetadataCard({
 
 function ObjectDetailView(): JSX.Element {
 	const params = Route.useParams();
-	const search = Route.useLoaderData();
+	const loaderData = Route.useLoaderData();
+	const search = Route.useSearch();
 	const navigate = useNavigate();
 
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
@@ -140,10 +148,10 @@ function ObjectDetailView(): JSX.Element {
 	const [error, setError] = useState<string | null>(null);
 
 	function handleDownload(): void {
-		const downloadUrl = `/cdn-cgi/explorer/api/r2/buckets/${encodeURIComponent(params.bucketName)}/objects/${encodeURIComponent(search.objectKey)}`;
+		const downloadUrl = `/cdn-cgi/explorer/api/r2/buckets/${encodeURIComponent(params.bucketName)}/objects/${encodeURIComponent(loaderData.objectKey)}`;
 		const link = document.createElement("a");
 		link.href = downloadUrl;
-		link.download = search.objectKey.split("/").pop() || "download";
+		link.download = loaderData.objectKey.split("/").pop() || "download";
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
@@ -156,11 +164,14 @@ function ObjectDetailView(): JSX.Element {
 				path: {
 					bucket_name: params.bucketName,
 				},
-				body: [search.objectKey],
+				body: [loaderData.objectKey],
 			});
 			// Navigate back to bucket root or parent prefix
-			const parentPrefix = search.objectKey.includes("/")
-				? search.objectKey.substring(0, search.objectKey.lastIndexOf("/") + 1)
+			const parentPrefix = loaderData.objectKey.includes("/")
+				? loaderData.objectKey.substring(
+						0,
+						loaderData.objectKey.lastIndexOf("/") + 1
+					)
 				: undefined;
 			void navigate({
 				params: {
@@ -181,18 +192,26 @@ function ObjectDetailView(): JSX.Element {
 	}
 
 	// Build breadcrumb items - bucket, parent folders, and object name
-	const pathSegments = search.objectKey.split("/").filter(Boolean);
-	const fileName = pathSegments.pop() || search.objectKey;
+	const directoryView = search.delimiter !== false;
+
+	const pathSegments = directoryView
+		? loaderData.objectKey.split("/").filter(Boolean)
+		: [];
+	const fileName = directoryView
+		? pathSegments.pop() || loaderData.objectKey
+		: loaderData.objectKey;
 	const breadcrumbItems = [
+		// bucket name
 		<Link
 			className="text-kumo-default no-underline hover:text-kumo-link"
 			key="bucket"
 			params={{ bucketName: params.bucketName }}
-			search={{}}
+			search={(prev) => ({ ...prev, prefix: undefined })}
 			to="/r2/$bucketName"
 		>
 			{params.bucketName}
 		</Link>,
+		// optional path segments (only if set to folder mode)
 		...pathSegments.map((segment, index) => {
 			const segmentPrefix = pathSegments.slice(0, index + 1).join("/") + "/";
 			return (
@@ -200,13 +219,14 @@ function ObjectDetailView(): JSX.Element {
 					className="text-kumo-default no-underline hover:text-kumo-link"
 					key={segmentPrefix}
 					params={{ bucketName: params.bucketName }}
-					search={{ prefix: segmentPrefix }}
+					search={(prev) => ({ ...prev, prefix: segmentPrefix })}
 					to="/r2/$bucketName"
 				>
-					{segment}
+					{segment}/
 				</Link>
 			);
 		}),
+		// file name (may be full object key if not in folder mode)
 		<span key="file">{fileName}</span>,
 	];
 
@@ -225,11 +245,11 @@ function ObjectDetailView(): JSX.Element {
 					<div className="flex min-w-0 items-center gap-2">
 						<h1
 							className="truncate text-base text-kumo-default"
-							title={search.objectKey}
+							title={loaderData.objectKey}
 						>
-							{search.objectKey}
+							{loaderData.objectKey}
 						</h1>
-						<CopyButton text={search.objectKey} />
+						<CopyButton text={loaderData.objectKey} />
 					</div>
 
 					<div className="flex shrink-0 items-center gap-2">
@@ -251,8 +271,8 @@ function ObjectDetailView(): JSX.Element {
 				</div>
 
 				<div className="space-y-6">
-					<ObjectDetailsCard object={search.object} />
-					<CustomMetadataCard metadata={search.object.custom_metadata} />
+					<ObjectDetailsCard object={loaderData.object} />
+					<CustomMetadataCard metadata={loaderData.object.custom_metadata} />
 				</div>
 
 				{/* Delete Confirmation Dialog */}
@@ -268,7 +288,7 @@ function ObjectDetailView(): JSX.Element {
 
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 						<Dialog.Description className="mb-2 text-kumo-subtle">
-							Are you sure you want to delete &ldquo;{search.objectKey}
+							Are you sure you want to delete &ldquo;{loaderData.objectKey}
 							&rdquo;? This cannot be undone.
 						</Dialog.Description>
 

@@ -398,7 +398,7 @@ export async function openTableSelector(): Promise<void> {
 		.first();
 	await tableSelector.click();
 
-	await page.waitForSelector('[role="listbox"]', {
+	await page.waitForSelector('[role="menu"]', {
 		state: "visible",
 		timeout: 5_000,
 	});

@@ -103,7 +103,9 @@ describe("Durable Objects", () => {
 
 			await openTableSelector();
 
-			const productsOption = page.getByRole("option", { name: "products" });
+			const productsOption = page.getByRole("menuitem", {
+				name: "products",
+			});
 			const isProductsVisible = await productsOption.isVisible();
 			expect(isProductsVisible).toBe(true);
 		});
