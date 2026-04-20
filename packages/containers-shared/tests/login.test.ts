@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, it } from "vitest";
 import { OpenAPI } from "../src/client/core/OpenAPI";
 import { configureOpenAPIForContainerPull } from "../src/login";
 
@@ -9,7 +9,7 @@ describe("configureOpenAPIForContainerPull", () => {
 		OpenAPI.CREDENTIALS = "include";
 	});
 
-	it("sets BASE, HEADERS, and CREDENTIALS", () => {
+	it("sets BASE, HEADERS, and CREDENTIALS", ({ expect }) => {
 		configureOpenAPIForContainerPull("abc123", "my-token");
 		expect(OpenAPI.BASE).toBe(
 			"https://api.cloudflare.com/client/v4/accounts/abc123/containers"
@@ -20,7 +20,7 @@ describe("configureOpenAPIForContainerPull", () => {
 		);
 	});
 
-	it("uses custom apiBase when provided", () => {
+	it("uses custom apiBase when provided", ({ expect }) => {
 		configureOpenAPIForContainerPull(
 			"abc123",
 			"my-token",
