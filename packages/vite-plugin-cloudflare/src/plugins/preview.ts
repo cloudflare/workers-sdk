@@ -1,12 +1,10 @@
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
+import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
 import { getDockerPath } from "../containers";
 import { assertIsPreview } from "../context";
-import {
-	buildPublicUrl,
-	getPreviewMiniflareOptions,
-} from "../miniflare-options";
+import { getPreviewMiniflareOptions } from "../miniflare-options";
 import { createPlugin, createRequestHandler } from "../utils";
 import { handleWebSocket } from "../websockets";
 
@@ -43,10 +41,15 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 				vitePreviewServer.httpServer.on("listening", () => {
 					const addr = vitePreviewServer.httpServer?.address();
 					if (typeof addr === "object" && addr !== null) {
-						ctx.miniflare.publicUrl = buildPublicUrl(
-							vitePreviewServer.config.preview,
-							addr.port
-						);
+						const serverConfig = vitePreviewServer.config.preview;
+						ctx.miniflare.publicUrl = buildPublicUrl({
+							hostname:
+								typeof serverConfig.host === "string"
+									? serverConfig.host
+									: undefined,
+							port: addr.port,
+							secure: !!serverConfig.https,
+						});
 					}
 				});
 			}

@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
-import { CoreHeaders } from "miniflare";
+import { buildPublicUrl, CoreHeaders } from "miniflare";
 import colors from "picocolors";
 import { initRunners } from "../cloudflare-environment";
 import {
@@ -17,7 +17,7 @@ import {
 	compareWorkerNameToExportTypesMaps,
 	getCurrentWorkerNameToExportTypesMap,
 } from "../export-types";
-import { buildPublicUrl, getDevMiniflareOptions } from "../miniflare-options";
+import { getDevMiniflareOptions } from "../miniflare-options";
 import { UNKNOWN_HOST } from "../shared";
 import {
 	createPlugin,
@@ -77,10 +77,15 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 				viteDevServer.httpServer.on("listening", () => {
 					const addr = viteDevServer.httpServer?.address();
 					if (typeof addr === "object" && addr !== null) {
-						ctx.miniflare.publicUrl = buildPublicUrl(
-							viteDevServer.config.server,
-							addr.port
-						);
+						const serverConfig = viteDevServer.config.server;
+						ctx.miniflare.publicUrl = buildPublicUrl({
+							hostname:
+								typeof serverConfig.host === "string"
+									? serverConfig.host
+									: undefined,
+							port: addr.port,
+							secure: !!serverConfig.https,
+						});
 					}
 				});
 			}

@@ -178,6 +178,35 @@ function maybeGetLocallyAccessibleHost(
 	if (h === "::1") return "[::1]";
 }
 
+/**
+ * Normalizes a hostname for use in a client-reachable URL.
+ *
+ * - Maps wildcard/listen-all addresses to `127.0.0.1`.
+ * - Brackets IPv6 addresses (e.g. `::1` -> `[::1]`, `fe80::1` -> `[fe80::1]`).
+ * - Leaves hostnames and IPv4 addresses unchanged.
+ */
+export function getLocallyAccessibleHost(host: string): string {
+	if (host === "0.0.0.0" || host === "::" || host === "*") {
+		return "127.0.0.1";
+	}
+	return getURLSafeHost(host);
+}
+
+/**
+ * Builds a client-reachable URL for a local server given host, port, and
+ * secure flag. Handles IPv6 bracketing and wildcard-address normalization
+ * so the resulting string is always a valid URL.
+ */
+export function buildPublicUrl(options: {
+	hostname?: string;
+	port: number;
+	secure?: boolean;
+}): string {
+	const host = getLocallyAccessibleHost(options.hostname ?? "localhost");
+	const protocol = options.secure ? "https" : "http";
+	return `${protocol}://${host}:${options.port}`;
+}
+
 function getServerPort(server: http.Server) {
 	const address = server.address();
 	// Note address would be string with unix socket

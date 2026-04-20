@@ -12,6 +12,7 @@ import {
 	getLocalExplorerEnabledFromEnv,
 } from "@cloudflare/workers-utils";
 import {
+	buildPublicUrl,
 	getDefaultDevRegistryPath,
 	kUnsafeEphemeralUniqueKey,
 	Log,
@@ -91,42 +92,6 @@ const MODULE_RUNNER_PATH = "./workers/runner-worker/module-runner.js";
 const MODULE_RUNNER_LEGACY_PATH =
 	"./workers/runner-worker/module-runner-legacy.js";
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
-
-/**
- * Maps wildcard/all-interfaces listen addresses to a locally-accessible
- * equivalent. Returns the input unchanged if it is already reachable.
- * Mirrors the `maybeGetLocallyAccessibleHost` logic in Miniflare.
- */
-function getLocallyAccessibleHost(host: string): string {
-	if (
-		host === "127.0.0.1" ||
-		host === "*" ||
-		host === "0.0.0.0" ||
-		host === "::"
-	) {
-		return "127.0.0.1";
-	}
-	if (host === "::1") {
-		return "[::1]";
-	}
-	return host;
-}
-
-/**
- * Builds a public URL from a server config's host/https settings and an
- * explicit port. Normalises wildcard listen addresses to locally-accessible
- * equivalents via {@link getLocallyAccessibleHost}.
- */
-export function buildPublicUrl(
-	serverConfig: { host?: string | boolean; https?: boolean | object },
-	port: number
-): string {
-	const host = getLocallyAccessibleHost(
-		typeof serverConfig.host === "string" ? serverConfig.host : "localhost"
-	);
-	const protocol = serverConfig.https ? "https" : "http";
-	return `${protocol}://${host}:${port}`;
-}
 
 /** Map that maps worker configPaths to their existing remote proxy session data (if any) */
 const remoteProxySessionsDataMap = new Map<
@@ -482,7 +447,12 @@ export async function getDevMiniflareOptions(
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	const serverConfig = viteDevServer.config.server;
-	const publicUrl = buildPublicUrl(serverConfig, serverConfig.port);
+	const publicUrl = buildPublicUrl({
+		hostname:
+			typeof serverConfig.host === "string" ? serverConfig.host : undefined,
+		port: serverConfig.port,
+		secure: !!serverConfig.https,
+	});
 
 	return {
 		miniflareOptions: {
@@ -677,7 +647,12 @@ export async function getPreviewMiniflareOptions(
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	const serverConfig = vitePreviewServer.config.preview;
-	const publicUrl = buildPublicUrl(serverConfig, serverConfig.port);
+	const publicUrl = buildPublicUrl({
+		hostname:
+			typeof serverConfig.host === "string" ? serverConfig.host : undefined,
+		port: serverConfig.port,
+		secure: !!serverConfig.https,
+	});
 
 	return {
 		miniflareOptions: {

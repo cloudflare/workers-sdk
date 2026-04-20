@@ -9,7 +9,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { Miniflare, Mutex } from "miniflare";
+import { buildPublicUrl, Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
@@ -148,7 +148,11 @@ export async function convertToConfigBundle(
 		zone: event.config.dev?.origin?.hostname,
 		sendMetrics: event.config.sendMetrics,
 		publicUrl: event.config.dev?.server?.port
-			? `${event.config.dev.server.secure ? "https" : "http"}://${event.config.dev.server.hostname ?? "localhost"}:${event.config.dev.server.port}`
+			? buildPublicUrl({
+					hostname: event.config.dev.server.hostname,
+					port: event.config.dev.server.port,
+					secure: event.config.dev.server.secure,
+				})
 			: undefined,
 	};
 }
