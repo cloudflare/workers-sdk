@@ -6,60 +6,34 @@ import { extractWAFBlockRayId, isWAFBlockResponse } from "../cfetch/internal";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { msw } from "./helpers/msw";
 
-const WAF_BLOCK_HTML = `<!DOCTYPE html>
-<html>
-<head><title>Attention Required! | Cloudflare</title></head>
-<body>
-  <h1 data-translate="block_headline">Sorry, you have been blocked</h1>
-  <h2 class="cf-subheadline"><span data-translate="unable_to_access">You are unable to access</span> api.cloudflare.com</h2>
-  <p>Cloudflare Ray ID: 9e8116df4823e2c5</p>
-</body>
-</html>`;
-
-const WAF_BLOCK_HTML_NO_RAY_ID = `<!DOCTYPE html>
-<html>
-<head><title>Attention Required! | Cloudflare</title></head>
-<body>
-  <h1 data-translate="block_headline">Sorry, you have been blocked</h1>
-  <h2 class="cf-subheadline"><span data-translate="unable_to_access">You are unable to access</span> api.cloudflare.com</h2>
-</body>
-</html>`;
-
 describe("isWAFBlockResponse", () => {
-	it("should detect a WAF block page", ({ expect }) => {
-		expect(isWAFBlockResponse(WAF_BLOCK_HTML)).toBe(true);
+	it("should detect a WAF-mitigated response", ({ expect }) => {
+		const headers = new Headers({ "cf-mitigated": "challenge" });
+		expect(isWAFBlockResponse(headers)).toBe(true);
 	});
 
-	it("should detect a WAF block page without a Ray ID", ({ expect }) => {
-		expect(isWAFBlockResponse(WAF_BLOCK_HTML_NO_RAY_ID)).toBe(true);
+	it("should return false when cf-mitigated header is absent", ({ expect }) => {
+		const headers = new Headers();
+		expect(isWAFBlockResponse(headers)).toBe(false);
 	});
 
-	it("should return false for valid JSON", ({ expect }) => {
-		expect(
-			isWAFBlockResponse(
-				JSON.stringify({ success: true, result: {}, errors: [], messages: [] })
-			)
-		).toBe(false);
-	});
-
-	it("should return false for other HTML error pages", ({ expect }) => {
-		expect(
-			isWAFBlockResponse("<html><body>Internal Server Error</body></html>")
-		).toBe(false);
+	it("should return false when cf-mitigated has a different value", ({
+		expect,
+	}) => {
+		const headers = new Headers({ "cf-mitigated": "other" });
+		expect(isWAFBlockResponse(headers)).toBe(false);
 	});
 });
 
 describe("extractWAFBlockRayId", () => {
-	it("should extract the Ray ID from a WAF block page", ({ expect }) => {
-		expect(extractWAFBlockRayId(WAF_BLOCK_HTML)).toBe("9e8116df4823e2c5");
+	it("should extract the Ray ID from the cf-ray header", ({ expect }) => {
+		const headers = new Headers({ "cf-ray": "9e8116df4823e2c5" });
+		expect(extractWAFBlockRayId(headers)).toBe("9e8116df4823e2c5");
 	});
 
-	it("should return undefined when no Ray ID is present", ({ expect }) => {
-		expect(extractWAFBlockRayId(WAF_BLOCK_HTML_NO_RAY_ID)).toBeUndefined();
-	});
-
-	it("should return undefined for non-HTML content", ({ expect }) => {
-		expect(extractWAFBlockRayId("some random text")).toBeUndefined();
+	it("should return undefined when cf-ray header is absent", ({ expect }) => {
+		const headers = new Headers();
+		expect(extractWAFBlockRayId(headers)).toBeUndefined();
 	});
 });
 
@@ -67,15 +41,19 @@ describe("fetchInternal WAF block detection", () => {
 	mockAccountId({ accountId: null });
 	mockApiToken();
 
-	it("should throw a helpful error when the API returns a WAF block page", async ({
+	it("should throw a helpful error when the API returns a WAF block response", async ({
 		expect,
 	}) => {
 		msw.use(
 			http.post("*/graphql", async () => {
-				return new HttpResponse(WAF_BLOCK_HTML, {
+				return new HttpResponse("blocked", {
 					status: 403,
 					statusText: "Forbidden",
-					headers: { "Content-Type": "text/html" },
+					headers: {
+						"Content-Type": "text/html",
+						"cf-mitigated": "challenge",
+						"cf-ray": "9e8116df4823e2c5",
+					},
 				});
 			})
 		);
@@ -88,15 +66,19 @@ describe("fetchInternal WAF block detection", () => {
 		);
 	});
 
-	it("should include the Ray ID in the error when present", async ({
+	it("should include the Ray ID in the error when cf-ray header is present", async ({
 		expect,
 	}) => {
 		msw.use(
 			http.post("*/graphql", async () => {
-				return new HttpResponse(WAF_BLOCK_HTML, {
+				return new HttpResponse("blocked", {
 					status: 403,
 					statusText: "Forbidden",
-					headers: { "Content-Type": "text/html" },
+					headers: {
+						"Content-Type": "text/html",
+						"cf-mitigated": "challenge",
+						"cf-ray": "9e8116df4823e2c5",
+					},
 				});
 			})
 		);
@@ -121,15 +103,18 @@ describe("fetchInternal WAF block detection", () => {
 		}
 	});
 
-	it("should still throw a WAF error without the Ray ID note when Ray ID is absent", async ({
+	it("should still throw a WAF error without the Ray ID note when cf-ray header is absent", async ({
 		expect,
 	}) => {
 		msw.use(
 			http.post("*/graphql", async () => {
-				return new HttpResponse(WAF_BLOCK_HTML_NO_RAY_ID, {
+				return new HttpResponse("blocked", {
 					status: 403,
 					statusText: "Forbidden",
-					headers: { "Content-Type": "text/html" },
+					headers: {
+						"Content-Type": "text/html",
+						"cf-mitigated": "challenge",
+					},
 				});
 			})
 		);

@@ -193,11 +193,11 @@ export async function fetchInternal<ResponseType>(
 		};
 	}
 
-	// Detect Cloudflare WAF block pages that return HTML instead of JSON.
+	// Detect Cloudflare WAF block pages via the cf-mitigated response header.
 	// Without this check, the JSON parser throws a confusing "malformed response" error.
-	if (isWAFBlockResponse(jsonText)) {
+	if (isWAFBlockResponse(response.headers)) {
 		throwWAFBlockError(
-			jsonText,
+			response.headers,
 			method,
 			resource,
 			response.status,
@@ -233,35 +233,33 @@ export function truncate(text: string, maxLength: number): string {
 }
 
 /**
- * Checks whether the response body looks like a Cloudflare WAF block page.
- * These are HTML pages returned when the WAF rejects a request, and will
- * never parse as JSON.
+ * Checks whether the response was blocked by Cloudflare's WAF by inspecting
+ * the `cf-mitigated` response header. When the WAF blocks or challenges a
+ * request the response will include `cf-mitigated: challenge`.
  *
- * @param body - The raw response body text to check.
- * @returns `true` if the body appears to be a Cloudflare WAF block page.
+ * @see https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/detect-response/
+ *
+ * @param headers - The response headers to inspect.
+ * @returns `true` if the response was mitigated by the WAF.
  */
-export function isWAFBlockResponse(body: string): boolean {
-	return (
-		body.includes("<html") && body.includes("Sorry, you have been blocked")
-	);
+export function isWAFBlockResponse(headers: Headers): boolean {
+	return headers.get("cf-mitigated") === "challenge";
 }
 
 /**
- * Extracts the Cloudflare Ray ID from a WAF block page, if present.
- * The Ray ID is a hex string typically shown at the bottom of the page.
+ * Extracts the Cloudflare Ray ID from the `cf-ray` response header.
  *
- * @param html - The HTML body of a WAF block page.
- * @returns The Ray ID hex string, or `undefined` if not found.
+ * @param headers - The response headers to inspect.
+ * @returns The Ray ID string, or `undefined` if the header is absent.
  */
-export function extractWAFBlockRayId(html: string): string | undefined {
-	const match = html.match(/Cloudflare Ray ID:\s*([0-9a-f]+)/i);
-	return match?.[1];
+export function extractWAFBlockRayId(headers: Headers): string | undefined {
+	return headers.get("cf-ray") ?? undefined;
 }
 
 /**
  * Throws a descriptive {@link APIError} for a WAF block response.
  *
- * @param body - The raw HTML body of the WAF block page.
+ * @param headers - The response headers (used to extract the Ray ID).
  * @param method - The HTTP method of the blocked request.
  * @param resource - The URL or path that was requested.
  * @param status - The HTTP status code returned.
@@ -269,13 +267,13 @@ export function extractWAFBlockRayId(html: string): string | undefined {
  * @throws {APIError} Always — this function never returns.
  */
 function throwWAFBlockError(
-	body: string,
+	headers: Headers,
 	method: string,
 	resource: string,
 	status: number,
 	statusText: string
 ): never {
-	const rayId = extractWAFBlockRayId(body);
+	const rayId = extractWAFBlockRayId(headers);
 	throw new APIError({
 		text: "The Cloudflare API responded with a WAF block page instead of the expected JSON response",
 		notes: [
