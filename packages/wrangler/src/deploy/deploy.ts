@@ -961,7 +961,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (props.dryRun) {
 			if (normalisedContainerConfig.length) {
 				for (const container of normalisedContainerConfig) {
-					if ("dockerfile" in container) {
+					if ("dockerfile" in container && props.containersRollout !== "none") {
 						await buildContainer(
 							container,
 							workerTag ?? "worker-tag",

@@ -720,7 +720,9 @@ describe("getNormalizedContainerOptions", () => {
 		expect(result[0].rollout_step_percentage).toBe(100);
 	});
 
-	it("should set rollout_kind to none when containersRollout is none", async () => {
+	it("should set rollout_kind to none when containersRollout is none", async ({
+		expect,
+	}) => {
 		const config: Config = {
 			name: "test-worker",
 			configPath: "/test/wrangler.toml",
