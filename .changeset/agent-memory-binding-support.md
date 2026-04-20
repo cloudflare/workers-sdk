@@ -11,12 +11,12 @@ To configure an `agent_memory` binding, add the following to your `wrangler.json
 
 ```jsonc
 {
-  "agent_memory": [
-    {
-      "binding": "MY_MEMORY",
-      "namespace": "my-namespace"
-    }
-  ]
+	"agent_memory": [
+		{
+			"binding": "MY_MEMORY",
+			"namespace": "my-namespace",
+		},
+	],
 }
 ```
 
