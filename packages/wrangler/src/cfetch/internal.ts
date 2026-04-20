@@ -209,6 +209,8 @@ export async function fetchInternal<ResponseType>(
 		const json = parseJSON(jsonText) as ResponseType;
 		return { response: json, status: response.status };
 	} catch {
+		const rayId = extractWAFBlockRayId(response.headers);
+
 		throw new APIError({
 			text: "Received a malformed response from the API",
 			notes: [
@@ -218,6 +220,7 @@ export async function fetchInternal<ResponseType>(
 				{
 					text: `${method} ${resource} -> ${response.status} ${response.statusText}`,
 				},
+				...(rayId ? [{ text: `Cloudflare Ray ID: ${rayId}` }] : []),
 			],
 			status: response.status,
 		});

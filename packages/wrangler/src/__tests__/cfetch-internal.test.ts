@@ -162,4 +162,72 @@ describe("fetchInternal WAF block detection", () => {
 			})
 		).rejects.toThrow("Received a malformed response from the API");
 	});
+
+	it("should include the Ray ID in 'malformed response' error when cf-ray header is present", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.post("*/graphql", async () => {
+				return new HttpResponse(
+					"<html><body>Internal Server Error</body></html>",
+					{
+						status: 500,
+						statusText: "Internal Server Error",
+						headers: {
+							"Content-Type": "text/html",
+							"cf-ray": "abc123def456",
+						},
+					}
+				);
+			})
+		);
+		try {
+			await fetchGraphqlResult(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
+				body: JSON.stringify({ query: "{ viewer { __typename } }" }),
+			});
+			expect.unreachable("should have thrown");
+		} catch (e) {
+			const error = e as { text: string; notes: { text: string }[] };
+			expect(error.text).toBe(
+				"Received a malformed response from the API"
+			);
+			const rayIdNote = error.notes.find((n: { text: string }) =>
+				n.text.includes("Cloudflare Ray ID:")
+			);
+			expect(rayIdNote).toBeDefined();
+			expect(rayIdNote?.text).toBe("Cloudflare Ray ID: abc123def456");
+		}
+	});
+
+	it("should omit the Ray ID in 'malformed response' error when cf-ray header is absent", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.post("*/graphql", async () => {
+				return new HttpResponse(
+					"<html><body>Internal Server Error</body></html>",
+					{
+						status: 500,
+						statusText: "Internal Server Error",
+						headers: { "Content-Type": "text/html" },
+					}
+				);
+			})
+		);
+		try {
+			await fetchGraphqlResult(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
+				body: JSON.stringify({ query: "{ viewer { __typename } }" }),
+			});
+			expect.unreachable("should have thrown");
+		} catch (e) {
+			const error = e as { text: string; notes: { text: string }[] };
+			expect(error.text).toBe(
+				"Received a malformed response from the API"
+			);
+			const rayIdNote = error.notes.find((n: { text: string }) =>
+				n.text.includes("Cloudflare Ray ID:")
+			);
+			expect(rayIdNote).toBeUndefined();
+		}
+	});
 });
