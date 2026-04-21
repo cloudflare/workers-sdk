@@ -1524,15 +1524,6 @@ export class Miniflare {
 					request,
 					customFetchService
 				);
-			} else if (
-				this.#sharedOpts.core.unsafeModuleFallbackService !== undefined &&
-				isModuleFallbackRequest(request) &&
-				originalUrl === null
-			) {
-				response = await this.#sharedOpts.core.unsafeModuleFallbackService(
-					request,
-					this
-				);
 			} else if (url.pathname === "/core/error") {
 				response = await handlePrettyErrorRequest(
 					this.#log,
@@ -1627,6 +1618,21 @@ export class Miniflare {
 				// stream binding) to construct externally-reachable URLs.
 				response = Response.json(
 					this.publicUrl ?? this.#runtimeEntryURL?.toString() ?? null
+				);
+			} else if (
+				// Module fallback check MUST come after all known pathname handlers.
+				// The V2 protocol (new_module_registry compat flag) uses POST requests,
+				// which would otherwise match internal loopback requests from embedded
+				// workers (e.g., POST to /core/log, /core/error, /core/store-temp-file).
+				// By checking module fallback last, we ensure internal endpoints are
+				// handled first, and only truly unmatched requests go to the fallback.
+				this.#sharedOpts.core.unsafeModuleFallbackService !== undefined &&
+				isModuleFallbackRequest(request) &&
+				originalUrl === null
+			) {
+				response = await this.#sharedOpts.core.unsafeModuleFallbackService(
+					request,
+					this
 				);
 			}
 		} catch (e: any) {
