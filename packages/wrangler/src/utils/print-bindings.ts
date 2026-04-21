@@ -470,13 +470,15 @@ export function printBindings(
 
 	if (flagship.length > 0) {
 		output.push(
-			...flagship.map(({ binding, app_id, remote }) => {
+			...flagship.map(({ binding, app_id }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("flagship"),
 					value: app_id,
 					mode: getMode({
-						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+						isSimulatedLocally: !context.remoteBindingsDisabled
+							? false
+							: undefined,
 					}),
 				};
 			})
