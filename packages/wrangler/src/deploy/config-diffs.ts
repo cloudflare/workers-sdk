@@ -213,12 +213,6 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		);
 	}
 
-	if (normalizedConfig.agent_memory?.length) {
-		normalizedConfig.agent_memory = normalizedConfig.agent_memory.map(
-			({ remote: _, ...binding }) => binding
-		);
-	}
-
 	if (normalizedConfig.queues?.producers?.length) {
 		normalizedConfig.queues.producers = normalizedConfig.queues.producers.map(
 			({ remote: _, ...binding }) => binding
@@ -240,6 +234,12 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 
 	if (normalizedConfig.ai_search?.length) {
 		normalizedConfig.ai_search = normalizedConfig.ai_search.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.agent_memory?.length) {
+		normalizedConfig.agent_memory = normalizedConfig.agent_memory.map(
 			({ remote: _, ...binding }) => binding
 		);
 	}
