@@ -289,6 +289,10 @@ export class InspectorProxyController {
 			id: string;
 		}[];
 
+		// Dispose old proxies before replacing them, so their runtime WebSocket
+		// connections and keepalive intervals are properly cleaned up.
+		await Promise.all(this.#proxies.map((proxy) => proxy.dispose()));
+
 		this.#proxies = workerdInspectorJson
 			.map(({ id }) => {
 				if (!id.startsWith("core:user:")) {

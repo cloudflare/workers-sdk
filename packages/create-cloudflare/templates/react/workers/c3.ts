@@ -123,24 +123,26 @@ async function getVariant(ctx: C3Context) {
 			label: "TypeScript",
 		},
 		{
-			value: "react-swc-ts",
-			lang: "ts",
-			label: "TypeScript + SWC",
-		},
-		{
 			value: "react",
 			lang: "js",
 			label: "JavaScript",
-		},
-		{
-			value: "react-swc",
-			lang: "js",
-			label: "JavaScript + SWC",
 		},
 	];
 
 	// If variant is provided via CLI args, use it directly
 	if (ctx.args.variant) {
+		const deprecatedVariantReplacements: Record<string, string> = {
+			"react-swc-ts": "react-ts",
+			"react-swc": "react",
+		};
+
+		const replacement = deprecatedVariantReplacements[ctx.args.variant];
+		if (replacement) {
+			throw new Error(
+				`The React variant "${ctx.args.variant}" is no longer available. Use "${replacement}" instead.`
+			);
+		}
+
 		const selected = variantsOptions.find(
 			(variant) => variant.value === ctx.args.variant
 		);

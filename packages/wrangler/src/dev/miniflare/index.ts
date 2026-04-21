@@ -102,6 +102,9 @@ export interface ConfigBundle {
 	// Zone to use for the CF-Worker header in outbound fetches
 	zone: string | undefined;
 	sendMetrics: boolean | undefined;
+	// The stable, externally-reachable URL of the proxy server in front of
+	// this Miniflare instance (e.g. Wrangler's ProxyWorker URL).
+	publicUrl: string | undefined;
 }
 
 export class WranglerLog extends Log {
@@ -1033,6 +1036,7 @@ export async function buildMiniflareOptions(
 	const options: MiniflareOptions = {
 		host: config.initialIp,
 		port: config.initialPort,
+		publicUrl: config.publicUrl,
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
 		inspectorHost: config.inspect ? config.inspectorHost : undefined,
 		liveReload: config.liveReload,

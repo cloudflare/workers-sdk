@@ -1,4 +1,4 @@
-import { Select } from "@cloudflare/kumo/primitives/select";
+import { DropdownMenu } from "@cloudflare/kumo";
 import {
 	CaretUpDownIcon,
 	CheckIcon,
@@ -6,7 +6,7 @@ import {
 	TableIcon,
 } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import type { StudioRef } from "./studio";
 import type { RefObject } from "react";
 
@@ -22,14 +22,9 @@ export function TableSelect({
 	selectedTable,
 }: TableSelectProps): JSX.Element {
 	const navigate = useNavigate();
-	const [open, setOpen] = useState(false);
 
 	const handleTableChange = useCallback(
-		(tableName: string | null) => {
-			if (tableName === null) {
-				return;
-			}
-
+		(tableName: string) => {
 			void navigate({
 				search: (prev) => ({ ...prev, table: tableName }),
 				to: ".",
@@ -39,77 +34,49 @@ export function TableSelect({
 	);
 
 	const handleCreateTable = useCallback((): void => {
-		setOpen(false);
 		studioRef.current?.openCreateTableTab();
 	}, [studioRef]);
 
 	return (
-		<Select.Root
-			key="table-select"
-			onOpenChange={setOpen}
-			onValueChange={handleTableChange}
-			open={open}
-			value={selectedTable}
-		>
-			<Select.Trigger className="-mx-1.5 inline-flex cursor-pointer items-center gap-1 rounded-md border-none bg-transparent p-2 text-sm text-kumo-default transition-colors hover:bg-kumo-fill data-popup-open:bg-kumo-fill">
-				{selectedTable ? <Select.Value /> : "Select table"}
-				<Select.Icon>
-					<CaretUpDownIcon className="h-3.5 w-3.5 text-kumo-subtle" />
-				</Select.Icon>
-			</Select.Trigger>
+		<DropdownMenu>
+			<DropdownMenu.Trigger
+				render={
+					<button
+						className="-mx-1.5 inline-flex cursor-pointer items-center gap-1 rounded-md border-none bg-transparent p-2 text-sm text-kumo-default transition-colors hover:bg-kumo-fill data-[popup-open]:bg-kumo-fill"
+						type="button"
+					/>
+				}
+			>
+				{selectedTable ?? "Select table"}
+				<CaretUpDownIcon className="h-3.5 w-3.5 text-kumo-subtle" />
+			</DropdownMenu.Trigger>
 
-			<Select.Portal>
-				<Select.Positioner
-					align="start"
-					alignItemWithTrigger={false}
-					className="z-100"
-					side="bottom"
-					sideOffset={4}
-				>
-					<Select.Popup className="max-h-72 min-w-36 overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-[opacity,transform] duration-150 data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-starting-style:-translate-y-1 data-starting-style:opacity-0">
-						<div className="p-1">
-							<button
-								className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-kumo-default transition-colors outline-none select-none hover:bg-kumo-elevated"
-								onClick={handleCreateTable}
-								type="button"
-							>
-								<span className="flex w-4 items-center">
-									<PlusIcon className="h-3.5 w-3.5" />
-								</span>
-								Create table
-							</button>
-						</div>
+			<DropdownMenu.Content
+				className="max-h-72 overflow-y-auto"
+				style={{ zIndex: 50 }}
+			>
+				<DropdownMenu.Item icon={PlusIcon} onClick={handleCreateTable}>
+					Create table
+				</DropdownMenu.Item>
 
-						<div className="mx-1 border-t border-kumo-fill" />
+				<DropdownMenu.Separator />
 
-						<Select.List className="p-1">
-							{tables.length > 0 ? (
-								tables.map((table) => {
-									const Icon =
-										selectedTable === table.value ? CheckIcon : TableIcon;
-
-									return (
-										<Select.Item
-											className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-kumo-default transition-colors outline-none select-none data-highlighted:bg-kumo-elevated"
-											key={table.value}
-											value={table.value}
-										>
-											<span className="flex w-4 items-center">
-												<Icon className="h-3.5 w-3.5" />
-											</span>
-											<Select.ItemText>{table.label}</Select.ItemText>
-										</Select.Item>
-									);
-								})
-							) : (
-								<span className="flex w-full items-center justify-center gap-2 px-2 py-1.5 text-sm text-kumo-subtle">
-									No tables
-								</span>
-							)}
-						</Select.List>
-					</Select.Popup>
-				</Select.Positioner>
-			</Select.Portal>
-		</Select.Root>
+				{tables.length > 0 ? (
+					tables.map((table) => (
+						<DropdownMenu.Item
+							icon={selectedTable === table.value ? CheckIcon : TableIcon}
+							key={table.value}
+							onClick={() => handleTableChange(table.value)}
+						>
+							{table.label}
+						</DropdownMenu.Item>
+					))
+				) : (
+					<span className="flex w-full items-center justify-center gap-2 px-2 py-1.5 text-sm text-kumo-subtle">
+						No tables
+					</span>
+				)}
+			</DropdownMenu.Content>
+		</DropdownMenu>
 	);
 }

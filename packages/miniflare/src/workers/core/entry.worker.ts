@@ -13,7 +13,7 @@ type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
 	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
-
+	[CoreBindings.SERVICE_STREAM]?: Fetcher;
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
@@ -577,6 +577,15 @@ export default <ExportedHandler<Env>>{
 						{ status: 404 }
 					);
 				}
+			}
+
+			const streamService = env[CoreBindings.SERVICE_STREAM];
+			if (
+				(url.pathname === CorePaths.STREAM_VIDEO ||
+					url.pathname.startsWith(`${CorePaths.STREAM_VIDEO}/`)) &&
+				streamService
+			) {
+				return await streamService.fetch(request);
 			}
 
 			let response = await service.fetch(request);

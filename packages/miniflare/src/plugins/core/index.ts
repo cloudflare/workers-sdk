@@ -19,6 +19,7 @@ import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
+	getUserBindingServiceName,
 	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
 	ProxyNodeBinding,
@@ -26,6 +27,7 @@ import {
 	SERVICE_LOOPBACK,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import { STREAM_PLUGIN_NAME } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -321,6 +323,12 @@ export const CoreSharedOptionsSchema = z
 				deviceId: z.string().optional(),
 			})
 			.default({ enabled: false }),
+
+		// The stable, externally-reachable URL for this Miniflare instance
+		// (e.g. the Wrangler proxy URL or Vite dev server URL). Used by
+		// plugins like Stream to generate preview URLs that outlive runtime
+		// restarts. If not set, plugins fall back to the runtime entry URL.
+		publicUrl: z.string().url().optional(),
 	})
 	.refine(
 		({ structuredWorkerdLogs, handleStructuredLogs }) => {
@@ -1054,6 +1062,20 @@ export function getGlobalServices({
 			name: CoreBindings.SERVICE_LOCAL_EXPLORER,
 			service: {
 				name: SERVICE_LOCAL_EXPLORER,
+			},
+		});
+	}
+	const streamServiceEnabled = allWorkerOpts?.some(
+		(worker) =>
+			worker.stream?.stream !== undefined &&
+			!worker.stream.stream.remoteProxyConnectionString
+	);
+	if (streamServiceEnabled) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_STREAM,
+			service: {
+				name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
+				entrypoint: "StreamBinding",
 			},
 		});
 	}
