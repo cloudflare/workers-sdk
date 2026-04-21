@@ -175,16 +175,18 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 			now + DEFAULT_TUNNEL_MAX_REMAINING_MS,
 			Math.max(expiresAt, now) + ms
 		);
+		const extendedByMs = expiresAt - previousExpiresAt;
 
-		if (expiresAt <= previousExpiresAt) {
+		if (extendedByMs < ms) {
 			logger?.log(
-				`Tunnel has reached the maximum remaining time of ${formatTunnelDuration(DEFAULT_TUNNEL_MAX_REMAINING_MS)}.`
+				`Tunnel expiry extended to the ${formatTunnelDuration(DEFAULT_TUNNEL_MAX_REMAINING_MS)} limit. It now expires at ${timeFormatter.format(new Date(expiresAt))}.`
 			);
+			scheduleExpiryTimeout();
 			return;
 		}
 
 		logger?.log(
-			`Tunnel expiry extended by ${formatTunnelDuration(expiresAt - previousExpiresAt)}. It now expires at ${timeFormatter.format(new Date(expiresAt))}.`
+			`Tunnel expiry extended by ${formatTunnelDuration(extendedByMs)}. It now expires at ${timeFormatter.format(new Date(expiresAt))}.`
 		);
 		scheduleExpiryTimeout();
 	}

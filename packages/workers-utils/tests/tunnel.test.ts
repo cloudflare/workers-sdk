@@ -367,7 +367,7 @@ describe("startTunnel", () => {
 		tunnel.extendExpiry();
 
 		expect(logger.log).toHaveBeenCalledWith(
-			"Tunnel has reached the maximum remaining time of 3h."
+			`Tunnel expiry extended to the 3h limit. It now expires at ${cappedExpiryTime}.`
 		);
 
 		await vi.advanceTimersByTimeAsync(60 * 60 * 1_000);
