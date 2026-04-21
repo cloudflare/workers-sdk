@@ -18,7 +18,9 @@ permissions:
 jobs:
   review-changesets:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # Temporarily skipping this while we investigate model issues
+    # if: github.event.pull_request.head.repo.full_name == github.repository
+    if: false
     steps:
       - name: Checkout changesets
         uses: actions/checkout@v4
