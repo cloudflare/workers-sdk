@@ -72,60 +72,62 @@ describe("Engine", () => {
 			},
 		});
 
-		setTestWorkflowCallback(async (_event, step) => {
-			await step.do("failing-step", async () => {
-				throw new NonRetryableError("my custom error message");
+		try {
+			setTestWorkflowCallback(async (_event, step) => {
+				await step.do("failing-step", async () => {
+					throw new NonRetryableError("my custom error message");
+				});
 			});
-		});
 
-		await engineStub
-			.init(
-				12346,
-				{} as DatabaseWorkflow,
-				{} as DatabaseVersion,
-				{ id: instanceId } as DatabaseInstance,
-				{ payload: {}, timestamp: new Date(), instanceId }
-			)
-			.catch(() => {});
+			await engineStub
+				.init(
+					12346,
+					{} as DatabaseWorkflow,
+					{} as DatabaseVersion,
+					{ id: instanceId } as DatabaseInstance,
+					{ payload: {}, timestamp: new Date(), instanceId }
+				)
+				.catch(() => {});
 
-		await vi.waitUntil(
-			async () => {
-				try {
-					const logs = (await env.ENGINE.get(
-						engineId
-					).readLogs()) as EngineLogs;
-					return logs.logs.some(
-						(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
-					);
-				} catch (e) {
-					if (isAbortError(e)) {
-						return false;
+			await vi.waitUntil(
+				async () => {
+					try {
+						const logs = (await env.ENGINE.get(
+							engineId
+						).readLogs()) as EngineLogs;
+						return logs.logs.some(
+							(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
+						);
+					} catch (e) {
+						if (isAbortError(e)) {
+							return false;
+						}
+						throw e;
 					}
-					throw e;
-				}
-			},
-			{ timeout: 3000 }
-		);
+				},
+				{ timeout: 3000 }
+			);
 
-		const logs = (await env.ENGINE.get(engineId).readLogs()) as EngineLogs;
+			const logs = (await env.ENGINE.get(engineId).readLogs()) as EngineLogs;
 
-		const workflowFailure = logs.logs.find(
-			(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
-		);
-		expect(workflowFailure?.metadata.error).toEqual({
-			name: "NonRetryableError",
-			message: "my custom error message",
-		});
+			const workflowFailure = logs.logs.find(
+				(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
+			);
+			expect(workflowFailure?.metadata.error).toEqual({
+				name: "NonRetryableError",
+				message: "my custom error message",
+			});
 
-		const attemptFailure = logs.logs.find(
-			(val) => val.event === InstanceEvent.ATTEMPT_FAILURE
-		);
-		expect(attemptFailure?.metadata.error).toEqual({
-			name: "NonRetryableError",
-			message: "my custom error message",
-		});
-
-		vi.unstubAllGlobals();
+			const attemptFailure = logs.logs.find(
+				(val) => val.event === InstanceEvent.ATTEMPT_FAILURE
+			);
+			expect(attemptFailure?.metadata.error).toEqual({
+				name: "NonRetryableError",
+				message: "my custom error message",
+			});
+		} finally {
+			vi.unstubAllGlobals();
+		}
 	});
 
 	it("should not error out if step fails but is try-catched", async ({
