@@ -80,7 +80,7 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					if (hasCFRegistryImages) {
 						const apiToken = process.env.CLOUDFLARE_API_TOKEN;
 						const accountId =
-							ctx.entryWorkerConfig?.account_id ??
+							ctx.allWorkerConfigs[0]?.account_id ??
 							process.env.CLOUDFLARE_ACCOUNT_ID;
 
 						if (!apiToken || !accountId) {
