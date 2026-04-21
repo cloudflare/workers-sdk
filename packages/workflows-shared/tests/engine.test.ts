@@ -49,7 +49,7 @@ describe("Engine", () => {
 					throw e;
 				}
 			},
-			{ timeout: 3000 }
+			{ timeout: 5000 }
 		);
 
 		const logs = (await env.ENGINE.get(engineId).readLogs()) as EngineLogs;
@@ -159,7 +159,7 @@ describe("Engine", () => {
 					(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
 				);
 			},
-			{ timeout: 1000 }
+			{ timeout: 5000 }
 		);
 
 		const logs = (await engineStub.readLogs()) as EngineLogs;
@@ -173,8 +173,7 @@ describe("Engine", () => {
 		).toHaveLength(1);
 	});
 
-	// eslint-disable-next-line jest/expect-expect
-	it("waitForEvent should receive events while active", async () => {
+	it("waitForEvent should receive events while active", async ({ expect }) => {
 		const engineStub = await runWorkflow(
 			"MOCK-INSTANCE-ID-WAIT-FOR-EVENT",
 			async (_, step) => {
@@ -185,10 +184,13 @@ describe("Engine", () => {
 			}
 		);
 
-		await vi.waitUntil(async () => {
-			const logs = (await engineStub.readLogs()) as EngineLogs;
-			return logs.logs.filter((val) => val.event == InstanceEvent.WAIT_START);
-		}, 500);
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some((val) => val.event === InstanceEvent.WAIT_START);
+			},
+			{ timeout: 5000 }
+		);
 
 		await engineStub.receiveEvent({
 			type: "event-type-1",
@@ -196,16 +198,28 @@ describe("Engine", () => {
 			payload: {},
 		});
 
-		await vi.waitUntil(async () => {
-			const logs = (await engineStub.readLogs()) as EngineLogs;
-			return logs.logs.filter(
-				(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
-			);
-		}, 500);
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(logs.logs.some((v) => v.event === InstanceEvent.WAIT_START)).toBe(
+			true
+		);
+		expect(
+			logs.logs.some((v) => v.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
 	});
 
-	// eslint-disable-next-line jest/expect-expect
-	it("waitForEvent should receive events even if not active", async () => {
+	it("waitForEvent should receive events even if not active", async ({
+		expect,
+	}) => {
 		const engineStub = await runWorkflow(
 			"MOCK-INSTANCE-ID-WAIT-FOR-EVENT-NOT-ACTIVE",
 			async (_, step) => {
@@ -216,10 +230,13 @@ describe("Engine", () => {
 			}
 		);
 
-		await vi.waitUntil(async () => {
-			const logs = (await engineStub.readLogs()) as EngineLogs;
-			return logs.logs.filter((val) => val.event == InstanceEvent.WAIT_START);
-		}, 500);
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some((val) => val.event === InstanceEvent.WAIT_START);
+			},
+			{ timeout: 5000 }
+		);
 
 		try {
 			await runInDurableObject(engineStub, async (engine) => {
@@ -240,12 +257,23 @@ describe("Engine", () => {
 			payload: {},
 		});
 
-		await vi.waitUntil(async () => {
-			const logs = (await newStub.readLogs()) as EngineLogs;
-			return logs.logs.filter(
-				(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
-			);
-		}, 500);
+		await vi.waitUntil(
+			async () => {
+				const logs = (await newStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		const logs = (await newStub.readLogs()) as EngineLogs;
+		expect(logs.logs.some((v) => v.event === InstanceEvent.WAIT_START)).toBe(
+			true
+		);
+		expect(
+			logs.logs.some((v) => v.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
 	});
 
 	it("waitForEvent should not deliver events to timed-out events with the same type", async ({
@@ -282,7 +310,7 @@ describe("Engine", () => {
 						.length >= 1
 				);
 			},
-			{ timeout: 500 }
+			{ timeout: 5000 }
 		);
 
 		await engineStub.receiveEvent({
@@ -299,7 +327,7 @@ describe("Engine", () => {
 						.length >= 2
 				);
 			},
-			{ timeout: 500 }
+			{ timeout: 5000 }
 		);
 
 		// 2nd waitForEvent iteration - should timeout (500ms)
@@ -310,7 +338,7 @@ describe("Engine", () => {
 					(val) => val.event === InstanceEvent.WAIT_TIMED_OUT
 				);
 			},
-			{ timeout: 1000 }
+			{ timeout: 5000 }
 		);
 
 		// 3rd waitForEvent iteration - should receive event
@@ -322,7 +350,7 @@ describe("Engine", () => {
 						.length >= 3
 				);
 			},
-			{ timeout: 500 }
+			{ timeout: 5000 }
 		);
 
 		await engineStub.receiveEvent({
@@ -338,7 +366,7 @@ describe("Engine", () => {
 					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
 				);
 			},
-			{ timeout: 1000 }
+			{ timeout: 5000 }
 		);
 
 		const logs = (await engineStub.readLogs()) as EngineLogs;
@@ -584,7 +612,7 @@ describe("Engine", () => {
 						);
 						return status === InstanceStatus.Complete;
 					},
-					{ timeout: 1000 }
+					{ timeout: 5000 }
 				);
 
 				// Verify the workflow ran again by checking logs
@@ -628,7 +656,7 @@ describe("Engine", () => {
 						);
 					});
 				},
-				{ timeout: 1000 }
+				{ timeout: 5000 }
 			);
 
 			// Request pause while long-step is in flight
@@ -657,7 +685,7 @@ describe("Engine", () => {
 						throw e;
 					}
 				},
-				{ timeout: 2000 }
+				{ timeout: 5000 }
 			);
 
 			const freshStub = env.ENGINE.get(engineId);
@@ -709,7 +737,7 @@ describe("Engine", () => {
 						);
 					});
 				},
-				{ timeout: 1000 }
+				{ timeout: 5000 }
 			);
 
 			// Request pause while both slow steps are in flight
@@ -738,7 +766,7 @@ describe("Engine", () => {
 						throw e;
 					}
 				},
-				{ timeout: 2000 }
+				{ timeout: 5000 }
 			);
 
 			const freshStub = env.ENGINE.get(engineId);
@@ -787,7 +815,7 @@ describe("Engine", () => {
 						);
 					});
 				},
-				{ timeout: 1000 }
+				{ timeout: 5000 }
 			);
 
 			await runInDurableObject(engineStub, async (engine) => {
@@ -801,7 +829,7 @@ describe("Engine", () => {
 						async (engine) =>
 							(await engine.getStatus()) === InstanceStatus.WaitingForPause
 					),
-				{ timeout: 1000 }
+				{ timeout: 5000 }
 			);
 
 			// Resume before slow-step finishes
@@ -874,7 +902,7 @@ describe("Engine", () => {
 						throw e;
 					}
 				},
-				{ timeout: 1000 }
+				{ timeout: 5000 }
 			);
 
 			// Request pause while in step.sleep — should pause immediately
@@ -903,7 +931,7 @@ describe("Engine", () => {
 						throw e;
 					}
 				},
-				{ timeout: 2000 }
+				{ timeout: 5000 }
 			);
 
 			expect(
@@ -999,7 +1027,7 @@ describe("Engine", () => {
 						throw e;
 					}
 				},
-				{ timeout: 1000 }
+				{ timeout: 5000 }
 			);
 
 			// Request pause while in waitForEvent
@@ -1028,7 +1056,7 @@ describe("Engine", () => {
 						throw e;
 					}
 				},
-				{ timeout: 2000 }
+				{ timeout: 5000 }
 			);
 
 			expect(

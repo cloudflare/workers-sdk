@@ -221,16 +221,39 @@ export type ContainerApp = {
 	};
 
 	/**
-	 * Scheduling constraints
-	 * @hidden
+	 * Scheduling constraints for container placement.
 	 */
 	constraints?: {
-		regions?: string[];
+		/**
+		 * Limit container placement to specific geographic regions.
+		 */
+		regions?: (
+			| "ENAM"
+			| "WNAM"
+			| "EEUR"
+			| "WEUR"
+			| "APAC"
+			| "SAM"
+			| "ME"
+			| "OC"
+			| "AFR"
+		)[];
+		/**
+		 * Restrict containers to compliance boundaries.
+		 */
+		jurisdiction?: "eu" | "fedramp";
+		/**
+		 * @hidden
+		 */
 		cities?: string[];
 		/**
 		 * @deprecated Use `tiers` instead
+		 * @hidden
 		 */
 		tier?: number;
+		/**
+		 * @hidden
+		 */
 		tiers?: number[];
 	};
 
@@ -1339,6 +1362,27 @@ export interface EnvironmentNonInheritable {
 
 		/** Name of the secret */
 		secret_name: string;
+	}[];
+
+	/**
+	 * Specifies Artifacts bindings that are bound to this Worker environment.
+	 * Artifacts provides git-compatible file storage on Cloudflare Workers.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	artifacts: {
+		/** The binding name used to refer to the Artifacts instance. */
+		binding: string;
+
+		/** The namespace to use. */
+		namespace: string;
+
+		/** Whether to use the remote Artifacts service in local dev. */
+		remote?: boolean;
 	}[];
 
 	/**

@@ -1,5 +1,27 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.14.8
+
+### Patch Changes
+
+- [#13548](https://github.com/cloudflare/workers-sdk/pull/13548) [`1aee990`](https://github.com/cloudflare/workers-sdk/commit/1aee99059d6025c7ea8ef88b3ea421922eee6354) Thanks [@emily-shen](https://github.com/emily-shen)! - Update warning message when attempting to access exports not defined on the main worker
+
+  Previously this referred to the `SELF` worker, which is now a deprecated API in the Vitest integration.
+
+- [#13607](https://github.com/cloudflare/workers-sdk/pull/13607) [`d5d0446`](https://github.com/cloudflare/workers-sdk/commit/d5d0446ecc30b75b6fabd1e5c7c3d8d4eca4146d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: Restore workflow binding before async cleanup in `WorkflowIntrospectorHandle.dispose()`
+
+  Previously, `dispose()` awaited all instance abort operations before restoring the original `env` binding. On slower CI environments (especially Windows), this left a window where the next test could see a stale proxy, causing "Trying to mock step multiple times" errors or failed introspection. The binding is now restored synchronously before the async instance cleanup begins.
+
+- [#13007](https://github.com/cloudflare/workers-sdk/pull/13007) [`2c3258d`](https://github.com/cloudflare/workers-sdk/commit/2c3258d5a4720b8b07f99f79c7dd17013f92ca44) Thanks [@sheplu](https://github.com/sheplu)! - Reduce default log verbosity from `VERBOSE` to `INFO`
+
+  The pool logger was previously hardcoded to `VERBOSE`, causing noisy debug messages on every test run (e.g. `[vpw:debug] Adding compatibility flag...`). Only informational, warning, and error messages are now printed by default.
+
+  For debugging, set `NODE_DEBUG=vitest-pool-workers` to restore the detailed output.
+
+- Updated dependencies [[`05f4443`](https://github.com/cloudflare/workers-sdk/commit/05f4443aa581d3f9095e2b1479672557d27e0603), [`4a9ba90`](https://github.com/cloudflare/workers-sdk/commit/4a9ba90b3f64e94da90343f2694d42f78777e4b7), [`d8c895a`](https://github.com/cloudflare/workers-sdk/commit/d8c895a9e97af52a25721cc08e9c5445986e0845), [`b35617b`](https://github.com/cloudflare/workers-sdk/commit/b35617b32456b742f716e2b2b0fa04839dd19a9e), [`7dc0433`](https://github.com/cloudflare/workers-sdk/commit/7dc043315272df2479c17ad204c379515dcc83e8), [`8ca78bb`](https://github.com/cloudflare/workers-sdk/commit/8ca78bba8b8079e80bee07259a455b57b70a68fc), [`b6e1351`](https://github.com/cloudflare/workers-sdk/commit/b6e13513ffbb6012c8d9829906aaeb23172334df), [`d8314c6`](https://github.com/cloudflare/workers-sdk/commit/d8314c64ce25a1f3d8a2c13c3d0c286874ec5560), [`b35617b`](https://github.com/cloudflare/workers-sdk/commit/b35617b32456b742f716e2b2b0fa04839dd19a9e), [`7f50300`](https://github.com/cloudflare/workers-sdk/commit/7f50300ad86c7f180ae3a8ff80ac83783b2416a7), [`4fda685`](https://github.com/cloudflare/workers-sdk/commit/4fda685f8074c7cec3af927cae3faeb58c33c3cd), [`be5e6a0`](https://github.com/cloudflare/workers-sdk/commit/be5e6a0c4421db36277736f8621346747f52f327), [`e456952`](https://github.com/cloudflare/workers-sdk/commit/e456952b46fccdb010730dbd91be332ee92f1e3d), [`59eec63`](https://github.com/cloudflare/workers-sdk/commit/59eec634e4611392a5eb273079d73bf6417cd8bc), [`50bf819`](https://github.com/cloudflare/workers-sdk/commit/50bf819ba8cc7731e9a45c277d0aea7434d8f315), [`cc1413a`](https://github.com/cloudflare/workers-sdk/commit/cc1413ae661e688e93406c3e252737f07d1e8cce), [`d0a9d1c`](https://github.com/cloudflare/workers-sdk/commit/d0a9d1c8d2123bd2ca49a963d11c7d2417b97de2), [`4eb1da9`](https://github.com/cloudflare/workers-sdk/commit/4eb1da9b24247a10a031ecced2cc829243024f84), [`8ca78bb`](https://github.com/cloudflare/workers-sdk/commit/8ca78bba8b8079e80bee07259a455b57b70a68fc), [`266c418`](https://github.com/cloudflare/workers-sdk/commit/266c418138f4ab53ea662fa45d3e66d38fdf0d52), [`6d887db`](https://github.com/cloudflare/workers-sdk/commit/6d887db1133595a5eae88cc95dac0935113d8674), [`5716d69`](https://github.com/cloudflare/workers-sdk/commit/5716d69b7988c111f3151d9fadbc6c717b6bb8c1)]:
+  - wrangler@4.84.0
+  - miniflare@4.20260420.0
+
 ## 0.14.7
 
 ### Patch Changes

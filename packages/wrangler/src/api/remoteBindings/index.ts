@@ -20,7 +20,11 @@ export function pickRemoteBindings(
 ): Record<string, Binding> {
 	return Object.fromEntries(
 		Object.entries(bindings ?? {}).filter(([, binding]) => {
-			if (binding.type === "ai" || binding.type === "media") {
+			if (
+				binding.type === "ai" ||
+				binding.type === "media" ||
+				binding.type === "artifacts"
+			) {
 				// AI and 'media' bindings are always remote
 				return true;
 			}

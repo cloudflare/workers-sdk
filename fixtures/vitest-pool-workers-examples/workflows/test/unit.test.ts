@@ -2,19 +2,19 @@ import { introspectWorkflowInstance } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { it } from "vitest";
 
-const INSTANCE_ID = "12345678910";
 const STATUS_COMPLETE = "complete";
 const STATUS_ERROR = "errored";
 const STEP_NAME = "AI content scan";
 
 // This example implicitly disposes the Workflow instance
 it("should mock a non-violation score and complete", async ({ expect }) => {
+	const instanceId = crypto.randomUUID();
 	const mockResult = { violationScore: 0 };
 
 	// CONFIG with `await using` to ensure Workflow instances cleanup:
 	await using instance = await introspectWorkflowInstance(
 		env.MODERATOR,
-		INSTANCE_ID
+		instanceId
 	);
 	await instance.modify(async (m) => {
 		await m.disableSleeps();
@@ -22,7 +22,7 @@ it("should mock a non-violation score and complete", async ({ expect }) => {
 	});
 
 	await env.MODERATOR.create({
-		id: INSTANCE_ID,
+		id: instanceId,
 	});
 
 	// ASSERTIONS:
@@ -45,10 +45,11 @@ it("should mock a non-violation score and complete", async ({ expect }) => {
 it("should mock the violation score calculation to fail 2 times and then complete", async ({
 	expect,
 }) => {
+	const instanceId = crypto.randomUUID();
 	const mockResult = { violationScore: 0 };
 
 	// CONFIG:
-	const instance = await introspectWorkflowInstance(env.MODERATOR, INSTANCE_ID);
+	const instance = await introspectWorkflowInstance(env.MODERATOR, instanceId);
 
 	try {
 		await instance.modify(async (m) => {
@@ -62,7 +63,7 @@ it("should mock the violation score calculation to fail 2 times and then complet
 		});
 
 		await env.MODERATOR.create({
-			id: INSTANCE_ID,
+			id: instanceId,
 		});
 
 		// ASSERTIONS:
@@ -88,11 +89,12 @@ it("should mock the violation score calculation to fail 2 times and then complet
 });
 
 it("should mock a violation score and complete", async ({ expect }) => {
+	const instanceId = crypto.randomUUID();
 	const mockResult = { violationScore: 99 };
 
 	await using instance = await introspectWorkflowInstance(
 		env.MODERATOR,
-		INSTANCE_ID
+		instanceId
 	);
 	await instance.modify(async (m) => {
 		await m.disableSleeps();
@@ -100,7 +102,7 @@ it("should mock a violation score and complete", async ({ expect }) => {
 	});
 
 	await env.MODERATOR.create({
-		id: INSTANCE_ID,
+		id: instanceId,
 	});
 
 	expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
@@ -117,11 +119,12 @@ it("should mock a violation score and complete", async ({ expect }) => {
 });
 
 it("should be reviewed, accepted and complete", async ({ expect }) => {
+	const instanceId = crypto.randomUUID();
 	const mockResult = { violationScore: 50 };
 
 	await using instance = await introspectWorkflowInstance(
 		env.MODERATOR,
-		INSTANCE_ID
+		instanceId
 	);
 	await instance.modify(async (m) => {
 		await m.disableSleeps();
@@ -133,7 +136,7 @@ it("should be reviewed, accepted and complete", async ({ expect }) => {
 	});
 
 	await env.MODERATOR.create({
-		id: INSTANCE_ID,
+		id: instanceId,
 	});
 
 	expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
@@ -152,11 +155,12 @@ it("should be reviewed, accepted and complete", async ({ expect }) => {
 it("should disable retry delays when mocking step errors", async ({
 	expect,
 }) => {
+	const instanceId = crypto.randomUUID();
 	const mockResult = { violationScore: 0 };
 
 	await using instance = await introspectWorkflowInstance(
 		env.MODERATOR,
-		INSTANCE_ID
+		instanceId
 	);
 	await instance.modify(async (m) => {
 		await m.disableSleeps();
@@ -170,7 +174,7 @@ it("should disable retry delays when mocking step errors", async ({
 	});
 
 	await env.MODERATOR.create({
-		id: INSTANCE_ID,
+		id: instanceId,
 	});
 
 	expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
@@ -184,11 +188,12 @@ it("should disable retry delays when mocking step errors", async ({
 });
 
 it("should force human review to timeout and error", async ({ expect }) => {
+	const instanceId = crypto.randomUUID();
 	const mockResult = { violationScore: 50 };
 
 	await using instance = await introspectWorkflowInstance(
 		env.MODERATOR,
-		INSTANCE_ID
+		instanceId
 	);
 	await instance.modify(async (m) => {
 		await m.disableSleeps();
@@ -197,7 +202,7 @@ it("should force human review to timeout and error", async ({ expect }) => {
 	});
 
 	await env.MODERATOR.create({
-		id: INSTANCE_ID,
+		id: instanceId,
 	});
 
 	expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(

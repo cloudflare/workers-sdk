@@ -4,6 +4,7 @@ export default defineConfig({
 	test: {
 		include: ["**/__tests__/**/*.spec.[tj]s"],
 		exclude: ["**/node_modules/**", "**/dist/**", "./playground/**/*.*"],
+		testTimeout: 50_000,
 	},
 	publicDir: false,
 });

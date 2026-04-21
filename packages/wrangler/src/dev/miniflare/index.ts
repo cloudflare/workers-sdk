@@ -429,6 +429,7 @@ type WorkerOptionsBindings = Pick<
 	| "mtlsCertificates"
 	| "helloWorld"
 	| "flagship"
+	| "artifacts"
 	| "workerLoaders"
 	| "unsafeBindings"
 	| "additionalUnboundDurableObjects"
@@ -504,6 +505,7 @@ export function buildMiniflareBindingOptions(
 		bindings
 	);
 	const flagshipBindings = extractBindingsOfType("flagship", bindings);
+	const artifactsBindings = extractBindingsOfType("artifacts", bindings);
 	const workerLoaders = extractBindingsOfType("worker_loader", bindings);
 	const sendEmailBindings = extractBindingsOfType("send_email", bindings);
 	// Extract both regular and unsafe ratelimit bindings
@@ -628,6 +630,10 @@ export function buildMiniflareBindingOptions(
 
 	for (const media of mediaBindings) {
 		warnOrError("media", media.remote, "always-remote");
+	}
+
+	for (const artifact of artifactsBindings) {
+		warnOrError("artifacts", artifact.remote, "always-remote");
 	}
 
 	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
@@ -806,6 +812,15 @@ export function buildMiniflareBindingOptions(
 						binding.remote && remoteProxyConnectionString
 							? remoteProxyConnectionString
 							: undefined,
+				},
+			])
+		),
+		artifacts: Object.fromEntries(
+			artifactsBindings.map((binding) => [
+				binding.binding,
+				{
+					namespace: binding.namespace,
+					remoteProxyConnectionString,
 				},
 			])
 		),

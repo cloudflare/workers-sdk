@@ -50,7 +50,7 @@ describe("Context", () => {
 					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
 				);
 			},
-			{ timeout: 1000 }
+			{ timeout: 5000 }
 		);
 
 		expect(receivedAttempt).toBe(1);
@@ -86,7 +86,7 @@ describe("Context", () => {
 					(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
 				);
 			},
-			{ timeout: 1000 }
+			{ timeout: 5000 }
 		);
 
 		// Should have received attempts 1, 2, and 3
@@ -192,7 +192,7 @@ describe("Context", () => {
 					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
 				);
 			},
-			{ timeout: 1000 }
+			{ timeout: 5000 }
 		);
 
 		expect(receivedCtx).toMatchObject({
@@ -224,6 +224,7 @@ describe("Context", () => {
 			}
 		);
 
+		// Needs extra headroom: 3 sequential step.do calls + cold DO startup on Windows
 		await vi.waitUntil(
 			async () => {
 				const logs = (await engineStub.readLogs()) as EngineLogs;
@@ -231,7 +232,7 @@ describe("Context", () => {
 					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
 				);
 			},
-			{ timeout: 1000 }
+			{ timeout: 10000 }
 		);
 
 		expect(receivedContexts[0]).toMatchObject({
@@ -269,7 +270,7 @@ describe("Context", () => {
 					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
 				);
 			},
-			{ timeout: 1000 }
+			{ timeout: 5000 }
 		);
 
 		expect(receivedCtx).toMatchObject({
@@ -317,7 +318,7 @@ describe("Context", () => {
 					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
 				);
 			},
-			{ timeout: 1000 }
+			{ timeout: 5000 }
 		);
 
 		// User overrides should be merged with defaults
@@ -369,7 +370,7 @@ describe("Context", () => {
 					(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
 				);
 			},
-			{ timeout: 1000 }
+			{ timeout: 5000 }
 		);
 
 		// With limit: 1, the engine should execute attempt 1 + 1 retry = 2 attempts total.

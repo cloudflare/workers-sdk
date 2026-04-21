@@ -28,6 +28,12 @@ describe("KV Namespace", () => {
 			expect(rowText).toContain("Hello, World!");
 		});
 
+		test("loads namespace values when aggregate payload exceeds bulk limit", async () => {
+			await navigateToKV("KV");
+			await waitForTableRows(5);
+			await waitForText("large-key-1");
+		});
+
 		test("shows column headers", async () => {
 			await navigateToKV("KV");
 			await waitForTableRows(1);
