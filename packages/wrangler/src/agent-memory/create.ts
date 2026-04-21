@@ -8,6 +8,9 @@ export const agentMemoryNamespaceCreateCommand = createCommand({
 		status: "open beta",
 		owner: "Product: Agent Memory",
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	args: {
 		namespace: {
 			type: "string",
@@ -15,12 +18,29 @@ export const agentMemoryNamespaceCreateCommand = createCommand({
 			description:
 				"The name for the new namespace (max 32 characters, alphanumeric with embedded hyphens)",
 		},
+		json: {
+			type: "boolean",
+			default: false,
+			description: "Return output as JSON",
+		},
 	},
 	positionalArgs: ["namespace"],
-	async handler({ namespace }, { config }) {
+	async handler({ namespace, json }, { config }) {
 		const result = await createNamespace(config, namespace);
-		logger.log(`✅ Created Agent Memory namespace`);
-		logger.log(`  ID:   ${result.id}`);
-		logger.log(`  Name: ${result.name}`);
+
+		if (json) {
+			logger.json(result);
+			return;
+		}
+
+		logger.log(`✅ Created Agent Memory namespace "${result.name}"`);
+		logger.table([
+			{
+				namespace_id: result.id,
+				name: result.name,
+				account_id: result.account_id,
+				created_at: result.created_at,
+			},
+		]);
 	},
 });
