@@ -244,10 +244,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "hono:pages",
 			argv: ["--platform", "pages"],
-			// The hono started template for pages is currently broken so we need to skip the test
-			// this will be fixed upstream
-			// TODO: un-quarantine this once https://github.com/honojs/starter/pull/116 is merged
-			quarantine: true,
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
