@@ -1,5 +1,21 @@
 # miniflare
 
+## 4.20260421.0
+
+### Patch Changes
+
+- [#13615](https://github.com/cloudflare/workers-sdk/pull/13615) [`8fec8b8`](https://github.com/cloudflare/workers-sdk/commit/8fec8b85e3a22289d85cf13eb6659ec3c5fb917a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260420.1 | 1.20260421.1 |
+
+- [#13613](https://github.com/cloudflare/workers-sdk/pull/13613) [`2f3d7b9`](https://github.com/cloudflare/workers-sdk/commit/2f3d7b9894b137e011f8ade835cb826de3846c91) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix sourcemap warnings caused by references to files outside the package boundary
+
+  miniflare's bundled sourcemap contained `sources` entries pointing into `node_modules` dependencies (zod, capnp-es, chokidar, etc.), which produced dozens of warnings in pnpm monorepos when tools like Vite or Vitest validated the sourcemaps at runtime. The build now inlines `sourcesContent` and patches any null entries left by upstream dependencies that don't publish their original source files
+
 ## 4.20260420.0
 
 ### Minor Changes

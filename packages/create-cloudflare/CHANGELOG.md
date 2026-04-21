@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.67.2
+
+### Patch Changes
+
+- [#13513](https://github.com/cloudflare/workers-sdk/pull/13513) [`f822594`](https://github.com/cloudflare/workers-sdk/commit/f82259422ee943d52adeaf797a4327904c67418f) Thanks [@edmundhung](https://github.com/edmundhung)! - Update the design of the React Workers starter
+
+  The React Workers template now follows the latest Vite React starter more closely, so new projects get the refreshed upstream design alongside the existing Cloudflare integration.
+
 ## 2.67.1
 
 ### Patch Changes
