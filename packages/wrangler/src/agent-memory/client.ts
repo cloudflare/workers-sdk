@@ -61,7 +61,7 @@ export async function deleteNamespaceRequest(
 	accountId: string,
 	namespaceName: string
 ): Promise<void> {
-	await fetchResult<null>(
+	await fetchResult<void>(
 		complianceConfig,
 		`/accounts/${accountId}/agentmemory/namespaces/${namespaceName}`,
 		{ method: "DELETE" }
