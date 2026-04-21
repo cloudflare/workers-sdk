@@ -54,6 +54,7 @@ export class TunnelManager {
 
 		const tunnel = startTunnel({
 			origin: new URL(origin),
+			extendHint: "Press t + enter to extend by 1 hour.",
 			logger: {
 				log: (message) => this.#logger.info(message),
 				warn: (message) => this.#logger.warn(message),
@@ -92,6 +93,10 @@ export class TunnelManager {
 
 	get publicUrl(): string | undefined {
 		return this.#publicUrl;
+	}
+
+	extendExpiry() {
+		this.#tunnel?.extendExpiry();
 	}
 
 	warnIfQuickTunnelSseResponse(contentType: string | null) {
@@ -133,6 +138,10 @@ process.on("exit", () => {
 
 export function warnIfQuickTunnelSseResponse(contentType: string | null) {
 	tunnelManager?.warnIfQuickTunnelSseResponse(contentType);
+}
+
+export function extendTunnelExpiry() {
+	tunnelManager?.extendExpiry();
 }
 
 export async function getTunnelOrigin(server: vite.ViteDevServer) {

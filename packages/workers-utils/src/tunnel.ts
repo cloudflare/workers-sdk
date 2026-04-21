@@ -8,6 +8,10 @@ import type { ChildProcess } from "node:child_process";
  */
 const TUNNEL_STARTUP_TIMEOUT_MS = 30_000;
 const TUNNEL_FORCE_KILL_TIMEOUT_MS = 5_000;
+const DEFAULT_TUNNEL_EXPIRY_MS = 60 * 60 * 1_000;
+const DEFAULT_TUNNEL_EXTENSION_MS = 60 * 60 * 1_000;
+const DEFAULT_TUNNEL_MAX_REMAINING_MS = 3 * 60 * 60 * 1_000;
+const DEFAULT_TUNNEL_REMINDER_INTERVAL_MS = 10 * 60 * 1_000;
 
 /**
  * cloudflared logs the quick tunnel URL to stderr.
@@ -21,11 +25,15 @@ export interface TunnelResult {
 export interface Tunnel {
 	ready: () => Promise<TunnelResult>;
 	dispose: () => Promise<void>;
+	extendExpiry: (ms?: number) => void;
 }
 
 export interface TunnelOptions {
 	origin: URL;
 	timeoutMs?: number;
+	expiryMs?: number;
+	reminderIntervalMs?: number;
+	extendHint?: string;
 	logger?: Logger;
 }
 
@@ -39,9 +47,18 @@ export interface TunnelOptions {
  */
 export function startTunnel(options: TunnelOptions): Tunnel {
 	let disposed = false;
+	let reminderInterval: ReturnType<typeof setInterval> | undefined;
+	let expiryTimeout: ReturnType<typeof setTimeout> | undefined;
+	let expiresAt = 0;
 
 	const logger = options.logger;
 	const timeoutMs = options.timeoutMs ?? TUNNEL_STARTUP_TIMEOUT_MS;
+	const reminderIntervalMs =
+		options.reminderIntervalMs ?? DEFAULT_TUNNEL_REMINDER_INTERVAL_MS;
+	const defaultExpiryMs = options.expiryMs ?? DEFAULT_TUNNEL_EXPIRY_MS;
+	const timeFormatter = new Intl.DateTimeFormat(undefined, {
+		timeStyle: "short",
+	});
 	const cloudflaredArgs = [
 		"tunnel",
 		"--no-autoupdate",
@@ -61,23 +78,132 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 		return process;
 	});
 
-	const readyPromise = cloudflaredPromise.then((process) =>
-		waitForQuickTunnelReady(process, timeoutMs, {
-			logger,
-			origin: options.origin,
-		})
-	);
+	const readyPromise = cloudflaredPromise
+		.then((process) =>
+			waitForQuickTunnelReady(process, timeoutMs, {
+				logger,
+				origin: options.origin,
+			})
+		)
+		.then((result) => {
+			expiresAt = Date.now() + defaultExpiryMs;
+
+			scheduleExpiryTimeout();
+			scheduleReminder(result.publicUrl.origin);
+
+			return result;
+		});
+
+	async function disposeTunnel() {
+		disposed = true;
+		clearTunnelTimers();
+		const process = await cloudflaredPromise.catch(() => undefined);
+		if (process) {
+			terminateCloudflared(process);
+		}
+	}
 
 	return {
 		ready: () => readyPromise,
-		dispose: async () => {
-			disposed = true;
-			const process = await cloudflaredPromise.catch(() => undefined);
-			if (process) {
-				terminateCloudflared(process);
-			}
-		},
+		dispose: disposeTunnel,
+		extendExpiry,
 	};
+
+	function clearTunnelTimers() {
+		if (expiryTimeout) {
+			clearTimeout(expiryTimeout);
+			expiryTimeout = undefined;
+		}
+
+		if (reminderInterval) {
+			clearInterval(reminderInterval);
+			reminderInterval = undefined;
+		}
+	}
+
+	function scheduleReminder(publicURL: string) {
+		if (reminderIntervalMs > 0) {
+			reminderInterval = setInterval(() => {
+				if (disposed) {
+					return;
+				}
+
+				const remainingMs = expiresAt - Date.now();
+				if (remainingMs <= 0) {
+					return;
+				}
+
+				logger?.log(
+					`The tunnel is still open at ${publicURL}. It expires in ${formatTunnelDuration(remainingMs)}. ${options.extendHint ?? ""}`
+				);
+			}, reminderIntervalMs);
+			reminderInterval.unref?.();
+		}
+	}
+
+	function scheduleExpiryTimeout() {
+		if (disposed) {
+			return;
+		}
+
+		if (expiryTimeout) {
+			clearTimeout(expiryTimeout);
+		}
+
+		expiryTimeout = setTimeout(
+			() => {
+				if (disposed) {
+					return;
+				}
+
+				logger?.log("Tunnel expired. Closing tunnel.");
+				void disposeTunnel();
+			},
+			Math.max(0, expiresAt - Date.now())
+		);
+		expiryTimeout.unref();
+	}
+
+	function extendExpiry(ms = DEFAULT_TUNNEL_EXTENSION_MS) {
+		if (disposed || !expiryTimeout || ms <= 0) {
+			return;
+		}
+
+		const now = Date.now();
+		const previousExpiresAt = expiresAt;
+		expiresAt = Math.min(
+			now + DEFAULT_TUNNEL_MAX_REMAINING_MS,
+			Math.max(expiresAt, now) + ms
+		);
+
+		if (expiresAt <= previousExpiresAt) {
+			logger?.log(
+				`Tunnel has reached the maximum remaining time of ${formatTunnelDuration(DEFAULT_TUNNEL_MAX_REMAINING_MS)}.`
+			);
+			return;
+		}
+
+		logger?.log(
+			`Tunnel expiry extended by ${formatTunnelDuration(expiresAt - previousExpiresAt)}. It now expires at ${timeFormatter.format(new Date(expiresAt))}.`
+		);
+		scheduleExpiryTimeout();
+	}
+}
+
+function formatTunnelDuration(durationMs: number) {
+	const totalMinutes = Math.max(1, Math.ceil(durationMs / 60_000));
+	const hours = Math.floor(totalMinutes / 60);
+	const minutes = totalMinutes % 60;
+
+	if (hours === 0) {
+		return `${minutes}m`;
+	}
+
+	if (minutes === 0) {
+		return `${hours}h`;
+	}
+
+	return `${hours}h ${minutes}m`;
 }
 
 function terminateCloudflared(cloudflared: ChildProcess) {

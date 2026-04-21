@@ -51,7 +51,7 @@ export async function startDev(args: StartDevOptions) {
 					unregisterHotKeys = registerDevHotKeys(
 						Array.isArray(devEnv) ? devEnv : [devEnv],
 						args,
-						false
+						{ getTunnel: () => tunnel, render: false }
 					);
 				}
 			}
@@ -106,7 +106,9 @@ export async function startDev(args: StartDevOptions) {
 				))
 			);
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(devEnv, args);
+				unregisterHotKeys = registerDevHotKeys(devEnv, args, {
+					getTunnel: () => tunnel,
+				});
 			}
 		} else {
 			devEnv = new DevEnv();
@@ -114,7 +116,9 @@ export async function startDev(args: StartDevOptions) {
 			await setupDevEnv(devEnv, args.config, authHook, args);
 
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys([devEnv], args);
+				unregisterHotKeys = registerDevHotKeys([devEnv], args, {
+					getTunnel: () => tunnel,
+				});
 			}
 		}
 
@@ -165,7 +169,11 @@ export async function startDev(args: StartDevOptions) {
 			);
 
 			logger.log(dim("⎔ Starting tunnel (usually takes a few seconds)..."));
-			tunnel = startTunnel({ origin, logger });
+			tunnel = startTunnel({
+				origin,
+				extendHint: "Press [t] to extend by 1 hour.",
+				logger,
+			});
 
 			// Clean up tunnel on teardown
 			primaryDevEnv.on("teardown", () => {

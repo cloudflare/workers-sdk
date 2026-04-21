@@ -8,6 +8,7 @@ import colors from "picocolors";
 import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
+import { extendTunnelExpiry } from "./tunnel";
 import type { PluginContext } from "../context";
 import type * as vite from "vite";
 
@@ -25,6 +26,9 @@ export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
 			assertIsNotPreview(ctx);
 			addBindingsShortcut(viteDevServer, ctx);
 			addExplorerShortcut(viteDevServer);
+			if (ctx.resolvedPluginConfig.tunnel) {
+				addTunnelShortcut(viteDevServer);
+			}
 		},
 		async configurePreviewServer(vitePreviewServer) {
 			if (!isCustomShortcutsSupported) {
@@ -169,5 +173,25 @@ export function addExplorerShortcut(
 
 	server.bindCLIShortcuts({
 		customShortcuts: [openExplorerShortcut],
+	});
+}
+
+export function addTunnelShortcut(
+	server: vite.ViteDevServer | vite.PreviewServer
+) {
+	if (!process.stdin.isTTY) {
+		return;
+	}
+
+	const extendTunnelExpiryShortcut = {
+		key: "t",
+		description: "extend tunnel by 1 hour",
+		action: () => {
+			extendTunnelExpiry();
+		},
+	} satisfies vite.CLIShortcut<vite.ViteDevServer | vite.PreviewServer>;
+
+	server.bindCLIShortcuts({
+		customShortcuts: [extendTunnelExpiryShortcut],
 	});
 }

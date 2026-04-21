@@ -24,6 +24,7 @@ describe("tunnel plugin", () => {
 			ready: vi.fn().mockResolvedValue({
 				publicUrl: new URL("https://example.trycloudflare.com"),
 			}),
+			extendExpiry: vi.fn(),
 			dispose: vi.fn(),
 		});
 
@@ -52,6 +53,7 @@ describe("tunnel plugin", () => {
 		expect(restart).toHaveBeenCalledTimes(1);
 		expect(startTunnel).toHaveBeenCalledWith({
 			origin: new URL(server.resolvedUrls?.local?.[0] ?? ""),
+			extendHint: "Press t + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
 				warn: expect.any(Function),
@@ -75,6 +77,7 @@ describe("tunnel plugin", () => {
 			ready: vi.fn().mockResolvedValue({
 				publicUrl: new URL("https://example.trycloudflare.com"),
 			}),
+			extendExpiry: vi.fn(),
 			dispose: vi.fn(),
 		});
 
@@ -114,12 +117,14 @@ describe("tunnel plugin", () => {
 				ready: vi.fn().mockResolvedValue({
 					publicUrl: new URL("https://foo.trycloudflare.com"),
 				}),
+				extendExpiry: vi.fn(),
 				dispose: vi.fn(),
 			})
 			.mockReturnValueOnce({
 				ready: vi.fn().mockResolvedValue({
 					publicUrl: new URL("https://bar.trycloudflare.com"),
 				}),
+				extendExpiry: vi.fn(),
 				dispose: vi.fn(),
 			});
 
@@ -141,6 +146,7 @@ describe("tunnel plugin", () => {
 		expect(startTunnel).toHaveBeenCalledTimes(1);
 		expect(startTunnel).toHaveBeenNthCalledWith(1, {
 			origin: new URL(server1.resolvedUrls?.local?.[0] ?? ""),
+			extendHint: "Press t + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
 				warn: expect.any(Function),
@@ -165,6 +171,7 @@ describe("tunnel plugin", () => {
 		expect(startTunnel).toHaveBeenCalledTimes(2);
 		expect(startTunnel).toHaveBeenNthCalledWith(2, {
 			origin: new URL(server2.resolvedUrls?.local?.[0] ?? ""),
+			extendHint: "Press t + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
 				warn: expect.any(Function),
@@ -184,6 +191,7 @@ describe("tunnel plugin", () => {
 
 		vi.mocked(startTunnel).mockReturnValue({
 			ready: vi.fn().mockRejectedValue(tunnelError),
+			extendExpiry: vi.fn(),
 			dispose: vi.fn().mockResolvedValue(undefined),
 		});
 		Object.defineProperty(ctx, "resolvedPluginConfig", {
@@ -213,6 +221,7 @@ describe("tunnel plugin", () => {
 			ready: vi.fn().mockResolvedValue({
 				publicUrl: new URL("https://example.trycloudflare.com"),
 			}),
+			extendExpiry: vi.fn(),
 			dispose: vi.fn().mockResolvedValue(undefined),
 		});
 

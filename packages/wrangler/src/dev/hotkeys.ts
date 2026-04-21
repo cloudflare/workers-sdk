@@ -7,15 +7,21 @@ import openInBrowser from "../open-in-browser";
 import { debounce } from "../utils/debounce";
 import { openInspector } from "./inspect";
 import type { DevEnv } from "../api";
+import type { Tunnel } from "@cloudflare/workers-utils";
 
 export default function registerDevHotKeys(
 	devEnvs: DevEnv[],
 	args: {
 		forceLocal?: boolean;
 		remote: boolean;
+		tunnel?: boolean;
 	},
-	render = true
+	options: {
+		render?: boolean;
+		getTunnel?: () => Tunnel | undefined;
+	} = {}
 ) {
+	const { render = true, getTunnel } = options;
 	const primaryDevEnv = devEnvs[0];
 	const unregisterHotKeys = registerHotKeys(
 		[
@@ -107,6 +113,19 @@ export default function registerDevHotKeys(
 							remote: !primaryDevEnv.config.latestConfig?.dev?.remote,
 						},
 					});
+				},
+			},
+			{
+				keys: ["t"],
+				disabled: () => !args.tunnel,
+				handler: async () => {
+					const tunnel = getTunnel?.();
+
+					if (!tunnel) {
+						return;
+					}
+
+					tunnel.extendExpiry();
 				},
 			},
 			{
