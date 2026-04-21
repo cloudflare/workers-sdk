@@ -107,7 +107,7 @@ export function isUserTriggeredTerminate(e: unknown): boolean {
 }
 
 function getCompatFlag(name: string): boolean {
-	return (globalThis as any).Cloudflare?.compatibilityFlags?.[name] ?? false;
+	return (globalThis as Record<string, unknown>).Cloudflare?.compatibilityFlags?.[name] ?? false;
 }
 
 export function shouldPreserveNonRetryableError(): boolean {
