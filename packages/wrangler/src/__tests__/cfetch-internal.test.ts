@@ -188,9 +188,7 @@ describe("fetchInternal WAF block detection", () => {
 			expect.unreachable("should have thrown");
 		} catch (e) {
 			const error = e as { text: string; notes: { text: string }[] };
-			expect(error.text).toBe(
-				"Received a malformed response from the API"
-			);
+			expect(error.text).toBe("Received a malformed response from the API");
 			const rayIdNote = error.notes.find((n: { text: string }) =>
 				n.text.includes("Cloudflare Ray ID:")
 			);
@@ -221,9 +219,7 @@ describe("fetchInternal WAF block detection", () => {
 			expect.unreachable("should have thrown");
 		} catch (e) {
 			const error = e as { text: string; notes: { text: string }[] };
-			expect(error.text).toBe(
-				"Received a malformed response from the API"
-			);
+			expect(error.text).toBe("Received a malformed response from the API");
 			const rayIdNote = error.notes.find((n: { text: string }) =>
 				n.text.includes("Cloudflare Ray ID:")
 			);
