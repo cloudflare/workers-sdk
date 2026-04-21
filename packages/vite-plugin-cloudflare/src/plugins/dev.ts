@@ -4,9 +4,9 @@ import {
 	getCloudflareContainerRegistry,
 	prepareContainerImagesForDev,
 } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
+import { UserError } from "@cloudflare/workers-utils";
 import { buildPublicUrl, CoreHeaders } from "miniflare";
 import colors from "picocolors";
 import { initRunners } from "../cloudflare-environment";
