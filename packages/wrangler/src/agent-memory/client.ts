@@ -1,6 +1,6 @@
 import { fetchListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export type AgentMemoryNamespace = {
 	id: string;
@@ -10,13 +10,22 @@ export type AgentMemoryNamespace = {
 	updated_at: string;
 };
 
-export async function createNamespace(
-	config: Config,
+// ============================================================================
+// Low-level request helpers
+//
+// These take a ComplianceConfig + accountId directly and perform the raw HTTP
+// call. They are shared between the high-level command wrappers below and the
+// provisioning flow (see agent-memory/provisioning.ts), which already has an
+// accountId in hand and cannot call requireAuth.
+// ============================================================================
+
+export async function createNamespaceRequest(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
 	name: string
 ): Promise<AgentMemoryNamespace> {
-	const accountId = await requireAuth(config);
 	return await fetchResult<AgentMemoryNamespace>(
-		config,
+		complianceConfig,
 		`/accounts/${accountId}/agentmemory/namespaces`,
 		{
 			method: "POST",
@@ -26,14 +35,59 @@ export async function createNamespace(
 	);
 }
 
+export async function listNamespacesRequest(
+	complianceConfig: ComplianceConfig,
+	accountId: string
+): Promise<AgentMemoryNamespace[]> {
+	return await fetchListResult<AgentMemoryNamespace>(
+		complianceConfig,
+		`/accounts/${accountId}/agentmemory/namespaces`
+	);
+}
+
+export async function getNamespaceRequest(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	namespaceName: string
+): Promise<AgentMemoryNamespace> {
+	return await fetchResult<AgentMemoryNamespace>(
+		complianceConfig,
+		`/accounts/${accountId}/agentmemory/namespaces/${namespaceName}`
+	);
+}
+
+export async function deleteNamespaceRequest(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	namespaceName: string
+): Promise<void> {
+	await fetchResult<null>(
+		complianceConfig,
+		`/accounts/${accountId}/agentmemory/namespaces/${namespaceName}`,
+		{ method: "DELETE" }
+	);
+}
+
+// ============================================================================
+// High-level command wrappers
+//
+// Used by the `wrangler agent-memory namespace …` commands. Each resolves the
+// account id via requireAuth and delegates to the low-level helper above.
+// ============================================================================
+
+export async function createNamespace(
+	config: Config,
+	name: string
+): Promise<AgentMemoryNamespace> {
+	const accountId = await requireAuth(config);
+	return await createNamespaceRequest(config, accountId, name);
+}
+
 export async function listNamespaces(
 	config: Config
 ): Promise<AgentMemoryNamespace[]> {
 	const accountId = await requireAuth(config);
-	return await fetchListResult<AgentMemoryNamespace>(
-		config,
-		`/accounts/${accountId}/agentmemory/namespaces`
-	);
+	return await listNamespacesRequest(config, accountId);
 }
 
 export async function getNamespace(
@@ -41,10 +95,7 @@ export async function getNamespace(
 	namespaceName: string
 ): Promise<AgentMemoryNamespace> {
 	const accountId = await requireAuth(config);
-	return await fetchResult<AgentMemoryNamespace>(
-		config,
-		`/accounts/${accountId}/agentmemory/namespaces/${namespaceName}`
-	);
+	return await getNamespaceRequest(config, accountId, namespaceName);
 }
 
 export async function deleteNamespace(
@@ -52,9 +103,5 @@ export async function deleteNamespace(
 	namespaceName: string
 ): Promise<void> {
 	const accountId = await requireAuth(config);
-	await fetchResult<null>(
-		config,
-		`/accounts/${accountId}/agentmemory/namespaces/${namespaceName}`,
-		{ method: "DELETE" }
-	);
+	await deleteNamespaceRequest(config, accountId, namespaceName);
 }

@@ -1,14 +1,10 @@
 import { APIError, type ComplianceConfig } from "@cloudflare/workers-utils";
-import { fetchResult } from "../cfetch";
-
-export interface AgentMemoryNamespace {
-	id: string;
-	name: string;
-}
+import { createNamespaceRequest, getNamespaceRequest } from "./client";
+import type { AgentMemoryNamespace } from "./client";
 
 /**
  * Get an Agent Memory namespace for the given account.
- * Throws an APIError (status 404) if the namespace does not exist.
+ * Returns `null` if the namespace does not exist (404); other errors propagate.
  */
 export async function getAgentMemoryNamespace(
 	complianceConfig: ComplianceConfig,
@@ -16,10 +12,10 @@ export async function getAgentMemoryNamespace(
 	namespaceName: string
 ): Promise<AgentMemoryNamespace | null> {
 	try {
-		return await fetchResult<AgentMemoryNamespace>(
+		return await getNamespaceRequest(
 			complianceConfig,
-			`/accounts/${accountId}/agentmemory/namespaces/${namespaceName}`,
-			{ method: "GET" }
+			accountId,
+			namespaceName
 		);
 	} catch (e) {
 		if (e instanceof APIError && e.status === 404) {
@@ -39,13 +35,5 @@ export async function createAgentMemoryNamespace(
 	accountId: string,
 	namespaceName: string
 ): Promise<void> {
-	await fetchResult<void>(
-		complianceConfig,
-		`/accounts/${accountId}/agentmemory/namespaces`,
-		{
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ name: namespaceName }),
-		}
-	);
+	await createNamespaceRequest(complianceConfig, accountId, namespaceName);
 }

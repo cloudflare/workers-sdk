@@ -796,7 +796,7 @@ describe("generate types - CLI", () => {
 					VPC_SERVICE_BINDING: Fetcher;
 					AI_SEARCH_NS_BINDING: AiSearchNamespace;
 					AI_SEARCH_BINDING: AiSearchInstance;
-					AGENT_MEMORY_BINDING: AgentMemory;
+					AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -915,7 +915,7 @@ describe("generate types - CLI", () => {
 					VPC_SERVICE_BINDING: Fetcher;
 					AI_SEARCH_NS_BINDING: AiSearchNamespace;
 					AI_SEARCH_BINDING: AiSearchInstance;
-					AGENT_MEMORY_BINDING: AgentMemory;
+					AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -1097,7 +1097,7 @@ describe("generate types - CLI", () => {
 					VPC_SERVICE_BINDING: Fetcher;
 					AI_SEARCH_NS_BINDING: AiSearchNamespace;
 					AI_SEARCH_BINDING: AiSearchInstance;
-					AGENT_MEMORY_BINDING: AgentMemory;
+					AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
