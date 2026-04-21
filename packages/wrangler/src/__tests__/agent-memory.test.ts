@@ -110,6 +110,28 @@ describe("agent-memory namespace commands", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
+	it("should create a namespace and output JSON with --json", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/agentmemory/namespaces",
+				async ({ request }) => {
+					const body = (await request.json()) as { name: string };
+					expect(body.name).toBe("my-namespace");
+					return HttpResponse.json(createFetchResult(TEST_NAMESPACE, true));
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler("agent-memory namespace create my-namespace --json");
+
+		const parsed = JSON.parse(std.out);
+		expect(parsed).toEqual(TEST_NAMESPACE);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
 	// ── list ──────────────────────────────────────────────────────────────────
 
 	it("should list namespaces in a table", async ({ expect }) => {

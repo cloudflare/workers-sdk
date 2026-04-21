@@ -1,3 +1,7 @@
+// TODO(agent-memory): migrate this client to the Cloudflare TypeScript SDK
+// once it covers the /agentmemory endpoints. Using `fetchResult` directly for
+// now, matching the current precedent for other products that pre-date the
+// SDK support (see `src/ai-search/client.ts`).
 import { fetchListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
