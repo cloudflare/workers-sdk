@@ -178,6 +178,35 @@ function maybeGetLocallyAccessibleHost(
 	if (h === "::1") return "[::1]";
 }
 
+/**
+ * Normalizes a hostname for use in a client-reachable URL.
+ *
+ * - Maps wildcard/listen-all addresses to `127.0.0.1`.
+ * - Brackets IPv6 addresses (e.g. `::1` -> `[::1]`, `fe80::1` -> `[fe80::1]`).
+ * - Leaves hostnames and IPv4 addresses unchanged.
+ */
+export function getLocallyAccessibleHost(host: string): string {
+	if (host === "0.0.0.0" || host === "::" || host === "*") {
+		return "127.0.0.1";
+	}
+	return getURLSafeHost(host);
+}
+
+/**
+ * Builds a client-reachable URL for a local server given host, port, and
+ * secure flag. Handles IPv6 bracketing and wildcard-address normalization
+ * so the resulting string is always a valid URL.
+ */
+export function buildPublicUrl(options: {
+	hostname?: string;
+	port: number;
+	secure?: boolean;
+}): string {
+	const host = getLocallyAccessibleHost(options.hostname ?? "localhost");
+	const protocol = options.secure ? "https" : "http";
+	return `${protocol}://${host}:${options.port}`;
+}
+
 function getServerPort(server: http.Server) {
 	const address = server.address();
 	// Note address would be string with unix socket
@@ -911,6 +940,7 @@ export class Miniflare {
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
+	publicUrl?: string;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
@@ -1576,6 +1606,14 @@ export class Miniflare {
 				const registryPath = this.#devRegistry.getRegistryPath();
 				const registry = registryPath ? getWorkerRegistry(registryPath) : {};
 				response = Response.json(registry);
+			} else if (url.pathname === "/core/public-url") {
+				// Returns the public URL for this Miniflare instance. If a publicUrl
+				// has been set (e.g. the Vite dev server URL), use that; otherwise
+				// fall back to the runtime entry URL. This allows workers (e.g. the
+				// stream binding) to construct externally-reachable URLs.
+				response = Response.json(
+					this.publicUrl ?? this.#runtimeEntryURL?.toString() ?? null
+				);
 			}
 		} catch (e: any) {
 			this.#log.error(e);
@@ -2002,6 +2040,11 @@ export class Miniflare {
 			const unsafeStickyBlobs = sharedOpts.core.unsafeStickyBlobs ?? false;
 			const unsafeEphemeralDurableObjects =
 				workerOpts.core.unsafeEphemeralDurableObjects ?? false;
+			// Store publicUrl so the /core/public-url loopback route can return it.
+			// This is set here (rather than only via the setter) so that the initial
+			// value from MiniflareOptions is picked up on first startup.
+			this.publicUrl = sharedOpts.core.publicUrl;
+
 			const pluginServicesOptionsBase: Omit<
 				PluginServicesOptions<z.ZodTypeAny, undefined>,
 				"options" | "sharedOptions"
@@ -2015,6 +2058,7 @@ export class Miniflare {
 				workerNames,
 				loopbackHost,
 				loopbackPort,
+				publicUrl: sharedOpts.core.publicUrl,
 				unsafeStickyBlobs,
 				wrappedBindingNames,
 				durableObjectClassNames,
