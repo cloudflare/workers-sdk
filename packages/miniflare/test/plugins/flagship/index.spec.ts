@@ -1,9 +1,7 @@
 import { FlagshipOptionsSchema } from "miniflare";
 import { test } from "vitest";
 
-test("FlagshipOptionsSchema: accepts valid flagship options", ({
-	expect,
-}) => {
+test("FlagshipOptionsSchema: accepts valid flagship options", ({ expect }) => {
 	const result = FlagshipOptionsSchema.safeParse({
 		flagship: {
 			FLAGS: {

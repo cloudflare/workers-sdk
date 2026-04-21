@@ -64,10 +64,7 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 						name,
 						remoteProxyConnectionString
 					),
-					worker: remoteProxyClientWorker(
-						remoteProxyConnectionString,
-						name
-					),
+					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
 				};
 			}
 		);
