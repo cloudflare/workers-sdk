@@ -14,6 +14,7 @@ import {
 	zDurableObjectsNamespaceQuerySqliteData,
 	zR2BucketDeleteObjectsData,
 	zR2BucketListObjectsData,
+	zWorkersKvNamespaceDeleteMultipleKeyValuePairsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
@@ -24,6 +25,7 @@ import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {
 	bulkGetKVValues,
+	bulkDeleteKVValues,
 	deleteKVValue,
 	getKVValue,
 	listKVKeys,
@@ -215,6 +217,14 @@ app.post(
 		zWorkersKvNamespaceGetMultipleKeyValuePairsData.shape.body
 	),
 	(c) => bulkGetKVValues(c, c.req.valid("json"))
+);
+
+app.post(
+	"/api/storage/kv/namespaces/:namespace_id/bulk/delete",
+	validateRequestBody(
+		zWorkersKvNamespaceDeleteMultipleKeyValuePairsData.shape.body
+	),
+	(c) => bulkDeleteKVValues(c, c.req.valid("json"))
 );
 
 // ============================================================================

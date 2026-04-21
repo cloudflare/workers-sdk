@@ -421,6 +421,80 @@
 				"tags": ["Workers KV Namespace"]
 			}
 		},
+		"/storage/kv/namespaces/{namespace_id}/bulk/delete": {
+			"post": {
+				"description": "Remove multiple KV pairs from the namespace. Body should be an array of up to 10,000 keys to be removed.",
+				"operationId": "workers-kv-namespace-delete-multiple-key-value-pairs",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "namespace_id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/workers-kv_bulk_delete"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers-kv_api-response-common-no-result"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/workers-kv_bulk-result"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Delete multiple key-value pairs response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers-kv_api-response-common-no-result"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/workers-kv_bulk-result"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Delete multiple key-value pairs response failure."
+					}
+				},
+				"summary": "Delete multiple key-value pairs",
+				"tags": ["Workers KV Namespace"]
+			}
+		},
 		"/d1/database": {
 			"get": {
 				"description": "Returns a list of D1 databases.",
@@ -2445,6 +2519,35 @@
 				"required": ["success", "errors", "messages", "result"],
 				"type": "object"
 			},
+			"workers-kv_bulk-result": {
+				"properties": {
+					"successful_key_count": {
+						"description": "Number of keys successfully updated.",
+						"example": 100,
+						"type": "number"
+					},
+					"unsuccessful_keys": {
+						"description": "Name of the keys that failed to be fully updated. They should be retried.",
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"type": "object"
+			},
+			"workers-kv_bulk_delete": {
+				"items": {
+					"$ref": "#/components/schemas/workers-kv_key_name_bulk"
+				},
+				"type": "array"
+			},
+			"workers-kv_key_name_bulk": {
+				"description": "A key's name. The name may be at most 512 bytes. All printable, non-whitespace characters are valid.",
+				"example": "My-Key",
+				"maxLength": 512,
+				"type": "string"
+			},
 			"workers-kv_bulk-get-result-with-metadata": {
 				"properties": {
 					"values": {
@@ -2562,12 +2665,6 @@
 					}
 				},
 				"type": "object"
-			},
-			"workers-kv_key_name_bulk": {
-				"description": "A key's name. The name may be at most 512 bytes. All printable, non-whitespace characters are valid.",
-				"example": "My-Key",
-				"maxLength": 512,
-				"type": "string"
 			},
 			"workers-kv_api-response-common-no-result": {
 				"allOf": [
@@ -2999,6 +3096,14 @@
 					"name": {
 						"type": "string",
 						"description": "Worker name from the dev registry"
+					},
+					"port": {
+						"type": "integer",
+						"description": "Port the worker is running on"
+					},
+					"protocol": {
+						"type": "string",
+						"description": "Protocol (http or https)"
 					},
 					"bindings": {
 						"$ref": "#/components/schemas/local-explorer_worker-bindings",

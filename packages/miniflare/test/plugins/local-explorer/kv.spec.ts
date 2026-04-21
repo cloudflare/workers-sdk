@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
 import {
 	zWorkersKvNamespaceDeleteKeyValuePairResponse,
+	zWorkersKvNamespaceDeleteMultipleKeyValuePairsResponse,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsResponse,
 	zWorkersKvNamespaceListANamespaceSKeysResponse,
 	zWorkersKvNamespaceListNamespacesResponse,
@@ -463,6 +464,56 @@ describe("KV API", () => {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ keys: ["key1"] }),
+				}
+			);
+
+			expect(response.status).toBe(404);
+			expect(await response.json()).toMatchObject({
+				success: false,
+				errors: [expect.objectContaining({ code: 10013 })],
+			});
+		});
+	});
+
+	describe("POST /storage/kv/namespaces/:namespaceId/bulk/delete", () => {
+		test("deletes multiple keys", async ({ expect }) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			await kv.put("bulk-delete-key-1", "value-1");
+			await kv.put("bulk-delete-key-2", "value-2");
+			await kv.put("bulk-delete-key-3", "value-3");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/delete`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						"bulk-delete-key-1",
+						"bulk-delete-key-2",
+						"bulk-delete-key-3",
+					]),
+				}
+			);
+
+			const data = await expectValidResponse(
+				response,
+				zWorkersKvNamespaceDeleteMultipleKeyValuePairsResponse,
+				expect
+			);
+
+			expect(data.success).toBe(true);
+			expect(await kv.get("bulk-delete-key-1")).toBeNull();
+			expect(await kv.get("bulk-delete-key-2")).toBeNull();
+			expect(await kv.get("bulk-delete-key-3")).toBeNull();
+		});
+
+		test("returns 404 for non-existent namespace", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/bulk/delete`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(["key-1"]),
 				}
 			);
 

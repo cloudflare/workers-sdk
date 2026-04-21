@@ -274,6 +274,24 @@ export type D1ApiResponseCommon = {
 	success: true;
 };
 
+export type WorkersKvBulkResult = {
+	/**
+	 * Number of keys successfully updated.
+	 */
+	successful_key_count?: number;
+	/**
+	 * Name of the keys that failed to be fully updated. They should be retried.
+	 */
+	unsuccessful_keys?: Array<string>;
+};
+
+export type WorkersKvBulkDelete = Array<WorkersKvKeyNameBulk>;
+
+/**
+ * A key's name. The name may be at most 512 bytes. All printable, non-whitespace characters are valid.
+ */
+export type WorkersKvKeyNameBulk = string;
+
 export type WorkersKvBulkGetResultWithMetadata = {
 	/**
 	 * Requested keys are paired with their values and metadata in an object.
@@ -318,11 +336,6 @@ export type WorkersKvBulkGetResult = {
 			| null;
 	};
 };
-
-/**
- * A key's name. The name may be at most 512 bytes. All printable, non-whitespace characters are valid.
- */
-export type WorkersKvKeyNameBulk = string;
 
 export type WorkersKvApiResponseCommonNoResult = WorkersKvApiResponseCommon & {
 	result?: {
@@ -580,6 +593,14 @@ export type LocalExplorerWorker = {
 	 * Worker name from the dev registry
 	 */
 	name: string;
+	/**
+	 * Port the worker is running on
+	 */
+	port?: number;
+	/**
+	 * Protocol (http or https)
+	 */
+	protocol?: string;
 	bindings?: LocalExplorerWorkerBindings;
 };
 
@@ -786,6 +807,8 @@ export type D1DatabaseResponseWritable = {
 	name?: D1DatabaseName;
 	version?: D1DatabaseVersion;
 };
+
+export type WorkersKvBulkDeleteWritable = Array<WorkersKvKeyNameBulk>;
 
 export type WorkersKvAnyWritable =
 	| string
@@ -1014,6 +1037,39 @@ export type WorkersKvNamespaceGetMultipleKeyValuePairsResponses = {
 
 export type WorkersKvNamespaceGetMultipleKeyValuePairsResponse =
 	WorkersKvNamespaceGetMultipleKeyValuePairsResponses[keyof WorkersKvNamespaceGetMultipleKeyValuePairsResponses];
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsData = {
+	body: WorkersKvBulkDeleteWritable;
+	path: {
+		namespace_id: WorkersKvNamespaceIdentifier;
+	};
+	query?: never;
+	url: "/storage/kv/namespaces/{namespace_id}/bulk/delete";
+};
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors = {
+	/**
+	 * Delete multiple key-value pairs response failure.
+	 */
+	"4XX": WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
+	};
+};
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsError =
+	WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors[keyof WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors];
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsResponses = {
+	/**
+	 * Delete multiple key-value pairs response.
+	 */
+	200: WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
+	};
+};
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsResponse =
+	WorkersKvNamespaceDeleteMultipleKeyValuePairsResponses[keyof WorkersKvNamespaceDeleteMultipleKeyValuePairsResponses];
 
 export type D1ListDatabasesData = {
 	body?: never;

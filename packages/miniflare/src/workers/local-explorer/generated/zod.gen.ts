@@ -215,6 +215,18 @@ export const zD1ApiResponseCommon = z.object({
 	success: z.literal(true),
 });
 
+export const zWorkersKvBulkResult = z.object({
+	successful_key_count: z.number().optional(),
+	unsuccessful_keys: z.array(z.string()).optional(),
+});
+
+/**
+ * A key's name. The name may be at most 512 bytes. All printable, non-whitespace characters are valid.
+ */
+export const zWorkersKvKeyNameBulk = z.string().max(512);
+
+export const zWorkersKvBulkDelete = z.array(zWorkersKvKeyNameBulk);
+
 export const zWorkersKvAny: z.ZodTypeAny = z
 	.union([
 		z.string(),
@@ -254,11 +266,6 @@ export const zWorkersKvBulkGetResult = z.object({
 		)
 		.optional(),
 });
-
-/**
- * A key's name. The name may be at most 512 bytes. All printable, non-whitespace characters are valid.
- */
-export const zWorkersKvKeyNameBulk = z.string().max(512);
 
 export const zWorkersKvMessages = z.array(
 	z.object({
@@ -436,6 +443,8 @@ export const zLocalExplorerWorkerBindings = z.object({
 export const zLocalExplorerWorker = z.object({
 	isSelf: z.boolean(),
 	name: z.string(),
+	port: z.number().int().optional(),
+	protocol: z.string().optional(),
 	bindings: zLocalExplorerWorkerBindings.optional(),
 });
 
@@ -525,6 +534,8 @@ export const zD1DatabaseResponseWritable = z.object({
 	name: zD1DatabaseName.optional(),
 	version: zD1DatabaseVersion.optional(),
 });
+
+export const zWorkersKvBulkDeleteWritable = z.array(zWorkersKvKeyNameBulk);
 
 export const zWorkersKvAnyWritable: z.ZodTypeAny = z
 	.union([
@@ -658,6 +669,24 @@ export const zWorkersKvNamespaceGetMultipleKeyValuePairsResponse =
 			result: z
 				.union([zWorkersKvBulkGetResult, zWorkersKvBulkGetResultWithMetadata])
 				.optional(),
+		})
+	);
+
+export const zWorkersKvNamespaceDeleteMultipleKeyValuePairsData = z.object({
+	body: zWorkersKvBulkDeleteWritable,
+	path: z.object({
+		namespace_id: zWorkersKvNamespaceIdentifier,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Delete multiple key-value pairs response.
+ */
+export const zWorkersKvNamespaceDeleteMultipleKeyValuePairsResponse =
+	zWorkersKvApiResponseCommonNoResult.and(
+		z.object({
+			result: zWorkersKvBulkResult.optional(),
 		})
 	);
 
