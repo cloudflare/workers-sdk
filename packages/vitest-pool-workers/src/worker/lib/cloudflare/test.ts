@@ -20,4 +20,6 @@ export {
 	createPagesEventContext,
 	introspectWorkflowInstance,
 	introspectWorkflow,
+	reset,
+	abortAllDurableObjects,
 } from "cloudflare:test-internal";
