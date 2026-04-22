@@ -1,16 +1,14 @@
 import { EventEmitter } from "node:events";
-import { afterEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { spawnCloudflared } from "../src/cloudflared";
+import { UserError } from "../src/errors";
+import { startTunnel } from "../src/tunnel";
 
-vi.mock("../../tunnel/cloudflared", () => {
+vi.mock("../src/cloudflared", () => {
 	return {
 		spawnCloudflared: vi.fn(),
 	};
 });
-
-// eslint-disable-next-line import/first
-import { startTunnel } from "../../dev/tunnel";
-// eslint-disable-next-line import/first
-import { spawnCloudflared } from "../../tunnel/cloudflared";
 
 function createMockProcess() {
 	const proc = new EventEmitter() as EventEmitter & {
@@ -57,8 +55,13 @@ function emitNextTick(
 const TEST_TIMEOUT_MS = 60_000;
 
 describe("startTunnel", () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+
 	afterEach(() => {
 		vi.restoreAllMocks();
+		vi.useRealTimers();
 	});
 
 	it("should resolve with the public URL", async ({ expect }) => {
@@ -116,7 +119,7 @@ describe("startTunnel", () => {
 
 		await emitNextTick(proc, "exit", 1, null);
 
-		await expect(tunnel.ready()).rejects.toThrow(
+		await expect(() => tunnel.ready()).rejects.toThrow(
 			"cloudflared exited with code 1 before the tunnel was ready"
 		);
 	});
@@ -165,19 +168,19 @@ describe("startTunnel", () => {
 			origin: new URL("http://localhost:8787"),
 			timeoutMs: 50,
 		});
-
-		await expect(tunnel.ready()).rejects.toThrow(
+		const readyPromise = tunnel.ready();
+		const timeoutAssertion = expect(readyPromise).rejects.toThrow(
 			"Timed out waiting for cloudflared to start"
 		);
+
+		await vi.advanceTimersByTimeAsync(50);
+
+		await timeoutAssertion;
 	});
 
 	it("should kill the cloudflared process on dispose", async ({ expect }) => {
 		const proc = createMockProcess();
-		const killSpy = vi.fn(() => {
-			proc.killed = true;
-			return true;
-		});
-		proc.kill = killSpy;
+		const killSpy = vi.spyOn(proc, "kill");
 		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
 
 		const tunnel = startTunnel({
@@ -226,5 +229,159 @@ describe("startTunnel", () => {
 		await emitNextTick(proc, "exit", 1, null);
 
 		await expect(tunnel.ready()).rejects.toThrow("some debug info");
+	});
+
+	it("should surface rate limiting guidance for quick tunnels", async ({
+		expect,
+	}) => {
+		const proc = createMockProcess();
+		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
+
+		const tunnel = startTunnel({
+			origin: new URL("http://localhost:8787"),
+			timeoutMs: TEST_TIMEOUT_MS,
+		});
+
+		await emitStderrNextTick(
+			proc,
+			'ERR Error unmarshaling QuickTunnel response: error code: 1015 status_code="429 Too Many Requests"\n'
+		);
+		await emitNextTick(proc, "exit", 1, null);
+
+		await expect(() => tunnel.ready()).rejects.toThrow(
+			"Cloudflare Quick Tunnel creation was rate limited."
+		);
+		await expect(() => tunnel.ready()).rejects.toThrow(
+			"The local dev server started at http://localhost:8787/."
+		);
+		await expect(() => tunnel.ready()).rejects.toBeInstanceOf(UserError);
+	});
+
+	it("should remind and expire tunnels when expiry timers are enabled", async ({
+		expect,
+	}) => {
+		const proc = createMockProcess();
+		const killSpy = vi.spyOn(proc, "kill");
+		const logger = {
+			log: vi.fn(),
+			warn: vi.fn(),
+			debug: vi.fn(),
+		};
+
+		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
+
+		const tunnel = startTunnel({
+			origin: new URL("http://localhost:8787"),
+			timeoutMs: TEST_TIMEOUT_MS,
+			expiryMs: 120_000,
+			reminderIntervalMs: 60_000,
+			extendHint: "Press [t] to extend by 1 hour.",
+			logger,
+		});
+
+		await emitStderrNextTick(proc, "INF https://my-tunnel.trycloudflare.com\n");
+		await tunnel.ready();
+
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(logger.log).toHaveBeenCalledWith(
+			"The tunnel is still open at https://my-tunnel.trycloudflare.com. It expires in 1m. Press [t] to extend by 1 hour."
+		);
+
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(logger.log).toHaveBeenCalledWith("Tunnel expired. Closing tunnel.");
+		expect(killSpy).toHaveBeenCalledWith("SIGTERM");
+	});
+
+	it("should extend tunnel expiry when requested", async ({ expect }) => {
+		const proc = createMockProcess();
+		const killSpy = vi.spyOn(proc, "kill");
+		const logger = {
+			log: vi.fn(),
+			warn: vi.fn(),
+			debug: vi.fn(),
+		};
+
+		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
+
+		const tunnel = startTunnel({
+			origin: new URL("http://localhost:8787"),
+			timeoutMs: TEST_TIMEOUT_MS,
+			expiryMs: 120_000,
+			reminderIntervalMs: 60_000,
+			logger,
+		});
+
+		await emitStderrNextTick(proc, "INF https://my-tunnel.trycloudflare.com\n");
+		await tunnel.ready();
+
+		await vi.advanceTimersByTimeAsync(60_000);
+		tunnel.extendExpiry(60_000);
+		const expectedExpiryTime = new Intl.DateTimeFormat(undefined, {
+			timeStyle: "short",
+		}).format(new Date(Date.now() + 120_000));
+
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(logger.log).toHaveBeenCalledWith(
+			`Tunnel expiry extended by 1m. It now expires at ${expectedExpiryTime}.`
+		);
+		expect(killSpy).not.toHaveBeenCalled();
+		expect(logger.log).toHaveBeenCalledWith(
+			"The tunnel is still open at https://my-tunnel.trycloudflare.com. It expires in 1m. "
+		);
+
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(logger.log).toHaveBeenCalledWith("Tunnel expired. Closing tunnel.");
+		expect(killSpy).toHaveBeenCalledWith("SIGTERM");
+	});
+
+	it("should cap the tunnel to 3h of remaining time", async ({ expect }) => {
+		const proc = createMockProcess();
+		const killSpy = vi.spyOn(proc, "kill");
+		const logger = {
+			log: vi.fn(),
+			warn: vi.fn(),
+			debug: vi.fn(),
+		};
+
+		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
+
+		const tunnel = startTunnel({
+			origin: new URL("http://localhost:8787"),
+			timeoutMs: TEST_TIMEOUT_MS,
+			reminderIntervalMs: 0,
+			logger,
+		});
+
+		await emitStderrNextTick(proc, "INF https://my-tunnel.trycloudflare.com\n");
+		await tunnel.ready();
+		tunnel.extendExpiry();
+		tunnel.extendExpiry();
+		const cappedExpiryTime = new Intl.DateTimeFormat(undefined, {
+			timeStyle: "short",
+		}).format(new Date(Date.now() + 3 * 60 * 60 * 1_000));
+
+		expect(logger.log).toHaveBeenCalledWith(
+			`Tunnel expiry extended by 1h. It now expires at ${cappedExpiryTime}.`
+		);
+
+		tunnel.extendExpiry();
+
+		expect(logger.log).toHaveBeenCalledWith(
+			`Tunnel expiry extended to the 3h limit. It now expires at ${cappedExpiryTime}.`
+		);
+
+		await vi.advanceTimersByTimeAsync(60 * 60 * 1_000);
+		tunnel.extendExpiry();
+		const extendedAgainExpiryTime = new Intl.DateTimeFormat(undefined, {
+			timeStyle: "short",
+		}).format(new Date(Date.now() + 3 * 60 * 60 * 1_000));
+
+		expect(logger.log).toHaveBeenCalledWith(
+			`Tunnel expiry extended by 1h. It now expires at ${extendedAgainExpiryTime}.`
+		);
+
+		await vi.advanceTimersByTimeAsync(3 * 60 * 60 * 1_000);
+		expect(logger.log).toHaveBeenCalledWith("Tunnel expired. Closing tunnel.");
+		expect(killSpy).toHaveBeenCalledWith("SIGTERM");
 	});
 });

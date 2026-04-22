@@ -3830,6 +3830,9 @@ importers:
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
+      '@types/command-exists':
+        specifier: ^1.2.0
+        version: 1.2.0
       '@types/node':
         specifier: ^22.10.1
         version: 22.15.17
@@ -3839,6 +3842,9 @@ importers:
       cloudflare:
         specifier: ^5.2.0
         version: 5.2.0(encoding@0.1.13)
+      command-exists:
+        specifier: ^1.2.9
+        version: 1.2.9
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -3863,6 +3869,9 @@ importers:
       typescript:
         specifier: catalog:default
         version: 5.8.3
+      undici:
+        specifier: catalog:default
+        version: 7.24.8
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -8311,9 +8320,6 @@ packages:
 
   '@speed-highlight/core@1.2.7':
     resolution: {integrity: sha512-0dxmVj4gxg3Jg879kvFS/msl4s9F3T9UXC1InxgOf7t5NvcPD97u/WTA5vL/IxWHMn7qSxBozqrnnE2wvl1m8g==}
-
-  '@standard-schema/spec@1.0.0':
-    resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -19139,8 +19145,6 @@ snapshots:
 
   '@speed-highlight/core@1.2.7': {}
 
-  '@standard-schema/spec@1.0.0': {}
-
   '@standard-schema/spec@1.1.0': {}
 
   '@styled-system/background@5.1.2':
@@ -21242,7 +21246,7 @@ snapshots:
 
   effect@3.18.4:
     dependencies:
-      '@standard-schema/spec': 1.0.0
+      '@standard-schema/spec': 1.1.0
       fast-check: 3.23.2
 
   electron-to-chromium@1.5.286: {}
