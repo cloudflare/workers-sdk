@@ -383,6 +383,45 @@ describe("R2 Bucket", () => {
 		});
 	});
 
+	describe("purging bucket", () => {
+		test("shows purge confirmation dialog", async () => {
+			await navigateToR2Bucket("my-bucket");
+			await waitForTableRows(1);
+
+			await page.locator('[data-testid="purge-r2-my-bucket"]').click();
+
+			await waitForDialog();
+			await waitForText("Purge resource?");
+		});
+
+		test("purges all objects after confirmation", async ({ expect }) => {
+			await navigateToR2Bucket("my-bucket");
+			await waitForTableRows(1);
+
+			await page.locator('[data-testid="purge-r2-my-bucket"]').click();
+			await waitForDialog();
+
+			await page
+				.getByRole("dialog")
+				.getByRole("button", { name: "Purge" })
+				.click();
+
+			await page.waitForSelector('[role="dialog"]', {
+				state: "hidden",
+				timeout: 15_000,
+			});
+
+			await page.waitForFunction(() => {
+				return !document.body.textContent?.includes("readme.txt");
+			});
+
+			const hasReadme = await isTextVisible("readme.txt");
+			const hasConfig = await isTextVisible("config.json");
+			expect(hasReadme).toBe(false);
+			expect(hasConfig).toBe(false);
+		});
+	});
+
 	describe("adding directories", () => {
 		test("opens add directory dialog", async () => {
 			await navigateToR2Bucket("my-bucket");

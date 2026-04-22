@@ -230,6 +230,41 @@ describe("KV Namespace", () => {
 		});
 	});
 
+	describe("purging namespace", () => {
+		test("shows purge confirmation dialog", async () => {
+			await navigateToKV("KV");
+			await waitForTableRows(5);
+
+			await page.locator('[data-testid="purge-kv-KV"]').click();
+
+			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
+			await waitForText("Purge resource?");
+		});
+
+		test("purges all keys after confirmation", async ({ expect }) => {
+			await navigateToKV("KV");
+			await waitForTableRows(5);
+
+			await page.locator('[data-testid="purge-kv-KV"]').click();
+			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
+
+			await page
+				.getByRole("dialog")
+				.getByRole("button", { name: "Purge" })
+				.click();
+
+			await page.waitForSelector('[role="dialog"]', {
+				state: "hidden",
+				timeout: 10_000,
+			});
+
+			await waitForText("No keys in this namespace");
+
+			const isGreetingVisible = await isTextVisible("greeting");
+			expect(isGreetingVisible).toBe(false);
+		});
+	});
+
 	describe("pagination", () => {
 		test("loads more entries when clicking Load More", async ({ expect }) => {
 			await navigateToKV("KV");

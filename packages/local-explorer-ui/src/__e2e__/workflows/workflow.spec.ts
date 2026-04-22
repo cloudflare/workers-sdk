@@ -339,40 +339,22 @@ describe("Workflows", () => {
 		});
 	});
 
-	describe("delete all instances", () => {
-		test("opens delete all dialog from more actions menu", async () => {
+	describe("purge instances", () => {
+		test("opens purge dialog from sidebar action", async () => {
 			await navigateToWorkflow(WORKFLOW_NAME);
-
-			const moreActionsButton = page.getByRole("button", {
-				name: "More actions",
-			});
-			await moreActionsButton.waitFor({
-				state: "visible",
-				timeout: 10_000,
-			});
-			await moreActionsButton.click();
-
-			await waitForText("Delete all instances");
-			await page.getByText("Delete all instances").click();
+			await page
+				.locator(`[data-testid="purge-workflows-${WORKFLOW_NAME}"]`)
+				.click();
 
 			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
-			await waitForText("Delete all instances");
+			await waitForText("Purge resource?");
 		});
 
-		test("cancels delete all dialog", async () => {
+		test("cancels purge dialog", async () => {
 			await navigateToWorkflow(WORKFLOW_NAME);
-
-			const moreActionsButton = page.getByRole("button", {
-				name: "More actions",
-			});
-			await moreActionsButton.waitFor({
-				state: "visible",
-				timeout: 10_000,
-			});
-			await moreActionsButton.click();
-
-			await waitForText("Delete all instances");
-			await page.getByText("Delete all instances").click();
+			await page
+				.locator(`[data-testid="purge-workflows-${WORKFLOW_NAME}"]`)
+				.click();
 
 			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
 
