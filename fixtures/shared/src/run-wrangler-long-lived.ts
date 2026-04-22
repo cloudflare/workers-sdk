@@ -64,6 +64,7 @@ async function runLongLivedWrangler(
 	let resolveReadyPromise: (value: { ip: string; port: number }) => void;
 	let rejectReadyPromise: (reason: unknown) => void;
 	let processExited = false;
+	let stopping = false;
 
 	const ready = new Promise<{ ip: string; port: number }>((resolve, reject) => {
 		resolveReadyPromise = resolve;
@@ -108,6 +109,11 @@ async function runLongLivedWrangler(
 			);
 			return;
 		}
+		if (stopping) {
+			// Exit was triggered by `stop()` (normal test teardown). No diagnostic
+			// needed — the tests are already done.
+			return;
+		}
 		// The process exited *after* we sent back a ready signal — any pending
 		// tests will now see ECONNREFUSED. Dump the captured output so CI logs
 		// contain the diagnostic info needed to understand what happened.
@@ -139,6 +145,7 @@ async function runLongLivedWrangler(
 	}, 50_000);
 
 	async function stop() {
+		stopping = true;
 		return new Promise<void>((resolve) => {
 			if (processExited) {
 				// Already dead — nothing to kill. Avoid noisy Windows taskkill errors.
