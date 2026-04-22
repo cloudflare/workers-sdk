@@ -18,9 +18,7 @@ permissions:
 jobs:
   review-changesets:
     runs-on: ubuntu-latest
-    # Temporarily skipping this while we investigate model issues
-    # if: github.event.pull_request.head.repo.full_name == github.repository
-    if: false
+    if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout changesets
         uses: actions/checkout@v4
@@ -31,8 +29,9 @@ jobs:
             .github/opencode.json
 
       - name: Install OpenCode
+        # pin OpenCode to 1.4.6 version as newer versions are causing ProviderInitError issues
         run: |
-          npm install -g opencode-ai
+          npm install -g opencode-ai@1.4.6
           cp .github/opencode.json ./opencode.json
 
       - name: Get changed changeset files

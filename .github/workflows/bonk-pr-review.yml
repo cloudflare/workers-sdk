@@ -6,9 +6,7 @@ on:
 
 jobs:
   review:
-    if: false
-    # Temporarily skipping this while we investigate model issues
-    # if: github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
+    if: github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
@@ -61,4 +59,5 @@ jobs:
           model: "cloudflare-ai-gateway/anthropic/claude-opus-4-6"
           forks: "false"
           permissions: write
+          opencode_version: "1.4.6" # pin to this version as newer versions are causing ProviderInitError issues
           prompt: ${{ steps.prompt.outputs.value }}
