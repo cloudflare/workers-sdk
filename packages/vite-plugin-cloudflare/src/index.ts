@@ -16,6 +16,7 @@ import { previewPlugin } from "./plugins/preview";
 import { rscPlugin } from "./plugins/rsc";
 import { shortcutsPlugin } from "./plugins/shortcuts";
 import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
+import { tunnelPlugin } from "./plugins/tunnel";
 import {
 	virtualClientFallbackPlugin,
 	virtualModulesPlugin,
@@ -51,6 +52,7 @@ export type { WorkerConfig } from "./workers-configs";
 const sharedContext: SharedContext = {
 	hasShownWorkerConfigWarnings: false,
 	restartingDevServerCount: 0,
+	tunnelHostnames: new Set(),
 };
 
 await assertWranglerVersion();
@@ -96,6 +98,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		configPlugin(ctx),
 		rscPlugin(ctx),
 		devPlugin(ctx),
+		tunnelPlugin(ctx),
 		previewPlugin(ctx),
 		shortcutsPlugin(ctx),
 		debugPlugin(ctx),
