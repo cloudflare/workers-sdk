@@ -1,3 +1,4 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { prompt, select } from "../../dialogs";
 import { logger } from "../../logger";
 import { createService, listServices } from "../../vpc/client";
@@ -50,7 +51,7 @@ export class VpcServiceHandler extends ProvisionResourceHandler<
 	}
 	async create(name: string) {
 		if (!this.serviceRequest) {
-			throw new Error(
+			throw new UserError(
 				"Cannot create VPC Service without configuration. Use interactive mode."
 			);
 		}
@@ -88,7 +89,7 @@ export class VpcServiceHandler extends ProvisionResourceHandler<
 	}
 
 	override async interactiveCreate(name: string): Promise<void> {
-		const serviceType: ServiceType = (await select(
+		const serviceType = await select<ServiceType>(
 			`Select the service type for VPC Service "${name}":`,
 			{
 				choices: [
@@ -97,7 +98,7 @@ export class VpcServiceHandler extends ProvisionResourceHandler<
 				],
 				defaultOption: 0,
 			}
-		)) as ServiceType;
+		);
 
 		const tunnelId = await prompt("Enter the Cloudflare Tunnel ID:", {});
 

@@ -107,9 +107,6 @@ async function collectPendingResources(
 
 	const pendingResources: PendingResource[] = [];
 
-	// Track provisioned queue names for de-duplication with consumers
-	const provisionedQueueNames = new Set<string>();
-
 	for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
 		if (!isProvisionableBinding(binding)) {
 			continue;
@@ -125,36 +122,6 @@ async function collectPendingResources(
 			pendingResources.push({
 				binding: bindingName,
 				resourceType: binding.type,
-				handler: h,
-			});
-		}
-
-		// Track queue names (both provisioned and already-existing) for de-duplication
-		if (binding.type === "queue" && typeof binding.queue_name === "string") {
-			provisionedQueueNames.add(binding.queue_name);
-		}
-	}
-
-	// Also provision queues referenced by consumers that aren't already
-	// covered by a producer binding. Consumers are triggers, not bindings,
-	// so they don't appear in the bindings map above.
-	for (const consumer of config.queues?.consumers ?? []) {
-		if (!consumer.queue || provisionedQueueNames.has(consumer.queue)) {
-			continue;
-		}
-		provisionedQueueNames.add(consumer.queue);
-
-		const syntheticBinding: ProvisionableBinding = {
-			type: "queue",
-			queue_name: consumer.queue,
-		};
-		const syntheticName = `__consumer_${consumer.queue}`;
-		const h = createHandler(syntheticName, syntheticBinding, config, accountId);
-
-		if (await h.shouldProvision(settings)) {
-			pendingResources.push({
-				binding: syntheticName,
-				resourceType: "queue",
 				handler: h,
 			});
 		}
@@ -251,18 +218,50 @@ export async function provisionBindings(
 	}
 
 	const existingResources: Record<string, NormalisedResourceInfo[]> = {};
+	const created: Array<{
+		binding: string;
+		friendlyName: string;
+		idField: string;
+		id: unknown;
+	}> = [];
 
-	for (const resource of pendingResources) {
-		existingResources[resource.resourceType] ??= await HANDLERS[
-			resource.resourceType
-		].load(config, accountId);
+	try {
+		for (const resource of pendingResources) {
+			existingResources[resource.resourceType] ??= await HANDLERS[
+				resource.resourceType
+			].load(config, accountId);
 
-		await runProvisioningFlow(
-			resource,
-			existingResources[resource.resourceType],
-			HANDLERS[resource.resourceType].friendlyName,
-			scriptName
-		);
+			await runProvisioningFlow(
+				resource,
+				existingResources[resource.resourceType],
+				HANDLERS[resource.resourceType].friendlyName,
+				scriptName
+			);
+
+			// runProvisioningFlow completed — record the now-populated id so we
+			// can tell the user about it if a later resource fails.
+			const idField = resource.handler.idField;
+			created.push({
+				binding: resource.binding,
+				friendlyName: HANDLERS[resource.resourceType].friendlyName,
+				idField,
+				id: (resource.handler.binding as Record<string, unknown>)[idField],
+			});
+		}
+	} catch (e) {
+		if (created.length > 0) {
+			logger.warn(
+				`Provisioning failed partway through. The following resources were created on your Cloudflare account and may be orphaned:\n` +
+					created
+						.map(
+							(r) =>
+								`  - ${r.binding} (${r.friendlyName}): ${r.idField}="${String(r.id)}"`
+						)
+						.join("\n") +
+					`\n\nYou can reuse them by adding these values to your wrangler config, or delete them manually.`
+			);
+		}
+		throw e;
 	}
 
 	const resourceCount = pendingResources.reduce(
@@ -310,16 +309,21 @@ async function runProvisioningFlow(
 		);
 		await item.handler.provision(item.handler.name);
 	} else if (!isNonInteractiveOrCI()) {
-		// Path 2: Interactive terminal -- searchable list of existing + create new
-		const choices = [
-			{ title: "Create new", value: NEW_OPTION_VALUE },
-			...preExisting,
-		];
+		// Path 2: Interactive terminal -- searchable list of existing + create new.
+		// Skip the search prompt entirely if there are no existing resources to
+		// choose from, since "Create new" would be the only option.
+		let action: string | undefined = NEW_OPTION_VALUE;
+		if (preExisting.length > 0) {
+			const choices = [
+				{ title: "Create new", value: NEW_OPTION_VALUE },
+				...preExisting,
+			];
 
-		const action = await search(
-			`Select an existing ${friendlyBindingName} or create a new one`,
-			{ choices }
-		);
+			action = await search(
+				`Select an existing ${friendlyBindingName} or create a new one`,
+				{ choices }
+			);
+		}
 
 		if (!action || action === NEW_OPTION_VALUE) {
 			const name = await prompt(
@@ -363,7 +367,7 @@ function reportProvisioningFailures(
 	);
 
 	let msg = `Could not auto-provision the following bindings:\n${lines.join("\n")}`;
-	msg += `\n\nAlternatively, run wrangler deploy interactively in a terminal to provision these resources via a guided wizard.`;
+	msg += `\n\nAlternatively, run \`wrangler deploy\` in an interactive terminal to provision these resources via a guided wizard.`;
 	if (wouldSucceed.length > 0) {
 		const names = wouldSucceed
 			.map((r) => `${r.binding} (${r.friendlyName})`)

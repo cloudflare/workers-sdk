@@ -3981,7 +3981,9 @@ const validateAISearchNamespaceBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "namespace", "string")) {
+	// Optional to support auto-provisioning (the handler will create a namespace
+	// with a generated name if none is specified).
+	if (!isOptionalProperty(value, "namespace", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a "namespace" field but got ${JSON.stringify(value)}.`
 		);

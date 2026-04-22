@@ -2146,8 +2146,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "ai_search_namespaces[0]" bindings should have a string "binding" field but got {}.
-					  - "ai_search_namespaces[0]" bindings must have a "namespace" field but got {}.
-					  - "ai_search_namespaces[1]" bindings must have a "namespace" field but got {"binding":"VALID"}.
 					  - "ai_search_namespaces[2]" bindings should have a string "binding" field but got {"binding":2000,"namespace":2111}.
 					  - "ai_search_namespaces[2]" bindings must have a "namespace" field but got {"binding":2000,"namespace":2111}."
 				`);

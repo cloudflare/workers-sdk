@@ -60,13 +60,6 @@ export class QueueHandler extends ProvisionResourceHandler<
 		super("queue", bindingName, binding, "queue_name", config, accountId);
 	}
 
-	isFullySpecified(): boolean {
-		return (
-			typeof this.binding.queue_name === "string" &&
-			this.binding.queue_name.length > 0
-		);
-	}
-
 	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
 			(existing) =>

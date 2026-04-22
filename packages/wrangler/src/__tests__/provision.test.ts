@@ -23,6 +23,7 @@ import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
+import type { WorkerMetadataBinding } from "@cloudflare/workers-utils";
 
 vi.mock("../utils/fetch-secrets", () => ({
 	fetchSecrets: async () => [],
@@ -30,9 +31,7 @@ vi.mock("../utils/fetch-secrets", () => ({
 
 // Fix the random suffix so auto-generated names are deterministic in tests.
 vi.spyOn(crypto, "randomBytes").mockReturnValue(
-	Buffer.from("deadbeef", "hex") as unknown as ReturnType<
-		typeof crypto.randomBytes
-	>
+	Buffer.from("cafe", "hex") as unknown as ReturnType<typeof crypto.randomBytes>
 );
 
 describe("resource provisioning", () => {
@@ -55,37 +54,11 @@ describe("resource provisioning", () => {
 		clearDialogs();
 	});
 
-	describe("inheriting bindings from deployed worker settings", () => {
-		it("should inherit KV, R2 and D1 bindings if they are found in settings", async () => {
-			writeWranglerConfig({
-				main: "index.js",
-				kv_namespaces: [{ binding: "KV" }],
-				r2_buckets: [{ binding: "R2" }],
-				d1_databases: [{ binding: "D1" }],
-			});
-			mockGetSettings({
-				result: {
-					bindings: [
-						{ type: "kv_namespace", name: "KV", namespace_id: "kv-id" },
-						{ type: "r2_bucket", name: "R2", bucket_name: "test-bucket" },
-						{ type: "d1", name: "D1", id: "d1-id" },
-					],
-				},
-			});
-			mockUploadWorkerRequest({
-				expectedBindings: [
-					{ name: "KV", type: "inherit" },
-					{ name: "R2", type: "inherit" },
-					{ name: "D1", type: "inherit" },
-				],
-			});
-
-			await runWrangler("deploy");
-			expect(std.out).toContain("env.KV (inherited)");
-			expect(std.out).toContain("env.R2 (inherited)");
-			expect(std.out).toContain("env.D1 (inherited)");
-			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
+	describe("D1-specific inheritance logic", () => {
+		// Generic per-handler inheritance is covered by the matrix test at the
+		// bottom of this file. These tests cover D1's unusual behaviour: it
+		// resolves the inherited binding's id back to a name, then compares to
+		// config.database_name to decide whether to keep inheriting.
 
 		it("can inherit D1 binding when the database name matches", async () => {
 			writeWranglerConfig({
@@ -373,52 +346,6 @@ describe("resource provisioning", () => {
 			expect(std.out).toContain("Resource name found in config: my-bucket");
 		});
 
-		it("skips provisioning if D1 database_name matches an existing database", async () => {
-			writeWranglerConfig({
-				main: "index.js",
-				d1_databases: [{ binding: "DB", database_name: "existing-db" }],
-			});
-			mockGetSettings();
-			mockGetD1Database("existing-db", {
-				name: "existing-db",
-				uuid: "existing-d1-id",
-			});
-			mockUploadWorkerRequest({
-				expectedBindings: [{ name: "DB", type: "d1", id: "existing-d1-id" }],
-			});
-
-			await runWrangler("deploy");
-			expect(std.out).not.toContain("Provisioning");
-		});
-
-		it("skips provisioning if R2 bucket_name matches an existing bucket", async () => {
-			writeWranglerConfig({
-				main: "index.js",
-				r2_buckets: [
-					{
-						binding: "BUCKET",
-						bucket_name: "existing-bucket",
-						jurisdiction: "eu",
-					},
-				],
-			});
-			mockGetSettings();
-			mockGetR2Bucket("existing-bucket", false);
-			mockUploadWorkerRequest({
-				expectedBindings: [
-					{
-						name: "BUCKET",
-						type: "r2_bucket",
-						bucket_name: "existing-bucket",
-						jurisdiction: "eu",
-					},
-				],
-			});
-
-			await runWrangler("deploy");
-			expect(std.out).not.toContain("Provisioning");
-		});
-
 		it("will provision if R2 jurisdiction changes", async () => {
 			writeWranglerConfig({
 				main: "index.js",
@@ -468,91 +395,54 @@ describe("resource provisioning", () => {
 		});
 	});
 
-	describe("CI auto-provisioning", () => {
+	describe("CI auto-provisioning (handler-specific edge cases)", () => {
+		// Per-handler "auto-create in CI with generated name" is covered by the
+		// matrix test below. These remaining tests cover queue-specific edge
+		// cases that don't fit cleanly into the matrix because of queue's
+		// `ensureQueuesExistByConfig` gating.
 		beforeEach(() => {
 			setIsTTY(false);
 		});
 
-		it("auto-creates ciSafe bindings with generated names", async () => {
-			writeWranglerConfig({
-				main: "index.js",
-				kv_namespaces: [{ binding: "KV" }],
-				d1_databases: [{ binding: "D1" }],
-				r2_buckets: [{ binding: "R2" }],
-			});
-			mockGetSettings();
-			mockListKVNamespacesRequest();
-			msw.use(
-				http.get("*/accounts/:accountId/d1/database", async () =>
-					HttpResponse.json(createFetchResult([]))
-				),
-				http.get("*/accounts/:accountId/r2/buckets", async () =>
-					HttpResponse.json(createFetchResult({ buckets: [] }))
-				)
-			);
-
-			// The random suffix is mocked to "deadbeef"
-			mockCreateKVNamespace({
-				assertTitle: "test-name-kv-deadbeef",
-				resultId: "auto-kv-id",
-			});
-			mockCreateD1Database({
-				assertName: "test-name-d1-deadbeef",
-				resultId: "auto-d1-id",
-			});
-			mockCreateR2Bucket({
-				assertBucketName: "test-name-r2-deadbeef",
-			});
-
-			mockUploadWorkerRequest({
-				expectedBindings: [
-					{
-						name: "KV",
-						type: "kv_namespace",
-						namespace_id: "auto-kv-id",
-					},
-					{
-						name: "R2",
-						type: "r2_bucket",
-						bucket_name: "test-name-r2-deadbeef",
-					},
-					{ name: "D1", type: "d1", id: "auto-d1-id" },
-				],
-			});
-
-			await runWrangler("deploy");
-			expect(std.out).toContain(
-				'Creating new KV Namespace "test-name-kv-deadbeef"'
-			);
-			expect(std.out).toContain(
-				'Creating new D1 Database "test-name-d1-deadbeef"'
-			);
-			expect(std.out).toContain(
-				'Creating new R2 Bucket "test-name-r2-deadbeef"'
-			);
-			expect(std.out).toContain("All resources provisioned");
-		});
-
-		it("skips provisioning for queue bindings with queue name set", async () => {
+		it("provisions queue by name-in-config when it doesn't exist", async () => {
 			writeWranglerConfig({
 				main: "index.js",
 				queues: {
-					producers: [{ binding: "QUEUE", queue: "my-queue" }],
+					producers: [{ binding: "QUEUE", queue: "new-queue" }],
 				},
 			});
 			mockGetSettings();
+			// Queue doesn't exist — should fall through to provisioning
+			msw.use(
+				http.get("*/accounts/:accountId/queues", () => {
+					return HttpResponse.json(createFetchResult([]));
+				}),
+				http.post(
+					"*/accounts/:accountId/queues",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							queue_name: string;
+						};
+						expect(body.queue_name).toBe("new-queue");
+						return HttpResponse.json(
+							createFetchResult({ queue_name: "new-queue" })
+						);
+					},
+					{ once: true }
+				)
+			);
 			mockUploadWorkerRequest({
 				expectedBindings: [
 					{
 						name: "QUEUE",
 						type: "queue",
-						queue_name: "my-queue",
+						queue_name: "new-queue",
 					},
 				],
 			});
 
 			await runWrangler("deploy");
-			expect(std.out).not.toContain("Provisioning");
+			expect(std.out).toContain('Creating new Queue "new-queue"');
 		});
 
 		it("auto-creates queue bindings without a name in CI", async () => {
@@ -573,11 +463,11 @@ describe("resource provisioning", () => {
 					async ({ request }) => {
 						const body = await request.json();
 						expect(body).toEqual({
-							queue_name: "test-name-queue-deadbeef",
+							queue_name: "test-name-queue-cafe",
 						});
 						return HttpResponse.json(
 							createFetchResult({
-								queue_name: "test-name-queue-deadbeef",
+								queue_name: "test-name-queue-cafe",
 							})
 						);
 					},
@@ -589,15 +479,13 @@ describe("resource provisioning", () => {
 					{
 						name: "QUEUE",
 						type: "queue",
-						queue_name: "test-name-queue-deadbeef",
+						queue_name: "test-name-queue-cafe",
 					},
 				],
 			});
 
 			await runWrangler("deploy");
-			expect(std.out).toContain(
-				'Creating new Queue "test-name-queue-deadbeef"'
-			);
+			expect(std.out).toContain('Creating new Queue "test-name-queue-cafe"');
 		});
 	});
 
@@ -622,9 +510,7 @@ describe("resource provisioning", () => {
 			expect(std.err).toContain("wrangler vectorize create");
 			// The message should mention what WOULD work once resolved
 			expect(std.err).toContain("KV (KV Namespace)");
-			expect(std.err).toContain(
-				"run wrangler deploy interactively in a terminal"
-			);
+			expect(std.err).toContain("in an interactive terminal");
 		});
 
 		it("blocks with multiple non-ciSafe bindings and lists all of them", async () => {
@@ -654,7 +540,7 @@ describe("resource provisioning", () => {
 			mockListKVNamespacesRequest();
 
 			mockCreateKVNamespace({
-				assertTitle: "test-name-kv-deadbeef",
+				assertTitle: "test-name-kv-cafe",
 				resultId: "auto-kv-id",
 			});
 			mockUploadWorkerRequest({
@@ -688,6 +574,506 @@ describe("resource provisioning", () => {
 		await expect(runWrangler("deploy")).rejects.toThrow(
 			"Provisioning resources is not supported with a service environment"
 		);
+	});
+
+	// ---- Matrix tests covering every provisionable binding type ----
+	//
+	// Each test case describes one binding type and what a minimal, fully-
+	// specified, or inheritable configuration looks like for it. The tests
+	// below iterate over subsets of this matrix to verify uniform behaviour
+	// across handlers.
+
+	type BindingCase = {
+		/** Friendly label for the test output, e.g. "KV Namespace" */
+		friendlyName: string;
+		/** The user-facing binding name used in the config (e.g. "KV") */
+		bindingName: string;
+		/** Wrangler config fragment with only the binding defined, no id/name */
+		emptyConfig: Record<string, unknown>;
+		/** The deployed worker setting for inheritance tests */
+		settingsBinding: WorkerMetadataBinding;
+		/** Whether this handler auto-creates in CI (true for KV/D1/R2/... / false for Vectorize/Hyperdrive/...) */
+		ciSafe: boolean;
+		/** Wrangler config fragment when the opaque ID is fully specified — only defined for handlers that have an opaque ID field */
+		fullyConfig?: Record<string, unknown>;
+		/** Expected upload binding when fully specified (only defined alongside fullyConfig) */
+		fullyExpectedBinding?: Record<string, unknown>;
+		/** For non-ciSafe bindings, the wrangler command fragment expected in the pre-flight error hint */
+		preflightHint?: string;
+		/**
+		 * For name-based handlers: fixture for the "name in config, resource
+		 * exists → skip provisioning" scenario. The `mockExists` installs MSW
+		 * handlers that return the resource as existing.
+		 */
+		connectExisting?: {
+			config: Record<string, unknown>;
+			expectedBinding: Record<string, unknown>;
+			mockExists: () => void;
+		};
+		/**
+		 * For ciSafe handlers: fixture for the "CI auto-create with generated
+		 * name" scenario. `mockListAndCreate` installs list (empty) + create
+		 * API handlers.
+		 */
+		ciAutoCreate?: {
+			generatedName: string;
+			mockListAndCreate: () => void;
+			expectedBinding: Record<string, unknown>;
+		};
+	};
+
+	const bindingCases: BindingCase[] = [
+		{
+			friendlyName: "KV Namespace",
+			bindingName: "KV",
+			emptyConfig: { kv_namespaces: [{ binding: "KV" }] },
+			settingsBinding: {
+				type: "kv_namespace",
+				name: "KV",
+				namespace_id: "kv-id",
+			},
+			ciSafe: true,
+			fullyConfig: { kv_namespaces: [{ binding: "KV", id: "kv-id" }] },
+			fullyExpectedBinding: {
+				name: "KV",
+				type: "kv_namespace",
+				namespace_id: "kv-id",
+			},
+			// KV has no name-based lookup (id is opaque), so no connectExisting case
+			ciAutoCreate: {
+				generatedName: "test-name-kv-cafe",
+				mockListAndCreate: () => {
+					mockListKVNamespacesRequest();
+					mockCreateKVNamespace({
+						assertTitle: "test-name-kv-cafe",
+						resultId: "auto-kv-id",
+					});
+				},
+				expectedBinding: {
+					name: "KV",
+					type: "kv_namespace",
+					namespace_id: "auto-kv-id",
+				},
+			},
+		},
+		{
+			friendlyName: "D1 Database",
+			bindingName: "DB",
+			emptyConfig: { d1_databases: [{ binding: "DB" }] },
+			settingsBinding: { type: "d1", name: "DB", id: "d1-id" },
+			ciSafe: true,
+			fullyConfig: {
+				d1_databases: [{ binding: "DB", database_id: "d1-id" }],
+			},
+			fullyExpectedBinding: { name: "DB", type: "d1", id: "d1-id" },
+			connectExisting: {
+				config: {
+					d1_databases: [{ binding: "DB", database_name: "existing-db" }],
+				},
+				expectedBinding: { name: "DB", type: "d1", id: "existing-d1-id" },
+				mockExists: () => {
+					mockGetD1Database("existing-db", {
+						name: "existing-db",
+						uuid: "existing-d1-id",
+					});
+				},
+			},
+			ciAutoCreate: {
+				generatedName: "test-name-db-cafe",
+				mockListAndCreate: () => {
+					msw.use(
+						http.get("*/accounts/:accountId/d1/database", () =>
+							HttpResponse.json(createFetchResult([]))
+						)
+					);
+					mockCreateD1Database({
+						assertName: "test-name-db-cafe",
+						resultId: "auto-d1-id",
+					});
+				},
+				expectedBinding: { name: "DB", type: "d1", id: "auto-d1-id" },
+			},
+		},
+		{
+			friendlyName: "R2 Bucket",
+			bindingName: "R2",
+			emptyConfig: { r2_buckets: [{ binding: "R2" }] },
+			settingsBinding: {
+				type: "r2_bucket",
+				name: "R2",
+				bucket_name: "r2-bucket",
+			},
+			ciSafe: true,
+			// R2 has no opaque id — bucket_name is the identity
+			connectExisting: {
+				config: {
+					r2_buckets: [
+						{
+							binding: "R2",
+							bucket_name: "existing-bucket",
+							jurisdiction: "eu",
+						},
+					],
+				},
+				expectedBinding: {
+					name: "R2",
+					type: "r2_bucket",
+					bucket_name: "existing-bucket",
+					jurisdiction: "eu",
+				},
+				mockExists: () => {
+					mockGetR2Bucket("existing-bucket", false);
+				},
+			},
+			ciAutoCreate: {
+				generatedName: "test-name-r2-cafe",
+				mockListAndCreate: () => {
+					msw.use(
+						http.get("*/accounts/:accountId/r2/buckets", () =>
+							HttpResponse.json(createFetchResult({ buckets: [] }))
+						)
+					);
+					mockCreateR2Bucket({ assertBucketName: "test-name-r2-cafe" });
+				},
+				expectedBinding: {
+					name: "R2",
+					type: "r2_bucket",
+					bucket_name: "test-name-r2-cafe",
+				},
+			},
+		},
+		{
+			friendlyName: "AI Search Namespace",
+			bindingName: "AIS",
+			emptyConfig: { ai_search_namespaces: [{ binding: "AIS" }] },
+			settingsBinding: {
+				type: "ai_search_namespace",
+				name: "AIS",
+				namespace: "my-ns",
+			},
+			ciSafe: true,
+			// AI Search has no list API; skipped for ciAutoCreate and connectExisting.
+		},
+		{
+			friendlyName: "Queue",
+			bindingName: "Q",
+			emptyConfig: { queues: { producers: [{ binding: "Q" }] } },
+			settingsBinding: { type: "queue", name: "Q", queue_name: "my-q" },
+			ciSafe: true,
+			connectExisting: {
+				config: { queues: { producers: [{ binding: "Q", queue: "my-q" }] } },
+				expectedBinding: { name: "Q", type: "queue", queue_name: "my-q" },
+				mockExists: () => {
+					msw.use(
+						http.get("*/accounts/:accountId/queues", () =>
+							HttpResponse.json(
+								createFetchResult([{ queue_name: "my-q", queue_id: "q-id" }])
+							)
+						)
+					);
+				},
+			},
+			// Queue CI auto-create needs ensureQueuesExistByConfig gating, which is
+			// exercised in a dedicated test — omitted here to keep this matrix tidy.
+		},
+		{
+			friendlyName: "Dispatch Namespace",
+			bindingName: "DISPATCH",
+			emptyConfig: { dispatch_namespaces: [{ binding: "DISPATCH" }] },
+			settingsBinding: {
+				type: "dispatch_namespace",
+				name: "DISPATCH",
+				namespace: "my-ns",
+			},
+			ciSafe: true,
+			connectExisting: {
+				config: {
+					dispatch_namespaces: [{ binding: "DISPATCH", namespace: "my-ns" }],
+				},
+				expectedBinding: {
+					name: "DISPATCH",
+					type: "dispatch_namespace",
+					namespace: "my-ns",
+				},
+				mockExists: () => {
+					msw.use(
+						http.get("*/accounts/:accountId/workers/dispatch/namespaces", () =>
+							HttpResponse.json(
+								createFetchResult([
+									{
+										namespace_id: "ns-id",
+										namespace_name: "my-ns",
+									},
+								])
+							)
+						)
+					);
+				},
+			},
+			ciAutoCreate: {
+				generatedName: "test-name-dispatch-cafe",
+				mockListAndCreate: () => {
+					// load() lists namespaces (empty), then create POST returns it
+					msw.use(
+						http.get("*/accounts/:accountId/workers/dispatch/namespaces", () =>
+							HttpResponse.json(createFetchResult([]))
+						),
+						http.post(
+							"*/accounts/:accountId/workers/dispatch/namespaces",
+							async ({ request }) => {
+								const body = (await request.json()) as {
+									name: string;
+								};
+								expect(body.name).toBe("test-name-dispatch-cafe");
+								return HttpResponse.json(
+									createFetchResult({
+										namespace_id: "auto-ns-id",
+										namespace_name: "test-name-dispatch-cafe",
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+				},
+				expectedBinding: {
+					name: "DISPATCH",
+					type: "dispatch_namespace",
+					namespace: "test-name-dispatch-cafe",
+				},
+			},
+		},
+		{
+			friendlyName: "Vectorize Index",
+			bindingName: "IDX",
+			emptyConfig: { vectorize: [{ binding: "IDX" }] },
+			settingsBinding: {
+				type: "vectorize",
+				name: "IDX",
+				index_name: "my-idx",
+			},
+			ciSafe: false,
+			preflightHint: "wrangler vectorize create",
+			connectExisting: {
+				config: { vectorize: [{ binding: "IDX", index_name: "my-idx" }] },
+				expectedBinding: {
+					name: "IDX",
+					type: "vectorize",
+					index_name: "my-idx",
+				},
+				mockExists: () => {
+					msw.use(
+						http.get("*/accounts/:accountId/vectorize/v2/indexes", () =>
+							HttpResponse.json(createFetchResult([{ name: "my-idx" }]))
+						)
+					);
+				},
+			},
+		},
+		{
+			friendlyName: "Hyperdrive Config",
+			bindingName: "HD",
+			emptyConfig: { hyperdrive: [{ binding: "HD" }] },
+			settingsBinding: { type: "hyperdrive", name: "HD", id: "hd-id" },
+			ciSafe: false,
+			fullyConfig: { hyperdrive: [{ binding: "HD", id: "hd-id" }] },
+			fullyExpectedBinding: { name: "HD", type: "hyperdrive", id: "hd-id" },
+			preflightHint: "wrangler hyperdrive create",
+		},
+		{
+			friendlyName: "Pipeline",
+			bindingName: "PIPE",
+			emptyConfig: { pipelines: [{ binding: "PIPE" }] },
+			// Note: metadata binding type is "pipelines" (plural), Binding union uses "pipeline"
+			settingsBinding: {
+				type: "pipelines",
+				name: "PIPE",
+				pipeline: "my-pipe",
+			},
+			ciSafe: false,
+			preflightHint: "wrangler pipelines create",
+			connectExisting: {
+				config: { pipelines: [{ binding: "PIPE", pipeline: "my-pipe" }] },
+				expectedBinding: {
+					name: "PIPE",
+					type: "pipelines",
+					pipeline: "my-pipe",
+				},
+				mockExists: () => {
+					msw.use(
+						http.get("*/accounts/:accountId/pipelines/v1/pipelines", () =>
+							HttpResponse.json(createFetchResult([{ name: "my-pipe" }]))
+						)
+					);
+				},
+			},
+		},
+		{
+			friendlyName: "VPC Service",
+			bindingName: "VPC",
+			emptyConfig: { vpc_services: [{ binding: "VPC" }] },
+			settingsBinding: {
+				type: "vpc_service",
+				name: "VPC",
+				service_id: "svc-id",
+			},
+			ciSafe: false,
+			fullyConfig: { vpc_services: [{ binding: "VPC", service_id: "svc-id" }] },
+			fullyExpectedBinding: {
+				name: "VPC",
+				type: "vpc_service",
+				service_id: "svc-id",
+			},
+			preflightHint: "wrangler vpc service create",
+		},
+		{
+			friendlyName: "mTLS Certificate",
+			bindingName: "CERT",
+			emptyConfig: { mtls_certificates: [{ binding: "CERT" }] },
+			settingsBinding: {
+				type: "mtls_certificate",
+				name: "CERT",
+				certificate_id: "cert-id",
+			},
+			ciSafe: false,
+			fullyConfig: {
+				mtls_certificates: [{ binding: "CERT", certificate_id: "cert-id" }],
+			},
+			fullyExpectedBinding: {
+				name: "CERT",
+				type: "mtls_certificate",
+				certificate_id: "cert-id",
+			},
+			preflightHint: "wrangler mtls-certificate upload",
+		},
+	];
+
+	it.each(bindingCases)(
+		"inherits $friendlyName binding when present in deployed worker settings",
+		async ({ bindingName, emptyConfig, settingsBinding }) => {
+			writeWranglerConfig({ main: "index.js", ...emptyConfig });
+			mockGetSettings({ result: { bindings: [settingsBinding] } });
+			mockUploadWorkerRequest({
+				expectedBindings: [{ name: bindingName, type: "inherit" }],
+			});
+
+			await runWrangler("deploy");
+			expect(std.out).toContain(`env.${bindingName} (inherited)`);
+			expect(std.err).toBe("");
+		}
+	);
+
+	it.each(bindingCases.filter((c) => c.fullyConfig))(
+		"skips provisioning $friendlyName when its opaque id is fully specified",
+		async ({ fullyConfig, fullyExpectedBinding }) => {
+			writeWranglerConfig({ main: "index.js", ...fullyConfig });
+			mockGetSettings();
+			mockUploadWorkerRequest({
+				expectedBindings: [fullyExpectedBinding as Record<string, unknown>],
+			});
+
+			await runWrangler("deploy");
+			expect(std.out).not.toContain("Provisioning");
+		}
+	);
+
+	it.each(bindingCases.filter((c) => !c.ciSafe && c.preflightHint))(
+		"pre-flight blocks $friendlyName provisioning in CI when details are missing",
+		async ({ bindingName, friendlyName, emptyConfig, preflightHint }) => {
+			setIsTTY(false);
+			writeWranglerConfig({ main: "index.js", ...emptyConfig });
+			mockGetSettings();
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				"Could not auto-provision the following bindings"
+			);
+			expect(std.err).toContain(`${bindingName} (${friendlyName})`);
+			expect(std.err).toContain(preflightHint);
+		}
+	);
+
+	it.each(
+		bindingCases.flatMap((c) =>
+			c.connectExisting ? [{ ...c, fixture: c.connectExisting }] : []
+		)
+	)(
+		"connects existing $friendlyName resource when name-in-config already exists",
+		async ({ fixture }) => {
+			writeWranglerConfig({ main: "index.js", ...fixture.config });
+			mockGetSettings();
+			fixture.mockExists();
+			mockUploadWorkerRequest({
+				expectedBindings: [fixture.expectedBinding],
+			});
+
+			await runWrangler("deploy");
+			// The provisioning flow detected an existing resource and skipped
+			// creation entirely — no "Creating new X" output.
+			expect(std.out).not.toMatch(/Creating new/);
+		}
+	);
+
+	it.each(
+		bindingCases.flatMap((c) =>
+			c.ciSafe && c.ciAutoCreate ? [{ ...c, fixture: c.ciAutoCreate }] : []
+		)
+	)(
+		"auto-creates $friendlyName in CI with a generated name",
+		async ({ friendlyName, emptyConfig, fixture }) => {
+			setIsTTY(false);
+			writeWranglerConfig({ main: "index.js", ...emptyConfig });
+			mockGetSettings();
+			fixture.mockListAndCreate();
+			mockUploadWorkerRequest({
+				expectedBindings: [fixture.expectedBinding],
+			});
+
+			await runWrangler("deploy");
+			expect(std.out).toContain(
+				`Creating new ${friendlyName} "${fixture.generatedName}"`
+			);
+		}
+	);
+
+	describe("orphan warning", () => {
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
+		it("warns about created resources when a later resource fails to provision", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				kv_namespaces: [{ binding: "KV" }],
+				d1_databases: [{ binding: "DB" }],
+			});
+			mockGetSettings();
+			mockListKVNamespacesRequest();
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+			// KV create succeeds
+			mockCreateKVNamespace({
+				resultId: "new-kv-id",
+			});
+			// D1 create fails
+			msw.use(
+				http.post("*/accounts/:accountId/d1/database", () =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 9999, message: "quota exceeded" },
+						])
+					)
+				)
+			);
+
+			await expect(runWrangler("deploy")).rejects.toThrow();
+			// Should warn about the orphaned KV namespace with its ID
+			expect(std.warn).toContain("may be orphaned");
+			expect(std.warn).toContain("KV (KV Namespace)");
+			expect(std.warn).toContain("new-kv-id");
+		});
 	});
 });
 

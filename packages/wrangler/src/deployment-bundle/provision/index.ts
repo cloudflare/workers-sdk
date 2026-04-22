@@ -142,11 +142,11 @@ export interface HandlerStatics {
 }
 
 /**
- * Generate a short random suffix for auto-created resource names
- * to reduce the chance of name collisions.
+ * Generate a short (4 hex chars) random suffix for auto-created resource
+ * names to reduce the chance of name collisions while keeping names short.
  */
 export function generateRandomSuffix(): string {
-	return crypto.randomBytes(4).toString("hex");
+	return crypto.randomBytes(2).toString("hex");
 }
 
 /**

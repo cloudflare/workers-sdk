@@ -1,3 +1,4 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { prompt } from "../../dialogs";
 import { logger } from "../../logger";
 import { createPipeline, listPipelines } from "../../pipelines/client";
@@ -12,6 +13,11 @@ import type { Config } from "@cloudflare/workers-utils";
 
 type PipelineBinding = Extract<Binding, { type: "pipeline" }>;
 
+// Note: the generic parameter is "pipelines" (plural) because that's the
+// WorkerMetadataBinding type key used by the Cloudflare Workers runtime,
+// while `bindingType` below is "pipeline" (singular) because that's the
+// Binding union discriminator used throughout the wrangler config layer.
+// The mismatch is intentional — keep it in mind when comparing identifiers.
 export class PipelineHandler extends ProvisionResourceHandler<
 	"pipelines",
 	PipelineBinding
@@ -51,7 +57,7 @@ export class PipelineHandler extends ProvisionResourceHandler<
 	}
 	async create(name: string) {
 		if (!this.sql) {
-			throw new Error(
+			throw new UserError(
 				"Cannot create Pipeline without a SQL query. Use interactive mode."
 			);
 		}
@@ -68,13 +74,6 @@ export class PipelineHandler extends ProvisionResourceHandler<
 		accountId: string
 	) {
 		super("pipelines", bindingName, binding, "pipeline", config, accountId);
-	}
-
-	isFullySpecified(): boolean {
-		return (
-			typeof this.binding.pipeline === "string" &&
-			this.binding.pipeline.length > 0
-		);
 	}
 
 	canInherit(settings: Settings | undefined): boolean {

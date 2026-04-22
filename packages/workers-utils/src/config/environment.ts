@@ -976,8 +976,8 @@ export interface EnvironmentNonInheritable {
 	ai_search_namespaces: {
 		/** The binding name used to refer to the AI Search namespace in the Worker. */
 		binding: string;
-		/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
-		namespace: string;
+		/** The user-chosen namespace name. Omit to auto-provision at deploy time. */
+		namespace?: string;
 		/** Whether the AI Search namespace binding should be remote in local development */
 		remote?: boolean;
 	}[];

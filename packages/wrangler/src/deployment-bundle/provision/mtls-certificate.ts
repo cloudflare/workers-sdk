@@ -1,3 +1,4 @@
+import { UserError } from "@cloudflare/workers-utils";
 import {
 	listMTlsCertificates,
 	uploadMTlsCertificateFromFs,
@@ -52,7 +53,7 @@ export class MtlsCertificateHandler extends ProvisionResourceHandler<
 	}
 	async create(name: string) {
 		if (!this.certPath || !this.keyPath) {
-			throw new Error(
+			throw new UserError(
 				"Cannot upload mTLS certificate without cert and key file paths. Use interactive mode."
 			);
 		}

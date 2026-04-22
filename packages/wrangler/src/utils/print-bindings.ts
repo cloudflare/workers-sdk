@@ -335,7 +335,10 @@ export function printBindings(
 			...ai_search_namespaces.map(({ binding, namespace }) => ({
 				name: binding,
 				type: getBindingTypeFriendlyName("ai_search_namespace"),
-				value: namespace ? String(namespace) : undefined,
+				// Pass symbol values through directly — the table renderer below
+				// detects symbols and prints "inherited" for them. Stringifying
+				// here would lose that.
+				value: namespace,
 				mode: getMode({ isSimulatedLocally: false }),
 			}))
 		);
@@ -765,7 +768,7 @@ export function printBindings(
 	} else {
 		let title: string;
 		if (context.provisioning) {
-			title = `${chalk.red("Experimental:")} The following bindings need to be provisioned:`;
+			title = `The following bindings need to be provisioned:`;
 		} else if (context.name && isMultiWorker) {
 			title = `${chalk.blue(context.name)} has access to the following bindings:`;
 		} else {

@@ -146,10 +146,15 @@ interface SearchOptions<Values> {
 	fallbackValue?: Values;
 }
 
+/**
+ * Autocomplete/search prompt. Returns `undefined` when the user submits an
+ * empty selection (e.g. filters all choices out then hits Enter). Callers
+ * must handle `undefined` explicitly.
+ */
 export async function search<Values extends string>(
 	text: string,
 	options: SearchOptions<Values>
-): Promise<Values> {
+): Promise<Values | undefined> {
 	if (isNonInteractiveOrCI()) {
 		if (options.fallbackValue === undefined) {
 			throw new NoDefaultValueProvided();

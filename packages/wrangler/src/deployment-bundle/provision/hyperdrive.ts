@@ -54,11 +54,12 @@ export class HyperdriveHandler extends ProvisionResourceHandler<
 				"Cannot create Hyperdrive config without connection details. Use interactive mode."
 			);
 		}
-		const config = await createConfig(this.config, {
+		// Don't shadow this.config with the HyperdriveConfig return value
+		const hdConfig = await createConfig(this.config, {
 			name,
 			origin: this.origin,
 		});
-		return config.id;
+		return hdConfig.id;
 	}
 	constructor(
 		bindingName: string,
@@ -142,14 +143,13 @@ function parseConnectionString(connStr: string): OriginWithSecrets {
 		);
 	}
 
+	// Exact-match protocols so we reject e.g. "postgres-injection://".
+	// url.protocol includes the trailing ":".
 	const protocol = url.protocol.toLowerCase();
-	if (
-		!protocol.startsWith("postgresql") &&
-		!protocol.startsWith("postgres") &&
-		!protocol.startsWith("mysql")
-	) {
+	const ALLOWED_PROTOCOLS = ["postgres:", "postgresql:", "mysql:"] as const;
+	if (!(ALLOWED_PROTOCOLS as readonly string[]).includes(protocol)) {
 		throw new UserError(
-			`Unsupported protocol "${protocol}". Must be postgresql, postgres, or mysql.`
+			`Unsupported protocol "${protocol}". Must be postgres, postgresql, or mysql.`
 		);
 	}
 
@@ -165,9 +165,9 @@ function parseConnectionString(connStr: string): OriginWithSecrets {
 
 	let port = url.port;
 	if (!port) {
-		if (protocol.startsWith("postgres")) {
+		if (protocol === "postgres:" || protocol === "postgresql:") {
 			port = "5432";
-		} else if (protocol.startsWith("mysql")) {
+		} else if (protocol === "mysql:") {
 			port = "3306";
 		}
 	}

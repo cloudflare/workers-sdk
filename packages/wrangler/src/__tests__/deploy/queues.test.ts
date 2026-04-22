@@ -671,6 +671,8 @@ describe("deploy", () => {
 			mockUploadWorkerRequest();
 			mockGetQueueByName(queueName, null);
 
+			// Consumer queues are never auto-provisioned (only producers are).
+			// updateQueueConsumers / getQueue will throw if the queue doesn't exist.
 			await expect(
 				runWrangler("deploy index.js")
 			).rejects.toMatchInlineSnapshot(
@@ -678,7 +680,7 @@ describe("deploy", () => {
 			);
 		});
 
-		it("producer should error when a queue doesn't exist", async ({
+		it("producer should error when a queue doesn't exist (provisioning disabled)", async ({
 			expect,
 		}) => {
 			writeWranglerConfig({
@@ -692,8 +694,11 @@ describe("deploy", () => {
 			mockUploadWorkerRequest();
 			mockGetQueueByName(queueName, null);
 
+			// With provisioning disabled, the old "error if queue missing" behavior
+			// still applies. With provisioning enabled (the default), the queue
+			// would be auto-created instead.
 			await expect(
-				runWrangler("deploy index.js")
+				runWrangler("deploy index.js --x-provision=false")
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);

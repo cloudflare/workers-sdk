@@ -232,7 +232,7 @@ export interface CfVectorize {
 
 export interface CfAISearchNamespace {
 	binding: string;
-	namespace: string | typeof INHERIT_SYMBOL;
+	namespace?: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
 }
 

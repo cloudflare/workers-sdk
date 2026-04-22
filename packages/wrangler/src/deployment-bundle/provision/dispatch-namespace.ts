@@ -77,13 +77,6 @@ export class DispatchNamespaceHandler extends ProvisionResourceHandler<
 		);
 	}
 
-	isFullySpecified(): boolean {
-		return (
-			typeof this.binding.namespace === "string" &&
-			this.binding.namespace.length > 0
-		);
-	}
-
 	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
 			(existing) =>

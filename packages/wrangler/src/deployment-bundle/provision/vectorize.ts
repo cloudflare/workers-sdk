@@ -1,3 +1,4 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { prompt, select } from "../../dialogs";
 import { logger } from "../../logger";
 import { createIndex, listIndexes } from "../../vectorize/client";
@@ -52,7 +53,14 @@ export class VectorizeHandler extends ProvisionResourceHandler<
 	}
 	async create(name: string) {
 		const body: Record<string, unknown> = { name };
-		if (this.dimensions !== undefined && this.metric !== undefined) {
+		const hasDimensions = this.dimensions !== undefined;
+		const hasMetric = this.metric !== undefined;
+		if (hasDimensions !== hasMetric) {
+			throw new UserError(
+				`Vectorize index creation requires both "dimensions" and "metric", or neither. Got dimensions=${this.dimensions}, metric=${this.metric}.`
+			);
+		}
+		if (hasDimensions && hasMetric) {
 			body.config = {
 				dimensions: this.dimensions,
 				metric: this.metric,
@@ -68,13 +76,6 @@ export class VectorizeHandler extends ProvisionResourceHandler<
 		accountId: string
 	) {
 		super("vectorize", bindingName, binding, "index_name", config, accountId);
-	}
-
-	isFullySpecified(): boolean {
-		return (
-			typeof this.binding.index_name === "string" &&
-			this.binding.index_name.length > 0
-		);
 	}
 
 	canInherit(settings: Settings | undefined): boolean {
@@ -124,7 +125,7 @@ export class VectorizeHandler extends ProvisionResourceHandler<
 		);
 		this.dimensions = parseInt(dimensionsStr, 10);
 		if (isNaN(this.dimensions) || this.dimensions <= 0) {
-			throw new Error(
+			throw new UserError(
 				`Invalid dimensions "${dimensionsStr}". Must be a positive integer.`
 			);
 		}
