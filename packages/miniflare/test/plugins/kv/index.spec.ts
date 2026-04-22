@@ -124,11 +124,7 @@ test("get: returns ArrayBuffer values", async ({ expect }) => {
 
 	const result = await kv.get("array-buffer-key", "arrayBuffer");
 	expect(result).not.toBeNull();
-	if (result === null) {
-		throw new Error("Expected array-buffer-key to be present in KV");
-	}
-
-	expect(new Uint8Array(result)).toEqual(bytes);
+	expect(new Uint8Array(result as NonNullable<typeof result>)).toEqual(bytes);
 });
 
 test("get: returns stream values", async ({ expect }) => {
@@ -137,11 +133,6 @@ test("get: returns stream values", async ({ expect }) => {
 	await kv.put("stream-key", new Blob([bytes]).stream());
 
 	const result = await kv.get("stream-key", "stream");
-	expect(result).not.toBeNull();
-	if (result === null) {
-		throw new Error("Expected stream-key to be present in KV");
-	}
-
 	expect(new Uint8Array(await new Response(result).arrayBuffer())).toEqual(
 		bytes
 	);
