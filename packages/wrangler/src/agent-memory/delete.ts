@@ -1,3 +1,4 @@
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -34,7 +35,17 @@ export const agentMemoryNamespaceDeleteCommand = createCommand({
 			}
 		}
 
-		await deleteNamespace(config, namespace_name);
+		try {
+			await deleteNamespace(config, namespace_name);
+		} catch (e) {
+			if (e instanceof APIError && e.status === 404) {
+				throw new UserError(
+					`Agent Memory namespace "${namespace_name}" not found. Use 'wrangler agent-memory namespace list' to see available namespaces.`,
+					{ telemetryMessage: "Agent Memory namespace not found" }
+				);
+			}
+			throw e;
+		}
 		logger.log(`✅ Deleted Agent Memory namespace ${namespace_name}`);
 	},
 });
