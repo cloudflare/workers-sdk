@@ -674,8 +674,8 @@ describe("deploy", () => {
 				writeWorkerSource();
 				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
-				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
-				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				mockCustomDomainsChangesetRequest({});
 				mockPublishCustomDomainsRequest({
 					publishFlags: {
