@@ -1,6 +1,5 @@
-import { env } from "cloudflare:test";
-import { exports } from "cloudflare:workers";
-import { expect, it, vi } from "vitest";
+import { env, exports } from "cloudflare:workers";
+import { it, vi } from "vitest";
 
 it("dispatches fetch event", async ({ expect }) => {
 	const response = await exports.default.fetch("https://example.com/");

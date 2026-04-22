@@ -1,4 +1,4 @@
-export async function processJob(env: Env, job: QueueJob) {
+async function processJob(env: Env, job: QueueJob) {
 	const result = job.value.toUpperCase();
 	await env.QUEUE_RESULTS.put(job.key, result);
 }

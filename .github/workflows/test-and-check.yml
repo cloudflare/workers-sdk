@@ -73,7 +73,7 @@ jobs:
         run: node packages/wrangler/src/__tests__/test-old-node-version.js error
 
   test:
-    timeout-minutes: 60
+    timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.suite }}-test
       cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
@@ -140,7 +140,10 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools'
         # We skip @cloudflare/vitest-pool-workers tests in CI on Windows because they're very flaky. We still run the vitest-pool-workers-examples fixture, which is a comprehensive set of example tests and gives us a lot of confidence.
         # The @cloudflare/vitest-pool-workers tests skipped are things like watch mode, which constantly times out probably due to the github runners in use.
-        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*" ${{ matrix.os == 'windows-latest' && '--filter="!./packages/vitest-pool-workers"' || '' }}
+        # Package tests are well-isolated (separate processes, temp dirs, random ports, MSW mocks) and can safely run in parallel.
+        # Concurrency is capped at 3 to avoid CPU starvation on 4-vCPU CI runners when heavyweight suites
+        # (wrangler/forks, miniflare/workerd, vitest-pool-workers/Verdaccio) overlap.
+        run: pnpm run test:ci --log-order=stream --concurrency=3 --filter="./packages/*" ${{ matrix.os == 'windows-latest' && '--filter="!./packages/vitest-pool-workers"' || '' }}
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
@@ -149,12 +152,28 @@ jobs:
 
       - name: Run tests (fixtures)
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
-        # Browser rendering is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
-        run: pnpm run test:ci --concurrency 1 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-rendering"' || '' }}
+        # Browser Run fixture is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
+        # start-worker-node is excluded here and run separately below — its worker.dispose() cleanup
+        # hangs when any other fixture runs in parallel, causing the file-level node:test timeout to fire.
+        # Since the dev registry is now file-based (not network-based), fixture tests can safely run in parallel.
+        # Concurrency is capped at 2 to avoid CPU starvation on CI runners when multiple fixtures
+        # spawn workerd processes simultaneously (Windows runners are especially slow under load).
+        run: pnpm run test:ci --concurrency=2 --log-order=stream --filter="./fixtures/*" --filter="!./fixtures/start-worker-node-test" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-run"' || '' }}
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run tests (start-worker-node)
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
+        # This fixture must run alone — worker.dispose() cleanup hangs under any parallel load,
+        # causing node:test's file-level timeout to fire even though all individual tests pass in <1s.
+        run: pnpm run test:ci --log-order=stream --filter="./fixtures/start-worker-node-test"
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/start-worker-node/index.html
           CI_OS: ${{ matrix.description }}
 
       - name: Upload turbo logs

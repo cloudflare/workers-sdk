@@ -1,12 +1,20 @@
 name: "Rerun Remote Tests"
 
-# When the "run-remote-tests" label is added to or removed from a PR, re-run
-# the E2E workflows so they pick up the label change and pass (or withhold) the
-# Cloudflare API token to the test steps.  This avoids adding "labeled" as a
-# trigger type to every E2E workflow (which would cause wasteful re-runs on
-# unrelated label changes).
+# Trigger: the "run-remote-tests" or "run-c3-frameworks-tests" label is added
+# to or removed from a pull request.
+#
+# Goal: re-run the E2E workflows (e2e-wrangler.yml, e2e-vite.yml, c3-e2e.yml)
+# so they pick up the label change and either pass or withhold the Cloudflare
+# API token to the test steps. This avoids adding "labeled" as a trigger type
+# to every E2E workflow (which would cause wasteful re-runs on unrelated label
+# changes).
+#
+# Using pull_request_target (not pull_request) so the workflow has access to a
+# privileged GITHUB_TOKEN even for fork PRs. This is safe because the workflow
+# runs code from the default branch — fork authors cannot modify it — and only
+# calls the Actions API (no checkout of untrusted code).
 on:
-  pull_request:
+  pull_request_target:
     types: [labeled, unlabeled]
 
 permissions: {}
@@ -14,7 +22,7 @@ permissions: {}
 jobs:
   rerun-e2e:
     name: "Rerun E2E Tests"
-    if: github.event.label.name == 'run-remote-tests'
+    if: github.event.label.name == 'run-remote-tests' || github.event.label.name == 'run-c3-frameworks-tests'
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -25,30 +33,36 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           REPO: ${{ github.repository }}
         run: |
-          for workflow in e2e-wrangler.yml e2e-vite.yml c3-e2e.yml; do
-            run=$(gh api "repos/${REPO}/actions/workflows/${workflow}/runs?head_sha=${HEAD_SHA}&per_page=1" \
+          # Determine which workflows to re-run based on the label.
+          if [ "${{ github.event.label.name }}" = "run-remote-tests" ]; then
+            WORKFLOWS="e2e-wrangler.yml e2e-vite.yml c3-e2e.yml"
+          else
+            WORKFLOWS="c3-e2e.yml"
+          fi
+
+          for workflow in ${WORKFLOWS}; do
+            # Find the most recent run of this workflow at the PR head SHA.
+            run_info=$(gh api "repos/${REPO}/actions/workflows/${workflow}/runs?head_sha=${HEAD_SHA}&per_page=1" \
               --jq '.workflow_runs[0] | "\(.id) \(.status)"' || true)
 
-            run_id=$(echo "$run" | awk '{print $1}')
-            status=$(echo "$run" | awk '{print $2}')
+            run_id=$(echo "$run_info" | awk '{print $1}')
+            status=$(echo "$run_info" | awk '{print $2}')
 
             if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
-              echo "No run found for ${workflow} at SHA ${HEAD_SHA}"
+              echo "::warning::No run found for ${workflow} at SHA ${HEAD_SHA}"
               continue
             fi
 
-            # Each E2E workflow has a "check-remote" step that calls
-            # `gh pr view ... --json labels` at runtime, so a run that
-            # hasn't started yet will see the newly-added label on its
-            # own — no need to cancel and re-run it.
+            # Runs that haven't started yet will see the newly-added label
+            # when they begin — no need to cancel and re-run them.
             if [ "$status" != "completed" ] && [ "$status" != "in_progress" ]; then
               echo "${workflow} run ${run_id} is ${status} — not yet started, skipping."
               continue
             fi
 
-            # If the run is actively executing, the label check has
-            # already evaluated to false. Cancel it first — the rerun
-            # endpoint only works on completed runs.
+            # If the run is actively executing, the label check has already
+            # evaluated (likely to the old value). Cancel it first — the
+            # rerun endpoint only works on completed runs.
             if [ "$status" = "in_progress" ]; then
               echo "Cancelling in-progress ${workflow} run ${run_id}..."
               gh api "repos/${REPO}/actions/runs/${run_id}/cancel" --method POST || true
@@ -67,54 +81,5 @@ jobs:
 
             gh api "repos/${REPO}/actions/runs/${run_id}/rerun" --method POST \
               && echo "Re-triggered ${workflow} (run ${run_id})" \
-              || echo "Failed to re-run ${workflow} (run ${run_id})"
+              || echo "::warning::Failed to re-run ${workflow} (run ${run_id})"
           done
-
-  rerun-c3-frameworks:
-    name: "Rerun C3 Frameworks E2E Tests"
-    if: github.event.label.name == 'run-c3-frameworks-tests'
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-    steps:
-      - name: "Re-run C3 E2E workflow"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          REPO: ${{ github.repository }}
-        run: |
-          workflow=c3-e2e.yml
-          run=$(gh api "repos/${REPO}/actions/workflows/${workflow}/runs?head_sha=${HEAD_SHA}&per_page=1" \
-            --jq '.workflow_runs[0] | "\(.id) \(.status)"' || true)
-
-          run_id=$(echo "$run" | awk '{print $1}')
-          status=$(echo "$run" | awk '{print $2}')
-
-          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
-            echo "No run found for ${workflow} at SHA ${HEAD_SHA}"
-            exit 0
-          fi
-
-          if [ "$status" != "completed" ] && [ "$status" != "in_progress" ]; then
-            echo "${workflow} run ${run_id} is ${status} — not yet started, skipping."
-            exit 0
-          fi
-
-          if [ "$status" = "in_progress" ]; then
-            echo "Cancelling in-progress ${workflow} run ${run_id}..."
-            gh api "repos/${REPO}/actions/runs/${run_id}/cancel" --method POST || true
-
-            for i in $(seq 1 30); do
-              current=$(gh api "repos/${REPO}/actions/runs/${run_id}" --jq '.status')
-              if [ "$current" = "completed" ]; then
-                echo "Run ${run_id} is now completed (cancelled)."
-                break
-              fi
-              echo "  Waiting for cancellation to finish (${i}/30, status: ${current})..."
-              sleep 2
-            done
-          fi
-
-          gh api "repos/${REPO}/actions/runs/${run_id}/rerun" --method POST \
-            && echo "Re-triggered ${workflow} (run ${run_id})" \
-            || echo "Failed to re-run ${workflow} (run ${run_id})"

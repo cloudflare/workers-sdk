@@ -1,4 +1,4 @@
-import { Button, Checkbox, DropdownMenu, Table } from "@cloudflare/kumo";
+import { Button, Checkbox, DropdownMenu, Table, Text } from "@cloudflare/kumo";
 import {
 	DotsThreeIcon,
 	DownloadIcon,
@@ -275,21 +275,6 @@ export function R2ObjectTable({
 		onSelectionChange(newSelection);
 	}
 
-	if (items.length === 0) {
-		return (
-			<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-kumo-subtle">
-				<h2 className="text-2xl font-medium">
-					{currentPrefix
-						? "No objects in this directory"
-						: "No objects in this bucket"}
-				</h2>
-				<p className="text-sm font-light">
-					Upload an object using the button above.
-				</p>
-			</div>
-		);
-	}
-
 	return (
 		<div className="overflow-hidden rounded-lg border border-kumo-fill">
 			<Table>
@@ -322,6 +307,22 @@ export function R2ObjectTable({
 				</Table.Header>
 
 				<Table.Body>
+					{items.length === 0 ? (
+						<Table.Row>
+							<Table.Cell colSpan={6} className="py-20! text-center">
+								<div className="flex flex-col items-center justify-center gap-1">
+									<Text size="sm" bold>
+										{currentPrefix
+											? "No objects in this directory"
+											: "No objects in this bucket"}
+									</Text>
+									<Text variant="secondary" size="xs">
+										Upload an object using the button above.
+									</Text>
+								</div>
+							</Table.Cell>
+						</Table.Row>
+					) : null}
 					{items.map((item) => {
 						if (item.type === "directory") {
 							const displayName = getDisplayName(item.prefix, currentPrefix);
@@ -399,6 +400,7 @@ export function R2ObjectTable({
 									<Link
 										to="/r2/$bucketName/object/$"
 										params={{ bucketName, _splat: key }}
+										search={(prev) => prev}
 										className="flex items-center gap-2 text-kumo-default no-underline hover:text-kumo-link"
 									>
 										<FileIcon size={16} className="text-kumo-subtle" />

@@ -1,5 +1,67 @@
 # create-cloudflare
 
+## 2.67.2
+
+### Patch Changes
+
+- [#13513](https://github.com/cloudflare/workers-sdk/pull/13513) [`f822594`](https://github.com/cloudflare/workers-sdk/commit/f82259422ee943d52adeaf797a4327904c67418f) Thanks [@edmundhung](https://github.com/edmundhung)! - Update the design of the React Workers starter
+
+  The React Workers template now follows the latest Vite React starter more closely, so new projects get the refreshed upstream design alongside the existing Cloudflare integration.
+
+## 2.67.1
+
+### Patch Changes
+
+- [#12714](https://github.com/cloudflare/workers-sdk/pull/12714) [`852fb79`](https://github.com/cloudflare/workers-sdk/commit/852fb79327ca525d8cbdc18ed2ffc1a28fad8a0a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To      |
+  | ---------------------- | ------ | ------- |
+  | @tanstack/create-start | 0.59.8 | 0.59.21 |
+
+- [#12804](https://github.com/cloudflare/workers-sdk/pull/12804) [`d090818`](https://github.com/cloudflare/workers-sdk/commit/d0908188ddcb909acc8034b2a2ae38e7e3b52c29) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.12.4 | 0.12.5 |
+
+- [#13360](https://github.com/cloudflare/workers-sdk/pull/13360) [`359706d`](https://github.com/cloudflare/workers-sdk/commit/359706d6a5c210de183100c94b20324eba684262) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.2.2 | 16.2.4 |
+
+- [#13593](https://github.com/cloudflare/workers-sdk/pull/13593) [`4ca7cc6`](https://github.com/cloudflare/workers-sdk/commit/4ca7cc6afb7a7cbf0e42580801654803b406b1e0) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.4.7 | 2.4.8 |
+
+- [#13594](https://github.com/cloudflare/workers-sdk/pull/13594) [`f406f0b`](https://github.com/cloudflare/workers-sdk/commit/f406f0b885f032e17a580a6e9fef0de01b0194be) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From   | To     |
+  | ------------------- | ------ | ------ |
+  | create-react-router | 7.14.0 | 7.14.1 |
+
+- [#13595](https://github.com/cloudflare/workers-sdk/pull/13595) [`aa1d317`](https://github.com/cloudflare/workers-sdk/commit/aa1d317e33e6cdb1693cff5490e19e93c433b515) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.616 | 0.0.622 |
+
+- [#12705](https://github.com/cloudflare/workers-sdk/pull/12705) [`7329b3f`](https://github.com/cloudflare/workers-sdk/commit/7329b3f1ba11d69ff242e0647d1de6f436b30082) Thanks [@roli-lpci](https://github.com/roli-lpci)! - Replace `glob` with `tinyglobby` in build tooling. Remove unused `glob` dependency from pages-shared.
+
 ## 2.67.0
 
 ### Minor Changes

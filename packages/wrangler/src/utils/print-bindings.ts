@@ -95,6 +95,7 @@ export function printBindings(
 		"secrets_store_secret",
 		bindings
 	);
+	const artifacts = extractBindingsOfType("artifacts", bindings);
 	const services = extractBindingsOfType("service", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
 	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
@@ -331,7 +332,11 @@ export function printBindings(
 			...ai_search_namespaces.map(({ binding, namespace }) => ({
 				name: binding,
 				type: getBindingTypeFriendlyName("ai_search_namespace"),
-				value: namespace ? String(namespace) : undefined,
+				// Preserve `namespace` as-is so `typeof === "symbol"` handling
+				// downstream can render INHERIT_SYMBOL as `"inherited"`. Using
+				// `String(namespace)` would stringify it to
+				// `"Symbol(inherit_binding)"` and defeat that check.
+				value: namespace ?? undefined,
 				mode: getMode({ isSimulatedLocally: false }),
 			}))
 		);
@@ -436,6 +441,19 @@ export function printBindings(
 					type: getBindingTypeFriendlyName("secrets_store_secret"),
 					value: `${store_id}/${secret_name}`,
 					mode: getMode({ isSimulatedLocally: true }),
+				};
+			})
+		);
+	}
+
+	if (artifacts.length > 0) {
+		output.push(
+			...artifacts.map(({ binding, namespace }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("artifacts"),
+					value: namespace,
+					mode: getMode({ isSimulatedLocally: false }),
 				};
 			})
 		);

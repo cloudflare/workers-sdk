@@ -6,7 +6,7 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { glob } from "glob";
+import { glob } from "tinyglobby";
 
 const ROOT = resolve(__dirname, "../..");
 

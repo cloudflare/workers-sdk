@@ -48,7 +48,29 @@ export function setRegistry(data: Record<string, RegistryEntry>): void {
  * Look up a worker's registry entry by service name.
  */
 export function resolveTarget(service: string): RegistryEntry | undefined {
-	return registry.get(service);
+	const entry = registry.get(service);
+	if (!entry || !("debugPortAddress" in entry)) {
+		return undefined;
+	}
+	return entry;
+}
+
+/**
+ * Check whether a registry entry exists for the given service, even if it's
+ * from an incompatible wrangler version.
+ */
+export function hasRegistryEntry(service: string): boolean {
+	return registry.has(service);
+}
+
+/**
+ * Return an appropriate error message for a worker that can't be resolved.
+ */
+export function workerNotFoundMessage(service: string): string {
+	if (hasRegistryEntry(service)) {
+		return `Worker "${service}" is not compatible with this version of the dev server. Please update all Worker instances to the same version.`;
+	}
+	return `Worker "${service}" not found. Make sure it is running locally.`;
 }
 
 /**
@@ -130,9 +152,7 @@ export function createProxyDurableObjectClass({
 						// workerd probes DO properties (fetch, alarm, etc.) via the get
 						// trap, and throwing here would crash those internal checks.
 						return () => {
-							throw new Error(
-								`Worker "${scriptName}" not found. Make sure it is running locally.`
-							);
+							throw new Error(workerNotFoundMessage(scriptName));
 						};
 					}
 					return Reflect.get(fetcher, prop);
@@ -144,10 +164,7 @@ export function createProxyDurableObjectClass({
 			const fetcher = this._resolve();
 			if (!fetcher) {
 				return Promise.resolve(
-					new Response(
-						`Worker "${scriptName}" not found. Make sure it is running locally.`,
-						{ status: 503 }
-					)
+					new Response(workerNotFoundMessage(scriptName), { status: 503 })
 				);
 			}
 			return fetcher.fetch(request);

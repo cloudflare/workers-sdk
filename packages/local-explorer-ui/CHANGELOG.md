@@ -1,5 +1,28 @@
 # @cloudflare/local-explorer-ui
 
+## 0.13.2
+
+### Patch Changes
+
+- [#13562](https://github.com/cloudflare/workers-sdk/pull/13562) [`78a252d`](https://github.com/cloudflare/workers-sdk/commit/78a252dbf7fc818b56db2f0870c60d4f49e2f4c5) Thanks [@emily-shen](https://github.com/emily-shen)! - Local Explorer UI refinements
+
+  - Add scrolling to the D1 table selector, instead of cutting off the table list
+  - Show table headers in R2 empty states
+  - Persist the `delimiter` search param when navigating to R2 object details
+  - Hide breadcrumb path segments when viewing R2 objects in ungrouped mode
+
+## 0.13.1
+
+### Patch Changes
+
+- [#13466](https://github.com/cloudflare/workers-sdk/pull/13466) [`c4461ff`](https://github.com/cloudflare/workers-sdk/commit/c4461ff25ec9cb6266ad0da240bed8a755de7d08) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix local explorer KV bulk / get for large payloads.
+
+  Fixes an issue where the local explorer UI would crash when fetching large KV payloads.
+
+  Additionally, the local KV bulk get API endpoint now enforces a total 25MB payload limit, in alignment with the remote Cloudflare API.
+
+- [#13543](https://github.com/cloudflare/workers-sdk/pull/13543) [`39a5f04`](https://github.com/cloudflare/workers-sdk/commit/39a5f04792f5e0ec12ff727fe9cb07e1f4516094) Thanks [@SAY-5](https://github.com/SAY-5)! - Fix `occured` -> `occurred` typo in the `ResourceError` fallback message rendered by the local explorer UI when a worker resource fails to load.
+
 ## 0.13.0
 
 ### Minor Changes

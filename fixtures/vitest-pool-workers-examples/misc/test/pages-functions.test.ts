@@ -1,8 +1,8 @@
 import {
 	createPagesEventContext,
-	env,
 	waitOnExecutionContext,
 } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { it, onTestFinished } from "vitest";
 
 // This will improve in the next major version of `@cloudflare/workers-types`,

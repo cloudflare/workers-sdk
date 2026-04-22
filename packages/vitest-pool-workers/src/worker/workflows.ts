@@ -259,13 +259,16 @@ class WorkflowIntrospectorHandle implements WorkflowIntrospector {
 	}
 
 	async dispose(): Promise<void> {
-		// also disposes all instance introspectors
-		await Promise.all(
-			this.#instanceIntrospectors.map((introspector) => introspector.dispose())
-		);
+		// Restore the original env binding immediately so the next test gets a
+		// clean binding even if instance disposal (unsafeAbort) is still in flight.
+		this.#disposeCallback();
+		const introspectors = this.#instanceIntrospectors;
 		this.#modifierCallbacks = [];
 		this.#instanceIntrospectors = [];
-		this.#disposeCallback();
+		// Dispose all instance introspectors after binding is restored
+		await Promise.all(
+			introspectors.map((introspector) => introspector.dispose())
+		);
 	}
 
 	async [Symbol.asyncDispose](): Promise<void> {

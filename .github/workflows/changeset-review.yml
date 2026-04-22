@@ -29,8 +29,9 @@ jobs:
             .github/opencode.json
 
       - name: Install OpenCode
+        # pin OpenCode to 1.4.6 version as newer versions are causing ProviderInitError issues
         run: |
-          npm install -g opencode-ai
+          npm install -g opencode-ai@1.4.6
           cp .github/opencode.json ./opencode.json
 
       - name: Get changed changeset files

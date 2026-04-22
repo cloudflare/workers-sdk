@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
+import assert from "node:assert";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
 /* eslint-disable no-restricted-imports */
@@ -13,6 +14,7 @@ import {
 } from "vitest";
 /* eslint-enable no-restricted-imports */
 import { Binding, StartRemoteProxySessionOptions } from "../../api";
+import { unwrapHook } from "../../api/startDevWorker/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import {
@@ -454,6 +456,33 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			],
 		},
 		{
+			name: "artifacts",
+			config: {
+				artifacts: [
+					{
+						binding: "MY_ARTIFACTS",
+						namespace: "default",
+					},
+				],
+			},
+			expectedProxyWorkerBindings: {
+				MY_ARTIFACTS: {
+					namespace: "default",
+					type: "artifacts",
+				},
+			},
+			expectedWorkerOptions: [
+				expect.objectContaining({
+					artifacts: {
+						MY_ARTIFACTS: {
+							namespace: "default",
+							remoteProxyConnectionString,
+						},
+					},
+				}),
+			],
+		},
+		{
 			name: "email",
 			config: {
 				send_email: [
@@ -714,15 +743,17 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 			timeout: 5_000,
 		});
-		expect(sessionOptions).toEqual({
-			auth: {
-				accountId: "some-account-id",
-				apiToken: {
-					apiToken: "some-api-token",
-				},
-			},
+		expect(sessionOptions).toBeDefined();
+		assert(sessionOptions);
+		const { auth, ...rest1 } = sessionOptions;
+		expect(rest1).toEqual({
 			complianceRegion: undefined,
 			workerName: "worker",
+		});
+		assert(auth);
+		expect(await unwrapHook(auth, { account_id: undefined })).toEqual({
+			accountId: "some-account-id",
+			apiToken: { apiToken: "some-api-token" },
 		});
 		await stopWrangler();
 		await wranglerStopped;
@@ -756,15 +787,17 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			timeout: 5_000,
 		});
 
-		expect(sessionOptions).toEqual({
-			auth: {
-				accountId: "mock-account-id",
-				apiToken: {
-					apiToken: "some-api-token",
-				},
-			},
+		expect(sessionOptions).toBeDefined();
+		assert(sessionOptions);
+		const { auth: auth2, ...rest2 } = sessionOptions;
+		expect(rest2).toEqual({
 			complianceRegion: undefined,
 			workerName: "worker",
+		});
+		assert(auth2);
+		expect(await unwrapHook(auth2, { account_id: undefined })).toEqual({
+			accountId: "mock-account-id",
+			apiToken: { apiToken: "some-api-token" },
 		});
 
 		await stopWrangler();

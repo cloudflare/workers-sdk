@@ -19,9 +19,4 @@ export type WorkerDefinition = {
 	 * workers it bypasses the Assets proxy (whether built-in or userland)
 	 */
 	userWorkerService: string;
-	/**
-	 * HTTP loopback address for this miniflare instance (e.g. "127.0.0.1:8787").
-	 * Used by the local explorer for cross-instance aggregation.
-	 */
-	loopbackAddress: string;
 };

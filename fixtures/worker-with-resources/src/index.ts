@@ -236,6 +236,7 @@ const SEED_DATA: [string, string][] = [
 	["number-integer", "42"],
 	["number-float", "3.14159"],
 	["number-negative", "-273.15"],
+	["large-key-1", "x".repeat(10 * 1024 * 1024)],
 ];
 
 interface R2SeedItem {
