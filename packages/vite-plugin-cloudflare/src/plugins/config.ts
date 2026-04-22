@@ -40,7 +40,6 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				".env.*",
 				"*.{crt,pem}",
 				"**/.git/**",
-				"vite.config.*",
 				".dev.vars",
 				".dev.vars.*",
 				"**/.wrangler/**",

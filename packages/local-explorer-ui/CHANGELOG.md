@@ -1,5 +1,16 @@
 # @cloudflare/local-explorer-ui
 
+## 0.13.2
+
+### Patch Changes
+
+- [#13562](https://github.com/cloudflare/workers-sdk/pull/13562) [`78a252d`](https://github.com/cloudflare/workers-sdk/commit/78a252dbf7fc818b56db2f0870c60d4f49e2f4c5) Thanks [@emily-shen](https://github.com/emily-shen)! - Local Explorer UI refinements
+
+  - Add scrolling to the D1 table selector, instead of cutting off the table list
+  - Show table headers in R2 empty states
+  - Persist the `delimiter` search param when navigating to R2 object details
+  - Hide breadcrumb path segments when viewing R2 objects in ungrouped mode
+
 ## 0.13.1
 
 ### Patch Changes

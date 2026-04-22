@@ -188,12 +188,59 @@ export class StreamObject extends DurableObject<Env> {
 			new Intl.DisplayNames(["en"], { type: "language" }).of(language) ??
 			language;
 
+		// Delete old blob if caption already exists
+		const existing = get(
+			this.#stmts.getCaption({ video_id: videoId, language })
+		);
+		if (existing?.blob_id !== undefined && existing.blob_id !== null) {
+			await this.#blob.delete(existing.blob_id);
+		}
+
 		this.#stmts.upsertCaption({
 			video_id: videoId,
 			language,
 			generated: 1,
 			label,
 			status: "ready",
+			blob_id: null,
+		});
+
+		const row = get(this.#stmts.getCaption({ video_id: videoId, language }));
+		if (row === undefined)
+			throw new NotFoundError(`Caption not found: ${videoId}/${language}`);
+		return row;
+	}
+
+	async uploadCaption(
+		videoId: string,
+		language: string,
+		input: ReadableStream
+	): Promise<CaptionRow> {
+		const video = get(this.#stmts.getVideo({ id: videoId }));
+		if (video === undefined)
+			throw new NotFoundError(`Video not found: ${videoId}`);
+
+		const label =
+			new Intl.DisplayNames(["en"], { type: "language" }).of(language) ??
+			language;
+
+		// Delete old blob if caption already exists
+		const existing = get(
+			this.#stmts.getCaption({ video_id: videoId, language })
+		);
+		if (existing?.blob_id !== undefined && existing.blob_id !== null) {
+			await this.#blob.delete(existing.blob_id);
+		}
+
+		const blobId = await this.#blob.put(input);
+
+		this.#stmts.upsertCaption({
+			video_id: videoId,
+			language,
+			generated: 0,
+			label,
+			status: "ready",
+			blob_id: blobId,
 		});
 
 		const row = get(this.#stmts.getCaption({ video_id: videoId, language }));
@@ -339,6 +386,20 @@ export class StreamObject extends DurableObject<Env> {
 		}
 	}
 
+	async getVideoBlob(
+		videoId: string
+	): Promise<{ stream: ReadableStream<Uint8Array>; size: number } | null> {
+		const row = get(this.#stmts.getVideo({ id: videoId }));
+		if (row === undefined || row.blob_id === null) {
+			return null;
+		}
+		const stream = await this.#blob.get(row.blob_id);
+		if (stream === null) {
+			return null;
+		}
+		return { stream, size: row.size };
+	}
+
 	async fetch(
 		req: Request<
 			unknown,
@@ -462,13 +523,17 @@ function sqlStmts(db: TypedSql, now: () => string) {
 	);
 
 	const stmtUpsertCaption = db.stmt<
-		Pick<CaptionRow, "video_id" | "language" | "generated" | "label" | "status">
-	>(`INSERT INTO _mf_stream_captions (video_id, language, generated, label, status)
-		VALUES (:video_id, :language, :generated, :label, :status)
+		Pick<
+			CaptionRow,
+			"video_id" | "language" | "generated" | "label" | "status" | "blob_id"
+		>
+	>(`INSERT INTO _mf_stream_captions (video_id, language, generated, label, status, blob_id)
+		VALUES (:video_id, :language, :generated, :label, :status, :blob_id)
 		ON CONFLICT (video_id, language) DO UPDATE SET
 			generated = excluded.generated,
 			label = excluded.label,
-			status = excluded.status`);
+			status = excluded.status,
+			blob_id = excluded.blob_id`);
 
 	const stmtListCaptionsByVideo = db.stmt<
 		Pick<CaptionRow, "video_id">,

@@ -210,6 +210,9 @@ describe("Stream videos", () => {
 		expect(video.modified).toBeTruthy();
 		expect(video.hlsPlaybackUrl).toContain(video.id);
 		expect(video.dashPlaybackUrl).toContain(video.id);
+		expect(video.preview).toMatch(
+			new RegExp(`^http://.*?/cdn-cgi/mf/stream/${video.id}/watch$`)
+		);
 
 		const details = (await sendCmdToWorker(mf, "video.details", {
 			id: video.id,
@@ -642,6 +645,59 @@ describe("Stream videos list", () => {
 	});
 });
 
+describe("Stream video serving", () => {
+	test("serve video via /cdn-cgi/mf/stream/:id/watch", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		// Fetch the video via the preview URL path and consume body immediately
+		const resp = await mf.dispatchFetch(
+			`http://placeholder/cdn-cgi/mf/stream/${video.id}/watch`
+		);
+		const bytes = new Uint8Array(await resp.arrayBuffer());
+		expect(resp.status).toBe(200);
+		expect(bytes).toEqual(TEST_VIDEO_BYTES);
+	});
+
+	test("serve video returns 404 for unknown video", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		const resp = await mf.dispatchFetch(
+			"http://placeholder/cdn-cgi/mf/stream/00000000-0000-0000-0000-000000000000/watch"
+		);
+		await resp.arrayBuffer(); // consume body to avoid dispatchFetch error
+		expect(resp.status).toBe(404);
+	});
+
+	test("preview URL from upload is directly fetchable over HTTP", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		expect(video.preview).toBeDefined();
+		const resp = await fetch(video.preview as string);
+		expect(resp.status).toBe(200);
+		const bytes = new Uint8Array(await resp.arrayBuffer());
+		expect(bytes).toEqual(TEST_VIDEO_BYTES);
+	});
+});
+
 describe("Stream reloads", () => {
 	test("keeps in-memory data across setOptions reloads", async ({ expect }) => {
 		const { http: videoUrl } = await useServer(
@@ -865,9 +921,28 @@ describe("Stream captions", () => {
 		).rejects.toThrow("Video not found");
 	});
 
-	test("caption upload via ReadableStream is not supported in local mode", async ({
-		expect,
-	}) => {
+	test("caption upload via ReadableStream", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		const caption = (await sendCmdToWorker(mf, "captions.upload", {
+			id: video.id,
+			language: "en",
+		})) as Caption;
+
+		expect(caption.language).toBe("en");
+		expect(caption.generated).toBe(false);
+		expect(caption.status).toBe("ready");
+	});
+
+	test("caption upload throws for non-existent video", async ({ expect }) => {
 		const mf = createMiniflare();
 		useDispose(mf);
 
@@ -876,7 +951,35 @@ describe("Stream captions", () => {
 				id: "00000000-0000-0000-0000-000000000000",
 				language: "en",
 			})
-		).rejects.toThrow("caption upload is not supported in local mode");
+		).rejects.toThrow("Video not found");
+	});
+
+	test("upload caption is idempotent (upsert)", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		// Upload the same caption twice
+		await sendCmdToWorker(mf, "captions.upload", {
+			id: video.id,
+			language: "en",
+		});
+		await sendCmdToWorker(mf, "captions.upload", {
+			id: video.id,
+			language: "en",
+		});
+
+		// Should still only have one caption, not two
+		const captions = (await sendCmdToWorker(mf, "captions.list", {
+			id: video.id,
+		})) as Caption[];
+		expect(captions.filter((c) => c.language === "en")).toHaveLength(1);
 	});
 
 	test("generate caption is idempotent (upsert)", async ({ expect }) => {
@@ -1505,5 +1608,74 @@ describe("Stream deletes clean up properly", () => {
 			id: videoB.id,
 		})) as DownloadGetResponse;
 		expect(downloadsB.default).toBeDefined();
+	});
+});
+
+describe("Stream publicUrl", () => {
+	test("preview URLs use publicUrl when set", async ({ expect }) => {
+		const mf = createMiniflare({
+			publicUrl: "http://my-proxy.example.com:8080",
+		});
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		expect(video.preview).toBe(
+			`http://my-proxy.example.com:8080/cdn-cgi/mf/stream/${video.id}/watch`
+		);
+	});
+
+	test("preview URLs use runtime entry URL when publicUrl is not set", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		// Without publicUrl, the preview URL should use the runtime entry URL
+		// (http://127.0.0.1:<port>) rather than any external proxy URL
+		expect(video.preview).toMatch(
+			new RegExp(
+				`^http://127\\.0\\.0\\.1:\\d+/cdn-cgi/mf/stream/${video.id}/watch$`
+			)
+		);
+	});
+
+	test("preview URLs update when publicUrl is changed via setter", async ({
+		expect,
+	}) => {
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+		const mf = createMiniflare({
+			publicUrl: "http://first-proxy.example.com:3000",
+		});
+		useDispose(mf);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+		expect(video.preview).toMatch(/^http:\/\/first-proxy\.example\.com:3000\//);
+
+		// Update publicUrl via the lightweight setter (no workerd restart)
+		mf.publicUrl = "http://second-proxy.example.com:4000";
+
+		const details = (await sendCmdToWorker(mf, "video.details", {
+			id: video.id,
+		})) as Video;
+		expect(details.preview).toMatch(
+			/^http:\/\/second-proxy\.example\.com:4000\//
+		);
 	});
 });

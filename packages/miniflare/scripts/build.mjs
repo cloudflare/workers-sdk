@@ -184,7 +184,7 @@ const embedWorkersPlugin = {
 					target: "esnext",
 					bundle: true,
 					sourcemap: true,
-					sourcesContent: false,
+					sourcesContent: true,
 					// These virtual modules are provided by workerd at runtime
 					external: ["miniflare:shared", "miniflare:zod", "cloudflare:workers"],
 					metafile: true,
@@ -281,6 +281,60 @@ function copyLocalExplorerUi(outPath, pkgRoot) {
 	}
 }
 
+// --- Sourcemap post-processing ---
+
+/**
+ * Patch sourcemaps so that every entry in `sourcesContent` is non-null.
+ *
+ * esbuild sets `sourcesContent: true` but some upstream dependencies ship
+ * their own sourcemaps that reference `.ts` source files they don't publish.
+ * esbuild follows the sourcemap chain and records those paths in `sources`,
+ * but can't read the files — leaving `null` holes in `sourcesContent`.
+ *
+ * Consumers (Vite, Vitest, etc.) warn when they encounter sourcemaps with
+ * missing sources. To avoid this, we replace null entries with an empty
+ * string so the sourcemap is fully self-contained.
+ *
+ * See https://github.com/cloudflare/workers-sdk/issues/13555
+ *
+ * @param {string} outPath  The miniflare dist output directory (dist/)
+ */
+async function patchSourcemaps(outPath) {
+	const mapFiles = [];
+
+	// Collect all .js.map files under outPath
+	async function walk(dir) {
+		for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+			const fullPath = path.join(dir, entry.name);
+			if (entry.isDirectory()) {
+				await walk(fullPath);
+			} else if (entry.name.endsWith(".js.map")) {
+				mapFiles.push(fullPath);
+			}
+		}
+	}
+
+	await walk(outPath);
+
+	for (const mapFile of mapFiles) {
+		const raw = await fs.readFile(mapFile, "utf8");
+		const map = JSON.parse(raw);
+		if (!Array.isArray(map.sourcesContent)) continue;
+
+		let patched = false;
+		for (let i = 0; i < map.sourcesContent.length; i++) {
+			if (map.sourcesContent[i] == null) {
+				map.sourcesContent[i] = "";
+				patched = true;
+			}
+		}
+
+		if (patched) {
+			await fs.writeFile(mapFile, JSON.stringify(map));
+		}
+	}
+}
+
 // --- Main build ---
 
 /**
@@ -289,6 +343,7 @@ function copyLocalExplorerUi(outPath, pkgRoot) {
  *      fixtures) into dist/ as CJS. The embedWorkersPlugin handles all
  *      "worker:..." imports by creating nested sub-builds.
  *   2. Copy local-explorer-ui assets into dist/.
+ *   3. Patch sourcemaps to fill any missing sourcesContent entries.
  */
 async function buildPackage() {
 	const pkg = getPackage(pkgRoot);
@@ -302,7 +357,7 @@ async function buildPackage() {
 		target: "esnext",
 		bundle: true,
 		sourcemap: true,
-		sourcesContent: false,
+		sourcesContent: true,
 		tsconfig: path.join(pkgRoot, "tsconfig.json"),
 		external: [
 			// Don't bundle miniflare itself — we want tests to run against
@@ -330,6 +385,7 @@ async function buildPackage() {
 	}
 
 	copyLocalExplorerUi(outPath, pkgRoot);
+	await patchSourcemaps(outPath);
 }
 
 buildPackage().catch((e) => {

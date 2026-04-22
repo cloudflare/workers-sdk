@@ -12,6 +12,7 @@ import {
 	getLocalExplorerEnabledFromEnv,
 } from "@cloudflare/workers-utils";
 import {
+	buildPublicUrl,
 	getDefaultDevRegistryPath,
 	kUnsafeEphemeralUniqueKey,
 	Log,
@@ -445,9 +446,18 @@ export async function getDevMiniflareOptions(
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
+	const serverConfig = viteDevServer.config.server;
+	const publicUrl = buildPublicUrl({
+		hostname:
+			typeof serverConfig.host === "string" ? serverConfig.host : undefined,
+		port: serverConfig.port,
+		secure: !!serverConfig.https,
+	});
+
 	return {
 		miniflareOptions: {
 			log: logger,
+			publicUrl,
 			unsafeProxySharedSecret: PROXY_SHARED_SECRET,
 			logRequests: false,
 			inspectorPort:
@@ -636,9 +646,18 @@ export async function getPreviewMiniflareOptions(
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
+	const serverConfig = vitePreviewServer.config.preview;
+	const publicUrl = buildPublicUrl({
+		hostname:
+			typeof serverConfig.host === "string" ? serverConfig.host : undefined,
+		port: serverConfig.port,
+		secure: !!serverConfig.https,
+	});
+
 	return {
 		miniflareOptions: {
 			log: logger,
+			publicUrl,
 			unsafeProxySharedSecret: PROXY_SHARED_SECRET,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,

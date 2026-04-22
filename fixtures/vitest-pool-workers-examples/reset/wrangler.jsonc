@@ -1,0 +1,37 @@
+{
+	"name": "reset",
+	"main": "src/index.ts",
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "COUNTER",
+				"class_name": "Counter",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["Counter"],
+		},
+	],
+	"kv_namespaces": [
+		{
+			"binding": "KV_NAMESPACE",
+			"id": "00000000000000000000000000000000",
+		},
+	],
+	"r2_buckets": [
+		{
+			"binding": "R2_BUCKET",
+			"bucket_name": "bucket",
+		},
+	],
+	"d1_databases": [
+		{
+			"binding": "DATABASE",
+			"database_name": "database",
+			"database_id": "00000000-0000-0000-0000-000000000000",
+		},
+	],
+}

@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
-import { CoreHeaders } from "miniflare";
+import { buildPublicUrl, CoreHeaders } from "miniflare";
 import colors from "picocolors";
 import { initRunners } from "../cloudflare-environment";
 import {
@@ -69,6 +69,26 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 			let containerTagToOptionsMap = initialOptions.containerTagToOptionsMap;
 
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
+
+			// Once the HTTP server is listening, update Miniflare's publicUrl with
+			// the actual address. This ensures "Cloudflare Stream" preview URLs always reflect
+			// the real server URL — even if Vite bumped the port.
+			if (viteDevServer.httpServer) {
+				viteDevServer.httpServer.on("listening", () => {
+					const addr = viteDevServer.httpServer?.address();
+					if (typeof addr === "object" && addr !== null) {
+						const serverConfig = viteDevServer.config.server;
+						ctx.miniflare.publicUrl = buildPublicUrl({
+							hostname:
+								typeof serverConfig.host === "string"
+									? serverConfig.host
+									: undefined,
+							port: addr.port,
+							secure: !!serverConfig.https,
+						});
+					}
+				});
+			}
 
 			if (ctx.resolvedPluginConfig.type === "workers") {
 				debuglog("Initializing the Vite module runners");
