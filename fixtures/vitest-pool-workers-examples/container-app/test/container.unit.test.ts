@@ -1,4 +1,4 @@
-import { env } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { it } from "vitest";
 
 it("dispatches fetch event", { timeout: 10000 }, async ({ expect }) => {

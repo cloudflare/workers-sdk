@@ -160,14 +160,14 @@ async function deleteMtlsCertificates() {
 	const mtlsCertificates = await listCertificates();
 	for (const certificate of mtlsCertificates) {
 		console.log("Deleting mTLS certificate: " + certificate.id);
-		await deleteCertificate(certificate.id);
+		if (await deleteCertificate(certificate.id)) {
+			console.log(`Successfully deleted mTLS certificate ${certificate.id}`);
+		} else {
+			console.log(`Failed to delete mTLS certificate ${certificate.id}`);
+		}
 	}
 	if (mtlsCertificates.length === 0) {
 		console.log(`No mTLS certificates to delete.`);
-	} else {
-		console.log(
-			`Successfully deleted ${mtlsCertificates.length} mTLS certificates`
-		);
 	}
 }
 

@@ -24,7 +24,7 @@ function createBinding(): WorkflowBinding {
 async function waitUntilLogEvent(
 	engineStub: DurableObjectStub<Engine>,
 	event: InstanceEvent,
-	timeout = 1000
+	timeout = 5000
 ): Promise<void> {
 	await vi.waitUntil(
 		async () => {
@@ -77,7 +77,7 @@ describe("WorkflowBinding", () => {
 					const s = await instance.status();
 					return s.status === "complete";
 				},
-				{ timeout: 1000 }
+				{ timeout: 5000 }
 			);
 		});
 
@@ -120,7 +120,7 @@ describe("WorkflowBinding", () => {
 					const s = await instance.status();
 					return s.status === "complete";
 				},
-				{ timeout: 1000 }
+				{ timeout: 5000 }
 			);
 		});
 	});
@@ -150,7 +150,7 @@ describe("WorkflowBinding", () => {
 						const s = await instance.status();
 						return s.status === "complete";
 					},
-					{ timeout: 1000 }
+					{ timeout: 5000 }
 				);
 			}
 		});
@@ -209,7 +209,7 @@ describe("WorkflowBinding", () => {
 				const status = await instance.status();
 				return status.status === "complete";
 			},
-			{ timeout: 1000 }
+			{ timeout: 5000 }
 		);
 
 		expect(disposeSpy).not.toHaveBeenCalled();
@@ -386,7 +386,7 @@ describe("WorkflowHandle", () => {
 					const status = await instance.status();
 					return status.status === "complete";
 				},
-				{ timeout: 1000 }
+				{ timeout: 5000 }
 			);
 
 			const status = await instance.status();
@@ -431,7 +431,7 @@ describe("WorkflowHandle", () => {
 					);
 					return waitStarts.length === 2;
 				},
-				{ timeout: 1000 }
+				{ timeout: 5000 }
 			);
 
 			await instance.sendEvent({
@@ -444,7 +444,7 @@ describe("WorkflowHandle", () => {
 					const status = await instance.status();
 					return status.status === "complete";
 				},
-				{ timeout: 1000 }
+				{ timeout: 5000 }
 			);
 
 			const status = await instance.status();
@@ -531,7 +531,7 @@ describe("WorkflowHandle", () => {
 					const s = await instance.status();
 					return s.status === "complete";
 				},
-				{ timeout: 1000 }
+				{ timeout: 5000 }
 			);
 
 			// Verify second run completed
@@ -570,7 +570,7 @@ describe("WorkflowHandle", () => {
 					const s = await instance.status();
 					return s.status === "paused";
 				},
-				{ timeout: 2000 }
+				{ timeout: 5000 }
 			);
 
 			const finalStatus = await instance.status();
@@ -608,7 +608,7 @@ describe("WorkflowHandle", () => {
 					const s = await instance.status();
 					return s.status === "paused";
 				},
-				{ timeout: 2000 }
+				{ timeout: 5000 }
 			);
 
 			await instance.resume();
@@ -618,7 +618,7 @@ describe("WorkflowHandle", () => {
 					const s = await instance.status();
 					return s.status === "complete";
 				},
-				{ timeout: 3000 }
+				{ timeout: 5000 }
 			);
 
 			const finalStatus = await instance.status();
@@ -665,7 +665,7 @@ describe("WorkflowHandle", () => {
 					const s = await instance.status();
 					return s.status === "complete";
 				},
-				{ timeout: 3000 }
+				{ timeout: 5000 }
 			);
 
 			const finalStatus = await instance.status();

@@ -1,5 +1,28 @@
 # @cloudflare/pages-shared
 
+## 0.13.127
+
+### Patch Changes
+
+- Updated dependencies [[`8fec8b8`](https://github.com/cloudflare/workers-sdk/commit/8fec8b85e3a22289d85cf13eb6659ec3c5fb917a), [`2f3d7b9`](https://github.com/cloudflare/workers-sdk/commit/2f3d7b9894b137e011f8ade835cb826de3846c91)]:
+  - miniflare@4.20260421.0
+
+## 0.13.126
+
+### Patch Changes
+
+- [#12705](https://github.com/cloudflare/workers-sdk/pull/12705) [`7329b3f`](https://github.com/cloudflare/workers-sdk/commit/7329b3f1ba11d69ff242e0647d1de6f436b30082) Thanks [@roli-lpci](https://github.com/roli-lpci)! - Replace `glob` with `tinyglobby` in build tooling. Remove unused `glob` dependency from pages-shared.
+
+- Updated dependencies [[`4a9ba90`](https://github.com/cloudflare/workers-sdk/commit/4a9ba90b3f64e94da90343f2694d42f78777e4b7), [`b35617b`](https://github.com/cloudflare/workers-sdk/commit/b35617b32456b742f716e2b2b0fa04839dd19a9e), [`8ca78bb`](https://github.com/cloudflare/workers-sdk/commit/8ca78bba8b8079e80bee07259a455b57b70a68fc), [`b6e1351`](https://github.com/cloudflare/workers-sdk/commit/b6e13513ffbb6012c8d9829906aaeb23172334df), [`d8314c6`](https://github.com/cloudflare/workers-sdk/commit/d8314c64ce25a1f3d8a2c13c3d0c286874ec5560), [`7f50300`](https://github.com/cloudflare/workers-sdk/commit/7f50300ad86c7f180ae3a8ff80ac83783b2416a7), [`4fda685`](https://github.com/cloudflare/workers-sdk/commit/4fda685f8074c7cec3af927cae3faeb58c33c3cd), [`be5e6a0`](https://github.com/cloudflare/workers-sdk/commit/be5e6a0c4421db36277736f8621346747f52f327), [`e456952`](https://github.com/cloudflare/workers-sdk/commit/e456952b46fccdb010730dbd91be332ee92f1e3d), [`50bf819`](https://github.com/cloudflare/workers-sdk/commit/50bf819ba8cc7731e9a45c277d0aea7434d8f315), [`4eb1da9`](https://github.com/cloudflare/workers-sdk/commit/4eb1da9b24247a10a031ecced2cc829243024f84), [`8ca78bb`](https://github.com/cloudflare/workers-sdk/commit/8ca78bba8b8079e80bee07259a455b57b70a68fc), [`266c418`](https://github.com/cloudflare/workers-sdk/commit/266c418138f4ab53ea662fa45d3e66d38fdf0d52)]:
+  - miniflare@4.20260420.0
+
+## 0.13.125
+
+### Patch Changes
+
+- Updated dependencies [[`854d66c`](https://github.com/cloudflare/workers-sdk/commit/854d66c30428cb3fe9ad8629089d9307c33d8b61), [`6f63eaa`](https://github.com/cloudflare/workers-sdk/commit/6f63eaa8931d2a33cd0fce95f88cc0dcff998d85), [`aef9825`](https://github.com/cloudflare/workers-sdk/commit/aef9825350e0da3f50231deb4892f1747f37cb66), [`eaaa728`](https://github.com/cloudflare/workers-sdk/commit/eaaa72839a4f7872766597a5467db769c5d50a97), [`58292f6`](https://github.com/cloudflare/workers-sdk/commit/58292f6957819a3e4a0b0917558b0bf9925d08a8), [`5e5bbc1`](https://github.com/cloudflare/workers-sdk/commit/5e5bbc1026b1219e4e9ec36951ed7d5b4188d5a2), [`d5ff5a4`](https://github.com/cloudflare/workers-sdk/commit/d5ff5a4699955bc52733e759f68d762aef00c641), [`89c7829`](https://github.com/cloudflare/workers-sdk/commit/89c782964deb6baf1fa88075a3225726e620560d)]:
+  - miniflare@4.20260415.0
+
 ## 0.13.124
 
 ### Patch Changes

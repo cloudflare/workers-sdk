@@ -1,5 +1,41 @@
 # @cloudflare/vite-plugin
 
+## 1.33.1
+
+### Patch Changes
+
+- Updated dependencies [[`8fec8b8`](https://github.com/cloudflare/workers-sdk/commit/8fec8b85e3a22289d85cf13eb6659ec3c5fb917a), [`2f3d7b9`](https://github.com/cloudflare/workers-sdk/commit/2f3d7b9894b137e011f8ade835cb826de3846c91), [`a610749`](https://github.com/cloudflare/workers-sdk/commit/a61074978584850774ca569a27c342c87adfba6b)]:
+  - miniflare@4.20260421.0
+  - wrangler@4.84.1
+
+## 1.33.0
+
+### Minor Changes
+
+- [#12600](https://github.com/cloudflare/workers-sdk/pull/12600) [`50bf819`](https://github.com/cloudflare/workers-sdk/commit/50bf819ba8cc7731e9a45c277d0aea7434d8f315) Thanks [@penalosa](https://github.com/penalosa)! - Use `workerd`'s debug port to power cross-process service bindings, Durable Objects, and tail workers via the dev registry. This enables Durable Object RPC via the dev registry, and is an overall stability improvement.
+
+### Patch Changes
+
+- [#13587](https://github.com/cloudflare/workers-sdk/pull/13587) [`fdb32ca`](https://github.com/cloudflare/workers-sdk/commit/fdb32ca32c8e93b8e3184c65ef5e1a10f0601ce1) Thanks [@vimtor](https://github.com/vimtor)! - Allow internal Wrangler config path overrides via env
+
+  `@cloudflare/vite-plugin` now checks `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH` when `configPath` is not set explicitly. This lets integrators provide generated Wrangler configs outside the project root without requiring users to thread `configPath` through framework config.
+
+- Updated dependencies [[`05f4443`](https://github.com/cloudflare/workers-sdk/commit/05f4443aa581d3f9095e2b1479672557d27e0603), [`4a9ba90`](https://github.com/cloudflare/workers-sdk/commit/4a9ba90b3f64e94da90343f2694d42f78777e4b7), [`d8c895a`](https://github.com/cloudflare/workers-sdk/commit/d8c895a9e97af52a25721cc08e9c5445986e0845), [`b35617b`](https://github.com/cloudflare/workers-sdk/commit/b35617b32456b742f716e2b2b0fa04839dd19a9e), [`7dc0433`](https://github.com/cloudflare/workers-sdk/commit/7dc043315272df2479c17ad204c379515dcc83e8), [`8ca78bb`](https://github.com/cloudflare/workers-sdk/commit/8ca78bba8b8079e80bee07259a455b57b70a68fc), [`b6e1351`](https://github.com/cloudflare/workers-sdk/commit/b6e13513ffbb6012c8d9829906aaeb23172334df), [`d8314c6`](https://github.com/cloudflare/workers-sdk/commit/d8314c64ce25a1f3d8a2c13c3d0c286874ec5560), [`b35617b`](https://github.com/cloudflare/workers-sdk/commit/b35617b32456b742f716e2b2b0fa04839dd19a9e), [`7f50300`](https://github.com/cloudflare/workers-sdk/commit/7f50300ad86c7f180ae3a8ff80ac83783b2416a7), [`4fda685`](https://github.com/cloudflare/workers-sdk/commit/4fda685f8074c7cec3af927cae3faeb58c33c3cd), [`be5e6a0`](https://github.com/cloudflare/workers-sdk/commit/be5e6a0c4421db36277736f8621346747f52f327), [`e456952`](https://github.com/cloudflare/workers-sdk/commit/e456952b46fccdb010730dbd91be332ee92f1e3d), [`59eec63`](https://github.com/cloudflare/workers-sdk/commit/59eec634e4611392a5eb273079d73bf6417cd8bc), [`50bf819`](https://github.com/cloudflare/workers-sdk/commit/50bf819ba8cc7731e9a45c277d0aea7434d8f315), [`cc1413a`](https://github.com/cloudflare/workers-sdk/commit/cc1413ae661e688e93406c3e252737f07d1e8cce), [`d0a9d1c`](https://github.com/cloudflare/workers-sdk/commit/d0a9d1c8d2123bd2ca49a963d11c7d2417b97de2), [`4eb1da9`](https://github.com/cloudflare/workers-sdk/commit/4eb1da9b24247a10a031ecced2cc829243024f84), [`8ca78bb`](https://github.com/cloudflare/workers-sdk/commit/8ca78bba8b8079e80bee07259a455b57b70a68fc), [`266c418`](https://github.com/cloudflare/workers-sdk/commit/266c418138f4ab53ea662fa45d3e66d38fdf0d52), [`6d887db`](https://github.com/cloudflare/workers-sdk/commit/6d887db1133595a5eae88cc95dac0935113d8674), [`5716d69`](https://github.com/cloudflare/workers-sdk/commit/5716d69b7988c111f3151d9fadbc6c717b6bb8c1)]:
+  - wrangler@4.84.0
+  - miniflare@4.20260420.0
+
+## 1.32.3
+
+### Patch Changes
+
+- [#13427](https://github.com/cloudflare/workers-sdk/pull/13427) [`c4deb1d`](https://github.com/cloudflare/workers-sdk/commit/c4deb1da6d8cdad1f928456a0f22cbe4c3ff0fd0) Thanks [@edmundhung](https://github.com/edmundhung)! - Harden file serving for Vite dev
+
+  The Vite plugin now includes Wrangler config files, Vite config files, and `.wrangler` state files in `server.fs.deny` so they cannot be fetched directly from the Vite dev server.
+
+- Updated dependencies [[`854d66c`](https://github.com/cloudflare/workers-sdk/commit/854d66c30428cb3fe9ad8629089d9307c33d8b61), [`6f63eaa`](https://github.com/cloudflare/workers-sdk/commit/6f63eaa8931d2a33cd0fce95f88cc0dcff998d85), [`aef9825`](https://github.com/cloudflare/workers-sdk/commit/aef9825350e0da3f50231deb4892f1747f37cb66), [`eaaa728`](https://github.com/cloudflare/workers-sdk/commit/eaaa72839a4f7872766597a5467db769c5d50a97), [`58292f6`](https://github.com/cloudflare/workers-sdk/commit/58292f6957819a3e4a0b0917558b0bf9925d08a8), [`5e5bbc1`](https://github.com/cloudflare/workers-sdk/commit/5e5bbc1026b1219e4e9ec36951ed7d5b4188d5a2), [`d5ff5a4`](https://github.com/cloudflare/workers-sdk/commit/d5ff5a4699955bc52733e759f68d762aef00c641), [`07a918c`](https://github.com/cloudflare/workers-sdk/commit/07a918c2638de1483468bcd01c829dad0a9c02e8), [`89c7829`](https://github.com/cloudflare/workers-sdk/commit/89c782964deb6baf1fa88075a3225726e620560d), [`60565dd`](https://github.com/cloudflare/workers-sdk/commit/60565dd1ac984b68319c087ea491171c3d64ecb2), [`6cbcdeb`](https://github.com/cloudflare/workers-sdk/commit/6cbcdeb65559a3fdf776210f43846fd3f786181a), [`90aee27`](https://github.com/cloudflare/workers-sdk/commit/90aee27f67fd148b43d1447a321df1e26f0438ec)]:
+  - miniflare@4.20260415.0
+  - wrangler@4.83.0
+
 ## 1.32.2
 
 ### Patch Changes

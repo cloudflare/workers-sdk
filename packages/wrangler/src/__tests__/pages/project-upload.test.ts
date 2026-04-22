@@ -429,6 +429,7 @@ describe("pages project upload", () => {
 		writeFileSync("logo.js", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -549,6 +550,7 @@ describe("pages project upload", () => {
 		}
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -608,6 +610,7 @@ describe("pages project upload", () => {
 		writeFileSync(".well-known/foobar", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"

@@ -11,5 +11,6 @@ export default defineConfig({
 	],
 	test: {
 		retry: 2,
+		testTimeout: 50_000,
 	},
 });

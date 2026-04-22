@@ -95,6 +95,7 @@ export function printBindings(
 		"secrets_store_secret",
 		bindings
 	);
+	const artifacts = extractBindingsOfType("artifacts", bindings);
 	const services = extractBindingsOfType("service", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
 	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
@@ -170,12 +171,7 @@ export function printBindings(
 						const registryDefinition = context.registry?.[script_name];
 
 						hasConnectionStatus = true;
-						if (
-							registryDefinition &&
-							registryDefinition.durableObjects.some(
-								(d) => d.className === class_name
-							)
-						) {
+						if (registryDefinition && registryDefinition.debugPortAddress) {
 							value += `, defined in ${script_name}`;
 							mode = getMode({ isSimulatedLocally: true, connected: true });
 						} else {
@@ -446,6 +442,19 @@ export function printBindings(
 		);
 	}
 
+	if (artifacts.length > 0) {
+		output.push(
+			...artifacts.map(({ binding, namespace }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("artifacts"),
+					value: namespace,
+					mode: getMode({ isSimulatedLocally: false }),
+				};
+			})
+		);
+	}
+
 	if (unsafe_hello_world.length > 0) {
 		output.push(
 			...unsafe_hello_world.map(({ binding, enable_timer }) => {
@@ -496,11 +505,7 @@ export function printBindings(
 						const registryDefinition = context.registry?.[service];
 						hasConnectionStatus = true;
 
-						if (
-							registryDefinition &&
-							(!entrypoint ||
-								registryDefinition.entrypointAddresses?.[entrypoint])
-						) {
+						if (registryDefinition && registryDefinition.debugPortAddress) {
 							mode = getMode({ isSimulatedLocally: true, connected: true });
 						} else {
 							mode = getMode({ isSimulatedLocally: true, connected: false });

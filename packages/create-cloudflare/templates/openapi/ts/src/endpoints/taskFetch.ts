@@ -1,4 +1,4 @@
-import { Bool, OpenAPIRoute, Str } from "chanfana";
+import { NotFoundException, OpenAPIRoute } from "chanfana";
 import { z } from "zod";
 import { type AppContext, Task } from "../types";
 
@@ -8,7 +8,7 @@ export class TaskFetch extends OpenAPIRoute {
 		summary: "Get a single Task by slug",
 		request: {
 			params: z.object({
-				taskSlug: Str({ description: "Task slug" }),
+				taskSlug: z.string().describe("Task slug"),
 			}),
 		},
 		responses: {
@@ -17,25 +17,8 @@ export class TaskFetch extends OpenAPIRoute {
 				content: {
 					"application/json": {
 						schema: z.object({
-							series: z.object({
-								success: Bool(),
-								result: z.object({
-									task: Task,
-								}),
-							}),
-						}),
-					},
-				},
-			},
-			"404": {
-				description: "Task not found",
-				content: {
-					"application/json": {
-						schema: z.object({
-							series: z.object({
-								success: Bool(),
-								error: Str(),
-							}),
+							success: z.boolean(),
+							task: Task,
 						}),
 					},
 				},
@@ -54,17 +37,8 @@ export class TaskFetch extends OpenAPIRoute {
 
 		const exists = true;
 
-		// @ts-ignore: check if the object exists
-		if (exists === false) {
-			return Response.json(
-				{
-					success: false,
-					error: "Object not found",
-				},
-				{
-					status: 404,
-				},
-			);
+		if (!exists) {
+			throw new NotFoundException();
 		}
 
 		return {

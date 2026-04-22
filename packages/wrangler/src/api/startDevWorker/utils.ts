@@ -16,6 +16,13 @@ import type {
 
 export function assertNever(_value: never) {}
 
+/**
+ * When to proactively refresh the preview token.
+ *
+ * Preview tokens expire after 1 hour (hardcoded in the Workers control plane), so we retry after 50 mins.
+ */
+export const PREVIEW_TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000;
+
 export type MaybePromise<T> = T | Promise<T>;
 export type DeferredPromise<T> = {
 	promise: Promise<T>;
@@ -343,6 +350,12 @@ export function convertConfigToBindings(
 			case "secrets_store_secrets": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "secrets_store_secret", ...x };
+				}
+				break;
+			}
+			case "artifacts": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "artifacts", ...x };
 				}
 				break;
 			}

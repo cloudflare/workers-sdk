@@ -121,14 +121,14 @@ export class HyperdriveProxyController {
 	}
 
 	/** Disposes of the proxy servers when shutting down the worker.*/
-	async dispose(): Promise<void> {
-		await Promise.allSettled(
-			Array.from(this.#servers.values()).map((server) => {
-				new Promise<void>((resolve, reject) => {
-					server.close((err) => (err ? reject(err) : resolve()));
-				});
-			})
-		);
+	dispose(): void {
+		// Stop accepting new connections on each proxy server. We don't await
+		// server.close() because net.Server waits for all existing connections
+		// to end before calling the callback, and lingering TCP sockets (e.g.
+		// from in-progress TLS negotiation) could block dispose indefinitely.
+		for (const server of this.#servers.values()) {
+			server.close();
+		}
 		this.#servers.clear();
 	}
 }

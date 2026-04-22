@@ -127,7 +127,7 @@ describe("resource provisioning", () => {
 			expect,
 		}) => {
 			mockGetSettings();
-			mockListKVNamespacesRequest({
+			mockListKVNamespacesRequest(expect, {
 				title: "test-kv",
 				id: "existing-kv-id",
 			});
@@ -358,7 +358,7 @@ describe("resource provisioning", () => {
 			expect,
 		}) => {
 			mockGetSettings();
-			mockListKVNamespacesRequest({
+			mockListKVNamespacesRequest(expect, {
 				title: "test-kv",
 				id: "existing-kv-id",
 			});
@@ -394,7 +394,7 @@ describe("resource provisioning", () => {
 				text: "Enter a name for your new KV Namespace",
 				result: "new-kv",
 			});
-			mockCreateKVNamespace({
+			mockCreateKVNamespace(expect, {
 				assertTitle: "new-kv",
 				resultId: "new-kv-id",
 			});
@@ -521,7 +521,7 @@ describe("resource provisioning", () => {
 				d1_databases: [{ binding: "D1" }],
 			});
 			mockGetSettings();
-			mockListKVNamespacesRequest({
+			mockListKVNamespacesRequest(expect, {
 				title: "test-kv",
 				id: "existing-kv-id",
 			});
@@ -557,7 +557,7 @@ describe("resource provisioning", () => {
 				text: "Enter a name for your new KV Namespace",
 				result: "new-kv",
 			});
-			mockCreateKVNamespace({
+			mockCreateKVNamespace(expect, {
 				assertTitle: "new-kv",
 				resultId: "new-kv-id",
 			});
@@ -686,7 +686,7 @@ describe("resource provisioning", () => {
 				d1_databases: [{ binding: "D1" }],
 			});
 			mockGetSettings();
-			mockListKVNamespacesRequest({
+			mockListKVNamespacesRequest(expect, {
 				title: "test-kv",
 				id: "existing-kv-id",
 			});
@@ -713,12 +713,12 @@ describe("resource provisioning", () => {
 					);
 				})
 			);
-			mockCreateKVNamespace({
+			mockCreateKVNamespace(expect, {
 				assertTitle: "test-name-platform-kv",
 				resultId: "test-name-platform-kv-id",
 			});
 
-			mockCreateKVNamespace({
+			mockCreateKVNamespace(expect, {
 				assertTitle: "test-name-kv",
 				resultId: "test-name-kv-id",
 			});

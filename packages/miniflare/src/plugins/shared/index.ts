@@ -79,7 +79,9 @@ export interface PluginServicesOptions<
 	tmpPath: string;
 	defaultPersistRoot: string | undefined;
 	workerNames: string[];
+	loopbackHost: string;
 	loopbackPort: number;
+	publicUrl: string | undefined;
 	unsafeStickyBlobs: boolean;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)

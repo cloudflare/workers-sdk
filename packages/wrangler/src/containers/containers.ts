@@ -124,7 +124,7 @@ export async function infoCommand(
 export const containersInfoCommand = createCommand({
 	metadata: {
 		description: "Get information about a specific container",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
@@ -147,7 +147,7 @@ export const containersInfoCommand = createCommand({
 export const containersDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a container",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	args: {

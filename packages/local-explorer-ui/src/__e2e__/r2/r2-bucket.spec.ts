@@ -212,6 +212,45 @@ describe("R2 Bucket", () => {
 			await waitForText("images/");
 			await waitForText("documents/");
 		});
+
+		test("delimiter param persists when navigating to an object and back", async ({
+			expect,
+		}) => {
+			await navigateToR2Bucket("my-bucket");
+			await waitForTableRows(1);
+
+			// Switch to ungrouped mode (sets delimiter=false in URL)
+			await page.getByRole("button", { name: /Grouped|Ungrouped/ }).click();
+			await page
+				.getByRole("menuitem", { name: "Ungrouped", exact: true })
+				.click();
+			await waitForTableRows(1);
+			await waitForText("images/logo.svg");
+
+			// Navigate to an object
+			const objectLink = page
+				.getByRole("link", { name: "images/logo.svg" })
+				.first();
+			await objectLink.click();
+			await waitForText("Object Details");
+
+			// URL should still contain delimiter=false
+			expect(page.url()).toContain("delimiter=false");
+
+			// Navigate back via the bucket breadcrumb
+			const bucketBreadcrumb = page
+				.locator('nav[aria-label="breadcrumb"]')
+				.getByRole("link", { name: "my-bucket" })
+				.first();
+			await bucketBreadcrumb.click();
+			await waitForTableRows(1);
+
+			// Should still be in ungrouped mode — full keys visible, no directories
+			await waitForText("images/logo.svg");
+
+			// The toolbar button should still show "Ungrouped"
+			await waitForText("Ungrouped");
+		});
 	});
 
 	describe("object detail page", () => {
@@ -531,6 +570,57 @@ describe("R2 Bucket", () => {
 				.locator("thead")
 				.getByRole("button", { name: "Bulk actions" });
 			expect(await bulkActionsButton.isDisabled()).toBe(false);
+		});
+
+		test("shift-click selects a contiguous range of rows", async ({
+			expect,
+		}) => {
+			await navigateToR2Bucket("my-bucket");
+			await waitForTableRows(4);
+
+			const checkboxes = page.locator("tbody tr").getByRole("checkbox");
+			const count = await checkboxes.count();
+
+			expect(count).toBeGreaterThanOrEqual(4);
+
+			await checkboxes.nth(0).click();
+			expect(await checkboxes.nth(0).isChecked()).toBe(true);
+
+			// Shift-click the fourth row checkbox
+			await checkboxes.nth(3).click({ modifiers: ["Shift"] });
+
+			expect(await checkboxes.nth(0).isChecked()).toBe(true);
+			expect(await checkboxes.nth(1).isChecked()).toBe(true);
+			expect(await checkboxes.nth(2).isChecked()).toBe(true);
+			expect(await checkboxes.nth(3).isChecked()).toBe(true);
+		});
+
+		test("shift-click deselects a contiguous range of rows", async ({
+			expect,
+		}) => {
+			await navigateToR2Bucket("my-bucket");
+			await waitForTableRows(4);
+
+			const checkboxes = page.locator("tbody tr").getByRole("checkbox");
+			const count = await checkboxes.count();
+			expect(count).toBeGreaterThanOrEqual(4);
+
+			// Click the first row (sets anchor), then shift-click the fourth to select range
+			await checkboxes.nth(0).click();
+			await checkboxes.nth(3).click({ modifiers: ["Shift"] });
+
+			expect(await checkboxes.nth(0).isChecked()).toBe(true);
+			expect(await checkboxes.nth(1).isChecked()).toBe(true);
+			expect(await checkboxes.nth(2).isChecked()).toBe(true);
+			expect(await checkboxes.nth(3).isChecked()).toBe(true);
+
+			// Shift-click the fourth row again to deselect the range
+			await checkboxes.nth(3).click({ modifiers: ["Shift"] });
+
+			expect(await checkboxes.nth(0).isChecked()).toBe(false);
+			expect(await checkboxes.nth(1).isChecked()).toBe(false);
+			expect(await checkboxes.nth(2).isChecked()).toBe(false);
+			expect(await checkboxes.nth(3).isChecked()).toBe(false);
 		});
 	});
 
