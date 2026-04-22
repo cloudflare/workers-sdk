@@ -107,7 +107,8 @@ export function isUserTriggeredTerminate(e: unknown): boolean {
 }
 
 function getCompatFlag(name: string): boolean {
-	return (globalThis as Record<string, unknown>).Cloudflare?.compatibilityFlags?.[name] ?? false;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- safe globalThis access for environments where cloudflare global may not exist
+	return (globalThis as any).Cloudflare?.compatibilityFlags?.[name] ?? false;
 }
 
 export function shouldPreserveNonRetryableError(): boolean {
