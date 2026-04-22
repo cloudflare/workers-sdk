@@ -1,3 +1,4 @@
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { getNamespace } from "./client";
@@ -25,7 +26,18 @@ export const agentMemoryNamespaceGetCommand = createCommand({
 	},
 	positionalArgs: ["namespace_name"],
 	async handler({ namespace_name, json }, { config }) {
-		const ns = await getNamespace(config, namespace_name);
+		let ns;
+		try {
+			ns = await getNamespace(config, namespace_name);
+		} catch (e) {
+			if (e instanceof APIError && e.status === 404) {
+				throw new UserError(
+					`Agent Memory namespace "${namespace_name}" not found. Use 'wrangler agent-memory namespace list' to see available namespaces.`,
+					{ telemetryMessage: "Agent Memory namespace not found" }
+				);
+			}
+			throw e;
+		}
 
 		if (json) {
 			logger.json(ns);

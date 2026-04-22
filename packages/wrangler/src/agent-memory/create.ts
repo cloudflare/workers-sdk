@@ -1,3 +1,4 @@
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { createNamespace } from "./client";
@@ -26,7 +27,32 @@ export const agentMemoryNamespaceCreateCommand = createCommand({
 	},
 	positionalArgs: ["namespace"],
 	async handler({ namespace, json }, { config }) {
-		const result = await createNamespace(config, namespace);
+		let result;
+		try {
+			result = await createNamespace(config, namespace);
+		} catch (e) {
+			// Surface server-side validation / conflict errors (e.g. invalid name,
+			// duplicate namespace) as UserErrors so they are not reported to Sentry
+			// and the user sees the underlying message from the API.
+			if (
+				e instanceof APIError &&
+				e.status !== undefined &&
+				[400, 409, 422].includes(e.status)
+			) {
+				const details = e.notes
+					.map((n) => n.text)
+					.filter((t) => t.length > 0)
+					.join("\n");
+				throw new UserError(
+					`Failed to create Agent Memory namespace "${namespace}".${details ? `\n${details}` : ""}`,
+					{
+						telemetryMessage:
+							"Agent Memory namespace create failed with client error",
+					}
+				);
+			}
+			throw e;
+		}
 
 		if (json) {
 			logger.json(result);

@@ -1,3 +1,4 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, it } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
@@ -304,5 +305,120 @@ describe("agent-memory namespace commands", () => {
 
 		expect(std.out).toContain(`✅ Deleted Agent Memory namespace`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	// ── user-caused errors ────────────────────────────────────────────────────
+	// These are surfaced as UserErrors so they are not reported to Sentry.
+
+	it("should throw a UserError when `get` hits a 404", async ({ expect }) => {
+		msw.use(
+			http.get(
+				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.name}`,
+				() => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 1000, message: "namespace not found" },
+						]),
+						{ status: 404 }
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		await expect(
+			runWrangler(`agent-memory namespace get ${TEST_NAMESPACE.name}`)
+		).rejects.toThrow(UserError);
+		expect(std.err).toContain(
+			`Agent Memory namespace "${TEST_NAMESPACE.name}" not found`
+		);
+	});
+
+	it("should throw a UserError when `delete` hits a 404", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.delete(
+				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.name}`,
+				() => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 1000, message: "namespace not found" },
+						]),
+						{ status: 404 }
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		await expect(
+			runWrangler(
+				`agent-memory namespace delete ${TEST_NAMESPACE.name} --force`
+			)
+		).rejects.toThrow(UserError);
+		expect(std.err).toContain(
+			`Agent Memory namespace "${TEST_NAMESPACE.name}" not found`
+		);
+	});
+
+	it("should throw a UserError when `create` receives a 400 (invalid name)", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/agentmemory/namespaces",
+				() => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: 1001,
+								message:
+									"namespace name must be 1-32 characters, alphanumeric with embedded hyphens",
+							},
+						]),
+						{ status: 400 }
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		await expect(
+			runWrangler("agent-memory namespace create bad_name!")
+		).rejects.toThrow(UserError);
+		expect(std.err).toContain(
+			`Failed to create Agent Memory namespace "bad_name!"`
+		);
+		expect(std.err).toContain(
+			"namespace name must be 1-32 characters, alphanumeric with embedded hyphens"
+		);
+	});
+
+	it("should throw a UserError when `create` receives a 409 (duplicate)", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/agentmemory/namespaces",
+				() => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 1002, message: "namespace already exists" },
+						]),
+						{ status: 409 }
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		await expect(
+			runWrangler(`agent-memory namespace create ${TEST_NAMESPACE.name}`)
+		).rejects.toThrow(UserError);
+		expect(std.err).toContain(
+			`Failed to create Agent Memory namespace "${TEST_NAMESPACE.name}"`
+		);
+		expect(std.err).toContain("namespace already exists");
 	});
 });
