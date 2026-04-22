@@ -1,11 +1,19 @@
 import {
 	Badge,
+	Button,
 	CloudflareLogo,
 	cn,
+	Dialog,
 	Sidebar,
+	useKumoToastManager,
 	useSidebar,
 } from "@cloudflare/kumo";
-import { MonitorIcon, MoonIcon, SunIcon } from "@phosphor-icons/react";
+import {
+	MonitorIcon,
+	MoonIcon,
+	SunIcon,
+	TrashIcon,
+} from "@phosphor-icons/react";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import D1Icon from "../assets/icons/d1.svg?react";
@@ -13,6 +21,12 @@ import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
 import WorkflowsIcon from "../assets/icons/workflows.svg?react";
+import {
+	purgeD1Database,
+	purgeKvNamespace,
+	purgeR2Bucket,
+	purgeWorkflow,
+} from "../utils/purge";
 import { loadGroupState, saveGroupState } from "../utils/sidebar-state";
 import { getNextThemeMode } from "../utils/theme-state";
 import { SidebarGroupPopup } from "./SidebarGroupPopup";
@@ -54,6 +68,14 @@ interface SidebarProps {
 	workers: LocalExplorerWorker[];
 }
 
+type PurgeKind = "d1" | "kv" | "r2" | "workflows";
+
+interface PurgeTarget {
+	id: string;
+	kind: PurgeKind;
+	label: string;
+}
+
 export function AppSidebar({
 	bindings,
 	currentPath,
@@ -65,8 +87,11 @@ export function AppSidebar({
 }: SidebarProps) {
 	const router = useRouter();
 	const sidebar = useSidebar();
+	const toast = useKumoToastManager();
 
 	const [groupOpen, setGroupOpen] = useState<SidebarGroupState>(loadGroupState);
+	const [purgeTarget, setPurgeTarget] = useState<PurgeTarget | null>(null);
+	const [purging, setPurging] = useState<boolean>(false);
 
 	const handleGroupOpenChange = useCallback(
 		(groupId: SidebarGroupId, open: boolean) => {
@@ -78,6 +103,63 @@ export function AppSidebar({
 		},
 		[]
 	);
+
+	const handlePurgeConfirm = useCallback(async (): Promise<void> => {
+		if (!purgeTarget) {
+			return;
+		}
+
+		try {
+			setPurging(true);
+
+			switch (purgeTarget.kind) {
+				case "kv": {
+					const count = await purgeKvNamespace(purgeTarget.id);
+					toast.add({
+						title: "Namespace purged",
+						description: `Deleted ${count} key${count === 1 ? "" : "s"}`,
+					});
+					break;
+				}
+				case "r2": {
+					const count = await purgeR2Bucket(purgeTarget.id);
+					toast.add({
+						title: "Bucket purged",
+						description: `Deleted ${count} object${count === 1 ? "" : "s"}`,
+					});
+					break;
+				}
+				case "d1": {
+					const count = await purgeD1Database(purgeTarget.id);
+					toast.add({
+						title: "Database purged",
+						description: `Dropped ${count} object${count === 1 ? "" : "s"}`,
+					});
+					break;
+				}
+				case "workflows": {
+					await purgeWorkflow(purgeTarget.id);
+					toast.add({
+						title: "Workflow instances deleted",
+						description: `Purged all instances in ${purgeTarget.label}`,
+					});
+					break;
+				}
+			}
+
+			setPurgeTarget(null);
+			await router.invalidate();
+		} catch (error) {
+			toast.add({
+				title: "Purge failed",
+				description:
+					error instanceof Error ? error.message : "Failed to purge resource",
+				variant: "error",
+			});
+		} finally {
+			setPurging(false);
+		}
+	}, [purgeTarget, router, toast]);
 
 	const showWorkerSelector = workers.length > 1;
 	const workerSearch = workers.length > 1 ? { worker: selectedWorker } : {};
@@ -97,6 +179,11 @@ export function AppSidebar({
 				id: db.id,
 				isActive: currentPath === `/d1/${db.id}`,
 				label: db.bindingName,
+				purge: {
+					id: db.id,
+					kind: "d1" as const,
+					label: db.bindingName,
+				},
 				link: {
 					params: { databaseId: db.id },
 					search: { table: undefined, ...workerSearch },
@@ -131,6 +218,11 @@ export function AppSidebar({
 				id: ns.id,
 				isActive: currentPath === `/kv/${ns.id}`,
 				label: ns.bindingName,
+				purge: {
+					id: ns.id,
+					kind: "kv" as const,
+					label: ns.bindingName,
+				},
 				link: {
 					params: { namespaceId: ns.id },
 					search: workerSearch,
@@ -149,6 +241,11 @@ export function AppSidebar({
 					currentPath === `/r2/${bucket.id}` ||
 					currentPath.startsWith(`/r2/${bucket.id}/`),
 				label: bucket.bindingName,
+				purge: {
+					id: bucket.id,
+					kind: "r2" as const,
+					label: bucket.bindingName,
+				},
 				link: {
 					params: { bucketName: bucket.id },
 					search: workerSearch,
@@ -167,6 +264,11 @@ export function AppSidebar({
 					currentPath === `/workflows/${wf.id}` ||
 					currentPath.startsWith(`/workflows/${wf.id}/`),
 				label: wf.bindingName,
+				purge: {
+					id: wf.id,
+					kind: "workflows" as const,
+					label: wf.bindingName,
+				},
 				link: {
 					params: { workflowName: wf.id },
 					search: workerSearch,
@@ -183,6 +285,7 @@ export function AppSidebar({
 			id: string;
 			isActive: boolean;
 			label: string;
+			purge?: PurgeTarget;
 			link: {
 				params: object;
 				search?: object;
@@ -265,16 +368,48 @@ export function AppSidebar({
 												{group.emptyLabel}
 											</div>
 										) : (
-											group.items.map((item) => (
-												<Sidebar.MenuSubButton
-													active={item.isActive}
-													className="cursor-pointer"
-													href={router.buildLocation(item.link).href}
-													key={item.id}
-												>
-													{item.label}
-												</Sidebar.MenuSubButton>
-											))
+											group.items.map((item) => {
+												const itemPurgeTarget =
+													"purge" in item ? item.purge : undefined;
+
+												return (
+													<Sidebar.MenuSubItem
+														className="group/item flex items-center gap-1 pr-1"
+														key={item.id}
+													>
+														<Sidebar.MenuSubButton
+															active={item.isActive}
+															className="min-w-0 flex-1 cursor-pointer"
+															href={router.buildLocation(item.link).href}
+														>
+															<span className="truncate">{item.label}</span>
+														</Sidebar.MenuSubButton>
+
+														{itemPurgeTarget && (
+															<Button
+																aria-label={`Purge ${itemPurgeTarget.kind} ${itemPurgeTarget.id}`}
+																className={cn(
+																	"shrink-0 text-kumo-subtle transition-colors hover:bg-kumo-fill hover:text-kumo-danger focus-visible:opacity-100",
+																	item.isActive
+																		? "opacity-100"
+																		: "opacity-0 group-hover/item:opacity-100"
+																)}
+																data-testid={`purge-${itemPurgeTarget.kind}-${itemPurgeTarget.id}`}
+																onClick={(event) => {
+																	event.preventDefault();
+																	event.stopPropagation();
+																	setPurgeTarget(itemPurgeTarget);
+																}}
+																shape="square"
+																type="button"
+																variant="ghost"
+															>
+																<TrashIcon size={12} weight="bold" />
+															</Button>
+														)}
+													</Sidebar.MenuSubItem>
+												);
+											})
 										)}
 									</Sidebar.MenuSub>
 								</Sidebar.CollapsibleContent>
@@ -289,12 +424,55 @@ export function AppSidebar({
 								icon={<group.icon width={20} height={20} />}
 								items={group.items}
 								key={group.groupId}
+								onPurge={(target) => setPurgeTarget(target)}
 								title={group.title}
 							/>
 						))}
 					</Sidebar.MenuItem>
 				)}
 			</Sidebar.Content>
+
+			<Dialog.Root
+				onOpenChange={(open) => {
+					if (!open) {
+						setPurgeTarget(null);
+					}
+				}}
+				open={purgeTarget !== null}
+			>
+				<Dialog className="p-6">
+					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+					<Dialog.Title className="mb-4 text-lg font-semibold">
+						Purge Resource
+					</Dialog.Title>
+
+					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+					<Dialog.Description className="mb-2 text-kumo-subtle">
+						This will permanently delete all local state for &nbsp;&ldquo;
+						{purgeTarget?.label}&rdquo;. This cannot be undone.
+					</Dialog.Description>
+
+					<div className="mt-6 flex justify-end gap-2">
+						<Button
+							disabled={purging}
+							onClick={() => setPurgeTarget(null)}
+							type="button"
+						>
+							Cancel
+						</Button>
+						<Button
+							disabled={purging}
+							onClick={() => {
+								void handlePurgeConfirm();
+							}}
+							type="button"
+							variant="destructive"
+						>
+							{purging ? "Purging..." : "Purge"}
+						</Button>
+					</div>
+				</Dialog>
+			</Dialog.Root>
 
 			<Sidebar.Footer className="gap-1">
 				{(() => {

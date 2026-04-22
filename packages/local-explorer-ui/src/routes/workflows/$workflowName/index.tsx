@@ -5,7 +5,6 @@ import {
 	CaretUpDownIcon,
 	CheckCircleIcon,
 	CircleNotchIcon,
-	DotsThreeIcon,
 	ListIcon,
 	PaperPlaneTiltIcon,
 	PauseIcon,
@@ -28,7 +27,6 @@ import {
 import {
 	workflowsChangeInstanceStatus,
 	workflowsDeleteInstance,
-	workflowsDeleteWorkflow,
 	workflowsListInstances,
 	workflowsSendInstanceEvent,
 } from "../../../api";
@@ -485,10 +483,6 @@ function WorkflowInstancesView() {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 
-	const [deleteAllConfirmOpen, setDeleteAllConfirmOpen] =
-		useState<boolean>(false);
-	const [deletingAll, setDeletingAll] = useState<boolean>(false);
-	const [deleteAllError, setDeleteAllError] = useState<string | null>(null);
 	const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 	const [instances, setInstances] = useState<WorkflowsInstance[]>(
@@ -628,31 +622,6 @@ function WorkflowInstancesView() {
 		void fetchInstances(1, undefined, false, newStatus);
 	}
 
-	function handleDeleteAllOpenChange(open: boolean): void {
-		setDeleteAllConfirmOpen(open);
-		if (!open) {
-			setDeleteAllError(null);
-		}
-	}
-
-	async function handleDeleteAll(): Promise<void> {
-		setDeletingAll(true);
-		setDeleteAllError(null);
-		try {
-			await workflowsDeleteWorkflow({
-				path: { workflow_name: params.workflowName },
-			});
-			handleDeleteAllOpenChange(false);
-			void fetchInstances(1);
-		} catch (err) {
-			setDeleteAllError(
-				err instanceof Error ? err.message : "Failed to delete instances"
-			);
-		} finally {
-			setDeletingAll(false);
-		}
-	}
-
 	return (
 		<>
 			<Breadcrumbs
@@ -721,25 +690,6 @@ function WorkflowInstancesView() {
 					shape="square"
 					variant="secondary"
 				></Button>
-
-				<DropdownMenu>
-					<DropdownMenu.Trigger
-						render={
-							<Button aria-label="More actions" shape="square">
-								<DotsThreeIcon size={14} weight="bold" />
-							</Button>
-						}
-					/>
-					<DropdownMenu.Content align="end" sideOffset={4}>
-						<DropdownMenu.Item
-							className="flex cursor-pointer items-center gap-2 text-kumo-danger"
-							onClick={() => handleDeleteAllOpenChange(true)}
-						>
-							<TrashIcon />
-							<span>Delete all instances</span>
-						</DropdownMenu.Item>
-					</DropdownMenu.Content>
-				</DropdownMenu>
 			</Breadcrumbs>
 
 			<div className="px-8 py-6">
@@ -819,55 +769,6 @@ function WorkflowInstancesView() {
 					</div>
 				)}
 			</div>
-
-			{/* Delete all instances confirmation dialog */}
-			<Dialog.Root
-				open={deleteAllConfirmOpen}
-				onOpenChange={handleDeleteAllOpenChange}
-			>
-				<Dialog size="lg" className="w-lg">
-					<div className="border-b border-kumo-fill px-6 py-4">
-						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Title className="text-lg font-semibold text-kumo-default">
-							Delete all instances
-						</Dialog.Title>
-					</div>
-
-					<div className="px-6 py-5">
-						{deleteAllError && (
-							<div className="mb-4 rounded-lg border border-kumo-danger/20 bg-kumo-danger/8 p-3 text-sm text-kumo-danger">
-								{deleteAllError}
-							</div>
-						)}
-						<p className="text-sm text-kumo-subtle">
-							This will permanently delete all instances of{" "}
-							<span className="font-semibold text-kumo-default">
-								{params.workflowName}
-							</span>
-							. All instance data and persistence files will be removed. This
-							action cannot be undone.
-						</p>
-					</div>
-
-					<div className="flex justify-end gap-2 border-t border-kumo-fill px-6 py-4">
-						<Button
-							variant="secondary"
-							onClick={() => handleDeleteAllOpenChange(false)}
-							disabled={deletingAll}
-						>
-							Cancel
-						</Button>
-						<Button
-							variant="destructive"
-							disabled={deletingAll}
-							loading={deletingAll}
-							onClick={() => void handleDeleteAll()}
-						>
-							Delete
-						</Button>
-					</div>
-				</Dialog>
-			</Dialog.Root>
 
 			<CreateWorkflowInstanceDialog
 				onCreated={handleCreated}
