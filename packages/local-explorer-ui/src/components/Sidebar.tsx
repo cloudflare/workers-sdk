@@ -443,9 +443,7 @@ export function AppSidebar({
 				<Dialog className="p-6">
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 					<Dialog.Title className="mb-4 text-lg font-semibold">
-					<Dialog.Title className="mb-4 text-lg font-semibold">
 						Purge resource?
-					</Dialog.Title>
 					</Dialog.Title>
 
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
