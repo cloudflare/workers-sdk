@@ -21,3 +21,5 @@ To configure an `agent_memory` binding, add the following to your `wrangler.json
 ```
 
 Wrangler will automatically provision the namespace during deployment if it does not already exist. Type generation via `wrangler types` is also supported.
+
+This change also adds the `agentmemory:write` OAuth scope to Wrangler's default login scopes, so `wrangler login` can request the permissions needed to provision and manage Agent Memory namespaces.
