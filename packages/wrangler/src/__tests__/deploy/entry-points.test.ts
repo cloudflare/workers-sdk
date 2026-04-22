@@ -546,8 +546,8 @@ addEventListener('fetch', event => {});`
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("deploy ./index.js");
 
@@ -610,8 +610,8 @@ addEventListener('fetch', event => {});`
 			process.chdir("..");
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("deploy --config ./my-site/wrangler.toml");
 

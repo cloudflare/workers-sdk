@@ -1,5 +1,11 @@
 # @cloudflare/containers-shared
 
+## 0.14.0
+
+### Minor Changes
+
+- [#13571](https://github.com/cloudflare/workers-sdk/pull/13571) [`7dc0433`](https://github.com/cloudflare/workers-sdk/commit/7dc043315272df2479c17ad204c379515dcc83e8) Thanks [@must108](https://github.com/must108)! - Add regional and jurisdictional placement constraints for Containers. Users can now set `constraints.regions` and `constraints.jurisdiction` in wrangler config to control where containers run.
+
 ## 0.13.1
 
 ### Patch Changes

@@ -9,12 +9,12 @@ import {
 } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { Miniflare, Mutex } from "miniflare";
+import { buildPublicUrl, Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { getBinaryFileContents, unwrapHook } from "./utils";
+import { getBinaryFileContents } from "./utils";
 import type { RemoteProxySession } from "../remoteBindings";
 import type {
 	BundleCompleteEvent,
@@ -146,6 +146,14 @@ export async function convertToConfigBundle(
 		enableContainers: event.config.dev.enableContainers ?? true,
 		// Zone for CF-Worker header - extracted from routes/host configuration
 		zone: event.config.dev?.origin?.hostname,
+		sendMetrics: event.config.sendMetrics,
+		publicUrl: event.config.dev?.server?.port
+			? buildPublicUrl({
+					hostname: event.config.dev.server.hostname,
+					port: event.config.dev.server.port,
+					secure: event.config.dev.server.secure,
+				})
+			: undefined,
 	};
 }
 
@@ -208,12 +216,6 @@ export class LocalRuntimeController extends RuntimeController {
 
 				const remoteBindings = pickRemoteBindings(configBundle.bindings ?? {});
 
-				const auth =
-					Object.keys(remoteBindings).length === 0
-						? // If there are no remote bindings (this is a local only session) there's no need to get auth data
-							undefined
-						: await unwrapHook(data.config.dev.auth);
-
 				this.#remoteProxySessionData =
 					await maybeStartOrUpdateRemoteProxySession(
 						{
@@ -222,7 +224,10 @@ export class LocalRuntimeController extends RuntimeController {
 							bindings: remoteBindings,
 						},
 						this.#remoteProxySessionData ?? null,
-						auth
+						Object.keys(remoteBindings).length === 0
+							? // If there are no remote bindings (this is a local only session) there's no need to get auth data
+								undefined
+							: data.config.dev.auth
 					);
 			}
 

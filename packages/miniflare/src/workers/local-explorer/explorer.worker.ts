@@ -48,12 +48,14 @@ import {
 	listWorkflows,
 	sendWorkflowInstanceEvent,
 } from "./resources/workflows";
+import { telemetryMiddleware } from "./telemetry";
 import type {
 	BindingIdMap,
 	ExplorerWorkerOpts,
 } from "../../plugins/core/types";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { CoreBindings } from "../core";
+import type { WorkerdDebugPortConnector } from "../core/dev-registry-proxy-shared.worker";
 import type { LocalExplorerWorker } from "./generated";
 
 export type Env = {
@@ -68,6 +70,8 @@ export type Env = {
 	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
 	// Per-worker resource bindings for the /local/workers endpoint
 	[CoreBindings.JSON_EXPLORER_WORKER_OPTS]: ExplorerWorkerOpts;
+	[CoreBindings.JSON_TELEMETRY_CONFIG]: { enabled: boolean; deviceId?: string };
+	[CoreBindings.DEV_REGISTRY_DEBUG_PORT]: WorkerdDebugPortConnector;
 };
 
 export type AppBindings = { Bindings: Env };
@@ -111,6 +115,8 @@ app.use("/api/*", async (c, next) => {
 		c.res.headers.set("Access-Control-Allow-Origin", origin);
 	}
 });
+
+app.use("/api/*", telemetryMiddleware);
 
 // ============================================================================
 // Static Asset Serving
@@ -355,13 +361,9 @@ app.get("/api/local/workers", async (c) => {
 		const localWorkers: LocalExplorerWorker[] = selfWorkerNames
 			.filter((name) => registry[name])
 			.map((name) => {
-				const def = registry[name];
 				return {
-					host: def.host,
 					isSelf: true,
 					name,
-					port: def.port,
-					protocol: def.protocol,
 					bindings: explorerWorkerOpts[name],
 				};
 			});

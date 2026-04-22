@@ -280,6 +280,31 @@ const localInterface = (interfaces["en0"] ?? interfaces["eth0"])?.find(
 		expect(await res.text()).toBe("body");
 	}
 );
+
+test("Miniflare: can use localhost as host", async ({ expect }) => {
+	const mf = new Miniflare({
+		host: "localhost",
+		modules: true,
+		script: `export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`,
+		serviceBindings: {
+			SERVICE() {
+				return new Response("body");
+			},
+		},
+	});
+	useDispose(mf);
+
+	const url = await mf.ready;
+	expect(url.hostname).toBe("localhost");
+
+	let res = await mf.dispatchFetch("https://example.com");
+	expect(await res.text()).toBe("body");
+
+	const worker = await mf.getWorker();
+	res = await worker.fetch("https://example.com");
+	expect(await res.text()).toBe("body");
+});
+
 test("Miniflare: can use IPv6 loopback as host", async ({ expect }) => {
 	const mf = new Miniflare({
 		host: "::1",
@@ -1918,6 +1943,58 @@ test("Miniflare: other /cdn-cgi/ routes", async ({ expect }) => {
 	expect(res.status).toBe(200);
 });
 
+test("Miniflare: blocks non-local Host headers from reaching /cdn-cgi/ routes", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+			export default {
+				fetch() {
+					return new Response("Hello world");
+				}
+			}
+		`,
+		unsafeTriggerHandlers: true,
+	});
+	useDispose(mf);
+
+	const url = await mf.ready;
+	const directUrlStatus = await new Promise<number>((resolve, reject) => {
+		const req = http.get(
+			`${url.origin}/cdn-cgi/foo`,
+			{ setHost: false, headers: { Host: "example.trycloudflare.com" } },
+			(res) => {
+				res.resume();
+				resolve(res.statusCode ?? 0);
+			}
+		);
+		req.on("error", reject);
+	});
+
+	expect(directUrlStatus).toBe(403);
+
+	const originalUrlStatus = await new Promise<number>((resolve, reject) => {
+		const req = http.get(
+			`${url.origin}/foo`,
+			{
+				setHost: false,
+				headers: {
+					Host: "example.trycloudflare.com",
+					"MF-Original-URL": "http://localhost/cdn-cgi/handler/scheduled",
+				},
+			},
+			(res) => {
+				res.resume();
+				resolve(res.statusCode ?? 0);
+			}
+		);
+		req.on("error", reject);
+	});
+
+	expect(originalUrlStatus).toBe(403);
+});
+
 test("Miniflare: listens on ipv6", async ({ expect }) => {
 	const log = new TestLog();
 
@@ -3355,6 +3432,7 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 	};
 
 	const mf = new Miniflare({
+		host: "localhost",
 		unsafeModuleFallbackService(request) {
 			const resolveMethod = request.headers.get("X-Resolve-Method");
 			assert(resolveMethod === "import" || resolveMethod === "require");
@@ -3692,4 +3770,61 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 	// workerd-config.json should be created when MINIFLARE_WORKERD_CONFIG_DEBUG=true
 	expect(existsSync(configFilePath)).toBe(true);
 	await mf.dispose();
+});
+
+// https://github.com/cloudflare/workers-sdk/issues/13013
+test("Miniflare: dispatchFetch handles POST/PUT with non-2xx status", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `export default {
+			async fetch(request) {
+				const url = new URL(request.url);
+				const status = parseInt(url.searchParams.get("status") ?? "200");
+				return Response.json(
+					{ method: request.method, status },
+					{ status }
+				);
+			}
+		}`,
+	});
+	useDispose(mf);
+
+	// GET + non-2xx (worked before the fix too)
+	for (const status of [400, 401, 403, 404, 500]) {
+		const res = await mf.dispatchFetch(`http://localhost/?status=${status}`);
+		expect(res.status).toBe(status);
+		expect(await res.json()).toEqual({ method: "GET", status });
+	}
+
+	// POST + 2xx
+	for (const status of [200, 201]) {
+		const res = await mf.dispatchFetch(`http://localhost/?status=${status}`, {
+			method: "POST",
+			body: JSON.stringify({ data: "test" }),
+		});
+		expect(res.status).toBe(status);
+		expect(await res.json()).toEqual({ method: "POST", status });
+	}
+
+	// POST + non-2xx (previously threw "fetch failed" due to undici bug)
+	for (const status of [400, 401, 403, 404, 500]) {
+		const res = await mf.dispatchFetch(`http://localhost/?status=${status}`, {
+			method: "POST",
+			body: JSON.stringify({ data: "test" }),
+		});
+		expect(res.status).toBe(status);
+		expect(await res.json()).toEqual({ method: "POST", status });
+	}
+
+	// PUT + non-2xx (also affected by the same bug)
+	for (const status of [400, 401, 403, 404, 500]) {
+		const res = await mf.dispatchFetch(`http://localhost/?status=${status}`, {
+			method: "PUT",
+			body: JSON.stringify({ data: "test" }),
+		});
+		expect(res.status).toBe(status);
+		expect(await res.json()).toEqual({ method: "PUT", status });
+	}
 });

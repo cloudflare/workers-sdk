@@ -73,7 +73,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 		);
 	},
 
-	getExtensions({}) {
+	getExtensions() {
 		return [
 			{
 				modules: [

@@ -1,5 +1,50 @@
 # @cloudflare/workers-utils
 
+## 0.17.0
+
+### Minor Changes
+
+- [#13326](https://github.com/cloudflare/workers-sdk/pull/13326) [`4a9ba90`](https://github.com/cloudflare/workers-sdk/commit/4a9ba90b3f64e94da90343f2694d42f78777e4b7) Thanks [@mattzcarey](https://github.com/mattzcarey)! - Add Artifacts binding support to wrangler
+
+  You can now configure Artifacts bindings in your wrangler configuration:
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+    "artifacts": [{ "binding": "MY_ARTIFACTS", "namespace": "default" }]
+  }
+  ```
+
+  Type generation produces the correct `Artifacts` type reference from the workerd type definitions:
+
+  ```ts
+  interface Env {
+    MY_ARTIFACTS: Artifacts;
+  }
+  ```
+
+- [#13571](https://github.com/cloudflare/workers-sdk/pull/13571) [`7dc0433`](https://github.com/cloudflare/workers-sdk/commit/7dc043315272df2479c17ad204c379515dcc83e8) Thanks [@must108](https://github.com/must108)! - Add regional and jurisdictional placement constraints for Containers. Users can now set `constraints.regions` and `constraints.jurisdiction` in wrangler config to control where containers run.
+
+### Patch Changes
+
+- [#13516](https://github.com/cloudflare/workers-sdk/pull/13516) [`4eb1da9`](https://github.com/cloudflare/workers-sdk/commit/4eb1da9b24247a10a031ecced2cc829243024f84) Thanks [@jonnyparris](https://github.com/jonnyparris)! - Rename "Browser Rendering" to "Browser Run" in all user-facing strings, error messages, and CLI output.
+
+## 0.16.1
+
+### Patch Changes
+
+- [#13468](https://github.com/cloudflare/workers-sdk/pull/13468) [`051db1f`](https://github.com/cloudflare/workers-sdk/commit/051db1fed10091bfd83b30975fbb7f8f00ea1484) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Make all properties in `previews` optional
+
+  All properties in `previews` were previously incorrectly typed as required.
+
+## 0.16.0
+
+### Minor Changes
+
+- [#13139](https://github.com/cloudflare/workers-sdk/pull/13139) [`79fd529`](https://github.com/cloudflare/workers-sdk/commit/79fd529e62b715405aacc0e643a20ce1af3df9f2) Thanks [@roerohan](https://github.com/roerohan)! - feat: add Flagship feature flag binding support
+
+  Adds end-to-end support for the Flagship feature flag binding, which allows Workers to evaluate feature flags from Cloudflare's Flagship service. Configure it in `wrangler.json` with a `flagship` array containing `binding` and `app_id` entries. In local dev, the binding returns default values for all flag evaluations; use `"remote": true` in the binding to evaluate flags against the live Flagship service.
+
 ## 0.15.0
 
 ### Minor Changes

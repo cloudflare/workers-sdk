@@ -166,19 +166,6 @@ export const typesCommand = createCommand({
 			);
 		}
 
-		if (args.check) {
-			const outOfDate = await checkTypesUpToDate(config, outputPath);
-			if (outOfDate) {
-				throw new FatalError(
-					`Types at ${outputPath} are out of date. Run \`wrangler types\` to regenerate.`,
-					1
-				);
-			}
-
-			logger.log(`✨ Types at ${outputPath} are up to date.\n`);
-			return;
-		}
-
 		const secondaryEntries: Map<string, Entry> = new Map();
 
 		if (secondaryConfigs.length > 0) {
@@ -220,6 +207,24 @@ export const typesCommand = createCommand({
 					);
 				}
 			}
+		}
+
+		if (args.check) {
+			const outOfDate = await checkTypesUpToDate(
+				config,
+				envInterface,
+				outputPath,
+				secondaryEntries
+			);
+			if (outOfDate) {
+				throw new FatalError(
+					`Types at ${outputPath} are out of date. Run \`wrangler types\` to regenerate.`,
+					1
+				);
+			}
+
+			logger.log(`✨ Types at ${outputPath} are up to date.\n`);
+			return;
 		}
 
 		const configContainsEntrypoint =
@@ -1797,6 +1802,21 @@ function collectCoreBindings(
 			);
 		}
 
+		for (const [index, artifact] of (env.artifacts ?? []).entries()) {
+			if (!artifact.binding) {
+				throwMissingBindingError({
+					binding: artifact,
+					bindingType: "artifacts",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(artifact.binding, "Artifacts", "artifacts", envName);
+		}
+
 		for (const [index, helloWorld] of (
 			env.unsafe_hello_world ?? []
 		).entries()) {
@@ -1817,6 +1837,21 @@ function collectCoreBindings(
 				"unsafe_hello_world",
 				envName
 			);
+		}
+
+		for (const [index, flagshipBinding] of (env.flagship ?? []).entries()) {
+			if (!flagshipBinding.binding) {
+				throwMissingBindingError({
+					binding: flagshipBinding,
+					bindingType: "flagship",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(flagshipBinding.binding, "Flagship", "flagship", envName);
 		}
 
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
@@ -2762,6 +2797,25 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
+		for (const [index, artifact] of (env.artifacts ?? []).entries()) {
+			if (!artifact.binding) {
+				throwMissingBindingError({
+					binding: artifact,
+					bindingType: "artifacts",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "artifacts",
+				name: artifact.binding,
+				type: "Artifacts",
+			});
+		}
+
 		for (const [index, helloWorld] of (
 			env.unsafe_hello_world ?? []
 		).entries()) {
@@ -2780,6 +2834,25 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "unsafe_hello_world",
 				name: helloWorld.binding,
 				type: "HelloWorldBinding",
+			});
+		}
+
+		for (const [index, flagshipBinding] of (env.flagship ?? []).entries()) {
+			if (!flagshipBinding.binding) {
+				throwMissingBindingError({
+					binding: flagshipBinding,
+					bindingType: "flagship",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "flagship",
+				name: flagshipBinding.binding,
+				type: "Flagship",
 			});
 		}
 

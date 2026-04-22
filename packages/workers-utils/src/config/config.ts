@@ -339,6 +339,7 @@ export const defaultWranglerConfig: Config = {
 	hyperdrive: [],
 	workflows: [],
 	secrets_store_secrets: [],
+	artifacts: [],
 	services: [],
 	analytics_engine_datasets: [],
 	ai: undefined,
@@ -347,6 +348,7 @@ export const defaultWranglerConfig: Config = {
 	media: undefined,
 	version_metadata: undefined,
 	unsafe_hello_world: [],
+	flagship: [],
 	ratelimits: [],
 	worker_loaders: [],
 
@@ -395,6 +397,7 @@ export const defaultWranglerConfig: Config = {
 	/** The default here is undefined so that we can delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable. */
 	compliance_region: undefined,
 	python_modules: { exclude: ["**/*.pyc"] },
+	previews: undefined,
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},

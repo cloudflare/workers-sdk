@@ -59,4 +59,5 @@ jobs:
           model: "cloudflare-ai-gateway/anthropic/claude-opus-4-6"
           forks: "false"
           permissions: write
+          opencode_version: "1.4.6" # pin to this version as newer versions are causing ProviderInitError issues
           prompt: ${{ steps.prompt.outputs.value }}

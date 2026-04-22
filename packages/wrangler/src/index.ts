@@ -21,6 +21,13 @@ import { aiSearchUpdateCommand } from "./ai-search/update";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
 import { aiModelsCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
+import {
+	browserCloseCommand,
+	browserCreateCommand,
+	browserListCommand,
+	browserViewCommand,
+	browserNamespace,
+} from "./browser-rendering";
 import { buildCommand } from "./build";
 import {
 	certDeleteCommand,
@@ -235,6 +242,17 @@ import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
 import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
 import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
+import {
+	previewCommand,
+	previewDeleteCommand,
+	previewSecretBulkCommand,
+	previewSecretDeleteCommand,
+	previewSecretListCommand,
+	previewSecretNamespace,
+	previewSecretPutCommand,
+	previewSettingsCommand,
+	previewSettingsUpdateCommand,
+} from "./preview";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
@@ -445,7 +463,7 @@ if (proxy) {
 	setGlobalDispatcher(
 		new EnvHttpProxyAgent({ noProxy: noProxy || "localhost,127.0.0.1,::1" })
 	);
-	logger.log(
+	logger.warn(
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
 }
@@ -763,6 +781,37 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("deploy");
+
+	registry.define([
+		{ command: "wrangler preview", definition: previewCommand },
+		{ command: "wrangler preview delete", definition: previewDeleteCommand },
+		{
+			command: "wrangler preview settings",
+			definition: previewSettingsCommand,
+		},
+		{
+			command: "wrangler preview settings update",
+			definition: previewSettingsUpdateCommand,
+		},
+		{ command: "wrangler preview secret", definition: previewSecretNamespace },
+		{
+			command: "wrangler preview secret put",
+			definition: previewSecretPutCommand,
+		},
+		{
+			command: "wrangler preview secret delete",
+			definition: previewSecretDeleteCommand,
+		},
+		{
+			command: "wrangler preview secret list",
+			definition: previewSecretListCommand,
+		},
+		{
+			command: "wrangler preview secret bulk",
+			definition: previewSecretBulkCommand,
+		},
+	]);
+	registry.registerNamespace("preview");
 
 	registry.define([
 		{
@@ -1687,6 +1736,16 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("ai");
+
+	// browser run
+	registry.define([
+		{ command: "wrangler browser", definition: browserNamespace },
+		{ command: "wrangler browser create", definition: browserCreateCommand },
+		{ command: "wrangler browser close", definition: browserCloseCommand },
+		{ command: "wrangler browser list", definition: browserListCommand },
+		{ command: "wrangler browser view", definition: browserViewCommand },
+	]);
+	registry.registerNamespace("browser");
 
 	// secrets store
 	registry.define([

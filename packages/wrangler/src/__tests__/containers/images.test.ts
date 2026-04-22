@@ -36,7 +36,7 @@ describe("containers images list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers images list
 
-			List images in the Cloudflare managed registry [open beta]
+			List images in the Cloudflare managed registry
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -203,7 +203,7 @@ describe("containers images delete", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers images delete <image>
 
-			Remove an image from the Cloudflare managed registry [open beta]
+			Remove an image from the Cloudflare managed registry
 
 			POSITIONALS
 			  image  Image and tag to delete, of the form IMAGE:TAG  [string] [required]

@@ -136,10 +136,12 @@ export function createWorkerUploadForm(
 		"secrets_store_secret",
 		bindings
 	);
+	const artifacts = extractBindingsOfType("artifacts", bindings);
 	const unsafe_hello_world = extractBindingsOfType(
 		"unsafe_hello_world",
 		bindings
 	);
+	const flagship = extractBindingsOfType("flagship", bindings);
 	const ratelimits = extractBindingsOfType("ratelimit", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
 	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
@@ -408,11 +410,27 @@ export function createWorkerUploadForm(
 		});
 	});
 
+	artifacts.forEach(({ binding, namespace }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "artifacts",
+			namespace,
+		});
+	});
+
 	unsafe_hello_world.forEach(({ binding, enable_timer }) => {
 		metadataBindings.push({
 			name: binding,
 			type: "unsafe_hello_world",
 			enable_timer,
+		});
+	});
+
+	flagship.forEach(({ binding, app_id }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "flagship",
+			app_id,
 		});
 	});
 

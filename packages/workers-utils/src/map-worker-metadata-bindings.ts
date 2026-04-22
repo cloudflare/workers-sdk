@@ -132,12 +132,33 @@ export function mapWorkerMetadataBindings(
 							];
 						}
 						break;
+					case "artifacts":
+						{
+							configObj.artifacts = [
+								...(configObj.artifacts ?? []),
+								{
+									binding: binding.name,
+									namespace: binding.namespace,
+								},
+							];
+						}
+						break;
 					case "unsafe_hello_world": {
 						configObj.unsafe_hello_world = [
 							...(configObj.unsafe_hello_world ?? []),
 							{
 								binding: binding.name,
 								enable_timer: binding.enable_timer,
+							},
+						];
+						break;
+					}
+					case "flagship": {
+						configObj.flagship = [
+							...(configObj.flagship ?? []),
+							{
+								binding: binding.name,
+								app_id: binding.app_id,
 							},
 						];
 						break;

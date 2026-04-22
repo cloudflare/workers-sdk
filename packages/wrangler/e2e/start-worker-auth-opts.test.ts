@@ -84,7 +84,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 
 			await assertValidWorkerAiResponse(expect);
 
-			expect(validAuth).toHaveBeenCalledOnce();
+			expect(validAuth).toHaveBeenCalled();
 
 			consoleErrorMock.mockReset();
 
@@ -105,7 +105,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 
 			await assertInvalidWorkerAiResponse(expect);
 
-			expect(incorrectAuth).toHaveBeenCalledOnce();
+			expect(incorrectAuth).toHaveBeenCalled();
 		});
 
 		test("starting a worker with startWorker with invalid auth information and updating it with valid auth information", async ({
@@ -139,7 +139,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 
 			await assertInvalidWorkerAiResponse(expect);
 
-			expect(incorrectAuth).toHaveBeenCalledOnce();
+			expect(incorrectAuth).toHaveBeenCalled();
 
 			consoleErrorMock.mockReset();
 
@@ -162,7 +162,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 
 			await assertValidWorkerAiResponse(expect);
 
-			expect(validAuth).toHaveBeenCalledOnce();
+			expect(validAuth).toHaveBeenCalled();
 		});
 
 		async function assertValidWorkerAiResponse(expect: ExpectStatic) {

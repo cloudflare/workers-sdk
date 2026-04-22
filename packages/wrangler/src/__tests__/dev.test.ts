@@ -2609,7 +2609,7 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
-	describe("`browser rendering binding", () => {
+	describe("`browser run binding", () => {
 		it("should not show error when running locally", async ({ expect }) => {
 			writeWranglerConfig({
 				browser: {
@@ -2621,7 +2621,7 @@ describe.sequential("wrangler dev", () => {
 			await expect(
 				runWrangler("dev index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				"[Error: Bailing early in tests]"
+				`[Error: Bailing early in tests]`
 			);
 		});
 	});

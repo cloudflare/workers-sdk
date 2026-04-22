@@ -16,6 +16,7 @@ import type {
 	CfDispatchNamespace,
 	CfDurableObject,
 	CfDurableObjectMigrations,
+	CfFlagship,
 	CfHelloWorld,
 	CfHyperdrive,
 	CfImagesBinding,
@@ -28,6 +29,7 @@ import type {
 	CfQueue,
 	CfR2Bucket,
 	CfRateLimit,
+	CfArtifacts,
 	CfSecretsStoreSecrets,
 	CfSendEmailBindings,
 	CfService,
@@ -155,9 +157,19 @@ export type WorkerMetadataBinding =
 			secret_name: string;
 	  }
 	| {
+			type: "artifacts";
+			name: string;
+			namespace: string;
+	  }
+	| {
 			type: "unsafe_hello_world";
 			name: string;
 			enable_timer?: boolean;
+	  }
+	| {
+			type: "flagship";
+			name: string;
+			app_id: string;
 	  }
 	| {
 			type: "ratelimit";
@@ -330,8 +342,10 @@ export type Binding =
 	| ({ type: "mtls_certificate" } & BindingOmit<CfMTlsCertificate>)
 	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
+	| ({ type: "artifacts" } & BindingOmit<CfArtifacts>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
+	| ({ type: "flagship" } & BindingOmit<CfFlagship>)
 	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
 	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
 	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)

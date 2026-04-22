@@ -289,6 +289,10 @@ export class InspectorProxyController {
 			id: string;
 		}[];
 
+		// Dispose old proxies before replacing them, so their runtime WebSocket
+		// connections and keepalive intervals are properly cleaned up.
+		await Promise.all(this.#proxies.map((proxy) => proxy.dispose()));
+
 		this.#proxies = workerdInspectorJson
 			.map(({ id }) => {
 				if (!id.startsWith("core:user:")) {
@@ -324,6 +328,10 @@ export class InspectorProxyController {
 		await Promise.all(this.#proxies.map((proxy) => proxy.dispose()));
 
 		const server = await this.#server;
+		// Force-close active connections so server.close() resolves immediately.
+		// Without this, active HTTP keep-alive or WebSocket connections prevent
+		// the close callback from firing, hanging the dispose.
+		server.closeAllConnections();
 		return new Promise((resolve, reject) => {
 			server.close((err) => (err ? reject(err) : resolve()));
 		});

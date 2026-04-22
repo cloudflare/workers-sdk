@@ -1,10 +1,11 @@
 import {
 	createExecutionContext,
-	env,
 	waitOnExecutionContext,
 } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { it } from "vitest";
-import worker, { greet } from "../src/index";
+import { greet } from "../src/greet";
+import worker from "../src/index";
 
 // This will improve in the next major version of `@cloudflare/workers-types`,
 // but for now you'll need to do something like this to get a correctly-typed

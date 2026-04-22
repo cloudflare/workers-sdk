@@ -532,7 +532,12 @@ export default {
 			expect(typeof version.Browser).toBe("string");
 			expect(typeof version["Protocol-Version"]).toBe("string");
 			expect(Array.isArray(list)).toBe(true);
-			expect(list).toEqual(listAlias);
+			// The page title for about:blank can change between sequential
+			// requests (from "" to "about:blank"), so strip the volatile
+			// `title` field before comparing the two alias endpoints.
+			const stripTitle = (arr: any[]) =>
+				arr.map(({ title, ...rest }: any) => rest);
+			expect(stripTitle(list)).toEqual(stripTitle(listAlias));
 		}
 	);
 

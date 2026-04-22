@@ -248,9 +248,21 @@ export interface CfSecretsStoreSecrets {
 	secret_name: string;
 }
 
+export interface CfArtifacts {
+	binding: string;
+	namespace: string;
+	remote?: boolean;
+}
+
 export interface CfHelloWorld {
 	binding: string;
 	enable_timer?: boolean;
+}
+
+export interface CfFlagship {
+	binding: string;
+	app_id: string;
+	remote?: boolean;
 }
 
 export interface CfWorkerLoader {

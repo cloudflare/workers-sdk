@@ -41,6 +41,7 @@ import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
 	CacheOptions,
+	ContainerApp,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -101,9 +102,11 @@ export type ConfigBindingFieldName =
 	| "workflows"
 	| "pipelines"
 	| "secrets_store_secrets"
+	| "artifacts"
 	| "ratelimits"
 	| "assets"
 	| "unsafe_hello_world"
+	| "flagship"
 	| "worker_loaders"
 	| "vpc_services"
 	| "vpc_networks";
@@ -127,7 +130,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	services: "Worker",
 	analytics_engine_datasets: "Analytics Engine Dataset",
 	text_blobs: "Text Blob",
-	browser: "Browser",
+	browser: "Browser Run",
 	ai: "AI",
 	images: "Images",
 	stream: "Stream",
@@ -141,9 +144,11 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	workflows: "Workflow",
 	pipelines: "Pipeline",
 	secrets_store_secrets: "Secrets Store Secret",
+	artifacts: "Artifacts",
 	ratelimits: "Rate Limit",
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
+	flagship: "Flagship",
 	worker_loaders: "Worker Loader",
 	vpc_services: "VPC Service",
 	vpc_networks: "VPC Network",
@@ -162,7 +167,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	send_email: "Send Email",
 	wasm_module: "Wasm Module",
 	text_blob: "Text Blob",
-	browser: "Browser",
+	browser: "Browser Run",
 	ai: "AI",
 	images: "Images",
 	stream: "Stream",
@@ -184,8 +189,10 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	mtls_certificate: "mTLS Certificate",
 	pipeline: "Pipeline",
 	secrets_store_secret: "Secrets Store Secret",
+	artifacts: "Artifacts",
 	logfwdr: "logfwdr",
 	unsafe_hello_world: "Hello World",
+	flagship: "Flagship",
 	ratelimit: "Rate Limit",
 	worker_loader: "Worker Loader",
 	vpc_service: "VPC Service",
@@ -1874,6 +1881,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateSecretsStoreSecretBinding),
 			[]
 		),
+		artifacts: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"artifacts",
+			validateBindingArray(envName, validateArtifactsBinding),
+			[]
+		),
 		unsafe_hello_world: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1882,6 +1899,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"unsafe_hello_world",
 			validateBindingArray(envName, validateHelloWorldBinding),
+			[]
+		),
+		flagship: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"flagship",
+			validateBindingArray(envName, validateFlagshipBinding),
 			[]
 		),
 		worker_loaders: notInheritable(
@@ -2023,6 +2050,14 @@ function normalizeAndValidateEnvironment(
 			"python_modules",
 			validatePythonModules,
 			{ exclude: ["**/*.pyc"] }
+		),
+		previews: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"previews",
+			validatePreviewsConfig(envName),
+			undefined
 		),
 	};
 
@@ -2971,9 +3006,11 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"pipeline",
 			"worker_loader",
 			"vpc_service",
+			"flagship",
 			"vpc_network",
 			"stream",
 			"media",
+			"artifacts",
 		];
 
 		if (safeBindings.includes(value.type)) {
@@ -3313,6 +3350,11 @@ function validateContainerApp(
 					`"containers.durable_objects" is deprecated. Use the "class_name" field instead.`
 				);
 			}
+			if ("wrangler_ssh" in containerAppOptional) {
+				diagnostics.warnings.push(
+					`"containers.wrangler_ssh" is deprecated. Use "containers.ssh" instead.`
+				);
+			}
 
 			// unsafe.containers
 			if ("unsafe" in containerAppOptional) {
@@ -3343,6 +3385,7 @@ function validateContainerApp(
 					"class_name",
 					"scheduling_policy",
 					"instance_type",
+					"ssh",
 					"wrangler_ssh",
 					"authorized_keys",
 					"trusted_user_ca_keys",
@@ -3365,30 +3408,40 @@ function validateContainerApp(
 				);
 			}
 
-			if ("wrangler_ssh" in containerAppOptional) {
-				if (
-					!isRequiredProperty(
-						containerAppOptional.wrangler_ssh,
-						"enabled",
-						"boolean"
-					)
-				) {
+			let sshField: "ssh" | "wrangler_ssh" | undefined;
+			let sshConfig:
+				| ContainerApp["ssh"]
+				| ContainerApp["wrangler_ssh"]
+				| undefined;
+
+			if ("ssh" in containerAppOptional) {
+				sshField = "ssh";
+				sshConfig = containerAppOptional.ssh;
+				containerAppOptional.wrangler_ssh = containerAppOptional.ssh;
+				delete containerAppOptional.ssh;
+			} else if ("wrangler_ssh" in containerAppOptional) {
+				sshField = "wrangler_ssh";
+				sshConfig = containerAppOptional.wrangler_ssh;
+			}
+
+			if (sshField !== undefined) {
+				const sshConfigObject =
+					typeof sshConfig === "object" && sshConfig !== null ? sshConfig : {};
+
+				if (!isRequiredProperty(sshConfigObject, "enabled", "boolean")) {
 					diagnostics.errors.push(
-						`${field}.wrangler_ssh.enabled must be a boolean`
+						`${field}.${sshField}.enabled must be a boolean`
 					);
 				}
 
+				const sshPort =
+					"port" in sshConfigObject ? sshConfigObject.port : undefined;
 				if (
-					!isOptionalProperty(
-						containerAppOptional.wrangler_ssh,
-						"port",
-						"number"
-					) ||
-					containerAppOptional.wrangler_ssh.port < 1 ||
-					containerAppOptional.wrangler_ssh.port > 65535
+					!isOptionalProperty(sshConfigObject, "port", "number") ||
+					(typeof sshPort === "number" && (sshPort < 1 || sshPort > 65535))
 				) {
 					diagnostics.errors.push(
-						`${field}.wrangler_ssh.port must be a number between 1 and 65535 inclusive`
+						`${field}.${sshField}.port must be a number between 1 and 65535 inclusive`
 					);
 				}
 			}
@@ -3477,6 +3530,53 @@ function validateContainerApp(
 					constraints.tiers,
 					"number"
 				);
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.constraints`,
+					"jurisdiction",
+					constraints.jurisdiction,
+					"string"
+				);
+				if (
+					constraints.jurisdiction &&
+					!["eu", "fedramp"].includes(constraints.jurisdiction)
+				) {
+					diagnostics.errors.push(
+						`${field}.constraints.jurisdiction must be one of: "eu", "fedramp"`
+					);
+				}
+				if (
+					validateOptionalTypedArray(
+						diagnostics,
+						`${field}.constraints.regions`,
+						constraints.regions,
+						"string"
+					) &&
+					constraints.regions &&
+					Array.isArray(constraints.regions)
+				) {
+					const validRegions = [
+						"ENAM",
+						"WNAM",
+						"EEUR",
+						"WEUR",
+						"APAC",
+						"SAM",
+						"ME",
+						"OC",
+						"AFR",
+					];
+					for (const region of constraints.regions) {
+						if (
+							typeof region === "string" &&
+							!validRegions.includes(region.toUpperCase())
+						) {
+							diagnostics.errors.push(
+								`${field}.constraints.regions contains invalid region "${region}". Valid regions are: ${validRegions.join(", ")}`
+							);
+						}
+					}
+				}
 			}
 
 			// Instance Type validation: When present, the instance type should be either (1) a string
@@ -4507,6 +4607,10 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 
 function validateQueues(envName: string): ValidatorFn {
 	return (diagnostics, field, value, config) => {
+		if (value === undefined) {
+			return true;
+		}
+
 		const fieldPath =
 			config === undefined ? `${field}` : `env.${envName}.${field}`;
 
@@ -4740,6 +4844,45 @@ const validateSecretsStoreSecretBinding: ValidatorFn = (
 	return isValid;
 };
 
+const validateArtifactsBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"artifacts" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "namespace" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"namespace",
+		"remote",
+	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	return isValid;
+};
+
 const validateHelloWorldBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -4769,6 +4912,44 @@ const validateHelloWorldBinding: ValidatorFn = (diagnostics, field, value) => {
 		"binding",
 		"enable_timer",
 	]);
+
+	return isValid;
+};
+
+const validateFlagshipBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"flagship" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "app_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "app_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"app_id",
+		"remote",
+	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
 
 	return isValid;
 };
@@ -4911,6 +5092,362 @@ function normalizeAndValidateLimits(
 		undefined
 	);
 }
+
+const validatePreviewsConfig =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value) => {
+		if (value === undefined) {
+			return true;
+		}
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${field}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		const previews = value as RawEnvironment;
+		let isValid = true;
+
+		isValid =
+			validateAdditionalProperties(diagnostics, field, Object.keys(previews), [
+				"vars",
+				"define",
+				"durable_objects",
+				"workflows",
+				"kv_namespaces",
+				"send_email",
+				"queues",
+				"d1_databases",
+				"r2_buckets",
+				"vectorize",
+				"hyperdrive",
+				"services",
+				"analytics_engine_datasets",
+				"dispatch_namespaces",
+				"mtls_certificates",
+				"tail_consumers",
+				"streaming_tail_consumers",
+				"unsafe",
+				"browser",
+				"ai",
+				"images",
+				"stream",
+				"media",
+				"pipelines",
+				"secrets_store_secrets",
+				"artifacts",
+				"unsafe_hello_world",
+				"worker_loaders",
+				"ratelimits",
+				"vpc_services",
+				"version_metadata",
+				"logpush",
+				"observability",
+				"limits",
+			]) && isValid;
+
+		isValid =
+			validateVars(envName)(
+				diagnostics,
+				`${field}.vars`,
+				previews.vars,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateDefines(envName)(
+				diagnostics,
+				`${field}.define`,
+				previews.define,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingsProperty(envName, validateDurableObjectBinding)(
+				diagnostics,
+				`${field}.durable_objects`,
+				previews.durable_objects,
+				undefined
+			) && isValid;
+
+		isValid =
+			all(
+				validateBindingArray(envName, validateWorkflowBinding),
+				validateUniqueNameProperty
+			)(diagnostics, `${field}.workflows`, previews.workflows, undefined) &&
+			isValid;
+
+		isValid =
+			validateBindingArray(envName, validateKVBinding)(
+				diagnostics,
+				`${field}.kv_namespaces`,
+				previews.kv_namespaces,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateSendEmailBinding)(
+				diagnostics,
+				`${field}.send_email`,
+				previews.send_email,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateQueues(envName)(
+				diagnostics,
+				`${field}.queues`,
+				previews.queues,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateD1Binding)(
+				diagnostics,
+				`${field}.d1_databases`,
+				previews.d1_databases,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateR2Binding)(
+				diagnostics,
+				`${field}.r2_buckets`,
+				previews.r2_buckets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateVectorizeBinding)(
+				diagnostics,
+				`${field}.vectorize`,
+				previews.vectorize,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateHyperdriveBinding)(
+				diagnostics,
+				`${field}.hyperdrive`,
+				previews.hyperdrive,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateServiceBinding)(
+				diagnostics,
+				`${field}.services`,
+				previews.services,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateAnalyticsEngineBinding)(
+				diagnostics,
+				`${field}.analytics_engine_datasets`,
+				previews.analytics_engine_datasets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateWorkerNamespaceBinding)(
+				diagnostics,
+				`${field}.dispatch_namespaces`,
+				previews.dispatch_namespaces,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateMTlsCertificateBinding)(
+				diagnostics,
+				`${field}.mtls_certificates`,
+				previews.mtls_certificates,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateTailConsumers(
+				diagnostics,
+				`${field}.tail_consumers`,
+				previews.tail_consumers,
+				undefined
+			) && isValid;
+
+		// The config APIs don't yet support streaming tail consumers,
+		// so we don't ever send this field up.
+		// Depending on how the streaming tail consumers feature develops,
+		// this field may be removed in the future, but let's validate it anyways for now.
+		isValid =
+			validateStreamingTailConsumers(
+				diagnostics,
+				`${field}.streaming_tail_consumers`,
+				previews.streaming_tail_consumers,
+				undefined
+			) && isValid;
+
+		if (previews.unsafe !== undefined) {
+			isValid =
+				validateUnsafeSettings(envName)(
+					diagnostics,
+					`${field}.unsafe`,
+					previews.unsafe,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.browser !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.browser`,
+					previews.browser,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.ai !== undefined) {
+			isValid =
+				validateAIBinding(envName)(
+					diagnostics,
+					`${field}.ai`,
+					previews.ai,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.images !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.images`,
+					previews.images,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.stream !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.stream`,
+					previews.stream,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.media !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.media`,
+					previews.media,
+					undefined
+				) && isValid;
+		}
+
+		isValid =
+			validateBindingArray(envName, validatePipelineBinding)(
+				diagnostics,
+				`${field}.pipelines`,
+				previews.pipelines,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateSecretsStoreSecretBinding)(
+				diagnostics,
+				`${field}.secrets_store_secrets`,
+				previews.secrets_store_secrets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateArtifactsBinding)(
+				diagnostics,
+				`${field}.artifacts`,
+				previews.artifacts,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateHelloWorldBinding)(
+				diagnostics,
+				`${field}.unsafe_hello_world`,
+				previews.unsafe_hello_world,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateWorkerLoaderBinding)(
+				diagnostics,
+				`${field}.worker_loaders`,
+				previews.worker_loaders,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateRateLimitBinding)(
+				diagnostics,
+				`${field}.ratelimits`,
+				previews.ratelimits,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateVpcServiceBinding)(
+				diagnostics,
+				`${field}.vpc_services`,
+				previews.vpc_services,
+				undefined
+			) && isValid;
+
+		if (previews.version_metadata !== undefined) {
+			isValid =
+				validateVersionMetadataBinding(envName)(
+					diagnostics,
+					`${field}.version_metadata`,
+					previews.version_metadata,
+					undefined
+				) && isValid;
+		}
+
+		isValid =
+			isBoolean(diagnostics, `${field}.logpush`, previews.logpush, undefined) &&
+			isValid;
+
+		isValid =
+			validateObservability(
+				diagnostics,
+				`${field}.observability`,
+				previews.observability,
+				undefined
+			) && isValid;
+
+		if (previews.limits) {
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.limits`,
+					"cpu_ms",
+					previews.limits.cpu_ms,
+					"number"
+				) && isValid;
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.limits`,
+					"subrequests",
+					previews.limits.subrequests,
+					"number"
+				) && isValid;
+		}
+
+		return isValid;
+	};
 
 /**
  * Validate the `migrations` configuration and return the normalized values.

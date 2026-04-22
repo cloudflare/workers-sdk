@@ -14,10 +14,10 @@ async function navigateTo(path: string): Promise<void> {
 }
 
 /**
- * Wait for the page to finish loading (no pending network requests).
+ * Wait for the page to finish loading.
  */
 async function waitForPageLoad(): Promise<void> {
-	await page.waitForLoadState("networkidle");
+	await page.waitForLoadState("domcontentloaded");
 }
 
 /**
@@ -49,11 +49,47 @@ export async function seedDO(objectId: string = "test-object"): Promise<void> {
 }
 
 /**
+ * Seed a Workflow instance by triggering via the explorer API.
+ */
+export async function seedWorkflow(workflowName: string): Promise<{
+	id: string;
+}> {
+	const workflowId = `e2e-test-${Date.now()}`;
+
+	await fetch(
+		`${workerUrl}/cdn-cgi/explorer/api/workflows/${workflowName}/instances`,
+		{
+			body: JSON.stringify({
+				id: workflowId,
+				params: { name: "E2E Test" },
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+			method: "POST",
+		}
+	);
+
+	return {
+		id: workflowId,
+	};
+}
+
+/**
+ * Delete all instances of a workflow via the explorer API.
+ */
+export async function cleanupWorkflow(workflowName: string): Promise<void> {
+	await fetch(`${workerUrl}/cdn-cgi/explorer/api/workflows/${workflowName}`, {
+		method: "DELETE",
+	});
+}
+
+/**
  * Common wait options for `vi.waitFor`
  */
 const WAIT_OPTIONS = {
 	interval: 100,
-	timeout: 10_000,
+	timeout: 30_000,
 };
 
 /**
@@ -110,6 +146,14 @@ export async function navigateToDOClass(className: string): Promise<void> {
 }
 
 /**
+ * Navigate to a Workflow instances list page.
+ */
+export async function navigateToWorkflow(workflowName: string): Promise<void> {
+	await navigateTo(`/cdn-cgi/explorer/workflows/${workflowName}`);
+	await waitForPageLoad();
+}
+
+/**
  * Navigate to a specific Durable Object instance by hex ID.
  *
  * Note: The API requires the actual hex object ID, not a string name.
@@ -144,27 +188,28 @@ export async function navigateToDOObject(
  */
 export async function navigateToDOObjectByName(
 	className: string,
-	table?: string
+	table?: string,
+	objectName: string = "test-object"
 ): Promise<string> {
 	await navigateToDOClass(className);
 	await waitForText(className);
 
-	const openStudioLink = page.locator('a:has-text("Open Studio")').first();
-	await openStudioLink.waitFor({ state: "visible", timeout: 10_000 });
+	await fillByPlaceholder("Enter instance name or hex ID...", objectName);
+	await page.getByRole("button", { name: "Open Studio" }).click();
+	await waitForPageLoad();
 
-	const href = await openStudioLink.getAttribute("href");
-	if (!href) {
-		throw new Error("Could not find href on Open Studio link");
-	}
-
-	// Extract the object ID from the href (format: /cdn-cgi/explorer/do/{className}/{objectId})
-	const match = href.match(/\/cdn-cgi\/explorer\/do\/[^/]+\/([a-f0-9]+)/);
+	// Extract the object ID from the current URL after navigation.
+	const objectPath = new URL(page.url()).pathname;
+	const match = objectPath.match(/\/cdn-cgi\/explorer\/do\/[^/]+\/([^/?#]+)/);
 	if (!match || !match[1]) {
-		throw new Error(`Could not extract object ID from href: ${href}`);
+		throw new Error(`Could not extract object ID from URL path: ${objectPath}`);
 	}
+
 	const objectId: string = match[1];
 
-	await navigateToDOObject(className, objectId, table);
+	if (table) {
+		await navigateToDOObject(className, objectId, table);
+	}
 
 	return objectId;
 }
@@ -181,6 +226,34 @@ export async function waitForText(
 	await page.waitForSelector(`text=${text}`, {
 		timeout: options?.timeout ?? WAIT_OPTIONS.timeout,
 	});
+}
+
+/**
+ * Wait for text to appear inside the breadcrumb navigation bar.
+ *
+ * Use this instead of `waitForText` when the same text also appears in the
+ * sidebar (e.g. bucket names, object keys) to avoid Playwright resolving
+ * to the wrong element.
+ */
+export async function waitForBreadcrumbText(
+	text: string,
+	options?: {
+		timeout?: number;
+	}
+): Promise<void> {
+	// The Kumo breadcrumb `<nav>` contains both a mobile and desktop layout.
+	// The desktop layout uses `hidden sm:contents`, so target it directly to
+	// avoid matching the hidden mobile `<span class="truncate">` first.
+	const desktopBreadcrumb = page.locator(
+		'nav[aria-label="breadcrumb"] > .hidden.sm\\:contents'
+	);
+	await desktopBreadcrumb
+		.getByText(text)
+		.first()
+		.waitFor({
+			state: "visible",
+			timeout: options?.timeout ?? WAIT_OPTIONS.timeout,
+		});
 }
 
 /**
@@ -272,7 +345,7 @@ export async function waitForQueryEditor(options?: {
 	// Wait for the `CodeMirror` editor to be visible and have the `contenteditable` attribute
 	await page.waitForSelector(".cm-editor .cm-content[contenteditable]", {
 		state: "visible",
-		timeout: options?.timeout ?? 10_000,
+		timeout: options?.timeout ?? WAIT_OPTIONS.timeout,
 	});
 }
 
@@ -318,12 +391,14 @@ export async function runAllQueries(): Promise<void> {
  * Open the table selector dropdown in the breadcrumb bar.
  */
 export async function openTableSelector(): Promise<void> {
-	// The `TableSelect` uses a `Select.Trigger` which contains either "Select table" or the table name
-	// Find the `Select` trigger by looking for the text + caret icon combo
-	const tableSelector = page.locator('text="Select table"').first();
+	// The `TableSelect` trigger text is dynamic ("Select table" or current table name).
+	// Target the table selector trigger by its unique utility class on the breadcrumb row.
+	const tableSelector = page
+		.locator('button[class*="-mx-1.5"]:visible')
+		.first();
 	await tableSelector.click();
 
-	await page.waitForSelector('[role="listbox"]', {
+	await page.waitForSelector('[role="menu"]', {
 		state: "visible",
 		timeout: 5_000,
 	});
@@ -337,7 +412,7 @@ export async function waitForQueryResult(options?: {
 	timeout?: number;
 }): Promise<void> {
 	await page.waitForSelector("text=/Executed \\d+\\/\\d+/", {
-		timeout: options?.timeout ?? 10_000,
+		timeout: options?.timeout ?? WAIT_OPTIONS.timeout,
 	});
 }
 

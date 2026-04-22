@@ -171,7 +171,7 @@ export type ContainerApp = {
 				disk_mb?: number;
 		  };
 
-	wrangler_ssh?: {
+	ssh?: {
 		/**
 		 * If enabled, those with write access to a container will be able to SSH into it through Wrangler.
 		 * @default false
@@ -181,6 +181,15 @@ export type ContainerApp = {
 		 * Port that the SSH service is running on
 		 * @defaults to 22
 		 */
+		port?: number;
+	};
+
+	/**
+	 * @deprecated Use `ssh` instead.
+	 * @hidden
+	 */
+	wrangler_ssh?: {
+		enabled: boolean;
 		port?: number;
 	};
 
@@ -212,16 +221,39 @@ export type ContainerApp = {
 	};
 
 	/**
-	 * Scheduling constraints
-	 * @hidden
+	 * Scheduling constraints for container placement.
 	 */
 	constraints?: {
-		regions?: string[];
+		/**
+		 * Limit container placement to specific geographic regions.
+		 */
+		regions?: (
+			| "ENAM"
+			| "WNAM"
+			| "EEUR"
+			| "WEUR"
+			| "APAC"
+			| "SAM"
+			| "ME"
+			| "OC"
+			| "AFR"
+		)[];
+		/**
+		 * Restrict containers to compliance boundaries.
+		 */
+		jurisdiction?: "eu" | "fedramp";
+		/**
+		 * @hidden
+		 */
 		cities?: string[];
 		/**
 		 * @deprecated Use `tiers` instead
+		 * @hidden
 		 */
 		tier?: number;
+		/**
+		 * @hidden
+		 */
 		tiers?: number[];
 	};
 
@@ -650,6 +682,19 @@ interface EnvironmentInheritable {
 		 */
 		exclude: string[];
 	};
+
+	/**
+	 * Configuration for Worker Previews.
+	 *
+	 * Previews are branches of your Worker's main instance used to test features
+	 * in development outside of production. This block defines the settings
+	 * used when creating Preview deployments via `wrangler preview`.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+	 *
+	 * @inheritable
+	 */
+	previews: PreviewsConfig | undefined;
 }
 
 export type DurableObjectBindings = {
@@ -1320,6 +1365,27 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies Artifacts bindings that are bound to this Worker environment.
+	 * Artifacts provides git-compatible file storage on Cloudflare Workers.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	artifacts: {
+		/** The binding name used to refer to the Artifacts instance. */
+		binding: string;
+
+		/** The namespace to use. */
+		namespace: string;
+
+		/** Whether to use the remote Artifacts service in local dev. */
+		remote?: boolean;
+	}[];
+
+	/**
 	 * **DO NOT USE**. Hello World Binding Config to serve as an explanatory example.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -1334,6 +1400,26 @@ export interface EnvironmentNonInheritable {
 
 		/** Whether the timer is enabled */
 		enable_timer?: boolean;
+	}[];
+
+	/**
+	 * Specifies Flagship feature flag bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	flagship: {
+		/** The binding name used to refer to the bound Flagship service. */
+		binding: string;
+
+		/** The Flagship app ID to bind to. */
+		app_id: string;
+
+		/** Whether to use the remote Flagship service for flag evaluation in local dev. */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -1558,3 +1644,23 @@ export type ContainerEngine =
 			localDocker: DockerConfiguration;
 	  }
 	| string;
+
+/**
+ * Configuration for Worker Previews.
+ *
+ * This defines the settings used when creating Preview deployments.
+ * Previews are branches of your Worker's main instance used to test features
+ * during feature development outside of production.
+ *
+ * The `previews` block contains any intentionally divergent configuration intended solely for Previews, including:
+ * - All non-inheritable properties (environment variables and bindings like KV, D1, R2, etc.)
+ * - Select inheritable properties: `logpush`, `observability`, `limits`
+ *
+ * @inheritable
+ */
+export interface PreviewsConfig
+	extends
+		Partial<EnvironmentNonInheritable>,
+		Partial<
+			Pick<EnvironmentInheritable, "logpush" | "observability" | "limits">
+		> {}

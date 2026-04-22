@@ -3,7 +3,10 @@ import { stripVTControlCharacters } from "node:util";
 import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import { PluginContext } from "../../../src/context";
 import { resolvePluginConfig } from "../../../src/plugin-config";
-import { addBindingsShortcut } from "../../../src/plugins/shortcuts";
+import {
+	addBindingsShortcut,
+	addExplorerShortcut,
+} from "../../../src/plugins/shortcuts";
 import {
 	resetServerLogs,
 	satisfiesViteVersion,
@@ -185,5 +188,34 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 			env.SERVICE (primary-worker)      Worker
 			"
 		`);
+	});
+
+	test("registers explorer shortcut with correct URL", async ({ expect }) => {
+		const mockOpen = vi.hoisted(() => vi.fn(() => ({ on: vi.fn() })));
+		vi.mock("open", () => ({ default: mockOpen }));
+
+		const mockBindCLIShortcuts = vi.spyOn(viteServer, "bindCLIShortcuts");
+
+		addExplorerShortcut(viteServer);
+
+		expect(mockBindCLIShortcuts).toHaveBeenCalledWith({
+			customShortcuts: [
+				{
+					key: "e",
+					description: "open local explorer",
+					action: expect.any(Function),
+				},
+			],
+		});
+
+		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
+		const explorerShortcut = customShortcuts?.find((s) => s.key === "e");
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		await explorerShortcut?.action?.(viteServer as any);
+
+		expect(mockOpen).toHaveBeenCalledWith(
+			expect.stringMatching(/^http:\/\/localhost:\d+\/cdn-cgi\/explorer$/)
+		);
 	});
 });

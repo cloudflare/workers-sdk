@@ -410,10 +410,22 @@ const bindingsConfigMock: Omit<
 			secret_name: "secret_name",
 		},
 	],
+	artifacts: [
+		{
+			binding: "MY_ARTIFACTS",
+			namespace: "default",
+		},
+	],
 	unsafe_hello_world: [
 		{
 			binding: "HELLO_WORLD",
 			enable_timer: true,
+		},
+	],
+	flagship: [
+		{
+			binding: "FLAGS",
+			app_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 		},
 	],
 	services: [
@@ -764,7 +776,9 @@ describe("generate types", () => {
 					MTLS_BINDING: Fetcher;
 					TEST_QUEUE_BINDING: Queue;
 					SECRET: SecretsStoreSecret;
+					MY_ARTIFACTS: Artifacts;
 					HELLO_WORLD: HelloWorldBinding;
+					FLAGS: Flagship;
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
@@ -879,7 +893,9 @@ describe("generate types", () => {
 					MTLS_BINDING: Fetcher;
 					TEST_QUEUE_BINDING: Queue;
 					SECRET: SecretsStoreSecret;
+					MY_ARTIFACTS: Artifacts;
 					HELLO_WORLD: HelloWorldBinding;
+					FLAGS: Flagship;
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
@@ -1057,7 +1073,9 @@ describe("generate types", () => {
 					MTLS_BINDING: Fetcher;
 					TEST_QUEUE_BINDING: Queue;
 					SECRET: SecretsStoreSecret;
+					MY_ARTIFACTS: Artifacts;
 					HELLO_WORLD: HelloWorldBinding;
+					FLAGS: Flagship;
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;

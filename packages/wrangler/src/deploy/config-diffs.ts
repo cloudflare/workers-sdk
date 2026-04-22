@@ -30,9 +30,11 @@ const reorderableBindings = {
 	mtls_certificates: true,
 	pipelines: true,
 	secrets_store_secrets: true,
+	artifacts: true,
 	ratelimits: true,
 	analytics_engine_datasets: true,
 	unsafe_hello_world: true,
+	flagship: true,
 	worker_loaders: true,
 	vpc_services: true,
 	vpc_networks: true,
@@ -231,6 +233,18 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 
 	if (normalizedConfig.ai_search?.length) {
 		normalizedConfig.ai_search = normalizedConfig.ai_search.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.flagship?.length) {
+		normalizedConfig.flagship = normalizedConfig.flagship.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.artifacts?.length) {
+		normalizedConfig.artifacts = normalizedConfig.artifacts.map(
 			({ remote: _, ...binding }) => binding
 		);
 	}
