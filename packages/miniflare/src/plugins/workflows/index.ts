@@ -23,6 +23,7 @@ export const WorkflowsOptionsSchema = z.object({
 					.custom<RemoteProxyConnectionString>()
 					.optional(),
 				stepLimit: z.number().int().min(1).optional(),
+				compatibilityFlags: z.string().array().optional(),
 			})
 		)
 		.optional(),
@@ -118,6 +119,10 @@ export const WORKFLOWS_PLUGIN: Plugin<
 					),
 					worker: {
 						compatibilityDate: "2024-10-22",
+						compatibilityFlags: [
+							"experimental",
+							...(workflow.compatibilityFlags ?? []),
+						],
 						modules: [
 							{
 								name: "workflows.mjs",
