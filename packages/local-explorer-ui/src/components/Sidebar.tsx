@@ -443,12 +443,14 @@ export function AppSidebar({
 				<Dialog className="p-6">
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 					<Dialog.Title className="mb-4 text-lg font-semibold">
-						Purge Resource
+					<Dialog.Title className="mb-4 text-lg font-semibold">
+						Purge resource?
+					</Dialog.Title>
 					</Dialog.Title>
 
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 					<Dialog.Description className="mb-2 text-kumo-subtle">
-						This will permanently delete all local state for &nbsp;&ldquo;
+						This will permanently delete all local state for &ldquo;
 						{purgeTarget?.label}&rdquo;. This cannot be undone.
 					</Dialog.Description>
 
