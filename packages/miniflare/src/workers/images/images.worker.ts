@@ -3,11 +3,37 @@
 // Transforms and info operations are handled via HTTP loopback to Node.js Sharp
 
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
+import { getPublicUrl } from "miniflare:shared";
 import { CoreBindings, CoreHeaders, CorePaths } from "../core/constants";
 
 interface Env {
 	IMAGES_STORE: KVNamespace;
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+}
+
+function buildVariantUrl(
+	publicUrl: URL,
+	imageId: string,
+	variant: string
+): string {
+	return new URL(
+		`${CorePaths.IMAGE_DELIVERY}/${imageId}/${variant}`,
+		publicUrl
+	).toString();
+}
+
+// Rewrites stored variant names (e.g. `["public"]`) to absolute URLs.
+async function withResolvedVariants(
+	metadata: ImageMetadata,
+	env: Env
+): Promise<ImageMetadata> {
+	const publicUrl = await getPublicUrl(env[CoreBindings.SERVICE_LOOPBACK]);
+	return {
+		...metadata,
+		variants: metadata.variants.map((variant) =>
+			buildVariantUrl(publicUrl, metadata.id, variant)
+		),
+	};
 }
 
 function base64DecodeArrayBuffer(buffer: ArrayBuffer): ArrayBuffer {
@@ -31,24 +57,27 @@ async function base64DecodeStream(
 
 class ImageHandleImpl extends RpcTarget {
 	readonly #imageId: string;
-	readonly #store: KVNamespace;
+	readonly #env: Env;
 
-	constructor(imageId: string, store: KVNamespace) {
+	constructor(imageId: string, env: Env) {
 		super();
 		this.#imageId = imageId;
-		this.#store = store;
+		this.#env = env;
 	}
 
 	async details(): Promise<ImageMetadata | null> {
-		const result = await this.#store.getWithMetadata<ImageMetadata>(
+		const result = await this.#env.IMAGES_STORE.getWithMetadata<ImageMetadata>(
 			this.#imageId,
 			"arrayBuffer"
 		);
-		return result.metadata ?? null;
+		if (result.metadata === null) {
+			return null;
+		}
+		return withResolvedVariants(result.metadata, this.#env);
 	}
 
 	async bytes(): Promise<ReadableStream<Uint8Array> | null> {
-		const data = await this.#store.get(this.#imageId, "arrayBuffer");
+		const data = await this.#env.IMAGES_STORE.get(this.#imageId, "arrayBuffer");
 		if (data === null) {
 			return null;
 		}
@@ -56,10 +85,11 @@ class ImageHandleImpl extends RpcTarget {
 	}
 
 	async update(options: ImageUpdateOptions): Promise<ImageMetadata> {
-		const existing = await this.#store.getWithMetadata<ImageMetadata>(
-			this.#imageId,
-			"arrayBuffer"
-		);
+		const existing =
+			await this.#env.IMAGES_STORE.getWithMetadata<ImageMetadata>(
+				this.#imageId,
+				"arrayBuffer"
+			);
 		if (existing.value === null || existing.metadata === null) {
 			throw new Error(`Image not found: ${this.#imageId}`);
 		}
@@ -72,25 +102,28 @@ class ImageHandleImpl extends RpcTarget {
 			creator: options.creator ?? existing.metadata.creator,
 		};
 
-		await this.#store.put(this.#imageId, existing.value, {
+		await this.#env.IMAGES_STORE.put(this.#imageId, existing.value, {
 			metadata: updatedMetadata,
 		});
-		return updatedMetadata;
+		return withResolvedVariants(updatedMetadata, this.#env);
 	}
 
 	async delete(): Promise<boolean> {
-		const existing = await this.#store.get(this.#imageId, "arrayBuffer");
+		const existing = await this.#env.IMAGES_STORE.get(
+			this.#imageId,
+			"arrayBuffer"
+		);
 		if (existing === null) {
 			return false;
 		}
-		await this.#store.delete(this.#imageId);
+		await this.#env.IMAGES_STORE.delete(this.#imageId);
 		return true;
 	}
 }
 
 export default class ImagesService extends WorkerEntrypoint<Env> {
 	image(imageId: string): ImageHandleImpl {
-		return new ImageHandleImpl(imageId, this.env.IMAGES_STORE);
+		return new ImageHandleImpl(imageId, this.env);
 	}
 
 	async upload(
@@ -118,13 +151,13 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 			uploaded: new Date().toISOString(),
 			requireSignedURLs: options?.requireSignedURLs ?? false,
 			meta: options?.metadata ?? {},
-			variants: [`${CorePaths.IMAGE_DELIVERY}/${id}/public`],
+			variants: ["public"],
 			draft: false,
 			creator: options?.creator,
 		};
 
 		await this.env.IMAGES_STORE.put(id, buffer, { metadata });
-		return metadata;
+		return withResolvedVariants(metadata, this.env);
 	}
 
 	async list(options?: ImageListOptions): Promise<ImageList> {
@@ -173,8 +206,19 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		const hasMore = startIndex + limit < allImages.length;
 		const lastImage = page[page.length - 1];
 
+		// Resolve variant URLs once per page.
+		const publicUrl = await getPublicUrl(
+			this.env[CoreBindings.SERVICE_LOOPBACK]
+		);
+		const resolvedPage = page.map((metadata) => ({
+			...metadata,
+			variants: metadata.variants.map((variant) =>
+				buildVariantUrl(publicUrl, metadata.id, variant)
+			),
+		}));
+
 		return {
-			images: page,
+			images: resolvedPage,
 			cursor: hasMore && lastImage ? lastImage.id : undefined,
 			listComplete: !hasMore,
 		};
