@@ -14,8 +14,8 @@ import type { CloudflareTunnel } from "../../tunnel/client";
 
 // Mock spawnCloudflared so `tunnel run` tests don't need a real binary.
 // The mock emits "exit" on next tick so the handler's Promise resolves.
-vi.mock("../../tunnel/cloudflared", async () => {
-	const actual = await vi.importActual("../../tunnel/cloudflared");
+vi.mock("@cloudflare/workers-utils", async () => {
+	const actual = await vi.importActual("@cloudflare/workers-utils");
 	return {
 		...actual,
 		spawnCloudflared: vi.fn(async () => {
@@ -259,7 +259,7 @@ describe("tunnel commands", () => {
 		it("should spawn cloudflared with correct args for quick tunnel", async ({
 			expect,
 		}) => {
-			const { spawnCloudflared } = await import("../../tunnel/cloudflared");
+			const { spawnCloudflared } = await import("@cloudflare/workers-utils");
 
 			await runWrangler("tunnel quick-start http://localhost:3000");
 
@@ -286,7 +286,7 @@ describe("tunnel commands", () => {
 		it("should pass token via TUNNEL_TOKEN env var, not CLI args", async ({
 			expect,
 		}) => {
-			const { spawnCloudflared } = await import("../../tunnel/cloudflared");
+			const { spawnCloudflared } = await import("@cloudflare/workers-utils");
 
 			await runWrangler("tunnel run --token TEST_TOKEN");
 

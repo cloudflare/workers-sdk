@@ -6,7 +6,9 @@ import { resolvePluginConfig } from "../../../src/plugin-config";
 import {
 	addBindingsShortcut,
 	addExplorerShortcut,
+	addTunnelShortcut,
 } from "../../../src/plugins/shortcuts";
+import * as tunnelPlugin from "../../../src/plugins/tunnel";
 import {
 	resetServerLogs,
 	satisfiesViteVersion,
@@ -36,6 +38,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
 			restartingDevServerCount: 0,
+			tunnelHostnames: new Set(),
 		});
 		mockContext.setResolvedPluginConfig(
 			resolvePluginConfig(
@@ -73,6 +76,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
 			restartingDevServerCount: 0,
+			tunnelHostnames: new Set(),
 		});
 
 		mockContext.setResolvedPluginConfig(
@@ -129,6 +133,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
 			restartingDevServerCount: 0,
+			tunnelHostnames: new Set(),
 		});
 
 		mockContext.setResolvedPluginConfig(
@@ -217,5 +222,32 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		expect(mockOpen).toHaveBeenCalledWith(
 			expect.stringMatching(/^http:\/\/localhost:\d+\/cdn-cgi\/explorer$/)
 		);
+	});
+
+	test("registers tunnel shortcut and extends expiry", async ({ expect }) => {
+		const mockBindCLIShortcuts = vi.spyOn(viteServer, "bindCLIShortcuts");
+		const extendExpirySpy = vi
+			.spyOn(tunnelPlugin, "extendTunnelExpiry")
+			.mockImplementation(() => {});
+
+		addTunnelShortcut(viteServer);
+
+		expect(mockBindCLIShortcuts).toHaveBeenCalledWith({
+			customShortcuts: [
+				{
+					key: "t",
+					description: "extend tunnel by 1 hour",
+					action: expect.any(Function),
+				},
+			],
+		});
+
+		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
+		const tunnelShortcut = customShortcuts?.find((s) => s.key === "t");
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		await tunnelShortcut?.action?.(viteServer as any);
+
+		expect(extendExpirySpy).toHaveBeenCalledTimes(1);
 	});
 });

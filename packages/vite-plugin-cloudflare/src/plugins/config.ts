@@ -49,6 +49,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			return {
 				appType: "custom",
 				server: {
+					allowedHosts: getAllowedHosts(ctx, userConfig),
 					fs: {
 						deny: [
 							...defaultDeniedFiles,
@@ -226,4 +227,18 @@ function getEnvironmentsConfig(
 			},
 		},
 	};
+}
+
+function getAllowedHosts(
+	ctx: PluginContext,
+	userConfig: UserConfig
+): true | string[] | undefined {
+	const userAllowedHosts = userConfig.server?.allowedHosts;
+	const tunnelHostnames = ctx.getTunnelHostnames();
+
+	if (tunnelHostnames.length === 0 || userAllowedHosts === true) {
+		return userAllowedHosts;
+	}
+
+	return Array.from(new Set([...(userAllowedHosts ?? []), ...tunnelHostnames]));
 }
