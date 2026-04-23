@@ -18,4 +18,5 @@ export default defineConfig({
 	outDir: "dist",
 	tsconfig: "tsconfig.json",
 	sourcemap: process.env.SOURCEMAPS !== "false",
+	unbundle: true,
 });
