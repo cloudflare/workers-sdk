@@ -8,13 +8,14 @@ describe("Multi Worker", () => {
 			path.resolve(__dirname, ".."),
 			["-c=workers/sentry/wrangler.jsonc", "-c=workers/default/wrangler.jsonc"]
 		);
-
-		await vi.waitFor(async () => {
-			const response = await fetch(`http://${ip}:${port}/`);
-			const text = await response.text();
-			expect(text).toBe(`Hello World!`);
-		});
-
-		await stop();
+		try {
+			await vi.waitFor(async () => {
+				const response = await fetch(`http://${ip}:${port}/`);
+				const text = await response.text();
+				expect(text).toBe(`Hello World!`);
+			});
+		} finally {
+			await stop();
+		}
 	});
 });
