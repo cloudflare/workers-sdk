@@ -17,6 +17,8 @@ type CustomDomainsRes = {
 	service: string;
 	environment: string;
 	cert_id: string;
+	enabled: boolean;
+	previews_enabled: boolean;
 }[];
 
 type WorkerSubdomainRes = {
