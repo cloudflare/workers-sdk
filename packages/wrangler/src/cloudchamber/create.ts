@@ -7,7 +7,10 @@ import {
 } from "@cloudflare/cli-shared-helpers";
 import { processArgument } from "@cloudflare/cli-shared-helpers/args";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
-import { inputPrompt, spinner } from "@cloudflare/cli-shared-helpers/interactive";
+import {
+	inputPrompt,
+	spinner,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	AssignIPv4,
 	AssignIPv6,

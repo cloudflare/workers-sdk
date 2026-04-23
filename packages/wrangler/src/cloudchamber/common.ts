@@ -1,6 +1,9 @@
 import { space, updateStatus } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
-import { inputPrompt, spinner } from "@cloudflare/cli-shared-helpers/interactive";
+import {
+	inputPrompt,
+	spinner,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	ApiError,
 	DeploymentMutationError,

@@ -12,7 +12,12 @@ import {
 	success,
 	updateStatus,
 } from "@cloudflare/cli-shared-helpers";
-import { bold, brandColor, dim, green } from "@cloudflare/cli-shared-helpers/colors";
+import {
+	bold,
+	brandColor,
+	dim,
+	green,
+} from "@cloudflare/cli-shared-helpers/colors";
 import {
 	ApiError,
 	ApplicationsService,

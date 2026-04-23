@@ -164,8 +164,9 @@ describe("deploy", () => {
 				"deploy",
 				"--x-autoconfig",
 			]);
-			const runCommandSpy = (await import("@cloudflare/cli-shared-helpers/command"))
-				.runCommand;
+			const runCommandSpy = (
+				await import("@cloudflare/cli-shared-helpers/command")
+			).runCommand;
 
 			await mockOpenNextLikeProject();
 
@@ -212,8 +213,9 @@ describe("deploy", () => {
 				"--keep-vars",
 				"--x-autoconfig",
 			]);
-			const runCommandSpy = (await import("@cloudflare/cli-shared-helpers/command"))
-				.runCommand;
+			const runCommandSpy = (
+				await import("@cloudflare/cli-shared-helpers/command")
+			).runCommand;
 
 			await mockOpenNextLikeProject();
 
@@ -258,8 +260,9 @@ describe("deploy", () => {
 		}) => {
 			vi.stubEnv("OPEN_NEXT_DEPLOY", "1");
 
-			const runCommandSpy = (await import("@cloudflare/cli-shared-helpers/command"))
-				.runCommand;
+			const runCommandSpy = (
+				await import("@cloudflare/cli-shared-helpers/command")
+			).runCommand;
 
 			await mockOpenNextLikeProject();
 
@@ -289,8 +292,9 @@ describe("deploy", () => {
 		it("should not delegate to open-next deploy when --x-autoconfig=false is provided", async ({
 			expect,
 		}) => {
-			const runCommandSpy = (await import("@cloudflare/cli-shared-helpers/command"))
-				.runCommand;
+			const runCommandSpy = (
+				await import("@cloudflare/cli-shared-helpers/command")
+			).runCommand;
 
 			await mockOpenNextLikeProject();
 
@@ -320,8 +324,9 @@ describe("deploy", () => {
 		it("should not delegate to open-next deploy when the Next.js config file is missing (to avoid false positives)", async ({
 			expect,
 		}) => {
-			const runCommandSpy = (await import("@cloudflare/cli-shared-helpers/command"))
-				.runCommand;
+			const runCommandSpy = (
+				await import("@cloudflare/cli-shared-helpers/command")
+			).runCommand;
 
 			await mockOpenNextLikeProject();
 
@@ -354,8 +359,9 @@ describe("deploy", () => {
 		it("should not delegate to open-next deploy when the open-next config file is missing (to avoid false positives)", async ({
 			expect,
 		}) => {
-			const runCommandSpy = (await import("@cloudflare/cli-shared-helpers/command"))
-				.runCommand;
+			const runCommandSpy = (
+				await import("@cloudflare/cli-shared-helpers/command")
+			).runCommand;
 
 			await mockOpenNextLikeProject();
 

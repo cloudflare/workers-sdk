@@ -1,6 +1,9 @@
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
-import { inputPrompt, spinner } from "@cloudflare/cli-shared-helpers/interactive";
+import {
+	inputPrompt,
+	spinner,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import { runWranglerCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { reporter } from "../metrics";

@@ -1,6 +1,9 @@
 import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
 import { dim } from "@cloudflare/cli-shared-helpers/colors";
-import { quoteShellArgs, runCommand } from "@cloudflare/cli-shared-helpers/command";
+import {
+	quoteShellArgs,
+	runCommand,
+} from "@cloudflare/cli-shared-helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import frameworksPackageJson from "./package.json";
 import type { C3Context } from "types";

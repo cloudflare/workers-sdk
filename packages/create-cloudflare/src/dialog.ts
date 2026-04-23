@@ -1,5 +1,10 @@
 import { relative } from "node:path";
-import { hyperlink, logRaw, shapes, stripAnsi } from "@cloudflare/cli-shared-helpers";
+import {
+	hyperlink,
+	logRaw,
+	shapes,
+	stripAnsi,
+} from "@cloudflare/cli-shared-helpers";
 import { bgGreen, blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import { quoteShellArgs } from "@cloudflare/cli-shared-helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";

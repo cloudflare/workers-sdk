@@ -3,7 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startSection, updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
-import { quoteShellArgs, runCommand } from "@cloudflare/cli-shared-helpers/command";
+import {
+	quoteShellArgs,
+	runCommand,
+} from "@cloudflare/cli-shared-helpers/command";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { readFile } from "helpers/files";

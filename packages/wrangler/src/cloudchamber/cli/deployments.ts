@@ -1,5 +1,10 @@
 import { exit } from "node:process";
-import { cancel, endSection, log, newline } from "@cloudflare/cli-shared-helpers";
+import {
+	cancel,
+	endSection,
+	log,
+	newline,
+} from "@cloudflare/cli-shared-helpers";
 import { processArgument } from "@cloudflare/cli-shared-helpers/args";
 import { brandColor, dim, yellow } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
