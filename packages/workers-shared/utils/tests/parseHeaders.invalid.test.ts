@@ -162,20 +162,10 @@ test("parseHeaders should reject paths with multiple wildcards", ({
 					"Only one wildcard is allowed per rule. Use a named placeholder (e.g. :project) instead. Skipping https://*.pages.dev/*.",
 			},
 			{
-				line: "x-custom: value",
-				lineNumber: 4,
-				message: "Path should come before header (x-custom: value)",
-			},
-			{
 				line: "/blog/*/posts/*",
 				lineNumber: 6,
 				message:
 					"Only one wildcard is allowed per rule. Use a named placeholder (e.g. :project) instead. Skipping /blog/*/posts/*.",
-			},
-			{
-				line: "x-custom: value",
-				lineNumber: 7,
-				message: "Path should come before header (x-custom: value)",
 			},
 		],
 	});
@@ -212,20 +202,10 @@ test("parseHeaders should reject paths combining wildcard with :splat placeholde
 					"Cannot combine a wildcard * with a :splat placeholder because wildcards are converted to :splat at runtime. Skipping https://*.pages.dev/:splat.",
 			},
 			{
-				line: "x-custom: value",
-				lineNumber: 4,
-				message: "Path should come before header (x-custom: value)",
-			},
-			{
 				line: "/blog/*/:splat",
 				lineNumber: 6,
 				message:
 					"Cannot combine a wildcard * with a :splat placeholder because wildcards are converted to :splat at runtime. Skipping /blog/*/:splat.",
-			},
-			{
-				line: "x-custom: value",
-				lineNumber: 7,
-				message: "Path should come before header (x-custom: value)",
 			},
 		],
 	});
@@ -275,31 +255,16 @@ test("parseHeaders should reject malformed URLs", ({ expect }) => {
 					'URLs should either be relative (e.g. begin with a forward-slash), or use HTTPS (e.g. begin with "https://").',
 			},
 			{
-				line: "invalid: things",
-				lineNumber: 17,
-				message: "Path should come before header (invalid: things)",
-			},
-			{
 				line: "https://nah.com:8080",
 				lineNumber: 19,
 				message:
 					"Specifying ports is not supported. Skipping absolute URL https://nah.com:8080.",
 			},
 			{
-				line: "invalid: also",
-				lineNumber: 20,
-				message: "Path should come before header (invalid: also)",
-			},
-			{
 				line: "https://nah.com:8080/blog",
 				lineNumber: 21,
 				message:
 					"Specifying ports is not supported. Skipping absolute URL https://nah.com:8080/blog.",
-			},
-			{
-				line: "invalid: 2",
-				lineNumber: 22,
-				message: "Path should come before header (invalid: 2)",
 			},
 			{
 				line: "nah.com",

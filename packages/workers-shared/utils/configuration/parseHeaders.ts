@@ -25,6 +25,10 @@ export function parseHeaders(
 	const invalid: InvalidHeadersRule[] = [];
 
 	let rule: (HeadersRule & { line: string }) | undefined = undefined;
+	// When a path line is rejected (invalid URL, multiple wildcards, etc.),
+	// we silently skip subsequent header lines until the next path line
+	// rather than emitting confusing "Path should come before header" errors.
+	let skipUntilNextPath = false;
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = (lines[i] || "").trim();
@@ -42,6 +46,8 @@ export function parseHeaders(
 		}
 
 		if (LINE_IS_PROBABLY_A_PATH.test(line)) {
+			skipUntilNextPath = false;
+
 			if (rules.length >= maxRules) {
 				invalid.push({
 					message: `Maximum number of rules supported is ${maxRules}. Skipping remaining ${
@@ -75,6 +81,7 @@ export function parseHeaders(
 					message: pathError,
 				});
 				rule = undefined;
+				skipUntilNextPath = true;
 				continue;
 			}
 
@@ -86,6 +93,7 @@ export function parseHeaders(
 					message: wildcardError,
 				});
 				rule = undefined;
+				skipUntilNextPath = true;
 				continue;
 			}
 
@@ -153,11 +161,13 @@ export function parseHeaders(
 		}
 
 		if (!rule) {
-			invalid.push({
-				line,
-				lineNumber: i + 1,
-				message: `Path should come before header (${name}: ${value})`,
-			});
+			if (!skipUntilNextPath) {
+				invalid.push({
+					line,
+					lineNumber: i + 1,
+					message: `Path should come before header (${name}: ${value})`,
+				});
+			}
 			continue;
 		}
 
