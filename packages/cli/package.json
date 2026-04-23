@@ -25,7 +25,7 @@
 		"ci-info": "catalog:default"
 	},
 	"devDependencies": {
-		"@clack/core": "^0.3.2",
+		"@clack/core": "^1.2.0",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@types/cross-spawn": "^6.0.2",
