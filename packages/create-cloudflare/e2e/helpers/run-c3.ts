@@ -146,7 +146,8 @@ export const runC3 = async (
 			const selectedOptionRegex = /^\u200a+(●|◀)\s/;
 			const currentSelection = lines
 				.find((line) => line.match(selectedOptionRegex))
-				?.replace(selectedOptionRegex, "");
+				?.replace(selectedOptionRegex, "")
+				.trim();
 
 			if (!currentSelection) {
 				// sometimes `lines` contain only the 'clear screen' ANSI codes and not the prompt options
