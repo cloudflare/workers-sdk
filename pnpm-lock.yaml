@@ -1525,22 +1525,13 @@ importers:
         version: link:../wrangler
 
   packages/cli:
-    devDependencies:
+    dependencies:
       '@clack/core':
         specifier: ^0.3.2
         version: 0.3.2
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../workers-tsconfig
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
-      '@types/cross-spawn':
-        specifier: ^6.0.2
-        version: 6.0.2
-      '@types/which-pm-runs':
-        specifier: ^1.0.0
-        version: 1.0.0
       chalk:
         specifier: ^5.2.0
         version: 5.3.0
@@ -1553,12 +1544,16 @@ importers:
       log-update:
         specifier: ^5.0.1
         version: 5.0.1
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@types/cross-spawn':
+        specifier: ^6.0.2
+        version: 6.0.2
       tsdown:
         specifier: ^0.15.9
         version: 0.15.9(typescript@5.9.3)
-      which-pm-runs:
-        specifier: ^2.0.0
-        version: 2.0.0
 
   packages/codemod:
     devDependencies:
@@ -14777,10 +14772,6 @@ packages:
     resolution: {integrity: sha512-n1brCuqClxfFfq/Rb0ICg9giSZqCS+pLtccdag6C2HyufBrh3fBOiy9nb6ggRMvWOVH5GrdJskj5iGTZNxd7SA==}
     engines: {node: '>=4'}
 
-  which-pm-runs@2.0.0:
-    resolution: {integrity: sha512-nZMKNZWw3urJ6GnFOS+rXYe2glmWFVlQQWnKYzYXKvxKjyLO4QqQfp/wIYjMJl35yOp2YG/TR58DcVbQ24Giew==}
-    engines: {node: '>=22.13'}
-
   which-typed-array@1.1.19:
     resolution: {integrity: sha512-rEvr90Bck4WZt9HHFC4DJMsjvu7x+r6bImz0/BrbWb7A2djJ8hnZMrWnHo9F8ssv0OMErasDhftrfROTyqSDrw==}
     engines: {node: '>= 0.4'}
@@ -26304,8 +26295,6 @@ snapshots:
       is-weakset: 2.0.3
 
   which-pm-runs@1.1.0: {}
-
-  which-pm-runs@2.0.0: {}
 
   which-typed-array@1.1.19:
     dependencies:
