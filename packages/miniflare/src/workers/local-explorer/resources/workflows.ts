@@ -633,9 +633,7 @@ async function executeGetInstanceDetails(
 		const steps: Array<Record<string, unknown>> = [];
 		for (const [, groupLogs] of stepGroups) {
 			const firstLog = groupLogs[0];
-			// Strip the trailing "-{count}" suffix from target for the step name
-			const rawTarget = firstLog.target ?? "";
-			const name = rawTarget.replace(/-\d+$/, "");
+			const name = firstLog.target ?? "";
 
 			const stepStart = groupLogs.find((l) => l.event === EVT.STEP_START);
 			const stepSuccess = groupLogs.find((l) => l.event === EVT.STEP_SUCCESS);

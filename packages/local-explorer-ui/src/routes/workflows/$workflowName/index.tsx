@@ -1,7 +1,7 @@
 import { Button, Dialog, DropdownMenu, Pagination } from "@cloudflare/kumo";
 import {
 	ArrowClockwiseIcon,
-	CaretDownIcon,
+	ArrowsClockwiseIcon,
 	CaretUpDownIcon,
 	CheckCircleIcon,
 	CircleNotchIcon,
@@ -93,7 +93,7 @@ const STATUS_SUMMARY_CONFIG = [
 		key: "errored",
 		label: "Errored",
 		icon: WarningCircleIcon,
-		color: "text-kumo-danger",
+		color: "text-[var(--color-kumo-danger)]",
 		weight: "fill" as const,
 	},
 	{
@@ -139,7 +139,7 @@ const StatusSummary = memo(function StatusSummary({
 	statusCounts: Record<string, number>;
 }): JSX.Element {
 	return (
-		<div className="mb-4 flex divide-x divide-kumo-fill overflow-hidden rounded-lg border border-kumo-fill bg-kumo-elevated">
+		<div className="mb-4 flex divide-x divide-kumo-fill overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
 			{STATUS_SUMMARY_CONFIG.map(
 				({ key, label, icon: Icon, color, weight }) => (
 					<div className="flex-1 space-y-1 px-4.5 pt-4 pb-3.5" key={key}>
@@ -183,7 +183,7 @@ const ACTION_CONFIG_LIST: Record<
 	terminate: {
 		icon: StopIcon,
 		style:
-			"border-kumo-fill bg-kumo-base text-kumo-danger hover:bg-kumo-danger/10",
+			"border-kumo-fill bg-kumo-base text-[var(--color-kumo-danger)] hover:bg-kumo-danger/10",
 		weight: "fill",
 	},
 };
@@ -307,7 +307,7 @@ const InstanceRow = memo(function InstanceRow({
 
 	return (
 		<>
-			<div className="border-b border-kumo-fill bg-kumo-elevated p-1 last:border-b-0">
+			<div className="border-b border-kumo-fill bg-kumo-base p-1 last:border-b-0">
 				<div
 					className="grid h-10 cursor-pointer grid-cols-[100px_60px_1fr_auto] items-center gap-3 rounded-lg px-2 transition-colors hover:bg-kumo-fill"
 					onClick={handleRowClick}
@@ -356,7 +356,7 @@ const InstanceRow = memo(function InstanceRow({
 								</button>
 							)}
 						<button
-							className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-kumo-danger transition-colors hover:bg-kumo-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
+							className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-[var(--color-kumo-danger)] transition-colors hover:bg-kumo-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
 							disabled={actionInProgress !== null}
 							onClick={handleDeleteClick}
 							title="Delete"
@@ -484,6 +484,7 @@ const InstanceRow = memo(function InstanceRow({
 function WorkflowInstancesView() {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
+	const navigate = useNavigate();
 
 	const [deleteAllConfirmOpen, setDeleteAllConfirmOpen] =
 		useState<boolean>(false);
@@ -567,10 +568,14 @@ function WorkflowInstancesView() {
 
 				setInstances(response.data?.result ?? []);
 				setTotalCount(response.data?.result_info?.total_count ?? 0);
-				setStatusCounts(
-					((response.data?.result_info as Record<string, unknown> | undefined)
-						?.status_counts as Record<string, number>) ?? {}
-				);
+				// Only update status counts from unfiltered responses so the
+				// stats strip stays visible when a filter yields zero results
+				if (!st || st === "all") {
+					setStatusCounts(
+						((response.data?.result_info as Record<string, unknown> | undefined)
+							?.status_counts as Record<string, number>) ?? {}
+					);
+				}
 				setPage(response.data?.result_info?.page ?? p);
 				setInitialLoad(false);
 			} catch (err) {
@@ -617,9 +622,15 @@ function WorkflowInstancesView() {
 		void fetchInstances(1, newPerPage);
 	}
 
-	function handleCreated(): void {
+	function handleCreated(newInstanceId: string): void {
 		setDialogOpen(false);
-		void fetchInstances(1);
+		void navigate({
+			to: "/workflows/$workflowName/$instanceId",
+			params: {
+				workflowName: params.workflowName,
+				instanceId: newInstanceId,
+			},
+		});
 	}
 
 	function handleStatusFilterChange(newStatus: string): void {
@@ -663,89 +674,100 @@ function WorkflowInstancesView() {
 					</span>,
 				]}
 				title="Workflows"
-			>
-				<Button
-					onClick={(e: MouseEvent<HTMLButtonElement>) => {
-						(e.target as HTMLButtonElement).blur();
-						setDialogOpen(true);
-					}}
-					variant="primary"
-				>
-					<PlayIcon size={14} weight="fill" />
-					Trigger
-				</Button>
-
-				<DropdownMenu>
-					<DropdownMenu.Trigger
-						render={
-							<Button className="min-w-36" icon={CaretDownIcon}>
-								<span>
-									{statusFilter === "all"
-										? "All"
-										: (STATUS_SUMMARY_CONFIG.find((s) => s.key === statusFilter)
-												?.label ?? statusFilter)}
-								</span>
-							</Button>
-						}
-					/>
-					<DropdownMenu.Content
-						align="start"
-						className="w-36 bg-kumo-base"
-						side="bottom"
-					>
-						<DropdownMenu.Item
-							className="cursor-pointer gap-2 rounded-md transition-colors hover:bg-kumo-fill"
-							icon={<ListIcon />}
-							onClick={() => handleStatusFilterChange("all")}
-						>
-							All
-						</DropdownMenu.Item>
-						{STATUS_SUMMARY_CONFIG.map(({ key, label, icon: Icon }) => (
-							<DropdownMenu.Item
-								className="cursor-pointer gap-2 rounded-md transition-colors hover:bg-kumo-fill"
-								icon={<Icon />}
-								key={key}
-								onClick={() => handleStatusFilterChange(key)}
-							>
-								{label}
-							</DropdownMenu.Item>
-						))}
-					</DropdownMenu.Content>
-				</DropdownMenu>
-
-				<Button
-					aria-label="Refresh"
-					icon={ArrowClockwiseIcon}
-					loading={refreshing}
-					onClick={() => void handleRefresh()}
-					shape="square"
-					variant="secondary"
-				></Button>
-
-				<DropdownMenu>
-					<DropdownMenu.Trigger
-						render={
-							<Button aria-label="More actions" shape="square">
-								<DotsThreeIcon size={14} weight="bold" />
-							</Button>
-						}
-					/>
-					<DropdownMenu.Content align="end" sideOffset={4}>
-						<DropdownMenu.Item
-							className="flex cursor-pointer items-center gap-2 text-kumo-danger"
-							onClick={() => handleDeleteAllOpenChange(true)}
-						>
-							<TrashIcon />
-							<span>Delete all instances</span>
-						</DropdownMenu.Item>
-					</DropdownMenu.Content>
-				</DropdownMenu>
-			</Breadcrumbs>
+			/>
 
 			<div className="px-8 py-6">
-				{totalCount > 0 && !initialLoad && (
-					<StatusSummary statusCounts={statusCounts} />
-				)}
+				<StatusSummary statusCounts={statusCounts} />
+
+				<hr className="-mx-8 my-4 border-kumo-fill" />
+
+				{/* Toolbar: filter (left), actions (right) */}
+				<div className="mb-4 flex items-center justify-between">
+					<DropdownMenu>
+						<DropdownMenu.Trigger
+							render={
+								<button className="inline-flex h-9 min-w-36 cursor-pointer items-center justify-between rounded-lg border border-kumo-fill bg-kumo-base px-3 text-sm text-kumo-default transition-colors hover:bg-kumo-fill">
+									<span>
+										{statusFilter === "all"
+											? "All"
+											: (STATUS_SUMMARY_CONFIG.find(
+													(s) => s.key === statusFilter
+												)?.label ?? statusFilter)}
+									</span>
+									<CaretUpDownIcon size={14} className="text-kumo-subtle" />
+								</button>
+							}
+						/>
+						<DropdownMenu.Content
+							align="start"
+							className="w-36 bg-kumo-base"
+							side="bottom"
+						>
+							<DropdownMenu.Item
+								className="cursor-pointer gap-2 rounded-md transition-colors hover:bg-kumo-fill"
+								icon={<ListIcon />}
+								onClick={() => handleStatusFilterChange("all")}
+							>
+								All
+							</DropdownMenu.Item>
+							{STATUS_SUMMARY_CONFIG.map(({ key, label, icon: Icon }) => (
+								<DropdownMenu.Item
+									className="cursor-pointer gap-2 rounded-md transition-colors hover:bg-kumo-fill"
+									icon={<Icon />}
+									key={key}
+									onClick={() => handleStatusFilterChange(key)}
+								>
+									{label}
+								</DropdownMenu.Item>
+							))}
+						</DropdownMenu.Content>
+					</DropdownMenu>
+
+					<div className="flex items-center gap-2">
+						<Button
+							onClick={(e: MouseEvent<HTMLButtonElement>) => {
+								(e.target as HTMLButtonElement).blur();
+								setDialogOpen(true);
+							}}
+							variant="primary"
+						>
+							<PlayIcon size={14} weight="fill" />
+							Trigger
+						</Button>
+
+						<Button
+							aria-label="Refresh"
+							disabled={refreshing}
+							onClick={() => void handleRefresh()}
+							shape="square"
+							variant="secondary"
+						>
+							<ArrowsClockwiseIcon
+								size={18}
+								className={refreshing ? "animate-spin" : ""}
+							/>
+						</Button>
+
+						<DropdownMenu>
+							<DropdownMenu.Trigger
+								render={
+									<Button aria-label="More actions" shape="square">
+										<DotsThreeIcon size={14} weight="bold" />
+									</Button>
+								}
+							/>
+							<DropdownMenu.Content align="end" sideOffset={4}>
+								<DropdownMenu.Item
+									className="flex cursor-pointer items-center gap-2 text-[var(--color-kumo-danger)]"
+									onClick={() => handleDeleteAllOpenChange(true)}
+								>
+									<TrashIcon />
+									<span>Delete all instances</span>
+								</DropdownMenu.Item>
+							</DropdownMenu.Content>
+						</DropdownMenu>
+					</div>
+				</div>
 
 				{error && (
 					<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
@@ -771,7 +793,7 @@ function WorkflowInstancesView() {
 					<div
 						className={`transition-opacity duration-150 ${fetching ? "opacity-60" : "opacity-100"}`}
 					>
-						<div className="overflow-hidden rounded-lg border border-kumo-fill">
+						<div className="overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
 							{instances.map((instance) => (
 								<InstanceRow
 									instance={instance}
@@ -786,7 +808,11 @@ function WorkflowInstancesView() {
 							<div className="flex items-center justify-between gap-2 pt-4">
 								<DropdownMenu>
 									<DropdownMenu.Trigger
-										render={<Button icon={CaretUpDownIcon}>{perPage}</Button>}
+										render={
+											<Button>
+												{perPage} <CaretUpDownIcon size={14} />
+											</Button>
+										}
 									/>
 									<DropdownMenu.Content
 										align="start"

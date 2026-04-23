@@ -22,7 +22,7 @@ export function StatusIcon({ status }: { status: string }): JSX.Element {
 					<WarningCircleIcon
 						size={20}
 						weight="fill"
-						className="text-kumo-danger"
+						className="text-[var(--color-kumo-danger)]"
 					/>
 				</Tooltip>
 			);

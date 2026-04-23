@@ -1,11 +1,4 @@
-import {
-	Button,
-	Dialog,
-	DropdownMenu,
-	LayerCard,
-	Text,
-	Tooltip,
-} from "@cloudflare/kumo";
+import { Button, Dialog, DropdownMenu, Tooltip } from "@cloudflare/kumo";
 import {
 	ArrowClockwiseIcon,
 	BellIcon,
@@ -45,7 +38,11 @@ import {
 import { ScrollableCodeBlock } from "../../../components/workflows/ScrollableCodeBlock";
 import { WorkflowStatusBadge } from "../../../components/workflows/StatusBadge";
 import { StatusIcon } from "../../../components/workflows/StatusIcon";
-import { StepRow } from "../../../components/workflows/StepRow";
+import {
+	getStepDisplayName,
+	getStepKey,
+	StepRow,
+} from "../../../components/workflows/StepRow";
 import {
 	getAvailableActions,
 	isTerminalStatus,
@@ -214,11 +211,13 @@ const ErrorCard = memo(function ErrorCard({
 	error: { name?: string; message?: string };
 }) {
 	return (
-		<LayerCard>
-			<LayerCard.Secondary className="bg-kumo-tint px-4! py-2.5!">
-				<Text bold>{error.name ?? "Error"}</Text>
-			</LayerCard.Secondary>
-			<LayerCard.Primary className="relative p-0!">
+		<div className="overflow-hidden rounded-xl border border-kumo-fill bg-kumo-tint">
+			<div className="px-4 py-2.5">
+				<span className="text-sm font-medium text-kumo-default">
+					{error.name ?? "Error"}
+				</span>
+			</div>
+			<div className="relative rounded-t-lg border-t border-kumo-fill bg-kumo-base">
 				<pre className="max-h-64 overflow-y-auto px-4 py-3 font-mono text-sm wrap-break-word whitespace-pre-wrap text-kumo-subtle">
 					{error.message ?? "Unknown error"}
 				</pre>
@@ -228,8 +227,8 @@ const ErrorCard = memo(function ErrorCard({
 						label="Copy error"
 					/>
 				</div>
-			</LayerCard.Primary>
-		</LayerCard>
+			</div>
+		</div>
 	);
 });
 
@@ -249,13 +248,30 @@ const StepHistory = memo(function StepHistory({
 	const [search, setSearch] = useState("");
 	const [typeFilter, setTypeFilter] = useState("all");
 
+	// Track expanded steps by stable key — persists across polling refreshes
+	const [expandedStepKeys, setExpandedStepKeys] = useState<Set<string>>(
+		() => new Set()
+	);
+
+	const toggleStepExpanded = useCallback((stepKey: string) => {
+		setExpandedStepKeys((prev) => {
+			const next = new Set(prev);
+			if (next.has(stepKey)) {
+				next.delete(stepKey);
+			} else {
+				next.add(stepKey);
+			}
+			return next;
+		});
+	}, []);
+
 	const filtered = [...stepList].reverse().filter((step) => {
 		if (typeFilter !== "all" && step.type !== typeFilter) {
 			return false;
 		}
 		if (search.trim()) {
 			const q = search.trim().toLowerCase();
-			return (step.name ?? "").toLowerCase().includes(q);
+			return getStepDisplayName(step.name).toLowerCase().includes(q);
 		}
 		return true;
 	});
@@ -332,9 +348,17 @@ const StepHistory = memo(function StepHistory({
 							No steps match your search
 						</div>
 					) : (
-						filtered.map((step, i) => (
-							<StepRow key={`${step.name}-${i}`} step={step} />
-						))
+						filtered.map((step) => {
+							const key = getStepKey(step);
+							return (
+								<StepRow
+									key={key}
+									step={step}
+									isExpanded={expandedStepKeys.has(key)}
+									onToggleExpanded={() => toggleStepExpanded(key)}
+								/>
+							);
+						})
 					)}
 				</div>
 			</div>
@@ -362,9 +386,16 @@ function InstanceDetailView() {
 	const [eventPayload, setEventPayload] = useState("");
 	const [sendingEvent, setSendingEvent] = useState(false);
 
+	// Track last-seen JSON so we skip state updates when polled data is unchanged
+	const lastDetailsJsonRef = useRef(JSON.stringify(loaderData.details));
+
 	// Sync from loader on navigation
 	useEffect(() => {
-		setDetails(loaderData.details);
+		const json = JSON.stringify(loaderData.details);
+		if (json !== lastDetailsJsonRef.current) {
+			lastDetailsJsonRef.current = json;
+			setDetails(loaderData.details);
+		}
 	}, [loaderData]);
 
 	const status = details.status ?? "unknown";
@@ -383,27 +414,38 @@ function InstanceDetailView() {
 			});
 			const result = response.data?.result as InstanceDetails | undefined;
 			if (result) {
-				setDetails(result);
+				const json = JSON.stringify(result);
+				if (json !== lastDetailsJsonRef.current) {
+					lastDetailsJsonRef.current = json;
+					setDetails(result);
+				}
 			}
 		} catch {
 			// Silent fail on poll
 		}
 	}, [instanceId, params.workflowName]);
 
-	// Poll every 1s, but stop on terminal states
+	// Poll every 1s, but stop on terminal states.
+	// Uses a setTimeout loop so the next poll waits for the current fetch to
+	// finish — no overlapping requests if a response is slow.
 	const isTerminal = isTerminalStatus(status);
-	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	useEffect(() => {
 		if (isTerminal) {
 			return;
 		}
-		pollRef.current = setInterval(() => {
-			void fetchDetails();
-		}, 1_000);
-		return () => {
-			if (pollRef.current) {
-				clearInterval(pollRef.current);
+		let active = true;
+		async function poll() {
+			while (active) {
+				await new Promise((r) => setTimeout(r, 1_000));
+				if (!active) {
+					break;
+				}
+				await fetchDetails();
 			}
+		}
+		void poll();
+		return () => {
+			active = false;
 		};
 	}, [fetchDetails, isTerminal]);
 
@@ -488,7 +530,7 @@ function InstanceDetailView() {
 											key={action}
 											className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
 												isTerminate
-													? "border-kumo-fill bg-kumo-base text-kumo-danger hover:bg-kumo-danger/10"
+													? "border-kumo-fill bg-kumo-base text-[var(--color-kumo-danger)] hover:bg-kumo-danger/10"
 													: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill"
 											}`}
 											disabled={actionInProgress !== null}
@@ -518,7 +560,7 @@ function InstanceDetailView() {
 										</button>
 									)}
 								<button
-									className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-kumo-fill bg-kumo-base text-kumo-danger transition-colors hover:bg-kumo-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
+									className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-kumo-fill bg-kumo-base text-[var(--color-kumo-danger)] transition-colors hover:bg-kumo-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
 									disabled={actionInProgress !== null}
 									onClick={() => setDeleteDialogOpen(true)}
 									title="Delete"
