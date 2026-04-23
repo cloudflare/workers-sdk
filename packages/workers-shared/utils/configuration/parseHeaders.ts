@@ -2,6 +2,7 @@ import {
 	HEADER_SEPARATOR,
 	MAX_HEADER_RULES,
 	MAX_LINE_LENGTH,
+	SPLAT_REGEX,
 	UNSET_OPERATOR,
 } from "./constants";
 import { validateUrl } from "./validateURL";
@@ -72,6 +73,17 @@ export function parseHeaders(
 					line,
 					lineNumber: i + 1,
 					message: pathError,
+				});
+				rule = undefined;
+				continue;
+			}
+
+			const wildcardError = validateNoMultipleWildcards(path as string);
+			if (wildcardError) {
+				invalid.push({
+					line,
+					lineNumber: i + 1,
+					message: wildcardError,
 				});
 				rule = undefined;
 				continue;
@@ -173,4 +185,25 @@ export function parseHeaders(
 
 function isValidRule(rule: HeadersRule) {
 	return Object.keys(rule.headers).length > 0 || rule.unsetHeaders.length > 0;
+}
+
+/**
+ * At runtime, `*` wildcards are converted to `:splat` placeholders. This means
+ * a path with multiple wildcards, or a wildcard combined with an explicit
+ * `:splat` placeholder, would result in duplicate `:splat` parameters which is
+ * unsupported.
+ */
+function validateNoMultipleWildcards(path: string): string | undefined {
+	const wildcardCount = (path.match(SPLAT_REGEX) ?? []).length;
+	const hasSplatPlaceholder = path.includes(":splat");
+
+	if (wildcardCount > 1) {
+		return `Only one wildcard is allowed per rule. Use a named placeholder (e.g. :project) instead. Skipping ${path}.`;
+	}
+
+	if (wildcardCount > 0 && hasSplatPlaceholder) {
+		return `Cannot combine a wildcard * with a :splat placeholder because wildcards are converted to :splat at runtime. Skipping ${path}.`;
+	}
+
+	return undefined;
 }

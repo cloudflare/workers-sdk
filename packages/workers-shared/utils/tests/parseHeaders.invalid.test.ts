@@ -124,6 +124,113 @@ test("parseHeaders should reject any rules after the first 100", ({
 	});
 });
 
+test("parseHeaders should reject paths with multiple wildcards", ({
+	expect,
+}) => {
+	const input = `
+  # Multiple wildcards in an absolute URL
+  https://*.pages.dev/*
+    x-custom: value
+  # Multiple wildcards in a relative path
+  /blog/*/posts/*
+    x-custom: value
+  # Single wildcard is fine
+  https://*.pages.dev/
+    x-custom: value
+  /blog/*
+    x-custom: value
+`;
+	const result = parseHeaders(input);
+	expect(result).toEqual({
+		rules: [
+			{
+				path: "https://*.pages.dev/",
+				headers: { "x-custom": "value" },
+				unsetHeaders: [],
+			},
+			{
+				path: "/blog/*",
+				headers: { "x-custom": "value" },
+				unsetHeaders: [],
+			},
+		],
+		invalid: [
+			{
+				line: "https://*.pages.dev/*",
+				lineNumber: 3,
+				message:
+					"Only one wildcard is allowed per rule. Use a named placeholder (e.g. :project) instead. Skipping https://*.pages.dev/*.",
+			},
+			{
+				line: "x-custom: value",
+				lineNumber: 4,
+				message: "Path should come before header (x-custom: value)",
+			},
+			{
+				line: "/blog/*/posts/*",
+				lineNumber: 6,
+				message:
+					"Only one wildcard is allowed per rule. Use a named placeholder (e.g. :project) instead. Skipping /blog/*/posts/*.",
+			},
+			{
+				line: "x-custom: value",
+				lineNumber: 7,
+				message: "Path should come before header (x-custom: value)",
+			},
+		],
+	});
+});
+
+test("parseHeaders should reject paths combining wildcard with :splat placeholder", ({
+	expect,
+}) => {
+	const input = `
+  # Wildcard + :splat in an absolute URL
+  https://*.pages.dev/:splat
+    x-custom: value
+  # Wildcard + :splat in a relative path
+  /blog/*/:splat
+    x-custom: value
+  # Just :splat without wildcard is fine
+  /blog/:splat
+    x-custom: value
+`;
+	const result = parseHeaders(input);
+	expect(result).toEqual({
+		rules: [
+			{
+				path: "/blog/:splat",
+				headers: { "x-custom": "value" },
+				unsetHeaders: [],
+			},
+		],
+		invalid: [
+			{
+				line: "https://*.pages.dev/:splat",
+				lineNumber: 3,
+				message:
+					"Cannot combine a wildcard * with a :splat placeholder because wildcards are converted to :splat at runtime. Skipping https://*.pages.dev/:splat.",
+			},
+			{
+				line: "x-custom: value",
+				lineNumber: 4,
+				message: "Path should come before header (x-custom: value)",
+			},
+			{
+				line: "/blog/*/:splat",
+				lineNumber: 6,
+				message:
+					"Cannot combine a wildcard * with a :splat placeholder because wildcards are converted to :splat at runtime. Skipping /blog/*/:splat.",
+			},
+			{
+				line: "x-custom: value",
+				lineNumber: 7,
+				message: "Path should come before header (x-custom: value)",
+			},
+		],
+	});
+});
+
 test("parseHeaders should reject malformed URLs", ({ expect }) => {
 	const input = `
   # Spaces should be URI encoded
