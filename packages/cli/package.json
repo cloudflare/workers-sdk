@@ -1,7 +1,7 @@
 {
 	"name": "@cloudflare/cli-shared-helpers",
-	"version": "1.4.0",
-	"description": "Shared CLI helpers used across workers-sdk tools (colors, prompts, spinners, package managers, etc.)",
+	"version": "0.0.0",
+	"description": "Internal shared CLI helpers for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"keywords": [
 		"cli",
 		"cloudflare",
