@@ -21,17 +21,30 @@ export const queuesConsumerHttpListCommand = createCommand({
 		owner: "Product: Queues",
 		status: "stable",
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	args: {
 		"queue-name": {
 			type: "string",
 			demandOption: true,
 			description: "Name of the queue",
 		},
+		json: {
+			describe: "Output in JSON format",
+			type: "boolean",
+			default: false,
+		},
 	},
 	positionalArgs: ["queue-name"],
 	async handler(args, { config }) {
 		const consumers = await listConsumers(config, args.queueName);
 		const httpConsumers = consumers.filter((c) => c.type === "http_pull");
+
+		if (args.json) {
+			logger.log(JSON.stringify(httpConsumers, null, 2));
+			return;
+		}
 
 		if (httpConsumers.length === 0) {
 			logger.log(`No HTTP pull consumers found for queue "${args.queueName}".`);

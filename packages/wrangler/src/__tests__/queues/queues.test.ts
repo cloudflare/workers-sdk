@@ -1862,7 +1862,10 @@ describe("wrangler", () => {
 					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help      Show help  [boolean]
-					  -v, --version   Show version number  [boolean]"
+					  -v, --version   Show version number  [boolean]
+
+					OPTIONS
+					      --json  Output in JSON format  [boolean] [default: false]"
 				`);
 			});
 
@@ -1984,6 +1987,67 @@ describe("wrangler", () => {
 					`[Error: Queue "testQueue" does not exist. To create it, run: wrangler queues create testQueue]`
 				);
 			});
+
+			it('should output consumers as JSON with "--json" flag', async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [workerConsumer, httpConsumer],
+					consumers_total_count: 2,
+				});
+
+				await runWrangler("queues consumer list testQueue --json");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+					[
+					  {
+					    "consumer_id": "1001",
+					    "dead_letter_queue": "my-dlq",
+					    "script": "my-worker",
+					    "settings": {
+					      "batch_size": 10,
+					      "max_concurrency": 2,
+					      "max_retries": 3,
+					      "max_wait_time_ms": 5000,
+					      "retry_delay": 30,
+					    },
+					    "type": "worker",
+					  },
+					  {
+					    "consumer_id": "1002",
+					    "dead_letter_queue": "my-dlq",
+					    "settings": {
+					      "batch_size": 5,
+					      "max_retries": 2,
+					      "retry_delay": 15,
+					      "visibility_timeout_ms": 10000,
+					    },
+					    "type": "http_pull",
+					  },
+					]
+				`);
+			});
+
+			it('should output empty array as JSON with "--json" flag when no consumers', async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [],
+					consumers_total_count: 0,
+				});
+
+				await runWrangler("queues consumer list testQueue --json");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(JSON.parse(std.out)).toMatchInlineSnapshot(`[]`);
+			});
 		});
 
 		describe("consumer worker list", () => {
@@ -2018,7 +2082,10 @@ describe("wrangler", () => {
 					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help      Show help  [boolean]
-					  -v, --version   Show version number  [boolean]"
+					  -v, --version   Show version number  [boolean]
+
+					OPTIONS
+					      --json  Output in JSON format  [boolean] [default: false]"
 				`);
 			});
 
@@ -2085,6 +2152,62 @@ describe("wrangler", () => {
 					`[Error: Queue "testQueue" does not exist. To create it, run: wrangler queues create testQueue]`
 				);
 			});
+
+			it('should output worker consumers as JSON with "--json" flag', async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [workerConsumer],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler("queues consumer worker list testQueue --json");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+					[
+					  {
+					    "consumer_id": "1001",
+					    "dead_letter_queue": "my-dlq",
+					    "script": "my-worker",
+					    "settings": {
+					      "batch_size": 10,
+					      "max_concurrency": 2,
+					      "max_retries": 3,
+					      "max_wait_time_ms": 5000,
+					      "retry_delay": 30,
+					    },
+					    "type": "worker",
+					  },
+					]
+				`);
+			});
+
+			it('should output empty array as JSON with "--json" flag when no worker consumers', async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [
+						{
+							consumer_id: "1002",
+							type: "http_pull",
+							settings: {},
+						},
+					],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler("queues consumer worker list testQueue --json");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(JSON.parse(std.out)).toMatchInlineSnapshot(`[]`);
+			});
 		});
 
 		describe("consumer http list", () => {
@@ -2117,7 +2240,10 @@ describe("wrangler", () => {
 					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 					  -h, --help      Show help  [boolean]
-					  -v, --version   Show version number  [boolean]"
+					  -v, --version   Show version number  [boolean]
+
+					OPTIONS
+					      --json  Output in JSON format  [boolean] [default: false]"
 				`);
 			});
 
@@ -2184,6 +2310,61 @@ describe("wrangler", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Queue "testQueue" does not exist. To create it, run: wrangler queues create testQueue]`
 				);
+			});
+
+			it('should output http consumers as JSON with "--json" flag', async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [httpConsumer],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler("queues consumer http list testQueue --json");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+					[
+					  {
+					    "consumer_id": "1002",
+					    "dead_letter_queue": "my-dlq",
+					    "settings": {
+					      "batch_size": 5,
+					      "max_retries": 2,
+					      "retry_delay": 15,
+					      "visibility_timeout_ms": 10000,
+					    },
+					    "type": "http_pull",
+					  },
+					]
+				`);
+			});
+
+			it('should output empty array as JSON with "--json" flag when no http consumers', async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [
+						{
+							consumer_id: "1001",
+							type: "worker",
+							script: "my-worker",
+							settings: {},
+						},
+					],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler("queues consumer http list testQueue --json");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(JSON.parse(std.out)).toMatchInlineSnapshot(`[]`);
 			});
 		});
 

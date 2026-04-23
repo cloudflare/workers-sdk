@@ -22,17 +22,30 @@ export const queuesConsumerWorkerListCommand = createCommand({
 		owner: "Product: Queues",
 		status: "stable",
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	args: {
 		"queue-name": {
 			type: "string",
 			demandOption: true,
 			description: "Name of the queue",
 		},
+		json: {
+			describe: "Output in JSON format",
+			type: "boolean",
+			default: false,
+		},
 	},
 	positionalArgs: ["queue-name"],
 	async handler(args, { config }) {
 		const consumers = await listConsumers(config, args.queueName);
 		const workerConsumers = consumers.filter((c) => c.type === "worker");
+
+		if (args.json) {
+			logger.log(JSON.stringify(workerConsumers, null, 2));
+			return;
+		}
 
 		if (workerConsumers.length === 0) {
 			logger.log(`No worker consumers found for queue "${args.queueName}".`);
