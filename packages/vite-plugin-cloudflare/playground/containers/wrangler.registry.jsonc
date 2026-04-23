@@ -1,0 +1,28 @@
+{
+	"name": "registry-container-app",
+	"main": "./src/index.ts",
+	"compatibility_date": "2025-04-03",
+	"containers": [
+		{
+			// Pre-built container image equivalent to the local Dockerfile, pulled from the Cloudflare-managed registry
+			"image": "registry.cloudflare.com/8d783f274e1f82dc46744c297b015a2f/ci-container-dont-delete:latest",
+			"class_name": "Container",
+			"name": "registry-http",
+			"max_instances": 2,
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "Container",
+				"name": "CONTAINER",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["Container"],
+		},
+	],
+}

@@ -332,7 +332,11 @@ export function printBindings(
 			...ai_search_namespaces.map(({ binding, namespace }) => ({
 				name: binding,
 				type: getBindingTypeFriendlyName("ai_search_namespace"),
-				value: namespace ? String(namespace) : undefined,
+				// Preserve `namespace` as-is so `typeof === "symbol"` handling
+				// downstream can render INHERIT_SYMBOL as `"inherited"`. Using
+				// `String(namespace)` would stringify it to
+				// `"Symbol(inherit_binding)"` and defeat that check.
+				value: namespace ?? undefined,
 				mode: getMode({ isSimulatedLocally: false }),
 			}))
 		);

@@ -1,0 +1,28 @@
+{
+	"name": "dockerfile-container-app",
+	"main": "./src/index.ts",
+	"compatibility_date": "2025-04-03",
+	"containers": [
+		{
+			// Container image built from the local Dockerfile
+			"image": "./Dockerfile",
+			"class_name": "Container",
+			"name": "dockerfile-http",
+			"max_instances": 2,
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "Container",
+				"name": "CONTAINER",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["Container"],
+		},
+	],
+}

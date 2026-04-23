@@ -275,7 +275,6 @@ export class LocalRuntimeController extends RuntimeController {
 						this.containerBeingBuilt = undefined;
 					},
 					logger: logger,
-					isVite: false,
 				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;

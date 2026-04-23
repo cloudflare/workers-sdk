@@ -166,7 +166,6 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 						this.containerBeingBuilt = undefined;
 					},
 					logger: logger,
-					isVite: false,
 				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;
