@@ -1,4 +1,4 @@
-import { CancelError } from "@cloudflare/cli/error";
+import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import { detectPackageManager } from "helpers/packageManagers";
 import { hasSparrowSourceKey, sendEvent } from "helpers/sparrow";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";

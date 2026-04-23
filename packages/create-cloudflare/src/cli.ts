@@ -9,11 +9,11 @@ import {
 	error,
 	logRaw,
 	startSection,
-} from "@cloudflare/cli";
-import { runCommand } from "@cloudflare/cli/command";
-import { CancelError } from "@cloudflare/cli/error";
-import { maybeAppendWranglerToGitIgnore } from "@cloudflare/cli/gitignore";
-import { isInteractive } from "@cloudflare/cli/interactive";
+} from "@cloudflare/cli-shared-helpers";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { CancelError } from "@cloudflare/cli-shared-helpers/error";
+import { maybeAppendWranglerToGitIgnore } from "@cloudflare/cli-shared-helpers/gitignore";
+import { isInteractive } from "@cloudflare/cli-shared-helpers/interactive";
 import { cliDefinition, parseArgs, processArgument } from "helpers/args";
 import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
 import { runWranglerCommand } from "helpers/command";

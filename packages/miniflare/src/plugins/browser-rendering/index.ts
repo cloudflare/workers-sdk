@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { brandColor } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { removeDir } from "@cloudflare/workers-utils";
 import {
 	Browser,

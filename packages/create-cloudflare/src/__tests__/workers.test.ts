@@ -10,7 +10,7 @@ import type { C3Context } from "types";
 vi.mock("helpers/files");
 vi.mock("helpers/compatDate");
 vi.mock("fs");
-vi.mock("@cloudflare/cli/interactive");
+vi.mock("@cloudflare/cli-shared-helpers/interactive");
 
 beforeEach(() => {
 	mockSpinner();

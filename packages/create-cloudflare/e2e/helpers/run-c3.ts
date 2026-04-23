@@ -1,5 +1,5 @@
 import { tmpdir } from "node:os";
-import { stripAnsi } from "@cloudflare/cli";
+import { stripAnsi } from "@cloudflare/cli-shared-helpers";
 import { version } from "../../package.json";
 import { keys } from "./constants";
 import { spawnWithLogging, testEnv, waitForExit } from "./spawn";

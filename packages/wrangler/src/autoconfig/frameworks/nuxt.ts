@@ -1,6 +1,6 @@
 import path from "node:path";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { installPackages } from "@cloudflare/cli/packages";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
 import * as recast from "recast";
 import { Framework } from "./framework-class";

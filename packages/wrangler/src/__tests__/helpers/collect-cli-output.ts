@@ -1,4 +1,4 @@
-import { stderr, stdout } from "@cloudflare/cli/streams";
+import { stderr, stdout } from "@cloudflare/cli-shared-helpers/streams";
 import { afterEach, beforeEach } from "vitest";
 
 export function collectCLIOutput() {

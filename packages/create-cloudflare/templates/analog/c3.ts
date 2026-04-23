@@ -1,5 +1,5 @@
-import { logRaw, updateStatus } from "@cloudflare/cli";
-import { blue } from "@cloudflare/cli/colors";
+import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { blue } from "@cloudflare/cli-shared-helpers/colors";
 import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
 import { runFrameworkGenerator } from "frameworks/index";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";

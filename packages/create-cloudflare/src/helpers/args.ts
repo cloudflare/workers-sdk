@@ -1,4 +1,4 @@
-import { inputPrompt } from "@cloudflare/cli/interactive";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../../package.json";
@@ -10,7 +10,7 @@ import {
 	getOtherTemplateMap,
 } from "../templates";
 import { C3_DEFAULTS, WRANGLER_DEFAULTS } from "./cli";
-import type { PromptConfig } from "@cloudflare/cli/interactive";
+import type { PromptConfig } from "@cloudflare/cli-shared-helpers/interactive";
 import type { C3Args } from "types";
 import type { Argv } from "yargs";
 

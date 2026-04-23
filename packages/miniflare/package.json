@@ -56,7 +56,7 @@
 		"youch": "4.1.0-beta.10"
 	},
 	"devDependencies": {
-		"@cloudflare/cli": "workspace:*",
+		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/local-explorer-ui": "workspace:*",

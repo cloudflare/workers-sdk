@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
-import { cancel } from "@cloudflare/cli";
+import { cancel } from "@cloudflare/cli-shared-helpers";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,

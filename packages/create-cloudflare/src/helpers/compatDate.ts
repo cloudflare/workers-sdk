@@ -1,7 +1,7 @@
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import type { C3Context } from "types";
 

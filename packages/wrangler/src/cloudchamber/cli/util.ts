@@ -1,4 +1,4 @@
-import { bgGreen, bgRed, bgYellow } from "@cloudflare/cli/colors";
+import { bgGreen, bgRed, bgYellow } from "@cloudflare/cli-shared-helpers/colors";
 import { type PlacementStatusHealth } from "@cloudflare/containers-shared";
 
 export function statusToColored(status?: PlacementStatusHealth): string {

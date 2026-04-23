@@ -1,12 +1,12 @@
-import { runCommand } from "@cloudflare/cli/command";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { mockPackageManager } from "helpers/__tests__/mocks";
 import { describe, test, vi } from "vitest";
 import { getFrameworkCli, runFrameworkGenerator } from "..";
 import { createTestContext } from "../../__tests__/helpers";
 
 vi.mock("which-pm-runs");
-vi.mock("@cloudflare/cli/command");
-vi.mock("@cloudflare/cli");
+vi.mock("@cloudflare/cli-shared-helpers/command");
+vi.mock("@cloudflare/cli-shared-helpers");
 
 describe("frameworks", () => {
 	const ctx = createTestContext();

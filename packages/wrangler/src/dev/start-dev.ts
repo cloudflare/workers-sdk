@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
-import { bold, green } from "@cloudflare/cli/colors";
+import { bold, green } from "@cloudflare/cli-shared-helpers/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { getRegistryPath } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
