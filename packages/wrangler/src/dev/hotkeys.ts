@@ -105,7 +105,8 @@ export default function registerDevHotKeys(
 			},
 			{
 				keys: ["l"],
-				disabled: () => args.forceLocal ?? false,
+				// Remote mode is not supported when using tunnels
+				disabled: () => args.forceLocal || args.tunnel,
 				handler: async () => {
 					await primaryDevEnv.config.patch({
 						dev: {
@@ -116,6 +117,8 @@ export default function registerDevHotKeys(
 				},
 			},
 			{
+				// We remind users about the tunnel hotkey every 10mins
+				// Hiding this hotkey to reduce noise on startup
 				keys: ["t"],
 				disabled: () => !args.tunnel,
 				handler: async () => {

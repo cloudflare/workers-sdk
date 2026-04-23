@@ -103,12 +103,6 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 		}
 	}
 
-	return {
-		ready: () => readyPromise,
-		dispose: disposeTunnel,
-		extendExpiry,
-	};
-
 	function clearTunnelTimers() {
 		if (expiryTimeout) {
 			clearTimeout(expiryTimeout);
@@ -190,6 +184,12 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 		);
 		scheduleExpiryTimeout();
 	}
+
+	return {
+		ready: () => readyPromise,
+		dispose: disposeTunnel,
+		extendExpiry,
+	};
 }
 
 function formatTunnelDuration(durationMs: number) {

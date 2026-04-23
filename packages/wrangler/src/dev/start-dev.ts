@@ -395,7 +395,7 @@ function maybePrintScheduledWorkerWarning(
 }
 
 export function formatHostname(hostname: string): string {
-	if (hostname === "0.0.0.0" || hostname === "::") {
+	if (hostname === "0.0.0.0" || hostname === "::" || hostname === "*") {
 		return "localhost";
 	}
 

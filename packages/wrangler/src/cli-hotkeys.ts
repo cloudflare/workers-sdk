@@ -8,7 +8,7 @@ import type { Hook } from "./api";
 export default function (
 	options: Array<{
 		keys: string[];
-		disabled?: Hook<boolean>;
+		disabled?: Hook<boolean | undefined>;
 		label?: Hook<string>;
 		handler: () => void | Promise<void>;
 	}>,
