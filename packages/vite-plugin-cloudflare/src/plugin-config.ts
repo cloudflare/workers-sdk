@@ -1,9 +1,9 @@
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { defu } from "defu";
 import * as vite from "vite";
 import * as wrangler from "wrangler";
+import { DEFAULT_COMPAT_DATE } from "./build-constants";
 import { getWorkerConfigs } from "./deploy-config";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import {
@@ -244,7 +244,7 @@ function resolveWorkerConfig(
 					configCustomizer: options.configCustomizer,
 				});
 
-	workerConfig.compatibility_date ??= getTodaysCompatDate();
+	workerConfig.compatibility_date ??= DEFAULT_COMPAT_DATE;
 
 	if (isEntryWorker) {
 		workerConfig.name ??= wrangler.unstable_getWorkerNameFromProject(
