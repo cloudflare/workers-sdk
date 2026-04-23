@@ -1,3 +1,9 @@
+import { stripAnsi } from "@cloudflare/cli-shared-helpers";
+import {
+	stderr,
+	stdout,
+} from "@cloudflare/cli-shared-helpers/streams";
+import { afterEach, beforeEach } from "vitest";
 import { C3_DEFAULTS } from "helpers/cli";
 import type { TemplateConfig } from "../templates";
 import type { C3Args, C3Context } from "types";
@@ -33,3 +39,29 @@ export const createTestTemplate = (
 		generate: Promise.resolve,
 	};
 };
+
+export function collectCLIOutput() {
+	const std = { out: "", err: "" };
+	const onStdOutData = (chunk: Buffer) => (std.out += chunk.toString());
+	const onStdErrData = (chunk: Buffer) => (std.err += chunk.toString());
+
+	beforeEach(() => {
+		stdout.on("data", onStdOutData);
+		stderr.on("data", onStdErrData);
+	});
+
+	afterEach(() => {
+		stdout.off("data", onStdOutData);
+		stderr.off("data", onStdErrData);
+		std.out = "";
+		std.err = "";
+	});
+
+	return std;
+}
+
+export function normalizeOutput(output: string) {
+	return stripAnsi(output)
+		.replace(/\\/g, "/")
+		.replaceAll(/\u200a|\u200b/g, " ");
+}

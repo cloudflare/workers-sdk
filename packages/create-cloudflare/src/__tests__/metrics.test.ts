@@ -2,7 +2,7 @@ import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import { detectPackageManager } from "helpers/packageManagers";
 import { hasSparrowSourceKey, sendEvent } from "helpers/sparrow";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
-import { collectCLIOutput, normalizeOutput } from "../../../cli/test-util";
+import { collectCLIOutput, normalizeOutput } from "./helpers";
 import { version as c3Version } from "../../package.json";
 import {
 	getDeviceId,
