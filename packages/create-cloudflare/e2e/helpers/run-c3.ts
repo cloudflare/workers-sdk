@@ -143,7 +143,7 @@ export const runC3 = async (
 				currentSelectDialog === undefined;
 
 			// Our select prompt options start with ○ / ◁ for unselected options and ● / ◀ for the current selection
-			const selectedOptionRegex = /^(●|◀)\s/;
+			const selectedOptionRegex = /^\u200a+(●|◀)\s/;
 			const currentSelection = lines
 				.find((line) => line.match(selectedOptionRegex))
 				?.replace(selectedOptionRegex, "");
