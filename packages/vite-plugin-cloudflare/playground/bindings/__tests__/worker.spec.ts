@@ -1,7 +1,12 @@
 import { test } from "vitest";
-import { getTextResponse } from "../../__test-utils__";
+import { getResponse, getTextResponse } from "../../__test-utils__";
 
-test("kv_namspaces support", async ({ expect }) => {
+test("serves Local Explorer UI", async ({ expect }) => {
+	const response = await getResponse("/cdn-cgi/explorer");
+	expect(response.status()).toBe(200);
+});
+
+test("kv_namespaces support", async ({ expect }) => {
 	const response = await getTextResponse("/kv");
 	expect(response).toBe("KV binding works");
 });
