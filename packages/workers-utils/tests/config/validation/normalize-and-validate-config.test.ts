@@ -9554,6 +9554,83 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
+			it("should accept previews.cache with enabled: true", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						cache: {
+							enabled: true,
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.cache with enabled: false", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						cache: {
+							enabled: false,
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject previews.cache when missing enabled", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						cache: {},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain("enabled");
+			});
+
+			it("should reject previews.cache when enabled is not a boolean", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						cache: {
+							enabled: "yes",
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+			});
+
 			it("should reject previews.queues when passed as a flat array", ({
 				expect,
 			}) => {

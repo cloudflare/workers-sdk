@@ -2506,6 +2506,174 @@ describe("wrangler preview", () => {
 			expect(deploymentRequestBody?.env).not.toHaveProperty("TOP_KV");
 		});
 
+		test("should include previews.cache in deployment request, falling back to top-level cache", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					cache: { enabled: true },
+					previews: {
+						vars: { ENVIRONMENT: "preview" },
+					},
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						cache?: { enabled?: boolean };
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-cache",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-cache",
+									preview_id: "preview-id-cache",
+									preview_name: "test-preview",
+									urls: ["https://cache.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									cache: deploymentRequestBody?.cache,
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.cache).toEqual({ enabled: true });
+		});
+
+		test("should prefer previews.cache over top-level cache in deployment request", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					cache: { enabled: true },
+					previews: {
+						cache: { enabled: false },
+					},
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						cache?: { enabled?: boolean };
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-cache-override",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-cache-override",
+									preview_id: "preview-id-cache-override",
+									preview_name: "test-preview",
+									urls: ["https://cache-override.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									cache: deploymentRequestBody?.cache,
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.cache).toEqual({ enabled: false });
+		});
+
 		test("should respect env-specific worker name for preview and deployment requests", async ({
 			expect,
 		}) => {
