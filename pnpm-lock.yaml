@@ -161,7 +161,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   fixtures/additional-modules:
     devDependencies:
@@ -182,7 +182,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -206,7 +206,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -245,7 +245,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -266,7 +266,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -290,7 +290,7 @@ importers:
         version: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -305,7 +305,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -323,7 +323,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -359,7 +359,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -386,7 +386,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -407,7 +407,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -431,7 +431,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -448,7 +448,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
     optionalDependencies:
       '@cdktf/node-pty-prebuilt-multiarch':
         specifier: 0.10.2
@@ -479,6 +479,22 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/multi-worker:
+    dependencies:
+      '@sentry/cloudflare':
+        specifier: ^10
+        version: 10.50.0(@cloudflare/workers-types@4.20260423.1)
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20260423.1
+      vitest:
+        specifier: catalog:default
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/no-bundle-import:
     devDependencies:
       get-port:
@@ -486,7 +502,7 @@ importers:
         version: 7.0.0
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -511,7 +527,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -548,7 +564,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -566,7 +582,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -599,7 +615,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -620,7 +636,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -648,7 +664,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -669,7 +685,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -687,7 +703,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -708,7 +724,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -729,7 +745,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -750,7 +766,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -790,7 +806,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -811,7 +827,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -826,7 +842,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -847,7 +863,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -868,7 +884,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -886,7 +902,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -904,7 +920,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -922,7 +938,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -940,7 +956,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -958,7 +974,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -976,7 +992,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -991,7 +1007,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1006,7 +1022,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1081,7 +1097,7 @@ importers:
         version: 4.20260423.1
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1111,7 +1127,7 @@ importers:
     devDependencies:
       '@better-auth/stripe':
         specifier: ^1.4.6
-        version: 1.5.4(4e77a7cf83afe345296b1d90a867c8b9)
+        version: 1.5.4(f9162cd4fcf0b952c3d36da3a03285ac)
       '@cloudflare/containers':
         specifier: ^0.2.2
         version: 0.2.2
@@ -1123,7 +1139,7 @@ importers:
         version: 4.20260423.1
       '@microlabs/otel-cf-workers':
         specifier: 1.0.0-rc.45
-        version: 1.0.0-rc.45(@opentelemetry/api@1.7.0)
+        version: 1.0.0-rc.45(@opentelemetry/api@1.9.1)
       '@types/mime-types':
         specifier: ^3.0.1
         version: 3.0.1
@@ -1135,7 +1151,7 @@ importers:
         version: 3.2.6
       better-auth:
         specifier: ^1.4.6
-        version: 1.5.4(@cloudflare/workers-types@4.20260423.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.7.0)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)))(mongodb@7.1.0)(mysql2@3.15.3)(pg@8.16.3)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@4.1.0)
+        version: 1.5.4(@cloudflare/workers-types@4.20260423.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.9.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)))(mongodb@7.1.0)(mysql2@3.15.3)(pg@8.16.3)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@4.1.0)
       discord-api-types:
         specifier: 0.37.98
         version: 0.37.98
@@ -1174,7 +1190,7 @@ importers:
         version: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1189,7 +1205,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1234,7 +1250,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1249,7 +1265,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1279,7 +1295,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1300,7 +1316,7 @@ importers:
         version: 2.2.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1330,7 +1346,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1351,7 +1367,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1372,7 +1388,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1393,7 +1409,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1414,7 +1430,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1447,7 +1463,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1474,7 +1490,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1495,7 +1511,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1513,7 +1529,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1527,8 +1543,8 @@ importers:
   packages/cli:
     dependencies:
       '@clack/core':
-        specifier: ^0.3.2
-        version: 0.3.2
+        specifier: ^1.2.0
+        version: 1.2.0
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
@@ -1586,7 +1602,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))
 
   packages/containers-shared:
     devDependencies:
@@ -1604,7 +1620,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/create-cloudflare:
     devDependencies:
@@ -1615,8 +1631,8 @@ importers:
         specifier: ^7.21.4
         version: 7.26.3
       '@clack/prompts':
-        specifier: ^0.6.3
-        version: 0.6.3
+        specifier: ^1.2.0
+        version: 1.2.0
       '@cloudflare/cli-shared-helpers':
         specifier: workspace:*
         version: link:../cli
@@ -1745,7 +1761,7 @@ importers:
         version: 4.2.0(typescript@5.8.3)(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       which-pm-runs:
         specifier: ^1.1.0
         version: 1.1.0
@@ -1802,7 +1818,7 @@ importers:
         version: 4.0.0(patch_hash=60bdb1dcdbde0a135bb56d6fa1a1027caba891b149e2cfcb48d6a5b3524e0a91)
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -1826,7 +1842,7 @@ importers:
         version: 7.0.0
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -1856,7 +1872,7 @@ importers:
         version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.1)
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/lint-config-shared:
     devDependencies:
@@ -1977,7 +1993,7 @@ importers:
         version: 4.5.0(rollup@4.57.1)(typescript@5.8.3)(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/miniflare:
     dependencies:
@@ -2137,7 +2153,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       which:
         specifier: ^2.0.2
         version: 2.0.2
@@ -2207,7 +2223,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/playground-preview-worker:
     dependencies:
@@ -2415,7 +2431,7 @@ importers:
         version: vite@7.1.12(@types/node@22.15.17)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.1)
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/vite-plugin-cloudflare/playground:
     devDependencies:
@@ -2439,7 +2455,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/vite-plugin-cloudflare/playground/additional-modules:
     devDependencies:
@@ -3608,7 +3624,7 @@ importers:
         version: 7.24.8
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/workers-editor-shared:
     dependencies:
@@ -3796,7 +3812,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -3849,7 +3865,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       xdg-app-paths:
         specifier: ^8.3.0
         version: 8.3.0
@@ -3889,7 +3905,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/wrangler:
     dependencies:
@@ -4178,7 +4194,7 @@ importers:
         version: 1.5.4
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       vitest-websocket-mock:
         specifier: ^0.4.0
         version: 0.4.0(vitest@4.1.0)
@@ -4871,13 +4887,11 @@ packages:
   '@chevrotain/utils@10.5.0':
     resolution: {integrity: sha512-hBzuU5+JjB2cqNZyszkDHZgOSrUUT8V3dhgRl8Q9Gp6dAj/H5+KILGjbhDpc3Iy9qmqlm/akuOI2ut9VUtzJxQ==}
 
-  '@clack/core@0.3.2':
-    resolution: {integrity: sha512-FZnsNynwGDIDktx6PEZK1EuCkFpY4ldEX6VYvfl0dqeoLPb9Jpw1xoUXaVcGR8ExmYNm1w2vdGdJkEUYD/2pqg==}
+  '@clack/core@1.2.0':
+    resolution: {integrity: sha512-qfxof/3T3t9DPU/Rj3OmcFyZInceqj/NVtO9rwIuJqCUgh32gwPjpFQQp/ben07qKlhpwq7GzfWpST4qdJ5Drg==}
 
-  '@clack/prompts@0.6.3':
-    resolution: {integrity: sha512-AM+kFmAHawpUQv2q9+mcB6jLKxXGjgu/r2EQjEwujgpCdzrST6BJqYw00GRn56/L/Izw5U7ImoLmy00X/r80Pw==}
-    bundledDependencies:
-      - is-unicode-supported
+  '@clack/prompts@1.2.0':
+    resolution: {integrity: sha512-4jmztR9fMqPMjz6H/UZXj0zEmE43ha1euENwkckKKel4XpSfokExPo5AiVStdHSAlHekz4d0CA/r45Ok1E4D3w==}
 
   '@cloudflare/component-box@4.0.2':
     resolution: {integrity: sha512-CInPo9qsB/XCFe5w3hllRhnuMIr9VpHfT4qHSMvSnXaKgeAcldGCw19EgcrkBST+Ye44cY9eO8sMycLLxG7luw==}
@@ -5242,9 +5256,6 @@ packages:
   '@electric-sql/pglite@0.3.2':
     resolution: {integrity: sha512-zfWWa+V2ViDCY/cmUfRqeWY1yLto+EpxjXnZzenB1TyxsTiXaTWeZFIZw6mac52BsuQm0RjCnisjBtdBaXOI6w==}
 
-  '@emnapi/core@1.7.0':
-    resolution: {integrity: sha512-pJdKGq/1iquWYtv1RRSljZklxHCOCAJFJrImO5ZLKPJVJlVUcs8yFwNQlqS0Lo8xT1VAXXTCZocF9n26FWEKsw==}
-
   '@emnapi/core@1.9.1':
     resolution: {integrity: sha512-mukuNALVsoix/w1BJwFzwXBN/dHeejQtuVzcDsfOEsdpCumXb/E9j8w11h5S54tT1xhifGfbbSm/ICrObRb3KA==}
 
@@ -5253,9 +5264,6 @@ packages:
 
   '@emnapi/runtime@1.9.1':
     resolution: {integrity: sha512-VYi5+ZVLhpgK4hQ0TAjiQiZ6ol0oe4mBx7mVv7IflsiEp0OWoVsp/+f9Vc1hOhE0TtkORVrI1GvzyreqpgWtkA==}
-
-  '@emnapi/wasi-threads@1.1.0':
-    resolution: {integrity: sha512-WI0DdZ8xFSbgMjR1sFsKABJ/C5OnRrjT06JXbZKexJGrDuPTzZdDYfFlsgcCXCyf+suG5QU2e/y1Wo2V/OapLQ==}
 
   '@emnapi/wasi-threads@1.2.0':
     resolution: {integrity: sha512-N10dEJNSsUx41Z6pZsXU8FjPjpBEplgH24sfkmITrBED1/U2Esum9F3lfLrMjKHHjmi557zQn7kR9R+XWXu5Rg==}
@@ -6453,9 +6461,6 @@ packages:
     resolution: {integrity: sha512-EFd6cVbHsgLa6wa4RljGj6Wk75qoHxUSyc5asLyyPSyuhIcdS2Q3Phw6ImS1q+CkALthJRShiYfKANcQMuMqsQ==}
     engines: {node: '>=18'}
 
-  '@napi-rs/wasm-runtime@1.0.7':
-    resolution: {integrity: sha512-SeDnOO0Tk7Okiq6DbXmmBODgOAb9dp9gjlphokTUxmt8U3liIP1ZsozBahH69j/RJv+Rfs6IwUKHTgQYJ/HBAw==}
-
   '@napi-rs/wasm-runtime@1.1.1':
     resolution: {integrity: sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A==}
 
@@ -6550,6 +6555,10 @@ packages:
 
   '@opentelemetry/api@1.7.0':
     resolution: {integrity: sha512-AdY5wvN0P2vXBi3b29hxZgSFvdhdxPB9+f0B6s//P9Q8nibRWeA3cHm8UmLpio9ABigkVHJ5NMPk+Mz8VCCyrw==}
+    engines: {node: '>=8.0.0'}
+
+  '@opentelemetry/api@1.9.1':
+    resolution: {integrity: sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q==}
     engines: {node: '>=8.0.0'}
 
   '@opentelemetry/core@1.25.1':
@@ -7987,6 +7996,19 @@ packages:
     resolution: {integrity: sha512-0GVmDiTV7R1492wkVY4bGcfC0fSmRmQjuxaaPI8CIV9B2VP9pBVCUizi1mevXaaE4I3fM60LI+XYrKFEneuVog==}
     engines: {node: '>= 10'}
     hasBin: true
+
+  '@sentry/cloudflare@10.50.0':
+    resolution: {integrity: sha512-fgPp2aVdCcHKzgoWwZDFbP/DwjsPwXMQFHCKeeE4jp6r4i0HoRGbaP7z1KlIGGrw12KM2i9rvQfKsaZlhHc0gQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@cloudflare/workers-types': ^4.x
+    peerDependenciesMeta:
+      '@cloudflare/workers-types':
+        optional: true
+
+  '@sentry/core@10.50.0':
+    resolution: {integrity: sha512-J4A+vzUO3adl0TkFCjaN1+4miamrjHiEIYuLHiuu1lmAjq5WIVw32ObvAh4yMwNtxyaEMosTrrh5M6f12XSJFg==}
+    engines: {node: '>=18'}
 
   '@sentry/core@7.87.0':
     resolution: {integrity: sha512-jkoXqK/nuYh8DYS+n7uaSuSIdw4HJemyRkXsWjAEPtEgD7taGMafZGbP5pl+XE38SE59jTBxmKnkUEZOFMgZGA==}
@@ -10652,8 +10674,17 @@ packages:
   fast-safe-stringify@2.1.1:
     resolution: {integrity: sha512-W+KJc2dmILlPplD/H4K9l9LcAHAfPtP6BY84uVLXQ6Evcz9Lcg33Y2z1IVblT6xdY54PXYVHEv+0Wpq8Io6zkA==}
 
+  fast-string-truncated-width@1.2.1:
+    resolution: {integrity: sha512-Q9acT/+Uu3GwGj+5w/zsGuQjh9O1TyywhIwAxHudtWrgF09nHOPrvTLhQevPbttcxjr/SNN7mJmfOw/B1bXgow==}
+
+  fast-string-width@1.1.0:
+    resolution: {integrity: sha512-O3fwIVIH5gKB38QNbdg+3760ZmGz0SZMgvwJbA1b2TGXceKE6A2cOlfogh1iw8lr049zPyd7YADHy+B7U4W9bQ==}
+
   fast-uri@3.0.6:
     resolution: {integrity: sha512-Atfo14OibSv5wAp4VWNsFYE1AchQRTv9cBGWET4pZWHzYshFSS9NQI6I57rdKn9croWVMbYFbLhJ+yJvmZIIHw==}
+
+  fast-wrap-ansi@0.1.6:
+    resolution: {integrity: sha512-HlUwET7a5gqjURj70D5jl7aC3Zmy4weA1SHUfM0JFI0Ptq987NH2TwbBFLoERhfwk+E+eaq4EK3jXoT+R3yp3w==}
 
   fast-xml-parser@4.4.1:
     resolution: {integrity: sha512-xkjOecfnKGkSsOwtZ5Pz7Us/T6mrbPQrq0nh+aCO5V9nk5NLWmasAHumTKjiPJPWANe+kAZ84Jc8ooJkzZ88Sw==}
@@ -15497,7 +15528,7 @@ snapshots:
       '@babel/types': 7.29.0
       '@jridgewell/remapping': 2.3.5
       convert-source-map: 2.0.0
-      debug: 4.4.3
+      debug: 4.4.1(supports-color@9.2.2)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -15835,11 +15866,11 @@ snapshots:
     optionalDependencies:
       '@cloudflare/workers-types': 4.20260423.1
 
-  '@better-auth/drizzle-adapter@1.5.4(@better-auth/core@1.5.4(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260423.1)(better-call@1.3.2(zod@4.3.6))(jose@5.9.3)(kysely@0.28.11)(nanostores@1.1.1))(@better-auth/utils@0.3.1)(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.7.0)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)))':
+  '@better-auth/drizzle-adapter@1.5.4(@better-auth/core@1.5.4(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260423.1)(better-call@1.3.2(zod@4.3.6))(jose@5.9.3)(kysely@0.28.11)(nanostores@1.1.1))(@better-auth/utils@0.3.1)(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.9.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)))':
     dependencies:
       '@better-auth/core': 1.5.4(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260423.1)(better-call@1.3.2(zod@4.3.6))(jose@5.9.3)(kysely@0.28.11)(nanostores@1.1.1)
       '@better-auth/utils': 0.3.1
-      drizzle-orm: 0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.7.0)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))
+      drizzle-orm: 0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.9.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))
 
   '@better-auth/kysely-adapter@1.5.4(@better-auth/core@1.5.4(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260423.1)(better-call@1.3.2(zod@4.3.6))(jose@5.9.3)(kysely@0.28.11)(nanostores@1.1.1))(@better-auth/utils@0.3.1)(kysely@0.28.11)':
     dependencies:
@@ -15865,10 +15896,10 @@ snapshots:
       '@prisma/client': 7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3)
       prisma: 7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)
 
-  '@better-auth/stripe@1.5.4(4e77a7cf83afe345296b1d90a867c8b9)':
+  '@better-auth/stripe@1.5.4(f9162cd4fcf0b952c3d36da3a03285ac)':
     dependencies:
       '@better-auth/core': 1.5.4(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260423.1)(better-call@1.3.2(zod@4.3.6))(jose@5.9.3)(kysely@0.28.11)(nanostores@1.1.1)
-      better-auth: 1.5.4(@cloudflare/workers-types@4.20260423.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.7.0)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)))(mongodb@7.1.0)(mysql2@3.15.3)(pg@8.16.3)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@4.1.0)
+      better-auth: 1.5.4(@cloudflare/workers-types@4.20260423.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.9.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)))(mongodb@7.1.0)(mysql2@3.15.3)(pg@8.16.3)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@4.1.0)
       better-call: 1.3.2(zod@4.3.6)
       defu: 6.1.4
       stripe: 20.4.1(@types/node@22.15.17)
@@ -16101,15 +16132,16 @@ snapshots:
 
   '@chevrotain/utils@10.5.0': {}
 
-  '@clack/core@0.3.2':
+  '@clack/core@1.2.0':
     dependencies:
-      picocolors: 1.1.1
+      fast-wrap-ansi: 0.1.6
       sisteransi: 1.0.5
 
-  '@clack/prompts@0.6.3':
+  '@clack/prompts@1.2.0':
     dependencies:
-      '@clack/core': 0.3.2
-      picocolors: 1.1.1
+      '@clack/core': 1.2.0
+      fast-string-width: 1.1.0
+      fast-wrap-ansi: 0.1.6
       sisteransi: 1.0.5
 
   '@cloudflare/component-box@4.0.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
@@ -16447,7 +16479,7 @@ snapshots:
       cjs-module-lexer: 1.2.3
       esbuild: 0.27.3
       miniflare: 4.20260317.1
-      vitest: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+      vitest: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler: 4.76.0(@cloudflare/workers-types@4.20260423.1)
       zod: 3.25.76
     transitivePeerDependencies:
@@ -16603,12 +16635,6 @@ snapshots:
 
   '@electric-sql/pglite@0.3.2': {}
 
-  '@emnapi/core@1.7.0':
-    dependencies:
-      '@emnapi/wasi-threads': 1.1.0
-      tslib: 2.8.1
-    optional: true
-
   '@emnapi/core@1.9.1':
     dependencies:
       '@emnapi/wasi-threads': 1.2.0
@@ -16621,11 +16647,6 @@ snapshots:
     optional: true
 
   '@emnapi/runtime@1.9.1':
-    dependencies:
-      tslib: 2.8.1
-    optional: true
-
-  '@emnapi/wasi-threads@1.1.0':
     dependencies:
       tslib: 2.8.1
     optional: true
@@ -17423,15 +17444,15 @@ snapshots:
 
   '@marijn/find-cluster-break@1.0.2': {}
 
-  '@microlabs/otel-cf-workers@1.0.0-rc.45(@opentelemetry/api@1.7.0)':
+  '@microlabs/otel-cf-workers@1.0.0-rc.45(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@opentelemetry/api': 1.7.0
-      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/exporter-trace-otlp-http': 0.52.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/otlp-exporter-base': 0.52.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/otlp-transformer': 0.52.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/resources': 1.30.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/sdk-trace-base': 1.30.1(@opentelemetry/api@1.7.0)
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/exporter-trace-otlp-http': 0.52.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/otlp-exporter-base': 0.52.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/otlp-transformer': 0.52.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources': 1.30.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-trace-base': 1.30.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.28.0
 
   '@microsoft/api-extractor-model@7.29.4(@types/node@22.15.17)':
@@ -17512,13 +17533,6 @@ snapshots:
       is-node-process: 1.2.0
       outvariant: 1.4.3
       strict-event-emitter: 0.5.1
-
-  '@napi-rs/wasm-runtime@1.0.7':
-    dependencies:
-      '@emnapi/core': 1.7.0
-      '@emnapi/runtime': 1.7.0
-      '@tybys/wasm-util': 0.10.1
-    optional: true
 
   '@napi-rs/wasm-runtime@1.1.1':
     dependencies:
@@ -17630,80 +17644,82 @@ snapshots:
 
   '@opentelemetry/api@1.7.0': {}
 
-  '@opentelemetry/core@1.25.1(@opentelemetry/api@1.7.0)':
+  '@opentelemetry/api@1.9.1': {}
+
+  '@opentelemetry/core@1.25.1(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@opentelemetry/api': 1.7.0
+      '@opentelemetry/api': 1.9.1
       '@opentelemetry/semantic-conventions': 1.25.1
 
-  '@opentelemetry/core@1.30.1(@opentelemetry/api@1.7.0)':
+  '@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@opentelemetry/api': 1.7.0
+      '@opentelemetry/api': 1.9.1
       '@opentelemetry/semantic-conventions': 1.28.0
 
-  '@opentelemetry/exporter-trace-otlp-http@0.52.1(@opentelemetry/api@1.7.0)':
+  '@opentelemetry/exporter-trace-otlp-http@0.52.1(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@opentelemetry/api': 1.7.0
-      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/otlp-exporter-base': 0.52.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/otlp-transformer': 0.52.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/resources': 1.25.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/sdk-trace-base': 1.25.1(@opentelemetry/api@1.7.0)
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/otlp-exporter-base': 0.52.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/otlp-transformer': 0.52.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources': 1.25.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-trace-base': 1.25.1(@opentelemetry/api@1.9.1)
 
-  '@opentelemetry/otlp-exporter-base@0.52.1(@opentelemetry/api@1.7.0)':
+  '@opentelemetry/otlp-exporter-base@0.52.1(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@opentelemetry/api': 1.7.0
-      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/otlp-transformer': 0.52.1(@opentelemetry/api@1.7.0)
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/otlp-transformer': 0.52.1(@opentelemetry/api@1.9.1)
 
-  '@opentelemetry/otlp-transformer@0.52.1(@opentelemetry/api@1.7.0)':
+  '@opentelemetry/otlp-transformer@0.52.1(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@opentelemetry/api': 1.7.0
+      '@opentelemetry/api': 1.9.1
       '@opentelemetry/api-logs': 0.52.1
-      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/resources': 1.25.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/sdk-logs': 0.52.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/sdk-metrics': 1.25.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/sdk-trace-base': 1.25.1(@opentelemetry/api@1.7.0)
+      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources': 1.25.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-logs': 0.52.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-metrics': 1.25.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-trace-base': 1.25.1(@opentelemetry/api@1.9.1)
       protobufjs: 7.4.0
 
-  '@opentelemetry/resources@1.25.1(@opentelemetry/api@1.7.0)':
+  '@opentelemetry/resources@1.25.1(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@opentelemetry/api': 1.7.0
-      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.7.0)
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.25.1
 
-  '@opentelemetry/resources@1.30.1(@opentelemetry/api@1.7.0)':
+  '@opentelemetry/resources@1.30.1(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@opentelemetry/api': 1.7.0
-      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.7.0)
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.28.0
 
-  '@opentelemetry/sdk-logs@0.52.1(@opentelemetry/api@1.7.0)':
+  '@opentelemetry/sdk-logs@0.52.1(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@opentelemetry/api': 1.7.0
+      '@opentelemetry/api': 1.9.1
       '@opentelemetry/api-logs': 0.52.1
-      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/resources': 1.25.1(@opentelemetry/api@1.7.0)
+      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources': 1.25.1(@opentelemetry/api@1.9.1)
 
-  '@opentelemetry/sdk-metrics@1.25.1(@opentelemetry/api@1.7.0)':
+  '@opentelemetry/sdk-metrics@1.25.1(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@opentelemetry/api': 1.7.0
-      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/resources': 1.25.1(@opentelemetry/api@1.7.0)
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources': 1.25.1(@opentelemetry/api@1.9.1)
       lodash.merge: 4.6.2
 
-  '@opentelemetry/sdk-trace-base@1.25.1(@opentelemetry/api@1.7.0)':
+  '@opentelemetry/sdk-trace-base@1.25.1(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@opentelemetry/api': 1.7.0
-      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/resources': 1.25.1(@opentelemetry/api@1.7.0)
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/core': 1.25.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources': 1.25.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.25.1
 
-  '@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.7.0)':
+  '@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@opentelemetry/api': 1.7.0
-      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.7.0)
-      '@opentelemetry/resources': 1.30.1(@opentelemetry/api@1.7.0)
+      '@opentelemetry/api': 1.9.1
+      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources': 1.30.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.28.0
 
   '@opentelemetry/semantic-conventions@1.25.1': {}
@@ -18251,7 +18267,7 @@ snapshots:
 
   '@rolldown/binding-wasm32-wasi@1.0.0-beta.49':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.0.7
+      '@napi-rs/wasm-runtime': 1.1.1
     optional: true
 
   '@rolldown/binding-wasm32-wasi@1.0.0-rc.10':
@@ -18654,6 +18670,15 @@ snapshots:
     transitivePeerDependencies:
       - encoding
       - supports-color
+
+  '@sentry/cloudflare@10.50.0(@cloudflare/workers-types@4.20260423.1)':
+    dependencies:
+      '@opentelemetry/api': 1.9.1
+      '@sentry/core': 10.50.0
+    optionalDependencies:
+      '@cloudflare/workers-types': 4.20260423.1
+
+  '@sentry/core@10.50.0': {}
 
   '@sentry/core@7.87.0':
     dependencies:
@@ -19921,7 +19946,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vitest: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+      vitest: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   '@vitest/utils@2.1.8':
     dependencies:
@@ -20289,10 +20314,10 @@ snapshots:
 
   before-after-hook@2.2.3: {}
 
-  better-auth@1.5.4(@cloudflare/workers-types@4.20260423.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.7.0)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)))(mongodb@7.1.0)(mysql2@3.15.3)(pg@8.16.3)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@4.1.0):
+  better-auth@1.5.4(@cloudflare/workers-types@4.20260423.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.9.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)))(mongodb@7.1.0)(mysql2@3.15.3)(pg@8.16.3)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@4.1.0):
     dependencies:
       '@better-auth/core': 1.5.4(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260423.1)(better-call@1.3.2(zod@4.3.6))(jose@6.2.1)(kysely@0.28.11)(nanostores@1.1.1)
-      '@better-auth/drizzle-adapter': 1.5.4(@better-auth/core@1.5.4(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260423.1)(better-call@1.3.2(zod@4.3.6))(jose@5.9.3)(kysely@0.28.11)(nanostores@1.1.1))(@better-auth/utils@0.3.1)(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.7.0)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)))
+      '@better-auth/drizzle-adapter': 1.5.4(@better-auth/core@1.5.4(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260423.1)(better-call@1.3.2(zod@4.3.6))(jose@5.9.3)(kysely@0.28.11)(nanostores@1.1.1))(@better-auth/utils@0.3.1)(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.9.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)))
       '@better-auth/kysely-adapter': 1.5.4(@better-auth/core@1.5.4(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260423.1)(better-call@1.3.2(zod@4.3.6))(jose@5.9.3)(kysely@0.28.11)(nanostores@1.1.1))(@better-auth/utils@0.3.1)(kysely@0.28.11)
       '@better-auth/memory-adapter': 1.5.4(@better-auth/core@1.5.4(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260423.1)(better-call@1.3.2(zod@4.3.6))(jose@5.9.3)(kysely@0.28.11)(nanostores@1.1.1))(@better-auth/utils@0.3.1)
       '@better-auth/mongo-adapter': 1.5.4(@better-auth/core@1.5.4(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260423.1)(better-call@1.3.2(zod@4.3.6))(jose@5.9.3)(kysely@0.28.11)(nanostores@1.1.1))(@better-auth/utils@0.3.1)(mongodb@7.1.0)
@@ -20310,14 +20335,14 @@ snapshots:
       zod: 4.3.6
     optionalDependencies:
       '@prisma/client': 7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3)
-      drizzle-orm: 0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.7.0)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))
+      drizzle-orm: 0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.9.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))
       mongodb: 7.1.0
       mysql2: 3.15.3
       pg: 8.16.3
       prisma: 7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
-      vitest: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+      vitest: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
 
@@ -21119,11 +21144,11 @@ snapshots:
     dependencies:
       wordwrap: 1.0.0
 
-  drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.7.0)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)):
+  drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260423.1)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.9.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)):
     optionalDependencies:
       '@cloudflare/workers-types': 4.20260423.1
       '@electric-sql/pglite': 0.3.2
-      '@opentelemetry/api': 1.7.0
+      '@opentelemetry/api': 1.9.1
       '@prisma/client': 7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3)
       '@types/pg': 8.15.4
       kysely: 0.28.11
@@ -21732,7 +21757,17 @@ snapshots:
 
   fast-safe-stringify@2.1.1: {}
 
+  fast-string-truncated-width@1.2.1: {}
+
+  fast-string-width@1.1.0:
+    dependencies:
+      fast-string-truncated-width: 1.2.1
+
   fast-uri@3.0.6: {}
+
+  fast-wrap-ansi@0.1.6:
+    dependencies:
+      fast-string-width: 1.1.0
 
   fast-xml-parser@4.4.1:
     dependencies:
@@ -26119,38 +26154,9 @@ snapshots:
     dependencies:
       '@vitest/utils': 2.1.8
       mock-socket: 9.3.1
-      vitest: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+      vitest: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
-  vitest@4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)):
-    dependencies:
-      '@vitest/expect': 4.1.0
-      '@vitest/mocker': 4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
-      '@vitest/pretty-format': 4.1.0
-      '@vitest/runner': 4.1.0
-      '@vitest/snapshot': 4.1.0
-      '@vitest/spy': 4.1.0
-      '@vitest/utils': 4.1.0
-      es-module-lexer: 2.0.0
-      expect-type: 1.3.0
-      magic-string: 0.30.21
-      obug: 2.1.1
-      pathe: 2.0.3
-      picomatch: 4.0.3
-      std-env: 4.0.0
-      tinybench: 2.9.0
-      tinyexec: 1.0.2
-      tinyglobby: 0.2.15
-      tinyrainbow: 3.0.3
-      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@opentelemetry/api': 1.7.0
-      '@types/node': 22.15.17
-      '@vitest/ui': 4.1.0(vitest@4.1.0)
-    transitivePeerDependencies:
-      - msw
-
-  vitest@4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)):
+  vitest@4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)):
     dependencies:
       '@vitest/expect': 4.1.0
       '@vitest/mocker': 4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))
@@ -26173,12 +26179,42 @@ snapshots:
       vite: 8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
+      '@opentelemetry/api': 1.9.1
       '@types/node': 22.15.17
       '@vitest/ui': 4.1.0(vitest@4.1.0)
     transitivePeerDependencies:
       - msw
 
-  vitest@4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)):
+  vitest@4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)):
+    dependencies:
+      '@vitest/expect': 4.1.0
+      '@vitest/mocker': 4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+      '@vitest/pretty-format': 4.1.0
+      '@vitest/runner': 4.1.0
+      '@vitest/snapshot': 4.1.0
+      '@vitest/spy': 4.1.0
+      '@vitest/utils': 4.1.0
+      es-module-lexer: 2.0.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.3
+      std-env: 4.0.0
+      tinybench: 2.9.0
+      tinyexec: 1.0.2
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.0.3
+      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.1
+      '@types/node': 22.15.17
+      '@vitest/ui': 4.1.0(vitest@4.1.0)
+    transitivePeerDependencies:
+      - msw
+
+  vitest@4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)):
     dependencies:
       '@vitest/expect': 4.1.0
       '@vitest/mocker': 4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -26201,6 +26237,7 @@ snapshots:
       vite: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
+      '@opentelemetry/api': 1.9.1
       '@types/node': 22.15.17
       '@vitest/ui': 4.1.0(vitest@4.1.0)
     transitivePeerDependencies:

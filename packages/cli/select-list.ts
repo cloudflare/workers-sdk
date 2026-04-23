@@ -18,7 +18,7 @@ export type SelectRefreshableOptions = ConstructorParameters<
 	options: OptionWithDetails[];
 };
 
-export default class SelectRefreshablePrompt extends Prompt {
+export default class SelectRefreshablePrompt extends Prompt<string> {
 	options: OptionWithDetails[];
 	cursor = 0;
 

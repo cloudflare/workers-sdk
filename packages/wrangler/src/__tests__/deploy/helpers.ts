@@ -215,6 +215,8 @@ export function mockCustomDomainsChangesetRequest({
 							environment: params.envName,
 							zone_name: "",
 							zone_id: "",
+							enabled: true,
+							previews_enabled: false,
 						};
 					}),
 					removed: [],
@@ -247,7 +249,11 @@ export function mockPublishCustomDomainsRequest({
 		override_existing_dns_record: boolean;
 	};
 	domains: Array<
-		{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
+		{
+			hostname: string;
+			enabled?: boolean;
+			previews_enabled?: boolean;
+		} & ({ zone_id?: string } | { zone_name?: string })
 	>;
 	env?: string | undefined;
 	useServiceEnvironments?: boolean | undefined;

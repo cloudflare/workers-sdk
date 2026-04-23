@@ -68,7 +68,7 @@
 		"test:ci": "vitest run"
 	},
 	"dependencies": {
-		"@clack/core": "^0.3.2",
+		"@clack/core": "^1.2.0",
 		"@cloudflare/workers-utils": "workspace:*",
 		"chalk": "^5.2.0",
 		"ci-info": "catalog:default",
