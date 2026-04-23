@@ -1,27 +1,15 @@
 {
-	"name": "container-app",
-	"main": "./src/index.ts",
+	"name": "entry",
+	"main": "./src/entry.ts",
 	"compatibility_date": "2025-04-03",
-	"containers": [
+	"services": [
 		{
-			"image": "./Dockerfile",
-			"class_name": "Container",
-			"name": "http2",
-			"max_instances": 2,
+			"binding": "DOCKERFILE_APP",
+			"service": "dockerfile-container-app",
 		},
-	],
-	"durable_objects": {
-		"bindings": [
-			{
-				"class_name": "Container",
-				"name": "CONTAINER",
-			},
-		],
-	},
-	"migrations": [
 		{
-			"tag": "v1",
-			"new_sqlite_classes": ["Container"],
+			"binding": "REGISTRY_APP",
+			"service": "registry-container-app",
 		},
 	],
 }
