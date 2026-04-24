@@ -3830,6 +3830,9 @@ importers:
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
+      '@types/command-exists':
+        specifier: ^1.2.0
+        version: 1.2.0
       '@types/node':
         specifier: ^22.10.1
         version: 22.15.17
@@ -3839,6 +3842,9 @@ importers:
       cloudflare:
         specifier: ^5.2.0
         version: 5.2.0(encoding@0.1.13)
+      command-exists:
+        specifier: ^1.2.9
+        version: 1.2.9
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -3863,6 +3869,9 @@ importers:
       typescript:
         specifier: catalog:default
         version: 5.8.3
+      undici:
+        specifier: catalog:default
+        version: 7.24.8
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -8312,9 +8321,6 @@ packages:
   '@speed-highlight/core@1.2.7':
     resolution: {integrity: sha512-0dxmVj4gxg3Jg879kvFS/msl4s9F3T9UXC1InxgOf7t5NvcPD97u/WTA5vL/IxWHMn7qSxBozqrnnE2wvl1m8g==}
 
-  '@standard-schema/spec@1.0.0':
-    resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
-
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
@@ -9813,9 +9819,6 @@ packages:
   confbox@0.1.8:
     resolution: {integrity: sha512-RMtmw0iFkeR4YV+fUOSucriAQNb9g8zFR52MWCtl+cCZOFRNL6zeB395vPzFhEjjn4fMxXudmELnl/KF/WrK6w==}
 
-  confbox@0.2.2:
-    resolution: {integrity: sha512-1NB+BKqhtNipMsov4xI/NnhCKp9XG9NamYp5PVm9klAT0fsrNPjaFICsCFhNhwZJKNh7zB/3q8qXz0E9oaMNtQ==}
-
   confbox@0.2.4:
     resolution: {integrity: sha512-ysOGlgTFbN2/Y6Cg3Iye8YKulHw+R2fNXHrgSmXISQdMnomY6eNDprVdW9R5xBguEqI954+S6709UyiO7B+6OQ==}
 
@@ -10649,9 +10652,6 @@ packages:
   express@5.1.0:
     resolution: {integrity: sha512-DT9ck5YIRU+8GYzzU5kT3eHGA5iL+1Zd0EutOmTE9Dtk+Tvuzd23VBU+ec7HPNSTxXYO55gPV/hq4pSBJDjFpA==}
     engines: {node: '>= 18'}
-
-  exsolve@1.0.7:
-    resolution: {integrity: sha512-VO5fQUzZtI6C+vx4w/4BWJpg3s/5l+6pRQEHzFRM8WFi4XffSP1Z+4qi7GbjWbvRQEbdIco5mIMq+zX4rPuLrw==}
 
   exsolve@1.0.8:
     resolution: {integrity: sha512-LmDxfWXwcTArk8fUEnOfSZpHOJ6zOMUJKOtFLFqJLoKJetuQG874Uc7/Kki7zFLzYybmZhp1M7+98pfMqeX8yA==}
@@ -19139,8 +19139,6 @@ snapshots:
 
   '@speed-highlight/core@1.2.7': {}
 
-  '@standard-schema/spec@1.0.0': {}
-
   '@standard-schema/spec@1.1.0': {}
 
   '@styled-system/background@5.1.2':
@@ -20525,10 +20523,10 @@ snapshots:
   c12@3.1.0:
     dependencies:
       chokidar: 4.0.3
-      confbox: 0.2.2
+      confbox: 0.2.4
       defu: 6.1.4
       dotenv: 16.6.1
-      exsolve: 1.0.7
+      exsolve: 1.0.8
       giget: 2.0.0
       jiti: 2.6.1
       ohash: 2.0.11
@@ -20804,8 +20802,6 @@ snapshots:
       yargs: 17.7.2
 
   confbox@0.1.8: {}
-
-  confbox@0.2.2: {}
 
   confbox@0.2.4: {}
 
@@ -21242,7 +21238,7 @@ snapshots:
 
   effect@3.18.4:
     dependencies:
-      '@standard-schema/spec': 1.0.0
+      '@standard-schema/spec': 1.1.0
       fast-check: 3.23.2
 
   electron-to-chromium@1.5.286: {}
@@ -21758,8 +21754,6 @@ snapshots:
       vary: 1.1.2
     transitivePeerDependencies:
       - supports-color
-
-  exsolve@1.0.7: {}
 
   exsolve@1.0.8: {}
 

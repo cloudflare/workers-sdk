@@ -161,6 +161,12 @@ export class ProxyWorker implements DurableObject {
 						res = insertLiveReloadScript(request, res, this.env, proxyData);
 					}
 
+					if (isSseResponse(res)) {
+						void sendMessageToProxyController(this.env, {
+							type: "sseResponseDetected",
+						});
+					}
+
 					deferredResponse.resolve(res);
 				})
 				.catch((error: Error) => {
@@ -226,6 +232,11 @@ function isRequestFromProxyController(req: Request, env: Env): boolean {
 }
 function isHtmlResponse(res: Response): boolean {
 	return res.headers.get("content-type")?.startsWith("text/html") ?? false;
+}
+function isSseResponse(res: Response): boolean {
+	return (
+		res.headers.get("content-type")?.startsWith("text/event-stream") ?? false
+	);
 }
 function isRequestForLiveReloadWebsocket(req: Request): boolean {
 	const websocketProtocol = req.headers.get("Sec-WebSocket-Protocol");

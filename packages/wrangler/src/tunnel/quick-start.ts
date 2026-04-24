@@ -1,10 +1,11 @@
 import { join } from "node:path";
 import {
 	getGlobalWranglerConfigPath,
+	spawnCloudflared,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { spawnCloudflared } from "./cloudflared";
+import { confirm } from "../dialogs";
 
 /**
  * Quick tunnel command - uses cloudflared to create a temporary tunnel
@@ -65,7 +66,10 @@ export const tunnelQuickStartCommand = createCommand({
 		logger.log(`   The tunnel will stop when you press Ctrl+C.\n`);
 
 		// Spawn cloudflared process with automatic binary management
-		const cloudflared = await spawnCloudflared(cloudflaredArgs);
+		const cloudflared = await spawnCloudflared(cloudflaredArgs, {
+			confirmDownload: (message) => confirm(message),
+			logger,
+		});
 
 		// Track if we've already started shutting down
 		let isShuttingDown = false;
