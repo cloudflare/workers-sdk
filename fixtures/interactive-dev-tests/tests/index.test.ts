@@ -444,10 +444,9 @@ if (process.platform === "win32") {
 					"utf-8"
 				);
 
-				// Capture the current stdout length so we can scope the
-				// log match below to output produced AFTER the rebuild
-				// hotkey is pressed.
-				const outputLengthBeforeRebuild = wrangler.stdout.length;
+				// Clear the captured stdout so we can match on log output
+				// produced AFTER the rebuild hotkey is pressed.
+				wrangler.stdout = "";
 				wrangler.pty.write("r");
 
 				// Wait for the rebuild and workerd reload to actually
@@ -459,9 +458,7 @@ if (process.platform === "win32") {
 				// on slow CI.
 				await vi.waitFor(
 					() => {
-						expect(wrangler.stdout.slice(outputLengthBeforeRebuild)).toMatch(
-							/Local server updated and ready/
-						);
+						expect(wrangler.stdout).toMatch(/Local server updated and ready/);
 					},
 					{ timeout: 30_000, interval: 500 }
 				);
