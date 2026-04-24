@@ -32,10 +32,14 @@ interface Env {
 interface Props {
 	service: string;
 	entrypoint: string | null;
+	// User-supplied `props` from the original service binding / tail consumer.
+	// Forwarded to the remote entrypoint via the debug port so they are
+	// available as `ctx.props` on the callee.
+	userProps?: Record<string, unknown>;
 }
 
 function resolve(props: Props, env: Env): Fetcher | null {
-	const { service, entrypoint } = props;
+	const { service, entrypoint, userProps } = props;
 	const target = resolveTarget(service);
 	if (!target || !target.debugPortAddress) {
 		return null;
@@ -45,7 +49,7 @@ function resolve(props: Props, env: Env): Fetcher | null {
 			? target.defaultEntrypointService
 			: target.userWorkerService;
 	const client = env.DEV_REGISTRY_DEBUG_PORT.connect(target.debugPortAddress);
-	return client.getEntrypoint(serviceName, entrypoint ?? undefined);
+	return client.getEntrypoint(serviceName, entrypoint ?? undefined, userProps);
 }
 
 export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
