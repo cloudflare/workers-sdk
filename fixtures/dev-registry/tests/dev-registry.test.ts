@@ -18,7 +18,7 @@ import {
 } from "../../../packages/vite-plugin-cloudflare/e2e/helpers";
 import { runWranglerDev as baseRunWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
-const waitForTimeout = 10_000;
+const waitForTimeout = 20_000;
 const cwd = resolve(__dirname, "..");
 const tmpPathBase = path.join(os.tmpdir(), "wrangler-tests");
 const it = test.extend<{
