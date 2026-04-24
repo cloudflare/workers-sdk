@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.17.0",
+	"version": "0.18.0",
 	"description": "Internal utility package for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-utils#readme",
 	"bugs": {

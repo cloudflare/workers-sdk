@@ -1,5 +1,30 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.15.0
+
+### Minor Changes
+
+- [#13623](https://github.com/cloudflare/workers-sdk/pull/13623) [`b156b2e`](https://github.com/cloudflare/workers-sdk/commit/b156b2e420351852b408d13c2bea10105ad96390) Thanks [@penalosa](https://github.com/penalosa)! - Add `reset()` and `abortAllDurableObjects()` helpers to `cloudflare:test`
+
+  The `reset()` helper deletes all data from attached bindings, and resets all Durable Object instances. This is useful for resetting state between test blocks.
+
+  The `abortAllDurableObjects()` helper resets all Durable Object instances without deleting persisted data.
+
+  ```ts
+  import { reset } from "cloudflare:test";
+  import { afterEach } from "vitest";
+
+  afterEach(async () => {
+    await reset();
+  });
+  ```
+
+### Patch Changes
+
+- Updated dependencies [[`5a2968a`](https://github.com/cloudflare/workers-sdk/commit/5a2968ab69dd3d42ddf532fc547236a2f034874d), [`5680287`](https://github.com/cloudflare/workers-sdk/commit/56802879641c123ee11160d77ecaf104915cd826), [`3494842`](https://github.com/cloudflare/workers-sdk/commit/34948423c4d873a3b493091b2a39ae9ed389bb67), [`7d728fb`](https://github.com/cloudflare/workers-sdk/commit/7d728fbca56a58b621767c83f734c1daf3e11c41), [`df9319d`](https://github.com/cloudflare/workers-sdk/commit/df9319d3c302866db7972ec5636a80d041e80900), [`d5e3c57`](https://github.com/cloudflare/workers-sdk/commit/d5e3c57207f2c76defee1878c3cfaa8ca41dbcc7), [`3ceeec3`](https://github.com/cloudflare/workers-sdk/commit/3ceeec34173d110048d0c18db5dd4d60fa308f75), [`7567ef7`](https://github.com/cloudflare/workers-sdk/commit/7567ef703f1bf157ef29e6d19dd0dd9f1ff8771f), [`2831b54`](https://github.com/cloudflare/workers-sdk/commit/2831b545efe86c71fe1930909ca9e891c27a0722), [`7fc50c1`](https://github.com/cloudflare/workers-sdk/commit/7fc50c1e5a6dfaaba84e774f4a5053716dae15ee), [`377715d`](https://github.com/cloudflare/workers-sdk/commit/377715d9f6ec7f3428e12a6ce56b367984fb0673)]:
+  - wrangler@4.85.0
+  - miniflare@4.20260424.0
+
 ## 0.14.9
 
 ### Patch Changes

@@ -1,5 +1,30 @@
 # @cloudflare/vite-plugin
 
+## 1.33.2
+
+### Patch Changes
+
+- [#13636](https://github.com/cloudflare/workers-sdk/pull/13636) [`1d54fb7`](https://github.com/cloudflare/workers-sdk/commit/1d54fb7137a8489df86836a94226e65ae44e9bff) Thanks [@edmundhung](https://github.com/edmundhung)! - Stop denying `vite.config.*` files from Vite dev server access
+
+  This allows projects to access `vite.config.*` files during development when needed.
+
+- [#13653](https://github.com/cloudflare/workers-sdk/pull/13653) [`48c61b6`](https://github.com/cloudflare/workers-sdk/commit/48c61b65e0efba88ed1cc1b1b2b087fd29938b83) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use the date that the plugin is built as the default compatibility date.
+
+  When no compatibility date was set by the user, the plugin was falling back to the current date. This meant that the date could get ahead of the latest date supported by the installed version of workerd. We now populate the default compatibility date when the plugin is built. This means that it is updated with each release but then stays fixed.
+
+- [#13634](https://github.com/cloudflare/workers-sdk/pull/13634) [`f3cb2b2`](https://github.com/cloudflare/workers-sdk/commit/f3cb2b2615ff4dde1b0c514f8213a5accc0a6b45) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Simplify `/cdn-cgi/` handling
+
+  We now only add special handling for `/cdn-cgi/handler/*` routes, so that trigger handlers are invoked on the User Worker.
+
+- [#13611](https://github.com/cloudflare/workers-sdk/pull/13611) [`6e99feb`](https://github.com/cloudflare/workers-sdk/commit/6e99feb9c8a883cc41caa6fadca8a283fc302d97) Thanks [@smaldd14](https://github.com/smaldd14)! - Support Cloudflare-managed registry images in Vite plugin local dev
+
+  Previously, using a `registry.cloudflare.com` image in a `containers` binding would crash `vite dev` with an unsupported error. The Vite plugin now configures the Cloudflare API client using `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` before pulling container images, matching the behavior of `wrangler dev`.
+
+- Updated dependencies [[`5a2968a`](https://github.com/cloudflare/workers-sdk/commit/5a2968ab69dd3d42ddf532fc547236a2f034874d), [`5680287`](https://github.com/cloudflare/workers-sdk/commit/56802879641c123ee11160d77ecaf104915cd826), [`3494842`](https://github.com/cloudflare/workers-sdk/commit/34948423c4d873a3b493091b2a39ae9ed389bb67), [`7d728fb`](https://github.com/cloudflare/workers-sdk/commit/7d728fbca56a58b621767c83f734c1daf3e11c41), [`df9319d`](https://github.com/cloudflare/workers-sdk/commit/df9319d3c302866db7972ec5636a80d041e80900), [`d5e3c57`](https://github.com/cloudflare/workers-sdk/commit/d5e3c57207f2c76defee1878c3cfaa8ca41dbcc7), [`3ceeec3`](https://github.com/cloudflare/workers-sdk/commit/3ceeec34173d110048d0c18db5dd4d60fa308f75), [`7567ef7`](https://github.com/cloudflare/workers-sdk/commit/7567ef703f1bf157ef29e6d19dd0dd9f1ff8771f), [`0a95061`](https://github.com/cloudflare/workers-sdk/commit/0a95061dbbd3c013a257c8ece99ed3f50e1a9870), [`2831b54`](https://github.com/cloudflare/workers-sdk/commit/2831b545efe86c71fe1930909ca9e891c27a0722), [`7fc50c1`](https://github.com/cloudflare/workers-sdk/commit/7fc50c1e5a6dfaaba84e774f4a5053716dae15ee), [`377715d`](https://github.com/cloudflare/workers-sdk/commit/377715d9f6ec7f3428e12a6ce56b367984fb0673)]:
+  - wrangler@4.85.0
+  - miniflare@4.20260424.0
+  - @cloudflare/unenv-preset@2.16.1
+
 ## 1.33.1
 
 ### Patch Changes

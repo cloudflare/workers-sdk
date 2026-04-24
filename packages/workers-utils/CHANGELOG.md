@@ -1,5 +1,15 @@
 # @cloudflare/workers-utils
 
+## 0.18.0
+
+### Minor Changes
+
+- [#13222](https://github.com/cloudflare/workers-sdk/pull/13222) [`5680287`](https://github.com/cloudflare/workers-sdk/commit/56802879641c123ee11160d77ecaf104915cd826) Thanks [@maxwellpeterson](https://github.com/maxwellpeterson)! - Add enabled and previews_enabled support for custom domain routes
+
+  Custom domain routes can now include optional `enabled` and `previews_enabled` boolean fields to control whether a custom domain serves production and/or preview traffic. When omitted, the API defaults apply (production enabled, previews disabled).
+
+- [#13651](https://github.com/cloudflare/workers-sdk/pull/13651) [`47ac63f`](https://github.com/cloudflare/workers-sdk/commit/47ac63f05ca86d781110490ff21ff88f2828fbbf) Thanks [@penalosa](https://github.com/penalosa)! - Publish `@cloudflare/cli-shared-helpers` and `@cloudflare/workers-utils` to npm
+
 ## 0.17.0
 
 ### Minor Changes
