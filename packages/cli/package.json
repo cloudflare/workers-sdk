@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/cli-shared-helpers",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Internal shared CLI helpers for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"keywords": [
 		"cli",

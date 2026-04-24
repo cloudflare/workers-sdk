@@ -1,5 +1,16 @@
 # @cloudflare/cli
 
+## 0.1.0
+
+### Minor Changes
+
+- [#13651](https://github.com/cloudflare/workers-sdk/pull/13651) [`47ac63f`](https://github.com/cloudflare/workers-sdk/commit/47ac63f05ca86d781110490ff21ff88f2828fbbf) Thanks [@penalosa](https://github.com/penalosa)! - Publish `@cloudflare/cli-shared-helpers` and `@cloudflare/workers-utils` to npm
+
+### Patch Changes
+
+- Updated dependencies [[`5680287`](https://github.com/cloudflare/workers-sdk/commit/56802879641c123ee11160d77ecaf104915cd826), [`47ac63f`](https://github.com/cloudflare/workers-sdk/commit/47ac63f05ca86d781110490ff21ff88f2828fbbf)]:
+  - @cloudflare/workers-utils@0.18.0
+
 ## 1.4.0
 
 ### Minor Changes

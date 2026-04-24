@@ -1,5 +1,61 @@
 # wrangler
 
+## 4.85.0
+
+### Minor Changes
+
+- [#13222](https://github.com/cloudflare/workers-sdk/pull/13222) [`5680287`](https://github.com/cloudflare/workers-sdk/commit/56802879641c123ee11160d77ecaf104915cd826) Thanks [@maxwellpeterson](https://github.com/maxwellpeterson)! - Add enabled and previews_enabled support for custom domain routes
+
+  Custom domain routes can now include optional `enabled` and `previews_enabled` boolean fields to control whether a custom domain serves production and/or preview traffic. When omitted, the API defaults apply (production enabled, previews disabled).
+
+### Patch Changes
+
+- [#13622](https://github.com/cloudflare/workers-sdk/pull/13622) [`5a2968a`](https://github.com/cloudflare/workers-sdk/commit/5a2968ab69dd3d42ddf532fc547236a2f034874d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix inherited `ai_search_namespaces` binding display in `wrangler deploy`
+
+  When an `ai_search_namespaces` binding inherits from the existing deployment, the bindings table now correctly shows `(inherited)` instead of a raw `Symbol(inherit_binding)` string.
+
+- [#13633](https://github.com/cloudflare/workers-sdk/pull/13633) [`3494842`](https://github.com/cloudflare/workers-sdk/commit/34948423c4d873a3b493091b2a39ae9ed389bb67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260421.1 | 1.20260422.1 |
+
+- [#13645](https://github.com/cloudflare/workers-sdk/pull/13645) [`7d728fb`](https://github.com/cloudflare/workers-sdk/commit/7d728fbca56a58b621767c83f734c1daf3e11c41) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260422.1 | 1.20260423.1 |
+
+- [#13657](https://github.com/cloudflare/workers-sdk/pull/13657) [`df9319d`](https://github.com/cloudflare/workers-sdk/commit/df9319d3c302866db7972ec5636a80d041e80900) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260423.1 | 1.20260424.1 |
+
+- [#13574](https://github.com/cloudflare/workers-sdk/pull/13574) [`d5e3c57`](https://github.com/cloudflare/workers-sdk/commit/d5e3c57207f2c76defee1878c3cfaa8ca41dbcc7) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Detect Cloudflare WAF block pages and include Ray ID in API error messages
+
+  When the Cloudflare WAF blocks an API request, the response is an HTML page rather than JSON. Previously, this caused a confusing "Received a malformed response from the API" error with a truncated HTML snippet. Wrangler now detects WAF block pages and displays a clear error message explaining that the request was blocked by the firewall, along with the Cloudflare Ray ID (when available) for use in support tickets.
+
+  For other non-JSON responses that aren't WAF blocks, the "malformed response" error also now includes the Ray ID to help reference failing requests in support tickets.
+
+- [#13560](https://github.com/cloudflare/workers-sdk/pull/13560) [`7567ef7`](https://github.com/cloudflare/workers-sdk/commit/7567ef703f1bf157ef29e6d19dd0dd9f1ff8771f) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Preserve NonRetryableError message and name when the `workflows_preserve_non_retryable_error_message` compatibility flag is enabled, instead of replacing it with a generic error message.
+
+- [#11784](https://github.com/cloudflare/workers-sdk/pull/11784) [`2831b54`](https://github.com/cloudflare/workers-sdk/commit/2831b545efe86c71fe1930909ca9e891c27a0722) Thanks [@JPeer264](https://github.com/JPeer264)! - fix(wrangler): Bind the console methods directly instead of using a global proxy
+
+- [#13644](https://github.com/cloudflare/workers-sdk/pull/13644) [`377715d`](https://github.com/cloudflare/workers-sdk/commit/377715d9f6ec7f3428e12a6ce56b367984fb0673) Thanks [@MattieTK](https://github.com/MattieTK)! - Update `@clack/core` and `@clack/prompts` to v1.2.0
+
+  Bumps the bundled `@clack/core` dependency used internally by `@cloudflare/cli` from `0.3.x` to `1.2.0`, and the `@clack/prompts` dependency in `create-cloudflare` from `0.6.x` to `1.2.0`. Clack v1 includes a number of API changes, but no user-facing prompt behaviour changes are expected.
+
+- Updated dependencies [[`3494842`](https://github.com/cloudflare/workers-sdk/commit/34948423c4d873a3b493091b2a39ae9ed389bb67), [`7d728fb`](https://github.com/cloudflare/workers-sdk/commit/7d728fbca56a58b621767c83f734c1daf3e11c41), [`df9319d`](https://github.com/cloudflare/workers-sdk/commit/df9319d3c302866db7972ec5636a80d041e80900), [`3ceeec3`](https://github.com/cloudflare/workers-sdk/commit/3ceeec34173d110048d0c18db5dd4d60fa308f75), [`7567ef7`](https://github.com/cloudflare/workers-sdk/commit/7567ef703f1bf157ef29e6d19dd0dd9f1ff8771f), [`0a95061`](https://github.com/cloudflare/workers-sdk/commit/0a95061dbbd3c013a257c8ece99ed3f50e1a9870), [`7fc50c1`](https://github.com/cloudflare/workers-sdk/commit/7fc50c1e5a6dfaaba84e774f4a5053716dae15ee), [`377715d`](https://github.com/cloudflare/workers-sdk/commit/377715d9f6ec7f3428e12a6ce56b367984fb0673)]:
+  - miniflare@4.20260424.0
+  - @cloudflare/unenv-preset@2.16.1
+
 ## 4.84.1
 
 ### Patch Changes
