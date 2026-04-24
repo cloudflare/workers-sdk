@@ -1,3 +1,4 @@
+import { inspect } from "node:util";
 import chalk from "chalk";
 import { logger } from "../logger";
 import type {
@@ -129,11 +130,8 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 
 	if (eventMessage.exceptions.length > 0) {
 		eventMessage.exceptions.forEach((err) => {
-			logger.error(
-				typeof err.message === "string"
-					? err.message
-					: JSON.stringify(err.message) + "\n" + err.stack
-			);
+			const errorLine = `${err.name}: ${typeof err.message === "string" ? err.message : inspect(err.message)}`;
+			logger.error(`${errorLine}\n${err.stack}`);
 		});
 	}
 }
