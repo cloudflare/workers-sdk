@@ -1,5 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
+import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
@@ -26,6 +27,13 @@ const namespaceArg = {
 	type: "string",
 	demandOption: true,
 	description: "The Artifacts namespace name",
+} as const;
+
+const forceArg = {
+	type: "boolean",
+	alias: "y",
+	default: false,
+	description: "Skip confirmation",
 } as const;
 
 export const artifactsReposNamespace = createNamespace({
@@ -226,9 +234,21 @@ export const artifactsReposDeleteCommand = createCommand({
 			description: "The Artifacts repository name",
 		},
 		namespace: namespaceArg,
+		force: forceArg,
 		json: jsonArg,
 	},
-	async handler({ name, namespace, json }, { config }) {
+	async handler({ name, namespace, force, json }, { config }) {
+		if (!force) {
+			const confirmedDeletion = await confirm(
+				`Are you sure you want to delete Artifacts repo "${name}" from namespace "${namespace}"? This action cannot be undone.`,
+				{ fallbackValue: false }
+			);
+			if (!confirmedDeletion) {
+				logger.log("Deletion cancelled.");
+				return;
+			}
+		}
+
 		await deleteRepo(config, namespace, name);
 
 		if (json) {

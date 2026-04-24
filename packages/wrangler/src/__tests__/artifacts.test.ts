@@ -1,7 +1,9 @@
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import type * as WorkersUtilsModule from "@cloudflare/workers-utils";
@@ -17,11 +19,17 @@ vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
 
 describe("artifacts", () => {
 	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
 
 	mockAccountId();
 	mockApiToken();
 
+	beforeEach(() => {
+		setIsTTY(true);
+	});
+
 	afterEach(() => {
+		clearDialogs();
 		msw.resetHandlers();
 	});
 
@@ -139,10 +147,37 @@ describe("artifacts", () => {
 				)
 			);
 
-			await runWrangler("artifacts namespaces delete default --json");
+			await runWrangler("artifacts namespaces delete default --force --json");
 
 			expect(std.err).toBe("");
 			expect(JSON.parse(std.out)).toEqual({ deleted: true, name: "default" });
+		});
+
+		it("should cancel namespace deletion when not confirmed", async ({
+			expect,
+		}) => {
+			let requestCount = 0;
+
+			mockConfirm({
+				text: 'Are you sure you want to delete Artifacts namespace "default"? This action cannot be undone.',
+				options: { defaultValue: true },
+				result: false,
+			});
+
+			msw.use(
+				http.delete(
+					"*/accounts/:accountId/artifacts/namespaces/:namespace",
+					() => {
+						requestCount += 1;
+						return HttpResponse.json(createFetchResult({ id: "ns_default" }));
+					}
+				)
+			);
+
+			await runWrangler("artifacts namespaces delete default");
+
+			expect(std.out).toContain("Deletion cancelled.");
+			expect(requestCount).toBe(0);
 		});
 	});
 
@@ -345,7 +380,7 @@ describe("artifacts", () => {
 			);
 
 			await runWrangler(
-				"artifacts repos delete starter-repo --namespace default --json"
+				"artifacts repos delete starter-repo --namespace default --force --json"
 			);
 
 			expect(JSON.parse(std.out)).toEqual({
@@ -353,6 +388,33 @@ describe("artifacts", () => {
 				name: "starter-repo",
 				namespace: "default",
 			});
+		});
+
+		it("should cancel repo deletion when not confirmed", async ({ expect }) => {
+			let requestCount = 0;
+
+			mockConfirm({
+				text: 'Are you sure you want to delete Artifacts repo "starter-repo" from namespace "default"? This action cannot be undone.',
+				options: { defaultValue: true },
+				result: false,
+			});
+
+			msw.use(
+				http.delete(
+					"*/accounts/:accountId/artifacts/namespaces/:namespace/repos/:repo",
+					() => {
+						requestCount += 1;
+						return HttpResponse.json(createFetchResult({ id: "repo_123" }));
+					}
+				)
+			);
+
+			await runWrangler(
+				"artifacts repos delete starter-repo --namespace default"
+			);
+
+			expect(std.out).toContain("Deletion cancelled.");
+			expect(requestCount).toBe(0);
 		});
 
 		it("should reject invalid token TTL", async ({ expect }) => {
