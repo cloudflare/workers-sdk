@@ -108,11 +108,14 @@ export function parseHeaders(
 
 		if (!line.includes(HEADER_SEPARATOR)) {
 			if (!rule) {
-				invalid.push({
-					line,
-					lineNumber: i + 1,
-					message: "Expected a path beginning with at least one forward-slash",
-				});
+				if (!skipUntilNextPath) {
+					invalid.push({
+						line,
+						lineNumber: i + 1,
+						message:
+							"Expected a path beginning with at least one forward-slash",
+					});
+				}
 			} else {
 				if (line.trim().startsWith(UNSET_OPERATOR)) {
 					rule.unsetHeaders.push(line.trim().replace(UNSET_OPERATOR, ""));
