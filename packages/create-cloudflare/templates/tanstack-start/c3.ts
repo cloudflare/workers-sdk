@@ -1,6 +1,7 @@
 import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
+import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
@@ -18,6 +19,12 @@ const generate = async (ctx: C3Context) => {
 	]);
 
 	logRaw(""); // newline
+
+	await installPackages(["@rsbuild/core"], {
+		dev: true,
+		startText: "Installing @rsbuild/core...",
+		doneText: "@rsbuild/core installed.",
+	});
 };
 
 const config: TemplateConfig = {
