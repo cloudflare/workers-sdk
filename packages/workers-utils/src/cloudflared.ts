@@ -56,6 +56,8 @@ export interface Logger {
 	debug: typeof console.debug;
 }
 
+const CLOUDFLARED_VERSION_PATTERN = /^\d{4}\.\d+\.\d+$/;
+
 function sha256Hex(buffer: Buffer): string {
 	return createHash("sha256").update(buffer).digest("hex");
 }
@@ -166,6 +168,15 @@ async function queryUpdateService(
 			`Update service returned non-JSON response: ${e instanceof Error ? e.message : String(e)}`
 		);
 		return null;
+	}
+
+	if (
+		typeof data.version === "string" &&
+		!CLOUDFLARED_VERSION_PATTERN.test(data.version)
+	) {
+		throw new Error(
+			`[cloudflared] Invalid cloudflared version returned by update service: ${data.version}`
+		);
 	}
 
 	// The update worker may return a response with only a version but no download URL
