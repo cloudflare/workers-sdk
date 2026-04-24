@@ -22,6 +22,20 @@ import { aiFineTuneCreateCommand } from "./ai/createFinetune";
 import { aiModelsCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
 import {
+	artifactsNamespace,
+	artifactsNamespacesCreateCommand,
+	artifactsNamespacesDeleteCommand,
+	artifactsNamespacesGetCommand,
+	artifactsNamespacesListCommand,
+	artifactsNamespacesNamespace,
+	artifactsReposCreateCommand,
+	artifactsReposDeleteCommand,
+	artifactsReposGetCommand,
+	artifactsReposIssueTokenCommand,
+	artifactsReposListCommand,
+	artifactsReposNamespace,
+} from "./artifacts";
+import {
 	browserCloseCommand,
 	browserCreateCommand,
 	browserListCommand,
@@ -955,6 +969,55 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler kv bulk delete", definition: kvBulkDeleteCommand },
 	]);
 	registry.registerNamespace("kv");
+
+	registry.define([
+		{ command: "wrangler artifacts", definition: artifactsNamespace },
+		{
+			command: "wrangler artifacts namespaces",
+			definition: artifactsNamespacesNamespace,
+		},
+		{
+			command: "wrangler artifacts namespaces create",
+			definition: artifactsNamespacesCreateCommand,
+		},
+		{
+			command: "wrangler artifacts namespaces list",
+			definition: artifactsNamespacesListCommand,
+		},
+		{
+			command: "wrangler artifacts namespaces get",
+			definition: artifactsNamespacesGetCommand,
+		},
+		{
+			command: "wrangler artifacts namespaces delete",
+			definition: artifactsNamespacesDeleteCommand,
+		},
+		{
+			command: "wrangler artifacts repos",
+			definition: artifactsReposNamespace,
+		},
+		{
+			command: "wrangler artifacts repos create",
+			definition: artifactsReposCreateCommand,
+		},
+		{
+			command: "wrangler artifacts repos list",
+			definition: artifactsReposListCommand,
+		},
+		{
+			command: "wrangler artifacts repos get",
+			definition: artifactsReposGetCommand,
+		},
+		{
+			command: "wrangler artifacts repos delete",
+			definition: artifactsReposDeleteCommand,
+		},
+		{
+			command: "wrangler artifacts repos issue-token",
+			definition: artifactsReposIssueTokenCommand,
+		},
+	]);
+	registry.registerNamespace("artifacts");
 
 	registry.define([
 		{ command: "wrangler queues", definition: queuesNamespace },
