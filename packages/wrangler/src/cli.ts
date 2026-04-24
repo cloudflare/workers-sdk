@@ -1,6 +1,8 @@
 /**
  * This file is the main entrypoint for the CLI, which calls `main()` from `index.ts`.
  * It also re-exports the public API of the package.
+ *
+ * NOTE: this comment bump invalidates the turbo cache so wrangler:test:ci runs fresh.
  */
 
 import "cloudflare/shims/web";
