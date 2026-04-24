@@ -129,7 +129,8 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 
 	if (eventMessage.exceptions.length > 0) {
 		eventMessage.exceptions.forEach((err) => {
-			logger.error(err.message + "\n" + err.stack);
+			const errorLine = `${err.name}: ${typeof err.message === "string" ? err.message : JSON.stringify(err.message)}`;
+			logger.error(`${errorLine}\n${err.stack}`);
 		});
 	}
 }
