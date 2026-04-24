@@ -203,9 +203,7 @@ describe("unit tests", () => {
 
 	// Regression test for WC-5014 / Sentry #31445454: previously threw
 	// `TypeError: rules is not iterable` when static_routing was defined but
-	// user_worker was undefined, because the matcher's for...of loop ran over
-	// an undefined value. The request URL must not match any asset_worker rule
-	// so that execution reaches the user_worker include-rule branch.
+	// user_worker was undefined.
 	it("does not throw when static_routing is defined without user_worker rules", async ({
 		expect,
 	}) => {
