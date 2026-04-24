@@ -128,8 +128,8 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 	}
 
 	if (eventMessage.exceptions.length > 0) {
-		eventMessage.exceptions.forEach(({ name, message }) => {
-			logger.error(`  ${name}:`, message);
+		eventMessage.exceptions.forEach((err) => {
+			logger.error(err.message + "\n" + err.stack);
 		});
 	}
 }
