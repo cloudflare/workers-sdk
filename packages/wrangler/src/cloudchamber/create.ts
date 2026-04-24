@@ -4,10 +4,13 @@ import {
 	log,
 	startSection,
 	updateStatus,
-} from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+} from "@cloudflare/cli-shared-helpers";
+import { processArgument } from "@cloudflare/cli-shared-helpers/args";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import {
+	inputPrompt,
+	spinner,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	AssignIPv4,
 	AssignIPv6,
@@ -44,7 +47,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Arg } from "@cloudflare/cli/interactive";
+import type { Arg } from "@cloudflare/cli-shared-helpers/interactive";
 import type {
 	CreateDeploymentV2RequestBody,
 	EnvironmentVariable,

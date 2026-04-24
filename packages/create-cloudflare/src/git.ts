@@ -1,8 +1,8 @@
 import assert from "node:assert";
-import { updateStatus } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { runCommand } from "@cloudflare/cli/command";
-import { spinner } from "@cloudflare/cli/interactive";
+import { updateStatus } from "@cloudflare/cli-shared-helpers";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { getFrameworkCli } from "frameworks/index";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";

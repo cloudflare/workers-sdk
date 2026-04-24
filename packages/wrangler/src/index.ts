@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
+import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli-shared-helpers";
 import {
 	CommandLineArgsError,
 	experimental_readRawConfig,

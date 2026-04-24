@@ -9,7 +9,7 @@ import path from "node:path";
 import { ReadableStream } from "node:stream/web";
 import util from "node:util";
 import zlib from "node:zlib";
-import { checkMacOSVersion } from "@cloudflare/cli";
+import { checkMacOSVersion } from "@cloudflare/cli-shared-helpers";
 import { removeDir, removeDirSync } from "@cloudflare/workers-utils";
 import { $ as colors$, green } from "kleur/colors";
 import stoppable from "stoppable";

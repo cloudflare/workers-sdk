@@ -1,6 +1,6 @@
-import { runCommand } from "@cloudflare/cli/command";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { readMetricsConfig } from "./metrics-config";
-import type { RunOptions } from "@cloudflare/cli/command";
+import type { RunOptions } from "@cloudflare/cli-shared-helpers/command";
 
 /**
  * Runs a wrangler command with C3-specific telemetry handling.

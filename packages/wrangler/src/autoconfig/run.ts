@@ -5,8 +5,8 @@ import { resolve } from "node:path";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
-} from "@cloudflare/cli/gitignore";
-import { installWrangler } from "@cloudflare/cli/packages";
+} from "@cloudflare/cli-shared-helpers/gitignore";
+import { installWrangler } from "@cloudflare/cli-shared-helpers/packages";
 import {
 	FatalError,
 	getTodaysCompatDate,

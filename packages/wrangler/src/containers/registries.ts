@@ -4,7 +4,7 @@ import {
 	log,
 	startSection,
 	updateStatus,
-} from "@cloudflare/cli";
+} from "@cloudflare/cli-shared-helpers";
 import {
 	ApiError,
 	ExternalRegistryKind,

@@ -1,7 +1,10 @@
 import { statSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { spinner, spinnerWhile } from "@cloudflare/cli/interactive";
+import {
+	spinner,
+	spinnerWhile,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Miniflare } from "miniflare";

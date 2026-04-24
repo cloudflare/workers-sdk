@@ -1,7 +1,12 @@
 import { relative } from "node:path";
-import { hyperlink, logRaw, shapes, stripAnsi } from "@cloudflare/cli";
-import { bgGreen, blue, gray } from "@cloudflare/cli/colors";
-import { quoteShellArgs } from "@cloudflare/cli/command";
+import {
+	hyperlink,
+	logRaw,
+	shapes,
+	stripAnsi,
+} from "@cloudflare/cli-shared-helpers";
+import { bgGreen, blue, gray } from "@cloudflare/cli-shared-helpers/colors";
+import { quoteShellArgs } from "@cloudflare/cli-shared-helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import type { C3Args, C3Context } from "types";
 

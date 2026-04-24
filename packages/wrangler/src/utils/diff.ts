@@ -34,8 +34,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import { log } from "@cloudflare/cli";
-import { green, red } from "@cloudflare/cli/colors";
+import { log } from "@cloudflare/cli-shared-helpers";
+import { green, red } from "@cloudflare/cli-shared-helpers/colors";
 
 type Result = {
 	count: number;

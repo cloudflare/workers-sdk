@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
-import { brandColor, dim, white } from "@cloudflare/cli/colors";
+import { brandColor, dim, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	getBindingTypeFriendlyName,
 	UserError,

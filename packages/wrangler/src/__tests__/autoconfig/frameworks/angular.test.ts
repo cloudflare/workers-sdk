@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import * as cliPackages from "@cloudflare/cli/packages";
+import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { beforeEach, describe, it, vi } from "vitest";
 import { Angular } from "../../../autoconfig/frameworks/angular";
 import { NpmPackageManager } from "../../../package-manager";

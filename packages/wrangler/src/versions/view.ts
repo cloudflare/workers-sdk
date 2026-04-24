@@ -1,4 +1,4 @@
-import { logRaw } from "@cloudflare/cli";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { UserError } from "@cloudflare/workers-utils";
 import { convertWorkerMetadataBindingsToFlatBindings } from "../api/startDevWorker/utils";
 import { createCommand } from "../core/create-command";

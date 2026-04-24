@@ -40,7 +40,7 @@
 		"@babel/parser": "^7.21.3",
 		"@babel/types": "^7.21.4",
 		"@clack/prompts": "^1.2.0",
-		"@cloudflare/cli": "workspace:*",
+		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/codemod": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/vite-plugin": "workspace:*",

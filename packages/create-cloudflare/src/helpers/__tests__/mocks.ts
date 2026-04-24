@@ -1,5 +1,5 @@
 import { readdirSync } from "node:fs";
-import { spinner } from "@cloudflare/cli/interactive";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import type { Dirent } from "node:fs";
@@ -33,7 +33,7 @@ export const mockWorkersTypesDirectory = (
 export const mockSpinner = () => {
 	if (!vi.isMockFunction(spinner)) {
 		throw new Error(
-			"When using `mockPackageManager` you must first call: vi.mock('@cloudflare/cli/interactive');"
+			"When using `mockPackageManager` you must first call: vi.mock('@cloudflare/cli-shared-helpers/interactive');"
 		);
 	}
 

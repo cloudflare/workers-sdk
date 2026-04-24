@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import nodePath from "node:path";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { runCommand } from "@cloudflare/cli/command";
-import * as cliPackages from "@cloudflare/cli/packages";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { fetch } from "undici";
 import { detectPackageManager } from "./packageManagers";
 import type { C3Context } from "types";

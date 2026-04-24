@@ -1,4 +1,4 @@
-import { brandColor } from "@cloudflare/cli/colors";
+import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import { getDetailsForAutoConfig } from "./autoconfig/details";
 import { runAutoConfig } from "./autoconfig/run";
 import {
