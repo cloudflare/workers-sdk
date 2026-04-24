@@ -394,8 +394,9 @@ describe.sequential("DevRegistry", () => {
 		await vi.waitFor(
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
+				const json = await res.json();
 				expect(res.status).toBe(200);
-				expect(await res.json()).toEqual({
+				expect(json).toEqual({
 					foo: 123,
 					bar: { baz: "hello from props" },
 				});
@@ -1262,8 +1263,9 @@ describe.sequential("DevRegistry", () => {
 
 				// Read the captured ctx.props back via the remote's default fetch.
 				const res = await remote.dispatchFetch("http://placeholder");
+				const json = await res.json();
 				expect(res.status).toBe(200);
-				expect(await res.json()).toEqual({
+				expect(json).toEqual({
 					props: { tailKey: "from-tail-binding" },
 				});
 			},
