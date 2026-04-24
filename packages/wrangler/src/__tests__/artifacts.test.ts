@@ -6,10 +6,12 @@ import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
-import type * as WorkersUtilsModule from "@cloudflare/workers-utils";
 
 vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
-	const actual = await importOriginal<WorkersUtilsModule>();
+	const actual = await importOriginal();
+	if (typeof actual !== "object" || actual === null) {
+		throw new Error("Expected @cloudflare/workers-utils module object");
+	}
 
 	return {
 		...actual,
