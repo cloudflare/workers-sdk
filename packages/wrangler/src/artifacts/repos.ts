@@ -1,4 +1,3 @@
-import { logRaw } from "@cloudflare/cli";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
@@ -134,7 +133,10 @@ export const artifactsReposCreateCommand = createCommand({
 		logger.log(
 			`Created Artifacts repo "${repo.name}" in namespace "${args.namespace}".`
 		);
-		logRaw(formatLabelledValues(formatCreateRepoDetails(repo, args.readOnly)));
+		logger.console(
+			"log",
+			formatLabelledValues(formatCreateRepoDetails(repo, args.readOnly))
+		);
 	},
 });
 
@@ -289,6 +291,9 @@ export const artifactsReposIssueTokenCommand = createCommand({
 		logger.log(
 			`Issued a ${issuedToken.scope} token for repo "${repo}" in namespace "${namespace}".`
 		);
-		logRaw(formatLabelledValues(formatIssuedTokenDetails(issuedToken)));
+		logger.console(
+			"log",
+			formatLabelledValues(formatIssuedTokenDetails(issuedToken))
+		);
 	},
 });

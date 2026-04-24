@@ -1,7 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { mockCLIOutput } from "./helpers/mock-cli-output";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -17,7 +16,6 @@ vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
 });
 
 describe("artifacts", () => {
-	const cliStd = mockCLIOutput();
 	const std = mockConsoleMethods();
 
 	mockAccountId();
@@ -244,10 +242,9 @@ describe("artifacts", () => {
 			expect(std.out).toContain(
 				'Created Artifacts repo "starter-repo" in namespace "default".'
 			);
-			expect(std.out).not.toContain("art_v1_token?expires=1760000000");
-			expect(cliStd.stdout).toContain("token:");
-			expect(cliStd.stdout).toContain("art_v1_token?expires=1760000000");
-			expect(cliStd.stdout).toContain("read_only:");
+			expect(std.out).toContain("token:");
+			expect(std.out).toContain("art_v1_token?expires=1760000000");
+			expect(std.out).toContain("read_only:");
 		});
 
 		it("should list repos with JSON output", async ({ expect }) => {
@@ -433,9 +430,8 @@ describe("artifacts", () => {
 			expect(std.out).toContain(
 				'Issued a read token for repo "starter-repo" in namespace "default".'
 			);
-			expect(std.out).not.toContain("art_v1_token?expires=1760000000");
-			expect(cliStd.stdout).toContain("plaintext:");
-			expect(cliStd.stdout).toContain("art_v1_token?expires=1760000000");
+			expect(std.out).toContain("plaintext:");
+			expect(std.out).toContain("art_v1_token?expires=1760000000");
 		});
 	});
 });
