@@ -1,4 +1,5 @@
 import { createCommand, createNamespace } from "../core/create-command";
+import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
@@ -154,13 +155,30 @@ export const artifactsNamespacesDeleteCommand = createCommand({
 			demandOption: true,
 			description: "The Artifacts namespace name",
 		},
+		force: {
+			type: "boolean",
+			alias: "y",
+			default: false,
+			description: "Skip confirmation",
+		},
 		json: {
 			type: "boolean",
 			default: false,
 			description: "Return output as JSON",
 		},
 	},
-	async handler({ name, json }, { config }) {
+	async handler({ name, force, json }, { config }) {
+		if (!force) {
+			const confirmedDeletion = await confirm(
+				`Are you sure you want to delete Artifacts namespace "${name}"? This action cannot be undone.`,
+				{ fallbackValue: false }
+			);
+			if (!confirmedDeletion) {
+				logger.log("Deletion cancelled.");
+				return;
+			}
+		}
+
 		await deleteNamespace(config, name);
 
 		if (json) {
