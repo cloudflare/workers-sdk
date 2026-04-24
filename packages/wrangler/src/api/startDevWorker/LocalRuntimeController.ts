@@ -24,7 +24,8 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { Binding, File, StartDevWorkerOptions } from "./types";
+import type { CfAccount } from "../../dev/create-worker-preview";
+import type { AsyncHook, Binding, File, StartDevWorkerOptions } from "./types";
 import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 
 async function getTextFileContents(file: File<string | Uint8Array>) {
@@ -179,6 +180,7 @@ export class LocalRuntimeController extends RuntimeController {
 	#remoteProxySessionData: {
 		session: RemoteProxySession;
 		remoteBindings: Record<string, Binding>;
+		auth?: AsyncHook<CfAccount> | undefined;
 	} | null = null;
 
 	// Set of container images that have been seen in the current dev session.
