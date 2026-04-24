@@ -201,6 +201,43 @@ describe("unit tests", () => {
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
+	// Regression test for WC-5014 / Sentry #31445454: previously threw
+	// `TypeError: rules is not iterable` when static_routing was defined but
+	// user_worker was undefined, because the matcher's for...of loop ran over
+	// an undefined value. The request URL must not match any asset_worker rule
+	// so that execution reaches the user_worker include-rule branch.
+	it("does not throw when static_routing is defined without user_worker rules", async ({
+		expect,
+	}) => {
+		const request = new Request("https://example.com/unmatched-path");
+		const ctx = createExecutionContext();
+
+		const env = {
+			CONFIG: {
+				has_user_worker: true,
+				static_routing: {
+					asset_worker: ["/assets/*"],
+				},
+			},
+			USER_WORKER: {
+				async fetch(_request: Request): Promise<Response> {
+					return new Response("hello from user worker");
+				},
+			},
+			ASSET_WORKER: {
+				async fetch(_request: Request): Promise<Response> {
+					return new Response("hello from asset worker");
+				},
+				async unstable_canFetch(_request: Request): Promise<boolean> {
+					return true;
+				},
+			},
+		} as Env;
+
+		const response = await worker.fetch(request, env, ctx);
+		expect(await response.text()).toEqual("hello from asset worker");
+	});
+
 	it("returns fetch from asset worker when no static_routing rule matches but asset exists", async ({
 		expect,
 	}) => {
