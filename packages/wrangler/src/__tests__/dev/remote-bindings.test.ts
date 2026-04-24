@@ -614,9 +614,8 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 	});
 
 	it("should not recreate the remote proxy session on reload when auth has not changed", async () => {
-		const { maybeStartOrUpdateRemoteProxySession } = await import(
-			"../../api/remoteBindings"
-		);
+		const { maybeStartOrUpdateRemoteProxySession } =
+			await import("../../api/remoteBindings");
 
 		const remoteBindings: Record<string, Binding> = {
 			REMOTE_WORKER: {

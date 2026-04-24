@@ -15,6 +15,7 @@ import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { getBinaryFileContents } from "./utils";
+import type { CfAccount } from "../../dev/create-worker-preview";
 import type { RemoteProxySession } from "../remoteBindings";
 import type {
 	BundleCompleteEvent,
@@ -24,7 +25,6 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { CfAccount } from "../../dev/create-worker-preview";
 import type { AsyncHook, Binding, File, StartDevWorkerOptions } from "./types";
 import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 
