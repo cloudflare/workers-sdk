@@ -1,10 +1,7 @@
 import { stripAnsi } from "@cloudflare/cli-shared-helpers";
-import {
-	stderr,
-	stdout,
-} from "@cloudflare/cli-shared-helpers/streams";
-import { afterEach, beforeEach } from "vitest";
+import { stderr, stdout } from "@cloudflare/cli-shared-helpers/streams";
 import { C3_DEFAULTS } from "helpers/cli";
+import { afterEach, beforeEach } from "vitest";
 import type { TemplateConfig } from "../templates";
 import type { C3Args, C3Context } from "types";
 
