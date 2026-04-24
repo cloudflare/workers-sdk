@@ -1,5 +1,5 @@
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { assertWranglerVersion } from "./assert-wrangler-version";
+import { DEFAULT_COMPAT_DATE } from "./build-constants";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
@@ -42,7 +42,7 @@ import type * as vite from "vite";
 export function getLocalWorkerdCompatibilityDate(_options?: {
 	projectPath?: string;
 }): { date: CompatDate; source: "workerd" | "fallback" } {
-	return { date: getTodaysCompatDate(), source: "workerd" };
+	return { date: DEFAULT_COMPAT_DATE, source: "workerd" };
 }
 
 export type { PluginConfig } from "./plugin-config";
