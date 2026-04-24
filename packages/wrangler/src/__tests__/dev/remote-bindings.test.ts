@@ -55,6 +55,7 @@ const remoteProxyConnectionString = new URL(
 ) as RemoteProxyConnectionString;
 let proxyWorkerBindings: Record<string, Binding> | undefined;
 let sessionOptions: StartRemoteProxySessionOptions | undefined;
+let startRemoteProxySessionCallCount = 0;
 vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 	const actual = await vi.importActual<
 		typeof import("../../api/remoteBindings/start-remote-proxy-session")
@@ -67,6 +68,7 @@ vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 		) {
 			proxyWorkerBindings = remoteBindings;
 			sessionOptions = options;
+			startRemoteProxySessionCallCount++;
 			return {
 				ready: Promise.resolve(),
 				async dispose() {},
@@ -119,6 +121,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		};
 		sessionOptions = undefined;
 		proxyWorkerBindings = undefined;
+		startRemoteProxySessionCallCount = 0;
 		workerOptions = [];
 	});
 
@@ -608,6 +611,45 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 
 		await stopWrangler();
 		await wranglerStopped;
+	});
+
+	it("should not recreate the remote proxy session on reload when auth has not changed", async () => {
+		const { maybeStartOrUpdateRemoteProxySession } = await import(
+			"../../api/remoteBindings"
+		);
+
+		const remoteBindings: Record<string, Binding> = {
+			REMOTE_WORKER: {
+				type: "service",
+				service: "remote-service-binding-worker",
+				remote: true,
+			},
+		};
+
+		const auth = async () => ({
+			accountId: "some-account-id",
+			apiToken: { apiToken: "some-api-token" } as const,
+		});
+
+		// First call — creates a new session
+		const firstResult = await maybeStartOrUpdateRemoteProxySession(
+			{ name: "worker", bindings: remoteBindings },
+			null,
+			auth
+		);
+		expect(startRemoteProxySessionCallCount).toBe(1);
+		expect(firstResult).not.toBeNull();
+
+		// Second call — passes the previous result back as pre-existing session data
+		// with the same auth reference. The session should be reused, not recreated.
+		const secondResult = await maybeStartOrUpdateRemoteProxySession(
+			{ name: "worker", bindings: remoteBindings },
+			firstResult,
+			auth
+		);
+		expect(startRemoteProxySessionCallCount).toBe(1);
+		expect(secondResult).not.toBeNull();
+		expect(secondResult?.session).toBe(firstResult?.session);
 	});
 
 	it("should allow both local and remote KV bindings to the same namespace in a single dev session", async () => {
