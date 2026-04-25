@@ -587,7 +587,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "tanstack-start",
-			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
@@ -756,7 +755,6 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "tanstack-start",
-			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
