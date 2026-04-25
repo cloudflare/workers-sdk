@@ -1291,14 +1291,14 @@ function generatePerEnvTypeStrings(
 		const perEnvContent = perEnvInterfaces.join("\n");
 
 		const envBindingLines = aggregatedEnvBindings
-			.map((b) => `\t\t${b.key}${b.required ? "" : "?"}: ${b.type};`)
+			.map((b) => `\t${b.key}${b.required ? "" : "?"}: ${b.type};`)
 			.join("\n");
 
 		const globalPropsContent = entrypointModule
 			? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}`
 			: "";
 
-		baseContent = `declare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env {\n${envBindingLines}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+		baseContent = `interface BaseEnv {\n${envBindingLines}\n}\ndeclare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env extends BaseEnv {}\n}\ninterface ${envInterface} extends BaseEnv {}${processEnv}`;
 	} else {
 		// Service worker syntax - type definitions go at the top level since there's no namespace
 		const globalTypeDefsContent =

@@ -337,7 +337,7 @@ export async function verifyTypes(
 			// old type gen - some framework templates pin older versions of wrangler
 			line === `interface ${envInterfaceName} {` ||
 			// new after importable env change
-			line === `interface ${envInterfaceName} extends BaseEnv {}`,
+			line === `interface ${envInterfaceName} extends BaseEnv {}`
 	);
 	expect(hasEnvInterface).toBe(true);
 
