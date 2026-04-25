@@ -32,8 +32,9 @@ export function realishPrintLogs(data: WebSocket.RawData): void {
 	}
 
 	if (eventMessage.exceptions.length > 0) {
-		eventMessage.exceptions.forEach(({ message }) => {
-			logger.error(message);
+		eventMessage.exceptions.forEach(({ name, message, stack }) => {
+			const errorLine = `${name}: ${typeof message === "string" ? message : inspect(message)}`;
+			logger.error(`${errorLine}${stack ? `\n${stack}` : ""}`);
 		});
 	}
 }
@@ -131,7 +132,7 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 	if (eventMessage.exceptions.length > 0) {
 		eventMessage.exceptions.forEach((err) => {
 			const errorLine = `${err.name}: ${typeof err.message === "string" ? err.message : inspect(err.message)}`;
-			logger.error(`${errorLine}\n${err.stack}`);
+			logger.error(`${errorLine}${err.stack ? `\n${err.stack}` : ""}`);
 		});
 	}
 }

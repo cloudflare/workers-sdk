@@ -261,7 +261,7 @@ export type TailEventMessage = {
 		/**
 		 * The stack trace of the exception, sourcemaps are already resolved.
 		 */
-		stack: string;
+		stack?: string;
 	}[];
 
 	/**
