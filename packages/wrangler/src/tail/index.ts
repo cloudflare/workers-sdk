@@ -196,10 +196,22 @@ export const tailCommand = createCommand({
 		}
 
 		const cancelPing = startWebSocketPing();
+		const removeExitListener = onExit(exit);
 		tail.on("close", exit);
-		onExit(exit);
 
+		// Guard against re-entry: `exit` can be invoked by both the WebSocket
+		// `close` event and the signal-exit handler (e.g. on SIGINT during an
+		// in-flight close). Without this, `deleteTail()` fires twice, and —
+		// in tests — the second invocation runs at process exit after mocks
+		// have been torn down, producing spurious "Not logged in" unhandled
+		// rejections.
+		let hasExited = false;
 		async function exit() {
+			if (hasExited) {
+				return;
+			}
+			hasExited = true;
+			removeExitListener();
 			cancelPing();
 			tail.terminate();
 			await deleteTail();
