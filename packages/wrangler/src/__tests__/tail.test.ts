@@ -1,4 +1,5 @@
 import { setTimeout } from "node:timers/promises";
+import { stripVTControlCharacters } from "node:util";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
@@ -894,20 +895,15 @@ describe("tail", () => {
 				  (log) { complex: 'object' }
 				  (error) 1234"
 			`);
-			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: some error[0m
-
-				  at Object.foo (file.js:1:2)
-
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: some error without stack trace[0m
-
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: { complex: 'error' }[0m
-
-				  at Object.foo (file.js:1:2)
-
-				"
-			`);
-			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(stripVTControlCharacters(std.err)).toBe(
+				"" +
+					"X [ERROR] Error: some error\n\n" +
+					"    at Object.foo (file.js:1:2)\n\n\n" +
+					"X [ERROR] Error: some error without stack trace\n\n\n" +
+					"X [ERROR] Error: { complex: 'error' }\n\n" +
+					"    at Object.foo (file.js:1:2)\n\n"
+			);
+			expect(std.warn).toBe("");
 			await api.closeHelper();
 		});
 	});
