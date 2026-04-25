@@ -2,4 +2,5 @@
 "wrangler": minor
 ---
 
-print stack trace when logging in wrangler CLI tail command
+`wrangler tail` will now log stack traces. These stack traces already include resolved
+frames if you have chosen to upload sourcemaps.
