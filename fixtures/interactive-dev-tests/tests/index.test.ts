@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import rl from "node:readline";
 import stream from "node:stream";
-import { setTimeout } from "node:timers/promises";
 import { stripVTControlCharacters } from "node:util";
 import { removeDir } from "@fixture/shared/src/fs-helpers";
 import { fetch } from "undici";
@@ -512,10 +511,16 @@ if (process.platform === "win32") {
 					wrangler.pty.onExit(() => resolve());
 				});
 
-				await vi.waitFor(() => {
-					const remainingIds = getContainerIds();
-					expect(remainingIds.length).toBe(0);
-				});
+				// `docker rm -f` of the running container after the SIGINT
+				// teardown can take several seconds on a busy CI runner, so
+				// allow more than the default 5s `vi.waitFor` timeout.
+				await vi.waitFor(
+					() => {
+						const remainingIds = getContainerIds();
+						expect(remainingIds.length).toBe(0);
+					},
+					{ timeout: 10_000, interval: 500 }
+				);
 			});
 		});
 
@@ -569,10 +574,10 @@ if (process.platform === "win32") {
 						true
 					);
 
-					const waitForOptions = {
-						timeout: 10_000,
-						interval: WAITFOR_OPTIONS.interval,
-					};
+					// Use a generous timeout to accommodate slow CI runners —
+					// 10s was occasionally tight when the docker daemon was
+					// under contention from other parallel fixtures.
+					const waitForOptions = { timeout: 30_000, interval: 500 };
 
 					// wait for long sleep instruction to start
 					await vi.waitFor(async () => {
@@ -592,37 +597,59 @@ if (process.platform === "win32") {
 						true
 					);
 
-					const waitForOptions = {
-						timeout: 15_000,
-						interval: 1_500,
-					};
+					// Match wrangler's own deterministic log lines and the docker
+					// buildkit `CANCELED` line. We intentionally do NOT count
+					// occurrences of "This (no-op) build takes forever..." because
+					// that text comes from buildkit's TTY progress display and is
+					// redrawn an unpredictable number of times per build, which
+					// made the previous version of this test flaky on slow CI
+					// (see https://github.com/cloudflare/workers-sdk/actions/runs/24924588002).
+					const PREPARING_RE = /⎔ Preparing container image\(s\)/g;
+					const SLEEP_RE = /RUN sleep 50000/g;
+					const CANCELED_RE = /CANCELED \[.*?\] RUN sleep 50000/g;
 
-					// wait for long sleep instruction to start
-					await vi.waitFor(async () => {
-						expect(wrangler.stdout).toContain("RUN sleep 50000");
+					const waitForOptions = { timeout: 30_000, interval: 500 };
+					const count = (re: RegExp) =>
+						(wrangler.stdout.match(re) ?? []).length;
+
+					// 1. Wait for the initial build to reach the long sleep
+					//    instruction — this is the "while the image is building"
+					//    state that the test name refers to.
+					await vi.waitFor(() => {
+						expect(wrangler.stdout).toMatch(SLEEP_RE);
 					}, waitForOptions);
 
-					let logOccurrencesBefore =
-						wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
-							?.length ?? 0;
-
+					// 2. First `r`: should cancel the in-progress build and
+					//    trigger another rebuild.
+					const preparingBefore1 = count(PREPARING_RE);
+					const canceledBefore1 = count(CANCELED_RE);
 					wrangler.pty.write("r");
 
-					await vi.waitFor(async () => {
-						const logOccurrences =
-							wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
-								?.length ?? 0;
-						expect(logOccurrences).toBeGreaterThan(1);
-						logOccurrencesBefore = logOccurrences;
+					await vi.waitFor(() => {
+						// Buildkit reports the previous build as canceled.
+						expect(count(CANCELED_RE)).toBeGreaterThan(canceledBefore1);
+						// Wrangler synchronously logs that it is preparing the
+						// image again before spawning a new docker subprocess.
+						expect(count(PREPARING_RE)).toBeGreaterThan(preparingBefore1);
 					}, waitForOptions);
 
-					await vi.waitFor(async () => {
-						await setTimeout(700);
-						wrangler.pty.write("r");
-						const logOccurrences =
-							wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
-								?.length ?? 0;
-						expect(logOccurrences).toBeGreaterThan(logOccurrencesBefore);
+					// 3. Wait for the second build to also reach the long sleep
+					//    instruction so the next `r` press is genuinely "while
+					//    the image is building".
+					const sleepBefore2 = count(SLEEP_RE);
+					await vi.waitFor(() => {
+						expect(count(SLEEP_RE)).toBeGreaterThan(sleepBefore2);
+					}, waitForOptions);
+
+					// 4. Second `r`: should again cancel the in-progress build
+					//    and trigger another rebuild.
+					const preparingBefore2 = count(PREPARING_RE);
+					const canceledBefore2 = count(CANCELED_RE);
+					wrangler.pty.write("r");
+
+					await vi.waitFor(() => {
+						expect(count(CANCELED_RE)).toBeGreaterThan(canceledBefore2);
+						expect(count(PREPARING_RE)).toBeGreaterThan(preparingBefore2);
 					}, waitForOptions);
 
 					wrangler.pty.kill();
@@ -767,10 +794,17 @@ if (process.platform === "win32") {
 				await new Promise<void>((resolve) => {
 					wrangler.pty.onExit(() => resolve());
 				});
-				await vi.waitFor(() => {
-					const remainingIds = getContainerIds();
-					expect(remainingIds.length).toBe(0);
-				});
+				// `docker rm -f` of multiple running containers after the
+				// SIGINT teardown can take several seconds on a busy CI
+				// runner, so allow more than the default 5s `vi.waitFor`
+				// timeout.
+				await vi.waitFor(
+					() => {
+						const remainingIds = getContainerIds();
+						expect(remainingIds.length).toBe(0);
+					},
+					{ timeout: 10_000, interval: 500 }
+				);
 			});
 		});
 

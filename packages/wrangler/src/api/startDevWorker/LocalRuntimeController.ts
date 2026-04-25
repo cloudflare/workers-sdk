@@ -366,11 +366,15 @@ export class LocalRuntimeController extends RuntimeController {
 			if (
 				this.containerBeingBuilt?.abortRequested &&
 				error instanceof Error &&
-				error.message === "Build exited with code: 1"
+				error.message.startsWith("Docker build exited with code:")
 			) {
 				// The user caused the container image build to be aborted, so it's expected
 				// to get a build error here, this can be safely ignored because after this
-				// the dev process either terminates or reloads the container
+				// the dev process either terminates or reloads the container.
+				// The exit code from `docker build` after a process-group SIGINT/SIGKILL
+				// can be any of 1, 130 (128 + SIGINT), 137 (128 + SIGKILL), or 143 (128 + SIGTERM)
+				// depending on platform/buildkit version, so we match on the message prefix
+				// rather than on a specific exit code.
 				return;
 			}
 			this.emitErrorEvent({
