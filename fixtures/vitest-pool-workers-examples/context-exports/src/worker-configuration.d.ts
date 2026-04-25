@@ -1,4 +1,4 @@
-interface BaseEnv {
+interface InternalEnv {
 	NAME: string;
 	AUXILIARY_WORKER: Fetcher;
 }
@@ -7,6 +7,6 @@ declare namespace Cloudflare {
 		mainModule: typeof import("./index");
 		durableNamespaces: "Counter" | "ConfiguredVirtualDurableObject";
 	}
-	interface Env extends BaseEnv {}
+	interface Env extends InternalEnv {}
 }
-interface Env extends BaseEnv {}
+interface Env extends InternalEnv {}
