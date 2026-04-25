@@ -597,20 +597,23 @@ if (process.platform === "win32") {
 						true
 					);
 
-					// Match wrangler's own deterministic log lines and the docker
-					// buildkit `CANCELED` line. We intentionally do NOT count
-					// occurrences of "This (no-op) build takes forever..." because
-					// that text comes from buildkit's TTY progress display and is
-					// redrawn an unpredictable number of times per build, which
-					// made the previous version of this test flaky on slow CI
-					// (see https://github.com/cloudflare/workers-sdk/actions/runs/24924588002).
-					const PREPARING_RE = /⎔ Preparing container image\(s\)/g;
-					const SLEEP_RE = /RUN sleep 50000/g;
-					const CANCELED_RE = /CANCELED \[.*?\] RUN sleep 50000/g;
+					// We assert on wrangler's own deterministic log line, which
+					// is emitted synchronously when wrangler picks up a new
+					// `containerBuildId` and starts the rebuild flow. We
+					// intentionally do NOT match "This (no-op) build takes
+					// forever..." or buildkit's `CANCELED` line — both come
+					// from docker buildkit's TTY output and are unreliable:
+					// the first is redrawn an unpredictable number of times
+					// per build, and the second is only emitted when buildkit
+					// has time to flush its cancellation status before the
+					// docker CLI is killed by the abort. Relying on either of
+					// those made earlier versions of this test flaky on slow
+					// CI (see
+					// https://github.com/cloudflare/workers-sdk/actions/runs/24924588002).
+					const PREPARING_RE = /⎔ Preparing container image\(s\)/;
+					const SLEEP_RE = /RUN sleep 50000/;
 
 					const waitForOptions = { timeout: 30_000, interval: 500 };
-					const count = (re: RegExp) =>
-						(wrangler.stdout.match(re) ?? []).length;
 
 					// 1. Wait for the initial build to reach the long sleep
 					//    instruction — this is the "while the image is building"
@@ -619,37 +622,32 @@ if (process.platform === "win32") {
 						expect(wrangler.stdout).toMatch(SLEEP_RE);
 					}, waitForOptions);
 
-					// 2. First `r`: should cancel the in-progress build and
-					//    trigger another rebuild.
-					const preparingBefore1 = count(PREPARING_RE);
-					const canceledBefore1 = count(CANCELED_RE);
+					// 2. First `r`: should trigger another rebuild while the
+					//    initial build is still in its long-sleep phase. Clear
+					//    the captured stdout so the assertion below only sees
+					//    output produced after the press.
+					wrangler.stdout = "";
 					wrangler.pty.write("r");
 
 					await vi.waitFor(() => {
-						// Buildkit reports the previous build as canceled.
-						expect(count(CANCELED_RE)).toBeGreaterThan(canceledBefore1);
-						// Wrangler synchronously logs that it is preparing the
-						// image again before spawning a new docker subprocess.
-						expect(count(PREPARING_RE)).toBeGreaterThan(preparingBefore1);
+						expect(wrangler.stdout).toMatch(PREPARING_RE);
 					}, waitForOptions);
 
 					// 3. Wait for the second build to also reach the long sleep
 					//    instruction so the next `r` press is genuinely "while
 					//    the image is building".
-					const sleepBefore2 = count(SLEEP_RE);
 					await vi.waitFor(() => {
-						expect(count(SLEEP_RE)).toBeGreaterThan(sleepBefore2);
+						expect(wrangler.stdout).toMatch(SLEEP_RE);
 					}, waitForOptions);
 
-					// 4. Second `r`: should again cancel the in-progress build
-					//    and trigger another rebuild.
-					const preparingBefore2 = count(PREPARING_RE);
-					const canceledBefore2 = count(CANCELED_RE);
+					// 4. Second `r`: should again trigger another rebuild.
+					//    Clear stdout again so the assertion only sees the new
+					//    Preparing log.
+					wrangler.stdout = "";
 					wrangler.pty.write("r");
 
 					await vi.waitFor(() => {
-						expect(count(CANCELED_RE)).toBeGreaterThan(canceledBefore2);
-						expect(count(PREPARING_RE)).toBeGreaterThan(preparingBefore2);
+						expect(wrangler.stdout).toMatch(PREPARING_RE);
 					}, waitForOptions);
 
 					wrangler.pty.kill();
