@@ -1,8 +1,7 @@
-interface InternalEnv {
-	CONTAINER_A: DurableObjectNamespace<import(".").FixtureTestContainerA>;
-	WORKER_B: Fetcher;
-}
 declare namespace Cloudflare {
-	interface Env extends InternalEnv {}
+	interface Env {
+		CONTAINER_A: DurableObjectNamespace<import(".").FixtureTestContainerA>;
+		WORKER_B: Fetcher;
+	}
 }
-interface Env extends InternalEnv {}
+interface Env extends Cloudflare.Env {}
