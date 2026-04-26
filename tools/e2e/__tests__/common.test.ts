@@ -113,7 +113,7 @@ describe("listTmpE2EProjects()", () => {
 });
 
 describe("deleteProject()", () => {
-	// eslint-disable-next-line jest/expect-expect
+	// eslint-disable-next-line jest/expect-expect -- assertions are implicit via undici mock agent interceptors
 	it("makes a REST request to delete the given project", async () => {
 		const MOCK_PROJECT = "mock-pages-project";
 		agent
@@ -195,7 +195,7 @@ describe("listTmpKVNamespaces()", () => {
 });
 
 describe("deleteKVNamespace()", () => {
-	// eslint-disable-next-line jest/expect-expect
+	// eslint-disable-next-line jest/expect-expect -- assertions are implicit via undici mock agent interceptors
 	it("makes a REST request to delete the given project", async () => {
 		const MOCK_KV = "tmp_e2e_kv";
 		agent
@@ -289,7 +289,7 @@ describe("listTmpDatabases()", () => {
 });
 
 describe("deleteDatabase()", () => {
-	// eslint-disable-next-line jest/expect-expect
+	// eslint-disable-next-line jest/expect-expect -- assertions are implicit via undici mock agent interceptors
 	it("makes a REST request to delete the given project", async () => {
 		const MOCK_DB = "tmp-e2e-db";
 		agent
@@ -347,7 +347,7 @@ describe("listTmpE2EWorkers()", () => {
 });
 
 describe("deleteWorker()", () => {
-	// eslint-disable-next-line jest/expect-expect
+	// eslint-disable-next-line jest/expect-expect -- assertions are implicit via undici mock agent interceptors
 	it("makes a REST request to delete the given project", async () => {
 		const MOCK_WORKER = "mock-worker";
 		agent
@@ -406,7 +406,7 @@ describe("listTmpR2Buckets()", () => {
 });
 
 describe("deleteR2Bucket()", () => {
-	// eslint-disable-next-line jest/expect-expect
+	// eslint-disable-next-line jest/expect-expect -- assertions are implicit via undici mock agent interceptors
 	it("makes a REST request to delete the given R2 bucket", async () => {
 		const MOCK_BUCKET = "tmp-e2e-abc123-next--workers-opennext-cache";
 		agent
