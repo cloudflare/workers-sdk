@@ -865,20 +865,16 @@ export async function handlePreviewCommand(
 		return;
 	}
 
-	const scriptLevel = buildMergedScriptLevel(config, preview);
-	const versionLevel = buildMergedVersionLevel(config, deployment);
-	const configName = configFileName(config.configPath);
-	logger.log(
-		formatPreviewResource(preview, scriptLevel, isNewPreview, configName)
-	);
-	logger.log(formatDeploymentResource(deployment, versionLevel, configName));
-
 	// Sync your local previews config to the platform's shared Preview settings.
 	// Your config file is the source of truth for shared previews settings.
 	// We always run sync so that:
 	//   - Adding a binding to your previews block flows through to the platform
 	//   - Removing a binding from your previews block also flows through
 	//   - The dashboard always reflects what your config says it should
+	//
+	// We do this BEFORE rendering the preview/deployment summary boxes so the
+	// user sees the diff and confirms (or declines) sync first, then sees the
+	// final state of their preview at the end of the output.
 	//
 	// The sync is interactive: it shows a diff and asks for confirmation before
 	// applying. Pass --skip-confirmation (or -y) to auto-confirm in non-interactive
@@ -902,6 +898,16 @@ export async function handlePreviewCommand(
 			logMissingPreviewsBindingsWarning(topLevelBindings);
 		}
 	}
+
+	// Render the preview + deployment summary boxes last so the URL is the
+	// last thing the user sees.
+	const scriptLevel = buildMergedScriptLevel(config, preview);
+	const versionLevel = buildMergedVersionLevel(config, deployment);
+	const configName = configFileName(config.configPath);
+	logger.log(
+		formatPreviewResource(preview, scriptLevel, isNewPreview, configName)
+	);
+	logger.log(formatDeploymentResource(deployment, versionLevel, configName));
 }
 
 export async function handlePreviewDeleteCommand(
