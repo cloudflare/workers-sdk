@@ -1,6 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
-globalThis.URL = (function (globalURL) {
+(globalThis as unknown as Record<string, unknown>).URL = (function (globalURL) {
 	PatchedURL.prototype = globalURL.prototype;
 	PatchedURL.createObjectURL = globalURL.createObjectURL;
 	PatchedURL.revokeObjectURL = globalURL.revokeObjectURL;
@@ -12,8 +10,9 @@ globalThis.URL = (function (globalURL) {
 
 		return new Proxy(url, {
 			get(target, prop) {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				return globalThis.decodeURIComponent((target as any)[prop]);
+				return globalThis.decodeURIComponent(
+					(target as unknown as Record<string | symbol, string>)[prop]
+				);
 			},
 		});
 	}

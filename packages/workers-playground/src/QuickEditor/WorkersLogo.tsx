@@ -2,7 +2,6 @@
 // but I'm not aware why this was done in the first place, so leaving
 // the plain html attributes as is
 
-/* eslint-disable react/no-unknown-property */
 import { Div } from "@cloudflare/elements";
 import { createComponent } from "@cloudflare/style-container";
 
