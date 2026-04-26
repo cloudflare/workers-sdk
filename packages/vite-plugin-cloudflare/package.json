@@ -73,7 +73,6 @@
 		"tree-kill": "catalog:default",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
-		"update-check": "^1.5.4",
 		"vite": "catalog:default",
 		"vite-legacy": "npm:vite@7.1.12",
 		"vitest": "catalog:default"

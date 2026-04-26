@@ -678,6 +678,14 @@ export async function getPreviewMiniflareOptions(
 }
 
 /**
+ * Prefix of the workerd warning emitted when the requested compatibility date
+ * is newer than the binary supports. Used to intercept the message and
+ * conditionally suppress it when no plugin update is available.
+ */
+const COMPAT_DATE_FALLBACK_WARNING_PREFIX =
+	"The latest compatibility date supported by";
+
+/**
  * A Miniflare logger that forwards messages onto a Vite logger.
  */
 class ViteMiniflareLogger extends Log {
@@ -702,23 +710,25 @@ class ViteMiniflareLogger extends Log {
 	}
 
 	override warn(message: string): void {
-		// Only log warning about requesting a compatibility date after the workerd
-		// binary's version once, and only if there's an update available.
-		if (message.startsWith("The latest compatibility date supported by")) {
-			if (this.#warnedCompatibilityDateFallback) {
+		if (!message.startsWith(COMPAT_DATE_FALLBACK_WARNING_PREFIX)) {
+			this.logger.warn(message);
+			return;
+		}
+
+		if (this.#warnedCompatibilityDateFallback) {
+			return;
+		}
+		this.#warnedCompatibilityDateFallback = true;
+
+		return void updateCheck().then((maybeNewVersion) => {
+			if (maybeNewVersion === undefined) {
 				return;
 			}
-			this.#warnedCompatibilityDateFallback = true;
-			return void updateCheck().then((maybeNewVersion) => {
-				if (maybeNewVersion === undefined) {
-					return;
-				}
-				this.logger.warn(
-					`${message}\nFeatures enabled by your requested compatibility date may not be available. Upgrade to \`@cloudflare/vite-plugin@${maybeNewVersion}\` to remove this warning.`
-				);
-			});
-		}
-		this.logger.warn(message);
+			this.logger.warn(
+				`${message}\nFeatures enabled by your requested compatibility date may not be available.` +
+					`\nUpgrade to \`@cloudflare/vite-plugin@${maybeNewVersion}\` to remove this warning.`
+			);
+		});
 	}
 
 	override logReady() {
