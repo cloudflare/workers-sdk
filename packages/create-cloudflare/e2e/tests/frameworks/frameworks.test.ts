@@ -32,7 +32,8 @@ const frameworkTests = getFrameworksTests();
 describe
 	.skipIf(frameworkTests.length === 0)
 	.concurrent(`E2E: Web frameworks`, () => {
-		beforeAll((_, ctx) => {
+		// eslint-disable-next-line no-empty-pattern -- Vitest 4 requires the 1st argument to use object destructuring
+		beforeAll(({}, ctx) => {
 			if (frameworkToTestFilter) {
 				debuglog("Running framework tests with filter:", frameworkToTestFilter);
 				frameworkTests.forEach((testConfig) => {
