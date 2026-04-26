@@ -40,8 +40,8 @@ import {
 	editPreview,
 	getPreviewDeployment,
 	getPreview,
-	getWorkerPreviewDefaults,
 } from "./api";
+import { syncPreviewSettings } from "./settings";
 import {
 	assemblePreviewScriptSettings,
 	extractConfigBindings,
@@ -728,18 +728,11 @@ function isInheritableBinding(
 }
 
 function logMissingPreviewsBindingsWarning(
-	topLevelBindings: StartDevWorkerInput["bindings"],
-	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
-	localPreviewBindings: Record<string, Binding>
+	topLevelBindings: StartDevWorkerInput["bindings"]
 ) {
-	const availableBindingNames = new Set([
-		...Object.keys(remotePreviewDefaultBindings ?? {}),
-		...Object.keys(localPreviewBindings),
-	]);
 	const missingBindings = Object.fromEntries(
 		Object.entries(topLevelBindings ?? {}).filter(
-			([name, binding]) =>
-				!availableBindingNames.has(name) && !isInheritableBinding(binding)
+			([, binding]) => !isInheritableBinding(binding)
 		)
 	);
 
@@ -747,8 +740,8 @@ function logMissingPreviewsBindingsWarning(
 		return;
 	}
 
-	logger.warn(`Your configuration has diverged.
-The following bindings are configured at the top level of your Wrangler config file, but are missing from the Previews settings of your Worker.
+	logger.warn(`No ${chalk.cyan(`"previews"`)} block found in your config file.
+The following production bindings will not be available in your Previews:
 
 ${Object.entries(missingBindings)
 	.map(
@@ -757,7 +750,7 @@ ${Object.entries(missingBindings)
 	)
 	.join("\n")}
 
-Either include these bindings in the ${chalk.cyan(`"previews"`)} field of your Wrangler config or update the Previews settings of your Worker in the Cloudflare dashboard.`);
+Add a ${chalk.cyan(`"previews"`)} block to your config file to configure bindings for your Previews.`);
 }
 
 export async function handlePreviewCommand(
@@ -768,6 +761,8 @@ export async function handlePreviewCommand(
 		message?: string;
 		json?: boolean;
 		ignoreDefaults: boolean;
+		skipConfirmation?: boolean;
+		"skip-confirmation"?: boolean;
 		workerName?: string;
 		"worker-name"?: string;
 	},
@@ -878,18 +873,34 @@ export async function handlePreviewCommand(
 	);
 	logger.log(formatDeploymentResource(deployment, versionLevel, configName));
 
-	const topLevelBindings = getBindings(config);
-	if (Object.keys(topLevelBindings).length > 0) {
-		const previewDefaults = await getWorkerPreviewDefaults(
-			config,
-			accountId,
-			workerName
-		);
-		logMissingPreviewsBindingsWarning(
-			topLevelBindings,
-			previewDefaults.env,
-			extractConfigBindings(config)
-		);
+	// Sync your local previews config to the platform's shared Preview settings.
+	// Your config file is the source of truth for shared previews settings.
+	// We always run sync so that:
+	//   - Adding a binding to your previews block flows through to the platform
+	//   - Removing a binding from your previews block also flows through
+	//   - The dashboard always reflects what your config says it should
+	//
+	// The sync is interactive: it shows a diff and asks for confirmation before
+	// applying. Pass --skip-confirmation (or -y) to auto-confirm in non-interactive
+	// contexts (e.g. CI). If you don't want to sync at all, answer "no" to the
+	// prompt — your deployment will still succeed.
+	const skipConfirmation =
+		args.skipConfirmation ?? args["skip-confirmation"] ?? false;
+
+	await syncPreviewSettings({
+		config,
+		accountId,
+		workerName,
+		skipConfirmation,
+	});
+
+	// If the user has no previews block at all, surface a warning about
+	// top-level bindings that won't be available in their previews.
+	if (config.previews === undefined) {
+		const topLevelBindings = getBindings(config);
+		if (Object.keys(topLevelBindings).length > 0) {
+			logMissingPreviewsBindingsWarning(topLevelBindings);
+		}
 	}
 }
 

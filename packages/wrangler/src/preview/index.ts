@@ -51,6 +51,13 @@ export const previewCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
+		"skip-confirmation": {
+			describe:
+				"Skip the confirmation prompt when syncing settings to the platform",
+			type: "boolean",
+			default: false,
+			alias: "y",
+		},
 		"worker-name": {
 			describe:
 				"Name of the Worker to target (defaults to the name in your local config file)",
