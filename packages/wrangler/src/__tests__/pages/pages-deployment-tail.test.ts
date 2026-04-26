@@ -829,14 +829,21 @@ describe("pages deployment tail", () => {
 				  (log) { complex: 'object' }
 				  (error) 1234"
 			`);
-			expect(stripVTControlCharacters(std.err)).toBe(
-				"" +
-					"X [ERROR] Error: some error\n\n" +
-					"    at Object.foo (file.js:1:2)\n\n\n" +
-					"X [ERROR] Error: some error without stack trace\n\n\n" +
-					"X [ERROR] Error: { complex: 'error' }\n\n" +
-					"    at Object.foo (file.js:1:2)\n\n"
-			);
+			expect(stripVTControlCharacters(std.err)).toMatchInlineSnapshot(`
+				"X [ERROR] Error: some error
+
+				    at Object.foo (file.js:1:2)
+
+
+				X [ERROR] Error: some error without stack trace
+
+
+				X [ERROR] Error: { complex: 'error' }
+
+				    at Object.foo (file.js:1:2)
+
+				"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			await api.closeHelper();
 		});
