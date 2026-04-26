@@ -2,13 +2,18 @@
 	"name": "@fixture/interactive-dev",
 	"private": true,
 	"scripts": {
+		"cf-typegen": "pnpm run \"/^typegen:.*/\"",
 		"test:ci": "vitest run",
-		"test:watch": "vitest"
+		"test:watch": "vitest",
+		"typegen:container-app": "wrangler types ./container-app/src/worker-configuration.d.ts -c ./container-app/wrangler.jsonc --no-include-runtime",
+		"typegen:multi-containers-app": "wrangler types ./multi-containers-app/src/worker-configuration.d.ts -c ./multi-containers-app/wrangler.jsonc --no-include-runtime",
+		"typegen:multi-workers-containers-app": "wrangler types ./multi-workers-containers-app/workerA/worker-configuration.d.ts -c ./multi-workers-containers-app/workerA/wrangler.jsonc --no-include-runtime & wrangler types ./multi-workers-containers-app/workerB/worker-configuration.d.ts -c ./multi-workers-containers-app/workerB/wrangler.jsonc --no-include-runtime"
 	},
 	"devDependencies": {
 		"@fixture/shared": "workspace:*",
 		"undici": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
 	},
 	"optionalDependencies": {
 		"@cdktf/node-pty-prebuilt-multiarch": "0.10.2"
