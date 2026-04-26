@@ -1,12 +1,11 @@
-interface InternalEnv {
-	NAME: string;
-	AUXILIARY_WORKER: Fetcher;
-}
 declare namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof import("./index");
 		durableNamespaces: "Counter" | "ConfiguredVirtualDurableObject";
 	}
-	interface Env extends InternalEnv {}
+	interface Env {
+		NAME: string;
+		AUXILIARY_WORKER: Fetcher;
+	}
 }
-interface Env extends InternalEnv {}
+interface Env extends Cloudflare.Env {}
