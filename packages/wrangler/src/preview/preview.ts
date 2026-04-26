@@ -304,10 +304,10 @@ async function assemblePreviewDeploymentSettings(
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
 	const request: CreatePreviewDeploymentRequestParams = {};
-	const assetsOptions = getAssetsOptions(
-		{ assets: undefined, script: scriptPath },
-		config
-	);
+	const assetsOptions = getAssetsOptions({
+		args: { assets: undefined, script: scriptPath },
+		config,
+	});
 	const deploymentModules = await getDeploymentModules(config, scriptPath, {
 		_headers: assetsOptions?._headers,
 		_redirects: assetsOptions?._redirects,
