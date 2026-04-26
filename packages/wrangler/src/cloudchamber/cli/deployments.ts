@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { exit } from "node:process";
 import {
 	cancel,
@@ -160,8 +161,9 @@ export async function listDeploymentsAndChoose(
 		})),
 		label: "deployment",
 	});
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	return deployments.find((d) => d.id === deployment)!;
+	const chosenDeployment = deployments.find((d) => d.id === deployment);
+	assert(chosenDeployment);
+	return chosenDeployment;
 }
 
 export async function pickDeployment(deploymentIdPrefix?: string) {

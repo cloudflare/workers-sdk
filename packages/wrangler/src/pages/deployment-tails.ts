@@ -27,11 +27,8 @@ import type { Deployment } from "@cloudflare/types";
 
 const statusChoices = ["ok", "error", "canceled"] as const;
 type StatusChoice = (typeof statusChoices)[number];
-const isStatusChoiceList = (
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	data?: any[]
-): data is StatusChoice[] =>
-	data?.every((d) => statusChoices.includes(d)) ?? false;
+const isStatusChoiceList = (data?: unknown[]): data is StatusChoice[] =>
+	data?.every((d) => statusChoices.includes(d as StatusChoice)) ?? false;
 
 export const pagesDeploymentTailCommand = createCommand({
 	metadata: {

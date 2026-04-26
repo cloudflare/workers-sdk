@@ -350,15 +350,11 @@ describe("maybeAppendWranglerToGitIgnore", () => {
 
 		appendFileSyncMock = vi.mocked(appendFileSync);
 
-		vi.mocked(statSync).mockImplementation(
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
-			(path: string) => ({
-				isDirectory() {
-					return path.endsWith(".git");
-				},
-			})
-		);
+		vi.mocked(statSync).mockImplementation(((path: string) => ({
+			isDirectory() {
+				return path.endsWith(".git");
+			},
+		})) as typeof statSync);
 	});
 
 	test("should not create the gitignore file if neither the .git directory not the .gitingore file exist", ({

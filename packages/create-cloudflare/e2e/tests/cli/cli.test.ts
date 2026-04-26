@@ -21,8 +21,7 @@ const workersDomain =
 	"devprod-testing7928.workers.dev";
 
 describe("Create Cloudflare CLI", () => {
-	// eslint-disable-next-line no-empty-pattern
-	beforeAll(({}, ctx) => {
+	beforeAll((_, ctx) => {
 		recreateLogFolder(ctx as RunnerTestSuite);
 	});
 

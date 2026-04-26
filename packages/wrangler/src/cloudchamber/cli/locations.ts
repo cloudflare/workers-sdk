@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { processArgument } from "@cloudflare/cli-shared-helpers/args";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { getLocations } from "../locations";
@@ -101,8 +102,9 @@ export async function getLocation(
 
 	const pops = locationToPops[location];
 	if (pops.length === 1) {
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		return pops.pop()!.location;
+		const pop = pops.pop();
+		assert(pop);
+		return pop.location;
 	}
 
 	const chosenPop = await inputPrompt({

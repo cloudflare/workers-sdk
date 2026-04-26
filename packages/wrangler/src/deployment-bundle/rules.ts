@@ -73,8 +73,7 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 		}
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	rulesToRemove.forEach((rule) => rules!.splice(rules!.indexOf(rule), 1));
+	rulesToRemove.forEach((rule) => rules.splice(rules.indexOf(rule), 1));
 
 	return { rules, removedRules: rulesToRemove };
 }

@@ -470,10 +470,8 @@ export const kvKeyPutCommand = createCommand({
 			localMode
 		);
 		// One of `args.path` and `args.value` must be defined
-		const value = args.path
-			? readFileSyncToBuffer(args.path)
-			: // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				args.value!;
+		const value = args.path ? readFileSyncToBuffer(args.path) : args.value;
+		assert(value);
 
 		const metadataLog = metadata
 			? ` with metadata "${JSON.stringify(metadata)}"`

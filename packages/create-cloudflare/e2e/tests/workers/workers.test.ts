@@ -25,8 +25,7 @@ const workerTests = getWorkerTests();
 describe
 	.skipIf(workerTests.length === 0 || isWindows)
 	.concurrent(`E2E: Workers templates`, () => {
-		// eslint-disable-next-line no-empty-pattern
-		beforeAll(({}, ctx) => {
+		beforeAll((_, ctx) => {
 			recreateLogFolder(ctx as RunnerTestSuite);
 
 			if (workerTemplateToTest) {
