@@ -88,7 +88,7 @@ describe("getAssetsOptions", () => {
 		});
 	});
 
-	describe("validateDirectoryExistence: false (local dev path)", () => {
+	describe("validateDirectoryExistence: false (getPlatformProxy / unstable_getMiniflareWorkerOptions path)", () => {
 		it("does NOT throw when the assets directory does not exist", ({
 			expect,
 		}) => {

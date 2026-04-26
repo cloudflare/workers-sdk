@@ -2433,17 +2433,23 @@ describe.sequential("wrangler dev", () => {
 			);
 		});
 
-		it("should not error if directory specified by '--assets' command line argument does not exist", async () => {
+		it("should error if directory specified by '--assets' command line argument does not exist", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "./index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			// In local dev mode, a missing assets directory is tolerated — the dev
-			// server starts with zero assets so the build output can appear later.
-			await runWranglerUntilConfig("dev --assets abc");
+			await expect(runWrangler("dev --assets abc")).rejects.toThrow(
+				new RegExp(
+					'^The directory specified by the "--assets" command line argument does not exist:[Ss]*'
+				)
+			);
 		});
 
-		it("should not error if directory specified by '[assets]' configuration key does not exist", async () => {
+		it("should error if directory specified by '[assets]' configuration key does not exist", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "./index.js",
 				assets: {
@@ -2451,9 +2457,11 @@ describe.sequential("wrangler dev", () => {
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			// In local dev mode, a missing assets directory is tolerated — the dev
-			// server starts with zero assets so the build output can appear later.
-			await runWranglerUntilConfig("dev");
+			await expect(runWrangler("dev")).rejects.toThrow(
+				new RegExp(
+					'^The directory specified by the "assets.directory" field in your configuration file does not exist:[Ss]*'
+				)
+			);
 		});
 
 		it("should error with a clear error message if the path specified by '--assets' command line argument is a file, not a directory", async ({

@@ -308,8 +308,6 @@ async function resolveConfig(
 			script: input.entrypoint,
 		},
 		config,
-		// For local dev we don't need to validate the directory's existence
-		validateDirectoryExistence: false,
 	});
 
 	const resolved = {

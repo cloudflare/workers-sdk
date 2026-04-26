@@ -58,7 +58,6 @@ export const triggersDeployCommand = createCommand({
 		const assetsOptions = getAssetsOptions({
 			args: { assets: undefined },
 			config,
-			validateDirectoryExistence: true,
 		});
 		metrics.sendMetricsEvent("deploy worker triggers", {
 			sendMetrics: config.send_metrics,

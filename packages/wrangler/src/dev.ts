@@ -403,8 +403,6 @@ export async function getHostAndRoutes(
 				assets: args.assets,
 			},
 			config,
-			// during local dev we don't care about validating the directory's existence
-			validateDirectoryExistence: false,
 		});
 		validateRoutes(routes, assetOptions);
 	}
@@ -424,9 +422,7 @@ export function getInferredHost(
 			throw new UserError(
 				`Cannot infer host from first route: ${JSON.stringify(
 					firstRoute
-				)}.\nYou can explicitly set the \`dev.host\` configuration in your ${configFileName(
-					configPath
-				)} file, for example:
+				)}.\nYou can explicitly set the \`dev.host\` configuration in your ${configFileName(configPath)} file, for example:
 
 	\`\`\`
 	${formatConfigSnippet(

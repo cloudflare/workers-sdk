@@ -416,7 +416,6 @@ export const deployCommand = createCommand({
 		const assetsOptions = getAssetsOptions({
 			args,
 			config,
-			validateDirectoryExistence: true,
 		});
 
 		if (args.latest) {
