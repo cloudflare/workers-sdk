@@ -289,3 +289,50 @@ export async function editWorkerPreviewDefaults(
 
 	return worker.preview_defaults ?? {};
 }
+
+/**
+ * Full replacement of preview defaults. Unlike editWorkerPreviewDefaults which
+ * uses PATCH (additive-only), this uses PATCH with explicit null values for
+ * removed bindings, achieving full replacement semantics.
+ *
+ * Bindings present on the platform but absent from the desired state are set
+ * to null, which the API interprets as a deletion.
+ */
+export async function replaceWorkerPreviewDefaults(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	currentDefaults: PreviewDefaults,
+	desiredDefaults: PreviewDefaults
+): Promise<PreviewDefaults> {
+	// Build the patch payload: start with the desired state
+	const patch: PreviewDefaultsPatch = { ...desiredDefaults };
+
+	// For bindings (env), explicitly null out any that exist on the platform
+	// but are not in the desired state — this tells the API to remove them.
+	const currentBindings = currentDefaults.env ?? {};
+	const desiredBindings = desiredDefaults.env ?? {};
+	const envPatch: Record<string, Binding | null> = { ...desiredBindings };
+
+	for (const name of Object.keys(currentBindings)) {
+		if (!(name in desiredBindings)) {
+			envPatch[name] = null;
+		}
+	}
+
+	if (Object.keys(envPatch).length > 0) {
+		patch.env = envPatch;
+	}
+
+	const worker = await fetchResult<WorkerPreviewDefaultsResource>(
+		config,
+		`/accounts/${accountId}/workers/workers/${workerName}`,
+		{
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ preview_defaults: patch }),
+		}
+	);
+
+	return worker.preview_defaults ?? {};
+}
