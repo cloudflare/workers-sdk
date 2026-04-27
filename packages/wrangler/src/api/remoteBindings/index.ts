@@ -23,9 +23,10 @@ export function pickRemoteBindings(
 			if (
 				binding.type === "ai" ||
 				binding.type === "media" ||
-				binding.type === "artifacts"
+				binding.type === "artifacts" ||
+				binding.type === "flagship"
 			) {
-				// AI and 'media' bindings are always remote
+				// AI, media, artifacts, and flagship bindings are always remote
 				return true;
 			}
 

@@ -14,6 +14,7 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
+import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import type { PagesConfigCache } from "./types";
 import type { Project } from "@cloudflare/types";
@@ -318,7 +319,8 @@ export const pagesDownloadConfigCommand = createCommand({
 		const projectConfig = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(projectConfig);
+		const accountId =
+			getCloudflareAccountIdFromEnv() ?? (await requireAuth(projectConfig));
 
 		projectName ??= projectConfig.project_name;
 
