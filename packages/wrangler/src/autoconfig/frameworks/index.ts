@@ -21,7 +21,7 @@ export function isKnownFramework(frameworkId: string): boolean {
 }
 
 /**
- * Gets an class instance for a framework based on its id
+ * Gets a class instance for a framework based on its id
  *
  * @param frameworkId The target framework's id
  * @returns The class for the framework, defaulting to the static framework is the id is not recognized
