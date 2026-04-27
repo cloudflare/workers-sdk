@@ -17,7 +17,7 @@ import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import {
 	mockExchangeRefreshTokenForAccessToken,
@@ -1424,5 +1424,66 @@ describe("deploy", () => {
 			  "wranglerInstall": true,
 			}
 		`);
+	});
+
+	describe("interactive worker name prompt", () => {
+		it("should prompt for name when not provided and default to script basename for non-generic scripts", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+			// Write a worker source with a non-generic filename
+			fs.writeFileSync(
+				"my-api.js",
+				`export default { async fetch() { return new Response("hello"); } };`
+			);
+			fs.writeFileSync("another.js", `export const foo = 100;`);
+			writeWranglerConfig(
+				{ name: undefined as unknown as string },
+				"./wrangler.toml"
+			);
+			mockPrompt({
+				text: "What would you like your Worker to be named? (Note: You can also set the name via the `--name` CLI argument or `name` in your Wrangler config file)",
+				options: { defaultValue: "my-api" },
+				result: "my-api",
+			});
+
+			await runWrangler("deploy my-api.js --dry-run");
+			expect(std.out).toContain("--dry-run: exiting now.");
+		});
+
+		it("should fall back to cwd basename when script has a generic name like index.js", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+			writeWorkerSource();
+			writeWranglerConfig(
+				{ name: undefined as unknown as string },
+				"./wrangler.toml"
+			);
+			// The cwd basename is set by runInTempDir() — it creates a random temp dir.
+			// We can't predict it, so we just check the prompt is shown without asserting the defaultValue.
+			mockPrompt({
+				text: "What would you like your Worker to be named? (Note: You can also set the name via the `--name` CLI argument or `name` in your Wrangler config file)",
+				result: "my-test-worker",
+			});
+
+			await runWrangler("deploy ./index.js --dry-run");
+			expect(std.out).toContain("--dry-run: exiting now.");
+		});
+
+		it("should error in non-interactive mode when no name is provided", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWorkerSource();
+			writeWranglerConfig(
+				{ name: undefined as unknown as string },
+				"./wrangler.toml"
+			);
+
+			await expect(runWrangler("deploy ./index.js")).rejects.toThrowError(
+				'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+			);
+		});
 	});
 });

@@ -30,6 +30,10 @@ import { collectKeyValues } from "../utils/collectKeyValues";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import {
+	checkWorkerNameValidity,
+	toValidWorkerName,
+} from "../utils/worker-name-validation";
 import deploy from "./deploy";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 
@@ -450,10 +454,14 @@ export const deployCommand = createCommand({
 		}
 
 		if (!name) {
-			throw new UserError(
-				'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-				{ telemetryMessage: true }
-			);
+			if (isNonInteractiveOrCI()) {
+				throw new UserError(
+					'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+					{ telemetryMessage: true }
+				);
+			} else {
+				name = await promptForWorkerName(entry.file);
+			}
 		}
 
 		if (!args.dryRun) {
@@ -541,6 +549,42 @@ export const deployCommand = createCommand({
 });
 
 export type DeployArgs = (typeof deployCommand)["args"];
+
+/**
+ * Interactively prompts the user for a Worker name, validating input against
+ * Cloudflare's Worker naming rules (lowercase alphanumeric and dashes, max 63 chars).
+ *
+ * The default value is derived from the entry-point filename (e.g. `my-api.ts` → `my-api`),
+ * unless the filename is generic (`index` or `worker`), in which case the current working
+ * directory's basename is used instead. The raw default is normalized via {@link toValidWorkerName}.
+ *
+ * @param entryPoint Absolute path to the Worker's entry-point file.
+ * @returns The worker name chosen by the user.
+ */
+async function promptForWorkerName(entryPoint: string) {
+	const scriptBasename = path.basename(entryPoint).replace(/\.[^.]+$/, "");
+	const genericNames = ["worker", "index"];
+	const rawDefault = !genericNames.includes(scriptBasename.toLowerCase())
+		? scriptBasename
+		: path.basename(process.cwd());
+	const defaultName = toValidWorkerName(rawDefault);
+
+	const name = await prompt(
+		"What would you like your Worker to be named? (Note: You can also set the name via the `--name` CLI argument or `name` in your Wrangler config file)",
+		{
+			defaultValue: defaultName,
+			validate: (value) => {
+				const validity = checkWorkerNameValidity(value.trim());
+				if (validity.valid) {
+					return true;
+				}
+				return validity.cause;
+			},
+		}
+	);
+
+	return name.trim();
+}
 
 /**
  * Handles the case where:
