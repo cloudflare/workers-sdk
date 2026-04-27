@@ -59,12 +59,13 @@ export const loginCommand = createCommand({
 			requiresArg: false,
 			default: 8976,
 		},
-		"x-websocket-callback": {
+		"experimental-websocket-callback": {
 			describe:
 				"Use WebSocket relay for OAuth callback (useful in containers/remote environments)",
 			type: "boolean" as const,
 			default: false,
 			hidden: true,
+			alias: "x-websocket-callback",
 		},
 	},
 	async handler(args, { config }) {
