@@ -13,7 +13,7 @@ import type { ArtifactsNamespace } from "./types";
 export const artifactsNamespacesNamespace = createNamespace({
 	metadata: {
 		description: "Manage Artifacts namespaces",
-		status: "open beta",
+		status: "private beta",
 		owner: "Product: Artifacts",
 	},
 });
@@ -34,7 +34,7 @@ function formatNamespaceDetails(
 export const artifactsNamespacesCreateCommand = createCommand({
 	metadata: {
 		description: "Create an Artifacts namespace",
-		status: "open beta",
+		status: "private beta",
 		owner: "Product: Artifacts",
 	},
 	behaviour: {
@@ -69,7 +69,7 @@ export const artifactsNamespacesCreateCommand = createCommand({
 export const artifactsNamespacesListCommand = createCommand({
 	metadata: {
 		description: "List Artifacts namespaces",
-		status: "open beta",
+		status: "private beta",
 		owner: "Product: Artifacts",
 	},
 	behaviour: {
@@ -108,7 +108,7 @@ export const artifactsNamespacesListCommand = createCommand({
 export const artifactsNamespacesGetCommand = createCommand({
 	metadata: {
 		description: "Get an Artifacts namespace",
-		status: "open beta",
+		status: "private beta",
 		owner: "Product: Artifacts",
 	},
 	behaviour: {
@@ -142,7 +142,7 @@ export const artifactsNamespacesGetCommand = createCommand({
 export const artifactsNamespacesDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete an Artifacts namespace",
-		status: "open beta",
+		status: "private beta",
 		owner: "Product: Artifacts",
 	},
 	behaviour: {

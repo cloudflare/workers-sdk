@@ -104,10 +104,18 @@ describe("artifacts", () => {
 			await runWrangler("artifacts namespaces list");
 
 			expect(std.err).toBe("");
-			expect(std.out).toContain("wrangler x.x.x");
-			expect(std.out).toContain("default");
-			expect(std.out).toContain("sandbox");
-			expect(std.out).toContain("created_at");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				┌─┬─┬─┐
+				│ name │ created_at │ updated_at │
+				├─┼─┼─┤
+				│ default │ 2026-04-20T10:00:00.000Z │ 2026-04-20T10:00:00.000Z │
+				├─┼─┼─┤
+				│ sandbox │ 2026-04-21T10:00:00.000Z │ 2026-04-22T10:00:00.000Z │
+				└─┴─┴─┘"
+			`);
 		});
 
 		it("should get a namespace in human mode", async ({ expect }) => {
@@ -132,9 +140,16 @@ describe("artifacts", () => {
 			await runWrangler("artifacts namespaces get default");
 
 			expect(std.err).toBe("");
-			expect(std.out).toContain("name:");
-			expect(std.out).toContain("default");
-			expect(std.out).toContain("id:");
+			expect(std.out).toContain("ns_default");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				name:        default
+				id:          ns_default
+				created_at:  2026-04-20T10:00:00.000Z
+				updated_at:  2026-04-22T10:00:00.000Z"
+			`);
 		});
 
 		it("should delete a namespace with JSON output", async ({ expect }) => {
@@ -158,7 +173,7 @@ describe("artifacts", () => {
 		it("should cancel namespace deletion when not confirmed", async ({
 			expect,
 		}) => {
-			let requestCount = 0;
+			let requestReceived = false;
 
 			mockConfirm({
 				text: 'Are you sure you want to delete Artifacts namespace "default"? This action cannot be undone.',
@@ -170,7 +185,7 @@ describe("artifacts", () => {
 				http.delete(
 					"*/accounts/:accountId/artifacts/namespaces/:namespace",
 					() => {
-						requestCount += 1;
+						requestReceived = true;
 						return HttpResponse.json(createFetchResult({ id: "ns_default" }));
 					}
 				)
@@ -179,7 +194,7 @@ describe("artifacts", () => {
 			await runWrangler("artifacts namespaces delete default");
 
 			expect(std.out).toContain("Deletion cancelled.");
-			expect(requestCount).toBe(0);
+			expect(requestReceived).toBe(false);
 		});
 	});
 
@@ -276,12 +291,20 @@ describe("artifacts", () => {
 				"artifacts repos create starter-repo --namespace default --description 'Starter repo' --default-branch main --read-only"
 			);
 
-			expect(std.out).toContain(
-				'Created Artifacts repo "starter-repo" in namespace "default".'
-			);
-			expect(std.out).toContain("token:");
-			expect(std.out).toContain("art_v1_token?expires=1760000000");
-			expect(std.out).toContain("read_only:");
+			expect(std.out).toContain("read_only:       true");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Created Artifacts repo "starter-repo" in namespace "default".
+				id:              repo_123
+				name:            starter-repo
+				description:     Starter repo
+				default_branch:  main
+				read_only:       true
+				remote:          https://some-account-id.artifacts.cloudflare.net/git/default/starter-repo.git
+				token:           art_v1_token?expires=1760000000"
+			`);
 		});
 
 		it("should list repos with JSON output", async ({ expect }) => {
@@ -363,9 +386,22 @@ describe("artifacts", () => {
 
 			await runWrangler("artifacts repos get starter-repo --namespace default");
 
-			expect(std.out).toContain("starter-repo");
-			expect(std.out).toContain("remote:");
-			expect(std.out).toContain("status:");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				id:              repo_123
+				name:            starter-repo
+				description:     Starter repo
+				default_branch:  main
+				remote:          https://some-account-id.artifacts.cloudflare.net/git/default/starter-repo.git
+				read_only:       false
+				status:          ready
+				created_at:      2026-04-20T10:00:00.000Z
+				updated_at:      2026-04-22T10:00:00.000Z
+				last_push_at:    2026-04-22T10:00:00.000Z
+				source:          "
+			`);
 		});
 
 		it("should delete a repo with JSON output", async ({ expect }) => {
@@ -393,7 +429,7 @@ describe("artifacts", () => {
 		});
 
 		it("should cancel repo deletion when not confirmed", async ({ expect }) => {
-			let requestCount = 0;
+			let requestReceived = false;
 
 			mockConfirm({
 				text: 'Are you sure you want to delete Artifacts repo "starter-repo" from namespace "default"? This action cannot be undone.',
@@ -405,7 +441,7 @@ describe("artifacts", () => {
 				http.delete(
 					"*/accounts/:accountId/artifacts/namespaces/:namespace/repos/:repo",
 					() => {
-						requestCount += 1;
+						requestReceived = true;
 						return HttpResponse.json(createFetchResult({ id: "repo_123" }));
 					}
 				)
@@ -416,7 +452,7 @@ describe("artifacts", () => {
 			);
 
 			expect(std.out).toContain("Deletion cancelled.");
-			expect(requestCount).toBe(0);
+			expect(requestReceived).toBe(false);
 		});
 
 		it("should reject invalid token TTL", async ({ expect }) => {
@@ -491,11 +527,16 @@ describe("artifacts", () => {
 				"artifacts repos issue-token starter-repo --namespace default --scope read --ttl 3600"
 			);
 
-			expect(std.out).toContain(
-				'Issued a read token for repo "starter-repo" in namespace "default".'
-			);
-			expect(std.out).toContain("plaintext:");
-			expect(std.out).toContain("art_v1_token?expires=1760000000");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Issued a read token for repo "starter-repo" in namespace "default".
+				id:          tok_123
+				scope:       read
+				expires_at:  2026-04-24T10:00:00.000Z
+				plaintext:   art_v1_token?expires=1760000000"
+			`);
 		});
 	});
 });
