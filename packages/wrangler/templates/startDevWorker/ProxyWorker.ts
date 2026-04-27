@@ -23,6 +23,7 @@ type Request = Parameters<
 >[0];
 
 const LIVE_RELOAD_PROTOCOL = "WRANGLER_PROXYWORKER_LIVE_RELOAD_PROTOCOL";
+const LIVE_RELOAD_PATHNAME = "/cdn-cgi/live-reload";
 export default {
 	fetch(req, env) {
 		const singleton = env.DURABLE_OBJECT.idFromName("");
@@ -239,6 +240,10 @@ function isSseResponse(res: Response): boolean {
 	);
 }
 function isRequestForLiveReloadWebsocket(req: Request): boolean {
+	if (new URL(req.url).pathname !== LIVE_RELOAD_PATHNAME) {
+		return false;
+	}
+
 	const websocketProtocol = req.headers.get("Sec-WebSocket-Protocol");
 	const isWebSocketUpgrade = req.headers.get("Upgrade") === "websocket";
 
@@ -320,7 +325,7 @@ const liveReloadScript = `
 		function initLiveReload() {
 			if (ws) return;
 			var origin = (location.protocol === "http:" ? "ws://" : "wss://") + location.host;
-			ws = new WebSocket(origin + "/cdn-cgi/live-reload", "${LIVE_RELOAD_PROTOCOL}");
+			ws = new WebSocket(origin + "${LIVE_RELOAD_PATHNAME}", "${LIVE_RELOAD_PROTOCOL}");
 			ws.onclose = recover;
 			ws.onerror = recover;
 			ws.onmessage = location.reload.bind(location);
