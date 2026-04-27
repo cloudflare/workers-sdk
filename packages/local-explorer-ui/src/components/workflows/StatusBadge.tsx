@@ -4,9 +4,9 @@ import type { WorkflowsInstance } from "../../api";
 type WorkflowStatus = NonNullable<WorkflowsInstance["status"]>;
 
 const statusStyles: Record<WorkflowStatus, string> = {
-	complete: "bg-kumo-success text-white",
-	errored: "bg-kumo-danger text-white",
-	terminated: "bg-kumo-danger text-white",
+	complete: "bg-kumo-badge-teal text-white",
+	errored: "bg-kumo-badge-red text-white",
+	terminated: "bg-kumo-badge-red text-white",
 	waiting: "bg-kumo-brand text-white",
 	paused: "bg-kumo-brand text-white",
 	running: "bg-kumo-brand text-white",

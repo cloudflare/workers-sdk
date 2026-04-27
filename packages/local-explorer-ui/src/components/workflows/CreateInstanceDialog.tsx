@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { workflowsCreateInstance } from "../../api";
 
 interface CreateWorkflowInstanceDialogProps {
-	onCreated: () => void;
+	onCreated: (instanceId: string) => void;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
 	workflowName: string;
@@ -68,13 +68,20 @@ export function CreateWorkflowInstanceDialog({
 				body.params = result.value;
 			}
 
-			await workflowsCreateInstance({
+			const response = await workflowsCreateInstance({
 				path: { workflow_name: workflowName },
 				body,
 			});
 
+			const newId = (response.data?.result as { id?: string } | undefined)?.id;
+
+			if (!newId) {
+				setError("Instance was created but no ID was returned");
+				return;
+			}
+
 			resetForm();
-			onCreated();
+			onCreated(newId);
 		} catch (err) {
 			setError(
 				err instanceof Error ? err.message : "Failed to create instance"
