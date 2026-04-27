@@ -17,7 +17,7 @@ import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
+import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import {
 	mockExchangeRefreshTokenForAccessToken,
