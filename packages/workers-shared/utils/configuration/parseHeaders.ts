@@ -207,7 +207,7 @@ function isValidRule(rule: HeadersRule) {
  */
 function validateNoMultipleWildcards(path: string): string | undefined {
 	const wildcardCount = (path.match(SPLAT_REGEX) ?? []).length;
-	const hasSplatPlaceholder = path.includes(":splat");
+	const hasSplatPlaceholder = /:splat(?!\w)/.test(path);
 
 	if (wildcardCount > 1) {
 		return `Only one wildcard is allowed per rule. Use a named placeholder (e.g. :project) instead. Skipping ${path}.`;
