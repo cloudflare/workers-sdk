@@ -4,17 +4,19 @@ import { createServer } from "vite";
 import { afterEach, describe, it, onTestFinished, vi } from "vitest";
 import { PluginContext } from "../context";
 import {
+	getTunnelOrigin,
 	PUBLIC_EXPOSURE_WARNING,
 	TunnelManager,
 	setupTunnel,
 	tunnelPlugin,
 } from "../plugins/tunnel";
+import type * as vite from "vite";
 
 vi.mock("@cloudflare/workers-utils");
 
 describe("tunnel plugin", () => {
 	afterEach(() => {
-		vi.clearAllMocks();
+		vi.resetAllMocks();
 	});
 
 	it("starts a tunnel after the server starts listening", async ({
@@ -180,8 +182,52 @@ describe("tunnel plugin", () => {
 		});
 	});
 
+	it("rejects tunnel sharing in middleware mode", async ({ expect }) => {
+		const server = { httpServer: null } as unknown as vite.ViteDevServer;
+
+		await expect(getTunnelOrigin(server)).rejects.toThrow(
+			"No HTTP server available for tunnel sharing. Tunnels are not supported in middleware mode."
+		);
+	});
+
+	it("rejects when disposing the previous tunnel fails", async ({ expect }) => {
+		const disposeError = new Error("dispose failed");
+		vi.mocked(startTunnel)
+			.mockReturnValueOnce({
+				ready: vi.fn().mockResolvedValue({
+					publicUrl: new URL("https://foo.trycloudflare.com"),
+				}),
+				extendExpiry: vi.fn(),
+				dispose: vi.fn(() => {
+					throw disposeError;
+				}),
+			})
+			.mockReturnValueOnce({
+				ready: vi.fn().mockResolvedValue({
+					publicUrl: new URL("https://bar.trycloudflare.com"),
+				}),
+				extendExpiry: vi.fn(),
+				dispose: vi.fn().mockResolvedValue(undefined),
+			});
+
+		const server = await createServer();
+		const tunnelManager = new TunnelManager(server.config.logger);
+
+		onTestFinished(() => server.close());
+
+		await tunnelManager.startTunnel("http://localhost:3000");
+
+		await expect(
+			tunnelManager.startTunnel("http://localhost:3001")
+		).rejects.toBe(disposeError);
+
+		expect(startTunnel).toHaveBeenCalledTimes(1);
+		expect(tunnelManager.publicUrl).toBeUndefined();
+	});
+
 	it("rejects server.listen when tunnel startup fails", async ({ expect }) => {
 		const tunnelError = new Error("quick tunnel rate limited");
+		const disposeError = new Error("failed to dispose tunnel");
 		const server = await createServer();
 		const ctx = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
@@ -192,7 +238,9 @@ describe("tunnel plugin", () => {
 		vi.mocked(startTunnel).mockReturnValue({
 			ready: vi.fn().mockRejectedValue(tunnelError),
 			extendExpiry: vi.fn(),
-			dispose: vi.fn().mockResolvedValue(undefined),
+			dispose: vi.fn(() => {
+				throw disposeError;
+			}),
 		});
 		Object.defineProperty(ctx, "resolvedPluginConfig", {
 			value: {
@@ -214,6 +262,7 @@ describe("tunnel plugin", () => {
 			cause: tunnelError,
 		});
 		expect(close).toHaveBeenCalledTimes(1);
+		expect(server.httpServer?.listening).toBe(false);
 	});
 
 	it("prints tunnel details with server.printUrls", async ({ expect }) => {

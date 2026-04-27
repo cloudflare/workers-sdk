@@ -46,7 +46,7 @@ export class TunnelManager {
 		const previousTunnel = this.#tunnel;
 
 		if (previousTunnel) {
-			void this.dispose();
+			this.dispose();
 		}
 
 		this.#origin = origin;
@@ -103,7 +103,8 @@ export class TunnelManager {
 		if (
 			this.#hasWarnedAboutSse ||
 			!this.#tunnel ||
-			!isSseContentType(contentType)
+			contentType === null ||
+			!contentType.toLowerCase().startsWith("text/event-stream")
 		) {
 			return;
 		}
@@ -112,7 +113,7 @@ export class TunnelManager {
 		this.#logger.warn(QUICK_TUNNEL_SSE_WARNING);
 	}
 
-	async dispose() {
+	dispose() {
 		const tunnel = this.#tunnel;
 
 		this.#origin = undefined;
@@ -123,7 +124,18 @@ export class TunnelManager {
 		debuglog("Disposing tunnel...");
 
 		if (tunnel) {
-			await tunnel.dispose();
+			tunnel.dispose();
+		}
+	}
+
+	disposeOnExit() {
+		try {
+			this.dispose();
+		} catch (e) {
+			this.#logger.error(
+				"Failed to dispose tunnel on exit:" +
+					(e instanceof Error ? e.message : `${e}`)
+			);
 		}
 	}
 }
@@ -131,9 +143,7 @@ export class TunnelManager {
 let tunnelManager: TunnelManager;
 
 process.on("exit", () => {
-	// We can't await this since the process is exiting. This is just a best-effort
-	// fallback; normal tunnel cleanup happens during Vite server shutdown.
-	void tunnelManager?.dispose();
+	tunnelManager?.disposeOnExit();
 });
 
 export function warnIfQuickTunnelSseResponse(contentType: string | null) {
@@ -145,9 +155,17 @@ export function extendTunnelExpiry() {
 }
 
 export async function getTunnelOrigin(server: vite.ViteDevServer) {
-	if (!server.httpServer?.listening) {
+	const httpServer = server.httpServer;
+
+	if (!httpServer) {
+		throw new Error(
+			"No HTTP server available for tunnel sharing. Tunnels are not supported in middleware mode."
+		);
+	}
+
+	if (!httpServer.listening) {
 		await new Promise<void>((resolve) => {
-			server.httpServer?.once("listening", () => resolve());
+			httpServer.once("listening", () => resolve());
 		});
 	}
 
@@ -207,33 +225,26 @@ export async function setupTunnel(
 	}
 }
 
-export function isSseContentType(contentType: string | null): boolean {
-	return (
-		typeof contentType === "string" &&
-		contentType.toLowerCase().startsWith("text/event-stream")
-	);
-}
-
 export const tunnelPlugin = createPlugin("tunnel", (ctx) => {
-	async function stopTunnel() {
+	function stopTunnel() {
 		ctx.clearTunnelHostnames();
-		await tunnelManager?.dispose();
+		tunnelManager?.dispose();
 	}
 
 	return {
 		/**
 		 * Vite runs `buildEnd` when the dev server restarts or closes.
 		 */
-		async buildEnd() {
+		buildEnd() {
 			if (!ctx.isRestartingDevServer) {
-				await stopTunnel();
+				stopTunnel();
 			}
 		},
-		async configureServer(server) {
+		configureServer(server) {
 			assertIsNotPreview(ctx);
 
 			if (!ctx.resolvedPluginConfig.tunnel) {
-				await stopTunnel();
+				stopTunnel();
 				return;
 			}
 
@@ -243,7 +254,7 @@ export const tunnelPlugin = createPlugin("tunnel", (ctx) => {
 			server.printUrls = () => {
 				serverPrintUrls();
 
-				const publicUrl = tunnelManager?.publicUrl;
+				const publicUrl = tunnelManager.publicUrl;
 				if (!publicUrl) {
 					return;
 				}
@@ -262,7 +273,12 @@ export const tunnelPlugin = createPlugin("tunnel", (ctx) => {
 					await setupTunnel(server, ctx, tunnelManager);
 					return result;
 				} catch (error) {
-					await Promise.allSettled([stopTunnel(), server.close()]);
+					await Promise.allSettled([
+						(async () => {
+							stopTunnel();
+						})(),
+						server.close(),
+					]);
 
 					// The user explicitly requested tunnel sharing, so tunnel startup failure is fatal.
 					throw error;
