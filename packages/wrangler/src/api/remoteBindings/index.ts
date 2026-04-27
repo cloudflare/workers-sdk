@@ -93,6 +93,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 ): Promise<{
 	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
+	auth?: AsyncHook<CfAccount> | undefined;
 } | null> {
 	let config: Config | undefined;
 	if ("path" in wranglerOrWorkerConfigObject) {
@@ -180,6 +181,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	return {
 		session: remoteProxySession,
 		remoteBindings,
+		auth,
 	};
 }
 
