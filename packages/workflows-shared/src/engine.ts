@@ -15,6 +15,7 @@ import {
 	isAbortError,
 	PreservedNonRetryableError,
 	shouldPreserveNonRetryableError,
+	stepNotFoundError,
 	WorkflowFatalError,
 } from "./lib/errors";
 import {
@@ -23,19 +24,22 @@ import {
 	startGracePeriod,
 } from "./lib/gracePeriodSemaphore";
 import {
+	readAndClearRestartFromStep,
+	resolveGroupKeysToWipe,
+	storeRestartFromStep,
+	wipeRestartState,
+} from "./lib/restart";
+import {
 	createReplayReadableStream,
 	getInvalidStoredStreamOutputError,
 	getStoredStreamOutputPreview,
 	StreamOutputState,
 } from "./lib/streams";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
-import {
-	isModifierKey,
-	MODIFIER_KEYS,
-	WorkflowInstanceModifier,
-} from "./modifier";
+import { MODIFIER_KEYS, WorkflowInstanceModifier } from "./modifier";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
+import type { RestartFromStep } from "./binding";
 import type { StreamOutputMeta } from "./lib/streams";
 import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 
@@ -753,7 +757,8 @@ export class Engine extends DurableObject<Env> {
 	}
 
 	async changeInstanceStatus(
-		newStatus: "resume" | "pause" | "terminate" | "restart"
+		newStatus: "resume" | "pause" | "terminate" | "restart",
+		from?: RestartFromStep
 	) {
 		const metadata =
 			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
@@ -802,6 +807,12 @@ export class Engine extends DurableObject<Env> {
 				break;
 			}
 			case "restart":
+				if (from) {
+					if (!resolveGroupKeysToWipe(this.ctx.storage.sql, from)) {
+						throw stepNotFoundError(from.name);
+					}
+					await storeRestartFromStep(this.ctx.storage, from);
+				}
 				await this.userTriggeredRestart();
 				break;
 		}
@@ -889,60 +900,26 @@ export class Engine extends DurableObject<Env> {
 		await this.abort(ABORT_REASONS.USER_RESTART);
 	}
 
-	private getMockedEventMapKeys(allKeys: Map<string, unknown>): Set<string> {
-		const mockEventTypes = new Set<string>();
-		for (const key of allKeys.keys()) {
-			if (key.startsWith(MODIFIER_KEYS.MOCK_EVENT)) {
-				mockEventTypes.add(key.slice(MODIFIER_KEYS.MOCK_EVENT.length));
-			}
-		}
-
-		if (mockEventTypes.size === 0) {
-			return new Set();
-		}
-
-		const preserved = new Set<string>();
-		for (const key of allKeys.keys()) {
-			if (key.startsWith(`${EVENT_MAP_PREFIX}\n`)) {
-				// EVENT_MAP keys are formatted as "EVENT_MAP\n{type}\n{idx}"
-				const eventType = key.split("\n")[1];
-				if (eventType !== undefined && mockEventTypes.has(eventType)) {
-					preserved.add(key);
-				}
-			}
-		}
-
-		return preserved;
-	}
-
 	async attemptRestart() {
-		this.ctx.storage.sql.exec("DELETE FROM states");
-		this.ctx.storage.sql.exec("DELETE FROM priority_queue");
-		// Only delete non-mock streaming chunks. Mock stream outputs are stored
-		// at attempt=0 (see modifier.ts mockStepResult) and their sentinels
-		// survive restart via isModifierKey(), so the underlying SQL rows must
-		// be preserved too.
-		this.ctx.storage.sql.exec(
-			"DELETE FROM streaming_step_chunks WHERE attempt != 0"
-		);
+		const restartFromStep = await readAndClearRestartFromStep(this.ctx.storage);
 
-		const allKeys = await this.ctx.storage.list();
-		const preservedEventMapKeys = this.getMockedEventMapKeys(allKeys);
-
-		// Remove all KV keys except:
-		// - INSTANCE_METADATA (needed to re-run the workflow)
-		// - Modifier/mock keys (so mocks survive restart)
-		// - EVENT_MAP entries for mocked event types
-		for (const key of allKeys.keys()) {
-			if (
-				key === INSTANCE_METADATA ||
-				isModifierKey(key) ||
-				preservedEventMapKeys.has(key)
-			) {
-				continue;
+		let groupKeysToWipe: Set<string> | null = null;
+		if (restartFromStep) {
+			groupKeysToWipe = resolveGroupKeysToWipe(
+				this.ctx.storage.sql,
+				restartFromStep
+			);
+			if (!groupKeysToWipe) {
+				throw stepNotFoundError(restartFromStep.name);
 			}
-			await this.ctx.storage.delete(key);
 		}
+
+		await wipeRestartState(
+			this.ctx.storage,
+			ENGINE_STATUS_KEY,
+			PAUSE_DATETIME,
+			groupKeysToWipe
+		);
 
 		const metadata =
 			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
@@ -956,14 +933,16 @@ export class Engine extends DurableObject<Env> {
 
 		const { accountId, workflow, version, instance, event } = metadata;
 
-		this.writeLog(InstanceEvent.WORKFLOW_QUEUED, null, null, {
-			params: event.payload,
-			versionId: version.id,
-			trigger: {
-				source: InstanceTrigger.API,
-			},
-		});
-		this.writeLog(InstanceEvent.WORKFLOW_START, null, null, {});
+		if (!groupKeysToWipe) {
+			this.writeLog(InstanceEvent.WORKFLOW_QUEUED, null, null, {
+				params: event.payload,
+				versionId: version.id,
+				trigger: {
+					source: InstanceTrigger.API,
+				},
+			});
+			this.writeLog(InstanceEvent.WORKFLOW_START, null, null, {});
+		}
 
 		void this.init(accountId, workflow, version, instance, event);
 	}

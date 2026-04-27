@@ -1,4 +1,7 @@
-import type { WorkflowBinding } from "@cloudflare/workflows-shared/src/binding";
+import type {
+	WorkflowBinding,
+	WorkflowInstanceRestartOptions,
+} from "@cloudflare/workflows-shared/src/binding";
 
 class WorkflowImpl implements Workflow {
 	constructor(private binding: WorkflowBinding) {}
@@ -86,9 +89,13 @@ class InstanceImpl implements WorkflowInstance {
 		await instance.terminate();
 	}
 
-	public async restart(): Promise<void> {
+	public async restart(
+		options?: WorkflowInstanceRestartOptions
+	): Promise<void> {
 		using instance = await this.getInstance();
-		await instance.restart();
+		// TODO(vaish): remove @ts-expect-error once @cloudflare/workers-types ships restart options
+		// @ts-expect-error WorkflowInstance type does not include options yet
+		await instance.restart(options);
 	}
 
 	public async status(): Promise<InstanceStatus> {

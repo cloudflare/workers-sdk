@@ -8,6 +8,7 @@ import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type { WorkflowsWorkflow } from "../generated";
 import type { zWorkflowsListInstancesData } from "../generated/zod.gen";
+import type { RestartFromStep } from "@cloudflare/workflows-shared/src/binding";
 import type { z } from "zod";
 
 // ============================================================================
@@ -30,7 +31,7 @@ interface DirectoryEntry {
 interface WorkflowHandle {
 	pause(): Promise<void>;
 	resume(): Promise<void>;
-	restart(): Promise<void>;
+	restart(options?: { from?: RestartFromStep }): Promise<void>;
 	terminate(): Promise<void>;
 	sendEvent(args: { payload: unknown; type: string }): Promise<void>;
 	status(): Promise<{ status: string; output?: unknown; error?: unknown }>;
@@ -873,7 +874,10 @@ export async function changeWorkflowInstanceStatus(
 	}
 
 	try {
-		const body = (await c.req.json()) as { action: string };
+		const body = (await c.req.json()) as {
+			action: string;
+			from?: RestartFromStep;
+		};
 		const { action } = body;
 
 		if (!["pause", "resume", "restart", "terminate"].includes(action)) {
@@ -893,9 +897,19 @@ export async function changeWorkflowInstanceStatus(
 			case "resume":
 				await handle.resume();
 				break;
-			case "restart":
-				await handle.restart();
+			case "restart": {
+				if (body.from && !body.from.name) {
+					return errorResponse(
+						400,
+						10001,
+						"'from.name' is required when restarting from a specific step."
+					);
+				}
+				const opts = body.from ? { from: body.from } : undefined;
+				// TODO(vaish): remove cast once @cloudflare/workers-types ships restart options
+				await (handle as unknown as WorkflowHandle).restart(opts);
 				break;
+			}
 			case "terminate":
 				await handle.terminate();
 				break;

@@ -634,6 +634,89 @@ describe("Engine", () => {
 			}
 		);
 
+		it("should restart from a specific step and preserve earlier results", async ({
+			expect,
+		}) => {
+			const instanceId = "RESTART-FROM-STEP";
+			const engineId = env.ENGINE.idFromName(instanceId);
+
+			const engineStub = await runWorkflowAndAwait(
+				instanceId,
+				async (_event: unknown, step: WorkflowStep) => {
+					const a = await step.do("step-a", async () => "result-a");
+					const b = await step.do("step-b", async () => "result-b");
+					return { a, b };
+				}
+			);
+
+			const statusBefore = await runInDurableObject(engineStub, (engine) =>
+				engine.getStatus()
+			);
+			expect(statusBefore).toBe(InstanceStatus.Complete);
+
+			try {
+				await runInDurableObject(engineStub, async (engine) => {
+					await engine.changeInstanceStatus("restart", {
+						name: "step-b",
+					});
+				});
+			} catch (e) {
+				if (!isAbortError(e)) {
+					throw e;
+				}
+			}
+
+			const restartedStub = env.ENGINE.get(engineId);
+
+			await runInDurableObject(restartedStub, async (engine) => {
+				await engine.attemptRestart();
+			});
+
+			await vi.waitUntil(
+				async () => {
+					const status = await runInDurableObject(restartedStub, (engine) =>
+						engine.getStatus()
+					);
+					return status === InstanceStatus.Complete;
+				},
+				{ timeout: 5000 }
+			);
+
+			const logs = (await restartedStub.readLogs()) as EngineLogs;
+
+			// step-a should still have its cached result from the first run
+			const stepSuccessLogs = logs.logs.filter(
+				(log) => log.event === InstanceEvent.STEP_SUCCESS
+			);
+			expect(stepSuccessLogs.length).toBeGreaterThanOrEqual(2);
+
+			expect(
+				logs.logs.some((log) => log.event === InstanceEvent.WORKFLOW_SUCCESS)
+			).toBe(true);
+		});
+
+		it("should throw when restarting from a non-existing step", async ({
+			expect,
+		}) => {
+			const instanceId = "RESTART-FROM-BAD-STEP";
+
+			const engineStub = await runWorkflowAndAwait(
+				instanceId,
+				async (_event: unknown, step: WorkflowStep) => {
+					await step.do("step-a", async () => "result-a");
+					return "done";
+				}
+			);
+
+			await expect(
+				runInDurableObject(engineStub, async (engine) => {
+					await engine.changeInstanceStatus("restart", {
+						name: "nonexistent-step",
+					});
+				})
+			).rejects.toThrow("not found in execution history");
+		});
+
 		it("should pause after in-flight step.do finishes", async ({ expect }) => {
 			const instanceId = "PAUSE-AFTER-DO";
 			const engineId = env.ENGINE.idFromName(instanceId);

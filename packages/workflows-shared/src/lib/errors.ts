@@ -114,3 +114,10 @@ function getCompatFlag(name: string): boolean {
 export function shouldPreserveNonRetryableError(): boolean {
 	return getCompatFlag("workflows_preserve_non_retryable_error_message");
 }
+
+export function stepNotFoundError(name: string): WorkflowError {
+	return createWorkflowError(
+		`Step "${name}" not found in execution history`,
+		"instance.cannot_restart"
+	);
+}

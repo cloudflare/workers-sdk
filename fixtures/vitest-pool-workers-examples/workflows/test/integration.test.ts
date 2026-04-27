@@ -140,6 +140,8 @@ describe("workflow instance lifecycle methods", () => {
 		// DISPOSE: ensured by `await using`
 	});
 
+	// TODO(vaish): add restart-from-step test here once @cloudflare/workers-types ships restart options
+
 	it("should pause a workflow instance", async ({ expect }) => {
 		// CONFIG:
 		await using introspector = await introspectWorkflow(env.MODERATOR);
