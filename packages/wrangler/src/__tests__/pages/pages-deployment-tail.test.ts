@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises";
-import { stripVTControlCharacters } from "node:util";
+import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
 import { afterEach, describe, it, vi } from "vitest";
@@ -829,16 +829,16 @@ describe("pages deployment tail", () => {
 				  (log) { complex: 'object' }
 				  (error) 1234"
 			`);
-			expect(stripVTControlCharacters(std.err)).toMatchInlineSnapshot(`
-				"X [ERROR] Error: some error
+			expect(normalizeString(std.err)).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError: some error[0m
 
 				    at Object.foo (file.js:1:2)
 
 
-				X [ERROR] Error: some error without stack trace
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError: some error without stack trace[0m
 
 
-				X [ERROR] Error: { complex: 'error' }
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError: { complex: 'error' }[0m
 
 				    at Object.foo (file.js:1:2)
 
