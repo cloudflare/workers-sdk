@@ -11,7 +11,7 @@
 	"durable_objects": {
 		"bindings": [{ "name": "AUTH_SESSION", "class_name": "AuthSession" }],
 	},
-	"migrations": [{ "tag": "v1", "new_classes": ["AuthSession"] }],
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["AuthSession"] }],
 	"observability": {
 		"enabled": true,
 	},
