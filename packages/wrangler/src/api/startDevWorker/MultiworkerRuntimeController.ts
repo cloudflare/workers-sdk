@@ -255,6 +255,17 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				});
 			}
 		} catch (error) {
+			if (
+				this.containerBeingBuilt?.abortRequested &&
+				error instanceof Error &&
+				error.message.startsWith("Docker build exited with code:")
+			) {
+				// The user caused the container image build to be aborted (e.g. via
+				// the rebuild hotkey), so a non-zero exit from `docker build` is
+				// expected here and can be safely ignored — after this the dev
+				// process either terminates or reloads the container.
+				return;
+			}
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Error reloading local server",
