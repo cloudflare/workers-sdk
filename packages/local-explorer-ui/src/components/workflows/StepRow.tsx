@@ -27,7 +27,7 @@ function StepStatusIcon({
 			);
 		}
 		return (
-			<div className="flex size-5 items-center justify-center rounded bg-kumo-danger">
+			<div className="flex size-5 items-center justify-center rounded bg-kumo-badge-red">
 				<span className="text-xs font-bold text-white">!</span>
 			</div>
 		);
@@ -41,7 +41,7 @@ function StepStatusIcon({
 			);
 		}
 		return (
-			<div className="flex size-5 items-center justify-center rounded bg-emerald-600">
+			<div className="flex size-5 items-center justify-center rounded bg-kumo-badge-teal">
 				<CheckIcon size={12} weight="bold" className="text-white" />
 			</div>
 		);
@@ -56,7 +56,7 @@ function StepStatusIcon({
 const TYPE_BADGE_STYLES: Record<string, string> = {
 	step: "bg-kumo-tint text-kumo-subtle",
 	sleep: "bg-kumo-overlay text-kumo-subtle",
-	waitForEvent: "bg-violet-100 text-violet-600",
+	waitForEvent: "bg-kumo-badge-purple/10 text-kumo-badge-purple",
 };
 
 export function getStepKey(step: StepData): string {

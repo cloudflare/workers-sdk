@@ -93,7 +93,7 @@ const STATUS_SUMMARY_CONFIG = [
 		key: "errored",
 		label: "Errored",
 		icon: WarningCircleIcon,
-		color: "text-[var(--color-kumo-danger)]",
+		color: "text-kumo-danger",
 		weight: "fill" as const,
 	},
 	{
@@ -183,7 +183,7 @@ const ACTION_CONFIG_LIST: Record<
 	terminate: {
 		icon: StopIcon,
 		style:
-			"border-kumo-fill bg-kumo-base text-[var(--color-kumo-danger)] hover:bg-kumo-danger/10",
+			"border-kumo-fill bg-kumo-base text-kumo-danger hover:bg-kumo-badge-red/10",
 		weight: "fill",
 	},
 };
@@ -356,7 +356,7 @@ const InstanceRow = memo(function InstanceRow({
 								</button>
 							)}
 						<button
-							className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-[var(--color-kumo-danger)] transition-colors hover:bg-kumo-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
+							className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-kumo-danger transition-colors hover:bg-kumo-badge-red/10 disabled:cursor-not-allowed disabled:opacity-40"
 							disabled={actionInProgress !== null}
 							onClick={handleDeleteClick}
 							title="Delete"
@@ -758,7 +758,7 @@ function WorkflowInstancesView() {
 							/>
 							<DropdownMenu.Content align="end" sideOffset={4}>
 								<DropdownMenu.Item
-									className="flex cursor-pointer items-center gap-2 text-[var(--color-kumo-danger)]"
+									className="flex cursor-pointer items-center gap-2 text-kumo-danger"
 									onClick={() => handleDeleteAllOpenChange(true)}
 								>
 									<TrashIcon />

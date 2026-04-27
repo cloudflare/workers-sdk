@@ -530,7 +530,7 @@ function InstanceDetailView() {
 											key={action}
 											className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
 												isTerminate
-													? "border-kumo-fill bg-kumo-base text-[var(--color-kumo-danger)] hover:bg-kumo-danger/10"
+													? "border-kumo-fill bg-kumo-base text-kumo-danger hover:bg-kumo-badge-red/10"
 													: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill"
 											}`}
 											disabled={actionInProgress !== null}
@@ -560,7 +560,7 @@ function InstanceDetailView() {
 										</button>
 									)}
 								<button
-									className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-kumo-fill bg-kumo-base text-[var(--color-kumo-danger)] transition-colors hover:bg-kumo-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
+									className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-kumo-fill bg-kumo-base text-kumo-danger transition-colors hover:bg-kumo-badge-red/10 disabled:cursor-not-allowed disabled:opacity-40"
 									disabled={actionInProgress !== null}
 									onClick={() => setDeleteDialogOpen(true)}
 									title="Delete"
