@@ -205,7 +205,6 @@
 				"packages/create-cloudflare/**",
 				"packages/local-explorer-ui/**",
 				"packages/miniflare/**",
-				"packages/playground-preview-worker/**",
 				"packages/quick-edit-extension/**",
 				"packages/vite-plugin-cloudflare/**",
 				"packages/vitest-pool-workers/**",
