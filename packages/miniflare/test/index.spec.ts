@@ -1650,6 +1650,49 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 	expect(await res.text()).toBe("true");
 });
 
+test("Miniflare: manually triggered scheduled events with assets", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const tmp = await useTmp();
+	await fs.writeFile(path.join(tmp, "foo.html"), "asset", "utf8");
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `
+				let scheduledRun = false;
+				export default {
+					fetch() {
+						return new Response(scheduledRun);
+					},
+					scheduled() {
+						scheduledRun = true;
+					}
+				}`,
+		assets: {
+			directory: tmp,
+			routerConfig: {
+				has_user_worker: true,
+			},
+		},
+		unsafeTriggerHandlers: true,
+	});
+	useDispose(mf);
+
+	let res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("false");
+
+	res = await mf.dispatchFetch("http://localhost/foo");
+	expect(await res.text()).toBe("asset");
+
+	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/scheduled");
+	expect(await res.text()).toBe("ok");
+
+	res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("true");
+});
+
 test("Miniflare: manually triggered email handler - valid email", async ({
 	expect,
 }) => {
