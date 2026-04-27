@@ -2,7 +2,7 @@ name: Semgrep OSS scan
 on:
   pull_request: {}
   push:
-    branches: [main, master]
+    branches: [main]
   workflow_dispatch: {}
   schedule:
     - cron: '0 0 15 * *'
