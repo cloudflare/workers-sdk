@@ -770,6 +770,7 @@ describe("deploy", () => {
 		it("should error if a compatibility_date is not available in wrangler.toml or cli args", async ({
 			expect,
 		}) => {
+			setIsTTY(false);
 			writeWorkerSource();
 			let err: undefined | Error;
 			try {
@@ -791,6 +792,7 @@ describe("deploy", () => {
 		it("should error if a compatibility_date is missing and suggest the correct date", async ({
 			expect,
 		}) => {
+			setIsTTY(false);
 			vi.setSystemTime(new Date(2020, 11, 1));
 
 			writeWorkerSource();

@@ -17,7 +17,7 @@ import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import {
 	mockExchangeRefreshTokenForAccessToken,
@@ -1424,5 +1424,62 @@ describe("deploy", () => {
 			  "wranglerInstall": true,
 			}
 		`);
+	});
+
+	describe("interactive compatibility date prompt", () => {
+		it("should prompt and use today's date when user confirms", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			writeWranglerConfig(
+				{ compatibility_date: undefined as unknown as string },
+				"./wrangler.toml"
+			);
+			mockConfirm({
+				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+				result: true,
+			});
+
+			await runWrangler("deploy ./index.js --name test-name --dry-run");
+			expect(std.out).toContain("--dry-run: exiting now.");
+			expect(std.out).toContain(
+				"To avoid this prompt, add `compatibility_date` to your wrangler.toml file or pass `--compatibility-date 2024-06-15` via CLI."
+			);
+		});
+
+		it("should error when user declines the prompt", async ({ expect }) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			writeWranglerConfig(
+				{ compatibility_date: undefined as unknown as string },
+				"./wrangler.toml"
+			);
+			mockConfirm({
+				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+				result: false,
+			});
+
+			await expect(
+				runWrangler("deploy ./index.js --name test-name --dry-run")
+			).rejects.toThrow("A compatibility_date is required when publishing");
+		});
+
+		it("should error in non-interactive mode when no compatibility_date is provided", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWorkerSource();
+			writeWranglerConfig(
+				{ compatibility_date: undefined as unknown as string },
+				"./wrangler.toml"
+			);
+
+			await expect(
+				runWrangler("deploy ./index.js --name test-name")
+			).rejects.toThrow("A compatibility_date is required when publishing");
+		});
 	});
 });

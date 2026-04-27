@@ -565,22 +565,40 @@ export default async function deploy(props: Props): Promise<{
 		}
 	}
 
-	const compatibilityDate =
-		props.compatibilityDate ?? config.compatibility_date;
+	let compatibilityDate = props.compatibilityDate ?? config.compatibility_date;
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
 
 	if (!compatibilityDate) {
 		const compatibilityDateStr = getTodaysCompatDate();
 
-		throw new UserError(
-			`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
+		if (isNonInteractiveOrCI()) {
+			throw new UserError(
+				`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
     ${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath, false)}
     \`\`\`
     Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
 See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
-			{ telemetryMessage: "missing compatibility date when deploying" }
+				{ telemetryMessage: "missing compatibility date when deploying" }
+			);
+		}
+
+		if (
+			!(await confirm(
+				`No compatibility date is set. Would you like to use today's date (${compatibilityDateStr})?`
+			))
+		) {
+			throw new UserError(
+				`A compatibility_date is required when publishing. Add it to your ${configFileName(config.configPath)} file or pass \`--compatibility-date\` via CLI.\nSee https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
+				{ telemetryMessage: "missing compatibility date when deploying" }
+			);
+		}
+
+		compatibilityDate = compatibilityDateStr;
+
+		logger.log(
+			`To avoid this prompt, add \`compatibility_date\` to your ${configFileName(config.configPath)} file or pass \`--compatibility-date ${compatibilityDateStr}\` via CLI.\nSee https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`
 		);
 	}
 
