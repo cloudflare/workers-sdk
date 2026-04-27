@@ -37,9 +37,9 @@ import {
 } from "./lib/streams";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
 import { MODIFIER_KEYS, WorkflowInstanceModifier } from "./modifier";
+import type { RestartFromStep } from "./binding";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
-import type { RestartFromStep } from "./binding";
 import type { StreamOutputMeta } from "./lib/streams";
 import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 
