@@ -44,6 +44,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/workers-shared",
 				"@cloudflare/workers-utils",
 				"@cloudflare/workflows-shared",
+				"@cloudflare/wrangler-auth-worker",
 				"create-cloudflare",
 				"miniflare",
 				"solarflare-theme",
