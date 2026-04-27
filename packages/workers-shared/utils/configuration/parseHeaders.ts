@@ -106,16 +106,17 @@ export function parseHeaders(
 			continue;
 		}
 
+		if (skipUntilNextPath) {
+			continue;
+		}
+
 		if (!line.includes(HEADER_SEPARATOR)) {
 			if (!rule) {
-				if (!skipUntilNextPath) {
-					invalid.push({
-						line,
-						lineNumber: i + 1,
-						message:
-							"Expected a path beginning with at least one forward-slash",
-					});
-				}
+				invalid.push({
+					line,
+					lineNumber: i + 1,
+					message: "Expected a path beginning with at least one forward-slash",
+				});
 			} else {
 				if (line.trim().startsWith(UNSET_OPERATOR)) {
 					rule.unsetHeaders.push(line.trim().replace(UNSET_OPERATOR, ""));
@@ -164,13 +165,11 @@ export function parseHeaders(
 		}
 
 		if (!rule) {
-			if (!skipUntilNextPath) {
-				invalid.push({
-					line,
-					lineNumber: i + 1,
-					message: `Path should come before header (${name}: ${value})`,
-				});
-			}
+			invalid.push({
+				line,
+				lineNumber: i + 1,
+				message: `Path should come before header (${name}: ${value})`,
+			});
 			continue;
 		}
 
