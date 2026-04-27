@@ -1,10 +1,33 @@
-import { exports } from "cloudflare:workers";
+import { SELF } from "cloudflare:test";
 import { describe, it } from "vitest";
+
+/**
+ * Returns a promise that resolves with the next message received on the WebSocket.
+ * Replaces ad-hoc `setTimeout` waits with a deterministic signal.
+ */
+function nextMessage(ws: WebSocket): Promise<string> {
+	return new Promise<string>((resolve, reject) => {
+		const onMessage = (event: MessageEvent) => {
+			cleanup();
+			resolve(typeof event.data === "string" ? event.data : String(event.data));
+		};
+		const onClose = () => {
+			cleanup();
+			reject(new Error("WebSocket closed before a message was received"));
+		};
+		const cleanup = () => {
+			ws.removeEventListener("message", onMessage);
+			ws.removeEventListener("close", onClose);
+		};
+		ws.addEventListener("message", onMessage);
+		ws.addEventListener("close", onClose);
+	});
+}
 
 describe("wrangler-auth-worker", () => {
 	describe("GET /session/:state (WebSocket upgrade)", () => {
 		it("should accept a WebSocket connection", async ({ expect }) => {
-			const resp = await exports.default.fetch(
+			const resp = await SELF.fetch(
 				"https://auth.devprod.cloudflare.dev/session/test-ws-accept",
 				{ headers: { Upgrade: "websocket" } }
 			);
@@ -21,7 +44,7 @@ describe("wrangler-auth-worker", () => {
 			const state = "test-duplicate-ws-" + Date.now();
 
 			// First connection should succeed
-			const resp1 = await exports.default.fetch(
+			const resp1 = await SELF.fetch(
 				`https://auth.devprod.cloudflare.dev/session/${state}`,
 				{ headers: { Upgrade: "websocket" } }
 			);
@@ -29,7 +52,7 @@ describe("wrangler-auth-worker", () => {
 			resp1.webSocket?.accept();
 
 			// Second connection should be rejected
-			const resp2 = await exports.default.fetch(
+			const resp2 = await SELF.fetch(
 				`https://auth.devprod.cloudflare.dev/session/${state}`,
 				{ headers: { Upgrade: "websocket" } }
 			);
@@ -41,7 +64,7 @@ describe("wrangler-auth-worker", () => {
 		it("should reject non-WebSocket requests to /session/:state", async ({
 			expect,
 		}) => {
-			const resp = await exports.default.fetch(
+			const resp = await SELF.fetch(
 				"https://auth.devprod.cloudflare.dev/session/test-no-ws"
 			);
 			expect(resp.status).toBe(426);
@@ -55,23 +78,19 @@ describe("wrangler-auth-worker", () => {
 			const state = "test-cb-code-" + Date.now();
 
 			// Connect WebSocket
-			const wsResp = await exports.default.fetch(
+			const wsResp = await SELF.fetch(
 				`https://auth.devprod.cloudflare.dev/session/${state}`,
 				{ headers: { Upgrade: "websocket" } }
 			);
 			expect(wsResp.status).toBe(101);
 			expect(wsResp.webSocket).toBeDefined();
-			const ws = wsResp.webSocket;
-			ws?.accept();
+			const ws = wsResp.webSocket as WebSocket;
+			ws.accept();
 
-			// Collect messages
-			const messages: string[] = [];
-			ws?.addEventListener("message", (event: MessageEvent) => {
-				messages.push(typeof event.data === "string" ? event.data : "");
-			});
+			const messagePromise = nextMessage(ws);
 
 			// Trigger callback (don't follow the redirect)
-			const callbackResp = await exports.default.fetch(
+			const callbackResp = await SELF.fetch(
 				`https://auth.devprod.cloudflare.dev/callback?code=test-auth-code&state=${state}`,
 				{ redirect: "manual" }
 			);
@@ -82,11 +101,9 @@ describe("wrangler-auth-worker", () => {
 				"https://welcome.developers.workers.dev/wrangler-oauth-consent-granted"
 			);
 
-			// Wait a tick for the message to be delivered
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			expect(messages.length).toBe(1);
-			expect(JSON.parse(messages[0])).toEqual({ code: "test-auth-code" });
+			// DO should have sent the auth code over WebSocket
+			const message = await messagePromise;
+			expect(JSON.parse(message)).toEqual({ code: "test-auth-code" });
 		});
 
 		it("should forward access_denied error and redirect to consent-denied page", async ({
@@ -95,23 +112,19 @@ describe("wrangler-auth-worker", () => {
 			const state = "test-cb-denied-" + Date.now();
 
 			// Connect WebSocket
-			const wsResp = await exports.default.fetch(
+			const wsResp = await SELF.fetch(
 				`https://auth.devprod.cloudflare.dev/session/${state}`,
 				{ headers: { Upgrade: "websocket" } }
 			);
 			expect(wsResp.status).toBe(101);
 			expect(wsResp.webSocket).toBeDefined();
-			const ws = wsResp.webSocket;
-			ws?.accept();
+			const ws = wsResp.webSocket as WebSocket;
+			ws.accept();
 
-			// Collect messages
-			const messages: string[] = [];
-			ws?.addEventListener("message", (event: MessageEvent) => {
-				messages.push(typeof event.data === "string" ? event.data : "");
-			});
+			const messagePromise = nextMessage(ws);
 
 			// Trigger callback with error (don't follow the redirect)
-			const callbackResp = await exports.default.fetch(
+			const callbackResp = await SELF.fetch(
 				`https://auth.devprod.cloudflare.dev/callback?error=access_denied&state=${state}`,
 				{ redirect: "manual" }
 			);
@@ -122,17 +135,15 @@ describe("wrangler-auth-worker", () => {
 				"https://welcome.developers.workers.dev/wrangler-oauth-consent-denied"
 			);
 
-			// Wait a tick for the message to be delivered
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			expect(messages.length).toBe(1);
-			expect(JSON.parse(messages[0])).toEqual({ error: "access_denied" });
+			// DO should have sent the error over WebSocket
+			const message = await messagePromise;
+			expect(JSON.parse(message)).toEqual({ error: "access_denied" });
 		});
 
 		it("should return 400 when state parameter is missing", async ({
 			expect,
 		}) => {
-			const resp = await exports.default.fetch(
+			const resp = await SELF.fetch(
 				"https://auth.devprod.cloudflare.dev/callback?code=test-code"
 			);
 			expect(resp.status).toBe(400);
@@ -144,23 +155,19 @@ describe("wrangler-auth-worker", () => {
 			const state = "test-cb-malformed-" + Date.now();
 
 			// Connect WebSocket
-			const wsResp = await exports.default.fetch(
+			const wsResp = await SELF.fetch(
 				`https://auth.devprod.cloudflare.dev/session/${state}`,
 				{ headers: { Upgrade: "websocket" } }
 			);
 			expect(wsResp.status).toBe(101);
 			expect(wsResp.webSocket).toBeDefined();
-			const ws = wsResp.webSocket;
-			ws?.accept();
+			const ws = wsResp.webSocket as WebSocket;
+			ws.accept();
 
-			// Collect messages
-			const messages: string[] = [];
-			ws?.addEventListener("message", (event: MessageEvent) => {
-				messages.push(typeof event.data === "string" ? event.data : "");
-			});
+			const messagePromise = nextMessage(ws);
 
 			// Trigger callback with neither code nor error (malformed redirect)
-			const callbackResp = await exports.default.fetch(
+			const callbackResp = await SELF.fetch(
 				`https://auth.devprod.cloudflare.dev/callback?state=${state}`,
 				{ redirect: "manual" }
 			);
@@ -171,39 +178,38 @@ describe("wrangler-auth-worker", () => {
 				"https://welcome.developers.workers.dev/wrangler-oauth-consent-denied"
 			);
 
-			// Wait a tick for the message to be delivered
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
 			// DO should have sent missing_code error over WebSocket
-			expect(messages.length).toBe(1);
-			expect(JSON.parse(messages[0])).toEqual({ error: "missing_code" });
+			const message = await messagePromise;
+			expect(JSON.parse(message)).toEqual({ error: "missing_code" });
 		});
 
-		it("should still redirect even when no WebSocket is connected", async ({
+		it("should redirect to consent-denied page when no WebSocket is connected", async ({
 			expect,
 		}) => {
-			// Callback to a session that has no WebSocket connected
-			// The DO returns 409 but the worker redirects regardless
-			const callbackResp = await exports.default.fetch(
+			// Callback to a session that has no WebSocket connected.
+			// The DO returns 409, which we treat as a denied/error and redirect
+			// the browser to the consent-denied page accordingly.
+			const callbackResp = await SELF.fetch(
 				`https://auth.devprod.cloudflare.dev/callback?code=test-code&state=no-ws-connected-${Date.now()}`,
 				{ redirect: "manual" }
 			);
 			expect(callbackResp.status).toBe(307);
+			expect(callbackResp.headers.get("Location")).toBe(
+				"https://welcome.developers.workers.dev/wrangler-oauth-consent-denied"
+			);
 		});
 	});
 
 	describe("Unknown routes", () => {
 		it("should return 404 for unknown paths", async ({ expect }) => {
-			const resp = await exports.default.fetch(
+			const resp = await SELF.fetch(
 				"https://auth.devprod.cloudflare.dev/unknown"
 			);
 			expect(resp.status).toBe(404);
 		});
 
 		it("should return 404 for root path", async ({ expect }) => {
-			const resp = await exports.default.fetch(
-				"https://auth.devprod.cloudflare.dev/"
-			);
+			const resp = await SELF.fetch("https://auth.devprod.cloudflare.dev/");
 			expect(resp.status).toBe(404);
 		});
 	});

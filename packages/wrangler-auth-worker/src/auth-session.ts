@@ -61,7 +61,7 @@ export class AuthSession extends DurableObject<Env> {
 	 * Handles the OAuth callback forwarded from the Worker fetch handler.
 	 * Sends the auth code or error down the WebSocket to Wrangler.
 	 */
-	private handleCallback(url: URL): Response {
+	private async handleCallback(url: URL): Promise<Response> {
 		const sockets = this.ctx.getWebSockets();
 		if (sockets.length === 0) {
 			return new Response("No WebSocket connected", { status: 409 });
@@ -80,6 +80,10 @@ export class AuthSession extends DurableObject<Env> {
 		}
 
 		ws.close(1000, "Auth complete");
+
+		// Clear the cleanup alarm — the session is finished.
+		await this.ctx.storage.deleteAlarm();
+
 		return new Response("OK");
 	}
 

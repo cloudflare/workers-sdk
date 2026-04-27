@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import { Request } from "undici";
 import openInBrowser from "../../open-in-browser";
 import { mockHttpServer } from "./mock-http-server";
+import { MockWebSocket } from "./mock-websocket";
 import { msw } from "./msw";
 import type { Mock } from "vitest";
 
@@ -128,11 +129,45 @@ export const mockOAuthFlow = () => {
 		);
 	}
 
+	/**
+	 * Mock out the WebSocket relay used by the `--x-websocket-callback` login flow.
+	 *
+	 * This replaces the implementation of `openInBrowser()` so that opening
+	 * the auth URL also drives the corresponding `MockWebSocket` instance to
+	 * deliver a message — simulating the OAuth provider redirecting to the
+	 * auth relay worker, which forwards the auth code back over the WebSocket.
+	 *
+	 * Wrangler must have already opened the WebSocket and triggered the open
+	 * event before `openInBrowser()` is called for this to work.
+	 */
+	const mockOAuthRelayCallback = (
+		respondWith: "success" | "failure" | { code?: string; error?: string }
+	) => {
+		(openInBrowser as Mock).mockImplementation(async (_url: string) => {
+			const ws = MockWebSocket.last;
+			if (!ws) {
+				throw new Error(
+					"mockOAuthRelayCallback: no MockWebSocket instance was created — did Wrangler skip the WebSocket flow?"
+				);
+			}
+			let message: { code?: string; error?: string };
+			if (respondWith === "success") {
+				message = { code: "test-oauth-code" };
+			} else if (respondWith === "failure") {
+				message = { error: "access_denied" };
+			} else {
+				message = respondWith;
+			}
+			ws.triggerMessage(JSON.stringify(message));
+		});
+	};
+
 	return {
 		mockHttpServer,
 		mockDomainUsesAccess,
 		mockGrantAccessToken,
 		mockOAuthServerCallback,
+		mockOAuthRelayCallback,
 		mockExchangeRefreshTokenForAccessToken,
 	};
 };
