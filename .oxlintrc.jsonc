@@ -211,7 +211,6 @@
 				"packages/vitest-pool-workers/**",
 				"packages/workers-editor-shared/**",
 				"packages/workers-shared/**",
-				"packages/workflows-shared/**",
 				"packages/wrangler/**",
 			],
 			"rules": {
