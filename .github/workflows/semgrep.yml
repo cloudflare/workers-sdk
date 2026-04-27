@@ -5,7 +5,7 @@ on:
     branches: [main]
   workflow_dispatch: {}
   schedule:
-    - cron: '0 0 15 * *'
+    - cron: "0 0 15 * *"
 concurrency:
   group: semgrep-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
