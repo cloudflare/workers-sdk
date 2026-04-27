@@ -1,5 +1,12 @@
 import { EventEmitter } from "node:events";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	it,
+	onTestFinished,
+	vi,
+} from "vitest";
 import { spawnCloudflared } from "../src/cloudflared";
 import { UserError } from "../src/errors";
 import { startTunnel } from "../src/tunnel";
@@ -16,6 +23,7 @@ function createMockProcess() {
 		stdout: EventEmitter;
 		killed: boolean;
 		kill: (signal?: string) => boolean;
+		unref: () => void;
 	};
 	proc.stderr = new EventEmitter();
 	proc.stdout = new EventEmitter();
@@ -24,6 +32,7 @@ function createMockProcess() {
 		proc.killed = true;
 		return true;
 	};
+	proc.unref = vi.fn();
 	return proc;
 }
 
@@ -72,6 +81,7 @@ describe("startTunnel", () => {
 			origin: new URL("http://localhost:8787"),
 			timeoutMs: TEST_TIMEOUT_MS,
 		});
+		onTestFinished(() => tunnel.dispose());
 
 		await emitStderrNextTick(
 			proc,
@@ -81,8 +91,6 @@ describe("startTunnel", () => {
 		await expect(tunnel.ready()).resolves.toEqual({
 			publicUrl: new URL("https://foo-bar-baz.trycloudflare.com"),
 		});
-
-		await tunnel.dispose();
 	});
 
 	it("should pass the correct args to spawnCloudflared", async ({ expect }) => {
@@ -190,8 +198,63 @@ describe("startTunnel", () => {
 
 		await emitStderrNextTick(proc, "INF https://my-tunnel.trycloudflare.com\n");
 		await tunnel.ready();
-		await tunnel.dispose();
+		tunnel.dispose();
 
+		expect(killSpy).toHaveBeenCalledWith("SIGTERM");
+	});
+
+	it("should detach the cloudflared process before dispose", async ({
+		expect,
+	}) => {
+		const proc = createMockProcess();
+		const unrefSpy = vi.spyOn(proc, "unref");
+		const killSpy = vi.spyOn(proc, "kill");
+		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
+
+		const tunnel = startTunnel({
+			origin: new URL("http://localhost:8787"),
+			timeoutMs: TEST_TIMEOUT_MS,
+		});
+
+		await emitStderrNextTick(proc, "INF https://my-tunnel.trycloudflare.com\n");
+		await tunnel.ready();
+
+		tunnel.dispose();
+
+		expect(unrefSpy).toHaveBeenCalledTimes(1);
+		expect(killSpy).toHaveBeenCalledWith("SIGTERM");
+	});
+
+	it("should terminate cloudflared when disposed before spawn resolves", async ({
+		expect,
+	}) => {
+		const proc = createMockProcess();
+		const unrefSpy = vi.spyOn(proc, "unref");
+		const killSpy = vi.spyOn(proc, "kill");
+		let resolveProcess:
+			| ((value: ReturnType<typeof createMockProcess>) => void)
+			| undefined;
+
+		vi.mocked(spawnCloudflared).mockImplementation(
+			() =>
+				new Promise<ReturnType<typeof createMockProcess>>((resolve) => {
+					resolveProcess = resolve;
+				}) as never
+		);
+
+		const tunnel = startTunnel({
+			origin: new URL("http://localhost:8787"),
+			timeoutMs: TEST_TIMEOUT_MS,
+		});
+
+		tunnel.dispose();
+		expect(unrefSpy).not.toHaveBeenCalled();
+		expect(killSpy).not.toHaveBeenCalled();
+
+		resolveProcess?.(proc);
+		await Promise.resolve();
+
+		expect(unrefSpy).toHaveBeenCalledTimes(1);
 		expect(killSpy).toHaveBeenCalledWith("SIGTERM");
 	});
 
