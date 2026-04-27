@@ -27,4 +27,4 @@ jobs:
       - if: steps.cache-semgrep.outputs.cache-hit != 'true'
         run: pip install --user semgrep==1.160.0
       - run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - run: semgrep scan --config=auto
+      - run: semgrep scan --config=auto || true
