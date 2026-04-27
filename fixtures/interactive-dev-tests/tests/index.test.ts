@@ -516,8 +516,7 @@ if (process.platform === "win32") {
 				// allow more than the default 5s `vi.waitFor` timeout.
 				await vi.waitFor(
 					() => {
-						const remainingIds = getContainerIds();
-						expect(remainingIds.length).toBe(0);
+						expect(getContainerIds()).toHaveLength(0);
 					},
 					{ timeout: 10_000, interval: 500 }
 				);
@@ -799,7 +798,7 @@ if (process.platform === "win32") {
 				await vi.waitFor(
 					() => {
 						const remainingIds = getContainerIds();
-						expect(remainingIds.length).toBe(0);
+						expect(remainingIds).toHaveLength(0);
 					},
 					{ timeout: 10_000, interval: 500 }
 				);
