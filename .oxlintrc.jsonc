@@ -48,6 +48,7 @@
 		"turbo/no-undeclared-env-vars": "error",
 		"workers-sdk/no-unsafe-command-execution": "error",
 		"workers-sdk/no-direct-recursive-rm": "error",
+		"workers-sdk/require-description-when-disabling": "error",
 
 		"no-unused-vars": [
 			"error",
@@ -195,6 +196,27 @@
 			"files": ["packages/vite-plugin-cloudflare/**"],
 			"rules": {
 				"workers-sdk/no-wrangler-named-imports": "error",
+			},
+		},
+		// Gradually rolling out require-description-when-disabling.
+		// TODO: Remove the following overrides.
+		{
+			"files": [
+				"packages/create-cloudflare/**",
+				"packages/local-explorer-ui/**",
+				"packages/miniflare/**",
+				"packages/playground-preview-worker/**",
+				"packages/quick-edit-extension/**",
+				"packages/vite-plugin-cloudflare/**",
+				"packages/vitest-pool-workers/**",
+				"packages/workers-editor-shared/**",
+				"packages/workers-shared/**",
+				"packages/workers-utils/**",
+				"packages/workflows-shared/**",
+				"packages/wrangler/**",
+			],
+			"rules": {
+				"workers-sdk/require-description-when-disabling": "off",
 			},
 		},
 	],
