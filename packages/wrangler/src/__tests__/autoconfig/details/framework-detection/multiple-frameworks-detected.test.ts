@@ -71,6 +71,25 @@ describe("detectFramework() / multiple frameworks detected", () => {
 			expect(result.detectedFramework?.framework.id).toBe("waku");
 		});
 
+		it("returns Hydrogen (not React Router) when both Hydrogen and React Router are detected", async ({
+			expect,
+		}) => {
+			await seed({
+				"package.json": JSON.stringify({
+					dependencies: {
+						"@shopify/hydrogen": "2024",
+						"@react-router/dev": "7",
+						"react-router": "7",
+					},
+				}),
+				"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+			});
+
+			const result = await detectFramework(process.cwd());
+
+			expect(result.detectedFramework?.framework.id).toBe("hydrogen");
+		});
+
 		it("returns first framework without throwing when multiple unknown frameworks are detected", async ({
 			expect,
 		}) => {
@@ -131,6 +150,25 @@ describe("detectFramework() / multiple frameworks detected", () => {
 			await expect(detectFramework(process.cwd())).rejects.toThrowError(
 				/Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found/
 			);
+		});
+
+		it("does not throw when Hydrogen and React Router are detected (Hydrogen is selected)", async ({
+			expect,
+		}) => {
+			await seed({
+				"package.json": JSON.stringify({
+					dependencies: {
+						"@shopify/hydrogen": "2024",
+						"@react-router/dev": "7",
+						"react-router": "7",
+					},
+				}),
+				"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+			});
+
+			const result = await detectFramework(process.cwd());
+
+			expect(result.detectedFramework?.framework.id).toBe("hydrogen");
 		});
 
 		it("does not throw when Vite and another known framework are detected (Vite is filtered out)", async ({

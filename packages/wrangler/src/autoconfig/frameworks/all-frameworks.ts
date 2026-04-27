@@ -2,10 +2,8 @@ import assert from "node:assert";
 import { Analog } from "./analog";
 import { Angular } from "./angular";
 import { Astro } from "./astro";
-import { Hono } from "./hono";
 import { NextJs } from "./next";
 import { Nuxt } from "./nuxt";
-import { CloudflarePages } from "./pages";
 import { Qwik } from "./qwik";
 import { ReactRouter } from "./react-router";
 import { SolidStart } from "./solid-start";
@@ -67,7 +65,6 @@ export const allKnownFrameworks = [
 	{
 		id: "hono",
 		name: "Hono",
-		class: Hono,
 		supported: false,
 	},
 	{
@@ -211,8 +208,12 @@ export const allKnownFrameworks = [
 	{
 		id: "cloudflare-pages",
 		name: "Cloudflare Pages",
-		class: CloudflarePages,
 		// Autoconfiguring a Pages project into a Workers one is not yet supported
+		supported: false,
+	},
+	{
+		id: "hydrogen",
+		name: "Hydrogen",
 		supported: false,
 	},
 ] as const satisfies FrameworkInfo[];
@@ -222,9 +223,10 @@ export const allKnownFrameworks = [
  *
  * It is supported by autoconfig but, unlike all other frameworks, it doesn't have a package associated to it
  */
-type StaticFrameworkInfo = Omit<FrameworkInfo, "frameworkPackageInfo"> & {
-	supported: true;
-};
+type StaticFrameworkInfo = Omit<
+	Extract<FrameworkInfo, { supported: true }>,
+	"frameworkPackageInfo"
+>;
 
 export const staticFramework = {
 	id: "static",
