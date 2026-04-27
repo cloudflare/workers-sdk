@@ -257,6 +257,11 @@ export type TailEventMessage = {
 		 * When the exception was raised/thrown
 		 */
 		timestamp: number;
+
+		/**
+		 * The stack trace of the exception, sourcemaps are already resolved.
+		 */
+		stack?: string;
 	}[];
 
 	/**
