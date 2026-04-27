@@ -251,8 +251,29 @@ async function viteResolve(
 ): Promise<string> {
 	const resolved = await vite.pluginContainer.resolveId(specifier, referrer, {
 		ssr: true,
+		// Vite ≤7: the rollup-based resolve plugin reads `isRequire` from this
+		// private `custom["node-resolve"]` bag to select the correct conditional
+		// export (`"require"` vs `"import"`).
 		// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L178-L179
 		custom: { "node-resolve": { isRequire } },
+		// Vite 8+: the resolver was rewritten to use rolldown and no longer reads
+		// `custom["node-resolve"]`. The `kind` field is read by the
+		// `vite:resolve-dev` plugin, which uses `kind === "require-call"` to
+		// set `isRequire: true` when resolving pre-bundled (optimized) deps.
+		// For deps that are NOT pre-bundled the `vite:resolve-builtin` native
+		// Rust plugin handles resolution — but its `isRequire` flag is a static
+		// value set at construction time and it does NOT read `kind` per-call.
+		// So `kind` alone is insufficient for the general case; `findCjsAlternative`
+		// below provides the fallback. We still pass `kind` so that pre-bundled
+		// deps resolve correctly and so future Vite versions that fix
+		// `vite:resolve-builtin` work without any change here.
+		// The `kind` field is not declared on the legacy `PluginContainer` type,
+		// so we cast it through `unknown`.
+		// https://github.com/cloudflare/workers-sdk/issues/12984
+		// https://github.com/cloudflare/workers-sdk/issues/13037
+		...(isRequire
+			? ({ kind: "require-call" } as unknown as object)
+			: undefined),
 	});
 	if (resolved === null) {
 		// Vite's resolution algorithm doesn't apply Node resolution to specifiers
@@ -300,6 +321,196 @@ async function viteResolve(
 	return trimViteVersionHash(resolved.id);
 }
 
+/**
+ * When a `require()` call resolves to an ESM file, walk up the directory tree
+ * to find the nearest `package.json` that owns the file and look for a
+ * CJS-compatible alternative via the `"require"` or `"default"` export
+ * condition.
+ *
+ * In Vite 8 the main resolve plugin (`vite:resolve-builtin`, backed by
+ * `viteResolvePlugin` from `rolldown/experimental`) does NOT dynamically read
+ * the `kind` field from the hook options to pick `"require"` vs `"import"`.
+ * Its `isRequire` flag is a static value set at plugin-construction time, so
+ * passing `kind: "require-call"` on the `pluginContainer.resolveId()` call is
+ * not sufficient. As a result, `require()` calls can still resolve to the
+ * `"import"` export condition entry (e.g. `pg-protocol/esm/index.js`) instead
+ * of `"require"`/`"default"` (e.g. `pg-protocol/dist/index.js`), causing
+ * workerd to choke on `import` statements inside a `commonJsModule`.
+ *
+ * This function detects the mismatch and redirects to the CJS alternative.
+ *
+ * See: https://github.com/cloudflare/workers-sdk/issues/12984
+ *      https://github.com/cloudflare/workers-sdk/issues/13037
+ */
+export function findCjsAlternative(resolvedPath: string): string | undefined {
+	// Strip any query suffix (e.g. ?mf_vitest_no_cjs_esm_shim, ?v=hash)
+	const cleanPath = resolvedPath.replace(/\?.*$/, "");
+
+	// Only .js, .mjs, and .cjs files can be module entry points.
+	// Bail out early for non-JS extensions (wasm, json, etc.) to avoid
+	// unnecessary filesystem walks.
+	if (!/\.[mc]?js$/.test(cleanPath)) {
+		return undefined;
+	}
+
+	// Walk up looking for the package.json that owns this file
+	let dir = posixPath.dirname(cleanPath);
+	while (dir !== posixPath.dirname(dir)) {
+		const pkgJsonPath = posixPath.join(dir, "package.json");
+		let pkg: Record<string, unknown>;
+		try {
+			pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8")) as Record<
+				string,
+				unknown
+			>;
+		} catch (e) {
+			if (!isFileNotFoundError(e)) {
+				throw e;
+			}
+			dir = posixPath.dirname(dir);
+			continue;
+		}
+
+		if (pkg.exports && typeof pkg.exports === "object") {
+			// Build a relative path from the package root to the resolved file
+			// e.g. "./esm/index.js" or "./esm/index.mjs"
+			const relPath =
+				"./" + posixPath.relative(dir, cleanPath).replaceAll("\\", "/");
+
+			const cjsEntry = findCjsEntryInExports(
+				pkg.exports as Record<string, unknown>,
+				relPath
+			);
+			if (cjsEntry) {
+				const cjsAbsPath = posixPath.join(dir, cjsEntry);
+				if (isFile(cjsAbsPath)) {
+					return cjsAbsPath;
+				}
+			}
+		}
+
+		// Stop at package boundary — don't cross into a parent package
+		if (pkg.name) {
+			break;
+		}
+		dir = posixPath.dirname(dir);
+	}
+
+	return undefined;
+}
+
+/**
+ * Given a package `exports` map and the relative path of a file that was
+ * resolved via the `"import"` condition, find the `"require"` or `"default"`
+ * entry that points to a different (CJS) file.
+ *
+ * Handles:
+ * - Sugar conditional exports (`{ "import": "...", "require": "..." }`)
+ * - Subpath maps (`{ ".": { "import": "...", "require": "..." } }`)
+ */
+export function findCjsEntryInExports(
+	exports: Record<string, unknown>,
+	esmRelPath: string
+): string | undefined {
+	// Handle sugar conditional exports (no subpath keys like ".")
+	// e.g. { "import": "./esm/index.js", "require": "./cjs/index.js" }
+	const directResult = findCjsEntryInConditions(exports, esmRelPath);
+	if (directResult !== undefined) {
+		return directResult;
+	}
+
+	// Handle subpath exports maps
+	// e.g. { ".": { "import": "...", "require": "..." } }
+	for (const value of Object.values(exports)) {
+		if (typeof value !== "object" || value === null) {
+			continue;
+		}
+		const result = findCjsEntryInConditions(
+			value as Record<string, unknown>,
+			esmRelPath
+		);
+		if (result !== undefined) {
+			return result;
+		}
+	}
+	return undefined;
+}
+
+/**
+ * Collect all terminal string values from a (potentially nested) conditions
+ * object. Used to check whether a resolved path appears anywhere inside a
+ * nested `"import"` condition (e.g. `{ "types": "...", "default": "./esm/index.mjs" }`).
+ */
+function collectTerminalStrings(obj: Record<string, unknown>): string[] {
+	const result: string[] = [];
+	for (const value of Object.values(obj)) {
+		if (typeof value === "string") {
+			result.push(value);
+		} else if (typeof value === "object" && value !== null) {
+			result.push(...collectTerminalStrings(value as Record<string, unknown>));
+		}
+	}
+	return result;
+}
+
+/**
+ * Given a single conditions object from a package exports map and the relative
+ * path of the file that was resolved via `"import"`, return the path from the
+ * `"require"` or `"default"` condition if it points to a different file.
+ *
+ * Handles:
+ * - Flat `"import"` strings: `{ "import": "./esm/index.js", "require": "..." }`
+ * - Nested `"import"` objects: `{ "import": { "types": "...", "default": "./esm/index.mjs" }, "require": "..." }`
+ *   (common in TypeScript packages)
+ *
+ * Recurses into other nested condition objects (e.g. `"node"`, `"browser"`).
+ */
+export function findCjsEntryInConditions(
+	conditions: Record<string, unknown>,
+	esmRelPath: string
+): string | undefined {
+	const importEntry = conditions["import"];
+	const requireEntry = conditions["require"] ?? conditions["default"];
+
+	if (typeof requireEntry === "string" && requireEntry !== esmRelPath) {
+		// Case 1: "import" is a plain string that matches the resolved path
+		if (typeof importEntry === "string" && importEntry === esmRelPath) {
+			return requireEntry;
+		}
+
+		// Case 2: "import" is a nested conditions object (common in TypeScript
+		// packages, e.g. { "types": "...", "default": "./esm/index.mjs" }).
+		// Check whether any terminal string inside it matches esmRelPath.
+		if (typeof importEntry === "object" && importEntry !== null) {
+			const importPaths = collectTerminalStrings(
+				importEntry as Record<string, unknown>
+			);
+			if (importPaths.includes(esmRelPath)) {
+				return requireEntry;
+			}
+		}
+	}
+
+	// Recurse into nested condition objects (skip terminal string conditions
+	// and "import"/"require"/"default" which we already handled above)
+	for (const [key, value] of Object.entries(conditions)) {
+		if (key === "import" || key === "require" || key === "default") {
+			continue;
+		}
+		if (typeof value === "object" && value !== null) {
+			const result = findCjsEntryInConditions(
+				value as Record<string, unknown>,
+				esmRelPath
+			);
+			if (result !== undefined) {
+				return result;
+			}
+		}
+	}
+
+	return undefined;
+}
+
 type ResolveMethod = "import" | "require";
 async function resolve(
 	vite: Vite.ViteDevServer,
@@ -338,7 +549,28 @@ async function resolve(
 		return filePath;
 	}
 
-	return viteResolve(vite, specifier, referrer, method === "require");
+	const resolved = await viteResolve(
+		vite,
+		specifier,
+		referrer,
+		method === "require"
+	);
+
+	// In Vite 8, the main `vite:resolve-builtin` plugin does not read the
+	// `kind` field from hook options to pick `"require"` vs `"import"` export
+	// conditions. Its `isRequire` is fixed at construction time, so `require()`
+	// calls can still resolve to the `"import"` condition (e.g. an ESM wrapper
+	// file). Detect and redirect to the CJS alternative.
+	// See: https://github.com/cloudflare/workers-sdk/issues/12984
+	//      https://github.com/cloudflare/workers-sdk/issues/13037
+	if (method === "require" && !specifier.startsWith("node:")) {
+		const cjsAlt = findCjsAlternative(resolved);
+		if (cjsAlt !== undefined) {
+			return cjsAlt;
+		}
+	}
+
+	return resolved;
 }
 
 function buildRedirectResponse(filePath: string) {
