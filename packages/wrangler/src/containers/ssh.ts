@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { showCursor } from "@cloudflare/cli";
-import { bold } from "@cloudflare/cli/colors";
+import { showCursor } from "@cloudflare/cli-shared-helpers";
+import { bold } from "@cloudflare/cli-shared-helpers/colors";
 import { ApiError, DeploymentsService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { WebSocket } from "ws";

@@ -1,4 +1,4 @@
-import { logRaw, shapes, space } from "@cloudflare/cli";
+import { logRaw, shapes, space } from "@cloudflare/cli-shared-helpers";
 import {
 	bgCyan,
 	bgRed,
@@ -8,8 +8,11 @@ import {
 	green,
 	white,
 	yellow,
-} from "@cloudflare/cli/colors";
-import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+} from "@cloudflare/cli-shared-helpers/colors";
+import {
+	inputPrompt,
+	spinner,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	DeploymentsService,
 	PlacementsService,

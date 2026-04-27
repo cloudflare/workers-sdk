@@ -20,16 +20,12 @@ import {
 } from "node:fs";
 import { arch } from "node:os";
 import { dirname, join } from "node:path";
-import {
-	getCloudflaredPathFromEnv,
-	getGlobalWranglerConfigPath,
-	removeDirSync,
-	UserError,
-} from "@cloudflare/workers-utils";
 import { sync as commandExistsSync } from "command-exists";
 import { fetch } from "undici";
-import { confirm } from "../dialogs";
-import { logger } from "../logger";
+import { getCloudflaredPathFromEnv } from "./environment-variables/misc-variables";
+import { UserError } from "./errors";
+import { removeDirSync } from "./fs-helpers";
+import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import type { ChildProcess } from "node:child_process";
 
 /**
@@ -53,6 +49,14 @@ interface VersionResponse {
 	userMessage: string;
 	error: string;
 }
+
+export interface Logger {
+	log: typeof console.log;
+	warn: typeof console.warn;
+	debug: typeof console.debug;
+}
+
+const CLOUDFLARED_VERSION_PATTERN = /^\d{4}\.\d+\.\d+$/;
 
 function sha256Hex(buffer: Buffer): string {
 	return createHash("sha256").update(buffer).digest("hex");
@@ -127,13 +131,15 @@ export function getAssetFilename(goOS: string, goArch: string): string {
  */
 async function queryUpdateService(
 	goOS: string,
-	goArch: string
+	goArch: string,
+	options?: { logger?: Logger }
 ): Promise<VersionResponse | null> {
+	const { logger } = options ?? {};
 	const url = new URL(UPDATE_SERVICE_URL);
 	url.searchParams.set("os", goOS);
 	url.searchParams.set("arch", goArch);
 
-	logger.debug(`Checking for latest cloudflared: ${url.toString()}`);
+	logger?.debug(`Checking for latest cloudflared: ${url.toString()}`);
 
 	let response: Response;
 	try {
@@ -141,14 +147,14 @@ async function queryUpdateService(
 			headers: { "User-Agent": "wrangler" },
 		});
 	} catch (e) {
-		logger.debug(
+		logger?.debug(
 			`Failed to reach update service: ${e instanceof Error ? e.message : String(e)}`
 		);
 		return null;
 	}
 
 	if (!response.ok) {
-		logger.debug(
+		logger?.debug(
 			`Update service returned ${response.status} for ${goOS}/${goArch}`
 		);
 		return null;
@@ -158,10 +164,19 @@ async function queryUpdateService(
 	try {
 		data = (await response.json()) as VersionResponse;
 	} catch (e) {
-		logger.debug(
+		logger?.debug(
 			`Update service returned non-JSON response: ${e instanceof Error ? e.message : String(e)}`
 		);
 		return null;
+	}
+
+	if (
+		typeof data.version === "string" &&
+		!CLOUDFLARED_VERSION_PATTERN.test(data.version)
+	) {
+		throw new Error(
+			`[cloudflared] Invalid cloudflared version returned by update service: ${data.version}`
+		);
 	}
 
 	// The update worker may return a response with only a version but no download URL
@@ -183,23 +198,26 @@ async function queryUpdateService(
  * combination (linux/amd64) to discover the latest version, then construct
  * the GitHub release URL directly.
  */
-async function getLatestVersionInfo(): Promise<VersionResponse> {
+async function getLatestVersionInfo(options?: {
+	logger?: Logger;
+}): Promise<VersionResponse> {
+	const { logger } = options ?? {};
 	const goOS = getGoOS();
 	const goArch = getGoArch();
 
 	// Try the update worker for our exact platform first
-	const primary = await queryUpdateService(goOS, goArch);
+	const primary = await queryUpdateService(goOS, goArch, { logger });
 	if (primary && primary.url && primary.version) {
 		return primary;
 	}
 
 	// Fallback: query a known-working combination to get the latest version,
 	// then construct the GitHub download URL for our actual platform.
-	logger.debug(
+	logger?.debug(
 		`Update worker had no result for ${goOS}/${goArch}, falling back to GitHub release URL`
 	);
 
-	const fallback = await queryUpdateService("linux", "amd64");
+	const fallback = await queryUpdateService("linux", "amd64", { logger });
 	if (!fallback?.version) {
 		throw new UserError(
 			`[cloudflared] Failed to determine the latest cloudflared version.\n\n` +
@@ -258,14 +276,15 @@ function isBinaryExecutable(binPath: string): boolean {
 /**
  * Validate that a binary works correctly by running --version.
  */
-function validateBinary(binPath: string): void {
+function validateBinary(binPath: string, options?: { logger?: Logger }): void {
+	const { logger } = options ?? {};
 	try {
 		const output = execFileSync(binPath, ["--version"], {
 			stdio: ["pipe", "pipe", "pipe"],
 			timeout: 10000,
 			encoding: "utf8",
 		}).trim();
-		logger.debug(`cloudflared version: ${output}`);
+		logger?.debug(`cloudflared version: ${output}`);
 	} catch {
 		let errorMessage = `[cloudflared] Failed to validate cloudflared binary at ${binPath}\n\n`;
 		errorMessage += `This usually means:\n`;
@@ -303,15 +322,18 @@ export function redactCloudflaredArgsForLogging(args: string[]): string[] {
 	return redacted;
 }
 
-function tryGetCloudflaredFromPath(): string | null {
+function tryGetCloudflaredFromPath(options?: {
+	logger?: Logger;
+}): string | null {
+	const { logger } = options ?? {};
 	if (!commandExistsSync("cloudflared")) {
 		return null;
 	}
 	try {
-		validateBinary("cloudflared");
+		validateBinary("cloudflared", { logger });
 		return "cloudflared";
 	} catch (e) {
-		logger.debug("cloudflared found in PATH but failed validation", e);
+		logger?.debug("cloudflared found in PATH but failed validation", e);
 		return null;
 	}
 }
@@ -358,7 +380,11 @@ export function isVersionOutdated(installed: string, latest: string): boolean {
  * version from the update worker. Logs a warning if outdated.
  * This runs asynchronously and never throws — it's purely advisory.
  */
-async function warnIfOutdated(binPath: string): Promise<void> {
+async function warnIfOutdated(
+	binPath: string,
+	options?: { logger?: Logger }
+): Promise<void> {
+	const { logger } = options ?? {};
 	try {
 		const installed = getInstalledVersion(binPath);
 		if (!installed) {
@@ -367,21 +393,21 @@ async function warnIfOutdated(binPath: string): Promise<void> {
 
 		// Try our platform first, fall back to linux/amd64 (always available)
 		const latest =
-			(await queryUpdateService(getGoOS(), getGoArch())) ??
-			(await queryUpdateService("linux", "amd64"));
+			(await queryUpdateService(getGoOS(), getGoArch(), { logger })) ??
+			(await queryUpdateService("linux", "amd64", { logger }));
 		const latestVersion = latest?.version;
 		if (!latestVersion) {
 			return;
 		}
 
 		if (isVersionOutdated(installed, latestVersion)) {
-			logger.warn(
+			logger?.warn(
 				`Your cloudflared (${installed}) is outdated. Latest version is ${latestVersion}.\n` +
 					`Update: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`
 			);
 		}
 	} catch (e) {
-		logger.debug("Failed to check cloudflared version", e);
+		logger?.debug("Failed to check cloudflared version", e);
 	}
 }
 
@@ -410,12 +436,14 @@ function writeFileAtomic(filePath: string, contents: Buffer): void {
  */
 async function downloadCloudflared(
 	versionInfo: VersionResponse,
-	binPath: string
+	binPath: string,
+	options?: { logger?: Logger }
 ): Promise<void> {
+	const { logger } = options ?? {};
 	const { url, version, checksum, compressed } = versionInfo;
 
-	logger.log(`Downloading cloudflared ${version}...`);
-	logger.debug(`Download URL: ${url}`);
+	logger?.log(`Downloading cloudflared ${version}...`);
+	logger?.debug(`Download URL: ${url}`);
 
 	const cacheDir = dirname(binPath);
 	mkdirSync(cacheDir, { recursive: true });
@@ -475,8 +503,8 @@ async function downloadCloudflared(
 		chmodSync(binPath, 0o755);
 	}
 
-	logger.log(`cloudflared ${version} installed`);
-	logger.debug(`Binary location: ${binPath}`);
+	logger?.log(`cloudflared ${version} installed`);
+	logger?.debug(`Binary location: ${binPath}`);
 }
 
 /**
@@ -554,7 +582,12 @@ async function downloadBinary(
  * 3. Cached binary in ~/.wrangler/cloudflared/{version}/
  * 4. Download latest from Cloudflare update worker
  */
-export async function getCloudflaredPath(): Promise<string> {
+export async function getCloudflaredPath(options?: {
+	skipVersionCheck?: boolean;
+	confirmDownload?: (message: string) => Promise<boolean>;
+	logger?: Logger;
+}): Promise<string> {
+	const logger = options?.logger;
 	// Check for environment variable override first
 	const envPath = getCloudflaredPathFromEnv();
 	if (envPath) {
@@ -564,7 +597,7 @@ export async function getCloudflaredPath(): Promise<string> {
 					`Please ensure the path points to a valid cloudflared binary.`
 			);
 		}
-		logger.debug(`Using cloudflared from CLOUDFLARED_PATH: ${envPath}`);
+		logger?.debug(`Using cloudflared from CLOUDFLARED_PATH: ${envPath}`);
 		// Skip validation — the user explicitly set the path, so trust it.
 		// This also avoids issues on platforms where the binary format
 		// differs (e.g. shell scripts won't pass --version on Windows).
@@ -572,37 +605,39 @@ export async function getCloudflaredPath(): Promise<string> {
 	}
 
 	// Next, prefer a user-installed cloudflared in PATH.
-	const pathBin = tryGetCloudflaredFromPath();
+	const pathBin = tryGetCloudflaredFromPath({ logger });
 	if (pathBin) {
-		logger.debug("Using cloudflared from PATH");
-		await warnIfOutdated(pathBin);
+		logger?.debug("Using cloudflared from PATH");
+		if (!options?.skipVersionCheck) {
+			await warnIfOutdated(pathBin, { logger });
+		}
 		return pathBin;
 	}
 
 	// Query the update worker for the latest version
-	const versionInfo = await getLatestVersionInfo();
+	const versionInfo = await getLatestVersionInfo({ logger });
 	const binPath = getCloudflaredBinPath(versionInfo.version);
 
 	// Check if this version is already cached and valid
 	let needsDownload = !isBinaryExecutable(binPath);
 	if (!needsDownload) {
 		try {
-			validateBinary(binPath);
-			logger.debug(
+			validateBinary(binPath, { logger });
+			logger?.debug(
 				`Using cached cloudflared ${versionInfo.version}: ${binPath}`
 			);
 			return binPath;
 		} catch (e) {
-			logger.debug("Cached cloudflared failed validation; re-downloading", e);
+			logger?.debug("Cached cloudflared failed validation; re-downloading", e);
 			needsDownload = true;
 		}
 	}
 
 	// Prompt user before downloading
-	const shouldDownload = await confirm(
-		`cloudflared (${versionInfo.version}) is needed but not installed. Download to ${binPath}?`,
-		{ defaultValue: true, fallbackValue: true }
-	);
+	const shouldDownload =
+		(await options?.confirmDownload?.(
+			`cloudflared (${versionInfo.version}) is needed but not installed. Download to ${binPath}?`
+		)) ?? true;
 	if (!shouldDownload) {
 		throw new UserError(
 			`cloudflared is required to run this command.\n\n` +
@@ -614,14 +649,17 @@ export async function getCloudflaredPath(): Promise<string> {
 
 	// Remove corrupted cache only after user has confirmed re-download
 	if (existsSync(binPath)) {
-		removeCloudflaredCache(versionInfo.version);
+		const cacheDir = removeCloudflaredCache(versionInfo.version);
+		if (cacheDir) {
+			logger?.log(`Removed cloudflared cache: ${cacheDir}`);
+		}
 	}
 
 	// Download cloudflared
-	await downloadCloudflared(versionInfo, binPath);
+	await downloadCloudflared(versionInfo, binPath, { logger });
 
 	// Validate the downloaded binary
-	validateBinary(binPath);
+	validateBinary(binPath, { logger });
 
 	return binPath;
 }
@@ -631,11 +669,22 @@ export async function getCloudflaredPath(): Promise<string> {
  */
 export async function spawnCloudflared(
 	args: string[],
-	options?: { stdio?: "inherit" | "pipe"; env?: Record<string, string> }
+	options?: {
+		stdio?: "inherit" | "pipe";
+		env?: Record<string, string>;
+		skipVersionCheck?: boolean;
+		confirmDownload?: (message: string) => Promise<boolean>;
+		logger?: Logger;
+	}
 ): Promise<ChildProcess> {
-	const binPath = await getCloudflaredPath();
+	const logger = options?.logger;
+	const binPath = await getCloudflaredPath({
+		skipVersionCheck: options?.skipVersionCheck,
+		confirmDownload: options?.confirmDownload,
+		logger,
+	});
 
-	logger.debug(
+	logger?.debug(
 		`Spawning cloudflared: ${binPath} ${redactCloudflaredArgsForLogging(args).join(" ")}`
 	);
 
@@ -650,12 +699,14 @@ export async function spawnCloudflared(
 /**
  * Remove cached cloudflared binary for a specific version, or all versions.
  */
-export function removeCloudflaredCache(version?: string): void {
+export function removeCloudflaredCache(version?: string): string | null {
 	const cacheDir = version
 		? getCacheDir(version)
 		: join(getGlobalWranglerConfigPath(), "cloudflared");
 	if (existsSync(cacheDir)) {
 		removeDirSync(cacheDir);
-		logger.log(`Removed cloudflared cache: ${cacheDir}`);
+		return cacheDir;
 	}
+
+	return null;
 }

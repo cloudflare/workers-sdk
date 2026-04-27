@@ -1,4 +1,4 @@
-import { spinner } from "@cloudflare/cli/interactive";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { APIError, parseJSON, UserError } from "@cloudflare/workers-utils";
 import prettyBytes from "pretty-bytes";
 import { fetch } from "undici";

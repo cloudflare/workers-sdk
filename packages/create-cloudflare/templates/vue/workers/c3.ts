@@ -1,6 +1,9 @@
-import { logRaw } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import {
+	inputPrompt,
+	spinner,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { readJSON, usesTypescript, writeJSON } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";

@@ -70,6 +70,9 @@ function convertWorkerToWranglerConfig(config: APIWorkerConfig): RawConfig {
 			pattern: c.hostname as string,
 			zone_name: c.zone_name,
 			custom_domain: true,
+			enabled: (c as typeof c & { enabled: boolean }).enabled,
+			previews_enabled: (c as typeof c & { previews_enabled: boolean })
+				.previews_enabled,
 		})),
 	];
 

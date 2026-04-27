@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from "node:fs";
 import nodePath from "node:path";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { runCommand } from "@cloudflare/cli/command";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import semver from "semver";
 import whichPmRuns from "which-pm-runs";
 import {

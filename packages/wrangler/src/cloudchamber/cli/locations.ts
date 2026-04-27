@@ -1,5 +1,5 @@
-import { processArgument } from "@cloudflare/cli/args";
-import { inputPrompt } from "@cloudflare/cli/interactive";
+import { processArgument } from "@cloudflare/cli-shared-helpers/args";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { getLocations } from "../locations";
 import type { Location, LocationID } from "@cloudflare/containers-shared";
 

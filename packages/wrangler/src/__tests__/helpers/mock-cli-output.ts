@@ -1,5 +1,5 @@
 import * as util from "node:util";
-import * as streams from "@cloudflare/cli/streams";
+import * as streams from "@cloudflare/cli-shared-helpers/streams";
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, vi } from "vitest";
 import type { MockInstance } from "vitest";

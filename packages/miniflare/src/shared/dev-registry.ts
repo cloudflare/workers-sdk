@@ -56,7 +56,17 @@ export class DevRegistry {
 		mkdirSync(this.registryPath, { recursive: true });
 
 		if (!this.watcher) {
-			this.watcher = watch(this.registryPath).on("all", () => {
+			this.watcher = watch(this.registryPath, {
+				// On Windows, chokidar's default `fs.watch` backend
+				// (`ReadDirectoryChangesW`) frequently drops or delays create
+				// events for files added shortly after the watcher attaches —
+				// especially under CI virtualization. Fall back to polling on
+				// Windows so cross-process worker registrations are observed
+				// reliably. The registry directory is small, so the cost is
+				// negligible.
+				usePolling: process.platform === "win32",
+				interval: 100,
+			}).on("all", () => {
 				this.refresh();
 			});
 		}

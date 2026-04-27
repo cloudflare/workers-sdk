@@ -6,8 +6,9 @@ import {
 	getAssetFilename,
 	getCloudflaredBinPath,
 	isVersionOutdated,
-} from "../../tunnel/cloudflared";
-import { runInTempDir } from "../helpers/run-in-tmp";
+	redactCloudflaredArgsForLogging,
+} from "../src/cloudflared";
+import { runInTempDir } from "../src/test-helpers";
 
 describe("cloudflared binary management", () => {
 	runInTempDir();
@@ -103,7 +104,7 @@ describe("environment variable override", () => {
 		vi.stubEnv("CLOUDFLARED_PATH", tempBin);
 
 		// Import fresh to pick up env change
-		const { getCloudflaredPath } = await import("../../tunnel/cloudflared");
+		const { getCloudflaredPath } = await import("../src/cloudflared");
 
 		// This should return the env var path without downloading
 		const binPath = await getCloudflaredPath();
@@ -116,8 +117,27 @@ describe("environment variable override", () => {
 		vi.stubEnv("CLOUDFLARED_PATH", "/nonexistent/path/to/cloudflared");
 
 		// Import fresh to pick up env change
-		const { getCloudflaredPath } = await import("../../tunnel/cloudflared");
+		const { getCloudflaredPath } = await import("../src/cloudflared");
 
 		await expect(getCloudflaredPath()).rejects.toThrow("CLOUDFLARED_PATH");
+	});
+});
+
+describe("cloudflared arg redaction", () => {
+	it("redacts --token and other sensitive values", ({ expect }) => {
+		const args = ["tunnel", "run", "--token", "SECRET_TOKEN"];
+
+		expect(redactCloudflaredArgsForLogging(args)).toEqual([
+			"tunnel",
+			"run",
+			"--token",
+			"[REDACTED]",
+		]);
+	});
+
+	it("redacts --token=... style", ({ expect }) => {
+		expect(redactCloudflaredArgsForLogging(["--token=SECRET"])).toEqual([
+			"--token=[REDACTED]",
+		]);
 	});
 });

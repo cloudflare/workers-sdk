@@ -1,4 +1,4 @@
-import * as cliPackages from "@cloudflare/cli/packages";
+import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../../../autoconfig/frameworks/utils/packages";
 import { installCloudflareVitePlugin } from "../../../../autoconfig/frameworks/utils/vite-plugin";

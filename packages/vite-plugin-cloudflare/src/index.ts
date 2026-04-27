@@ -1,9 +1,8 @@
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { assertWranglerVersion } from "./assert-wrangler-version";
+import { DEFAULT_COMPAT_DATE } from "./build-constants";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
-import { cdnCgiPlugin } from "./plugins/cdn-cgi";
 import { configPlugin } from "./plugins/config";
 import { debugPlugin } from "./plugins/debug";
 import { devPlugin } from "./plugins/dev";
@@ -16,6 +15,7 @@ import { outputConfigPlugin } from "./plugins/output-config";
 import { previewPlugin } from "./plugins/preview";
 import { rscPlugin } from "./plugins/rsc";
 import { shortcutsPlugin } from "./plugins/shortcuts";
+import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
 import {
 	virtualClientFallbackPlugin,
 	virtualModulesPlugin,
@@ -42,7 +42,7 @@ import type * as vite from "vite";
 export function getLocalWorkerdCompatibilityDate(_options?: {
 	projectPath?: string;
 }): { date: CompatDate; source: "workerd" | "fallback" } {
-	return { date: getTodaysCompatDate(), source: "workerd" };
+	return { date: DEFAULT_COMPAT_DATE, source: "workerd" };
 }
 
 export type { PluginConfig } from "./plugin-config";
@@ -99,7 +99,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		previewPlugin(ctx),
 		shortcutsPlugin(ctx),
 		debugPlugin(ctx),
-		cdnCgiPlugin(ctx),
+		triggerHandlersPlugin(ctx),
 		virtualModulesPlugin(ctx),
 		virtualClientFallbackPlugin(ctx),
 		outputConfigPlugin(ctx),

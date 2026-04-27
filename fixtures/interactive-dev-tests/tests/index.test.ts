@@ -394,7 +394,9 @@ if (process.platform === "win32") {
 
 				// wait container to be ready
 				await vi.waitFor(async () => {
-					const status = await fetch(wrangler.url + "/status");
+					const status = await fetch(wrangler.url + "/status", {
+						signal: AbortSignal.timeout(500),
+					});
 					expect(await status.json()).toBe(true);
 				}, WAITFOR_OPTIONS);
 
@@ -442,16 +444,37 @@ if (process.platform === "win32") {
 					"utf-8"
 				);
 
+				// Clear the captured stdout so we can match on log output
+				// produced AFTER the rebuild hotkey is pressed.
+				wrangler.stdout = "";
 				wrangler.pty.write("r");
 
+				// Wait for the rebuild and workerd reload to actually
+				// finish before asserting on `/status`. Without this,
+				// the old workerd (which still reports the container as
+				// running even after `docker rm`) can satisfy /status
+				// requests during the rebuild window, and requests can
+				// hang while miniflare is reloading — both cause flakes
+				// on slow CI.
+				await vi.waitFor(
+					() => {
+						expect(wrangler.stdout).toMatch(/Local server updated and ready/);
+					},
+					{ timeout: 30_000, interval: 500 }
+				);
+
 				await vi.waitFor(async () => {
-					const status = await fetch(wrangler.url + "/status");
+					const status = await fetch(wrangler.url + "/status", {
+						signal: AbortSignal.timeout(500),
+					});
 					expect(await status.json()).toBe(false);
 				}, WAITFOR_OPTIONS);
 
 				await fetch(wrangler.url + "/start");
 				await vi.waitFor(async () => {
-					const status = await fetch(wrangler.url + "/status");
+					const status = await fetch(wrangler.url + "/status", {
+						signal: AbortSignal.timeout(500),
+					});
 					expect(await status.json()).toBe(true);
 				}, WAITFOR_OPTIONS);
 				await vi.waitFor(async () => {

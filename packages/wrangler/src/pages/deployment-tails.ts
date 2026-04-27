@@ -18,6 +18,7 @@ import {
 } from "../tail/createTail";
 import { translateCLICommandToFilterMessage } from "../tail/filters";
 import { requireAuth } from "../user";
+import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import { isUrl } from "./utils";
@@ -144,7 +145,8 @@ export const pagesDeploymentTailCommand = createCommand({
 		const pagesConfig = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(pagesConfig);
+		const accountId =
+			getCloudflareAccountIdFromEnv() ?? (await requireAuth(pagesConfig));
 		let deploymentId = deployment;
 
 		if (!isInteractive()) {

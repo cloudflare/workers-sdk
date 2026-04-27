@@ -1,5 +1,5 @@
-import { dim, green, red } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import { dim, green, red } from "@cloudflare/cli-shared-helpers/colors";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
 import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";

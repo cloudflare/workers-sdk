@@ -1,5 +1,5 @@
-import { updateStatus } from "@cloudflare/cli";
-import { blue } from "@cloudflare/cli/colors";
+import { updateStatus } from "@cloudflare/cli-shared-helpers";
+import { blue } from "@cloudflare/cli-shared-helpers/colors";
 import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
 import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import * as recast from "recast";

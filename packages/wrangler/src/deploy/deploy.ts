@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
-import { cancel } from "@cloudflare/cli";
+import { cancel } from "@cloudflare/cli-shared-helpers";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,
@@ -152,6 +152,8 @@ export type CustomDomain = {
 	hostname: string;
 	service: string;
 	environment: string;
+	enabled: boolean;
+	previews_enabled: boolean;
 };
 type UpdatedCustomDomain = CustomDomain & { modified: boolean };
 type ConflictingCustomDomain = CustomDomain & {
@@ -248,6 +250,21 @@ export function renderRoute(route: Route): string {
 		} else if ("zone_name" in route) {
 			result += ` (zone name: ${route.zone_name})`;
 		}
+
+		if (isCustomDomain) {
+			const flags: string[] = [];
+			if ("enabled" in route && route.enabled !== undefined) {
+				flags.push(route.enabled ? "enabled" : "disabled");
+			}
+			if ("previews_enabled" in route && route.previews_enabled !== undefined) {
+				flags.push(
+					route.previews_enabled ? "previews: enabled" : "previews: disabled"
+				);
+			}
+			if (flags.length > 0) {
+				result += ` [${flags.join(", ")}]`;
+			}
+		}
 	}
 	return result;
 }
@@ -286,6 +303,11 @@ export async function publishCustomDomains(
 			hostname: domainRoute.pattern,
 			zone_id: "zone_id" in domainRoute ? domainRoute.zone_id : undefined,
 			zone_name: "zone_name" in domainRoute ? domainRoute.zone_name : undefined,
+			enabled: "enabled" in domainRoute ? domainRoute.enabled : undefined,
+			previews_enabled:
+				"previews_enabled" in domainRoute
+					? domainRoute.previews_enabled
+					: undefined,
 		};
 	});
 

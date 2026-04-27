@@ -1,6 +1,6 @@
 import { setTimeout } from "node:timers/promises";
-import { blue, brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import dns2 from "dns2";
 import { request } from "undici";
 import type { DnsAnswer, DnsResponse } from "dns2";

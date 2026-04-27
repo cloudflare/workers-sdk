@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.14.1
+
+### Patch Changes
+
+- [#13611](https://github.com/cloudflare/workers-sdk/pull/13611) [`6e99feb`](https://github.com/cloudflare/workers-sdk/commit/6e99feb9c8a883cc41caa6fadca8a283fc302d97) Thanks [@smaldd14](https://github.com/smaldd14)! - Support Cloudflare-managed registry images in Vite plugin local dev
+
+  Previously, using a `registry.cloudflare.com` image in a `containers` binding would crash `vite dev` with an unsupported error. The Vite plugin now configures the Cloudflare API client using `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` before pulling container images, matching the behavior of `wrangler dev`.
+
 ## 0.14.0
 
 ### Minor Changes

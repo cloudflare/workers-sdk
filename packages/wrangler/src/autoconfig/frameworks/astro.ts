@@ -4,10 +4,10 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { updateStatus } from "@cloudflare/cli";
-import { blue, brandColor, dim } from "@cloudflare/cli/colors";
-import { runCommand } from "@cloudflare/cli/command";
-import { installPackages } from "@cloudflare/cli/packages";
+import { updateStatus } from "@cloudflare/cli-shared-helpers";
+import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
 import { parseJSONC } from "@cloudflare/workers-utils";
 import * as recast from "recast";

@@ -1,5 +1,5 @@
-import { logRaw } from "@cloudflare/cli";
-import { white } from "@cloudflare/cli/colors";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
+import { white } from "@cloudflare/cli-shared-helpers/colors";
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { requireAuth } from "../../user";

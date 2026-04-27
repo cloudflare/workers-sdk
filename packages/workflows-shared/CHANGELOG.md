@@ -1,5 +1,11 @@
 # @cloudflare/workflows-shared
 
+## 0.9.1
+
+### Patch Changes
+
+- [#13560](https://github.com/cloudflare/workers-sdk/pull/13560) [`7567ef7`](https://github.com/cloudflare/workers-sdk/commit/7567ef703f1bf157ef29e6d19dd0dd9f1ff8771f) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Preserve NonRetryableError message and name when the `workflows_preserve_non_retryable_error_message` compatibility flag is enabled, instead of replacing it with a generic error message.
+
 ## 0.9.0
 
 ### Minor Changes

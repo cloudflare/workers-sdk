@@ -1,8 +1,8 @@
 import assert from "node:assert";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { installPackages } from "@cloudflare/cli/packages";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { transformFile } from "@cloudflare/codemod";
 import * as recast from "recast";
 import semiver from "semiver";

@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, relative, resolve } from "node:path";
-import { brandColor } from "@cloudflare/cli/colors";
+import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	FatalError,
 	getCIOverrideName,

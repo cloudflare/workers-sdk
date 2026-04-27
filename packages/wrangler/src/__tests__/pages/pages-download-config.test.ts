@@ -3,7 +3,9 @@ import { readFile } from "node:fs/promises";
 import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterAll, beforeEach, describe, it } from "vitest";
+import { afterAll, beforeEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../../config-cache";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -11,6 +13,7 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { PagesConfigCache } from "../../pages/types";
 import type { ExpectStatic } from "vitest";
 
 async function readNormalizedWranglerToml() {
@@ -837,6 +840,48 @@ describe("pages download config", () => {
 			"
 		`);
 	});
+	it("should prefer CLOUDFLARE_ACCOUNT_ID over cached account id", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-var-account-id");
+
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "stale-cached-account-id",
+			project_name: MOCK_PROJECT_NAME,
+		});
+
+		msw.use(
+			http.get(
+				`*/accounts/:accountId/pages/projects/:projectName`,
+				({ params }) => {
+					expect(params.accountId).toEqual("env-var-account-id");
+					return HttpResponse.json(makePagesProject(), { status: 200 });
+				},
+				{ once: true }
+			),
+			http.get(
+				`*/accounts/:accountId/workers/durable_objects/namespaces/:doId`,
+				({ params }) => {
+					expect(params.accountId).toEqual("env-var-account-id");
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							result: {
+								script: `some-script-${params.doId}`,
+								class: `some-class-${params.doId}`,
+								environment: `some-environment-${params.doId}`,
+							},
+						},
+						{ status: 200 }
+					);
+				}
+			)
+		);
+
+		await runWrangler(`pages download config ${MOCK_PROJECT_NAME}`);
+	});
+
 	it("should fail if not given a project name", async ({ expect }) => {
 		await expect(
 			runWrangler(`pages download config`)

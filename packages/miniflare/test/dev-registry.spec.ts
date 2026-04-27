@@ -350,6 +350,61 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
+	test("service binding props are propagated across instances", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				export class PropsEntrypoint extends WorkerEntrypoint {
+					getProps() { return this.ctx.props; }
+				}
+			`,
+		});
+		useDispose(remote);
+		await remote.ready;
+
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+			serviceBindings: {
+				SERVICE: {
+					name: "remote-worker",
+					entrypoint: "PropsEntrypoint",
+					props: { foo: 123, bar: { baz: "hello from props" } },
+				},
+			},
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				export default {
+					async fetch(request, env) {
+						return Response.json(await env.SERVICE.getProps());
+					}
+				}
+			`,
+		});
+		useDispose(local);
+
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				const json = await res.json();
+				expect(res.status).toBe(200);
+				expect(json).toEqual({
+					foo: 123,
+					bar: { baz: "hello from props" },
+				});
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
 	test("fetch to module worker with node bindings", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
@@ -1134,6 +1189,87 @@ describe.sequential("DevRegistry", () => {
 
 		expect(result2).toEqual(
 			`Worker "remote-worker" not found. Make sure it is running locally.`
+		);
+	});
+
+	test("tail consumer props are propagated across instances", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				let resolve;
+				const captured = new Promise((res) => { resolve = res; });
+				export default {
+					async fetch() {
+						try {
+							const result = await Promise.race([
+								captured,
+								new Promise((_, cancel) =>
+									setTimeout(() => cancel(new Error("no tail event received")), 2000)
+								)
+							]);
+							return Response.json(result);
+						} catch (e) {
+							return new Response(e.message, { status: 500 });
+						}
+					}
+				};
+				export class TailCollector extends WorkerEntrypoint {
+					async tail() {
+						resolve({ props: this.ctx.props ?? null });
+					}
+				}
+			`,
+		});
+		useDispose(remote);
+		await remote.ready;
+
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+			tails: [
+				{
+					name: "remote-worker",
+					entrypoint: "TailCollector",
+					props: { tailKey: "from-tail-binding" },
+				},
+			],
+			handleRuntimeStdio: () => {},
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				export default {
+					async fetch() {
+						console.log("DevReg: trigger tail event");
+						return new Response("ok");
+					}
+				}
+			`,
+		});
+		useDispose(local);
+
+		await vi.waitFor(
+			async () => {
+				// Fire a request that produces a log, which triggers a tail event
+				// targeting the remote worker's TailCollector entrypoint.
+				const trigger = await local.dispatchFetch("http://example.com");
+				expect(await trigger.text()).toBe("ok");
+
+				// Read the captured ctx.props back via the remote's default fetch.
+				const res = await remote.dispatchFetch("http://placeholder");
+				const json = await res.json();
+				expect(res.status).toBe(200);
+				expect(json).toEqual({
+					props: { tailKey: "from-tail-binding" },
+				});
+			},
+			{ timeout: 10_000, interval: 100 }
 		);
 	});
 

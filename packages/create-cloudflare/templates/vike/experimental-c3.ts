@@ -1,4 +1,4 @@
-import { logRaw } from "@cloudflare/cli";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { runFrameworkGenerator } from "frameworks/index";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";

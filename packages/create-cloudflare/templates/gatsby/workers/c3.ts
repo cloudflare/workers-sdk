@@ -1,4 +1,4 @@
-import { inputPrompt } from "@cloudflare/cli/interactive";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../../src/templates";
