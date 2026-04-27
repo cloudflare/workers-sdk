@@ -286,6 +286,92 @@ describe("User", () => {
 			Please use a Cloudflare API token (\`CLOUDFLARE_API_TOKEN\` environment variable) or remove the \`CLOUDFLARE_API_ENVIRONMENT\` environment variable.]
 		`);
 		});
+
+		describe("with --x-websocket-callback (auth relay)", () => {
+			const { mockOAuthRelayCallback } = mockOAuthFlow();
+
+			it("should login a user via the WebSocket auth relay", async ({
+				expect,
+			}) => {
+				mockOAuthRelayCallback("success");
+
+				let counter = 0;
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						async ({ request }) => {
+							counter += 1;
+							const body = await request.text();
+							const params = new URLSearchParams(body);
+							// The redirect_uri sent to the token endpoint must be the
+							// auth relay's callback URL, not localhost.
+							expect(params.get("redirect_uri")).toBe(
+								"https://auth.devprod.cloudflare.dev/callback"
+							);
+							expect(params.get("code")).toBe("test-oauth-code");
+							return HttpResponse.json({
+								access_token: "test-access-token",
+								expires_in: 100000,
+								refresh_token: "test-refresh-token",
+								scope: "account:read",
+							});
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler("login --x-websocket-callback");
+
+				expect(counter).toBe(1);
+				expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+					api_token: undefined,
+					oauth_token: "test-access-token",
+					refresh_token: "test-refresh-token",
+					expiration_time: expect.any(String),
+					scopes: ["account:read"],
+				});
+			});
+
+			it("should error when the user denies consent in the WebSocket flow", async ({
+				expect,
+			}) => {
+				mockOAuthRelayCallback("failure");
+
+				await expect(
+					runWrangler("login --x-websocket-callback")
+				).rejects.toThrow(/Consent denied/);
+			});
+
+			it("should use the auth worker URL as redirect_uri in the auth URL", async ({
+				expect,
+			}) => {
+				mockOAuthRelayCallback("success");
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						() =>
+							HttpResponse.json({
+								access_token: "test-access-token",
+								expires_in: 100000,
+								refresh_token: "test-refresh-token",
+								scope: "account:read",
+							}),
+						{ once: true }
+					)
+				);
+
+				await runWrangler("login --x-websocket-callback");
+
+				// The auth URL printed in the console should contain the auth
+				// worker callback URL as redirect_uri (not localhost).
+				expect(std.out).toContain(
+					encodeURIComponent("https://auth.devprod.cloudflare.dev/callback")
+				);
+				expect(std.out).not.toContain(
+					encodeURIComponent("http://localhost:8976/oauth/callback")
+				);
+			});
+		});
 	});
 
 	it("should handle errors for failed token refresh in a non-interactive environment", async ({

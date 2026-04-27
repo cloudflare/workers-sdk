@@ -1049,15 +1049,21 @@ async function getOauthTokenViaWebSocket(options: {
 
 	const ws = new WebSocket(wsUrl);
 
-	// Wait for connection to open
+	// Wait for connection to open. The `error` event on undici's WebSocket is
+	// an `ErrorEvent`, which has a useful `.message` (and sometimes `.error`).
 	await new Promise<void>((resolve, reject) => {
 		ws.addEventListener("open", () => resolve(), { once: true });
 		ws.addEventListener(
 			"error",
 			(event) => {
+				const detail =
+					(event as { message?: string; error?: { message?: string } })
+						.message ??
+					(event as { error?: { message?: string } }).error?.message ??
+					"connection failed";
 				reject(
 					new UserError(
-						`Failed to connect to auth relay at ${authWorkerUrl}: ${String(event)}`
+						`Failed to connect to auth relay at ${authWorkerUrl}: ${detail}`
 					)
 				);
 			},
@@ -1065,83 +1071,102 @@ async function getOauthTokenViaWebSocket(options: {
 		);
 	});
 
-	// 3. Build auth URL with the auth worker's callback URL as redirect_uri
-	const remoteCallbackUrl = `${authWorkerUrl}/callback`;
-	const authUrl = generateAuthUrl({
-		authUrl: getAuthUrlFromEnv(),
-		clientId: options.clientId,
-		scopes: options.scopes,
-		stateQueryParam,
-		codeChallenge,
-		callbackUrl: remoteCallbackUrl,
-	});
-
-	// 4. Open browser or print URL
-	if (options.browser) {
-		logger.log(`Opening a link in your default browser: ${authUrl}`);
-		await openInBrowser(authUrl);
-	} else {
-		logger.log(`Visit this link to authenticate: ${authUrl}`);
-	}
-
-	// 5. Wait for auth code via WebSocket (with 120s timeout)
-	const result = await Promise.race([
-		new Promise<{ code?: string; error?: string }>((resolve, reject) => {
-			ws.addEventListener(
-				"message",
-				(event) => {
+	// All paths from here must close the WebSocket — wrap in try/finally.
+	try {
+		// 3. Set up the message/close listener BEFORE sending the auth URL to
+		//    the browser. This avoids any chance of missing the message if the
+		//    DO is fast (it shouldn't be, since the user must authorise in the
+		//    browser, but the listener attachment is essentially free).
+		const messagePromise = new Promise<{ code?: string; error?: string }>(
+			(resolve, reject) => {
+				const onMessage = (event: MessageEvent) => {
+					cleanup();
 					try {
-						resolve(
-							JSON.parse(
-								typeof event.data === "string" ? event.data : String(event.data)
-							)
-						);
+						const data =
+							typeof event.data === "string" ? event.data : String(event.data);
+						resolve(JSON.parse(data));
 					} catch {
-						reject(new Error("Invalid message from auth relay"));
+						reject(new UserError("Invalid message from auth relay"));
 					}
-				},
-				{ once: true }
-			);
-			ws.addEventListener(
-				"close",
-				() => {
+				};
+				const onClose = () => {
+					cleanup();
 					reject(
 						new UserError("Auth relay connection closed before login completed")
 					);
-				},
-				{ once: true }
-			);
-		}),
-		new Promise<never>((_resolve, reject) => {
-			setTimeout(() => {
-				ws.close();
+				};
+				const cleanup = () => {
+					ws.removeEventListener("message", onMessage);
+					ws.removeEventListener("close", onClose);
+				};
+				ws.addEventListener("message", onMessage);
+				ws.addEventListener("close", onClose);
+			}
+		);
+
+		// 4. Build auth URL with the auth worker's callback URL as redirect_uri
+		const remoteCallbackUrl = `${authWorkerUrl}/callback`;
+		const authUrl = generateAuthUrl({
+			authUrl: getAuthUrlFromEnv(),
+			clientId: options.clientId,
+			scopes: options.scopes,
+			stateQueryParam,
+			codeChallenge,
+			callbackUrl: remoteCallbackUrl,
+		});
+
+		// 5. Open browser or print URL
+		if (options.browser) {
+			logger.log(`Opening a link in your default browser: ${authUrl}`);
+			await openInBrowser(authUrl);
+		} else {
+			logger.log(`Visit this link to authenticate: ${authUrl}`);
+		}
+
+		// 6. Wait for auth code via WebSocket (with 120s timeout). We capture
+		//    the timer handle so we can clear it when the message arrives,
+		//    avoiding a stray `ws.close()` 120s later.
+		let loginTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
+		const timeoutPromise = new Promise<never>((_resolve, reject) => {
+			loginTimeoutHandle = setTimeout(() => {
 				reject(
 					new UserError(
 						"Timed out waiting for authorization code, please try again."
 					)
 				);
 			}, 120_000);
-		}),
-	]);
+		});
 
-	ws.close();
+		let result: { code?: string; error?: string };
+		try {
+			result = await Promise.race([messagePromise, timeoutPromise]);
+		} finally {
+			if (loginTimeoutHandle !== undefined) {
+				clearTimeout(loginTimeoutHandle);
+			}
+		}
 
-	// 6. Handle error (user denied consent)
-	if (result.error) {
-		throw new UserError(options.denied.error);
+		// 7. Handle error (user denied consent)
+		if (result.error) {
+			throw new UserError(options.denied.error);
+		}
+
+		if (!result.code) {
+			throw new UserError("No authorization code received from auth relay");
+		}
+
+		// 8. Exchange code for token. NOTE: this also writes the resulting
+		//    tokens to the module-level `localState` (same as the localhost
+		//    flow), which is what the rest of the auth code expects.
+		return await exchangeAuthCodeForAccessToken({
+			code: result.code,
+			redirectUri: remoteCallbackUrl,
+			clientId: options.clientId,
+			codeVerifier,
+		});
+	} finally {
+		ws.close();
 	}
-
-	if (!result.code) {
-		throw new UserError("No authorization code received from auth relay");
-	}
-
-	// 7. Exchange code for token using the refactored function
-	return exchangeAuthCodeForAccessToken({
-		code: result.code,
-		redirectUri: remoteCallbackUrl,
-		clientId: options.clientId,
-		codeVerifier,
-	});
 }
 
 export async function getOauthToken(options: {

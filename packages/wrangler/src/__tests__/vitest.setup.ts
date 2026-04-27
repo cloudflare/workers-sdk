@@ -3,6 +3,7 @@ import { PassThrough } from "node:stream";
 import chalk from "chalk";
 import { passthrough } from "msw";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
+import { MockWebSocket } from "./helpers/mock-websocket";
 import { msw } from "./helpers/msw";
 
 //turn off chalk for tests due to inconsistencies between operating systems
@@ -106,7 +107,17 @@ vi.mock("undici", async (importOriginal) => {
 		get Response() {
 			return globalThis.Response;
 		},
+		// Stubbed WebSocket so the OAuth WebSocket relay flow can be tested
+		// without a real network connection. Tests drive instances by calling
+		// `triggerOpen` / `triggerMessage` etc. on `MockWebSocket.last`.
+		WebSocket: MockWebSocket,
 	};
+});
+
+// Reset the mock WebSocket instance list between tests so each test sees only
+// the instances created during its own execution.
+beforeEach(() => {
+	MockWebSocket.reset();
 });
 
 vi.mock("../package-manager", async (importOriginal) => {

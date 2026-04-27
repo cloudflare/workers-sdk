@@ -48,11 +48,13 @@ export default {
 				doUrl.searchParams.set("code", code);
 			}
 
-			await stub.fetch(new Request(doUrl));
+			const doResp = await stub.fetch(new Request(doUrl));
 
-			// Redirect the browser to the appropriate page
+			// Redirect the browser based on the actual outcome:
+			// - If the DO accepted the code (200 OK and we have a code): granted
+			// - Anything else (DO returned 409, callback had no code, or had an error): denied
 			const redirectUrl =
-				code && !error ? CONSENT_GRANTED_URL : CONSENT_DENIED_URL;
+				doResp.ok && code && !error ? CONSENT_GRANTED_URL : CONSENT_DENIED_URL;
 			return Response.redirect(redirectUrl, 307);
 		}
 
