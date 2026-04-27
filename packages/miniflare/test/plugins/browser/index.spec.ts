@@ -96,15 +96,15 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 		{ retry: 3 },
 		async ({ expect }) => {
 			const workerScript = (bindingName: string) => `
-export default {
-	async fetch(request, env) {
-		if (request.url.endsWith("session")) {
-			const newBrowserSession = await env.${bindingName}.fetch("https://localhost/v1/acquire")
-			return new Response(await newBrowserSession.text())
-		}
-	}
-};
-`;
+			export default {
+				async fetch(request, env) {
+					if (request.url.endsWith("session")) {
+						const newBrowserSession = await env.${bindingName}.fetch("https://localhost/v1/acquire")
+						return new Response(await newBrowserSession.text())
+					}
+				}
+			};
+			`;
 			const mf = new Miniflare({
 				workers: [
 					{
