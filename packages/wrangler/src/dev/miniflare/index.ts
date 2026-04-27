@@ -639,6 +639,10 @@ export function buildMiniflareBindingOptions(
 		warnOrError("artifacts", artifact.remote, "always-remote");
 	}
 
+	for (const flagship of flagshipBindings) {
+		warnOrError("flagship", flagship.remote, "always-remote");
+	}
+
 	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
 	const unsafeBindingsWithLocalDev = Object.entries(bindings ?? {}).filter(
 		(b) => isUnsafeServiceBindingWithDevCfg(b[1])
@@ -811,10 +815,7 @@ export function buildMiniflareBindingOptions(
 				binding.binding,
 				{
 					app_id: binding.app_id,
-					remoteProxyConnectionString:
-						binding.remote && remoteProxyConnectionString
-							? remoteProxyConnectionString
-							: undefined,
+					remoteProxyConnectionString,
 				},
 			])
 		),

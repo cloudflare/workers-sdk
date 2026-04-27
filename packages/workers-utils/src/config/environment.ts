@@ -1423,7 +1423,7 @@ export interface EnvironmentNonInheritable {
 		/** The Flagship app ID to bind to. */
 		app_id: string;
 
-		/** Whether to use the remote Flagship service for flag evaluation in local dev. */
+		/** Set to `true` to suppress the remote binding warning in local dev. Flagship bindings are always remote. */
 		remote?: boolean;
 	}[];
 
