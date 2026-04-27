@@ -26,10 +26,9 @@ export {
 // This code relies on the that rollup/esbuild/webpack don't evaluate string concatenation
 // so they don't recognize the below as `globalThis.console` which they would try to rewrite
 // into unenv/node/console, thus creating a circular dependency, and breaking this polyfill.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const workerdConsole = (globalThis as any)[
-	"con" + "sole"
-] as typeof nodeConsole;
+const workerdConsole = (
+	globalThis as unknown as Record<string, typeof nodeConsole>
+)["con" + "sole"];
 
 // TODO: Ideally this list is not hardcoded but instead is generated when the preset is being generated in the `env()` call
 //       This generation should use information from https://github.com/cloudflare/workerd/issues/2097

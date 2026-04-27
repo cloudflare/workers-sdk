@@ -21,7 +21,7 @@ const workersDomain =
 	"devprod-testing7928.workers.dev";
 
 describe("Create Cloudflare CLI", () => {
-	// eslint-disable-next-line no-empty-pattern
+	// eslint-disable-next-line no-empty-pattern -- Vitest requires the 1st argument to use object destructuring
 	beforeAll(({}, ctx) => {
 		recreateLogFolder(ctx as RunnerTestSuite);
 	});
