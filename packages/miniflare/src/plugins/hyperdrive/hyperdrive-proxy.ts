@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import net from "node:net";
 import tls from "node:tls";
+import type { Log } from "../../shared";
 
 export interface HyperdriveProxyConfig {
 	// Name of the Hyperdrive binding
@@ -112,6 +113,7 @@ function buildTlsConnectionOptions(
 export class HyperdriveProxyController {
 	// Map hyperdrive binding name to proxy server
 	#servers = new Map<string, net.Server>();
+	log?: Log;
 
 	/**
 	 * Creates a proxy server for a Hyperdrive binding.
@@ -132,13 +134,22 @@ export class HyperdriveProxyController {
 				sslrootcert
 			);
 		});
+		server.on("error", (err) => {
+			this.log?.error(
+				new Error(
+					`Hyperdrive proxy server error for binding "${name}": ${err.message}`
+				)
+			);
+		});
 		const port = await new Promise<number>((resolve, reject) => {
+			server.once("error", reject);
 			server.listen(0, "127.0.0.1", () => {
+				server.off("error", reject);
 				const address = server.address() as net.AddressInfo;
 				if (address && typeof address !== "string") {
 					resolve(address.port);
 				} else {
-					reject("Invalid port");
+					reject(new Error("Invalid port"));
 				}
 			});
 		});
