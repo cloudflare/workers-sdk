@@ -2,13 +2,13 @@ import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
-import { cancel } from "@cloudflare/cli";
+import { cancel } from "@cloudflare/cli-shared-helpers";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,
 	configFileName,
 	experimental_patchConfig,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	formatConfigSnippet,
 	getDockerPath,
 	parseNonHyphenedUuid,
@@ -16,7 +16,7 @@ import {
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
 import { Response } from "undici";
-import { syncAssets } from "../assets";
+import { buildAssetManifest, syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -33,6 +33,10 @@ import {
 } from "../deployment-bundle/module-collection";
 import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
+import {
+	addRequiredSecretsInheritBindings,
+	handleMissingSecretsError,
+} from "../deployment-bundle/secrets-validation";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -52,8 +56,8 @@ import {
 	getQueue,
 	postConsumer,
 	putConsumer,
-	putConsumerById,
 } from "../queues/client";
+import { parseBulkInputToObject } from "../secret";
 import { syncWorkersSite } from "../sites";
 import {
 	getSourceMappedString,
@@ -134,6 +138,9 @@ type Props = {
 	metafile: string | boolean | undefined;
 	containersRollout: "immediate" | "gradual" | undefined;
 	strict: boolean | undefined;
+	tag: string | undefined;
+	message: string | undefined;
+	secretsFile: string | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -145,6 +152,8 @@ export type CustomDomain = {
 	hostname: string;
 	service: string;
 	environment: string;
+	enabled: boolean;
+	previews_enabled: boolean;
 };
 type UpdatedCustomDomain = CustomDomain & { modified: boolean };
 type ConflictingCustomDomain = CustomDomain & {
@@ -241,6 +250,21 @@ export function renderRoute(route: Route): string {
 		} else if ("zone_name" in route) {
 			result += ` (zone name: ${route.zone_name})`;
 		}
+
+		if (isCustomDomain) {
+			const flags: string[] = [];
+			if ("enabled" in route && route.enabled !== undefined) {
+				flags.push(route.enabled ? "enabled" : "disabled");
+			}
+			if ("previews_enabled" in route && route.previews_enabled !== undefined) {
+				flags.push(
+					route.previews_enabled ? "previews: enabled" : "previews: disabled"
+				);
+			}
+			if (flags.length > 0) {
+				result += ` [${flags.join(", ")}]`;
+			}
+		}
 	}
 	return result;
 }
@@ -279,6 +303,11 @@ export async function publishCustomDomains(
 			hostname: domainRoute.pattern,
 			zone_id: "zone_id" in domainRoute ? domainRoute.zone_id : undefined,
 			zone_name: "zone_name" in domainRoute ? domainRoute.zone_name : undefined,
+			enabled: "enabled" in domainRoute ? domainRoute.enabled : undefined,
+			previews_enabled:
+				"previews_enabled" in domainRoute
+					? domainRoute.previews_enabled
+					: undefined,
 		};
 	});
 
@@ -542,7 +571,7 @@ export default async function deploy(props: Props): Promise<{
 		props.compatibilityFlags ?? config.compatibility_flags;
 
 	if (!compatibilityDate) {
-		const compatibilityDateStr = formatCompatibilityDate(new Date());
+		const compatibilityDateStr = getTodaysCompatDate();
 
 		throw new UserError(
 			`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
@@ -797,6 +826,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
+		// validate asset directory
+		if (props.assetsOptions && props.dryRun) {
+			await buildAssetManifest(props.assetsOptions.directory);
+		}
+
 		const workersSitesAssets = await syncWorkersSite(
 			config,
 			accountId,
@@ -821,6 +855,25 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				hidden: true,
 			};
 		}
+
+		if (props.secretsFile) {
+			const secretsResult = await parseBulkInputToObject(props.secretsFile);
+			if (secretsResult) {
+				for (const [secretName, secretValue] of Object.entries(
+					secretsResult.content
+				)) {
+					bindings[secretName] = {
+						type: "secret_text",
+						value: secretValue,
+					};
+				}
+			}
+		}
+
+		addRequiredSecretsInheritBindings(config, bindings, {
+			type: "deploy",
+			workerExists,
+		});
 
 		if (workersSitesAssets.manifest) {
 			modules.push({
@@ -852,12 +905,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars,
-			keepSecrets: keepVars, // keepVars implies keepSecrets
+			keepSecrets: keepVars || !!props.secretsFile,
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
 			placement,
 			tail_consumers: config.tail_consumers,
 			streaming_tail_consumers: config.streaming_tail_consumers,
 			limits: config.limits,
+			annotations:
+				props.tag || props.message
+					? {
+							"workers/message": props.message,
+							"workers/tag": props.tag,
+						}
+					: undefined,
 			assets:
 				props.assetsOptions && assetsJwt
 					? {
@@ -870,6 +930,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						}
 					: undefined,
 			observability: config.observability,
+			cache: config.cache,
 		};
 
 		sourceMapSize = worker.sourceMaps?.reduce(
@@ -1002,7 +1063,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 								method: "POST",
 								body: workerBundle,
 								headers: await getMetricsUsageHeaders(config.send_metrics),
-							}
+							},
+							new URLSearchParams({ bindings_inherit: "strict" })
 						)
 					);
 
@@ -1014,7 +1076,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						accountId,
 						scriptName,
 						versionMap,
-						undefined
+						props.message
 					);
 
 					// Update service and environment tags when using environments
@@ -1069,6 +1131,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 								// pass excludeScript so the whole body of the
 								// script doesn't get included in the response
 								excludeScript: "true",
+								bindings_inherit: "strict",
 							})
 						)
 					);
@@ -1145,6 +1208,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				if (message !== null) {
 					logger.error(message);
 				}
+
+				handleMissingSecretsError(err, config, {
+					type: "deploy",
+					workerExists,
+				});
 
 				// Apply source mapping to validation startup errors if possible
 				if (
@@ -1454,80 +1522,48 @@ export async function updateQueueConsumers(
 	for (const consumer of consumers) {
 		const queue = await getQueue(config, consumer.queue);
 
-		if (consumer.type === "http_pull") {
-			const body: PostTypedConsumerBody = {
-				type: consumer.type,
-				dead_letter_queue: consumer.dead_letter_queue,
-				settings: {
-					batch_size: consumer.max_batch_size,
-					max_retries: consumer.max_retries,
-					visibility_timeout_ms: consumer.visibility_timeout_ms,
-					retry_delay: consumer.retry_delay,
-				},
-			};
-
-			const existingConsumer = queue.consumers && queue.consumers[0];
-			if (existingConsumer) {
-				updateConsumers.push(
-					putConsumerById(
-						config,
-						queue.queue_id,
-						existingConsumer.consumer_id,
-						body
-					).then(() => [`Consumer for ${consumer.queue}`])
-				);
-				continue;
-			}
-			updateConsumers.push(
-				postConsumer(config, consumer.queue, body).then(() => [
-					`Consumer for ${consumer.queue}`,
-				])
-			);
-		} else {
-			if (scriptName === undefined) {
-				// TODO: how can we reliably get the current script name?
-				throw new UserError(
-					"Script name is required to update queue consumers",
-					{ telemetryMessage: true }
-				);
-			}
-
-			const body: PostTypedConsumerBody = {
-				type: "worker",
-				dead_letter_queue: consumer.dead_letter_queue,
-				script_name: scriptName,
-				settings: {
-					batch_size: consumer.max_batch_size,
-					max_retries: consumer.max_retries,
-					max_wait_time_ms:
-						consumer.max_batch_timeout !== undefined
-							? 1000 * consumer.max_batch_timeout
-							: undefined,
-					max_concurrency: consumer.max_concurrency,
-					retry_delay: consumer.retry_delay,
-				},
-			};
-
-			// Current script already assigned to queue?
-			const existingConsumer =
-				queue.consumers.filter(
-					(c) => c.script === scriptName || c.service === scriptName
-				).length > 0;
-			const envName = undefined; // TODO: script environment for wrangler deploy?
-			if (existingConsumer) {
-				updateConsumers.push(
-					putConsumer(config, consumer.queue, scriptName, envName, body).then(
-						() => [`Consumer for ${consumer.queue}`]
-					)
-				);
-				continue;
-			}
-			updateConsumers.push(
-				postConsumer(config, consumer.queue, body).then(() => [
-					`Consumer for ${consumer.queue}`,
-				])
-			);
+		if (scriptName === undefined) {
+			// TODO: how can we reliably get the current script name?
+			throw new UserError("Script name is required to update queue consumers", {
+				telemetryMessage: true,
+			});
 		}
+
+		const body: PostTypedConsumerBody = {
+			type: "worker",
+			dead_letter_queue: consumer.dead_letter_queue,
+			script_name: scriptName,
+			settings: {
+				batch_size: consumer.max_batch_size,
+				max_retries: consumer.max_retries,
+				max_wait_time_ms:
+					consumer.max_batch_timeout !== undefined
+						? 1000 * consumer.max_batch_timeout
+						: undefined,
+				max_concurrency: consumer.max_concurrency,
+				retry_delay: consumer.retry_delay,
+			},
+		};
+
+		// Current script already assigned to queue?
+		const existingConsumer =
+			queue.consumers.filter(
+				(c) => c.script === scriptName || c.service === scriptName
+			).length > 0;
+		const envName = undefined; // TODO: script environment for wrangler deploy?
+		if (existingConsumer) {
+			updateConsumers.push(
+				putConsumer(config, consumer.queue, scriptName, envName, body).then(
+					() => [`Consumer for ${consumer.queue}`]
+				)
+			);
+			continue;
+		}
+		updateConsumers.push(
+			postConsumer(config, consumer.queue, body).then(() => [
+				`Consumer for ${consumer.queue}`,
+			])
+		);
 	}
 
 	return updateConsumers;

@@ -48,10 +48,11 @@ const testProjectDir = (suite: string, test: string) => {
 
 			realpathSync(mkdtempSync(nodePath.join(tmpdir(), `c3-tests-${suite}`)));
 			const filepath = getPath();
+			// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- see log-stream.ts for rationale
 			rmSync(filepath, {
 				recursive: true,
 				force: true,
-				maxRetries: 10,
+				maxRetries: 5,
 				retryDelay: 100,
 			});
 		} catch (e) {

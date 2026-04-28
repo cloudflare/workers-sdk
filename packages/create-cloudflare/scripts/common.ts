@@ -1,7 +1,7 @@
 import { fetch } from "undici";
 
 type ApiSuccessBody = {
-	result: any[];
+	result: unknown[];
 };
 
 export type Project = {
@@ -17,7 +17,7 @@ export type Worker = {
 const apiFetch = async (
 	path: string,
 	init = { method: "GET" },
-	queryParams = {},
+	queryParams = {}
 ) => {
 	const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}`;
 	const queryString = queryParams
@@ -42,6 +42,9 @@ const apiFetch = async (
 };
 
 export const deleteProject = async (project: string) => {
+	if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID) {
+		return;
+	}
 	try {
 		await apiFetch(`/pages/projects/${project}`, {
 			method: "DELETE",
@@ -52,6 +55,9 @@ export const deleteProject = async (project: string) => {
 };
 
 export const deleteWorker = async (id: string) => {
+	if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID) {
+		return;
+	}
 	try {
 		await apiFetch(`/workers/scripts/${id}`, {
 			method: "DELETE",

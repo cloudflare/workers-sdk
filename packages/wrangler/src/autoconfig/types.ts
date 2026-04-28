@@ -1,6 +1,6 @@
 import type { PackageManager } from "../package-manager";
 import type { Optional } from "../utils/types";
-import type { Framework } from "./frameworks/index";
+import type { Framework } from "./frameworks/framework-class";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
 type AutoConfigDetailsBase = {
@@ -20,6 +20,8 @@ type AutoConfigDetailsBase = {
 	outputDir: string;
 	/** The detected package manager for the project */
 	packageManager: PackageManager;
+	/** Whether the current path is at the root of a workspace */
+	isWorkspaceRoot?: boolean;
 };
 
 export type AutoConfigDetailsForConfiguredProject = Optional<
@@ -63,7 +65,7 @@ export type AutoConfigOptions = {
 export type AutoConfigSummary = {
 	scripts: Record<string, string>;
 	wranglerInstall: boolean;
-	wranglerConfig: RawConfig;
+	wranglerConfig?: RawConfig;
 	frameworkConfiguration?: string;
 	outputDir: string;
 	frameworkId?: string;

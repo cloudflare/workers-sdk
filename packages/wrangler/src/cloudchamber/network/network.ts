@@ -1,4 +1,4 @@
-import { processArgument } from "@cloudflare/cli/args";
+import { processArgument } from "@cloudflare/cli-shared-helpers/args";
 import { AssignIPv4, AssignIPv6 } from "@cloudflare/containers-shared";
 import type { NetworkParameters } from "@cloudflare/containers-shared";
 

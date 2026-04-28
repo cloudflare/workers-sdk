@@ -5,49 +5,29 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
-import { bold } from "kleur/colors";
+import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
-import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import { z } from "zod";
 import { fetch } from "../../http";
-import {
-	Extension,
-	kVoid,
-	Service,
-	ServiceDesignator,
-	supportedCompatibilityDate,
-	Worker_Binding,
-	Worker_ContainerEngine,
-	Worker_DurableObjectNamespace,
-	Worker_Module,
-} from "../../runtime";
-import {
-	Json,
-	JsonSchema,
-	Log,
-	MiniflareCoreError,
-	PathSchema,
-} from "../../shared";
-import {
-	Awaitable,
-	CoreBindings,
-	CoreHeaders,
-	viewToBuffer,
-} from "../../workers";
+import { kVoid } from "../../runtime";
+import { JsonSchema, Log, MiniflareCoreError, PathSchema } from "../../shared";
+import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
+	getUserBindingServiceName,
 	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import { STREAM_PLUGIN_NAME } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -55,15 +35,20 @@ import {
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
 	getUserServiceName,
-	LOCAL_EXPLORER_DISK,
 	SERVICE_ENTRY,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
 import {
+	constructExplorerBindingMap,
+	constructExplorerWorkerOpts,
+	getExplorerServices,
+	wrapDurableObjectModules,
+} from "./explorer";
+import {
 	buildStringScriptPath,
 	convertModuleDefinition,
 	ModuleLocator,
-	SourceOptions,
+	type SourceOptions,
 	SourceOptionsSchema,
 	withSourceURL,
 } from "./modules";
@@ -73,7 +58,25 @@ import {
 	kCurrentWorker,
 	ServiceDesignatorSchema,
 } from "./services";
-import type { WorkerRegistry } from "../../shared/dev-registry";
+import type { PluginWorkerOptions } from "..";
+import type {
+	Extension,
+	Service,
+	ServiceDesignator,
+	Worker_Binding,
+	Worker_ContainerEngine,
+	Worker_DurableObjectNamespace,
+	Worker_Module,
+} from "../../runtime";
+import type { Json } from "../../shared";
+import type { WorkerRegistry } from "../../shared/dev-registry-types";
+import type { Awaitable } from "../../workers";
+import type {
+	WorkflowOption,
+	DurableObjectClassNames,
+	Plugin,
+} from "../shared";
+import type { BindingIdMap } from "./types";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses
@@ -103,7 +106,6 @@ if (process.env.NODE_EXTRA_CA_CERTS !== undefined) {
 }
 
 const encoder = new TextEncoder();
-const numericCompare = new Intl.Collator(undefined, { numeric: true }).compare;
 
 export function createFetchMock() {
 	return new MockAgent();
@@ -164,6 +166,20 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
 
+		/**
+		 * When sending a request over the dev registry to a Worker's default entrypoint,
+		 * Miniflare _actually_ serves the request from the associated Assets proxy, so
+		 * that Assets can be served in front of the user-worker when configured.
+		 *
+		 * However, @cloudflare/vite-plugin bypasses Miniflare's native Assets handling
+		 * and does everything itself. We still want service bindings to a Vite app to
+		 * serve Assets in front of the worker when appropriate though, and so we let
+		 * the caller specify an alternative worker name whose service handles
+		 * default-entrypoint requests from the dev registry (e.g. a proxy worker
+		 * that serves assets in front of the user worker).
+		 */
+		unsafeOverrideFetchWorker: z.string().optional(),
+
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
 
@@ -187,7 +203,10 @@ const CoreOptionsSchemaInput = z.intersection(
 		containerEngine: z
 			.union([
 				z.object({
-					localDocker: z.object({ socketPath: z.string() }),
+					localDocker: z.object({
+						socketPath: z.string(),
+						containerEgressInterceptorImage: z.string().optional(),
+					}),
 				}),
 				z.string(),
 			])
@@ -268,8 +287,6 @@ export const CoreSharedOptionsSchema = z
 
 		// Enable auto service / durable objects discovery with the dev registry
 		unsafeDevRegistryPath: z.string().optional(),
-		// Enable External Durable Objects Proxy / Internal DOs registration
-		unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
 		// Called when external workers this instance depends on are updated in the dev registry
 		unsafeHandleDevRegistryUpdate: z
 			.function(z.tuple([z.custom<WorkerRegistry>()]))
@@ -298,6 +315,20 @@ export const CoreSharedOptionsSchema = z
 		// `handleStructuredLogs` is set, to `false` otherwise)
 		// This option is useful in combination with a custom handleRuntimeStdio.
 		structuredWorkerdLogs: z.boolean().optional(),
+
+		// Enable telemetry for the local explorer.
+		telemetry: z
+			.object({
+				enabled: z.boolean().default(false),
+				deviceId: z.string().optional(),
+			})
+			.default({ enabled: false }),
+
+		// The stable, externally-reachable URL for this Miniflare instance
+		// (e.g. the Wrangler proxy URL or Vite dev server URL). Used by
+		// plugins like Stream to generate preview URLs that outlive runtime
+		// restarts. If not set, plugins fall back to the runtime entry URL.
+		publicUrl: z.string().url().optional(),
 	})
 	.refine(
 		({ structuredWorkerdLogs, handleStructuredLogs }) => {
@@ -463,37 +494,13 @@ function maybeGetCustomServiceService(
 
 const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
 
-function getCurrentCompatibilityDate() {
-	// Get current compatibility date in UTC timezone
-	const now = new Date().toISOString();
-	return now.substring(0, now.indexOf("T"));
-}
-
-function validateCompatibilityDate(log: Log, compatibilityDate: string) {
-	if (numericCompare(compatibilityDate, getCurrentCompatibilityDate()) > 0) {
+function validateCompatibilityDate(compatibilityDate: string) {
+	if (compatibilityDate > getTodaysCompatDate()) {
 		// If this compatibility date is in the future, throw
 		throw new MiniflareCoreError(
 			"ERR_FUTURE_COMPATIBILITY_DATE",
 			`Compatibility date "${compatibilityDate}" is in the future and unsupported`
 		);
-	} else if (
-		numericCompare(compatibilityDate, supportedCompatibilityDate) > 0
-	) {
-		// If this compatibility date is greater than the maximum supported
-		// compatibility date of the runtime, but not in the future, warn,
-		// and use the maximum supported date instead
-		log.warn(
-			[
-				"The latest compatibility date supported by the installed Cloudflare Workers Runtime is ",
-				bold(`"${supportedCompatibilityDate}"`),
-				",\nbut you've requested ",
-				bold(`"${compatibilityDate}"`),
-				". Falling back to ",
-				bold(`"${supportedCompatibilityDate}"`),
-				"...",
-			].join("")
-		);
-		return supportedCompatibilityDate;
 	}
 	return compatibilityDate;
 }
@@ -690,7 +697,7 @@ export const CORE_PLUGIN: Plugin<
 		return Object.fromEntries(await Promise.all(bindingEntries));
 	},
 	async getServices({
-		log,
+		log: _log,
 		options,
 		sharedOptions,
 		workerBindings,
@@ -698,6 +705,7 @@ export const CORE_PLUGIN: Plugin<
 		wrappedBindingNames,
 		durableObjectClassNames,
 		additionalModules,
+		loopbackHost,
 		loopbackPort,
 	}) {
 		// Define regular user worker
@@ -742,8 +750,27 @@ export const CORE_PLUGIN: Plugin<
 		const classNames = durableObjectClassNames.get(serviceName);
 		const classNamesEntries = Array.from(classNames ?? []);
 
+		// Wrap Durable Object classes for the local explorer
+		// This injects a method onto user defined DO classes to allow
+		// us to introspect the sqlite databases, since these are not
+		// available on the stub.
+		const sqliteClasses = classNamesEntries.filter(
+			([, { enableSql }]) => enableSql
+		);
+		if (
+			sharedOptions.unsafeLocalExplorer &&
+			// service-format workers are not supported
+			"modules" in workerScript &&
+			sqliteClasses.length > 0 &&
+			"esModule" in workerScript.modules[0]
+		) {
+			workerScript.modules = wrapDurableObjectModules(
+				workerScript.modules,
+				sqliteClasses.map(([className]) => className)
+			);
+		}
+
 		const compatibilityDate = validateCompatibilityDate(
-			log,
 			options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE
 		);
 
@@ -856,7 +883,7 @@ export const CORE_PLUGIN: Plugin<
 					moduleFallback:
 						options.unsafeUseModuleFallbackService &&
 						sharedOptions.unsafeModuleFallbackService !== undefined
-							? `localhost:${loopbackPort}`
+							? `${loopbackHost}:${loopbackPort}`
 							: undefined,
 					tails: options.tails?.map<ServiceDesignator>((service) => {
 						return getCustomServiceDesignator(
@@ -966,6 +993,12 @@ export interface GlobalServicesOptions {
 	log: Log;
 	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */
 	proxyBindings: Worker_Binding[];
+	/** Pass Durable Object configuration for the explorer worker (has more info than proxyBindings)*/
+	durableObjectClassNames: DurableObjectClassNames;
+	/** Pass Workflow configuration for the explorer worker */
+	workflowOptions?: Map<string, WorkflowOption>;
+	/** All worker options for building per-worker resource bindings */
+	allWorkerOpts?: PluginWorkerOptions[];
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -974,6 +1007,9 @@ export function getGlobalServices({
 	loopbackPort,
 	log,
 	proxyBindings,
+	durableObjectClassNames,
+	workflowOptions,
+	allWorkerOpts,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1015,12 +1051,31 @@ export function getGlobalServices({
 		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
+		// Add cache service binding for purgeCache() API
+		{
+			name: CoreBindings.SERVICE_CACHE,
+			service: { name: getCacheServiceName(0) },
+		},
 	];
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_LOCAL_EXPLORER,
 			service: {
 				name: SERVICE_LOCAL_EXPLORER,
+			},
+		});
+	}
+	const streamServiceEnabled = allWorkerOpts?.some(
+		(worker) =>
+			worker.stream?.stream !== undefined &&
+			!worker.stream.stream.remoteProxyConnectionString
+	);
+	if (streamServiceEnabled) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_STREAM,
+			service: {
+				name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
+				entrypoint: "StreamBinding",
 			},
 		});
 	}
@@ -1043,6 +1098,7 @@ export function getGlobalServices({
 			data: encoder.encode(liveReloadScript),
 		});
 	}
+
 	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,
@@ -1091,90 +1147,38 @@ export function getGlobalServices({
 	];
 
 	if (sharedOptions.unsafeLocalExplorer) {
-		// Build binding ID map from proxyBindings
-		// Maps binding names to their actual resource IDs
-		const IDToBindingName: {
-			d1: Record<string, string>;
-			kv: Record<string, string>;
-		} = {
-			d1: {},
-			kv: {},
-		};
-
-		for (const binding of proxyBindings) {
-			// D1 bindings: name = "MINIFLARE_PROXY:d1:worker-*:BINDING", wrapped.innerBindings[0].service.name = "d1:db:ID"
-			if (
-				binding.name?.startsWith(
-					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:d1:`
-				) &&
-				"wrapped" in binding
-			) {
-				const [innerBinding] = binding.wrapped?.innerBindings ?? [];
-				assert(innerBinding && "service" in innerBinding);
-
-				const databaseId = innerBinding.service?.name?.replace(/^d1:db:/, "");
-				assert(databaseId);
-
-				IDToBindingName.d1[databaseId] = binding.name;
-			}
-
-			// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING", kvNamespace.name = "kv:ns:ID"
-			if (
-				binding.name?.startsWith(
-					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:kv:`
-				) &&
-				"kvNamespace" in binding &&
-				binding.kvNamespace?.name?.startsWith("kv:ns:")
-			) {
-				// Extract ID from service name "kv:ns:ID"
-				const namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
-				IDToBindingName.kv[namespaceId] = binding.name;
-			}
-		}
-
-		// Disk service for serving local-explorer-ui assets
+		// Local explorer UI assets path
 		// The UI dist is copied to miniflare's dist/local-explorer-ui at build time.
 		// In the bundled CJS output, __dirname is dist/src/ so we need ../local-explorer-ui
-		const distPath = path.join(__dirname, "../local-explorer-ui");
-		if (existsSync(distPath)) {
-			services.push({
-				name: LOCAL_EXPLORER_DISK,
-				disk: {
-					path: distPath,
-					writable: false,
-				},
-			});
-		} else {
+		const localExplorerUiPath = path.join(__dirname, "../local-explorer-ui");
+		if (!existsSync(localExplorerUiPath)) {
 			throw new MiniflareCoreError(
 				"ERR_MISSING_EXPLORER_UI",
-				`Local Explorer UI assets not found at expected path: ${distPath}`
+				`Local Explorer UI assets not found at expected path: ${localExplorerUiPath}`
 			);
 		}
+		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
+			proxyBindings,
+			durableObjectClassNames,
+			workflowOptions
+		);
+		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
 
-		services.push({
-			name: SERVICE_LOCAL_EXPLORER,
-			worker: {
-				compatibilityDate: "2026-01-01",
-				compatibilityFlags: ["nodejs_compat"],
-				modules: [
-					{
-						name: "explorer.worker.js",
-						esModule: SCRIPT_LOCAL_EXPLORER(),
-					},
-				],
-				bindings: [
-					...proxyBindings,
-					{
-						name: CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP,
-						json: JSON.stringify(IDToBindingName),
-					},
-					{
-						name: CoreBindings.EXPLORER_DISK,
-						service: { name: LOCAL_EXPLORER_DISK },
-					},
-				],
-			},
-		});
+		const explorerWorkerOpts = constructExplorerWorkerOpts(
+			allWorkerOpts ?? [],
+			durableObjectClassNames
+		);
+		services.push(
+			...getExplorerServices({
+				localExplorerUiPath,
+				proxyBindings,
+				bindingIdMap: IDToBindingMap,
+				hasDurableObjects,
+				workerNames,
+				explorerWorkerOpts,
+				telemetry: sharedOptions.telemetry,
+			})
+		);
 	}
 
 	return services;
@@ -1236,6 +1240,17 @@ function getWorkerScript(
 }
 
 /**
+ * Returns the default containerEgressInterceptorImage. It's used for
+ * container network interception for local dev.
+ */
+function getContainerEgressInterceptorImage(): string {
+	return (
+		process.env.MINIFLARE_CONTAINER_EGRESS_IMAGE ??
+		DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE
+	);
+}
+
+/**
  * Returns the Container engine configuration
  * @param engineOrSocketPath Either a full engine config or a unix socket
  * @returns The container engine, defaulting to the default docker socket located on linux/macOS at `unix:///var/run/docker.sock`
@@ -1251,11 +1266,28 @@ function getContainerEngine(
 				: "unix:///var/run/docker.sock";
 	}
 
+	// Egress interceptor is to support direct connectivity between the Container and Workers,
+	// it spawns a container in the same network namespace as the local dev container and
+	// intercepts traffic to redirect to Workerd.
+	const egressImage = getContainerEgressInterceptorImage();
+
 	if (typeof engineOrSocketPath === "string") {
-		return { localDocker: { socketPath: engineOrSocketPath } };
+		return {
+			localDocker: {
+				socketPath: engineOrSocketPath,
+				containerEgressInterceptorImage: egressImage,
+			},
+		};
 	}
 
-	return engineOrSocketPath;
+	return {
+		localDocker: {
+			...engineOrSocketPath.localDocker,
+			containerEgressInterceptorImage:
+				engineOrSocketPath.localDocker.containerEgressInterceptorImage ??
+				egressImage,
+		},
+	};
 }
 
 export * from "./errors";

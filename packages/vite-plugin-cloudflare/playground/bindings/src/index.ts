@@ -4,6 +4,11 @@ export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
 
+		// We return a 404 here to test that valid /cdn-cgi/ routes are handled earlier
+		if (url.pathname.startsWith("/cdn-cgi/")) {
+			return new Response(null, { status: 404 });
+		}
+
 		switch (url.pathname) {
 			case "/kv": {
 				const value = Math.floor(Date.now() * Math.random()).toString(36);

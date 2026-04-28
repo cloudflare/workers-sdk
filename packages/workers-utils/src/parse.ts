@@ -60,6 +60,10 @@ export class APIError extends ParseError {
 		this.#status = status;
 	}
 
+	get status(): number | undefined {
+		return this.#status;
+	}
+
 	isGatewayError() {
 		if (this.#status !== undefined) {
 			return [524].includes(this.#status);

@@ -1,7 +1,8 @@
 import assert from "node:assert";
 import { z } from "zod";
-import { Worker_Binding } from "../../runtime";
-import { Plugin, ProxyNodeBinding } from "../shared";
+import { ProxyNodeBinding } from "../shared";
+import type { Worker_Binding } from "../../runtime";
+import type { Plugin } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
 
@@ -126,6 +127,7 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 				targetPort: getPort(url),
 				scheme,
 				sslmode: parseSslMode(url, scheme),
+				sslrootcert: parseSslRootCert(url),
 			});
 			services.push({
 				name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
@@ -156,8 +158,12 @@ function parseSslMode(url: URL, scheme: string): string {
 		// Parse different variations for mysql sslmode
 		const sslmode = params["ssl-mode"] || params["ssl"] || params["sslmode"];
 
-		// Normalize to postgres values
+		// Normalize to postgres-equivalent values
 		switch (sslmode) {
+			case "verify_identity":
+				return "verify-full";
+			case "verify_ca":
+				return "verify-ca";
 			case "required":
 			case "true":
 			case "1":
@@ -173,6 +179,13 @@ function parseSslMode(url: URL, scheme: string): string {
 
 	// default to disable
 	return "disable";
+}
+
+function parseSslRootCert(url: URL): string | undefined {
+	const params = Object.fromEntries(
+		Array.from(url.searchParams.entries()).map(([k, v]) => [k.toLowerCase(), v])
+	);
+	return params["sslrootcert"] || undefined;
 }
 
 export type {

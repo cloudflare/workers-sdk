@@ -61,7 +61,7 @@ export function loadDotEnv(
 			}
 		} else if (parsed && !silent) {
 			const relativePath = path.relative(process.cwd(), envPath);
-			logger.log(`Using vars defined in ${relativePath}`);
+			logger.log(`Using secrets defined in ${relativePath}`);
 		}
 	}
 
@@ -71,7 +71,7 @@ export function loadDotEnv(
 	if (includeProcessEnv) {
 		Object.assign(expandedEnv, process.env);
 		if (!silent) {
-			logger.log("Using vars defined in process.env");
+			logger.log("Using secrets defined in process.env");
 		}
 	}
 	const { error } = dotenvExpand.expand({

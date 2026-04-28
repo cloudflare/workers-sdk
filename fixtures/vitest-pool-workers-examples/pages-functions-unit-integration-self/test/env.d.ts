@@ -1,4 +1,10 @@
-declare module "cloudflare:test" {
-	// Controls the type of `import("cloudflare:test").env`
-	interface ProvidedEnv extends Env {}
+declare namespace Cloudflare {
+	interface GlobalProps {
+		// Pages Functions compile to a worker with an ExportedHandler default export
+		mainModule: { default: ExportedHandler<Cloudflare.Env> };
+	}
+	interface Env {
+		KV_NAMESPACE: KVNamespace;
+		ASSETS: Fetcher;
+	}
 }

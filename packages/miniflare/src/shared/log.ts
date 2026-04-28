@@ -1,7 +1,8 @@
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
-import { Colorize, dim, green, grey, red, reset, yellow } from "kleur/colors";
+import { dim, green, grey, red, reset, yellow } from "kleur/colors";
 import { LogLevel } from "../workers";
+import type { Colorize } from "kleur/colors";
 
 const cwd = process.cwd();
 const cwdNodeModules = path.join(cwd, "node_modules");

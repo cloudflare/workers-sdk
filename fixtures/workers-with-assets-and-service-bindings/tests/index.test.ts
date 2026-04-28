@@ -64,17 +64,21 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 				await vi.waitFor(async () => {
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
 					let text = await response.text();
-					expect(response.status).toBe(200);
-					expect(text).toContain(
-						`env.DEFAULT_EXPORT.fetch() response: This is an asset of "worker-b"`
-					);
+					expect({ status: response.status, text }).toMatchObject({
+						status: 200,
+						text: expect.stringContaining(
+							`env.DEFAULT_EXPORT.fetch() response: This is an asset of "worker-b"`
+						),
+					});
 
 					response = await fetch(`http://${ipWorkerA}:${portWorkerA}/busy-bee`);
 					text = await response.text();
-					expect(response.status).toBe(200);
-					expect(text).toContain(
-						`env.DEFAULT_EXPORT.fetch() response: All "worker-b" 🐝🐝🐝 are 🐝sy. Please come back later`
-					);
+					expect({ status: response.status, text }).toMatchObject({
+						status: 200,
+						text: expect.stringContaining(
+							`env.DEFAULT_EXPORT.fetch() response: All "worker-b" 🐝🐝🐝 are 🐝sy. Please come back later`
+						),
+					});
 				});
 			});
 

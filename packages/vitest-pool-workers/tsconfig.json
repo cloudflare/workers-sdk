@@ -4,19 +4,16 @@
 		"alwaysStrict": true,
 		"forceConsistentCasingInFileNames": true,
 		"module": "esnext",
-		"lib": ["esnext"],
-		"paths": {
-			"@cloudflare/vitest-pool-workers/config": ["./src/config"]
-		}
+		"lib": ["esnext"]
 	},
 	"exclude": ["./scripts/**/rtti.ts"],
 	"include": [
 		"./scripts/**/*",
-		"./src/config/**/*.ts",
 		"./src/pool/**/*.ts",
 		"./src/shared/**/*.ts",
 		"./test/**/*.ts",
 		"./vitest.config.*ts",
-		"./vitest.workspace.ts"
+		"./vitest.workspace.ts",
+		"./tsdown.config.ts"
 	]
 }

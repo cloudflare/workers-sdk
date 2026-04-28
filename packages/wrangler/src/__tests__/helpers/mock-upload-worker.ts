@@ -1,5 +1,6 @@
 import { ParseError } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
+// eslint-disable-next-line no-restricted-imports
 import { expect } from "vitest";
 import {
 	getSubdomainValues,
@@ -55,6 +56,8 @@ export function mockUploadWorkerRequest(
 		expectedObservability?: CfWorkerInit["observability"];
 		expectedSettingsPatch?: Partial<NonVersionedScriptSettings>;
 		expectedContainers?: { class_name: string }[];
+		expectedAnnotations?: Record<string, string | undefined>;
+		expectedDeploymentMessage?: string;
 	} = {}
 ) {
 	const handleUpload: HttpResponseResolver = async ({ params, request }) => {
@@ -142,6 +145,9 @@ export function mockUploadWorkerRequest(
 		if ("expectedContainers" in options) {
 			expect(metadata.containers).toEqual(expectedContainers);
 		}
+		if ("expectedAnnotations" in options) {
+			expect(metadata.annotations).toEqual(expectedAnnotations);
+		}
 
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {
@@ -203,12 +209,14 @@ export function mockUploadWorkerRequest(
 		expectedCapnpSchema,
 		expectedLimits,
 		expectedContainers,
+		expectedAnnotations,
 		keepVars,
 		keepSecrets,
 		expectedDispatchNamespace,
 		useOldUploadApi,
 		expectedObservability,
 		expectedSettingsPatch,
+		expectedDeploymentMessage,
 	} = options;
 
 	const expectedScriptName =
@@ -244,7 +252,17 @@ export function mockUploadWorkerRequest(
 			),
 			http.post(
 				"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
-				() => HttpResponse.json(createFetchResult({ id: "Deployment-ID" }))
+				async ({ request }) => {
+					if ("expectedDeploymentMessage" in options) {
+						const body = (await request.json()) as {
+							annotations?: { "workers/message"?: string };
+						};
+						expect(body.annotations?.["workers/message"]).toEqual(
+							expectedDeploymentMessage
+						);
+					}
+					return HttpResponse.json(createFetchResult({ id: "Deployment-ID" }));
+				}
 			),
 			http.patch(
 				"*/accounts/:accountId/workers/scripts/:scriptName/script-settings",

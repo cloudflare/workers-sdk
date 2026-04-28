@@ -1,4 +1,4 @@
-import { inputPrompt } from "@cloudflare/cli/interactive";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../../package.json";
@@ -10,7 +10,7 @@ import {
 	getOtherTemplateMap,
 } from "../templates";
 import { C3_DEFAULTS, WRANGLER_DEFAULTS } from "./cli";
-import type { PromptConfig } from "@cloudflare/cli/interactive";
+import type { PromptConfig } from "@cloudflare/cli-shared-helpers/interactive";
 import type { C3Args } from "types";
 import type { Argv } from "yargs";
 
@@ -120,7 +120,7 @@ export const cliDefinition: ArgumentsDefinition = {
 				getNamesAndDescriptions(
 					getFrameworkMap({
 						experimental: Boolean(args?.["experimental"]),
-					}),
+					})
 				),
 		},
 		{
@@ -264,7 +264,7 @@ export const cliDefinition: ArgumentsDefinition = {
 };
 
 export const parseArgs = async (
-	argv: string[],
+	argv: string[]
 ): Promise<
 	| {
 			type: "default";
@@ -284,7 +284,7 @@ export const parseArgs = async (
 	const doubleDashesIdx = argv.indexOf("--");
 	const c3Args = argv.slice(
 		0,
-		doubleDashesIdx < 0 ? undefined : doubleDashesIdx,
+		doubleDashesIdx < 0 ? undefined : doubleDashesIdx
 	);
 	const additionalArgs =
 		doubleDashesIdx < 0 ? [] : argv.slice(doubleDashesIdx + 1);
@@ -417,7 +417,7 @@ const camelize = (str: string) => str.replace(/-./g, (x) => x[1].toUpperCase());
 export const processArgument = async <Key extends keyof C3Args>(
 	args: Partial<C3Args>,
 	key: Key,
-	promptConfig: PromptConfig,
+	promptConfig: PromptConfig
 ) => {
 	return await reporter.collectAsyncMetrics({
 		eventPrefix: "c3 prompt",
@@ -431,7 +431,11 @@ export const processArgument = async <Key extends keyof C3Args>(
 		disableTelemetry: args[key] !== undefined,
 		async promise() {
 			const value = args[key];
-			const error = promptConfig.validate?.(value) ?? null;
+			const validationResult = promptConfig.validate?.(value);
+			const error =
+				validationResult instanceof Error
+					? validationResult.message
+					: (validationResult ?? null);
 			const result = await inputPrompt<Required<C3Args>[Key]>({
 				...promptConfig,
 				// Accept the default value if the arg is already set

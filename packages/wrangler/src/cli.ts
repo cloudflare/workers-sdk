@@ -1,8 +1,6 @@
 /**
- * This file contains:
- *
- * - The main entrypoint for the CLI, which calls `main()` from `index.ts`.
- * - The exports for the public API of the package.
+ * This file is the main entrypoint for the CLI, which calls `main()` from `index.ts`.
+ * It also re-exports the public API of the package.
  */
 
 import "cloudflare/shims/web";
@@ -103,6 +101,7 @@ export interface Unstable_ASSETSBindingsOptions {
 	log: Logger;
 	proxyPort?: number;
 	directory?: string;
+	signal?: AbortSignal;
 }
 export const unstable_generateASSETSBinding: (
 	opts: Unstable_ASSETSBindingsOptions
@@ -129,6 +128,6 @@ export type { StartRemoteProxySessionOptions, Binding, RemoteProxySession };
 
 export { getDetailsForAutoConfig as experimental_getDetailsForAutoConfig } from "./autoconfig/details";
 export { runAutoConfig as experimental_runAutoConfig } from "./autoconfig/run";
-export { Framework as experimental_AutoConfigFramework } from "./autoconfig/frameworks/index";
+export { Framework as experimental_AutoConfigFramework } from "./autoconfig/frameworks/framework-class";
 
 export { experimental_getWranglerCommands } from "./experimental-commands-api";

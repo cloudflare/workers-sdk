@@ -1,25 +1,24 @@
 import { readdirSync } from "node:fs";
-import { spinner } from "@cloudflare/cli/interactive";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- helper module with expect at module scope
-import { expect, vi } from "vitest";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
+import { vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import type { Dirent } from "node:fs";
 
 export const mockPackageManager = (name: string, version = "1.0.0") => {
 	if (!vi.isMockFunction(whichPMRuns)) {
-		expect.fail(
-			"When using `mockPackageManager` you must first call: vi.mock('which-pm-runs');",
+		throw new Error(
+			"When using `mockPackageManager` you must first call: vi.mock('which-pm-runs');"
 		);
 	}
 	vi.mocked(whichPMRuns).mockReturnValue({ name, version });
 };
 
 export const mockWorkersTypesDirectory = (
-	mockImpl: () => string[] = () => [...mockWorkersTypesDirListing],
+	mockImpl: () => string[] = () => [...mockWorkersTypesDirListing]
 ) => {
 	if (!vi.isMockFunction(readdirSync)) {
-		expect.fail(
-			"When using `mockWorkersTypesDirectory` you must first call: vi.mock('fs');",
+		throw new Error(
+			"When using `mockWorkersTypesDirectory` you must first call: vi.mock('fs');"
 		);
 	}
 	vi.mocked(readdirSync).mockImplementation((path) => {
@@ -33,8 +32,8 @@ export const mockWorkersTypesDirectory = (
 
 export const mockSpinner = () => {
 	if (!vi.isMockFunction(spinner)) {
-		expect.fail(
-			"When using `mockPackageManager` you must first call: vi.mock('@cloudflare/cli/interactive');",
+		throw new Error(
+			"When using `mockPackageManager` you must first call: vi.mock('@cloudflare/cli-shared-helpers/interactive');"
 		);
 	}
 

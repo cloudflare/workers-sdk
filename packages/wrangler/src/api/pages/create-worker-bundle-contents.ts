@@ -74,6 +74,7 @@ function createWorkerBundleFormData(
 			assets: undefined,
 			containers: undefined, // containers are not supported in Pages
 			observability: undefined,
+			cache: undefined, // cache is not supported in Pages
 		},
 		getBindings(config, { pages: true })
 	);

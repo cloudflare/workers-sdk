@@ -12,7 +12,7 @@ import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Message } from "@cloudflare/workers-utils";
 import type { URLSearchParams } from "node:url";
 import type { HeadersInit, RequestInfo, RequestInit } from "undici";
 
@@ -193,10 +193,24 @@ export async function fetchInternal<ResponseType>(
 		};
 	}
 
+	// Detect Cloudflare WAF block pages via the cf-mitigated response header.
+	// Without this check, the JSON parser throws a confusing "malformed response" error.
+	if (isWAFBlockResponse(response.headers)) {
+		throwWAFBlockError(
+			response.headers,
+			method,
+			resource,
+			response.status,
+			response.statusText
+		);
+	}
+
 	try {
 		const json = parseJSON(jsonText) as ResponseType;
 		return { response: json, status: response.status };
 	} catch {
+		const rayId = extractWAFBlockRayId(response.headers);
+
 		throw new APIError({
 			text: "Received a malformed response from the API",
 			notes: [
@@ -206,6 +220,7 @@ export async function fetchInternal<ResponseType>(
 				{
 					text: `${method} ${resource} -> ${response.status} ${response.statusText}`,
 				},
+				...(rayId ? [{ text: `Cloudflare Ray ID: ${rayId}` }] : []),
 			],
 			status: response.status,
 		});
@@ -218,6 +233,68 @@ export function truncate(text: string, maxLength: number): string {
 		return text;
 	}
 	return `${text.substring(0, maxLength)}... (length = ${length})`;
+}
+
+/**
+ * Checks whether the response was blocked by Cloudflare's WAF by inspecting
+ * the `cf-mitigated` response header. When the WAF blocks or challenges a
+ * request the response will include `cf-mitigated: challenge`.
+ *
+ * @see https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/detect-response/
+ *
+ * @param headers - The response headers to inspect.
+ * @returns `true` if the response was mitigated by the WAF.
+ */
+export function isWAFBlockResponse(headers: Headers): boolean {
+	return headers.get("cf-mitigated") === "challenge";
+}
+
+/**
+ * Extracts the Cloudflare Ray ID from the `cf-ray` response header.
+ *
+ * @param headers - The response headers to inspect.
+ * @returns The Ray ID string, or `undefined` if the header is absent.
+ */
+export function extractWAFBlockRayId(headers: Headers): string | undefined {
+	return headers.get("cf-ray") ?? undefined;
+}
+
+/**
+ * Throws a descriptive {@link APIError} for a WAF block response.
+ *
+ * @param headers - The response headers (used to extract the Ray ID).
+ * @param method - The HTTP method of the blocked request.
+ * @param resource - The URL or path that was requested.
+ * @param status - The HTTP status code returned.
+ * @param statusText - The HTTP status text returned.
+ * @throws {APIError} Always — this function never returns.
+ */
+function throwWAFBlockError(
+	headers: Headers,
+	method: string,
+	resource: string,
+	status: number,
+	statusText: string
+): never {
+	const rayId = extractWAFBlockRayId(headers);
+	throw new APIError({
+		text: "The Cloudflare API responded with a WAF block page instead of the expected JSON response",
+		notes: [
+			{
+				text: "Cloudflare's firewall (WAF) blocked this API request. This is usually a false positive.",
+			},
+			...(rayId ? [{ text: `Cloudflare Ray ID: ${rayId}` }] : []),
+			{
+				text: rayId
+					? "If the issue persists, please open a Cloudflare Support ticket and include the Ray ID above."
+					: "If the issue persists, please open a Cloudflare Support ticket. You can find the Cloudflare Ray ID on the block page in your browser.",
+			},
+			{
+				text: `${method} ${resource} -> ${status} ${statusText}`,
+			},
+		],
+		status,
+	});
 }
 
 function cloneHeaders(headers: HeadersInit | undefined): Headers {
@@ -326,9 +403,34 @@ export async function fetchR2Objects(
 	} else if (response.status === 404) {
 		return null;
 	} else {
-		throw new Error(
-			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
-		);
+		// Read response body to get detailed error message
+		const notes: Message[] = [];
+		let errorCode: number | undefined;
+		try {
+			const bodyText = await response.text();
+			// Attempt to parse as a standard Cloudflare API JSON envelope to
+			// extract the structured error code (e.g. for data catalog conflicts).
+			try {
+				const json = JSON.parse(bodyText) as {
+					errors?: Array<{ code?: number; message?: string }>;
+				};
+				errorCode = json.errors?.[0]?.code;
+			} catch {
+				// Not JSON — fall through and use raw text as the note
+			}
+			notes.push({ text: bodyText });
+		} catch {
+			// If we can't read the body, continue without it
+		}
+		const apiError = new APIError({
+			text: `Failed to fetch ${resource} - ${response.status}: ${response.statusText};`,
+			status: response.status,
+			notes,
+		});
+		if (errorCode !== undefined) {
+			apiError.code = errorCode;
+		}
+		throw apiError;
 	}
 }
 

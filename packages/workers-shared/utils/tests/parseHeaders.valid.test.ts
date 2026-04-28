@@ -1,8 +1,7 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { parseHeaders } from "../configuration/parseHeaders";
 
-test("parseHeaders should handle a single rule", () => {
+test("parseHeaders should handle a single rule", ({ expect }) => {
 	const input = `/a
   Name: Value`;
 	const result = parseHeaders(input);
@@ -12,7 +11,9 @@ test("parseHeaders should handle a single rule", () => {
 	});
 });
 
-test("parseHeaders should handle headers with exclamation marks", () => {
+test("parseHeaders should handle headers with exclamation marks", ({
+	expect,
+}) => {
 	const input = `/a
   !Name: Value`;
 	const result = parseHeaders(input);
@@ -22,7 +23,7 @@ test("parseHeaders should handle headers with exclamation marks", () => {
 	});
 });
 
-test("parseHeaders should ignore blank lines", () => {
+test("parseHeaders should ignore blank lines", ({ expect }) => {
 	const input = `
 /a
 
@@ -36,7 +37,7 @@ Name: Value
 	});
 });
 
-test("parseHeaders should trim whitespace", () => {
+test("parseHeaders should trim whitespace", ({ expect }) => {
 	const input = `
                 /a
     Name         :           Value
@@ -48,7 +49,7 @@ test("parseHeaders should trim whitespace", () => {
 	});
 });
 
-test("parseHeaders should ignore comments", () => {
+test("parseHeaders should ignore comments", ({ expect }) => {
 	const input = `
   # This is a comment
   /a
@@ -62,7 +63,7 @@ test("parseHeaders should ignore comments", () => {
 	});
 });
 
-test("parseHeaders should combine headers together", () => {
+test("parseHeaders should combine headers together", ({ expect }) => {
 	const input = `
   /a
     Set-Cookie: test=cookie; expires=never
@@ -92,7 +93,7 @@ test("parseHeaders should combine headers together", () => {
 	});
 });
 
-test("parseHeaders should support setting hosts", () => {
+test("parseHeaders should support setting hosts", ({ expect }) => {
 	const input = `
   https://example.com
     a: a
@@ -126,7 +127,7 @@ test("parseHeaders should support setting hosts", () => {
 	});
 });
 
-test("parseHeaders should add unset headers", () => {
+test("parseHeaders should add unset headers", ({ expect }) => {
 	const input = `/a
   Name: Value
   ! Place`;
@@ -139,7 +140,7 @@ test("parseHeaders should add unset headers", () => {
 	});
 });
 
-test("parseHeaders should support custom limits", () => {
+test("parseHeaders should support custom limits", ({ expect }) => {
 	const aaa = Array(1001).fill("a").join("");
 	const bbb = Array(1001).fill("b").join("");
 	const huge_line = `${aaa}: ${bbb}`;

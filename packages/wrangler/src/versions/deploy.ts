@@ -1,12 +1,12 @@
 import assert from "node:assert";
-import * as cli from "@cloudflare/cli";
-import { brandColor, gray, white } from "@cloudflare/cli/colors";
+import * as cli from "@cloudflare/cli-shared-helpers";
+import { brandColor, gray, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	grayBar,
 	inputPrompt,
 	leftT,
 	spinnerWhile,
-} from "@cloudflare/cli/interactive";
+} from "@cloudflare/cli-shared-helpers/interactive";
 import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
@@ -362,15 +362,23 @@ async function promptVersionsToDeploy(
 	versionCache: VersionCache,
 	yesFlag: boolean
 ): Promise<VersionId[]> {
+	// If the user has already specified all versions they want to deploy and
+	// has passed --yes (so there's no interactive prompt), skip fetching the
+	// full deployable-versions list and only fetch the specific versions needed.
+	const skipDeployableVersionsFetch =
+		yesFlag && defaultSelectedVersionIds.length > 0;
+
 	await spinnerWhile({
-		startMessage: "Fetching deployable versions",
+		startMessage: "Fetching versions",
 		async promise() {
-			await fetchDeployableVersions(
-				complianceConfig,
-				accountId,
-				workerName,
-				versionCache
-			);
+			if (!skipDeployableVersionsFetch) {
+				await fetchDeployableVersions(
+					complianceConfig,
+					accountId,
+					workerName,
+					versionCache
+				);
+			}
 			await fetchVersions(
 				complianceConfig,
 				accountId,

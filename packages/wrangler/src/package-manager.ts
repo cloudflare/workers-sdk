@@ -7,6 +7,7 @@ export interface PackageManager {
 	type: "npm" | "yarn" | "pnpm" | "bun";
 	npx: string;
 	dlx: string[];
+	lockFiles: string[];
 }
 
 export async function getPackageManager(): Promise<PackageManager> {
@@ -67,38 +68,42 @@ export function getPackageManagerName(packageManager: PackageManager): string {
 /**
  * Manage packages using npm
  */
-export const NpmPackageManager: PackageManager = {
+export const NpmPackageManager = {
 	type: "npm",
 	npx: "npx",
 	dlx: ["npx"],
-};
+	lockFiles: ["package-lock.json"],
+} as const satisfies PackageManager;
 
 /**
  * Manage packages using pnpm
  */
-export const PnpmPackageManager: PackageManager = {
+export const PnpmPackageManager = {
 	type: "pnpm",
 	npx: "pnpm",
+	lockFiles: ["pnpm-lock.yaml"],
 	dlx: ["pnpm", "dlx"],
-};
+} as const satisfies PackageManager;
 
 /**
  * Manage packages using yarn
  */
-export const YarnPackageManager: PackageManager = {
+export const YarnPackageManager = {
 	type: "yarn",
 	npx: "yarn",
 	dlx: ["yarn", "dlx"],
-};
+	lockFiles: ["yarn.lock"],
+} as const satisfies PackageManager;
 
 /**
  * Manage packages using bun
  */
-export const BunPackageManager: PackageManager = {
+export const BunPackageManager = {
 	type: "bun",
 	npx: "bunx",
 	dlx: ["bunx"],
-};
+	lockFiles: ["bun.lockb", "bun.lock"],
+} as const satisfies PackageManager;
 
 async function supports(name: string): Promise<boolean> {
 	try {

@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { supportedCompatibilityDate } from "miniflare";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterAll, beforeEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../../config-cache";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -13,13 +13,15 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { PagesConfigCache } from "../../pages/types";
+import type { ExpectStatic } from "vitest";
 
 async function readNormalizedWranglerToml() {
 	return (await readFile("wrangler.toml", "utf8"))
 		.split("\n")
 		.slice(1)
 		.join("\n")
-		.replace(supportedCompatibilityDate, "LATEST-SUPPORTED");
+		.replace(getTodaysCompatDate(), "LATEST-SUPPORTED");
 }
 function makePagesProject(
 	previewOverride: Record<string, unknown> = {},
@@ -226,7 +228,10 @@ function makePagesProject(
 	};
 }
 
-function mockSupportingDashRequests(expectedAccountId: string) {
+function mockSupportingDashRequests(
+	expect: ExpectStatic,
+	expectedAccountId: string
+) {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/pages/projects/NOT_REAL`,
@@ -334,15 +339,15 @@ describe("pages download config", () => {
 	const MOCK_PROJECT_NAME = "MOCK_PROJECT_NAME";
 	mockAccountId({ accountId: MOCK_ACCOUNT_ID });
 
-	beforeEach(() => {
-		mockSupportingDashRequests(MOCK_ACCOUNT_ID);
+	beforeEach(({ expect }) => {
+		mockSupportingDashRequests(expect, MOCK_ACCOUNT_ID);
 		setIsTTY(true);
 	});
 	afterAll(() => {
 		clearDialogs();
 	});
 
-	it("should download full config correctly", async () => {
+	it("should download full config correctly", async ({ expect }) => {
 		await runWrangler(`pages download config ${MOCK_PROJECT_NAME}`);
 
 		await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`
@@ -483,7 +488,9 @@ describe("pages download config", () => {
 			"
 		`);
 	});
-	it("should generate preview override if preview has limits and production does not", async () => {
+	it("should generate preview override if preview has limits and production does not", async ({
+		expect,
+	}) => {
 		await runWrangler(`pages download config NO_PROD_LIMITS`);
 
 		await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`
@@ -701,7 +708,9 @@ describe("pages download config", () => {
 			"
 		`);
 	});
-	it("should not duplicate inheritable properties if they're equal", async () => {
+	it("should not duplicate inheritable properties if they're equal", async ({
+		expect,
+	}) => {
 		await runWrangler(`pages download config INHERIT`);
 
 		await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`
@@ -831,14 +840,56 @@ describe("pages download config", () => {
 			"
 		`);
 	});
-	it("should fail if not given a project name", async () => {
+	it("should prefer CLOUDFLARE_ACCOUNT_ID over cached account id", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-var-account-id");
+
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "stale-cached-account-id",
+			project_name: MOCK_PROJECT_NAME,
+		});
+
+		msw.use(
+			http.get(
+				`*/accounts/:accountId/pages/projects/:projectName`,
+				({ params }) => {
+					expect(params.accountId).toEqual("env-var-account-id");
+					return HttpResponse.json(makePagesProject(), { status: 200 });
+				},
+				{ once: true }
+			),
+			http.get(
+				`*/accounts/:accountId/workers/durable_objects/namespaces/:doId`,
+				({ params }) => {
+					expect(params.accountId).toEqual("env-var-account-id");
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							result: {
+								script: `some-script-${params.doId}`,
+								class: `some-class-${params.doId}`,
+								environment: `some-environment-${params.doId}`,
+							},
+						},
+						{ status: 200 }
+					);
+				}
+			)
+		);
+
+		await runWrangler(`pages download config ${MOCK_PROJECT_NAME}`);
+	});
+
+	it("should fail if not given a project name", async ({ expect }) => {
 		await expect(
 			runWrangler(`pages download config`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Must specify a project name.]`
 		);
 	});
-	it("should fail if project does not exist", async () => {
+	it("should fail if project does not exist", async ({ expect }) => {
 		await expect(
 			runWrangler(`pages download config NOT_REAL`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -868,7 +919,7 @@ describe("pages download config", () => {
 		`);
 	});
 	describe("overwrite existing file", () => {
-		it("should overwrite existing file w/ --force", async () => {
+		it("should overwrite existing file w/ --force", async ({ expect }) => {
 			await writeWranglerConfig({ name: "some-project" });
 			await runWrangler(`pages download config ${MOCK_PROJECT_NAME} --force`);
 
@@ -1010,7 +1061,9 @@ describe("pages download config", () => {
 				"
 			`);
 		});
-		it("should not overwrite existing file w/o --force (non-interactive)", async () => {
+		it("should not overwrite existing file w/o --force (non-interactive)", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			await writeWranglerConfig({ name: "some-project" });
 			await expect(
@@ -1034,7 +1087,7 @@ describe("pages download config", () => {
 				"
 			`);
 		});
-		it("should overwrite existing file w/ prompt", async () => {
+		it("should overwrite existing file w/ prompt", async ({ expect }) => {
 			await writeWranglerConfig({ name: "some-project" });
 			await mockConfirm({
 				text: "Your existing Wrangler configuration file will be overwritten. Continue?",
@@ -1180,7 +1233,7 @@ describe("pages download config", () => {
 				"
 			`);
 		});
-		it("should not overwrite existing file w/ prompt", async () => {
+		it("should not overwrite existing file w/ prompt", async ({ expect }) => {
 			await writeWranglerConfig({ name: "some-project" });
 			await mockConfirm({
 				text: "Your existing `wrangler.toml` file will be overwritten. Continue?",

@@ -93,11 +93,9 @@ describe("Preview Worker", () => {
 				},
 			}
 		);
-		expect(resp.headers.get("location")).toMatchInlineSnapshot(
-			'"/hello?world"'
-		);
-		expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-			`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
+		expect(resp.headers.get("location")).toEqual("/hello?world");
+		expect(resp.headers.get("set-cookie") ?? "").toEqual(
+			`token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
 		);
 	});
 	it("shouldn't be redirected with no token", async ({ expect }) => {
@@ -343,8 +341,8 @@ describe("Preview Worker", () => {
 			expect(resp.headers.get("location")).toMatchInlineSnapshot(
 				'"/hello?world"'
 			);
-			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
+			expect(resp.headers.get("set-cookie") ?? "").toEqual(
+				`token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
 			);
 		});
 		it("should allow workers.cloudflare.com", async ({ expect }) => {
@@ -365,8 +363,8 @@ describe("Preview Worker", () => {
 			expect(resp.headers.get("location")).toMatchInlineSnapshot(
 				'"/hello?world"'
 			);
-			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
+			expect(resp.headers.get("set-cookie") ?? "").toEqual(
+				`token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
 			);
 		});
 		it("should allow workers-playground.pages.dev", async ({ expect }) => {
@@ -388,8 +386,30 @@ describe("Preview Worker", () => {
 			expect(resp.headers.get("location")).toMatchInlineSnapshot(
 				'"/hello?world"'
 			);
-			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
+			expect(resp.headers.get("set-cookie") ?? "").toEqual(
+				`token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
+			);
+		});
+		it("should allow workers-playground.workers.dev", async ({ expect }) => {
+			const resp = await fetch(
+				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
+					"/hello?world"
+				)}`,
+				{
+					method: "GET",
+					redirect: "manual",
+					// These are forbidden headers, but undici currently allows setting them
+					headers: {
+						"Sec-Fetch-Dest": "iframe",
+						Referer: "https://workers-playground.workers.dev/some/path",
+					},
+				}
+			);
+			expect(resp.headers.get("location")).toMatchInlineSnapshot(
+				'"/hello?world"'
+			);
+			expect(resp.headers.get("set-cookie") ?? "").toEqual(
+				`token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
 			);
 		});
 		it("should reject unknown referer", async ({ expect }) => {
@@ -407,13 +427,11 @@ describe("Preview Worker", () => {
 					},
 				}
 			);
-			expect(await resp.json()).toMatchInlineSnapshot(`
-				{
-				  "data": {},
-				  "error": "PreviewRequestForbidden",
-				  "message": "Preview request forbidden",
-				}
-			`);
+			expect(await resp.json()).toEqual({
+				data: {},
+				error: "PreviewRequestForbidden",
+				message: "Preview request forbidden",
+			});
 		});
 		it("should reject unknown referer with pages.dev in path", async ({
 			expect,
@@ -432,13 +450,76 @@ describe("Preview Worker", () => {
 					},
 				}
 			);
-			expect(await resp.json()).toMatchInlineSnapshot(`
+			expect(await resp.json()).toEqual({
+				data: {},
+				error: "PreviewRequestForbidden",
+				message: "Preview request forbidden",
+			});
+		});
+		it("should reject unknown referer with workers.dev in path", async ({
+			expect,
+		}) => {
+			const resp = await fetch(
+				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
+					"/hello?world"
+				)}`,
 				{
-				  "data": {},
-				  "error": "PreviewRequestForbidden",
-				  "message": "Preview request forbidden",
+					method: "GET",
+					redirect: "manual",
+					// These are forbidden headers, but undici currently allows setting them
+					headers: {
+						"Sec-Fetch-Dest": "iframe",
+						Referer: "https://example.com/workers-playground.workers.dev",
+					},
 				}
-			`);
+			);
+			expect(await resp.json()).toEqual({
+				data: {},
+				error: "PreviewRequestForbidden",
+				message: "Preview request forbidden",
+			});
+		});
+		it("should reject spoofed pages.dev hostname", async ({ expect }) => {
+			const resp = await fetch(
+				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
+					"/hello?world"
+				)}`,
+				{
+					method: "GET",
+					redirect: "manual",
+					// These are forbidden headers, but undici currently allows setting them
+					headers: {
+						"Sec-Fetch-Dest": "iframe",
+						Referer: "https://evil-workers-playground.pages.dev/some/path",
+					},
+				}
+			);
+			expect(await resp.json()).toEqual({
+				data: {},
+				error: "PreviewRequestForbidden",
+				message: "Preview request forbidden",
+			});
+		});
+		it("should reject spoofed workers.dev hostname", async ({ expect }) => {
+			const resp = await fetch(
+				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
+					"/hello?world"
+				)}`,
+				{
+					method: "GET",
+					redirect: "manual",
+					// These are forbidden headers, but undici currently allows setting them
+					headers: {
+						"Sec-Fetch-Dest": "iframe",
+						Referer: "https://evil-workers-playground.workers.dev/some/path",
+					},
+				}
+			);
+			expect(await resp.json()).toEqual({
+				data: {},
+				error: "PreviewRequestForbidden",
+				message: "Preview request forbidden",
+			});
 		});
 	});
 });
@@ -457,7 +538,7 @@ describe("Upload Worker", () => {
 			},
 			body: TEST_WORKER,
 		});
-		expect(w.status).toMatchInlineSnapshot("200");
+		expect(w.status).toBe(200);
 	});
 	it("should upload valid worker and return tail url", async ({ expect }) => {
 		const w = await fetch(`${REMOTE}/api/worker`, {
@@ -481,19 +562,15 @@ describe("Upload Worker", () => {
 			},
 			body: TEST_WORKER.replace("fetch(request)", "fetch(request"),
 		}).then((response) => response.json());
-		expect(w).toMatchInlineSnapshot(`
-			{
-			  "data": {
-			    "error": "Uncaught SyntaxError: Unexpected token '{'
-			  at index.js:2:15
-			",
-			  },
-			  "error": "PreviewError",
-			  "message": "Uncaught SyntaxError: Unexpected token '{'
-			  at index.js:2:15
-			",
-			}
-		`);
+		expect(w).toEqual({
+			data: {
+				error:
+					"Uncaught SyntaxError: Unexpected token '{'\n  at index.js:2:15\n",
+			},
+			error: "PreviewError",
+			message:
+				"Uncaught SyntaxError: Unexpected token '{'\n  at index.js:2:15\n",
+		});
 	});
 	it("should reject no token", async ({ expect }) => {
 		const w = await fetch(`${REMOTE}/api/worker`, {
@@ -504,8 +581,8 @@ describe("Upload Worker", () => {
 			body: TEST_WORKER,
 		});
 		expect(w.status).toBe(401);
-		expect(await w.text()).toMatchInlineSnapshot(
-			`"{"error":"UploadFailed","message":"Valid token not provided","data":{}}"`
+		expect(await w.text()).toEqual(
+			`{"error":"UploadFailed","message":"Valid token not provided","data":{}}`
 		);
 	});
 	it("should reject invalid token", async ({ expect }) => {
@@ -518,8 +595,8 @@ describe("Upload Worker", () => {
 			body: TEST_WORKER,
 		});
 		expect(w.status).toBe(401);
-		expect(await w.text()).toMatchInlineSnapshot(
-			`"{"error":"UploadFailed","message":"Valid token not provided","data":{}}"`
+		expect(await w.text()).toEqual(
+			`{"error":"UploadFailed","message":"Valid token not provided","data":{}}`
 		);
 	});
 	it("should reject invalid form data", async ({ expect }) => {
@@ -532,8 +609,8 @@ describe("Upload Worker", () => {
 			body: "not a form",
 		});
 		expect(w.status).toBe(400);
-		expect(await w.text()).toMatchInlineSnapshot(
-			`"{"error":"BadUpload","message":"Expected valid form data","data":{"error":"TypeError: Unrecognized Content-Type header value. FormData can only parse the following MIME types: multipart/form-data, application/x-www-form-urlencoded"}}"`
+		expect(await w.text()).toEqual(
+			`{"error":"BadUpload","message":"Expected valid form data","data":{"error":"TypeError: Unrecognized Content-Type header value. FormData can only parse the following MIME types: multipart/form-data, application/x-www-form-urlencoded"}}`
 		);
 	});
 	it("should reject missing metadata", async ({ expect }) => {
@@ -554,8 +631,8 @@ export default {
 --${TEST_WORKER_BOUNDARY}--`,
 		});
 		expect(w.status).toBe(400);
-		expect(await w.text()).toMatchInlineSnapshot(
-			`"{"error":"BadUpload","message":"Expected metadata file to be defined","data":{}}"`
+		expect(await w.text()).toEqual(
+			`{"error":"BadUpload","message":"Expected metadata file to be defined","data":{}}`
 		);
 	});
 	it("should reject invalid metadata json", async ({ expect }) => {
@@ -573,8 +650,8 @@ Content-Type: application/json
 --${TEST_WORKER_BOUNDARY}--`,
 		});
 		expect(w.status).toBe(400);
-		expect(await w.text()).toMatchInlineSnapshot(
-			`"{"error":"BadUpload","message":"Expected metadata file to be valid","data":{}}"`
+		expect(await w.text()).toEqual(
+			`{"error":"BadUpload","message":"Expected metadata file to be valid","data":{}}`
 		);
 	});
 	it("should reject invalid metadata", async ({ expect }) => {
@@ -592,8 +669,8 @@ Content-Type: application/json
 --${TEST_WORKER_BOUNDARY}--`,
 		});
 		expect(w.status).toBe(400);
-		expect(await w.text()).toMatchInlineSnapshot(
-			`"{"error":"BadUpload","message":"Expected metadata file to be valid","data":{}}"`
+		expect(await w.text()).toEqual(
+			`{"error":"BadUpload","message":"Expected metadata file to be valid","data":{}}`
 		);
 	});
 	it("should reject service worker", async ({ expect }) => {
@@ -616,8 +693,8 @@ Content-Type: application/json
 --${TEST_WORKER_BOUNDARY}--`,
 		});
 		expect(w.status).toBe(400);
-		expect(await w.text()).toMatchInlineSnapshot(
-			`"{"error":"ServiceWorkerNotSupported","message":"Service Workers are not supported in the Workers Playground","data":{}}"`
+		expect(await w.text()).toEqual(
+			`{"error":"ServiceWorkerNotSupported","message":"Service Workers are not supported in the Workers Playground","data":{}}`
 		);
 	});
 });
@@ -675,9 +752,7 @@ describe("Raw HTTP preview", () => {
 			},
 		});
 
-		expect(resp.headers.get("cf-ew-raw-set-cookie")).toMatchInlineSnapshot(
-			`"foo=1, bar=2"`
-		);
+		expect(resp.headers.get("cf-ew-raw-set-cookie")).toEqual(`foo=1, bar=2`);
 	});
 
 	it("should pass headers to the user-worker", async ({ expect }) => {
@@ -699,18 +774,10 @@ describe("Raw HTTP preview", () => {
 		);
 
 		// This contains some-custom-header & accept, as expected
-		expect(headers).toMatchInlineSnapshot(`
-			[
-			  [
-			    "accept",
-			    "application/json",
-			  ],
-			  [
-			    "some-custom-header",
-			    "custom",
-			  ],
-			]
-		`);
+		expect(headers).toEqual([
+			["accept", "application/json"],
+			["some-custom-header", "custom"],
+		]);
 	});
 
 	it("should strip cf-ew-raw- prefix from headers which have it before hitting the user-worker", async ({
@@ -737,17 +804,9 @@ describe("Raw HTTP preview", () => {
 		);
 
 		// This contains some-custom-header & accept, as expected, and does not contain cf-ew-raw-some-custom-header or cf-ew-raw-accept
-		expect(headers).toMatchInlineSnapshot(`
-			[
-			  [
-			    "accept",
-			    "application/json",
-			  ],
-			  [
-			    "some-custom-header",
-			    "custom",
-			  ],
-			]
-		`);
+		expect(headers).toEqual([
+			["accept", "application/json"],
+			["some-custom-header", "custom"],
+		]);
 	});
 });

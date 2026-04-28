@@ -1,4 +1,4 @@
-import { runInDurableObject, SELF } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
 import { exports } from "cloudflare:workers";
 import { it, vi } from "vitest";
 
@@ -15,21 +15,23 @@ it("can access imported context exports for Durable Objects", async ({
 	expect(count).toBe(1);
 });
 
-it("can access context exports for Durable Objects on SELF", async ({
+it("can access context exports for Durable Objects on exports.default", async ({
 	expect,
 }) => {
-	const response = await SELF.fetch("https://example.com/durable-object");
+	const response = await exports.default.fetch(
+		"https://example.com/durable-object"
+	);
 	expect(await response.text()).toMatchInlineSnapshot(`"1"`);
 });
 
-it("will can access Durable Object context exports that could not be guessed on the SELF worker but are described by DO migrations", async ({
+it("will can access Durable Object context exports that could not be guessed on the exports.default worker but are described by DO migrations", async ({
 	expect,
 }) => {
 	// In this test, we are trying to access a durable-object that is wildcard (*) re-exported from a virtual module.
 	// This virtual module is understood by Vitest and TypeScript but not the lightweight esbuild that we use to guess exports.
 	// But since Durable Objects require explicit "migration" configuration in wrangler, we can still make this work.
 	const warnSpy = vi.spyOn(console, "warn");
-	const response = await SELF.fetch(
+	const response = await exports.default.fetch(
 		"http://example.com/virtual-durable-object"
 	);
 	expect(await response.text()).toMatchInlineSnapshot(

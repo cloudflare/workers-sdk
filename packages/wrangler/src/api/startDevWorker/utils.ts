@@ -16,6 +16,13 @@ import type {
 
 export function assertNever(_value: never) {}
 
+/**
+ * When to proactively refresh the preview token.
+ *
+ * Preview tokens expire after 1 hour (hardcoded in the Workers control plane), so we retry after 50 mins.
+ */
+export const PREVIEW_TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000;
+
 export type MaybePromise<T> = T | Promise<T>;
 export type DeferredPromise<T> = {
 	promise: Promise<T>;
@@ -133,7 +140,7 @@ export function convertConfigToBindings(
 					output[binding] = {
 						type: "kv_namespace",
 						...x,
-						id: usePreviewIds ? x.preview_id ?? x.id : x.id,
+						id: usePreviewIds ? (x.preview_id ?? x.id) : x.id,
 					};
 				}
 				break;
@@ -215,7 +222,7 @@ export function convertConfigToBindings(
 						type: "r2_bucket",
 						...x,
 						bucket_name: usePreviewIds
-							? x.preview_bucket_name ?? x.bucket_name
+							? (x.preview_bucket_name ?? x.bucket_name)
 							: x.bucket_name,
 					};
 				}
@@ -227,7 +234,7 @@ export function convertConfigToBindings(
 						type: "d1",
 						...x,
 						database_id: usePreviewIds
-							? x.preview_database_id ?? x.database_id
+							? (x.preview_database_id ?? x.database_id)
 							: x.database_id,
 					};
 				}
@@ -279,6 +286,11 @@ export function convertConfigToBindings(
 				output[binding] = { type: "images", ...x };
 				break;
 			}
+			case "stream": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "stream", ...x };
+				break;
+			}
 			case "version_metadata": {
 				const { binding, ...x } = info;
 				output[binding] = { type: "version_metadata", ...x };
@@ -293,6 +305,18 @@ export function convertConfigToBindings(
 			case "vectorize": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "vectorize", ...x };
+				}
+				break;
+			}
+			case "ai_search_namespaces": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "ai_search_namespace", ...x };
+				}
+				break;
+			}
+			case "ai_search": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "ai_search", ...x };
 				}
 				break;
 			}
@@ -329,12 +353,24 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "artifacts": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "artifacts", ...x };
+				}
+				break;
+			}
 			case "unsafe_hello_world": {
 				if (pages) {
 					break;
 				}
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "unsafe_hello_world", ...x };
+				}
+				break;
+			}
+			case "flagship": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "flagship", ...x };
 				}
 				break;
 			}
@@ -353,6 +389,12 @@ export function convertConfigToBindings(
 			case "vpc_services": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "vpc_service", ...x };
+				}
+				break;
+			}
+			case "vpc_networks": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "vpc_network", ...x };
 				}
 				break;
 			}
@@ -380,6 +422,7 @@ export type StartDevOptionsBindings = Pick<
 	| "services"
 	| "r2"
 	| "ai"
+	| "stream"
 	| "version_metadata"
 	| "d1Databases"
 >;
@@ -400,6 +443,7 @@ export function convertStartDevOptionsToBindings(
 		services: inputBindings.services,
 		r2_buckets: inputBindings.r2,
 		ai: inputBindings.ai,
+		stream: inputBindings.stream,
 		version_metadata: inputBindings.version_metadata,
 		d1_databases: inputBindings.d1Databases,
 	};
@@ -596,6 +640,28 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				};
 				break;
 			}
+			case "ai_search_namespace": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "ai_search_namespace" }
+				>;
+				output[name] = {
+					type: "ai_search_namespace",
+					namespace: b.namespace,
+				};
+				break;
+			}
+			case "ai_search": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "ai_search" }
+				>;
+				output[name] = {
+					type: "ai_search",
+					instance_name: b.instance_name,
+				};
+				break;
+			}
 			case "hyperdrive": {
 				const b = binding as Extract<
 					WorkerMetadataBinding,
@@ -649,6 +715,7 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 			case "browser":
 			case "ai":
 			case "images":
+			case "stream":
 			case "version_metadata":
 			case "media":
 			case "inherit": {

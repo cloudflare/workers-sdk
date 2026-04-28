@@ -1,8 +1,11 @@
 import { instrument } from "@microlabs/otel-cf-workers";
+import { exports } from "cloudflare:workers";
 import { Utils } from "discord-api-types/v10";
+import { value as esmDepValue } from "esm-dep";
 import dep from "ext-dep";
 import mime from "mime-types";
-import { assert, describe, test } from "vitest";
+import { assert, describe, expect, test } from "vitest";
+import worker from "../src/index";
 import sqlPlain from "../src/test.sql";
 import sqlRaw from "../src/test.sql?raw";
 
@@ -11,14 +14,23 @@ describe("test", () => {
 		assert.equal(dep, 123);
 	});
 
-	// This requires the `deps.optimizer` option to be set in the vitest config
 	test("resolves dependency without a default entrypoint", async () => {
 		assert.isFunction(Utils.isDMInteraction);
 	});
 
-	// This requires the `deps.optimizer` option to be set in the vitest config
 	test("resolves dependency with mapping on the browser field", async () => {
 		assert.isFunction(instrument);
+	});
+
+	test("can use toucan-js (integration)", async () => {
+		expect((await exports.default.fetch("http://example.com")).status).toBe(
+			200
+		);
+	});
+
+	test("can use toucan-js (unit)", async () => {
+		const response = await worker.fetch();
+		expect(response.status).toBe(200);
 	});
 
 	// Regression test for https://github.com/cloudflare/workers-sdk/issues/12049
@@ -30,5 +42,12 @@ describe("test", () => {
 	// Verify CommonJS require() of JSON files works
 	test("resolves dependency that requires JSON files", async () => {
 		assert.equal(mime.lookup("test.html"), "text/html");
+	});
+
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/12022
+	// ESM imports with extensionless specifiers should be resolved by Vite, not
+	// by the module fallback's extension-probing loop (which is only for require()).
+	test("resolves ESM dependency with extensionless internal import", async () => {
+		assert.equal(esmDepValue, 456);
 	});
 });

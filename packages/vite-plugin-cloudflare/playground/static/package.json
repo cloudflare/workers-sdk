@@ -16,7 +16,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }

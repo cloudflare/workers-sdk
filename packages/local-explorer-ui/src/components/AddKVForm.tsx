@@ -1,5 +1,4 @@
-import { Button } from "@base-ui/react/button";
-import { cn } from "@cloudflare/kumo";
+import { Button, cn } from "@cloudflare/kumo";
 import { useEffect, useState } from "react";
 import { validateKey } from "../utils/kv-validation";
 
@@ -54,19 +53,20 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 
 	return (
 		<form
-			className="flex flex-col lg:flex-row gap-2 mb-4 items-start"
+			className="mb-4 flex flex-col items-start gap-2 lg:flex-row"
 			onSubmit={handleSubmit}
 		>
-			<div className="flex flex-col w-full lg:w-2xs shrink-0">
+			<div className="flex w-full shrink-0 flex-col lg:w-2xs">
 				<label className="sr-only" htmlFor="add-key">
 					Key
 				</label>
 				<input
 					id="add-key"
 					className={cn(
-						"w-full font-mono bg-bg text-text placeholder:text-text! py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-focus-primary disabled:bg-bg-secondary disabled:text-text-secondary",
+						"focus-visible:ring-kumo-ring h-9 w-full rounded-md border border-kumo-fill bg-kumo-base px-3 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 disabled:bg-kumo-elevated disabled:text-kumo-subtle",
 						{
-							"border-danger focus:shadow-focus-danger": keyError,
+							"border-kumo-danger focus-visible:ring-2 focus-visible:ring-kumo-danger":
+								keyError,
 						}
 					)}
 					placeholder="Key"
@@ -75,16 +75,16 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 					disabled={saving}
 				/>
 				{keyError && (
-					<span className="text-danger text-xs mt-1">{keyError}</span>
+					<span className="mt-1 text-xs text-kumo-danger">{keyError}</span>
 				)}
 			</div>
-			<div className="flex flex-col flex-1 w-full lg:min-w-2xs">
+			<div className="flex w-full flex-1 flex-col lg:min-w-2xs">
 				<label className="sr-only" htmlFor="add-value">
 					Value
 				</label>
 				<textarea
 					id="add-value"
-					className="w-full font-mono bg-bg text-text placeholder:text-text! py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-focus-primary disabled:bg-bg-secondary disabled:text-text-secondary max-h-2xs resize-none overflow-y-auto lg:[field-sizing:content]"
+					className="focus-visible:ring-kumo-ring max-h-32 min-h-9 w-full resize-none overflow-y-auto rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 disabled:bg-kumo-elevated disabled:text-kumo-subtle lg:field-sizing-content"
 					placeholder="Value"
 					value={value}
 					onChange={(e) => setValue(e.target.value)}
@@ -93,9 +93,10 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 			</div>
 			<Button
 				type="submit"
-				className="shrink-0 w-full lg:w-auto inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,color,transform] active:translate-y-px bg-primary text-white hover:bg-primary-hover focus:outline-none focus:border-primary focus:shadow-focus-primary data-[disabled]:bg-primary/50 data-[disabled]:text-white/70 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0"
+				className="w-full shrink-0 lg:w-auto"
+				variant="primary"
 				disabled={saving || isKeyInvalid}
-				focusableWhenDisabled
+				loading={saving}
 			>
 				{saving ? "Adding..." : "Add entry"}
 			</Button>

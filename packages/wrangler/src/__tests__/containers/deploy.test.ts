@@ -10,10 +10,9 @@ import {
 import { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- module-level helper functions use expect */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { clearCachedAccount } from "../../cloudchamber/locations";
+import * as user from "../../user";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-cli-output";
@@ -36,6 +35,7 @@ import type {
 	ImageRegistryCredentialsConfiguration,
 } from "@cloudflare/containers-shared";
 import type { ChildProcess } from "node:child_process";
+import type { ExpectStatic } from "vitest";
 
 vi.mock("node:child_process");
 
@@ -56,7 +56,9 @@ describe("wrangler deploy with containers", () => {
 	afterEach(() => {
 		vi.unstubAllEnvs();
 	});
-	it("should fail early if no docker is detected when deploying a container from a dockerfile", async () => {
+	it("should fail early if no docker is detected when deploying a container from a dockerfile", async ({
+		expect,
+	}) => {
 		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/bad-docker-path");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
@@ -74,7 +76,9 @@ describe("wrangler deploy with containers", () => {
 		`
 		);
 	});
-	it("should fail early if the account id doesn't match the account id in the image uri", async () => {
+	it("should fail early if the account id doesn't match the account id in the image uri", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
 			containers: [
@@ -93,18 +97,20 @@ describe("wrangler deploy with containers", () => {
 			Current account: "some-account-id"]
 		`);
 	});
-	it("should be able to deploy a new container from a dockerfile", async () => {
+	it("should be able to deploy a new container from a dockerfile", async ({
+		expect,
+	}) => {
 		mockGetVersion("Galaxy-Class");
-		setupDockerMocks("my-container", "Galaxy");
+		setupDockerMocks(expect, "my-container", "Galaxy");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
 			containers: [DEFAULT_CONTAINER_FROM_DOCKERFILE],
 		});
 		mockGetApplications([]);
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
-		mockGenerateImageRegistryCredentials();
+		mockGenerateImageRegistryCredentials(expect);
 
-		mockCreateApplication({
+		mockCreateApplication(expect, {
 			name: "my-container",
 			max_instances: 10,
 			configuration: {
@@ -174,7 +180,9 @@ describe("wrangler deploy with containers", () => {
 			"
 		`);
 	});
-	it("should be able to deploy a new container from an image uri", async () => {
+	it("should be able to deploy a new container from an image uri", async ({
+		expect,
+	}) => {
 		// note no docker commands have been mocked here!
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
@@ -183,13 +191,17 @@ describe("wrangler deploy with containers", () => {
 				{
 					...DEFAULT_CONTAINER_FROM_REGISTRY,
 					rollout_active_grace_period: 600,
+					constraints: {
+						regions: ["ENAM", "WNAM"],
+						jurisdiction: "fedramp",
+					},
 				},
 			],
 		});
 
 		mockGetApplications([]);
 
-		mockCreateApplication({
+		mockCreateApplication(expect, {
 			name: "my-container",
 			max_instances: 10,
 			scheduling_policy: SchedulingPolicy.DEFAULT,
@@ -238,6 +250,8 @@ describe("wrangler deploy with containers", () => {
 			│
 			│   [containers.constraints]
 			│   tiers = [ 1, 2 ]
+			│   regions = [ "ENAM", "WNAM" ]
+			│   jurisdiction = "fedramp"
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = "1"
@@ -251,7 +265,9 @@ describe("wrangler deploy with containers", () => {
 		`);
 	});
 
-	it("should be able to deploy a new container with custom instance limits", async () => {
+	it("should be able to deploy a new container with custom instance limits", async ({
+		expect,
+	}) => {
 		// this test checks the deprecated path for setting custom instance limits
 		// note no docker commands have been mocked here!
 		mockGetVersion("Galaxy-Class");
@@ -271,7 +287,7 @@ describe("wrangler deploy with containers", () => {
 
 		mockGetApplications([]);
 
-		mockCreateApplication({
+		mockCreateApplication(expect, {
 			name: "my-container",
 			max_instances: 10,
 			scheduling_policy: SchedulingPolicy.DEFAULT,
@@ -352,7 +368,9 @@ describe("wrangler deploy with containers", () => {
 		`);
 	});
 
-	it("should be able to deploy a new container with custom instance limits (instance_type)", async () => {
+	it("should be able to deploy a new container with custom instance limits (instance_type)", async ({
+		expect,
+	}) => {
 		// tests the preferred method for setting custom instance limits
 		// note no docker commands have been mocked here!
 		mockGetVersion("Galaxy-Class");
@@ -372,7 +390,7 @@ describe("wrangler deploy with containers", () => {
 
 		mockGetApplications([]);
 
-		mockCreateApplication({
+		mockCreateApplication(expect, {
 			name: "my-container",
 			max_instances: 10,
 			scheduling_policy: SchedulingPolicy.DEFAULT,
@@ -447,10 +465,12 @@ describe("wrangler deploy with containers", () => {
 		`);
 	});
 
-	it("should resolve the docker build context path based on the dockerfile location, if image_build_context is not provided", async () => {
+	it("should resolve the docker build context path based on the dockerfile location, if image_build_context is not provided", async ({
+		expect,
+	}) => {
 		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 		mockGetVersion("Galaxy-Class");
-		setupDockerMocks("my-container", "Galaxy");
+		setupDockerMocks(expect, "my-container", "Galaxy");
 		mockContainersAccount();
 
 		writeWranglerConfig(
@@ -477,9 +497,9 @@ describe("wrangler deploy with containers", () => {
 		);
 		mockGetApplications([]);
 
-		mockGenerateImageRegistryCredentials();
+		mockGenerateImageRegistryCredentials(expect);
 
-		mockCreateApplication({
+		mockCreateApplication(expect, {
 			name: "my-container",
 			max_instances: 10,
 			configuration: {
@@ -522,9 +542,11 @@ describe("wrangler deploy with containers", () => {
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should resolve dockerfile path relative to wrangler config path", async () => {
+	it("should resolve dockerfile path relative to wrangler config path", async ({
+		expect,
+	}) => {
 		mockGetVersion("Galaxy-Class");
-		setupDockerMocks("my-container", "Galaxy", "FROM alpine");
+		setupDockerMocks(expect, "my-container", "Galaxy", "FROM alpine");
 
 		fs.mkdirSync("nested/src", { recursive: true });
 		fs.writeFileSync("Dockerfile", "FROM alpine");
@@ -550,9 +572,9 @@ describe("wrangler deploy with containers", () => {
 		);
 
 		mockGetApplications([]);
-		mockGenerateImageRegistryCredentials();
+		mockGenerateImageRegistryCredentials(expect);
 
-		mockCreateApplication({
+		mockCreateApplication(expect, {
 			name: "my-container",
 			max_instances: 10,
 			configuration: {
@@ -589,9 +611,11 @@ describe("wrangler deploy with containers", () => {
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should be able to redeploy an existing application ", async () => {
+	it("should be able to redeploy an existing application ", async ({
+		expect,
+	}) => {
 		mockGetVersion("Galaxy-Class");
-		setupDockerMocks("my-container", "Galaxy");
+		setupDockerMocks(expect, "my-container", "Galaxy");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
 			containers: [
@@ -631,15 +655,15 @@ describe("wrangler deploy with containers", () => {
 			},
 		]);
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
-		mockGenerateImageRegistryCredentials();
-		mockModifyApplication({
+		mockGenerateImageRegistryCredentials(expect);
+		mockModifyApplication(expect, {
 			configuration: {
 				image: "registry.cloudflare.com/some-account-id/my-container:Galaxy",
 			},
 			max_instances: 10,
 			rollout_active_grace_period: 600,
 		});
-		mockCreateApplicationRollout({
+		mockCreateApplicationRollout(expect, {
 			description: "Progressive update",
 			strategy: "rolling",
 			kind: "full_auto",
@@ -676,7 +700,9 @@ describe("wrangler deploy with containers", () => {
 			"
 		`);
 	});
-	it("should be able to redeploy an existing application and create another", async () => {
+	it("should be able to redeploy an existing application and create another", async ({
+		expect,
+	}) => {
 		mockGetVersion("Galaxy-Class", [
 			{
 				type: "durable_object_namespace",
@@ -690,7 +716,7 @@ describe("wrangler deploy with containers", () => {
 			},
 		]);
 
-		setupDockerMocks("my-container", "Galaxy");
+		setupDockerMocks(expect, "my-container", "Galaxy");
 		mockUploadWorkerRequest({
 			expectedBindings: [
 				{
@@ -775,19 +801,19 @@ describe("wrangler deploy with containers", () => {
 			},
 		]);
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
-		mockGenerateImageRegistryCredentials();
-		mockModifyApplication({
+		mockGenerateImageRegistryCredentials(expect);
+		mockModifyApplication(expect, {
 			configuration: {
 				image: "registry.cloudflare.com/some-account-id/my-container:Galaxy",
 			},
 			max_instances: 10,
 		});
-		mockCreateApplication({
+		mockCreateApplication(expect, {
 			name: "my-container-app-2",
 			max_instances: 3,
 			scheduling_policy: SchedulingPolicy.DEFAULT,
 		});
-		mockCreateApplicationRollout({
+		mockCreateApplicationRollout(expect, {
 			description: "Progressive update",
 			strategy: "rolling",
 			kind: "full_auto",
@@ -852,9 +878,11 @@ describe("wrangler deploy with containers", () => {
 		`);
 	});
 
-	it("skips an existing application if there are no changes", async () => {
+	it("skips an existing application if there are no changes", async ({
+		expect,
+	}) => {
 		mockGetVersion("Galaxy-Class");
-		setupDockerMocks("my-container", "Galaxy");
+		setupDockerMocks(expect, "my-container", "Galaxy");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
 			containers: [DEFAULT_CONTAINER_FROM_DOCKERFILE],
@@ -889,7 +917,7 @@ describe("wrangler deploy with containers", () => {
 			},
 		]);
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
-		mockGenerateImageRegistryCredentials();
+		mockGenerateImageRegistryCredentials(expect);
 
 		await runWrangler("deploy index.js");
 
@@ -908,7 +936,9 @@ describe("wrangler deploy with containers", () => {
 		`);
 	});
 
-	it("should error when no scope for containers", async () => {
+	it("should error when no scope for containers", async ({ expect }) => {
+		// Reset the spy from setupCommonMocks before setting empty scopes
+		vi.mocked(user.getScopes).mockReset();
 		mockContainersAccount([]);
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
@@ -923,7 +953,9 @@ describe("wrangler deploy with containers", () => {
 	});
 
 	describe("rollout_percentage_steps", () => {
-		it("should create rollout with *step_percentage* when rollout_step_percentage is a number", async () => {
+		it("should create rollout with *step_percentage* when rollout_step_percentage is a number", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
 				containers: [
@@ -938,9 +970,9 @@ describe("wrangler deploy with containers", () => {
 
 			mockGetApplications([]);
 
-			mockCreateApplication();
+			mockCreateApplication(expect);
 
-			mockCreateApplicationRollout({
+			mockCreateApplicationRollout(expect, {
 				description: "Progressive update",
 				strategy: "rolling",
 				kind: "full_auto",
@@ -956,7 +988,9 @@ describe("wrangler deploy with containers", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should create rollout with *steps* when rollout_step_percentage is an array of numbers", async () => {
+		it("should create rollout with *steps* when rollout_step_percentage is an array of numbers", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
 				containers: [
@@ -998,9 +1032,9 @@ describe("wrangler deploy with containers", () => {
 				},
 			]);
 
-			mockModifyApplication();
+			mockModifyApplication(expect);
 
-			mockCreateApplicationRollout({
+			mockCreateApplicationRollout(expect, {
 				description: "Progressive update",
 				strategy: "rolling",
 				kind: "full_auto",
@@ -1024,7 +1058,9 @@ describe("wrangler deploy with containers", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should override rollout to 100 if deploying with --containers-rollout=immediate ", async () => {
+		it("should override rollout to 100 if deploying with --containers-rollout=immediate ", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
 				containers: [
@@ -1039,10 +1075,10 @@ describe("wrangler deploy with containers", () => {
 
 			mockGetApplications([]);
 
-			mockCreateApplication();
+			mockCreateApplication(expect);
 
 			// expect to see 100
-			mockCreateApplicationRollout({
+			mockCreateApplicationRollout(expect, {
 				description: "Progressive update",
 				strategy: "rolling",
 				kind: "full_auto",
@@ -1058,7 +1094,9 @@ describe("wrangler deploy with containers", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("deploying with --containers-rollout=rolling should pass through the config value of rollout_step_percentage", async () => {
+		it("deploying with --containers-rollout=rolling should pass through the config value of rollout_step_percentage", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
 				containers: [
@@ -1073,10 +1111,10 @@ describe("wrangler deploy with containers", () => {
 
 			mockGetApplications([]);
 
-			mockCreateApplication();
+			mockCreateApplication(expect);
 
 			// expect to see 100
-			mockCreateApplicationRollout({
+			mockCreateApplicationRollout(expect, {
 				description: "Progressive update",
 				strategy: "rolling",
 				kind: "full_auto",
@@ -1121,7 +1159,9 @@ describe("wrangler deploy with containers", () => {
 				namespace_id: "1",
 			},
 		};
-		it("should be able to enable observability logs (top level)", async () => {
+		it("should be able to enable observability logs (top level)", async ({
+			expect,
+		}) => {
 			mockGetVersion("Galaxy-Class");
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
@@ -1131,13 +1171,13 @@ describe("wrangler deploy with containers", () => {
 
 			mockGetApplications([sharedGetApplicationResult]);
 
-			mockModifyApplication({
+			mockModifyApplication(expect, {
 				configuration: {
 					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: true } },
 				},
 			});
-			mockCreateApplicationRollout();
+			mockCreateApplicationRollout(expect);
 
 			await runWrangler("deploy index.js");
 
@@ -1164,7 +1204,9 @@ describe("wrangler deploy with containers", () => {
 			`);
 		});
 
-		it("should be able to enable observability logs (logs field)", async () => {
+		it("should be able to enable observability logs (logs field)", async ({
+			expect,
+		}) => {
 			mockGetVersion("Galaxy-Class");
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
@@ -1174,14 +1216,14 @@ describe("wrangler deploy with containers", () => {
 
 			mockGetApplications([sharedGetApplicationResult]);
 
-			mockModifyApplication({
+			mockModifyApplication(expect, {
 				configuration: {
 					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: true } },
 				},
 			});
 
-			mockCreateApplicationRollout();
+			mockCreateApplicationRollout(expect);
 
 			await runWrangler("deploy index.js");
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
@@ -1207,7 +1249,9 @@ describe("wrangler deploy with containers", () => {
 			`);
 		});
 
-		it("should be able to disable observability logs (top level)", async () => {
+		it("should be able to disable observability logs (top level)", async ({
+			expect,
+		}) => {
 			mockGetVersion("Galaxy-Class");
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
@@ -1229,14 +1273,14 @@ describe("wrangler deploy with containers", () => {
 				},
 			]);
 
-			mockModifyApplication({
+			mockModifyApplication(expect, {
 				configuration: {
 					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: false } },
 				},
 			});
 
-			mockCreateApplicationRollout();
+			mockCreateApplicationRollout(expect);
 
 			await runWrangler("deploy index.js");
 
@@ -1263,7 +1307,9 @@ describe("wrangler deploy with containers", () => {
 			`);
 		});
 
-		it("should be able to disable observability logs (logs field)", async () => {
+		it("should be able to disable observability logs (logs field)", async ({
+			expect,
+		}) => {
 			mockGetVersion("Galaxy-Class");
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
@@ -1285,14 +1331,14 @@ describe("wrangler deploy with containers", () => {
 				},
 			]);
 
-			mockModifyApplication({
+			mockModifyApplication(expect, {
 				configuration: {
 					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: false } },
 				},
 			});
 
-			mockCreateApplicationRollout();
+			mockCreateApplicationRollout(expect);
 
 			await runWrangler("deploy index.js");
 
@@ -1318,7 +1364,9 @@ describe("wrangler deploy with containers", () => {
 				"
 			`);
 		});
-		it("should be able to disable observability logs (absent field)", async () => {
+		it("should be able to disable observability logs (absent field)", async ({
+			expect,
+		}) => {
 			mockGetVersion("Galaxy-Class");
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
@@ -1339,14 +1387,14 @@ describe("wrangler deploy with containers", () => {
 				},
 			]);
 
-			mockModifyApplication({
+			mockModifyApplication(expect, {
 				configuration: {
 					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: false } },
 				},
 			});
 
-			mockCreateApplicationRollout();
+			mockCreateApplicationRollout(expect);
 			await runWrangler("deploy index.js");
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
 				"╭ Deploy a container application deploy changes to your application
@@ -1370,7 +1418,7 @@ describe("wrangler deploy with containers", () => {
 				"
 			`);
 		});
-		it("should keep observability logs enabled", async () => {
+		it("should keep observability logs enabled", async ({ expect }) => {
 			mockGetVersion("Galaxy-Class");
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
@@ -1392,14 +1440,14 @@ describe("wrangler deploy with containers", () => {
 				},
 			]);
 
-			mockModifyApplication({
+			mockModifyApplication(expect, {
 				configuration: {
 					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: true } },
 				},
 			});
 
-			mockCreateApplicationRollout();
+			mockCreateApplicationRollout(expect);
 
 			await runWrangler("deploy index.js");
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
@@ -1415,7 +1463,9 @@ describe("wrangler deploy with containers", () => {
 			`);
 		});
 
-		it("should keep obserability logs disabled if api returns false and undefined in config", async () => {
+		it("should keep obserability logs disabled if api returns false and undefined in config", async ({
+			expect,
+		}) => {
 			mockGetVersion("Galaxy-Class");
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
@@ -1452,7 +1502,7 @@ describe("wrangler deploy with containers", () => {
 		});
 	});
 
-	it("should expand image names from managed registry", async () => {
+	it("should expand image names from managed registry", async ({ expect }) => {
 		mockGetVersion("Galaxy-Class");
 		const registry = getCloudflareContainerRegistry();
 		writeWranglerConfig({
@@ -1473,7 +1523,7 @@ describe("wrangler deploy with containers", () => {
 
 		mockGetApplications([]);
 
-		mockCreateApplication({
+		mockCreateApplication(expect, {
 			name: "my-container",
 			max_instances: 10,
 			configuration: {
@@ -1518,7 +1568,7 @@ describe("wrangler deploy with containers", () => {
 	});
 
 	describe("affinities", () => {
-		it("may be specified on creation", async () => {
+		it("may be specified on creation", async ({ expect }) => {
 			mockGetVersion("Galaxy-Class");
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
@@ -1534,7 +1584,7 @@ describe("wrangler deploy with containers", () => {
 
 			mockGetApplications([]);
 
-			mockCreateApplication();
+			mockCreateApplication(expect);
 
 			await runWrangler("deploy index.js");
 
@@ -1574,7 +1624,7 @@ describe("wrangler deploy with containers", () => {
 			`);
 		});
 
-		it("may be specified on modification", async () => {
+		it("may be specified on modification", async ({ expect }) => {
 			mockGetVersion("Galaxy-Class");
 			writeWranglerConfig({
 				...DEFAULT_DURABLE_OBJECTS,
@@ -1618,13 +1668,13 @@ describe("wrangler deploy with containers", () => {
 				},
 			]);
 
-			mockModifyApplication({
+			mockModifyApplication(expect, {
 				affinities: {
 					hardware_generation:
 						ApplicationAffinityHardwareGeneration.HIGHEST_OVERALL_PERFORMANCE,
 				},
 			});
-			mockCreateApplicationRollout({
+			mockCreateApplicationRollout(expect, {
 				description: "Progressive update",
 				strategy: "rolling",
 				kind: "full_auto",
@@ -1654,27 +1704,40 @@ describe("wrangler deploy with containers", () => {
 		});
 	});
 
-	it("should not repush image if it already exists remotely", async () => {
+	it("should not repush image if it already exists remotely", async ({
+		expect,
+	}) => {
 		mockGetVersion("Galaxy-Class");
 		const containerName = "my-container";
 		const tag = "Galaxy";
 		vi.mocked(spawn).mockReset();
 		vi.mocked(spawn)
-			.mockImplementationOnce(mockDockerInfo())
+			.mockImplementationOnce(mockDockerInfo(expect))
 			.mockImplementationOnce(
-				mockDockerBuild(containerName, tag, "FROM scratch", process.cwd())
+				mockDockerBuild(
+					expect,
+					containerName,
+					tag,
+					"FROM scratch",
+					process.cwd()
+				)
 			)
 			.mockImplementationOnce(
 				mockDockerImageInspectDigestsWithRepoDigest(
+					expect,
 					containerName,
 					tag,
 					"sha256:three"
 				)
 			)
-			.mockImplementationOnce(mockDockerImageInspectSize(containerName, tag))
-			.mockImplementationOnce(mockDockerLogin("mockpassword"))
+			.mockImplementationOnce(
+				mockDockerImageInspectSize(expect, containerName, tag)
+			)
+			.mockImplementationOnce(mockDockerLogin(expect, "mockpassword"))
 			// Mock docker image rm call since we skip the push
-			.mockImplementationOnce(mockDockerImageDelete(containerName, tag));
+			.mockImplementationOnce(
+				mockDockerImageDelete(expect, containerName, tag)
+			);
 		// // Add fallback mocks in case we fall through to push (for debugging)
 		// .mockImplementationOnce(
 		// 	mockDockerTag(containerName, `some-account-id/${containerName}`, tag)
@@ -1738,7 +1801,7 @@ describe("wrangler deploy with containers", () => {
 			},
 		]);
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
-		mockGenerateImageRegistryCredentials();
+		mockGenerateImageRegistryCredentials(expect);
 
 		await runWrangler("deploy index.js");
 
@@ -1758,14 +1821,16 @@ describe("wrangler deploy with containers", () => {
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should enable ssh when provided for new container", async () => {
+	it("should enable ssh when provided for new container", async ({
+		expect,
+	}) => {
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
 			containers: [
 				{
 					...DEFAULT_CONTAINER_FROM_REGISTRY,
-					wrangler_ssh: {
+					ssh: {
 						enabled: true,
 						port: 1010,
 					},
@@ -1782,7 +1847,7 @@ describe("wrangler deploy with containers", () => {
 
 		mockGetApplications([]);
 
-		mockCreateApplication({
+		mockCreateApplication(expect, {
 			name: "my-container",
 			max_instances: 10,
 			scheduling_policy: SchedulingPolicy.DEFAULT,
@@ -1825,7 +1890,7 @@ describe("wrangler deploy with containers", () => {
 			│   image = "registry.cloudflare.com/some-account-id/hello:world"
 			│   instance_type = "lite"
 			│
-			│   [containers.configuration.wrangler_ssh]
+			│   [containers.configuration.ssh]
 			│   enabled = true
 			│   port = 1010
 			│
@@ -1848,14 +1913,16 @@ describe("wrangler deploy with containers", () => {
 		`);
 	});
 
-	it("should enable ssh when provided for an existing container", async () => {
+	it("should enable ssh when provided for an existing container", async ({
+		expect,
+	}) => {
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
 			containers: [
 				{
 					...DEFAULT_CONTAINER_FROM_REGISTRY,
-					wrangler_ssh: {
+					ssh: {
 						enabled: true,
 					},
 					authorized_keys: [
@@ -1888,7 +1955,7 @@ describe("wrangler deploy with containers", () => {
 			},
 		]);
 
-		mockModifyApplication({
+		mockModifyApplication(expect, {
 			configuration: {
 				image: "registry.cloudflare.com/some-account-id/hello:world",
 				wrangler_ssh: {
@@ -1904,7 +1971,7 @@ describe("wrangler deploy with containers", () => {
 			},
 		});
 
-		mockCreateApplicationRollout({
+		mockCreateApplicationRollout(expect, {
 			description: "Progressive update",
 			strategy: "rolling",
 			kind: "full_auto",
@@ -1933,7 +2000,7 @@ describe("wrangler deploy with containers", () => {
 			│ + [[containers.configuration.authorized_keys]]
 			│ + name = "jeff"
 			│ + public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm"
-			│ + [containers.configuration.wrangler_ssh]
+			│ + [containers.configuration.ssh]
 			│ + enabled = true
 			│   [containers.durable_objects]
 			│   namespace_id = "1"
@@ -1949,10 +2016,110 @@ describe("wrangler deploy with containers", () => {
 		`);
 	});
 
+	it("enables ssh when provided in wrangler.jsonc", async ({ expect }) => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig(
+			{
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						ssh: {
+							enabled: true,
+							port: 2022,
+						},
+					},
+				],
+			},
+			"./wrangler.jsonc"
+		);
+
+		mockGetApplications([]);
+
+		mockCreateApplication(expect, {
+			name: "my-container",
+			max_instances: 10,
+			scheduling_policy: SchedulingPolicy.DEFAULT,
+			configuration: {
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+				wrangler_ssh: {
+					enabled: true,
+					port: 2022,
+				},
+			},
+		});
+
+		await runWrangler("deploy index.js --config ./wrangler.jsonc");
+
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
+	});
+
+	it("accepts wrangler_ssh as a backward-compatible alias", async ({
+		expect,
+	}) => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					wrangler_ssh: {
+						enabled: true,
+						port: 2222,
+					},
+				},
+			],
+		});
+
+		mockGetApplications([]);
+
+		mockCreateApplication(expect, {
+			name: "my-container",
+			max_instances: 10,
+			scheduling_policy: SchedulingPolicy.DEFAULT,
+			configuration: {
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+				wrangler_ssh: {
+					enabled: true,
+					port: 2222,
+				},
+			},
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.warn).toContain("Processing wrangler.toml configuration:");
+		expect(std.warn).toContain(
+			'"containers.wrangler_ssh" is deprecated. Use "containers.ssh" instead.'
+		);
+		expect(std.err).toBe("");
+	});
+
+	it("should validate containers.ssh fields", async ({ expect }) => {
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					ssh: {
+						// @ts-expect-error - intentionally invalid to test config validation
+						enabled: "true",
+						port: 70000,
+					},
+				},
+			],
+		});
+
+		await expect(runWrangler("deploy index.js")).rejects.toThrow(
+			/containers\.ssh\.enabled must be a boolean[\s\S]*containers\.ssh\.port must be a number between 1 and 65535 inclusive/
+		);
+	});
+
 	describe("ctx.exports", async () => {
 		// note how mockGetVersion is NOT mocked in any of these, unlike the other tests.
 		// instead we mock the list durable objects endpoint, which the ctx.exports path uses instead
-		it("should be able to deploy a new container", async () => {
+		it("should be able to deploy a new container", async ({ expect }) => {
 			writeWranglerConfig({
 				// no DO!
 				migrations: [
@@ -1980,7 +2147,7 @@ describe("wrangler deploy with containers", () => {
 				useOldUploadApi: true,
 				expectedContainers: [{ class_name: "ExampleDurableObject" }],
 			});
-			mockCreateApplication({
+			mockCreateApplication(expect, {
 				name: "my-container",
 				max_instances: 10,
 				scheduling_policy: SchedulingPolicy.DEFAULT,
@@ -2041,7 +2208,9 @@ describe("wrangler deploy with containers", () => {
 			`);
 		});
 
-		it("should error if a container name has been used before but attached to a different DO", async () => {
+		it("should error if a container name has been used before but attached to a different DO", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				migrations: [
 					{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
@@ -2104,7 +2273,9 @@ describe("wrangler deploy with containers", () => {
 			);
 		});
 
-		it("should be able to redeploy an existing application", async () => {
+		it("should be able to redeploy an existing application", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				migrations: [
 					{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
@@ -2159,15 +2330,15 @@ describe("wrangler deploy with containers", () => {
 				},
 			]);
 			fs.writeFileSync("./Dockerfile", "FROM scratch");
-			mockGenerateImageRegistryCredentials();
-			mockModifyApplication({
+			mockGenerateImageRegistryCredentials(expect);
+			mockModifyApplication(expect, {
 				configuration: {
 					image: "registry.cloudflare.com/some-account-id/hello:world",
 				},
 				max_instances: 10,
 				rollout_active_grace_period: 600,
 			});
-			mockCreateApplicationRollout({
+			mockCreateApplicationRollout(expect, {
 				description: "Progressive update",
 				strategy: "rolling",
 				kind: "full_auto",
@@ -2212,7 +2383,7 @@ describe("wrangler deploy with containers dry run", () => {
 	const cliStd = mockCLIOutput();
 	beforeEach(() => {
 		clearCachedAccount();
-		expect(process.env.CLOUDFLARE_API_TOKEN).toBeUndefined();
+		assert(process.env.CLOUDFLARE_API_TOKEN === undefined);
 		vi.mocked(spawn).mockReset();
 	});
 
@@ -2220,12 +2391,18 @@ describe("wrangler deploy with containers dry run", () => {
 		vi.unstubAllEnvs();
 	});
 
-	it("builds the image without pushing", async () => {
+	it("builds the image without pushing", async ({ expect }) => {
 		// Reduced mock chain for dry run (no delete, push)
 		vi.mocked(spawn)
-			.mockImplementationOnce(mockDockerInfo())
+			.mockImplementationOnce(mockDockerInfo(expect))
 			.mockImplementationOnce(
-				mockDockerBuild("my-container", "worker", "FROM scratch", process.cwd())
+				mockDockerBuild(
+					expect,
+					"my-container",
+					"worker",
+					"FROM scratch",
+					process.cwd()
+				)
 			);
 		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
@@ -2257,7 +2434,7 @@ describe("wrangler deploy with containers dry run", () => {
 		expect(cliStd.stdout).toMatchInlineSnapshot(`""`);
 	});
 
-	it("builds the image without pushing", async () => {
+	it("builds the image without pushing", async ({ expect }) => {
 		// No docker mocks at all
 
 		fs.writeFileSync(
@@ -2302,7 +2479,9 @@ describe("containers.unsafe configuration", () => {
 		);
 	});
 
-	it("should merge containers.unsafe config into create request", async () => {
+	it("should merge containers.unsafe config into create request", async ({
+		expect,
+	}) => {
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
@@ -2320,7 +2499,7 @@ describe("containers.unsafe configuration", () => {
 
 		mockGetApplications([]);
 
-		mockCreateApplication({
+		mockCreateApplication(expect, {
 			name: "my-container",
 			max_instances: 10,
 			custom_field: "custom_value",
@@ -2337,7 +2516,9 @@ describe("containers.unsafe configuration", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should merge containers.unsafe config into modify request", async () => {
+	it("should merge containers.unsafe config into modify request", async ({
+		expect,
+	}) => {
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
@@ -2383,7 +2564,7 @@ describe("containers.unsafe configuration", () => {
 			},
 		]);
 
-		mockModifyApplication({
+		mockModifyApplication(expect, {
 			max_instances: 20,
 			// @ts-expect-error - testing unsafe.containers with custom fields
 			unsafe_field: "unsafe_value",
@@ -2392,7 +2573,7 @@ describe("containers.unsafe configuration", () => {
 			},
 		});
 
-		mockCreateApplicationRollout({
+		mockCreateApplicationRollout(expect, {
 			description: "Progressive update",
 			strategy: "rolling",
 			kind: "full_auto",
@@ -2411,37 +2592,46 @@ describe("containers.unsafe configuration", () => {
 
 // Docker mock factory
 function createDockerMockChain(
+	expect: ExpectStatic,
 	containerName: string,
 	tag: string,
 	dockerfilePath?: string,
 	buildContext?: string
 ) {
 	const mocks = [
-		mockDockerInfo(),
+		mockDockerInfo(expect),
 		mockDockerBuild(
+			expect,
 			containerName,
 			tag,
 			dockerfilePath || "FROM scratch",
 			buildContext || process.cwd()
 		),
-		mockDockerImageInspectDigests(containerName, tag),
-		mockDockerImageInspectSize(containerName, tag),
-		mockDockerLogin("mockpassword"),
+		mockDockerImageInspectDigests(expect, containerName, tag),
+		mockDockerImageInspectSize(expect, containerName, tag),
+		mockDockerLogin(expect, "mockpassword"),
 		// Skip manifest inspect mock - it's not being called due to empty repoDigests
-		mockDockerTag(containerName, "some-account-id/" + containerName, tag),
-		mockDockerPush("some-account-id/" + containerName, tag),
+		mockDockerTag(
+			expect,
+			containerName,
+			"some-account-id/" + containerName,
+			tag
+		),
+		mockDockerPush(expect, "some-account-id/" + containerName, tag),
 	];
 
 	return mocks;
 }
 
 function setupDockerMocks(
+	expect: ExpectStatic,
 	containerName: string,
 	tag: string,
 	dockerfilePath?: string,
 	buildContext?: string
 ) {
 	const mocks = createDockerMockChain(
+		expect,
 		containerName,
 		tag,
 		dockerfilePath,
@@ -2557,7 +2747,10 @@ function defaultChildProcess() {
 	} as unknown as ChildProcess;
 }
 
-function mockCreateApplication(expected?: Partial<Application>) {
+function mockCreateApplication(
+	expect: ExpectStatic,
+	expected?: Partial<Application>
+) {
 	msw.use(
 		http.post("*/applications", async ({ request }) => {
 			const json = await request.json();
@@ -2570,7 +2763,10 @@ function mockCreateApplication(expected?: Partial<Application>) {
 	);
 }
 
-function mockModifyApplication(expected?: Partial<Application>) {
+function mockModifyApplication(
+	expect: ExpectStatic,
+	expected?: Partial<Application>
+) {
 	msw.use(
 		http.patch("*/applications/:id", async ({ request }) => {
 			const json = await request.json();
@@ -2590,7 +2786,10 @@ function mockModifyApplication(expected?: Partial<Application>) {
 	);
 }
 
-function mockCreateApplicationRollout(expected?: Record<string, unknown>) {
+function mockCreateApplicationRollout(
+	expect: ExpectStatic,
+	expected?: Record<string, unknown>
+) {
 	msw.use(
 		http.post("*/applications/:id/rollouts", async ({ request }) => {
 			const json = await request.json();
@@ -2609,7 +2808,7 @@ function mockCreateApplicationRollout(expected?: Record<string, unknown>) {
 	);
 }
 
-function mockGenerateImageRegistryCredentials() {
+function mockGenerateImageRegistryCredentials(expect: ExpectStatic) {
 	msw.use(
 		http.post(
 			`*/registries/${getCloudflareContainerRegistry()}/credentials`,
@@ -2658,7 +2857,7 @@ function mockListDurableObjects(
 	);
 }
 
-function mockDockerInfo() {
+function mockDockerInfo(expect: ExpectStatic) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual(["info"]);
@@ -2667,6 +2866,7 @@ function mockDockerInfo() {
 }
 
 function mockDockerBuild(
+	expect: ExpectStatic,
 	containerName: string,
 	tag: string,
 	expectedDockerfile: string,
@@ -2713,7 +2913,11 @@ function mockDockerBuild(
 	};
 }
 
-function mockDockerImageInspectDigests(containerName: string, tag: string) {
+function mockDockerImageInspectDigests(
+	expect: ExpectStatic,
+	containerName: string,
+	tag: string
+) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([
@@ -2750,6 +2954,7 @@ function mockDockerImageInspectDigests(containerName: string, tag: string) {
 }
 
 function mockDockerImageInspectDigestsWithRepoDigest(
+	expect: ExpectStatic,
 	containerName: string,
 	tag: string,
 	imageId: string
@@ -2790,7 +2995,11 @@ function mockDockerImageInspectDigestsWithRepoDigest(
 	};
 }
 
-function mockDockerImageInspectSize(containerName: string, tag: string) {
+function mockDockerImageInspectSize(
+	expect: ExpectStatic,
+	containerName: string,
+	tag: string
+) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([
@@ -2823,7 +3032,11 @@ function mockDockerImageInspectSize(containerName: string, tag: string) {
 	};
 }
 
-function mockDockerImageDelete(containerName: string, tag: string) {
+function mockDockerImageDelete(
+	expect: ExpectStatic,
+	containerName: string,
+	tag: string
+) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual(["image", "rm", `${containerName}:${tag}`]);
@@ -2831,7 +3044,7 @@ function mockDockerImageDelete(containerName: string, tag: string) {
 	};
 }
 
-function mockDockerLogin(expectedPassword: string) {
+function mockDockerLogin(expect: ExpectStatic, expectedPassword: string) {
 	return (cmd: string, _args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
 		let password = "";
@@ -2855,7 +3068,11 @@ function mockDockerLogin(expectedPassword: string) {
 	};
 }
 
-function mockDockerPush(containerName: string, tag: string) {
+function mockDockerPush(
+	expect: ExpectStatic,
+	containerName: string,
+	tag: string
+) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([
@@ -2866,7 +3083,12 @@ function mockDockerPush(containerName: string, tag: string) {
 	};
 }
 
-function mockDockerTag(from: string, to: string, tag: string) {
+function mockDockerTag(
+	expect: ExpectStatic,
+	from: string,
+	to: string,
+	tag: string
+) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([

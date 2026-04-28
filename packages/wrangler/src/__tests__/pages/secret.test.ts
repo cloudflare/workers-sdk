@@ -1,9 +1,9 @@
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../../config-cache";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -14,7 +14,9 @@ import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { PagesProject } from "../../pages/download-config";
+import type { PagesConfigCache } from "../../pages/types";
 import type { Interface } from "node:readline";
+import type { ExpectStatic } from "vitest";
 
 export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
@@ -42,6 +44,7 @@ describe("wrangler pages secret", () => {
 
 	describe("put", () => {
 		function mockProjectRequests(
+			expect: ExpectStatic,
 			input: { name: string; text: string },
 			env: "production" | "preview" = "production"
 		) {
@@ -86,7 +89,7 @@ describe("wrangler pages secret", () => {
 				setIsTTY(true);
 			});
 
-			it("should trim stdin secret value", async () => {
+			it("should trim stdin secret value", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -94,7 +97,7 @@ describe("wrangler pages secret", () => {
 				  `,
 				});
 
-				mockProjectRequests({ name: `secret-name`, text: `hunter2` });
+				mockProjectRequests(expect, { name: `secret-name`, text: `hunter2` });
 				await runWrangler(
 					"pages secret put secret-name --project some-project-name"
 				);
@@ -107,14 +110,14 @@ describe("wrangler pages secret", () => {
 				`);
 			});
 
-			it("should create a secret", async () => {
+			it("should create a secret", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
 					result: "the-secret",
 				});
 
-				mockProjectRequests({ name: "the-key", text: "the-secret" });
+				mockProjectRequests(expect, { name: "the-key", text: "the-secret" });
 				await runWrangler(
 					"pages secret put the-key --project some-project-name"
 				);
@@ -129,14 +132,18 @@ describe("wrangler pages secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should create a secret: preview", async () => {
+			it("should create a secret: preview", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
 					result: "the-secret",
 				});
 
-				mockProjectRequests({ name: "the-key", text: "the-secret" }, "preview");
+				mockProjectRequests(
+					expect,
+					{ name: "the-key", text: "the-secret" },
+					"preview"
+				);
 				await runWrangler(
 					"pages secret put the-key --project some-project-name --env preview"
 				);
@@ -151,8 +158,9 @@ describe("wrangler pages secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error with invalid env", async () => {
+			it("should error with invalid env", async ({ expect }) => {
 				mockProjectRequests(
+					expect,
 					{ name: "the-key", text: "the-secret" },
 					// @ts-expect-error This is intentionally invalid
 					"some-env"
@@ -166,7 +174,7 @@ describe("wrangler pages secret", () => {
 				);
 			});
 
-			it("should error without a project name", async () => {
+			it("should error without a project name", async ({ expect }) => {
 				await expect(
 					runWrangler("pages secret put the-key")
 				).rejects.toMatchInlineSnapshot(
@@ -181,8 +189,10 @@ describe("wrangler pages secret", () => {
 			});
 			const mockStdIn = useMockStdin({ isTTY: false });
 
-			it("should trim stdin secret value, from piped input", async () => {
-				mockProjectRequests({ name: "the-key", text: "the-secret" });
+			it("should trim stdin secret value, from piped input", async ({
+				expect,
+			}) => {
+				mockProjectRequests(expect, { name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send(
 					`the`,
@@ -205,8 +215,8 @@ describe("wrangler pages secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should create a secret, from piped input", async () => {
-				mockProjectRequests({ name: "the-key", text: "the-secret" });
+			it("should create a secret, from piped input", async ({ expect }) => {
+				mockProjectRequests(expect, { name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send("the", "-", "secret");
 				await runWrangler(
@@ -224,8 +234,8 @@ describe("wrangler pages secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error if the piped input fails", async () => {
-				mockProjectRequests({ name: "the-key", text: "the-secret" });
+			it("should error if the piped input fails", async ({ expect }) => {
+				mockProjectRequests(expect, { name: "the-key", text: "the-secret" });
 				mockStdIn.throwError(new Error("Error in stdin stream"));
 				await expect(
 					runWrangler("pages secret put the-key --project some-project-name")
@@ -246,7 +256,9 @@ describe("wrangler pages secret", () => {
 			describe("with accountId", () => {
 				mockAccountId({ accountId: null });
 
-				it("should error if request for memberships fails", async () => {
+				it("should error if request for memberships fails", async ({
+					expect,
+				}) => {
 					mockGetMembershipsFail();
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
@@ -255,7 +267,7 @@ describe("wrangler pages secret", () => {
 					);
 				});
 
-				it("should error if a user has no account", async () => {
+				it("should error if a user has no account", async ({ expect }) => {
 					mockGetMemberships([]);
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
@@ -265,7 +277,9 @@ describe("wrangler pages secret", () => {
 					`);
 				});
 
-				it("should error if a user has multiple accounts, and has not specified an account", async () => {
+				it("should error if a user has multiple accounts, and has not specified an account", async ({
+					expect,
+				}) => {
 					mockGetMemberships([
 						{
 							id: "1",
@@ -287,9 +301,9 @@ describe("wrangler pages secret", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`(redacted)\`: \`account-id-1\`
-						  \`(redacted)\`: \`account-id-2\`
-						  \`(redacted)\`: \`account-id-3\`]
+						  \`account-name-1\`: \`account-id-1\`
+						  \`account-name-2\`: \`account-id-2\`
+						  \`account-name-3\`: \`account-id-3\`]
 					`);
 				});
 			});
@@ -301,6 +315,7 @@ describe("wrangler pages secret", () => {
 			setIsTTY(true);
 		});
 		function mockDeleteRequest(
+			expect: ExpectStatic,
 			name: string,
 			env: "production" | "preview" = "production"
 		) {
@@ -341,8 +356,8 @@ describe("wrangler pages secret", () => {
 			);
 		}
 
-		it("should delete a secret", async () => {
-			mockDeleteRequest("the-key");
+		it("should delete a secret", async ({ expect }) => {
+			mockDeleteRequest(expect, "the-key");
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Pages project some-project-name (production)?",
 				result: true,
@@ -360,8 +375,8 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should delete a secret: preview", async () => {
-			mockDeleteRequest("the-key", "preview");
+		it("should delete a secret: preview", async ({ expect }) => {
+			mockDeleteRequest(expect, "the-key", "preview");
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Pages project some-project-name (preview)?",
 				result: true,
@@ -379,7 +394,7 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should fail to delete with invalid env", async () => {
+		it("should fail to delete with invalid env", async ({ expect }) => {
 			await expect(
 				runWrangler(
 					"pages secret delete the-key --project some-project-name --env some-env"
@@ -389,7 +404,7 @@ describe("wrangler pages secret", () => {
 			);
 		});
 
-		it("should error without a project name", async () => {
+		it("should error without a project name", async ({ expect }) => {
 			await expect(
 				runWrangler("pages secret delete the-key")
 			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
@@ -438,7 +453,7 @@ describe("wrangler pages secret", () => {
 			);
 		}
 
-		it("should list secrets", async () => {
+		it("should list secrets", async ({ expect }) => {
 			mockListRequest();
 			await runWrangler("pages secret list --project some-project-name");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -452,7 +467,7 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should list secrets: preview", async () => {
+		it("should list secrets: preview", async ({ expect }) => {
 			mockListRequest();
 			await runWrangler(
 				"pages secret list --project some-project-name --env preview"
@@ -467,7 +482,7 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should fail with invalid env", async () => {
+		it("should fail with invalid env", async ({ expect }) => {
 			mockListRequest();
 			await expect(
 				runWrangler(
@@ -478,7 +493,7 @@ describe("wrangler pages secret", () => {
 			);
 		});
 
-		it("should error without a project name", async () => {
+		it("should error without a project name", async ({ expect }) => {
 			await expect(
 				runWrangler("pages secret list")
 			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
@@ -487,6 +502,7 @@ describe("wrangler pages secret", () => {
 
 	describe("secret bulk", () => {
 		function mockProjectRequests(
+			expect: ExpectStatic,
 			vars: { name: string; text: string }[],
 			env: "production" | "preview" = "production"
 		) {
@@ -528,8 +544,10 @@ describe("wrangler pages secret", () => {
 				})
 			);
 		}
-		it("should fail secret bulk w/ no pipe or JSON input", async () => {
-			mockProjectRequests([]);
+		it("should fail secret bulk w/ no pipe or JSON input", async ({
+			expect,
+		}) => {
+			mockProjectRequests(expect, []);
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() => null as unknown as Interface
 			);
@@ -540,7 +558,7 @@ describe("wrangler pages secret", () => {
 			);
 		});
 
-		it("should use secret bulk w/ pipe input", async () => {
+		it("should use secret bulk w/ pipe input", async ({ expect }) => {
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
 					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
@@ -550,7 +568,7 @@ describe("wrangler pages secret", () => {
 					}) as unknown as Interface
 			);
 
-			mockProjectRequests([
+			mockProjectRequests(expect, [
 				{
 					name: "secret1",
 					text: "secret-value",
@@ -573,7 +591,7 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should create secret bulk", async () => {
+		it("should create secret bulk", async ({ expect }) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -582,7 +600,7 @@ describe("wrangler pages secret", () => {
 				})
 			);
 
-			mockProjectRequests([
+			mockProjectRequests(expect, [
 				{
 					name: "secret-name-1",
 					text: "secret_text",
@@ -607,13 +625,13 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should create secret bulk w/ env file", async () => {
+		it("should create secret bulk w/ env file", async ({ expect }) => {
 			writeFileSync(
 				".env",
 				`SECRET_1=secret-1\nSECRET_2=secret-2\nSECRET_3=secret-3`
 			);
 
-			mockProjectRequests([
+			mockProjectRequests(expect, [
 				{
 					name: "SECRET_1",
 					text: "secret-1",
@@ -640,7 +658,7 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should create secret bulk: preview", async () => {
+		it("should create secret bulk: preview", async ({ expect }) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -650,6 +668,7 @@ describe("wrangler pages secret", () => {
 			);
 
 			mockProjectRequests(
+				expect,
 				[
 					{
 						name: "secret-name-1",
@@ -678,7 +697,9 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should count success and network failure on secret bulk", async () => {
+		it("should count success and network failure on secret bulk", async ({
+			expect,
+		}) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -744,7 +765,7 @@ describe("wrangler pages secret", () => {
 			`);
 		});
 
-		it("throws a meaningful error", async () => {
+		it("throws a meaningful error", async ({ expect }) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -806,6 +827,56 @@ describe("wrangler pages secret", () => {
 				  "warn": "",
 				}
 			`);
+		});
+	});
+
+	describe("account id resolution", () => {
+		beforeEach(() => {
+			setIsTTY(true);
+		});
+
+		it("should prefer CLOUDFLARE_ACCOUNT_ID over cached account id", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-var-account-id");
+
+			saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+				account_id: "stale-cached-account-id",
+				project_name: "some-project-name",
+			});
+
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/pages/projects/:project",
+					({ params }) => {
+						expect(params.accountId).toEqual("env-var-account-id");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									name: "some-project-name",
+									deployment_configs: {
+										production: {
+											wrangler_config_hash: "wch",
+											env_vars: {
+												"the-secret": {
+													type: "secret_text",
+												},
+											},
+										},
+										preview: {},
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages secret list --project some-project-name");
 		});
 	});
 });

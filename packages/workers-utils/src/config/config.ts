@@ -334,16 +334,21 @@ export const defaultWranglerConfig: Config = {
 	r2_buckets: [],
 	d1_databases: [],
 	vectorize: [],
+	ai_search_namespaces: [],
+	ai_search: [],
 	hyperdrive: [],
 	workflows: [],
 	secrets_store_secrets: [],
+	artifacts: [],
 	services: [],
 	analytics_engine_datasets: [],
 	ai: undefined,
 	images: undefined,
+	stream: undefined,
 	media: undefined,
 	version_metadata: undefined,
 	unsafe_hello_world: [],
+	flagship: [],
 	ratelimits: [],
 	worker_loaders: [],
 
@@ -388,9 +393,11 @@ export const defaultWranglerConfig: Config = {
 	upload_source_maps: undefined,
 	assets: undefined,
 	observability: { enabled: true },
+	cache: undefined,
 	/** The default here is undefined so that we can delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable. */
 	compliance_region: undefined,
 	python_modules: { exclude: ["**/*.pyc"] },
+	previews: undefined,
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},
@@ -404,4 +411,5 @@ export const defaultWranglerConfig: Config = {
 	streaming_tail_consumers: undefined,
 	pipelines: [],
 	vpc_services: [],
+	vpc_networks: [],
 };

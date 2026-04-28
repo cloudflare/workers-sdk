@@ -1,4 +1,4 @@
-import { brandColor } from "@cloudflare/cli/colors";
+import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import { getDetailsForAutoConfig } from "./autoconfig/details";
 import { runAutoConfig } from "./autoconfig/run";
 import {
@@ -14,7 +14,7 @@ export const setupCommand = createCommand({
 	metadata: {
 		description: "🪄 Setup a project to work on Cloudflare",
 		owner: "Workers: Authoring and Testing",
-		status: "experimental",
+		status: "stable",
 		category: "Compute & AI",
 	},
 	args: {
@@ -107,7 +107,9 @@ export const setupCommand = createCommand({
 		if (!args.dryRun) {
 			const { type } = await getPackageManager();
 			logCompletionMessage(
-				`You can now deploy with ${brandColor(details.packageJson ? `${type} run deploy` : "wrangler deploy")}`
+				`You can now deploy with ${brandColor(
+					details.packageJson ? `${type} run deploy` : "wrangler deploy"
+				)}`
 			);
 		}
 	},

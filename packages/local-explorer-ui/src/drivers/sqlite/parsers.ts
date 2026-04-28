@@ -1,4 +1,4 @@
-import { tokenizeSQL } from "../../utils/studio";
+import { tokenizeSQL } from "../../utils/studio/sql";
 import type {
 	StudioColumnConflict,
 	StudioSortDirection,
@@ -52,8 +52,6 @@ class CursorV2 {
 		) {
 			this.tokens.pop();
 		}
-
-		this.tokens = tokens;
 	}
 
 	/**

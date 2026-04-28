@@ -1,9 +1,9 @@
 import {
 	createExecutionContext,
-	env,
 	waitOnExecutionContext,
 } from "cloudflare:test";
-import { afterEach, it, vi } from "vitest";
+import { env } from "cloudflare:workers";
+import { afterEach, assert, it, vi } from "vitest";
 import worker from "../src/index";
 
 // This will improve in the next major version of `@cloudflare/workers-types`,
@@ -19,7 +19,15 @@ it("produces queue message with mocked send", async ({ expect }) => {
 	// Intercept calls to `QUEUE_PRODUCER.send()`
 	const sendSpy = vi
 		.spyOn(env.QUEUE_PRODUCER, "send")
-		.mockImplementation(async () => {});
+		.mockImplementation(async () => ({
+			metadata: {
+				metrics: {
+					backlogCount: 0,
+					backlogBytes: 0,
+					oldestMessageTimestamp: new Date(0),
+				},
+			},
+		}));
 
 	// Enqueue job on queue
 	const request = new IncomingRequest("https://example.com/key", {
@@ -63,8 +71,8 @@ it("produces queue message with mocked consumer", async ({ expect }) => {
 	await vi.waitUntil(() => consumerSpy.mock.calls.length > 0);
 	expect(consumerSpy).toBeCalledTimes(1);
 	const batch = consumerSpy.mock.lastCall?.[0];
-	expect(batch).toBeDefined();
-	expect(batch?.messages[0].body).toStrictEqual({
+	assert(batch);
+	expect(batch.messages[0].body).toStrictEqual({
 		key: "/key",
 		value: "another value",
 	});

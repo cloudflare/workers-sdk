@@ -1,9 +1,9 @@
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
-import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import { defu } from "defu";
 import * as vite from "vite";
 import * as wrangler from "wrangler";
+import { DEFAULT_COMPAT_DATE } from "./build-constants";
 import { getWorkerConfigs } from "./deploy-config";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import {
@@ -74,6 +74,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 	persistState?: PersistState;
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
+	tunnel?: boolean;
 	experimental?: Experimental;
 }
 
@@ -97,6 +98,7 @@ interface BaseResolvedConfig {
 	inspectorPort: number | false | undefined;
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport">;
 	remoteBindings: boolean;
+	tunnel: boolean;
 }
 
 interface NonPreviewResolvedConfig extends BaseResolvedConfig {
@@ -227,6 +229,7 @@ function resolveWorkerConfig(
 		nonApplicable = {
 			replacedByVite: new Set(),
 			notRelevant: new Set(),
+			notSupportedOnAuxiliary: new Set(),
 		};
 	}
 
@@ -243,11 +246,7 @@ function resolveWorkerConfig(
 					configCustomizer: options.configCustomizer,
 				});
 
-	const { date } = getLocalWorkerdCompatibilityDate({
-		projectPath: options.root,
-	});
-
-	workerConfig.compatibility_date ??= date;
+	workerConfig.compatibility_date ??= DEFAULT_COMPAT_DATE;
 
 	if (isEntryWorker) {
 		workerConfig.name ??= wrangler.unstable_getWorkerNameFromProject(
@@ -273,6 +272,7 @@ export function resolvePluginConfig(
 	const shared = {
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
+		tunnel: pluginConfig.tunnel ?? false,
 		experimental: {
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
@@ -301,9 +301,11 @@ export function resolvePluginConfig(
 	const configPaths = new Set<string>();
 	const cloudflareEnv = prefixedEnv.CLOUDFLARE_ENV;
 	const validateAndAddEnvironmentName = createEnvironmentNameValidator();
+	const requestedEntryWorkerConfigPath =
+		pluginConfig.configPath ?? prefixedEnv.CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH;
 	const configPath = getValidatedWranglerConfigPath(
 		root,
-		pluginConfig.configPath
+		requestedEntryWorkerConfigPath
 	);
 
 	// Build entry worker config: defaults → file config → config()
@@ -437,6 +439,10 @@ export function resolvePluginConfig(
 			entryWorkerConfig: entryWorkerResolvedConfig.config,
 			visitedConfigPaths: configPaths,
 		});
+
+		if (workerResolvedConfig.config.assets) {
+			workerResolvedConfig.nonApplicable.notSupportedOnAuxiliary.add("assets");
+		}
 
 		auxiliaryWorkersResolvedConfigs.push(workerResolvedConfig);
 

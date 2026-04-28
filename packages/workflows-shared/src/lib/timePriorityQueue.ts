@@ -109,6 +109,30 @@ export class TimePriorityQueue {
 		});
 	}
 
+	offsetAll(offset: number) {
+		// Clear the entire PQ table and re-insert only the offset entries.
+		// We can't use the append-only add/remove pattern here because the
+		// UNIQUE (action, entryType, hash) constraint would conflict with
+		// the original action=1 rows still in the table.
+		this.#ctx.storage.transactionSync(() => {
+			const entries = this.#heap.toArray();
+
+			// Wipe the table — removes all historical add/remove rows
+			this.#ctx.storage.sql.exec("DELETE FROM priority_queue");
+
+			const newEntries = entries.map((value) => ({
+				...value,
+				targetTimestamp: value.targetTimestamp + offset,
+			}));
+			for (const entry of newEntries) {
+				this.addEntryDB(entry);
+			}
+			// re-init in-memory heap
+			this.#heap = new Heap(wakerPriorityEntryComparator);
+			this.#heap.init(newEntries);
+		});
+	}
+
 	popTypeAll(entryType: WakerPriorityType) {
 		this.#ctx.storage.transactionSync(() => {
 			this.filter((e) => e.type !== entryType);

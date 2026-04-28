@@ -25,7 +25,7 @@ interface Repository {
 export const containersImagesNamespace = createNamespace({
 	metadata: {
 		description: "Manage images in the Cloudflare managed registry",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 });
@@ -35,7 +35,7 @@ export const containersImagesNamespace = createNamespace({
 export const containersImagesListCommand = createCommand({
 	metadata: {
 		description: "List images in the Cloudflare managed registry",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
@@ -61,7 +61,7 @@ export const containersImagesListCommand = createCommand({
 export const containersImagesDeleteCommand = createCommand({
 	metadata: {
 		description: "Remove an image from the Cloudflare managed registry",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {

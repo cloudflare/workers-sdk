@@ -7,12 +7,12 @@
 		},
 		"test:ci:serve": {
 			"dependsOn": ["build"],
-			"env": ["NODE_DEBUG"],
+			"env": ["NODE_DEBUG", "VITE_VERSION"],
 			"outputLogs": "new-only"
 		},
 		"test:ci:build": {
 			"dependsOn": ["build"],
-			"env": ["NODE_DEBUG"],
+			"env": ["NODE_DEBUG", "VITE_VERSION"],
 			"outputLogs": "new-only"
 		}
 	}

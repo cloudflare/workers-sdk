@@ -144,12 +144,11 @@ export async function deploy({
 		_routesCustom = readFileSync(join(directory, "_routes.json"), "utf-8");
 	} catch {}
 
-	try {
-		_workerJSIsDirectory = lstatSync(_workerPath).isDirectory();
-		if (!_workerJSIsDirectory) {
-			_workerJS = readFileSync(_workerPath, "utf-8");
-		}
-	} catch {}
+	const workerJSStats = lstatSync(_workerPath, { throwIfNoEntry: false });
+	_workerJSIsDirectory = workerJSStats?.isDirectory() ?? false;
+	if (workerJSStats !== undefined && !_workerJSIsDirectory) {
+		_workerJS = readFileSync(_workerPath, "utf-8");
+	}
 
 	// Grab the bindings from the API, we need these for shims and other such hacky inserts
 	const project = await fetchResult<Project>(

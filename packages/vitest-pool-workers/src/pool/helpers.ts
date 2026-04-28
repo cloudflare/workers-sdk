@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { WorkspaceProject } from "vitest/node";
+import type { TestProject } from "vitest/node";
 
 // User worker names must not start with this
 export const WORKER_NAME_PREFIX = "vitest-pool-workers-";
@@ -10,17 +10,17 @@ export function isFileNotFoundError(e: unknown): boolean {
 	);
 }
 
-export function getProjectPath(project: WorkspaceProject): string | number {
-	return project.config.config ?? project.path;
+export function getProjectPath(project: TestProject): string {
+	return project.config.root;
 }
 
-export function getRelativeProjectPath(
-	project: WorkspaceProject
-): string | number {
+export function getRelativeProjectPath(project: TestProject): string {
 	const projectPath = getProjectPath(project);
-	if (typeof projectPath === "number") {
-		return projectPath;
-	} else {
-		return path.relative("", projectPath);
-	}
+	return path.relative("", projectPath);
+}
+
+export function getRelativeProjectConfigPath(project: TestProject): string {
+	return project.config.config
+		? path.relative("", project.config.config)
+		: getRelativeProjectPath(project);
 }

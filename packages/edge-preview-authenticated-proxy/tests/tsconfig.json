@@ -2,8 +2,13 @@
 	"compilerOptions": {
 		"target": "esnext",
 		"lib": ["esnext"],
-		"module": "es2022",
+		"module": "esnext",
 		"moduleResolution": "bundler",
+		"types": [
+			"@types/node",
+			"@cloudflare/workers-types",
+			"@cloudflare/vitest-pool-workers/types"
+		],
 		"allowJs": true,
 		"checkJs": false,
 		"noEmit": true,
@@ -13,5 +18,5 @@
 		"strict": true,
 		"skipLibCheck": true
 	},
-	"include": ["**/*.test.ts"]
+	"include": ["**/*.test.ts", "../src/env.d.ts"]
 }

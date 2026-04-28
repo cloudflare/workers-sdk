@@ -5,6 +5,7 @@ declare namespace Cloudflare {
 	}
 	interface Env {
 		NAME: string;
+		AUXILIARY_WORKER: Fetcher;
 	}
 }
 interface Env extends Cloudflare.Env {}

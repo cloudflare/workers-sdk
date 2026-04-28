@@ -1,5 +1,32 @@
 # @cloudflare/cli
 
+## 0.1.0
+
+### Minor Changes
+
+- [#13651](https://github.com/cloudflare/workers-sdk/pull/13651) [`47ac63f`](https://github.com/cloudflare/workers-sdk/commit/47ac63f05ca86d781110490ff21ff88f2828fbbf) Thanks [@penalosa](https://github.com/penalosa)! - Publish `@cloudflare/cli-shared-helpers` and `@cloudflare/workers-utils` to npm
+
+### Patch Changes
+
+- Updated dependencies [[`5680287`](https://github.com/cloudflare/workers-sdk/commit/56802879641c123ee11160d77ecaf104915cd826), [`47ac63f`](https://github.com/cloudflare/workers-sdk/commit/47ac63f05ca86d781110490ff21ff88f2828fbbf)]:
+  - @cloudflare/workers-utils@0.18.0
+
+## 1.4.0
+
+### Minor Changes
+
+- [#13144](https://github.com/cloudflare/workers-sdk/pull/13144) [`db60b94`](https://github.com/cloudflare/workers-sdk/commit/db60b94d9620e7608df3e98876d5df4fde952ecf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add gitignore helpers for appending Wrangler-related entries
+
+  New `maybeAppendWranglerToGitIgnore` and `maybeAppendWranglerToGitIgnoreLikeFile` functions that automatically append Wrangler-related entries (`.wrangler`, `.dev.vars*`, `.env*`, and their negated example patterns) to `.gitignore` or similar ignore files. Existing entries are detected and skipped to avoid duplicates.
+
+## 1.3.0
+
+### Minor Changes
+
+- [#13068](https://github.com/cloudflare/workers-sdk/pull/13068) [`e631a94`](https://github.com/cloudflare/workers-sdk/commit/e631a946466ded834763497d094da9e93d3d3721) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `runCommand` and `quoteShellArgs`, `installPackages` and `installWrangler` utilities to `@cloudflare/cli/command`
+
+  These utilities are now available from `@cloudflare/cli` as dedicated sub-path exports: `runCommand` and `quoteShellArgs` via `@cloudflare/cli/command`, and `installPackages` and `installWrangler` via `@cloudflare/cli/packages`. This makes them reusable across packages in the SDK without duplication.
+
 ## 1.2.1
 
 ### Patch Changes

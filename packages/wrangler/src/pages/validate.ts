@@ -63,6 +63,7 @@ export const validate = async (args: {
 		"**/.DS_Store",
 		"**/node_modules",
 		"**/.git",
+		".wrangler",
 	].map((pattern) => new Minimatch(pattern));
 
 	const directory = resolve(args.directory);

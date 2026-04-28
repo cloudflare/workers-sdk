@@ -3,6 +3,13 @@
 	"name": "worker-w-resources",
 	"main": "src/index.ts",
 	"compatibility_date": "2023-05-04",
+	"r2_buckets": [
+		{
+			"bucket_name": "my-bucket",
+			"binding": "BUCKET",
+		},
+		{ "bucket_name": "bucket-b", "binding": "BUCKET_B" },
+	],
 	"kv_namespaces": [
 		{
 			"binding": "KV",
@@ -10,6 +17,10 @@
 		{
 			"binding": "KV_WITH_ID",
 			"id": "some-kv-id",
+		},
+		{
+			"binding": "KV_B",
+			"id": "worker-b-kv-id",
 		},
 	],
 	"d1_databases": [
@@ -20,12 +31,28 @@
 			"binding": "BACKUP_DB",
 			"database_id": "some-db-id",
 		},
+		{
+			"binding": "DB_B",
+			"database_id": "worker-b-db-id",
+		},
+	],
+	"workflows": [
+		{
+			"binding": "MY_WORKFLOW",
+			"class_name": "MyWorkflow",
+			"name": "my-workflow",
+		},
 	],
 	"durable_objects": {
 		"bindings": [
 			{
 				"name": "DO",
 				"class_name": "MyDurableObject",
+			},
+			{
+				"name": "DO_B",
+				"class_name": "WorkerBDurableObject",
+				"script_name": "worker-b",
 			},
 		],
 	},

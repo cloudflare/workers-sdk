@@ -1,12 +1,12 @@
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { mockPackageManager } from "helpers/__tests__/mocks";
-import { runCommand } from "helpers/command";
 import { describe, test, vi } from "vitest";
 import { getFrameworkCli, runFrameworkGenerator } from "..";
 import { createTestContext } from "../../__tests__/helpers";
 
 vi.mock("which-pm-runs");
-vi.mock("helpers/command");
-vi.mock("@cloudflare/cli");
+vi.mock("@cloudflare/cli-shared-helpers/command");
+vi.mock("@cloudflare/cli-shared-helpers");
 
 describe("frameworks", () => {
 	const ctx = createTestContext();
@@ -47,7 +47,7 @@ describe("frameworks", () => {
 
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				[pmCmd, cli, "-p", "my-project", "--template", "potato"],
-				{ env },
+				{ env }
 			);
 		});
 	});

@@ -59,10 +59,9 @@ describe("errors during dev with remote bindings", () => {
 		expect,
 	}) => {
 		vi.mocked(createPreviewSession).mockResolvedValue({
-			id: "test-session-id",
 			value: "test-session-value",
 			host: "test.workers.dev",
-			prewarmUrl: new URL("https://test.workers.dev/prewarm"),
+			name: "test",
 		});
 
 		vi.mocked(createWorkerPreview).mockImplementation(async () => {

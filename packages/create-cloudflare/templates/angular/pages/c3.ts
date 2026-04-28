@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
-import { logRaw } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { readFile, readJSON, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -41,7 +41,7 @@ async function updateAppCode() {
 		"import { provideHttpClient, withFetch } from '@angular/common/http';\n" +
 		appConfig.replace(
 			"providers: [",
-			"providers: [provideHttpClient(withFetch()), ",
+			"providers: [provideHttpClient(withFetch()), "
 		);
 	writeFile(resolve(appConfigPath), newAppConfig);
 	s.stop(`${brandColor(`updated`)} ${dim(appConfigPath)}`);
@@ -51,7 +51,7 @@ async function updateAppCode() {
 	const appRoutes = readFile(resolve(appServerRoutesPath));
 	const newAppRoutes = appRoutes.replace(
 		"RenderMode.Prerender",
-		"RenderMode.Server",
+		"RenderMode.Server"
 	);
 	writeFile(resolve(appServerRoutesPath), newAppRoutes);
 	s.stop(`${brandColor(`updated`)} ${dim(appServerRoutesPath)}`);

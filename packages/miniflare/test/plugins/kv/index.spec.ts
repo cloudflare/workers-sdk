@@ -3,31 +3,24 @@ import { Blob } from "node:buffer";
 import fs from "node:fs/promises";
 import path from "node:path";
 import consumers from "node:stream/consumers";
-import {
-	KV_PLUGIN_NAME,
-	MAX_BULK_GET_KEYS,
-	Miniflare,
-	MiniflareOptions,
-	ReplaceWorkersTypes,
-} from "miniflare";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { beforeEach, expect, test } from "vitest";
+import { KV_PLUGIN_NAME, MAX_BULK_GET_KEYS, Miniflare } from "miniflare";
+import { beforeEach, type ExpectStatic, test } from "vitest";
 import {
 	createJunkStream,
 	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
-	MiniflareTestContext,
 	namespace,
-	Namespaced,
 	useDispose,
 	useTmp,
 } from "../../test-shared";
+import type { MiniflareTestContext, Namespaced } from "../../test-shared";
 import type {
 	KVNamespace,
 	KVNamespaceListOptions,
 	KVNamespaceListResult,
 } from "@cloudflare/workers-types/experimental";
+import type { MiniflareOptions, ReplaceWorkersTypes } from "miniflare";
 
 function secondsToMillis(seconds: number): number {
 	return seconds * 1000;
@@ -84,10 +77,13 @@ beforeEach(async () => {
 	await ctx.object.enableFakeTimers(secondsToMillis(TIME_NOW));
 });
 
-async function testValidatesKey(opts: {
-	method: string;
-	f: (kv: ReplaceWorkersTypes<KVNamespace>, key?: any) => Promise<void>;
-}) {
+async function testValidatesKey(
+	expect: ExpectStatic,
+	opts: {
+		method: string;
+		f: (kv: ReplaceWorkersTypes<KVNamespace>, key?: any) => Promise<void>;
+	}
+) {
 	const { kv } = ctx;
 	kv.ns = "";
 	await expect(opts.f(kv, "")).rejects.toThrow(
@@ -106,22 +102,43 @@ async function testValidatesKey(opts: {
 	);
 }
 
-test("get: validates key", async () => {
-	await testValidatesKey({
+test("get: validates key", async ({ expect }) => {
+	await testValidatesKey(expect, {
 		method: "get",
 		f: async (kv, key) => {
 			await kv.get(key);
 		},
 	});
 });
-test("get: returns value", async () => {
+test("get: returns value", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key", "value");
 	const result = await kv.get("key");
 	expect(result).toBe("value");
 });
 
-test("bulk get: returns value", async () => {
+test("get: returns ArrayBuffer values", async ({ expect }) => {
+	const { kv } = ctx;
+	const bytes = Uint8Array.from([0, 1, 2, 127, 128, 254, 255]);
+	await kv.put("array-buffer-key", bytes.buffer);
+
+	const result = await kv.get("array-buffer-key", "arrayBuffer");
+	expect(result).not.toBeNull();
+	expect(new Uint8Array(result as NonNullable<typeof result>)).toEqual(bytes);
+});
+
+test("get: returns stream values", async ({ expect }) => {
+	const { kv } = ctx;
+	const bytes = Uint8Array.from([255, 0, 10, 20, 30, 200]);
+	await kv.put("stream-key", new Blob([bytes]).stream());
+
+	const result = await kv.get("stream-key", "stream");
+	expect(new Uint8Array(await new Response(result).arrayBuffer())).toEqual(
+		bytes
+	);
+});
+
+test("bulk get: returns value", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key1", "value1");
 	const result: any = await kv.get(["key1", "key2"]);
@@ -133,7 +150,7 @@ test("bulk get: returns value", async () => {
 	expect(result).toEqual(expectedResult);
 });
 
-test("bulk get: check max keys", async () => {
+test("bulk get: check max keys", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key1", "value1");
 	const keyArray = [];
@@ -149,7 +166,7 @@ test("bulk get: check max keys", async () => {
 	}
 });
 
-test("bulk get: check minimum keys", async () => {
+test("bulk get: check minimum keys", async ({ expect }) => {
 	const { kv } = ctx;
 	try {
 		await kv.get([]);
@@ -160,7 +177,7 @@ test("bulk get: check minimum keys", async () => {
 	}
 });
 
-test("bulk get: invalid type", async () => {
+test("bulk get: invalid type", async ({ expect }) => {
 	const { kv } = ctx;
 	try {
 		await kv.get(["key"], { type: "invalid" as "json" });
@@ -171,7 +188,7 @@ test("bulk get: invalid type", async () => {
 	}
 });
 
-test("bulk get: request json type", async () => {
+test("bulk get: request json type", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key1", '{"example": "ex"}');
 	await kv.put("key2", "example");
@@ -193,7 +210,7 @@ test("bulk get: request json type", async () => {
 	}
 });
 
-test("bulk get: check metadata", async () => {
+test("bulk get: check metadata", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key1", "value1", {
 		expiration: TIME_FUTURE,
@@ -209,7 +226,7 @@ test("bulk get: check metadata", async () => {
 	expect(result).toEqual(expectedResult);
 });
 
-test("bulk get: check metadata with int", async () => {
+test("bulk get: check metadata with int", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key1", "value1", {
 		expiration: TIME_FUTURE,
@@ -223,7 +240,7 @@ test("bulk get: check metadata with int", async () => {
 	expect(result).toEqual(expectedResult);
 });
 
-test("bulk get: check metadata as string", async () => {
+test("bulk get: check metadata as string", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key1", "value1", {
 		expiration: TIME_FUTURE,
@@ -236,7 +253,7 @@ test("bulk get: check metadata as string", async () => {
 	expect(result).toEqual(expectedResult);
 });
 
-test("bulk get: get with metadata for 404", async () => {
+test("bulk get: get with metadata for 404", async ({ expect }) => {
 	const { kv } = ctx;
 
 	const result: any = await kv.getWithMetadata(["key1"]);
@@ -244,7 +261,7 @@ test("bulk get: get with metadata for 404", async () => {
 	expect(result).toEqual(expectedResult);
 });
 
-test("bulk get: get over size limit", async () => {
+test("bulk get: get over size limit", async ({ expect }) => {
 	const { kv } = ctx;
 	const bigValue = new Array(1024).fill("x").join("");
 	await kv.put("key1", bigValue);
@@ -258,18 +275,18 @@ test("bulk get: get over size limit", async () => {
 	}
 });
 
-test("get: returns null for non-existent keys", async () => {
+test("get: returns null for non-existent keys", async ({ expect }) => {
 	const { kv } = ctx;
 	expect(await kv.get("key")).toBe(null);
 });
-test("get: returns null for expired keys", async () => {
+test("get: returns null for expired keys", async ({ expect }) => {
 	const { kv, object } = ctx;
 	await kv.put("key", "value", { expirationTtl: 60 });
 	expect(await kv.get("key")).not.toBe(null);
 	await object.advanceFakeTime(60_000);
 	expect(await kv.get("key")).toBe(null);
 });
-test("get: validates but ignores cache ttl", async () => {
+test("get: validates but ignores cache ttl", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key", "value");
 	await expect(
@@ -288,15 +305,15 @@ test("get: validates but ignores cache ttl", async () => {
 	expect(await kv.get("key", { cacheTtl: 60 })).toBeDefined();
 });
 
-test("put: validates key", async () => {
-	await testValidatesKey({
+test("put: validates key", async ({ expect }) => {
+	await testValidatesKey(expect, {
 		method: "put",
 		f: async (kv, key) => {
 			await kv.put(key, "value");
 		},
 	});
 });
-test("put: puts value", async () => {
+test("put: puts value", async ({ expect }) => {
 	const { kv, ns } = ctx;
 	await kv.put("key", "value", {
 		expiration: TIME_FUTURE,
@@ -309,14 +326,14 @@ test("put: puts value", async () => {
 	const results = await kv.list({ prefix: ns });
 	expect(results.keys[0]?.expiration).toBe(TIME_FUTURE);
 });
-test("put: puts empty value", async () => {
+test("put: puts empty value", async ({ expect }) => {
 	// https://github.com/cloudflare/miniflare/issues/703
 	const { kv } = ctx;
 	await kv.put("key", "");
 	const value = await kv.get("key");
 	expect(value).toBe("");
 });
-test("put: overrides existing keys", async () => {
+test("put: overrides existing keys", async ({ expect }) => {
 	const { kv, ns, object } = ctx;
 	const stmts = sqlStmts(object);
 	await kv.put("key", "value1");
@@ -339,7 +356,7 @@ test("put: overrides existing keys", async () => {
 	assert(newBlobId !== undefined);
 	expect(blobId).not.toBe(newBlobId);
 });
-test("put: keys are case-sensitive", async () => {
+test("put: keys are case-sensitive", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key", "lower");
 	await kv.put("KEY", "upper");
@@ -348,7 +365,7 @@ test("put: keys are case-sensitive", async () => {
 	result = await kv.get("KEY");
 	expect(result).toBe("upper");
 });
-test("put: validates expiration ttl", async () => {
+test("put: validates expiration ttl", async ({ expect }) => {
 	const { kv } = ctx;
 	await expect(
 		kv.put("key", "value", { expirationTtl: "nan" as unknown as number })
@@ -368,7 +385,7 @@ test("put: validates expiration ttl", async () => {
 		)
 	);
 });
-test("put: validates expiration", async () => {
+test("put: validates expiration", async ({ expect }) => {
 	const { kv } = ctx;
 	await expect(
 		kv.put("key", "value", { expiration: "nan" as unknown as number })
@@ -388,11 +405,13 @@ test("put: validates expiration", async () => {
 		kv.put("key", "value", { expiration: TIME_NOW + 30 })
 	).rejects.toThrow(
 		new Error(
-			`KV PUT failed: 400 Invalid expiration of ${TIME_NOW + 30}. Expiration times must be at least 60 seconds in the future.`
+			`KV PUT failed: 400 Invalid expiration of ${
+				TIME_NOW + 30
+			}. Expiration times must be at least 60 seconds in the future.`
 		)
 	);
 });
-test("put: validates value size", async () => {
+test("put: validates value size", async ({ expect }) => {
 	const { kv } = ctx;
 	const maxValueSize = 1024;
 	const byteLength = maxValueSize + 1;
@@ -405,7 +424,7 @@ test("put: validates value size", async () => {
 	// Check 1 less byte is accepted
 	await kv.put("key", createJunkStream(byteLength - 1));
 });
-test("put: validates metadata size", async () => {
+test("put: validates metadata size", async ({ expect }) => {
 	const { kv } = ctx;
 	const maxMetadataSize = 1024;
 	await expect(
@@ -416,20 +435,22 @@ test("put: validates metadata size", async () => {
 		})
 	).rejects.toThrow(
 		new Error(
-			`KV PUT failed: 413 Metadata length of ${maxMetadataSize + 1} exceeds limit of ${maxMetadataSize}.`
+			`KV PUT failed: 413 Metadata length of ${
+				maxMetadataSize + 1
+			} exceeds limit of ${maxMetadataSize}.`
 		)
 	);
 });
 
-test("delete: validates key", async () => {
-	await testValidatesKey({
+test("delete: validates key", async ({ expect }) => {
+	await testValidatesKey(expect, {
 		method: "delete",
 		f: async (kv, key) => {
 			await kv.delete(key);
 		},
 	});
 });
-test("delete: deletes existing keys", async () => {
+test("delete: deletes existing keys", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key", "value");
 	expect(await kv.get("key")).not.toBe(null);
@@ -441,14 +462,17 @@ test("delete: does nothing for non-existent keys", async () => {
 	await kv.delete("key");
 });
 
-async function testList(opts: {
-	values: Record<
-		string,
-		{ value: string; expiration?: number; metadata?: unknown }
-	>;
-	options?: KVNamespaceListOptions;
-	pages: KVNamespaceListResult<unknown>["keys"][];
-}) {
+async function testList(
+	expect: ExpectStatic,
+	opts: {
+		values: Record<
+			string,
+			{ value: string; expiration?: number; metadata?: unknown }
+		>;
+		options?: KVNamespaceListOptions;
+		pages: KVNamespaceListResult<unknown>["keys"][];
+	}
+) {
 	const { kv, ns } = ctx;
 	for (const [key, value] of Object.entries(opts.values)) {
 		await kv.put(key, value.value, {
@@ -483,8 +507,8 @@ async function testList(opts: {
 	}
 }
 
-test("list: lists keys in sorted order", async () => {
-	await testList({
+test("list: lists keys in sorted order", async ({ expect }) => {
+	await testList(expect, {
 		values: {
 			key3: { value: "value3" },
 			key1: { value: "value1" },
@@ -493,8 +517,8 @@ test("list: lists keys in sorted order", async () => {
 		pages: [[{ name: "key1" }, { name: "key2" }, { name: "key3" }]],
 	});
 });
-test("list: lists keys matching prefix", async () => {
-	await testList({
+test("list: lists keys matching prefix", async ({ expect }) => {
+	await testList(expect, {
 		values: {
 			section1key1: { value: "value11" },
 			section1key2: { value: "value12" },
@@ -504,8 +528,8 @@ test("list: lists keys matching prefix", async () => {
 		pages: [[{ name: "section1key1" }, { name: "section1key2" }]],
 	});
 });
-test("list: prefix is case-sensitive", async () => {
-	await testList({
+test("list: prefix is case-sensitive", async ({ expect }) => {
+	await testList(expect, {
 		values: {
 			key1: { value: "lower1" },
 			key2: { value: "lower2 " },
@@ -516,8 +540,8 @@ test("list: prefix is case-sensitive", async () => {
 		pages: [[{ name: "KEY1" }, { name: "KEY2" }]],
 	});
 });
-test("list: prefix permits special characters", async () => {
-	await testList({
+test("list: prefix permits special characters", async ({ expect }) => {
+	await testList(expect, {
 		values: {
 			["key\\_%1"]: { value: "value1" },
 			["key\\a"]: { value: "bad1" },
@@ -529,8 +553,8 @@ test("list: prefix permits special characters", async () => {
 		pages: [[{ name: "key\\_%1" }, { name: "key\\_%2" }, { name: "key\\_%3" }]],
 	});
 });
-test("list: lists keys with expiration", async () => {
-	await testList({
+test("list: lists keys with expiration", async ({ expect }) => {
+	await testList(expect, {
 		values: {
 			key1: { value: "value1", expiration: TIME_FUTURE },
 			key2: { value: "value2", expiration: TIME_FUTURE + 100 },
@@ -545,8 +569,8 @@ test("list: lists keys with expiration", async () => {
 		],
 	});
 });
-test("list: lists keys with metadata", async () => {
-	await testList({
+test("list: lists keys with metadata", async ({ expect }) => {
+	await testList(expect, {
 		values: {
 			key1: { value: "value1", metadata: { testing: 1 } },
 			key2: { value: "value2", metadata: { testing: 2 } },
@@ -561,8 +585,8 @@ test("list: lists keys with metadata", async () => {
 		],
 	});
 });
-test("list: lists keys with expiration and metadata", async () => {
-	await testList({
+test("list: lists keys with expiration and metadata", async ({ expect }) => {
+	await testList(expect, {
 		values: {
 			key1: {
 				value: "value1",
@@ -601,14 +625,16 @@ test("list: lists keys with expiration and metadata", async () => {
 		],
 	});
 });
-test("list: returns an empty list with no keys", async () => {
-	await testList({
+test("list: returns an empty list with no keys", async ({ expect }) => {
+	await testList(expect, {
 		values: {},
 		pages: [[]],
 	});
 });
-test("list: returns an empty list with no matching keys", async () => {
-	await testList({
+test("list: returns an empty list with no matching keys", async ({
+	expect,
+}) => {
+	await testList(expect, {
 		values: {
 			key1: { value: "value1" },
 			key2: { value: "value2" },
@@ -618,8 +644,8 @@ test("list: returns an empty list with no matching keys", async () => {
 		pages: [[]],
 	});
 });
-test("list: paginates keys", async () => {
-	await testList({
+test("list: paginates keys", async ({ expect }) => {
+	await testList(expect, {
 		values: {
 			key1: { value: "value1" },
 			key2: { value: "value2" },
@@ -629,8 +655,8 @@ test("list: paginates keys", async () => {
 		pages: [[{ name: "key1" }, { name: "key2" }], [{ name: "key3" }]],
 	});
 });
-test("list: paginates keys matching prefix", async () => {
-	await testList({
+test("list: paginates keys matching prefix", async ({ expect }) => {
+	await testList(expect, {
 		values: {
 			section1key1: { value: "value11" },
 			section1key2: { value: "value12" },
@@ -644,7 +670,7 @@ test("list: paginates keys matching prefix", async () => {
 		],
 	});
 });
-test("list: accepts long prefix", async () => {
+test("list: accepts long prefix", async ({ expect }) => {
 	const { kv, ns } = ctx;
 	// Max key length, minus padding for `context.ns`
 	const longKey = "x".repeat(512 - ns.length);
@@ -652,7 +678,7 @@ test("list: accepts long prefix", async () => {
 	const page = await kv.list({ prefix: ns + longKey });
 	expect(page.keys).toEqual([{ name: ns + longKey }]);
 });
-test("list: paginates with variable limit", async () => {
+test("list: paginates with variable limit", async ({ expect }) => {
 	const { kv, ns } = ctx;
 	await kv.put("key1", "value1");
 	await kv.put("key2", "value2");
@@ -669,7 +695,7 @@ test("list: paginates with variable limit", async () => {
 	expect(page.keys).toEqual([{ name: `${ns}key2` }, { name: `${ns}key3` }]);
 	assert(page.list_complete);
 });
-test("list: returns keys inserted whilst paginating", async () => {
+test("list: returns keys inserted whilst paginating", async ({ expect }) => {
 	const { kv, ns } = ctx;
 	await kv.put("key1", "value1");
 	await kv.put("key3", "value3");
@@ -690,7 +716,7 @@ test("list: returns keys inserted whilst paginating", async () => {
 	expect(page.keys).toEqual([{ name: `${ns}key4` }, { name: `${ns}key5` }]);
 	assert(page.list_complete);
 });
-test("list: ignores expired keys", async () => {
+test("list: ignores expired keys", async ({ expect }) => {
 	const { kv, ns, object } = ctx;
 	for (let i = 1; i <= 3; i++) {
 		await kv.put(`key${i}`, `value${i}`, { expiration: TIME_NOW + i * 60 });
@@ -702,7 +728,7 @@ test("list: ignores expired keys", async () => {
 		cacheStatus: null,
 	});
 });
-test("list: sorts lexicographically", async () => {
+test("list: sorts lexicographically", async ({ expect }) => {
 	const { kv, ns } = ctx;
 	await kv.put(", ", "value");
 	await kv.put("!", "value");
@@ -712,7 +738,7 @@ test("list: sorts lexicographically", async () => {
 		cacheStatus: null,
 	});
 });
-test("list: validates limit", async () => {
+test("list: validates limit", async ({ expect }) => {
 	const { kv } = ctx;
 	// The runtime will only send the limit if it's > 0
 	await expect(kv.list({ limit: 1001 })).rejects.toThrow(
@@ -722,7 +748,7 @@ test("list: validates limit", async () => {
 	);
 });
 
-test("persists in-memory between options reloads", async () => {
+test("persists in-memory between options reloads", async ({ expect }) => {
 	const opts = {
 		modules: true,
 		script: `export default {
@@ -758,7 +784,7 @@ test("persists in-memory between options reloads", async () => {
 	res = await mf2.dispatchFetch("http://placeholder");
 	expect(await res.json()).toEqual({ version: 3, key: "value2" });
 });
-test("persists on file-system", async () => {
+test("persists on file-system", async ({ expect }) => {
 	const tmp = await useTmp();
 	const opts: MiniflareOptions = {
 		modules: true,
@@ -785,7 +811,7 @@ test("persists on file-system", async () => {
 	expect(await kv.get("key")).toBe("value");
 });
 
-test("migrates database to new location", async () => {
+test("migrates database to new location", async ({ expect }) => {
 	// Copy legacy data to temporary directory
 	const tmp = await useTmp();
 	const persistFixture = path.join(FIXTURES_PATH, "migrations", "3.20230821.0");
@@ -805,7 +831,7 @@ test("migrates database to new location", async () => {
 	expect(await namespace.get("key")).toBe("value");
 });
 
-test("sticky blobs never deleted", async () => {
+test("sticky blobs never deleted", async ({ expect }) => {
 	// Checking regular behaviour that old blobs deleted in `put: overrides
 	// existing keys` test. Only testing sticky blobs for KV, as the blob store
 	// should only be constructed in the shared `MiniflareDurableObject` ABC.

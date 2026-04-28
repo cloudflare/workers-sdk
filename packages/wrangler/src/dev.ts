@@ -255,16 +255,13 @@ export const dev = createCommand({
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 			type: "boolean",
 		},
-		"experimental-tail-logs": {
-			type: "boolean",
-			alias: ["x-tail-logs"],
-			describe:
-				"Experimental: Get runtime logs for the remote worker via Workers Tails rather than the Devtools inspector",
-			default: true,
-			hidden: true,
-		},
 		types: {
 			describe: "Generate types from your Worker configuration",
+			type: "boolean",
+		},
+		tunnel: {
+			describe:
+				"Expose your local dev server via a Cloudflare Quick Tunnel (https://try.cloudflare.com)",
 			type: "boolean",
 		},
 	},
@@ -278,6 +275,9 @@ export const dev = createCommand({
 			throw new UserError(
 				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
 			);
+		}
+		if (args.tunnel && args.remote) {
+			throw new UserError("--tunnel is only supported in local mode.");
 		}
 
 		if (isWebContainer()) {
@@ -294,10 +294,7 @@ export const dev = createCommand({
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
 		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
-		if (devInstance.teardownRegistryPromise) {
-			const teardownRegistry = await devInstance.teardownRegistryPromise;
-			await teardownRegistry(devInstance.devEnv.config.latestConfig?.name);
-		}
+
 		devInstance.unregisterHotKeys?.();
 	},
 });
@@ -335,6 +332,10 @@ export type AdditionalDevProps = {
 	ai?: {
 		binding: string;
 	};
+	stream?: {
+		binding: string;
+		remote?: boolean;
+	};
 	version_metadata?: {
 		binding: string;
 	};
@@ -364,6 +365,8 @@ export type StartDevOptions = DevArguments &
 		enableIpc?: boolean;
 		dockerPath?: string;
 		containerEngine?: string;
+		/** Set to `false` to disable persistence. When `true` or `undefined`, uses default persistence path. */
+		persist?: boolean;
 	};
 
 export async function getHostAndRoutes(
@@ -505,12 +508,15 @@ export function getBindings(
 
 	// Override vars with .dev.vars (dev-specific)
 	// getVarsForDev returns typed bindings: config vars are plain_text/json,
-	// while .dev.vars/.env vars are secret_text
+	// while .dev.vars/.env vars are secret_text.
+	// When secrets is defined, only declared secret keys are loaded from files.
 	const vars = getVarsForDev(
 		configParam.userConfigPath,
 		envFiles,
 		configParam.vars,
-		env
+		env,
+		false,
+		configParam.secrets
 	);
 	for (const [name, binding] of Object.entries(vars)) {
 		// Only override plain_text/json/secret_text vars, not other binding types like kv_namespace

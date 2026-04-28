@@ -1,4 +1,4 @@
-import { logRaw } from "@cloudflare/cli";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { UserError } from "@cloudflare/workers-utils";
 import { convertWorkerMetadataBindingsToFlatBindings } from "../api/startDevWorker/utils";
 import { createCommand } from "../core/create-command";
@@ -33,7 +33,7 @@ export const versionsViewCommand = createCommand({
 			requiresArg: true,
 		},
 		json: {
-			describe: "Display output as clean JSON",
+			describe: "Display output as JSON",
 			type: "boolean",
 			default: false,
 		},

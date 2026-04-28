@@ -1,20 +1,19 @@
-import assert from "node:assert";
 import http from "node:http";
-import { AddressInfo } from "node:net";
 import { setImmediate } from "node:timers/promises";
 import { expectTypeOf } from "expect-type";
 import {
-	CloseEvent,
 	coupleWebSocket,
 	DeferredPromise,
-	MessageEvent,
 	viewToBuffer,
 	WebSocket,
 	WebSocketPair,
 } from "miniflare";
-import { test } from "vitest";
-import NodeWebSocket, { Event as WebSocketEvent, WebSocketServer } from "ws";
+import { assert, test } from "vitest";
+import NodeWebSocket, { WebSocketServer } from "ws";
 import { useServer, utf8Decode, utf8Encode } from "../test-shared";
+import type { CloseEvent, MessageEvent } from "miniflare";
+import type { AddressInfo } from "node:net";
+import type { Event as WebSocketEvent } from "ws";
 
 const noop = () => {};
 
@@ -311,7 +310,6 @@ test("coupleWebSocket: forwards binary messages from client to worker", async ({
 	await coupleWebSocket(ws, client);
 
 	const event = await eventPromise;
-	expect(event.data).toBeInstanceOf(ArrayBuffer);
 	assert(event.data instanceof ArrayBuffer);
 	expect(utf8Decode(new Uint8Array(event.data))).toBe("test");
 });

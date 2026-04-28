@@ -109,7 +109,7 @@ const getResponseOrAssetIntent = async (
 				location:
 					encodedDestination !== pathname
 						? encodedDestination
-						: intent.redirect ?? "<unknown>",
+						: (intent.redirect ?? "<unknown>"),
 				status: TemporaryRedirectResponse.status,
 			});
 

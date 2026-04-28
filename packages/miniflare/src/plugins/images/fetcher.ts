@@ -1,7 +1,7 @@
 import { File } from "node:buffer";
-import { Request } from "undici";
 import type { ImageInfoResponse } from "@cloudflare/workers-types/experimental";
 import type { Sharp } from "sharp";
+import type { Request } from "undici";
 
 type Transform = {
 	imageIndex?: number;

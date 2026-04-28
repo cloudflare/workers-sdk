@@ -1,32 +1,24 @@
 import {
-	env,
+	createExecutionContext,
 	runDurableObjectAlarm,
 	runInDurableObject,
-	SELF,
 } from "cloudflare:test";
-import { RpcStub } from "cloudflare:workers";
+import { env, RpcStub } from "cloudflare:workers";
 import { describe, it, onTestFinished } from "vitest";
-import { Counter, TestObject } from "../src";
+import TestDefaultEntrypoint, { TestObject } from "../src";
+import { Counter } from "../src/counter";
 
 describe("named entrypoints", () => {
 	it("dispatches fetch request to named ExportedHandler", async ({
 		expect,
 	}) => {
 		const response = await env.TEST_NAMED_HANDLER.fetch("https://example.com");
-		expect(await response.json()).toMatchInlineSnapshot(`
-			{
-			  "ctxWaitUntil": "function",
-			  "envKeys": [
-			    "KV_NAMESPACE",
-			    "TEST_NAMED_ENTRYPOINT",
-			    "TEST_NAMED_HANDLER",
-			    "TEST_OBJECT",
-			  ],
-			  "method": "GET",
-			  "source": "testNamedHandler",
-			  "url": "https://example.com/",
-			}
-		`);
+		expect(await response.json()).toMatchObject({
+			ctxWaitUntil: "function",
+			method: "GET",
+			source: "testNamedHandler",
+			url: "https://example.com/",
+		});
 	});
 	it("dispatches fetch request to named WorkerEntrypoint", async ({
 		expect,
@@ -34,20 +26,12 @@ describe("named entrypoints", () => {
 		const response = await env.TEST_NAMED_ENTRYPOINT.fetch(
 			"https://example.com"
 		);
-		expect(await response.json()).toMatchInlineSnapshot(`
-			{
-			  "ctxWaitUntil": "function",
-			  "envKeys": [
-			    "KV_NAMESPACE",
-			    "TEST_NAMED_ENTRYPOINT",
-			    "TEST_NAMED_HANDLER",
-			    "TEST_OBJECT",
-			  ],
-			  "method": "GET",
-			  "source": "TestNamedEntrypoint",
-			  "url": "https://example.com/",
-			}
-		`);
+		expect(await response.json()).toMatchObject({
+			ctxWaitUntil: "function",
+			method: "GET",
+			source: "TestNamedEntrypoint",
+			url: "https://example.com/",
+		});
 	});
 	it("calls method with rpc", async ({ expect }) => {
 		const result = await env.TEST_NAMED_ENTRYPOINT.ping();
@@ -78,20 +62,12 @@ describe("Durable Object", () => {
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
 		const response = await stub.fetch("https://example.com");
-		expect(await response.json()).toMatchInlineSnapshot(`
-			{
-			  "ctxWaitUntil": "function",
-			  "envKeys": [
-			    "KV_NAMESPACE",
-			    "TEST_NAMED_ENTRYPOINT",
-			    "TEST_NAMED_HANDLER",
-			    "TEST_OBJECT",
-			  ],
-			  "method": "GET",
-			  "source": "TestObject",
-			  "url": "https://example.com/",
-			}
-		`);
+		expect(await response.json()).toMatchObject({
+			ctxWaitUntil: "function",
+			method: "GET",
+			source: "TestObject",
+			url: "https://example.com/",
+		});
 	});
 	it("increments count and allows direct/rpc access to instance/storage", async ({
 		expect,
@@ -176,6 +152,25 @@ describe("Durable Object", () => {
 		using result = await stub.getObject();
 		expect(result).toMatchObject({ hello: "world" });
 	});
+});
+
+// Regression: https://github.com/cloudflare/workers-sdk/issues/7077
+// Fixed in workerd by https://github.com/cloudflare/workerd/pull/3782
+it("can construct a WorkerEntrypoint with mocked env", async ({ expect }) => {
+	const data = new Map<string, string>([["mocked-key", "mocked-value"]]);
+	const mockedKv = new Proxy(env.KV_NAMESPACE, {
+		get: (target, prop, receiver) =>
+			prop === "get"
+				? async (key: string) => data.get(key) ?? null
+				: Reflect.get(target, prop, receiver),
+	});
+
+	const ctx = createExecutionContext();
+	const worker = new TestDefaultEntrypoint(ctx, {
+		...env,
+		KV_NAMESPACE: mockedKv,
+	});
+	expect(await worker.read("mocked-key")).toBe("mocked-value");
 });
 
 describe("counter", () => {

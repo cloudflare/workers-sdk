@@ -29,7 +29,7 @@ export default {
 
 async function testPostgresLibrary(client: Client, ctx: ExecutionContext) {
 	await client.connect();
-	const result = await client.query(`SELECT * FROM rnc_database`);
+	const result = await client.query(`SELECT * FROM rnacen.rnc_database`);
 	// Return the first row as JSON
 	const resp = Response.json(result.rows[0]);
 

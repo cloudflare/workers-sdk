@@ -31,7 +31,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check user for team affiliation
-        uses: tspascoal/get-user-teams-membership@v2
+        uses: tspascoal/get-user-teams-membership@ba78054988f58bea69b7c6136d563236f8ed2fc0 # v2
         id: teamAffiliation
         with:
           GITHUB_TOKEN: ${{ secrets.READ_ONLY_ORG_GITHUB_TOKEN }}

@@ -38,7 +38,7 @@ describe("containers push", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers push <TAG>
 
-			Push a local image to the Cloudflare managed registry [open beta]
+			Push a local image to the Cloudflare managed registry
 
 			POSITIONALS
 			  TAG  The tag of the local image to push  [string] [required]

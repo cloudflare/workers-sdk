@@ -341,9 +341,14 @@ describe("whoami", () => {
 			  - queues:write
 			  - pipelines:write
 			  - secrets_store:write
+			  - artifacts:write
+			  - flagship:write
 			  - containers:write
 			  - cloudchamber:write
 			  - connectivity:admin
+			  - email_routing:write
+			  - email_sending:write
+			  - browser:write
 
 
 			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
@@ -351,9 +356,7 @@ describe("whoami", () => {
 		`);
 	});
 
-	it("should redact email and account names in non-interactive mode", async ({
-		expect,
-	}) => {
+	it("should not redact in non-interactive mode", async ({ expect }) => {
 		setIsTTY(false);
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		msw.use(
@@ -374,15 +377,15 @@ describe("whoami", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Getting User settings...
-			👋 You are logged in with an OAuth Token, associated with the email (redacted).
+			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤
-			│ (redacted) │ account-1 │
+			│ Account One │ account-1 │
 			├─┼─┤
-			│ (redacted) │ account-2 │
+			│ Account Two │ account-2 │
 			├─┼─┤
-			│ (redacted) │ account-3 │
+			│ Account Three │ account-3 │
 			└─┴─┘
 			🔓 Token Permissions:
 			Scope (Access)
@@ -406,12 +409,17 @@ describe("whoami", () => {
 			  - queues:write
 			  - pipelines:write
 			  - secrets_store:write
+			  - artifacts:write
+			  - flagship:write
 			  - containers:write
 			  - cloudchamber:write
 			  - connectivity:admin
+			  - email_routing:write
+			  - email_sending:write
+			  - browser:write
 
 
-			🎢 Membership roles in "(redacted)": Contact account super admin to change your permissions.
+			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
 			- Test role"
 		`);
 	});
@@ -515,9 +523,14 @@ describe("whoami", () => {
 			  - queues:write
 			  - pipelines:write
 			  - secrets_store:write
+			  - artifacts:write
+			  - flagship:write
 			  - containers:write
 			  - cloudchamber:write
 			  - connectivity:admin
+			  - email_routing:write
+			  - email_sending:write
+			  - browser:write
 
 
 			🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"

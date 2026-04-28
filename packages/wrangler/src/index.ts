@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
+import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli-shared-helpers";
 import {
 	CommandLineArgsError,
 	experimental_readRawConfig,
@@ -10,9 +10,30 @@ import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { aiFineTuneNamespace, aiNamespace } from "./ai";
+import { aiSearchCreateCommand } from "./ai-search/create";
+import { aiSearchDeleteCommand } from "./ai-search/delete";
+import { aiSearchGetCommand } from "./ai-search/get";
+import { aiSearchNamespace } from "./ai-search/index";
+import { aiSearchListCommand } from "./ai-search/list";
+import { aiSearchNamespaceCreateCommand } from "./ai-search/namespace/create";
+import { aiSearchNamespaceDeleteCommand } from "./ai-search/namespace/delete";
+import { aiSearchNamespaceGetCommand } from "./ai-search/namespace/get";
+import { aiSearchNamespaceNamespace } from "./ai-search/namespace/index";
+import { aiSearchNamespaceListCommand } from "./ai-search/namespace/list";
+import { aiSearchNamespaceUpdateCommand } from "./ai-search/namespace/update";
+import { aiSearchSearchCommand } from "./ai-search/search";
+import { aiSearchStatsCommand } from "./ai-search/stats";
+import { aiSearchUpdateCommand } from "./ai-search/update";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
 import { aiModelsCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
+import {
+	browserCloseCommand,
+	browserCreateCommand,
+	browserListCommand,
+	browserViewCommand,
+	browserNamespace,
+} from "./browser-rendering";
 import { buildCommand } from "./build";
 import {
 	certDeleteCommand,
@@ -54,10 +75,12 @@ import {
 	containersImagesListCommand,
 	containersImagesNamespace,
 	containersInfoCommand,
+	containersInstancesCommand,
 	containersListCommand,
 	containersNamespace,
 	containersPushCommand,
 	containersRegistriesConfigureCommand,
+	containersRegistriesCredentialsCommand,
 	containersRegistriesDeleteCommand,
 	containersRegistriesListCommand,
 	containersRegistriesNamespace,
@@ -95,6 +118,37 @@ import {
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
+import { emailRoutingAddressesCreateCommand } from "./email-routing/addresses/create";
+import { emailRoutingAddressesDeleteCommand } from "./email-routing/addresses/delete";
+import { emailRoutingAddressesGetCommand } from "./email-routing/addresses/get";
+import { emailRoutingAddressesListCommand } from "./email-routing/addresses/list";
+import { emailRoutingDisableCommand } from "./email-routing/disable";
+import { emailRoutingDnsGetCommand } from "./email-routing/dns-get";
+import { emailRoutingDnsUnlockCommand } from "./email-routing/dns-unlock";
+import { emailRoutingEnableCommand } from "./email-routing/enable";
+import {
+	emailNamespace,
+	emailRoutingAddressesNamespace,
+	emailRoutingDnsNamespace,
+	emailRoutingNamespace,
+	emailRoutingRulesNamespace,
+	emailSendingDnsNamespace,
+	emailSendingNamespace,
+} from "./email-routing/index";
+import { emailRoutingListCommand } from "./email-routing/list";
+import { emailRoutingRulesCreateCommand } from "./email-routing/rules/create";
+import { emailRoutingRulesDeleteCommand } from "./email-routing/rules/delete";
+import { emailRoutingRulesGetCommand } from "./email-routing/rules/get";
+import { emailRoutingRulesListCommand } from "./email-routing/rules/list";
+import { emailRoutingRulesUpdateCommand } from "./email-routing/rules/update";
+import { emailSendingDisableCommand } from "./email-routing/sending/disable";
+import { emailSendingDnsGetCommand } from "./email-routing/sending/dns-get";
+import { emailSendingEnableCommand } from "./email-routing/sending/enable";
+import { emailSendingListCommand } from "./email-routing/sending/list";
+import { emailSendingSendCommand } from "./email-routing/sending/send";
+import { emailSendingSendRawCommand } from "./email-routing/sending/send-raw";
+import { emailSendingSettingsCommand } from "./email-routing/sending/settings";
+import { emailRoutingSettingsCommand } from "./email-routing/settings";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
@@ -194,13 +248,27 @@ import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
 import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
 import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
+import {
+	previewCommand,
+	previewDeleteCommand,
+	previewSecretBulkCommand,
+	previewSecretDeleteCommand,
+	previewSecretListCommand,
+	previewSecretNamespace,
+	previewSecretPutCommand,
+	previewSettingsCommand,
+	previewSettingsUpdateCommand,
+} from "./preview";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
 import { queuesConsumerHttpAddCommand } from "./queues/cli/commands/consumer/http-pull/add";
+import { queuesConsumerHttpListCommand } from "./queues/cli/commands/consumer/http-pull/list";
 import { queuesConsumerHttpRemoveCommand } from "./queues/cli/commands/consumer/http-pull/remove";
+import { queuesConsumerListCommand } from "./queues/cli/commands/consumer/list";
 import { queuesConsumerWorkerNamespace } from "./queues/cli/commands/consumer/worker";
 import { queuesConsumerAddCommand } from "./queues/cli/commands/consumer/worker/add";
+import { queuesConsumerWorkerListCommand } from "./queues/cli/commands/consumer/worker/list";
 import { queuesConsumerRemoveCommand } from "./queues/cli/commands/consumer/worker/remove";
 import { queuesCreateCommand } from "./queues/cli/commands/create";
 import { queuesDeleteCommand } from "./queues/cli/commands/delete";
@@ -329,6 +397,13 @@ import { closeSentry, setupSentry } from "./sentry";
 import { setupCommand } from "./setup";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
+import { tunnelCreateCommand } from "./tunnel/create";
+import { tunnelDeleteCommand } from "./tunnel/delete";
+import { tunnelNamespace } from "./tunnel/index";
+import { tunnelInfoCommand } from "./tunnel/info";
+import { tunnelListCommand } from "./tunnel/list";
+import { tunnelQuickStartCommand } from "./tunnel/quick-start";
+import { tunnelRunCommand } from "./tunnel/run";
 import { typesCommand } from "./type-generation";
 import {
 	authNamespace,
@@ -397,7 +472,7 @@ if (proxy) {
 	setGlobalDispatcher(
 		new EnvHttpProxyAgent({ noProxy: noProxy || "localhost,127.0.0.1,::1" })
 	);
-	logger.log(
+	logger.warn(
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
 }
@@ -724,6 +799,37 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("deploy");
 
 	registry.define([
+		{ command: "wrangler preview", definition: previewCommand },
+		{ command: "wrangler preview delete", definition: previewDeleteCommand },
+		{
+			command: "wrangler preview settings",
+			definition: previewSettingsCommand,
+		},
+		{
+			command: "wrangler preview settings update",
+			definition: previewSettingsUpdateCommand,
+		},
+		{ command: "wrangler preview secret", definition: previewSecretNamespace },
+		{
+			command: "wrangler preview secret put",
+			definition: previewSecretPutCommand,
+		},
+		{
+			command: "wrangler preview secret delete",
+			definition: previewSecretDeleteCommand,
+		},
+		{
+			command: "wrangler preview secret list",
+			definition: previewSecretListCommand,
+		},
+		{
+			command: "wrangler preview secret bulk",
+			definition: previewSecretBulkCommand,
+		},
+	]);
+	registry.registerNamespace("preview");
+
+	registry.define([
 		{
 			command: "wrangler setup",
 			definition: setupCommand,
@@ -913,6 +1019,10 @@ export function createCLIParser(argv: string[]) {
 			definition: queuesConsumerRemoveCommand,
 		},
 		{
+			command: "wrangler queues consumer list",
+			definition: queuesConsumerListCommand,
+		},
+		{
 			command: "wrangler queues consumer http",
 			definition: queuesConsumerHttpNamespace,
 		},
@@ -925,6 +1035,10 @@ export function createCLIParser(argv: string[]) {
 			definition: queuesConsumerHttpRemoveCommand,
 		},
 		{
+			command: "wrangler queues consumer http list",
+			definition: queuesConsumerHttpListCommand,
+		},
+		{
 			command: "wrangler queues consumer worker",
 			definition: queuesConsumerWorkerNamespace,
 		},
@@ -935,6 +1049,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler queues consumer worker remove",
 			definition: queuesConsumerRemoveCommand,
+		},
+		{
+			command: "wrangler queues consumer worker list",
+			definition: queuesConsumerWorkerListCommand,
 		},
 	]);
 	registry.registerNamespace("queues");
@@ -1298,6 +1416,78 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("hyperdrive");
 
+	// tunnel
+	registry.define([
+		{ command: "wrangler tunnel", definition: tunnelNamespace },
+		{
+			command: "wrangler tunnel create",
+			definition: tunnelCreateCommand,
+		},
+		{
+			command: "wrangler tunnel delete",
+			definition: tunnelDeleteCommand,
+		},
+		{ command: "wrangler tunnel info", definition: tunnelInfoCommand },
+		{ command: "wrangler tunnel list", definition: tunnelListCommand },
+		{
+			command: "wrangler tunnel run",
+			definition: tunnelRunCommand,
+		},
+		{
+			command: "wrangler tunnel quick-start",
+			definition: tunnelQuickStartCommand,
+		},
+	]);
+	registry.registerNamespace("tunnel");
+	// ai-search
+	registry.define([
+		{ command: "wrangler ai-search", definition: aiSearchNamespace },
+		{ command: "wrangler ai-search list", definition: aiSearchListCommand },
+		{
+			command: "wrangler ai-search create",
+			definition: aiSearchCreateCommand,
+		},
+		{ command: "wrangler ai-search get", definition: aiSearchGetCommand },
+		{
+			command: "wrangler ai-search update",
+			definition: aiSearchUpdateCommand,
+		},
+		{
+			command: "wrangler ai-search delete",
+			definition: aiSearchDeleteCommand,
+		},
+		{ command: "wrangler ai-search stats", definition: aiSearchStatsCommand },
+		{
+			command: "wrangler ai-search search",
+			definition: aiSearchSearchCommand,
+		},
+		{
+			command: "wrangler ai-search namespace",
+			definition: aiSearchNamespaceNamespace,
+		},
+		{
+			command: "wrangler ai-search namespace list",
+			definition: aiSearchNamespaceListCommand,
+		},
+		{
+			command: "wrangler ai-search namespace create",
+			definition: aiSearchNamespaceCreateCommand,
+		},
+		{
+			command: "wrangler ai-search namespace get",
+			definition: aiSearchNamespaceGetCommand,
+		},
+		{
+			command: "wrangler ai-search namespace update",
+			definition: aiSearchNamespaceUpdateCommand,
+		},
+		{
+			command: "wrangler ai-search namespace delete",
+			definition: aiSearchNamespaceDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("ai-search");
+
 	// cert - includes mtls-certificates and CA cert management
 	registry.define([
 		{ command: "wrangler cert", definition: certNamespace },
@@ -1509,6 +1699,10 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler containers list", definition: containersListCommand },
 		{ command: "wrangler containers info", definition: containersInfoCommand },
 		{
+			command: "wrangler containers instances",
+			definition: containersInstancesCommand,
+		},
+		{
 			command: "wrangler containers delete",
 			definition: containersDeleteCommand,
 		},
@@ -1533,6 +1727,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler containers registries delete",
 			definition: containersRegistriesDeleteCommand,
+		},
+		{
+			command: "wrangler containers registries credentials",
+			definition: containersRegistriesCredentialsCommand,
 		},
 		{
 			command: "wrangler containers images",
@@ -1590,6 +1788,16 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("ai");
+
+	// browser run
+	registry.define([
+		{ command: "wrangler browser", definition: browserNamespace },
+		{ command: "wrangler browser create", definition: browserCreateCommand },
+		{ command: "wrangler browser close", definition: browserCloseCommand },
+		{ command: "wrangler browser list", definition: browserListCommand },
+		{ command: "wrangler browser view", definition: browserViewCommand },
+	]);
+	registry.registerNamespace("browser");
 
 	// secrets store
 	registry.define([
@@ -1799,6 +2007,117 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("vpc");
+
+	registry.define([
+		{ command: "wrangler email", definition: emailNamespace },
+		{ command: "wrangler email routing", definition: emailRoutingNamespace },
+		{
+			command: "wrangler email routing list",
+			definition: emailRoutingListCommand,
+		},
+		{
+			command: "wrangler email routing settings",
+			definition: emailRoutingSettingsCommand,
+		},
+		{
+			command: "wrangler email routing enable",
+			definition: emailRoutingEnableCommand,
+		},
+		{
+			command: "wrangler email routing disable",
+			definition: emailRoutingDisableCommand,
+		},
+		{
+			command: "wrangler email routing dns",
+			definition: emailRoutingDnsNamespace,
+		},
+		{
+			command: "wrangler email routing dns get",
+			definition: emailRoutingDnsGetCommand,
+		},
+		{
+			command: "wrangler email routing dns unlock",
+			definition: emailRoutingDnsUnlockCommand,
+		},
+		{
+			command: "wrangler email routing rules",
+			definition: emailRoutingRulesNamespace,
+		},
+		{
+			command: "wrangler email routing rules list",
+			definition: emailRoutingRulesListCommand,
+		},
+		{
+			command: "wrangler email routing rules get",
+			definition: emailRoutingRulesGetCommand,
+		},
+		{
+			command: "wrangler email routing rules create",
+			definition: emailRoutingRulesCreateCommand,
+		},
+		{
+			command: "wrangler email routing rules update",
+			definition: emailRoutingRulesUpdateCommand,
+		},
+		{
+			command: "wrangler email routing rules delete",
+			definition: emailRoutingRulesDeleteCommand,
+		},
+		{
+			command: "wrangler email routing addresses",
+			definition: emailRoutingAddressesNamespace,
+		},
+		{
+			command: "wrangler email routing addresses list",
+			definition: emailRoutingAddressesListCommand,
+		},
+		{
+			command: "wrangler email routing addresses get",
+			definition: emailRoutingAddressesGetCommand,
+		},
+		{
+			command: "wrangler email routing addresses create",
+			definition: emailRoutingAddressesCreateCommand,
+		},
+		{
+			command: "wrangler email routing addresses delete",
+			definition: emailRoutingAddressesDeleteCommand,
+		},
+		{ command: "wrangler email sending", definition: emailSendingNamespace },
+		{
+			command: "wrangler email sending list",
+			definition: emailSendingListCommand,
+		},
+		{
+			command: "wrangler email sending settings",
+			definition: emailSendingSettingsCommand,
+		},
+		{
+			command: "wrangler email sending enable",
+			definition: emailSendingEnableCommand,
+		},
+		{
+			command: "wrangler email sending disable",
+			definition: emailSendingDisableCommand,
+		},
+		{
+			command: "wrangler email sending send",
+			definition: emailSendingSendCommand,
+		},
+		{
+			command: "wrangler email sending send-raw",
+			definition: emailSendingSendRawCommand,
+		},
+		{
+			command: "wrangler email sending dns",
+			definition: emailSendingDnsNamespace,
+		},
+		{
+			command: "wrangler email sending dns get",
+			definition: emailSendingDnsGetCommand,
+		},
+	]);
+	registry.registerNamespace("email");
 
 	registry.define([
 		{ command: "wrangler hello-world", definition: helloWorldNamespace },

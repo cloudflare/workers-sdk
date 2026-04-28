@@ -4,28 +4,44 @@ import events from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
 import util from "node:util";
+import { removeDir } from "@cloudflare/workers-utils";
 import { stripAnsi } from "miniflare";
 import treeKill from "tree-kill";
+import dedent from "ts-dedent";
 import { test as baseTest, inject, vi } from "vitest";
 
 const debuglog = util.debuglog("vitest-pool-workers:test");
 
-export const minimalVitestConfig = `
-import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
-export default defineWorkersConfig({
-	test: {
-		testTimeout: 90_000,
-		poolOptions: {
-			workers: {
-				singleWorker: true,
+export const vitestConfig = (
+	cfOptions: Record<string, unknown> = {},
+	testOptions: Record<string, unknown> = {}
+) => dedent /* javascript */ `
+	import { cloudflareTest } from "@cloudflare/vitest-pool-workers"
+
+	import { BaseSequencer } from "vitest/node";
+
+	class DeterministicSequencer extends BaseSequencer {
+		sort(files) {
+			return [...files].sort((a, b) => a.moduleId.localeCompare(b.moduleId));
+		}
+	}
+
+	export default {
+		plugins: [
+			cloudflareTest({
 				miniflare: {
-					compatibilityDate: "2024-01-01",
+					compatibilityDate: "2025-12-02",
 					compatibilityFlags: ["nodejs_compat"],
 				},
-			},
-		},
-	}
-});
+				...${JSON.stringify(cfOptions)}
+			})
+		],
+		test: {
+			sequence: { sequencer: DeterministicSequencer },
+			testTimeout: 90_000,
+			...${JSON.stringify(testOptions)}
+		}
+	};
 `;
 
 export function waitFor<T>(callback: Parameters<typeof vi.waitFor<T>>[0]) {
@@ -81,6 +97,7 @@ function wrap(proc: childProcess.ChildProcess): Process {
 	};
 }
 
+// eslint-disable-next-line jest/expect-expect, jest/no-disabled-tests
 export const test = baseTest.extend<{
 	tmpPath: string;
 	seed: (files: Record<string, string>) => Promise<void>;
@@ -96,7 +113,7 @@ export const test = baseTest.extend<{
 		const tmpPathBase = path.join(tmpPoolInstallationPath, "test-");
 		const tmpPath = await fs.mkdtemp(tmpPathBase);
 		await use(tmpPath);
-		await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
+		await removeDir(tmpPath);
 	},
 	// Fixture for seeding data in the temporary directory
 	async seed({ tmpPath }, use) {
@@ -107,6 +124,7 @@ export const test = baseTest.extend<{
 		const tmpPoolInstallationPath = inject("tmpPoolInstallationPath");
 
 		await use(async ({ flags = [], maxBuffer } = {}) => {
+			// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- test helper
 			const proc = childProcess.exec(
 				`pnpm exec vitest run --root="${tmpPath}" ` + flags.join(" "),
 				{
@@ -139,6 +157,7 @@ export const test = baseTest.extend<{
 		process.on("exit", killAllProcesses);
 
 		await use(({ flags = [], maxBuffer } = {}) => {
+			// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- test helper
 			const proc = childProcess.exec(
 				`pnpm exec vitest dev --root="${tmpPath}" ` + flags.join(" "),
 				{

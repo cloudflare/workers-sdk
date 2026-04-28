@@ -20,9 +20,19 @@ export function createTestLogStream(task: RunnerTask) {
 
 export function recreateLogFolder(suite: RunnerTestSuite) {
 	// Clean the old folder if exists (useful for dev)
+	//
+	// Note: this is intentionally inlined rather than importing `removeDirSync`
+	// from `@cloudflare/workers-utils`. That package's barrel export pulls in CJS
+	// dependencies (e.g. `xdg-app-paths`) that break when Vite bundles the vitest
+	// config (which imports this file) into ESM — the shimmed `require()` calls
+	// throw "Dynamic require of 'path' is not supported".
+	// Keep aligned with `removeDirSync()` in `packages/workers-utils/src/fs-helpers.ts`.
+	// eslint-disable-next-line workers-sdk/no-direct-recursive-rm
 	rmSync(getLogPath(suite), {
 		recursive: true,
 		force: true,
+		maxRetries: 5,
+		retryDelay: 100,
 	});
 
 	mkdirSync(getLogPath(suite), { recursive: true });
@@ -49,13 +59,13 @@ function getLogPath(suite: RunnerTestSuite) {
 
 	return nodePath.join(
 		getLogFolder(isExperimental, testPackageManager),
-		suiteFilename,
+		suiteFilename
 	);
 }
 
 export function getLogFolder(experimental: boolean, packageManager: string) {
 	return nodePath.join(
 		"./.e2e-logs" + (experimental ? "-experimental" : ""),
-		packageManager,
+		packageManager
 	);
 }

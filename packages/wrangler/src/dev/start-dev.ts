@@ -1,8 +1,9 @@
 import assert from "node:assert";
 import path from "node:path";
-import { bold, green } from "@cloudflare/cli/colors";
+import { bold, dim, green } from "@cloudflare/cli-shared-helpers/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { getRegistryPath } from "@cloudflare/workers-utils";
+import { getRegistryPath, startTunnel } from "@cloudflare/workers-utils";
+import chalk from "chalk";
 import dedent from "ts-dedent";
 import { DevEnv } from "../api";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
@@ -23,20 +24,14 @@ import type { StartDevOptionsBindings } from "../api/startDevWorker/utils";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
-import type { Config } from "@cloudflare/workers-utils";
-import type { watch } from "chokidar";
+import type { Config, Tunnel } from "@cloudflare/workers-utils";
 
 /**
  * Starts one (primary) or more (secondary) DevEnv environments given the `args`.
  */
 export async function startDev(args: StartDevOptions) {
-	let configFileWatcher: ReturnType<typeof watch> | undefined;
-	let assetsWatcher: ReturnType<typeof watch> | undefined;
 	let devEnv: DevEnv | DevEnv[] | undefined;
-	let teardownRegistryPromise:
-		| Promise<(name?: string) => Promise<void>>
-		| undefined;
-
+	let tunnel: Tunnel | undefined;
 	let unregisterHotKeys: (() => void) | undefined;
 	try {
 		if (args.logLevel) {
@@ -56,7 +51,7 @@ export async function startDev(args: StartDevOptions) {
 					unregisterHotKeys = registerDevHotKeys(
 						Array.isArray(devEnv) ? devEnv : [devEnv],
 						args,
-						false
+						{ getTunnel: () => tunnel, render: false }
 					);
 				}
 			}
@@ -103,6 +98,7 @@ export async function startDev(args: StartDevOptions) {
 							proxyFactory: (d) => new NoOpProxyController(d),
 						});
 						return setupDevEnv(auxDevEnv, c, authHook, {
+							env: args.env,
 							disableDevRegistry: args.disableDevRegistry,
 							multiworkerPrimary: false,
 						});
@@ -110,7 +106,9 @@ export async function startDev(args: StartDevOptions) {
 				))
 			);
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(devEnv, args);
+				unregisterHotKeys = registerDevHotKeys(devEnv, args, {
+					getTunnel: () => tunnel,
+				});
 			}
 		} else {
 			devEnv = new DevEnv();
@@ -118,7 +116,9 @@ export async function startDev(args: StartDevOptions) {
 			await setupDevEnv(devEnv, args.config, authHook, args);
 
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys([devEnv], args);
+				unregisterHotKeys = registerDevHotKeys([devEnv], args, {
+					getTunnel: () => tunnel,
+				});
 			}
 		}
 
@@ -156,26 +156,67 @@ export async function startDev(args: StartDevOptions) {
 			maybePrintScheduledWorkerWarning(hasCrons, !!args.testScheduled, url);
 		});
 
+		// Start tunnel early, before the proxy is ready.
+		// The port is already resolved by ConfigController, so we can build the
+		// origin URL now and let cloudflared connect as soon as the server binds.
+		if (args.tunnel) {
+			const config = primaryDevEnv.config.latestConfig;
+			const protocol = config?.dev?.server?.secure ? "https" : "http";
+			const hostname = config?.dev?.server?.hostname ?? "localhost";
+			const port = config?.dev?.server?.port ?? 8787;
+			const origin = new URL(
+				`${protocol}://${formatHostname(hostname)}:${port}`
+			);
+
+			logger.log(dim("⎔ Starting tunnel (usually takes a few seconds)..."));
+			tunnel = startTunnel({
+				origin,
+				extendHint: "Press [t] to extend by 1 hour.",
+				logger,
+			});
+
+			// Clean up tunnel on teardown
+			primaryDevEnv.on("teardown", () => {
+				tunnel?.dispose();
+			});
+
+			// User requested tunnel sharing explicitly. If it fails, let it throw
+			// and prevent dev server from starting without a tunnel.
+			const { publicUrl } = await tunnel.ready();
+
+			logger.log(
+				`⬣ Sharing via Cloudflare Tunnel: ` +
+					`${chalk.green(publicUrl.origin)}\n`
+			);
+			logger.warn(
+				chalk.dim("This URL is ") +
+					"publicly accessible" +
+					chalk.dim(". Anyone with it can:\n") +
+					chalk.dim(
+						"- Call ungated endpoints\n" +
+							"- Trigger logic that uses remote bindings\n" +
+							"- Reach internal services if your Worker proxies requests\n" +
+							"\n" +
+							"Consider using a named tunnel with Cloudflare Access to restrict access."
+					)
+			);
+		}
+
 		return {
 			devEnv: primaryDevEnv,
 			secondary,
 			unregisterHotKeys,
-			teardownRegistryPromise,
 		};
 	} catch (e) {
 		await Promise.allSettled([
-			configFileWatcher?.close(),
-			assetsWatcher?.close(),
 			...(Array.isArray(devEnv)
 				? devEnv.map((d) => d.teardown())
 				: [devEnv?.teardown()]),
 			(async () => {
-				if (teardownRegistryPromise) {
-					assert(devEnv === undefined || !Array.isArray(devEnv));
-					const teardownRegistry = await teardownRegistryPromise;
-					await teardownRegistry(devEnv?.config.latestConfig?.name);
-				}
 				unregisterHotKeys?.();
+			})(),
+			(async () => {
+				tunnel?.dispose();
 			})(),
 		]);
 		throw e;
@@ -256,7 +297,7 @@ async function setupDevEnv(
 							? undefined
 							: args.upstreamProtocol === "https",
 				},
-				persist: args.persistTo,
+				persist: args.persist === false ? false : args.persistTo,
 				liveReload: args.liveReload,
 				testScheduled: args.testScheduled,
 				logLevel: args.logLevel,
@@ -267,6 +308,7 @@ async function setupDevEnv(
 				// initialise with a random id
 				containerBuildId: generateContainerBuildId(),
 				generateTypes: args.types,
+				tunnel: args.tunnel,
 			},
 			legacy: {
 				site: (configParam) => {
@@ -285,9 +327,6 @@ async function setupDevEnv(
 				useServiceEnvironments: !(args.legacyEnv ?? true),
 			},
 			assets: args.assets,
-			experimental: {
-				tailLogs: !!args.experimentalTailLogs,
-			},
 		} satisfies StartDevWorkerInput,
 		true
 	);
@@ -346,12 +385,7 @@ function maybePrintScheduledWorkerWarning(
 		return;
 	}
 
-	const host =
-		url.hostname === "0.0.0.0" || url.hostname === "::"
-			? "localhost"
-			: url.hostname.includes(":")
-				? `[${url.hostname}]`
-				: url.hostname;
+	const host = formatHostname(url.hostname);
 	const port = url.port;
 
 	logger.once.warn(
@@ -360,4 +394,12 @@ function maybePrintScheduledWorkerWarning(
 			`  curl "http://${host}:${port}/cdn-cgi/handler/scheduled"\n` +
 			`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
 	);
+}
+
+export function formatHostname(hostname: string): string {
+	if (hostname === "0.0.0.0" || hostname === "::" || hostname === "*") {
+		return "localhost";
+	}
+
+	return hostname.includes(":") ? `[${hostname}]` : hostname;
 }

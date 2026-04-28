@@ -230,6 +230,23 @@ describe("execute", () => {
 		]);
 	});
 
+	it("should output JSON null for SQL NULL values with --json flag", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		await runWrangler(
+			"d1 execute db --command 'SELECT 1 as id, null as name;' --json"
+		);
+		const parsed = JSON.parse(std.out);
+		expect(parsed[0].results[0].name).toBeNull();
+	});
+
 	describe("duration formatting", () => {
 		mockAccountId({ accountId: "some-account-id" });
 		mockApiToken();

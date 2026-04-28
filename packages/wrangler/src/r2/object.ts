@@ -12,10 +12,12 @@ import {
 import PQueue from "p-queue";
 import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
+import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { isLocal } from "../utils/is-local";
 import { logBulkProgress, validateBulkPutFile } from "./helpers/bulk";
+import { isDataCatalogConflict } from "./helpers/misc";
 import {
 	deleteR2Object,
 	getR2Object,
@@ -221,6 +223,12 @@ const commonPutArguments = {
 		requiresArg: false,
 		type: "string",
 	},
+	force: {
+		describe: "Skip data catalog validation prompt",
+		type: "boolean",
+		alias: "y",
+		default: false,
+	},
 } as const;
 
 export const r2ObjectPutCommand = createCommand({
@@ -269,22 +277,26 @@ export const r2ObjectPutCommand = createCommand({
 
 		let objectStream: ReadableStream;
 		let sizeBytes: number;
+		let objectBlob: Blob | undefined;
 		if (file) {
 			try {
-				const stats = fs.statSync(file);
-				sizeBytes = stats.size;
-				objectStream = stream.Readable.toWeb(fs.createReadStream(file));
-			} catch (err) {
-				if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+				const stats = fs.statSync(file, { throwIfNoEntry: false });
+				if (!stats) {
 					throw new UserError(`The file "${file}" does not exist.`);
 				}
-				const error = new UserError(
+				sizeBytes = stats.size;
+
+				objectStream = stream.Readable.toWeb(fs.createReadStream(file));
+			} catch (err) {
+				if (err instanceof UserError) {
+					throw err;
+				}
+				throw new UserError(
 					`An error occurred while trying to read the file "${file}": ${
 						(err as Error).message
-					}`
+					}`,
+					{ cause: err }
 				);
-				error.cause = err;
-				throw error;
 			}
 		} else {
 			const buffer = await new Promise<Buffer>((resolve, reject) => {
@@ -298,9 +310,9 @@ export const r2ObjectPutCommand = createCommand({
 					)
 				);
 			});
-			const blob = new Blob([buffer]);
-			objectStream = blob.stream();
-			sizeBytes = blob.size;
+			objectBlob = new Blob([buffer]);
+			objectStream = objectBlob.stream();
+			sizeBytes = objectBlob.size;
 		}
 
 		let fullBucketName = bucket;
@@ -360,24 +372,64 @@ export const r2ObjectPutCommand = createCommand({
 		} else {
 			validateUploadSize(key, sizeBytes);
 
-			await putRemoteObject(
-				config,
-				await requireAuth(config),
-				bucket,
-				key,
-				objectStream,
-				{
-					"content-type": yArgs.contentType,
-					"content-disposition": yArgs.contentDisposition,
-					"content-encoding": yArgs.contentEncoding,
-					"content-language": yArgs.contentLanguage,
-					"cache-control": yArgs.cacheControl,
-					"content-length": String(sizeBytes),
-					expires: yArgs.expires,
-				},
-				yArgs.jurisdiction,
-				yArgs.storageClass
-			);
+			const accountId = await requireAuth(config);
+			const putHeaders = {
+				"content-type": yArgs.contentType,
+				"content-disposition": yArgs.contentDisposition,
+				"content-encoding": yArgs.contentEncoding,
+				"content-language": yArgs.contentLanguage,
+				"cache-control": yArgs.cacheControl,
+				"content-length": String(sizeBytes),
+				expires: yArgs.expires,
+			};
+			try {
+				await putRemoteObject(
+					config,
+					accountId,
+					bucket,
+					key,
+					objectStream,
+					putHeaders,
+					yArgs.force,
+					yArgs.jurisdiction,
+					yArgs.storageClass
+				);
+			} catch (error) {
+				if (!yArgs.force && isDataCatalogConflict(error)) {
+					const confirmed = await confirm(
+						"Data catalog is enabled for this bucket. " +
+							"Proceeding may leave the data catalog in an invalid state. Continue?",
+						{ defaultValue: false, fallbackValue: true }
+					);
+					if (!confirmed) {
+						logger.log("Operation cancelled.");
+						return;
+					}
+					// Re-create the stream since the original was consumed
+					// by the failed request.
+					let retryStream: ReadableStream;
+					if (file) {
+						retryStream = stream.Readable.toWeb(fs.createReadStream(file));
+					} else if (objectBlob) {
+						retryStream = objectBlob.stream();
+					} else {
+						throw error;
+					}
+					await putRemoteObject(
+						config,
+						accountId,
+						bucket,
+						key,
+						retryStream,
+						putHeaders,
+						true, // force=true on retry (skip header)
+						yArgs.jurisdiction,
+						yArgs.storageClass
+					);
+				} else {
+					throw error;
+				}
+			}
 		}
 
 		logger.log("Upload complete.");
@@ -416,6 +468,12 @@ export const r2ObjectDeleteCommand = createCommand({
 			requiresArg: true,
 			type: "string",
 		},
+		force: {
+			describe: "Skip data catalog validation prompt",
+			type: "boolean",
+			alias: "y",
+			default: false,
+		},
 	},
 	behaviour: {
 		printResourceLocation: true,
@@ -439,7 +497,38 @@ export const r2ObjectDeleteCommand = createCommand({
 			);
 		} else {
 			const accountId = await requireAuth(config);
-			await deleteR2Object(config, accountId, bucket, key, jurisdiction);
+			try {
+				await deleteR2Object(
+					config,
+					accountId,
+					bucket,
+					key,
+					args.force,
+					jurisdiction
+				);
+			} catch (error) {
+				if (!args.force && isDataCatalogConflict(error)) {
+					const confirmed = await confirm(
+						"Data catalog is enabled for this bucket. " +
+							"Proceeding may leave the data catalog in an invalid state. Continue?",
+						{ defaultValue: false, fallbackValue: true }
+					);
+					if (!confirmed) {
+						logger.log("Operation cancelled.");
+						return;
+					}
+					await deleteR2Object(
+						config,
+						accountId,
+						bucket,
+						key,
+						true,
+						jurisdiction
+					);
+				} else {
+					throw error;
+				}
+			}
 		}
 
 		logger.log("Delete complete.");
@@ -578,6 +667,25 @@ export const r2BulkPutCommand = createCommand({
 
 			const accountId = await requireAuth(config);
 
+			// Upfront data catalog warning for bulk operations.
+			// Unlike individual commands, we don't use the API-level catalog check
+			// header because the PQueue concurrency model makes mid-batch
+			// prompting unreliable (in-flight requests can't be paused).
+			let forceBulk = yArgs.force;
+			if (!forceBulk) {
+				const confirmed = await confirm(
+					"Bulk upload may overwrite existing objects. If this bucket has " +
+						"data catalog enabled, this operation could leave the catalog " +
+						"in an invalid state. Continue?",
+					{ defaultValue: false, fallbackValue: true }
+				);
+				if (!confirmed) {
+					logger.log("Bulk upload cancelled.");
+					return;
+				}
+				forceBulk = true;
+			}
+
 			const queue = new PQueue({
 				concurrency,
 				interval: API_RATE_LIMIT_WINDOWS_MS,
@@ -605,6 +713,7 @@ export const r2BulkPutCommand = createCommand({
 								"content-length": String(entry.size),
 								expires: yArgs.expires,
 							},
+							forceBulk, // Always true after prompt (no header sent)
 							yArgs.jurisdiction,
 							yArgs.storageClass
 						);

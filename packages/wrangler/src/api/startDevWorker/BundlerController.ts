@@ -173,7 +173,6 @@ export class BundlerController extends Controller {
 				entrypointSource: readFileSync(entrypointPath, "utf8"),
 			});
 		} catch (err) {
-			logger.error("Custom build failed:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Custom build failed",
@@ -335,9 +334,6 @@ export class BundlerController extends Controller {
 		try {
 			this.#tmpDir = getWranglerTmpDir(event.config.projectRoot, "dev");
 		} catch (e) {
-			logger.error(
-				"Failed to create temporary directory to store built files."
-			);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Failed to create temporary directory to store built files.",
@@ -348,7 +344,6 @@ export class BundlerController extends Controller {
 		}
 
 		void this.#startCustomBuild(event.config).catch((err) => {
-			logger.error("Failed to run custom build:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Failed to run custom build",
@@ -358,7 +353,6 @@ export class BundlerController extends Controller {
 			});
 		});
 		void this.#startBundle(event.config).catch((err) => {
-			logger.error("Failed to start bundler:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Failed to start bundler",
@@ -368,7 +362,6 @@ export class BundlerController extends Controller {
 			});
 		});
 		void this.#ensureWatchingAssets(event.config).catch((err) => {
-			logger.error("Failed to watch assets:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Failed to watch assets",
@@ -383,12 +376,25 @@ export class BundlerController extends Controller {
 		logger.debug("BundlerController teardown beginning...");
 		await super.teardown();
 		this.#customBuildAborter?.abort();
-		this.#tmpDir?.remove();
+		// Abort any in-flight esbuild build so that a finishing build doesn't
+		// emit `bundleComplete`/`bundleStart` into a torn-down event bus.
+		// `Controller.#tearingDown` already suppresses error events, but not
+		// the bundler success events, which go straight through `bus.dispatch`.
+		this.#bundleBuildAborter?.abort();
 		await Promise.all([
+			// Must run before `#tmpDir.remove()` so that the esbuild watcher
+			// can dispose cleanly. Removing the directory first would make
+			// esbuild's watcher fail a rebuild with "Could not resolve
+			// ...middleware-loader.entry.ts" during teardown.
 			this.#bundlerCleanup?.(),
 			this.#customBuildWatcher?.close(),
 			this.#assetsWatcher?.close(),
 		]);
+		// Defence-in-depth: `bundle.ts`'s `stop()` normally removes the tmp
+		// dir on our behalf, but it may have never been assigned (e.g. when
+		// running a custom build, or when the initial build threw). Remove
+		// after esbuild cleanup to avoid the race described above.
+		this.#tmpDir?.remove();
 		logger.debug("BundlerController teardown complete");
 	}
 

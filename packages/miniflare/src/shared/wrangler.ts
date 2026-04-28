@@ -4,12 +4,9 @@ import path from "node:path";
 import xdgAppPaths from "xdg-app-paths";
 
 function isDirectory(configPath: string) {
-	try {
-		return fs.statSync(configPath).isDirectory();
-	} catch {
-		// ignore error
-		return false;
-	}
+	return (
+		fs.statSync(configPath, { throwIfNoEntry: false })?.isDirectory() ?? false
+	);
 }
 
 export function getGlobalWranglerConfigPath() {

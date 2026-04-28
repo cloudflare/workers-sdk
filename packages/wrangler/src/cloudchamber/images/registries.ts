@@ -3,9 +3,9 @@ import {
 	newline,
 	startSection,
 	updateStatus,
-} from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
-import { brandColor, dim } from "@cloudflare/cli/colors";
+} from "@cloudflare/cli-shared-helpers";
+import { processArgument } from "@cloudflare/cli-shared-helpers/args";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	ApiError,
 	ImageRegistriesService,

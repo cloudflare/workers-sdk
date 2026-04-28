@@ -50,6 +50,7 @@ describe("startWorker - configuration errors", () => {
 		const worker = await unstable_startWorker({
 			config: "wrangler.json",
 			dev: {
+				persist: false,
 				server: {
 					port: await getPort(),
 				},
@@ -76,6 +77,7 @@ describe("startWorker - configuration errors", () => {
 		const worker = await unstable_startWorker({
 			config: "wrangler.json",
 			dev: {
+				persist: false,
 				server: {
 					port: await getPort(),
 				},

@@ -1,6 +1,5 @@
-import assert from "node:assert";
 import { Request } from "undici";
-import { describe, it } from "vitest";
+import { assert, describe, it } from "vitest";
 import { parseRequestInput } from "../api/dev";
 
 describe("parseRequestInput for fetch on unstable dev", () => {
@@ -82,7 +81,9 @@ describe("parseRequestInput for fetch on unstable dev", () => {
 		const [input, init] = parseRequestInput(
 			"0.0.0.0",
 			8080,
-			new Request("https://cloudflare.com/test?q=testparam", { method: "POST" })
+			new Request("https://cloudflare.com/test?q=testparam", {
+				method: "POST",
+			})
 		);
 
 		expect(input).toMatchInlineSnapshot(

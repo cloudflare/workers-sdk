@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, test } from "vitest";
-import { collectCLIOutput, normalizeOutput } from "../../../cli/test-util";
 import { printSummary, printWelcomeMessage } from "../dialog";
+import { collectCLIOutput, normalizeOutput } from "./helpers";
 import type { C3Context } from "types";
 
 describe("dialog helpers", () => {
@@ -122,7 +122,7 @@ describe("dialog helpers", () => {
 
 				🔍 View Project
 				Visit: https://example.test.workers.dev
-				Dash: https://dash.cloudflare.com/?to=/:account/workers/services/view/test-project
+				Dash: https://dash.cloudflare.com/?to=/:account/workers/services/view/test-project/production
 
 				💻 Continue Developing
 				Deploy again: pnpm run deploy

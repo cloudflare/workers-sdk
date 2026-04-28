@@ -1,9 +1,7 @@
 import fs from "node:fs";
 import { thrownIsDoesNotExistError } from "@cloudflare/workers-shared";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- complex deployment logic */
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterAll, afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs } from "./helpers/mock-dialogs";
@@ -51,7 +49,9 @@ describe("deployments", () => {
 		}
 	});
 
-	it("should log a help message for deployments command", async () => {
+	it("should log a help message for deployments command", async ({
+		expect,
+	}) => {
 		await runWrangler("deployments --help");
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler deployments
@@ -74,7 +74,7 @@ describe("deployments", () => {
 
 	describe("deployments subcommands", () => {
 		describe("deployment view", () => {
-			it("should error with no flag", async () => {
+			it("should error with no flag", async ({ expect }) => {
 				writeWranglerConfig();
 
 				await expect(

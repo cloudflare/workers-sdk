@@ -5,10 +5,9 @@
 		"lib": ["ES2020"],
 		"types": ["@cloudflare/workers-types"],
 		"moduleResolution": "node",
-		"esModuleInterop": true,
 		"noEmit": true,
 		"skipLibCheck": true
 	},
 	"include": ["**/*.ts"],
-	"exclude": ["tests"]
+	"exclude": ["test"]
 }

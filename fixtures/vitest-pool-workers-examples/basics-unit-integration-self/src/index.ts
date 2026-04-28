@@ -1,6 +1,4 @@
-export function greet(request: Request): string {
-	return `👋 ${request.url}`;
-}
+import { greet } from "./greet";
 
 export default {
 	async fetch(request, env, ctx) {

@@ -46,7 +46,6 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "buildCommand": "npm run build",
 				  "configured": false,
 				  "framework": Static {
-				    "autoConfigSupported": true,
 				    "configurationDescription": undefined,
 				    "id": "static",
 				    "name": "Static",
@@ -55,6 +54,9 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "packageManager": {
 				    "dlx": [
 				      "npx",
+				    ],
+				    "lockFiles": [
+				      "package-lock.json",
 				    ],
 				    "npx": "npx",
 				    "type": "npm",
@@ -105,7 +107,6 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "buildCommand": "npm run app:build",
 				  "configured": false,
 				  "framework": Static {
-				    "autoConfigSupported": true,
 				    "configurationDescription": undefined,
 				    "id": "static",
 				    "name": "Static",
@@ -114,6 +115,9 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "packageManager": {
 				    "dlx": [
 				      "npx",
+				    ],
+				    "lockFiles": [
+				      "package-lock.json",
 				    ],
 				    "npx": "npx",
 				    "type": "npm",
@@ -164,7 +168,6 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "buildCommand": "npm run build",
 				  "configured": false,
 				  "framework": Astro {
-				    "autoConfigSupported": true,
 				    "configurationDescription": "Configuring project for Astro with "astro add cloudflare"",
 				    "id": "astro",
 				    "name": "Astro",
@@ -173,6 +176,9 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "packageManager": {
 				    "dlx": [
 				      "npx",
+				    ],
+				    "lockFiles": [
+				      "package-lock.json",
 				    ],
 				    "npx": "npx",
 				    "type": "npm",
@@ -245,7 +251,6 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "buildCommand": "npm run build",
 				  "configured": false,
 				  "framework": Static {
-				    "autoConfigSupported": true,
 				    "configurationDescription": undefined,
 				    "id": "static",
 				    "name": "Static",
@@ -254,6 +259,9 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "packageManager": {
 				    "dlx": [
 				      "npx",
+				    ],
+				    "lockFiles": [
+				      "package-lock.json",
 				    ],
 				    "npx": "npx",
 				    "type": "npm",

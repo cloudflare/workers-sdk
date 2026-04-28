@@ -54,24 +54,10 @@ For more detailed information about configuration, refer to the [documentation](
 
 ## Commands
 
-### Workers
+The `wrangler` CLI offers various commands, the most popular being:
 
-#### `wrangler dev`
+- `wrangler dev` to start a local development server, with live reloading and devtools.
 
-Start a local development server, with live reloading and devtools.
+- `wrangler deploy` to deploy a Worker to the Cloudflare's global network.
 
-#### `wrangler deploy`
-
-Publish the given script to Cloudflare's global network.
-
-For more commands and options, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/commands/).
-
-### Pages
-
-#### `wrangler pages dev [directory]`
-
-Serves a static build asset directory.
-
-Builds and runs functions from a `./functions` directory or uses a `_worker.js` file inside the static build asset directory.
-
-For more commands and options, refer to the [documentation](https://developers.cloudflare.com/pages/platform/functions#develop-and-preview-locally) or run `wrangler pages dev --help`.
+There are many more commands and options available, for a full list refer to the [official Cloudflare documentation](https://developers.cloudflare.com/workers/wrangler/commands/).

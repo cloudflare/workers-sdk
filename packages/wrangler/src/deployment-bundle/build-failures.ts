@@ -43,6 +43,47 @@ export function rewriteNodeCompatBuildFailure(
 	}
 }
 /**
+ * RegExp matching against esbuild's error text when it is unable to resolve
+ * a module. Used to detect when we should suggest the `alias` config.
+ */
+const couldNotResolveErrorText = /^Could not resolve "(.+?)"$/;
+
+/**
+ * Text that appears in esbuild's notes when it suggests marking a module as external.
+ */
+const markAsExternalNoteText = "as external to exclude it from the bundle";
+
+/**
+ * Rewrites esbuild BuildFailures for failing to resolve modules to suggest
+ * using the `alias` config option in wrangler.json.
+ */
+export function rewriteUnresolvedModuleBuildFailure(errors: esbuild.Message[]) {
+	for (const error of errors) {
+		const match = couldNotResolveErrorText.exec(error.text);
+		// Note: we skip Node built-in modules since these are handled by rewriteNodeCompatBuildFailure
+		if (match !== null && !nodeBuiltinResolveErrorText.test(error.text)) {
+			const hasExternalSuggestion = error.notes?.some((note) =>
+				note.text?.includes(markAsExternalNoteText)
+			);
+			if (hasExternalSuggestion) {
+				// Filter out esbuild's "mark as external" suggestion since we provide our own
+				error.notes = [
+					...(error.notes ?? []).filter(
+						(note) => !note.text?.includes(markAsExternalNoteText)
+					),
+					{
+						location: null,
+						text:
+							`To fix this, you can add an entry to "alias" in your Wrangler configuration.\n` +
+							`For more guidance see: https://developers.cloudflare.com/workers/wrangler/configuration/#bundling-issues\n`,
+					},
+				];
+			}
+		}
+	}
+}
+
+/**
  * Returns true if the passed value looks like an esbuild BuildFailure object
  */
 export function isBuildFailure(err: unknown): err is esbuild.BuildFailure {

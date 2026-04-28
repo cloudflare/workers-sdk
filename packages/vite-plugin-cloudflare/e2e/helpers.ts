@@ -5,6 +5,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import util from "node:util";
+import { removeDir } from "@cloudflare/workers-utils";
 import { stripAnsi } from "miniflare";
 import kill from "tree-kill";
 import {
@@ -78,11 +79,7 @@ export function seed(
 	afterAll(async () => {
 		if (!process.env.CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS) {
 			debuglog("Deleting project path", projectPath);
-			await fs.rm(projectPath, {
-				force: true,
-				recursive: true,
-				maxRetries: 10,
-			});
+			await removeDir(projectPath);
 		}
 	}, 40_000);
 
@@ -310,7 +307,9 @@ export async function fetchJson(url: string, info?: RequestInit) {
 export async function waitForReady(proc: Process) {
 	const match = await vi.waitUntil(
 		() => proc.stdout.match(/Local:\s+(http:\/\/localhost:\d+)/),
-		{ interval: 100, timeout: 20_000 }
+		// buildAndPreview does a full build before starting the server,
+		// so allow more time than the default.
+		{ interval: 100, timeout: 30_000 }
 	);
 	return match[1];
 }

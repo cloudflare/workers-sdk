@@ -1,38 +1,84 @@
 {
-	"name": "@cloudflare/cli",
-	"version": "1.2.1",
-	"private": true,
-	"description": "An SDK to build workers-sdk CLIs",
+	"name": "@cloudflare/cli-shared-helpers",
+	"version": "0.1.0",
+	"description": "Internal shared CLI helpers for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"keywords": [
+		"cli",
 		"cloudflare",
-		"workers",
 		"cloudflare workers",
-		"cli"
+		"workers"
 	],
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/cli#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/cli"
 	},
-	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		},
+		"./args": {
+			"types": "./dist/args.d.mts",
+			"import": "./dist/args.mjs"
+		},
+		"./colors": {
+			"types": "./dist/colors.d.mts",
+			"import": "./dist/colors.mjs"
+		},
+		"./command": {
+			"types": "./dist/command.d.mts",
+			"import": "./dist/command.mjs"
+		},
+		"./error": {
+			"types": "./dist/error.d.mts",
+			"import": "./dist/error.mjs"
+		},
+		"./gitignore": {
+			"types": "./dist/gitignore.d.mts",
+			"import": "./dist/gitignore.mjs"
+		},
+		"./interactive": {
+			"types": "./dist/interactive.d.mts",
+			"import": "./dist/interactive.mjs"
+		},
+		"./packages": {
+			"types": "./dist/packages.d.mts",
+			"import": "./dist/packages.mjs"
+		},
+		"./streams": {
+			"types": "./dist/streams.d.mts",
+			"import": "./dist/streams.mjs"
+		}
+	},
 	"scripts": {
-		"check:lint": "eslint . --max-warnings=0 --cache",
+		"build": "tsdown",
 		"check:type": "tsc",
 		"deploy": "echo 'no deploy'",
+		"dev": "tsdown --watch",
 		"test:ci": "vitest run"
 	},
 	"dependencies": {
-		"ci-info": "catalog:default"
-	},
-	"devDependencies": {
-		"@clack/core": "^0.3.2",
-		"@cloudflare/eslint-config-shared": "workspace:*",
-		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@clack/core": "^1.2.0",
 		"@cloudflare/workers-utils": "workspace:*",
 		"chalk": "^5.2.0",
-		"eslint": "catalog:default",
+		"ci-info": "catalog:default",
+		"cross-spawn": "^7.0.3",
 		"log-update": "^5.0.1"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@types/cross-spawn": "^6.0.2",
+		"tsdown": "^0.15.9"
 	},
 	"volta": {
 		"extends": "../../package.json"

@@ -1,10 +1,10 @@
 import { execSync } from "child_process";
 import { randomUUID } from "crypto";
-import assert from "node:assert";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- uses expect in helper functions and beforeAll */
 import {
 	afterAll,
+	assert,
 	beforeAll,
 	beforeEach,
 	describe,
@@ -19,6 +19,9 @@ import type { DispatchFetch, Response } from "miniflare";
 
 type Fetcher = { fetch: DispatchFetch };
 
+const workersDomain =
+	process.env.E2E_ACCOUNT_WORKERS_DEV_DOMAIN ??
+	"devprod-testing7928.workers.dev";
 const auth = getAuthenticatedEnv();
 const execOptions = {
 	encoding: "utf8",
@@ -35,8 +38,7 @@ if (auth) {
 		let remoteKvId: string;
 
 		beforeAll(async () => {
-			const deployedUrl =
-				"https://preserve-e2e-get-platform-proxy-remote.devprod-testing7928.workers.dev/";
+			const deployedUrl = `https://preserve-e2e-get-platform-proxy-remote.${workersDomain}/`;
 
 			try {
 				assert((await fetch(deployedUrl)).status !== 404);
@@ -54,8 +56,7 @@ if (auth) {
 				);
 			}
 
-			const stagingDeployedUrl =
-				"https://preserve-e2e-get-platform-proxy-remote-staging.devprod-testing7928.workers.dev/";
+			const stagingDeployedUrl = `https://preserve-e2e-get-platform-proxy-remote-staging.${workersDomain}/`;
 			try {
 				assert((await fetch(stagingDeployedUrl)).status !== 404);
 			} catch {

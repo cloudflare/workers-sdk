@@ -15,7 +15,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { glob } from "glob";
+import { glob } from "tinyglobby";
 
 export interface PackageJSON {
 	name: string;
@@ -109,7 +109,7 @@ export function loadExternalDependencies(packageDir: string): string[] | null {
 	}
 
 	// Use require with esbuild-register (which is already loaded)
-	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic require needed for esbuild-register compatibility
 	const depsModule = require(depsFilePath) as {
 		EXTERNAL_DEPENDENCIES?: string[];
 	};

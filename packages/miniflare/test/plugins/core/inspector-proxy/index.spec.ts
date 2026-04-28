@@ -1,15 +1,11 @@
 import events from "node:events";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
-import {
-	fetch,
-	Miniflare,
-	MiniflareCoreError,
-	MiniflareOptions,
-} from "miniflare";
+import { fetch, Miniflare, MiniflareCoreError } from "miniflare";
 import { beforeAll, test, vi } from "vitest";
 import WebSocket from "ws";
 import { useDispose } from "../../../test-shared";
+import type { MiniflareOptions } from "miniflare";
 
 const nullScript =
 	'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));';

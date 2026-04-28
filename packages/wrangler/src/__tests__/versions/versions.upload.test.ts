@@ -3,9 +3,8 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handler callbacks */
-import { beforeEach, describe, expect, it, test, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+// eslint-disable-next-line no-restricted-imports
+import { assert, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
@@ -337,7 +336,7 @@ describe("versions upload", () => {
 
 		await runWrangler("versions upload");
 
-		assertApiRequest(/.*?workers\/scripts\/test-name\/versions/, {
+		assertApiRequest(expect, /.*?workers\/scripts\/test-name\/versions/, {
 			method: "POST",
 			// Make sure the main module (index.py) has a text/x-python content type
 			body: /Content-Disposition: form-data; name="index.py"; filename="index.py"\nContent-Type: text\/x-python/,
@@ -1086,10 +1085,9 @@ describe("generatePreviewAlias", () => {
 
 		// Should be truncated to fit: max 63 - 21 - 1 = 41 chars
 		// With 4-char hash + hyphen, we have 41 - 4 - 1 = 36 chars for the prefix
-		expect(result).toBeDefined();
+		assert(result);
 		expect(result).toMatch(/^a{36}-[a-f0-9]{4}$/);
-		expect(result?.length).toBe(41);
-		expect(result).not.toBeUndefined();
+		expect(result.length).toBe(41);
 		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 
@@ -1135,11 +1133,11 @@ describe("generatePreviewAlias", () => {
 		);
 
 		const result = generatePreviewAlias(scriptName);
+		assert(result);
 		expect(result).toMatch(
 			/^some-really-really-really-really-really-long-br-[a-f0-9]{4}$/
 		);
-		expect(result?.length).toBe(52);
-		expect(result).not.toBeUndefined();
+		expect(result.length).toBe(52);
 		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 

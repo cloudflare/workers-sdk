@@ -1,9 +1,13 @@
-import { endSection } from "@cloudflare/cli";
-import { brandColor } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import { endSection } from "@cloudflare/cli-shared-helpers";
+import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
+import {
+	quoteShellArgs,
+	runCommand,
+} from "@cloudflare/cli-shared-helpers/command";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
+import { transformFile } from "@cloudflare/codemod";
 import { runFrameworkGenerator } from "frameworks/index";
-import { loadTemplateSnippets, transformFile } from "helpers/codemod";
-import { quoteShellArgs, runCommand } from "helpers/command";
+import { loadTemplateSnippets } from "helpers/codemod";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
@@ -19,7 +23,13 @@ const generate = async (ctx: C3Context) => {
 const configure = async (ctx: C3Context) => {
 	// Add the pages integration
 	// For some reason `pnpx qwik add` fails for qwik so we use `pnpm qwik add` instead.
-	const cmd = [name === "pnpm" ? npm : npx, "qwik", "add", "cloudflare-pages"];
+	const cmd = [
+		name === "pnpm" ? npm : npx,
+		"qwik",
+		"add",
+		"cloudflare-pages",
+		"--skipConfirmation=true",
+	];
 	endSection(`Running ${quoteShellArgs(cmd)}`);
 	await runCommand(cmd);
 
@@ -43,7 +53,7 @@ const addBindingsProxy = (ctx: C3Context) => {
 		// Insert the env declaration after the last import (but before the rest of the body)
 		visitProgram: function (n) {
 			const lastImportIndex = n.node.body.findLastIndex(
-				(t) => t.type === "ImportDeclaration",
+				(t) => t.type === "ImportDeclaration"
 			);
 			const lastImport = n.get("body", lastImportIndex);
 			lastImport.insertAfter(...snippets.getPlatformProxyTs);

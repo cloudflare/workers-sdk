@@ -20,8 +20,8 @@ export function writeMetricsConfig(config: MetricsConfigFile) {
 		JSON.stringify(
 			config,
 			(_key, value) => (value instanceof Date ? value.toISOString() : value),
-			"\t",
-		),
+			"\t"
+		)
 	);
 }
 
@@ -32,7 +32,7 @@ export function readMetricsConfig(): MetricsConfigFile {
 	try {
 		const config = readFileSync(getMetricsConfigPath(), "utf8");
 		return JSON.parse(config, (key, value) =>
-			key === "date" ? new Date(value) : value,
+			key === "date" ? new Date(value) : value
 		);
 	} catch {
 		return {};

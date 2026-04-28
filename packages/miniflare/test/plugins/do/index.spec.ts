@@ -2,16 +2,15 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { removeDir } from "@cloudflare/workers-utils";
 import {
 	DeferredPromise,
 	kUnsafeEphemeralUniqueKey,
-	MessageEvent,
 	Miniflare,
-	MiniflareOptions,
-	RequestInit,
 } from "miniflare";
 import { describe, onTestFinished, test } from "vitest";
 import { disposeWithRetry, useDispose, useTmp } from "../../test-shared";
+import type { MessageEvent, MiniflareOptions, RequestInit } from "miniflare";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {
   instanceId = crypto.randomUUID();
@@ -134,7 +133,7 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 	// reload here as `workerd` keeps a copy of the SQLite database in-memory,
 	// we also need to `dispose()` to avoid `EBUSY` error on Windows)
 	await mf.dispose();
-	await fs.rm(path.join(tmp, names[0]), { force: true, recursive: true });
+	await removeDir(path.join(tmp, names[0]));
 
 	const mf2 = new Miniflare(opts);
 	useDispose(mf2);

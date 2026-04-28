@@ -1,4 +1,4 @@
-import { WorkerdStructuredLog } from "../plugins/core";
+import type { WorkerdStructuredLog } from "../plugins/core";
 import type { Stream } from "node:stream";
 
 export type StructuredLogsHandler = (

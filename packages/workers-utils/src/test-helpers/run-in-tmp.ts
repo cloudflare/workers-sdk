@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
-import { rm } from "node:fs/promises";
 import os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, vi } from "vitest";
+import { removeDir } from "../fs-helpers";
 
 const originalCwd = process.cwd();
 
@@ -28,21 +28,7 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 	});
 
 	afterEach(() => {
-		if (fs.existsSync(tmpDir)) {
-			process.chdir(originalCwd);
-			// Don't block on deleting the tmp dir
-			void rm(tmpDir).catch(() => {
-				// Best effort - try once then just move on - they are only temp files after all.
-				// It seems that Windows doesn't let us delete this, with errors like:
-				//
-				// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
-				// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-				// Serialized Error: {
-				// 	"code": "EBUSY",
-				// 	"errno": -4082,
-				// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
-				// 	"syscall": "rmdir",
-			});
-		}
+		process.chdir(originalCwd);
+		removeDir(tmpDir, { fireAndForget: true });
 	});
 }

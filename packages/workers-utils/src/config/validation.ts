@@ -40,6 +40,8 @@ import type { Binding } from "../types";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
+	CacheOptions,
+	ContainerApp,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -78,6 +80,8 @@ export type ConfigBindingFieldName =
 	| "queues"
 	| "d1_databases"
 	| "vectorize"
+	| "ai_search_namespaces"
+	| "ai_search"
 	| "hyperdrive"
 	| "r2_buckets"
 	| "logfwdr"
@@ -87,6 +91,7 @@ export type ConfigBindingFieldName =
 	| "browser"
 	| "ai"
 	| "images"
+	| "stream"
 	| "media"
 	| "version_metadata"
 	| "unsafe"
@@ -97,11 +102,14 @@ export type ConfigBindingFieldName =
 	| "workflows"
 	| "pipelines"
 	| "secrets_store_secrets"
+	| "artifacts"
 	| "ratelimits"
 	| "assets"
 	| "unsafe_hello_world"
+	| "flagship"
 	| "worker_loaders"
-	| "vpc_services";
+	| "vpc_services"
+	| "vpc_networks";
 
 /**
  * @deprecated new code should use getBindingTypeFriendlyName() instead
@@ -114,15 +122,18 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	queues: "Queue",
 	d1_databases: "D1 Database",
 	vectorize: "Vectorize Index",
+	ai_search_namespaces: "AI Search Namespace",
+	ai_search: "AI Search Instance",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
 	logfwdr: "logfwdr",
 	services: "Worker",
 	analytics_engine_datasets: "Analytics Engine Dataset",
 	text_blobs: "Text Blob",
-	browser: "Browser",
+	browser: "Browser Run",
 	ai: "AI",
 	images: "Images",
+	stream: "Stream",
 	media: "Media",
 	version_metadata: "Worker Version Metadata",
 	unsafe: "Unsafe Metadata",
@@ -133,11 +144,14 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	workflows: "Workflow",
 	pipelines: "Pipeline",
 	secrets_store_secrets: "Secrets Store Secret",
+	artifacts: "Artifacts",
 	ratelimits: "Rate Limit",
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
+	flagship: "Flagship",
 	worker_loaders: "Worker Loader",
 	vpc_services: "VPC Service",
+	vpc_networks: "VPC Network",
 } as const;
 
 /**
@@ -153,9 +167,10 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	send_email: "Send Email",
 	wasm_module: "Wasm Module",
 	text_blob: "Text Blob",
-	browser: "Browser",
+	browser: "Browser Run",
 	ai: "AI",
 	images: "Images",
+	stream: "Stream",
 	version_metadata: "Worker Version Metadata",
 	data_blob: "Data Blob",
 	durable_object_namespace: "Durable Object",
@@ -164,6 +179,8 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	r2_bucket: "R2 Bucket",
 	d1: "D1 Database",
 	vectorize: "Vectorize Index",
+	ai_search_namespace: "AI Search Namespace",
+	ai_search: "AI Search Instance",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
 	fetcher: "Service Binding",
@@ -172,11 +189,14 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	mtls_certificate: "mTLS Certificate",
 	pipeline: "Pipeline",
 	secrets_store_secret: "Secrets Store Secret",
+	artifacts: "Artifacts",
 	logfwdr: "logfwdr",
 	unsafe_hello_world: "Hello World",
+	flagship: "Flagship",
 	ratelimit: "Rate Limit",
 	worker_loader: "Worker Loader",
 	vpc_service: "VPC Service",
+	vpc_network: "VPC Network",
 	media: "Media",
 	assets: "Assets",
 	inherit: "Inherited",
@@ -698,7 +718,7 @@ function normalizeAndValidateDev(
 		inspector_ip,
 		local_protocol = localProtocolArg ?? "http",
 		// In remote mode upstream_protocol must be https, otherwise it defaults to local_protocol.
-		upstream_protocol = upstreamProtocolArg ?? remoteArg
+		upstream_protocol = (upstreamProtocolArg ?? remoteArg)
 			? "https"
 			: local_protocol,
 		host,
@@ -960,8 +980,6 @@ function isValidRouteValue(item: unknown): boolean {
 			return false;
 		}
 
-		const otherKeys = Object.keys(item).length - 1; // minus one to subtract "pattern"
-
 		const hasZoneId =
 			hasProperty(item, "zone_id") && typeof item.zone_id === "string";
 		const hasZoneName =
@@ -969,13 +987,38 @@ function isValidRouteValue(item: unknown): boolean {
 		const hasCustomDomainFlag =
 			hasProperty(item, "custom_domain") &&
 			typeof item.custom_domain === "boolean";
+		const hasEnabled =
+			hasProperty(item, "enabled") && typeof item.enabled === "boolean";
+		const hasPreviewsEnabled =
+			hasProperty(item, "previews_enabled") &&
+			typeof item.previews_enabled === "boolean";
 
-		if (otherKeys === 2 && hasCustomDomainFlag && (hasZoneId || hasZoneName)) {
-			return true;
-		} else if (
-			otherKeys === 1 &&
-			(hasZoneId || hasZoneName || hasCustomDomainFlag)
-		) {
+		const recognizedKeys = [
+			hasZoneId,
+			hasZoneName,
+			hasCustomDomainFlag,
+			hasEnabled,
+			hasPreviewsEnabled,
+		].filter(Boolean).length;
+		const otherKeys = Object.keys(item).length - 1; // minus one to subtract "pattern"
+
+		// All keys must be recognized
+		if (recognizedKeys !== otherKeys) {
+			return false;
+		}
+
+		// zone_id and zone_name are mutually exclusive
+		if (hasZoneId && hasZoneName) {
+			return false;
+		}
+
+		// enabled and previews_enabled are only valid on custom domain routes
+		if ((hasEnabled || hasPreviewsEnabled) && !hasCustomDomainFlag) {
+			return false;
+		}
+
+		// Must have at least one of: zone_id, zone_name, or custom_domain
+		if (hasZoneId || hasZoneName || hasCustomDomainFlag) {
 			return true;
 		}
 	}
@@ -1026,7 +1069,7 @@ function mutateEmptyStringRouteValue(
 const isRoute: ValidatorFn = (diagnostics, field, value) => {
 	if (value !== undefined && !isValidRouteValue(value)) {
 		diagnostics.errors.push(
-			`Expected "${field}" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got ${JSON.stringify(
+			`Expected "${field}" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name, enabled, previews_enabled }, but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -1056,7 +1099,7 @@ const isRouteArray: ValidatorFn = (diagnostics, field, value) => {
 	}
 	if (invalidRoutes.length > 0) {
 		diagnostics.errors.push(
-			`Expected "${field}" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: ${JSON.stringify(
+			`Expected "${field}" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name, enabled, previews_enabled }, but these weren't valid: ${JSON.stringify(
 				invalidRoutes,
 				null,
 				2
@@ -1390,6 +1433,7 @@ function normalizeAndValidateEnvironment(
 	);
 
 	experimental(diagnostics, rawEnv, "unsafe");
+	experimental(diagnostics, rawEnv, "secrets");
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
@@ -1557,6 +1601,16 @@ function normalizeAndValidateEnvironment(
 			validateVars(envName),
 			{}
 		),
+		secrets: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"secrets",
+			validateSecrets(envName),
+			undefined
+		),
 		define: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1680,6 +1734,26 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateVectorizeBinding),
 			[]
 		),
+		ai_search_namespaces: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"ai_search_namespaces",
+			validateBindingArray(envName, validateAISearchNamespaceBinding),
+			[]
+		),
+		ai_search: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"ai_search",
+			validateBindingArray(envName, validateAISearchBinding),
+			[]
+		),
 		hyperdrive: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1790,6 +1864,16 @@ function normalizeAndValidateEnvironment(
 			validateNamedSimpleBinding(envName),
 			undefined
 		),
+		stream: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"stream",
+			validateNamedSimpleBinding(envName),
+			undefined
+		),
 		media: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1820,6 +1904,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateSecretsStoreSecretBinding),
 			[]
 		),
+		artifacts: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"artifacts",
+			validateBindingArray(envName, validateArtifactsBinding),
+			[]
+		),
 		unsafe_hello_world: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1828,6 +1922,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"unsafe_hello_world",
 			validateBindingArray(envName, validateHelloWorldBinding),
+			[]
+		),
+		flagship: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"flagship",
+			validateBindingArray(envName, validateFlagshipBinding),
 			[]
 		),
 		worker_loaders: notInheritable(
@@ -1858,6 +1962,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"vpc_services",
 			validateBindingArray(envName, validateVpcServiceBinding),
+			[]
+		),
+		vpc_networks: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"vpc_networks",
+			validateBindingArray(envName, validateVpcNetworkBinding),
 			[]
 		),
 		version_metadata: notInheritable(
@@ -1936,6 +2050,14 @@ function normalizeAndValidateEnvironment(
 			validateObservability,
 			undefined
 		),
+		cache: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"cache",
+			validateCache,
+			undefined
+		),
 		compliance_region: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1951,6 +2073,14 @@ function normalizeAndValidateEnvironment(
 			"python_modules",
 			validatePythonModules,
 			{ exclude: ["**/*.pyc"] }
+		),
+		previews: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"previews",
+			validatePreviewsConfig(envName),
+			undefined
 		),
 	};
 
@@ -2223,6 +2353,42 @@ const validateVars =
 				}
 			}
 		}
+		return isValid;
+	};
+
+const validateSecrets =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (value === undefined) {
+			return true;
+		}
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(value)}.`
+			);
+			return false;
+		}
+
+		let isValid = true;
+
+		// Warn about unexpected properties
+		validateAdditionalProperties(diagnostics, fieldPath, Object.keys(value), [
+			"required",
+		]);
+
+		// Validate 'required' property if present
+		isValid =
+			validateOptionalTypedArray(
+				diagnostics,
+				`${fieldPath}.required`,
+				(value as Record<string, unknown>).required,
+				"string"
+			) && isValid;
+
 		return isValid;
 	};
 
@@ -2528,12 +2694,54 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (hasProperty(value, "limits") && value.limits !== undefined) {
+		if (
+			typeof value.limits !== "object" ||
+			value.limits === null ||
+			Array.isArray(value.limits)
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an object "limits" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		} else {
+			const limits = value.limits as Record<string, unknown>;
+			if (limits.steps !== undefined) {
+				if (
+					typeof limits.steps !== "number" ||
+					!Number.isInteger(limits.steps) ||
+					limits.steps < 1
+				) {
+					diagnostics.errors.push(
+						`"${field}" bindings "limits.steps" field must be a positive integer but got ${JSON.stringify(
+							limits.steps
+						)}.`
+					);
+					isValid = false;
+				} else if (limits.steps > 25_000) {
+					diagnostics.warnings.push(
+						`"${field}" has a step limit of ${limits.steps}, which exceeds the production maximum of 25,000. This configuration may not work when deployed.`
+					);
+				}
+			}
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.limits`,
+				Object.keys(limits),
+				["steps"]
+			);
+		}
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"name",
 		"class_name",
 		"script_name",
 		"remote",
+		"limits",
 	]);
 
 	return isValid;
@@ -2809,6 +3017,8 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"text_blob",
 			"browser",
 			"ai",
+			"ai_search_namespace",
+			"ai_search",
 			"kv_namespace",
 			"durable_object_namespace",
 			"d1_database",
@@ -2819,7 +3029,11 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"pipeline",
 			"worker_loader",
 			"vpc_service",
+			"flagship",
+			"vpc_network",
+			"stream",
 			"media",
+			"artifacts",
 		];
 
 		if (safeBindings.includes(value.type)) {
@@ -3159,6 +3373,11 @@ function validateContainerApp(
 					`"containers.durable_objects" is deprecated. Use the "class_name" field instead.`
 				);
 			}
+			if ("wrangler_ssh" in containerAppOptional) {
+				diagnostics.warnings.push(
+					`"containers.wrangler_ssh" is deprecated. Use "containers.ssh" instead.`
+				);
+			}
 
 			// unsafe.containers
 			if ("unsafe" in containerAppOptional) {
@@ -3189,6 +3408,7 @@ function validateContainerApp(
 					"class_name",
 					"scheduling_policy",
 					"instance_type",
+					"ssh",
 					"wrangler_ssh",
 					"authorized_keys",
 					"trusted_user_ca_keys",
@@ -3211,30 +3431,40 @@ function validateContainerApp(
 				);
 			}
 
-			if ("wrangler_ssh" in containerAppOptional) {
-				if (
-					!isRequiredProperty(
-						containerAppOptional.wrangler_ssh,
-						"enabled",
-						"boolean"
-					)
-				) {
+			let sshField: "ssh" | "wrangler_ssh" | undefined;
+			let sshConfig:
+				| ContainerApp["ssh"]
+				| ContainerApp["wrangler_ssh"]
+				| undefined;
+
+			if ("ssh" in containerAppOptional) {
+				sshField = "ssh";
+				sshConfig = containerAppOptional.ssh;
+				containerAppOptional.wrangler_ssh = containerAppOptional.ssh;
+				delete containerAppOptional.ssh;
+			} else if ("wrangler_ssh" in containerAppOptional) {
+				sshField = "wrangler_ssh";
+				sshConfig = containerAppOptional.wrangler_ssh;
+			}
+
+			if (sshField !== undefined) {
+				const sshConfigObject =
+					typeof sshConfig === "object" && sshConfig !== null ? sshConfig : {};
+
+				if (!isRequiredProperty(sshConfigObject, "enabled", "boolean")) {
 					diagnostics.errors.push(
-						`${field}.wrangler_ssh.enabled must be a boolean`
+						`${field}.${sshField}.enabled must be a boolean`
 					);
 				}
 
+				const sshPort =
+					"port" in sshConfigObject ? sshConfigObject.port : undefined;
 				if (
-					!isOptionalProperty(
-						containerAppOptional.wrangler_ssh,
-						"port",
-						"number"
-					) ||
-					containerAppOptional.wrangler_ssh.port < 1 ||
-					containerAppOptional.wrangler_ssh.port > 65535
+					!isOptionalProperty(sshConfigObject, "port", "number") ||
+					(typeof sshPort === "number" && (sshPort < 1 || sshPort > 65535))
 				) {
 					diagnostics.errors.push(
-						`${field}.wrangler_ssh.port must be a number between 1 and 65535 inclusive`
+						`${field}.${sshField}.port must be a number between 1 and 65535 inclusive`
 					);
 				}
 			}
@@ -3323,6 +3553,53 @@ function validateContainerApp(
 					constraints.tiers,
 					"number"
 				);
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.constraints`,
+					"jurisdiction",
+					constraints.jurisdiction,
+					"string"
+				);
+				if (
+					constraints.jurisdiction &&
+					!["eu", "fedramp"].includes(constraints.jurisdiction)
+				) {
+					diagnostics.errors.push(
+						`${field}.constraints.jurisdiction must be one of: "eu", "fedramp"`
+					);
+				}
+				if (
+					validateOptionalTypedArray(
+						diagnostics,
+						`${field}.constraints.regions`,
+						constraints.regions,
+						"string"
+					) &&
+					constraints.regions &&
+					Array.isArray(constraints.regions)
+				) {
+					const validRegions = [
+						"ENAM",
+						"WNAM",
+						"EEUR",
+						"WEUR",
+						"APAC",
+						"SAM",
+						"ME",
+						"OC",
+						"AFR",
+					];
+					for (const region of constraints.regions) {
+						if (
+							typeof region === "string" &&
+							!validRegions.includes(region.toUpperCase())
+						) {
+							diagnostics.errors.push(
+								`${field}.constraints.regions contains invalid region "${region}". Valid regions are: ${validRegions.join(", ")}`
+							);
+						}
+					}
+				}
 			}
 
 			// Instance Type validation: When present, the instance type should be either (1) a string
@@ -3808,6 +4085,77 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateAISearchNamespaceBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"ai_search_namespaces" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "namespace" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"namespace",
+		"remote",
+	]);
+
+	return isValid;
+};
+
+const validateAISearchBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"ai_search" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "instance_name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have an "instance_name" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"instance_name",
+		"remote",
+	]);
+
+	return isValid;
+};
+
 const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -3882,6 +4230,65 @@ const validateVpcServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateVpcNetworkBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"vpc_networks" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// VPC network bindings must have a binding and exactly one of tunnel_id or network_id.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	const hasTunnelId = hasProperty(value, "tunnel_id");
+	const hasNetworkId = hasProperty(value, "network_id");
+	if (hasTunnelId && hasNetworkId) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have either a "tunnel_id" or "network_id", but not both.`
+		);
+		isValid = false;
+	} else if (!hasTunnelId && !hasNetworkId) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have either a "tunnel_id" or "network_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	} else if (hasTunnelId && typeof value.tunnel_id !== "string") {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "tunnel_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	} else if (hasNetworkId && typeof value.network_id !== "string") {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "network_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"tunnel_id",
+		"network_id",
+		"remote",
+	]);
+
+	return isValid;
+};
+
 /**
  * Check that bindings whose names might conflict, don't.
  *
@@ -3911,6 +4318,10 @@ const validateBindingsHaveUniqueNames = (
 			),
 		])
 	);
+
+	// Add secrets to binding name validation (secrets is not a CfWorkerInit binding type,
+	// but we want to validate that secret names don't conflict with other bindings)
+	bindingsGroupedByType["Secret"] = config.secrets?.required ?? [];
 
 	const bindingsGroupedByName: Record<string, string[]> = {};
 
@@ -4215,6 +4626,10 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 
 function validateQueues(envName: string): ValidatorFn {
 	return (diagnostics, field, value, config) => {
+		if (value === undefined) {
+			return true;
+		}
+
 		const fieldPath =
 			config === undefined ? `${field}` : `env.${envName}.${field}`;
 
@@ -4307,6 +4722,16 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 				value
 			)}.`
 		);
+	}
+
+	// Validate that consumer type, if specified, is "worker".
+	// Non-worker consumer types (e.g., "http_pull") cannot be configured via
+	// wrangler config. Use `wrangler queues consumer http add` instead.
+	if ("type" in value && value.type !== undefined && value.type !== "worker") {
+		diagnostics.errors.push(
+			`"${field}.type" has an invalid value "${value.type}". Only "worker" consumers can be configured in your Wrangler configuration.`
+		);
+		isValid = false;
 	}
 
 	const options: {
@@ -4438,6 +4863,45 @@ const validateSecretsStoreSecretBinding: ValidatorFn = (
 	return isValid;
 };
 
+const validateArtifactsBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"artifacts" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "namespace" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"namespace",
+		"remote",
+	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	return isValid;
+};
+
 const validateHelloWorldBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -4467,6 +4931,44 @@ const validateHelloWorldBinding: ValidatorFn = (diagnostics, field, value) => {
 		"binding",
 		"enable_timer",
 	]);
+
+	return isValid;
+};
+
+const validateFlagshipBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"flagship" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "app_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "app_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"app_id",
+		"remote",
+	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
 
 	return isValid;
 };
@@ -4609,6 +5111,362 @@ function normalizeAndValidateLimits(
 		undefined
 	);
 }
+
+const validatePreviewsConfig =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value) => {
+		if (value === undefined) {
+			return true;
+		}
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${field}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		const previews = value as RawEnvironment;
+		let isValid = true;
+
+		isValid =
+			validateAdditionalProperties(diagnostics, field, Object.keys(previews), [
+				"vars",
+				"define",
+				"durable_objects",
+				"workflows",
+				"kv_namespaces",
+				"send_email",
+				"queues",
+				"d1_databases",
+				"r2_buckets",
+				"vectorize",
+				"hyperdrive",
+				"services",
+				"analytics_engine_datasets",
+				"dispatch_namespaces",
+				"mtls_certificates",
+				"tail_consumers",
+				"streaming_tail_consumers",
+				"unsafe",
+				"browser",
+				"ai",
+				"images",
+				"stream",
+				"media",
+				"pipelines",
+				"secrets_store_secrets",
+				"artifacts",
+				"unsafe_hello_world",
+				"worker_loaders",
+				"ratelimits",
+				"vpc_services",
+				"version_metadata",
+				"logpush",
+				"observability",
+				"limits",
+			]) && isValid;
+
+		isValid =
+			validateVars(envName)(
+				diagnostics,
+				`${field}.vars`,
+				previews.vars,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateDefines(envName)(
+				diagnostics,
+				`${field}.define`,
+				previews.define,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingsProperty(envName, validateDurableObjectBinding)(
+				diagnostics,
+				`${field}.durable_objects`,
+				previews.durable_objects,
+				undefined
+			) && isValid;
+
+		isValid =
+			all(
+				validateBindingArray(envName, validateWorkflowBinding),
+				validateUniqueNameProperty
+			)(diagnostics, `${field}.workflows`, previews.workflows, undefined) &&
+			isValid;
+
+		isValid =
+			validateBindingArray(envName, validateKVBinding)(
+				diagnostics,
+				`${field}.kv_namespaces`,
+				previews.kv_namespaces,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateSendEmailBinding)(
+				diagnostics,
+				`${field}.send_email`,
+				previews.send_email,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateQueues(envName)(
+				diagnostics,
+				`${field}.queues`,
+				previews.queues,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateD1Binding)(
+				diagnostics,
+				`${field}.d1_databases`,
+				previews.d1_databases,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateR2Binding)(
+				diagnostics,
+				`${field}.r2_buckets`,
+				previews.r2_buckets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateVectorizeBinding)(
+				diagnostics,
+				`${field}.vectorize`,
+				previews.vectorize,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateHyperdriveBinding)(
+				diagnostics,
+				`${field}.hyperdrive`,
+				previews.hyperdrive,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateServiceBinding)(
+				diagnostics,
+				`${field}.services`,
+				previews.services,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateAnalyticsEngineBinding)(
+				diagnostics,
+				`${field}.analytics_engine_datasets`,
+				previews.analytics_engine_datasets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateWorkerNamespaceBinding)(
+				diagnostics,
+				`${field}.dispatch_namespaces`,
+				previews.dispatch_namespaces,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateMTlsCertificateBinding)(
+				diagnostics,
+				`${field}.mtls_certificates`,
+				previews.mtls_certificates,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateTailConsumers(
+				diagnostics,
+				`${field}.tail_consumers`,
+				previews.tail_consumers,
+				undefined
+			) && isValid;
+
+		// The config APIs don't yet support streaming tail consumers,
+		// so we don't ever send this field up.
+		// Depending on how the streaming tail consumers feature develops,
+		// this field may be removed in the future, but let's validate it anyways for now.
+		isValid =
+			validateStreamingTailConsumers(
+				diagnostics,
+				`${field}.streaming_tail_consumers`,
+				previews.streaming_tail_consumers,
+				undefined
+			) && isValid;
+
+		if (previews.unsafe !== undefined) {
+			isValid =
+				validateUnsafeSettings(envName)(
+					diagnostics,
+					`${field}.unsafe`,
+					previews.unsafe,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.browser !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.browser`,
+					previews.browser,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.ai !== undefined) {
+			isValid =
+				validateAIBinding(envName)(
+					diagnostics,
+					`${field}.ai`,
+					previews.ai,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.images !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.images`,
+					previews.images,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.stream !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.stream`,
+					previews.stream,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.media !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.media`,
+					previews.media,
+					undefined
+				) && isValid;
+		}
+
+		isValid =
+			validateBindingArray(envName, validatePipelineBinding)(
+				diagnostics,
+				`${field}.pipelines`,
+				previews.pipelines,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateSecretsStoreSecretBinding)(
+				diagnostics,
+				`${field}.secrets_store_secrets`,
+				previews.secrets_store_secrets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateArtifactsBinding)(
+				diagnostics,
+				`${field}.artifacts`,
+				previews.artifacts,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateHelloWorldBinding)(
+				diagnostics,
+				`${field}.unsafe_hello_world`,
+				previews.unsafe_hello_world,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateWorkerLoaderBinding)(
+				diagnostics,
+				`${field}.worker_loaders`,
+				previews.worker_loaders,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateRateLimitBinding)(
+				diagnostics,
+				`${field}.ratelimits`,
+				previews.ratelimits,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateVpcServiceBinding)(
+				diagnostics,
+				`${field}.vpc_services`,
+				previews.vpc_services,
+				undefined
+			) && isValid;
+
+		if (previews.version_metadata !== undefined) {
+			isValid =
+				validateVersionMetadataBinding(envName)(
+					diagnostics,
+					`${field}.version_metadata`,
+					previews.version_metadata,
+					undefined
+				) && isValid;
+		}
+
+		isValid =
+			isBoolean(diagnostics, `${field}.logpush`, previews.logpush, undefined) &&
+			isValid;
+
+		isValid =
+			validateObservability(
+				diagnostics,
+				`${field}.observability`,
+				previews.observability,
+				undefined
+			) && isValid;
+
+		if (previews.limits) {
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.limits`,
+					"cpu_ms",
+					previews.limits.cpu_ms,
+					"number"
+				) && isValid;
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.limits`,
+					"subrequests",
+					previews.limits.subrequests,
+					"number"
+				) && isValid;
+		}
+
+		return isValid;
+	};
 
 /**
  * Validate the `migrations` configuration and return the normalized values.
@@ -4911,6 +5769,38 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			`"${field}.head_sampling_rate" must be a value between 0 and 1.`
 		);
 	}
+
+	return isValid;
+};
+
+const validateCache: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const val = value as CacheOptions;
+	let isValid = true;
+
+	isValid =
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"enabled",
+			val.enabled,
+			"boolean"
+		) && isValid;
+
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
+			"enabled",
+		]) && isValid;
 
 	return isValid;
 };

@@ -1,10 +1,7 @@
 import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
 import * as TOML from "smol-toml";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers and module-level helpers */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -14,8 +11,9 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
 import type { SSHPublicKeyItem } from "@cloudflare/containers-shared";
+import type { ExpectStatic } from "vitest";
 
-function mockDeploymentPost() {
+function mockDeploymentPost(expect: ExpectStatic) {
 	msw.use(
 		http.post(
 			"*/deployments/v2",
@@ -71,11 +69,10 @@ describe("cloudchamber create", () => {
 	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("cloudchamber create --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -105,7 +102,9 @@ describe("cloudchamber create", () => {
 		`);
 	});
 
-	it("should fail with a nice message when parameters are missing", async () => {
+	it("should fail with a nice message when parameters are missing", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await expect(
@@ -115,7 +114,9 @@ describe("cloudchamber create", () => {
 		);
 	});
 
-	it("should fail with a nice message when image is invalid", async () => {
+	it("should fail with a nice message when image is invalid", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await expect(
@@ -131,7 +132,9 @@ describe("cloudchamber create", () => {
 		);
 	});
 
-	it("should fail with a nice message when parameters are mistyped", async () => {
+	it("should fail with a nice message when parameters are mistyped", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		fs.writeFileSync(
 			"./wrangler.toml",
@@ -150,7 +153,9 @@ describe("cloudchamber create", () => {
 		);
 	});
 
-	it("should fail with a nice message when instance type is invalid", async () => {
+	it("should fail with a nice message when instance type is invalid", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		fs.writeFileSync(
 			"./wrangler.toml",
@@ -173,7 +178,9 @@ describe("cloudchamber create", () => {
 		);
 	});
 
-	it("should fail with a nice message when instance type is set with vcpu", async () => {
+	it("should fail with a nice message when instance type is set with vcpu", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		fs.writeFileSync(
 			"./wrangler.toml",
@@ -197,11 +204,13 @@ describe("cloudchamber create", () => {
 		);
 	});
 
-	it("should create deployment (detects no interactivity)", async () => {
+	it("should create deployment (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		mockGetKey();
-		mockDeploymentPost();
+		mockDeploymentPost(expect);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler(
 			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --vcpu 3 --memory 400GB --ipv4 true"
@@ -233,7 +242,9 @@ describe("cloudchamber create", () => {
 		`);
 	});
 
-	it("should create deployment with instance type (detects no interactivity)", async () => {
+	it("should create deployment with instance type (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		mockGetKey();
@@ -256,7 +267,7 @@ describe("cloudchamber create", () => {
 		expect(std.out).toMatchInlineSnapshot(`"{}"`);
 	});
 
-	it("properly reads wrangler config", async () => {
+	it("properly reads wrangler config", async ({ expect }) => {
 		// This is very similar to the previous tests except config
 		// is set in wrangler and not overridden by the CLI
 		setIsTTY(false);
@@ -270,7 +281,7 @@ describe("cloudchamber create", () => {
 		// if values are not read by wrangler, this mock won't work
 		// since the wrangler command wont get the right parameters
 		mockGetKey();
-		mockDeploymentPost();
+		mockDeploymentPost(expect);
 		await runWrangler(
 			"cloudchamber create --var HELLO:WORLD --var YOU:CONQUERED"
 		);
@@ -300,7 +311,7 @@ describe("cloudchamber create", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("properly reads wrangler config for instance type", async () => {
+	it("properly reads wrangler config for instance type", async ({ expect }) => {
 		// This is very similar to the previous tests except config
 		// is set in wrangler and not overridden by the CLI
 		setIsTTY(false);
@@ -332,7 +343,9 @@ describe("cloudchamber create", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should create deployment indicating ssh keys (detects no interactivity)", async () => {
+	it("should create deployment indicating ssh keys (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({
 			vcpu: 40,
@@ -396,7 +409,9 @@ describe("cloudchamber create", () => {
 		`);
 	});
 
-	it("can't create deployment due to lack of fields (json)", async () => {
+	it("can't create deployment due to lack of fields (json)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		expect(std.err).toMatchInlineSnapshot(`""`);

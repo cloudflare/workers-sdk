@@ -1,5 +1,5 @@
 import path from "node:path";
-import { findUpSync } from "find-up";
+import * as find from "empathic/find";
 import { getWranglerTmpDir } from "../paths";
 import type { BundleResult } from "../deployment-bundle/bundle";
 
@@ -47,7 +47,7 @@ export function getPagesProjectRoot(): string {
 	if (projectRootCache !== undefined && projectRootCacheCwd === cwd) {
 		return projectRootCache;
 	}
-	const packagePath = findUpSync("package.json");
+	const packagePath = find.file("package.json");
 	projectRootCache = packagePath ? path.dirname(packagePath) : process.cwd();
 	projectRootCacheCwd = cwd;
 	return projectRootCache;

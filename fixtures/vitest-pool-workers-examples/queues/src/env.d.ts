@@ -3,7 +3,13 @@ interface QueueJob {
 	value: string;
 }
 
-interface Env {
-	QUEUE_PRODUCER: Queue<QueueJob>;
-	QUEUE_RESULTS: KVNamespace;
+declare namespace Cloudflare {
+	interface GlobalProps {
+		mainModule: typeof import("./index");
+	}
+	interface Env {
+		QUEUE_RESULTS: KVNamespace;
+		QUEUE_PRODUCER: Queue<QueueJob>;
+	}
 }
+interface Env extends Cloudflare.Env {}

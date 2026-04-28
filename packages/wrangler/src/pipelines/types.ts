@@ -31,8 +31,9 @@ export interface CloudflareAPIResponse<T> {
 	result: T;
 }
 
-export interface PipelineListResponse
-	extends CloudflareAPIResponse<Pipeline[]> {
+export interface PipelineListResponse extends CloudflareAPIResponse<
+	Pipeline[]
+> {
 	result_info: PaginationInfo;
 }
 
@@ -137,8 +138,11 @@ export type SchemaField = {
 		| "bool"
 		| "int32"
 		| "int64"
+		| "uint32"
+		| "uint64"
 		| "float32"
 		| "float64"
+		| "decimal128"
 		| "string"
 		| "timestamp"
 		| "json"
@@ -149,6 +153,8 @@ export type SchemaField = {
 	fields?: SchemaField[];
 	items?: SchemaField;
 	unit?: "second" | "millisecond" | "microsecond" | "nanosecond"; // For timestamp type
+	precision?: number; // For decimal128 type
+	scale?: number; // For decimal128 type
 };
 
 export type Sink = {

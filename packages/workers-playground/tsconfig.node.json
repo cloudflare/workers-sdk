@@ -3,10 +3,10 @@
 		"composite": true,
 		"skipLibCheck": true,
 		"module": "ESNext",
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"allowSyntheticDefaultImports": true,
 		"target": "ES2021",
 		"lib": ["ES2021"]
 	},
-	"include": ["vite.config.ts", "eslintrc.cjs", "generate-default-hash.ts"]
+	"include": ["vite.config.ts", "eslintrc.cjs", "generate-default-hashes.ts"]
 }

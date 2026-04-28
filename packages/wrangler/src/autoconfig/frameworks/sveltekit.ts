@@ -1,14 +1,18 @@
 import { writeFileSync } from "node:fs";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { runCommand } from "../c3-vendor/command";
-import { installPackages } from "../c3-vendor/packages";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
+import { Framework } from "./framework-class";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 
 export class SvelteKit extends Framework {
 	async configure({
 		dryRun,
 		packageManager,
+		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const { dlx } = packageManager;
 		if (!dryRun) {
@@ -25,21 +29,23 @@ export class SvelteKit extends Framework {
 					silent: true,
 					startText: "Installing adapter",
 					doneText: `${brandColor("installed")} ${dim(
-						`via \`${dlx.join(" ")} sv add sveltekit-adapter=adapter:cloudflare+cfTarget:workers\``
+						`via \`${dlx.join(
+							" "
+						)} sv add sveltekit-adapter=adapter:cloudflare+cfTarget:workers\``
 					)}`,
 				}
 			);
 			writeFileSync("static/.assetsignore", "_worker.js\n_routes.json");
 
-			await installPackages(packageManager, [], {
+			await installPackages(packageManager.type, [], {
 				startText: "Installing packages",
 				doneText: `${brandColor("installed")}`,
+				isWorkspaceRoot,
 			});
 		}
 		return {
 			wranglerConfig: {
 				main: ".svelte-kit/cloudflare/_worker.js",
-				compatibility_flags: ["nodejs_als"],
 				assets: {
 					binding: "ASSETS",
 					directory: ".svelte-kit/cloudflare",

@@ -176,7 +176,6 @@ For TypeScript to work properly in the Monorepo the version used in VSCode must 
 3. In the command palette, type "Select TypeScript Version" and select the command with the same name that appears in the list.
 
 4. A submenu will appear with a list of available TypeScript versions. Choose the desired version you want to use for this project. If you have multiple versions installed, they will be listed here.
-
    - Selecting "Use Workspace Version" will use the version of TypeScript installed in the project's `node_modules` directory.
 
 5. After selecting the TypeScript version, VSCode will reload the workspace using the chosen version.
@@ -272,7 +271,6 @@ Changes should be committed to a new local branch, which then gets pushed to you
   ```
 
 - Stage files to include in a commit
-
   - Use [VS Code](https://code.visualstudio.com/docs/editor/versioncontrol#_git-support)
   - Or add and commit files via the command line
 
@@ -312,10 +310,9 @@ Every PR will have an associated pre-release build for all releasable packages w
 It's also possible to generate preview builds for the applications in the repository. These aren't generated automatically because they're pretty slow CI jobs, but you can trigger preview builds by adding one of the following labels to your PR:
 
 - `preview:chrome-devtools-patches` for deploying [chrome-devtools-patches](packages/chrome-devtools-patches)
-- `preview:workers-playground` for deploying [workers-playground](packages/workers-playground)
 - `preview:quick-edit` for deploying [quick-edit](packages/quick-edit)
 
-Once built, you can find the preview link for these applications in the [Deploy Pages Previews](.github/workflows/deploy-pages-previews.yml) action output
+Once built, you can find the preview link for these applications in the [Deploy Previews](.github/workflows/deploy-previews.yml) action output
 
 ## PR Tests
 
@@ -345,6 +342,20 @@ export default mergeConfig(
 If you need to test the interaction of Wrangler with a real Cloudflare account, you can add an E2E test within the `packages/wrangler/e2e` folder. This lets you add a test for functionality that requires real credentials (i.e. testing whether a worker deployed from Wrangler can be accessed over the internet).
 
 A summary of this repositories actions can be found [in the `.github/workflows` folder](.github/workflows/README.md)
+
+## Remote E2E Tests in CI
+
+E2E tests that hit the Cloudflare backend (deploying Workers, testing bindings, etc.) are inherently slow and can be flaky due to network and service dependencies. To keep PR feedback loops fast and reliable, **CI does not pass Cloudflare API credentials to E2E test jobs by default**. The E2E test suites still run on every PR, but tests that require remote access are automatically skipped when the API token is absent.
+
+Remote E2E tests run automatically in these cases:
+
+- **Version Packages PRs** (branch `changeset-release/main`) — acts as a pre-release safety net, catching remote-test failures before packages are published.
+- **Merge queue** — final check before code lands on `main`.
+
+If you need remote E2E tests on your PR (e.g. you're changing deployment logic or binding behavior), apply the **`run-remote-tests`** label. This triggers a re-run of the E2E workflows with API credentials enabled.
+
+> [!NOTE]
+> The `run-remote-tests` label has no effect on PRs from forks, because GitHub does not expose repository secrets to fork PRs.
 
 ## Running E2E tests locally
 

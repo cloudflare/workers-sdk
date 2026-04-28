@@ -1,4 +1,4 @@
-import { Awaitable, Miniflare, MiniflareOptions } from "miniflare";
+import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, onTestFinished } from "vitest";
 import { TestLog } from "./log";
 import type {
@@ -7,6 +7,7 @@ import type {
 	Request as WorkerRequest,
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
+import type { Awaitable, MiniflareOptions } from "miniflare";
 
 const isWindows = process.platform === "win32";
 

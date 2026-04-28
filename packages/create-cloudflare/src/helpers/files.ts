@@ -46,12 +46,9 @@ export const removeFile = (path: string) => {
 
 export const directoryExists = (path: string): boolean => {
 	try {
-		const stat = statSync(path);
-		return stat.isDirectory();
+		const stat = statSync(path, { throwIfNoEntry: false });
+		return stat?.isDirectory() ?? false;
 	} catch (error) {
-		if ((error as { code: string }).code === "ENOENT") {
-			return false;
-		}
 		throw new Error(error as string);
 	}
 };
@@ -69,7 +66,7 @@ export const readToml = (path: string) => {
 export const writeJSON = (
 	path: string,
 	object: unknown,
-	stringifySpace = "\t",
+	stringifySpace = "\t"
 ) => {
 	writeFile(path, stringify(object, null, stringifySpace));
 };

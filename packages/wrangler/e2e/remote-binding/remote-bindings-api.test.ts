@@ -1,13 +1,11 @@
-import assert from "node:assert";
 import { resolve } from "node:path";
-import { beforeAll, describe, expect, test } from "vitest";
+import { assert, beforeAll, describe, test } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importMiniflare,
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "../helpers/e2e-wrangler-test";
-import { generateResourceName } from "../helpers/generate-resource-name";
 import type {
 	MiniflareOptions,
 	Miniflare as MiniflareType,
@@ -16,10 +14,8 @@ import type {
 } from "miniflare";
 
 const { Miniflare } = await importMiniflare();
-const {
-	startRemoteProxySession: startRemoteProxySession,
-	maybeStartOrUpdateRemoteProxySession: maybeStartOrUpdateRemoteProxySession,
-} = await importWrangler();
+const { startRemoteProxySession, maybeStartOrUpdateRemoteProxySession } =
+	await importWrangler();
 
 // Note: the tests in this file are simple ones that check basic functionalities of the remote bindings programmatic APIs
 //       various other aspects of these APIs (e.g. different bindings, reloading capabilities) are indirectly tested when
@@ -28,17 +24,15 @@ const {
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"wrangler dev - remote bindings - programmatic API",
 	async () => {
-		const remoteWorkerName = generateResourceName();
+		const remoteWorkerName = "preserve-e2e-wrangler-remote-worker";
 		const helper = new WranglerE2ETestHelper();
 
 		beforeAll(async () => {
 			await helper.seed(resolve(__dirname, "./workers"));
-			const { cleanup } = await helper.worker({
+			await helper.ensureWorkerDeployed({
 				workerName: remoteWorkerName,
 				entryPoint: "remote-worker.js",
-				cleanOnTestFinished: false,
 			});
-			return cleanup;
 		}, 35_000);
 
 		function getMfOptions(
@@ -63,7 +57,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		}
 
 		describe("startRemoteProxySession", () => {
-			test("base usage", async () => {
+			test("base usage", async ({ expect }) => {
 				const remoteProxySession = await startRemoteProxySession({
 					MY_SERVICE: {
 						type: "service",
@@ -87,7 +81,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				await remoteProxySession.dispose();
 			});
 
-			test("user provided incorrect auth data", async () => {
+			test("user provided incorrect auth data", async ({ expect }) => {
 				await expect(
 					startRemoteProxySession(
 						{
@@ -112,7 +106,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		});
 
 		describe("maybeStartOrUpdateRemoteProxySession", () => {
-			test("base usage", async () => {
+			test("base usage", async ({ expect }) => {
 				const proxySessionData = await maybeStartOrUpdateRemoteProxySession({
 					bindings: {
 						MY_SERVICE: {
@@ -142,7 +136,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				await proxySessionData.session.dispose();
 			});
 
-			test("user provided incorrect auth data", async () => {
+			test("user provided incorrect auth data", async ({ expect }) => {
 				await expect(
 					maybeStartOrUpdateRemoteProxySession(
 						{

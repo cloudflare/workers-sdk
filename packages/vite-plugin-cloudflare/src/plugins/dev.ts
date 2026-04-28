@@ -1,8 +1,13 @@
 import assert from "node:assert";
-import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
+import {
+	configureOpenAPIForContainerPull,
+	getCloudflareContainerRegistry,
+	prepareContainerImagesForDev,
+} from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
-import { CoreHeaders } from "miniflare";
+import { UserError } from "@cloudflare/workers-utils";
+import { buildPublicUrl, CoreHeaders } from "miniflare";
 import colors from "picocolors";
 import { initRunners } from "../cloudflare-environment";
 import {
@@ -19,10 +24,14 @@ import {
 } from "../export-types";
 import { getDevMiniflareOptions } from "../miniflare-options";
 import { UNKNOWN_HOST } from "../shared";
-import { createPlugin, createRequestHandler, debuglog } from "../utils";
+import {
+	createPlugin,
+	createRequestHandler,
+	debuglog,
+	satisfiesMinimumViteVersion,
+} from "../utils";
 import { handleWebSocket } from "../websockets";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
-import type * as vite from "vite";
 
 let exitCallback = () => {};
 
@@ -66,7 +75,25 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
 
-			let preMiddleware: vite.Connect.NextHandleFunction | undefined;
+			// Once the HTTP server is listening, update Miniflare's publicUrl with
+			// the actual address. This ensures "Cloudflare Stream" preview URLs always reflect
+			// the real server URL — even if Vite bumped the port.
+			if (viteDevServer.httpServer) {
+				viteDevServer.httpServer.on("listening", () => {
+					const addr = viteDevServer.httpServer?.address();
+					if (typeof addr === "object" && addr !== null) {
+						const serverConfig = viteDevServer.config.server;
+						ctx.miniflare.publicUrl = buildPublicUrl({
+							hostname:
+								typeof serverConfig.host === "string"
+									? serverConfig.host
+									: undefined,
+							port: addr.port,
+							secure: !!serverConfig.https,
+						});
+					}
+				});
+			}
 
 			if (ctx.resolvedPluginConfig.type === "workers") {
 				debuglog("Initializing the Vite module runners");
@@ -166,33 +193,32 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					const includeRulesMatcher = generateStaticRoutingRuleMatcher(
 						staticRouting.user_worker
 					);
-					const userWorkerHandler = createRequestHandler(
-						ctx,
-						async (request) => {
-							request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+					const userWorkerHandler = createRequestHandler(async (request) => {
+						request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 
-							return ctx.miniflare.dispatchFetch(request, {
-								redirect: "manual",
-							});
+						return ctx.miniflare.dispatchFetch(request, {
+							redirect: "manual",
+						});
+					});
+
+					viteDevServer.middlewares.use(
+						async function cloudflarePreMiddleware(req, res, next) {
+							assert(req.url, `req.url not defined`);
+							// Only the URL pathname is used to match rules
+							const request = new Request(new URL(req.url, UNKNOWN_HOST));
+
+							if (req[kRequestType] === "asset") {
+								next();
+							} else if (excludeRulesMatcher({ request })) {
+								req[kRequestType] = "asset";
+								next();
+							} else if (includeRulesMatcher({ request })) {
+								void userWorkerHandler(req, res, next);
+							} else {
+								next();
+							}
 						}
 					);
-
-					preMiddleware = async (req, res, next) => {
-						assert(req.url, `req.url not defined`);
-						// Only the URL pathname is used to match rules
-						const request = new Request(new URL(req.url, UNKNOWN_HOST));
-
-						if (req[kRequestType] === "asset") {
-							next();
-						} else if (excludeRulesMatcher({ request })) {
-							req[kRequestType] = "asset";
-							next();
-						} else if (includeRulesMatcher({ request })) {
-							void userWorkerHandler(req, res, next);
-						} else {
-							next();
-						}
-					};
 				}
 
 				if (containerTagToOptionsMap.size) {
@@ -204,13 +230,39 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						)
 					);
 
+					const hasCFRegistryImages = [
+						...containerTagToOptionsMap.values(),
+					].some(
+						(opts) =>
+							"image_uri" in opts &&
+							new URL(`http://${opts.image_uri}`).hostname ===
+								getCloudflareContainerRegistry()
+					);
+
+					if (hasCFRegistryImages) {
+						const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+						const accountId =
+							ctx.entryWorkerConfig?.account_id ??
+							process.env.CLOUDFLARE_ACCOUNT_ID;
+
+						if (!apiToken || !accountId) {
+							throw new UserError(
+								"To use images from the Cloudflare-managed registry with the Vite plugin, " +
+									"set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID environment variables.\n" +
+									"The API token requires Containers:Edit and Workers Scripts:Edit permissions.\n" +
+									"Alternatively, use a Dockerfile that references the image via FROM."
+							);
+						}
+
+						configureOpenAPIForContainerPull(accountId, apiToken);
+					}
+
 					await prepareContainerImagesForDev({
 						dockerPath: getDockerPath(),
 						containerOptions: [...containerTagToOptionsMap.values()],
 						onContainerImagePreparationStart: () => {},
 						onContainerImagePreparationEnd: () => {},
 						logger: viteDevServer.config.logger,
-						isVite: true,
 					});
 
 					containerImageTags = new Set(containerTagToOptionsMap.keys());
@@ -245,30 +297,49 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 			}
 
 			return () => {
-				if (preMiddleware) {
+				// In Vite 6, pre-middleware is placed before the host check middleware,
+				// leaving the server vulnerable to DNS rebinding attacks. We move it to
+				// after the host check middleware by re-inserting it before
+				// viteCachedTransformMiddleware. In Vite 7+, it's already in the
+				// correct position so no action is needed.
+				if (!satisfiesMinimumViteVersion("7.0.0")) {
 					const middlewareStack = viteDevServer.middlewares.stack;
-					const cachedTransformMiddlewareIndex = middlewareStack.findIndex(
+					const preMiddlewareIndex = middlewareStack.findIndex(
 						(middleware) =>
 							"name" in middleware.handle &&
-							middleware.handle.name === "viteCachedTransformMiddleware"
-					);
-					assert(
-						cachedTransformMiddlewareIndex !== -1,
-						"Failed to find viteCachedTransformMiddleware"
+							middleware.handle.name === "cloudflarePreMiddleware"
 					);
 
-					// Insert our middleware after the host check middleware to prevent DNS rebinding attacks.
-					// TODO: when we drop support for Vite 6 we can provide this middleware as normal.
-					// This is because Vite 7 places pre-middleware here by default.
-					middlewareStack.splice(cachedTransformMiddlewareIndex, 0, {
-						route: "",
-						handle: preMiddleware,
-					});
+					if (preMiddlewareIndex !== -1) {
+						const [preMiddleware] = middlewareStack.splice(
+							preMiddlewareIndex,
+							1
+						);
+						assert(
+							preMiddleware,
+							"Failed to remove cloudflarePreMiddleware from stack"
+						);
+
+						const cachedTransformMiddlewareIndex = middlewareStack.findIndex(
+							(middleware) =>
+								"name" in middleware.handle &&
+								middleware.handle.name === "viteCachedTransformMiddleware"
+						);
+						assert(
+							cachedTransformMiddlewareIndex !== -1,
+							"Failed to find viteCachedTransformMiddleware"
+						);
+						middlewareStack.splice(
+							cachedTransformMiddlewareIndex,
+							0,
+							preMiddleware
+						);
+					}
 				}
 
 				// post middleware
 				viteDevServer.middlewares.use(
-					createRequestHandler(ctx, async (request, req) => {
+					createRequestHandler(async (request, req) => {
 						if (req[kRequestType] === "asset") {
 							request.headers.set(
 								CoreHeaders.ROUTE_OVERRIDE,

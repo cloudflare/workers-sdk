@@ -1,4 +1,8 @@
-import { grayBar, leftT, spinner } from "@cloudflare/cli/interactive";
+import {
+	grayBar,
+	leftT,
+	spinner,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import { describe, test } from "vitest";
 import { collectCLIOutput } from "./helpers/collect-cli-output";
 import { useMockIsTTY } from "./helpers/mock-istty";

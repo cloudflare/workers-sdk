@@ -1,9 +1,6 @@
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -28,11 +25,10 @@ describe("containers images list", () => {
 	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await runWrangler("containers images list --help");
@@ -40,7 +36,7 @@ describe("containers images list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers images list
 
-			List images in the Cloudflare managed registry [open beta]
+			List images in the Cloudflare managed registry
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -56,7 +52,7 @@ describe("containers images list", () => {
 		`);
 	});
 
-	it("should list images", async () => {
+	it("should list images", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -95,7 +91,7 @@ describe("containers images list", () => {
 		`);
 	});
 
-	it("should list images with a filter", async () => {
+	it("should list images with a filter", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -129,7 +125,9 @@ describe("containers images list", () => {
 		`);
 	});
 
-	it("should list repos as valid json with json flag set", async () => {
+	it("should list repos as valid json with json flag set", async ({
+		expect,
+	}) => {
 		setWranglerConfig({});
 		const tags = {
 			one: ["hundred", "ten", "sha256:239a0dfhasdfui235"],
@@ -194,11 +192,10 @@ describe("containers images delete", () => {
 	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await runWrangler("containers images delete --help");
@@ -206,7 +203,7 @@ describe("containers images delete", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers images delete <image>
 
-			Remove an image from the Cloudflare managed registry [open beta]
+			Remove an image from the Cloudflare managed registry
 
 			POSITIONALS
 			  image  Image and tag to delete, of the form IMAGE:TAG  [string] [required]
@@ -221,7 +218,7 @@ describe("containers images delete", () => {
 		`);
 	});
 
-	it("should delete images", async () => {
+	it("should delete images", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 
@@ -266,7 +263,7 @@ describe("containers images delete", () => {
 		);
 	});
 
-	it("should error when provided a repo without a tag", async () => {
+	it("should error when provided a repo without a tag", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 

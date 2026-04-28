@@ -17,29 +17,35 @@ import type {
 	WranglerLogger,
 } from "./types";
 
+export const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
+	"cloudflare/proxy-everything:3cb1195@sha256:0ef6716c52430096900b150d84a3302057d6cd2319dae7987128c85d0733e3c8";
+
+export function getEgressInterceptorImage(): string {
+	return (
+		process.env.MINIFLARE_CONTAINER_EGRESS_IMAGE ??
+		DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE
+	);
+}
+
+export async function pullEgressInterceptorImage(
+	dockerPath: string
+): Promise<void> {
+	const image = getEgressInterceptorImage();
+	await runDockerCmd(dockerPath, ["pull", image, "--platform", "linux/amd64"]);
+}
+
 export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,
-	logger: WranglerLogger | ViteLogger,
-	isVite: boolean
+	logger: WranglerLogger | ViteLogger
 ): Promise<{ abort: () => void; ready: Promise<void> }> {
 	const domain = new URL(`http://${options.image_uri}`).hostname;
 
 	const isExternalRegistry = domain !== getCloudflareContainerRegistry();
 	try {
-		// this will fail in two cases:
-		// 1. this is being called from the vite plugin (doesn't have the appropriate auth context)
-		// 2. the user has not run `wrangler containers registries configure` yet to set up credentials
 		await dockerLoginImageRegistry(dockerPath, domain);
 	} catch (e) {
 		if (!isExternalRegistry) {
-			if (isVite) {
-				throw new UserError(
-					`Using images from the Cloudflare-managed registry is not currently supported with the Vite plugin.\n` +
-						`You should use a Dockerfile or a supported external registry and authenticate to that registry separately using \`docker login\` or similar.\n` +
-						`Supported external registries are currently: ${Object.values(ExternalRegistryKind).join(", ")}.`
-				);
-			}
 			throw e;
 		}
 		logger?.warn(
@@ -96,7 +102,6 @@ export async function prepareContainerImagesForDev(args: {
 		containerOptions: ContainerDevOptions;
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
-	isVite: boolean;
 }): Promise<void> {
 	const {
 		dockerPath,
@@ -127,12 +132,7 @@ export async function prepareContainerImagesForDev(args: {
 				containerOptions: options,
 			});
 		} else {
-			const pull = await pullImage(
-				dockerPath,
-				options,
-				args.logger,
-				args.isVite
-			);
+			const pull = await pullImage(dockerPath, options, args.logger);
 			onContainerImagePreparationStart({
 				containerOptions: options,
 				abort: () => {
@@ -151,6 +151,12 @@ export async function prepareContainerImagesForDev(args: {
 
 			await checkExposedPorts(dockerPath, options);
 		}
+	}
+
+	// Pull the egress interceptor image used to intercept outbound HTTP from
+	// containers and route it back to workerd (e.g. for interceptOutboundHttp).
+	if (!aborted) {
+		await pullEgressInterceptorImage(dockerPath);
 	}
 }
 
@@ -233,6 +239,12 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 			pattern: /^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com$/,
 			name: "AWS ECR",
 			secretType: "AWS Secret Access Key",
+		},
+		{
+			type: ExternalRegistryKind.DOCKER_HUB,
+			pattern: /^docker\.io$/,
+			name: "DockerHub",
+			secretType: "DockerHub PAT Token",
 		},
 		{
 			type: "cloudflare",

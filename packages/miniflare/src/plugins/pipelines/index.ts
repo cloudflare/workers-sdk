@@ -1,27 +1,28 @@
 import SCRIPT_PIPELINE_OBJECT from "worker:pipelines/pipeline";
 import { z } from "zod";
-import { Service } from "../../runtime";
 import {
 	namespaceKeys,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 } from "../shared";
+import type { Service } from "../../runtime";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const PipelineOptionsSchema = z.object({
 	pipelines: z
 		.union([
-			z.record(z.string()),
-			z.string().array(),
 			z.record(
-				z.object({
-					pipeline: z.string(),
-					remoteProxyConnectionString: z
-						.custom<RemoteProxyConnectionString>()
-						.optional(),
-				})
+				z.union([
+					z.string(),
+					z.object({
+						pipeline: z.string(),
+						remoteProxyConnectionString: z
+							.custom<RemoteProxyConnectionString>()
+							.optional(),
+					}),
+				])
 			),
+			z.string().array(),
 		])
 		.optional(),
 });
@@ -76,13 +77,13 @@ function bindingEntries(
 	namespaces?:
 		| Record<
 				string,
-				{
-					pipeline: string;
-					remoteProxyConnectionString?: RemoteProxyConnectionString;
-				}
+				| string
+				| {
+						pipeline: string;
+						remoteProxyConnectionString?: RemoteProxyConnectionString;
+				  }
 		  >
 		| string[]
-		| Record<string, string>
 ): [
 	bindingName: string,
 	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },

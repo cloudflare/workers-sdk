@@ -1,5 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createNamespace } from "../core/create-command";
+import { MySqlSslmode, PostgresSslmode } from "./client";
 import type {
 	CachingOptions,
 	Mtls,
@@ -20,6 +21,14 @@ export const hyperdriveNamespace = createNamespace({
 	},
 });
 
+function normalizeMysqlSslmode(sslmode: string): string {
+	const mysqlSslmode = MySqlSslmode.find(
+		(mode) => mode.toLowerCase() === sslmode.toLowerCase()
+	);
+
+	return mysqlSslmode ?? sslmode;
+}
+
 export const upsertOptions = (
 	defaultOriginScheme: string | undefined = undefined
 ) =>
@@ -30,13 +39,24 @@ export const upsertOptions = (
 				"The connection string for the database you want Hyperdrive to connect to - ex: protocol://user:password@host:port/database",
 			group: "Configure using a connection string",
 		},
+		"service-id": {
+			type: "string",
+			description: "The Workers VPC Service ID of the origin database",
+			conflicts: [
+				"origin-host",
+				"origin-port",
+				"connection-string",
+				"access-client-id",
+				"access-client-secret",
+			],
+		},
 		"origin-host": {
 			alias: "host",
 			type: "string",
 			description: "The host of the origin database",
-			conflicts: "connection-string",
+			conflicts: ["connection-string", "service-id"],
 			group:
-				"Configure using individual parameters [conflicts with --connection-string]",
+				"Configure using individual parameters [conflicts with --connection-string, --service-id]",
 		},
 		"origin-port": {
 			alias: "port",
@@ -44,11 +64,12 @@ export const upsertOptions = (
 			description: "The port number of the origin database",
 			conflicts: [
 				"connection-string",
+				"service-id",
 				"access-client-id",
 				"access-client-secret",
 			],
 			group:
-				"Configure using individual parameters [conflicts with --connection-string]",
+				"Configure using individual parameters [conflicts with --connection-string, --service-id]",
 		},
 		"origin-scheme": {
 			alias: "scheme",
@@ -86,18 +107,18 @@ export const upsertOptions = (
 			type: "string",
 			description:
 				"The Client ID of the Access token to use when connecting to the origin database",
-			conflicts: ["connection-string", "origin-port"],
+			conflicts: ["connection-string", "origin-port", "service-id"],
 			implies: ["access-client-secret"],
 			group:
-				"Hyperdrive over Access [conflicts with --connection-string, --origin-port]",
+				"Hyperdrive over Access [conflicts with --connection-string, --origin-port, --service-id]",
 		},
 		"access-client-secret": {
 			type: "string",
 			description:
 				"The Client Secret of the Access token to use when connecting to the origin database",
-			conflicts: ["connection-string", "origin-port"],
+			conflicts: ["connection-string", "origin-port", "service-id"],
 			group:
-				"Hyperdrive over Access [conflicts with --connection-string, --origin-port]",
+				"Hyperdrive over Access [conflicts with --connection-string, --origin-port, --service-id]",
 		},
 		"caching-disabled": {
 			type: "boolean",
@@ -130,8 +151,9 @@ export const upsertOptions = (
 		},
 		sslmode: {
 			type: "string",
-			choices: ["require", "verify-ca", "verify-full"],
-			description: "Sets CA sslmode for connecting to database.",
+			coerce: normalizeMysqlSslmode,
+			choices: [...PostgresSslmode, ...MySqlSslmode],
+			description: `Sets sslmode for connecting to database. For PostgreSQL: '${PostgresSslmode.join(", ")}'. For MySQL: '${MySqlSslmode.join(", ")}'.`,
 		},
 		"origin-connection-limit": {
 			type: "number",
@@ -157,10 +179,10 @@ export function getOriginFromArgs<
 
 		if (
 			url.port === "" &&
-			(url.protocol == "postgresql:" || url.protocol == "postgres:")
+			(url.protocol == "postgresql:" || url.protocol === "postgres:")
 		) {
 			url.port = "5432";
-		} else if (url.port === "" && url.protocol == "mysql:") {
+		} else if (url.port === "" && url.protocol === "mysql:") {
 			url.port = "3306";
 		}
 
@@ -236,14 +258,18 @@ export function getOriginFromArgs<
 		: OriginDatabaseWithSecrets;
 
 	let networkOrigin: NetworkOriginWithSecrets | undefined;
-	if (args.accessClientId || args.accessClientSecret) {
+	if (args.serviceId) {
+		networkOrigin = {
+			service_id: args.serviceId,
+		};
+	} else if (args.accessClientId || args.accessClientSecret) {
 		if (!args.accessClientId || !args.accessClientSecret) {
 			throw new UserError(
 				"You must provide both an Access Client ID and Access Client Secret when configuring Hyperdrive-over-Access"
 			);
 		}
 
-		if (!args.originHost || args.originHost == "") {
+		if (!args.originHost || args.originHost === "") {
 			throw new UserError(
 				"You must provide an origin hostname for the database"
 			);
@@ -315,22 +341,21 @@ export function getMtlsFromArgs(
 	const mtls = {
 		ca_certificate_id: args.caCertificateId,
 		mtls_certificate_id: args.mtlsCertificateId,
-		sslmode: args.sslmode,
+		sslmode: args.sslmode ? normalizeMysqlSslmode(args.sslmode) : undefined,
 	};
 
 	if (JSON.stringify(mtls) === "{}") {
 		return undefined;
 	} else {
-		if (mtls.sslmode == "require" && mtls.ca_certificate_id?.trim()) {
-			throw new UserError("CA not allowed when sslmode = 'require' is set");
-		}
-
 		if (
-			(mtls.sslmode == "verify-ca" || mtls.sslmode == "verify-full") &&
-			!mtls.ca_certificate_id?.trim()
+			mtls.sslmode &&
+			!PostgresSslmode.includes(mtls.sslmode) &&
+			!MySqlSslmode.includes(mtls.sslmode)
 		) {
 			throw new UserError(
-				"CA required when sslmode = 'verify-ca' or 'verify-full' is set"
+				`Invalid sslmode '${mtls.sslmode}'. Valid options are:\n` +
+					`- PostgreSQL: ${PostgresSslmode.join(", ")}\n` +
+					`- MySQL: ${MySqlSslmode.join(", ")}`
 			);
 		}
 		return mtls;

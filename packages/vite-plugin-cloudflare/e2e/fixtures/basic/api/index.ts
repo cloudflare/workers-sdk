@@ -28,19 +28,26 @@ export default {
 				requestAborted = true;
 			});
 
-			async function sendPing(writable: WritableStream) {
-				const writer = writable.getWriter();
-				const enc = new TextEncoder();
-
-				for (let i = 0; i < 6; i++) {
-					// Send 'ping' every 500ms to keep the connection alive for 3 seconds
-					await writer.write(enc.encode("ping\r\n"));
-					await scheduler.wait(500);
-				}
-			}
-
 			const { readable, writable } = new IdentityTransformStream();
-			ctx.waitUntil(sendPing(writable));
+			// Acquire the writer immediately before returning the Response
+			// to ensure the stream stays open for writes
+			const writer = writable.getWriter();
+			const enc = new TextEncoder();
+
+			ctx.waitUntil(
+				(async () => {
+					try {
+						for (let i = 0; i < 6; i++) {
+							// Send 'ping' every 500ms to keep the connection alive for 3 seconds
+							await writer.write(enc.encode("ping\r\n"));
+							await scheduler.wait(500);
+						}
+					} finally {
+						await writer.close();
+					}
+				})()
+			);
+
 			return new Response(readable, {
 				headers: { "Content-Type": "text/plain" },
 			});

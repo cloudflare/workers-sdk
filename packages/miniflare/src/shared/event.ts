@@ -1,4 +1,4 @@
-import { ValueOf } from "../workers";
+import type { ValueOf } from "../workers";
 
 export type TypedEventListener<E extends Event> =
 	| ((e: E) => void)

@@ -1,0 +1,10 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "cloudflare-devtools",
+	"compatibility_date": "2025-07-01",
+	"assets": {
+		"directory": "devtools-frontend/out/Default/gen/front_end",
+	},
+	"preview_urls": true,
+	"workers_dev": true,
+}

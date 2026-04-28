@@ -1,4 +1,5 @@
 import prompts from "prompts";
+// eslint-disable-next-line no-restricted-imports
 import { expect } from "vitest";
 import type { Mock } from "vitest";
 

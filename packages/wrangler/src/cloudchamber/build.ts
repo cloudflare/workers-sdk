@@ -164,11 +164,10 @@ export async function buildAndMaybePush(
 					);
 				}
 
-				const repositoryOnly = resolveImageName(
-					account.external_account_id,
-					imageTag
-				).split(":")[0];
-
+				const imageUrl = new URL(
+					`http://${resolveImageName(account.external_account_id, imageTag)}`
+				);
+				const repositoryOnly = `${imageUrl.host}${imageUrl.pathname.split(":")[0]}`;
 				logger.debug("respositoryOnly:", repositoryOnly);
 
 				// make sure the repository + name provided in wrangler config

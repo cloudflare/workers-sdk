@@ -1,7 +1,8 @@
 import { red } from "kleur/colors";
-import PostalMime, { Email } from "postal-mime";
+import PostalMime from "postal-mime";
 import { RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
+import type { Email } from "postal-mime";
 
 // Email Routing has some limits on what emails can be responded to, documented at https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/
 export async function isEmailReplyable(

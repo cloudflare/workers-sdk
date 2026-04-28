@@ -5,11 +5,11 @@ import { ReadableStream, TransformStream } from "node:stream/web";
 import util from "node:util";
 import { stringify } from "devalue";
 import { Headers } from "undici";
-import { DispatchFetch, Request, Response } from "../../../http";
+import { Request } from "../../../http";
 import { prefixStream, readPrefix } from "../../../shared";
 import {
-	Awaitable,
 	CoreHeaders,
+	CorePaths,
 	createHTTPReducers,
 	createHTTPRevivers,
 	isDurableObjectStub,
@@ -18,14 +18,19 @@ import {
 	parseWithReadableStreams,
 	ProxyAddresses,
 	ProxyOps,
-	ReducersRevivers,
-	StringifiedWithStream,
 	stringifyWithStreams,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "../../../workers";
-import { DECODER, SynchronousFetcher, SynchronousResponse } from "./fetch-sync";
+import { DECODER, SynchronousFetcher } from "./fetch-sync";
 import { NODE_PLATFORM_IMPL } from "./types";
+import type { DispatchFetch, Response } from "../../../http";
+import type {
+	Awaitable,
+	ReducersRevivers,
+	StringifiedWithStream,
+} from "../../../workers";
+import type { SynchronousResponse } from "./fetch-sync";
 import type {
 	ImageDrawOptions,
 	ImageOutputOptions,
@@ -97,7 +102,10 @@ export class ProxyClient {
 	#bridge: ProxyClientBridge;
 
 	constructor(runtimeEntryURL: URL, dispatchFetch: DispatchFetch) {
-		this.#bridge = new ProxyClientBridge(runtimeEntryURL, dispatchFetch);
+		this.#bridge = new ProxyClientBridge(
+			new URL(CorePaths.PLATFORM_PROXY, runtimeEntryURL),
+			dispatchFetch
+		);
 	}
 
 	// Lazily initialise proxies as required
@@ -120,7 +128,7 @@ export class ProxyClient {
 	setRuntimeEntryURL(runtimeEntryURL: URL) {
 		// This function will be called whenever the runtime restarts. The URL may
 		// be different if the port has changed.
-		this.#bridge.url = runtimeEntryURL;
+		this.#bridge.url = new URL(CorePaths.PLATFORM_PROXY, runtimeEntryURL);
 	}
 
 	dispose(): Promise<void> {
@@ -221,6 +229,7 @@ class ProxyClientBridge {
 			// the proxy target needs to be a function so that the consumer of the proxy
 			// can simply call it (if we didn't do this consumers would get a
 			// `x is not a function` type error)
+			// eslint-disable-next-line @typescript-eslint/no-implied-eval -- intentional: creates callable proxy target
 			proxyTarget = new Function();
 		} else {
 			proxyTarget = {};
@@ -246,6 +255,7 @@ class ProxyClientBridge {
 	}
 
 	dispose(): Promise<void> {
+		clearTimeout(this.#finalizeBatchTimeout);
 		this.poisonProxies();
 		return this.sync.dispose();
 	}
@@ -342,13 +352,16 @@ class ProxyStubHandler<T extends object>
 				},
 			};
 		};
+		const proxy = this.bridge.getProxy(target) as any;
 		const binding = {
 			info: (stream: ReadableStream<Uint8Array>) => {
-				// @ts-expect-error The stream types are mismatched
-				return (this.bridge.getProxy(target) as ImagesBinding)["info"](stream);
+				return proxy["info"](stream);
 			},
 			input: (stream: ReadableStream<Uint8Array>) => {
-				return transformer(this.bridge.getProxy(target), stream, []);
+				return transformer(proxy, stream, []);
+			},
+			get hosted(): ImagesBinding["hosted"] {
+				return proxy["hosted"];
 			},
 		};
 		return binding;
@@ -716,9 +729,12 @@ class ProxyStubHandler<T extends object>
 	#fetcherFetchCall(args: unknown[]) {
 		// @ts-expect-error `...args` isn't type-safe here, but `undici` should
 		//  validate types at runtime, and throw appropriate errors
-		const request = new Request(...args);
+		const userRequest = new Request(...args);
+		// Create a new request with the proxy URL, preserving the original request
+		const request = new Request(this.bridge.url, userRequest);
 		// If adding new headers here, remember to `delete()` them in `ProxyServer`
 		// before calling `fetch()`.
+		request.headers.set(CoreHeaders.OP_ORIGINAL_URL, userRequest.url);
 		request.headers.set(CoreHeaders.OP_SECRET, PROXY_SECRET_HEX);
 		request.headers.set(CoreHeaders.OP, ProxyOps.CALL);
 		request.headers.set(CoreHeaders.OP_TARGET, this.#stringifiedTarget);

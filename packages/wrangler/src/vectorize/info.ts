@@ -18,14 +18,16 @@ export const vectorizeInfoCommand = createCommand({
 			description: "The name of the Vectorize index.",
 		},
 		json: {
-			describe: "return output as clean JSON",
+			describe: "return output as JSON",
 			type: "boolean",
 			default: false,
 		},
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
-		logger.log(`📋 Fetching index info...`);
+		if (!args.json) {
+			logger.log(`📋 Fetching index info...`);
+		}
 		const info = await indexInfo(config, args.name);
 
 		if (args.json) {

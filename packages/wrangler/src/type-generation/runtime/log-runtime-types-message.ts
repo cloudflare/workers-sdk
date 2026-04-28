@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
 import chalk from "chalk";
-import { findUpMultipleSync } from "find-up";
+import * as find from "empathic/find";
 import { logger } from "../../logger";
 
 /**
@@ -42,14 +41,9 @@ export function logRuntimeTypesMessage(
 	);
 
 	if (!isNodeTypesInstalled && isNodeCompat) {
-		const nodeModules = findUpMultipleSync("node_modules", {
-			type: "directory",
-		});
-		for (const folder of nodeModules) {
-			if (nodeModules && existsSync(join(folder, "@types/node"))) {
-				isNodeTypesInstalled = true;
-				break;
-			}
+		const nodeModules = find.dir("node_modules/@types/node");
+		if (nodeModules) {
+			isNodeTypesInstalled = true;
 		}
 	}
 	if (isNodeCompat && !isNodeTypesInstalled) {

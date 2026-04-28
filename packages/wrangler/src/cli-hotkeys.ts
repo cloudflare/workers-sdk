@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
-import { dim } from "@cloudflare/cli/colors";
+import { dim } from "@cloudflare/cli-shared-helpers/colors";
 import { unwrapHook } from "./api/startDevWorker/utils";
 import { logger } from "./logger";
 import { onKeyPress } from "./utils/onKeyPress";
@@ -8,7 +8,7 @@ import type { Hook } from "./api";
 export default function (
 	options: Array<{
 		keys: string[];
-		disabled?: Hook<boolean>;
+		disabled?: Hook<boolean | undefined>;
 		label?: Hook<string>;
 		handler: () => void | Promise<void>;
 	}>,

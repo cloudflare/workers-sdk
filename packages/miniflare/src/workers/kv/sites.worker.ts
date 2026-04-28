@@ -5,12 +5,14 @@ import {
 	encodeSitesKey,
 	KVLimits,
 	KVParams,
-	SerialisableSiteMatcherRegExps,
 	SiteBindings,
-	SiteMatcherRegExps,
 	testSiteRegExps,
 } from "./constants";
 import { decodeListOptions, validateListOptions } from "./validator.worker";
+import type {
+	SerialisableSiteMatcherRegExps,
+	SiteMatcherRegExps,
+} from "./constants";
 
 interface Env {
 	[SharedBindings.MAYBE_SERVICE_BLOBS]: Fetcher;

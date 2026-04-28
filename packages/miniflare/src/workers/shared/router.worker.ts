@@ -1,4 +1,4 @@
-import { Awaitable } from "./types";
+import type { Awaitable } from "./types";
 
 export class HttpError extends Error {
 	constructor(

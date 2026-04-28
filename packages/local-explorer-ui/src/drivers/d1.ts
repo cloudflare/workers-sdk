@@ -1,4 +1,4 @@
-import { cloudflareD1RawDatabaseQuery } from "../api";
+import { d1RawDatabaseQuery } from "../api";
 import { transformStudioArrayBasedResult } from "../utils/studio";
 import { StudioSQLiteDriver } from "./sqlite";
 import type { D1RawResultResponse } from "../api";
@@ -52,7 +52,7 @@ export class LocalD1Connection implements IStudioConnection {
 			s.trim().replace(/;+$/, "")
 		);
 
-		const response = await cloudflareD1RawDatabaseQuery({
+		const response = await d1RawDatabaseQuery({
 			body: {
 				sql: trimmedStatements.join(";"),
 			},
@@ -77,10 +77,12 @@ export class LocalD1Connection implements IStudioConnection {
 	 * @returns A normalised result set for use by the studio UI.
 	 */
 	private transformResult(result: D1RawResultResponse): StudioResultSet {
+		const rows = (result.results?.rows ?? []) as unknown[][];
+
 		return {
 			...transformStudioArrayBasedResult({
 				headers: result.results?.columns ?? [],
-				rows: (result.results?.rows ?? []) as unknown[][],
+				rows,
 				transformHeader: (headerName) => ({
 					name: headerName,
 					displayName: headerName,
@@ -92,6 +94,7 @@ export class LocalD1Connection implements IStudioConnection {
 				rowsAffected: result.meta?.changes ?? 0,
 				rowsRead: result.meta?.rows_read ?? null,
 				rowsWritten: result.meta?.rows_written ?? null,
+				rowCount: rows.length,
 			},
 		};
 	}

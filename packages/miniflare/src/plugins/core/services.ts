@@ -1,15 +1,9 @@
 import { z } from "zod";
-import { Request, Response } from "../../http";
-import {
-	HOST_CAPNP_CONNECT,
-	Miniflare,
-	RemoteProxyConnectionString,
-} from "../../index";
-import {
-	ExternalServer,
-	HttpOptions_Style,
-	TlsOptions_Version,
-} from "../../runtime";
+import { HOST_CAPNP_CONNECT } from "../../index";
+import { HttpOptions_Style, TlsOptions_Version } from "../../runtime";
+import type { Request, Response } from "../../http";
+import type { Miniflare, RemoteProxyConnectionString } from "../../index";
+import type { ExternalServer } from "../../runtime";
 import type { Awaitable } from "../../workers";
 import type * as http from "node:http";
 

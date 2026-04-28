@@ -11,5 +11,5 @@ export function getLegacyScriptName(
 ) {
 	return args.name && args.env && !useServiceEnvironments(config)
 		? `${args.name}-${args.env}`
-		: args.name ?? config.name;
+		: (args.name ?? config.name);
 }
