@@ -3,9 +3,10 @@ import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import {
 	configFileName,
+	formatConfigSnippet,
+	getTodaysCompatDate,
 	getDisableConfigWatching,
 	getDockerPath,
-	getLocalWorkerdCompatibilityDate,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
@@ -159,12 +160,13 @@ async function resolveDevConfig(
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
 		containerEngine: useContainers
-			? input.dev?.containerEngine ??
+			? (input.dev?.containerEngine ??
 				config.dev.container_engine ??
-				resolveDockerHost(input.dev?.dockerPath ?? getDockerPath())
+				resolveDockerHost(input.dev?.dockerPath ?? getDockerPath()))
 			: undefined,
 		containerBuildId: input.dev?.containerBuildId,
 		generateTypes: input.dev?.generateTypes ?? config.dev.generate_types,
+		tunnel: input.dev?.tunnel,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -466,7 +468,7 @@ async function resolveConfig(
 /**
  * Returns the compatibility date to use in development.
  *
- * When no compatibility date is configured, uses the installed Workers runtime's latest supported date.
+ * When no compatibility date is configured, uses today's date.
  *
  * @param config wrangler configuration
  * @param compatibilityDate configured compatibility date
@@ -477,19 +479,17 @@ function getDevCompatibilityDate(
 	config: Config | undefined,
 	compatibilityDate = config?.compatibility_date
 ): string {
-	const { date: workerdDate } = getLocalWorkerdCompatibilityDate({
-		projectPath,
-	});
+	const todaysDate = getTodaysCompatDate();
 
 	if (config?.configPath && compatibilityDate === undefined) {
 		logger.warn(
-			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${workerdDate}.\n` +
-				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${workerdDate}", or\n` +
-				`❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=${workerdDate}\n\n` +
+			`No compatibility_date was specified. Using today's date: ${todaysDate}.\n` +
+				`❯❯ Add one to your ${configFileName(config.configPath)} file: ${formatConfigSnippet({ compatibility_date: todaysDate }, config.configPath, false).trim()}, or\n` +
+				`❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=${todaysDate}\n\n` +
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);
 	}
-	return compatibilityDate ?? workerdDate;
+	return compatibilityDate ?? todaysDate;
 }
 
 export class ConfigController extends Controller {

@@ -236,12 +236,12 @@ You must manually define your modules when constructing Miniflare:
     ...,
     modules: [
       { type: "ESModule", path: "index-dynamic.mjs" },
-      { type: "CommonJS", path: "index.cjs" },
-      { type: "CommonJS", path: "index.node.cjs" },
       { type: "ESModule", path: "blobs-indirect.mjs" },
       { type: "ESModule", path: "blobs.mjs" },
       { type: "Text", path: "blobs/text.txt" },
       { type: "Data", path: "blobs/data.bin" },
+      { type: "CommonJS", path: "index.cjs" },
+      { type: "CommonJS", path: "index.node.cjs" },
       { type: "CompiledWasm", path: "add.wasm" },
       ...
     ]
@@ -338,4 +338,45 @@ If you're trying to import an npm package, you'll need to bundle your Worker fir
 	expect(error?.message).toMatch(
 		/^Unable to resolve "index\.mjs" dependency "node:assert": no matching module rules\.\nIf you're trying to import a Node\.js built-in module, or an npm package that uses Node\.js built-ins, you'll either need to:/
 	);
+});
+test("Miniflare: parses source phase imports without error", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const wasmPath = path.join(tmp, "module.wasm");
+	const workerPath = path.join(tmp, "index.mjs");
+
+	// Create a minimal wasm file
+	await fs.writeFile(
+		wasmPath,
+		Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])
+	);
+
+	// Create a worker that uses source phase import syntax
+	await fs.writeFile(
+		workerPath,
+		`import source wasmModule from "./module.wasm";
+export default {
+  async fetch() {
+    return new Response("source phase import parsed successfully");
+  }
+};`
+	);
+
+	// Verify the worker can be loaded without parse errors
+	// Note: workerd doesn't actually support source phase imports at runtime,
+	// but we need to ensure the parser doesn't fail on the syntax
+	const mf = new Miniflare({
+		modules: true,
+		modulesRoot: tmp,
+		modulesRules: [{ type: "CompiledWasm", include: ["**/*.wasm"] }],
+		compatibilityDate: "2023-08-01",
+		scriptPath: workerPath,
+	});
+	useDispose(mf);
+
+	// The worker should be able to load (even if the source phase import
+	// is not fully functional at runtime)
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("source phase import parsed successfully");
 });

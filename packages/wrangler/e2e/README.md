@@ -39,15 +39,32 @@ pnpm test:e2e:wrangler -- -u --bail=1
 ### Cloudflare Credentials
 
 Cloudflare credentials are provided to the tests by setting `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`.
+If you don't provide these then only the local e2e tests are executed.
 
-- If you don't provide these then only the local e2e tests are executed.
-- If you don't provide the "DevProd Testing" Cloudflare account (as `CLOUDFLARE_ACCOUNT_ID=8d783f274e1f82dc46744c297b015a2f`), tests that require that specific account are not executed.
+#### Running against the CI account
 
-To fully run the tests you should generate an API token for the "DevProd Testing" account:
+The default configuration targets the "DevProd Testing" account. To fully run the tests, generate an API token for that account:
 
 ```zsh
 CLOUDFLARE_ACCOUNT_ID=8d783f274e1f82dc46744c297b015a2f CLOUDFLARE_API_TOKEN=<cloudflare-testing-api-token> pnpm test:e2e:wrangler
 ```
+
+#### Running against your own account
+
+You can run the e2e tests against any Cloudflare account. Some tests rely on
+pre-deployed `preserve-e2e-*` workers whose URL includes the account's
+`workers.dev` subdomain. Set `E2E_ACCOUNT_WORKERS_DEV_DOMAIN` so these tests
+can locate (and, on first run, deploy) those workers on your account:
+
+```zsh
+CLOUDFLARE_ACCOUNT_ID=<your-account-id> \
+CLOUDFLARE_API_TOKEN=<your-api-token> \
+E2E_ACCOUNT_WORKERS_DEV_DOMAIN=<your-subdomain>.workers.dev \
+pnpm test:e2e:wrangler
+```
+
+> You can find your subdomain in the Cloudflare dashboard under **Workers & Pages**.
+> It defaults to `devprod-testing7928.workers.dev` (the CI account).
 
 ### Focusing on a single e2e test file
 

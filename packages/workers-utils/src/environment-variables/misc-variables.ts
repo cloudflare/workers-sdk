@@ -339,11 +339,30 @@ export const getOpenNextDeployFromEnv = getEnvironmentVariableFactory({
 
 /**
  * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/explorer.
- * This is an experimental feature flag. Defaults to false when not set.
  */
 export const getLocalExplorerEnabledFromEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "X_LOCAL_EXPLORER",
+		defaultValue: true,
+	});
+
+/**
+ * `X_BROWSER_HEADFUL` opens the browser in headful (visible) mode when using the
+ * Browser Run API in local development.
+ *
+ * Set to "true" to enable:
+ *
+ * ```sh
+ * X_BROWSER_HEADFUL=true vite dev
+ * ```
+ *
+ * Note: when using `@cloudflare/playwright`, two Chrome windows may appear — the initial blank
+ * page and the one created by `browser.newPage()`. This is expected due to how Playwright handles
+ * browser contexts via CDP.
+ */
+export const getBrowserRenderingHeadfulFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "X_BROWSER_HEADFUL",
 		defaultValue: false,
 	});
 
@@ -391,4 +410,14 @@ export const getCfFetchPathFromEnv = getEnvironmentVariableFactory({
  */
 export const getWranglerCacheDirFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CACHE_DIR",
+});
+
+/**
+ * `CLOUDFLARED_PATH` specifies a custom path to a cloudflared binary.
+ *
+ * If set, Wrangler will use this cloudflared binary instead of downloading one.
+ * The path must point to an existing executable file.
+ */
+export const getCloudflaredPathFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARED_PATH",
 });

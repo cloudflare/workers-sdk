@@ -414,6 +414,14 @@ async function getDefaultService(
 	return service.default_environment.environment;
 }
 
+export async function listConsumers(
+	config: Config,
+	queueName: string
+): Promise<Consumer[]> {
+	const queue = await getQueue(config, queueName);
+	return queue.consumers;
+}
+
 export async function deleteWorkerConsumer(
 	config: Config,
 	queueName: string,

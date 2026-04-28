@@ -1,0 +1,9 @@
+{
+	"name": "dynamic-import",
+	"main": "src/index.ts",
+	// don't provide compatibility_date so that vitest will infer the latest one
+	"durable_objects": {
+		"bindings": [{ "name": "GREETER", "class_name": "GreeterDO" }],
+	},
+	"migrations": [{ "tag": "v1", "new_classes": ["GreeterDO"] }],
+}

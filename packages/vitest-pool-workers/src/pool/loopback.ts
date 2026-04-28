@@ -77,7 +77,10 @@ export async function listDurableObjectIds(
 	try {
 		const names = await fs.readdir(namespacePath);
 		for (const name of names) {
-			if (name.endsWith(".sqlite")) {
+			// Exclude metadata.sqlite, added by newer workerd versions for
+			// per-namespace metadata. Only include files whose stem is a
+			// valid 64-hex-digit Durable Object ID.
+			if (name.endsWith(".sqlite") && name !== "metadata.sqlite") {
 				ids.push(name.substring(0, name.length - 7 /* ".sqlite".length */));
 			}
 		}

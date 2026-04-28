@@ -2,16 +2,15 @@ import fs from "node:fs/promises";
 import SCRIPT_WORKFLOWS_BINDING from "worker:workflows/binding";
 import SCRIPT_WORKFLOWS_WRAPPED_BINDING from "worker:workflows/wrapped-binding";
 import { z } from "zod";
-import { Service } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
 	getUserBindingServiceName,
 	PersistenceSchema,
-	Plugin,
 	ProxyNodeBinding,
-	RemoteProxyConnectionString,
 } from "../shared";
+import type { Service } from "../../runtime";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const WorkflowsOptionsSchema = z.object({
 	workflows: z
@@ -24,6 +23,7 @@ export const WorkflowsOptionsSchema = z.object({
 					.custom<RemoteProxyConnectionString>()
 					.optional(),
 				stepLimit: z.number().int().min(1).optional(),
+				compatibilityFlags: z.string().array().optional(),
 			})
 		)
 		.optional(),
@@ -74,7 +74,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 		);
 	},
 
-	getExtensions({}) {
+	getExtensions() {
 		return [
 			{
 				modules: [
@@ -119,6 +119,10 @@ export const WORKFLOWS_PLUGIN: Plugin<
 					),
 					worker: {
 						compatibilityDate: "2024-10-22",
+						compatibilityFlags: [
+							"experimental",
+							...(workflow.compatibilityFlags ?? []),
+						],
 						modules: [
 							{
 								name: "workflows.mjs",

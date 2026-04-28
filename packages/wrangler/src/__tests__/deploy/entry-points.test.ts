@@ -1,5 +1,3 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { findWranglerConfig } from "@cloudflare/workers-utils";
@@ -10,7 +8,7 @@ import {
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -65,7 +63,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("../../autoconfig/c3-vendor/command");
+vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -103,7 +101,9 @@ describe("deploy", () => {
 	});
 
 	describe("entry-points", () => {
-		it("should be able to use `index` with no extension as the entry-point (esm)", async () => {
+		it("should be able to use `index` with no extension as the entry-point (esm)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockUploadWorkerRequest({ expectedType: "esm" });
@@ -125,7 +125,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to use `index` with no extension as the entry-point (sw)", async () => {
+		it("should be able to use `index` with no extension as the entry-point (sw)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource({ type: "sw" });
 			mockUploadWorkerRequest({
@@ -150,7 +152,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to use the `main` config as the entry-point for ESM sources", async () => {
+		it("should be able to use the `main` config as the entry-point for ESM sources", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({ main: "./index.js" });
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -172,7 +176,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use `main` relative to the wrangler.toml not cwd", async () => {
+		it("should use `main` relative to the wrangler.toml not cwd", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "./foo/index.js",
 			});
@@ -196,7 +202,7 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to transpile TypeScript (esm)", async () => {
+		it("should be able to transpile TypeScript (esm)", async ({ expect }) => {
 			writeWranglerConfig();
 			writeWorkerSource({ format: "ts" });
 			mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
@@ -217,7 +223,7 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to transpile TypeScript (sw)", async () => {
+		it("should be able to transpile TypeScript (sw)", async ({ expect }) => {
 			writeWranglerConfig();
 			writeWorkerSource({ format: "ts", type: "sw" });
 			mockUploadWorkerRequest({
@@ -242,7 +248,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should add referenced text modules into the form upload", async () => {
+		it("should add referenced text modules into the form upload", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"./index.js",
@@ -278,7 +286,7 @@ export default{
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should allow cloudflare module import", async () => {
+		it("should allow cloudflare module import", async ({ expect }) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"./index.js",
@@ -308,7 +316,9 @@ export default{
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to transpile entry-points in sub-directories (esm)", async () => {
+		it("should be able to transpile entry-points in sub-directories (esm)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource({ basePath: "./src" });
 			mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
@@ -330,7 +340,9 @@ export default{
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not trigger autoconfig on `wrangler deploy <script>` when called with `--x-autoconfig`", async () => {
+		it("should not trigger autoconfig on `wrangler deploy <script>` when called with `--x-autoconfig`", async ({
+			expect,
+		}) => {
 			vi.mock(import("../../autoconfig/details"), { spy: true });
 			vi.mock(import("../../autoconfig/run"), { spy: true });
 
@@ -352,7 +364,9 @@ export default{
 			expect(runAutoConfigSpy).not.toHaveBeenCalled();
 		});
 
-		it("should preserve exports on a module format worker", async () => {
+		it("should preserve exports on a module format worker", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"index.js",
@@ -396,7 +410,9 @@ export default {};`
 			`);
 		});
 
-		it("should not preserve exports on a service-worker format worker", async () => {
+		it("should not preserve exports on a service-worker format worker", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"index.js",
@@ -436,7 +452,9 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should be able to transpile entry-points in sub-directories (sw)", async () => {
+		it("should be able to transpile entry-points in sub-directories (sw)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource({ basePath: "./src", type: "sw" });
 			mockUploadWorkerRequest({
@@ -462,7 +480,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it('should error if a site definition doesn\'t have a "bucket" field', async () => {
+		it('should error if a site definition doesn\'t have a "bucket" field', async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				// @ts-expect-error we're intentionally setting an invalid config
 				site: {},
@@ -504,7 +524,9 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should warn if there is a `site.entry-point` configuration", async () => {
+		it("should warn if there is a `site.entry-point` configuration", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -524,8 +546,8 @@ addEventListener('fetch', event => {});`
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("deploy ./index.js");
 
@@ -563,7 +585,9 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should resolve site.entry-point relative to wrangler.toml", async () => {
+		it("should resolve site.entry-point relative to wrangler.toml", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -586,8 +610,8 @@ addEventListener('fetch', event => {});`
 			process.chdir("..");
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("deploy --config ./my-site/wrangler.toml");
 
@@ -626,7 +650,9 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should error if both main and site.entry-point are specified", async () => {
+		it("should error if both main and site.entry-point are specified", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "some-entry",
 				site: {
@@ -644,7 +670,9 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should error if there is no entry-point specified", async () => {
+		it("should error if there is no entry-point specified", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -729,7 +757,7 @@ addEventListener('fetch', event => {});`
 				msw.use(handler);
 			}
 
-			it("with TypeScript source file", async () => {
+			it("with TypeScript source file", async ({ expect }) => {
 				writeWranglerConfig();
 				fs.writeFileSync(
 					`index.ts`,
@@ -753,7 +781,7 @@ addEventListener('fetch', event => {});`
 				});
 			});
 
-			it("with additional modules", async () => {
+			it("with additional modules", async ({ expect }) => {
 				writeWranglerConfig({
 					no_bundle: true,
 					rules: [{ type: "ESModule", globs: ["**/*.js"] }],
@@ -794,7 +822,7 @@ addEventListener('fetch', event => {});`
 				});
 			});
 
-			it("with inline source map", async () => {
+			it("with inline source map", async ({ expect }) => {
 				writeWranglerConfig({
 					no_bundle: true,
 				});
@@ -842,7 +870,7 @@ addEventListener('fetch', event => {});`
 					{ filePath: "index.html", content: "<html>test</html>" },
 				];
 				writeAssets(assets);
-				expect(findWranglerConfig().configPath).toBe(undefined);
+				assert(findWranglerConfig().configPath === undefined);
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					expectedAssets: {
@@ -858,7 +886,7 @@ addEventListener('fetch', event => {});`
 			});
 
 			// TODO: remove this test once autoconfig goes GA and its experimental opt-in flag is removed
-			it("should handle `wrangler deploy <directory>`", async () => {
+			it("should handle `wrangler deploy <directory>`", async ({ expect }) => {
 				mockConfirm({
 					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
 					result: true,
@@ -927,7 +955,9 @@ addEventListener('fetch', event => {});`
 				`);
 			});
 
-			it("should handle interactive `wrangler deploy <directory>` flows without triggering autoconfig when called with `--x-autoconfig`", async () => {
+			it("should handle interactive `wrangler deploy <directory>` flows without triggering autoconfig when called with `--x-autoconfig`", async ({
+				expect,
+			}) => {
 				vi.mock(import("../../autoconfig/details"), { spy: true });
 				vi.mock(import("../../autoconfig/run"), { spy: true });
 
@@ -1009,7 +1039,9 @@ addEventListener('fetch', event => {});`
 			});
 
 			// TODO: remove this test once autoconfig goes GA and its experimental opt-in flag is removed
-			it("should handle `wrangler deploy --assets` without name or compat date", async () => {
+			it("should handle `wrangler deploy --assets` without name or compat date", async ({
+				expect,
+			}) => {
 				// if the user has used --assets flag and args.script is not set, we just need to prompt for the name and add compat date
 				mockPrompt({
 					text: "What do you want to name your project?",
@@ -1074,7 +1106,9 @@ addEventListener('fetch', event => {});`
 				`);
 			});
 
-			it("should handle `wrangler deploy --assets` without name or compat date without triggering autoconfig when called with `--x-autoconfig`", async () => {
+			it("should handle `wrangler deploy --assets` without name or compat date without triggering autoconfig when called with `--x-autoconfig`", async ({
+				expect,
+			}) => {
 				vi.mock(import("../../autoconfig/details"), { spy: true });
 				vi.mock(import("../../autoconfig/run"), { spy: true });
 
@@ -1151,7 +1185,9 @@ addEventListener('fetch', event => {});`
 				expect(runAutoConfigSpy).not.toHaveBeenCalled();
 			});
 
-			it("should not trigger autoconfig on `wrangler deploy <script>` when called with `--x-autoconfig`", async () => {
+			it("should not trigger autoconfig on `wrangler deploy <script>` when called with `--x-autoconfig`", async ({
+				expect,
+			}) => {
 				vi.mock(import("../../autoconfig/details"), { spy: true });
 				vi.mock(import("../../autoconfig/run"), { spy: true });
 
@@ -1232,7 +1268,9 @@ addEventListener('fetch', event => {});`
 				expect(runAutoConfigSpy).not.toHaveBeenCalled();
 			});
 
-			it("should suggest 'my-project' if the default name from the cwd is invalid", async () => {
+			it("should suggest 'my-project' if the default name from the cwd is invalid", async ({
+				expect,
+			}) => {
 				process.chdir("../");
 				fs.renameSync("my-site", "[blah]");
 				process.chdir("[blah]");
@@ -1273,7 +1311,9 @@ addEventListener('fetch', event => {});`
 					`);
 			});
 
-			it("should bail if the user denies that they are trying to deploy a directory", async () => {
+			it("should bail if the user denies that they are trying to deploy a directory", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
 					result: false,
@@ -1290,7 +1330,9 @@ addEventListener('fetch', event => {});`
 				`);
 			});
 
-			it("does not write out a wrangler config file if the user says no", async () => {
+			it("does not write out a wrangler config file if the user says no", async ({
+				expect,
+			}) => {
 				mockPrompt({
 					text: "What do you want to name your project?",
 					options: { defaultValue: "my-site" },

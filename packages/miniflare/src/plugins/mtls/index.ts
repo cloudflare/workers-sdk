@@ -1,11 +1,10 @@
 import { z } from "zod";
 import {
 	getUserBindingServiceName,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 } from "../shared";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const MtlsSchema = z.object({
 	certificate_id: z.string(),

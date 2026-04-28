@@ -7,9 +7,7 @@ import { removeDirSync } from "@cloudflare/workers-utils";
 import { DeferredPromise, Response } from "miniflare";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- large test file with many patterns */
-import { assert, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { assert, describe, it } from "vitest";
 import WebSocket from "ws";
 import { createPostgresEchoHandler } from "../../../../e2e/helpers/postgres-echo-handler";
 import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
@@ -139,7 +137,7 @@ describe("LocalRuntimeController", () => {
 	const teardown = useTeardown();
 
 	describe("Core", () => {
-		it("should start Miniflare with module worker", async () => {
+		it("should start Miniflare with module worker", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -205,7 +203,7 @@ describe("LocalRuntimeController", () => {
 				],
 				id: 0,
 				path: "/virtual/esm/index.mjs",
-				entrypointSource: dedent/*javascript*/ `
+				entrypointSource: dedent /*javascript*/ `
 				import add from "./add.cjs";
 				import base64 from "./base64.cjs";
 				import wave1 from "./data/wave.txt";
@@ -294,7 +292,7 @@ describe("LocalRuntimeController", () => {
 			`);
 			}
 		});
-		it("should start Miniflare with service worker", async () => {
+		it("should start Miniflare with service worker", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -305,7 +303,7 @@ describe("LocalRuntimeController", () => {
 			};
 			const bundle: Bundle = {
 				type: "commonjs",
-				entrypointSource: dedent/*javascript*/ `
+				entrypointSource: dedent /*javascript*/ `
 				addEventListener("fetch", (event) => {
 					const { pathname } = new URL(event.request.url);
 					if (pathname === "/") {
@@ -390,7 +388,7 @@ describe("LocalRuntimeController", () => {
 			`);
 			}
 		});
-		it("should update the running Miniflare instance", async () => {
+		it("should update the running Miniflare instance", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -403,7 +401,7 @@ describe("LocalRuntimeController", () => {
 						VERSION: { type: "json", value: version },
 					},
 				} satisfies Partial<StartDevWorkerOptions>;
-				const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 					export default {
 						fetch(request, env, ctx) {
 							return Response.json({ binding: env.VERSION, bundle: ${version} });
@@ -442,7 +440,9 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.json()).toEqual({ binding: 5, bundle: 5 });
 		});
-		it("should start Miniflare with configured compatibility settings", async () => {
+		it("should start Miniflare with configured compatibility settings", async ({
+			expect,
+		}) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -457,7 +457,7 @@ describe("LocalRuntimeController", () => {
 				entrypoint: "NOT_REAL",
 				compatibilityDate: disabledDate,
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					fetch(request, env, ctx) { return new Response(typeof navigator); }
 				}
@@ -507,7 +507,9 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("object");
 		});
-		it("should start inspector on random port and allow debugging", async () => {
+		it("should start inspector on random port and allow debugging", async ({
+			expect,
+		}) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -516,7 +518,7 @@ describe("LocalRuntimeController", () => {
 				name: "worker",
 				entrypoint: "NOT_REAL",
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					fetch(request, env, ctx) {
 						debugger;
@@ -577,7 +579,7 @@ describe("LocalRuntimeController", () => {
 	});
 
 	describe("Bindings", () => {
-		it("should expose basic bindings", async () => {
+		it("should expose basic bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -594,7 +596,7 @@ describe("LocalRuntimeController", () => {
 					},
 				},
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 			export default {
 				fetch(request, env, ctx) {
 					const body = JSON.stringify(env, (key, value) => {
@@ -625,7 +627,9 @@ describe("LocalRuntimeController", () => {
 				DATA: { $type: "ArrayBuffer", value: [1, 2, 3] },
 			});
 		});
-		it("should expose WebAssembly module bindings in service workers", async () => {
+		it("should expose WebAssembly module bindings in service workers", async ({
+			expect,
+		}) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -661,7 +665,7 @@ describe("LocalRuntimeController", () => {
 			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("3");
 		});
-		it("should persist cached data", async () => {
+		it("should persist cached data", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -672,7 +676,7 @@ describe("LocalRuntimeController", () => {
 				dev: { persist: "./persist" },
 			};
 
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						const key = "http://localhost/";
@@ -733,7 +737,7 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("miss");
 		});
-		it("should not persist data when persist is false", async () => {
+		it("should not persist data when persist is false", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -746,7 +750,7 @@ describe("LocalRuntimeController", () => {
 				name: "worker",
 			} satisfies Partial<StartDevWorkerOptions>;
 
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						const key = "http://localhost/";
@@ -801,7 +805,7 @@ describe("LocalRuntimeController", () => {
 			// Data should be gone since persistence was disabled
 			expect(await res.text()).toBe("miss");
 		});
-		it("should expose KV namespace bindings", async () => {
+		it("should expose KV namespace bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -812,7 +816,7 @@ describe("LocalRuntimeController", () => {
 				bindings: { NAMESPACE: { type: "kv_namespace", id: "ns" } },
 				dev: { persist: "./persist" },
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						if (request.method === "POST") await env.NAMESPACE.put("key", "value");
@@ -865,7 +869,7 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("");
 		});
-		it("should support Secrets Store bindings", async () => {
+		it("should support Secrets Store bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -881,7 +885,7 @@ describe("LocalRuntimeController", () => {
 				(api) => api.create(secretValue)
 			);
 
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						return new Response(await env.SECRET.get());
@@ -911,12 +915,12 @@ describe("LocalRuntimeController", () => {
 			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe(secretValue);
 		});
-		it("should support Hello World bindings", async () => {
+		it("should support Hello World bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						if (request.method === "POST") {
@@ -974,7 +978,7 @@ describe("LocalRuntimeController", () => {
 			expect(await res4.text()).toBe("Not found");
 			expect(res4.status).toBe(404);
 		});
-		it("should support Workers Sites bindings", async () => {
+		it("should support Workers Sites bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -988,7 +992,7 @@ describe("LocalRuntimeController", () => {
 				entrypoint: "NOT_REAL",
 				legacy: { site: { bucket: ".", include: ["*.txt"] } },
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				import manifestJSON from "__STATIC_CONTENT_MANIFEST";
 				const manifest = JSON.parse(manifestJSON);
 				export default {
@@ -1046,7 +1050,7 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(new URL("/secrets.txt", url));
 			expect(res.status).toBe(404);
 		});
-		it("should expose R2 bucket bindings", async () => {
+		it("should expose R2 bucket bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -1057,7 +1061,7 @@ describe("LocalRuntimeController", () => {
 				bindings: { BUCKET: { type: "r2_bucket", bucket_name: "bucket" } },
 				dev: { persist: "./persist" },
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						if (request.method === "POST") await env.BUCKET.put("key", "value");
@@ -1111,7 +1115,7 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("");
 		});
-		it("should expose D1 database bindings", async () => {
+		it("should expose D1 database bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -1124,7 +1128,7 @@ describe("LocalRuntimeController", () => {
 				},
 				dev: { persist: "./persist" },
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						await env.DB.exec("CREATE TABLE IF NOT EXISTS entries (key text PRIMARY KEY, value text)");
@@ -1181,7 +1185,9 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.json()).toEqual([]);
 		});
-		it("should expose queue producer bindings and consume queue messages", async () => {
+		it("should expose queue producer bindings and consume queue messages", async ({
+			expect,
+		}) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -1205,7 +1211,7 @@ describe("LocalRuntimeController", () => {
 				],
 				dev: { persist: "./persist" },
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						await env.QUEUE.send("message");
@@ -1235,7 +1241,7 @@ describe("LocalRuntimeController", () => {
 			expect(res.status).toBe(204);
 			expect(await reportPromise).toEqual(["message"]);
 		});
-		it("should expose hyperdrive bindings - default", async () => {
+		it("should expose hyperdrive bindings - default", async ({ expect }) => {
 			// Start TCP echo server
 			const server = net.createServer((socket) => {
 				socket.on("data", createPostgresEchoHandler(socket));
@@ -1261,7 +1267,7 @@ describe("LocalRuntimeController", () => {
 					DB: { type: "hyperdrive", id: "db", localConnectionString },
 				},
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						const socket = env.DB.connect();
@@ -1291,7 +1297,9 @@ describe("LocalRuntimeController", () => {
 			expect(res.status).toBe(200);
 			expect(await res.text()).toBe("👋");
 		});
-		it("should expose hyperdrive bindings - sslmode 'prefer'", async () => {
+		it("should expose hyperdrive bindings - sslmode 'prefer'", async ({
+			expect,
+		}) => {
 			// Start TCP echo server
 			const server = net.createServer((socket) => {
 				socket.on("data", createPostgresEchoHandler(socket));
@@ -1346,7 +1354,9 @@ describe("LocalRuntimeController", () => {
 			expect(res.status).toBe(200);
 			expect(await res.text()).toBe("👋");
 		});
-		it("should expose hyperdrive bindings - sslmode 'require' fails", async () => {
+		it("should expose hyperdrive bindings - sslmode 'require' fails", async ({
+			expect,
+		}) => {
 			// Start TCP echo server
 			const server = net.createServer((socket) => {
 				socket.on("data", createPostgresEchoHandler(socket));
@@ -1408,12 +1418,12 @@ describe("LocalRuntimeController", () => {
 				"Error: Server does not support SSL, but client requires SSL"
 			);
 		});
-		it("should support Pipeline bindings", async () => {
+		it("should support Pipeline bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						let log = {
@@ -1449,12 +1459,12 @@ describe("LocalRuntimeController", () => {
 			const res = await fetch(url);
 			await expect(res.text()).resolves.toBe("Data sent to env.PIPELINE");
 		});
-		it("should support Images bindings", async () => {
+		it("should support Images bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						return new Response("env.IMAGES is " + (env.IMAGES === undefined ? "not available" : "available"));

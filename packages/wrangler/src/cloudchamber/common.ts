@@ -1,6 +1,9 @@
-import { space, updateStatus } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { space, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import {
+	inputPrompt,
+	spinner,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	ApiError,
 	DeploymentMutationError,
@@ -25,7 +28,7 @@ import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Arg } from "@cloudflare/cli/interactive";
+import type { Arg } from "@cloudflare/cli-shared-helpers/interactive";
 import type {
 	CompleteAccountCustomer,
 	EnvironmentVariable,
@@ -109,10 +112,9 @@ export function handleFailure<
 		const isJson = "json" in args ? args.json === true : false;
 		if (!isNonInteractiveOrCI() && !isJson) {
 			await printWranglerBanner();
-			const commandStatus = command.includes("cloudchamber")
-				? "alpha"
-				: "open beta";
-			logger.warn(constructStatusMessage(command, commandStatus));
+			if (scope === cloudchamberScope) {
+				logger.warn(constructStatusMessage(command, "alpha"));
+			}
 		}
 		const config = readConfig(args);
 		await fillOpenAPIConfiguration(config, scope);

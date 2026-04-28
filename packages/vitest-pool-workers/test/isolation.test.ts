@@ -8,7 +8,7 @@ test(
 		// Check unique global scopes, storage isolated, and unique auxiliaries:
 		// https://developers.cloudflare.com/workers/testing/vitest-integration/isolation-and-concurrency/#isolatedstorage-true-singleworker-false-default
 		await seed({
-			"auxiliary.mjs": dedent/* javascript */ `
+			"auxiliary.mjs": dedent /* javascript */ `
 				let count = 0;
 				export default {
 					fetch() {
@@ -31,7 +31,7 @@ test(
 					],
 				},
 			}),
-			"a.test.ts": dedent/* javascript */ `
+			"a.test.ts": dedent /* javascript */ `
 				import { env } from "cloudflare:test";
 				import { it, expect } from "vitest";
 				it("does something", async () => {
@@ -45,7 +45,7 @@ test(
 					expect(await response.text()).toBe("1");
 				});
 			`,
-			"b.test.ts": dedent/* javascript */ `
+			"b.test.ts": dedent /* javascript */ `
 				import { env } from "cloudflare:test";
 				import { it, expect } from "vitest";
 				it("does something else", async () => {
@@ -95,7 +95,7 @@ test(
 					],
 				},
 			}),
-			"a.test.ts": dedent/* javascript */ `
+			"a.test.ts": dedent /* javascript */ `
 				import { env } from "cloudflare:test";
 				import { it, expect } from "vitest";
 				it("does something", async () => {
@@ -106,7 +106,7 @@ test(
 					expect(await response.text()).toBe("1");
 				});
 			`,
-			"b.test.ts": dedent/* javascript */ `
+			"b.test.ts": dedent /* javascript */ `
 				import { env } from "cloudflare:test";
 				import { it, expect } from "vitest";
 				it("does something else", async () => {
@@ -130,7 +130,7 @@ test(
 	async ({ expect, seed, vitestRun }) => {
 		// With --no-isolate --max-workers=1, test files share globals, storage, and auxiliaries
 		await seed({
-			"auxiliary.mjs": dedent/* javascript */ `
+			"auxiliary.mjs": dedent /* javascript */ `
 				let count = 0;
 				export default {
 					fetch() {
@@ -153,7 +153,7 @@ test(
 					],
 				},
 			}),
-			"a.test.ts": dedent/* javascript */ `
+			"a.test.ts": dedent /* javascript */ `
 				import { env } from "cloudflare:test";
 				import { it, expect } from "vitest";
 				it("does something", async () => {
@@ -167,7 +167,7 @@ test(
 					expect(await response.text()).toBe("1");
 				});
 			`,
-			"b.test.ts": dedent/* javascript */ `
+			"b.test.ts": dedent /* javascript */ `
 				import { env } from "cloudflare:test";
 				import { it, expect } from "vitest";
 				it("does something else", async () => {

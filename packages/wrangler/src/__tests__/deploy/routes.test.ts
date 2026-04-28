@@ -1,8 +1,6 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -71,7 +69,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("../../autoconfig/c3-vendor/command");
+vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -109,7 +107,7 @@ describe("deploy", () => {
 	});
 
 	describe("routes", () => {
-		it("should deploy the worker to a route", async () => {
+		it("should deploy the worker to a route", async ({ expect }) => {
 			writeWranglerConfig({
 				routes: ["example.com/some-route/*"],
 			});
@@ -118,14 +116,14 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZones("example.com", [{ id: "example-com-id" }]);
-			mockGetZoneWorkerRoutes("example-com-id");
+			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-com-id");
 			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 			mockPublishRoutesRequest({ routes: ["example.com/some-route/*"] });
 			await runWrangler("deploy ./index");
 		});
 
-		it("should deploy with an empty string route", async () => {
+		it("should deploy with an empty string route", async ({ expect }) => {
 			writeWranglerConfig({
 				route: "",
 			});
@@ -158,7 +156,9 @@ describe("deploy", () => {
 				}
 			`);
 		});
-		it("should deploy to a route with a pattern/{zone_id|zone_name} combo", async () => {
+		it("should deploy to a route with a pattern/{zone_id|zone_name} combo", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				routes: [
 					"some-example.com/some-route/*",
@@ -176,7 +176,7 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZonesMulti({
+			mockGetZonesMulti(expect, {
 				"some-example.com": {
 					accountId: "some-account-id",
 					zones: [{ id: "some-example-com-id" }],
@@ -202,7 +202,7 @@ describe("deploy", () => {
 					zones: [{ id: "more-examples-id" }],
 				},
 			});
-			mockGetZoneWorkerRoutesMulti({
+			mockGetZoneWorkerRoutesMulti(expect, {
 				"some-example-com-id": [],
 				"a-boring-website-id": [],
 				"another-boring-website-id": [],
@@ -247,7 +247,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should deploy to a route with a SaaS domain", async () => {
+		it("should deploy to a route with a SaaS domain", async ({ expect }) => {
 			writeWranglerConfig({
 				workers_dev: false,
 				routes: [
@@ -260,8 +260,8 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUploadWorkerRequest();
 			mockGetWorkerSubdomain({ enabled: false });
-			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
-			mockGetZoneWorkerRoutes("owned-zone-id-1");
+			mockGetZones(expect, "owned-zone.com", [{ id: "owned-zone-id-1" }]);
+			mockGetZoneWorkerRoutes(expect, "owned-zone-id-1");
 			mockPublishRoutesRequest({
 				routes: [
 					{
@@ -290,7 +290,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should deploy to a route with a SaaS subdomain", async () => {
+		it("should deploy to a route with a SaaS subdomain", async ({ expect }) => {
 			writeWranglerConfig({
 				workers_dev: false,
 				routes: [
@@ -303,8 +303,8 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockUploadWorkerRequest();
 			mockGetWorkerSubdomain({ enabled: false });
-			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
-			mockGetZoneWorkerRoutes("owned-zone-id-1");
+			mockGetZones(expect, "owned-zone.com", [{ id: "owned-zone-id-1" }]);
+			mockGetZoneWorkerRoutes(expect, "owned-zone-id-1");
 			mockPublishRoutesRequest({
 				routes: [
 					{
@@ -333,7 +333,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should deploy to a route with a pattern/{zone_id|zone_name} combo (service environments)", async () => {
+		it("should deploy to a route with a pattern/{zone_id|zone_name} combo (service environments)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				env: {
 					staging: {
@@ -371,7 +373,7 @@ describe("deploy", () => {
 			});
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZonesMulti({
+			mockGetZonesMulti(expect, {
 				"some-example.com": {
 					accountId: "some-account-id",
 					zones: [{ id: "some-example-com-id" }],
@@ -397,7 +399,7 @@ describe("deploy", () => {
 					zones: [{ id: "more-examples-id" }],
 				},
 			});
-			mockGetZoneWorkerRoutesMulti({
+			mockGetZoneWorkerRoutesMulti(expect, {
 				"some-example-com-id": [],
 				"a-boring-website-id": [],
 				"another-boring-website-id": [],
@@ -449,7 +451,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should deploy to legacy environment specific routes", async () => {
+		it("should deploy to legacy environment specific routes", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				routes: ["example.com/some-route/*"],
 				env: {
@@ -471,7 +475,7 @@ describe("deploy", () => {
 			});
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZonesMulti({
+			mockGetZonesMulti(expect, {
 				"example.com": {
 					accountId: "some-account-id",
 					zones: [{ id: "example-com-id" }],
@@ -481,7 +485,7 @@ describe("deploy", () => {
 					zones: [{ id: "dev-example-com-id" }],
 				},
 			});
-			mockGetZoneWorkerRoutesMulti({
+			mockGetZoneWorkerRoutesMulti(expect, {
 				"example-com-id": [],
 				"dev-example-com-id": [],
 			});
@@ -494,7 +498,9 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index --env dev --legacy-env true");
 		});
 
-		it("services: should deploy to service environment specific routes", async () => {
+		it("services: should deploy to service environment specific routes", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				routes: ["example.com/some-route/*"],
 				env: {
@@ -511,7 +517,7 @@ describe("deploy", () => {
 			});
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZonesMulti({
+			mockGetZonesMulti(expect, {
 				"example.com": {
 					accountId: "some-account-id",
 					zones: [{ id: "example-com-id" }],
@@ -521,7 +527,7 @@ describe("deploy", () => {
 					zones: [{ id: "dev-example-com-id" }],
 				},
 			});
-			mockGetZoneWorkerRoutesMulti({
+			mockGetZoneWorkerRoutesMulti(expect, {
 				"example-com-id": [],
 				"dev-example-com-id": [],
 			});
@@ -533,7 +539,9 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 		});
 
-		it("should fallback to the Wrangler v1 zone-based API if the bulk-routes API fails", async () => {
+		it("should fallback to the Wrangler v1 zone-based API if the bulk-routes API fails", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				routes: ["example.com/some-route/*"],
 			});
@@ -542,8 +550,8 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZones("example.com", [{ id: "example-com-id" }]);
-			mockGetZoneWorkerRoutes("example-com-id", [
+			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-com-id", [
 				// Simulate that the worker has already been deployed to another route.
 				{
 					pattern: "foo.example.com/other-route",
@@ -588,7 +596,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error if the bulk-routes API fails and trying to push to a non-production environment", async () => {
+		it("should error if the bulk-routes API fails and trying to push to a non-production environment", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				routes: ["example.com/some-route/*"],
 				legacy_env: false,
@@ -598,8 +608,8 @@ describe("deploy", () => {
 			mockUpdateWorkerSubdomain({ env: "staging", enabled: false });
 			// These run during route conflict resolution.
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			mockGetZones("example.com", [{ id: "example-com-id" }]);
-			mockGetZoneWorkerRoutes("example-com-id", [
+			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-com-id", [
 				// Simulate that the worker has already been deployed to another route.
 				{
 					pattern: "foo.example.com/other-route",
@@ -621,7 +631,9 @@ describe("deploy", () => {
 		});
 
 		describe("custom domains", () => {
-			it("should deploy routes marked with 'custom_domain' as separate custom domains", async () => {
+			it("should deploy routes marked with 'custom_domain' as separate custom domains", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -630,8 +642,8 @@ describe("deploy", () => {
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
-				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({});
 				mockPublishCustomDomainsRequest({
@@ -646,7 +658,47 @@ describe("deploy", () => {
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should confirm override if custom domain deploy would override an existing domain", async () => {
+			it("should pass enabled and previews_enabled to the custom domains API", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					routes: [
+						{
+							pattern: "api.example.com",
+							custom_domain: true,
+							enabled: true,
+							previews_enabled: true,
+						},
+					],
+				});
+				writeWorkerSource();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [
+						{
+							hostname: "api.example.com",
+							enabled: true,
+							previews_enabled: true,
+						},
+					],
+				});
+				await runWrangler("deploy ./index");
+				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("[enabled, previews: enabled]");
+			});
+
+			it("should confirm override if custom domain deploy would override an existing domain", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -655,8 +707,8 @@ describe("deploy", () => {
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
-				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
 					originConflicts: [
@@ -667,6 +719,8 @@ describe("deploy", () => {
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
+							enabled: true,
+							previews_enabled: false,
 						},
 					],
 				});
@@ -677,6 +731,8 @@ describe("deploy", () => {
 					hostname: "api.example.com",
 					service: "other-script",
 					environment: "",
+					enabled: true,
+					previews_enabled: false,
 				});
 				mockPublishCustomDomainsRequest({
 					publishFlags: {
@@ -696,7 +752,9 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should confirm override if custom domain deploy contains a conflicting DNS record", async () => {
+			it("should confirm override if custom domain deploy contains a conflicting DNS record", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -705,8 +763,8 @@ Update them to point to this script instead?`,
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
-				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
 					dnsRecordConflicts: [
@@ -717,6 +775,8 @@ Update them to point to this script instead?`,
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
+							enabled: true,
+							previews_enabled: false,
 						},
 					],
 				});
@@ -738,7 +798,9 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should confirm for conflicting custom domains and then again for conflicting dns", async () => {
+			it("should confirm for conflicting custom domains and then again for conflicting dns", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -747,8 +809,8 @@ Update them to point to this script instead?`,
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
-				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
 					originConflicts: [
@@ -759,6 +821,8 @@ Update them to point to this script instead?`,
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
+							enabled: true,
+							previews_enabled: false,
 						},
 					],
 					dnsRecordConflicts: [
@@ -769,6 +833,8 @@ Update them to point to this script instead?`,
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
+							enabled: true,
+							previews_enabled: false,
 						},
 					],
 				});
@@ -779,6 +845,8 @@ Update them to point to this script instead?`,
 					hostname: "api.example.com",
 					service: "other-script",
 					environment: "",
+					enabled: true,
+					previews_enabled: false,
 				});
 				mockPublishCustomDomainsRequest({
 					publishFlags: {
@@ -807,7 +875,9 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should throw if an invalid custom domain is requested", async () => {
+			it("should throw if an invalid custom domain is requested", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					routes: [{ pattern: "*.example.com", custom_domain: true }],
 				});
@@ -835,7 +905,9 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("should not continue with publishing an override if user does not confirm", async () => {
+			it("should not continue with publishing an override if user does not confirm", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -844,8 +916,8 @@ Update them to point to this script instead?`,
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("api.example.com", [{ id: "api-example-com-id" }]);
-				mockGetZoneWorkerRoutes("api-example-com-id", []);
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
 					originConflicts: [
@@ -856,6 +928,8 @@ Update them to point to this script instead?`,
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
+							enabled: true,
+							previews_enabled: false,
 						},
 					],
 				});
@@ -866,6 +940,8 @@ Update them to point to this script instead?`,
 					hostname: "api.example.com",
 					service: "other-script",
 					environment: "",
+					enabled: true,
+					previews_enabled: false,
 				});
 				mockConfirm({
 					text: `Custom Domains already exist for these domains:
@@ -878,7 +954,9 @@ Update them to point to this script instead?`,
 					'Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again'
 				);
 			});
-			it("should deploy domains passed via --domain flag as custom domains", async () => {
+			it("should deploy domains passed via --domain flag as custom domains", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({});
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -898,7 +976,9 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should deploy multiple domains passed via --domain flags", async () => {
+			it("should deploy multiple domains passed via --domain flags", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({});
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -924,7 +1004,9 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("app.example.com (custom domain)");
 			});
 
-			it("should deploy --domain flags alongside routes (from config when no CLI routes)", async () => {
+			it("should deploy --domain flags alongside routes (from config when no CLI routes)", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					routes: ["example.com/api/*"],
 				});
@@ -934,7 +1016,7 @@ Update them to point to this script instead?`,
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZonesMulti({
+				mockGetZonesMulti(expect, {
 					"example.com": {
 						accountId: "some-account-id",
 						zones: [{ id: "example-com-id" }],
@@ -944,7 +1026,7 @@ Update them to point to this script instead?`,
 						zones: [{ id: "api-example-com-id" }],
 					},
 				});
-				mockGetZoneWorkerRoutesMulti({
+				mockGetZoneWorkerRoutesMulti(expect, {
 					"example-com-id": [],
 					"api-example-com-id": [],
 				});
@@ -982,7 +1064,9 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should validate domain flags and reject invalid domains with wildcards", async () => {
+			it("should validate domain flags and reject invalid domains with wildcards", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({});
 				writeWorkerSource();
 
@@ -994,7 +1078,9 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("should validate domain flags and reject invalid domains with paths", async () => {
+			it("should validate domain flags and reject invalid domains with paths", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({});
 				writeWorkerSource();
 
@@ -1007,7 +1093,9 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("should handle both --route and --domain flags together", async () => {
+			it("should handle both --route and --domain flags together", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					routes: ["config.com/api/*"],
 				});
@@ -1017,7 +1105,7 @@ Update them to point to this script instead?`,
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZonesMulti({
+				mockGetZonesMulti(expect, {
 					"config.com": {
 						accountId: "some-account-id",
 						zones: [{ id: "config-com-id" }],
@@ -1031,7 +1119,7 @@ Update them to point to this script instead?`,
 						zones: [{ id: "cli-com-id" }],
 					},
 				});
-				mockGetZoneWorkerRoutesMulti({
+				mockGetZoneWorkerRoutesMulti(expect, {
 					"config-com-id": [],
 					"api-example-com-id": [],
 					"cli-com-id": [],
@@ -1075,7 +1163,9 @@ Update them to point to this script instead?`,
 		});
 
 		describe("deploy asset routes", () => {
-			it("shouldn't error on routes with paths if there are no assets", async () => {
+			it("shouldn't error on routes with paths if there are no assets", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					routes: [
 						"simple.co.uk/path",
@@ -1107,7 +1197,7 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("should warn on mounted paths", async () => {
+			it("should warn on mounted paths", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: [
 						"simple.co.uk/path/*",
@@ -1131,7 +1221,7 @@ Update them to point to this script instead?`,
 				});
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZonesMulti({
+				mockGetZonesMulti(expect, {
 					"simple.co.uk": {
 						accountId: "some-account-id",
 						zones: [{ id: "simple-co-uk-id" }],
@@ -1141,7 +1231,7 @@ Update them to point to this script instead?`,
 						zones: [{ id: "example-com-id" }],
 					},
 				});
-				mockGetZoneWorkerRoutesMulti({
+				mockGetZoneWorkerRoutesMulti(expect, {
 					"simple-co-uk-id": [],
 					"example-com-id": [],
 				});
@@ -1213,7 +1303,9 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("does not mention 404s hit a Worker if it's assets only", async () => {
+			it("does not mention 404s hit a Worker if it's assets only", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					routes: [
 						{ pattern: "example.com/blog/*", zone_id: "example-com-id" },
@@ -1236,8 +1328,8 @@ Update them to point to this script instead?`,
 				});
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("example.com", [{ id: "example-com-id" }]);
-				mockGetZoneWorkerRoutes("example-com-id", []);
+				mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockPublishRoutesRequest({
 					routes: [
@@ -1283,7 +1375,9 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("does mention hitting the Worker on 404 if there is one", async () => {
+			it("does mention hitting the Worker on 404 if there is one", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					routes: [
 						{ pattern: "example.com/blog/*", zone_id: "example-com-id" },
@@ -1308,8 +1402,8 @@ Update them to point to this script instead?`,
 				});
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZones("example.com", [{ id: "example-com-id" }]);
-				mockGetZoneWorkerRoutes("example-com-id", []);
+				mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockPublishRoutesRequest({
 					routes: [
@@ -1357,7 +1451,9 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("should not warn on mounted paths if run_worker_first = false", async () => {
+			it("should not warn on mounted paths if run_worker_first = false", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					routes: [
 						"simple.co.uk/path/*",
@@ -1387,7 +1483,7 @@ Update them to point to this script instead?`,
 				});
 				// These run during route conflict resolution.
 				// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-				mockGetZonesMulti({
+				mockGetZonesMulti(expect, {
 					"simple.co.uk": {
 						accountId: "some-account-id",
 						zones: [{ id: "simple-co-uk-id" }],
@@ -1397,7 +1493,7 @@ Update them to point to this script instead?`,
 						zones: [{ id: "example-com-id" }],
 					},
 				});
-				mockGetZoneWorkerRoutesMulti({
+				mockGetZoneWorkerRoutesMulti(expect, {
 					"simple-co-uk-id": [],
 					"example-com-id": [],
 				});

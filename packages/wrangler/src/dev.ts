@@ -259,6 +259,11 @@ export const dev = createCommand({
 			describe: "Generate types from your Worker configuration",
 			type: "boolean",
 		},
+		tunnel: {
+			describe:
+				"Expose your local dev server via a Cloudflare Quick Tunnel (https://try.cloudflare.com)",
+			type: "boolean",
+		},
 	},
 	async validateArgs(args) {
 		if (args.nodeCompat) {
@@ -270,6 +275,9 @@ export const dev = createCommand({
 			throw new UserError(
 				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
 			);
+		}
+		if (args.tunnel && args.remote) {
+			throw new UserError("--tunnel is only supported in local mode.");
 		}
 
 		if (isWebContainer()) {
@@ -286,10 +294,7 @@ export const dev = createCommand({
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
 		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
-		if (devInstance.teardownRegistryPromise) {
-			const teardownRegistry = await devInstance.teardownRegistryPromise;
-			await teardownRegistry(devInstance.devEnv.config.latestConfig?.name);
-		}
+
 		devInstance.unregisterHotKeys?.();
 	},
 });
@@ -326,6 +331,10 @@ export type AdditionalDevProps = {
 	}[];
 	ai?: {
 		binding: string;
+	};
+	stream?: {
+		binding: string;
+		remote?: boolean;
 	};
 	version_metadata?: {
 		binding: string;

@@ -11,8 +11,13 @@ import {
 	startSection,
 	success,
 	updateStatus,
-} from "@cloudflare/cli";
-import { bold, brandColor, dim, green } from "@cloudflare/cli/colors";
+} from "@cloudflare/cli-shared-helpers";
+import {
+	bold,
+	brandColor,
+	dim,
+	green,
+} from "@cloudflare/cli-shared-helpers/colors";
 import {
 	ApiError,
 	ApplicationsService,
@@ -453,7 +458,7 @@ export async function apply(
 					name: application.name,
 					rollout_step_percentage:
 						application.durable_objects !== undefined
-							? appConfigNoDefaults.rollout_step_percentage ?? 25
+							? (appConfigNoDefaults.rollout_step_percentage ?? 25)
 							: appConfigNoDefaults.rollout_step_percentage,
 					rollout_kind:
 						appConfigNoDefaults.rollout_kind == "full_manual"

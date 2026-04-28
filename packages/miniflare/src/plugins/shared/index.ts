@@ -4,27 +4,23 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
-import {
+import { MiniflareCoreError, PathSchema } from "../../shared";
+import { sanitisePath } from "../../workers";
+import type {
 	Extension,
 	Service,
 	Worker_Binding,
 	Worker_Module,
 } from "../../runtime";
-import {
-	Log,
-	MiniflareCoreError,
-	OptionalZodTypeOf,
-	PathSchema,
-} from "../../shared";
-import {
+import type { Log, OptionalZodTypeOf } from "../../shared";
+import type {
 	Awaitable,
 	QueueConsumerSchema,
 	QueueProducerSchema,
-	sanitisePath,
 } from "../../workers";
-import { UnsafeUniqueKey } from "./constants";
 import type { DOContainerOptions } from "../do";
 import type { HyperdriveProxyController } from "../hyperdrive/hyperdrive-proxy";
+import type { UnsafeUniqueKey } from "./constants";
 
 export const DEFAULT_PERSIST_ROOT = ".mf";
 
@@ -39,6 +35,13 @@ export type Persistence = z.infer<typeof PersistenceSchema>;
 // Set of "worker" names that are being used as wrapped bindings and shouldn't
 // be added a regular worker services. These workers shouldn't be routable.
 export type WrappedBindingNames = Set<string>;
+
+// Maps workflow binding names to their workflow options
+export interface WorkflowOption {
+	name: string;
+	className: string;
+	scriptName?: string;
+}
 
 // Maps **service** names to the Durable Object class names exported by them
 export type DurableObjectClassNames = Map<
@@ -76,7 +79,9 @@ export interface PluginServicesOptions<
 	tmpPath: string;
 	defaultPersistRoot: string | undefined;
 	workerNames: string[];
+	loopbackHost: string;
 	loopbackPort: number;
+	publicUrl: string | undefined;
 	unsafeStickyBlobs: boolean;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)

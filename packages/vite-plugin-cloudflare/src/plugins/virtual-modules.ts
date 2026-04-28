@@ -12,6 +12,7 @@ export const VIRTUAL_CLIENT_FALLBACK_ENTRY = `${virtualPrefix}client-fallback-en
 export const VIRTUAL_NODEJS_GLOBAL_INJECT_PREFIX = `${virtualPrefix}nodejs-global-inject/`;
 
 const virtualCloudflareResolveRE = /^virtual:cloudflare\//;
+// eslint-disable-next-line no-control-regex -- Vite virtual module convention uses \0 prefix
 const virtualCloudflareLoadRE = /^\0virtual:cloudflare\//;
 
 /**
@@ -132,8 +133,10 @@ export function getExportTypes(module) {
 
 const virtualClientFallbackResolveRE =
 	/^virtual:cloudflare\/client-fallback-entry$/;
+/* eslint-disable no-control-regex -- Vite virtual module convention uses \0 prefix */
 const virtualClientFallbackLoadRE =
 	/^\0virtual:cloudflare\/client-fallback-entry$/;
+/* eslint-enable no-control-regex */
 
 /**
  * Plugin to provide a virtual fallback entry file for the `client` environment.

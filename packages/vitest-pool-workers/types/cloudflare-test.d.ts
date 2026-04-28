@@ -46,6 +46,38 @@ declare module "cloudflare:test" {
 	): Promise<DurableObjectId[]>;
 
 	/**
+	 * Deletes all data from all attached bindings. This is
+	 * useful for resetting state between test blocks.
+	 *
+	 * @example
+	 * ```ts
+	 * import { reset } from "cloudflare:test";
+	 * import { afterEach } from "vitest";
+	 *
+	 * afterEach(async () => {
+	 *   await reset();
+	 * });
+	 * ```
+	 */
+	export function reset(): Promise<void>;
+
+	/**
+	 * Resets all Durable Object instances. Unlike `reset()`, this does not delete
+	 * persisted data.
+	 *
+	 * @example
+	 * ```ts
+	 * import { abortAllDurableObjects } from "cloudflare:test";
+	 * import { afterEach } from "vitest";
+	 *
+	 * afterEach(async () => {
+	 *   await abortAllDurableObjects();
+	 * });
+	 * ```
+	 */
+	export function abortAllDurableObjects(): Promise<void>;
+
+	/**
 	 * Creates an instance of `ExecutionContext` for use as the 3rd argument to
 	 * modules-format exported handlers.
 	 */
@@ -101,6 +133,44 @@ declare module "cloudflare:test" {
 		migrations: D1Migration[],
 		migrationsTableName?: string
 	): Promise<void>;
+
+	/**
+	 * Admin API for a secrets store binding. Returned by `adminSecretsStore()`.
+	 */
+	export interface SecretsStoreSecretAdmin {
+		/** Create a new secret with the given value. Returns the secret's ID. */
+		create(value: string): Promise<string>;
+		/** Update an existing secret (identified by ID) with a new value. Returns the secret's ID. */
+		update(value: string, id: string): Promise<string>;
+		/** Duplicate a secret (identified by ID) under a new name. Returns the new secret's ID. */
+		duplicate(id: string, newName: string): Promise<string>;
+		/** Delete a secret by ID. */
+		delete(id: string): Promise<void>;
+		/** List all secrets in the store. */
+		list(): Promise<{ name: string; metadata?: { uuid: string } }[]>;
+		/** Get a secret's name by ID. */
+		get(id: string): Promise<string>;
+	}
+
+	/**
+	 * Returns the admin API for a secrets store binding, allowing tests to
+	 * create, update, and delete secrets that would otherwise be read-only
+	 * via `binding.get()`.
+	 *
+	 * @example
+	 * ```ts
+	 * import { adminSecretsStore } from "cloudflare:test";
+	 * import { env } from "cloudflare:workers";
+	 *
+	 * const admin = adminSecretsStore(env.MY_SECRET);
+	 * await admin.create("my-secret-value");
+	 *
+	 * // Now env.MY_SECRET.get() will return "my-secret-value"
+	 * ```
+	 */
+	export function adminSecretsStore(binding: {
+		get(): Promise<string>;
+	}): SecretsStoreSecretAdmin;
 
 	/**
 	 * Creates an introspector for a specific Workflow instance, used to
@@ -288,6 +358,39 @@ declare module "cloudflare:test" {
 		 * Defaults to the first step found (`index: 1`).
 		 */
 		disableSleeps(steps?: { name: string; index?: number }[]): Promise<void>;
+
+		/**
+		 * Disables retry backoff delays, causing retry attempts of a failing
+		 * `step.do()` to execute immediately without waiting.
+		 *
+		 * By default, when a step fails and has retries configured, the engine
+		 * waits according to the retry config (e.g., exponential backoff).
+		 * This method eliminates those delays while preserving retry behavior
+		 * (all attempts still execute, just without waiting between them).
+		 *
+		 * @example Disable all retry delays:
+		 * ```ts
+		 * await instance.modify(m => {
+		 *   m.disableRetryDelays();
+		 * });
+		 * ```
+		 *
+		 * @example Disable retry delays for specific steps:
+		 * ```ts
+		 * await instance.modify(m => {
+		 *   m.disableRetryDelays([{ name: "fetch-data" }, { name: "call-api" }]);
+		 * });
+		 * ```
+		 *
+		 * @param steps - Optional array of specific steps to disable retry delays for.
+		 * If omitted, **all retry delays** in the Workflow will be disabled.
+		 * A step is an object specifying the step `name` and optional `index` (1-based).
+		 * If multiple steps share the same name, `index` targets a specific one.
+		 * Defaults to the first step found (`index: 1`).
+		 */
+		disableRetryDelays(
+			steps?: { name: string; index?: number }[]
+		): Promise<void>;
 
 		/**
 		 * Mocks the result of a `step.do()`, causing it to return a specified

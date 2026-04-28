@@ -4,15 +4,14 @@
 	"private": true,
 	"description": "TurboRepo API Compliant Remote Caching w/ Cloudflare Workers using R2",
 	"keywords": [
-		"workers",
 		"cloudflare",
-		"typescript",
+		"remote cache",
 		"turborepo",
-		"remote cache"
+		"typescript",
+		"workers"
 	],
 	"scripts": {
 		"build": "wrangler deploy --dry-run --outdir=./dist",
-		"check:lint": "eslint . --max-warnings=0 --cache",
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
 		"type:check": "tsc"
@@ -23,9 +22,7 @@
 		"zod": "^3.22.3"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"eslint": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

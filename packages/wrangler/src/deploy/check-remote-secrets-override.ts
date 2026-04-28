@@ -112,10 +112,13 @@ function extractBindingNames(config: Config): string[] {
 			case "kv_namespaces":
 			case "r2_buckets":
 			case "vectorize":
+			case "ai_search_namespaces":
+			case "ai_search":
 			case "services":
 			case "mtls_certificates":
 			case "dispatch_namespaces":
-			case "vpc_services": {
+			case "vpc_services":
+			case "vpc_networks": {
 				const value: Config[typeof key] = untypedValue;
 				return (value ?? []).map((workflowBinding) => workflowBinding.binding);
 			}

@@ -196,19 +196,14 @@ export function runBuild(
 		// trigger "builds" when any change
 		if (noBundle) {
 			const watching = [path.resolve(entry.moduleRoot)];
-			// Check whether we need to watch a Python cf-requirements.txt file.
-			const watchPythonRequirements =
-				getBundleType(entry.format, entry.file) === "python"
-					? path.resolve(entry.projectRoot, "cf-requirements.txt")
-					: undefined;
-
-			if (watchPythonRequirements) {
-				watching.push(watchPythonRequirements);
-			}
-
 			const watcher = watch(watching, {
 				persistent: true,
-				ignored: [".git", "node_modules"],
+				// Ignore VCS dirs, dependencies, and the .wrangler dir (which
+				// contains miniflare state/cache files written by workerd at
+				// runtime — watching them causes an infinite reload loop).
+				// chokidar v4 normalises paths to forward slashes before
+				// matching, so a regex on path segments works cross-platform.
+				ignored: /[/\\](\.git|node_modules|\.wrangler)([/\\]|$)/,
 			}).on("change", async (_event) => {
 				await updateBundle();
 			});
@@ -231,12 +226,22 @@ export function runBuild(
 		}));
 	}
 
-	build().catch((err) => {
+	const buildPromise = build().catch((err) => {
 		// If esbuild fails on first run, we want to quit the process
 		// since we can't recover from here
 		// related: https://github.com/evanw/esbuild/issues/1037
 		onErr(err);
 	});
 
-	return () => stopWatching?.();
+	return async () => {
+		// Wait for the initial build to settle so that `stopWatching` is
+		// assigned (on success) or the esbuild context has been disposed
+		// by `bundle.ts`'s catch block (on failure). Without this await,
+		// teardown can return before `ctx.dispose()` has run, leaving the
+		// esbuild child process alive and preventing Node from exiting.
+		// Errors from `build()` are already routed to `onErr` above, so we
+		// don't need to handle rejections here.
+		await buildPromise;
+		await stopWatching?.();
+	};
 }

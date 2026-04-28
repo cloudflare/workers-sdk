@@ -1,4 +1,4 @@
-import prom from "promjs";
+import { MetricsRegistry } from "@cloudflare/workers-utils/prometheus-metrics";
 import { Toucan } from "toucan-js";
 import { z } from "zod";
 import Youch from "./Youch";
@@ -127,9 +127,8 @@ export default {
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<Response> {
-		const registry = prom();
-		const requestCounter = registry.create(
-			"counter",
+		const registry = new MetricsRegistry();
+		const requestCounter = registry.createCounter(
 			"devprod_format_errors_request_total",
 			"Request counter for DevProd's format-errors service"
 		);
@@ -170,8 +169,7 @@ export default {
 			return await handlePrettyErrorRequest(payload);
 		} catch (e) {
 			sentry.captureException(e);
-			const errorCounter = registry.create(
-				"counter",
+			const errorCounter = registry.createCounter(
 				"devprod_format_errors_error_total",
 				"Error counter for DevProd's format-errors service"
 			);

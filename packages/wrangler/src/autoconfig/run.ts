@@ -3,8 +3,13 @@ import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
+	maybeAppendWranglerToGitIgnoreLikeFile,
+	maybeAppendWranglerToGitIgnore,
+} from "@cloudflare/cli-shared-helpers/gitignore";
+import { installWrangler } from "@cloudflare/cli-shared-helpers/packages";
+import {
 	FatalError,
-	getLocalWorkerdCompatibilityDate,
+	getTodaysCompatDate,
 	parseJSONC,
 } from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
@@ -12,18 +17,20 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import { sanitizeError } from "../metrics/sanitization";
-import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
-import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
-import { installWrangler } from "./c3-vendor/packages";
 import {
 	assertNonConfigured,
 	confirmAutoConfigDetails,
 	displayAutoConfigDetails,
 } from "./details";
+import {
+	isFrameworkSupported,
+	isKnownFramework,
+	type PackageJsonScriptsOverrides,
+} from "./frameworks";
+import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
 import { getAutoConfigId } from "./telemetry-utils";
 import { usesTypescript } from "./uses-typescript";
-import type { PackageJsonScriptsOverrides } from "./frameworks";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
@@ -75,12 +82,17 @@ export async function runAutoConfig(
 		autoConfigDetails = updatedAutoConfigDetails;
 		assertNonConfigured(autoConfigDetails);
 
-		if (!autoConfigDetails.framework.autoConfigSupported) {
-			throw new FatalError(
-				autoConfigDetails.framework.id === "cloudflare-pages"
-					? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to a Workers one is not yet supported.`
-					: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+		if (isKnownFramework(autoConfigDetails.framework.id)) {
+			const frameworkIsSupported = isFrameworkSupported(
+				autoConfigDetails.framework.id
 			);
+			if (!frameworkIsSupported) {
+				throw new FatalError(
+					autoConfigDetails.framework.id === "cloudflare-pages"
+						? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.`
+						: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+				);
+			}
 		}
 
 		assert(
@@ -88,9 +100,7 @@ export async function runAutoConfig(
 			"The Output Directory is unexpectedly missing"
 		);
 
-		const { date: compatibilityDate } = getLocalWorkerdCompatibilityDate({
-			projectPath: autoConfigDetails.projectPath,
-		});
+		const compatibilityDate = getTodaysCompatDate();
 
 		const wranglerConfig: RawConfig = {
 			$schema: "node_modules/wrangler/config-schema.json",
@@ -103,11 +113,24 @@ export async function runAutoConfig(
 
 		const { packageManager } = autoConfigDetails;
 
+		const isWorkspaceRoot = autoConfigDetails.isWorkspaceRoot ?? false;
+
+		const frameworkPackageInfo = getFrameworkPackageInfo(
+			autoConfigDetails.framework.id
+		);
+		if (frameworkPackageInfo) {
+			autoConfigDetails.framework.validateFrameworkVersion(
+				autoConfigDetails.projectPath,
+				frameworkPackageInfo
+			);
+		}
+
 		const dryRunConfigurationResults =
 			await autoConfigDetails.framework.configure({
 				outputDir: autoConfigDetails.outputDir,
 				projectPath: autoConfigDetails.projectPath,
 				workerName: autoConfigDetails.workerName,
+				isWorkspaceRoot,
 				dryRun: true,
 				packageManager,
 			});
@@ -116,10 +139,12 @@ export async function runAutoConfig(
 
 		autoConfigSummary = await buildOperationsSummary(
 			{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
-			ensureNodejsCompatIsInConfig({
-				...wranglerConfig,
-				...dryRunConfigurationResults.wranglerConfig,
-			}),
+			dryRunConfigurationResults.wranglerConfig === null
+				? null
+				: ensureNodejsCompatIsInConfig({
+						...wranglerConfig,
+						...dryRunConfigurationResults.wranglerConfig,
+					}),
 			{
 				build:
 					dryRunConfigurationResults.buildCommandOverride ??
@@ -159,17 +184,22 @@ export async function runAutoConfig(
 		}
 
 		logger.debug(
-			`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
+			`Running autoconfig with:\n${JSON.stringify(
+				autoConfigDetails,
+				null,
+				2
+			)}...`
 		);
 
 		if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
-			await installWrangler(packageManager);
+			await installWrangler(packageManager.type, isWorkspaceRoot);
 		}
 
 		const configurationResults = await autoConfigDetails.framework.configure({
 			outputDir: autoConfigDetails.outputDir,
 			projectPath: autoConfigDetails.projectPath,
 			workerName: autoConfigDetails.workerName,
+			isWorkspaceRoot,
 			dryRun: false,
 			packageManager,
 		});
@@ -199,19 +229,23 @@ export async function runAutoConfig(
 			);
 		}
 
-		await saveWranglerJsonc(
-			autoConfigDetails.projectPath,
-			ensureNodejsCompatIsInConfig({
-				...wranglerConfig,
-				...configurationResults.wranglerConfig,
-			})
-		);
+		if (configurationResults.wranglerConfig !== null) {
+			await saveWranglerJsonc(
+				autoConfigDetails.projectPath,
+				ensureNodejsCompatIsInConfig({
+					...wranglerConfig,
+					...configurationResults.wranglerConfig,
+				})
+			);
+		}
 
-		addWranglerToGitIgnore(autoConfigDetails.projectPath);
+		maybeAppendWranglerToGitIgnore(autoConfigDetails.projectPath);
 
 		// If we're uploading the project path as the output directory, make sure we don't accidentally upload any sensitive Wrangler files
 		if (autoConfigDetails.outputDir === autoConfigDetails.projectPath) {
-			addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
+			maybeAppendWranglerToGitIgnoreLikeFile(
+				`${autoConfigDetails.projectPath}/.assetsignore`
+			);
 		}
 
 		const buildCommand =
@@ -316,7 +350,7 @@ export async function buildOperationsSummary(
 	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject & {
 		outputDir: NonNullable<AutoConfigDetails["outputDir"]>;
 	},
-	wranglerConfigToWrite: RawConfig,
+	wranglerConfigToWrite: RawConfig | null,
 	projectCommands: {
 		build?: string;
 		deploy: string;
@@ -329,7 +363,11 @@ export async function buildOperationsSummary(
 	const summary: AutoConfigSummary = {
 		wranglerInstall: false,
 		scripts: {},
-		wranglerConfig: wranglerConfigToWrite,
+		...(wranglerConfigToWrite !== null
+			? {
+					wranglerConfig: wranglerConfigToWrite,
+				}
+			: {}),
 		outputDir: autoConfigDetails.outputDir,
 		frameworkId: autoConfigDetails.framework.id,
 		buildCommand: projectCommands.build,
@@ -360,7 +398,7 @@ export async function buildOperationsSummary(
 
 		const containsServerSideCode =
 			// If there is an entrypoint then we know that there is server side code
-			!!wranglerConfigToWrite.main;
+			!!wranglerConfigToWrite?.main;
 
 		if (
 			// If there is no server side code, then there is no need to add the cf-typegen script

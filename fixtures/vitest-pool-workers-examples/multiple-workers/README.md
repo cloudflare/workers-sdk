@@ -8,6 +8,6 @@ This example uses multiple Workers:
 
 In a real project, only the `api-service` would be publicly routable. The `auth-service` sends request to an external endpoint to login and sign JWTs. This endpoint is mocked in tests using the `outboundService` Miniflare option. The `database-service` assumes the user has been authenticated and allows reads/writes to any key.
 
-| Test                                            | Overview                       |
-| ----------------------------------------------- | ------------------------------ |
-| [integration.test.ts](test/integration.test.ts) | Integration tests using `SELF` |
+| Test                                            | Overview                          |
+| ----------------------------------------------- | --------------------------------- |
+| [integration.test.ts](test/integration.test.ts) | Integration tests using `exports` |

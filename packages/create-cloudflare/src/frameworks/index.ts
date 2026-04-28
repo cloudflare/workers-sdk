@@ -1,6 +1,9 @@
-import { logRaw, updateStatus } from "@cloudflare/cli";
-import { dim } from "@cloudflare/cli/colors";
-import { quoteShellArgs, runCommand } from "helpers/command";
+import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { dim } from "@cloudflare/cli-shared-helpers/colors";
+import {
+	quoteShellArgs,
+	runCommand,
+} from "@cloudflare/cli-shared-helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import frameworksPackageJson from "./package.json";
 import type { C3Context } from "types";
@@ -43,8 +46,8 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 
 	updateStatus(
 		`Continue with ${ctx.template.displayName} ${dim(
-			`via \`${quoteShellArgs(cmd)}\``,
-		)}`,
+			`via \`${quoteShellArgs(cmd)}\``
+		)}`
 	);
 
 	// newline

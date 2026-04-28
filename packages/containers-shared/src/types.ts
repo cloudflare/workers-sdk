@@ -51,7 +51,7 @@ export type ImageURIConfig = {
 export type InstanceTypeOrLimits =
 	| {
 			/** if undefined in config, defaults to instance_type */
-			/** disk size is defined in config in mb but normalised here to bytes */
+			/** disk size is defined in config in mb but normalized here to bytes */
 			disk_bytes: number;
 			vcpu: number;
 			memory_mib: number;
@@ -83,6 +83,7 @@ export type SharedContainerConfig = {
 	trusted_user_ca_keys?: Array<UserSSHPublicKey>;
 	constraints: {
 		regions?: string[];
+		jurisdiction?: string;
 		cities?: string[];
 		tiers?: number[];
 	};

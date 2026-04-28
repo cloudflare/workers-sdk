@@ -2,8 +2,9 @@ import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { ReadableStream } from "node:stream/web";
 import { Headers } from "undici";
-import { Request, RequestInit, Response } from "../../../http";
-import { PlatformImpl } from "../../../workers";
+import { Request, Response } from "../../../http";
+import type { RequestInit } from "../../../http";
+import type { PlatformImpl } from "../../../workers";
 import type {
 	AbortSignal as WorkerAbortSignal,
 	Blob as WorkerBlob,

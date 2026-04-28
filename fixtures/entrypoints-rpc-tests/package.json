@@ -6,7 +6,6 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"miniflare": "workspace:*",
 		"ts-dedent": "^2.2.0",

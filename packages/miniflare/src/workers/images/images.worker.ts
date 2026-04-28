@@ -2,7 +2,7 @@
 // Image data is stored as KV values, metadata as KV metadata
 // Transforms and info operations are handled via HTTP loopback to Node.js Sharp
 
-import { WorkerEntrypoint } from "cloudflare:workers";
+import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { CoreBindings, CoreHeaders } from "../core/constants";
 
 interface Env {
@@ -29,21 +29,68 @@ async function base64DecodeStream(
 	return base64DecodeArrayBuffer(buffer);
 }
 
-export default class ImagesService extends WorkerEntrypoint<Env> {
-	async details(imageId: string): Promise<ImageMetadata | null> {
-		const result = await this.env.IMAGES_STORE.getWithMetadata<ImageMetadata>(
-			imageId,
+class ImageHandleImpl extends RpcTarget {
+	readonly #imageId: string;
+	readonly #store: KVNamespace;
+
+	constructor(imageId: string, store: KVNamespace) {
+		super();
+		this.#imageId = imageId;
+		this.#store = store;
+	}
+
+	async details(): Promise<ImageMetadata | null> {
+		const result = await this.#store.getWithMetadata<ImageMetadata>(
+			this.#imageId,
 			"arrayBuffer"
 		);
 		return result.metadata ?? null;
 	}
 
-	async image(imageId: string): Promise<ReadableStream<Uint8Array> | null> {
-		const data = await this.env.IMAGES_STORE.get(imageId, "arrayBuffer");
+	async bytes(): Promise<ReadableStream<Uint8Array> | null> {
+		const data = await this.#store.get(this.#imageId, "arrayBuffer");
 		if (data === null) {
 			return null;
 		}
 		return new Blob([data]).stream();
+	}
+
+	async update(options: ImageUpdateOptions): Promise<ImageMetadata> {
+		const existing = await this.#store.getWithMetadata<ImageMetadata>(
+			this.#imageId,
+			"arrayBuffer"
+		);
+		if (existing.value === null || existing.metadata === null) {
+			throw new Error(`Image not found: ${this.#imageId}`);
+		}
+
+		const updatedMetadata: ImageMetadata = {
+			...existing.metadata,
+			requireSignedURLs:
+				options.requireSignedURLs ?? existing.metadata.requireSignedURLs,
+			meta: options.metadata ?? existing.metadata.meta,
+			creator: options.creator ?? existing.metadata.creator,
+		};
+
+		await this.#store.put(this.#imageId, existing.value, {
+			metadata: updatedMetadata,
+		});
+		return updatedMetadata;
+	}
+
+	async delete(): Promise<boolean> {
+		const existing = await this.#store.get(this.#imageId, "arrayBuffer");
+		if (existing === null) {
+			return false;
+		}
+		await this.#store.delete(this.#imageId);
+		return true;
+	}
+}
+
+export default class ImagesService extends WorkerEntrypoint<Env> {
+	image(imageId: string): ImageHandleImpl {
+		return new ImageHandleImpl(imageId, this.env.IMAGES_STORE);
 	}
 
 	async upload(
@@ -78,41 +125,6 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 
 		await this.env.IMAGES_STORE.put(id, buffer, { metadata });
 		return metadata;
-	}
-
-	async update(
-		imageId: string,
-		options: ImageUpdateOptions
-	): Promise<ImageMetadata> {
-		const existing = await this.env.IMAGES_STORE.getWithMetadata<ImageMetadata>(
-			imageId,
-			"arrayBuffer"
-		);
-		if (existing.value === null || existing.metadata === null) {
-			throw new Error(`Image not found: ${imageId}`);
-		}
-
-		const updatedMetadata: ImageMetadata = {
-			...existing.metadata,
-			requireSignedURLs:
-				options.requireSignedURLs ?? existing.metadata.requireSignedURLs,
-			meta: options.metadata ?? existing.metadata.meta,
-			creator: options.creator ?? existing.metadata.creator,
-		};
-
-		await this.env.IMAGES_STORE.put(imageId, existing.value, {
-			metadata: updatedMetadata,
-		});
-		return updatedMetadata;
-	}
-
-	async delete(imageId: string): Promise<boolean> {
-		const existing = await this.env.IMAGES_STORE.get(imageId, "arrayBuffer");
-		if (existing === null) {
-			return false;
-		}
-		await this.env.IMAGES_STORE.delete(imageId);
-		return true;
 	}
 
 	async list(options?: ImageListOptions): Promise<ImageList> {

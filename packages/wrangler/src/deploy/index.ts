@@ -3,7 +3,7 @@ import { statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	configFileName,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	getCIOverrideName,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -258,6 +258,12 @@ export const deployCommand = createCommand({
 			type: "boolean",
 			default: true,
 		},
+		"secrets-file": {
+			describe:
+				"Path to a file containing secrets to upload with the deployment (JSON or .env format). Secrets from previous deployments will not be deleted - see `--keep-secrets`",
+			type: "string",
+			requiresArg: true,
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -411,7 +417,9 @@ export const deployCommand = createCommand({
 
 		if (args.latest) {
 			logger.warn(
-				`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(config.configPath)} file.`
+				`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(
+					config.configPath
+				)} file.`
 			);
 		}
 
@@ -471,7 +479,7 @@ export const deployCommand = createCommand({
 			entry,
 			env: args.env,
 			compatibilityDate: args.latest
-				? formatCompatibilityDate(new Date())
+				? getTodaysCompatDate()
 				: args.compatibilityDate,
 			compatibilityFlags: args.compatibilityFlags,
 			vars: cliVars,
@@ -504,6 +512,7 @@ export const deployCommand = createCommand({
 			strict: args.strict,
 			tag: args.tag,
 			message: args.message,
+			secretsFile: args.secretsFile,
 		});
 
 		writeOutput({
@@ -579,7 +588,7 @@ export async function handleMaybeAssetsDeployment(
 
 	// Set compatibility date if not provided
 	if (!args.compatibilityDate) {
-		const compatibilityDate = formatCompatibilityDate(new Date());
+		const compatibilityDate = getTodaysCompatDate();
 		args.compatibilityDate = compatibilityDate;
 		logger.log(
 			`${chalk.bold("No compatibility date found")} Defaulting to today:`,
@@ -590,7 +599,9 @@ export async function handleMaybeAssetsDeployment(
 
 	// Ask if user wants to write config file
 	const writeConfig = await confirm(
-		`Do you want Wrangler to write a wrangler.json config file to store this configuration?\n${chalk.dim("This will allow you to simply run `wrangler deploy` on future deployments.")}`
+		`Do you want Wrangler to write a wrangler.json config file to store this configuration?\n${chalk.dim(
+			"This will allow you to simply run `wrangler deploy` on future deployments."
+		)}`
 	);
 
 	if (writeConfig) {
@@ -607,7 +618,9 @@ export async function handleMaybeAssetsDeployment(
 		writeFileSync(configPath, jsonString);
 		logger.log(`Wrote \n${jsonString}\n to ${chalk.bold(configPath)}.`);
 		logger.log(
-			`Please run ${chalk.bold("`wrangler deploy`")} instead of ${chalk.bold(`\`wrangler deploy ${args.assets}\``)} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
+			`Please run ${chalk.bold("`wrangler deploy`")} instead of ${chalk.bold(
+				`\`wrangler deploy ${args.assets}\``
+			)} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
 		);
 	} else {
 		logger.log(

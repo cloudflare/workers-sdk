@@ -13,6 +13,7 @@ import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
 	isBuildFailure,
 	rewriteNodeCompatBuildFailure,
+	rewriteUnresolvedModuleBuildFailure,
 } from "./build-failures";
 import { dedupeModulesByName } from "./dedupe-modules";
 import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
@@ -46,6 +47,7 @@ export const COMMON_ESBUILD_OPTIONS = {
 	// v8 supports es2024 features as of 11.9
 	// workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
 	target: "es2024",
+	supported: { "import-source": true },
 	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 } as const;
 
@@ -384,6 +386,7 @@ export async function bundleWorker(
 			: undefined,
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: COMMON_ESBUILD_OPTIONS.target,
+		supported: COMMON_ESBUILD_OPTIONS.supported,
 		sourcemap: sourcemap ?? true,
 		// Include a reference to the output folder in the sourcemap.
 		// This is omitted by default, but we need it to properly resolve source paths in error output.
@@ -432,9 +435,15 @@ export async function bundleWorker(
 
 	let result: esbuild.BuildResult<typeof buildOptions>;
 	let stop: BundleResult["stop"];
+	// Hoisted so the `catch` below can dispose any esbuild context that was
+	// created before the initial build failed. Without this, a failing initial
+	// build (e.g. unresolvable entrypoint) leaves the esbuild child process
+	// running for the lifetime of the Node process, keeping the event loop
+	// alive and preventing clean exit.
+	let ctx: esbuild.BuildContext<typeof buildOptions> | undefined;
 	try {
 		if (watch) {
-			const ctx = await esbuild.context(buildOptions);
+			ctx = await esbuild.context(buildOptions);
 			await ctx.watch();
 			result = await initialBuildResultPromise;
 			if (result.errors.length > 0) {
@@ -445,9 +454,10 @@ export async function bundleWorker(
 				);
 			}
 
+			const ctxForStop = ctx;
 			stop = async function () {
 				tmpDir.remove();
-				await ctx.dispose();
+				await ctxForStop.dispose();
 			};
 		} else {
 			result = await esbuild.build(buildOptions);
@@ -475,8 +485,18 @@ export async function bundleWorker(
 			};
 		}
 	} catch (e) {
+		if (ctx !== undefined) {
+			// Best-effort cleanup of the esbuild context; swallow errors because
+			// we are re-throwing the original build failure anyway.
+			try {
+				await ctx.dispose();
+			} catch {
+				// intentionally empty
+			}
+		}
 		if (isBuildFailure(e)) {
 			rewriteNodeCompatBuildFailure(e.errors, nodejsCompatMode);
+			rewriteUnresolvedModuleBuildFailure(e.errors);
 		}
 		throw e;
 	}

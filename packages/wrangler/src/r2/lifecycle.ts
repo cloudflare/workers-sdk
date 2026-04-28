@@ -12,6 +12,7 @@ import {
 } from "./helpers/bucket";
 import {
 	formatActionDescription,
+	isDataCatalogConflict,
 	isNonNegativeNumber,
 	isValidDate,
 } from "./helpers/misc";
@@ -129,7 +130,7 @@ export const r2BucketLifecycleAddCommand = createCommand({
 			type: "string",
 		},
 		force: {
-			describe: "Skip confirmation",
+			describe: "Skip confirmation and data catalog validation prompt",
 			type: "boolean",
 			alias: "y",
 			default: false,
@@ -313,13 +314,38 @@ export const r2BucketLifecycleAddCommand = createCommand({
 
 		lifecycleRules.push(newRule);
 		logger.log(`Adding lifecycle rule '${name}' to bucket '${bucket}'...`);
-		await putLifecycleRules(
-			config,
-			accountId,
-			bucket,
-			lifecycleRules,
-			jurisdiction
-		);
+		try {
+			await putLifecycleRules(
+				config,
+				accountId,
+				bucket,
+				lifecycleRules,
+				force,
+				jurisdiction
+			);
+		} catch (error) {
+			if (!force && isDataCatalogConflict(error)) {
+				const confirmed = await confirm(
+					"Data catalog is enabled for this bucket. " +
+						"Proceeding may leave the data catalog in an invalid state. Continue?",
+					{ defaultValue: false, fallbackValue: true }
+				);
+				if (!confirmed) {
+					logger.log("Operation cancelled.");
+					return;
+				}
+				await putLifecycleRules(
+					config,
+					accountId,
+					bucket,
+					lifecycleRules,
+					true,
+					jurisdiction
+				);
+			} else {
+				throw error;
+			}
+		}
 		logger.log(`✨ Added lifecycle rule '${name}' to bucket '${bucket}'.`);
 	},
 });
@@ -379,6 +405,7 @@ export const r2BucketLifecycleRemoveCommand = createCommand({
 			accountId,
 			bucket,
 			lifecycleRules,
+			true, // Always bypass validation
 			jurisdiction
 		);
 		logger.log(`Lifecycle rule '${name}' removed from bucket '${bucket}'.`);
@@ -412,7 +439,7 @@ export const r2BucketLifecycleSetCommand = createCommand({
 			type: "string",
 		},
 		force: {
-			describe: "Skip confirmation",
+			describe: "Skip confirmation and data catalog validation prompt",
 			type: "boolean",
 			alias: "y",
 			default: false,
@@ -453,13 +480,38 @@ export const r2BucketLifecycleSetCommand = createCommand({
 		logger.log(
 			`Setting lifecycle configuration (${lifecyclePolicy.rules.length} rules) for bucket '${bucket}'...`
 		);
-		await putLifecycleRules(
-			config,
-			accountId,
-			bucket,
-			lifecyclePolicy.rules,
-			jurisdiction
-		);
+		try {
+			await putLifecycleRules(
+				config,
+				accountId,
+				bucket,
+				lifecyclePolicy.rules,
+				force,
+				jurisdiction
+			);
+		} catch (error) {
+			if (!force && isDataCatalogConflict(error)) {
+				const confirmed = await confirm(
+					"Data catalog is enabled for this bucket. " +
+						"Proceeding may leave the data catalog in an invalid state. Continue?",
+					{ defaultValue: false, fallbackValue: true }
+				);
+				if (!confirmed) {
+					logger.log("Operation cancelled.");
+					return;
+				}
+				await putLifecycleRules(
+					config,
+					accountId,
+					bucket,
+					lifecyclePolicy.rules,
+					true,
+					jurisdiction
+				);
+			} else {
+				throw error;
+			}
+		}
 		logger.log(`✨ Set lifecycle configuration for bucket '${bucket}'.`);
 	},
 });

@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { createReadStream, promises as fs } from "node:fs";
 import path from "node:path";
-import { spinnerWhile } from "@cloudflare/cli/interactive";
+import { spinnerWhile } from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	APIError,
 	configFileName,
@@ -91,7 +91,7 @@ export const d1ExecuteCommand = createCommand({
 		},
 		json: {
 			type: "boolean",
-			description: "Return output as clean JSON",
+			description: "Return output as JSON",
 			default: false,
 		},
 		preview: {
@@ -610,7 +610,7 @@ function logResult(r: QueryResult | QueryResult[]) {
 		? r
 				.map((d: QueryResult) => d.meta?.duration || 0)
 				.reduce((a, b) => a + b, 0)
-		: r.meta?.duration ?? 0;
+		: (r.meta?.duration ?? 0);
 
 	logger.log(`🚣 Executed ${commandsCount} in ${durationMs.toFixed(2)}ms`);
 }

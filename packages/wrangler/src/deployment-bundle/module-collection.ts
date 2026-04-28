@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import crypto from "node:crypto";
 import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -210,9 +211,9 @@ export function createModuleCollector(props: {
 							// take the file and massage it to a
 							// transportable/manageable format
 							const cleanedPath = stripQueryString(args.path);
+							assert(props.wrangler1xLegacyModuleReferences);
 							const filePath = path.join(
-								// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-								props.wrangler1xLegacyModuleReferences!.rootDirectory,
+								props.wrangler1xLegacyModuleReferences.rootDirectory,
 								cleanedPath
 							);
 							const fileContent = (await readFile(

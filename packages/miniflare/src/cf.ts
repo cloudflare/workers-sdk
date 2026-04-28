@@ -4,8 +4,8 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { dim } from "kleur/colors";
 import { fetch } from "undici";
-import { Plugins } from "./plugins";
-import { Log, OptionalZodTypeOf } from "./shared";
+import type { Plugins } from "./plugins";
+import type { Log, OptionalZodTypeOf } from "./shared";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 
 /**
@@ -198,7 +198,9 @@ export async function setupCf(
 	} catch {}
 
 	try {
-		const res = await fetch(defaultCfFetchEndpoint);
+		const res = await fetch(defaultCfFetchEndpoint, {
+			signal: AbortSignal.timeout(3000),
+		});
 		const cfText = await res.text();
 		const storedCf = JSON.parse(cfText);
 		// Write cf so we can reuse it later

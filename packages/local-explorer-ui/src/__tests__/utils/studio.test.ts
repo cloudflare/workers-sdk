@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import {
 	escapeSqlValue,
 	transformStudioArrayBasedResult,
@@ -6,65 +6,65 @@ import {
 import { tokenizeSQL } from "../../utils/studio/sql";
 
 describe("escapeSqlValue", () => {
-	test("undefined returns `DEFAULT`", () => {
+	test("undefined returns `DEFAULT`", ({ expect }) => {
 		expect(escapeSqlValue(undefined)).toBe("DEFAULT");
 	});
 
-	test("null returns `NULL`", () => {
+	test("null returns `NULL`", ({ expect }) => {
 		expect(escapeSqlValue(null)).toBe("NULL");
 	});
 
-	test("string is escaped with single quotes", () => {
+	test("string is escaped with single quotes", ({ expect }) => {
 		expect(escapeSqlValue("hello")).toBe("'hello'");
 	});
 
-	test("string with single quotes is escaped correctly", () => {
+	test("string with single quotes is escaped correctly", ({ expect }) => {
 		expect(escapeSqlValue("O'Brien")).toBe("'O''Brien'");
 	});
 
-	test("empty string is escaped", () => {
+	test("empty string is escaped", ({ expect }) => {
 		expect(escapeSqlValue("")).toBe("''");
 	});
 
-	test("string with multiple single quotes", () => {
+	test("string with multiple single quotes", ({ expect }) => {
 		expect(escapeSqlValue("it's a 'test'")).toBe("'it''s a ''test'''");
 	});
 
-	test("number is converted to string", () => {
+	test("number is converted to string", ({ expect }) => {
 		expect(escapeSqlValue(42)).toBe("42");
 	});
 
-	test("negative number is converted to string", () => {
+	test("negative number is converted to string", ({ expect }) => {
 		expect(escapeSqlValue(-3.14)).toBe("-3.14");
 	});
 
-	test("zero is converted to string", () => {
+	test("zero is converted to string", ({ expect }) => {
 		expect(escapeSqlValue(0)).toBe("0");
 	});
 
-	test("bigint is converted to string", () => {
+	test("bigint is converted to string", ({ expect }) => {
 		expect(escapeSqlValue(BigInt(9007199254740991))).toBe("9007199254740991");
 	});
 
-	test("ArrayBuffer throws", () => {
+	test("ArrayBuffer throws", ({ expect }) => {
 		expect(() => escapeSqlValue(new ArrayBuffer(8))).toThrow(
 			"Blob escape is not supported yet"
 		);
 	});
 
-	test("Array throws", () => {
+	test("Array throws", ({ expect }) => {
 		expect(() => escapeSqlValue([1, 2, 3])).toThrow(
 			"Blob escape is not supported yet"
 		);
 	});
 
-	test("unrecognized type throws", () => {
+	test("unrecognized type throws", ({ expect }) => {
 		expect(() => escapeSqlValue(true)).toThrow("is unrecognized type of value");
 	});
 });
 
 describe("tokenizeSQL", () => {
-	test("simple `SELECT` query", () => {
+	test("simple `SELECT` query", ({ expect }) => {
 		const sql = "SELECT * FROM customers";
 		const tokens = tokenizeSQL(sql, "sqlite");
 		expect(tokens).toEqual([
@@ -79,7 +79,7 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("double-quoted identifiers", () => {
+	test("double-quoted identifiers", ({ expect }) => {
 		const sql = `SELECT "customer"."name" FROM "customers"`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 		expect(tokens).toEqual([
@@ -96,7 +96,7 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("bracket-quoted identifiers", () => {
+	test("bracket-quoted identifiers", ({ expect }) => {
 		const sql = `SELECT [customer].[first name] FROM [customers]`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 		expect(tokens).toEqual([
@@ -113,7 +113,7 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("string literals", () => {
+	test("string literals", ({ expect }) => {
 		const sql = `SELECT 'Hello' FROM "t" WHERE "name" = 'John Doe'`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 
@@ -125,7 +125,7 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("number literals", () => {
+	test("number literals", ({ expect }) => {
 		const sql = `SELECT 123.45 FROM "t" WHERE "age" = 30`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 
@@ -137,7 +137,7 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("placeholders", () => {
+	test("placeholders", ({ expect }) => {
 		const sql = `SELECT * FROM customers WHERE name = :name`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 
@@ -148,7 +148,9 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("placeholders inside strings and comments are not treated as placeholders", () => {
+	test("placeholders inside strings and comments are not treated as placeholders", ({
+		expect,
+	}) => {
 		const sql = `SELECT * FROM t WHERE name = ':name' AND "code" =:code -- only :code is a placeholder`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 
@@ -159,7 +161,7 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("line comments", () => {
+	test("line comments", ({ expect }) => {
 		const sql = `SELECT * FROM t -- this is a comment`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 
@@ -170,7 +172,7 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("block comments", () => {
+	test("block comments", ({ expect }) => {
 		const sql = `SELECT /* a block comment */ * FROM t`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 
@@ -181,7 +183,7 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("operators and punctuation", () => {
+	test("operators and punctuation", ({ expect }) => {
 		const sql = `SELECT * FROM t WHERE name = 'test' AND age > 30;`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 
@@ -198,7 +200,7 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("unknown token accumulation", () => {
+	test("unknown token accumulation", ({ expect }) => {
 		const sql = `SELECT * FROM t ### unknown`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 
@@ -207,7 +209,7 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("PostgreSQL cast operator", () => {
+	test("PostgreSQL cast operator", ({ expect }) => {
 		const sql = `SELECT spend::float FROM t`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 
@@ -215,7 +217,7 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("`WITH` and subquery", () => {
+	test("`WITH` and subquery", ({ expect }) => {
 		const sql = `WITH cte AS (SELECT * FROM t) SELECT * FROM cte`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 
@@ -225,7 +227,7 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("`IN` clause", () => {
+	test("`IN` clause", ({ expect }) => {
 		const sql = `SELECT * FROM t WHERE age IN (25, 30, 35)`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 
@@ -233,14 +235,14 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("empty string returns empty tokens", () => {
+	test("empty string returns empty tokens", ({ expect }) => {
 		const tokens = tokenizeSQL("", "sqlite");
 		expect(tokens).toEqual([]);
 	});
 });
 
 describe("transformStudioArrayBasedResult", () => {
-	test("transforms headers and rows", () => {
+	test("transforms headers and rows", ({ expect }) => {
 		const result = transformStudioArrayBasedResult({
 			headers: ["id", "name"],
 			rows: [
@@ -263,7 +265,7 @@ describe("transformStudioArrayBasedResult", () => {
 		]);
 	});
 
-	test("deduplicates column names", () => {
+	test("deduplicates column names", ({ expect }) => {
 		const result = transformStudioArrayBasedResult({
 			headers: ["a", "a", "a"],
 			rows: [[1, 2, 3]],
@@ -277,7 +279,7 @@ describe("transformStudioArrayBasedResult", () => {
 		expect(result.rows).toEqual([{ a: 1, a_1: 2, a_2: 3 }]);
 	});
 
-	test("applies transformValue callback", () => {
+	test("applies transformValue callback", ({ expect }) => {
 		const result = transformStudioArrayBasedResult({
 			headers: ["val"],
 			rows: [[42]],
@@ -292,7 +294,7 @@ describe("transformStudioArrayBasedResult", () => {
 		expect(result.rows).toEqual([{ val: 84 }]);
 	});
 
-	test("handles empty result set", () => {
+	test("handles empty result set", ({ expect }) => {
 		const result = transformStudioArrayBasedResult({
 			headers: ["id"],
 			rows: [],
@@ -306,7 +308,7 @@ describe("transformStudioArrayBasedResult", () => {
 		expect(result.rows).toEqual([]);
 	});
 
-	test("handles empty headers", () => {
+	test("handles empty headers", ({ expect }) => {
 		const result = transformStudioArrayBasedResult({
 			headers: [],
 			rows: [],
@@ -320,7 +322,7 @@ describe("transformStudioArrayBasedResult", () => {
 		expect(result.rows).toEqual([]);
 	});
 
-	test("passes header index to transformHeader", () => {
+	test("passes header index to transformHeader", ({ expect }) => {
 		const result = transformStudioArrayBasedResult({
 			headers: ["a", "b"],
 			rows: [[1, 2]],

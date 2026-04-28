@@ -1,4 +1,5 @@
-import { DurableObject } from "cloudflare:workers";
+import { DurableObject, WorkflowEntrypoint } from "cloudflare:workers";
+import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
@@ -24,6 +25,19 @@ export default {
 			case "/kv/seed": {
 				await Promise.all(SEED_DATA.map(([k, v]) => env.KV.put(k, v)));
 				return new Response(`Seeded ${SEED_DATA.length} KV entries`);
+			}
+
+			// R2 routes
+			case "/r2/seed": {
+				await Promise.all(
+					R2_SEED_DATA.map(({ key, content, contentType, customMetadata }) =>
+						env.BUCKET.put(key, content, {
+							httpMetadata: { contentType },
+							customMetadata,
+						})
+					)
+				);
+				return new Response(`Seeded ${R2_SEED_DATA.length} R2 objects`);
 			}
 
 			// D1 database route
@@ -57,6 +71,27 @@ export class MyDurableObject extends DurableObject<Env> {
 		return new Response("OK");
 	}
 }
+
+interface WorkflowParams {
+	name: string;
+}
+
+export class MyWorkflow extends WorkflowEntrypoint<Env, WorkflowParams> {
+	async run(event: WorkflowEvent<WorkflowParams>, step: WorkflowStep) {
+		const name = event.payload.name ?? "World";
+
+		const greeting = await step.do("greet", async () => `Hello, ${name}!`);
+
+		await step.sleep("wait", "1 second");
+
+		const result = await step.do("finalize", async () => {
+			return `${greeting} Workflow complete.`;
+		});
+
+		return result;
+	}
+}
+
 const SEED_DATA: [string, string][] = [
 	["greeting", "Hello, World!"],
 	["counter", "42"],
@@ -201,4 +236,136 @@ const SEED_DATA: [string, string][] = [
 	["number-integer", "42"],
 	["number-float", "3.14159"],
 	["number-negative", "-273.15"],
+	["large-key-1", "x".repeat(10 * 1024 * 1024)],
+];
+
+interface R2SeedItem {
+	key: string;
+	content: string | ArrayBuffer;
+	contentType: string;
+	customMetadata?: Record<string, string>;
+}
+
+const R2_SEED_DATA: R2SeedItem[] = [
+	// Root level files
+	{
+		key: "readme.txt",
+		content: "Welcome to the R2 bucket! This is a sample readme file.",
+		contentType: "text/plain",
+	},
+	{
+		key: "config.json",
+		content: JSON.stringify(
+			{ version: "1.0.0", environment: "development" },
+			null,
+			2
+		),
+		contentType: "application/json",
+		customMetadata: { author: "admin", created: "2025-01-15" },
+	},
+
+	// Images folder
+	{
+		key: "images/logo.svg",
+		content:
+			'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="40" fill="orange"/></svg>',
+		contentType: "image/svg+xml",
+	},
+	{
+		key: "images/banner.svg",
+		content:
+			'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100"><rect width="300" height="100" fill="blue"/></svg>',
+		contentType: "image/svg+xml",
+	},
+	{
+		key: "images/icons/home.svg",
+		content:
+			'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M12 3L2 12h3v9h6v-6h2v6h6v-9h3L12 3z"/></svg>',
+		contentType: "image/svg+xml",
+	},
+	{
+		key: "images/icons/settings.svg",
+		content:
+			'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="3"/></svg>',
+		contentType: "image/svg+xml",
+	},
+
+	// Documents folder
+	{
+		key: "documents/report.txt",
+		content:
+			"Annual Report 2024\n\nThis is a sample annual report with important business metrics.",
+		contentType: "text/plain",
+		customMetadata: { department: "finance", year: "2024" },
+	},
+	{
+		key: "documents/notes.md",
+		content:
+			"# Meeting Notes\n\n## Action Items\n- Review budget\n- Update roadmap\n- Schedule follow-up",
+		contentType: "text/markdown",
+	},
+	{
+		key: "documents/data.csv",
+		content: "id,name,value\n1,Alpha,100\n2,Beta,200\n3,Gamma,300",
+		contentType: "text/csv",
+	},
+
+	// Data folder with nested structure
+	{
+		key: "data/users.json",
+		content: JSON.stringify(
+			[
+				{ id: 1, name: "Alice", role: "admin" },
+				{ id: 2, name: "Bob", role: "user" },
+			],
+			null,
+			2
+		),
+		contentType: "application/json",
+	},
+	{
+		key: "data/backup/2024/january.json",
+		content: JSON.stringify({ month: "January", records: 150 }),
+		contentType: "application/json",
+		customMetadata: { backup: "true", period: "2024-01" },
+	},
+	{
+		key: "data/backup/2024/february.json",
+		content: JSON.stringify({ month: "February", records: 175 }),
+		contentType: "application/json",
+		customMetadata: { backup: "true", period: "2024-02" },
+	},
+
+	// Logs folder
+	{
+		key: "logs/access.log",
+		content:
+			"2025-01-15 10:00:00 GET /api/users 200\n2025-01-15 10:01:00 POST /api/login 200\n2025-01-15 10:02:00 GET /api/products 200",
+		contentType: "text/plain",
+	},
+	{
+		key: "logs/error.log",
+		content:
+			"2025-01-15 09:30:00 ERROR Connection timeout\n2025-01-15 09:45:00 ERROR Invalid token",
+		contentType: "text/plain",
+	},
+
+	// Assets with various content types
+	{
+		key: "assets/styles.css",
+		content:
+			"body { font-family: sans-serif; }\n.container { max-width: 1200px; margin: 0 auto; }",
+		contentType: "text/css",
+	},
+	{
+		key: "assets/script.js",
+		content: 'console.log("Hello from R2!");\nfunction init() { return true; }',
+		contentType: "application/javascript",
+	},
+	{
+		key: "assets/template.html",
+		content:
+			"<!DOCTYPE html>\n<html><head><title>Template</title></head><body><h1>Hello</h1></body></html>",
+		contentType: "text/html",
+	},
 ];

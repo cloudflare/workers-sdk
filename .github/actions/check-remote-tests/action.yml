@@ -1,0 +1,33 @@
+name: "Check Remote Tests"
+description: >
+  Determines whether E2E tests should be given Cloudflare API credentials.
+  Returns true for merge-queue runs, Version Packages PRs, or when the
+  "run-remote-tests" label is present on a pull request.
+outputs:
+  run-remote:
+    description: "'true' when remote tests should run, 'false' otherwise"
+    value: ${{ steps.decide.outputs.run_remote }}
+runs:
+  using: "composite"
+  steps:
+    - name: Decide whether to run remote tests
+      id: decide
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        EVENT_NAME: ${{ github.event_name }}
+        HEAD_REF: ${{ github.head_ref }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+      run: |
+        if [ "$EVENT_NAME" = "merge_group" ] || \
+           [ "$HEAD_REF" = "changeset-release/main" ]; then
+          echo "run_remote=true" >> "$GITHUB_OUTPUT"
+        elif [ "$EVENT_NAME" = "pull_request" ]; then
+          HAS_LABEL=$(gh pr view "$PR_NUMBER" \
+            --repo "$REPO" --json labels \
+            --jq '[.labels[].name] | any(. == "run-remote-tests")')
+          echo "run_remote=${HAS_LABEL}" >> "$GITHUB_OUTPUT"
+        else
+          echo "run_remote=false" >> "$GITHUB_OUTPUT"
+        fi

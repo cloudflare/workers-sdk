@@ -128,7 +128,7 @@ const listAppliedMigrations = async ({
 	return response[0].results as Migration[];
 };
 
-function getMigrationNames(migrationsPath: string): Array<string> {
+export function getMigrationNames(migrationsPath: string): Array<string> {
 	const migrations = [];
 
 	const dir = fs.opendirSync(migrationsPath);
@@ -142,7 +142,7 @@ function getMigrationNames(migrationsPath: string): Array<string> {
 
 	dir.closeSync();
 
-	return migrations;
+	return migrations.toSorted();
 }
 
 /**

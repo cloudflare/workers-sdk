@@ -7,7 +7,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
 
 permissions:
   contents: read
@@ -29,8 +29,9 @@ jobs:
             .github/opencode.json
 
       - name: Install OpenCode
+        # pin OpenCode to 1.4.6 version as newer versions are causing ProviderInitError issues
         run: |
-          npm install -g opencode-ai
+          npm install -g opencode-ai@1.4.6
           cp .github/opencode.json ./opencode.json
 
       - name: Get changed changeset files
@@ -41,7 +42,7 @@ jobs:
             .changeset/*.md
           files_ignore: |
             .changeset/README.md
-          # Recover deleted files so Claude can read them (needed for Version Packages PRs)
+          # Recover deleted files so the AI can read them (needed for Version Packages PRs)
           recover_deleted_files: ${{ github.event.pull_request.title == 'Version Packages' }}
 
       - name: Review Changesets with OpenCode
@@ -55,7 +56,7 @@ jobs:
           DELETED_FILES: ${{ steps.changed-changesets.outputs.deleted_files }}
           ADDED_FILES: ${{ steps.changed-changesets.outputs.added_files }}
         run: |
-          opencode run --print-logs \
+          opencode --model "cloudflare-ai-gateway/workers-ai/@cf/moonshotai/kimi-k2.5" run --print-logs \
             "Review the changeset files in this PR.
 
             For \"Version Packages\" PRs, review: ${DELETED_FILES}

@@ -24,18 +24,19 @@ export function validateChangesets(
 		try {
 			const changeset = parseChangeset(contents);
 			for (const release of changeset.releases) {
-				if (!packages.has(release.name)) {
+				const targetPackage = packages.get(release.name);
+				if (!targetPackage) {
 					errors.push(
 						`Unknown package name "${release.name}" in changeset at "${file}".`
 					);
 				}
 
-				if (release.type === "major") {
+				if (release.type === "major" && targetPackage?.private !== true) {
 					errors.push(
 						`Major version bumps are not allowed for package "${release.name}" in changeset at "${file}".`
 					);
 				}
-				if (!["minor", "patch", "none"].includes(release.type)) {
+				if (!["major", "minor", "patch", "none"].includes(release.type)) {
 					errors.push(
 						`Invalid type "${release.type}" for package "${release.name}" in changeset at "${file}".`
 					);

@@ -16,7 +16,7 @@ import type {
  */
 export function readJSONWithComments(
 	jsonFilePath: string,
-	reviver?: Reviver,
+	reviver?: Reviver
 ): CommentObject {
 	const jsonString = readFile(jsonFilePath);
 	const jsonObject = parse(jsonString, reviver) as unknown as CommentObject;
@@ -30,7 +30,7 @@ export function readJSONWithComments(
  */
 export function writeJSONWithComments(
 	jsonFilePath: string,
-	jsonObject: CommentObject,
+	jsonObject: CommentObject
 ): void {
 	const jsonStr = stringify(jsonObject, null, "\t");
 	writeFile(jsonFilePath, jsonStr);
@@ -45,7 +45,7 @@ export function writeJSONWithComments(
 export function addJSONComment(
 	jsonObject: Partial<CommentObject>,
 	descriptor: CommentDescriptor,
-	comment: string | Partial<CommentToken> | (string | Partial<CommentToken>)[],
+	comment: string | Partial<CommentToken> | (string | Partial<CommentToken>)[]
 ): void {
 	if (!Array.isArray(comment)) {
 		comment = [comment];
@@ -80,7 +80,7 @@ export function addJSONComment(
 export function appendJSONProperty<T>(
 	jsonObject: T,
 	property: string,
-	value: unknown,
+	value: unknown
 ) {
 	return assign(jsonObject, { [property]: value });
 }
@@ -95,7 +95,7 @@ export function appendJSONProperty<T>(
 export function insertJSONProperty<T>(
 	jsonObject: T,
 	property: string,
-	value: unknown,
+	value: unknown
 ) {
 	return assign({ [property]: value }, jsonObject) as CommentObject;
 }

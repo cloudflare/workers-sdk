@@ -1,14 +1,14 @@
 {
 	"name": "@fixture/pages-plugin",
 	"private": true,
-	"main": "dist/index.js",
-	"types": "index.d.ts",
 	"files": [
 		"dist/",
 		"index.d.ts",
 		"tsconfig.json",
 		"public/"
 	],
+	"main": "dist/index.js",
+	"types": "index.d.ts",
 	"scripts": {
 		"build": "wrangler pages functions build --plugin --outdir=dist --external=is-odd",
 		"check:type": "tsc"

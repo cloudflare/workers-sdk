@@ -1,63 +1,37 @@
+import { Sidebar, Toasty } from "@cloudflare/kumo";
 import {
 	createRootRoute,
 	Outlet,
+	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
+import { useCallback, useMemo, useState } from "react";
+import { localExplorerListWorkers } from "../api";
+import { NotFound } from "../components/NotFound";
+import { AppSidebar } from "../components/Sidebar";
 import {
-	d1ListDatabases,
-	durableObjectsNamespaceListNamespaces,
-	workersKvNamespaceListNamespaces,
-} from "../api";
-import { Sidebar } from "../components/Sidebar";
-import type {
-	D1DatabaseResponse,
-	WorkersKvNamespace,
-	WorkersNamespace,
-} from "../api";
+	filterVisibleWorkers,
+	getSelectedWorker,
+} from "../components/WorkerSelector";
+import {
+	loadSidebarOpenState,
+	saveSidebarOpenState,
+} from "../utils/sidebar-state";
+import {
+	applyThemeMode,
+	getNextThemeMode,
+	loadThemeMode,
+	saveThemeMode,
+} from "../utils/theme-state";
+import type { ThemeMode } from "../utils/theme-state";
 
 export const Route = createRootRoute({
 	component: RootLayout,
+	notFoundComponent: NotFound,
 	loader: async () => {
-		const [kvResponse, d1Response, doResponse] = await Promise.allSettled([
-			workersKvNamespaceListNamespaces(),
-			d1ListDatabases(),
-			durableObjectsNamespaceListNamespaces(),
-		]);
-
-		let kvNamespaces = new Array<WorkersKvNamespace>();
-		let kvError: string | null = null;
-		if (kvResponse.status === "fulfilled") {
-			kvNamespaces = kvResponse.value.data?.result ?? [];
-		} else {
-			kvError = `KV Error: ${kvResponse.reason instanceof Error ? kvResponse.reason.message : JSON.stringify(kvResponse.reason)}`;
-		}
-
-		let databases = new Array<D1DatabaseResponse>();
-		let d1Error: string | null = null;
-		if (d1Response.status === "fulfilled") {
-			databases = d1Response.value.data?.result ?? [];
-		} else {
-			d1Error = `D1 Error: ${d1Response.reason instanceof Error ? d1Response.reason.message : JSON.stringify(d1Response.reason)}`;
-		}
-
-		let doNamespaces = new Array<WorkersNamespace>();
-		let doError: string | null = null;
-		if (doResponse.status === "fulfilled") {
-			// Only show namespaces that use SQLite storage
-			const allDoNamespaces = doResponse.value.data?.result ?? [];
-			doNamespaces = allDoNamespaces.filter((ns) => ns.use_sqlite === true);
-		} else {
-			doError = `DO Error: ${doResponse.reason instanceof Error ? doResponse.reason.message : JSON.stringify(doResponse.reason)}`;
-		}
-
-		return {
-			d1Error,
-			databases,
-			doError,
-			doNamespaces,
-			kvError,
-			kvNamespaces,
-		};
+		const workersResponse = await localExplorerListWorkers();
+		const workers = workersResponse.data?.result ?? [];
+		return { workers };
 	},
 });
 
@@ -65,21 +39,72 @@ function RootLayout() {
 	const loaderData = Route.useLoaderData();
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
+	const router = useRouter();
+
+	const [sidebarOpen, setSidebarOpen] = useState<boolean>(loadSidebarOpenState);
+	const [themeMode, setThemeMode] = useState<ThemeMode>(loadThemeMode);
+
+	const handleSidebarOpenChange = useCallback((open: boolean) => {
+		setSidebarOpen(open);
+		saveSidebarOpenState(open);
+	}, []);
+
+	const handleCycleTheme = useCallback(() => {
+		const next = getNextThemeMode(themeMode);
+		saveThemeMode(next);
+		applyThemeMode(
+			next,
+			window.matchMedia("(prefers-color-scheme: dark)").matches
+		);
+		setThemeMode(next);
+	}, [themeMode]);
+
+	// Filter out internal workers (like __asset-worker__, __router-worker__, etc.)
+	const visibleWorkers = useMemo(
+		() => filterVisibleWorkers(loaderData.workers),
+		[loaderData.workers]
+	);
+
+	const selectedWorkerObj = useMemo(
+		() => getSelectedWorker(loaderData.workers, routerState.location.searchStr),
+		[loaderData.workers, routerState.location.searchStr]
+	);
+
+	const selectedWorker = selectedWorkerObj?.name ?? "";
+
+	const handleWorkerChange = useCallback(
+		(workerName: string) => {
+			const currentSearch = new URLSearchParams(routerState.location.searchStr);
+			currentSearch.set("worker", workerName);
+			router.history.push(
+				`${window.location.pathname}?${currentSearch.toString()}`
+			);
+		},
+		[router, routerState.location.searchStr]
+	);
 
 	return (
-		<div className="flex min-h-screen">
-			<Sidebar
-				currentPath={currentPath}
-				d1Error={loaderData.d1Error}
-				databases={loaderData.databases}
-				doError={loaderData.doError}
-				doNamespaces={loaderData.doNamespaces}
-				kvError={loaderData.kvError}
-				kvNamespaces={loaderData.kvNamespaces}
-			/>
-			<main className="flex-1 overflow-y-auto flex flex-col">
-				<Outlet />
-			</main>
-		</div>
+		<Toasty>
+			<div className="flex h-screen">
+				<Sidebar.Provider
+					onOpenChange={handleSidebarOpenChange}
+					open={sidebarOpen}
+					resizable={true}
+				>
+					<AppSidebar
+						bindings={selectedWorkerObj?.bindings}
+						currentPath={currentPath}
+						onCycleTheme={handleCycleTheme}
+						onWorkerChange={handleWorkerChange}
+						selectedWorker={selectedWorker}
+						themeMode={themeMode}
+						workers={visibleWorkers}
+					/>
+					<main className="flex flex-1 flex-col overflow-y-auto">
+						<Outlet />
+					</main>
+				</Sidebar.Provider>
+			</div>
+		</Toasty>
 	);
 }

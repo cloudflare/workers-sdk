@@ -1,0 +1,22 @@
+{
+	"name": "@cloudflare/lint-config-shared",
+	"version": "1.2.1",
+	"private": true,
+	"description": "Custom lint rules for workers-sdk (used by oxlint jsPlugins)",
+	"type": "module",
+	"exports": {
+		".": "./oxlint-plugin.mjs"
+	},
+	"scripts": {
+		"deploy": "echo 'no deploy'",
+		"test": "node rules/__tests__/no-unsafe-command-execution.test.mjs && node rules/__tests__/no-direct-recursive-rm.test.mjs",
+		"test:ci": "node rules/__tests__/no-unsafe-command-execution.test.mjs && node rules/__tests__/no-direct-recursive-rm.test.mjs"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"eslint": "^9.39.1"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

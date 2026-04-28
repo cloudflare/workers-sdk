@@ -30,6 +30,7 @@ type ValidKeys = Exclude<
 	| "durable_objects"
 	| "version_metadata"
 	| "images"
+	| "stream"
 	| "media"
 	| "unsafe"
 	| "ratelimits"
@@ -40,7 +41,9 @@ type ValidKeys = Exclude<
 	| "mtls_certificates"
 	| "dispatch_namespaces"
 	| "secrets_store_secrets"
+	| "artifacts"
 	| "unsafe_hello_world"
+	| "flagship"
 >;
 
 export const sharedResourceCreationArgs = {

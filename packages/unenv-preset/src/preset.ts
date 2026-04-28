@@ -685,20 +685,24 @@ function getStreamWrapOverrides({
  * Returns the overrides for `node:repl` (unenv or workerd)
  *
  * The native repl implementation:
- * - is experimental and has no default enable date
+ * - is enabled starting from 2026-03-17
  * - can be enabled with the "enable_nodejs_repl_module" flag
  * - can be disabled with the "disable_nodejs_repl_module" flag
  */
-function getReplOverrides({ compatibilityFlags }: Compatibility): Override {
+function getReplOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_repl_module"
 	);
 
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_repl_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_repl_module"
+	);
+	const enabledByDate = compatibilityDate >= "2026-03-17";
 
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	// When enabled, use the native `repl` module from workerd
 	return enabled
@@ -810,20 +814,22 @@ function hasFetchIterableFixes({
  * Returns the overrides for `node:v8` (unenv or workerd)
  *
  * The native v8 implementation:
- * - is experimental and has no default enable date
+ * - is enabled starting from 2026-03-17
  * - can be enabled with the "enable_nodejs_v8_module" flag
  * - can be disabled with the "disable_nodejs_v8_module" flag
  */
-function getV8Overrides({ compatibilityFlags }: Compatibility): Override {
+function getV8Overrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_v8_module"
 	);
 
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_v8_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes("enable_nodejs_v8_module");
+	const enabledByDate = compatibilityDate >= "2026-03-17";
 
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	// When enabled, use the native `v8` module from workerd
 	return enabled
@@ -841,20 +847,22 @@ function getV8Overrides({ compatibilityFlags }: Compatibility): Override {
  * Returns the overrides for `node:tty` (unenv or workerd)
  *
  * The native tty implementation:
- * - is experimental and has no default enable date
+ * - is enabled starting from 2026-03-17
  * - can be enabled with the "enable_nodejs_tty_module" flag
  * - can be disabled with the "disable_nodejs_tty_module" flag
  */
-function getTtyOverrides({ compatibilityFlags }: Compatibility): Override {
+function getTtyOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_tty_module"
 	);
 
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_tty_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes("enable_nodejs_tty_module");
+	const enabledByDate = compatibilityDate >= "2026-03-17";
 
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	// When enabled, use the native `tty` module from workerd
 	return enabled
@@ -872,22 +880,24 @@ function getTtyOverrides({ compatibilityFlags }: Compatibility): Override {
  * Returns the overrides for `node:child_process` (unenv or workerd)
  *
  * The native child_process implementation:
- * - is experimental and has no default enable date
+ * - is enabled starting from 2026-03-17
  * - can be enabled with the "enable_nodejs_child_process_module" flag
  * - can be disabled with the "disable_nodejs_child_process_module" flag
  */
 function getChildProcessOverrides({
+	compatibilityDate,
 	compatibilityFlags,
 }: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_child_process_module"
 	);
 
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_child_process_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_child_process_module"
+	);
+	const enabledByDate = compatibilityDate >= "2026-03-17";
 
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	// When enabled, use the native `child_process` module from workerd
 	return enabled
@@ -905,23 +915,24 @@ function getChildProcessOverrides({
  * Returns the overrides for `node:worker_threads` (unenv or workerd)
  *
  * The native worker_threads implementation:
+ * - is enabled starting from 2026-03-17
  * - can be enabled with the "enable_nodejs_worker_threads_module" flag
  * - can be disabled with the "disable_nodejs_worker_threads_module" flag
- * - is experimental (no default enable date)
  */
 function getWorkerThreadsOverrides({
+	compatibilityDate,
 	compatibilityFlags,
 }: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_worker_threads_module"
 	);
 
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_worker_threads_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_worker_threads_module"
+	);
+	const enabledByDate = compatibilityDate >= "2026-03-17";
 
-	// worker_threads is experimental, no default enable date
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	// When enabled, use the native `worker_threads` module from workerd
 	return enabled
@@ -939,20 +950,24 @@ function getWorkerThreadsOverrides({
  * Returns the overrides for `node:readline` and `node:readline/promises` (unenv or workerd)
  *
  * The native readline implementation:
- * - is experimental and has no default enable date
+ * - is enabled starting from 2026-03-17
  * - can be enabled with the "enable_nodejs_readline_module" flag
  * - can be disabled with the "disable_nodejs_readline_module" flag
  */
-function getReadlineOverrides({ compatibilityFlags }: Compatibility): Override {
+function getReadlineOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_readline_module"
 	);
 
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_readline_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_readline_module"
+	);
+	const enabledByDate = compatibilityDate >= "2026-03-17";
 
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	// When enabled, use the native `readline` and `readline/promises` modules from workerd
 	return enabled
@@ -970,22 +985,24 @@ function getReadlineOverrides({ compatibilityFlags }: Compatibility): Override {
  * Returns the overrides for `node:perf_hooks` (unenv or workerd)
  *
  * The native performance implementation:
- * - is experimental and has no default enable date
+ * - is enabled starting from 2026-03-17
  * - can be enabled with the "enable_nodejs_perf_hooks_module" flag
  * - can be disabled with the "disable_nodejs_perf_hooks_module" flag
  */
 function getPerfHooksOverrides({
+	compatibilityDate,
 	compatibilityFlags,
 }: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_perf_hooks_module"
 	);
 
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_perf_hooks_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_perf_hooks_module"
+	);
+	const enabledByDate = compatibilityDate >= "2026-03-17";
 
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	return enabled
 		? {

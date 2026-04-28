@@ -40,9 +40,7 @@ export async function introspectWorkflowInstance(
 	return new WorkflowInstanceIntrospectorHandle(workflow, instanceId);
 }
 
-class WorkflowInstanceIntrospectorHandle
-	implements WorkflowInstanceIntrospector
-{
+class WorkflowInstanceIntrospectorHandle implements WorkflowInstanceIntrospector {
 	#workflow: WorkflowBinding;
 	#instanceId: string;
 	#instanceModifier: WorkflowInstanceModifier | undefined;
@@ -86,15 +84,6 @@ class WorkflowInstanceIntrospectorHandle
 	}
 
 	async waitForStatus(status: InstanceStatus["status"]): Promise<void> {
-		if (
-			status === instanceStatusName(InstanceStatusNumber.Terminated) ||
-			status === instanceStatusName(InstanceStatusNumber.Paused)
-		) {
-			throw new Error(
-				`[WorkflowIntrospector] InstanceStatus '${status}' is not implemented yet and cannot be waited.`
-			);
-		}
-
 		if (status === instanceStatusName(InstanceStatusNumber.Queued)) {
 			// we currently don't have a queue mechanism, but it would happen before it
 			// starts running, so waiting for it to be queued should always return
@@ -270,13 +259,16 @@ class WorkflowIntrospectorHandle implements WorkflowIntrospector {
 	}
 
 	async dispose(): Promise<void> {
-		// also disposes all instance introspectors
-		await Promise.all(
-			this.#instanceIntrospectors.map((introspector) => introspector.dispose())
-		);
+		// Restore the original env binding immediately so the next test gets a
+		// clean binding even if instance disposal (unsafeAbort) is still in flight.
+		this.#disposeCallback();
+		const introspectors = this.#instanceIntrospectors;
 		this.#modifierCallbacks = [];
 		this.#instanceIntrospectors = [];
-		this.#disposeCallback();
+		// Dispose all instance introspectors after binding is restored
+		await Promise.all(
+			introspectors.map((introspector) => introspector.dispose())
+		);
 	}
 
 	async [Symbol.asyncDispose](): Promise<void> {

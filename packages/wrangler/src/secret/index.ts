@@ -589,23 +589,17 @@ export async function parseBulkInputToObject(
 	if (input) {
 		secretSource = "file";
 		const jsonFilePath = path.resolve(input);
+		const fileContent = readFileSync(jsonFilePath);
 		try {
-			const fileContent = readFileSync(jsonFilePath);
-			try {
-				content = parseJSON(fileContent) as Record<string, string>;
-				secretFormat = "json";
-			} catch (e) {
-				content = dotenvParse(fileContent);
-				secretFormat = "dotenv";
-				// dotenvParse does not error unless fileContent is undefined, no keys === error
-				if (Object.keys(content).length === 0) {
-					throw e;
-				}
+			content = parseJSON(fileContent) as Record<string, string>;
+			secretFormat = "json";
+		} catch {
+			content = dotenvParse(fileContent);
+			secretFormat = "dotenv";
+			// dotenvParse does not error unless fileContent is undefined, no keys === error
+			if (Object.keys(content).length === 0) {
+				throw new UserError(`The contents of "${input}" is not valid.`);
 			}
-		} catch (e) {
-			throw new FatalError(
-				`The contents of "${input}" is not valid JSON: "${e}"`
-			);
 		}
 		validateFileSecrets(content, input);
 	} else {

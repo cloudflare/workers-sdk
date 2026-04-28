@@ -11,10 +11,6 @@ export const SERVICE_ENTRY = `${CORE_PLUGIN_NAME}:entry`;
 export const SERVICE_LOCAL_EXPLORER = `${CORE_PLUGIN_NAME}:local-explorer`;
 // Disk service for local explorer UI assets
 export const LOCAL_EXPLORER_DISK = `${CORE_PLUGIN_NAME}:local-explorer-disk`;
-// URL path prefix where the local explorer UI is served
-export const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/explorer";
-// URL path prefix for the local explorer API endpoints
-export const LOCAL_EXPLORER_API_PATH = `${LOCAL_EXPLORER_BASE_PATH}/api`;
 // Service prefix for all regular user workers
 const SERVICE_USER_PREFIX = `${CORE_PLUGIN_NAME}:user`;
 // Service prefix for `workerd`'s builtin services (network, external, disk)
@@ -70,3 +66,11 @@ export const INTROSPECT_SQLITE_METHOD = "__miniflare_introspectSqlite";
 export type IntrospectSqliteMethod = (
 	queries: DoSqlWithParams[]
 ) => Promise<DoRawQueryResult[]>;
+
+/**
+ * Used by the local explorer worker.
+ * This method is injected into wrapped Durable Objects to allow getting the DO instance name.
+ */
+export const GET_DO_NAME_METHOD = "__miniflare_getDOName";
+
+export type GetDONameMethod = () => string | undefined;

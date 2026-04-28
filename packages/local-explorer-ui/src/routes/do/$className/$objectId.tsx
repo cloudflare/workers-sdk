@@ -1,34 +1,40 @@
-import { Select } from "@base-ui/react/select";
-import { Button } from "@cloudflare/kumo";
+import { Button, Breadcrumbs as KumoBreadcrumbs } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
-	CaretUpDownIcon,
-	CheckIcon,
-	CubeIcon,
 	PencilIcon,
-	PlusIcon,
-	TableIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import {
 	createFileRoute,
 	Link,
+	notFound,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { durableObjectsNamespaceListNamespaces } from "../../../api";
+import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { NotFound } from "../../../components/NotFound";
+import { ResourceError } from "../../../components/ResourceError";
 import { Studio } from "../../../components/studio";
 import { DropTableConfirmationModal } from "../../../components/studio/Modal/DropTableConfirmation";
 import { StudioTableActionsDropdown } from "../../../components/studio/Table/ActionsDropdown";
+import { TableSelect } from "../../../components/TableSelect";
 import { LocalDODriver } from "../../../drivers/do";
 import type { StudioRef } from "../../../components/studio";
 import type { StudioResource } from "../../../types/studio";
-import type { RefObject } from "react";
+
+/**
+ * Checks if a string is a valid 64-character hex Durable Object ID.
+ */
+function isHexId(str: string): boolean {
+	return /^[0-9a-f]{64}$/i.test(str);
+}
 
 export const Route = createFileRoute("/do/$className/$objectId")({
 	component: ObjectView,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		// Resolve className to a namespace ID
 		const response = await durableObjectsNamespaceListNamespaces();
@@ -40,11 +46,16 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 				ns.id === params.className
 		);
 		if (!namespace?.id) {
-			throw new Error(`Durable Object class "${params.className}" not found`);
+			throw notFound();
 		}
 
+		// Determine if the param is a hex ID or a name
+		const isId = isHexId(params.objectId);
+		const objectId = isId ? params.objectId : null;
+		const objectName = isId ? null : params.objectId;
+
 		// Fetch tables using the resolved namespace ID
-		const driver = new LocalDODriver(namespace.id, params.objectId);
+		const driver = new LocalDODriver(namespace.id, objectId, objectName);
 		const schemas = await driver.schemas();
 		const mainSchema = schemas["main"] ?? [];
 		const tables = mainSchema
@@ -53,10 +64,14 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 			.sort((a, b) => a.label.localeCompare(b.label));
 
 		return {
+			isId,
 			namespaceId: namespace.id,
+			objectId,
+			objectName,
 			tables,
 		};
 	},
+	notFoundComponent: NotFound,
 	validateSearch: (search) => ({
 		table: typeof search.table === "string" ? search.table : undefined,
 	}),
@@ -65,6 +80,7 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 function ObjectView(): JSX.Element {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
+	const { namespaceId, objectId, objectName } = loaderData;
 	const searchParams = Route.useSearch();
 	const navigate = useNavigate();
 	const router = useRouter();
@@ -81,11 +97,9 @@ function ObjectView(): JSX.Element {
 		tableName: string;
 	} | null>(null);
 
-	const { namespaceId } = loaderData;
-
 	const driver = useMemo<LocalDODriver>(
-		() => new LocalDODriver(namespaceId, params.objectId),
-		[namespaceId, params.objectId]
+		() => new LocalDODriver(namespaceId, objectId, objectName),
+		[namespaceId, objectId, objectName]
 	);
 
 	const resource = useMemo<StudioResource>(
@@ -110,9 +124,7 @@ function ObjectView(): JSX.Element {
 
 			void navigate({
 				replace: true,
-				search: {
-					table: tableName,
-				},
+				search: (prev) => ({ ...prev, table: tableName }),
 				to: ".",
 			});
 		},
@@ -138,9 +150,7 @@ function ObjectView(): JSX.Element {
 		await handleTableRefresh();
 		void navigate({
 			replace: true,
-			search: {
-				table: undefined,
-			},
+			search: (prev) => ({ ...prev, table: undefined }),
 			to: ".",
 		});
 	}, [handleTableRefresh, navigate]);
@@ -179,9 +189,9 @@ function ObjectView(): JSX.Element {
 			: params.objectId;
 
 	return (
-		<div className="flex flex-col h-full">
+		<div className="flex h-full flex-col">
 			<Breadcrumbs
-				icon={CubeIcon}
+				icon={DOIcon}
 				items={[
 					<Link
 						className="flex items-center gap-1.5"
@@ -192,13 +202,19 @@ function ObjectView(): JSX.Element {
 						{params.className}
 					</Link>,
 					<span
-						className="flex items-center gap-1.5 font-mono text-xs"
+						className="flex items-center gap-1 font-mono text-xs [&_button]:opacity-100"
 						key="object-id"
 						title={params.objectId}
 					>
 						{shortObjectId}
+						<KumoBreadcrumbs.Clipboard text={params.objectId} />
 					</span>,
-					<TableSelect key="table-selector" studioRef={studioRef} />,
+					<TableSelect
+						key="table-selector"
+						selectedTable={searchParams.table}
+						studioRef={studioRef}
+						tables={loaderData.tables}
+					/>,
 				]}
 				title="Durable Objects"
 			>
@@ -268,106 +284,5 @@ function ObjectView(): JSX.Element {
 				/>
 			</div>
 		</div>
-	);
-}
-
-interface TableSelectProps {
-	studioRef: RefObject<StudioRef | null>;
-}
-
-function TableSelect({ studioRef }: TableSelectProps): JSX.Element {
-	const data = Route.useLoaderData();
-	const navigate = useNavigate();
-	const searchParams = Route.useSearch();
-	const [open, setOpen] = useState(false);
-
-	const handleTableChange = useCallback(
-		(tableName: string | null) => {
-			if (tableName === null) {
-				return;
-			}
-
-			void navigate({
-				search: {
-					table: tableName,
-				},
-				to: ".",
-			});
-		},
-		[navigate]
-	);
-
-	const handleCreateTable = useCallback((): void => {
-		setOpen(false);
-		studioRef.current?.openCreateTableTab();
-	}, [studioRef]);
-
-	return (
-		<Select.Root
-			key="table-select"
-			onOpenChange={setOpen}
-			onValueChange={handleTableChange}
-			open={open}
-			value={searchParams.table ?? null}
-		>
-			<Select.Trigger className="inline-flex items-center gap-1 p-2 -mx-1.5 rounded-md bg-transparent text-sm text-text cursor-pointer border-none transition-colors hover:bg-border/50 data-popup-open:bg-border/50">
-				<Select.Value placeholder="Select table" />
-				<Select.Icon>
-					<CaretUpDownIcon className="w-3.5 h-3.5 text-text-secondary" />
-				</Select.Icon>
-			</Select.Trigger>
-
-			<Select.Portal>
-				<Select.Positioner
-					align="start"
-					alignItemWithTrigger={false}
-					side="bottom"
-					sideOffset={4}
-				>
-					<Select.Popup className="min-w-36 max-h-72 bg-bg border border-border rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-100 overflow-hidden transition-[opacity,transform] duration-150 data-starting-style:opacity-0 data-starting-style:-translate-y-1 data-ending-style:opacity-0 data-ending-style:-translate-y-1">
-						<div className="p-1">
-							<button
-								className="flex items-center gap-2 w-full py-1.5 px-2 rounded-md text-sm text-text cursor-pointer transition-colors select-none outline-none hover:bg-bg-secondary dark:hover:bg-bg-tertiary"
-								onClick={handleCreateTable}
-								type="button"
-							>
-								<span className="flex items-center w-4">
-									<PlusIcon className="w-3.5 h-3.5" />
-								</span>
-								Create table
-							</button>
-						</div>
-
-						<div className="mx-1 border-t border-border" />
-
-						<Select.List className="p-1">
-							{data.tables.length > 0 ? (
-								data.tables.map((table) => {
-									const Icon =
-										searchParams.table === table.value ? CheckIcon : TableIcon;
-
-									return (
-										<Select.Item
-											className="flex items-center gap-2 w-full py-1.5 px-2 rounded-md text-sm text-text cursor-pointer transition-colors select-none outline-none data-highlighted:bg-bg-secondary dark:data-highlighted:bg-bg-tertiary"
-											key={table.value}
-											value={table.value}
-										>
-											<span className="flex items-center w-4">
-												<Icon className="w-3.5 h-3.5" />
-											</span>
-											<Select.ItemText>{table.label}</Select.ItemText>
-										</Select.Item>
-									);
-								})
-							) : (
-								<span className="flex justify-center items-center gap-2 w-full py-1.5 px-2 text-sm text-text-secondary">
-									No tables
-								</span>
-							)}
-						</Select.List>
-					</Select.Popup>
-				</Select.Positioner>
-			</Select.Portal>
-		</Select.Root>
 	);
 }

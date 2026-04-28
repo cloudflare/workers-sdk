@@ -2,9 +2,14 @@ import assert from "assert";
 import { execSync } from "child_process";
 import { existsSync, readFileSync } from "fs";
 import path from "path";
+import { parse } from "jsonc-parser";
 
 function readJson(filePath) {
 	return JSON.parse(readFileSync(filePath, "utf8"));
+}
+
+function readJsonc(filePath) {
+	return parse(readFileSync(filePath, "utf8"));
 }
 
 const listResult = execSync(
@@ -36,7 +41,7 @@ for (const p of paths) {
 		console.log(pkg.name, "has build script. Checking turbo.json");
 		let turboConfig;
 		try {
-			turboConfig = readJson(path.join(p, "turbo.json"));
+			turboConfig = readJsonc(path.join(p, "turbo.json"));
 		} catch {
 			console.log("Failed to read turbo.json for", pkg.name);
 			process.exit(1);

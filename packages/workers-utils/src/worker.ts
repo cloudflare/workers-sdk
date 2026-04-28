@@ -149,6 +149,14 @@ export interface CfMediaBinding {
 }
 
 /**
+ * A binding to Cloudflare Stream
+ */
+export interface CfStreamBinding {
+	binding: string;
+	remote?: boolean;
+}
+
+/**
  * A binding to the Worker Version's metadata
  */
 
@@ -222,15 +230,39 @@ export interface CfVectorize {
 	remote?: boolean;
 }
 
+export interface CfAISearchNamespace {
+	binding: string;
+	namespace: string | typeof INHERIT_SYMBOL;
+	remote?: boolean;
+}
+
+export interface CfAISearch {
+	binding: string;
+	instance_name: string;
+	remote?: boolean;
+}
+
 export interface CfSecretsStoreSecrets {
 	binding: string;
 	store_id: string;
 	secret_name: string;
 }
 
+export interface CfArtifacts {
+	binding: string;
+	namespace: string;
+	remote?: boolean;
+}
+
 export interface CfHelloWorld {
 	binding: string;
 	enable_timer?: boolean;
+}
+
+export interface CfFlagship {
+	binding: string;
+	app_id: string;
+	remote?: boolean;
 }
 
 export interface CfWorkerLoader {
@@ -265,6 +297,13 @@ export interface CfService {
 export interface CfVpcService {
 	binding: string;
 	service_id: string;
+	remote?: boolean;
+}
+
+export interface CfVpcNetwork {
+	binding: string;
+	tunnel_id?: string;
+	network_id?: string;
 	remote?: boolean;
 }
 

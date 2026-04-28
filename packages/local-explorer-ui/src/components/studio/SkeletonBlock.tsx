@@ -20,7 +20,7 @@ export function SkeletonBlock({
 	return (
 		<div
 			className={cn(
-				"relative overflow-hidden rounded-md bg-surface-tertiary",
+				"relative overflow-hidden rounded-md bg-kumo-interact",
 				"before:absolute before:inset-0 before:animate-pulse before:bg-linear-to-r before:from-transparent before:via-white/20 before:to-transparent",
 				className
 			)}

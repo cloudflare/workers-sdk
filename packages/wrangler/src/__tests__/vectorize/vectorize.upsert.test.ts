@@ -1,9 +1,7 @@
 import crypto from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
-import { describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw } from "../helpers/msw";
@@ -54,7 +52,9 @@ describe("dataset upsert", () => {
 		},
 	];
 
-	it("should batch uploads in ndjson format for Vectorize v1", async () => {
+	it("should batch uploads in ndjson format for Vectorize v1", async ({
+		expect,
+	}) => {
 		writeFileSync(
 			"vectors.ndjson",
 			testVectors.map((v) => JSON.stringify(v)).join(`\n`)
@@ -113,7 +113,9 @@ describe("dataset upsert", () => {
 		`);
 	});
 
-	it("should batch uploads in ndjson format for Vectorize", async () => {
+	it("should batch uploads in ndjson format for Vectorize", async ({
+		expect,
+	}) => {
 		writeFileSync(
 			"vectors.ndjson",
 			testVectors.map((v) => JSON.stringify(v)).join(`\n`)
@@ -176,7 +178,9 @@ describe("dataset upsert", () => {
 		`);
 	});
 
-	it("should batch uploads for upsert in ndjson format for Vectorize", async () => {
+	it("should batch uploads for upsert in ndjson format for Vectorize", async ({
+		expect,
+	}) => {
 		writeFileSync(
 			"vectors.ndjson",
 			testVectors.map((v) => JSON.stringify(v)).join(`\n`)
@@ -239,7 +243,83 @@ describe("dataset upsert", () => {
 		`);
 	});
 
-	it("should reject an invalid file param", async () => {
+	it("should output valid JSON for insert with --json flag", async ({
+		expect,
+	}) => {
+		writeFileSync(
+			"vectors.ndjson",
+			testVectors.map((v) => JSON.stringify(v)).join(`\n`)
+		);
+
+		const mutationId = crypto.randomUUID();
+
+		msw.use(
+			http.post("*/vectorize/v2/indexes/:indexName/insert", async () => {
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: { mutationId: mutationId },
+					},
+					{ status: 200 }
+				);
+			})
+		);
+
+		await runWrangler(
+			`vectorize insert my-index --file vectors.ndjson --batch-size 10 --json`
+		);
+
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			{
+			  "count": 5,
+			  "index": "my-index",
+			}
+		`);
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
+	});
+
+	it("should output valid JSON for upsert with --json flag", async ({
+		expect,
+	}) => {
+		writeFileSync(
+			"vectors.ndjson",
+			testVectors.map((v) => JSON.stringify(v)).join(`\n`)
+		);
+
+		const mutationId = crypto.randomUUID();
+
+		msw.use(
+			http.post("*/vectorize/v2/indexes/:indexName/upsert", async () => {
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: { mutationId: mutationId },
+					},
+					{ status: 200 }
+				);
+			})
+		);
+
+		await runWrangler(
+			`vectorize upsert my-index --file vectors.ndjson --batch-size 10 --json`
+		);
+
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			{
+			  "count": 5,
+			  "index": "my-index",
+			}
+		`);
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
+	});
+
+	it("should reject an invalid file param", async ({ expect }) => {
 		await expect(
 			runWrangler("vectorize upsert my-index --file invalid_vectors.ndjson")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -247,7 +327,7 @@ describe("dataset upsert", () => {
 		);
 	});
 
-	it("should reject an empty file param", async () => {
+	it("should reject an empty file param", async ({ expect }) => {
 		writeFileSync("empty_vectors.ndjson", "");
 
 		await expect(

@@ -1,8 +1,14 @@
+import assert from "node:assert";
 import { exit } from "node:process";
-import { cancel, endSection, log, newline } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
-import { brandColor, dim, yellow } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import {
+	cancel,
+	endSection,
+	log,
+	newline,
+} from "@cloudflare/cli-shared-helpers";
+import { processArgument } from "@cloudflare/cli-shared-helpers/args";
+import { brandColor, dim, yellow } from "@cloudflare/cli-shared-helpers/colors";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { wrap } from "../helpers/wrap";
@@ -155,8 +161,9 @@ export async function listDeploymentsAndChoose(
 		})),
 		label: "deployment",
 	});
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	return deployments.find((d) => d.id === deployment)!;
+	const chosenDeployment = deployments.find((d) => d.id === deployment);
+	assert(chosenDeployment);
+	return chosenDeployment;
 }
 
 export async function pickDeployment(deploymentIdPrefix?: string) {

@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { http, HttpResponse } from "msw";
+// eslint-disable-next-line no-restricted-imports
 import { expect } from "vitest";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import {
@@ -214,6 +215,8 @@ export function mockCustomDomainsChangesetRequest({
 							environment: params.envName,
 							zone_name: "",
 							zone_id: "",
+							enabled: true,
+							previews_enabled: false,
 						};
 					}),
 					removed: [],
@@ -246,7 +249,11 @@ export function mockPublishCustomDomainsRequest({
 		override_existing_dns_record: boolean;
 	};
 	domains: Array<
-		{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
+		{
+			hostname: string;
+			enabled?: boolean;
+			previews_enabled?: boolean;
+		} & ({ zone_id?: string } | { zone_name?: string })
 	>;
 	env?: string | undefined;
 	useServiceEnvironments?: boolean | undefined;
@@ -651,32 +658,6 @@ export function mockPostConsumerById(
 				});
 			},
 			{ once: true }
-		)
-	);
-	return requests;
-}
-
-export function mockPostQueueHTTPConsumer(
-	expectedQueueId: string,
-	expectedBody: PostTypedConsumerBody
-) {
-	const requests = { count: 0 };
-	msw.use(
-		http.post(
-			`*/accounts/:accountId/queues/:queueId/consumers`,
-			async ({ request, params }) => {
-				const body = await request.json();
-				expect(params.queueId).toEqual(expectedQueueId);
-				expect(params.accountId).toEqual("some-account-id");
-				expect(body).toEqual(expectedBody);
-				requests.count += 1;
-				return HttpResponse.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: {},
-				});
-			}
 		)
 	);
 	return requests;

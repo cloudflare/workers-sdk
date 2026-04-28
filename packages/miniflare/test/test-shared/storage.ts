@@ -2,14 +2,14 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import {
-	ReadableByteStreamController,
-	ReadableStream,
-	ReadableStreamBYOBRequest,
-} from "node:stream/web";
+import { ReadableStream } from "node:stream/web";
 import { TextDecoder, TextEncoder } from "node:util";
 import { sanitisePath } from "miniflare";
 import { onTestFinished } from "vitest";
+import type {
+	ReadableByteStreamController,
+	ReadableStreamBYOBRequest,
+} from "node:stream/web";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();

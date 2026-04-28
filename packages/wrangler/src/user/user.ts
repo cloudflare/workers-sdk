@@ -239,7 +239,7 @@ import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
 	getClientIdFromEnv,
-	getCloudflareAccessToken,
+	getCloudflareAccessHeaders,
 	getCloudflareAccountIdFromEnv,
 	getCloudflareAPITokenFromEnv,
 	getCloudflareGlobalAuthEmailFromEnv,
@@ -374,10 +374,18 @@ const DefaultScopes = {
 		"See and change Cloudflare Pipelines configurations and data",
 	"secrets_store:write":
 		"See and change secrets + stores within the Secrets Store",
+	"artifacts:write":
+		"See and change Cloudflare Artifacts data such as registries and artifacts",
+	"flagship:write": "See and change Flagship feature flags and apps",
 	"containers:write": "Manage Workers Containers",
 	"cloudchamber:write": "Manage Cloudchamber",
 	"connectivity:admin":
-		" See, change, and bind to Connectivity Directory services, including creating services targeting Cloudflare Tunnel.",
+		"See, change, and bind to Connectivity Directory services, including creating services targeting Cloudflare Tunnel.",
+	"email_routing:write":
+		"See and change Email Routing settings, rules, and destination addresses.",
+	"email_sending:write":
+		"See and change Email Sending settings and configuration.",
+	"browser:write": "See and manage Browser Run sessions",
 } as const;
 
 /**
@@ -1401,8 +1409,9 @@ async function fetchAuthToken(body: URLSearchParams) {
 		logger.debug(
 			"Using Cloudflare Access to get an access token for the auth request"
 		);
-		// We are trying to access the staging API so we need an "access token".
-		headers["Cookie"] = `CF_Authorization=${await getCloudflareAccessToken()}`;
+		// We are trying to access a domain behind Access so we need auth headers.
+		const accessHeaders = await getCloudflareAccessHeaders();
+		Object.assign(headers, accessHeaders);
 	}
 	logger.debug("Fetching auth token from", getTokenUrlFromEnv());
 	try {

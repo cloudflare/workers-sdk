@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { it } from "vitest";
 
 const TINY_PNG = new Uint8Array([
@@ -90,7 +90,7 @@ const TINY_PNG = new Uint8Array([
 
 it("can return image info", async ({ expect }) => {
 	const resp = (await (
-		await SELF.fetch("https://example.com/", {
+		await exports.default.fetch("https://example.com/", {
 			method: "POST",
 			body: new Blob([TINY_PNG]).stream(),
 		})

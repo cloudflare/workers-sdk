@@ -29,7 +29,7 @@ export function StudioQueryResultSummary({
 	const isEnded = total === value || !!progress.error;
 
 	return (
-		<div className="p-4 w-full h-full overflow-hidden overflow-y-auto">
+		<div className="h-full w-full overflow-hidden overflow-y-auto p-4">
 			<div>
 				{isEnded ? (
 					<strong>
@@ -42,7 +42,7 @@ export function StudioQueryResultSummary({
 				)}
 			</div>
 
-			<div className="flex flex-col gap-4 mt-4">
+			<div className="mt-4 flex flex-col gap-4">
 				{last3.map((detail) => (
 					<div key={detail.order}>
 						{!detail.end && (
@@ -60,7 +60,7 @@ export function StudioQueryResultSummary({
 						<CodeBlock language="sql" code={detail.sql} />
 
 						{!!detail.error && (
-							<div className="mt-2 mb-2 ml-2 text-red-500 font-mono text-xs">
+							<div className="mt-2 mb-2 ml-2 font-mono text-xs text-red-500">
 								{detail.error}
 							</div>
 						)}

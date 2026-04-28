@@ -1,12 +1,12 @@
 import {
-	env,
+	createExecutionContext,
 	runDurableObjectAlarm,
 	runInDurableObject,
-	SELF,
 } from "cloudflare:test";
-import { RpcStub } from "cloudflare:workers";
+import { env, RpcStub } from "cloudflare:workers";
 import { describe, it, onTestFinished } from "vitest";
-import { Counter, TestObject } from "../src";
+import TestDefaultEntrypoint, { TestObject } from "../src";
+import { Counter } from "../src/counter";
 
 describe("named entrypoints", () => {
 	it("dispatches fetch request to named ExportedHandler", async ({
@@ -152,6 +152,25 @@ describe("Durable Object", () => {
 		using result = await stub.getObject();
 		expect(result).toMatchObject({ hello: "world" });
 	});
+});
+
+// Regression: https://github.com/cloudflare/workers-sdk/issues/7077
+// Fixed in workerd by https://github.com/cloudflare/workerd/pull/3782
+it("can construct a WorkerEntrypoint with mocked env", async ({ expect }) => {
+	const data = new Map<string, string>([["mocked-key", "mocked-value"]]);
+	const mockedKv = new Proxy(env.KV_NAMESPACE, {
+		get: (target, prop, receiver) =>
+			prop === "get"
+				? async (key: string) => data.get(key) ?? null
+				: Reflect.get(target, prop, receiver),
+	});
+
+	const ctx = createExecutionContext();
+	const worker = new TestDefaultEntrypoint(ctx, {
+		...env,
+		KV_NAMESPACE: mockedKv,
+	});
+	expect(await worker.read("mocked-key")).toBe("mocked-value");
 });
 
 describe("counter", () => {

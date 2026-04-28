@@ -129,14 +129,14 @@ export function StudioWhereFilterInput({
 
 		return (
 			<>
-				<span className="text-muted">●</span>
+				<span className="text-kumo-subtle">●</span>
 				<span>Apply</span>
 			</>
 		);
 	}, [loading, currentValue, value, parsingError]);
 
 	return (
-		<div className="border-border bg-surface-secondary border rounded flex items-center">
+		<div className="flex items-center rounded border border-kumo-fill bg-kumo-elevated">
 			<StudioSQLWhereEditor
 				className="w-full p-1"
 				columnNames={columnNameList}

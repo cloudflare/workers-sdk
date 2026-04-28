@@ -1,6 +1,22 @@
 import { spawn } from "node:child_process";
 import { UserError } from "@cloudflare/workers-utils";
 import { ImageRegistriesService, ImageRegistryPermissions } from "./client";
+import { OpenAPI } from "./client/core/OpenAPI";
+
+export function configureOpenAPIForContainerPull(
+	accountId: string,
+	apiToken: string,
+	apiBase = "https://api.cloudflare.com/client/v4"
+): void {
+	OpenAPI.BASE = `${apiBase}/accounts/${accountId}/containers`;
+	OpenAPI.CREDENTIALS = "omit";
+	const existingHeaders =
+		typeof OpenAPI.HEADERS === "object" ? OpenAPI.HEADERS : {};
+	OpenAPI.HEADERS = {
+		...existingHeaders,
+		Authorization: `Bearer ${apiToken}`,
+	};
+}
 
 /**
  * Gets push and pull credentials for a configured image registry

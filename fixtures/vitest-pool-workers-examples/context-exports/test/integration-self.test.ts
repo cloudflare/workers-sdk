@@ -1,15 +1,14 @@
-import { SELF } from "cloudflare:test";
 import { exports } from "cloudflare:workers";
 import { it, vi } from "vitest";
 
-it("can use context exports on the SELF worker", async ({ expect }) => {
-	const response = await SELF.fetch("http://example.com");
+it("can use context exports on the main worker", async ({ expect }) => {
+	const response = await exports.default.fetch("http://example.com");
 	expect(await response.text()).toBe(
 		"👋 Hello MainWorker from Main NamedEntryPoint!"
 	);
 });
 
-it("can use context exports (parameterized with props) on the exports.default worker", async ({
+it("can use context exports (parameterized with props) on the main worker", async ({
 	expect,
 }) => {
 	const response = await exports.default.fetch("http://example.com/props");
@@ -18,7 +17,7 @@ it("can use context exports (parameterized with props) on the exports.default wo
 	);
 });
 
-it("will warn on missing context exports on the exports.default worker", async ({
+it("will warn on missing context exports on the main worker", async ({
 	expect,
 }) => {
 	const warnSpy = vi.spyOn(console, "warn");
@@ -27,13 +26,13 @@ it("will warn on missing context exports on the exports.default worker", async (
 	);
 	expect(await response.text()).toMatchInlineSnapshot(`"👋 undefined"`);
 	expect(warnSpy).toHaveBeenCalledWith(
-		"Attempted to access 'ctx.exports.InvalidExport', which was not defined for the main 'SELF' Worker.\n" +
+		"Attempted to access 'ctx.exports.InvalidExport', which was not defined for the main Worker.\n" +
 			"Check that 'InvalidExport' is exported as an entry-point from the Worker.\n" +
 			"The '@cloudflare/vitest-pool-workers' integration tries to infer these exports by analyzing the source code of the main Worker.\n"
 	);
 });
 
-it("will warn on implicit re-exports that will exist in production but cannot not be guessed on the exports.default worker", async ({
+it("will warn on implicit re-exports that will exist in production but cannot not be guessed on the main worker", async ({
 	expect,
 }) => {
 	// In this test, we are trying to access an entry-point that is wildcard (*) re-exported from a virtual module.
@@ -44,13 +43,13 @@ it("will warn on implicit re-exports that will exist in production but cannot no
 	);
 	expect(await response.text()).toMatchInlineSnapshot(`"👋 undefined"`);
 	expect(warnSpy).toHaveBeenCalledWith(
-		"Attempted to access 'ctx.exports.ReexportedVirtualEntryPoint', which was not defined for the main 'SELF' Worker.\n" +
+		"Attempted to access 'ctx.exports.ReexportedVirtualEntryPoint', which was not defined for the main Worker.\n" +
 			"Check that 'ReexportedVirtualEntryPoint' is exported as an entry-point from the Worker.\n" +
 			"The '@cloudflare/vitest-pool-workers' integration tries to infer these exports by analyzing the source code of the main Worker.\n"
 	);
 });
 
-it("will still guess re-exports on the exports.default worker that cannot be fully analyzed by esbuild", async ({
+it("will still guess re-exports on the main worker that cannot be fully analyzed by esbuild", async ({
 	expect,
 }) => {
 	// In this test, we are trying to access an entry-point that is explicitly re-exported from a virtual module.
@@ -63,7 +62,7 @@ it("will still guess re-exports on the exports.default worker that cannot be ful
 	);
 });
 
-it("can access configured virtual entry points on the exports.default worker that cannot be fully analyzed by esbuild", async ({
+it("can access configured virtual entry points on the main worker that cannot be fully analyzed by esbuild", async ({
 	expect,
 }) => {
 	// In this test, we are trying to access an entry-point that is explicitly re-exported from a virtual module.
@@ -76,7 +75,7 @@ it("can access configured virtual entry points on the exports.default worker tha
 	);
 });
 
-it("can access imported context exports for exports.default worker", async ({
+it("can access imported context exports for the main worker", async ({
 	expect,
 }) => {
 	const msg = await exports.NamedEntryPoint.greet();

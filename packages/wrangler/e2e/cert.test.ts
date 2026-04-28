@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {
 	generateCaCertName,
@@ -24,7 +24,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("cert", () => {
 	const mtlsCertName = generateMtlsCertName();
 	const caCertName = generateCaCertName();
 
-	it("upload mtls-certificate", async () => {
+	it("upload mtls-certificate", async ({ expect }) => {
 		// locally generated certs/key
 		await helper.seed({ "mtls_client_cert_file.pem": leafCert });
 		await helper.seed({ "mtls_client_private_key_file.pem": leafKey });
@@ -41,7 +41,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("cert", () => {
 		`);
 	});
 
-	it("upload certificate-authority", async () => {
+	it("upload certificate-authority", async ({ expect }) => {
 		await helper.seed({ "ca_chain_cert.pem": caCert });
 
 		const output = await helper.run(
@@ -56,7 +56,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("cert", () => {
 		`);
 	});
 
-	it("delete mtls cert", async () => {
+	it("delete mtls cert", async ({ expect }) => {
 		const delete_mtls_cert_output = await helper.run(
 			`wrangler cert delete --name ${mtlsCertName}`
 		);
@@ -69,7 +69,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("cert", () => {
 		);
 	});
 
-	it("delete ca chain cert", async () => {
+	it("delete ca chain cert", async ({ expect }) => {
 		const delete_ca_cert_output = await helper.run(
 			`wrangler cert delete --name ${caCertName}`
 		);

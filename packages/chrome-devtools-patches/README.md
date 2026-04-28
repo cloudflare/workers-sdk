@@ -1,4 +1,4 @@
-# Workers Devtools Pages Project
+# Workers Devtools
 
 This package contains a Workers specific version of Chrome Devtools that is used by the Wrangler dev command and other applications. It is a customized fork of Chrome DevTools specifically tailored for debugging Cloudflare Workers. This package provides Worker-specific functionality through carefully maintained patches on top of Chrome DevTools.
 
@@ -52,16 +52,9 @@ Two methods are available for testing updates:
 
 **Preview Builds:**
 
-On any pull request to the repo on GitHub, you can add labels to trigger preview builds of both the DevTools frontend, and the Playground. This is useful because it will allow you to manually test your changes in a live environment, and with one-click.
+On any pull request to the repo on GitHub, you can add the `preview:chrome-devtools-patches` label to trigger a preview build of the DevTools frontend. This is useful because it will allow you to manually test your changes in a live environment, and with one-click.
 
-There are two labels you can use:
-
-- `preview:chrome-devtools-patches` - this will trigger the DevTools preview
-- `preview:workers-playground` - this will trigger the Playground preview
-
-If you add **both** labels, Playground will embed the DevTools preview, so you can test them together.
-
-Once the previews are built, you will see a comment on the PR with links to the live URLs.
+Once the preview is built, you will see a comment on the PR with a link to the live URL.
 
 ## Acceptance Criteria
 
@@ -83,11 +76,15 @@ When making changes:
 
 ## Deployment
 
+This package is deployed as a Cloudflare Workers + Assets project. The static DevTools frontend is served directly from Workers Assets, configured via `wrangler.jsonc`.
+
 Deployments are managed by GitHub Actions:
 
-- deploy-pages-previews.yml:
+- deploy-previews.yml:
   - Runs on any PR that has the `preview:chrome-devtools-patches` label.
-  - Deploys a preview, which can then be accessed via [https://<SHA>.cloudflare-devtools.pages.dev/].
+  - Uploads a preview version (without activating it in production) via `wrangler versions upload`.
+  - The preview URL is posted as a comment on the PR.
 - changesets.yml:
   - Runs when a "Version Packages" PR, containing a changeset that touches this package, is merged to `main`.
-  - Deploys this package to production, which can then be accessed via [https://cloudflare-devtools.pages.dev/].
+  - Deploys this package to production via `wrangler deploy`.
+  - Production is accessible via the custom domain [https://devtools.devprod.cloudflare.dev/].

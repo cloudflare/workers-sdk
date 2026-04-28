@@ -11,14 +11,14 @@ test("automatically re-runs unit tests", async ({
 }) => {
 	await seed({
 		"vitest.config.mts": vitestConfig(),
-		"index.ts": dedent/* javascript */ `
+		"index.ts": dedent /* javascript */ `
 			export default {
 				async fetch(request, env, ctx) {
 					return new Response("wrong");
 				}
 			}
 		`,
-		"index.test.ts": dedent/* javascript */ `
+		"index.test.ts": dedent /* javascript */ `
 			import { env, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			import worker from "./index";
@@ -38,7 +38,7 @@ test("automatically re-runs unit tests", async ({
 	});
 
 	await seed({
-		"index.ts": dedent/* javascript */ `
+		"index.ts": dedent /* javascript */ `
 			export default {
 				async fetch(request, env, ctx) {
 					return new Response("correct");
@@ -64,14 +64,14 @@ test("automatically re-runs integration tests", async ({
 				compatibilityFlags: ["nodejs_compat"],
 			},
 		}),
-		"index.ts": dedent/* javascript */ `
+		"index.ts": dedent /* javascript */ `
 			export default {
 				async fetch(request, env, ctx) {
 					return new Response("wrong");
 				}
 			}
 		`,
-		"index.test.ts": dedent/* javascript */ `
+		"index.test.ts": dedent /* javascript */ `
 			import { SELF } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it("sends request", async () => {
@@ -87,7 +87,7 @@ test("automatically re-runs integration tests", async ({
 	});
 
 	await seed({
-		"index.ts": dedent/* javascript */ `
+		"index.ts": dedent /* javascript */ `
 			export default {
 				async fetch(request, env, ctx) {
 					return new Response("correct");
@@ -113,12 +113,12 @@ test("automatically reset module graph", async ({
 				compatibilityFlags: ["nodejs_compat"],
 			},
 		}),
-		"answer.ts": dedent/* javascript */ `
+		"answer.ts": dedent /* javascript */ `
 			export function getAnswer() {
 				return "wrong";
 			}
 		`,
-		"index.ts": dedent/* javascript */ `
+		"index.ts": dedent /* javascript */ `
 			import { getAnswer } from "./answer";
 
 			export default {
@@ -128,7 +128,7 @@ test("automatically reset module graph", async ({
 				}
 			}
 		`,
-		"index.test.ts": dedent/* javascript */ `
+		"index.test.ts": dedent /* javascript */ `
 			import { env, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 			import { it, expect, vi } from "vitest";
 			import worker from "./index";
@@ -155,7 +155,7 @@ test("automatically reset module graph", async ({
 
 	// Trigger a re-run by updating the test file with an extra test.
 	await seed({
-		"index.test.ts": dedent/* javascript */ `
+		"index.test.ts": dedent /* javascript */ `
 			import { env, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 			import { it, expect, vi } from "vitest";
 			import worker from "./index";

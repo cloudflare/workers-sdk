@@ -23,6 +23,7 @@
 			},
 		],
 	},
+	"r2_buckets": [{ "bucket_name": "bucket-b", "binding": "BUCKET_B" }],
 	"migrations": [
 		{
 			"new_sqlite_classes": ["WorkerBDurableObject"],

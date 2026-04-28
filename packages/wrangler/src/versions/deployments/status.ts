@@ -1,6 +1,6 @@
 import assert from "node:assert";
-import { logRaw } from "@cloudflare/cli";
-import { brandColor, gray } from "@cloudflare/cli/colors";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
+import { brandColor, gray } from "@cloudflare/cli-shared-helpers/colors";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import * as metrics from "../../metrics";
@@ -25,7 +25,7 @@ export const deploymentsStatusCommand = createCommand({
 			requiresArg: true,
 		},
 		json: {
-			describe: "Display output as clean JSON",
+			describe: "Display output as JSON",
 			type: "boolean",
 			default: false,
 		},

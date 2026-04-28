@@ -1,7 +1,5 @@
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
-import { afterEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { mockConsoleMethods } from "./../helpers/mock-console";
@@ -24,7 +22,7 @@ describe("pages project create", () => {
 		msw.restoreHandlers();
 	});
 
-	it("should create a project with a production branch", async () => {
+	it("should create a project with a production branch", async ({ expect }) => {
 		msw.use(
 			http.post(
 				"*/accounts/:accountId/pages/projects",
@@ -71,7 +69,7 @@ describe("pages project create", () => {
 		`);
 	});
 
-	it("should create a project with compatibility flags", async () => {
+	it("should create a project with compatibility flags", async ({ expect }) => {
 		msw.use(
 			http.post(
 				"*/accounts/:accountId/pages/projects",
@@ -116,7 +114,9 @@ describe("pages project create", () => {
 		`);
 	});
 
-	it("should create a project with a compatibility date", async () => {
+	it("should create a project with a compatibility date", async ({
+		expect,
+	}) => {
 		msw.use(
 			http.post(
 				"*/accounts/:accountId/pages/projects",
@@ -161,7 +161,9 @@ describe("pages project create", () => {
 		`);
 	});
 
-	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async () => {
+	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async ({
+		expect,
+	}) => {
 		msw.use(
 			http.post(
 				"*/accounts/:accountId/pages/projects",

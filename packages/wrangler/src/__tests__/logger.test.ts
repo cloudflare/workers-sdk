@@ -1,4 +1,4 @@
-import { error, logRaw, setLogLevel } from "@cloudflare/cli";
+import { error, logRaw, setLogLevel } from "@cloudflare/cli-shared-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { Logger } from "../logger";
 import { mockCLIOutput } from "./helpers/mock-cli-output";
@@ -258,7 +258,7 @@ describe("logger", () => {
 		});
 	});
 
-	describe("@cloudflare/cli logRaw", () => {
+	describe("@cloudflare/cli-shared-helpers logRaw", () => {
 		const cliOut = mockCLIOutput();
 
 		it("should output at log level", ({ expect }) => {
@@ -296,7 +296,7 @@ describe("logger", () => {
 		});
 	});
 
-	describe("@cloudflare/cli error", () => {
+	describe("@cloudflare/cli-shared-helpers error", () => {
 		const cliOut = mockCLIOutput();
 
 		it("should output at error level", ({ expect }) => {

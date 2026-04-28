@@ -6,13 +6,11 @@ import { removeDir } from "@cloudflare/workers-utils";
 import {
 	DeferredPromise,
 	kUnsafeEphemeralUniqueKey,
-	MessageEvent,
 	Miniflare,
-	MiniflareOptions,
-	RequestInit,
 } from "miniflare";
 import { describe, onTestFinished, test } from "vitest";
 import { disposeWithRetry, useDispose, useTmp } from "../../test-shared";
+import type { MessageEvent, MiniflareOptions, RequestInit } from "miniflare";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {
   instanceId = crypto.randomUUID();

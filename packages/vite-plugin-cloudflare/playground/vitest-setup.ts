@@ -89,7 +89,8 @@ export function resetServerLogs() {
 	serverLogs.errors.splice(0, serverLogs.errors.length);
 }
 
-beforeAll(async (s) => {
+// eslint-disable-next-line no-empty-pattern
+beforeAll(async ({}, s) => {
 	let server: ViteDevServer | PreviewServer | undefined;
 	let postServe: (() => Promise<void>) | undefined;
 
@@ -282,6 +283,10 @@ export async function startDefaultServe(): Promise<
 	ViteDevServer | PreviewServer
 > {
 	setupConsoleWarnCollector(serverLogs.warns);
+
+	// Vitest 4 sets NODE_ENV=test — override so Vite uses the correct mode
+	// eslint-disable-next-line turbo/no-undeclared-env-vars
+	process.env.NODE_ENV = isBuild ? "production" : "development";
 
 	if (!isBuild) {
 		// eslint-disable-next-line turbo/no-undeclared-env-vars

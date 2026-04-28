@@ -1,16 +1,24 @@
-import { Button } from "@base-ui/react/button";
-import { CubeIcon } from "@phosphor-icons/react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Button, Label, Link as KumoLink, Table } from "@cloudflare/kumo";
+import {
+	createFileRoute,
+	Link,
+	notFound,
+	useNavigate,
+} from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
 	durableObjectsNamespaceListNamespaces,
 	durableObjectsNamespaceListObjects,
 } from "../../../api";
+import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { NotFound } from "../../../components/NotFound";
+import { ResourceError } from "../../../components/ResourceError";
 import type { WorkersObject } from "../../../api";
 
 export const Route = createFileRoute("/do/$className/")({
 	component: NamespaceView,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		const response = await durableObjectsNamespaceListNamespaces();
 		const namespaces = response.data?.result ?? [];
@@ -21,7 +29,7 @@ export const Route = createFileRoute("/do/$className/")({
 				ns.id === params.className
 		);
 		if (!namespace?.id) {
-			throw new Error(`Durable Object class "${params.className}" not found`);
+			throw notFound();
 		}
 
 		const objectsResponse = await durableObjectsNamespaceListObjects({
@@ -43,12 +51,14 @@ export const Route = createFileRoute("/do/$className/")({
 			objects,
 		};
 	},
+	notFoundComponent: NotFound,
 });
 
 function NamespaceView() {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 	const { namespaceId } = loaderData;
+	const navigate = useNavigate();
 
 	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);
 	const [error, setError] = useState<string | null>(null);
@@ -56,6 +66,7 @@ function NamespaceView() {
 	const [loading, setLoading] = useState<boolean>(false);
 	const [loadingMore, setLoadingMore] = useState<boolean>(false);
 	const [objects, setObjects] = useState<WorkersObject[]>(loaderData.objects);
+	const [openInstanceInput, setOpenInstanceInput] = useState<string>("");
 
 	useEffect((): void => {
 		setObjects(loaderData.objects);
@@ -116,10 +127,26 @@ function NamespaceView() {
 		}
 	}
 
+	function handleOpenInstance(e: React.SyntheticEvent): void {
+		e.preventDefault();
+		const trimmed = openInstanceInput.trim();
+		if (!trimmed) {
+			return;
+		}
+		void navigate({
+			params: {
+				className: params.className,
+				objectId: trimmed,
+			},
+			search: { table: undefined },
+			to: "/do/$className/$objectId",
+		});
+	}
+
 	return (
 		<>
 			<Breadcrumbs
-				icon={CubeIcon}
+				icon={DOIcon}
 				items={[
 					<span className="flex items-center gap-1.5" key="class-name">
 						{params.className}
@@ -129,16 +156,44 @@ function NamespaceView() {
 			/>
 
 			<div className="px-6 py-6">
+				<form
+					className="mb-6 flex items-end gap-2"
+					onSubmit={handleOpenInstance}
+				>
+					<div className="max-w-100 flex-1">
+						<Label
+							htmlFor="open-instance"
+							tooltip="Get an instance by its name (i.e. idFromName) or by its ID (Cloudflare-generated 64 digit hex ID)"
+						>
+							View specific DO instance
+						</Label>
+						<input
+							id="open-instance"
+							className="bg-bg text-text focus:ring-kumo-ring mt-1.5 h-9 w-full rounded-lg border border-kumo-line px-3 font-mono text-sm focus:ring focus:outline-none"
+							placeholder="Enter instance name or hex ID..."
+							value={openInstanceInput}
+							onChange={(e) => setOpenInstanceInput(e.target.value)}
+						/>
+					</div>
+					<Button
+						type="submit"
+						variant="secondary"
+						disabled={!openInstanceInput.trim()}
+					>
+						Open Studio
+					</Button>
+				</form>
+
 				{error && (
-					<div className="text-danger p-4 bg-danger/8 border border-danger/20 rounded-md mb-4">
+					<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
 						{error}
 					</div>
 				)}
 
 				{loading ? (
-					<div className="text-center p-12 text-text-secondary">Loading...</div>
+					<div className="p-12 text-center text-kumo-subtle">Loading...</div>
 				) : objects.length === 0 ? (
-					<div className="text-center p-12 text-text-secondary space-y-2 flex flex-col items-center justify-center">
+					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-kumo-subtle">
 						<h2 className="text-2xl font-medium">
 							No Durable Objects with stored data
 						</h2>
@@ -148,26 +203,27 @@ function NamespaceView() {
 					</div>
 				) : (
 					<>
-						<div className="rounded-lg border border-border overflow-hidden">
-							<table className="w-full text-sm">
-								<thead className="bg-bg-secondary">
-									<tr>
-										<th className="text-left px-4 py-3 font-medium text-text-secondary border-b border-border">
-											Object ID
-										</th>
-										<th className="text-right px-4 py-3 font-medium text-text-secondary border-b border-border" />
-									</tr>
-								</thead>
-								<tbody>
+						<div className="overflow-hidden rounded-lg border border-kumo-fill">
+							<Table>
+								<Table.Header>
+									<Table.Row>
+										<Table.Head>Name</Table.Head>
+										<Table.Head>Object ID</Table.Head>
+										<Table.Head />
+									</Table.Row>
+								</Table.Header>
+								<Table.Body>
 									{objects.map((obj) => (
-										<tr
-											className="border-b border-border last:border-b-0 hover:bg-bg-secondary/50 transition-colors"
-											key={obj.id}
-										>
-											<td className="px-4 py-3 font-mono text-xs">{obj.id}</td>
-											<td className="px-4 py-3 text-right">
+										<Table.Row key={obj.id}>
+											<Table.Cell className="font-mono text-xs">
+												{obj.name ?? "—"}
+											</Table.Cell>
+											<Table.Cell className="text-text-secondary font-mono text-xs">
+												{obj.id}
+											</Table.Cell>
+											<Table.Cell className="text-right">
 												<Link
-													className="inline-flex items-center justify-center py-1.5 px-3 text-xs font-medium rounded-md cursor-pointer transition-colors bg-primary text-white hover:bg-primary-hover"
+													className="inline-flex h-6.5 items-center gap-1 rounded-md px-2 text-xs hover:bg-kumo-fill"
 													params={{
 														className: params.className,
 														objectId: obj.id as string,
@@ -176,20 +232,21 @@ function NamespaceView() {
 													to="/do/$className/$objectId"
 												>
 													Open Studio
+													<KumoLink.ExternalIcon />
 												</Link>
-											</td>
-										</tr>
+											</Table.Cell>
+										</Table.Row>
 									))}
-								</tbody>
-							</table>
+								</Table.Body>
+							</Table>
 						</div>
 
 						{hasMore && (
-							<div className="text-center p-4">
+							<div className="py-4 text-center">
 								<Button
-									className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0"
+									variant="secondary"
 									disabled={loadingMore}
-									focusableWhenDisabled
+									loading={loadingMore}
 									onClick={handleLoadMore}
 								>
 									{loadingMore ? "Loading..." : "Load More"}

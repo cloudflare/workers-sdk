@@ -2,18 +2,18 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
 import SCRIPT_KV_SITES from "worker:kv/sites";
-import { Service, Worker_Binding } from "../../runtime";
 import { globsToRegExps } from "../../shared";
 import {
 	encodeSitesKey,
 	serialiseSiteRegExps,
 	SharedBindings,
 	SiteBindings,
-	SiteMatcherRegExps,
 	testSiteRegExps,
 } from "../../workers";
 import { ProxyNodeBinding } from "../shared";
 import { KV_PLUGIN_NAME } from "./constants";
+import type { Service, Worker_Binding } from "../../runtime";
+import type { SiteMatcherRegExps } from "../../workers";
 
 async function* listKeysInDirectoryInner(
 	rootPath: string,

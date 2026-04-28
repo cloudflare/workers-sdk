@@ -54,14 +54,14 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@fixture/shared": "workspace:*",
 		"@types/debug": "^4.1.12",
-		"@types/node": "catalog:vite-plugin",
+		"@types/node": "catalog:default",
 		"@types/pg": "^8.15.4",
 		"cross-fetch": "^4.0.0",
 		"debug": "^4.4.1",
 		"pg": "^8.16.3",
 		"pg-cloudflare": "^1.2.7",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }

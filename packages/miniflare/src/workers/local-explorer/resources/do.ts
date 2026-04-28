@@ -1,17 +1,24 @@
-import { INTROSPECT_SQLITE_METHOD } from "../../../plugins/core/constants";
+import {
+	GET_DO_NAME_METHOD,
+	INTROSPECT_SQLITE_METHOD,
+} from "../../../plugins/core/constants";
 import {
 	aggregateListResults,
 	fetchFromPeer,
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import {
+import type {
+	GetDONameMethod,
+	IntrospectSqliteMethod,
+} from "../../../plugins/core/constants";
+import type { AppContext } from "../common";
+import type { Env } from "../explorer.worker";
+import type { WorkersNamespace } from "../generated";
+import type {
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
 } from "../generated/zod.gen";
-import type { IntrospectSqliteMethod } from "../../../plugins/core/constants";
-import type { AppContext } from "../common";
-import type { Env } from "../explorer.worker";
 import type { z } from "zod";
 
 // ============================================================================
@@ -32,6 +39,7 @@ interface DirectoryEntry {
 
 interface IntrospectableDurableObject extends Rpc.DurableObjectBranded {
 	[INTROSPECT_SQLITE_METHOD]: IntrospectSqliteMethod;
+	[GET_DO_NAME_METHOD]: GetDONameMethod;
 }
 
 function getDOBinding(
@@ -54,13 +62,7 @@ function getDOBinding(
 /**
  * Get local DO namespaces from the binding map.
  */
-function getLocalDONamespaces(env: Env): {
-	id: string;
-	name: string;
-	script: string;
-	class: string;
-	use_sqlite: boolean;
-}[] {
+function getLocalDONamespaces(env: Env): Required<WorkersNamespace>[] {
 	const doBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.do;
 	return Object.entries(doBindingMap).map(([id, info]) => ({
 		id, // This is the unsafeUniqueKey - ${scriptName}-${className}
@@ -159,7 +161,9 @@ export async function listDOObjects(
 		if (cursor) params.set("cursor", cursor);
 		if (limit !== undefined) params.set("limit", String(limit));
 		const queryString = params.toString();
-		const path = `/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/objects${queryString ? `?${queryString}` : ""}`;
+		const path = `/workers/durable_objects/namespaces/${encodeURIComponent(
+			namespaceId
+		)}/objects${queryString ? `?${queryString}` : ""}`;
 
 		const response = await fetchFromPeer(ownerMiniflare, path);
 		if (response) return response;
@@ -217,9 +221,16 @@ async function executeListDOObjects(
 	const files = (await response.json()) as DirectoryEntry[];
 
 	// Each DO object gets a sqlite file named <objectId>.sqlite,
-	// so filter for those and use that to extract object IDs
+	// so filter for those and use that to extract object IDs.
+	// Exclude metadata.sqlite which is used by workerd for per-namespace
+	// metadata (e.g. alarm storage) and is not a DO object.
 	let objectIds = files
-		.filter((entry) => entry.type === "file" && entry.name.endsWith(".sqlite"))
+		.filter(
+			(entry) =>
+				entry.type === "file" &&
+				entry.name.endsWith(".sqlite") &&
+				entry.name !== "metadata.sqlite"
+		)
 		.map((entry) => entry.name.replace(/\.sqlite$/, ""));
 
 	// Sort for consistent ordering (required for cursor pagination)
@@ -239,11 +250,27 @@ async function executeListDOObjects(
 	const hasMore = objectIds.length > limit;
 	const paginatedIds = objectIds.slice(0, limit);
 
-	const objects = paginatedIds.map((id) => ({
-		id,
-		// TODO: check if this is correct or if we need to check the content of the sqlite file to determine if it has stored data
-		hasStoredData: true,
-	}));
+	// Get the names for each DO object, if available
+	const ns = getDOBinding(c.env, namespaceId);
+	const objects = await Promise.all(
+		paginatedIds.map(async (id) => {
+			let name: string | undefined;
+			if (ns && ns.useSQLite) {
+				try {
+					const doId = ns.binding.idFromString(id);
+					const stub = ns.binding.get(doId);
+					name = await stub[GET_DO_NAME_METHOD]();
+				} catch {
+					// Ignore errors - name is optional
+				}
+			}
+			return {
+				id,
+				name,
+				hasStoredData: true,
+			};
+		})
+	);
 
 	// Build next cursor (last ID if there are more results)
 	const nextCursor = hasMore ? paginatedIds[paginatedIds.length - 1] : "";
@@ -291,7 +318,9 @@ export async function queryDOSqlite(
 	if (ownerMiniflare) {
 		const response = await fetchFromPeer(
 			ownerMiniflare,
-			`/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/query`,
+			`/workers/durable_objects/namespaces/${encodeURIComponent(
+				namespaceId
+			)}/query`,
 			{
 				method: "POST",
 				headers: { "Content-Type": "application/json" },

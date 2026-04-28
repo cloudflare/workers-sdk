@@ -136,7 +136,7 @@ async function getPackagesToPublish(names: string[]) {
 				`{ package(name: "${name}") { path, allDependencies { items { name, path } } } }`
 			);
 			const results = JSON.parse(
-				// eslint-disable-next-line workers-sdk/no-unsafe-command-execution
+				// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- The following command uses turboQueryPath which is a path we computed so it is safe to run
 				execSync("pnpm exec turbo query " + turboQueryPath, {
 					encoding: "utf8",
 					stdio: "pipe",

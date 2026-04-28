@@ -5,9 +5,9 @@ import {
 	newline,
 	status,
 	updateStatus,
-} from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+} from "@cloudflare/cli-shared-helpers";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	DeploymentsService,
 	ImageRegistriesService,

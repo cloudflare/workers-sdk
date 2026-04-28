@@ -1,7 +1,7 @@
-import { logRaw, updateStatus } from "@cloudflare/cli";
-import { blue } from "@cloudflare/cli/colors";
+import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { blue } from "@cloudflare/cli-shared-helpers/colors";
+import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
 import { runFrameworkGenerator } from "frameworks/index";
-import { mergeObjectProperties, transformFile } from "helpers/codemod";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
@@ -34,7 +34,7 @@ const configure = async (ctx: C3Context) => {
 			const b = recast.types.builders;
 			const presetProp = b.objectProperty(
 				b.identifier("preset"),
-				b.stringLiteral("cloudflare-module"),
+				b.stringLiteral("cloudflare-module")
 			);
 
 			if (n.node.arguments.length === 0) {
@@ -42,7 +42,7 @@ const configure = async (ctx: C3Context) => {
 			} else {
 				mergeObjectProperties(
 					n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
-					[presetProp],
+					[presetProp]
 				);
 			}
 

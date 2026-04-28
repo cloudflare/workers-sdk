@@ -19,6 +19,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
+import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { diagnoseStartupError } from "../utils/friendly-validator-errors";
 import {
 	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
@@ -186,7 +187,8 @@ export const pagesDeployCommand = createCommand({
 		const configCache = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(configCache);
+		const accountId =
+			getCloudflareAccountIdFromEnv() ?? (await requireAuth(configCache));
 
 		let projectName =
 			args.projectName ?? config?.name ?? configCache.project_name;

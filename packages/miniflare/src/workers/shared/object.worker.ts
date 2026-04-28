@@ -1,10 +1,12 @@
 import assert from "node:assert";
 import { BlobStore } from "./blob.worker";
-import { LogLevel, SharedBindings, SharedHeaders } from "./constants";
+import { SharedBindings, SharedHeaders } from "./constants";
 import { Router } from "./router.worker";
-import { all, createTypedSql, isTypedValue, TypedSql } from "./sql.worker";
+import { all, createTypedSql, isTypedValue } from "./sql.worker";
 import { Timers } from "./timers.worker";
 import { reduceError } from "./types";
+import type { LogLevel } from "./constants";
+import type { TypedSql } from "./sql.worker";
 
 export interface MiniflareDurableObjectEnv {
 	// NOTE: "in-memory" storage is never in-memory. We always back simulator

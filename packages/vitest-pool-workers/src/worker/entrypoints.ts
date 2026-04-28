@@ -176,6 +176,7 @@ function getEntrypointState(
 }
 
 const WORKER_ENTRYPOINT_KEYS = [
+	"connect",
 	"tailStream",
 	"fetch",
 	"tail",
@@ -186,6 +187,7 @@ const WORKER_ENTRYPOINT_KEYS = [
 	"email",
 ] as const;
 const DURABLE_OBJECT_KEYS = [
+	"connect",
 	"fetch",
 	"alarm",
 	"webSocketMessage",

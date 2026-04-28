@@ -331,6 +331,9 @@ describe("getRemoteConfigsDiff", () => {
 				images: {
 					binding: "IMAGES",
 				},
+				stream: {
+					binding: "STREAM",
+				},
 				send_email: [
 					{
 						name: "email",
@@ -384,6 +387,30 @@ describe("getRemoteConfigsDiff", () => {
 						service_id: "my-vpc",
 					},
 				],
+				vpc_networks: [
+					{
+						binding: "MY_NETWORK",
+						tunnel_id: "my-tunnel",
+					},
+				],
+				ai_search_namespaces: [
+					{
+						binding: "MY_AI_SEARCH_NS",
+						namespace: "my-namespace",
+					},
+				],
+				ai_search: [
+					{
+						binding: "MY_AI_SEARCH",
+						instance_name: "my-instance",
+					},
+				],
+				artifacts: [
+					{
+						binding: "MY_ARTIFACTS",
+						namespace: "default",
+					},
+				],
 			},
 			{
 				name: "my-worker-id",
@@ -425,6 +452,10 @@ describe("getRemoteConfigsDiff", () => {
 				images: {
 					binding: "IMAGES",
 					remote: true,
+				},
+				stream: {
+					binding: "STREAM",
+					remote: false,
 				},
 				send_email: [
 					{
@@ -485,6 +516,34 @@ describe("getRemoteConfigsDiff", () => {
 					{
 						binding: "MY_VPC",
 						service_id: "my-vpc",
+						remote: true,
+					},
+				],
+				vpc_networks: [
+					{
+						binding: "MY_NETWORK",
+						tunnel_id: "my-tunnel",
+						remote: true,
+					},
+				],
+				ai_search_namespaces: [
+					{
+						binding: "MY_AI_SEARCH_NS",
+						namespace: "my-namespace",
+						remote: true,
+					},
+				],
+				ai_search: [
+					{
+						binding: "MY_AI_SEARCH",
+						instance_name: "my-instance",
+						remote: true,
+					},
+				],
+				artifacts: [
+					{
+						binding: "MY_ARTIFACTS",
+						namespace: "default",
 						remote: true,
 					},
 				],

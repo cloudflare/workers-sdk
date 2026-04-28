@@ -6,9 +6,8 @@ import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { downloadWorker } from "../init";
 import { writeMetricsConfig } from "../metrics/metrics-config";
 import { getPackageManager } from "../package-manager";
@@ -216,7 +215,7 @@ describe("init", () => {
 			usage_model = "bundled",
 			tags = [],
 			compatibility_date = "1987-09-27",
-			content = dedent/*javascript*/ `
+			content = dedent /*javascript*/ `
 							export default {
 								async fetch(request, env, ctx) {
 									return new Response("Hello World!");
@@ -1327,7 +1326,7 @@ describe("init", () => {
 				"index.js",
 				new File(
 					[
-						dedent/*javascript*/ `
+						dedent /*javascript*/ `
 								import handleRequest from './other.js';
 
 								export default {
@@ -1345,7 +1344,7 @@ describe("init", () => {
 				"other.js",
 				new File(
 					[
-						dedent/*javascript*/ `
+						dedent /*javascript*/ `
 								export default function (request, env, ctx) {
 									return new Response("Hello World!");
 								}

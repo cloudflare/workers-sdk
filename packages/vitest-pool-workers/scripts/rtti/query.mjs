@@ -2,6 +2,8 @@ import { Message } from "capnp-es";
 import { Miniflare } from "miniflare";
 import { StructureGroups } from "./rtti.js";
 
+const compatibilityDate = new Date().toISOString().slice(0, 10);
+
 export async function getBuiltinModules() {
 	// Extract RTTI from `workerd`
 	const mf = new Miniflare({
@@ -12,7 +14,7 @@ export async function getBuiltinModules() {
 	import rtti from "workerd:rtti";
 	export default {
 		fetch() {
-			return new Response(rtti.exportTypes("2023-12-01", ["nodejs_compat"]));
+			return new Response(rtti.exportTypes("${compatibilityDate}", ["nodejs_compat"]));
 		}
 	}
 	`,

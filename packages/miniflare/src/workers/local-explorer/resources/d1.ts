@@ -1,14 +1,9 @@
-import { z } from "zod";
 import {
 	aggregateListResults,
 	fetchFromPeer,
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import {
-	zD1ListDatabasesData,
-	zD1RawDatabaseQueryData,
-} from "../generated/zod.gen";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type {
@@ -16,6 +11,11 @@ import type {
 	D1RawResultResponse,
 	D1SingleQuery,
 } from "../generated";
+import type {
+	zD1ListDatabasesData,
+	zD1RawDatabaseQueryData,
+} from "../generated/zod.gen";
+import type { z } from "zod";
 
 // ============================================================================
 // Error Codes (matching Cloudflare API)
@@ -56,10 +56,10 @@ function getD1Binding(env: Env, databaseId: string): D1Database | null {
  */
 function getLocalD1Databases(env: Env): D1DatabaseResponse[] {
 	const d1BindingMap = env.LOCAL_EXPLORER_BINDING_MAP.d1;
+
 	return Object.entries(d1BindingMap).map(([id, bindingName]) => {
-		// Use the binding name as the database name since we don't have
-		// the actual name locally. The ID is the `database_id` or generated from binding.
-		const databaseName = bindingName.split(":").pop() || bindingName;
+		const parts = bindingName.split(":");
+		const databaseName = parts.pop() || bindingName;
 
 		return {
 			name: databaseName,
@@ -176,13 +176,9 @@ type RawDatabaseBody = z.output<typeof zD1RawDatabaseQueryData.shape.body>;
  */
 export async function rawD1Database(
 	c: AppContext,
+	databaseId: string,
 	body: RawDatabaseBody
 ): Promise<Response> {
-	const databaseId = c.req.param("database_id");
-	if (!databaseId) {
-		return errorResponse(400, 10000, "Missing database_id parameter");
-	}
-
 	// Try local first
 	const db = getD1Binding(c.env, databaseId);
 	if (db) {

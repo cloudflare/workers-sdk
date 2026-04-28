@@ -31,8 +31,10 @@ export function StudioWindowTabItemRenderer({
 	return (
 		<div
 			className={cn(
-				"h-10 min-w-42.5 max-w-75  flex gap-2 relative px-2 border-b border-r border-border items-center text-left text-xs cursor-pointer hover:text-text select-none",
-				selected ? "bg-surface" : "bg-surface-secondary text-muted",
+				"relative flex h-10 max-w-75 min-w-42.5 cursor-pointer items-center gap-2 border-r border-b border-kumo-fill bg-kumo-elevated px-2 text-left text-xs select-none hover:text-kumo-default",
+				selected
+					? "border-b-kumo-brand text-kumo-default"
+					: "border-b-kumo-fill text-kumo-subtle",
 				isTemp && "italic",
 				isDirty && "not-italic"
 			)}
@@ -41,14 +43,14 @@ export function StudioWindowTabItemRenderer({
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
 		>
-			<tab.icon className="w-4 h-4" />
+			<tab.icon className="h-4 w-4" />
 
 			<div className={cn("line-clamp-1 grow")}>{tab.title}</div>
 
 			{onClose && (
 				<div
 					className={cn(
-						"ml-2 flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+						"ml-2 flex h-5 w-5 items-center justify-center rounded hover:bg-kumo-overlay"
 					)}
 					onClick={(e) => {
 						e.stopPropagation();
@@ -62,7 +64,7 @@ export function StudioWindowTabItemRenderer({
 					)}
 					{shouldShowDirtyIcon && (
 						<CircleIcon
-							className={"h-3 w-3 shrink-0 grow-0 text-muted"}
+							className={"h-3 w-3 shrink-0 grow-0 text-kumo-subtle"}
 							weight="fill"
 						/>
 					)}

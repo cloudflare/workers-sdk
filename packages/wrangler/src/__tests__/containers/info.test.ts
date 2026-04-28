@@ -1,8 +1,5 @@
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as user from "../../user";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -22,17 +19,16 @@ describe("containers info", () => {
 	beforeEach(mockAccount);
 
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("containers info --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers info <ID>
 
-			Get information about a specific container [open beta]
+			Get information about a specific container
 
 			POSITIONALS
 			  ID  ID of the container to view  [string] [required]
@@ -47,7 +43,7 @@ describe("containers info", () => {
 		`);
 	});
 
-	it("should show the correct authentication error", async () => {
+	it("should show the correct authentication error", async ({ expect }) => {
 		const spy = vi.spyOn(user, "getScopes");
 		spy.mockReset();
 		spy.mockImplementationOnce(() => []);
@@ -60,7 +56,9 @@ describe("containers info", () => {
 		);
 	});
 
-	it("should show a single container when given an ID (json)", async () => {
+	it("should show a single container when given an ID (json)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -111,7 +109,7 @@ describe("containers info", () => {
 		`);
 	});
 
-	it("should error when not given an ID", async () => {
+	it("should error when not given an ID", async ({ expect }) => {
 		await expect(
 			runWrangler("containers info")
 		).rejects.toThrowErrorMatchingInlineSnapshot(

@@ -29,6 +29,10 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
 - Whether the command was executed by an AI coding agent (e.g. Claude Code, Cursor, GitHub Copilot), and if so, which agent
 - Error _type_ (e.g. `APIError` or `UserError`), and sanitised error messages that will not include user information like filepaths or stack traces (e.g. `Asset too large`).
 - General machine information such as OS and OS Version
+- local REST API usage (e.g. via the Local Explorer):
+  - What route and method is being called (e.g. `localapi.kv.keys.get`)
+  - Browser user agent
+  - Counts of local resources (Workers, KV namespaces, D1 databases, R2 buckets, Durable Objects, Workflows). No actual data values, keys, query contents, or resource IDs are collected.
 
 Cloudflare will receive the IP address associated with your machine and such information is handled in accordance with Cloudflare’s [Privacy Policy](https://www.cloudflare.com/privacypolicy/).
 

@@ -1,33 +1,32 @@
-import { Select } from "@base-ui/react/select";
 import { Button } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
-	CaretUpDownIcon,
-	CheckIcon,
-	DatabaseIcon,
 	PencilIcon,
-	PlusIcon,
-	TableIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import {
 	createFileRoute,
-	Link,
+	getRouteApi,
 	useNavigate,
 	useRouter,
+	useRouterState,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
+import D1Icon from "../../assets/icons/d1.svg?react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
+import { ResourceError } from "../../components/ResourceError";
 import { Studio } from "../../components/studio";
 import { DropTableConfirmationModal } from "../../components/studio/Modal/DropTableConfirmation";
 import { StudioTableActionsDropdown } from "../../components/studio/Table/ActionsDropdown";
+import { TableSelect } from "../../components/TableSelect";
+import { getSelectedWorker } from "../../components/WorkerSelector";
 import { LocalD1Driver } from "../../drivers/d1";
 import type { StudioRef } from "../../components/studio";
 import type { StudioResource } from "../../types/studio";
-import type { RefObject } from "react";
 
 export const Route = createFileRoute("/d1/$databaseId")({
 	component: DatabaseView,
+	errorComponent: ResourceError,
 	loader: async (ctx) => {
 		const driver = new LocalD1Driver(ctx.params.databaseId);
 		const schemas = await driver.schemas();
@@ -41,16 +40,22 @@ export const Route = createFileRoute("/d1/$databaseId")({
 			tables,
 		};
 	},
-	validateSearch: (search) => ({
+	validateSearch: (search): { table?: string; worker?: string } => ({
 		table: typeof search.table === "string" ? search.table : undefined,
+		worker: typeof search.worker === "string" ? search.worker : undefined,
 	}),
 });
 
+const rootRoute = getRouteApi("__root__");
+
 function DatabaseView(): JSX.Element {
 	const params = Route.useParams();
+	const loaderData = Route.useLoaderData();
 	const searchParams = Route.useSearch();
 	const navigate = useNavigate();
 	const router = useRouter();
+	const rootData = rootRoute.useLoaderData();
+	const routerState = useRouterState();
 
 	const lastSyncedTable = useRef<string | undefined>(searchParams.table);
 	const studioRef = useRef<StudioRef>(null);
@@ -68,6 +73,18 @@ function DatabaseView(): JSX.Element {
 		() => new LocalD1Driver(params.databaseId),
 		[params.databaseId]
 	);
+
+	// Get database binding name from selected worker's bindings
+	const databaseName = useMemo(() => {
+		const worker = getSelectedWorker(
+			rootData.workers,
+			routerState.location.searchStr
+		);
+		const binding = worker?.bindings?.d1?.find(
+			(db) => db.id === params.databaseId
+		);
+		return binding?.bindingName;
+	}, [rootData.workers, routerState.location.searchStr, params.databaseId]);
 
 	const resource = useMemo<StudioResource>(
 		() => ({
@@ -90,9 +107,7 @@ function DatabaseView(): JSX.Element {
 
 			void navigate({
 				replace: true,
-				search: {
-					table: tableName,
-				},
+				search: (prev) => ({ ...prev, table: tableName }),
 				to: ".",
 			});
 		},
@@ -118,9 +133,7 @@ function DatabaseView(): JSX.Element {
 		await handleTableRefresh();
 		void navigate({
 			replace: true,
-			search: {
-				table: undefined,
-			},
+			search: (prev) => ({ ...prev, table: undefined }),
 			to: ".",
 		});
 	}, [handleTableRefresh, navigate]);
@@ -153,21 +166,27 @@ function DatabaseView(): JSX.Element {
 	}, [deleteTarget, handleTableDeleted]);
 
 	return (
-		<div className="flex flex-col h-full">
+		<div className="flex h-full flex-col">
 			<Breadcrumbs
-				icon={DatabaseIcon}
+				icon={D1Icon}
 				title="D1"
 				items={[
-					<Link
-						className="flex items-center gap-1.5"
-						key="database-id"
-						params={{ databaseId: params.databaseId }}
-						search={{ table: undefined }}
-						to="/d1/$databaseId"
-					>
-						{params.databaseId}
-					</Link>,
-					<TableSelect key="table-selector" studioRef={studioRef} />,
+					<span className="flex items-center gap-1.5" key="database-id">
+						{databaseName && databaseName !== params.databaseId ? (
+							<>
+								{databaseName}
+								<span className="text-kumo-subtle">({params.databaseId})</span>
+							</>
+						) : (
+							params.databaseId
+						)}
+					</span>,
+					<TableSelect
+						key="table-selector"
+						selectedTable={searchParams.table}
+						studioRef={studioRef}
+						tables={loaderData.tables}
+					/>,
 				]}
 			>
 				<div className="flex-1" />
@@ -225,7 +244,7 @@ function DatabaseView(): JSX.Element {
 				/>
 			)}
 
-			<div className="flex-1 overflow-hidden">
+			<div className="flex-1 overflow-hidden bg-kumo-elevated">
 				<Studio
 					driver={driver}
 					initialTable={searchParams.table}
@@ -236,104 +255,5 @@ function DatabaseView(): JSX.Element {
 				/>
 			</div>
 		</div>
-	);
-}
-
-interface TableSelectProps {
-	studioRef: RefObject<StudioRef | null>;
-}
-
-function TableSelect({ studioRef }: TableSelectProps): JSX.Element {
-	const data = Route.useLoaderData();
-	const navigate = useNavigate();
-	const searchParams = Route.useSearch();
-	const [open, setOpen] = useState(false);
-
-	const handleTableChange = useCallback(
-		(tableName: string | null) => {
-			if (tableName === null) {
-				return;
-			}
-
-			void navigate({
-				search: { table: tableName },
-				to: ".",
-			});
-		},
-		[navigate]
-	);
-
-	const handleCreateTable = useCallback((): void => {
-		setOpen(false);
-		studioRef.current?.openCreateTableTab();
-	}, [studioRef]);
-
-	return (
-		<Select.Root
-			key="table-select"
-			onOpenChange={setOpen}
-			onValueChange={handleTableChange}
-			open={open}
-			value={searchParams.table ?? null}
-		>
-			<Select.Trigger className="inline-flex items-center gap-1 p-2 -mx-1.5 rounded-md bg-transparent text-sm text-text cursor-pointer border-none transition-colors hover:bg-border/50 data-popup-open:bg-border/50">
-				<Select.Value placeholder="Select table" />
-				<Select.Icon>
-					<CaretUpDownIcon className="w-3.5 h-3.5 text-text-secondary" />
-				</Select.Icon>
-			</Select.Trigger>
-
-			<Select.Portal>
-				<Select.Positioner
-					align="start"
-					alignItemWithTrigger={false}
-					side="bottom"
-					sideOffset={4}
-				>
-					<Select.Popup className="min-w-36 max-h-72 bg-bg border border-border rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-100 overflow-hidden transition-[opacity,transform] duration-150 data-starting-style:opacity-0 data-starting-style:-translate-y-1 data-ending-style:opacity-0 data-ending-style:-translate-y-1">
-						<div className="p-1">
-							<button
-								className="flex items-center gap-2 w-full py-1.5 px-2 rounded-md text-sm text-text cursor-pointer transition-colors select-none outline-none hover:bg-bg-secondary dark:hover:bg-bg-tertiary"
-								onClick={handleCreateTable}
-								type="button"
-							>
-								<span className="flex items-center w-4">
-									<PlusIcon className="w-3.5 h-3.5" />
-								</span>
-								Create table
-							</button>
-						</div>
-
-						<div className="mx-1 border-t border-border" />
-
-						<Select.List className="p-1">
-							{data.tables.length > 0 ? (
-								data.tables.map((table) => {
-									const Icon =
-										searchParams.table === table.value ? CheckIcon : TableIcon;
-
-									return (
-										<Select.Item
-											className="flex items-center gap-2 w-full py-1.5 px-2 rounded-md text-sm text-text cursor-pointer transition-colors select-none outline-none data-highlighted:bg-bg-secondary dark:data-highlighted:bg-bg-tertiary"
-											key={table.value}
-											value={table.value}
-										>
-											<span className="flex items-center w-4">
-												<Icon className="w-3.5 h-3.5" />
-											</span>
-											<Select.ItemText>{table.label}</Select.ItemText>
-										</Select.Item>
-									);
-								})
-							) : (
-								<span className="flex justify-center items-center gap-2 w-full py-1.5 px-2 text-sm text-text-secondary">
-									No tables
-								</span>
-							)}
-						</Select.List>
-					</Select.Popup>
-				</Select.Positioner>
-			</Select.Portal>
-		</Select.Root>
 	);
 }

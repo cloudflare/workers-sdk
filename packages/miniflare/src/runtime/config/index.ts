@@ -1,7 +1,9 @@
 import { writeFileSync } from "node:fs";
-import { Data, List, Message, Struct } from "capnp-es";
+import { Message } from "capnp-es";
 import { Config as CapnpConfig } from "./generated/workerd";
-import { Config, kVoid } from "./workerd";
+import { kVoid } from "./workerd";
+import type { Config } from "./workerd";
+import type { Data, List, Struct } from "capnp-es";
 
 function capitalize<S extends string>(str: S): Capitalize<S> {
 	return (

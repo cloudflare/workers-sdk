@@ -4,7 +4,7 @@ import {
 	log,
 	startSection,
 	updateStatus,
-} from "@cloudflare/cli";
+} from "@cloudflare/cli-shared-helpers";
 import {
 	ApiError,
 	ExternalRegistryKind,
@@ -501,6 +501,7 @@ async function registryCredentialsCommand(credentialsArgs: {
 	expirationMinutes: number;
 	push?: boolean;
 	pull?: boolean;
+	libraryPush?: boolean;
 	json?: boolean;
 }) {
 	const cloudflareRegistry = getCloudflareContainerRegistry();
@@ -511,7 +512,11 @@ async function registryCredentialsCommand(credentialsArgs: {
 		);
 	}
 
-	if (!credentialsArgs.pull && !credentialsArgs.push) {
+	if (
+		!credentialsArgs.pull &&
+		!credentialsArgs.push &&
+		!credentialsArgs.libraryPush
+	) {
 		throw new UserError(
 			"You have to specify either --push or --pull in the command."
 		);
@@ -523,6 +528,7 @@ async function registryCredentialsCommand(credentialsArgs: {
 			permissions: [
 				...(credentialsArgs.push ? ["push"] : []),
 				...(credentialsArgs.pull ? ["pull"] : []),
+				...(credentialsArgs.libraryPush ? ["library_push"] : []),
 			] as ImageRegistryPermissions[],
 		});
 	if (credentialsArgs.json) {
@@ -535,7 +541,7 @@ async function registryCredentialsCommand(credentialsArgs: {
 export const containersRegistriesNamespace = createNamespace({
 	metadata: {
 		description: "Configure and manage non-Cloudflare registries",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 });
@@ -544,7 +550,7 @@ export const containersRegistriesConfigureCommand = createCommand({
 	metadata: {
 		description:
 			"Configure credentials for a non-Cloudflare container registry",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	args: registryConfigureArgs,
@@ -569,7 +575,7 @@ export const containersRegistriesConfigureCommand = createCommand({
 export const containersRegistriesListCommand = createCommand({
 	metadata: {
 		description: "List all configured container registries",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
@@ -585,7 +591,7 @@ export const containersRegistriesListCommand = createCommand({
 export const containersRegistriesDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a configured container registry",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	args: registryDeleteArgs,
@@ -599,7 +605,7 @@ export const containersRegistriesDeleteCommand = createCommand({
 export const containersRegistriesCredentialsCommand = createCommand({
 	metadata: {
 		description: "Get a temporary password for a specific domain",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
@@ -622,6 +628,12 @@ export const containersRegistriesCredentialsCommand = createCommand({
 		pull: {
 			type: "boolean",
 			description: "If you want these credentials to be able to pull",
+		},
+		"library-push": {
+			type: "boolean",
+			description:
+				"If you want these credentials to be able to push to the public library namespace",
+			hidden: true,
 		},
 		json: {
 			type: "boolean",

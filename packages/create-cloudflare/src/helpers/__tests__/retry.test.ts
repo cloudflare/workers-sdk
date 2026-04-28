@@ -63,7 +63,7 @@ describe("retry", () => {
 						throw Error("error");
 					}
 					throw Error("special condition");
-				},
+				}
 			);
 		}).rejects.toThrowError("special condition");
 	});

@@ -2,9 +2,7 @@ import * as fs from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines */
-import { beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { beforeEach, describe, it, vi } from "vitest";
 import { startWorker } from "../api/startDevWorker";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -37,7 +35,7 @@ describe("middleware", () => {
 		});
 
 		describe("module workers", () => {
-			it("should register a middleware and intercept", async () => {
+			it("should register a middleware and intercept", async ({ expect }) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				const response = await middlewareCtx.next(request, env);
@@ -71,7 +69,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should be able to access scheduled workers from middleware", async () => {
+			it("should be able to access scheduled workers from middleware", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
@@ -105,7 +105,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should trigger an error in a scheduled work from middleware", async () => {
+			it("should trigger an error in a scheduled work from middleware", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				try {
@@ -144,7 +146,9 @@ describe("middleware", () => {
 		});
 
 		describe("service workers", () => {
-			it("should register a middleware and intercept using addMiddleware", async () => {
+			it("should register a middleware and intercept using addMiddleware", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				const response = await middlewareCtx.next(request, env);
@@ -175,7 +179,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should register a middleware and intercept using addMiddlewareInternal", async () => {
+			it("should register a middleware and intercept using addMiddlewareInternal", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				const response = await middlewareCtx.next(request, env);
@@ -206,7 +212,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should be able to access scheduled workers from middleware", async () => {
+			it("should be able to access scheduled workers from middleware", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
@@ -237,7 +245,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should trigger an error in a scheduled work from middleware", async () => {
+			it("should trigger an error in a scheduled work from middleware", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 				const middleware = async (request, env, _ctx, middlewareCtx) => {
 					try {
@@ -281,7 +291,9 @@ describe("middleware", () => {
 		});
 
 		describe("module workers", () => {
-			it("should return Hello World with no middleware export", async () => {
+			it("should return Hello World with no middleware export", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			export default {
 				fetch(request, env, ctx) {
@@ -307,7 +319,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should return hello world with empty middleware array", async () => {
+			it("should return hello world with empty middleware array", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			export const __INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ = []
 
@@ -336,7 +350,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should return hello world passing through middleware", async () => {
+			it("should return hello world passing through middleware", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				return middlewareCtx.next(request, env);
@@ -367,7 +383,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should return hello world with multiple middleware in array", async () => {
+			it("should return hello world with multiple middleware in array", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				return middlewareCtx.next(request, env);
@@ -402,7 +420,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should leave response headers unchanged with middleware", async () => {
+			it("should leave response headers unchanged with middleware", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				return middlewareCtx.next(request, env);
@@ -438,7 +458,7 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("waitUntil should not block responses", async () => {
+			it("waitUntil should not block responses", async ({ expect }) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				return middlewareCtx.next(request, env);
@@ -481,7 +501,9 @@ describe("middleware", () => {
 		});
 
 		describe("service workers", () => {
-			it("should return Hello World with no middleware export", async () => {
+			it("should return Hello World with no middleware export", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			addEventListener("fetch", (event) => {
 				event.respondWith(new Response("Hello world"));
@@ -505,7 +527,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should return hello world with empty middleware array", async () => {
+			it("should return hello world with empty middleware array", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			addMiddleware([]);
 			addEventListener("fetch", (event) => {
@@ -531,7 +555,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should return hello world passing through middleware", async () => {
+			it("should return hello world passing through middleware", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				return middlewareCtx.next(request, env);
@@ -559,7 +585,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should return hello world with addMiddleware function called multiple times", async () => {
+			it("should return hello world with addMiddleware function called multiple times", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				return middlewareCtx.next(request, env);
@@ -592,7 +620,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should return hello world with addMiddleware function called with array of middleware", async () => {
+			it("should return hello world with addMiddleware function called with array of middleware", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				return middlewareCtx.next(request, env);
@@ -624,7 +654,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should return hello world with addMiddlewareInternal function called multiple times", async () => {
+			it("should return hello world with addMiddlewareInternal function called multiple times", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				return middlewareCtx.next(request, env);
@@ -657,7 +689,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should return hello world with addMiddlewareInternal function called with array of middleware", async () => {
+			it("should return hello world with addMiddlewareInternal function called with array of middleware", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				return middlewareCtx.next(request, env);
@@ -689,7 +723,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should return hello world with both addMiddleware and addMiddlewareInternal called", async () => {
+			it("should return hello world with both addMiddleware and addMiddlewareInternal called", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				return middlewareCtx.next(request, env);
@@ -722,7 +758,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should leave response headers unchanged with middleware", async () => {
+			it("should leave response headers unchanged with middleware", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {
 				return middlewareCtx.next(request, env);
@@ -754,7 +792,9 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("should allow multiple addEventListeners for fetch", async () => {
+			it("should allow multiple addEventListeners for fetch", async ({
+				expect,
+			}) => {
 				const scriptContent = `
 			let count = 0;
 			addEventListener("fetch", (event) => {
@@ -783,7 +823,7 @@ describe("middleware", () => {
 				await worker.dispose();
 			});
 
-			it("waitUntil should not block responses", async () => {
+			it("waitUntil should not block responses", async ({ expect }) => {
 				const scriptContent = `
 			addEventListener("fetch", (event) => {
 				let count = 0;
@@ -825,9 +865,9 @@ describe("middleware", () => {
 			vi.stubEnv("EXPERIMENTAL_MIDDLEWARE", "true");
 		});
 
-		it("should build multiple middleware as expected", async () => {
+		it("should build multiple middleware as expected", async ({ expect }) => {
 			await seedFs({
-				"src/index.js": dedent/* javascript */ `
+				"src/index.js": dedent /* javascript */ `
 				export default {
 					async fetch(request, env) {
 						return Response.json(env);
@@ -841,7 +881,7 @@ describe("middleware", () => {
 					}
 				}
 			`,
-				"wrangler.toml": dedent/*toml*/ `
+				"wrangler.toml": dedent /*toml*/ `
 				name = "worker-app"
 				main = "src/index.js"
 				compatibility_date = "2022-03-31"
@@ -1037,7 +1077,9 @@ describe("middleware", () => {
 				//# sourceMappingURL=index.js.map"
 			`);
 		});
-		it("should respond correctly with D1 databases, scheduled testing, and formatted dev errors", async () => {
+		it("should respond correctly with D1 databases, scheduled testing, and formatted dev errors", async ({
+			expect,
+		}) => {
 			// Kitchen sink test to check interaction between multiple middlewares
 			const scriptContent = `
 			export default {

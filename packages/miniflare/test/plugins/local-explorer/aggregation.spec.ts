@@ -2,35 +2,12 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
-import { getWorkerRegistry, Miniflare } from "miniflare";
+import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
-import { disposeWithRetry } from "../../test-shared";
+import { CorePaths } from "../../../src/workers/core/constants";
+import { disposeWithRetry, waitForWorkersInRegistry } from "../../test-shared";
 
-const BASE_URL = `http://localhost${LOCAL_EXPLORER_API_PATH}`;
-
-/**
- * Poll the dev registry until all expected workers are registered.
- * This avoids flakey tests that rely on fixed timeouts.
- */
-async function waitForWorkersInRegistry(
-	registryPath: string,
-	expectedWorkers: string[],
-	timeoutMs = 5000
-): Promise<void> {
-	const startTime = Date.now();
-	while (Date.now() - startTime < timeoutMs) {
-		const registry = getWorkerRegistry(registryPath);
-		const registeredWorkers = Object.keys(registry);
-		if (expectedWorkers.every((w) => registeredWorkers.includes(w))) {
-			return;
-		}
-		await new Promise((resolve) => setTimeout(resolve, 50));
-	}
-	throw new Error(
-		`Timed out waiting for workers to register: ${expectedWorkers.join(", ")}`
-	);
-}
+const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
 interface ListResponse {
 	result?: Array<{ id?: string; uuid?: string; [key: string]: unknown }>;
@@ -84,6 +61,9 @@ describe("Cross-process aggregation", () => {
 			durableObjects: {
 				MY_DO: "MyDO",
 			},
+			r2Buckets: {
+				BUCKET_A: "bucket-a",
+			},
 		});
 
 		instanceB = new Miniflare({
@@ -108,6 +88,9 @@ describe("Cross-process aggregation", () => {
 			},
 			durableObjects: {
 				OTHER_DO: "OtherDO",
+			},
+			r2Buckets: {
+				BUCKET_B: "bucket-b",
 			},
 		});
 		await instanceA.ready;
@@ -382,6 +365,35 @@ describe("Cross-process aggregation", () => {
 			`);
 		});
 	});
+
+	describe("r2 bucket aggregation", () => {
+		test("lists r2 buckets from both instances", async ({ expect }) => {
+			const response = await instanceA.dispatchFetch(`${BASE_URL}/r2/buckets`);
+			const data = (await response.json()) as ListResponse;
+
+			expect(data.result).toMatchInlineSnapshot(`
+				{
+				  "buckets": [
+				    {
+				      "name": "bucket-a",
+				    },
+				    {
+				      "name": "bucket-b",
+				    },
+				  ],
+				}
+			`);
+			expect(data.result_info).toMatchInlineSnapshot(`
+				{
+				  "count": 2,
+				}
+			`);
+
+			const responseB = await instanceB.dispatchFetch(`${BASE_URL}/r2/buckets`);
+			const dataB = (await responseB.json()) as ListResponse;
+			expect(dataB).toEqual(data);
+		});
+	});
 });
 
 describe("Multi-worker peer deduplication", () => {
@@ -627,6 +639,11 @@ describe("Same ID across multiple instances with same persistence directories", 
 			},
 		});
 
+		// Wait for instanceA to be ready before starting instanceB to avoid
+		// SQLite "database is locked" errors when both instances race to open
+		// the same persistence file simultaneously.
+		await instanceA.ready;
+
 		instanceB = new Miniflare({
 			name: "worker-b",
 			inspectorPort: 0,
@@ -641,7 +658,6 @@ describe("Same ID across multiple instances with same persistence directories", 
 			},
 		});
 
-		await instanceA.ready;
 		await instanceB.ready;
 
 		await waitForWorkersInRegistry(registryPath, ["worker-a", "worker-b"]);

@@ -1,3 +1,5 @@
+import { APIError } from "@cloudflare/workers-utils";
+
 export function formatActionDescription(action: string): string {
 	switch (action) {
 		case "expire":
@@ -35,4 +37,14 @@ export function isNonNegativeNumber(str: string): boolean {
 	}
 	const num = Number(str);
 	return num >= 0;
+}
+
+/**
+ * Helper to detect if a command errored due to the data catalog validation.
+ *
+ * @param error The specific error returned by an API
+ * @returns True if failed due to data catalog check, false otherwise
+ */
+export function isDataCatalogConflict(error: unknown): boolean {
+	return error instanceof APIError && error.code === 10081;
 }

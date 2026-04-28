@@ -5,10 +5,8 @@ function checkURL(request, init) {
 		request instanceof URL
 			? request
 			: new URL(
-					(typeof request === "string"
-						? new Request(request, init)
-						: request
-					).url
+					(typeof request === "string" ? new Request(request, init) : request)
+						.url
 				);
 	if (url.port && url.port !== "443" && url.protocol === "https:") {
 		if (!urls.has(url.toString())) {

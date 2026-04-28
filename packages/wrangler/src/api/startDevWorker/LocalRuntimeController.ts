@@ -9,12 +9,13 @@ import {
 } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { Miniflare, Mutex } from "miniflare";
+import { buildPublicUrl, Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { getBinaryFileContents, unwrapHook } from "./utils";
+import { getBinaryFileContents } from "./utils";
+import type { CfAccount } from "../../dev/create-worker-preview";
 import type { RemoteProxySession } from "../remoteBindings";
 import type {
 	BundleCompleteEvent,
@@ -24,7 +25,7 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { Binding, File, StartDevWorkerOptions } from "./types";
+import type { AsyncHook, Binding, File, StartDevWorkerOptions } from "./types";
 import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 
 async function getTextFileContents(file: File<string | Uint8Array>) {
@@ -55,7 +56,8 @@ export async function convertToConfigBundle(
 		if (trigger.type === "cron") {
 			crons.push(trigger.cron);
 		} else if (trigger.type === "queue-consumer") {
-			queueConsumers.push(trigger);
+			const { type: _, ...consumer } = trigger;
+			queueConsumers.push(consumer);
 		}
 	}
 	if (event.bundle.entry.format === "service-worker") {
@@ -145,6 +147,14 @@ export async function convertToConfigBundle(
 		enableContainers: event.config.dev.enableContainers ?? true,
 		// Zone for CF-Worker header - extracted from routes/host configuration
 		zone: event.config.dev?.origin?.hostname,
+		sendMetrics: event.config.sendMetrics,
+		publicUrl: event.config.dev?.server?.port
+			? buildPublicUrl({
+					hostname: event.config.dev.server.hostname,
+					port: event.config.dev.server.port,
+					secure: event.config.dev.server.secure,
+				})
+			: undefined,
 	};
 }
 
@@ -170,6 +180,7 @@ export class LocalRuntimeController extends RuntimeController {
 	#remoteProxySessionData: {
 		session: RemoteProxySession;
 		remoteBindings: Record<string, Binding>;
+		auth?: AsyncHook<CfAccount> | undefined;
 	} | null = null;
 
 	// Set of container images that have been seen in the current dev session.
@@ -207,12 +218,6 @@ export class LocalRuntimeController extends RuntimeController {
 
 				const remoteBindings = pickRemoteBindings(configBundle.bindings ?? {});
 
-				const auth =
-					Object.keys(remoteBindings).length === 0
-						? // If there are no remote bindings (this is a local only session) there's no need to get auth data
-							undefined
-						: await unwrapHook(data.config.dev.auth);
-
 				this.#remoteProxySessionData =
 					await maybeStartOrUpdateRemoteProxySession(
 						{
@@ -221,7 +226,10 @@ export class LocalRuntimeController extends RuntimeController {
 							bindings: remoteBindings,
 						},
 						this.#remoteProxySessionData ?? null,
-						auth
+						Object.keys(remoteBindings).length === 0
+							? // If there are no remote bindings (this is a local only session) there's no need to get auth data
+								undefined
+							: data.config.dev.auth
 					);
 			}
 
@@ -269,7 +277,6 @@ export class LocalRuntimeController extends RuntimeController {
 						this.containerBeingBuilt = undefined;
 					},
 					logger: logger,
-					isVite: false,
 				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;
@@ -361,11 +368,15 @@ export class LocalRuntimeController extends RuntimeController {
 			if (
 				this.containerBeingBuilt?.abortRequested &&
 				error instanceof Error &&
-				error.message === "Build exited with code: 1"
+				error.message.startsWith("Docker build exited with code:")
 			) {
 				// The user caused the container image build to be aborted, so it's expected
 				// to get a build error here, this can be safely ignored because after this
-				// the dev process either terminates or reloads the container
+				// the dev process either terminates or reloads the container.
+				// The exit code from `docker build` after a process-group SIGINT/SIGKILL
+				// can be any of 1, 130 (128 + SIGINT), 137 (128 + SIGKILL), or 143 (128 + SIGTERM)
+				// depending on platform/buildkit version, so we match on the message prefix
+				// rather than on a specific exit code.
 				return;
 			}
 			this.emitErrorEvent({

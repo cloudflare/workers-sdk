@@ -543,6 +543,7 @@ export async function putLifecycleRules(
 	accountId: string,
 	bucket: string,
 	rules: LifecycleRule[],
+	force: boolean,
 	jurisdiction?: string
 ): Promise<void> {
 	const headers: HeadersInit = {
@@ -550,6 +551,10 @@ export async function putLifecycleRules(
 	};
 	if (jurisdiction) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	if (!force) {
+		headers["cf-r2-data-catalog-check"] = "true";
 	}
 
 	await fetchResult(

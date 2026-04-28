@@ -84,6 +84,7 @@ export async function putRemoteObject(
 	objectName: string,
 	object: Readable | ReadableStream | Buffer,
 	options: Record<(typeof putHeaderKeys)[number], string | undefined>,
+	force: boolean,
 	jurisdiction?: string,
 	storageClass?: string
 ): Promise<void> {
@@ -100,6 +101,9 @@ export async function putRemoteObject(
 
 	if (storageClass !== undefined) {
 		headers["cf-r2-storage-class"] = storageClass;
+	}
+	if (!force) {
+		headers["cf-r2-data-catalog-check"] = "true";
 	}
 
 	const result = await fetchR2Objects(
@@ -124,11 +128,15 @@ export async function deleteR2Object(
 	accountId: string,
 	bucketName: string,
 	objectName: string,
+	force: boolean,
 	jurisdiction?: string
 ): Promise<void> {
 	const headers: HeadersInit = {};
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	if (!force) {
+		headers["cf-r2-data-catalog-check"] = "true";
 	}
 	await fetchR2Objects(
 		complianceConfig,

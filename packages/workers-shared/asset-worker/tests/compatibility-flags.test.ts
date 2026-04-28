@@ -1,9 +1,8 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { resolveCompatibilityOptions } from "../src/compatibility-flags";
 
 describe("resolveCompatibilityOptions", () => {
-	test("it does not interfere with existing flags", () => {
+	test("it does not interfere with existing flags", ({ expect }) => {
 		expect(resolveCompatibilityOptions({ compatibility_flags: ["foo", "bar"] }))
 			.toMatchInlineSnapshot(`
 			{
@@ -16,7 +15,7 @@ describe("resolveCompatibilityOptions", () => {
 		`);
 	});
 
-	test("it opts you into new flags if you have a future date", () => {
+	test("it opts you into new flags if you have a future date", ({ expect }) => {
 		const { compatibilityDate, compatibilityFlags } =
 			resolveCompatibilityOptions({
 				compatibility_flags: ["foo", "bar"],
@@ -31,7 +30,9 @@ describe("resolveCompatibilityOptions", () => {
 		);
 	});
 
-	test("it doesn't double you up if you've already opted into new flags and have a future date", () => {
+	test("it doesn't double you up if you've already opted into new flags and have a future date", ({
+		expect,
+	}) => {
 		const { compatibilityDate, compatibilityFlags } =
 			resolveCompatibilityOptions({
 				compatibility_flags: [
@@ -52,7 +53,9 @@ describe("resolveCompatibilityOptions", () => {
 		).toBe(1);
 	});
 
-	test("it doesn't opt you into new flags if you have a future date and have disabled it", () => {
+	test("it doesn't opt you into new flags if you have a future date and have disabled it", ({
+		expect,
+	}) => {
 		const { compatibilityDate, compatibilityFlags } =
 			resolveCompatibilityOptions({
 				compatibility_flags: ["foo", "bar", "assets_navigation_has_no_effect"],

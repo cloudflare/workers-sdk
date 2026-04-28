@@ -1,5 +1,68 @@
 # @cloudflare/workflows-shared
 
+## 0.9.1
+
+### Patch Changes
+
+- [#13560](https://github.com/cloudflare/workers-sdk/pull/13560) [`7567ef7`](https://github.com/cloudflare/workers-sdk/commit/7567ef703f1bf157ef29e6d19dd0dd9f1ff8771f) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Preserve NonRetryableError message and name when the `workflows_preserve_non_retryable_error_message` compatibility flag is enabled, instead of replacing it with a generic error message.
+
+## 0.9.0
+
+### Minor Changes
+
+- [#13351](https://github.com/cloudflare/workers-sdk/pull/13351) [`3788983`](https://github.com/cloudflare/workers-sdk/commit/3788983378793781829798bb10ae710fb452f746) Thanks [@pombosilva](https://github.com/pombosilva)! - Add `step` and `config` properties to the workflow step context
+
+  The callback passed to `step.do()` now receives `ctx.step` (with `name` and `count`) and `ctx.config` (the fully resolved step configuration with defaults merged in), in addition to the existing `ctx.attempt`.
+
+## 0.8.0
+
+### Minor Changes
+
+- [#13145](https://github.com/cloudflare/workers-sdk/pull/13145) [`5b60405`](https://github.com/cloudflare/workers-sdk/commit/5b60405954a2866a67920f5a7a48748861f58a60) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Add support for ReadableStream on workflow steps. This allows users to overcome the 1MB limit per step output.
+
+  `ReadableStream<Uint8Array>` is already serializable on the workers platform. This feature makes it native to workflows as well by persisting each chunk and replaying it if needed
+
+## 0.7.2
+
+### Patch Changes
+
+- [#13086](https://github.com/cloudflare/workers-sdk/pull/13086) [`d4c6158`](https://github.com/cloudflare/workers-sdk/commit/d4c61587094a2a2ceee35acfb3619c95e0a993fe) Thanks [@pombosilva](https://github.com/pombosilva)! - Add Workflows support to the local explorer UI.
+
+  The local explorer (`/cdn-cgi/explorer/`) now includes a full Workflows dashboard for viewing and managing workflow instances during local development.
+
+  UI features:
+
+  - Workflow instance list with status badges, creation time, action buttons, and pagination
+  - Status summary bar with instance counts per status
+  - Status filter dropdown and search
+  - Instance detail page with step history, params/output cards, error display, and expandable step details
+  - Create instance dialog with optional ID and JSON params
+
+## 0.7.1
+
+### Patch Changes
+
+- [#12985](https://github.com/cloudflare/workers-sdk/pull/12985) [`17a57e6`](https://github.com/cloudflare/workers-sdk/commit/17a57e641798dca0b298bd91dcdcef6be30d38b6) Thanks [@pombosilva](https://github.com/pombosilva)! - Fix `waitForEvent` delivering events to stale waiters after timeout.
+
+  When a `step.waitForEvent()` call timed out, its resolver was not removed from the workflow's internal waiters map. This meant the next `step.waitForEvent()` for the same event type would have its incoming event consumed by the dead resolver instead of the live one, causing the workflow to hang indefinitely.
+
+## 0.7.0
+
+### Minor Changes
+
+- [#12881](https://github.com/cloudflare/workers-sdk/pull/12881) [`8729f3d`](https://github.com/cloudflare/workers-sdk/commit/8729f3d0954c5325a0a28da6fa87129411819787) Thanks [@pombosilva](https://github.com/pombosilva)! - Workflow instances now support pause, resume, restart, and terminate in local dev.
+
+  ```js
+  const instance = await env.MY_WORKFLOW.create({
+    id: "my-instance",
+  });
+
+  await instance.pause(); // pauses after the current step completes
+  await instance.resume(); // resumes from where it left off
+  await instance.restart(); // restarts the workflow from the beginning
+  await instance.terminate(); // terminates the workflow immediately
+  ```
+
 ## 0.6.0
 
 ### Minor Changes
@@ -13,8 +76,8 @@
 
   ```ts
   await step.do("my-step", async (ctx) => {
-  	// ctx.attempt is 1 on first try, 2 on first retry, etc.
-  	console.log(`Attempt ${ctx.attempt}`);
+    // ctx.attempt is 1 on first try, 2 on first retry, etc.
+    console.log(`Attempt ${ctx.attempt}`);
   });
   ```
 
@@ -29,16 +92,16 @@
   ```jsonc
   // wrangler.jsonc
   {
-  	"workflows": [
-  		{
-  			"binding": "MY_WORKFLOW",
-  			"name": "my-workflow",
-  			"class_name": "MyWorkflow",
-  			"limits": {
-  				"steps": 5000,
-  			},
-  		},
-  	],
+    "workflows": [
+      {
+        "binding": "MY_WORKFLOW",
+        "name": "my-workflow",
+        "class_name": "MyWorkflow",
+        "limits": {
+          "steps": 5000
+        }
+      }
+    ]
   }
   ```
 
@@ -58,7 +121,7 @@
   ```ts
   // First wait for the workflow instance to complete:
   await expect(
-  	instance.waitForStatus({ status: "complete" })
+    instance.waitForStatus({ status: "complete" })
   ).resolves.not.toThrow();
 
   // Then, get its output
@@ -66,7 +129,7 @@
 
   // Or for errored workflow instances, get their error:
   await expect(
-  	instance.waitForStatus({ status: "errored" })
+    instance.waitForStatus({ status: "errored" })
   ).resolves.not.toThrow();
   const error = await instance.getError();
   ```

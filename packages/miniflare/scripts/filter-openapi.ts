@@ -32,7 +32,7 @@ const DEFAULT_OUTPUT_PATH = join(
 const LOCAL_EXPLORER_INFO = {
 	title: "Local Explorer API",
 	description:
-		"Local subset of Cloudflare API for exploring resources during local development.",
+		"A local subset of the Cloudflare API for inspecting and modifying resource state during local development. Supports D1, R2, KV, Durable Objects and Workflows.",
 	version: "0.0.1",
 };
 
@@ -80,6 +80,7 @@ export interface FilterConfig {
 export interface ExtensionsConfig {
 	paths?: Record<string, Record<string, OpenAPIOperation>>;
 	schemas?: Record<string, OpenAPISchema>;
+	addSchemaProperties?: Record<string, Record<string, OpenAPISchema>>;
 }
 export interface EndpointConfig {
 	path: string;
@@ -222,6 +223,19 @@ function filterOpenAPISpec(
 			filteredSpec.components.schemas ??= {};
 			Object.assign(filteredSpec.components.schemas, config.extensions.schemas);
 		}
+		// Add properties to existing schemas
+		if (config.extensions.addSchemaProperties) {
+			filteredSpec.components.schemas ??= {};
+			for (const [schemaName, properties] of Object.entries(
+				config.extensions.addSchemaProperties
+			)) {
+				const schema = filteredSpec.components.schemas[schemaName];
+				if (schema) {
+					schema.properties ??= {};
+					Object.assign(schema.properties, properties);
+				}
+			}
+		}
 	}
 
 	// 9. Strip all x-* extensions from the final spec (single pass)
@@ -361,6 +375,7 @@ function resolveAllRefs(
 	const toResolve = [...initialRefs];
 
 	while (toResolve.length > 0) {
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- length check on line above guarantees pop() returns a value
 		const ref = toResolve.pop()!;
 		if (resolved.has(ref)) {
 			continue;
@@ -400,6 +415,7 @@ function filterComponents(
 		const component = components[parsed.type]?.[parsed.name];
 		if (component) {
 			filtered[parsed.type] ??= {};
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- ??= on line above guarantees this exists
 			filtered[parsed.type]![parsed.name] = component;
 		}
 	}

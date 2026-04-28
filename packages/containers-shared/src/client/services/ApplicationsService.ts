@@ -2,8 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 import { OpenAPI } from "../core/OpenAPI";
-import { request as __request } from "../core/request";
+import { request as __request, requestPaginated } from "../core/request";
 import type { CancelablePromise } from "../core/CancelablePromise";
+import type { PaginatedResult } from "../core/PaginatedResult";
 import type { Application } from "../models/Application";
 import type { ApplicationID } from "../models/ApplicationID";
 import type { ApplicationJob } from "../models/ApplicationJob";
@@ -13,6 +14,8 @@ import type { ApplicationStatus } from "../models/ApplicationStatus";
 import type { CreateApplicationJobRequest } from "../models/CreateApplicationJobRequest";
 import type { CreateApplicationRequest } from "../models/CreateApplicationRequest";
 import type { CreateApplicationRolloutRequest } from "../models/CreateApplicationRolloutRequest";
+import type { DashApplication } from "../models/DashApplication";
+import type { DashApplicationInstances } from "../models/DashApplicationInstances";
 import type { DeploymentID } from "../models/DeploymentID";
 import type { DeploymentV2 } from "../models/DeploymentV2";
 import type { EmptyResponse } from "../models/EmptyResponse";
@@ -525,6 +528,65 @@ export class ApplicationsService {
 				401: `Unauthorized`,
 				404: `Deployment not found`,
 				500: `Deployment Creation Error`,
+			},
+		});
+	}
+
+	/**
+	 * List container applications with pagination (Dash endpoint)
+	 * Returns summary application data suitable for list display
+	 * @param perPage Number of results per page
+	 * @param pageToken Token for fetching the next page
+	 * @returns PaginatedResult<DashApplication[]> Paginated list of applications
+	 * @throws ApiError
+	 */
+	public static listDashApplications(
+		perPage?: number,
+		pageToken?: string
+	): CancelablePromise<PaginatedResult<DashApplication[]>> {
+		return requestPaginated(OpenAPI, {
+			method: "GET",
+			url: "/dash/applications",
+			query: {
+				per_page: perPage,
+				page_token: pageToken,
+			},
+			errors: {
+				401: `Unauthorized`,
+				404: `Not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * List container instances for a given application
+	 * Returns instances and optional durable object instances with pagination support
+	 * @param applicationId
+	 * @param perPage Number of results per page
+	 * @param pageToken Token for fetching the next page
+	 * @returns PaginatedResult<DashApplicationInstances> Paginated list of instances
+	 * @throws ApiError
+	 */
+	public static listDashApplicationInstances(
+		applicationId: ApplicationID,
+		perPage?: number,
+		pageToken?: string
+	): CancelablePromise<PaginatedResult<DashApplicationInstances>> {
+		return requestPaginated(OpenAPI, {
+			method: "GET",
+			url: "/dash/applications/{application_id}/instances",
+			path: {
+				application_id: applicationId,
+			},
+			query: {
+				per_page: perPage,
+				page_token: pageToken,
+			},
+			errors: {
+				401: `Unauthorized`,
+				404: `Application not found`,
+				500: `Internal error`,
 			},
 		});
 	}

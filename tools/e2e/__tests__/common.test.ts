@@ -1,5 +1,5 @@
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import {
 	deleteDatabase,
 	deleteKVNamespace,
@@ -40,7 +40,9 @@ afterEach(() => {
 });
 
 describe("listTmpE2EProjects()", () => {
-	it("makes paged REST requests and returns a filtered list of projects", async () => {
+	it("makes paged REST requests and returns a filtered list of projects", async ({
+		expect,
+	}) => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -111,6 +113,7 @@ describe("listTmpE2EProjects()", () => {
 });
 
 describe("deleteProject()", () => {
+	// eslint-disable-next-line jest/expect-expect -- assertions are implicit via undici mock agent interceptors
 	it("makes a REST request to delete the given project", async () => {
 		const MOCK_PROJECT = "mock-pages-project";
 		agent
@@ -125,7 +128,9 @@ describe("deleteProject()", () => {
 });
 
 describe("listTmpKVNamespaces()", () => {
-	it("makes a REST request and returns a filtered list of kv namespaces", async () => {
+	it("makes a REST request and returns a filtered list of kv namespaces", async ({
+		expect,
+	}) => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -190,6 +195,7 @@ describe("listTmpKVNamespaces()", () => {
 });
 
 describe("deleteKVNamespace()", () => {
+	// eslint-disable-next-line jest/expect-expect -- assertions are implicit via undici mock agent interceptors
 	it("makes a REST request to delete the given project", async () => {
 		const MOCK_KV = "tmp_e2e_kv";
 		agent
@@ -204,7 +210,9 @@ describe("deleteKVNamespace()", () => {
 });
 
 describe("listTmpDatabases()", () => {
-	it("makes a REST request and returns a filtered list of d1 databases", async () => {
+	it("makes a REST request and returns a filtered list of d1 databases", async ({
+		expect,
+	}) => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -281,6 +289,7 @@ describe("listTmpDatabases()", () => {
 });
 
 describe("deleteDatabase()", () => {
+	// eslint-disable-next-line jest/expect-expect -- assertions are implicit via undici mock agent interceptors
 	it("makes a REST request to delete the given project", async () => {
 		const MOCK_DB = "tmp-e2e-db";
 		agent
@@ -295,7 +304,9 @@ describe("deleteDatabase()", () => {
 });
 
 describe("listTmpE2EWorkers()", () => {
-	it("makes a REST request and returns a filtered list of workers", async () => {
+	it("makes a REST request and returns a filtered list of workers", async ({
+		expect,
+	}) => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -336,6 +347,7 @@ describe("listTmpE2EWorkers()", () => {
 });
 
 describe("deleteWorker()", () => {
+	// eslint-disable-next-line jest/expect-expect -- assertions are implicit via undici mock agent interceptors
 	it("makes a REST request to delete the given project", async () => {
 		const MOCK_WORKER = "mock-worker";
 		agent
@@ -350,7 +362,9 @@ describe("deleteWorker()", () => {
 });
 
 describe("listTmpR2Buckets()", () => {
-	it("makes a REST request and returns a filtered list of R2 buckets", async () => {
+	it("makes a REST request and returns a filtered list of R2 buckets", async ({
+		expect,
+	}) => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -392,6 +406,7 @@ describe("listTmpR2Buckets()", () => {
 });
 
 describe("deleteR2Bucket()", () => {
+	// eslint-disable-next-line jest/expect-expect -- assertions are implicit via undici mock agent interceptors
 	it("makes a REST request to delete the given R2 bucket", async () => {
 		const MOCK_BUCKET = "tmp-e2e-abc123-next--workers-opennext-cache";
 		agent

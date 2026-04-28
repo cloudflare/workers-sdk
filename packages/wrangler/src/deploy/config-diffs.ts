@@ -22,17 +22,22 @@ const reorderableBindings = {
 	services: true,
 	send_email: true,
 	vectorize: true,
+	ai_search_namespaces: true,
+	ai_search: true,
 	hyperdrive: true,
 	workflows: true,
 	dispatch_namespaces: true,
 	mtls_certificates: true,
 	pipelines: true,
 	secrets_store_secrets: true,
+	artifacts: true,
 	ratelimits: true,
 	analytics_engine_datasets: true,
 	unsafe_hello_world: true,
+	flagship: true,
 	worker_loaders: true,
 	vpc_services: true,
+	vpc_networks: true,
 
 	// Wrapper objects containing binding arrays
 	durable_objects: true,
@@ -47,6 +52,7 @@ const reorderableBindings = {
 	browser: false,
 	ai: false,
 	images: false,
+	stream: false,
 	media: false,
 	version_metadata: false,
 	unsafe: false,
@@ -169,6 +175,12 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		);
 	}
 
+	if (normalizedConfig.vpc_networks?.length) {
+		normalizedConfig.vpc_networks = normalizedConfig.vpc_networks.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
 	if (normalizedConfig.workflows?.length) {
 		normalizedConfig.workflows = normalizedConfig.workflows.map(
 			({ remote: _, ...binding }) => binding
@@ -212,7 +224,38 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		);
 	}
 
-	const singleBindingFields = ["browser", "ai", "images", "media"] as const;
+	if (normalizedConfig.ai_search_namespaces?.length) {
+		normalizedConfig.ai_search_namespaces =
+			normalizedConfig.ai_search_namespaces.map(
+				({ remote: _, ...binding }) => binding
+			);
+	}
+
+	if (normalizedConfig.ai_search?.length) {
+		normalizedConfig.ai_search = normalizedConfig.ai_search.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.flagship?.length) {
+		normalizedConfig.flagship = normalizedConfig.flagship.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.artifacts?.length) {
+		normalizedConfig.artifacts = normalizedConfig.artifacts.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	const singleBindingFields = [
+		"browser",
+		"ai",
+		"images",
+		"stream",
+		"media",
+	] as const;
 	for (const singleBindingField of singleBindingFields) {
 		if (
 			normalizedConfig[singleBindingField] &&

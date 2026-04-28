@@ -1,8 +1,8 @@
-import { logRaw, updateStatus } from "@cloudflare/cli";
-import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { transformFile } from "@cloudflare/codemod";
 import { runFrameworkGenerator } from "frameworks/index";
-import { transformFile } from "helpers/codemod";
-import { runCommand } from "helpers/command";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
@@ -30,7 +30,7 @@ const configure = async () => {
 		silent: true,
 		startText: "Installing adapter",
 		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npx} astro add cloudflare\``,
+			`via \`${npx} astro add cloudflare\``
 		)}`,
 	});
 
@@ -56,12 +56,12 @@ const configure = async () => {
 						b.identifier("platformProxy"),
 						b.objectExpression([
 							b.objectProperty(b.identifier("enabled"), b.booleanLiteral(true)),
-						]),
+						])
 					),
 					// imageService: "cloudflare",
 					b.objectProperty(
 						b.identifier("imageService"),
-						b.stringLiteral("cloudflare"),
+						b.stringLiteral("cloudflare")
 					),
 				]),
 			];

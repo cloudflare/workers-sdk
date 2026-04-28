@@ -27,8 +27,12 @@ cpSync(
 	"./.tmp/vitest.workers.config.staging.ts"
 );
 
-const remoteWorkerName = `tmp-e2e-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
-const remoteStagingWorkerName = `tmp-e2e-staging-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
+const remoteWorkerName = `tmp-e2e-worker-test-remote-bindings-${
+	randomUUID().split("-")[0]
+}`;
+const remoteStagingWorkerName = `tmp-e2e-staging-worker-test-remote-bindings-${
+	randomUUID().split("-")[0]
+}`;
 
 const wranglerJson = JSON.parse(readFileSync("./wrangler.json", "utf8"));
 wranglerJson.services[0].service = remoteWorkerName;

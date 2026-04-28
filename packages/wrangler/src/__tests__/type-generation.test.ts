@@ -410,10 +410,22 @@ const bindingsConfigMock: Omit<
 			secret_name: "secret_name",
 		},
 	],
+	artifacts: [
+		{
+			binding: "MY_ARTIFACTS",
+			namespace: "default",
+		},
+	],
 	unsafe_hello_world: [
 		{
 			binding: "HELLO_WORLD",
 			enable_timer: true,
+		},
+	],
+	flagship: [
+		{
+			binding: "FLAGS",
+			app_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 		},
 	],
 	services: [
@@ -440,6 +452,15 @@ const bindingsConfigMock: Omit<
 	],
 	send_email: [{ name: "SEND_EMAIL_BINDING" }],
 	vectorize: [{ binding: "VECTORIZE_BINDING", index_name: "VECTORIZE_NAME" }],
+	ai_search_namespaces: [
+		{ binding: "AI_SEARCH_NS_BINDING", namespace: "production" },
+	],
+	ai_search: [
+		{
+			binding: "AI_SEARCH_BINDING",
+			instance_name: "cloudflare-blog",
+		},
+	],
 	hyperdrive: [{ binding: "HYPERDRIVE_BINDING", id: "HYPERDRIVE_ID" }],
 	mtls_certificates: [
 		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },
@@ -452,6 +473,9 @@ const bindingsConfigMock: Omit<
 	},
 	images: {
 		binding: "IMAGES_BINDING",
+	},
+	stream: {
+		binding: "STREAM_BINDING",
 	},
 	media: {
 		binding: "MEDIA_BINDING",
@@ -517,6 +541,7 @@ const bindingsConfigMock: Omit<
 			service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
 		},
 	],
+	vpc_networks: [],
 };
 
 describe("generate types", () => {
@@ -751,14 +776,19 @@ describe("generate types", () => {
 					MTLS_BINDING: Fetcher;
 					TEST_QUEUE_BINDING: Queue;
 					SECRET: SecretsStoreSecret;
+					MY_ARTIFACTS: Artifacts;
 					HELLO_WORLD: HelloWorldBinding;
+					FLAGS: Flagship;
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
+					AI_SEARCH_NS_BINDING: AiSearchNamespace;
+					AI_SEARCH_BINDING: AiSearchInstance;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
+					STREAM_BINDING: StreamBinding;
 					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
@@ -863,14 +893,19 @@ describe("generate types", () => {
 					MTLS_BINDING: Fetcher;
 					TEST_QUEUE_BINDING: Queue;
 					SECRET: SecretsStoreSecret;
+					MY_ARTIFACTS: Artifacts;
 					HELLO_WORLD: HelloWorldBinding;
+					FLAGS: Flagship;
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
+					AI_SEARCH_NS_BINDING: AiSearchNamespace;
+					AI_SEARCH_BINDING: AiSearchInstance;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
+					STREAM_BINDING: StreamBinding;
 					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
@@ -1038,14 +1073,19 @@ describe("generate types", () => {
 					MTLS_BINDING: Fetcher;
 					TEST_QUEUE_BINDING: Queue;
 					SECRET: SecretsStoreSecret;
+					MY_ARTIFACTS: Artifacts;
 					HELLO_WORLD: HelloWorldBinding;
+					FLAGS: Flagship;
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
+					AI_SEARCH_NS_BINDING: AiSearchNamespace;
+					AI_SEARCH_BINDING: AiSearchInstance;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
+					STREAM_BINDING: StreamBinding;
 					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
@@ -1093,6 +1133,119 @@ describe("generate types", () => {
 			}
 			────────────────────────────────────────────────────────────
 			✨ Types written to a/worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+			"
+		`);
+	});
+
+	it("should resolve secondary worker types when env overrides the worker name", async ({
+		expect,
+	}) => {
+		// Reproduces https://github.com/cloudflare/workers-sdk/issues/12971
+		// When a secondary worker has named environments that override the worker name
+		// (e.g. name "do-worker" with env "staging" whose effective name is "do-worker-staging"),
+		// service/DO bindings in the primary worker that reference "do-worker-staging" should
+		// resolve to the typed entry instead of falling back to an unresolved comment type.
+		fs.mkdirSync("primary");
+		fs.mkdirSync("secondary");
+
+		fs.writeFileSync(
+			"./secondary/index.ts",
+			`import { DurableObject } from 'cloudflare:workers';
+			export default { async fetch() {} };
+			export class MyDurableObject extends DurableObject {}
+			`
+		);
+		fs.writeFileSync(
+			"./secondary/wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "do-worker",
+				main: "./index.ts",
+				durable_objects: {
+					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+				},
+				migrations: [{ tag: "v1", new_classes: ["MyDurableObject"] }],
+				env: {
+					staging: {
+						name: "do-worker-staging",
+						durable_objects: {
+							bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+						},
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		fs.writeFileSync(
+			"./primary/index.ts",
+			"export default { async fetch() {} };"
+		);
+		fs.writeFileSync(
+			"./primary/wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "primary-worker",
+				main: "./index.ts",
+				services: [{ binding: "DO_WORKER", service: "do-worker" }],
+				durable_objects: {
+					bindings: [
+						{
+							name: "DO_OBJECT",
+							class_name: "MyDurableObject",
+							script_name: "do-worker",
+						},
+					],
+				},
+				env: {
+					staging: {
+						name: "primary-worker-staging",
+						services: [{ binding: "DO_WORKER", service: "do-worker-staging" }],
+						durable_objects: {
+							bindings: [
+								{
+									name: "DO_OBJECT",
+									class_name: "MyDurableObject",
+									script_name: "do-worker-staging",
+								},
+							],
+						},
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		await runWrangler(
+			"types --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			- Found Worker 'do-worker' at 'secondary/index.ts' (secondary/wrangler.jsonc)
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import("./index");
+				}
+				interface StagingEnv {
+					DO_OBJECT: DurableObjectNamespace<import("../secondary/index").MyDurableObject>;
+					DO_WORKER: Service<typeof import("../secondary/index").default>;
+				}
+				interface Env {
+					DO_OBJECT: DurableObjectNamespace<import("../secondary/index").MyDurableObject>;
+					DO_WORKER: Service<typeof import("../secondary/index").default>;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to primary/worker-configuration.d.ts
 
 			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
@@ -3284,6 +3437,105 @@ describe("generate types", () => {
 				interface Env {
 					VPC_API: Fetcher;
 					VPC_DATABASE: Fetcher;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should generate types for VPC networks bindings", async ({ expect }) => {
+		fs.writeFileSync(
+			"./index.ts",
+			`export default { async fetch(request, env) { return await env.VPC_NET.fetch(request); } };`
+		);
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-vpc-networks",
+				main: "./index.ts",
+				vpc_networks: [
+					{
+						binding: "VPC_NET",
+						tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+					{
+						binding: "VPC_NET_B",
+						tunnel_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import("./index");
+				}
+				interface Env {
+					VPC_NET: Fetcher;
+					VPC_NET_B: Fetcher;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should generate types for VPC networks bindings with network_id", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./index.ts",
+			`export default { async fetch(request, env) { return await env.VPC_MESH.fetch(request); } };`
+		);
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-vpc-networks-mesh",
+				main: "./index.ts",
+				vpc_networks: [
+					{
+						binding: "VPC_MESH",
+						network_id: "cf1:network",
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import("./index");
+				}
+				interface Env {
+					VPC_MESH: Fetcher;
 				}
 			}
 			interface Env extends Cloudflare.Env {}

@@ -8,12 +8,15 @@ import type {
 } from "./config/environment";
 import type {
 	CfAIBinding,
+	CfAISearch,
+	CfAISearchNamespace,
 	CfAnalyticsEngineDataset,
 	CfBrowserBinding,
 	CfD1Database,
 	CfDispatchNamespace,
 	CfDurableObject,
 	CfDurableObjectMigrations,
+	CfFlagship,
 	CfHelloWorld,
 	CfHyperdrive,
 	CfImagesBinding,
@@ -26,13 +29,16 @@ import type {
 	CfQueue,
 	CfR2Bucket,
 	CfRateLimit,
+	CfArtifacts,
 	CfSecretsStoreSecrets,
 	CfSendEmailBindings,
 	CfService,
+	CfStreamBinding,
 	CfTailConsumer,
 	CfUnsafeBinding,
 	CfUserLimits,
 	CfVectorize,
+	CfVpcNetwork,
 	CfVpcService,
 	CfWorkerLoader,
 	CfWorkflow,
@@ -62,8 +68,11 @@ export type WorkerMetadataBinding =
 	| { type: "browser"; name: string; raw?: boolean }
 	| { type: "ai"; name: string; staging?: boolean; raw?: boolean }
 	| { type: "images"; name: string; raw?: boolean }
+	| { type: "stream"; name: string }
 	| { type: "version_metadata"; name: string }
 	| { type: "data_blob"; name: string; part: string }
+	| { type: "ai_search_namespace"; name: string; namespace: string }
+	| { type: "ai_search"; name: string; instance_name: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
 	| { type: "media"; name: string }
 	| {
@@ -148,9 +157,19 @@ export type WorkerMetadataBinding =
 			secret_name: string;
 	  }
 	| {
+			type: "artifacts";
+			name: string;
+			namespace: string;
+	  }
+	| {
 			type: "unsafe_hello_world";
 			name: string;
 			enable_timer?: boolean;
+	  }
+	| {
+			type: "flagship";
+			name: string;
+			app_id: string;
 	  }
 	| {
 			type: "ratelimit";
@@ -159,6 +178,12 @@ export type WorkerMetadataBinding =
 			simple: { limit: number; period: 10 | 60 };
 	  }
 	| { type: "vpc_service"; name: string; service_id: string }
+	| {
+			type: "vpc_network";
+			name: string;
+			tunnel_id?: string;
+			network_id?: string;
+	  }
 	| {
 			type: "worker_loader";
 			name: string;
@@ -274,7 +299,7 @@ export type Trigger =
 	| ({ type: "route" } & ZoneNameRoute)
 	| ({ type: "route" } & CustomDomainRoute)
 	| { type: "cron"; cron: string }
-	| ({ type: "queue-consumer" } & QueueConsumer);
+	| ({ type: "queue-consumer" } & Omit<QueueConsumer, "type">);
 
 type BindingOmit<T> = Omit<T, "binding">;
 type NameOmit<T> = Omit<T, "name">;
@@ -298,6 +323,7 @@ export type Binding =
 	| ({ type: "browser" } & BindingOmit<CfBrowserBinding>)
 	| ({ type: "ai" } & BindingOmit<CfAIBinding>)
 	| ({ type: "images" } & BindingOmit<CfImagesBinding>)
+	| ({ type: "stream" } & BindingOmit<CfStreamBinding>)
 	| { type: "version_metadata" }
 	| { type: "data_blob"; source: BinaryFile }
 	| ({ type: "durable_object_namespace" } & NameOmit<CfDurableObject>)
@@ -306,6 +332,8 @@ export type Binding =
 	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
 	| ({ type: "d1" } & BindingOmit<CfD1Database>)
 	| ({ type: "vectorize" } & BindingOmit<CfVectorize>)
+	| ({ type: "ai_search_namespace" } & BindingOmit<CfAISearchNamespace>)
+	| ({ type: "ai_search" } & BindingOmit<CfAISearch>)
 	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
 	| ({ type: "service" } & BindingOmit<CfService>)
 	| { type: "fetcher"; fetcher: ServiceFetch }
@@ -314,11 +342,14 @@ export type Binding =
 	| ({ type: "mtls_certificate" } & BindingOmit<CfMTlsCertificate>)
 	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
+	| ({ type: "artifacts" } & BindingOmit<CfArtifacts>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
+	| ({ type: "flagship" } & BindingOmit<CfFlagship>)
 	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
 	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
 	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
+	| ({ type: "vpc_network" } & BindingOmit<CfVpcNetwork>)
 	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
 	| ({ type: `unsafe_${string}` } & Omit<CfUnsafeBinding, "name" | "type">)
 	| { type: "assets" }

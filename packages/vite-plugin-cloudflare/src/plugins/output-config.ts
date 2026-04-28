@@ -1,12 +1,12 @@
 import assert from "node:assert";
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
+import * as vite from "vite";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
 import { writeDeployConfig } from "../deploy-config";
 import { getLocalDevVarsForPreview } from "../dev-vars";
 import { createPlugin } from "../utils";
-import type * as vite from "vite";
 import type { Unstable_RawConfig } from "wrangler";
 
 /**
@@ -172,8 +172,10 @@ function getAssetsDirectory(
 		"Unexpected error: client output directory is undefined"
 	);
 
-	return path.relative(
-		path.resolve(resolvedViteConfig.root, workerOutputDirectory),
-		path.resolve(resolvedViteConfig.root, clientOutputDirectory)
+	return vite.normalizePath(
+		path.relative(
+			path.resolve(resolvedViteConfig.root, workerOutputDirectory),
+			path.resolve(resolvedViteConfig.root, clientOutputDirectory)
+		)
 	);
 }

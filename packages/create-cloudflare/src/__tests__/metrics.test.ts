@@ -1,8 +1,7 @@
-import { CancelError } from "@cloudflare/cli/error";
+import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import { detectPackageManager } from "helpers/packageManagers";
 import { hasSparrowSourceKey, sendEvent } from "helpers/sparrow";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
-import { collectCLIOutput, normalizeOutput } from "../../../cli/test-util";
 import { version as c3Version } from "../../package.json";
 import {
 	getDeviceId,
@@ -15,6 +14,7 @@ import {
 	promiseWithResolvers,
 	runTelemetryCommand,
 } from "../metrics";
+import { collectCLIOutput, normalizeOutput } from "./helpers";
 
 vi.mock("helpers/metrics-config");
 vi.mock("helpers/sparrow");
@@ -75,7 +75,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(1);
 
@@ -103,7 +103,7 @@ describe("createReporter", () => {
 					durationMs: 1234,
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
@@ -142,7 +142,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			true,
+			true
 		);
 		expect(sendEvent).toBeCalledTimes(1);
 
@@ -170,7 +170,7 @@ describe("createReporter", () => {
 					durationMs: 1234,
 				},
 			},
-			true,
+			true
 		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
@@ -291,7 +291,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(1);
 
@@ -318,7 +318,7 @@ describe("createReporter", () => {
 					durationMs: 1234,
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
@@ -353,7 +353,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(1);
 
@@ -385,7 +385,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
@@ -423,7 +423,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(1);
 
@@ -451,7 +451,7 @@ describe("createReporter", () => {
 					durationMs: 1234,
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
@@ -488,7 +488,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(1);
 
@@ -516,7 +516,7 @@ describe("createReporter", () => {
 					durationMs: 1234,
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});

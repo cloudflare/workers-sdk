@@ -6,18 +6,16 @@ export const containersScope = "containers:write" as const;
 export const containersNamespace = createNamespace({
 	metadata: {
 		description: "📦 Manage Containers",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 });
 
 // --- Re-export commands from their respective files ---
-export {
-	containersListCommand,
-	containersInfoCommand,
-	containersDeleteCommand,
-} from "./containers";
+export { containersListCommand } from "./list";
+export { containersInfoCommand, containersDeleteCommand } from "./containers";
 
+export { containersInstancesCommand } from "./instances";
 export { containersSshCommand } from "./ssh";
 
 export {

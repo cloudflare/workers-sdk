@@ -166,19 +166,6 @@ export const typesCommand = createCommand({
 			);
 		}
 
-		if (args.check) {
-			const outOfDate = await checkTypesUpToDate(config, outputPath);
-			if (outOfDate) {
-				throw new FatalError(
-					`Types at ${outputPath} are out of date. Run \`wrangler types\` to regenerate.`,
-					1
-				);
-			}
-
-			logger.log(`✨ Types at ${outputPath} are up to date.\n`);
-			return;
-		}
-
 		const secondaryEntries: Map<string, Entry> = new Map();
 
 		if (secondaryConfigs.length > 0) {
@@ -198,12 +185,46 @@ export const typesCommand = createCommand({
 							`- Found Worker '${key}' at '${relative(process.cwd(), serviceEntry.file)}' (${secondaryConfig.configPath})`
 						)
 					);
+
+					// Also register environment-specific names (e.g. "worker-foo" for env "foo")
+					// so that service/DO bindings referencing those names can be resolved.
+					const { rawConfig } = experimental_readRawConfig({
+						config: secondaryConfig.configPath,
+					});
+					for (const envName of Object.keys(rawConfig.env ?? {})) {
+						const envConfig = readConfig({
+							config: secondaryConfig.configPath,
+							env: envName,
+						});
+						const envKey = envConfig.name;
+						if (envKey && envKey !== key && !secondaryEntries.has(envKey)) {
+							secondaryEntries.set(envKey, serviceEntry);
+						}
+					}
 				} else {
 					throw new UserError(
 						`Could not resolve entry point for service config '${secondaryConfig}'.`
 					);
 				}
 			}
+		}
+
+		if (args.check) {
+			const outOfDate = await checkTypesUpToDate(
+				config,
+				envInterface,
+				outputPath,
+				secondaryEntries
+			);
+			if (outOfDate) {
+				throw new FatalError(
+					`Types at ${outputPath} are out of date. Run \`wrangler types\` to regenerate.`,
+					1
+				);
+			}
+
+			logger.log(`✨ Types at ${outputPath} are up to date.\n`);
+			return;
 		}
 
 		const configContainsEntrypoint =
@@ -1846,6 +1867,21 @@ function collectCoreBindings(
 			);
 		}
 
+		for (const [index, artifact] of (env.artifacts ?? []).entries()) {
+			if (!artifact.binding) {
+				throwMissingBindingError({
+					binding: artifact,
+					bindingType: "artifacts",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(artifact.binding, "Artifacts", "artifacts", envName);
+		}
+
 		for (const [index, helloWorld] of (
 			env.unsafe_hello_world ?? []
 		).entries()) {
@@ -1866,6 +1902,21 @@ function collectCoreBindings(
 				"unsafe_hello_world",
 				envName
 			);
+		}
+
+		for (const [index, flagshipBinding] of (env.flagship ?? []).entries()) {
+			if (!flagshipBinding.binding) {
+				throwMissingBindingError({
+					binding: flagshipBinding,
+					bindingType: "flagship",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(flagshipBinding.binding, "Flagship", "flagship", envName);
 		}
 
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
@@ -1918,6 +1969,58 @@ function collectCoreBindings(
 			addBinding(vpcService.binding, "Fetcher", "vpc_services", envName);
 		}
 
+		for (const [index, vpcNetwork] of (env.vpc_networks ?? []).entries()) {
+			if (!vpcNetwork.binding) {
+				throwMissingBindingError({
+					binding: vpcNetwork,
+					bindingType: "vpc_networks",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(vpcNetwork.binding, "Fetcher", "vpc_networks", envName);
+		}
+
+		for (const [index, aiSearchNamespace] of (
+			env.ai_search_namespaces ?? []
+		).entries()) {
+			if (!aiSearchNamespace.binding) {
+				throwMissingBindingError({
+					binding: aiSearchNamespace,
+					bindingType: "ai_search_namespaces",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(
+				aiSearchNamespace.binding,
+				"AiSearchNamespace",
+				"ai_search_namespaces",
+				envName
+			);
+		}
+
+		for (const [index, aiSearch] of (env.ai_search ?? []).entries()) {
+			if (!aiSearch.binding) {
+				throwMissingBindingError({
+					binding: aiSearch,
+					bindingType: "ai_search",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(aiSearch.binding, "AiSearchInstance", "ai_search", envName);
+		}
+
 		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
@@ -1963,6 +2066,20 @@ function collectCoreBindings(
 				});
 			} else {
 				addBinding(env.images.binding, "ImagesBinding", "images", envName);
+			}
+		}
+
+		if (env.stream) {
+			if (!env.stream.binding) {
+				throwMissingBindingError({
+					binding: env.stream,
+					bindingType: "stream",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				addBinding(env.stream.binding, "StreamBinding", "stream", envName);
 			}
 		}
 
@@ -2828,6 +2945,25 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
+		for (const [index, artifact] of (env.artifacts ?? []).entries()) {
+			if (!artifact.binding) {
+				throwMissingBindingError({
+					binding: artifact,
+					bindingType: "artifacts",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "artifacts",
+				name: artifact.binding,
+				type: "Artifacts",
+			});
+		}
+
 		for (const [index, helloWorld] of (
 			env.unsafe_hello_world ?? []
 		).entries()) {
@@ -2846,6 +2982,25 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "unsafe_hello_world",
 				name: helloWorld.binding,
 				type: "HelloWorldBinding",
+			});
+		}
+
+		for (const [index, flagshipBinding] of (env.flagship ?? []).entries()) {
+			if (!flagshipBinding.binding) {
+				throwMissingBindingError({
+					binding: flagshipBinding,
+					bindingType: "flagship",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "flagship",
+				name: flagshipBinding.binding,
+				type: "Flagship",
 			});
 		}
 
@@ -2902,6 +3057,25 @@ function collectCoreBindingsPerEnvironment(
 			bindings.push({
 				bindingCategory: "vpc_services",
 				name: vpcService.binding,
+				type: "Fetcher",
+			});
+		}
+
+		for (const [index, vpcNetwork] of (env.vpc_networks ?? []).entries()) {
+			if (!vpcNetwork.binding) {
+				throwMissingBindingError({
+					binding: vpcNetwork,
+					bindingType: "vpc_networks",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "vpc_networks",
+				name: vpcNetwork.binding,
 				type: "Fetcher",
 			});
 		}
@@ -2970,6 +3144,24 @@ function collectCoreBindingsPerEnvironment(
 			}
 		}
 
+		if (env.stream) {
+			if (!env.stream.binding) {
+				throwMissingBindingError({
+					binding: env.stream,
+					bindingType: "stream",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				bindings.push({
+					bindingCategory: "stream",
+					name: env.stream.binding,
+					type: "StreamBinding",
+				});
+			}
+		}
+
 		if (env.media) {
 			if (!env.media.binding) {
 				throwMissingBindingError({
@@ -3011,6 +3203,46 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "assets",
 				name: env.assets.binding,
 				type: "Fetcher",
+			});
+		}
+
+		for (const [index, aiSearchNamespace] of (
+			env.ai_search_namespaces ?? []
+		).entries()) {
+			if (!aiSearchNamespace.binding) {
+				throwMissingBindingError({
+					binding: aiSearchNamespace,
+					bindingType: "ai_search_namespaces",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "ai_search_namespaces",
+				name: aiSearchNamespace.binding,
+				type: "AiSearchNamespace",
+			});
+		}
+
+		for (const [index, aiSearch] of (env.ai_search ?? []).entries()) {
+			if (!aiSearch.binding) {
+				throwMissingBindingError({
+					binding: aiSearch,
+					bindingType: "ai_search",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "ai_search",
+				name: aiSearch.binding,
+				type: "AiSearchInstance",
 			});
 		}
 

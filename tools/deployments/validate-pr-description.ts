@@ -1,4 +1,4 @@
-/* eslint-disable turbo/no-undeclared-env-vars */
+/* eslint-disable turbo/no-undeclared-env-vars -- this script reads CI environment variables */
 if (require.main === module) {
 	const errors = validateDescription(
 		process.env.TITLE as string,

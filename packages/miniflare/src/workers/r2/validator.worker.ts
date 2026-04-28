@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
-import { InclusiveRange, parseRanges } from "miniflare:shared";
+import { parseRanges } from "miniflare:shared";
 import { R2Limits } from "./constants";
 import {
 	BadDigest,
@@ -11,8 +11,13 @@ import {
 	MetadataTooLarge,
 	PreconditionFailed,
 } from "./errors.worker";
-import { InternalR2Object } from "./r2Object.worker";
-import { InternalR2GetOptions, R2Conditional, R2Etag } from "./schemas.worker";
+import type { InternalR2Object } from "./r2Object.worker";
+import type {
+	InternalR2GetOptions,
+	R2Conditional,
+	R2Etag,
+} from "./schemas.worker";
+import type { InclusiveRange } from "miniflare:shared";
 
 function identity(ms: number) {
 	return ms;

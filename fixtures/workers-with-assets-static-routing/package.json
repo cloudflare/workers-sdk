@@ -11,7 +11,6 @@
 		"type:tests": "tsc -p ./test/tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/node": "catalog:default",
@@ -22,7 +21,7 @@
 		"wrangler": "workspace:*"
 	},
 	"volta": {
-		"node": "20.19.2",
-		"extends": "../../package.json"
+		"extends": "../../package.json",
+		"node": "20.19.2"
 	}
 }

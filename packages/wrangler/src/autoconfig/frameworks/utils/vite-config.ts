@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { transformFile } from "@cloudflare/codemod";
 import { UserError } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import dedent from "ts-dedent";
 import { logger } from "../../../logger";
-import { transformFile } from "../../c3-vendor/codemod";
 import type { types } from "recast";
 
 const b = recast.types.builders;

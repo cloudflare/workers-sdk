@@ -18,7 +18,7 @@ import type {
 } from "./types";
 
 export const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
-	"cloudflare/proxy-everything:3f5e832@sha256:816255f5b6ebdc2cdcddb578d803121e7ee9cfe178442da07725d75a66cdcf37";
+	"cloudflare/proxy-everything:3cb1195@sha256:0ef6716c52430096900b150d84a3302057d6cd2319dae7987128c85d0733e3c8";
 
 export function getEgressInterceptorImage(): string {
 	return (
@@ -37,26 +37,15 @@ export async function pullEgressInterceptorImage(
 export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,
-	logger: WranglerLogger | ViteLogger,
-	isVite: boolean
+	logger: WranglerLogger | ViteLogger
 ): Promise<{ abort: () => void; ready: Promise<void> }> {
 	const domain = new URL(`http://${options.image_uri}`).hostname;
 
 	const isExternalRegistry = domain !== getCloudflareContainerRegistry();
 	try {
-		// this will fail in two cases:
-		// 1. this is being called from the vite plugin (doesn't have the appropriate auth context)
-		// 2. the user has not run `wrangler containers registries configure` yet to set up credentials
 		await dockerLoginImageRegistry(dockerPath, domain);
 	} catch (e) {
 		if (!isExternalRegistry) {
-			if (isVite) {
-				throw new UserError(
-					`Using images from the Cloudflare-managed registry is not currently supported with the Vite plugin.\n` +
-						`You should use a Dockerfile or a supported external registry and authenticate to that registry separately using \`docker login\` or similar.\n` +
-						`Supported external registries are currently: ${Object.values(ExternalRegistryKind).join(", ")}.`
-				);
-			}
 			throw e;
 		}
 		logger?.warn(
@@ -113,7 +102,6 @@ export async function prepareContainerImagesForDev(args: {
 		containerOptions: ContainerDevOptions;
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
-	isVite: boolean;
 }): Promise<void> {
 	const {
 		dockerPath,
@@ -144,12 +132,7 @@ export async function prepareContainerImagesForDev(args: {
 				containerOptions: options,
 			});
 		} else {
-			const pull = await pullImage(
-				dockerPath,
-				options,
-				args.logger,
-				args.isVite
-			);
+			const pull = await pullImage(dockerPath, options, args.logger);
 			onContainerImagePreparationStart({
 				containerOptions: options,
 				abort: () => {

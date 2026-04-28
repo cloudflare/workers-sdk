@@ -9,6 +9,7 @@ export const IGNORED_KEYS = ["self"] as const;
 
 /** Available methods for `WorkerEntrypoint` class */
 export const WORKER_ENTRYPOINT_KEYS = [
+	"connect",
 	"email",
 	"fetch",
 	"queue",
@@ -22,6 +23,7 @@ export const WORKER_ENTRYPOINT_KEYS = [
 /** Available methods for `DurableObject` class */
 export const DURABLE_OBJECT_KEYS = [
 	"alarm",
+	"connect",
 	"fetch",
 	"webSocketClose",
 	"webSocketError",

@@ -51,7 +51,7 @@ export function DropTableConfirmationModal({
 			open={isOpen}
 		>
 			<Dialog className="p-6">
-				<div className="flex items-start justify-between gap-4 mb-4">
+				<div className="mb-4 flex items-start justify-between gap-4">
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 					<Dialog.Title className="text-lg font-semibold">
 						Delete table?
@@ -73,7 +73,7 @@ export function DropTableConfirmationModal({
 							<input
 								autoComplete="off"
 								autoFocus
-								className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm"
+								className="w-full rounded-md border border-kumo-fill bg-transparent px-3 py-2 text-sm"
 								onChange={(e) => setChallengeInput(e.target.value)}
 								value={challengeInput}
 							/>
@@ -86,7 +86,7 @@ export function DropTableConfirmationModal({
 						)}
 					</div>
 
-					<div className="flex gap-2 justify-end mt-4">
+					<div className="mt-4 flex justify-end gap-2">
 						<Button onClick={closeModal} variant="secondary">
 							Cancel
 						</Button>

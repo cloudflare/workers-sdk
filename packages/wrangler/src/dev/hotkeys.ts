@@ -1,6 +1,5 @@
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
-import { LOCAL_EXPLORER_BASE_PATH } from "miniflare";
+import { CorePaths } from "miniflare";
 import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
@@ -8,15 +7,21 @@ import openInBrowser from "../open-in-browser";
 import { debounce } from "../utils/debounce";
 import { openInspector } from "./inspect";
 import type { DevEnv } from "../api";
+import type { Tunnel } from "@cloudflare/workers-utils";
 
 export default function registerDevHotKeys(
 	devEnvs: DevEnv[],
 	args: {
 		forceLocal?: boolean;
 		remote: boolean;
+		tunnel?: boolean;
 	},
-	render = true
+	options: {
+		render?: boolean;
+		getTunnel?: () => Tunnel | undefined;
+	} = {}
 ) {
+	const { render = true, getTunnel } = options;
 	const primaryDevEnv = devEnvs[0];
 	const unregisterHotKeys = registerHotKeys(
 		[
@@ -50,10 +55,9 @@ export default function registerDevHotKeys(
 			{
 				keys: ["e"],
 				label: "open local explorer",
-				disabled: !getLocalExplorerEnabledFromEnv(),
 				handler: async () => {
 					const { url } = await primaryDevEnv.proxy.ready.promise;
-					const explorerUrl = new URL(LOCAL_EXPLORER_BASE_PATH, url);
+					const explorerUrl = new URL(CorePaths.EXPLORER, url);
 					await openInBrowser(explorerUrl.href);
 				},
 			},
@@ -101,7 +105,8 @@ export default function registerDevHotKeys(
 			},
 			{
 				keys: ["l"],
-				disabled: () => args.forceLocal ?? false,
+				// Remote mode is not supported when using tunnels
+				disabled: () => args.forceLocal || args.tunnel,
 				handler: async () => {
 					await primaryDevEnv.config.patch({
 						dev: {
@@ -109,6 +114,21 @@ export default function registerDevHotKeys(
 							remote: !primaryDevEnv.config.latestConfig?.dev?.remote,
 						},
 					});
+				},
+			},
+			{
+				// We remind users about the tunnel hotkey every 10mins
+				// Hiding this hotkey to reduce noise on startup
+				keys: ["t"],
+				disabled: () => !args.tunnel,
+				handler: async () => {
+					const tunnel = getTunnel?.();
+
+					if (!tunnel) {
+						return;
+					}
+
+					tunnel.extendExpiry();
 				},
 			},
 			{

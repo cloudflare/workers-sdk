@@ -1,14 +1,16 @@
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
-import { afterEach, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../../config-cache";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { msw } from "./../helpers/msw";
 import { runInTempDir } from "./../helpers/run-in-tmp";
 import { runWrangler } from "./../helpers/run-wrangler";
+import type { PagesConfigCache } from "../../pages/types";
 import type { Deployment } from "./../../pages/types";
+import type { ExpectStatic } from "vitest";
 
 describe("pages deployment list", () => {
 	runInTempDir();
@@ -24,7 +26,7 @@ describe("pages deployment list", () => {
 		msw.restoreHandlers();
 	});
 
-	it("should make request to list deployments", async () => {
+	it("should make request to list deployments", async ({ expect }) => {
 		const deployments: Deployment[] = [
 			{
 				id: "87bbc8fe-16be-45cd-81e0-63d722e82cdf",
@@ -45,7 +47,7 @@ describe("pages deployment list", () => {
 			},
 		];
 
-		const requests = mockDeploymentListRequest(deployments);
+		const requests = mockDeploymentListRequest(expect, deployments);
 		await runWrangler("pages deployment list --project-name=images");
 
 		expect(requests.count).toBe(1);
@@ -61,7 +63,9 @@ describe("pages deployment list", () => {
 		`);
 	});
 
-	it("should make request to list deployments and return result as json", async () => {
+	it("should make request to list deployments and return result as json", async ({
+		expect,
+	}) => {
 		const deployments: Deployment[] = [
 			{
 				id: "87bbc8fe-16be-45cd-81e0-63d722e82cdf",
@@ -82,7 +86,7 @@ describe("pages deployment list", () => {
 			},
 		];
 
-		const requests = mockDeploymentListRequest(deployments);
+		const requests = mockDeploymentListRequest(expect, deployments);
 		await runWrangler("pages deployment list --project-name=images --json");
 
 		expect(requests.count).toBe(1);
@@ -106,7 +110,7 @@ describe("pages deployment list", () => {
 		`);
 	});
 
-	it("should pass no environment", async () => {
+	it("should pass no environment", async ({ expect }) => {
 		const deployments: Deployment[] = [
 			{
 				id: "87bbc8fe-16be-45cd-81e0-63d722e82cdf",
@@ -127,7 +131,7 @@ describe("pages deployment list", () => {
 			},
 		];
 
-		const requests = mockDeploymentListRequest(deployments);
+		const requests = mockDeploymentListRequest(expect, deployments);
 		await runWrangler("pages deployment list --project-name=images");
 		expect(requests.count).toBe(1);
 		expect(
@@ -137,7 +141,7 @@ describe("pages deployment list", () => {
 		).toBeUndefined();
 	});
 
-	it("should pass production environment with flag", async () => {
+	it("should pass production environment with flag", async ({ expect }) => {
 		const deployments: Deployment[] = [
 			{
 				id: "87bbc8fe-16be-45cd-81e0-63d722e82cdf",
@@ -158,7 +162,7 @@ describe("pages deployment list", () => {
 			},
 		];
 
-		const requests = mockDeploymentListRequest(deployments);
+		const requests = mockDeploymentListRequest(expect, deployments);
 		await runWrangler(
 			"pages deployment list --project-name=images --environment=production"
 		);
@@ -170,7 +174,7 @@ describe("pages deployment list", () => {
 		).toStrictEqual(["env", "production"]);
 	});
 
-	it("should pass preview environment with flag", async () => {
+	it("should pass preview environment with flag", async ({ expect }) => {
 		const deployments: Deployment[] = [
 			{
 				id: "87bbc8fe-16be-45cd-81e0-63d722e82cdf",
@@ -191,7 +195,7 @@ describe("pages deployment list", () => {
 			},
 		];
 
-		const requests = mockDeploymentListRequest(deployments);
+		const requests = mockDeploymentListRequest(expect, deployments);
 		await runWrangler(
 			"pages deployment list --project-name=images --environment=preview"
 		);
@@ -201,6 +205,38 @@ describe("pages deployment list", () => {
 				return key === "env";
 			})
 		).toStrictEqual(["env", "preview"]);
+	});
+
+	it("should prefer CLOUDFLARE_ACCOUNT_ID over cached account id", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-var-account-id");
+
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "stale-cached-account-id",
+			project_name: "images",
+		});
+
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/pages/projects/:project/deployments",
+				({ params }) => {
+					expect(params.accountId).toEqual("env-var-account-id");
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: [],
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler("pages deployment list --project-name=images");
 	});
 });
 
@@ -218,7 +254,10 @@ type RequestLogger = {
 	queryParams: [string, string][][];
 };
 
-function mockDeploymentListRequest(deployments: unknown[]): RequestLogger {
+function mockDeploymentListRequest(
+	expect: ExpectStatic,
+	deployments: unknown[]
+): RequestLogger {
 	const requests: RequestLogger = { count: 0, queryParams: [] };
 	msw.use(
 		http.get(

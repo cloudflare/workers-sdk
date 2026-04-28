@@ -1,5 +1,5 @@
-import html from "./index.html?raw";
 import { DurableObject } from "cloudflare:workers";
+import html from "./index.html?raw";
 
 interface Env {
 	WEBSOCKET_SERVER: DurableObjectNamespace<WebSocketServer>;

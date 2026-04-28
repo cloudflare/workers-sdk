@@ -473,6 +473,15 @@ export class ProxyController extends Controller {
 				logger.debug("[ProxyWorker]", ...message.args);
 
 				break;
+			case "sseResponseDetected":
+				// Only warn about SSE if a quick tunnel is active
+				if (this.latestConfig?.dev?.tunnel) {
+					logger.once.warn(
+						"Quick tunnels do not support Server-Sent Events (SSE). Use a named Cloudflare Tunnel if you need SSE over a public URL."
+					);
+				}
+
+				break;
 			default:
 				assertNever(message);
 		}

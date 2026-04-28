@@ -45,7 +45,7 @@ export {
 } from "./router.worker";
 export type { RouteHandler } from "./router.worker";
 
-export { get, all, drain } from "./sql.worker";
+export { get, all, drain, createTypedSql } from "./sql.worker";
 export type {
 	TypedValue,
 	TypedResult,

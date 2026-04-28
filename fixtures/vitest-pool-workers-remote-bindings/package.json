@@ -1,15 +1,15 @@
 {
 	"name": "@fixture/vitest-pool-workers-remote-bindings",
 	"private": true,
+	"type": "module",
 	"scripts": {
 		"test": "vitest run --config vitest.workers.config.ts",
 		"test:ci": "node run-tests.mjs",
 		"test:vitest": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "workspace:*",
-		"typescript": "^5.5.2",
+		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	}

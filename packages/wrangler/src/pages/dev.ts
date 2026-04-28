@@ -6,7 +6,7 @@ import { setTimeout } from "node:timers/promises";
 import {
 	configFileName,
 	FatalError,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
@@ -1024,6 +1024,7 @@ export const pagesDevCommand = createCommand({
 					siteExclude: undefined,
 					enableContainers: false,
 					types: false,
+					tunnel: undefined,
 				})
 		);
 
@@ -1034,8 +1035,6 @@ export const pagesDevCommand = createCommand({
 		process.on("SIGTERM", CLEANUP);
 
 		await events.once(devServer.devEnv, "teardown");
-		const teardownRegistry = await devServer.teardownRegistryPromise;
-		await teardownRegistry?.(devServer.devEnv.config.latestConfig?.name);
 
 		devServer.unregisterHotKeys?.();
 		CLEANUP();
@@ -1202,7 +1201,7 @@ function resolvePagesDevServerSettings(
 	// resolve compatibility date
 	let compatibilityDate = args.compatibilityDate || config.compatibility_date;
 	if (!compatibilityDate) {
-		const currentDate = formatCompatibilityDate(new Date());
+		const currentDate = getTodaysCompatDate();
 		logger.warn(
 			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
 				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${currentDate}", or\n` +

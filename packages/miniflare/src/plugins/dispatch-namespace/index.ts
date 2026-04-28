@@ -1,14 +1,13 @@
 import SCRIPT_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespace";
 import SCRIPT_DISPATCH_NAMESPACE_PROXY from "worker:dispatch-namespace/dispatch-namespace-proxy";
 import { z } from "zod";
-import { Worker_Binding } from "../../runtime";
 import {
 	getUserBindingServiceName,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 } from "../shared";
+import type { Worker_Binding } from "../../runtime";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const DispatchNamespaceOptionsSchema = z.object({
 	dispatchNamespaces: z

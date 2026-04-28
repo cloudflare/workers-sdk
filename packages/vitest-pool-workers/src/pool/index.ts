@@ -3,6 +3,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import util from "node:util";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import * as devalue from "devalue";
 import getPort, { portNumbers } from "get-port";
 import {
@@ -15,7 +17,6 @@ import {
 	Miniflare,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
-	supportedCompatibilityDate,
 } from "miniflare";
 import semverSatisfies from "semver/functions/satisfies.js";
 import { experimental_readRawConfig } from "wrangler";
@@ -34,8 +35,12 @@ import type {
 	WorkersPoolOptions,
 	WorkersPoolOptionsWithDefines,
 } from "./config";
-import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
-import type { Readable } from "node:stream";
+import type {
+	MiniflareOptions,
+	SharedOptions,
+	WorkerOptions,
+	WorkerdStructuredLog,
+} from "miniflare";
 import type { TestProject, Vitest } from "vitest/node";
 
 export function structuredSerializableStringify(value: unknown): string {
@@ -62,8 +67,10 @@ export function structuredSerializableParse(value: string): unknown {
 	return devalue.parse(value, structuredSerializableRevivers);
 }
 
-// Log for informational pool messages
-const log = new Log(LogLevel.VERBOSE, { prefix: "vpw" });
+// Log for pool info/warnings/errors (user-actionable messages only)
+const log = new Log(LogLevel.INFO, { prefix: "vpw" });
+// Debug log gated behind NODE_DEBUG=vitest-pool-workers
+const debug = util.debuglog("vitest-pool-workers");
 // Log for Miniflare instances, used for user code warnings/errors
 const mfLog = new Log(LogLevel.WARN);
 
@@ -75,32 +82,36 @@ const POOL_WORKER_PATH = path.join(DIST_PATH, "worker/index.mjs");
 const symbolizerWarning =
 	"warning: Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set.";
 const ignoreMessages = [
+	symbolizerWarning,
 	// Not user actionable
 	// TODO(someday): this is normal operation and really shouldn't error
 	"disconnected: operation canceled",
 	"disconnected: worker_do_not_log; Request failed due to internal error",
 	"disconnected: WebSocket was aborted",
+	"CODE_MOVED for unknown code block",
+	"broken.outputGateBroken; jsg.Error: Instance dispose",
 ];
-function trimSymbolizerWarning(chunk: string): string {
-	return chunk.includes(symbolizerWarning)
-		? chunk.substring(chunk.indexOf("\n") + 1)
-		: chunk;
-}
-function handleRuntimeStdio(stdout: Readable, stderr: Readable): void {
-	stdout.on("data", (chunk: Buffer) => {
-		process.stdout.write(chunk);
-	});
-	stderr.on("data", (chunk: Buffer) => {
-		const str = trimSymbolizerWarning(chunk.toString());
-		if (ignoreMessages.some((message) => str.includes(message))) {
-			return;
-		}
-		process.stderr.write(str);
-	});
+function handleStructuredLogs({ level, message }: WorkerdStructuredLog): void {
+	if (ignoreMessages.some((ignore) => message.includes(ignore))) {
+		return;
+	}
+
+	switch (level) {
+		case "error":
+		case "warn":
+			process.stderr.write(`${message}\n`);
+			break;
+		default:
+			process.stdout.write(`${message}\n`);
+			break;
+	}
 }
 
 export function getRunnerName(project: TestProject, testFile?: string) {
-	const name = `${WORKER_NAME_PREFIX}runner-${project.name.replace(/[^a-z0-9-]/gi, "_")}`;
+	const name = `${WORKER_NAME_PREFIX}runner-${project.name.replace(
+		/[^a-z0-9-]/gi,
+		"_"
+	)}`;
 	if (testFile === undefined) {
 		return name;
 	}
@@ -302,10 +313,12 @@ async function buildProjectWorkerOptions(
 	);
 
 	if (runnerWorker.compatibilityDate === undefined) {
-		// No compatibility date was provided, so infer the latest supported date
-		runnerWorker.compatibilityDate ??= supportedCompatibilityDate;
-		log.info(
-			`No compatibility date was provided for project ${getRelativeProjectPath(project)}, defaulting to latest supported date ${runnerWorker.compatibilityDate}.`
+		// No compatibility date was provided, so use today's date
+		runnerWorker.compatibilityDate = getTodaysCompatDate();
+		debug(
+			"No compatibility date was provided for project %s, defaulting to today's date %s.",
+			getRelativeProjectPath(project),
+			runnerWorker.compatibilityDate
 		);
 	}
 
@@ -534,13 +547,19 @@ async function buildProjectWorkerOptions(
 				worker.name === ""
 			) {
 				throw new Error(
-					`In project ${getRelativeProjectPath(project)}, \`miniflare.workers[${i}].name\` must be non-empty`
+					`In project ${getRelativeProjectPath(
+						project
+					)}, \`miniflare.workers[${i}].name\` must be non-empty`
 				);
 			}
 			// ...that doesn't start with our reserved prefix
 			if (worker.name.startsWith(WORKER_NAME_PREFIX)) {
 				throw new Error(
-					`In project ${getRelativeProjectPath(project)}, \`miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${worker.name}`
+					`In project ${getRelativeProjectPath(
+						project
+					)}, \`miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${
+						worker.name
+					}`
 				);
 			}
 
@@ -556,7 +575,7 @@ async function buildProjectWorkerOptions(
 const SHARED_MINIFLARE_OPTIONS: SharedOptions = {
 	log: mfLog,
 	verbose: true,
-	handleRuntimeStdio,
+	handleStructuredLogs,
 	unsafeStickyBlobs: true,
 } satisfies Partial<MiniflareOptions>;
 
@@ -643,11 +662,12 @@ export async function getProjectMiniflare(
 		poolOptions,
 		main
 	);
-	log.info(
-		`Starting runtime for ${getRelativeProjectPath(project)}` +
-			`${mfOptions.inspectorPort !== undefined ? ` with inspector on port ${mfOptions.inspectorPort}` : ""}` +
-			`...`
-	);
+	debug("Starting runtime for %s...", getRelativeProjectPath(project));
+	if (mfOptions.inspectorPort !== undefined) {
+		log.info(
+			`Starting inspector on port ${mfOptions.inspectorPort} for ${getRelativeProjectPath(project)}`
+		);
+	}
 	const mf = new Miniflare(mfOptions);
 	await mf.ready;
 	return mf;
@@ -704,8 +724,10 @@ export async function connectToMiniflareSocket(
 }
 
 interface PackageJson {
+	name?: string;
 	version?: string;
 	peerDependencies?: Record<string, string | undefined>;
+	bundledVersions?: Record<string, string | undefined>;
 }
 function getPackageJson(dirPath: string): PackageJson | undefined {
 	while (true) {
@@ -727,6 +749,15 @@ function getPackageJson(dirPath: string): PackageJson | undefined {
 	}
 }
 
+/**
+ * Extract the upstream vitest version from an alternative distribution's
+ * package.json. Distributions like `@voidzero-dev/vite-plus-test` declare
+ * the bundled vitest version in `bundledVersions.vitest`.
+ */
+function getUpstreamVitestVersion(pkgJson: PackageJson): string | undefined {
+	return pkgJson.bundledVersions?.vitest;
+}
+
 export function assertCompatibleVitestVersion(ctx: Vitest) {
 	// Some package managers don't enforce `peerDependencies` requirements,
 	// so add a runtime sanity check to ensure things don't break in strange ways.
@@ -742,11 +773,15 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
 	);
 
 	const expectedVitestVersion = poolPkgJson.peerDependencies?.vitest;
-	const actualVitestVersion = vitestPkgJson.version;
 	assert(
 		expectedVitestVersion !== undefined,
 		"Expected to find `@cloudflare/vitest-pool-workers`'s `vitest` version constraint"
 	);
+
+	const actualVitestVersion =
+		vitestPkgJson.name === "vitest"
+			? vitestPkgJson.version
+			: (getUpstreamVitestVersion(vitestPkgJson) ?? vitestPkgJson.version);
 	assert(
 		actualVitestVersion !== undefined,
 		"Expected to find `vitest`'s version"
@@ -777,13 +812,14 @@ function ensureFeature(compatibilityFlags: string[], feature: string) {
 	const flagToEnable = `enable_${feature}`;
 	const flagToDisable = `disable_${feature}`;
 	if (!compatibilityFlags.includes(flagToEnable)) {
-		log.debug(
-			`Adding \`${flagToEnable}\` compatibility flag during tests as this feature is needed to support the Vitest runner.`
+		debug(
+			"Adding `%s` compatibility flag during tests as this feature is needed to support the Vitest runner.",
+			flagToEnable
 		);
 		compatibilityFlags.push(flagToEnable);
 	}
 	if (compatibilityFlags.includes(flagToDisable)) {
-		log.info(
+		log.warn(
 			`Removing \`${flagToDisable}\` compatibility flag during tests as that feature is needed to support the Vitest runner.`
 		);
 		compatibilityFlags.splice(compatibilityFlags.indexOf(flagToDisable), 1);

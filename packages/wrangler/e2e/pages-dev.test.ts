@@ -1,19 +1,22 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { formatCompatibilityDate } from "@cloudflare/workers-utils";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";
+import { waitFor } from "./helpers/wait-for";
 
 const port = await getPort();
 const inspectorPort = await getPort();
 const cmd = "wrangler pages dev";
 describe.sequential("wrangler pages dev", () => {
-	it("should warn if no [--compatibility_date] command line arg was specified", async () => {
+	it("should warn if no [--compatibility_date] command line arg was specified", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			"_worker.js": dedent`
@@ -28,7 +31,7 @@ describe.sequential("wrangler pages dev", () => {
 		);
 		const { url } = await worker.waitForReady();
 
-		const currentDate = formatCompatibilityDate(new Date());
+		const currentDate = getTodaysCompatDate();
 		const output = worker.currentOutput.replaceAll(
 			currentDate,
 			"<current-date>"
@@ -47,7 +50,9 @@ describe.sequential("wrangler pages dev", () => {
 		expect(text).toBe("Testing [--compatibility_date]");
 	});
 
-	it("should warn that [--experimental-local] is no longer required, if specified", async () => {
+	it("should warn that [--experimental-local] is no longer required, if specified", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		const worker = helper.runLongLived(
 			`${cmd} --port ${port} --inspector-port ${inspectorPort} . --experimental-local`
@@ -63,8 +68,10 @@ describe.sequential("wrangler pages dev", () => {
 		const { url } = await worker.waitForReady();
 		const text = await fetchText(url);
 		expect(text).toBe("Testing [--experimental-local]");
-		expect(await worker.currentOutput).toContain(
-			`--experimental-local is no longer required and will be removed in a future version`
+		await waitFor(() =>
+			expect(worker.currentOutput).toContain(
+				`--experimental-local is no longer required and will be removed in a future version`
+			)
 		);
 	});
 
@@ -79,30 +86,30 @@ describe.sequential("wrangler pages dev", () => {
 		);
 	});
 
-	it("should warn if bindings specified as args in the command line are invalid", async () => {
+	it("should warn if bindings specified as args in the command line are invalid", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		const worker = helper.runLongLived(
 			`${cmd} --inspector-port ${inspectorPort} . --port ${port} --service test --kv = --do test --d1 = --r2 =`
 		);
 		await worker.waitForReady();
-		expect(await worker.currentOutput).toContain(
-			`Could not parse Service binding: test`
-		);
-		expect(await worker.currentOutput).toContain(
-			`Could not parse KV binding: =`
-		);
-		expect(await worker.currentOutput).toContain(
-			`Could not parse Durable Object binding: test`
-		);
-		expect(await worker.currentOutput).toContain(
-			`Could not parse R2 binding: =`
-		);
-		expect(await worker.currentOutput).toContain(
-			`Could not parse D1 binding: =`
-		);
+		await waitFor(() => {
+			expect(worker.currentOutput).toContain(
+				`Could not parse Service binding: test`
+			);
+			expect(worker.currentOutput).toContain(`Could not parse KV binding: =`);
+			expect(worker.currentOutput).toContain(
+				`Could not parse Durable Object binding: test`
+			);
+			expect(worker.currentOutput).toContain(`Could not parse R2 binding: =`);
+			expect(worker.currentOutput).toContain(`Could not parse D1 binding: =`);
+		});
 	});
 
-	it("should use bindings specified as args in the command line", async () => {
+	it("should use bindings specified as args in the command line", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			"_worker.js": dedent`
@@ -116,6 +123,13 @@ describe.sequential("wrangler pages dev", () => {
 			`${cmd} --inspector-port ${inspectorPort} . --port ${port} --service TEST_SERVICE=test-worker --kv TEST_KV --do TEST_DO=TestDurableObject@a --d1 TEST_D1 --r2 TEST_R2 --compatibility-date=2025-05-21`
 		);
 		await worker.waitForReady();
+
+		await waitFor(() =>
+			expect(worker.currentOutput).toContain(
+				"Your Worker has access to the following bindings:"
+			)
+		);
+
 		const bindingMessages = worker.currentOutput.split(
 			"Your Worker has access to the following bindings:"
 		);
@@ -147,7 +161,7 @@ describe.sequential("wrangler pages dev", () => {
 		`);
 	});
 
-	it("should support wrangler.toml", async () => {
+	it("should support wrangler.toml", async ({ expect }) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			"public/_worker.js": dedent`
@@ -171,7 +185,9 @@ describe.sequential("wrangler pages dev", () => {
 		expect(text).toBe("Pages supports wrangler.toml ⚡️⚡️");
 	});
 
-	it("should recover from syntax error during dev session (_worker)", async () => {
+	it("should recover from syntax error during dev session (_worker)", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		const worker = helper.runLongLived(`${cmd} .`);
 
@@ -218,7 +234,9 @@ describe.sequential("wrangler pages dev", () => {
 		);
 	});
 
-	it("should recover from syntax error during dev session (Functions)", async () => {
+	it("should recover from syntax error during dev session (Functions)", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		const worker = helper.runLongLived(
 			`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
@@ -261,7 +279,9 @@ describe.sequential("wrangler pages dev", () => {
 		);
 	});
 
-	it("should validate _routes.json during dev session, and fallback to default value", async () => {
+	it("should validate _routes.json during dev session, and fallback to default value", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			"functions/foo.ts": dedent`
@@ -301,7 +321,9 @@ describe.sequential("wrangler pages dev", () => {
 		await worker.readUntil(/All rules must start with '\/'/);
 	});
 
-	it("should use top-level configuration specified in `wrangler.toml`", async () => {
+	it("should use top-level configuration specified in `wrangler.toml`", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		const worker = helper.runLongLived(
 			`${cmd} --port ${port} --inspector-port ${inspectorPort}`
@@ -336,6 +358,12 @@ describe.sequential("wrangler pages dev", () => {
 
 		await worker.readUntil(/GET \/ 200 OK/);
 
+		await waitFor(() =>
+			expect(worker.currentOutput).toContain(
+				"Your Worker has access to the following bindings:"
+			)
+		);
+
 		expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
 			"✨ Compiled Worker successfully
 			Your Worker has access to the following bindings:
@@ -352,7 +380,9 @@ describe.sequential("wrangler pages dev", () => {
 		`);
 	});
 
-	it("should merge (with override) `wrangler.toml` configuration with configuration provided via the command line, with command line args taking precedence", async () => {
+	it("should merge (with override) `wrangler.toml` configuration with configuration provided via the command line, with command line args taking precedence", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 
 		const flags = [
@@ -439,6 +469,12 @@ describe.sequential("wrangler pages dev", () => {
 		});
 		await worker.waitForReady();
 
+		await waitFor(() =>
+			expect(worker.currentOutput).toContain(
+				"Your Worker has access to the following bindings:"
+			)
+		);
+
 		// We only care about the list of bindings and warnings, so strip other output
 		const [prestartOutput] = normalizeOutput(worker.currentOutput).split(
 			"⎔ Starting local server..."
@@ -475,7 +511,9 @@ describe.sequential("wrangler pages dev", () => {
 		`);
 	});
 
-	it("should pick up wrangler.toml configuration even in cases when `pages_build_output_dir` was not specified, but the <directory> command argument was", async () => {
+	it("should pick up wrangler.toml configuration even in cases when `pages_build_output_dir` was not specified, but the <directory> command argument was", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 
 		await helper.seed({
@@ -503,7 +541,7 @@ describe.sequential("wrangler pages dev", () => {
 		);
 	});
 
-	it("should inject CF_PAGES environment variables", async () => {
+	it("should inject CF_PAGES environment variables", async ({ expect }) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			"_worker.js": dedent`
@@ -536,7 +574,9 @@ describe.sequential("wrangler pages dev", () => {
 		});
 	});
 
-	it("should allow user to override CF_PAGES... environment variables", async () => {
+	it("should allow user to override CF_PAGES... environment variables", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			"_worker.js": dedent`
@@ -565,7 +605,9 @@ describe.sequential("wrangler pages dev", () => {
 	});
 
 	describe("watch mode", () => {
-		it("should modify worker during dev session (Functions)", async () => {
+		it("should modify worker during dev session (Functions)", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 
 			await helper.seed({
@@ -601,7 +643,9 @@ describe.sequential("wrangler pages dev", () => {
 			).toBeFalsy();
 		});
 
-		it("should support modifying dependencies during dev session (Functions)", async () => {
+		it("should support modifying dependencies during dev session (Functions)", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 
 			await helper.seed({
@@ -648,7 +692,9 @@ describe.sequential("wrangler pages dev", () => {
 			expect(hi).toBe("Hey there!");
 		});
 
-		it("should support modifying external modules during dev session (Functions)", async () => {
+		it("should support modifying external modules during dev session (Functions)", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 
 			await helper.seed({
@@ -682,7 +728,9 @@ describe.sequential("wrangler pages dev", () => {
 			expect(hello).toBe("<h1>Updated HTML!</h1>");
 		});
 
-		it("should modify worker during dev session (_worker)", async () => {
+		it("should modify worker during dev session (_worker)", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 
 			await helper.seed({
@@ -717,7 +765,9 @@ describe.sequential("wrangler pages dev", () => {
 			expect(hello).toBe("Updated Worker!");
 		});
 
-		it("should support modifying dependencies during dev session (_worker)", async () => {
+		it("should support modifying dependencies during dev session (_worker)", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 
 			await helper.seed({
@@ -753,7 +803,9 @@ describe.sequential("wrangler pages dev", () => {
 			expect(bear).toBe("We love BEAR!");
 		});
 
-		it("should support modifying external modules during dev session (_worker)", async () => {
+		it("should support modifying external modules during dev session (_worker)", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 
 			await helper.seed({
@@ -789,7 +841,9 @@ describe.sequential("wrangler pages dev", () => {
 			expect(graham).toBe("<h1>Graham is the bestest doggo</h1>");
 		});
 
-		it("should support modifying _routes.json during dev session", async () => {
+		it("should support modifying _routes.json during dev session", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 
 			await helper.seed({

@@ -1,0 +1,13 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "nonexistent-entrypoint",
+	"main": "./workers/worker-entrypoint.ts",
+	"compatibility_date": "2025-05-01",
+	"services": [
+		{
+			"binding": "NAMED_ENTRYPOINT",
+			"service": "worker-entrypoint",
+			"entrypoint": "NonExistentEntrypoint",
+		},
+	],
+}

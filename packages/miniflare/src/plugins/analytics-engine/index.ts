@@ -1,7 +1,8 @@
 import ANALYTICS_ENGINE from "worker:analytics-engine/analytics-engine";
 import { z } from "zod";
-import { Worker_Binding } from "../../runtime";
-import { PersistenceSchema, Plugin, ProxyNodeBinding } from "../shared";
+import { PersistenceSchema, ProxyNodeBinding } from "../shared";
+import type { Worker_Binding } from "../../runtime";
+import type { Plugin } from "../shared";
 
 const AnalyticsEngineSchema = z.record(
 	z.object({

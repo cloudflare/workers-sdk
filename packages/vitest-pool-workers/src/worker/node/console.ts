@@ -31,7 +31,7 @@ export class Console {
 		this.#stdout = opts.stdout;
 		this.#stderr = opts.stderr ?? this.#stdout;
 		const colors =
-			typeof opts.colorMode === "string" ? false : opts.colorMode ?? false;
+			typeof opts.colorMode === "string" ? false : (opts.colorMode ?? false);
 		this.#inspectOptions = opts.inspectOptions ?? { colors };
 
 		// Ensure methods are bound to the instance

@@ -6,12 +6,15 @@ const ALLOWED_PARENT_ORIGINS = [
 	"https://dash.cloudflare.com",
 	"https://workers.cloudflare.com",
 	"https://workers-playground.pages.dev",
+	"https://workers-playground.workers.dev",
+	"http://localhost:7445",
 ];
 
-// Origin patterns using wildcards, for Pages preview deployments etc.
+// Origin patterns using wildcards, for preview deployments etc.
 // Supported in CSP frame-ancestors and matched manually in the client.
 const ALLOWED_PARENT_ORIGIN_WILDCARDS = [
 	"https://*.workers-playground.pages.dev",
+	"https://*.workers-playground.workers.dev",
 ];
 
 // During local development (wrangler dev), the playground runs on localhost.

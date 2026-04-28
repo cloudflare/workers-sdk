@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, test, vi } from "vitest";
 import { StudioSQLiteDriver } from "../../../drivers/sqlite";
 import type { IStudioConnection, StudioResultSet } from "../../../types/studio";
 
@@ -26,7 +26,7 @@ function createMockConnection(
 
 describe("StudioSQLiteDriver", () => {
 	describe("feature flags", () => {
-		test("has correct default feature flags", () => {
+		test("has correct default feature flags", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -39,35 +39,35 @@ describe("StudioSQLiteDriver", () => {
 	});
 
 	describe("escapeId", () => {
-		test("wraps identifier in double quotes", () => {
+		test("wraps identifier in double quotes", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
 			expect(driver.escapeId("users")).toBe('"users"');
 		});
 
-		test("doubles existing double quotes", () => {
+		test("doubles existing double quotes", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
 			expect(driver.escapeId('my"table')).toBe('"my""table"');
 		});
 
-		test("handles empty string", () => {
+		test("handles empty string", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
 			expect(driver.escapeId("")).toBe('""');
 		});
 
-		test("handles identifier with spaces", () => {
+		test("handles identifier with spaces", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
 			expect(driver.escapeId("my table")).toBe('"my table"');
 		});
 
-		test("handles multiple double quotes", () => {
+		test("handles multiple double quotes", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -79,13 +79,13 @@ describe("StudioSQLiteDriver", () => {
 		const conn = createMockConnection();
 		const driver = new StudioSQLiteDriver(conn);
 
-		test("returns `null` for `null` or `undefined` input", () => {
+		test("returns `null` for `null` or `undefined` input", ({ expect }) => {
 			expect(driver.getColumnTypeHint(null)).toBeNull();
 			expect(driver.getColumnTypeHint(undefined)).toBeNull();
 			expect(driver.getColumnTypeHint("")).toBeNull();
 		});
 
-		test("returns `TEXT` for text-like types", () => {
+		test("returns `TEXT` for text-like types", ({ expect }) => {
 			expect(driver.getColumnTypeHint("CHAR")).toBe("TEXT");
 			expect(driver.getColumnTypeHint("CLOB")).toBe("TEXT");
 			expect(driver.getColumnTypeHint("NCHAR(100)")).toBe("TEXT");
@@ -96,7 +96,7 @@ describe("StudioSQLiteDriver", () => {
 			expect(driver.getColumnTypeHint("VARCHAR(255)")).toBe("TEXT");
 		});
 
-		test("returns `NUMBER` for numeric types", () => {
+		test("returns `NUMBER` for numeric types", ({ expect }) => {
 			expect(driver.getColumnTypeHint("BIGINT")).toBe("NUMBER");
 			expect(driver.getColumnTypeHint("DOUBLE PRECISION")).toBe("NUMBER");
 			expect(driver.getColumnTypeHint("DOUBLE")).toBe("NUMBER");
@@ -110,13 +110,13 @@ describe("StudioSQLiteDriver", () => {
 			expect(driver.getColumnTypeHint("TINYINT")).toBe("NUMBER");
 		});
 
-		test("returns `BLOB` for blob types", () => {
+		test("returns `BLOB` for blob types", ({ expect }) => {
 			expect(driver.getColumnTypeHint("blob")).toBe("BLOB");
 			expect(driver.getColumnTypeHint("Blob")).toBe("BLOB");
 			expect(driver.getColumnTypeHint("BLOB")).toBe("BLOB");
 		});
 
-		test("returns `TEXT` as default for unknown types", () => {
+		test("returns `TEXT` as default for unknown types", ({ expect }) => {
 			expect(driver.getColumnTypeHint("BOOLEAN")).toBe("TEXT");
 			expect(driver.getColumnTypeHint("DATE")).toBe("TEXT");
 			expect(driver.getColumnTypeHint("JSON")).toBe("TEXT");
@@ -128,33 +128,35 @@ describe("StudioSQLiteDriver", () => {
 		const conn = createMockConnection();
 		const driver = new StudioSQLiteDriver(conn);
 
-		test("prepends `EXPLAIN QUERY PLAN` to simple `SELECT`", () => {
+		test("prepends `EXPLAIN QUERY PLAN` to simple `SELECT`", ({ expect }) => {
 			const result = driver.buildExplainStatement("SELECT * FROM users");
 			expect(result).toBe("EXPLAIN QUERY PLAN SELECT * FROM users");
 		});
 
-		test("upgrades existing `EXPLAIN` to `EXPLAIN QUERY PLAN`", () => {
+		test("upgrades existing `EXPLAIN` to `EXPLAIN QUERY PLAN`", ({
+			expect,
+		}) => {
 			const result = driver.buildExplainStatement(
 				"EXPLAIN SELECT * FROM users"
 			);
 			expect(result).toBe("EXPLAIN QUERY PLAN SELECT * FROM users");
 		});
 
-		test("upgrades `EXPLAIN ANALYZE` to `EXPLAIN QUERY PLAN`", () => {
+		test("upgrades `EXPLAIN ANALYZE` to `EXPLAIN QUERY PLAN`", ({ expect }) => {
 			const result = driver.buildExplainStatement(
 				"EXPLAIN ANALYZE SELECT * FROM users"
 			);
 			expect(result).toBe("EXPLAIN QUERY PLAN SELECT * FROM users");
 		});
 
-		test("does not double-prefix `EXPLAIN QUERY PLAN`", () => {
+		test("does not double-prefix `EXPLAIN QUERY PLAN`", ({ expect }) => {
 			const result = driver.buildExplainStatement(
 				"EXPLAIN QUERY PLAN SELECT * FROM users"
 			);
 			expect(result).toBe("EXPLAIN QUERY PLAN SELECT * FROM users");
 		});
 
-		test("strips comments", () => {
+		test("strips comments", ({ expect }) => {
 			const result = driver.buildExplainStatement(
 				"-- comment\nSELECT * FROM users"
 			);
@@ -163,7 +165,7 @@ describe("StudioSQLiteDriver", () => {
 			expect(result).toContain("SELECT * FROM users");
 		});
 
-		test("replaces `?` placeholders with empty strings", () => {
+		test("replaces `?` placeholders with empty strings", ({ expect }) => {
 			const result = driver.buildExplainStatement(
 				"SELECT * FROM users WHERE id = ?"
 			);
@@ -172,14 +174,14 @@ describe("StudioSQLiteDriver", () => {
 			expect(result).toContain("EXPLAIN QUERY PLAN");
 		});
 
-		test("handles whitespace trimming", () => {
+		test("handles whitespace trimming", ({ expect }) => {
 			const result = driver.buildExplainStatement("  SELECT * FROM users  ");
 			expect(result).toBe("EXPLAIN QUERY PLAN SELECT * FROM users");
 		});
 	});
 
 	describe("generateTableSchemaStatement", () => {
-		test("delegates to `buildSQLiteSchemaDiffStatement`", () => {
+		test("delegates to `buildSQLiteSchemaDiffStatement`", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 

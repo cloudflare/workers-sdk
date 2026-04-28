@@ -2,7 +2,6 @@ import fs from "node:fs/promises";
 import SCRIPT_IMAGES_SERVICE from "worker:images/images";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import { z } from "zod";
-import { Service } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";
 import {
@@ -11,13 +10,13 @@ import {
 	getUserBindingServiceName,
 	objectEntryWorker,
 	PersistenceSchema,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 	SERVICE_LOOPBACK,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import type { Service } from "../../runtime";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const ImagesSchema = z.object({
 	binding: z.string(),

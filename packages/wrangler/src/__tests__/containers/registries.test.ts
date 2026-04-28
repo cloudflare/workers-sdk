@@ -1,7 +1,5 @@
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers and module-level helpers */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccount } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-cli-output";
@@ -18,22 +16,23 @@ import {
 import { useMockStdin } from "../helpers/mock-stdin";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { ExpectStatic } from "vitest";
 
 describe("containers registries --help", () => {
 	const std = mockConsoleMethods();
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("containers registries --help");
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers registries
 
-			Configure and manage non-Cloudflare registries [open beta]
+			Configure and manage non-Cloudflare registries
 
 			COMMANDS
-			  wrangler containers registries configure <DOMAIN>    Configure credentials for a non-Cloudflare container registry [open beta]
-			  wrangler containers registries list                  List all configured container registries [open beta]
-			  wrangler containers registries delete <DOMAIN>       Delete a configured container registry [open beta]
-			  wrangler containers registries credentials [DOMAIN]  Get a temporary password for a specific domain [open beta]
+			  wrangler containers registries configure <DOMAIN>    Configure credentials for a non-Cloudflare container registry
+			  wrangler containers registries list                  List all configured container registries
+			  wrangler containers registries delete <DOMAIN>       Delete a configured container registry
+			  wrangler containers registries credentials [DOMAIN]  Get a temporary password for a specific domain
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -47,6 +46,7 @@ describe("containers registries --help", () => {
 });
 
 describe("containers registries configure", () => {
+	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 	const cliStd = mockCLIOutput();
 	mockAccountId();
@@ -58,7 +58,14 @@ describe("containers registries configure", () => {
 	afterEach(() => {
 		clearDialogs();
 	});
-	it("should reject unsupported registry domains", async () => {
+
+	it("should not show beta labels in top level help", async ({ expect }) => {
+		await runWrangler("containers --help");
+		expect(std.out).toContain("📦 Manage Containers");
+		expect(std.out).not.toContain("[open beta]");
+	});
+
+	it("should reject unsupported registry domains", async ({ expect }) => {
 		await expect(
 			runWrangler(
 				`containers registries configure unsupported.domain --public-credential=test-id`
@@ -70,7 +77,9 @@ describe("containers registries configure", () => {
 		`);
 	});
 
-	it("should validate command line arguments for Secrets Store", async () => {
+	it("should validate command line arguments for Secrets Store", async ({
+		expect,
+	}) => {
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		await expect(
 			runWrangler(
@@ -107,7 +116,9 @@ describe("containers registries configure", () => {
 		);
 	});
 
-	it("should enforce mutual exclusivity for public credential arguments", async () => {
+	it("should enforce mutual exclusivity for public credential arguments", async ({
+		expect,
+	}) => {
 		await expect(
 			runWrangler(`containers registries configure docker.io`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -131,7 +142,7 @@ describe("containers registries configure", () => {
 		);
 	});
 
-	it("should no-op on cloudflare registry (default)", async () => {
+	it("should no-op on cloudflare registry (default)", async ({ expect }) => {
 		await runWrangler(
 			`containers registries configure registry.cloudflare.com`
 		);
@@ -151,7 +162,9 @@ describe("containers registries configure", () => {
 			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
 		});
 
-		it("should configure AWS ECR registry with interactive prompts", async () => {
+		it("should configure AWS ECR registry with interactive prompts", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 			mockPrompt({
@@ -160,7 +173,7 @@ describe("containers registries configure", () => {
 				result: "test-secret-access-key",
 			});
 
-			mockPutRegistry({
+			mockPutRegistry(expect, {
 				domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com",
 				is_public: false,
 				auth: {
@@ -194,11 +207,11 @@ describe("containers registries configure", () => {
 			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 			const mockStdIn = useMockStdin({ isTTY: false });
 
-			it("should accept the secret from piped input", async () => {
+			it("should accept the secret from piped input", async ({ expect }) => {
 				const secret = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
 
 				mockStdIn.send(secret);
-				mockPutRegistry({
+				mockPutRegistry(expect, {
 					domain: awsEcrDomain,
 					is_public: false,
 					auth: {
@@ -216,7 +229,9 @@ describe("containers registries configure", () => {
 	});
 
 	describe("AWS ECR registry configuration", () => {
-		it("should configure AWS ECR registry with interactive prompts", async () => {
+		it("should configure AWS ECR registry with interactive prompts", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 			const storeId = "test-store-id-123";
@@ -242,7 +257,7 @@ describe("containers registries configure", () => {
 			]);
 			mockListSecrets(storeId, []);
 			mockCreateSecret(storeId);
-			mockPutRegistry({
+			mockPutRegistry(expect, {
 				domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com",
 				is_public: false,
 				auth: {
@@ -262,7 +277,9 @@ describe("containers registries configure", () => {
 			expect(cliStd.stdout).toContain("Using existing Secret Store Default");
 		});
 
-		it("will create a secret store if no existing stores are returned from the api", async () => {
+		it("will create a secret store if no existing stores are returned from the api", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 			const newStoreId = "new-store-id-456";
@@ -286,7 +303,7 @@ describe("containers registries configure", () => {
 			mockCreateSecretStore(newStoreId);
 			mockListSecrets(newStoreId, []);
 			mockCreateSecret(newStoreId);
-			mockPutRegistry({
+			mockPutRegistry(expect, {
 				domain: awsEcrDomain,
 				is_public: false,
 				auth: {
@@ -309,7 +326,9 @@ describe("containers registries configure", () => {
 			);
 		});
 
-		it("will use an existing secret store if a store id is provided", async () => {
+		it("will use an existing secret store if a store id is provided", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 			const providedStoreId = "provided-store-id-789";
@@ -327,7 +346,7 @@ describe("containers registries configure", () => {
 
 			mockListSecrets(providedStoreId, []);
 			mockCreateSecret(providedStoreId);
-			mockPutRegistry({
+			mockPutRegistry(expect, {
 				domain: awsEcrDomain,
 				is_public: false,
 				auth: {
@@ -373,7 +392,7 @@ describe("containers registries configure", () => {
 			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 			const mockStdIn = useMockStdin({ isTTY: false });
 
-			it("should accept the secret from piped input", async () => {
+			it("should accept the secret from piped input", async ({ expect }) => {
 				const secret = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
 				const storeId = "test-store-id-999";
 
@@ -389,7 +408,7 @@ describe("containers registries configure", () => {
 				]);
 				mockListSecrets(storeId, []);
 				mockCreateSecret(storeId);
-				mockPutRegistry({
+				mockPutRegistry(expect, {
 					domain: awsEcrDomain,
 					is_public: false,
 					auth: {
@@ -406,7 +425,9 @@ describe("containers registries configure", () => {
 				);
 			});
 
-			it("should reuse existing secret with --skip-confirmation", async () => {
+			it("should reuse existing secret with --skip-confirmation", async ({
+				expect,
+			}) => {
 				const storeId = "test-store-id-reuse";
 				const secretName = "existing_secret";
 
@@ -432,7 +453,7 @@ describe("containers registries configure", () => {
 						status: "active",
 					},
 				]);
-				mockPutRegistry({
+				mockPutRegistry(expect, {
 					domain: awsEcrDomain,
 					is_public: false,
 					auth: {
@@ -456,7 +477,9 @@ describe("containers registries configure", () => {
 	});
 
 	describe("DockerHub registry configuration", () => {
-		it("should configure DockerHub registry with interactive prompts", async () => {
+		it("should configure DockerHub registry with interactive prompts", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			const dockerHubDomain = "docker.io";
 			const storeId = "test-store-id-123";
@@ -482,7 +505,7 @@ describe("containers registries configure", () => {
 			]);
 			mockListSecrets(storeId, []);
 			mockCreateSecret(storeId);
-			mockPutRegistry({
+			mockPutRegistry(expect, {
 				domain: "docker.io",
 				is_public: false,
 				auth: {
@@ -509,7 +532,7 @@ describe("containers registries configure", () => {
 			const dockerHubDomain = "docker.io";
 			const mockStdIn = useMockStdin({ isTTY: false });
 
-			it("should accept the secret from piped input", async () => {
+			it("should accept the secret from piped input", async ({ expect }) => {
 				const secret = "example-pat-token";
 				const storeId = "test-store-id-999";
 
@@ -525,7 +548,7 @@ describe("containers registries configure", () => {
 				]);
 				mockListSecrets(storeId, []);
 				mockCreateSecret(storeId);
-				mockPutRegistry({
+				mockPutRegistry(expect, {
 					domain: dockerHubDomain,
 					is_public: false,
 					auth: {
@@ -556,7 +579,7 @@ describe("containers registries list", () => {
 		mockAccount();
 	});
 
-	it("should list empty registries", async () => {
+	it("should list empty registries", async ({ expect }) => {
 		mockListRegistries([]);
 		await runWrangler("containers registries list");
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
@@ -568,7 +591,7 @@ describe("containers registries list", () => {
 		`);
 	});
 
-	it("should list configured registries", async () => {
+	it("should list configured registries", async ({ expect }) => {
 		const mockRegistries = [
 			{ domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com" },
 			{ domain: "987654321098.dkr.ecr.eu-west-1.amazonaws.com" },
@@ -593,7 +616,9 @@ describe("containers registries list", () => {
 		`);
 	});
 
-	it("should output valid JSON when --json flag is used", async () => {
+	it("should output valid JSON when --json flag is used", async ({
+		expect,
+	}) => {
 		const mockRegistries = [
 			{ domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com" },
 		];
@@ -623,7 +648,7 @@ describe("containers registries delete", () => {
 		clearDialogs();
 	});
 
-	it("should delete a registry with confirmation", async () => {
+	it("should delete a registry with confirmation", async ({ expect }) => {
 		setIsTTY(true);
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		mockConfirm({
@@ -642,7 +667,7 @@ describe("containers registries delete", () => {
 		`);
 	});
 
-	it("should cancel deletion when user says no", async () => {
+	it("should cancel deletion when user says no", async ({ expect }) => {
 		setIsTTY(true);
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		mockConfirm({
@@ -653,7 +678,9 @@ describe("containers registries delete", () => {
 		expect(cliStd.stdout).toContain("The operation has been cancelled");
 	});
 
-	it("should delete a registry in non-interactive mode without skip confirmation flag", async () => {
+	it("should delete a registry in non-interactive mode without skip confirmation flag", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		mockDeleteRegistry(domain);
@@ -675,7 +702,9 @@ describe("containers registries delete", () => {
 		`);
 	});
 
-	it("should delete a registry in interactive mode with --skip-confirmation flag", async () => {
+	it("should delete a registry in interactive mode with --skip-confirmation flag", async ({
+		expect,
+	}) => {
 		setIsTTY(true);
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		mockDeleteRegistry(domain);
@@ -699,7 +728,9 @@ describe("containers registries delete", () => {
 		const secretId = "secret-id-456";
 		const secretsStoreRef = `${storeId}:${secretName}`;
 
-		it("should delete registry and associated secret when user confirms", async () => {
+		it("should delete registry and associated secret when user confirms", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			mockConfirm({
 				text: `Are you sure you want to delete the registry credentials for ${domain}? This action cannot be undone.`,
@@ -730,7 +761,9 @@ describe("containers registries delete", () => {
 			expect(cliStd.stdout).toContain(`Deleted secret ${secretsStoreRef}`);
 		});
 
-		it("should delete registry but not secret when user declines secret deletion", async () => {
+		it("should delete registry but not secret when user declines secret deletion", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			mockConfirm({
 				text: `Are you sure you want to delete the registry credentials for ${domain}? This action cannot be undone.`,
@@ -748,7 +781,9 @@ describe("containers registries delete", () => {
 			expect(cliStd.stdout).toContain("The secret was not deleted.");
 		});
 
-		it("should delete registry and secret with --skip-confirmation flag", async () => {
+		it("should delete registry and secret with --skip-confirmation flag", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			mockDeleteRegistry(domain, secretsStoreRef);
 			mockListSecrets(storeId, [
@@ -773,7 +808,9 @@ describe("containers registries delete", () => {
 			expect(cliStd.stdout).toContain(`Deleted secret ${secretsStoreRef}`);
 		});
 
-		it("should handle case when secret is already deleted", async () => {
+		it("should handle case when secret is already deleted", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			mockConfirm({
 				text: `Are you sure you want to delete the registry credentials for ${domain}? This action cannot be undone.`,
@@ -810,7 +847,7 @@ describe("containers registries credentials", () => {
 		msw.resetHandlers();
 	});
 
-	it("should reject non-Cloudflare registry domains", async () => {
+	it("should reject non-Cloudflare registry domains", async ({ expect }) => {
 		setIsTTY(false);
 		await expect(
 			runWrangler("containers registries credentials example.com --push")
@@ -819,18 +856,24 @@ describe("containers registries credentials", () => {
 		);
 	});
 
-	it("should default to Cloudflare registry when DOMAIN is omitted", async () => {
+	it("should default to Cloudflare registry when DOMAIN is omitted", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
-			"push",
-		]);
+		mockGenerateCredentials(
+			expect,
+			"registry.cloudflare.com",
+			"test-password",
+			15,
+			["push"]
+		);
 
 		await runWrangler("containers registries credentials --push");
 
 		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
 	});
 
-	it("should require --push or --pull", async () => {
+	it("should require --push or --pull", async ({ expect }) => {
 		setIsTTY(false);
 		await expect(
 			runWrangler("containers registries credentials registry.cloudflare.com")
@@ -839,11 +882,15 @@ describe("containers registries credentials", () => {
 		);
 	});
 
-	it("should generate credentials with --push", async () => {
+	it("should generate credentials with --push", async ({ expect }) => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
-			"push",
-		]);
+		mockGenerateCredentials(
+			expect,
+			"registry.cloudflare.com",
+			"test-password",
+			15,
+			["push"]
+		);
 
 		await runWrangler(
 			"containers registries credentials registry.cloudflare.com --push"
@@ -852,11 +899,15 @@ describe("containers registries credentials", () => {
 		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
 	});
 
-	it("should generate credentials with --pull", async () => {
+	it("should generate credentials with --pull", async ({ expect }) => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
-			"pull",
-		]);
+		mockGenerateCredentials(
+			expect,
+			"registry.cloudflare.com",
+			"test-password",
+			15,
+			["pull"]
+		);
 
 		await runWrangler(
 			"containers registries credentials registry.cloudflare.com --pull"
@@ -865,12 +916,17 @@ describe("containers registries credentials", () => {
 		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
 	});
 
-	it("should generate credentials with both --push and --pull", async () => {
+	it("should generate credentials with both --push and --pull", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.cloudflare.com", "jwt-token", 15, [
-			"push",
-			"pull",
-		]);
+		mockGenerateCredentials(
+			expect,
+			"registry.cloudflare.com",
+			"jwt-token",
+			15,
+			["push", "pull"]
+		);
 
 		await runWrangler(
 			"containers registries credentials registry.cloudflare.com --push --pull"
@@ -879,9 +935,10 @@ describe("containers registries credentials", () => {
 		expect(std.out).toMatchInlineSnapshot(`"jwt-token"`);
 	});
 
-	it("should support custom expiration-minutes", async () => {
+	it("should support custom expiration-minutes", async ({ expect }) => {
 		setIsTTY(false);
 		mockGenerateCredentials(
+			expect,
 			"registry.cloudflare.com",
 			"custom-expiry-token",
 			30,
@@ -895,11 +952,34 @@ describe("containers registries credentials", () => {
 		expect(std.out).toMatchInlineSnapshot(`"custom-expiry-token"`);
 	});
 
-	it("should output valid JSON when --json flag is used", async () => {
+	it("should generate credentials with --library-push", async ({ expect }) => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
-			"push",
-		]);
+		mockGenerateCredentials(
+			expect,
+			"registry.cloudflare.com",
+			"test-password",
+			15,
+			["library_push"]
+		);
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --library-push"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
+	});
+
+	it("should output valid JSON when --json flag is used", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		mockGenerateCredentials(
+			expect,
+			"registry.cloudflare.com",
+			"test-password",
+			15,
+			["push"]
+		);
 
 		await runWrangler(
 			"containers registries credentials registry.cloudflare.com --push --json"
@@ -916,7 +996,7 @@ describe("containers registries credentials", () => {
 	});
 });
 
-const mockPutRegistry = (expected?: object) => {
+const mockPutRegistry = (expect: ExpectStatic, expected?: object) => {
 	msw.use(
 		http.post(
 			"*/accounts/:accountId/containers/registries",
@@ -962,6 +1042,7 @@ const mockDeleteRegistry = (domain: string, secretsStoreRef?: string) => {
 };
 
 const mockGenerateCredentials = (
+	expect: ExpectStatic,
 	domain: string,
 	password: string,
 	expectedExpirationMinutes: number,

@@ -143,7 +143,7 @@ export function StudioResultTable({
 							className="text-sm"
 							onClick={() => navigator.clipboard.writeText(header.name || "")}
 						>
-							<CopyIcon className="size-4 mr-1" />
+							<CopyIcon className="mr-1 size-4" />
 							<span>Copy column name</span>
 						</DropdownMenu.Item>
 
@@ -154,14 +154,14 @@ export function StudioResultTable({
 									className="text-sm"
 									onClick={() => onOrderByColumnChange(header.name, "ASC")}
 								>
-									<SortAscendingIcon className="size-4 mr-1" />
+									<SortAscendingIcon className="mr-1 size-4" />
 									<span>Sort A → Z</span>
 								</DropdownMenu.Item>
 								<DropdownMenu.Item
 									className="text-sm"
 									onClick={() => onOrderByColumnChange(header.name, "DESC")}
 								>
-									<SortDescendingIcon className="size-4 mr-1" />
+									<SortDescendingIcon className="mr-1 size-4" />
 									<span>Sort Z → A</span>
 								</DropdownMenu.Item>
 							</>
@@ -170,7 +170,7 @@ export function StudioResultTable({
 						{hasColumnInfo && (
 							<>
 								<DropdownMenu.Separator />
-								<span className="text-xs font-medium px-3 py-1.5 text-muted">
+								<span className="px-3 py-1.5 text-xs font-medium text-kumo-subtle">
 									Constraints and Indexes
 								</span>
 							</>
@@ -182,7 +182,7 @@ export function StudioResultTable({
 								icon={
 									<KeyIcon
 										weight="duotone"
-										className="size-5 text-green-600 dark:text-green-400"
+										className="size-5 text-kumo-success"
 									/>
 								}
 								title={"Primary Key"}
@@ -196,9 +196,8 @@ export function StudioResultTable({
 									<KeyIcon
 										weight="duotone"
 										className={cn("size-5", {
-											"text-blue-600 dark:text-blue-400": idx.type === "KEY",
-											"text-orange-600 dark:text-orange-400":
-												idx.type === "UNIQUE",
+											"text-kumo-link": idx.type === "KEY",
+											"text-kumo-warning": idx.type === "UNIQUE",
 										})}
 									/>
 								}
@@ -213,7 +212,7 @@ export function StudioResultTable({
 								icon={
 									<FlowArrowIcon
 										weight="duotone"
-										className="size-5 text-blue-600 dark:text-blue-400"
+										className="size-5 text-kumo-link"
 									/>
 								}
 								title={"Reference To"}
@@ -225,9 +224,7 @@ export function StudioResultTable({
 								description={
 									header.metadata.columnSchema.constraint.generatedExpression
 								}
-								icon={
-									<SigmaIcon className="size-5 text-purple-600 dark:text-purple-400" />
-								}
+								icon={<SigmaIcon className="size-5 text-kumo-brand" />}
 								title={"Generated Expression"}
 							/>
 						)}
@@ -304,7 +301,7 @@ function HeaderDropdownMenu({
 				render={(props) => (
 					<div
 						{...props}
-						className="flex items-center px-2 py-1 font-mono cursor-pointer w-full gap-1 bg-surface h-9"
+						className="flex h-9 w-full cursor-pointer items-center gap-1 bg-kumo-base px-2 py-1 font-mono"
 						onContextMenu={(e): void => {
 							e.preventDefault();
 							e.stopPropagation();
@@ -318,7 +315,7 @@ function HeaderDropdownMenu({
 							header.display.iconElement
 						)}
 
-						<div className="grow line-clamp-1">{header.display.text}</div>
+						<div className="line-clamp-1 grow">{header.display.text}</div>
 
 						{orderIconPart}
 					</div>
@@ -341,11 +338,11 @@ function DropdownMenuColumnInfo({
 	title,
 }: DropdownMenuColumnInfoProps) {
 	return (
-		<DropdownMenu.Item className="text-sm py-1.5 px-3 flex items-center gap-2">
+		<DropdownMenu.Item className="flex items-center gap-2 px-3 py-1.5 text-sm">
 			{icon}
 			<div className="flex flex-col gap-0.5">
 				<div className="font-medium">{title}</div>
-				<div className="text-muted text-sm">{description}</div>
+				<div className="text-sm text-kumo-subtle">{description}</div>
 			</div>
 		</DropdownMenu.Item>
 	);

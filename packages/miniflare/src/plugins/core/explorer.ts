@@ -1,19 +1,32 @@
 import assert from "node:assert";
 import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
-import { Service, Worker_Binding, Worker_Module } from "../../runtime";
-import { OUTBOUND_DO_PROXY_SERVICE_NAME } from "../../shared/external-service";
-import { CoreBindings } from "../../workers";
 import {
-	DurableObjectClassNames,
+	kVoid,
+	type Service,
+	type Worker_Binding,
+	type Worker_Module,
+} from "../../runtime";
+import { CoreBindings } from "../../workers";
+import { normaliseDurableObject } from "../do";
+import {
+	namespaceEntries,
 	WORKER_BINDING_SERVICE_LOOPBACK,
+	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
 import {
 	getUserServiceName,
 	LOCAL_EXPLORER_DISK,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
-import type { BindingIdMap } from "./types";
+import type { PluginWorkerOptions } from "..";
+import type { DurableObjectClassNames, WorkflowOption } from "../shared";
+import type {
+	BindingIdMap,
+	ExplorerWorkerOpts,
+	WorkerResourceBindings,
+	WorkflowBindingInfo,
+} from "./types";
 
 export interface ExplorerServicesOptions {
 	localExplorerUiPath: string;
@@ -21,6 +34,11 @@ export interface ExplorerServicesOptions {
 	bindingIdMap: BindingIdMap;
 	hasDurableObjects: boolean;
 	workerNames: string[];
+	explorerWorkerOpts: ExplorerWorkerOpts;
+	telemetry: {
+		enabled: boolean;
+		deviceId?: string;
+	};
 }
 
 /**
@@ -35,6 +53,8 @@ export function getExplorerServices(
 		bindingIdMap,
 		hasDurableObjects,
 		workerNames,
+		explorerWorkerOpts,
+		telemetry,
 	} = options;
 
 	const explorerBindings: Worker_Binding[] = [
@@ -57,6 +77,20 @@ export function getExplorerServices(
 			name: CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES,
 			json: JSON.stringify(workerNames),
 		},
+		// Per-worker resource bindings for the /local/workers endpoint
+		{
+			name: CoreBindings.JSON_EXPLORER_WORKER_OPTS,
+			json: JSON.stringify(explorerWorkerOpts),
+		},
+		{
+			name: CoreBindings.JSON_TELEMETRY_CONFIG,
+			json: JSON.stringify(telemetry),
+		},
+		{
+			name: CoreBindings.DEV_REGISTRY_DEBUG_PORT,
+			// workerdDebugPort bindings don't have any additional configuration
+			workerdDebugPort: kVoid,
+		},
 	];
 
 	if (hasDurableObjects) {
@@ -72,6 +106,21 @@ export function getExplorerServices(
 				},
 			});
 		}
+	}
+
+	// Add Engine DO namespace bindings for each workflow.
+	// This gives the explorer direct access to Engine DOs via idFromString()
+	// for the instance detail view. Same pattern as DO namespace bindings above.
+	// The Engine DO has no alarms and its constructor is idempotent, so waking
+	// it up for reads is safe.
+	for (const workflowInfo of Object.values(bindingIdMap.workflows)) {
+		explorerBindings.push({
+			name: workflowInfo.engineBinding,
+			durableObjectNamespace: {
+				className: "Engine",
+				serviceName: `workflows:${workflowInfo.name}`,
+			},
+		});
 	}
 
 	return [
@@ -98,17 +147,20 @@ export function getExplorerServices(
 }
 
 /**
- * Build binding ID map from proxyBindings and durableObjectClassNames
- * Maps resource IDs to binding information for the local explorer
+ * Build binding ID map from proxyBindings, durableObjectClassNames, and workflow options.
+ * Maps resource IDs to binding information for the local explorer.
  */
 export function constructExplorerBindingMap(
 	proxyBindings: Worker_Binding[],
-	durableObjectClassNames: DurableObjectClassNames
+	durableObjectClassNames: DurableObjectClassNames,
+	workflowOptions?: Map<string, WorkflowOption>
 ): BindingIdMap {
 	const IDToBindingName: BindingIdMap = {
 		d1: {},
 		kv: {},
 		do: {},
+		r2: {},
+		workflows: {},
 	};
 
 	for (const binding of proxyBindings) {
@@ -140,6 +192,19 @@ export function constructExplorerBindingMap(
 			const namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
 			IDToBindingName.kv[namespaceId] = binding.name;
 		}
+
+		// R2 bindings: name = "MINIFLARE_PROXY:r2:worker:BINDING", r2Bucket.name = "r2:bucket:ID"
+		if (
+			binding.name?.startsWith(
+				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:r2:`
+			) &&
+			"r2Bucket" in binding &&
+			binding.r2Bucket?.name?.startsWith("r2:bucket:")
+		) {
+			// Extract bucket name from service name "r2:bucket:BUCKET_NAME"
+			const bucketName = binding.r2Bucket.name.replace(/^r2:bucket:/, "");
+			IDToBindingName.r2[bucketName] = binding.name;
+		}
 	}
 
 	// Handle DOs separately, since we need more information than is
@@ -147,8 +212,8 @@ export function constructExplorerBindingMap(
 	// durableObjectClassNames includes internal and unbound DOs,
 	// but not external ones, which we don't want anyway.
 	for (const [serviceName, classMap] of durableObjectClassNames) {
-		// Skip the outbound DO proxy service (used for external DOs)
-		if (serviceName === getUserServiceName(OUTBOUND_DO_PROXY_SERVICE_NAME)) {
+		// Skip the dev registry proxy service (hosts external DO proxies)
+		if (serviceName === getUserServiceName(SERVICE_DEV_REGISTRY_PROXY)) {
 			continue;
 		}
 		const scriptName = serviceName.replace(/^core:user:/, "");
@@ -163,7 +228,129 @@ export function constructExplorerBindingMap(
 		}
 	}
 
+	// Handle Workflows: detect workflow proxy bindings by the "workflows:" prefix
+	// and enrich with workflow option metadata.
+	// Workflow proxy binding names follow: MINIFLARE_PROXY:workflows:<worker>:<bindingName>
+	if (workflowOptions) {
+		for (const binding of proxyBindings) {
+			if (
+				!binding.name?.startsWith(
+					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:workflows:`
+				)
+			) {
+				continue;
+			}
+			if (!("wrapped" in binding)) {
+				continue;
+			}
+
+			// Extract the workflow name from the inner binding service name ("workflows:<name>")
+			const [innerBinding] = binding.wrapped?.innerBindings ?? [];
+			if (!innerBinding || !("service" in innerBinding)) {
+				continue;
+			}
+			const serviceName = innerBinding.service?.name;
+			if (!serviceName?.startsWith("workflows:")) {
+				continue;
+			}
+			const workflowName = serviceName.replace(/^workflows:/, "");
+
+			// Find the matching workflow option to get className / scriptName
+			const workflowOpt = workflowOptions.get(workflowName);
+			if (!workflowOpt) {
+				continue;
+			}
+
+			IDToBindingName.workflows[workflowName] = {
+				name: workflowName,
+				className: workflowOpt.className,
+				scriptName: workflowOpt.scriptName ?? "",
+				binding: binding.name,
+				engineBinding: `EXPLORER_WORKFLOW_ENGINE_${workflowName}`,
+			} satisfies WorkflowBindingInfo;
+		}
+	}
+
 	return IDToBindingName;
+}
+
+/**
+ * Build per-worker resource bindings map for the local explorer.
+ * Maps worker names to their resource bindings with IDs.
+ */
+export function constructExplorerWorkerOpts(
+	allWorkerOpts: PluginWorkerOptions[],
+	durableObjectClassNames: DurableObjectClassNames
+): ExplorerWorkerOpts {
+	const result: ExplorerWorkerOpts = {};
+
+	for (const workerOpts of allWorkerOpts) {
+		const workerName = workerOpts.core.name;
+		if (!workerName) {
+			continue;
+		}
+		const bindings: WorkerResourceBindings = {
+			kv: [],
+			d1: [],
+			r2: [],
+			do: [],
+			workflows: [],
+		};
+
+		for (const [bindingName, ns] of namespaceEntries(
+			workerOpts.kv.kvNamespaces
+		)) {
+			bindings.kv.push({ id: ns.id, bindingName });
+		}
+
+		for (const [bindingName, db] of namespaceEntries(
+			workerOpts.d1.d1Databases
+		)) {
+			bindings.d1.push({ id: db.id, bindingName });
+		}
+
+		for (const [bindingName, bucket] of namespaceEntries(
+			workerOpts.r2.r2Buckets
+		)) {
+			bindings.r2.push({ id: bucket.id, bindingName });
+		}
+
+		for (const [bindingName, designator] of Object.entries(
+			workerOpts.do.durableObjects ?? {}
+		)) {
+			const doInfo = normaliseDurableObject(designator);
+			const scriptName = doInfo.scriptName ?? workerName;
+			const serviceName = getUserServiceName(scriptName);
+			const uniqueKey = `${scriptName}-${doInfo.className}`;
+
+			const classMap = durableObjectClassNames.get(serviceName);
+			const classInfo = classMap?.get(doInfo.className);
+			const useSqlite = classInfo?.enableSql ?? false;
+
+			bindings.do.push({
+				id: uniqueKey,
+				bindingName,
+				className: doInfo.className,
+				scriptName,
+				useSqlite,
+			});
+		}
+
+		for (const [bindingName, workflow] of Object.entries(
+			workerOpts.workflows.workflows ?? {}
+		)) {
+			bindings.workflows.push({
+				id: workflow.name,
+				bindingName,
+				className: workflow.className,
+				scriptName: workflow.scriptName ?? workerName,
+			});
+		}
+
+		result[workerName] = bindings;
+	}
+
+	return result;
 }
 
 /**

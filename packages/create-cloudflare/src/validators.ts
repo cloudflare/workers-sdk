@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import type { Arg } from "@cloudflare/cli/interactive";
+import type { Arg } from "@cloudflare/cli-shared-helpers/interactive";
 import type { C3Args } from "types";
 
 /**
@@ -35,7 +35,7 @@ export const validateTemplateUrl = (value: Arg) => {
  */
 export const validateProjectDirectory = (
 	relativePath: string,
-	args: Partial<C3Args>,
+	args: Partial<C3Args>
 ) => {
 	// Validate that the directory is non-existent or empty
 	const path = resolve(relativePath);
