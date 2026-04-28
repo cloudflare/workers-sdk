@@ -96,6 +96,12 @@ type VariableNames =
 	| "WRANGLER_REVOKE_URL"
 	/** URL of the auth relay worker for WebSocket-based OAuth callback flow (usually auto-configured). */
 	| "WRANGLER_AUTH_WORKER_URL"
+	/**
+	 * Connect timeout (ms) for the auth relay WebSocket. Defaults to `5000`.
+	 * `0` means "wait indefinitely AND do not fall back to the local callback
+	 * server" — useful to force the relay path in container/remote environments.
+	 */
+	| "WRANGLER_AUTH_WORKER_TIMEOUT"
 	/** Direct authorization token for API requests. */
 	| "WRANGLER_CF_AUTHORIZATION_TOKEN"
 

@@ -113,6 +113,36 @@ export const getAuthWorkerUrlFromEnv = getEnvironmentVariableFactory({
 	defaultValue: () => "https://auth.devprod.cloudflare.dev",
 });
 
+/**
+ * `WRANGLER_AUTH_WORKER_TIMEOUT` controls the connect timeout (in milliseconds)
+ * for the auth relay WebSocket and whether Wrangler falls back to the local
+ * callback server if the relay can't be reached.
+ *
+ * - Default: `5000` ms — connect timeout of 5s; on timeout/connect-error,
+ *   Wrangler logs a warning and falls back to the local HTTP callback server
+ *   (the `--callback-host`/`--callback-port` flow).
+ * - `0` — no connect timeout (waits indefinitely for `open`/`error`/`close`)
+ *   AND disables the local-server fallback. Useful in container/remote
+ *   environments where the localhost flow can't work anyway and you want
+ *   relay-only behaviour.
+ * - Any other positive number — that many milliseconds for connect timeout,
+ *   with fallback enabled.
+ *
+ * Invalid values fall back to `5000`.
+ */
+const _getAuthWorkerTimeoutFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_AUTH_WORKER_TIMEOUT",
+	defaultValue: () => "5000",
+});
+export function getAuthWorkerTimeoutMs(): number {
+	const raw = _getAuthWorkerTimeoutFromEnv();
+	const num = Number(raw);
+	if (!Number.isFinite(num) || num < 0) {
+		return 5000;
+	}
+	return num;
+}
+
 export const getWranglerR2SqlAuthToken = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_R2_SQL_AUTH_TOKEN",
 });

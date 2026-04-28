@@ -116,6 +116,34 @@ registered against both Wrangler OAuth client IDs at `dash.cloudflare.com`:
 - Production client: `54d11594-84e4-41aa-b438-e81b8fa78ee7`
 - Staging client: `4b2ea6cc-9421-4761-874b-ce550e0e3def`
 
+## Automatic fallback to the local callback server
+
+If the relay can't be reached when Wrangler tries to start the WebSocket flow,
+Wrangler logs a warning and falls back to the existing local callback server
+flow (`http://localhost:8976/oauth/callback`). This handles transient outages
+and gracefully degrades for users on a regular laptop where the localhost
+flow already works.
+
+The behaviour is governed by a single env var:
+
+| `WRANGLER_AUTH_WORKER_TIMEOUT` | Connect timeout                | Fall back on relay pre-open failure? |
+| ------------------------------ | ------------------------------ | ------------------------------------ |
+| (unset) / `5000` (default)     | 5s                             | ✅                                   |
+| any positive number            | that many ms                   | ✅                                   |
+| `0`                            | none (waits for relay forever) | ❌                                   |
+
+Setting `WRANGLER_AUTH_WORKER_TIMEOUT=0` is useful in container/remote
+environments where the localhost flow can't work anyway and you want
+relay-only behaviour with a clear failure if the relay is unreachable.
+
+Fallback only applies to **pre-open** failures (timeout, connect error,
+premature close). Once the WebSocket has opened and Wrangler has launched
+the user's browser, the user has committed to the relay's `redirect_uri`
+and falling back would require restarting the entire flow with a new
+authorisation. Failures from that point on (relay disappears mid-flow, the
+120s authorisation timeout, etc.) propagate as normal errors with no
+fallback.
+
 ## Developing
 
 ```sh
