@@ -314,13 +314,13 @@ describe("types", () => {
 			expect(output.status).toBe(1);
 		});
 
-		it("should not error on `--check` when types generated with a boolean flag like `--strict-vars=false`", async ({
+		it("should not error on `--check` when types generated with a boolean flag like `--strict-vars`", async ({
 			expect,
 		}) => {
-			// Regression test: yargs parses boolean flags (e.g. --strict-vars=false) as
+			// Regression test: yargs parses boolean flags (e.g. --strict-vars) as
 			// actual booleans, not strings. Previously, `unsafeParseBooleanString` would
 			// throw when given a boolean value, causing `--check` to fail.
-			await helper.run(`wrangler types --strict-vars=false`);
+			await helper.run(`wrangler types --strict-vars`);
 
 			const output = await helper.run(`wrangler types --check`);
 			expect(output.stderr).toBeFalsy();
