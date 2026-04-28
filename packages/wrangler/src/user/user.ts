@@ -1108,69 +1108,72 @@ async function getOauthTokenViaWebSocket(options: {
 	// runs.
 	sendMetricsEvent("login user (relay attempt)", { authWorkerUrl }, {});
 
-	// Wait for connection to open. Pre-open failures (error event, premature
-	// close, or connect timeout) throw `RelayUnavailableError` so `login()`
-	// can decide whether to fall back to the localhost flow.
-	const connectTimeoutMs = getAuthWorkerTimeoutMs();
-	await new Promise<void>((resolve, reject) => {
-		let connectTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
-		const cleanup = () => {
-			if (connectTimeoutHandle !== undefined) {
-				clearTimeout(connectTimeoutHandle);
-			}
-		};
-
-		ws.addEventListener(
-			"open",
-			() => {
-				cleanup();
-				resolve();
-			},
-			{ once: true }
-		);
-		ws.addEventListener(
-			"error",
-			(event) => {
-				cleanup();
-				const detail =
-					(event as { message?: string; error?: { message?: string } })
-						.message ??
-					(event as { error?: { message?: string } }).error?.message ??
-					"connection failed";
-				reject(new RelayUnavailableError(detail));
-			},
-			{ once: true }
-		);
-		ws.addEventListener(
-			"close",
-			() => {
-				cleanup();
-				reject(new RelayUnavailableError("connection closed before open"));
-			},
-			{ once: true }
-		);
-
-		if (connectTimeoutMs > 0) {
-			connectTimeoutHandle = setTimeout(() => {
-				reject(
-					new RelayUnavailableError(
-						`connect timed out after ${connectTimeoutMs}ms`
-					)
-				);
-			}, connectTimeoutMs);
-		}
-	});
-
-	// All paths from here must clean up listeners, clear the timeout, and
-	// close the WebSocket. Hoisting `cleanup` and `loginTimeoutHandle` out of
-	// the body lets the single outer `finally` handle every exit path —
-	// successful return, user-denied error, parse error, openInBrowser throw,
-	// or a 120s timeout. Without this, e.g. a throw from `openInBrowser` would
-	// skip the listener cleanup and the outer `ws.close()` would fire `onClose`
-	// against an orphan `messagePromise`, producing an unhandled rejection.
+	// All paths from here must remove our listeners, clear any pending
+	// timeout, and terminate the WebSocket. Hoisting `cleanup` and
+	// `loginTimeoutHandle` lets the single outer `finally` handle every
+	// exit path — pre-open relay failure (connect timeout, error, or
+	// premature close), successful return, user-denied error, parse error,
+	// openInBrowser throw, or a 120s post-open timeout. Without this, e.g.
+	// a connect timeout would leak the WebSocket, and a throw from
+	// `openInBrowser` would skip the auth-flow listener cleanup so the
+	// outer `ws.terminate()` would fire `onClose` against an orphan
+	// `messagePromise`, producing an unhandled rejection.
 	let cleanup = () => {};
 	let loginTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
 	try {
+		// Wait for connection to open. Pre-open failures (error event,
+		// premature close, or connect timeout) throw `RelayUnavailableError`
+		// so `login()` can decide whether to fall back to the localhost flow.
+		const connectTimeoutMs = getAuthWorkerTimeoutMs();
+		await new Promise<void>((resolve, reject) => {
+			let connectTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
+			const connectCleanup = () => {
+				if (connectTimeoutHandle !== undefined) {
+					clearTimeout(connectTimeoutHandle);
+				}
+			};
+
+			ws.addEventListener(
+				"open",
+				() => {
+					connectCleanup();
+					resolve();
+				},
+				{ once: true }
+			);
+			ws.addEventListener(
+				"error",
+				(event) => {
+					connectCleanup();
+					const detail =
+						(event as { message?: string; error?: { message?: string } })
+							.message ??
+						(event as { error?: { message?: string } }).error?.message ??
+						"connection failed";
+					reject(new RelayUnavailableError(detail));
+				},
+				{ once: true }
+			);
+			ws.addEventListener(
+				"close",
+				() => {
+					connectCleanup();
+					reject(new RelayUnavailableError("connection closed before open"));
+				},
+				{ once: true }
+			);
+
+			if (connectTimeoutMs > 0) {
+				connectTimeoutHandle = setTimeout(() => {
+					reject(
+						new RelayUnavailableError(
+							`connect timed out after ${connectTimeoutMs}ms`
+						)
+					);
+				}, connectTimeoutMs);
+			}
+		});
+
 		// 3. Set up the message/close listener BEFORE sending the auth URL to
 		//    the browser. The user has to authorise in the browser before the
 		//    DO can deliver a message, but listener attachment is essentially
