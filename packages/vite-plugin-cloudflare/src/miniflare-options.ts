@@ -122,6 +122,7 @@ export async function getDevMiniflareOptions(
 		{
 			name: ROUTER_WORKER_NAME,
 			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
+			compatibilityFlags: ["enable_ctx_exports"],
 			modulesRoot: miniflareModulesRoot,
 			modules: [
 				{
