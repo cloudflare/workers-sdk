@@ -107,10 +107,18 @@ vi.mock("undici", async (importOriginal) => {
 		get Response() {
 			return globalThis.Response;
 		},
-		// Stubbed WebSocket so the OAuth WebSocket relay flow can be tested
-		// without a real network connection. Tests drive instances by calling
-		// `triggerOpen` / `triggerMessage` etc. on `MockWebSocket.last`.
-		WebSocket: MockWebSocket,
+	};
+});
+
+// Stubbed WebSocket so the OAuth WebSocket relay flow can be tested
+// without a real network connection. Tests drive instances by calling
+// `triggerOpen` / `triggerMessage` etc. on `MockWebSocket.last`.
+vi.mock("ws", async (importOriginal) => {
+	const original = await importOriginal<typeof import("ws")>();
+	return {
+		...original,
+		__esModule: true,
+		default: MockWebSocket,
 	};
 });
 

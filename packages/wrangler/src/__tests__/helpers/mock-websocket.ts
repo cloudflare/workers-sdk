@@ -3,7 +3,7 @@
  * making any network calls. Instances can be obtained via `MockWebSocket.last`
  * and driven with `triggerOpen`, `triggerMessage`, etc.
  *
- * Installed globally via the `undici` mock in `vitest.setup.ts`.
+ * Installed globally via the `ws` mock in `vitest.setup.ts`.
  */
 export class MockWebSocket {
 	static instances: MockWebSocket[] = [];
@@ -76,7 +76,7 @@ export class MockWebSocket {
 	close(_code?: number, _reason?: string): void {
 		// Match real WebSocket semantics: closing dispatches a `close` event
 		// (asynchronously) to any registered listeners. We fire it on the next
-		// microtask to mimic the queue-and-deliver behaviour of undici/browser
+		// microtask to mimic the queue-and-deliver behaviour of ws/browser
 		// WebSockets, which is what makes the orphan-rejection bug observable.
 		if (this.readyState === 3) {
 			return;
@@ -88,6 +88,14 @@ export class MockWebSocket {
 				listener({});
 			}
 		});
+	}
+
+	terminate(): void {
+		// Same effect as close() for our purposes: dispatch close listeners
+		// asynchronously and transition to CLOSED. The real `ws.terminate()`
+		// is force-destroy without a CLOSE frame, but tests don't observe
+		// the wire — they only care about state and listener delivery.
+		this.close();
 	}
 
 	// --- Test driver helpers ---
