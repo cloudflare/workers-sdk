@@ -38,6 +38,9 @@ export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
 			assertIsPreview(ctx);
 			addBindingsShortcut(vitePreviewServer, ctx);
 			addExplorerShortcut(vitePreviewServer);
+			if (ctx.resolvedPluginConfig.tunnel) {
+				addTunnelShortcut(vitePreviewServer);
+			}
 		},
 	};
 });

@@ -1,13 +1,22 @@
 import { stripVTControlCharacters } from "node:util";
 import { startTunnel } from "@cloudflare/workers-utils";
-import { createServer } from "vite";
-import { afterEach, describe, it, onTestFinished, vi } from "vitest";
+import { createServer, preview } from "vite";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	it,
+	onTestFinished,
+	vi,
+} from "vitest";
 import { PluginContext } from "../context";
 import {
-	getTunnelOrigin,
-	PUBLIC_EXPOSURE_WARNING,
+	DEV_PUBLIC_EXPOSURE_WARNING,
+	PREVIEW_PUBLIC_EXPOSURE_WARNING,
+	resolveDevTunnelOrigin,
+	setupPreviewTunnel,
 	TunnelManager,
-	setupTunnel,
+	setupDevTunnel,
 	tunnelPlugin,
 } from "../plugins/tunnel";
 import type * as vite from "vite";
@@ -15,6 +24,16 @@ import type * as vite from "vite";
 vi.mock("@cloudflare/workers-utils");
 
 describe("tunnel plugin", () => {
+	beforeEach(() => {
+		vi.mocked(startTunnel).mockReturnValue({
+			ready: vi.fn().mockResolvedValue({
+				publicUrl: new URL("https://example.trycloudflare.com"),
+			}),
+			extendExpiry: vi.fn(),
+			dispose: vi.fn(),
+		});
+	});
+
 	afterEach(() => {
 		vi.resetAllMocks();
 	});
@@ -49,7 +68,7 @@ describe("tunnel plugin", () => {
 		onTestFinished(() => server.close());
 
 		await server.listen(0);
-		await setupTunnel(server, ctx, tunnelManager);
+		await setupDevTunnel(server, ctx, tunnelManager);
 
 		expect(ctx.getTunnelHostnames()).toEqual(["example.trycloudflare.com"]);
 		expect(restart).toHaveBeenCalledTimes(1);
@@ -95,7 +114,7 @@ describe("tunnel plugin", () => {
 		onTestFinished(() => server.close());
 
 		await server.listen(0);
-		await setupTunnel(server, ctx, tunnelManager);
+		await setupDevTunnel(server, ctx, tunnelManager);
 
 		expect(startTunnel).toHaveBeenCalledTimes(1);
 		expect(restart).toHaveBeenCalledTimes(1);
@@ -107,7 +126,7 @@ describe("tunnel plugin", () => {
 		expect(restart).toHaveBeenCalledTimes(1);
 		restart.mockClear();
 
-		await setupTunnel(server, ctx, tunnelManager);
+		await setupDevTunnel(server, ctx, tunnelManager);
 
 		expect(startTunnel).toHaveBeenCalledTimes(1);
 		expect(restart).not.toHaveBeenCalled();
@@ -141,7 +160,7 @@ describe("tunnel plugin", () => {
 		onTestFinished(() => server1.close());
 
 		await server1.listen(0);
-		await setupTunnel(server1, ctx, tunnelManager);
+		await setupDevTunnel(server1, ctx, tunnelManager);
 
 		expect(ctx.getTunnelHostnames()).toEqual(["foo.trycloudflare.com"]);
 		expect(restart1).toHaveBeenCalledTimes(1);
@@ -166,7 +185,7 @@ describe("tunnel plugin", () => {
 			server1.resolvedUrls?.local?.[0]
 		);
 
-		await setupTunnel(server2, ctx, tunnelManager);
+		await setupDevTunnel(server2, ctx, tunnelManager);
 
 		expect(ctx.getTunnelHostnames()).toEqual(["bar.trycloudflare.com"]);
 		expect(restart2).toHaveBeenCalledTimes(1);
@@ -185,7 +204,7 @@ describe("tunnel plugin", () => {
 	it("rejects tunnel sharing in middleware mode", async ({ expect }) => {
 		const server = { httpServer: null } as unknown as vite.ViteDevServer;
 
-		await expect(getTunnelOrigin(server)).rejects.toThrow(
+		await expect(resolveDevTunnelOrigin(server)).rejects.toThrow(
 			"No HTTP server available for tunnel sharing. Tunnels are not supported in middleware mode."
 		);
 	});
@@ -219,7 +238,10 @@ describe("tunnel plugin", () => {
 
 		await expect(
 			tunnelManager.startTunnel("http://localhost:3001")
-		).rejects.toBe(disposeError);
+		).rejects.toMatchObject({
+			message: "Failed to start tunnel: dispose failed",
+			cause: disposeError,
+		});
 
 		expect(startTunnel).toHaveBeenCalledTimes(1);
 		expect(tunnelManager.publicUrl).toBeUndefined();
@@ -263,6 +285,40 @@ describe("tunnel plugin", () => {
 		});
 		expect(close).toHaveBeenCalledTimes(1);
 		expect(server.httpServer?.listening).toBe(false);
+	});
+
+	it("fails preview startup when tunnel startup fails", async ({ expect }) => {
+		const tunnelError = new Error("quick tunnel rate limited");
+		vi.mocked(startTunnel).mockReturnValue({
+			ready: vi.fn().mockRejectedValue(tunnelError),
+			extendExpiry: vi.fn(),
+			dispose: vi.fn(),
+		});
+
+		const previewServer = await preview();
+		const ctx = new PluginContext({
+			hasShownWorkerConfigWarnings: false,
+			restartingDevServerCount: 0,
+			tunnelHostnames: new Set(),
+		});
+		Object.defineProperty(ctx, "resolvedPluginConfig", {
+			value: {
+				type: "preview",
+				tunnel: true,
+			},
+		});
+
+		onTestFinished(() => previewServer.close());
+
+		const plugin = tunnelPlugin(ctx);
+
+		await expect(
+			// @ts-expect-error The tunnel plugin accepts a server instance directly without relying on `this`
+			plugin.configurePreviewServer(previewServer)
+		).rejects.toMatchObject({
+			message: "Failed to start tunnel: quick tunnel rate limited",
+			cause: tunnelError,
+		});
 	});
 
 	it("prints tunnel details with server.printUrls", async ({ expect }) => {
@@ -310,6 +366,75 @@ describe("tunnel plugin", () => {
 			.join("\n");
 
 		expect(infoLog).toContain("Tunnel:  https://example.trycloudflare.com/");
-		expect(warnOnce).toHaveBeenCalledWith(PUBLIC_EXPOSURE_WARNING);
+		expect(warnOnce).toHaveBeenCalledWith(DEV_PUBLIC_EXPOSURE_WARNING);
+	});
+
+	it("prints preview tunnel warning without dev-only caveats", async ({
+		expect,
+	}) => {
+		const previewServer = await preview();
+		const infoMock = vi
+			.spyOn(previewServer.config.logger, "info")
+			.mockReturnValue(undefined);
+		const warnOnceMock = vi
+			.spyOn(previewServer.config.logger, "warnOnce")
+			.mockReturnValue(undefined);
+
+		const ctx = new PluginContext({
+			hasShownWorkerConfigWarnings: false,
+			restartingDevServerCount: 0,
+			tunnelHostnames: new Set(),
+		});
+		Object.defineProperty(ctx, "resolvedPluginConfig", {
+			value: {
+				type: "preview",
+				tunnel: true,
+			},
+		});
+
+		const plugin = tunnelPlugin(ctx);
+
+		onTestFinished(() => previewServer.close());
+
+		// @ts-expect-error The tunnel plugin accepts a server instance directly without relying on `this`
+		await plugin.configurePreviewServer(previewServer);
+
+		previewServer.printUrls();
+
+		const infoLog = infoMock.mock.calls
+			.map(([message]) => stripVTControlCharacters(message))
+			.join("\n");
+
+		expect(infoLog).toContain("Tunnel:  https://example.trycloudflare.com/");
+		expect(warnOnceMock).toHaveBeenCalledWith(PREVIEW_PUBLIC_EXPOSURE_WARNING);
+	});
+
+	it("starts a preview tunnel with the resolved preview port", async ({
+		expect,
+	}) => {
+		const previewServer = await preview();
+		const tunnelManager = new TunnelManager(
+			previewServer.config.logger as vite.Logger
+		);
+
+		onTestFinished(() => previewServer.close());
+
+		await setupPreviewTunnel(previewServer, tunnelManager);
+
+		const startTunnelCall = vi.mocked(startTunnel).mock.calls[0]?.[0];
+		expect(startTunnelCall).toMatchObject({
+			extendHint: "Press t + enter to extend by 1 hour.",
+			logger: expect.objectContaining({
+				log: expect.any(Function),
+				warn: expect.any(Function),
+				debug: expect.any(Function),
+			}),
+		});
+		expect(startTunnelCall?.origin).toBeInstanceOf(URL);
+		expect(startTunnelCall?.origin.hostname).toBe("localhost");
+		expect(startTunnelCall?.origin.port).toBe(
+			String(previewServer.config.preview.port)
+		);
+		expect(previewServer.config.preview.strictPort).toBe(true);
 	});
 });
