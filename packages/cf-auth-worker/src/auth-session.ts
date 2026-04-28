@@ -9,7 +9,7 @@ const SESSION_TTL_MS = 5 * 60 * 1000; // 5 minutes
  * Uses the Hibernation API for efficient WebSocket handling.
  *
  * Lifecycle:
- *   1. Wrangler opens a WebSocket to /session/:state (routed here via idFromName(state))
+ *   1. Wrangler opens a WebSocket to /session/:state (routed here via getByName(state))
  *   2. The DO accepts one WebSocket and sets a 5-minute cleanup alarm
  *   3. The OAuth callback hits /callback?code=X&state=Y, which the Worker
  *      forwards to /callback on this DO
@@ -36,7 +36,7 @@ export class AuthSession extends DurableObject<Env> {
 	 * Accepts a WebSocket upgrade from Wrangler.
 	 * Only one WebSocket is allowed per session — extras are rejected with 409.
 	 */
-	private handleWebSocketUpgrade(request: Request): Response {
+	private async handleWebSocketUpgrade(request: Request): Promise<Response> {
 		if (request.headers.get("Upgrade") !== "websocket") {
 			return new Response("Expected WebSocket upgrade", { status: 426 });
 		}
@@ -51,8 +51,9 @@ export class AuthSession extends DurableObject<Env> {
 		const pair = new WebSocketPair();
 		this.ctx.acceptWebSocket(pair[1]);
 
-		// Set a 5-minute alarm for cleanup
-		void this.ctx.storage.setAlarm(Date.now() + SESSION_TTL_MS);
+		// Set a 5-minute alarm for cleanup. Awaited (matching `deleteAlarm` in
+		// `handleCallback`) so the alarm is durably written before we return.
+		await this.ctx.storage.setAlarm(Date.now() + SESSION_TTL_MS);
 
 		return new Response(null, { status: 101, webSocket: pair[0] });
 	}
@@ -64,7 +65,9 @@ export class AuthSession extends DurableObject<Env> {
 	private async handleCallback(url: URL): Promise<Response> {
 		const sockets = this.ctx.getWebSockets();
 		if (sockets.length === 0) {
-			return new Response("No WebSocket connected", { status: 409 });
+			// No active session for this state — Wrangler never connected, or
+			// the session has already been completed/expired.
+			return new Response("No WebSocket connected", { status: 404 });
 		}
 
 		const ws = sockets[0];

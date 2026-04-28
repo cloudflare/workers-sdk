@@ -14,8 +14,7 @@ export default {
 		const sessionMatch = url.pathname.match(/^\/session\/([a-zA-Z0-9._~-]+)$/);
 		if (sessionMatch) {
 			const state = sessionMatch[1];
-			const id = env.AUTH_SESSION.idFromName(state);
-			const stub = env.AUTH_SESSION.get(id);
+			const stub = env.AUTH_SESSION.getByName(state);
 
 			// Forward to the DO's /connect endpoint
 			return stub.fetch(
@@ -33,8 +32,7 @@ export default {
 				return new Response("Missing state parameter", { status: 400 });
 			}
 
-			const id = env.AUTH_SESSION.idFromName(state);
-			const stub = env.AUTH_SESSION.get(id);
+			const stub = env.AUTH_SESSION.getByName(state);
 
 			// Forward callback data to the DO
 			const error = url.searchParams.get("error");
@@ -52,7 +50,8 @@ export default {
 
 			// Redirect the browser based on the actual outcome:
 			// - If the DO accepted the code (200 OK and we have a code): granted
-			// - Anything else (DO returned 409, callback had no code, or had an error): denied
+			// - Anything else (no WebSocket connected, callback had no code, or
+			//   had an error): denied
 			const redirectUrl =
 				doResp.ok && code && !error ? CONSENT_GRANTED_URL : CONSENT_DENIED_URL;
 			return Response.redirect(redirectUrl, 307);
