@@ -97,6 +97,7 @@ describe("findDeployablePackageNames()", () => {
 	}) => {
 		expect(findDeployablePackageNames()).toMatchInlineSnapshot(`
 			Set {
+			  "@cloudflare/cf-auth-worker",
 			  "@cloudflare/chrome-devtools-patches",
 			  "@cloudflare/devprod-status-bot",
 			  "@cloudflare/edge-preview-authenticated-proxy",
@@ -106,7 +107,6 @@ describe("findDeployablePackageNames()", () => {
 			  "@cloudflare/turbo-r2-archive",
 			  "@cloudflare/workers-playground",
 			  "@cloudflare/workers-shared",
-			  "@cloudflare/wrangler-auth-worker",
 			}
 		`);
 	});
