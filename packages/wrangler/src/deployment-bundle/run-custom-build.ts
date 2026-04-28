@@ -3,7 +3,7 @@ import path from "node:path";
 import { Writable } from "node:stream";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { execaCommand } from "execa";
+import { x } from "tinyexec";
 import dedent from "ts-dedent";
 import { logger } from "../logger";
 import type { Config } from "@cloudflare/workers-utils";
@@ -18,15 +18,17 @@ export async function runCommand(
 ) {
 	logger.log(chalk.blue(prefix), "Running:", command);
 	try {
-		const res = execaCommand(command, {
-			shell: true,
-			cwd,
-			env: {
-				...process.env,
-				...(wranglerCommand ? { WRANGLER_COMMAND: wranglerCommand } : {}),
+		const res = x(command, [], {
+			nodeOptions: {
+				shell: true,
+				cwd,
+				env: {
+					...(wranglerCommand ? { WRANGLER_COMMAND: wranglerCommand } : {}),
+				},
 			},
+			throwOnError: true,
 		});
-		res.stdout?.pipe(
+		res.process?.stdout?.pipe(
 			new Writable({
 				write(chunk: Buffer, _, callback) {
 					const lines = chunk.toString().split("\n");
@@ -37,7 +39,7 @@ export async function runCommand(
 				},
 			})
 		);
-		res.stderr?.pipe(
+		res.process?.stderr?.pipe(
 			new Writable({
 				write(chunk: Buffer, _, callback) {
 					const lines = chunk.toString().split("\n");
