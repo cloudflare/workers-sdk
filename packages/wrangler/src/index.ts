@@ -15,6 +15,12 @@ import { aiSearchDeleteCommand } from "./ai-search/delete";
 import { aiSearchGetCommand } from "./ai-search/get";
 import { aiSearchNamespace } from "./ai-search/index";
 import { aiSearchListCommand } from "./ai-search/list";
+import { aiSearchNamespaceCreateCommand } from "./ai-search/namespace/create";
+import { aiSearchNamespaceDeleteCommand } from "./ai-search/namespace/delete";
+import { aiSearchNamespaceGetCommand } from "./ai-search/namespace/get";
+import { aiSearchNamespaceNamespace } from "./ai-search/namespace/index";
+import { aiSearchNamespaceListCommand } from "./ai-search/namespace/list";
+import { aiSearchNamespaceUpdateCommand } from "./ai-search/namespace/update";
 import { aiSearchSearchCommand } from "./ai-search/search";
 import { aiSearchStatsCommand } from "./ai-search/stats";
 import { aiSearchUpdateCommand } from "./ai-search/update";
@@ -1454,6 +1460,30 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler ai-search search",
 			definition: aiSearchSearchCommand,
+		},
+		{
+			command: "wrangler ai-search namespace",
+			definition: aiSearchNamespaceNamespace,
+		},
+		{
+			command: "wrangler ai-search namespace list",
+			definition: aiSearchNamespaceListCommand,
+		},
+		{
+			command: "wrangler ai-search namespace create",
+			definition: aiSearchNamespaceCreateCommand,
+		},
+		{
+			command: "wrangler ai-search namespace get",
+			definition: aiSearchNamespaceGetCommand,
+		},
+		{
+			command: "wrangler ai-search namespace update",
+			definition: aiSearchNamespaceUpdateCommand,
+		},
+		{
+			command: "wrangler ai-search namespace delete",
+			definition: aiSearchNamespaceDeleteCommand,
 		},
 	]);
 	registry.registerNamespace("ai-search");
