@@ -423,6 +423,33 @@ export const deployCommand = createCommand({
 			);
 		}
 
+		// Interactively prompt for compatibility_date when not provided via CLI or config
+		if (
+			!args.latest &&
+			!args.compatibilityDate &&
+			!config.compatibility_date &&
+			// In non-interactive/CI mode, let the deploy command continue and throw its detailed error message
+			!isNonInteractiveOrCI()
+		) {
+			const compatibilityDateStr = getTodaysCompatDate();
+
+			if (
+				await confirm(
+					`No compatibility date is set. Would you like to use today's date (${compatibilityDateStr})?`
+				)
+			) {
+				args.compatibilityDate = compatibilityDateStr;
+				logger.log(
+					`To avoid this prompt, add \`compatibility_date\` to your ${configFileName(config.configPath)} file or pass \`--compatibility-date ${compatibilityDateStr}\` via CLI.\nSee https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`
+				);
+			} else {
+				throw new UserError(
+					`A compatibility_date is required when publishing. Add it to your ${configFileName(config.configPath)} file or pass \`--compatibility-date\` via CLI.\nSee https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
+					{ telemetryMessage: "missing compatibility date when deploying" }
+				);
+			}
+		}
+
 		const cliVars = collectKeyValues(args.var);
 		const cliDefines = collectKeyValues(args.define);
 		const cliAlias = collectKeyValues(args.alias);
