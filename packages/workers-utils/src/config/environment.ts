@@ -898,8 +898,8 @@ export interface EnvironmentNonInheritable {
 			/** The binding name used to refer to the Queue in the Worker. */
 			binding: string;
 
-			/** The name of this Queue. */
-			queue: string;
+			/** The name of this Queue. Omit to auto-provision. */
+			queue?: string;
 
 			/** The number of seconds to wait before delivering a message */
 			delivery_delay?: number;
@@ -1008,7 +1008,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the Vectorize index in the Worker. */
 		binding: string;
 		/** The name of the index. */
-		index_name: string;
+		index_name?: string;
 		/** Whether the Vectorize index should be remote or not in local development */
 		remote?: boolean;
 	}[];
@@ -1026,8 +1026,8 @@ export interface EnvironmentNonInheritable {
 	ai_search_namespaces: {
 		/** The binding name used to refer to the AI Search namespace in the Worker. */
 		binding: string;
-		/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
-		namespace: string;
+		/** The user-chosen namespace name. Omit to auto-provision at deploy time. */
+		namespace?: string;
 		/** Whether the AI Search namespace binding should be remote in local development */
 		remote?: boolean;
 	}[];
@@ -1066,7 +1066,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the project in the Worker. */
 		binding: string;
 		/** The id of the database. */
-		id: string;
+		id?: string;
 		/** The local database connection string for `wrangler dev` */
 		localConnectionString?: string;
 	}[];
@@ -1282,7 +1282,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the certificate in the Worker */
 		binding: string;
 		/** The uuid of the uploaded mTLS certificate */
-		certificate_id: string;
+		certificate_id?: string;
 		/** Whether the mtls fetcher should be remote or not in local development */
 		remote?: boolean;
 	}[];
@@ -1324,7 +1324,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the bound service. */
 		binding: string;
 		/** The namespace to bind to. */
-		namespace: string;
+		namespace?: string;
 		/** Details about the outbound Worker which will handle outbound requests from your namespace */
 		outbound?: DispatchNamespaceOutbound;
 		/** Whether the Dispatch Namespace should be remote or not in local development */
@@ -1344,7 +1344,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the bound service. */
 		binding: string;
 		/** Name of the Pipeline to bind */
-		pipeline: string;
+		pipeline?: string;
 		/** Whether the pipeline should be remote or not in local development */
 		remote?: boolean;
 	}[];
@@ -1477,7 +1477,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the VPC service in the Worker. */
 		binding: string;
 		/** The service ID of the VPC connectivity service. */
-		service_id: string;
+		service_id?: string;
 		/** Whether the VPC service is remote or not */
 		remote?: boolean;
 	}[];

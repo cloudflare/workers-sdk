@@ -74,6 +74,10 @@ describe("deploy", () => {
 		msw.use(
 			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
 				return HttpResponse.json(createFetchResult({}));
+			}),
+			// Pretend all pipelines referenced by tests exist.
+			http.get("*/accounts/:accountId/pipelines/v1/pipelines", async () => {
+				return HttpResponse.json(createFetchResult([{ name: "my-pipeline" }]));
 			})
 		);
 		vi.mocked(fetchSecrets).mockResolvedValue([]);

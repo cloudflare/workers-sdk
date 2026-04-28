@@ -134,6 +134,35 @@ export function mockSelect<Values>(
 	}
 }
 
+/**
+ * The expected values for a search (autocomplete) request.
+ */
+export interface SearchExpectation {
+	/** The text expected to be seen in the search dialog (without the chalk-dimmed hint). */
+	text: string;
+	/** The mock response sent back from the search dialog. */
+	result: string;
+}
+
+/**
+ * Mock the implementation of `search()` (autocomplete prompt) that will respond
+ * with configured results for configured search text messages.
+ */
+export function mockSearch(...expectations: SearchExpectation[]) {
+	for (const expectation of expectations) {
+		(prompts as unknown as Mock).mockImplementationOnce(
+			({ type, name, message }) => {
+				expect(type).toStrictEqual("autocomplete");
+				expect(name).toStrictEqual("value");
+				// The message includes a chalk-dimmed "(type to filter)" suffix,
+				// so we check with a `toContain` rather than exact match.
+				expect(message).toContain(expectation.text);
+				return Promise.resolve({ value: expectation.result });
+			}
+		);
+	}
+}
+
 export function clearDialogs() {
 	// No dialog mocks should be left after each test, and so calling the dialog methods should throw
 	expect(() => prompts({ type: "select", name: "unknown" })).toThrow(

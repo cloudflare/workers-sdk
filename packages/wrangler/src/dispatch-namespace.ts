@@ -5,7 +5,7 @@ import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
-type Namespace = {
+export type Namespace = {
 	namespace_id: string;
 	namespace_name: string;
 	created_on: string;
@@ -20,11 +20,11 @@ type Namespace = {
 /**
  * Create a dynamic dispatch namespace.
  */
-async function createWorkerNamespace(
+export async function createWorkerNamespace(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	name: string
-) {
+): Promise<Namespace> {
 	const namespace = await fetchResult<Namespace>(
 		complianceConfig,
 		`/accounts/${accountId}/workers/dispatch/namespaces`,
@@ -39,6 +39,7 @@ async function createWorkerNamespace(
 	logger.log(
 		`Created dispatch namespace "${name}" with ID "${namespace.namespace_id}"`
 	);
+	return namespace;
 }
 
 /**
@@ -60,21 +61,20 @@ async function deleteWorkerNamespace(
 /**
  * List all created dynamic dispatch namespaces for an account
  */
-async function listWorkerNamespaces(
+export async function listWorkerNamespaces(
 	complianceConfig: ComplianceConfig,
 	accountId: string
-) {
-	logger.log(
-		await fetchResult<Namespace>(
-			complianceConfig,
-			`/accounts/${accountId}/workers/dispatch/namespaces`,
-			{
-				headers: {
-					"Content-Type": "application/json",
-				},
-			}
-		)
+): Promise<Namespace[]> {
+	const namespaces = await fetchResult<Namespace[]>(
+		complianceConfig,
+		`/accounts/${accountId}/workers/dispatch/namespaces`,
+		{
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
 	);
+	return namespaces;
 }
 
 /**
@@ -138,7 +138,8 @@ export const dispatchNamespaceListCommand = createCommand({
 	},
 	async handler(_, { config }) {
 		const accountId = await requireAuth(config);
-		await listWorkerNamespaces(config, accountId);
+		const namespaces = await listWorkerNamespaces(config, accountId);
+		logger.log(namespaces);
 		metrics.sendMetricsEvent("list dispatch namespaces", {
 			sendMetrics: config.send_metrics,
 		});

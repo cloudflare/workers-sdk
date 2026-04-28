@@ -2418,7 +2418,8 @@ function collectAllPipelines(
 
 			pipelinesMap.set(pipeline.binding, {
 				binding: pipeline.binding,
-				pipeline: pipeline.pipeline,
+				// pipeline.pipeline is guaranteed to be a string after the !pipeline.pipeline check above
+				pipeline: pipeline.pipeline as string,
 			});
 		}
 	}
@@ -3564,7 +3565,8 @@ function collectPipelinesPerEnvironment(
 
 			pipelines.push({
 				binding: pipeline.binding,
-				pipeline: pipeline.pipeline,
+				// pipeline.pipeline is guaranteed to be a string after the !pipeline.pipeline check above
+				pipeline: pipeline.pipeline as string,
 			});
 		}
 

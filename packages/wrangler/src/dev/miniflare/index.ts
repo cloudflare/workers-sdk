@@ -277,10 +277,17 @@ function queueProducerEntry(
 	},
 ] {
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { queueName, deliveryDelay }];
+		return [binding, { queueName: queueName as string, deliveryDelay }];
 	}
 
-	return [binding, { queueName, deliveryDelay, remoteProxyConnectionString }];
+	return [
+		binding,
+		{
+			queueName: queueName as string,
+			deliveryDelay,
+			remoteProxyConnectionString,
+		},
+	];
 }
 function pipelineEntry(
 	pipeline: CfPipeline,
@@ -293,11 +300,11 @@ function pipelineEntry(
 	},
 ] {
 	if (!remoteProxyConnectionString || !pipeline.remote) {
-		return [pipeline.binding, { pipeline: pipeline.pipeline }];
+		return [pipeline.binding, { pipeline: pipeline.pipeline as string }];
 	}
 	return [
 		pipeline.binding,
-		{ pipeline: pipeline.pipeline, remoteProxyConnectionString },
+		{ pipeline: pipeline.pipeline as string, remoteProxyConnectionString },
 	];
 }
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
@@ -378,9 +385,12 @@ function dispatchNamespaceEntry(
 	},
 ] {
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { namespace }];
+		return [binding, { namespace: namespace as string }];
 	}
-	return [binding, { namespace, remoteProxyConnectionString }];
+	return [
+		binding,
+		{ namespace: namespace as string, remoteProxyConnectionString },
+	];
 }
 function ratelimitEntry<T extends { name: string }>(ratelimit: T): [string, T] {
 	return [ratelimit.name, ratelimit];
@@ -886,7 +896,7 @@ export function buildMiniflareBindingOptions(
 				return [
 					vectorize.binding,
 					{
-						index_name: vectorize.index_name,
+						index_name: vectorize.index_name as string,
 						remoteProxyConnectionString:
 							vectorize.remote && remoteProxyConnectionString
 								? remoteProxyConnectionString
@@ -901,7 +911,7 @@ export function buildMiniflareBindingOptions(
 				return [
 					vpc.binding,
 					{
-						service_id: vpc.service_id,
+						service_id: vpc.service_id as string,
 						remoteProxyConnectionString,
 					},
 				];
@@ -965,7 +975,7 @@ export function buildMiniflareBindingOptions(
 							mtlsCertificate.remote && remoteProxyConnectionString
 								? remoteProxyConnectionString
 								: undefined,
-						certificate_id: mtlsCertificate.certificate_id,
+						certificate_id: mtlsCertificate.certificate_id as string,
 					},
 				];
 			})

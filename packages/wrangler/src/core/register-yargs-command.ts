@@ -178,7 +178,6 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				: {
 						MULTIWORKER: false,
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
-						AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 					};
 
 			await run(experimentalFlags, async () => {

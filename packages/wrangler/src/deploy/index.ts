@@ -270,7 +270,6 @@ export const deployCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 		printMetricsBanner: true,
@@ -507,7 +506,6 @@ export const deployCommand = createCommand({
 			oldAssetTtl: args.oldAssetTtl,
 			projectRoot,
 			dispatchNamespace: args.dispatchNamespace,
-			experimentalAutoCreate: args.experimentalAutoCreate,
 			containersRollout: args.containersRollout,
 			strict: args.strict,
 			tag: args.tag,

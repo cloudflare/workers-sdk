@@ -259,13 +259,23 @@ export function createWorkerUploadForm(
 	});
 
 	queues.forEach(({ binding, queue_name, delivery_delay, raw }) => {
-		metadataBindings.push({
-			type: "queue",
-			name: binding,
-			queue_name,
-			delivery_delay,
-			raw,
-		});
+		if (options?.dryRun) {
+			queue_name ??= INHERIT_SYMBOL;
+		}
+		if (queue_name === undefined) {
+			throw new UserError(`${binding} bindings must have a "queue_name" field`);
+		}
+		if (queue_name === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				type: "queue",
+				name: binding,
+				queue_name,
+				delivery_delay,
+				raw,
+			});
+		}
 	});
 
 	r2_buckets.forEach(({ binding, bucket_name, jurisdiction, raw }) => {
@@ -323,12 +333,24 @@ export function createWorkerUploadForm(
 	);
 
 	vectorize.forEach(({ binding, index_name, raw }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "vectorize",
-			index_name: index_name,
-			raw,
-		});
+		if (options?.dryRun) {
+			index_name ??= INHERIT_SYMBOL;
+		}
+		if (index_name === undefined) {
+			throw new UserError(
+				`${binding} bindings must have an "index_name" field`
+			);
+		}
+		if (index_name === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "vectorize",
+				index_name,
+				raw,
+			});
+		}
 	});
 
 	ai_search_namespaces.forEach(({ binding, namespace }) => {
@@ -362,11 +384,21 @@ export function createWorkerUploadForm(
 	});
 
 	hyperdrive.forEach(({ binding, id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "hyperdrive",
-			id: id,
-		});
+		if (options?.dryRun) {
+			id ??= INHERIT_SYMBOL;
+		}
+		if (id === undefined) {
+			throw new UserError(`${binding} bindings must have an "id" field`);
+		}
+		if (id === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "hyperdrive",
+				id,
+			});
+		}
 	});
 
 	secrets_store_secrets.forEach(({ binding, store_id, secret_name }) => {
@@ -412,11 +444,21 @@ export function createWorkerUploadForm(
 	});
 
 	vpc_services.forEach(({ binding, service_id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "vpc_service",
-			service_id,
-		});
+		if (options?.dryRun) {
+			service_id ??= INHERIT_SYMBOL;
+		}
+		if (service_id === undefined) {
+			throw new UserError(`${binding} bindings must have a "service_id" field`);
+		}
+		if (service_id === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "vpc_service",
+				service_id,
+			});
+		}
 	});
 
 	vpc_networks.forEach(({ binding, tunnel_id, network_id }) => {
@@ -457,36 +499,68 @@ export function createWorkerUploadForm(
 	});
 
 	dispatch_namespaces.forEach(({ binding, namespace, outbound }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "dispatch_namespace",
-			namespace,
-			...(outbound && {
-				outbound: {
-					worker: {
-						service: outbound.service,
-						environment: outbound.environment,
+		if (options?.dryRun) {
+			namespace ??= INHERIT_SYMBOL;
+		}
+		if (namespace === undefined) {
+			throw new UserError(`${binding} bindings must have a "namespace" field`);
+		}
+		if (namespace === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "dispatch_namespace",
+				namespace,
+				...(outbound && {
+					outbound: {
+						worker: {
+							service: outbound.service,
+							environment: outbound.environment,
+						},
+						params: outbound.parameters?.map((p) => ({ name: p })),
 					},
-					params: outbound.parameters?.map((p) => ({ name: p })),
-				},
-			}),
-		});
+				}),
+			});
+		}
 	});
 
 	mtls_certificates.forEach(({ binding, certificate_id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "mtls_certificate",
-			certificate_id,
-		});
+		if (options?.dryRun) {
+			certificate_id ??= INHERIT_SYMBOL;
+		}
+		if (certificate_id === undefined) {
+			throw new UserError(
+				`${binding} bindings must have a "certificate_id" field`
+			);
+		}
+		if (certificate_id === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "mtls_certificate",
+				certificate_id,
+			});
+		}
 	});
 
 	pipelines.forEach(({ binding, pipeline }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "pipelines",
-			pipeline: pipeline,
-		});
+		if (options?.dryRun) {
+			pipeline ??= INHERIT_SYMBOL;
+		}
+		if (pipeline === undefined) {
+			throw new UserError(`${binding} bindings must have a "pipeline" field`);
+		}
+		if (pipeline === INHERIT_SYMBOL) {
+			metadataBindings.push({ name: binding, type: "inherit" });
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "pipelines",
+				pipeline,
+			});
+		}
 	});
 
 	worker_loaders.forEach(({ binding }) => {

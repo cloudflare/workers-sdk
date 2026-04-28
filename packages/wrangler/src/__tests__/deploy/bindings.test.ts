@@ -79,7 +79,21 @@ describe("deploy", () => {
 		msw.use(
 			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
 				return HttpResponse.json(createFetchResult({}));
-			})
+			}),
+			// Same for dispatch namespaces — the provisioning flow calls
+			// listWorkerNamespaces to check existence. Return every namespace
+			// referenced by any test so existence checks pass.
+			http.get(
+				"*/accounts/:accountId/workers/dispatch/namespaces",
+				async () => {
+					return HttpResponse.json(
+						createFetchResult([
+							{ namespace_id: "ns-foo-id", namespace_name: "Foo" },
+							{ namespace_id: "ns-bar-id", namespace_name: "Bar" },
+						])
+					);
+				}
+			)
 		);
 		vi.mocked(fetchSecrets).mockResolvedValue([]);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);

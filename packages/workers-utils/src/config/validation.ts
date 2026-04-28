@@ -3874,11 +3874,12 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	if (
-		!isRequiredProperty(value, "queue", "string") ||
-		(value as { queue: string }).queue.length === 0
+		!isOptionalProperty(value, "queue", "string") ||
+		(isRequiredProperty(value, "queue", "string") &&
+			(value as { queue: string }).queue.length === 0)
 	) {
 		diagnostics.errors.push(
-			`"${field}" bindings should have a string "queue" field but got ${JSON.stringify(
+			`"${field}" bindings should, optionally, have a string "queue" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -4063,7 +4064,7 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "index_name", "string")) {
+	if (!isOptionalProperty(value, "index_name", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have an "index_name" field but got ${JSON.stringify(
 				value
@@ -4103,7 +4104,9 @@ const validateAISearchNamespaceBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "namespace", "string")) {
+	// Optional to support auto-provisioning (the handler will create a namespace
+	// with a generated name if none is specified).
+	if (!isOptionalProperty(value, "namespace", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a "namespace" field but got ${JSON.stringify(value)}.`
 		);
@@ -4175,7 +4178,7 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "id", "string")) {
+	if (!isOptionalProperty(value, "id", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a "id" field but got ${JSON.stringify(
 				value
@@ -4212,7 +4215,7 @@ const validateVpcServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "service_id", "string")) {
+	if (!isOptionalProperty(value, "service_id", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a "service_id" field but got ${JSON.stringify(
 				value
@@ -4504,7 +4507,7 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "namespace", "string")) {
+	if (!isOptionalProperty(value, "namespace", "string")) {
 		diagnostics.errors.push(
 			`"${field}" should have a string "namespace" field but got ${JSON.stringify(
 				value
@@ -4600,8 +4603,9 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 		isValid = false;
 	}
 	if (
-		!isRequiredProperty(value, "certificate_id", "string") ||
-		(value as { certificate_id: string }).certificate_id.length === 0
+		!isOptionalProperty(value, "certificate_id", "string") ||
+		((value as { certificate_id?: string }).certificate_id !== undefined &&
+			(value as { certificate_id: string }).certificate_id.length === 0)
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "certificate_id" field but got ${JSON.stringify(
@@ -4793,7 +4797,7 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "pipeline", "string")) {
+	if (!isOptionalProperty(value, "pipeline", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a string "pipeline" field but got ${JSON.stringify(
 				value
