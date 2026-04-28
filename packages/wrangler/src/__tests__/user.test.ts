@@ -30,6 +30,7 @@ import {
 	mockExchangeRefreshTokenForAccessToken,
 	mockOAuthFlow,
 } from "./helpers/mock-oauth-flow";
+import { MockWebSocket } from "./helpers/mock-websocket";
 import {
 	createFetchResult,
 	msw,
@@ -47,7 +48,7 @@ describe("User", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 	// TODO: Implement these two mocks with MSW
-	const { mockOAuthServerCallback } = mockOAuthFlow();
+	const { mockOAuthServerCallback, mockOAuthRelayCallback } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
 
 	beforeEach(() => {
@@ -294,8 +295,6 @@ describe("User", () => {
 		});
 
 		describe("with --experimental-websocket-callback (auth relay)", () => {
-			const { mockOAuthRelayCallback } = mockOAuthFlow();
-
 			it("should login a user via the WebSocket auth relay", async ({
 				expect,
 			}) => {
@@ -438,6 +437,135 @@ describe("User", () => {
 				} finally {
 					process.off("unhandledRejection", onUnhandled);
 				}
+			});
+
+			describe("automatic fallback to the local callback server", () => {
+				/**
+				 * Helper: kick off `runWrangler` with the WebSocket relay flag,
+				 * wait until the WebSocket has been constructed, then run the
+				 * supplied driver to simulate a relay failure. Two
+				 * `setImmediate` ticks are enough to get past the
+				 * `await generatePKCECodes()` and into the connect Promise.
+				 */
+				async function runAndFailWebSocket(
+					cmd: string,
+					driver: (ws: MockWebSocket) => void
+				) {
+					MockWebSocket.autoOpen = false;
+					const runPromise = runWrangler(cmd);
+					await new Promise((r) => setImmediate(r));
+					await new Promise((r) => setImmediate(r));
+					const ws = MockWebSocket.last;
+					if (!ws) {
+						throw new Error(
+							"runAndFailWebSocket: no MockWebSocket was constructed"
+						);
+					}
+					driver(ws);
+					return runPromise;
+				}
+
+				it("falls back to the local server when the relay connection errors before open", async ({
+					expect,
+				}) => {
+					mockOAuthServerCallback("success");
+
+					await runAndFailWebSocket(
+						"login --experimental-websocket-callback",
+						(ws) => ws.triggerError("ECONNREFUSED")
+					);
+
+					expect(std.warn).toContain("Could not reach the auth relay");
+					expect(std.warn).toContain("ECONNREFUSED");
+					expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+						api_token: undefined,
+						oauth_token: "test-access-token",
+						refresh_token: "test-refresh-token",
+						expiration_time: expect.any(String),
+						scopes: ["account:read"],
+					});
+				});
+
+				it("falls back when the relay closes before open", async ({
+					expect,
+				}) => {
+					mockOAuthServerCallback("success");
+
+					await runAndFailWebSocket(
+						"login --experimental-websocket-callback",
+						(ws) => ws.triggerClose()
+					);
+
+					expect(std.warn).toContain("Could not reach the auth relay");
+					expect(std.warn).toContain("connection closed before open");
+					expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+						api_token: undefined,
+						oauth_token: "test-access-token",
+						refresh_token: "test-refresh-token",
+						expiration_time: expect.any(String),
+						scopes: ["account:read"],
+					});
+				});
+
+				it("falls back when the relay connect times out", async ({
+					expect,
+				}) => {
+					// Use a very short timeout so the test doesn't sleep noticeably.
+					vi.stubEnv("WRANGLER_AUTH_WORKER_TIMEOUT", "50");
+					mockOAuthServerCallback("success");
+					MockWebSocket.autoOpen = false;
+
+					await runWrangler("login --experimental-websocket-callback");
+
+					expect(std.warn).toContain("Could not reach the auth relay");
+					expect(std.warn).toContain("connect timed out after 50ms");
+					expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+						api_token: undefined,
+						oauth_token: "test-access-token",
+						refresh_token: "test-refresh-token",
+						expiration_time: expect.any(String),
+						scopes: ["account:read"],
+					});
+				});
+
+				it("does not fall back when WRANGLER_AUTH_WORKER_TIMEOUT=0", async ({
+					expect,
+				}) => {
+					vi.stubEnv("WRANGLER_AUTH_WORKER_TIMEOUT", "0");
+
+					await expect(
+						runAndFailWebSocket(
+							"login --experimental-websocket-callback",
+							(ws) => ws.triggerError("ECONNREFUSED")
+						)
+					).rejects.toThrow(/Auth relay is unavailable: ECONNREFUSED/);
+
+					// No localhost fallback was attempted.
+					expect(std.warn).not.toContain("Falling back");
+				});
+
+				it("does not fall back once the browser has been opened", async ({
+					expect,
+				}) => {
+					// `openInBrowser` is replaced with one that closes the
+					// WebSocket *after* the browser has been opened. This
+					// simulates the relay disappearing mid-flow. The fix
+					// must keep the existing UserError path here — falling
+					// back at this point would require re-authorising at a
+					// different redirect_uri.
+					(openInBrowser as Mock).mockImplementation(async () => {
+						MockWebSocket.last?.triggerClose();
+					});
+
+					await expect(
+						runWrangler("login --experimental-websocket-callback")
+					).rejects.toThrow(
+						/Auth relay connection closed before login completed/
+					);
+
+					// No fallback warning was logged.
+					expect(std.warn).not.toContain("Falling back");
+				});
 			});
 		});
 	});
