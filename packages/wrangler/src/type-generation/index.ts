@@ -2365,19 +2365,21 @@ function collectAllUnsafeBindings(
  *
  * @param args - All the CLI arguments passed to the `types` command
  *
- * @returns An array of collected pipeline bindings with their names and pipeline IDs.
+ * @returns An array of collected pipeline bindings with their names and stream IDs.
  */
 function collectAllPipelines(
 	args: Partial<(typeof typesCommand)["args"]>
 ): Array<{
 	binding: string;
-	pipeline: string;
+	stream?: string;
+	pipeline?: string;
 }> {
 	const pipelinesMap = new Map<
 		string,
 		{
 			binding: string;
-			pipeline: string;
+			stream?: string;
+			pipeline?: string;
 		}
 	>();
 
@@ -2401,13 +2403,13 @@ function collectAllPipelines(
 				});
 			}
 
-			if (!pipeline.pipeline) {
+			if (!pipeline.stream && !pipeline.pipeline) {
 				throwMissingBindingError({
 					binding: pipeline,
 					bindingType: "pipelines",
 					configPath: args.config,
 					envName,
-					fieldName: "pipeline",
+					fieldName: "stream",
 					index,
 				});
 			}
@@ -2418,6 +2420,7 @@ function collectAllPipelines(
 
 			pipelinesMap.set(pipeline.binding, {
 				binding: pipeline.binding,
+				stream: pipeline.stream,
 				pipeline: pipeline.pipeline,
 			});
 		}
@@ -3512,14 +3515,14 @@ function collectPipelinesPerEnvironment(
 	string,
 	Array<{
 		binding: string;
-		pipeline: string;
+		stream: string;
 	}>
 > {
 	const result = new Map<
 		string,
 		Array<{
 			binding: string;
-			pipeline: string;
+			stream: string;
 		}>
 	>();
 
@@ -3528,11 +3531,11 @@ function collectPipelinesPerEnvironment(
 		envName: string
 	): Array<{
 		binding: string;
-		pipeline: string;
+		stream: string;
 	}> {
 		const pipelines = new Array<{
 			binding: string;
-			pipeline: string;
+			stream: string;
 		}>();
 
 		if (!env?.pipelines) {
@@ -3551,20 +3554,24 @@ function collectPipelinesPerEnvironment(
 				});
 			}
 
-			if (!pipeline.pipeline) {
+			const stream = pipeline.stream || pipeline.pipeline;
+			if (!stream) {
 				throwMissingBindingError({
 					binding: pipeline,
 					bindingType: "pipelines",
 					configPath: args.config,
 					envName,
-					fieldName: "pipeline",
+					fieldName: "stream",
 					index,
 				});
 			}
 
 			pipelines.push({
 				binding: pipeline.binding,
-				pipeline: pipeline.pipeline,
+				// we just asserted above that stream cannot be null|undefined, but typescript
+				// isn't recognizing this, so we have to force it
+				// eslint-disable-next-line no-non-null-assertion
+				stream: stream!,
 			});
 		}
 
