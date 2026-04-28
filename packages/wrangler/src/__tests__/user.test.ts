@@ -6,10 +6,13 @@ import {
 	normalizeString,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
+import * as Sentry from "@sentry/node";
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
 import { saveToConfigCache } from "../config-cache";
+import { allMetricsDispatchesCompleted } from "../metrics";
+import { getMetricsConfig } from "../metrics/metrics-config";
 import openInBrowser from "../open-in-browser";
 import {
 	fetchAllAccounts,
@@ -439,13 +442,157 @@ describe("User", () => {
 				}
 			});
 
+			describe("metrics and error reporting", () => {
+				beforeEach(() => {
+					// The metrics dispatcher only POSTs events when
+					// SPARROW_SOURCE_KEY is set (it's normally injected at
+					// build time) AND `getMetricsConfig().enabled` is true.
+					// vitest.setup.ts globally stubs the latter to `false`
+					// so most tests don't accidentally send events; for these
+					// tests we explicitly opt back in so we can observe the
+					// dispatched events.
+					vi.stubEnv("SPARROW_SOURCE_KEY", "MOCK_KEY");
+					vi.mocked(getMetricsConfig).mockReturnValue({
+						enabled: true,
+						deviceId: "mock-device",
+					});
+				});
+
+				it("emits a `(relay attempt)` metrics event for every relay login", async ({
+					expect,
+				}) => {
+					const events = captureMetricEvents();
+					mockOAuthRelayCallback("success");
+					msw.use(
+						http.post(
+							"*/oauth2/token",
+							() =>
+								HttpResponse.json({
+									access_token: "test-access-token",
+									expires_in: 100000,
+									refresh_token: "test-refresh-token",
+									scope: "account:read",
+								}),
+							{ once: true }
+						)
+					);
+
+					await runWrangler("login --experimental-websocket-callback");
+					await allMetricsDispatchesCompleted();
+
+					const attempt = events.find(
+						(e) => e.event === "login user (relay attempt)"
+					);
+					expect(attempt).toBeDefined();
+					expect(attempt?.properties.authWorkerUrl).toBe(
+						"https://auth.devprod.cloudflare.dev"
+					);
+					expect(
+						events.find((e) => e.event === "login user (relay fallback)")
+					).toBeUndefined();
+				});
+
+				it("emits `(relay fallback)` and reports to Sentry when falling back", async ({
+					expect,
+				}) => {
+					const events = captureMetricEvents();
+					const captureException = vi
+						.spyOn(Sentry, "captureException")
+						.mockImplementation(() => "");
+					mockOAuthServerCallback("success");
+					MockWebSocket.autoOpen = false;
+
+					const runPromise = runWrangler(
+						"login --experimental-websocket-callback"
+					);
+					const ws = await waitForMockWebSocket();
+					ws.triggerError("ECONNREFUSED");
+					await runPromise;
+					await allMetricsDispatchesCompleted();
+
+					const fallback = events.find(
+						(e) => e.event === "login user (relay fallback)"
+					);
+					expect(fallback).toBeDefined();
+					expect(fallback?.properties.authWorkerUrl).toBe(
+						"https://auth.devprod.cloudflare.dev"
+					);
+					expect(fallback?.properties.reason).toBe("ECONNREFUSED");
+
+					expect(captureException).toHaveBeenCalledTimes(1);
+					const [err, ctx] = captureException.mock.calls[0];
+					expect((err as Error).message).toContain("ECONNREFUSED");
+					expect(ctx).toMatchObject({
+						level: "warning",
+						tags: { feature: "wrangler-login-relay" },
+						extra: expect.objectContaining({ detail: "ECONNREFUSED" }),
+					});
+				});
+
+				it("does not emit relay events for the local-only login flow", async ({
+					expect,
+				}) => {
+					const events = captureMetricEvents();
+					mockOAuthServerCallback("success");
+					msw.use(
+						http.post(
+							"*/oauth2/token",
+							() =>
+								HttpResponse.json({
+									access_token: "test-access-token",
+									expires_in: 100000,
+									refresh_token: "test-refresh-token",
+									scope: "account:read",
+								}),
+							{ once: true }
+						)
+					);
+
+					await runWrangler("login");
+					await allMetricsDispatchesCompleted();
+
+					expect(
+						events.find((e) => e.event === "login user (relay attempt)")
+					).toBeUndefined();
+					expect(
+						events.find((e) => e.event === "login user (relay fallback)")
+					).toBeUndefined();
+				});
+
+				it("does not emit `(relay fallback)` for failures after the browser is opened", async ({
+					expect,
+				}) => {
+					const events = captureMetricEvents();
+					const captureException = vi
+						.spyOn(Sentry, "captureException")
+						.mockImplementation(() => "");
+					(openInBrowser as Mock).mockImplementation(async () => {
+						MockWebSocket.last?.triggerClose();
+					});
+
+					await expect(
+						runWrangler("login --experimental-websocket-callback")
+					).rejects.toThrow();
+					await allMetricsDispatchesCompleted();
+
+					expect(
+						events.find((e) => e.event === "login user (relay attempt)")
+					).toBeDefined();
+					expect(
+						events.find((e) => e.event === "login user (relay fallback)")
+					).toBeUndefined();
+					expect(captureException).not.toHaveBeenCalled();
+				});
+			});
+
 			describe("automatic fallback to the local callback server", () => {
 				/**
 				 * Helper: kick off `runWrangler` with the WebSocket relay flag,
 				 * wait until the WebSocket has been constructed, then run the
-				 * supplied driver to simulate a relay failure. Two
-				 * `setImmediate` ticks are enough to get past the
-				 * `await generatePKCECodes()` and into the connect Promise.
+				 * supplied driver to simulate a relay failure. Polls
+				 * `MockWebSocket.last` (rather than waiting a fixed number of
+				 * `setImmediate` ticks) so the helper stays robust to small
+				 * timing changes in the upstream login flow.
 				 */
 				async function runAndFailWebSocket(
 					cmd: string,
@@ -453,14 +600,7 @@ describe("User", () => {
 				) {
 					MockWebSocket.autoOpen = false;
 					const runPromise = runWrangler(cmd);
-					await new Promise((r) => setImmediate(r));
-					await new Promise((r) => setImmediate(r));
-					const ws = MockWebSocket.last;
-					if (!ws) {
-						throw new Error(
-							"runAndFailWebSocket: no MockWebSocket was constructed"
-						);
-					}
+					const ws = await waitForMockWebSocket();
 					driver(ws);
 					return runPromise;
 				}
@@ -1382,3 +1522,43 @@ describe("User", () => {
 		});
 	});
 });
+
+/**
+ * Wait for `MockWebSocket.last` to be populated, polling `setImmediate` for up
+ * to ~50 ticks (~500ms in the worst case) before giving up. Used by tests
+ * that need the relay WebSocket to have been constructed before they drive
+ * it. Polling (rather than awaiting a fixed number of ticks) keeps the
+ * helper resilient to small timing changes in the login flow.
+ */
+async function waitForMockWebSocket(): Promise<MockWebSocket> {
+	for (let i = 0; i < 50; i++) {
+		const ws = MockWebSocket.last;
+		if (ws) {
+			return ws;
+		}
+		await new Promise((r) => setImmediate(r));
+	}
+	throw new Error("waitForMockWebSocket: no MockWebSocket was constructed");
+}
+
+/**
+ * Capture all metrics events posted via the Sparrow `/event` endpoint and
+ * return them as a live-updating array. Lets tests assert which named events
+ * were dispatched (and with what properties) without mocking the metrics
+ * module itself.
+ */
+function captureMetricEvents() {
+	const events: Array<{ event: string; properties: Record<string, unknown> }> =
+		[];
+	msw.use(
+		http.post(`*/event`, async ({ request }) => {
+			const body = (await request.json()) as {
+				event: string;
+				properties: Record<string, unknown>;
+			};
+			events.push({ event: body.event, properties: body.properties });
+			return HttpResponse.json({}, { status: 200 });
+		})
+	);
+	return events;
+}
