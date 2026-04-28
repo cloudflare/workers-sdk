@@ -1,27 +1,32 @@
-// Mirrored at `packages/pages-functions/src/routes-transformation.ts`. This
-// file will be removed once wrangler consumes `@cloudflare/pages-functions`
-// directly. Keep the two in sync until then.
+/**
+ * Transform route configurations into _routes.json format for Pages deployment.
+ *
+ * Mirrors `packages/wrangler/src/pages/functions/routes-transformation.ts`.
+ * Keep the two in sync until wrangler consumes this package.
+ */
 
 import { join as pathJoin } from "node:path";
-import { toUrlPath } from "../../paths";
 import {
+	consolidateRoutes,
 	MAX_FUNCTIONS_ROUTES_RULES,
-	ROUTES_SPEC_DESCRIPTION,
-	ROUTES_SPEC_VERSION,
-} from "../constants";
-import { consolidateRoutes } from "./routes-consolidation";
-import type { RouteConfig } from "./routes";
+} from "./routes-consolidation";
+import type { RouteConfig, RoutesJSONSpec, UrlPath } from "./types";
 
-/** Interface for _routes.json */
-export interface RoutesJSONSpec {
-	version: typeof ROUTES_SPEC_VERSION;
-	description?: string;
-	include: string[];
-	exclude: string[];
+/** Version of the _routes.json specification */
+export const ROUTES_SPEC_VERSION = 1;
+
+/**
+ * Convert a path to a URL path format (forward slashes).
+ */
+function toUrlPath(p: string): UrlPath {
+	return p.replace(/\\/g, "/") as UrlPath;
 }
 
 type RoutesJSONRouteInput = Pick<RouteConfig, "routePath" | "middleware">[];
 
+/**
+ * Convert route configurations to glob patterns for _routes.json.
+ */
 export function convertRoutesToGlobPatterns(
 	routes: RoutesJSONRouteInput
 ): string[] {
@@ -53,7 +58,8 @@ export function convertRoutesToGlobPatterns(
  * @returns RoutesJSONSpec to be written to _routes.json
  */
 export function convertRoutesToRoutesJSONSpec(
-	routes: RoutesJSONRouteInput
+	routes: RoutesJSONRouteInput,
+	description?: string
 ): RoutesJSONSpec {
 	// The initial routes coming in are sorted most-specific to least-specific.
 	// The order doesn't have any affect on the output of this function, but
@@ -62,7 +68,7 @@ export function convertRoutesToRoutesJSONSpec(
 	const include = convertRoutesToGlobPatterns(reversedRoutes);
 	return optimizeRoutesJSONSpec({
 		version: ROUTES_SPEC_VERSION,
-		description: ROUTES_SPEC_DESCRIPTION,
+		description,
 		include,
 		exclude: [],
 	});
@@ -70,7 +76,7 @@ export function convertRoutesToRoutesJSONSpec(
 
 /**
  * Optimizes and returns a new Routes JSON Spec instance performing
- * de-duping, consolidation, truncation, and sorting
+ * de-duping, consolidation, truncation, and sorting.
  */
 export function optimizeRoutesJSONSpec(spec: RoutesJSONSpec): RoutesJSONSpec {
 	const optimizedSpec = { ...spec };
@@ -88,11 +94,10 @@ export function optimizeRoutesJSONSpec(spec: RoutesJSONSpec): RoutesJSONSpec {
 }
 
 /**
- * Simplified routes comparison (copied from the one in filepath-routing.)
- * This version will sort most-specific to least-specific, but the input is simplified
- * routes like /foo/*, /foo, etc
+ * Simplified routes comparison for sorting.
+ * Sorts most-specific to least-specific.
  */
-export function compareRoutes(routeA: string, routeB: string) {
+export function compareRoutes(routeA: string, routeB: string): number {
 	function parseRoutePath(routePath: string): string[] {
 		return routePath.slice(1).split("/").filter(Boolean);
 	}

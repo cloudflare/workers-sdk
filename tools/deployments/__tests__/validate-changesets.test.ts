@@ -32,6 +32,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/format-errors",
 				"@cloudflare/kv-asset-handler",
 				"@cloudflare/local-explorer-ui",
+				"@cloudflare/pages-functions",
 				"@cloudflare/pages-shared",
 				"@cloudflare/playground-preview-worker",
 				"@cloudflare/quick-edit",
