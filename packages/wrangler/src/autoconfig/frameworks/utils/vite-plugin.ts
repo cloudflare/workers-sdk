@@ -1,5 +1,5 @@
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { installPackages } from "@cloudflare/cli/packages";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import semiver from "semiver";
 import { getInstalledPackageVersion } from "./packages";
 import type { PackageManager } from "../../../package-manager";

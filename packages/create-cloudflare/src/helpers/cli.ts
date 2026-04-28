@@ -1,6 +1,9 @@
-import { updateStatus, warn } from "@cloudflare/cli";
-import { blue } from "@cloudflare/cli/colors";
-import { spinner, spinnerFrames } from "@cloudflare/cli/interactive";
+import { updateStatus, warn } from "@cloudflare/cli-shared-helpers";
+import { blue } from "@cloudflare/cli-shared-helpers/colors";
+import {
+	spinner,
+	spinnerFrames,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import Haikunator from "haikunator";
 import { getLatestPackageVersion } from "helpers/packages";
 import open from "open";

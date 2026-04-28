@@ -9,7 +9,7 @@ import path from "node:path";
 import { ReadableStream } from "node:stream/web";
 import util from "node:util";
 import zlib from "node:zlib";
-import { checkMacOSVersion } from "@cloudflare/cli";
+import { checkMacOSVersion } from "@cloudflare/cli-shared-helpers";
 import { removeDir, removeDirSync } from "@cloudflare/workers-utils";
 import { $ as colors$, green } from "kleur/colors";
 import stoppable from "stoppable";
@@ -521,7 +521,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 			for (const [name, service] of Object.entries(
 				workerOpts.core.serviceBindings
 			)) {
-				const { serviceName, entrypoint, remoteProxyConnectionString } =
+				const { serviceName, entrypoint, props, remoteProxyConnectionString } =
 					normaliseServiceDesignator(service);
 
 				if (
@@ -535,7 +535,13 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 					workerOpts.core.serviceBindings[name] = {
 						name: SERVICE_DEV_REGISTRY_PROXY,
 						entrypoint: "ExternalServiceProxy",
-						props: { service: serviceName, entrypoint: entrypoint ?? null },
+						// User-supplied `props` are preserved in `userProps` so the proxy
+						// can forward them to the remote entrypoint via the debug port.
+						props: {
+							service: serviceName,
+							entrypoint: entrypoint ?? null,
+							userProps: props,
+						},
 					};
 				}
 			}
@@ -584,6 +590,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 				const {
 					serviceName = workerOpts.core.name,
 					entrypoint,
+					props,
 					remoteProxyConnectionString,
 				} = normaliseServiceDesignator(workerOpts.core.tails[i]);
 
@@ -598,7 +605,13 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 					workerOpts.core.tails[i] = {
 						name: SERVICE_DEV_REGISTRY_PROXY,
 						entrypoint: "ExternalServiceProxy",
-						props: { service: serviceName, entrypoint: entrypoint ?? null },
+						// User-supplied `props` are preserved in `userProps` so the proxy
+						// can forward them to the remote entrypoint via the debug port.
+						props: {
+							service: serviceName,
+							entrypoint: entrypoint ?? null,
+							userProps: props,
+						},
 					};
 				}
 			}

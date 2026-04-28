@@ -312,7 +312,8 @@ function workflowEntry(
 		remote,
 		limits,
 	}: CfWorkflow,
-	remoteProxyConnectionString?: RemoteProxyConnectionString
+	remoteProxyConnectionString?: RemoteProxyConnectionString,
+	compatibilityFlags?: string[]
 ): [
 	string,
 	{
@@ -321,6 +322,7 @@ function workflowEntry(
 		scriptName?: string;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 		stepLimit?: number;
+		compatibilityFlags?: string[];
 	},
 ] {
 	const stepLimit = limits?.steps;
@@ -333,6 +335,7 @@ function workflowEntry(
 				className,
 				scriptName,
 				...(stepLimit !== undefined && { stepLimit }),
+				compatibilityFlags,
 			},
 		];
 	}
@@ -345,6 +348,7 @@ function workflowEntry(
 			scriptName,
 			remoteProxyConnectionString,
 			...(stepLimit !== undefined && { stepLimit }),
+			compatibilityFlags,
 		},
 	];
 }
@@ -450,7 +454,9 @@ type MiniflareBindingsConfig = Pick<
 	| "containerBuildId"
 	| "enableContainers"
 > &
-	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
+	Partial<
+		Pick<ConfigBundle, "format" | "bundle" | "assets" | "compatibilityFlags">
+	>;
 
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
@@ -633,6 +639,10 @@ export function buildMiniflareBindingOptions(
 		warnOrError("artifacts", artifact.remote, "always-remote");
 	}
 
+	for (const flagship of flagshipBindings) {
+		warnOrError("flagship", flagship.remote, "always-remote");
+	}
+
 	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
 	const unsafeBindingsWithLocalDev = Object.entries(bindings ?? {}).filter(
 		(b) => isUnsafeServiceBindingWithDevCfg(b[1])
@@ -787,7 +797,11 @@ export function buildMiniflareBindingOptions(
 							`Configure limits on the worker that defines the workflow.`
 					);
 				}
-				return workflowEntry(workflow, remoteProxyConnectionString);
+				return workflowEntry(
+					workflow,
+					remoteProxyConnectionString,
+					config.compatibilityFlags
+				);
 			})
 		),
 		secretsStoreSecrets: Object.fromEntries(
@@ -801,10 +815,7 @@ export function buildMiniflareBindingOptions(
 				binding.binding,
 				{
 					app_id: binding.app_id,
-					remoteProxyConnectionString:
-						binding.remote && remoteProxyConnectionString
-							? remoteProxyConnectionString
-							: undefined,
+					remoteProxyConnectionString,
 				},
 			])
 		),

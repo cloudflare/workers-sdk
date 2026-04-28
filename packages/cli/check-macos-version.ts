@@ -35,7 +35,8 @@ export function checkMacOSVersion(options: { shouldThrow: boolean }): void {
 					`If you cannot upgrade your version of macOS, you could try running in a DevContainer setup with a supported version of Linux (glibc 2.35+ required).`
 			);
 		} else {
-			// eslint-disable-next-line no-console
+			/* eslint-disable-next-line no-console -- this package has no logger to use
+			   (TODO: disable the `no-console` rule on packages that do not use a logger) */
 			console.warn(
 				`⚠️  Warning: Unsupported macOS version detected (${macOSVersion}). ` +
 					`The Cloudflare Workers runtime may not work correctly on macOS versions below ${MINIMUM_MACOS_VERSION}. ` +

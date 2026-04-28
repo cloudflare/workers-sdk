@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { setTimeout } from "node:timers/promises";
-import { logRaw } from "@cloudflare/cli";
-import { CancelError } from "@cloudflare/cli/error";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
+import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import {
 	getDeviceId,
 	readMetricsConfig,

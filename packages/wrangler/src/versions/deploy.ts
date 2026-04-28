@@ -1,12 +1,12 @@
 import assert from "node:assert";
-import * as cli from "@cloudflare/cli";
-import { brandColor, gray, white } from "@cloudflare/cli/colors";
+import * as cli from "@cloudflare/cli-shared-helpers";
+import { brandColor, gray, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	grayBar,
 	inputPrompt,
 	leftT,
 	spinnerWhile,
-} from "@cloudflare/cli/interactive";
+} from "@cloudflare/cli-shared-helpers/interactive";
 import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";

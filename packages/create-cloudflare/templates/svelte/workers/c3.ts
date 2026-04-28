@@ -1,5 +1,5 @@
-import { logRaw, updateStatus } from "@cloudflare/cli";
-import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { transformFile } from "@cloudflare/codemod";
 import { runFrameworkGenerator } from "frameworks/index";
 import { usesTypescript } from "helpers/files";

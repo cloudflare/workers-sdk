@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, test } from "vitest";
-import { collectCLIOutput, normalizeOutput } from "../../../cli/test-util";
 import { printSummary, printWelcomeMessage } from "../dialog";
+import { collectCLIOutput, normalizeOutput } from "./helpers";
 import type { C3Context } from "types";
 
 describe("dialog helpers", () => {

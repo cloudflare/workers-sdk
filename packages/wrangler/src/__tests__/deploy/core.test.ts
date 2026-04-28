@@ -77,7 +77,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("@cloudflare/cli/command");
+vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
 	mockAccountId();

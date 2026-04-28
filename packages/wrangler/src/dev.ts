@@ -259,6 +259,11 @@ export const dev = createCommand({
 			describe: "Generate types from your Worker configuration",
 			type: "boolean",
 		},
+		tunnel: {
+			describe:
+				"Expose your local dev server via a Cloudflare Quick Tunnel (https://try.cloudflare.com)",
+			type: "boolean",
+		},
 	},
 	async validateArgs(args) {
 		if (args.nodeCompat) {
@@ -270,6 +275,9 @@ export const dev = createCommand({
 			throw new UserError(
 				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
 			);
+		}
+		if (args.tunnel && args.remote) {
+			throw new UserError("--tunnel is only supported in local mode.");
 		}
 
 		if (isWebContainer()) {

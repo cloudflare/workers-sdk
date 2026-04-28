@@ -11,6 +11,7 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
+import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import type { PagesConfigCache } from "./types";
@@ -48,7 +49,8 @@ export const pagesDeploymentListCommand = createCommand({
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(config);
+		const accountId =
+			getCloudflareAccountIdFromEnv() ?? (await requireAuth(config));
 
 		projectName ??= config.project_name;
 
@@ -144,7 +146,8 @@ export const pagesDeploymentDeleteCommand = createCommand({
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(config);
+		const accountId =
+			getCloudflareAccountIdFromEnv() ?? (await requireAuth(config));
 
 		projectName ??= config.project_name;
 

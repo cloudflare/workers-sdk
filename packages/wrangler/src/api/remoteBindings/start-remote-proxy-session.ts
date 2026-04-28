@@ -1,4 +1,5 @@
 import path from "node:path";
+import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
 import { logger } from "../../logger";
@@ -20,6 +21,7 @@ export async function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
 	options?: StartRemoteProxySessionOptions
 ): Promise<RemoteProxySession> {
+	logger.log(chalk.dim("⎔ Establishing remote connection..."));
 	// Transform all bindings to use "raw" mode
 	const rawBindings = Object.fromEntries(
 		Object.entries(bindings ?? {}).map(([key, binding]) => [

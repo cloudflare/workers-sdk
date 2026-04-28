@@ -376,12 +376,25 @@ export class BundlerController extends Controller {
 		logger.debug("BundlerController teardown beginning...");
 		await super.teardown();
 		this.#customBuildAborter?.abort();
-		this.#tmpDir?.remove();
+		// Abort any in-flight esbuild build so that a finishing build doesn't
+		// emit `bundleComplete`/`bundleStart` into a torn-down event bus.
+		// `Controller.#tearingDown` already suppresses error events, but not
+		// the bundler success events, which go straight through `bus.dispatch`.
+		this.#bundleBuildAborter?.abort();
 		await Promise.all([
+			// Must run before `#tmpDir.remove()` so that the esbuild watcher
+			// can dispose cleanly. Removing the directory first would make
+			// esbuild's watcher fail a rebuild with "Could not resolve
+			// ...middleware-loader.entry.ts" during teardown.
 			this.#bundlerCleanup?.(),
 			this.#customBuildWatcher?.close(),
 			this.#assetsWatcher?.close(),
 		]);
+		// Defence-in-depth: `bundle.ts`'s `stop()` normally removes the tmp
+		// dir on our behalf, but it may have never been assigned (e.g. when
+		// running a custom build, or when the initial build threw). Remove
+		// after esbuild cleanup to avoid the race described above.
+		this.#tmpDir?.remove();
 		logger.debug("BundlerController teardown complete");
 	}
 

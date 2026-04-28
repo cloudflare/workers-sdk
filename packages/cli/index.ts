@@ -246,7 +246,7 @@ export const stripAnsi = (str: string) => {
 // Regular Expression that matches a hyperlink
 // e.g. `\u001B]8;;http://example.com/\u001B\\This is a link\u001B]8;;\u001B\`
 export const linkRegex =
-	// eslint-disable-next-line no-control-regex
+	// eslint-disable-next-line no-control-regex -- regex intentionally matches ANSI escape sequences for hyperlink parsing
 	/\u001B\]8;;(?<url>.+)\u001B\\(?<label>.+)\u001B\]8;;\u001B\\/g;
 
 // Create a hyperlink in terminal

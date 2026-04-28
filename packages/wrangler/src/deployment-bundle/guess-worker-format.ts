@@ -35,8 +35,7 @@ export async function guessWorkerFormat(
 	});
 
 	// result.metafile is defined because of the `metafile: true` option above.
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	const metafile = result.metafile!;
+	const metafile = result.metafile;
 
 	const { exports } = getEntryPointFromMetafile(entryFile, metafile);
 	let guessedWorkerFormat: CfScriptFormat;

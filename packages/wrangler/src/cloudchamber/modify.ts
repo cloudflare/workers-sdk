@@ -1,6 +1,9 @@
-import { cancel, startSection } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
-import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { cancel, startSection } from "@cloudflare/cli-shared-helpers";
+import { processArgument } from "@cloudflare/cli-shared-helpers/args";
+import {
+	inputPrompt,
+	spinner,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
 import { createCommand } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";

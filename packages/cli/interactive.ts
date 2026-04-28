@@ -59,7 +59,7 @@ export type BasePromptConfig = {
 	// Pretty-prints the value in the interactive prompt
 	format?: (value: Arg) => string;
 	// Returns a user displayed error if the value is invalid
-	validate?: (value: Arg) => string | void;
+	validate?: (value: Arg) => string | Error | undefined;
 	// Override some/all renderers (can be used for custom renderers before hoisting back into shared code)
 	renderers?: Partial<ReturnType<typeof getRenderers>>;
 	// Whether to throw an error if the prompt is crashed or cancelled
@@ -116,10 +116,11 @@ function acceptDefault<T>(
 ): T {
 	const error = promptConfig.validate?.(initialValue as Arg);
 	if (error) {
+		const errorMessage = error instanceof Error ? error.message : error;
 		if (promptConfig.throwOnError) {
-			throw new Error(error);
+			throw new Error(errorMessage);
 		} else {
-			crash(error);
+			crash(errorMessage);
 		}
 	}
 
@@ -145,7 +146,10 @@ export const inputPrompt = async <T = string>(
 		| SelectRefreshablePrompt;
 
 	// Looks up the needed renderer by the current state ('initial', 'submitted', etc.)
-	const dispatchRender = (props: RenderProps, p: Prompt): string | void => {
+	const dispatchRender = (
+		props: RenderProps,
+		p: Prompt<unknown>
+	): string | undefined => {
 		let state = props.state;
 
 		if (state === "initial" && promptConfig.initialErrorMessage) {
@@ -263,7 +267,7 @@ type Renderer = (
 		cursor?: number;
 		value: Arg;
 	},
-	prompt: Prompt
+	prompt: Prompt<unknown>
 ) => string[];
 
 const renderSubmit = (config: PromptConfig, value: string) => {
@@ -302,10 +306,10 @@ const getTextRenderers = (config: TextPromptConfig) => {
 	const format = config.format ?? ((val: Arg) => String(val));
 	const defaultValue = config.defaultValue?.toString() ?? "";
 	const activeRenderer = (props: RenderProps) => {
-		const { valueWithCursor } = props as TextPrompt;
+		const { userInputWithCursor } = props as TextPrompt;
 		return [
 			`${blCorner} ${bold(question)} ${dim(helpText)}`,
-			`${space(2)}${format(valueWithCursor || dim(defaultValue))}`,
+			`${space(2)}${format(userInputWithCursor || dim(defaultValue))}`,
 			``, // extra line for readability
 		];
 	};
@@ -434,7 +438,7 @@ const getSelectRenderers = (
 		initial: defaultRenderer,
 		active: defaultRenderer,
 		confirm: defaultRenderer,
-		error: (opts: { value: Arg; error: string }, prompt: Prompt) => {
+		error: (opts: { value: Arg; error: string }, prompt: Prompt<unknown>) => {
 			return [
 				`${leftT} ${status.error} ${dim(opts.error)}`,
 				`${grayBar}`,
@@ -466,7 +470,10 @@ const getSelectListRenderers = (config: ListPromptConfig) => {
 	let options = config.options;
 	const helpText = _helpText ?? "";
 	const { rows } = stdout;
-	const defaultRenderer: Renderer = ({ cursor, value }, prompt: Prompt) => {
+	const defaultRenderer: Renderer = (
+		{ cursor, value },
+		prompt: Prompt<unknown>
+	) => {
 		if (prompt instanceof SelectRefreshablePrompt) {
 			options = prompt.options;
 		}
@@ -558,7 +565,7 @@ const getSelectListRenderers = (config: ListPromptConfig) => {
 		initial: defaultRenderer,
 		active: defaultRenderer,
 		confirm: defaultRenderer,
-		error: (opts: { value: Arg; error: string }, prompt: Prompt) => {
+		error: (opts: { value: Arg; error: string }, prompt: Prompt<unknown>) => {
 			return [
 				`${leftT} ${status.error} ${dim(opts.error)}`,
 				`${grayBar}`,

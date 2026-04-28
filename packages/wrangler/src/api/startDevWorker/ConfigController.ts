@@ -166,6 +166,7 @@ async function resolveDevConfig(
 			: undefined,
 		containerBuildId: input.dev?.containerBuildId,
 		generateTypes: input.dev?.generateTypes ?? config.dev.generate_types,
+		tunnel: input.dev?.tunnel,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 

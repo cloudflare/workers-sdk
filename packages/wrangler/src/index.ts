@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
+import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli-shared-helpers";
 import {
 	CommandLineArgsError,
 	experimental_readRawConfig,
@@ -15,6 +15,12 @@ import { aiSearchDeleteCommand } from "./ai-search/delete";
 import { aiSearchGetCommand } from "./ai-search/get";
 import { aiSearchNamespace } from "./ai-search/index";
 import { aiSearchListCommand } from "./ai-search/list";
+import { aiSearchNamespaceCreateCommand } from "./ai-search/namespace/create";
+import { aiSearchNamespaceDeleteCommand } from "./ai-search/namespace/delete";
+import { aiSearchNamespaceGetCommand } from "./ai-search/namespace/get";
+import { aiSearchNamespaceNamespace } from "./ai-search/namespace/index";
+import { aiSearchNamespaceListCommand } from "./ai-search/namespace/list";
+import { aiSearchNamespaceUpdateCommand } from "./ai-search/namespace/update";
 import { aiSearchSearchCommand } from "./ai-search/search";
 import { aiSearchStatsCommand } from "./ai-search/stats";
 import { aiSearchUpdateCommand } from "./ai-search/update";
@@ -257,9 +263,12 @@ import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
 import { queuesConsumerHttpAddCommand } from "./queues/cli/commands/consumer/http-pull/add";
+import { queuesConsumerHttpListCommand } from "./queues/cli/commands/consumer/http-pull/list";
 import { queuesConsumerHttpRemoveCommand } from "./queues/cli/commands/consumer/http-pull/remove";
+import { queuesConsumerListCommand } from "./queues/cli/commands/consumer/list";
 import { queuesConsumerWorkerNamespace } from "./queues/cli/commands/consumer/worker";
 import { queuesConsumerAddCommand } from "./queues/cli/commands/consumer/worker/add";
+import { queuesConsumerWorkerListCommand } from "./queues/cli/commands/consumer/worker/list";
 import { queuesConsumerRemoveCommand } from "./queues/cli/commands/consumer/worker/remove";
 import { queuesCreateCommand } from "./queues/cli/commands/create";
 import { queuesDeleteCommand } from "./queues/cli/commands/delete";
@@ -1010,6 +1019,10 @@ export function createCLIParser(argv: string[]) {
 			definition: queuesConsumerRemoveCommand,
 		},
 		{
+			command: "wrangler queues consumer list",
+			definition: queuesConsumerListCommand,
+		},
+		{
 			command: "wrangler queues consumer http",
 			definition: queuesConsumerHttpNamespace,
 		},
@@ -1022,6 +1035,10 @@ export function createCLIParser(argv: string[]) {
 			definition: queuesConsumerHttpRemoveCommand,
 		},
 		{
+			command: "wrangler queues consumer http list",
+			definition: queuesConsumerHttpListCommand,
+		},
+		{
 			command: "wrangler queues consumer worker",
 			definition: queuesConsumerWorkerNamespace,
 		},
@@ -1032,6 +1049,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler queues consumer worker remove",
 			definition: queuesConsumerRemoveCommand,
+		},
+		{
+			command: "wrangler queues consumer worker list",
+			definition: queuesConsumerWorkerListCommand,
 		},
 	]);
 	registry.registerNamespace("queues");
@@ -1439,6 +1460,30 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler ai-search search",
 			definition: aiSearchSearchCommand,
+		},
+		{
+			command: "wrangler ai-search namespace",
+			definition: aiSearchNamespaceNamespace,
+		},
+		{
+			command: "wrangler ai-search namespace list",
+			definition: aiSearchNamespaceListCommand,
+		},
+		{
+			command: "wrangler ai-search namespace create",
+			definition: aiSearchNamespaceCreateCommand,
+		},
+		{
+			command: "wrangler ai-search namespace get",
+			definition: aiSearchNamespaceGetCommand,
+		},
+		{
+			command: "wrangler ai-search namespace update",
+			definition: aiSearchNamespaceUpdateCommand,
+		},
+		{
+			command: "wrangler ai-search namespace delete",
+			definition: aiSearchNamespaceDeleteCommand,
 		},
 	]);
 	registry.registerNamespace("ai-search");

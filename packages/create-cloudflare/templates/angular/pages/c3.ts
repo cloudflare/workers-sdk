@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
-import { logRaw } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { readFile, readJSON, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";

@@ -1,5 +1,10 @@
-import { logRaw } from "@cloudflare/cli";
-import { blue, bold, brandColor, dim } from "@cloudflare/cli/colors";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
+import {
+	blue,
+	bold,
+	brandColor,
+	dim,
+} from "@cloudflare/cli-shared-helpers/colors";
 import { detectPackageManager } from "helpers/packageManagers";
 import indentString from "indent-string";
 import wrap from "wrap-ansi";

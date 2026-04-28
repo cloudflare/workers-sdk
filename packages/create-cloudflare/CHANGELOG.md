@@ -1,5 +1,81 @@
 # create-cloudflare
 
+## 2.67.4
+
+### Patch Changes
+
+- [#13680](https://github.com/cloudflare/workers-sdk/pull/13680) [`08fa62e`](https://github.com/cloudflare/workers-sdk/commit/08fa62e34e81be6b04b749266e944e1ede2a4107) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 9.0.4 | 9.0.6 |
+
+- [#13681](https://github.com/cloudflare/workers-sdk/pull/13681) [`32cc1b4`](https://github.com/cloudflare/workers-sdk/commit/32cc1b4e71fc9675b35422f11ec3e6bac18f19dc) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From   | To     |
+  | ------------------- | ------ | ------ |
+  | create-react-router | 7.14.1 | 7.14.2 |
+
+- [#13682](https://github.com/cloudflare/workers-sdk/pull/13682) [`c642d18`](https://github.com/cloudflare/workers-sdk/commit/c642d18fbf99b21d3333bc7d917dccd0569925a2) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To     |
+  | ------------- | ----- | ------ |
+  | create-analog | 2.4.8 | 2.4.10 |
+
+- [#13683](https://github.com/cloudflare/workers-sdk/pull/13683) [`a3496fa`](https://github.com/cloudflare/workers-sdk/commit/a3496fa844d26a56b585d20cd3e55831d5ce2635) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From    | To      |
+  | ---------------------- | ------- | ------- |
+  | @tanstack/create-start | 0.59.21 | 0.59.22 |
+
+- [#13684](https://github.com/cloudflare/workers-sdk/pull/13684) [`02ab1b4`](https://github.com/cloudflare/workers-sdk/commit/02ab1b41ec782cc689df4f04d711fee3c68963f6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From                   | To                     |
+  | ----------- | ---------------------- | ---------------------- |
+  | create-waku | 0.12.5-1.0.0-alpha.7-0 | 0.12.5-1.0.0-alpha.8-0 |
+
+- [#13685](https://github.com/cloudflare/workers-sdk/pull/13685) [`6fc418b`](https://github.com/cloudflare/workers-sdk/commit/6fc418b4473bfc55b394acf4972441047444c1c9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-astro | 5.0.5 | 5.0.6 |
+
+- [#13686](https://github.com/cloudflare/workers-sdk/pull/13686) [`1d8bad5`](https://github.com/cloudflare/workers-sdk/commit/1d8bad5de8dada14ec78580232e02e7c39e798c1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.22.2 | 3.22.3 |
+
+- [#13687](https://github.com/cloudflare/workers-sdk/pull/13687) [`2bcfffc`](https://github.com/cloudflare/workers-sdk/commit/2bcfffcf1095b632df982f6710bc05896e21978e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.12.5 | 0.15.1 |
+
+## 2.67.3
+
+### Patch Changes
+
+- [#13644](https://github.com/cloudflare/workers-sdk/pull/13644) [`377715d`](https://github.com/cloudflare/workers-sdk/commit/377715d9f6ec7f3428e12a6ce56b367984fb0673) Thanks [@MattieTK](https://github.com/MattieTK)! - Update `@clack/core` and `@clack/prompts` to v1.2.0
+
+  Bumps the bundled `@clack/core` dependency used internally by `@cloudflare/cli` from `0.3.x` to `1.2.0`, and the `@clack/prompts` dependency in `create-cloudflare` from `0.6.x` to `1.2.0`. Clack v1 includes a number of API changes, but no user-facing prompt behaviour changes are expected.
+
 ## 2.67.2
 
 ### Patch Changes

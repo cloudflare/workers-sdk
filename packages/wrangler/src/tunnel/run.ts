@@ -1,12 +1,13 @@
 import { join } from "node:path";
 import {
 	getGlobalWranglerConfigPath,
+	spawnCloudflared,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
+import { confirm } from "../dialogs";
 import { requireAuth } from "../user";
 import { getTunnelToken, resolveTunnelId } from "./client";
-import { spawnCloudflared } from "./cloudflared";
 
 export const tunnelRunCommand = createCommand({
 	metadata: {
@@ -102,6 +103,8 @@ export const tunnelRunCommand = createCommand({
 		// Token is passed via env var to avoid leaking in `ps` output.
 		const cloudflared = await spawnCloudflared(cloudflaredArgs, {
 			env: { TUNNEL_TOKEN: tokenStr },
+			confirmDownload: (message) => confirm(message),
+			logger,
 		});
 
 		// Track if we've already started shutting down

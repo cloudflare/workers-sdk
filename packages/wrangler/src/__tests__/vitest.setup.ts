@@ -261,7 +261,7 @@ afterEach(() => {
 	vi.clearAllMocks();
 });
 
-vi.mock("@cloudflare/cli/streams", async () => {
+vi.mock("@cloudflare/cli-shared-helpers/streams", async () => {
 	const stdout = new PassThrough();
 	const stderr = new PassThrough();
 

@@ -1,5 +1,5 @@
-import { updateStatus } from "@cloudflare/cli";
-import { runCommand } from "@cloudflare/cli/command";
+import { updateStatus } from "@cloudflare/cli-shared-helpers";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { mockSpinner } from "helpers/__tests__/mocks";
 import { processArgument } from "helpers/args";
 import { beforeEach, describe, test, vi } from "vitest";
@@ -14,10 +14,10 @@ import {
 } from "../git";
 import { createTestContext } from "./helpers";
 
-vi.mock("@cloudflare/cli/command");
+vi.mock("@cloudflare/cli-shared-helpers/command");
 vi.mock("helpers/args");
-vi.mock("@cloudflare/cli/interactive");
-vi.mock("@cloudflare/cli");
+vi.mock("@cloudflare/cli-shared-helpers/interactive");
+vi.mock("@cloudflare/cli-shared-helpers");
 
 beforeEach(() => {
 	mockSpinner();

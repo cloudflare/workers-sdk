@@ -1,4 +1,4 @@
-import { inputPrompt } from "@cloudflare/cli/interactive";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { UserError } from "@cloudflare/workers-utils";
 import type {
 	CreateApplicationRequest,

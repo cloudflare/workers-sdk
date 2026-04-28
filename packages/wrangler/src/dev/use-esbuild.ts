@@ -233,17 +233,15 @@ export function runBuild(
 		onErr(err);
 	});
 
-	return () => {
-		// Stop watching immediately if the build has already completed
-		// and `stopWatching` is assigned.
-		const immediateStop = stopWatching?.();
-		if (immediateStop) {
-			return immediateStop;
-		}
-		// If the build is still in flight, `stopWatching` is undefined.
-		// Fire-and-forget: wait for the build to finish, then clean up.
-		// We intentionally don't block teardown on this — blocking would
-		// hang teardown if the build is slow (e.g. esbuild startup).
-		void buildPromise.then(() => stopWatching?.());
+	return async () => {
+		// Wait for the initial build to settle so that `stopWatching` is
+		// assigned (on success) or the esbuild context has been disposed
+		// by `bundle.ts`'s catch block (on failure). Without this await,
+		// teardown can return before `ctx.dispose()` has run, leaving the
+		// esbuild child process alive and preventing Node from exiting.
+		// Errors from `build()` are already routed to `onErr` above, so we
+		// don't need to handle rejections here.
+		await buildPromise;
+		await stopWatching?.();
 	};
 }

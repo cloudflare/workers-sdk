@@ -99,6 +99,7 @@ export type ProxyWorkerIncomingRequestBody =
 	| { type: "pause" };
 export type ProxyWorkerOutgoingRequestBody =
 	| { type: "error"; error: SerializedError }
+	| { type: "sseResponseDetected" }
 	| { type: "previewTokenExpired"; proxyData: ProxyData }
 	| { type: "debug-log"; args: Parameters<typeof console.debug> };
 

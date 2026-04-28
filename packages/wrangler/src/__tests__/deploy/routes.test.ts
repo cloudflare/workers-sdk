@@ -69,7 +69,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("@cloudflare/cli/command");
+vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -658,6 +658,44 @@ describe("deploy", () => {
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
+			it("should pass enabled and previews_enabled to the custom domains API", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					routes: [
+						{
+							pattern: "api.example.com",
+							custom_domain: true,
+							enabled: true,
+							previews_enabled: true,
+						},
+					],
+				});
+				writeWorkerSource();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [
+						{
+							hostname: "api.example.com",
+							enabled: true,
+							previews_enabled: true,
+						},
+					],
+				});
+				await runWrangler("deploy ./index");
+				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("[enabled, previews: enabled]");
+			});
+
 			it("should confirm override if custom domain deploy would override an existing domain", async ({
 				expect,
 			}) => {
@@ -681,6 +719,8 @@ describe("deploy", () => {
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
+							enabled: true,
+							previews_enabled: false,
 						},
 					],
 				});
@@ -691,6 +731,8 @@ describe("deploy", () => {
 					hostname: "api.example.com",
 					service: "other-script",
 					environment: "",
+					enabled: true,
+					previews_enabled: false,
 				});
 				mockPublishCustomDomainsRequest({
 					publishFlags: {
@@ -733,6 +775,8 @@ Update them to point to this script instead?`,
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
+							enabled: true,
+							previews_enabled: false,
 						},
 					],
 				});
@@ -777,6 +821,8 @@ Update them to point to this script instead?`,
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
+							enabled: true,
+							previews_enabled: false,
 						},
 					],
 					dnsRecordConflicts: [
@@ -787,6 +833,8 @@ Update them to point to this script instead?`,
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
+							enabled: true,
+							previews_enabled: false,
 						},
 					],
 				});
@@ -797,6 +845,8 @@ Update them to point to this script instead?`,
 					hostname: "api.example.com",
 					service: "other-script",
 					environment: "",
+					enabled: true,
+					previews_enabled: false,
 				});
 				mockPublishCustomDomainsRequest({
 					publishFlags: {
@@ -878,6 +928,8 @@ Update them to point to this script instead?`,
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
+							enabled: true,
+							previews_enabled: false,
 						},
 					],
 				});
@@ -888,6 +940,8 @@ Update them to point to this script instead?`,
 					hostname: "api.example.com",
 					service: "other-script",
 					environment: "",
+					enabled: true,
+					previews_enabled: false,
 				});
 				mockConfirm({
 					text: `Custom Domains already exist for these domains:

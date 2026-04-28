@@ -6,9 +6,16 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { createR2Bucket, listR2Buckets } from "../r2/helpers/bucket";
 import { requireAuth } from "../user";
-import { createInstance, listTokens } from "./client";
+import {
+	createInstance,
+	createNamespace,
+	DEFAULT_NAMESPACE,
+	listNamespaces,
+	listTokens,
+} from "./client";
 
 const CREATE_NEW_BUCKET = "__create_new__";
+const CREATE_NEW_NAMESPACE = "__create_new__";
 
 export const aiSearchCreateCommand = createCommand({
 	metadata: {
@@ -24,7 +31,12 @@ export const aiSearchCreateCommand = createCommand({
 			type: "string",
 			demandOption: true,
 			description:
-				"The name of the AI Search instance to create (must be unique).",
+				"The name of the AI Search instance to create (must be unique within its namespace).",
+		},
+		namespace: {
+			type: "string",
+			alias: "n",
+			description: "The namespace to create the instance in.",
 		},
 		source: {
 			type: "string",
@@ -133,6 +145,62 @@ export const aiSearchCreateCommand = createCommand({
 
 		// Interactive wizard: prompt for missing required fields
 		const instanceName = args.name;
+
+		// 0. Namespace — either explicitly passed, picked interactively, or "default"
+		let instanceNamespace = args.namespace;
+		if (instanceNamespace === undefined) {
+			if (isNonInteractiveOrCI() || args.json) {
+				instanceNamespace = DEFAULT_NAMESPACE;
+			} else {
+				const namespaces = await listNamespaces(config);
+				// The list endpoint does not return the "default" namespace, so
+				// surface it explicitly so users can target it from the picker.
+				const hasDefault = namespaces.some(
+					(ns) => ns.name === DEFAULT_NAMESPACE
+				);
+				const namespaceChoices = [
+					...(hasDefault
+						? []
+						: [{ title: DEFAULT_NAMESPACE, value: DEFAULT_NAMESPACE }]),
+					...namespaces.map((ns) => ({
+						title: ns.name,
+						description: ns.description,
+						value: ns.name,
+					})),
+					{
+						title: "Create new namespace",
+						description: "Provision a brand-new namespace for this instance",
+						value: CREATE_NEW_NAMESPACE,
+					},
+				];
+				// Start with "default" highlighted if present in the list.
+				const defaultIndex = namespaceChoices.findIndex(
+					(choice) => choice.value === DEFAULT_NAMESPACE
+				);
+				const selectedNamespace = await select("Select a namespace:", {
+					choices: namespaceChoices,
+					defaultOption: defaultIndex >= 0 ? defaultIndex : 0,
+				});
+
+				if (selectedNamespace === CREATE_NEW_NAMESPACE) {
+					const newNamespaceName = await prompt(
+						"Enter a name for the new namespace:",
+						{
+							validate: (value: string) =>
+								value.length > 0 || "Namespace name is required.",
+						}
+					);
+					logger.log(`Creating namespace "${newNamespaceName}"...`);
+					await createNamespace(config, accountId, {
+						name: newNamespaceName,
+					});
+					logger.log(`Successfully created namespace "${newNamespaceName}".`);
+					instanceNamespace = newNamespaceName;
+				} else {
+					instanceNamespace = selectedNamespace;
+				}
+			}
+		}
 
 		// 1. Source type
 		let instanceType = args.type;
@@ -323,9 +391,16 @@ export const aiSearchCreateCommand = createCommand({
 		}
 
 		if (!args.json) {
-			logger.log(`Creating AI Search instance "${instanceName}"...`);
+			logger.log(
+				`Creating AI Search instance "${instanceName}" in namespace "${instanceNamespace}"...`
+			);
 		}
-		const instance = await createInstance(config, accountId, body);
+		const instance = await createInstance(
+			config,
+			accountId,
+			instanceNamespace,
+			body
+		);
 
 		if (args.json) {
 			logger.log(JSON.stringify(instance, null, 2));
@@ -333,6 +408,7 @@ export const aiSearchCreateCommand = createCommand({
 			logger.log(
 				`Successfully created AI Search instance "${instance.id}"\n` +
 					`  Name:       ${instance.id}\n` +
+					`  Namespace:  ${instance.namespace ?? instanceNamespace}\n` +
 					`  Type:       ${instance.type}\n` +
 					`  Source:     ${instance.source}\n` +
 					`  Model:      ${instance.ai_search_model ?? "default"}\n` +

@@ -1,5 +1,111 @@
 # miniflare
 
+## 4.20260426.0
+
+### Minor Changes
+
+- [#13599](https://github.com/cloudflare/workers-sdk/pull/13599) [`21b87b2`](https://github.com/cloudflare/workers-sdk/commit/21b87b298574ec5b32d3611eb664414392f850a8) Thanks [@Ltadrian](https://github.com/Ltadrian)! - Add extended sslmode support for Hyperdrive local dev. This adds support for sslmodes verify-full / verify-ca for Postgres and VERIFY_IDENTITY / VERIFY_CA for MySQL
+
+- [#13617](https://github.com/cloudflare/workers-sdk/pull/13617) [`118027d`](https://github.com/cloudflare/workers-sdk/commit/118027d501abfe2a15cdc4f2e3817ee64d7631f0) Thanks [@roerohan](https://github.com/roerohan)! - Force Flagship bindings to always use remote mode in local dev
+
+  Flagship bindings now always access the remote Flagship service during local development, matching the behavior of AI bindings. Previously, Flagship supported both local and remote modes, but the local stub only returned default values, providing no real functionality and creating a dual source of truth for flag evaluations.
+
+  The `remote` config field is retained for backward compatibility but only controls whether a warning is displayed. Setting `remote: true` suppresses the warning that Flagship bindings always access remote resources and may incur usage charges in local dev.
+
+### Patch Changes
+
+- [#13696](https://github.com/cloudflare/workers-sdk/pull/13696) [`62e9f2a`](https://github.com/cloudflare/workers-sdk/commit/62e9f2a465cf7f80817e35b0b8d2196402db3731) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260424.1 | 1.20260426.1 |
+
+- [#13652](https://github.com/cloudflare/workers-sdk/pull/13652) [`033d6ec`](https://github.com/cloudflare/workers-sdk/commit/033d6ec3f4cd5fe3893127a86ad8d954d43b16a6) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: allow multiple workers with browser bindings in dev
+
+  You can now run multiple workers with multiple browser bindings in miniflare. Previously, this would crash with `kj/table.c++:49: failed: inserted row already exists in table`.
+
+- [#13649](https://github.com/cloudflare/workers-sdk/pull/13649) [`ae8eae3`](https://github.com/cloudflare/workers-sdk/commit/ae8eae3fd5d374aed8edcc0aa61d0af4a8d08118) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix service binding and tail consumer `props` being dropped between workers in different local dev instances
+
+  When a service binding or tail consumer configured with `props` targeted a worker running in a separate `wrangler dev` instance (via the dev registry), the `props` were silently dropped and the remote entrypoint saw an empty `ctx.props`. Props are now forwarded correctly across the dev registry boundary, matching the behavior users get when all workers run in a single instance.
+
+  ```jsonc
+  // wrangler.json
+  {
+    "services": [
+      {
+        "binding": "AUTH",
+        "service": "auth-worker", // may be in a separate `wrangler dev` process
+        "entrypoint": "SessionEntry",
+        "props": { "tenant": "acme" }
+      }
+    ]
+  }
+  ```
+
+  The target worker's `SessionEntry` entrypoint now correctly receives `{ tenant: "acme" }` on `ctx.props` regardless of which local dev instance it runs in.
+
+- [#13668](https://github.com/cloudflare/workers-sdk/pull/13668) [`ef24ff2`](https://github.com/cloudflare/workers-sdk/commit/ef24ff28d905ca3706a272653c52a342de3c4339) Thanks [@for-the-kidz](https://github.com/for-the-kidz)! - Fix `TypeError: rules is not iterable` in the router-worker when `static_routing` is configured without `user_worker` rules
+
+  The router-worker's static-routing include-rule evaluation passed `config.static_routing.user_worker` directly to the matcher, which iterates with `for...of`. When `static_routing` was set but `user_worker` was omitted, the matcher threw `TypeError: rules is not iterable` and failed the request. The adjacent `asset_worker` branch already falls back to `[]` in this case; the `user_worker` branch now does the same.
+
+- [#13654](https://github.com/cloudflare/workers-sdk/pull/13654) [`6d27479`](https://github.com/cloudflare/workers-sdk/commit/6d2747962be5ed8707840ce3cf138d1e2c434d10) Thanks [@pombosilva](https://github.com/pombosilva)! - fix: Preserve internal counter suffix on workflow step names in local explorer API
+
+  Stop stripping the `-N` suffix from step names in the API response so the UI can distinguish duplicate step names. The suffix is now stripped only visually in the UI.
+
+## 4.20260424.0
+
+### Minor Changes
+
+- [#13234](https://github.com/cloudflare/workers-sdk/pull/13234) [`7fc50c1`](https://github.com/cloudflare/workers-sdk/commit/7fc50c1e5a6dfaaba84e774f4a5053716dae15ee) Thanks [@natewong1313](https://github.com/natewong1313)! - Support serving videos locally, add `publicUrl` option for stable stream preview URLs, and add caption upload support via ReadableStream
+
+  Videos uploaded while in local mode are now served at `/cdn-cgi/mf/stream/<video-id>/watch`. The `preview` field in `StreamVideo` is now directly fetchable during development.
+
+  A new `publicUrl` option on `MiniflareOptions` allows callers (e.g. Wrangler, the Vite plugin) to advertise a stable, externally-reachable URL for the Miniflare instance. When set, Stream preview URLs use this value instead of the runtime entry URL, so they remain valid across runtime restarts and port changes. The same value is also exposed as a mutable `miniflare.publicUrl` property.
+
+  The helper functions `buildPublicUrl` and `getLocallyAccessibleHost` are now exported from `miniflare`, enabling consumers to construct client-reachable URLs that correctly handle IPv6 addresses (bracketing) and wildcard listen addresses (`0.0.0.0`, `::`, `*` → `127.0.0.1`).
+
+  Caption uploads via `ReadableStream` are now supported in local mode. They no longer throw a "not supported in local mode" error.
+
+### Patch Changes
+
+- [#13633](https://github.com/cloudflare/workers-sdk/pull/13633) [`3494842`](https://github.com/cloudflare/workers-sdk/commit/34948423c4d873a3b493091b2a39ae9ed389bb67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260421.1 | 1.20260422.1 |
+
+- [#13645](https://github.com/cloudflare/workers-sdk/pull/13645) [`7d728fb`](https://github.com/cloudflare/workers-sdk/commit/7d728fbca56a58b621767c83f734c1daf3e11c41) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260422.1 | 1.20260423.1 |
+
+- [#13657](https://github.com/cloudflare/workers-sdk/pull/13657) [`df9319d`](https://github.com/cloudflare/workers-sdk/commit/df9319d3c302866db7972ec5636a80d041e80900) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260423.1 | 1.20260424.1 |
+
+- [#13659](https://github.com/cloudflare/workers-sdk/pull/13659) [`3ceeec3`](https://github.com/cloudflare/workers-sdk/commit/3ceeec34173d110048d0c18db5dd4d60fa308f75) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Make the dev registry watcher reliable on Windows
+
+  The filesystem-based dev registry used `chokidar` with default settings, which on Windows backs onto `fs.watch` (`ReadDirectoryChangesW`). That API is known to drop or delay create events for files added shortly after the watcher attaches, which is especially common under CI virtualization. When this happened, a process that had attached its watcher before another process registered its worker would never be notified of the new entry until the next 30-second heartbeat — long enough to time out cross-process service-binding calls.
+
+  Switch to chokidar's polling mode on Windows so the dev registry observes cross-process worker registrations reliably. The registry directory is small and a 100ms poll interval has negligible cost. Non-Windows platforms continue to use the more efficient native filesystem-event backend.
+
+- [#13560](https://github.com/cloudflare/workers-sdk/pull/13560) [`7567ef7`](https://github.com/cloudflare/workers-sdk/commit/7567ef703f1bf157ef29e6d19dd0dd9f1ff8771f) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Preserve NonRetryableError message and name when the `workflows_preserve_non_retryable_error_message` compatibility flag is enabled, instead of replacing it with a generic error message.
+
+- [#13644](https://github.com/cloudflare/workers-sdk/pull/13644) [`377715d`](https://github.com/cloudflare/workers-sdk/commit/377715d9f6ec7f3428e12a6ce56b367984fb0673) Thanks [@MattieTK](https://github.com/MattieTK)! - Update `@clack/core` and `@clack/prompts` to v1.2.0
+
+  Bumps the bundled `@clack/core` dependency used internally by `@cloudflare/cli` from `0.3.x` to `1.2.0`, and the `@clack/prompts` dependency in `create-cloudflare` from `0.6.x` to `1.2.0`. Clack v1 includes a number of API changes, but no user-facing prompt behaviour changes are expected.
+
 ## 4.20260421.0
 
 ### Patch Changes

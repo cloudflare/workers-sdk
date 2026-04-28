@@ -1,6 +1,6 @@
 import { Loader } from "@cloudflare/kumo";
 import { CheckIcon, PlusIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { memo } from "react";
 import { CopyButton } from "./CopyButton";
 import { formatDuration, formatJson } from "./helpers";
 import { ScrollableCodeBlock } from "./ScrollableCodeBlock";
@@ -27,7 +27,7 @@ function StepStatusIcon({
 			);
 		}
 		return (
-			<div className="flex size-5 items-center justify-center rounded bg-kumo-danger">
+			<div className="flex size-5 items-center justify-center rounded bg-kumo-badge-red">
 				<span className="text-xs font-bold text-white">!</span>
 			</div>
 		);
@@ -41,7 +41,7 @@ function StepStatusIcon({
 			);
 		}
 		return (
-			<div className="flex size-5 items-center justify-center rounded bg-kumo-success">
+			<div className="flex size-5 items-center justify-center rounded bg-kumo-badge-teal">
 				<CheckIcon size={12} weight="bold" className="text-white" />
 			</div>
 		);
@@ -56,23 +56,38 @@ function StepStatusIcon({
 const TYPE_BADGE_STYLES: Record<string, string> = {
 	step: "bg-kumo-tint text-kumo-subtle",
 	sleep: "bg-kumo-overlay text-kumo-subtle",
-	waitForEvent: "bg-kumo-brand/10 text-kumo-brand",
+	waitForEvent: "bg-kumo-badge-purple/10 text-kumo-badge-purple",
 };
 
-export function StepRow({ step }: { step: StepData }): JSX.Element {
-	const [expanded, setExpanded] = useState(false);
+export function getStepKey(step: StepData): string {
+	return `${step.type}-${step.name}`;
+}
 
+/** Strip the internal "-N" counter suffix for display purposes */
+export function getStepDisplayName(name: string | undefined): string {
+	return (name ?? "Unknown step").replace(/-\d+$/, "");
+}
+
+export const StepRow = memo(function StepRow({
+	step,
+	isExpanded,
+	onToggleExpanded,
+}: {
+	step: StepData;
+	isExpanded: boolean;
+	onToggleExpanded: () => void;
+}): JSX.Element {
 	const hasDetails =
 		step.type === "step" ||
 		(step.type === "waitForEvent" &&
-			(step.error || step.output !== undefined || step.finished));
+			(step.error || step.output != null || step.finished));
 
 	return (
 		<div className="border-b border-kumo-fill p-1 last:border-b-0">
 			{/* Collapsed row */}
 			<div
 				className={`grid h-10 grid-cols-[20px_1fr_160px_160px_80px_24px] items-center gap-3 rounded-lg px-2 transition-colors ${hasDetails ? "cursor-pointer hover:bg-kumo-fill" : ""}`}
-				onClick={hasDetails ? () => setExpanded(!expanded) : undefined}
+				onClick={hasDetails ? onToggleExpanded : undefined}
 			>
 				<StepStatusIcon
 					success={step.success}
@@ -89,7 +104,7 @@ export function StepRow({ step }: { step: StepData }): JSX.Element {
 						</span>
 					)}
 					<span className="truncate text-sm text-kumo-default">
-						{step.name ?? "Unknown step"}
+						{getStepDisplayName(step.name)}
 					</span>
 				</div>
 
@@ -103,7 +118,7 @@ export function StepRow({ step }: { step: StepData }): JSX.Element {
 					{hasDetails ? (
 						<PlusIcon
 							size={14}
-							className={`text-kumo-subtle transition-transform ${expanded ? "rotate-45" : ""}`}
+							className={`text-kumo-subtle transition-transform ${isExpanded ? "rotate-45" : ""}`}
 						/>
 					) : (
 						<div className="w-6" />
@@ -112,7 +127,7 @@ export function StepRow({ step }: { step: StepData }): JSX.Element {
 			</div>
 
 			{/* Expanded detail panel */}
-			{expanded && hasDetails && (
+			{isExpanded && hasDetails && (
 				<div className="-mx-1 -mb-1">
 					<div className="mt-1 h-2 rounded-t-lg border-t border-kumo-fill" />
 					<div className="px-4 pt-3 pb-4">
@@ -125,7 +140,7 @@ export function StepRow({ step }: { step: StepData }): JSX.Element {
 			)}
 		</div>
 	);
-}
+});
 
 function StepCodeCard({
 	label,

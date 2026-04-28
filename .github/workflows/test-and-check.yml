@@ -153,27 +153,14 @@ jobs:
       - name: Run tests (fixtures)
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
         # Browser Run fixture is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
-        # start-worker-node is excluded here and run separately below — its worker.dispose() cleanup
-        # hangs when any other fixture runs in parallel, causing the file-level node:test timeout to fire.
         # Since the dev registry is now file-based (not network-based), fixture tests can safely run in parallel.
         # Concurrency is capped at 2 to avoid CPU starvation on CI runners when multiple fixtures
         # spawn workerd processes simultaneously (Windows runners are especially slow under load).
-        run: pnpm run test:ci --concurrency=2 --log-order=stream --filter="./fixtures/*" --filter="!./fixtures/start-worker-node-test" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-run"' || '' }}
+        run: pnpm run test:ci --concurrency=2 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-run"' || '' }}
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
-          CI_OS: ${{ matrix.description }}
-
-      - name: Run tests (start-worker-node)
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
-        # This fixture must run alone — worker.dispose() cleanup hangs under any parallel load,
-        # causing node:test's file-level timeout to fire even though all individual tests pass in <1s.
-        run: pnpm run test:ci --log-order=stream --filter="./fixtures/start-worker-node-test"
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/start-worker-node/index.html
           CI_OS: ${{ matrix.description }}
 
       - name: Upload turbo logs

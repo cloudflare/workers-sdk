@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, it } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../../config-cache";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -8,6 +10,7 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { PagesConfigCache } from "../../pages/types";
 import type { ExpectStatic } from "vitest";
 
 /** Create a mock handler for the request to delete a Pages deployment. */
@@ -119,5 +122,39 @@ describe("pages deployment delete", () => {
 		);
 
 		expect(std.out).toContain("Successfully deleted deployment abc123");
+	});
+
+	it("should prefer CLOUDFLARE_ACCOUNT_ID over cached account id", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-var-account-id");
+
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "stale-cached-account-id",
+			project_name: "my-project",
+		});
+
+		msw.use(
+			http.delete(
+				"*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId",
+				({ params }) => {
+					expect(params.accountId).toEqual("env-var-account-id");
+					return HttpResponse.json(
+						{
+							result: null,
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler(
+			"pages deployment delete abc123 --project-name=my-project --force"
+		);
 	});
 });

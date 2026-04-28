@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import type { Arg } from "@cloudflare/cli/interactive";
+import type { Arg } from "@cloudflare/cli-shared-helpers/interactive";
 import type { C3Args } from "types";
 
 /**

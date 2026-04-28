@@ -13,6 +13,8 @@ import {
 	ABORT_REASONS,
 	createWorkflowError,
 	isAbortError,
+	PreservedNonRetryableError,
+	shouldPreserveNonRetryableError,
 	WorkflowFatalError,
 } from "./lib/errors";
 import {
@@ -1124,10 +1126,14 @@ export class Engine extends DurableObject<Env> {
 					err.name === "NonRetryableError" ||
 					err.message.startsWith("NonRetryableError")
 				) {
+					const fatalError = shouldPreserveNonRetryableError()
+						? new PreservedNonRetryableError(err)
+						: new WorkflowFatalError(
+								`The execution of the Workflow instance was terminated, as a step threw an NonRetryableError and it was not handled`
+							);
+
 					this.writeLog(InstanceEvent.WORKFLOW_FAILURE, null, null, {
-						error: new WorkflowFatalError(
-							`The execution of the Workflow instance was terminated, as a step threw an NonRetryableError and it was not handled`
-						),
+						error: fatalError,
 					});
 
 					await this.setStatus(accountId, instance.id, InstanceStatus.Errored);

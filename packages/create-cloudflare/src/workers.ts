@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { warn } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { runCommand } from "@cloudflare/cli/command";
+import { warn } from "@cloudflare/cli-shared-helpers";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, readJSON, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";

@@ -435,9 +435,15 @@ export async function bundleWorker(
 
 	let result: esbuild.BuildResult<typeof buildOptions>;
 	let stop: BundleResult["stop"];
+	// Hoisted so the `catch` below can dispose any esbuild context that was
+	// created before the initial build failed. Without this, a failing initial
+	// build (e.g. unresolvable entrypoint) leaves the esbuild child process
+	// running for the lifetime of the Node process, keeping the event loop
+	// alive and preventing clean exit.
+	let ctx: esbuild.BuildContext<typeof buildOptions> | undefined;
 	try {
 		if (watch) {
-			const ctx = await esbuild.context(buildOptions);
+			ctx = await esbuild.context(buildOptions);
 			await ctx.watch();
 			result = await initialBuildResultPromise;
 			if (result.errors.length > 0) {
@@ -448,9 +454,10 @@ export async function bundleWorker(
 				);
 			}
 
+			const ctxForStop = ctx;
 			stop = async function () {
 				tmpDir.remove();
-				await ctx.dispose();
+				await ctxForStop.dispose();
 			};
 		} else {
 			result = await esbuild.build(buildOptions);
@@ -478,6 +485,15 @@ export async function bundleWorker(
 			};
 		}
 	} catch (e) {
+		if (ctx !== undefined) {
+			// Best-effort cleanup of the esbuild context; swallow errors because
+			// we are re-throwing the original build failure anyway.
+			try {
+				await ctx.dispose();
+			} catch {
+				// intentionally empty
+			}
+		}
 		if (isBuildFailure(e)) {
 			rewriteNodeCompatBuildFailure(e.errors, nodejsCompatMode);
 			rewriteUnresolvedModuleBuildFailure(e.errors);

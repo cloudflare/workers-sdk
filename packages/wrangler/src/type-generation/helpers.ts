@@ -117,6 +117,10 @@ export const getRuntimeHeader = (
  * @throws {ParseError} If the provided value cannot be parsed as a boolean.
  */
 const unsafeParseBooleanString = (value: unknown): boolean => {
+	if (typeof value === "boolean") {
+		return value;
+	}
+
 	if (typeof value !== "string") {
 		throw new ParseError({
 			text: `Invalid value: ${value}`,

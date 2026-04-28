@@ -8,10 +8,12 @@ export function normaliseServiceDesignator(
 ): {
 	serviceName: string | undefined;
 	entrypoint: string | undefined;
+	props: Record<string, unknown> | undefined;
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined;
 } {
 	let serviceName: string | undefined;
 	let entrypoint: string | undefined;
+	let props: Record<string, unknown> | undefined;
 	let remoteProxyConnectionString: RemoteProxyConnectionString | undefined;
 
 	if (typeof service === "string") {
@@ -19,12 +21,14 @@ export function normaliseServiceDesignator(
 	} else if (typeof service === "object" && "name" in service) {
 		serviceName = service.name !== kCurrentWorker ? service.name : undefined;
 		entrypoint = service.entrypoint;
+		props = service.props;
 		remoteProxyConnectionString = service.remoteProxyConnectionString;
 	}
 
 	return {
 		serviceName,
 		entrypoint,
+		props,
 		remoteProxyConnectionString,
 	};
 }

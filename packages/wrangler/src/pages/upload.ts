@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { spinner } from "@cloudflare/cli/interactive";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	APIError,
 	COMPLIANCE_REGION_CONFIG_PUBLIC,

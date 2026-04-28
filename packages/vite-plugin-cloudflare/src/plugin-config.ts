@@ -1,9 +1,9 @@
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { defu } from "defu";
 import * as vite from "vite";
 import * as wrangler from "wrangler";
+import { DEFAULT_COMPAT_DATE } from "./build-constants";
 import { getWorkerConfigs } from "./deploy-config";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import {
@@ -74,6 +74,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 	persistState?: PersistState;
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
+	tunnel?: boolean;
 	experimental?: Experimental;
 }
 
@@ -97,6 +98,7 @@ interface BaseResolvedConfig {
 	inspectorPort: number | false | undefined;
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport">;
 	remoteBindings: boolean;
+	tunnel: boolean;
 }
 
 interface NonPreviewResolvedConfig extends BaseResolvedConfig {
@@ -244,7 +246,7 @@ function resolveWorkerConfig(
 					configCustomizer: options.configCustomizer,
 				});
 
-	workerConfig.compatibility_date ??= getTodaysCompatDate();
+	workerConfig.compatibility_date ??= DEFAULT_COMPAT_DATE;
 
 	if (isEntryWorker) {
 		workerConfig.name ??= wrangler.unstable_getWorkerNameFromProject(
@@ -270,6 +272,7 @@ export function resolvePluginConfig(
 	const shared = {
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
+		tunnel: pluginConfig.tunnel ?? false,
 		experimental: {
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
