@@ -224,7 +224,8 @@ import {
 import ci from "ci-info";
 import TOML from "smol-toml";
 import dedent from "ts-dedent";
-import { fetch, WebSocket } from "undici";
+import { fetch } from "undici";
+import WebSocket from "ws";
 import {
 	getConfigCache,
 	purgeConfigCaches,
@@ -1137,7 +1138,7 @@ async function getOauthTokenViaWebSocket(options: {
 		//    free, so we do it as early as possible.
 		const messagePromise = new Promise<{ code?: string; error?: string }>(
 			(resolve, reject) => {
-				const onMessage = (event: MessageEvent) => {
+				const onMessage = (event: WebSocket.MessageEvent) => {
 					cleanup();
 					try {
 						const data =
@@ -1217,11 +1218,17 @@ async function getOauthTokenViaWebSocket(options: {
 			clearTimeout(loginTimeoutHandle);
 		}
 		// Remove the WebSocket listeners before closing. After this,
-		// `ws.close()` won't dispatch any listeners, so `messagePromise` either
-		// already settled (consumed by the race) or stays pending forever (and
-		// is GC'd) — never producing an orphan rejection.
+		// neither `close()` nor `terminate()` will dispatch any listeners, so
+		// `messagePromise` either already settled (consumed by the race) or
+		// stays pending forever (and is GC'd) — never producing an orphan
+		// rejection.
 		cleanup();
-		ws.close();
+		// Force-destroy the underlying TLS socket. The auth-worker DO has
+		// already done its job and we don't need a graceful close handshake;
+		// waiting for the Cloudflare edge to FIN the TCP connection delays
+		// process exit by ~10s, which the user perceives as wrangler hanging
+		// after "Successfully logged in.".
+		ws.terminate();
 	}
 }
 
