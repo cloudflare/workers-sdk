@@ -613,6 +613,11 @@ describe("User", () => {
 
 					expect(std.warn).toContain("Could not reach the auth relay");
 					expect(std.warn).toContain("ECONNREFUSED");
+					// The failed relay socket must be terminated (readyState
+					// 3 === CLOSED) and not leaked in CONNECTING state —
+					// asserts `ws.terminate()` ran in the outer `finally`
+					// after the connect promise rejected.
+					expect(MockWebSocket.last?.readyState).toBe(3);
 					expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
 						api_token: undefined,
 						oauth_token: "test-access-token",
@@ -634,6 +639,7 @@ describe("User", () => {
 
 					expect(std.warn).toContain("Could not reach the auth relay");
 					expect(std.warn).toContain("connection closed before open");
+					expect(MockWebSocket.last?.readyState).toBe(3);
 					expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
 						api_token: undefined,
 						oauth_token: "test-access-token",
@@ -655,6 +661,7 @@ describe("User", () => {
 
 					expect(std.warn).toContain("Could not reach the auth relay");
 					expect(std.warn).toContain("connect timed out after 50ms");
+					expect(MockWebSocket.last?.readyState).toBe(3);
 					expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
 						api_token: undefined,
 						oauth_token: "test-access-token",
