@@ -1,5 +1,118 @@
 # wrangler
 
+## 4.86.0
+
+### Minor Changes
+
+- [#13605](https://github.com/cloudflare/workers-sdk/pull/13605) [`ea943ff`](https://github.com/cloudflare/workers-sdk/commit/ea943ffcc3551b499591d96547228e0fe844b058) Thanks [@danielgek](https://github.com/danielgek)! - Add namespace support to `wrangler ai-search` commands
+
+  All `wrangler ai-search` instance commands (`create`, `list`, `get`, `update`, `delete`, `stats`, `search`) now accept a `--namespace` (or `-n`) flag to target a specific AI Search namespace. When the flag is omitted, commands default to the `default` namespace that Cloudflare automatically provisions for every account.
+
+  `wrangler ai-search list` now displays a `namespace` column, and `wrangler ai-search create` offers an interactive picker for existing namespaces (with an option to create a new one) when `--namespace` is not supplied in an interactive session.
+
+  A new `wrangler ai-search namespace` subcommand group is also introduced, with `list`, `create`, `get`, `update`, and `delete` subcommands for managing namespaces directly.
+
+  ```sh
+  wrangler ai-search list --namespace blog
+  wrangler ai-search create my-instance --namespace blog --type r2 --source my-bucket
+  wrangler ai-search namespace create blog --description "Blog content"
+  ```
+
+- [#13637](https://github.com/cloudflare/workers-sdk/pull/13637) [`9eb9e69`](https://github.com/cloudflare/workers-sdk/commit/9eb9e69ade8e8195c79a408f821d4f4899ab91a2) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `--tunnel` flag to `wrangler dev` for sharing your local dev server via Cloudflare Quick Tunnels
+
+  You can now expose your local dev server publicly by passing `--tunnel`:
+
+  ```sh
+  wrangler dev --tunnel
+  ```
+
+  This starts a Cloudflare Quick Tunnel that gives you a random `*.trycloudflare.com` URL to share. The tunnel stops automatically when the dev session ends. Quick tunnels don't require a Cloudflare account or any configuration.
+
+  A warning is shown when Server-Sent Events (SSE) responses are detected through the tunnel, since quick tunnels don't support SSE.
+
+- [#13661](https://github.com/cloudflare/workers-sdk/pull/13661) [`0a5db08`](https://github.com/cloudflare/workers-sdk/commit/0a5db08137a90594257953e5ff49a5b11daa1c0f) Thanks [@aspizu](https://github.com/aspizu)! - `wrangler tail` will now log stack traces. These stack traces already include resolved frames if you have chosen to upload sourcemaps.
+
+- [#13617](https://github.com/cloudflare/workers-sdk/pull/13617) [`118027d`](https://github.com/cloudflare/workers-sdk/commit/118027d501abfe2a15cdc4f2e3817ee64d7631f0) Thanks [@roerohan](https://github.com/roerohan)! - Force Flagship bindings to always use remote mode in local dev
+
+  Flagship bindings now always access the remote Flagship service during local development, matching the behavior of AI bindings. Previously, Flagship supported both local and remote modes, but the local stub only returned default values, providing no real functionality and creating a dual source of truth for flag evaluations.
+
+  The `remote` config field is retained for backward compatibility but only controls whether a warning is displayed. Setting `remote: true` suppresses the warning that Flagship bindings always access remote resources and may incur usage charges in local dev.
+
+- [#13254](https://github.com/cloudflare/workers-sdk/pull/13254) [`e867ac2`](https://github.com/cloudflare/workers-sdk/commit/e867ac28dce5923331c9b8ad50a8feccfedf6c5c) Thanks [@tgarg-cf](https://github.com/tgarg-cf)! - Add `wrangler queues consumer list` subcommands for listing queue consumers
+
+  Three new commands are available for listing consumers on a queue:
+
+  - `wrangler queues consumer list <queue-name>` — lists all consumers (both worker and HTTP pull), grouped by type
+  - `wrangler queues consumer worker list <queue-name>` — lists only worker consumers
+  - `wrangler queues consumer http list <queue-name>` — lists only HTTP pull consumers
+
+### Patch Changes
+
+- [#13696](https://github.com/cloudflare/workers-sdk/pull/13696) [`62e9f2a`](https://github.com/cloudflare/workers-sdk/commit/62e9f2a465cf7f80817e35b0b8d2196402db3731) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260424.1 | 1.20260426.1 |
+
+- [#13576](https://github.com/cloudflare/workers-sdk/pull/13576) [`2dc6175`](https://github.com/cloudflare/workers-sdk/commit/2dc61751451f142dbf93e618133a5c8942c07c9a) Thanks [@MattieTK](https://github.com/MattieTK)! - Restore telemetry tracking for common CLI flags that were unintentionally dropped during sanitisation
+
+  When argument sanitisation was introduced, only explicitly allow-listed args had their values included in telemetry. The allow list was very conservative, which meant common boolean flags like `--remote`, `--json`, `--dry-run`, `--force`, and many others were no longer being captured in `sanitizedArgs` despite previously being tracked. Boolean flags are inherently safe (values are only `true`/`false`), so these have now been added back to the global allow list. A small number of fixed-choice args (`--local-protocol`, `--upstream-protocol`, `--containers-rollout`) have also been added with their known value sets.
+
+- [#13649](https://github.com/cloudflare/workers-sdk/pull/13649) [`ae8eae3`](https://github.com/cloudflare/workers-sdk/commit/ae8eae3fd5d374aed8edcc0aa61d0af4a8d08118) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix service binding and tail consumer `props` being dropped between workers in different local dev instances
+
+  When a service binding or tail consumer configured with `props` targeted a worker running in a separate `wrangler dev` instance (via the dev registry), the `props` were silently dropped and the remote entrypoint saw an empty `ctx.props`. Props are now forwarded correctly across the dev registry boundary, matching the behavior users get when all workers run in a single instance.
+
+  ```jsonc
+  // wrangler.json
+  {
+    "services": [
+      {
+        "binding": "AUTH",
+        "service": "auth-worker", // may be in a separate `wrangler dev` process
+        "entrypoint": "SessionEntry",
+        "props": { "tenant": "acme" }
+      }
+    ]
+  }
+  ```
+
+  The target worker's `SessionEntry` entrypoint now correctly receives `{ tenant: "acme" }` on `ctx.props` regardless of which local dev instance it runs in.
+
+- [#13662](https://github.com/cloudflare/workers-sdk/pull/13662) [`f2e2241`](https://github.com/cloudflare/workers-sdk/commit/f2e22413eedea892a230e2197a1c0d677e3dab66) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix three resource leaks in `unstable_startWorker` teardown that could prevent Node from exiting cleanly after `worker.dispose()`.
+
+  - The esbuild context created by `bundleWorker` is now disposed when the initial build fails. Previously a failing initial build (e.g. an unresolvable entrypoint, or a worker started with an invalid config via `setConfig`) left the esbuild child process running for the lifetime of the parent Node process.
+  - `runBuild`'s cleanup function now awaits the in-flight build before running the bundler's stop handler. Previously teardown could return before `esbuild.BuildContext.dispose()` had been called, so the esbuild watcher kept the event loop alive after dispose had resolved.
+  - `BundlerController.teardown()` now runs the esbuild cleanup before removing the bundler's temporary directory, and aborts the in-flight bundle build so it cannot emit stale `bundleStart`/`bundleComplete` events after teardown. Previously the tmpdir was removed first, which in race with an in-flight rebuild produced confusing "Could not resolve `.wrangler/tmp/bundle-XXXX/middleware-loader.entry.ts`" errors during dispose.
+
+- [#13674](https://github.com/cloudflare/workers-sdk/pull/13674) [`4f6ed93`](https://github.com/cloudflare/workers-sdk/commit/4f6ed938464687ed854864b551aeb9bbf26d9cd5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Stop emitting a misleading `[wrangler:error] Docker build exited with code: <n>` log when the user aborts an in-progress container image build (for example by pressing the `r` rebuild hotkey while the previous build is still running).
+
+  The abort-detection branch in the local and multi-worker runtime controllers was matching the wrong error message — it checked for `"Build exited with code: 1"`, but the error thrown by the docker build helper is actually `"Docker build exited with code: <n>"`, and the exit code after a process-group SIGINT/SIGKILL is typically `130`/`137`/`143`, not `1`. As a result, every legitimate user-initiated rebuild abort produced a spurious error event and `[wrangler:error]` log line. The check now matches the real error message prefix and ignores any non-zero exit code from the aborted build, so a user-requested rebuild while another build is in progress is silent.
+
+- [#13667](https://github.com/cloudflare/workers-sdk/pull/13667) [`ed2f4ec`](https://github.com/cloudflare/workers-sdk/commit/ed2f4ec7b7c2ffeec77b244292b5ee91300fe7cd) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: Preserve auth in remote proxy session data to avoid unnecessary session restarts
+
+  `maybeStartOrUpdateRemoteProxySession` was not including `auth` in its return value, so on subsequent calls `preExistingRemoteProxySessionData.auth` was always `undefined`. This caused the auth comparison to always detect a change, disposing and recreating the remote proxy session on every reload even when auth had not changed.
+
+- [#13695](https://github.com/cloudflare/workers-sdk/pull/13695) [`92bb8a5`](https://github.com/cloudflare/workers-sdk/commit/92bb8a529271219c5f4539582bd79bbf9dd83a7b) Thanks [@alexanderniebuhr](https://github.com/alexanderniebuhr)! - `wrangler types --check` no longer throws when the types file was generated with an explicit boolean flag. Previously, yargs would parse such flags as actual booleans rather than strings, causing an internal parse error.
+
+- [#13662](https://github.com/cloudflare/workers-sdk/pull/13662) [`f2e2241`](https://github.com/cloudflare/workers-sdk/commit/f2e22413eedea892a230e2197a1c0d677e3dab66) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix the `wrangler tail` command leaking a signal-exit listener after the tail has been cleanly closed.
+
+  The tail command registered both a `tail.on("close", exit)` listener and a process-level `onExit(exit)` handler, but never removed the latter after `exit()` had run. In long-lived CLI processes this is harmless — the handler eventually runs once on shutdown — but in unit tests that repeatedly invoke `wrangler tail`, every invocation accumulates a handler that fires during test-runner shutdown. Those late invocations call `deleteTail()` after the test's auth mocks have been torn down, producing spurious "Not logged in" unhandled rejections which fail the Linux CI runs.
+
+  The handler is now removed as soon as `exit()` runs, and `exit()` is guarded against re-entry so it is idempotent if both the WebSocket `close` event and a real signal fire for the same session.
+
+- [#13187](https://github.com/cloudflare/workers-sdk/pull/13187) [`fcc491a`](https://github.com/cloudflare/workers-sdk/commit/fcc491aa375e386a829001e38d405510a974ea5e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Recognize Hydrogen as a known unsupported framework in autoconfig
+
+  Previously, Hydrogen projects were incorrectly identified as React Router (since Hydrogen uses React Router under the hood), leading to a confusing autoconfig experience. Hydrogen is now recognized as a distinct unsupported framework, so users see a clear message that Hydrogen is not yet supported instead of being guided through React Router configuration.
+
+- [#13628](https://github.com/cloudflare/workers-sdk/pull/13628) [`e6c437a`](https://github.com/cloudflare/workers-sdk/commit/e6c437a3d40d2619a47c886673969969c6a8a87d) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: prioritise `CLOUDFLARE_ACCOUNT_ID` over a cached account id for all Pages commands
+
+  Previously, some Pages commands (`pages deploy`, `pages deployment list/delete/tail`, `pages download config`, `pages secret`) used a cached account id over the `CLOUDFLARE_ACCOUNT_ID` environment variable. The `pages project` commands already correctly prioritised `CLOUDFLARE_ACCOUNT_ID`.
+
+- Updated dependencies [[`21b87b2`](https://github.com/cloudflare/workers-sdk/commit/21b87b298574ec5b32d3611eb664414392f850a8), [`62e9f2a`](https://github.com/cloudflare/workers-sdk/commit/62e9f2a465cf7f80817e35b0b8d2196402db3731), [`033d6ec`](https://github.com/cloudflare/workers-sdk/commit/033d6ec3f4cd5fe3893127a86ad8d954d43b16a6), [`ae8eae3`](https://github.com/cloudflare/workers-sdk/commit/ae8eae3fd5d374aed8edcc0aa61d0af4a8d08118), [`ef24ff2`](https://github.com/cloudflare/workers-sdk/commit/ef24ff28d905ca3706a272653c52a342de3c4339), [`6d27479`](https://github.com/cloudflare/workers-sdk/commit/6d2747962be5ed8707840ce3cf138d1e2c434d10), [`118027d`](https://github.com/cloudflare/workers-sdk/commit/118027d501abfe2a15cdc4f2e3817ee64d7631f0)]:
+  - miniflare@4.20260426.0
+
 ## 4.85.0
 
 ### Minor Changes

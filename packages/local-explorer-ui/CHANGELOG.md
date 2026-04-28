@@ -1,5 +1,15 @@
 # @cloudflare/local-explorer-ui
 
+## 0.13.3
+
+### Patch Changes
+
+- [#13654](https://github.com/cloudflare/workers-sdk/pull/13654) [`6d27479`](https://github.com/cloudflare/workers-sdk/commit/6d2747962be5ed8707840ce3cf138d1e2c434d10) Thanks [@pombosilva](https://github.com/pombosilva)! - fix: Preserve expanded workflow steps across polling and improve instance page UX
+
+  Expanded steps no longer collapse when new steps arrive via polling. Expansion state is lifted into the parent component and tracked by stable step keys, and polling skips state updates when data hasn't changed.
+
+  Also: navigate to instance page after triggering, distinct refresh/restart icons, toolbar layout below stats strip, always-visible stats, unified status colors, and visual-only stripping of internal step name suffixes.
+
 ## 0.13.2
 
 ### Patch Changes
