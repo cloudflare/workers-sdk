@@ -187,7 +187,7 @@ export function createWorkerUploadForm(
 		metadataBindings.push({ name: binding, type: "secret_text", text: value });
 	});
 
-	kv_namespaces.forEach(({ id, binding, raw }) => {
+	kv_namespaces.forEach(({ id, binding, kv_namespace, raw }) => {
 		// If we're doing a dry run there's no way to know whether or not a KV namespace
 		// is inheritable or requires provisioning (since that would require hitting the API).
 		// As such, _assume_ any undefined IDs are inheritable when doing a dry run.
@@ -197,7 +197,9 @@ export function createWorkerUploadForm(
 		}
 
 		if (id === undefined) {
-			throw new UserError(`${binding} bindings must have an "id" field`);
+			throw new UserError(
+				`KV namespace binding "${binding}" is missing an "id". ${kv_namespace ? `The namespace name "${kv_namespace}" should have been resolved before upload.` : "Please provide an id or kv_namespace."}`
+			);
 		}
 
 		if (id === INHERIT_SYMBOL) {
@@ -361,7 +363,11 @@ export function createWorkerUploadForm(
 		});
 	});
 
-	hyperdrive.forEach(({ binding, id }) => {
+	hyperdrive.forEach(({ binding, id, hyperdrive_name }) => {
+		assert(
+			id,
+			`Hyperdrive binding "${binding}" is missing an "id". ${hyperdrive_name ? `The name "${hyperdrive_name}" should have been resolved before upload.` : "Please provide an id or hyperdrive_name."}`
+		);
 		metadataBindings.push({
 			name: binding,
 			type: "hyperdrive",
@@ -411,7 +417,11 @@ export function createWorkerUploadForm(
 		});
 	});
 
-	vpc_services.forEach(({ binding, service_id }) => {
+		vpc_services.forEach(({ binding, service_id, service_name }) => {
+		assert(
+			service_id,
+			`VPC service binding "${binding}" is missing a "service_id". ${service_name ? `The service name "${service_name}" should have been resolved before upload.` : "Please provide a service_id or service_name."}`
+		);
 		metadataBindings.push({
 			name: binding,
 			type: "vpc_service",
@@ -473,7 +483,11 @@ export function createWorkerUploadForm(
 		});
 	});
 
-	mtls_certificates.forEach(({ binding, certificate_id }) => {
+	mtls_certificates.forEach(({ binding, certificate_id, certificate_name }) => {
+		assert(
+			certificate_id,
+			`mTLS certificate binding "${binding}" is missing a "certificate_id". ${certificate_name ? `The certificate name "${certificate_name}" should have been resolved before upload.` : "Please provide a certificate_id or certificate_name."}`
+		);
 		metadataBindings.push({
 			name: binding,
 			type: "mtls_certificate",

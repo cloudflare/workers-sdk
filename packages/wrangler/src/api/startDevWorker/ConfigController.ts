@@ -36,6 +36,8 @@ import { getScriptName } from "../../utils/getScriptName";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
 import { printBindings } from "../../utils/print-bindings";
 import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
+import { resolveBindingNames } from "../../deployment-bundle/resolve-binding-names";
+import { resolveVpcServiceBindings } from "../../vpc/client";
 import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -186,6 +188,10 @@ async function resolveBindings(
 		input.bindings,
 		input.defaultBindings
 	);
+
+	// Resolve binding names (e.g. service_name, title, config_name) to IDs
+	await resolveVpcServiceBindings(config, bindings);
+	await resolveBindingNames(config, bindings);
 
 	// Create a print function that captures the current bindings context
 	const printCurrentBindings = (registry: WorkerRegistry | null) => {
