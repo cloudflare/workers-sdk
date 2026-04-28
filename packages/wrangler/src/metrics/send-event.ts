@@ -37,6 +37,8 @@ export type EventNames =
 	| "list r2 buckets"
 	| "delete r2 bucket"
 	| "login user"
+	| "login user (relay attempt)"
+	| "login user (relay fallback)"
 	| "logout user"
 	| "retrieve auth token"
 	| "list dispatch namespaces"
