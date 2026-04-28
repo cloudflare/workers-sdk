@@ -189,7 +189,12 @@ export function extendTunnelExpiry() {
 	tunnelManager?.extendExpiry();
 }
 
-export async function getTunnelOrigin(server: vite.ViteDevServer) {
+/**
+ * Resolve the dev tunnel origin from the running server.
+ *
+ * This simply waits for Vite to start listening and then reuses its resolved URL.
+ */
+export async function resolveDevTunnelOrigin(server: vite.ViteDevServer) {
 	const httpServer = server.httpServer;
 
 	if (!httpServer) {
@@ -216,6 +221,18 @@ export async function getTunnelOrigin(server: vite.ViteDevServer) {
 	return url;
 }
 
+/**
+ * Resolve the preview tunnel origin before preview starts listening.
+ *
+ * Unlike dev, preview does not give us a similar `server.listen()` hook where
+ * we can wait for the final bound URL before starting the tunnel. We resolve
+ * the port up front using Vite's preview port rules so the tunnel and preview
+ * server agree on the same origin:
+ *
+ * - `port: 0`: use any free port
+ * - `strictPort: true`: use the exact port or fail
+ * - otherwise: use the first free port at or above `preview.port`
+ */
 export async function resolvePreviewTunnelOrigin(server: vite.PreviewServer) {
 	const { preview } = server.config;
 	const host = typeof preview.host === "string" ? preview.host : undefined;
@@ -255,7 +272,7 @@ export async function setupDevTunnel(
 	ctx: PluginContext,
 	manager: TunnelManager
 ): Promise<void> {
-	const origin = await getTunnelOrigin(server);
+	const origin = await resolveDevTunnelOrigin(server);
 
 	if (manager.isStarted(origin)) {
 		debuglog("Tunnel is already started on", origin);
@@ -283,6 +300,12 @@ export async function setupDevTunnel(
 	}
 }
 
+/**
+ * Start a preview tunnel on the resolved preview origin.
+ *
+ * We write the resolved port back to preview config so the server binds the
+ * same port that the tunnel is sharing.
+ */
 export async function setupPreviewTunnel(
 	server: vite.PreviewServer,
 	manager: TunnelManager

@@ -13,7 +13,7 @@ import { PluginContext } from "../context";
 import {
 	DEV_PUBLIC_EXPOSURE_WARNING,
 	PREVIEW_PUBLIC_EXPOSURE_WARNING,
-	getTunnelOrigin,
+	resolveDevTunnelOrigin,
 	setupPreviewTunnel,
 	TunnelManager,
 	setupDevTunnel,
@@ -204,7 +204,7 @@ describe("tunnel plugin", () => {
 	it("rejects tunnel sharing in middleware mode", async ({ expect }) => {
 		const server = { httpServer: null } as unknown as vite.ViteDevServer;
 
-		await expect(getTunnelOrigin(server)).rejects.toThrow(
+		await expect(resolveDevTunnelOrigin(server)).rejects.toThrow(
 			"No HTTP server available for tunnel sharing. Tunnels are not supported in middleware mode."
 		);
 	});
