@@ -2053,6 +2053,115 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
+	describe("hyperdrive local connection strings", () => {
+		const processEnv = process.env;
+		beforeEach(() => (process.env = { ...processEnv }));
+		afterEach(() => (process.env = processEnv));
+
+		function writeHyperdriveWorkerConfig() {
+			fs.writeFileSync("index.js", `export default {};`);
+			writeWranglerConfig({
+				main: "index.js",
+				hyperdrive: [{ binding: "DB", id: "db-id" }],
+			});
+		}
+
+		it("should prefer .dev.vars over .env, process.env, and config for Hyperdrive bindings", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("index.js", `export default {};`);
+			writeWranglerConfig({
+				main: "index.js",
+				hyperdrive: [
+					{
+						binding: "DB",
+						id: "db-id",
+						localConnectionString:
+							"postgres://user:pass@127.0.0.1:5432/config-db",
+					},
+				],
+			});
+			fs.writeFileSync(
+				".env",
+				"CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB=postgres://user:pass@127.0.0.1:5432/dot-env-db\n"
+			);
+			fs.writeFileSync(
+				".dev.vars",
+				"CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB=postgres://user:pass@127.0.0.1:5432/dev-vars-db\n"
+			);
+			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			process.env.CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB =
+				"postgres://user:pass@127.0.0.1:5432/process-env-db";
+			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			process.env.WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB =
+				"postgres://user:pass@127.0.0.1:5432/deprecated-process-env-db";
+
+			const config = await runWranglerUntilConfig("dev");
+
+			expect(config.bindings?.DB).toMatchObject({
+				type: "hyperdrive",
+				id: "db-id",
+				localConnectionString:
+					"postgres://user:pass@127.0.0.1:5432/dev-vars-db",
+			});
+		});
+
+		it("should sync a Hyperdrive local connection string from process.env into bindings", async ({
+			expect,
+		}) => {
+			writeHyperdriveWorkerConfig();
+			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			process.env.CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB =
+				"postgres://user:pass@127.0.0.1:5432/process-env-db";
+
+			const config = await runWranglerUntilConfig("dev");
+
+			expect(config.bindings?.DB).toMatchObject({
+				type: "hyperdrive",
+				id: "db-id",
+				localConnectionString:
+					"postgres://user:pass@127.0.0.1:5432/process-env-db",
+			});
+		});
+
+		it("should sync a Hyperdrive local connection string from .env into bindings", async ({
+			expect,
+		}) => {
+			writeHyperdriveWorkerConfig();
+			fs.writeFileSync(
+				".env",
+				"CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB=postgres://user:pass@127.0.0.1:5432/dot-env-db\n"
+			);
+
+			const config = await runWranglerUntilConfig("dev");
+
+			expect(config.bindings?.DB).toMatchObject({
+				type: "hyperdrive",
+				id: "db-id",
+				localConnectionString: "postgres://user:pass@127.0.0.1:5432/dot-env-db",
+			});
+		});
+
+		it("should sync a Hyperdrive local connection string from .dev.vars into bindings", async ({
+			expect,
+		}) => {
+			writeHyperdriveWorkerConfig();
+			fs.writeFileSync(
+				".dev.vars",
+				"CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB=postgres://user:pass@127.0.0.1:5432/dev-vars-db\n"
+			);
+
+			const config = await runWranglerUntilConfig("dev");
+
+			expect(config.bindings?.DB).toMatchObject({
+				type: "hyperdrive",
+				id: "db-id",
+				localConnectionString:
+					"postgres://user:pass@127.0.0.1:5432/dev-vars-db",
+			});
+		});
+	});
+
 	describe(".env in local dev", () => {
 		const processEnv = process.env;
 		beforeEach(() => (process.env = { ...processEnv }));
