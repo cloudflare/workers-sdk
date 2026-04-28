@@ -15,6 +15,7 @@ import { logger } from "../../logger";
 import * as metrics from "../../metrics";
 import { parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
+import { getCloudflareAccountIdFromEnv } from "../../user/auth-variables";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../constants";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../errors";
@@ -79,7 +80,8 @@ async function pagesProject(
 	const configCache = getConfigCache<PagesConfigCache>(
 		PAGES_CONFIG_CACHE_FILENAME
 	);
-	const accountId = await requireAuth(configCache);
+	const accountId =
+		getCloudflareAccountIdFromEnv() ?? (await requireAuth(configCache));
 
 	const projectName =
 		cliProjectName ?? config?.name ?? configCache.project_name;

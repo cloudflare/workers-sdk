@@ -1,4 +1,3 @@
-import BINDING_SCRIPT from "worker:flagship/binding";
 import { z } from "zod";
 import {
 	getUserBindingServiceName,
@@ -37,7 +36,6 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 						name,
 						config.remoteProxyConnectionString
 					),
-					entrypoint: "FlagshipBinding",
 				},
 			})
 		);
@@ -66,17 +64,7 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 						name,
 						remoteProxyConnectionString
 					),
-					worker: remoteProxyConnectionString
-						? remoteProxyClientWorker(remoteProxyConnectionString, name)
-						: {
-								compatibilityDate: "2025-03-17",
-								modules: [
-									{
-										name: "binding.worker.js",
-										esModule: BINDING_SCRIPT(),
-									},
-								],
-							},
+					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
 				};
 			}
 		);

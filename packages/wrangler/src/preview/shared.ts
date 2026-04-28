@@ -115,6 +115,8 @@ export function getBindingValue(binding: Binding): string {
 			return binding.secret_name
 				? `${binding.store_id}/${binding.secret_name}`
 				: String(binding.store_id ?? "");
+		case "artifacts":
+			return String(binding.namespace ?? "");
 		case "ratelimit":
 			return String(binding.namespace_id ?? "");
 		case "vpc_service":
@@ -248,6 +250,13 @@ export function extractConfigBindings(config: Config): EnvBindings {
 			type: "secrets_store_secret",
 			store_id: secret.store_id,
 			secret_name: secret.secret_name,
+		};
+	}
+
+	for (const artifact of previews?.artifacts ?? []) {
+		env[artifact.binding] = {
+			type: "artifacts",
+			namespace: artifact.namespace,
 		};
 	}
 

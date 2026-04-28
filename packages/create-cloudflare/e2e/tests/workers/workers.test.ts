@@ -25,7 +25,7 @@ const workerTests = getWorkerTests();
 describe
 	.skipIf(workerTests.length === 0 || isWindows)
 	.concurrent(`E2E: Workers templates`, () => {
-		// eslint-disable-next-line no-empty-pattern
+		// eslint-disable-next-line no-empty-pattern -- Vitest requires the 1st argument to use object destructuring
 		beforeAll(({}, ctx) => {
 			recreateLogFolder(ctx as RunnerTestSuite);
 

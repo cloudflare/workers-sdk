@@ -332,6 +332,5 @@ describe("getPublicPackages()", () => {
 
 		// These are known private packages
 		expect(packageNames).not.toContain("@cloudflare/workers-shared");
-		expect(packageNames).not.toContain("@cloudflare/cli");
 	});
 });

@@ -40,6 +40,7 @@ export interface RuntimeOptions {
 	loopbackAddress: string;
 	requiredSockets: SocketIdentifier[];
 	inspectorAddress?: string;
+	debugPortAddress?: string;
 	verbose?: boolean;
 	handleRuntimeStdio?: (stdout: Readable, stderr: Readable) => void;
 	handleStructuredLogs?: StructuredLogsHandler;
@@ -122,6 +123,9 @@ function getRuntimeArgs(options: RuntimeOptions) {
 	if (options.inspectorAddress !== undefined) {
 		// Required to enable the V8 inspector
 		args.push(`--inspector-addr=${options.inspectorAddress}`);
+	}
+	if (options.debugPortAddress !== undefined) {
+		args.push(`--debug-port=${options.debugPortAddress}`);
 	}
 	if (options.verbose) {
 		args.push("--verbose");

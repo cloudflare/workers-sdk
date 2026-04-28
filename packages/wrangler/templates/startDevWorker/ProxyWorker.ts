@@ -23,6 +23,7 @@ type Request = Parameters<
 >[0];
 
 const LIVE_RELOAD_PROTOCOL = "WRANGLER_PROXYWORKER_LIVE_RELOAD_PROTOCOL";
+const LIVE_RELOAD_PATHNAME = "/cdn-cgi/live-reload";
 export default {
 	fetch(req, env) {
 		const singleton = env.DURABLE_OBJECT.idFromName("");
@@ -155,9 +156,16 @@ export class ProxyWorker implements DurableObject {
 					res = new Response(res.body, res);
 					rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
 
+					await checkForPreviewTokenError(res, this.env, proxyData);
+
 					if (isHtmlResponse(res)) {
-						await checkForPreviewTokenError(res, this.env, proxyData);
 						res = insertLiveReloadScript(request, res, this.env, proxyData);
+					}
+
+					if (isSseResponse(res)) {
+						void sendMessageToProxyController(this.env, {
+							type: "sseResponseDetected",
+						});
 					}
 
 					deferredResponse.resolve(res);
@@ -226,7 +234,16 @@ function isRequestFromProxyController(req: Request, env: Env): boolean {
 function isHtmlResponse(res: Response): boolean {
 	return res.headers.get("content-type")?.startsWith("text/html") ?? false;
 }
+function isSseResponse(res: Response): boolean {
+	return (
+		res.headers.get("content-type")?.startsWith("text/event-stream") ?? false
+	);
+}
 function isRequestForLiveReloadWebsocket(req: Request): boolean {
+	if (new URL(req.url).pathname !== LIVE_RELOAD_PATHNAME) {
+		return false;
+	}
+
 	const websocketProtocol = req.headers.get("Sec-WebSocket-Protocol");
 	const isWebSocketUpgrade = req.headers.get("Upgrade") === "websocket";
 
@@ -256,8 +273,15 @@ async function checkForPreviewTokenError(
 	// so we clone and read the text instead.
 	const clone = response.clone();
 	const text = await clone.text();
-	// Naive string match should be good enough when combined with status code check
-	if (text.includes("Invalid Workers Preview configuration")) {
+	// Naive string match should be good enough when combined with status code check.
+	// "Invalid Workers Preview configuration" is the HTML error returned when the
+	// preview token has expired. "error code: 1031" is a text/plain error returned
+	// by remote bindings (e.g. Workers AI) when their underlying session has timed out.
+	// Both indicate the preview session needs to be refreshed.
+	if (
+		text.includes("Invalid Workers Preview configuration") ||
+		text.includes("error code: 1031")
+	) {
 		void sendMessageToProxyController(env, {
 			type: "previewTokenExpired",
 			proxyData,
@@ -301,7 +325,7 @@ const liveReloadScript = `
 		function initLiveReload() {
 			if (ws) return;
 			var origin = (location.protocol === "http:" ? "ws://" : "wss://") + location.host;
-			ws = new WebSocket(origin + "/cdn-cgi/live-reload", "${LIVE_RELOAD_PROTOCOL}");
+			ws = new WebSocket(origin + "${LIVE_RELOAD_PATHNAME}", "${LIVE_RELOAD_PROTOCOL}");
 			ws.onclose = recover;
 			ws.onerror = recover;
 			ws.onmessage = location.reload.bind(location);

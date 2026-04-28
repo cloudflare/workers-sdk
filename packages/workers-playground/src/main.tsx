@@ -24,7 +24,7 @@ function syncDarkModeWithSystem() {
 }
 syncDarkModeWithSystem();
 setDarkMode(DarkModeSettings.SYSTEM);
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the root element of an html pages is always defined
 ReactDOM.createRoot(document.getElementById("root")!).render(
 	<React.StrictMode>
 		<StyleProvider renderer={felaRenderer}>

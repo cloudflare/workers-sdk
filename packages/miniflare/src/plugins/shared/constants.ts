@@ -10,6 +10,8 @@ import type {
 
 export const SOCKET_ENTRY = "entry";
 export const SOCKET_ENTRY_LOCAL = "entry:local";
+export const SOCKET_DEBUG_PORT = "debug-port";
+export const SOCKET_DEV_REGISTRY = "dev-registry";
 const SOCKET_DIRECT_PREFIX = "direct";
 
 export function getDirectSocketName(workerIndex: number, entrypoint: string) {
@@ -18,6 +20,9 @@ export function getDirectSocketName(workerIndex: number, entrypoint: string) {
 
 // Service looping back to Miniflare's Node.js process (for storage, etc)
 export const SERVICE_LOOPBACK = "loopback";
+
+// Service for the dev registry proxy worker (routes cross-process service bindings and DO proxies).
+export const SERVICE_DEV_REGISTRY_PROXY = "dev-registry-proxy";
 
 // Special host to use for Cap'n Proto connections. This is required to use
 // JS RPC over `external` services in Wrangler's service registry.

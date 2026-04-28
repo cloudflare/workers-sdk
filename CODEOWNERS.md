@@ -86,7 +86,7 @@ This exists only so that GitHub branch protection can gate merging on the bot's 
 
 ### `.github/workflows/codeowners.yml` — GitHub Actions Workflow
 
-A single workflow handles PR events (`pull_request_target`). When reviews are submitted or dismissed, the separate `rerun_codeowners.yml` workflow re-runs the check.
+A single workflow handles PR events (`pull_request_target`). When reviews are submitted or dismissed, the `rerun-codeowners.yml` / `rerun-codeowners-privileged.yml` workflow pair re-runs the check (using the `workflow_run` pattern so it works for fork PRs too).
 
 Using `pull_request_target` (not `pull_request`) ensures the workflow has access to secrets for **fork PRs**. The checkout is always the base branch, so PR authors cannot modify ownership rules.
 

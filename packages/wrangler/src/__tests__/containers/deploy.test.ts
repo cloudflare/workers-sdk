@@ -191,6 +191,10 @@ describe("wrangler deploy with containers", () => {
 				{
 					...DEFAULT_CONTAINER_FROM_REGISTRY,
 					rollout_active_grace_period: 600,
+					constraints: {
+						regions: ["ENAM", "WNAM"],
+						jurisdiction: "fedramp",
+					},
 				},
 			],
 		});
@@ -246,6 +250,8 @@ describe("wrangler deploy with containers", () => {
 			│
 			│   [containers.constraints]
 			│   tiers = [ 1, 2 ]
+			│   regions = [ "ENAM", "WNAM" ]
+			│   jurisdiction = "fedramp"
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = "1"
@@ -1824,7 +1830,7 @@ describe("wrangler deploy with containers", () => {
 			containers: [
 				{
 					...DEFAULT_CONTAINER_FROM_REGISTRY,
-					wrangler_ssh: {
+					ssh: {
 						enabled: true,
 						port: 1010,
 					},
@@ -1884,7 +1890,7 @@ describe("wrangler deploy with containers", () => {
 			│   image = "registry.cloudflare.com/some-account-id/hello:world"
 			│   instance_type = "lite"
 			│
-			│   [containers.configuration.wrangler_ssh]
+			│   [containers.configuration.ssh]
 			│   enabled = true
 			│   port = 1010
 			│
@@ -1916,7 +1922,7 @@ describe("wrangler deploy with containers", () => {
 			containers: [
 				{
 					...DEFAULT_CONTAINER_FROM_REGISTRY,
-					wrangler_ssh: {
+					ssh: {
 						enabled: true,
 					},
 					authorized_keys: [
@@ -1994,7 +2000,7 @@ describe("wrangler deploy with containers", () => {
 			│ + [[containers.configuration.authorized_keys]]
 			│ + name = "jeff"
 			│ + public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm"
-			│ + [containers.configuration.wrangler_ssh]
+			│ + [containers.configuration.ssh]
 			│ + enabled = true
 			│   [containers.durable_objects]
 			│   namespace_id = "1"
@@ -2008,6 +2014,106 @@ describe("wrangler deploy with containers", () => {
 
 			"
 		`);
+	});
+
+	it("enables ssh when provided in wrangler.jsonc", async ({ expect }) => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig(
+			{
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						ssh: {
+							enabled: true,
+							port: 2022,
+						},
+					},
+				],
+			},
+			"./wrangler.jsonc"
+		);
+
+		mockGetApplications([]);
+
+		mockCreateApplication(expect, {
+			name: "my-container",
+			max_instances: 10,
+			scheduling_policy: SchedulingPolicy.DEFAULT,
+			configuration: {
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+				wrangler_ssh: {
+					enabled: true,
+					port: 2022,
+				},
+			},
+		});
+
+		await runWrangler("deploy index.js --config ./wrangler.jsonc");
+
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
+	});
+
+	it("accepts wrangler_ssh as a backward-compatible alias", async ({
+		expect,
+	}) => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					wrangler_ssh: {
+						enabled: true,
+						port: 2222,
+					},
+				},
+			],
+		});
+
+		mockGetApplications([]);
+
+		mockCreateApplication(expect, {
+			name: "my-container",
+			max_instances: 10,
+			scheduling_policy: SchedulingPolicy.DEFAULT,
+			configuration: {
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+				wrangler_ssh: {
+					enabled: true,
+					port: 2222,
+				},
+			},
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.warn).toContain("Processing wrangler.toml configuration:");
+		expect(std.warn).toContain(
+			'"containers.wrangler_ssh" is deprecated. Use "containers.ssh" instead.'
+		);
+		expect(std.err).toBe("");
+	});
+
+	it("should validate containers.ssh fields", async ({ expect }) => {
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					ssh: {
+						// @ts-expect-error - intentionally invalid to test config validation
+						enabled: "true",
+						port: 70000,
+					},
+				},
+			],
+		});
+
+		await expect(runWrangler("deploy index.js")).rejects.toThrow(
+			/containers\.ssh\.enabled must be a boolean[\s\S]*containers\.ssh\.port must be a number between 1 and 65535 inclusive/
+		);
 	});
 
 	describe("ctx.exports", async () => {

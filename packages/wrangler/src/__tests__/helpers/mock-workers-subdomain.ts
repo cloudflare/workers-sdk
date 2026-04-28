@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { expect } from "vitest";
+import { assert } from "vitest";
 import { createFetchResult, msw } from "./msw";
 
 /** Create a mock handler for the request to get the account's subdomain. */
@@ -59,12 +58,12 @@ export function mockGetWorkerSubdomain({
 		http.get(
 			url,
 			({ params }) => {
-				expect(params.accountId).toEqual("some-account-id");
+				assert(params.accountId === "some-account-id");
 				if (expectedScriptName !== false) {
-					expect(params.scriptName).toEqual(expectedScriptName);
+					assert(params.scriptName === expectedScriptName);
 				}
 				if (useServiceEnvironments) {
-					expect(params.envName).toEqual(env);
+					assert(params.envName === env);
 				}
 
 				return HttpResponse.json(
@@ -112,16 +111,19 @@ export function mockUpdateWorkerSubdomain({
 		http.post(
 			url,
 			async ({ request, params }) => {
-				expect(params.accountId).toEqual("some-account-id");
+				assert(params.accountId === "some-account-id");
 				if (expectedScriptName !== false) {
-					expect(params.scriptName).toEqual(expectedScriptName);
+					assert(params.scriptName === expectedScriptName);
 				}
 				if (useServiceEnvironments) {
-					expect(params.envName).toEqual(env);
+					assert(params.envName === env);
 				}
 				const body = await request.json();
-				const expectBody = { enabled, previews_enabled };
-				expect(body).toEqual(expectBody);
+				assert(body instanceof Object);
+				assert(body.enabled === enabled);
+				if (previews_enabled !== undefined) {
+					assert(body.previews_enabled === previews_enabled);
+				}
 				return HttpResponse.json(createFetchResult(response));
 			},
 			{ once: true }

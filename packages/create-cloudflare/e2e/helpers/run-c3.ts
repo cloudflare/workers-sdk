@@ -1,5 +1,5 @@
 import { tmpdir } from "node:os";
-import { stripAnsi } from "@cloudflare/cli";
+import { stripAnsi } from "@cloudflare/cli-shared-helpers";
 import { version } from "../../package.json";
 import { keys } from "./constants";
 import { spawnWithLogging, testEnv, waitForExit } from "./spawn";
@@ -143,10 +143,11 @@ export const runC3 = async (
 				currentSelectDialog === undefined;
 
 			// Our select prompt options start with ○ / ◁ for unselected options and ● / ◀ for the current selection
-			const selectedOptionRegex = /^(●|◀)\s/;
+			const selectedOptionRegex = /^\u200a+(●|◀)\s/;
 			const currentSelection = lines
 				.find((line) => line.match(selectedOptionRegex))
-				?.replace(selectedOptionRegex, "");
+				?.replace(selectedOptionRegex, "")
+				.trim();
 
 			if (!currentSelection) {
 				// sometimes `lines` contain only the 'clear screen' ANSI codes and not the prompt options

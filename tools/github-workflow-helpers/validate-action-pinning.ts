@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { globSync } from "glob";
+import { globSync } from "tinyglobby";
 
 /**
  * Matches `uses:` directives in GitHub Actions workflow YAML files.

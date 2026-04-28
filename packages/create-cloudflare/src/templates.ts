@@ -2,9 +2,9 @@ import { existsSync } from "node:fs";
 import { cp, mkdtemp, rename } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { shapes, updateStatus, warn } from "@cloudflare/cli";
-import { blue, brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import { shapes, updateStatus, warn } from "@cloudflare/cli-shared-helpers";
+import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import deepmerge from "deepmerge";
 import degit from "degit";
 import { processArgument } from "helpers/args";
@@ -51,7 +51,7 @@ import wakuExperimentalTemplate from "templates/waku/experimental-c3";
 import { getAgentsMd } from "./agents-md";
 import { isInsideGitRepo } from "./git";
 import { validateProjectDirectory, validateTemplateUrl } from "./validators";
-import type { Option } from "@cloudflare/cli/interactive";
+import type { Option } from "@cloudflare/cli-shared-helpers/interactive";
 import type { C3Args, C3Context, PackageJson } from "types";
 
 export type MultiPlatformTemplateConfig = {

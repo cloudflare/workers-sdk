@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
-import { brandColor, dim, white } from "@cloudflare/cli/colors";
+import { brandColor, dim, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	getBindingTypeFriendlyName,
 	UserError,
@@ -95,6 +95,7 @@ export function printBindings(
 		"secrets_store_secret",
 		bindings
 	);
+	const artifacts = extractBindingsOfType("artifacts", bindings);
 	const services = extractBindingsOfType("service", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
 	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
@@ -170,12 +171,7 @@ export function printBindings(
 						const registryDefinition = context.registry?.[script_name];
 
 						hasConnectionStatus = true;
-						if (
-							registryDefinition &&
-							registryDefinition.durableObjects.some(
-								(d) => d.className === class_name
-							)
-						) {
+						if (registryDefinition && registryDefinition.debugPortAddress) {
 							value += `, defined in ${script_name}`;
 							mode = getMode({ isSimulatedLocally: true, connected: true });
 						} else {
@@ -336,7 +332,11 @@ export function printBindings(
 			...ai_search_namespaces.map(({ binding, namespace }) => ({
 				name: binding,
 				type: getBindingTypeFriendlyName("ai_search_namespace"),
-				value: namespace ? String(namespace) : undefined,
+				// Preserve `namespace` as-is so `typeof === "symbol"` handling
+				// downstream can render INHERIT_SYMBOL as `"inherited"`. Using
+				// `String(namespace)` would stringify it to
+				// `"Symbol(inherit_binding)"` and defeat that check.
+				value: namespace ?? undefined,
 				mode: getMode({ isSimulatedLocally: false }),
 			}))
 		);
@@ -446,6 +446,19 @@ export function printBindings(
 		);
 	}
 
+	if (artifacts.length > 0) {
+		output.push(
+			...artifacts.map(({ binding, namespace }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("artifacts"),
+					value: namespace,
+					mode: getMode({ isSimulatedLocally: false }),
+				};
+			})
+		);
+	}
+
 	if (unsafe_hello_world.length > 0) {
 		output.push(
 			...unsafe_hello_world.map(({ binding, enable_timer }) => {
@@ -461,13 +474,15 @@ export function printBindings(
 
 	if (flagship.length > 0) {
 		output.push(
-			...flagship.map(({ binding, app_id, remote }) => {
+			...flagship.map(({ binding, app_id }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("flagship"),
 					value: app_id,
 					mode: getMode({
-						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+						isSimulatedLocally: !context.remoteBindingsDisabled
+							? false
+							: undefined,
 					}),
 				};
 			})
@@ -496,11 +511,7 @@ export function printBindings(
 						const registryDefinition = context.registry?.[service];
 						hasConnectionStatus = true;
 
-						if (
-							registryDefinition &&
-							(!entrypoint ||
-								registryDefinition.entrypointAddresses?.[entrypoint])
-						) {
+						if (registryDefinition && registryDefinition.debugPortAddress) {
 							mode = getMode({ isSimulatedLocally: true, connected: true });
 						} else {
 							mode = getMode({ isSimulatedLocally: true, connected: false });

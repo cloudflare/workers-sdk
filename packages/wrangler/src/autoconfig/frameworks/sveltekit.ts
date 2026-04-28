@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { runCommand } from "@cloudflare/cli/command";
-import { installPackages } from "@cloudflare/cli/packages";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { Framework } from "./framework-class";
 import type {
 	ConfigurationOptions,

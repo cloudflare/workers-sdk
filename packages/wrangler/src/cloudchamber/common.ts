@@ -1,6 +1,9 @@
-import { space, updateStatus } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { space, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import {
+	inputPrompt,
+	spinner,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	ApiError,
 	DeploymentMutationError,
@@ -25,7 +28,7 @@ import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Arg } from "@cloudflare/cli/interactive";
+import type { Arg } from "@cloudflare/cli-shared-helpers/interactive";
 import type {
 	CompleteAccountCustomer,
 	EnvironmentVariable,

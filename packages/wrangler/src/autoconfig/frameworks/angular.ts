@@ -1,9 +1,9 @@
 import assert from "node:assert";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
-import { installPackages } from "@cloudflare/cli/packages";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
+import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { parseJSONC } from "@cloudflare/workers-utils";
 import { dedent } from "../../utils/dedent";
 import { Framework } from "./framework-class";

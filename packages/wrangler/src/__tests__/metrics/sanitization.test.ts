@@ -1,6 +1,7 @@
 import { describe, it } from "vitest";
 import {
 	ALLOW,
+	COMMAND_ARG_ALLOW_LIST,
 	getAllowedArgs,
 	REDACT,
 	sanitizeArgKeys,
@@ -132,5 +133,39 @@ describe("getAllowedArgs", () => {
 		expect(r2Result.sharedArg).toBe(ALLOW);
 		expect(r2Result.r2Only).toBe(ALLOW);
 		expect(r2Result.global).toBe(ALLOW);
+	});
+});
+
+describe("COMMAND_ARG_ALLOW_LIST", () => {
+	it("should pass boolean flag values through the full sanitisation pipeline for any command", ({
+		expect,
+	}) => {
+		// Simulate a user running: wrangler <command> --remote --dry-run --json
+		const args = {
+			remote: true,
+			"dry-run": true,
+			dryRun: true,
+			json: true,
+			$0: "wrangler",
+			_: [],
+		};
+		const argv = [
+			"node",
+			"wrangler",
+			"some-command",
+			"--remote",
+			"--dry-run",
+			"--json",
+		];
+
+		const argsWithSanitizedKeys = sanitizeArgKeys(args, argv);
+		const allowedArgs = getAllowedArgs(COMMAND_ARG_ALLOW_LIST, "some-command");
+		const sanitizedArgs = sanitizeArgValues(argsWithSanitizedKeys, allowedArgs);
+
+		expect(sanitizedArgs).toEqual({
+			remote: true,
+			dryRun: true,
+			json: true,
+		});
 	});
 });

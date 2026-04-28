@@ -5,6 +5,7 @@ import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
+import { mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
@@ -134,6 +135,83 @@ describe("export", () => {
 		);
 
 		await runWrangler("d1 export db --remote --output test-remote.sql");
+		expect(fs.readFileSync("test-remote.sql", "utf8")).toBe(mockSqlContent);
+	});
+
+	it("should prompt for confirmation when exporting remotely in interactive mode", async ({
+		expect,
+	}) => {
+		setIsTTY(true);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+		mockGetMemberships([
+			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+		]);
+		const mockSqlContent = "PRAGMA defer_foreign_keys=TRUE;";
+
+		mockConfirm({
+			text: `⚠️ This process may take some time, during which your D1 database will be unavailable to serve queries.\n  Ok to proceed?`,
+			result: true,
+		});
+
+		mockResponses();
+
+		msw.use(
+			http.get("https://example.com/xxxx-yyyy.sql", async () => {
+				return HttpResponse.text(mockSqlContent, { status: 200 });
+			})
+		);
+
+		await runWrangler("d1 export db --remote --output test-remote.sql");
+		expect(fs.readFileSync("test-remote.sql", "utf8")).toBe(mockSqlContent);
+	});
+
+	it("should not export when confirmation is rejected", async ({ expect }) => {
+		setIsTTY(true);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		mockConfirm({
+			text: `⚠️ This process may take some time, during which your D1 database will be unavailable to serve queries.\n  Ok to proceed?`,
+			result: false,
+		});
+
+		await runWrangler("d1 export db --remote --output test-remote.sql");
+		expect(std.out).toContain("Not exporting.");
+		expect(fs.existsSync("test-remote.sql")).toBe(false);
+	});
+
+	it("should skip confirmation when --skip-confirmation flag is used", async ({
+		expect,
+	}) => {
+		setIsTTY(true);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+		mockGetMemberships([
+			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+		]);
+		const mockSqlContent = "PRAGMA defer_foreign_keys=TRUE;";
+
+		mockResponses();
+
+		msw.use(
+			http.get("https://example.com/xxxx-yyyy.sql", async () => {
+				return HttpResponse.text(mockSqlContent, { status: 200 });
+			})
+		);
+
+		await runWrangler(
+			"d1 export db --remote --skip-confirmation --output test-remote.sql"
+		);
 		expect(fs.readFileSync("test-remote.sql", "utf8")).toBe(mockSqlContent);
 	});
 

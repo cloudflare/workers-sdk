@@ -1,4 +1,4 @@
-import { stripAnsi } from "@cloudflare/cli";
+import { stripAnsi } from "@cloudflare/cli-shared-helpers";
 import { spawn } from "cross-spawn";
 import treeKill from "tree-kill";
 import type {

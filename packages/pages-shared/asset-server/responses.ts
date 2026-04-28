@@ -138,8 +138,7 @@ export class NotAcceptableResponse extends Response {
 export class InternalServerErrorResponse extends Response {
 	constructor(err: Error, init?: ConstructorParameters<typeof Response>[1]) {
 		let body: string | undefined = undefined;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		if ((globalThis as any).DEBUG) {
+		if ((globalThis as Record<string, unknown>).DEBUG) {
 			body = `${err.message}\n\n${err.stack}`;
 		}
 

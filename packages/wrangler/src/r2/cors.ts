@@ -100,14 +100,46 @@ export const r2BucketCORSSetCommand = createCommand({
 
 		const jsonFilePath = path.resolve(file);
 
-		const corsConfig = parseJSON(readFileSync(jsonFilePath), jsonFilePath) as {
-			rules: CORSRule[];
-		};
+		const corsConfig = parseJSON(
+			readFileSync(jsonFilePath),
+			jsonFilePath
+		) as Record<string, unknown>;
 
-		if (!corsConfig.rules || !Array.isArray(corsConfig.rules)) {
+		// Detect AWS S3 top-level format (CORSRules instead of rules)
+		if (corsConfig.CORSRules) {
 			throw new UserError(
-				`The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: ` +
+				"Wrangler detected an AWS S3 CORS configuration format.\n" +
+					"Cloudflare R2 expects a 'rules' array instead of 'CORSRules'.\n" +
+					"See: https://developers.cloudflare.com/r2/buckets/cors/#example"
+			);
+		}
+
+		// Validate existence of rules array
+		const rules = corsConfig.rules;
+		if (!rules || !Array.isArray(rules)) {
+			throw new UserError(
+				`The CORS configuration file must contain a 'rules' array as expected by the R2 API: ` +
 					`https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
+			);
+		}
+
+		// Detect AWS S3 individual rule format (AllowedOrigins, AllowedMethods, AllowedHeaders)
+		const hasS3Keys = (rules as Record<string, unknown>[]).some(
+			(rule) =>
+				rule &&
+				typeof rule === "object" &&
+				!Array.isArray(rule) &&
+				("AllowedOrigins" in rule ||
+					"AllowedMethods" in rule ||
+					"AllowedHeaders" in rule)
+		);
+
+		if (hasS3Keys) {
+			throw new UserError(
+				"Wrangler detected AWS S3 style keys (e.g. 'AllowedOrigins').\n" +
+					"Cloudflare R2 requires lowercase keys nested inside an 'allowed' object.\n" +
+					'Example: { "allowed": { "origins": ["*"], "methods": ["GET"] } }\n' +
+					"See: https://developers.cloudflare.com/r2/buckets/cors/#example"
 			);
 		}
 
@@ -122,13 +154,13 @@ export const r2BucketCORSSetCommand = createCommand({
 		}
 
 		logger.log(
-			`Setting CORS configuration (${corsConfig.rules.length} rules) for bucket '${bucket}'...`
+			`Setting CORS configuration (${rules.length} rules) for bucket '${bucket}'...`
 		);
 		await putCORSPolicy(
 			config,
 			accountId,
 			bucket,
-			corsConfig.rules,
+			rules as CORSRule[],
 			jurisdiction
 		);
 		logger.log(`✨ Set CORS configuration for bucket '${bucket}'.`);

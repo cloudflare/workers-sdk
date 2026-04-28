@@ -434,11 +434,8 @@ export const zLocalExplorerWorkerBindings = z.object({
 });
 
 export const zLocalExplorerWorker = z.object({
-	host: z.string(),
 	isSelf: z.boolean(),
 	name: z.string(),
-	port: z.number().int(),
-	protocol: z.string(),
 	bindings: zLocalExplorerWorkerBindings.optional(),
 });
 

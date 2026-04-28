@@ -63,7 +63,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("@cloudflare/cli/command");
+vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -546,8 +546,8 @@ addEventListener('fetch', event => {});`
 			writeAssets(assets);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("deploy ./index.js");
 
@@ -610,8 +610,8 @@ addEventListener('fetch', event => {});`
 			process.chdir("..");
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
+			mockListKVNamespacesRequest(expect, kvNamespace);
+			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("deploy --config ./my-site/wrangler.toml");
 

@@ -38,7 +38,7 @@ Successfully logged in.
 vi.mock("helpers/command");
 vi.mock("helpers/sparrow");
 vi.mock("which-pm-runs");
-vi.mock("@cloudflare/cli/interactive");
+vi.mock("@cloudflare/cli-shared-helpers/interactive");
 
 describe("wrangler account helpers", () => {
 	const ctx = createTestContext();

@@ -46,10 +46,7 @@ export class HTMLRewriter {
 				// will also synchronously compile a WebAssembly module, so delay doing
 				// this until we really need it.
 				// TODO: async compile the WebAssembly module
-				const {
-					HTMLRewriter: BaseHTMLRewriter,
-					// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-				}: typeof import("html-rewriter-wasm") =
+				const { HTMLRewriter: BaseHTMLRewriter } =
 					await import("html-rewriter-wasm");
 				rewriter = new BaseHTMLRewriter((output) => {
 					// enqueue will throw on empty chunks

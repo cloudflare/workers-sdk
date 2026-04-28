@@ -58,6 +58,9 @@ export async function fetch(
 		});
 
 		const responsePromise = new DeferredPromise<Response>();
+		ws.once("error", (error) => {
+			responsePromise.reject(error);
+		});
 		ws.once("upgrade", (req) => {
 			const headers = convertUndiciHeadersToStandard(req.headers);
 			// Couple web socket with pair and resolve

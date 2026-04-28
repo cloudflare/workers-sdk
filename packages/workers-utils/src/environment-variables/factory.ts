@@ -108,7 +108,7 @@ type VariableNames =
 
 	/** Enable the local explorer UI at /cdn-cgi/explorer (experimental, default: false). */
 	| "X_LOCAL_EXPLORER"
-	/** Open the browser in headful (visible) mode when using the Browser Rendering API in local dev (default: false). */
+	/** Open the browser in headful (visible) mode when using the Browser Run API in local dev (default: false). */
 	| "X_BROWSER_HEADFUL"
 
 	// ## CI-specific Variables (Internal Use)
@@ -247,8 +247,7 @@ export function getEnvironmentVariableFactory<
 		if (deprecatedName && deprecatedName in process.env) {
 			if (!hasWarned) {
 				hasWarned = true;
-				// Ideally we'd use `logger.warn` here, but that creates a circular dependency that Vitest is unable to resolve
-				// eslint-disable-next-line no-console
+				// eslint-disable-next-line no-console -- ideally we'd use `logger.warn` here, but that creates a circular dependency that Vitest is unable to resolve
 				console.warn(
 					`Using "${deprecatedName}" environment variable. This is deprecated. Please use "${variableName}", instead.`
 				);

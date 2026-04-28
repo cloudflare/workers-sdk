@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { MissingConfigError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex } from "miniflare";
@@ -20,7 +21,7 @@ import { getAccessHeaders } from "../../user/access";
 import { retryOnAPIFailure } from "../../utils/retry";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { unwrapHook } from "./utils";
+import { PREVIEW_TOKEN_REFRESH_INTERVAL, unwrapHook } from "./utils";
 import type {
 	CfAccount,
 	CfPreviewSession,
@@ -30,6 +31,7 @@ import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
 	PreviewTokenExpiredEvent,
+	ProxyData,
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
@@ -51,6 +53,10 @@ export class RemoteRuntimeController extends RuntimeController {
 	#latestConfig?: StartDevWorkerOptions;
 	#latestBundle?: Bundle;
 	#latestRoutes?: Route[];
+	#latestProxyData?: ProxyData;
+
+	// Timer for proactive token refresh before the 1-hour expiry
+	#refreshTimer?: ReturnType<typeof setTimeout>;
 
 	async #previewSession(
 		props: Parameters<typeof getWorkerAccountAndContext>[0] & {
@@ -81,13 +87,7 @@ export class RemoteRuntimeController extends RuntimeController {
 
 			handlePreviewSessionCreationError(err, props.accountId);
 
-			this.emitErrorEvent({
-				type: "error",
-				reason: "Failed to create a preview token",
-				cause: castErrorCause(err),
-				source: "RemoteRuntimeController",
-				data: undefined,
-			});
+			throw err;
 		}
 	}
 
@@ -267,11 +267,11 @@ export class RemoteRuntimeController extends RuntimeController {
 		auth: CfAccount,
 		routes: Route[] | undefined,
 		bundleId: number
-	) {
+	): Promise<boolean> {
 		// If we received a new `bundleComplete` event before we were able to
 		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 		if (bundleId !== this.#currentBundleId) {
-			return;
+			return false;
 		}
 
 		const token = await this.#previewToken({
@@ -307,30 +307,49 @@ export class RemoteRuntimeController extends RuntimeController {
 		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 		// If `token` is undefined, we've surfaced a relevant error to the user above, so ignore this bundle
 		if (bundleId !== this.#currentBundleId || !token) {
-			return;
+			return false;
 		}
 
 		const accessHeaders = await getAccessHeaders(token.host);
+
+		const proxyData: ProxyData = {
+			userWorkerUrl: {
+				protocol: "https:",
+				hostname: token.host,
+				port: "443",
+			},
+			headers: {
+				"cf-workers-preview-token": token.value,
+				...accessHeaders,
+				"cf-connecting-ip": "",
+			},
+			liveReload: config.dev.liveReload,
+			proxyLogsToController: true,
+		};
+
+		this.#latestProxyData = proxyData;
 
 		this.emitReloadCompleteEvent({
 			type: "reloadComplete",
 			bundle,
 			config,
-			proxyData: {
-				userWorkerUrl: {
-					protocol: "https:",
-					hostname: token.host,
-					port: "443",
-				},
-				headers: {
-					"cf-workers-preview-token": token.value,
-					...accessHeaders,
-					"cf-connecting-ip": "",
-				},
-				liveReload: config.dev.liveReload,
-				proxyLogsToController: true,
-			},
+			proxyData,
 		});
+
+		this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_INTERVAL);
+		return true;
+	}
+
+	#scheduleRefresh(interval: number) {
+		clearTimeout(this.#refreshTimer);
+		this.#refreshTimer = setTimeout(() => {
+			if (this.#latestProxyData) {
+				this.onPreviewTokenExpired({
+					type: "previewTokenExpired",
+					proxyData: this.#latestProxyData,
+				});
+			}
+		}, interval);
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
@@ -343,9 +362,9 @@ export class RemoteRuntimeController extends RuntimeController {
 				throw new MissingConfigError("config.dev.auth");
 			}
 
+			assert(config.dev.auth);
 			const auth = await unwrapHook(config.dev.auth);
 
-			// Store for token refresh
 			this.#latestConfig = config;
 			this.#latestBundle = bundle;
 			this.#latestRoutes = routes;
@@ -385,34 +404,27 @@ export class RemoteRuntimeController extends RuntimeController {
 			return;
 		}
 
-		this.emitReloadStartEvent({
-			type: "reloadStart",
-			config: this.#latestConfig,
-			bundle: this.#latestBundle,
-		});
-
-		if (!this.#latestConfig.dev?.auth) {
-			// This shouldn't happen as it's checked earlier, but we guard against it anyway
-			throw new MissingConfigError("config.dev.auth");
-		}
-
-		const auth = await unwrapHook(this.#latestConfig.dev.auth);
-
 		try {
+			assert(this.#latestConfig.dev.auth);
+			const auth = await unwrapHook(this.#latestConfig.dev.auth);
+
 			this.#session = await this.#getPreviewSession(
 				this.#latestConfig,
 				auth,
 				this.#latestRoutes
 			);
 
-			await this.#updatePreviewToken(
+			const refreshed = await this.#updatePreviewToken(
 				this.#latestConfig,
 				this.#latestBundle,
 				auth,
 				this.#latestRoutes,
 				this.#currentBundleId
 			);
-			logger.log(chalk.green("✔ Preview token refreshed successfully"));
+
+			if (refreshed) {
+				logger.log(chalk.green("✔ Preview token refreshed successfully"));
+			}
 		} catch (error) {
 			if (error instanceof Error && error.name == "AbortError") {
 				return;
@@ -436,6 +448,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
 		this.#abortController = new AbortController();
+		clearTimeout(this.#refreshTimer);
 	}
 	onBundleComplete(ev: BundleCompleteEvent) {
 		const id = ++this.#currentBundleId;
@@ -454,7 +467,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		void this.#mutex.runWith(() => this.#onBundleComplete(ev, id));
 	}
 	onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void {
-		logger.log(chalk.dim("⎔ Preview token expired, refreshing..."));
+		logger.log(chalk.dim("⎔ Refreshing preview token..."));
 		void this.#mutex.runWith(() => this.#refreshPreviewToken());
 	}
 
@@ -465,6 +478,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		}
 		logger.debug("RemoteRuntimeController teardown beginning...");
 		this.#session = undefined;
+		clearTimeout(this.#refreshTimer);
 		this.#abortController.abort();
 		// Suppress errors from terminating a WebSocket that hasn't connected yet
 		this.#activeTail?.removeAllListeners("error");

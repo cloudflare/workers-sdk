@@ -1,5 +1,9 @@
-import { cancel, endSection, startSection } from "@cloudflare/cli";
-import { inputPrompt } from "@cloudflare/cli/interactive";
+import {
+	cancel,
+	endSection,
+	startSection,
+} from "@cloudflare/cli-shared-helpers";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import YAML from "yaml";

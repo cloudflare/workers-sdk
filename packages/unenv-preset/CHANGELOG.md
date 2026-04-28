@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.16.1
+
+### Patch Changes
+
+- [#13647](https://github.com/cloudflare/workers-sdk/pull/13647) [`0a95061`](https://github.com/cloudflare/workers-sdk/commit/0a95061dbbd3c013a257c8ece99ed3f50e1a9870) Thanks [@vicb](https://github.com/vicb)! - refactor: simplify workerd peer dependency range
+
 ## 2.16.0
 
 ### Minor Changes

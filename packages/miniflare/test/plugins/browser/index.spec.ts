@@ -91,6 +91,46 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 		expect(text.includes("sessionId")).toBe(true);
 	});
 
+	test(
+		"two workers with different browser bindings can coexist",
+		{ retry: 3 },
+		async ({ expect }) => {
+			const workerScript = (bindingName: string) => `
+			export default {
+				async fetch(request, env) {
+					if (request.url.endsWith("session")) {
+						const newBrowserSession = await env.${bindingName}.fetch("https://localhost/v1/acquire")
+						return new Response(await newBrowserSession.text())
+					}
+				}
+			};
+			`;
+			const mf = new Miniflare({
+				workers: [
+					{
+						name: "worker-a",
+						compatibilityDate: "2024-11-20",
+						modules: true,
+						script: workerScript("BROWSER_A"),
+						browserRendering: { binding: "BROWSER_A" },
+					},
+					{
+						name: "worker-b",
+						compatibilityDate: "2024-11-20",
+						modules: true,
+						script: workerScript("BROWSER_B"),
+						browserRendering: { binding: "BROWSER_B" },
+					},
+				],
+			});
+			useDispose(mf);
+
+			const res = await mf.dispatchFetch("https://localhost/session");
+			const text = await res.text();
+			expect(text.includes("sessionId")).toBe(true);
+		}
+	);
+
 	const BROWSER_WORKER_CLOSE_SCRIPT = `
 ${sendMessage.toString()}
 ${waitForClosedConnection.toString()}
@@ -532,7 +572,12 @@ export default {
 			expect(typeof version.Browser).toBe("string");
 			expect(typeof version["Protocol-Version"]).toBe("string");
 			expect(Array.isArray(list)).toBe(true);
-			expect(list).toEqual(listAlias);
+			// The page title for about:blank can change between sequential
+			// requests (from "" to "about:blank"), so strip the volatile
+			// `title` field before comparing the two alias endpoints.
+			const stripTitle = (arr: any[]) =>
+				arr.map(({ title, ...rest }: any) => rest);
+			expect(stripTitle(list)).toEqual(stripTitle(listAlias));
 		}
 	);
 

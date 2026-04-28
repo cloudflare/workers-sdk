@@ -634,7 +634,7 @@ parameter in module format Workers.
 - `workflows?: WorkflowOptions[]`
   Configuration for one or more Workflows in your project.
 
-#### Browser Rendering
+#### Browser Run
 
 - `browserRendering: BrowserRenderingOptions`
 

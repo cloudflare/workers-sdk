@@ -50,6 +50,7 @@
 # ----------------------------------------------------------
 & packages/wrangler/src/cloudchamber/** @cloudflare/cloudchamber
 & packages/wrangler/src/containers/** @cloudflare/cloudchamber
+& packages/wrangler/src/__tests__/containers/** @cloudflare/cloudchamber
 # */** excludes root-level files (CHANGELOG.md, package.json)
 & packages/containers-shared/*/** @cloudflare/cloudchamber
 

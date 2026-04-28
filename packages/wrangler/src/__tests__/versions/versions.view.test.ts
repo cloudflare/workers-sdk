@@ -684,7 +684,7 @@ describe("versions view", () => {
 				env.SERVICE (worker)                                                     Worker
 				env.SERVICE_2 (worker#Enterypoint)                                       Worker
 				env.AE (datset)                                                          Analytics Engine Dataset
-				env.BROWSER                                                              Browser
+				env.BROWSER                                                              Browser Run
 				env.AI                                                                   AI
 				env.VERSION_METADATA                                                     Worker Version Metadata
 				env.WFP (wfp-namespace)                                                  Dispatch Namespace

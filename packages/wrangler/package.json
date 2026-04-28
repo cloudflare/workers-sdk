@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.82.2",
+	"version": "4.86.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -72,12 +72,12 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20260413.1"
+		"workerd": "1.20260426.1"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
 		"@bomb.sh/tab": "^0.0.12",
-		"@cloudflare/cli": "workspace:*",
+		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/codemod": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
@@ -88,7 +88,7 @@
 		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
-		"@netlify/build-info": "^10.2.0",
+		"@netlify/build-info": "^10.5.1",
 		"@sentry/node": "^7.86.0",
 		"@sentry/types": "^7.86.0",
 		"@sentry/utils": "^7.86.0",
@@ -110,7 +110,7 @@
 		"@types/yargs": "^17.0.22",
 		"@vitest/ui": "catalog:default",
 		"@webcontainer/env": "^1.1.0",
-		"am-i-vibing": "^0.1.0",
+		"am-i-vibing": "^0.1.1",
 		"capnweb": "catalog:default",
 		"chalk": "^5.2.0",
 		"chokidar": "^4.0.1",

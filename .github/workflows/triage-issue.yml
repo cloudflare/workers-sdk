@@ -17,7 +17,7 @@ permissions:
 # Cancel in-progress runs for the same issue
 concurrency:
   group: triage-${{ github.event.issue.number || inputs.issue-number }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
 
 jobs:
   triage:

@@ -255,6 +255,7 @@ class ProxyClientBridge {
 	}
 
 	dispose(): Promise<void> {
+		clearTimeout(this.#finalizeBatchTimeout);
 		this.poisonProxies();
 		return this.sync.dispose();
 	}

@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { execSync } from "node:child_process";
 import { statSync } from "node:fs";
 import path from "node:path";
-import { globIterateSync } from "glob";
+import { globSync } from "tinyglobby";
 import type { ExecSyncOptionsWithBufferEncoding } from "node:child_process";
 
 // Turbo only supports caching on the individual task level, but for Wrangler's
@@ -44,13 +44,9 @@ const command =
 const wranglerPath = path.join(__dirname, "../../packages/wrangler");
 assert(statSync(wranglerPath).isDirectory());
 
-let tests = Array.from(
-	globIterateSync("e2e/**/*.test.ts", {
-		cwd: wranglerPath,
-		// Return `/` delimited paths, even on Windows.
-		posix: true,
-	})
-);
+let tests = globSync("e2e/**/*.test.ts", {
+	cwd: wranglerPath,
+});
 
 // Apply sharding if E2E_SHARD and E2E_SHARD_COUNT are set.
 // Uses greedy bin-packing by estimated duration so shards are roughly balanced.

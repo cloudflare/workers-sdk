@@ -1,11 +1,14 @@
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, it } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../../config-cache";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { msw } from "./../helpers/msw";
 import { runInTempDir } from "./../helpers/run-in-tmp";
 import { runWrangler } from "./../helpers/run-wrangler";
+import type { PagesConfigCache } from "../../pages/types";
 import type { Deployment } from "./../../pages/types";
 import type { ExpectStatic } from "vitest";
 
@@ -202,6 +205,38 @@ describe("pages deployment list", () => {
 				return key === "env";
 			})
 		).toStrictEqual(["env", "preview"]);
+	});
+
+	it("should prefer CLOUDFLARE_ACCOUNT_ID over cached account id", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-var-account-id");
+
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "stale-cached-account-id",
+			project_name: "images",
+		});
+
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/pages/projects/:project/deployments",
+				({ params }) => {
+					expect(params.accountId).toEqual("env-var-account-id");
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: [],
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler("pages deployment list --project-name=images");
 	});
 });
 

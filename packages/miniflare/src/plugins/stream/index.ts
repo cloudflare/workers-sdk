@@ -10,6 +10,7 @@ import {
 	PersistenceSchema,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
@@ -53,10 +54,12 @@ export const STREAM_PLUGIN: Plugin<
 				service: {
 					name: getUserBindingServiceName(
 						STREAM_PLUGIN_NAME,
-						options.stream.binding,
+						"service",
 						options.stream.remoteProxyConnectionString
 					),
-					entrypoint: "StreamBinding",
+					entrypoint: options.stream.remoteProxyConnectionString
+						? undefined
+						: "StreamBinding",
 				},
 			},
 		];
@@ -80,13 +83,13 @@ export const STREAM_PLUGIN: Plugin<
 			return [];
 		}
 
-		const serviceName = getUserBindingServiceName(
-			STREAM_PLUGIN_NAME,
-			options.stream.binding,
-			options.stream.remoteProxyConnectionString
-		);
-
 		if (options.stream.remoteProxyConnectionString) {
+			const serviceName = getUserBindingServiceName(
+				STREAM_PLUGIN_NAME,
+				"service",
+				options.stream.remoteProxyConnectionString
+			);
+
 			return [
 				{
 					name: serviceName,
@@ -146,7 +149,11 @@ export const STREAM_PLUGIN: Plugin<
 
 		// Entrypoint with RPC
 		const bindingService = {
-			name: serviceName,
+			name: getUserBindingServiceName(
+				STREAM_PLUGIN_NAME,
+				"service",
+				options.stream.remoteProxyConnectionString
+			),
 			worker: {
 				compatibilityDate: STREAM_COMPAT_DATE,
 				compatibilityFlags: ["nodejs_compat", "experimental"],
@@ -164,6 +171,7 @@ export const STREAM_PLUGIN: Plugin<
 							serviceName: STREAM_OBJECT_SERVICE_NAME,
 						},
 					},
+					WORKER_BINDING_SERVICE_LOOPBACK,
 				],
 				// Allow the binding worker to send outbound HTTP requests
 				// (e.g. fetching video from URL in upload fn)

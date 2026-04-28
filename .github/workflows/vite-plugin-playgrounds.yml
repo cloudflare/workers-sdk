@@ -9,7 +9,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
 
 env:
   # We run `playwright install` manually instead

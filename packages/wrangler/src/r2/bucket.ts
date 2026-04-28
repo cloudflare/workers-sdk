@@ -183,6 +183,12 @@ export const r2BucketListCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		// This is an account-level command and does not require a valid project config.
+		// Keeping config parsing out of the critical path avoids blocking users who are
+		// using `wrangler r2 bucket list` to debug/fix an invalid wrangler.jsonc/toml.
+		provideConfig: false,
+	},
 	args: {
 		jurisdiction: {
 			describe: "The jurisdiction to list",

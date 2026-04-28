@@ -1,5 +1,19 @@
 # @cloudflare/containers-shared
 
+## 0.14.1
+
+### Patch Changes
+
+- [#13611](https://github.com/cloudflare/workers-sdk/pull/13611) [`6e99feb`](https://github.com/cloudflare/workers-sdk/commit/6e99feb9c8a883cc41caa6fadca8a283fc302d97) Thanks [@smaldd14](https://github.com/smaldd14)! - Support Cloudflare-managed registry images in Vite plugin local dev
+
+  Previously, using a `registry.cloudflare.com` image in a `containers` binding would crash `vite dev` with an unsupported error. The Vite plugin now configures the Cloudflare API client using `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` before pulling container images, matching the behavior of `wrangler dev`.
+
+## 0.14.0
+
+### Minor Changes
+
+- [#13571](https://github.com/cloudflare/workers-sdk/pull/13571) [`7dc0433`](https://github.com/cloudflare/workers-sdk/commit/7dc043315272df2479c17ad204c379515dcc83e8) Thanks [@must108](https://github.com/must108)! - Add regional and jurisdictional placement constraints for Containers. Users can now set `constraints.regions` and `constraints.jurisdiction` in wrangler config to control where containers run.
+
 ## 0.13.1
 
 ### Patch Changes

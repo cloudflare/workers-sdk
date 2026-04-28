@@ -46,5 +46,6 @@ Main CLI for Cloudflare Workers. ~2k-line yargs command tree in `src/index.ts`. 
 
 ## Anti-Patterns
 
-- Never import `expect` from vitest — use test context `({ expect }) => {}`
 - Test files use `.test.ts` (not `.spec.ts`)
+- Never import `expect` from vitest — use test context `({ expect }) => {}`
+  - When adding `expect` as a parameter to helper functions, check ALL call sites (e.g., across `deployments.test.ts`, `versions.test.ts`)

@@ -9,8 +9,12 @@ import dedent from "ts-dedent";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { version } from "../../../package.json";
+import { saveToConfigCache } from "../../config-cache";
 import { logger } from "../../logger";
-import { ROUTES_SPEC_VERSION } from "../../pages/constants";
+import {
+	PAGES_CONFIG_CACHE_FILENAME,
+	ROUTES_SPEC_VERSION,
+} from "../../pages/constants";
 import { ApiErrorCodes } from "../../pages/errors";
 import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
 import { endEventLoop } from "../helpers/end-event-loop";
@@ -28,7 +32,11 @@ import {
 	formDataToObject,
 	toString,
 } from "../helpers/serialize-form-data-entry";
-import type { Project, UploadPayloadFile } from "../../pages/types";
+import type {
+	PagesConfigCache,
+	Project,
+	UploadPayloadFile,
+} from "../../pages/types";
 import type { StrictRequest } from "msw";
 import type { FormDataEntryValue } from "undici";
 
@@ -131,6 +139,7 @@ describe("pages deploy", () => {
 	it("should upload a directory of files", async ({ expect }) => {
 		writeFileSync("logo.png", "foobar");
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -275,6 +284,7 @@ describe("pages deploy", () => {
 		writeFileSync("logo.txt", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -448,6 +458,7 @@ describe("pages deploy", () => {
 		writeFileSync("logo.txt", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -630,6 +641,7 @@ describe("pages deploy", () => {
 		);
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -1060,6 +1072,7 @@ describe("pages deploy", () => {
 		writeFileSync("logo.js", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -1259,6 +1272,7 @@ describe("pages deploy", () => {
 		writeFileSync("public/logo.js", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -1455,6 +1469,7 @@ describe("pages deploy", () => {
 		writeFileSync("public/logo.js", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -1653,6 +1668,7 @@ describe("pages deploy", () => {
 		writeFileSync(".well-known/foobar", "foobar");
 
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -1797,6 +1813,7 @@ describe("pages deploy", () => {
 		await execa("git", ["init"]);
 		writeFileSync("logo.png", "foobar");
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -2010,6 +2027,7 @@ describe("pages deploy", () => {
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -2274,6 +2292,7 @@ describe("pages deploy", () => {
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -2548,6 +2567,7 @@ async function onRequest() {
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -2812,6 +2832,7 @@ async function onRequest() {
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -2932,6 +2953,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -3149,6 +3171,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -3359,6 +3382,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -3630,6 +3654,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -3902,6 +3927,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -4033,6 +4059,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -4260,6 +4287,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -4384,6 +4412,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -4573,6 +4602,7 @@ and that at least one include rule is provided.
 			);
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -4788,6 +4818,7 @@ and that at least one include rule is provided.
 				);
 
 				mockGetUploadTokenRequest(
+					expect,
 					"<<funfetti-auth-jwt>>",
 					"some-account-id",
 					"pages-is-awesome"
@@ -5038,6 +5069,7 @@ and that at least one include rule is provided.
 				);
 
 				mockGetUploadTokenRequest(
+					expect,
 					"<<funfetti-auth-jwt>>",
 					"some-account-id",
 					"pages-project"
@@ -5219,6 +5251,7 @@ and that at least one include rule is provided.
 		aliases?: string[]
 	) => {
 		mockGetUploadTokenRequest(
+			expect,
 			"<<funfetti-auth-jwt>>",
 			"some-account-id",
 			"foo"
@@ -5737,6 +5770,7 @@ and that at least one include rule is provided.
 			writeFileSync("public/README.md", "# Test project");
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -5858,6 +5892,7 @@ and that at least one include rule is provided.
 			writeFileSync("public/README.md", "# Test project");
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -5955,6 +5990,7 @@ and that at least one include rule is provided.
 			writeFileSync("public/README.md", "# Test project");
 
 			mockGetUploadTokenRequest(
+				expect,
 				"<<funfetti-auth-jwt>>",
 				"some-account-id",
 				"foo"
@@ -6221,7 +6257,7 @@ and that at least one include rule is provided.
 					"base64"
 				) +
 				".signature";
-			mockGetUploadTokenRequest(jwt, "some-account-id", "foo");
+			mockGetUploadTokenRequest(expect, jwt, "some-account-id", "foo");
 
 			await expect(
 				runWrangler("pages deploy . --project-name=foo")
@@ -6240,12 +6276,52 @@ and that at least one include rule is provided.
 					"base64"
 				) +
 				".signature";
-			mockGetUploadTokenRequest(jwt, "some-account-id", "foo");
+			mockGetUploadTokenRequest(expect, jwt, "some-account-id", "foo");
 
 			await runWrangler("pages deploy . --project-name=foo");
 
 			expect(std.out).toContain("Success! Uploaded 6 files");
 			expect(std.out).toContain("Deployment complete!");
+		});
+	});
+
+	describe("account id resolution", () => {
+		it("should prefer the CLOUDFLARE_ACCOUNT_ID environment variable over a stale cached account id in pages.json", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-var-account-id");
+
+			// Seed the Pages config cache with a stale account id, simulating
+			// a previous deploy against a different account.
+			saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+				account_id: "stale-cached-account-id",
+				project_name: "foo",
+			});
+
+			writeFileSync("logo.png", "foobar");
+
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					({ params }) => {
+						expect(params.accountId).toEqual("env-var-account-id");
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 10000, message: "Authentication error" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 401 }
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(
+				runWrangler("pages deploy . --project-name=foo")
+			).rejects.toThrow();
 		});
 	});
 });

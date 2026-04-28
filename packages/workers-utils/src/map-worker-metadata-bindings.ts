@@ -132,6 +132,17 @@ export function mapWorkerMetadataBindings(
 							];
 						}
 						break;
+					case "artifacts":
+						{
+							configObj.artifacts = [
+								...(configObj.artifacts ?? []),
+								{
+									binding: binding.name,
+									namespace: binding.namespace,
+								},
+							];
+						}
+						break;
 					case "unsafe_hello_world": {
 						configObj.unsafe_hello_world = [
 							...(configObj.unsafe_hello_world ?? []),

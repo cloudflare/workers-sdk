@@ -9,6 +9,21 @@ import type { EmailAddress, MessageBuilder } from "./types";
 import type { Email } from "postal-mime";
 
 /**
+ * Build a Message-ID in the shape the production `send_email` binding returns:
+ * `<{36 alphanumeric chars}@{sender domain}>`, brackets included. The body is
+ * random — production synthesizes its own id rather than echoing any header
+ * present in the submitted email.
+ */
+function synthesizeMessageId(senderEmail: string): string {
+	const alphabet =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	const bytes = crypto.getRandomValues(new Uint8Array(36));
+	const id = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+	const domain = senderEmail.slice(senderEmail.lastIndexOf("@") + 1);
+	return `<${id}@${domain}>`;
+}
+
+/**
  * Extracts email address from string or EmailAddress object
  */
 function extractEmailAddress(addr: string | EmailAddress): string {
@@ -168,7 +183,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 
 	async send(
 		emailMessageOrBuilder: EmailMessage | MessageBuilder
-	): Promise<void> {
+	): Promise<EmailSendResult> {
 		// Check if this is an EmailMessage (has RAW_EMAIL symbol) or MessageBuilder
 		if (this.isEmailMessage(emailMessageOrBuilder)) {
 			// Original EmailMessage API - validate and parse MIME
@@ -217,6 +232,8 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			this.log(
 				`${blue("send_email binding called with the following message:")}\n  ${file}`
 			);
+
+			return { messageId: synthesizeMessageId(emailMessage.from) };
 		} else {
 			// New MessageBuilder API - just validate and log
 			const builder = emailMessageOrBuilder;
@@ -269,6 +286,10 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			this.log(
 				`${blue("send_email binding called with MessageBuilder:")}\n${formatted}${fileInfo}`
 			);
+
+			return {
+				messageId: synthesizeMessageId(extractEmailAddress(builder.from)),
+			};
 		}
 	}
 }

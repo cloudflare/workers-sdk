@@ -1,4 +1,4 @@
-import { isInteractive as __isInteractive } from "@cloudflare/cli/interactive";
+import { isInteractive as __isInteractive } from "@cloudflare/cli-shared-helpers/interactive";
 import ci from "ci-info";
 
 /**

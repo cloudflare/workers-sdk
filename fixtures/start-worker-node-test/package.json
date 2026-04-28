@@ -6,7 +6,7 @@
 	"author": "",
 	"type": "module",
 	"scripts": {
-		"test:ci": "node --test"
+		"test:ci": "node --test --test-timeout=15000"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

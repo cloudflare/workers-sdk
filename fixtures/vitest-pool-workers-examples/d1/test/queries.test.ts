@@ -1,6 +1,6 @@
-import { env } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { it } from "vitest";
-import { listPosts, readPost, upsertPost } from "../src/";
+import { listPosts, readPost, upsertPost } from "../src/utils";
 
 it("should create and read post", async ({ expect }) => {
 	await upsertPost(env, "/hello", "👋");

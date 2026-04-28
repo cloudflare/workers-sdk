@@ -18,6 +18,7 @@ const TEAM_ASSIGNMENTS: { [label: string]: { [jobRole: string]: string } } = {
 	d1: { em: "joshthoward", pm: "vy-ton" },
 	documentation: {},
 	"durable objects": { em: "joshthoward", pm: "vy-ton" },
+	email: { pm: "thomasgauvin" },
 	hyperdrive: { em: "sejoker", pm: "thomasgauvin" },
 	"kv-asset-handler": { em: "lrapoport-cf", pm: "mattietk" },
 	miniflare: { em: "lrapoport-cf", pm: "mattietk" },

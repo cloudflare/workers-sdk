@@ -49,7 +49,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("@cloudflare/cli/command");
+vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -860,7 +860,7 @@ describe("deploy", () => {
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
 				Binding               Resource
-				env.MYBROWSER         Browser
+				env.MYBROWSER         Browser Run
 				env.AI_BIND           AI
 
 				Uploaded test-name (TIMINGS)

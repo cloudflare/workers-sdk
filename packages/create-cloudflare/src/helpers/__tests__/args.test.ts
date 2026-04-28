@@ -1,7 +1,7 @@
 import { assert, describe, test, vi } from "vitest";
 import { parseArgs } from "../args";
 
-vi.mock("@cloudflare/cli");
+vi.mock("@cloudflare/cli-shared-helpers");
 vi.mock("yargs/helpers", () => ({ hideBin: (x: string[]) => x }));
 
 describe("Cli", () => {

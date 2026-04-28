@@ -1,4 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
+import { INHERIT_SYMBOL } from "@cloudflare/workers-utils";
 import { describe, it } from "vitest";
 import { printBindings } from "../utils/print-bindings";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
@@ -97,5 +98,35 @@ describe("printBindings — AI Search bindings", () => {
 		expect(output).toContain("BLOG_SEARCH");
 		expect(output).toContain("AI Search Instance");
 		expect(output).toContain("cloudflare-blog");
+	});
+
+	it("renders inherited AI Search namespace bindings as `(inherited)`", ({
+		expect,
+	}) => {
+		const output = callPrintBindings({
+			AI_SEARCH: {
+				type: "ai_search_namespace",
+				namespace: INHERIT_SYMBOL,
+			},
+		});
+
+		expect(output).toContain("AI_SEARCH");
+		expect(output).toContain("(inherited)");
+		expect(output).not.toContain("Symbol(inherit_binding)");
+	});
+});
+
+describe("printBindings -- Artifacts bindings", () => {
+	it("shows Artifacts bindings", ({ expect }) => {
+		const output = callPrintBindings({
+			MY_ARTIFACTS: {
+				type: "artifacts",
+				namespace: "default",
+			},
+		});
+
+		expect(output).toContain("MY_ARTIFACTS");
+		expect(output).toContain("Artifacts");
+		expect(output).toContain("default");
 	});
 });

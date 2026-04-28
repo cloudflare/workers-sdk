@@ -3,7 +3,7 @@ import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { blue, gray } from "@cloudflare/cli/colors";
+import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	configFileName,
 	getTodaysCompatDate,

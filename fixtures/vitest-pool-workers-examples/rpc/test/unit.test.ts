@@ -1,13 +1,12 @@
 import {
 	createExecutionContext,
-	env,
 	runDurableObjectAlarm,
 	runInDurableObject,
-	SELF,
 } from "cloudflare:test";
-import { RpcStub } from "cloudflare:workers";
+import { env, RpcStub } from "cloudflare:workers";
 import { describe, it, onTestFinished } from "vitest";
-import TestDefaultEntrypoint, { Counter, TestObject } from "../src";
+import TestDefaultEntrypoint, { TestObject } from "../src";
+import { Counter } from "../src/counter";
 
 describe("named entrypoints", () => {
 	it("dispatches fetch request to named ExportedHandler", async ({

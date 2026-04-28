@@ -71,4 +71,5 @@ jobs:
           mentions: "/bonk,@ask-bonk"
           permissions: write
           agent: bonk
+          opencode_version: "1.4.6" # pin to this version as newer versions are causing ProviderInitError issues
           prompt: ${{ steps.prompt.outputs.value }}

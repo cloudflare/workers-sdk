@@ -2609,7 +2609,7 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
-	describe("`browser rendering binding", () => {
+	describe("`browser run binding", () => {
 		it("should not show error when running locally", async ({ expect }) => {
 			writeWranglerConfig({
 				browser: {
@@ -2985,6 +2985,47 @@ describe.sequential("wrangler dev", () => {
 				expect(std.out).not.toContain("types might be out of date");
 				expect(std.out).not.toContain("types looked out of date");
 			});
+		});
+	});
+
+	describe("tunnel", () => {
+		it("should pass --tunnel flag through to dev config", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev --tunnel");
+			expect(config.input.dev?.tunnel).toBe(true);
+		});
+
+		it("should default tunnel to undefined when not specified", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev");
+			expect(config.input.dev?.tunnel).toBeUndefined();
+		});
+
+		it("should error when --tunnel and --remote are both specified", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await expect(
+				runWrangler("dev --tunnel --remote")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --tunnel is only supported in local mode.]`
+			);
 		});
 	});
 

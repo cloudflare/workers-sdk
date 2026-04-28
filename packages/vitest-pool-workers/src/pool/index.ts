@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import util from "node:util";
 import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import * as devalue from "devalue";
 import getPort, { portNumbers } from "get-port";
@@ -66,8 +67,10 @@ export function structuredSerializableParse(value: string): unknown {
 	return devalue.parse(value, structuredSerializableRevivers);
 }
 
-// Log for informational pool messages
-const log = new Log(LogLevel.VERBOSE, { prefix: "vpw" });
+// Log for pool info/warnings/errors (user-actionable messages only)
+const log = new Log(LogLevel.INFO, { prefix: "vpw" });
+// Debug log gated behind NODE_DEBUG=vitest-pool-workers
+const debug = util.debuglog("vitest-pool-workers");
 // Log for Miniflare instances, used for user code warnings/errors
 const mfLog = new Log(LogLevel.WARN);
 
@@ -312,10 +315,10 @@ async function buildProjectWorkerOptions(
 	if (runnerWorker.compatibilityDate === undefined) {
 		// No compatibility date was provided, so use today's date
 		runnerWorker.compatibilityDate = getTodaysCompatDate();
-		log.info(
-			`No compatibility date was provided for project ${getRelativeProjectPath(
-				project
-			)}, defaulting to today's date ${runnerWorker.compatibilityDate}.`
+		debug(
+			"No compatibility date was provided for project %s, defaulting to today's date %s.",
+			getRelativeProjectPath(project),
+			runnerWorker.compatibilityDate
 		);
 	}
 
@@ -659,15 +662,12 @@ export async function getProjectMiniflare(
 		poolOptions,
 		main
 	);
-	log.info(
-		`Starting runtime for ${getRelativeProjectPath(project)}` +
-			`${
-				mfOptions.inspectorPort !== undefined
-					? ` with inspector on port ${mfOptions.inspectorPort}`
-					: ""
-			}` +
-			`...`
-	);
+	debug("Starting runtime for %s...", getRelativeProjectPath(project));
+	if (mfOptions.inspectorPort !== undefined) {
+		log.info(
+			`Starting inspector on port ${mfOptions.inspectorPort} for ${getRelativeProjectPath(project)}`
+		);
+	}
 	const mf = new Miniflare(mfOptions);
 	await mf.ready;
 	return mf;
@@ -812,13 +812,14 @@ function ensureFeature(compatibilityFlags: string[], feature: string) {
 	const flagToEnable = `enable_${feature}`;
 	const flagToDisable = `disable_${feature}`;
 	if (!compatibilityFlags.includes(flagToEnable)) {
-		log.debug(
-			`Adding \`${flagToEnable}\` compatibility flag during tests as this feature is needed to support the Vitest runner.`
+		debug(
+			"Adding `%s` compatibility flag during tests as this feature is needed to support the Vitest runner.",
+			flagToEnable
 		);
 		compatibilityFlags.push(flagToEnable);
 	}
 	if (compatibilityFlags.includes(flagToDisable)) {
-		log.info(
+		log.warn(
 			`Removing \`${flagToDisable}\` compatibility flag during tests as that feature is needed to support the Vitest runner.`
 		);
 		compatibilityFlags.splice(compatibilityFlags.indexOf(flagToDisable), 1);

@@ -288,7 +288,7 @@ export class RouterInnerEntrypoint extends WorkerEntrypoint<Env> {
 				}
 				// evaluate "include" rules
 				const includeRulesMatcher = generateStaticRoutingRuleMatcher(
-					config.static_routing.user_worker
+					config.static_routing.user_worker ?? []
 				);
 				if (
 					includeRulesMatcher({

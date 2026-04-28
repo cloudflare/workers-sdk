@@ -1,9 +1,9 @@
 import {
-	env,
 	listDurableObjectIds,
 	runDurableObjectAlarm,
 	runInDurableObject,
 } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { it } from "vitest";
 
 it("uses other object", async ({ expect }) => {

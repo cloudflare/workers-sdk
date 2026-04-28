@@ -1,5 +1,5 @@
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { quoteShellArgs } from "@cloudflare/cli/command";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { quoteShellArgs } from "@cloudflare/cli-shared-helpers/command";
 import { runWranglerCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";

@@ -41,6 +41,7 @@ import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
 	CacheOptions,
+	ContainerApp,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -101,6 +102,7 @@ export type ConfigBindingFieldName =
 	| "workflows"
 	| "pipelines"
 	| "secrets_store_secrets"
+	| "artifacts"
 	| "ratelimits"
 	| "assets"
 	| "unsafe_hello_world"
@@ -128,7 +130,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	services: "Worker",
 	analytics_engine_datasets: "Analytics Engine Dataset",
 	text_blobs: "Text Blob",
-	browser: "Browser",
+	browser: "Browser Run",
 	ai: "AI",
 	images: "Images",
 	stream: "Stream",
@@ -142,6 +144,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	workflows: "Workflow",
 	pipelines: "Pipeline",
 	secrets_store_secrets: "Secrets Store Secret",
+	artifacts: "Artifacts",
 	ratelimits: "Rate Limit",
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
@@ -164,7 +167,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	send_email: "Send Email",
 	wasm_module: "Wasm Module",
 	text_blob: "Text Blob",
-	browser: "Browser",
+	browser: "Browser Run",
 	ai: "AI",
 	images: "Images",
 	stream: "Stream",
@@ -186,6 +189,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	mtls_certificate: "mTLS Certificate",
 	pipeline: "Pipeline",
 	secrets_store_secret: "Secrets Store Secret",
+	artifacts: "Artifacts",
 	logfwdr: "logfwdr",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
@@ -976,8 +980,6 @@ function isValidRouteValue(item: unknown): boolean {
 			return false;
 		}
 
-		const otherKeys = Object.keys(item).length - 1; // minus one to subtract "pattern"
-
 		const hasZoneId =
 			hasProperty(item, "zone_id") && typeof item.zone_id === "string";
 		const hasZoneName =
@@ -985,13 +987,38 @@ function isValidRouteValue(item: unknown): boolean {
 		const hasCustomDomainFlag =
 			hasProperty(item, "custom_domain") &&
 			typeof item.custom_domain === "boolean";
+		const hasEnabled =
+			hasProperty(item, "enabled") && typeof item.enabled === "boolean";
+		const hasPreviewsEnabled =
+			hasProperty(item, "previews_enabled") &&
+			typeof item.previews_enabled === "boolean";
 
-		if (otherKeys === 2 && hasCustomDomainFlag && (hasZoneId || hasZoneName)) {
-			return true;
-		} else if (
-			otherKeys === 1 &&
-			(hasZoneId || hasZoneName || hasCustomDomainFlag)
-		) {
+		const recognizedKeys = [
+			hasZoneId,
+			hasZoneName,
+			hasCustomDomainFlag,
+			hasEnabled,
+			hasPreviewsEnabled,
+		].filter(Boolean).length;
+		const otherKeys = Object.keys(item).length - 1; // minus one to subtract "pattern"
+
+		// All keys must be recognized
+		if (recognizedKeys !== otherKeys) {
+			return false;
+		}
+
+		// zone_id and zone_name are mutually exclusive
+		if (hasZoneId && hasZoneName) {
+			return false;
+		}
+
+		// enabled and previews_enabled are only valid on custom domain routes
+		if ((hasEnabled || hasPreviewsEnabled) && !hasCustomDomainFlag) {
+			return false;
+		}
+
+		// Must have at least one of: zone_id, zone_name, or custom_domain
+		if (hasZoneId || hasZoneName || hasCustomDomainFlag) {
 			return true;
 		}
 	}
@@ -1042,7 +1069,7 @@ function mutateEmptyStringRouteValue(
 const isRoute: ValidatorFn = (diagnostics, field, value) => {
 	if (value !== undefined && !isValidRouteValue(value)) {
 		diagnostics.errors.push(
-			`Expected "${field}" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got ${JSON.stringify(
+			`Expected "${field}" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name, enabled, previews_enabled }, but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -1072,7 +1099,7 @@ const isRouteArray: ValidatorFn = (diagnostics, field, value) => {
 	}
 	if (invalidRoutes.length > 0) {
 		diagnostics.errors.push(
-			`Expected "${field}" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: ${JSON.stringify(
+			`Expected "${field}" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name, enabled, previews_enabled }, but these weren't valid: ${JSON.stringify(
 				invalidRoutes,
 				null,
 				2
@@ -1875,6 +1902,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"secrets_store_secrets",
 			validateBindingArray(envName, validateSecretsStoreSecretBinding),
+			[]
+		),
+		artifacts: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"artifacts",
+			validateBindingArray(envName, validateArtifactsBinding),
 			[]
 		),
 		unsafe_hello_world: notInheritable(
@@ -2996,6 +3033,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"vpc_network",
 			"stream",
 			"media",
+			"artifacts",
 		];
 
 		if (safeBindings.includes(value.type)) {
@@ -3335,6 +3373,11 @@ function validateContainerApp(
 					`"containers.durable_objects" is deprecated. Use the "class_name" field instead.`
 				);
 			}
+			if ("wrangler_ssh" in containerAppOptional) {
+				diagnostics.warnings.push(
+					`"containers.wrangler_ssh" is deprecated. Use "containers.ssh" instead.`
+				);
+			}
 
 			// unsafe.containers
 			if ("unsafe" in containerAppOptional) {
@@ -3365,6 +3408,7 @@ function validateContainerApp(
 					"class_name",
 					"scheduling_policy",
 					"instance_type",
+					"ssh",
 					"wrangler_ssh",
 					"authorized_keys",
 					"trusted_user_ca_keys",
@@ -3387,30 +3431,40 @@ function validateContainerApp(
 				);
 			}
 
-			if ("wrangler_ssh" in containerAppOptional) {
-				if (
-					!isRequiredProperty(
-						containerAppOptional.wrangler_ssh,
-						"enabled",
-						"boolean"
-					)
-				) {
+			let sshField: "ssh" | "wrangler_ssh" | undefined;
+			let sshConfig:
+				| ContainerApp["ssh"]
+				| ContainerApp["wrangler_ssh"]
+				| undefined;
+
+			if ("ssh" in containerAppOptional) {
+				sshField = "ssh";
+				sshConfig = containerAppOptional.ssh;
+				containerAppOptional.wrangler_ssh = containerAppOptional.ssh;
+				delete containerAppOptional.ssh;
+			} else if ("wrangler_ssh" in containerAppOptional) {
+				sshField = "wrangler_ssh";
+				sshConfig = containerAppOptional.wrangler_ssh;
+			}
+
+			if (sshField !== undefined) {
+				const sshConfigObject =
+					typeof sshConfig === "object" && sshConfig !== null ? sshConfig : {};
+
+				if (!isRequiredProperty(sshConfigObject, "enabled", "boolean")) {
 					diagnostics.errors.push(
-						`${field}.wrangler_ssh.enabled must be a boolean`
+						`${field}.${sshField}.enabled must be a boolean`
 					);
 				}
 
+				const sshPort =
+					"port" in sshConfigObject ? sshConfigObject.port : undefined;
 				if (
-					!isOptionalProperty(
-						containerAppOptional.wrangler_ssh,
-						"port",
-						"number"
-					) ||
-					containerAppOptional.wrangler_ssh.port < 1 ||
-					containerAppOptional.wrangler_ssh.port > 65535
+					!isOptionalProperty(sshConfigObject, "port", "number") ||
+					(typeof sshPort === "number" && (sshPort < 1 || sshPort > 65535))
 				) {
 					diagnostics.errors.push(
-						`${field}.wrangler_ssh.port must be a number between 1 and 65535 inclusive`
+						`${field}.${sshField}.port must be a number between 1 and 65535 inclusive`
 					);
 				}
 			}
@@ -3499,6 +3553,53 @@ function validateContainerApp(
 					constraints.tiers,
 					"number"
 				);
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.constraints`,
+					"jurisdiction",
+					constraints.jurisdiction,
+					"string"
+				);
+				if (
+					constraints.jurisdiction &&
+					!["eu", "fedramp"].includes(constraints.jurisdiction)
+				) {
+					diagnostics.errors.push(
+						`${field}.constraints.jurisdiction must be one of: "eu", "fedramp"`
+					);
+				}
+				if (
+					validateOptionalTypedArray(
+						diagnostics,
+						`${field}.constraints.regions`,
+						constraints.regions,
+						"string"
+					) &&
+					constraints.regions &&
+					Array.isArray(constraints.regions)
+				) {
+					const validRegions = [
+						"ENAM",
+						"WNAM",
+						"EEUR",
+						"WEUR",
+						"APAC",
+						"SAM",
+						"ME",
+						"OC",
+						"AFR",
+					];
+					for (const region of constraints.regions) {
+						if (
+							typeof region === "string" &&
+							!validRegions.includes(region.toUpperCase())
+						) {
+							diagnostics.errors.push(
+								`${field}.constraints.regions contains invalid region "${region}". Valid regions are: ${validRegions.join(", ")}`
+							);
+						}
+					}
+				}
 			}
 
 			// Instance Type validation: When present, the instance type should be either (1) a string
@@ -4762,6 +4863,45 @@ const validateSecretsStoreSecretBinding: ValidatorFn = (
 	return isValid;
 };
 
+const validateArtifactsBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"artifacts" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "namespace" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"namespace",
+		"remote",
+	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	return isValid;
+};
+
 const validateHelloWorldBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -5018,6 +5158,7 @@ const validatePreviewsConfig =
 				"media",
 				"pipelines",
 				"secrets_store_secrets",
+				"artifacts",
 				"unsafe_hello_world",
 				"worker_loaders",
 				"ratelimits",
@@ -5240,6 +5381,14 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.secrets_store_secrets`,
 				previews.secrets_store_secrets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateArtifactsBinding)(
+				diagnostics,
+				`${field}.artifacts`,
+				previews.artifacts,
 				undefined
 			) && isValid;
 

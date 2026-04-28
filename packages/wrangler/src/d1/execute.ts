@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { createReadStream, promises as fs } from "node:fs";
 import path from "node:path";
-import { spinnerWhile } from "@cloudflare/cli/interactive";
+import { spinnerWhile } from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	APIError,
 	configFileName,

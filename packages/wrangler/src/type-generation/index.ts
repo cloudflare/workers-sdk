@@ -166,19 +166,6 @@ export const typesCommand = createCommand({
 			);
 		}
 
-		if (args.check) {
-			const outOfDate = await checkTypesUpToDate(config, outputPath);
-			if (outOfDate) {
-				throw new FatalError(
-					`Types at ${outputPath} are out of date. Run \`wrangler types\` to regenerate.`,
-					1
-				);
-			}
-
-			logger.log(`✨ Types at ${outputPath} are up to date.\n`);
-			return;
-		}
-
 		const secondaryEntries: Map<string, Entry> = new Map();
 
 		if (secondaryConfigs.length > 0) {
@@ -220,6 +207,24 @@ export const typesCommand = createCommand({
 					);
 				}
 			}
+		}
+
+		if (args.check) {
+			const outOfDate = await checkTypesUpToDate(
+				config,
+				envInterface,
+				outputPath,
+				secondaryEntries
+			);
+			if (outOfDate) {
+				throw new FatalError(
+					`Types at ${outputPath} are out of date. Run \`wrangler types\` to regenerate.`,
+					1
+				);
+			}
+
+			logger.log(`✨ Types at ${outputPath} are up to date.\n`);
+			return;
 		}
 
 		const configContainsEntrypoint =
@@ -1797,6 +1802,21 @@ function collectCoreBindings(
 			);
 		}
 
+		for (const [index, artifact] of (env.artifacts ?? []).entries()) {
+			if (!artifact.binding) {
+				throwMissingBindingError({
+					binding: artifact,
+					bindingType: "artifacts",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(artifact.binding, "Artifacts", "artifacts", envName);
+		}
+
 		for (const [index, helloWorld] of (
 			env.unsafe_hello_world ?? []
 		).entries()) {
@@ -2773,6 +2793,25 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "secrets_store_secrets",
 				name: secret.binding,
 				type: "SecretsStoreSecret",
+			});
+		}
+
+		for (const [index, artifact] of (env.artifacts ?? []).entries()) {
+			if (!artifact.binding) {
+				throwMissingBindingError({
+					binding: artifact,
+					bindingType: "artifacts",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "artifacts",
+				name: artifact.binding,
+				type: "Artifacts",
 			});
 		}
 

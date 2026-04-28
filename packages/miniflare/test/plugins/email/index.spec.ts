@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { LogLevel, Miniflare } from "miniflare";
 import dedent from "ts-dedent";
-import { test, vi } from "vitest";
+import { type ExpectStatic, test, vi } from "vitest";
 import { TestLog, useDispose } from "../../test-shared";
 
 const SEND_EMAIL_WORKER = dedent /* javascript */ `
@@ -1507,4 +1507,104 @@ test("MessageBuilder backward compatibility - old EmailMessage API still works",
 
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
+});
+
+const SEND_EMAIL_RETURNS_RESULT_WORKER = dedent /* javascript */ `
+	import { EmailMessage } from "cloudflare:email";
+
+	export default {
+		async fetch(request, env) {
+			const url = new URL(request.url);
+			const result = await env.SEND_EMAIL.send(new EmailMessage(
+				url.searchParams.get("from"),
+				url.searchParams.get("to"),
+				request.body
+			));
+			return Response.json(result);
+		},
+	};
+`;
+
+// Both branches return an id in the shape production returns:
+// `<{36 alphanumeric chars}@{sender domain}>`, angle brackets included.
+function synthesizedMessageId(expect: ExpectStatic, domain: string) {
+	return expect.stringMatching(
+		new RegExp(`^<[A-Za-z0-9]{36}@${domain.replace(/\./g, "\\.")}>$`)
+	);
+}
+
+test("send() on an EmailMessage returns a synthesized messageId", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: SEND_EMAIL_RETURNS_RESULT_WORKER,
+		email: {
+			send_email: [{ name: "SEND_EMAIL" }],
+		},
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	const email = dedent`
+		From: someone <someone@sender.domain>
+		To: someone else <someone-else@example.com>
+		Message-ID: <do-not-echo-this@example.com>
+		MIME-Version: 1.0
+		Content-Type: text/plain
+
+		body`;
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/?" +
+			new URLSearchParams({
+				from: "someone@sender.domain",
+				to: "someone-else@example.com",
+			}).toString(),
+		{ body: email, method: "POST" }
+	);
+
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual({
+		messageId: synthesizedMessageId(expect, "sender.domain"),
+	});
+});
+
+test("send() on a MessageBuilder returns a synthesized messageId", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: dedent /* javascript */ `
+			export default {
+				async fetch(request, env) {
+					const builder = await request.json();
+					const result = await env.SEND_EMAIL.send(builder);
+					return Response.json(result);
+				},
+			};
+		`,
+		email: {
+			send_email: [{ name: "SEND_EMAIL" }],
+		},
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@sender.domain",
+			to: "recipient@example.com",
+			subject: "s",
+			text: "t",
+		}),
+	});
+
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual({
+		messageId: synthesizedMessageId(expect, "sender.domain"),
+	});
 });

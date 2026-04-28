@@ -1,7 +1,10 @@
-import { endSection } from "@cloudflare/cli";
-import { brandColor } from "@cloudflare/cli/colors";
-import { quoteShellArgs, runCommand } from "@cloudflare/cli/command";
-import { spinner } from "@cloudflare/cli/interactive";
+import { endSection } from "@cloudflare/cli-shared-helpers";
+import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
+import {
+	quoteShellArgs,
+	runCommand,
+} from "@cloudflare/cli-shared-helpers/command";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { transformFile } from "@cloudflare/codemod";
 import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets } from "helpers/codemod";

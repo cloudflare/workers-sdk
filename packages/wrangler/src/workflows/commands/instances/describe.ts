@@ -1,5 +1,5 @@
-import { logRaw } from "@cloudflare/cli";
-import { red, white } from "@cloudflare/cli/colors";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
+import { red, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	addMilliseconds,
 	formatDistanceStrict,

@@ -8,7 +8,7 @@ import { mockSpinner, mockWorkersTypesDirectory } from "./mocks";
 
 vi.mock("helpers/files");
 vi.mock("fs");
-vi.mock("@cloudflare/cli/interactive");
+vi.mock("@cloudflare/cli-shared-helpers/interactive");
 
 describe("Compatibility Date Helpers", () => {
 	let spinner: ReturnType<typeof mockSpinner>;

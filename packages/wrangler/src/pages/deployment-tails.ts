@@ -18,6 +18,7 @@ import {
 } from "../tail/createTail";
 import { translateCLICommandToFilterMessage } from "../tail/filters";
 import { requireAuth } from "../user";
+import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import { isUrl } from "./utils";
@@ -26,11 +27,8 @@ import type { Deployment } from "@cloudflare/types";
 
 const statusChoices = ["ok", "error", "canceled"] as const;
 type StatusChoice = (typeof statusChoices)[number];
-const isStatusChoiceList = (
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	data?: any[]
-): data is StatusChoice[] =>
-	data?.every((d) => statusChoices.includes(d)) ?? false;
+const isStatusChoiceList = (data?: unknown[]): data is StatusChoice[] =>
+	data?.every((d) => statusChoices.includes(d as StatusChoice)) ?? false;
 
 export const pagesDeploymentTailCommand = createCommand({
 	metadata: {
@@ -144,7 +142,8 @@ export const pagesDeploymentTailCommand = createCommand({
 		const pagesConfig = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(pagesConfig);
+		const accountId =
+			getCloudflareAccountIdFromEnv() ?? (await requireAuth(pagesConfig));
 		let deploymentId = deployment;
 
 		if (!isInteractive()) {

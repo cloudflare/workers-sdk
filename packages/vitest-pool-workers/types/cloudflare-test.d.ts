@@ -46,6 +46,38 @@ declare module "cloudflare:test" {
 	): Promise<DurableObjectId[]>;
 
 	/**
+	 * Deletes all data from all attached bindings. This is
+	 * useful for resetting state between test blocks.
+	 *
+	 * @example
+	 * ```ts
+	 * import { reset } from "cloudflare:test";
+	 * import { afterEach } from "vitest";
+	 *
+	 * afterEach(async () => {
+	 *   await reset();
+	 * });
+	 * ```
+	 */
+	export function reset(): Promise<void>;
+
+	/**
+	 * Resets all Durable Object instances. Unlike `reset()`, this does not delete
+	 * persisted data.
+	 *
+	 * @example
+	 * ```ts
+	 * import { abortAllDurableObjects } from "cloudflare:test";
+	 * import { afterEach } from "vitest";
+	 *
+	 * afterEach(async () => {
+	 *   await abortAllDurableObjects();
+	 * });
+	 * ```
+	 */
+	export function abortAllDurableObjects(): Promise<void>;
+
+	/**
 	 * Creates an instance of `ExecutionContext` for use as the 3rd argument to
 	 * modules-format exported handlers.
 	 */

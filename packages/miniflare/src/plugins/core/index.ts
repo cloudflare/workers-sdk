@@ -19,6 +19,7 @@ import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
+	getUserBindingServiceName,
 	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
 	ProxyNodeBinding,
@@ -26,6 +27,7 @@ import {
 	SERVICE_LOOPBACK,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import { STREAM_PLUGIN_NAME } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -164,6 +166,20 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
 
+		/**
+		 * When sending a request over the dev registry to a Worker's default entrypoint,
+		 * Miniflare _actually_ serves the request from the associated Assets proxy, so
+		 * that Assets can be served in front of the user-worker when configured.
+		 *
+		 * However, @cloudflare/vite-plugin bypasses Miniflare's native Assets handling
+		 * and does everything itself. We still want service bindings to a Vite app to
+		 * serve Assets in front of the worker when appropriate though, and so we let
+		 * the caller specify an alternative worker name whose service handles
+		 * default-entrypoint requests from the dev registry (e.g. a proxy worker
+		 * that serves assets in front of the user worker).
+		 */
+		unsafeOverrideFetchWorker: z.string().optional(),
+
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
 
@@ -271,8 +287,6 @@ export const CoreSharedOptionsSchema = z
 
 		// Enable auto service / durable objects discovery with the dev registry
 		unsafeDevRegistryPath: z.string().optional(),
-		// Enable External Durable Objects Proxy / Internal DOs registration
-		unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
 		// Called when external workers this instance depends on are updated in the dev registry
 		unsafeHandleDevRegistryUpdate: z
 			.function(z.tuple([z.custom<WorkerRegistry>()]))
@@ -309,6 +323,12 @@ export const CoreSharedOptionsSchema = z
 				deviceId: z.string().optional(),
 			})
 			.default({ enabled: false }),
+
+		// The stable, externally-reachable URL for this Miniflare instance
+		// (e.g. the Wrangler proxy URL or Vite dev server URL). Used by
+		// plugins like Stream to generate preview URLs that outlive runtime
+		// restarts. If not set, plugins fall back to the runtime entry URL.
+		publicUrl: z.string().url().optional(),
 	})
 	.refine(
 		({ structuredWorkerdLogs, handleStructuredLogs }) => {
@@ -685,6 +705,7 @@ export const CORE_PLUGIN: Plugin<
 		wrappedBindingNames,
 		durableObjectClassNames,
 		additionalModules,
+		loopbackHost,
 		loopbackPort,
 	}) {
 		// Define regular user worker
@@ -862,7 +883,7 @@ export const CORE_PLUGIN: Plugin<
 					moduleFallback:
 						options.unsafeUseModuleFallbackService &&
 						sharedOptions.unsafeModuleFallbackService !== undefined
-							? `localhost:${loopbackPort}`
+							? `${loopbackHost}:${loopbackPort}`
 							: undefined,
 					tails: options.tails?.map<ServiceDesignator>((service) => {
 						return getCustomServiceDesignator(
@@ -1044,6 +1065,20 @@ export function getGlobalServices({
 			},
 		});
 	}
+	const streamServiceEnabled = allWorkerOpts?.some(
+		(worker) =>
+			worker.stream?.stream !== undefined &&
+			!worker.stream.stream.remoteProxyConnectionString
+	);
+	if (streamServiceEnabled) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_STREAM,
+			service: {
+				name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
+				entrypoint: "StreamBinding",
+			},
+		});
+	}
 	if (sharedOptions.upstream !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.TEXT_UPSTREAM_URL,
@@ -1063,6 +1098,7 @@ export function getGlobalServices({
 			data: encoder.encode(liveReloadScript),
 		});
 	}
+
 	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,

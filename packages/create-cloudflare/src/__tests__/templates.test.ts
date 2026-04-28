@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { spinner } from "@cloudflare/cli/interactive";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import degit from "degit";
 import { mockSpinner } from "helpers/__tests__/mocks";
 import { readFile, readJSON, writeFile, writeJSON } from "helpers/files";
@@ -18,7 +18,7 @@ import type { Mock } from "vitest";
 vi.mock("degit");
 vi.mock("fs");
 vi.mock("helpers/files");
-vi.mock("@cloudflare/cli/interactive");
+vi.mock("@cloudflare/cli-shared-helpers/interactive");
 
 describe("downloadRemoteTemplate", () => {
 	let cloneMock: Mock;

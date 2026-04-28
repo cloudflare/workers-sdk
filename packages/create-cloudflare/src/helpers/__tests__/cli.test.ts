@@ -6,7 +6,7 @@ import { isUpdateAvailable } from "../cli";
 import { mockSpinner } from "./mocks";
 
 vi.mock("process");
-vi.mock("@cloudflare/cli/interactive");
+vi.mock("@cloudflare/cli-shared-helpers/interactive");
 
 beforeEach(() => {
 	mockSpinner();

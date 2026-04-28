@@ -5,6 +5,7 @@
  * any one instance can aggregate data from all instances.
  */
 
+import { env } from "cloudflare:workers";
 import { CorePaths } from "../core";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { AppContext } from "./common";
@@ -21,18 +22,19 @@ export const NO_AGGREGATE_HEADER = "X-Miniflare-Explorer-No-Aggregate";
  * Get the unique base URLs of peer instances from the dev registry,
  * excluding the current instance (identified by worker names).
  */
-function getPeerUrls(
+function getPeerDebugPortAddresses(
 	registry: WorkerRegistry,
 	selfWorkerNames: string[]
 ): string[] {
 	const selfSet = new Set(selfWorkerNames);
-	const urls = Object.entries(registry)
+	const addresses = Object.entries(registry)
 		.filter(([name]) => !selfSet.has(name))
-		.map(([, def]) => `${def.protocol}://${def.host}:${def.port}`);
+		.map(([, def]) => def.debugPortAddress)
+		.filter((addr): addr is string => typeof addr === "string");
 	// A single Miniflare process with multiple workers registers multiple
 	// entries in the registry, all sharing the same host:port. We deduplicate
 	// to avoid fetching from the same peer multiple times.
-	return [...new Set(urls)];
+	return [...new Set(addresses)];
 }
 
 export async function getPeerUrlsIfAggregating(
@@ -45,25 +47,29 @@ export async function getPeerUrlsIfAggregating(
 	const workerNames = c.env.LOCAL_EXPLORER_WORKER_NAMES;
 	const response = await loopback.fetch("http://localhost/core/dev-registry");
 	const registry = (await response.json()) as WorkerRegistry;
-	return getPeerUrls(registry, workerNames);
+	return getPeerDebugPortAddresses(registry, workerNames);
 }
 
 /**
  * Fetch data from a peer instance's explorer API.
  * Returns null on any error (silent omission policy).
  *
- * @param peerUrl - Base URL of the peer instance (e.g., "http://127.0.0.1:8788")
+ * @param peerDebugPortAddress - Debug port address of the peer instance (e.g., "127.0.0.1:12345")
  * @param apiPath - API path relative to the explorer API base (e.g., "/d1/database")
  * @param init - Optional fetch init options
  */
 export async function fetchFromPeer(
-	peerUrl: string,
+	peerDebugPortAddress: string,
 	apiPath: string,
 	init?: RequestInit
 ): Promise<Response | null> {
 	try {
-		const url = new URL(`${EXPLORER_API_PATH}${apiPath}`, peerUrl);
-		const response = await fetch(url.toString(), {
+		const client = (env as AppContext["env"]).DEV_REGISTRY_DEBUG_PORT.connect(
+			peerDebugPortAddress
+		);
+		const fetcher = client.getEntrypoint("core:entry");
+		const url = new URL(`http://localhost${EXPLORER_API_PATH}${apiPath}`);
+		const response = await fetcher.fetch(url.toString(), {
 			...init,
 			headers: {
 				...(init?.headers as Record<string, string> | undefined),

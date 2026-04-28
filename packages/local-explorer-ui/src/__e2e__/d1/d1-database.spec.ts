@@ -38,7 +38,7 @@ describe("D1 Database Studio", () => {
 			await selectTableButton.click();
 
 			// Should show the users table from seed data
-			const usersOption = page.getByRole("option", { name: "users" });
+			const usersOption = page.getByRole("menuitem", { name: "users" });
 			const isUsersVisible = await usersOption.isVisible();
 			expect(isUsersVisible).toBe(true);
 		});
@@ -192,7 +192,9 @@ describe("D1 Database Studio", () => {
 
 			await openTableSelector();
 
-			const productsOption = page.getByRole("option", { name: "products" });
+			const productsOption = page.getByRole("menuitem", {
+				name: "products",
+			});
 			const isProductsVisible = await productsOption.isVisible();
 			expect(isProductsVisible).toBe(true);
 		});

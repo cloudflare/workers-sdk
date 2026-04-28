@@ -1,6 +1,6 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
-import { searchInstance } from "./client";
+import { DEFAULT_NAMESPACE, searchInstance } from "./client";
 import { parseFilters } from "./utils";
 import type { AiSearchMessage } from "./types";
 
@@ -19,6 +19,12 @@ export const aiSearchSearchCommand = createCommand({
 			type: "string",
 			demandOption: true,
 			description: "The name of the AI Search instance.",
+		},
+		namespace: {
+			type: "string",
+			alias: "n",
+			default: DEFAULT_NAMESPACE,
+			description: "The namespace the instance belongs to.",
 		},
 		query: {
 			type: "string",
@@ -72,7 +78,12 @@ export const aiSearchSearchCommand = createCommand({
 		if (args.reranking !== undefined) {
 			body.reranking = args.reranking;
 		}
-		const result = await searchInstance(config, args.name, body);
+		const result = await searchInstance(
+			config,
+			args.namespace,
+			args.name,
+			body
+		);
 
 		if (args.json) {
 			logger.log(JSON.stringify(result, null, 2));

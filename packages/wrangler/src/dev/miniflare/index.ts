@@ -102,6 +102,9 @@ export interface ConfigBundle {
 	// Zone to use for the CF-Worker header in outbound fetches
 	zone: string | undefined;
 	sendMetrics: boolean | undefined;
+	// The stable, externally-reachable URL of the proxy server in front of
+	// this Miniflare instance (e.g. Wrangler's ProxyWorker URL).
+	publicUrl: string | undefined;
 }
 
 export class WranglerLog extends Log {
@@ -309,7 +312,8 @@ function workflowEntry(
 		remote,
 		limits,
 	}: CfWorkflow,
-	remoteProxyConnectionString?: RemoteProxyConnectionString
+	remoteProxyConnectionString?: RemoteProxyConnectionString,
+	compatibilityFlags?: string[]
 ): [
 	string,
 	{
@@ -318,6 +322,7 @@ function workflowEntry(
 		scriptName?: string;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 		stepLimit?: number;
+		compatibilityFlags?: string[];
 	},
 ] {
 	const stepLimit = limits?.steps;
@@ -330,6 +335,7 @@ function workflowEntry(
 				className,
 				scriptName,
 				...(stepLimit !== undefined && { stepLimit }),
+				compatibilityFlags,
 			},
 		];
 	}
@@ -342,6 +348,7 @@ function workflowEntry(
 			scriptName,
 			remoteProxyConnectionString,
 			...(stepLimit !== undefined && { stepLimit }),
+			compatibilityFlags,
 		},
 	];
 }
@@ -425,6 +432,7 @@ type WorkerOptionsBindings = Pick<
 	| "mtlsCertificates"
 	| "helloWorld"
 	| "flagship"
+	| "artifacts"
 	| "workerLoaders"
 	| "unsafeBindings"
 	| "additionalUnboundDurableObjects"
@@ -446,7 +454,9 @@ type MiniflareBindingsConfig = Pick<
 	| "containerBuildId"
 	| "enableContainers"
 > &
-	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
+	Partial<
+		Pick<ConfigBundle, "format" | "bundle" | "assets" | "compatibilityFlags">
+	>;
 
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
@@ -498,6 +508,7 @@ export function buildMiniflareBindingOptions(
 		bindings
 	);
 	const flagshipBindings = extractBindingsOfType("flagship", bindings);
+	const artifactsBindings = extractBindingsOfType("artifacts", bindings);
 	const workerLoaders = extractBindingsOfType("worker_loader", bindings);
 	const sendEmailBindings = extractBindingsOfType("send_email", bindings);
 	// Extract both regular and unsafe ratelimit bindings
@@ -622,6 +633,14 @@ export function buildMiniflareBindingOptions(
 
 	for (const media of mediaBindings) {
 		warnOrError("media", media.remote, "always-remote");
+	}
+
+	for (const artifact of artifactsBindings) {
+		warnOrError("artifacts", artifact.remote, "always-remote");
+	}
+
+	for (const flagship of flagshipBindings) {
+		warnOrError("flagship", flagship.remote, "always-remote");
 	}
 
 	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
@@ -778,7 +797,11 @@ export function buildMiniflareBindingOptions(
 							`Configure limits on the worker that defines the workflow.`
 					);
 				}
-				return workflowEntry(workflow, remoteProxyConnectionString);
+				return workflowEntry(
+					workflow,
+					remoteProxyConnectionString,
+					config.compatibilityFlags
+				);
 			})
 		),
 		secretsStoreSecrets: Object.fromEntries(
@@ -792,10 +815,16 @@ export function buildMiniflareBindingOptions(
 				binding.binding,
 				{
 					app_id: binding.app_id,
-					remoteProxyConnectionString:
-						binding.remote && remoteProxyConnectionString
-							? remoteProxyConnectionString
-							: undefined,
+					remoteProxyConnectionString,
+				},
+			])
+		),
+		artifacts: Object.fromEntries(
+			artifactsBindings.map((binding) => [
+				binding.binding,
+				{
+					namespace: binding.namespace,
+					remoteProxyConnectionString,
 				},
 			])
 		),
@@ -1003,7 +1032,7 @@ export async function buildMiniflareOptions(
 			? `${config.upstreamProtocol}://${config.localUpstream}`
 			: undefined;
 
-	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
+	const { sourceOptions } = await buildSourceOptions(config);
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		config,
 		remoteProxyConnectionString
@@ -1018,12 +1047,12 @@ export async function buildMiniflareOptions(
 	const options: MiniflareOptions = {
 		host: config.initialIp,
 		port: config.initialPort,
+		publicUrl: config.publicUrl,
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
 		inspectorHost: config.inspect ? config.inspectorHost : undefined,
 		liveReload: config.liveReload,
 		upstream,
 		unsafeDevRegistryPath: config.devRegistry,
-		unsafeDevRegistryDurableObjectProxy: true,
 		unsafeHandleDevRegistryUpdate: onDevRegistryUpdate,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
@@ -1050,13 +1079,6 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
-				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
-				unsafeDirectSockets: entrypointNames.map((name) => ({
-					host: "127.0.0.1",
-					port: 0,
-					entrypoint: name,
-					proxy: true,
-				})),
 				containerEngine: config.containerEngine,
 				zone: config.zone,
 			},

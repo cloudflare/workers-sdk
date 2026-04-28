@@ -336,7 +336,7 @@ describe("versions upload", () => {
 
 		await runWrangler("versions upload");
 
-		assertApiRequest(/.*?workers\/scripts\/test-name\/versions/, {
+		assertApiRequest(expect, /.*?workers\/scripts\/test-name\/versions/, {
 			method: "POST",
 			// Make sure the main module (index.py) has a text/x-python content type
 			body: /Content-Disposition: form-data; name="index.py"; filename="index.py"\nContent-Type: text\/x-python/,

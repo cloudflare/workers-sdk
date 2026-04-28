@@ -1,8 +1,8 @@
 import assert from "node:assert";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { brandColor } from "@cloudflare/cli/colors";
-import { installPackages } from "@cloudflare/cli/packages";
+import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
+import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { transformFile } from "@cloudflare/codemod";
 import * as recast from "recast";
 import { Framework } from "./framework-class";

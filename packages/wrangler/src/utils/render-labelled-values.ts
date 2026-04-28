@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
-import { gray, white } from "@cloudflare/cli/colors";
+import { gray, white } from "@cloudflare/cli-shared-helpers/colors";
 
 type Options = {
 	/** Hook to format each label. This is a convenience option to avoid manually formatting each label. */

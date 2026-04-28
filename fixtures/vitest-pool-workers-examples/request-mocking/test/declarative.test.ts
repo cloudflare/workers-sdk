@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { http, HttpResponse } from "msw";
 import { expect, it } from "vitest";
 import { server } from "./server";
@@ -18,19 +18,19 @@ it("mocks GET requests", async () => {
 	);
 
 	// Host `example.com` will be rewritten to `cloudflare.com` by the Worker
-	let response = await SELF.fetch("https://example.com/once");
+	let response = await exports.default.fetch("https://example.com/once");
 	expect(response.status).toBe(200);
 	expect(await response.text()).toBe("😉");
 
 	// Subsequent `fetch()`es fail...
-	response = await SELF.fetch("https://example.com/once");
+	response = await exports.default.fetch("https://example.com/once");
 	expect(response.status).toBe(500);
 	expect(await response.text()).toMatch("Cannot bypass");
 
 	// ...but calling `.persist()` will match forever, with `.times(n)` matching
 	// `n` times
 	for (let i = 0; i < 3; i++) {
-		response = await SELF.fetch("https://example.com/persistent");
+		response = await exports.default.fetch("https://example.com/persistent");
 		expect(response.status).toBe(200);
 		expect(await response.text()).toBe("📌");
 	}
@@ -48,7 +48,7 @@ it("mocks POST requests", async () => {
 	);
 
 	// Sending a request without the expected body returns an error response...
-	let response = await SELF.fetch("https://example.com/path", {
+	let response = await exports.default.fetch("https://example.com/path", {
 		method: "POST",
 		body: "🙃",
 	});
@@ -56,7 +56,7 @@ it("mocks POST requests", async () => {
 	expect(await response.text()).toBe("Bad request body");
 
 	// ...but the correct body should succeed
-	response = await SELF.fetch("https://example.com/path", {
+	response = await exports.default.fetch("https://example.com/path", {
 		method: "POST",
 		body: "✨",
 	});

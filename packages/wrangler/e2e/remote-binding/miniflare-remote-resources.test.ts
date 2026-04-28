@@ -538,6 +538,9 @@ const testCases: TestCase[] = [
 	{
 		name: "VPC Network",
 		scriptPath: "vpc-network.js",
+		// Currently these tests start failing whenever the VPC worker is doing a deployment
+		// Re-enable when EW-10563 is resolved
+		skip: true,
 		setup: async (helper) => {
 			// Create a real Cloudflare tunnel for testing
 			const tunnelId = await helper.tunnel();
@@ -859,7 +862,14 @@ function useTeardown(options: { timeout?: number } = {}) {
 	}
 	afterAll(async () => {
 		for (const fn of tearDownCallbacks.reverse()) {
-			await fn();
+			try {
+				await fn();
+			} catch (e) {
+				console.warn(
+					"Teardown callback failed:",
+					e instanceof Error ? e.message : e
+				);
+			}
 		}
 		tearDownCallbacks.length = 0;
 	}, options.timeout);

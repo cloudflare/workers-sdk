@@ -8,7 +8,7 @@ interface FetchOptions {
 }
 
 /**
- * Parse error message from Browser Rendering API response.
+ * Parse error message from Browser Run API response.
  */
 function parseErrorMessage(text: string): string {
 	try {
@@ -29,9 +29,9 @@ function parseErrorMessage(text: string): string {
 }
 
 /**
- * Fetch from the Browser Rendering Devtools API.
+ * Fetch from the Browser Run Devtools API.
  *
- * The Browser Rendering Devtools API returns raw JSON responses (not wrapped in the
+ * The Browser Run Devtools API returns raw JSON responses (not wrapped in the
  * standard Cloudflare API envelope with `success`, `result`, `errors` fields).
  * This function handles that difference.
  */
@@ -58,18 +58,18 @@ export async function fetchBrowserRendering<ResponseType>(
 	if (!response.ok) {
 		const errorMessage = parseErrorMessage(text);
 		throw new APIError({
-			text: `Browser Rendering API error: ${errorMessage}`,
+			text: `Browser Run API error: ${errorMessage}`,
 			notes: [{ text: `${method} ${url} -> ${response.status}` }],
 			status: response.status,
 		});
 	}
 
 	try {
-		// Browser Rendering API returns raw JSON, not wrapped in { success, result }
+		// Browser Run API returns raw JSON, not wrapped in { success, result }
 		return JSON.parse(text) as ResponseType;
 	} catch {
 		throw new APIError({
-			text: "Received a malformed response from the Browser Rendering API",
+			text: "Received a malformed response from the Browser Run API",
 			notes: [
 				{ text: text.length > 100 ? `${text.substring(0, 100)}...` : text },
 				{ text: `${method} ${url} -> ${response.status}` },

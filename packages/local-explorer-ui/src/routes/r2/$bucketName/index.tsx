@@ -317,9 +317,10 @@ function BucketView(): JSX.Element {
 	}
 
 	// Build breadcrumb items
-	const pathSegments = search.prefix
-		? search.prefix.split("/").filter(Boolean)
-		: [];
+	const pathSegments =
+		directoryView && search.prefix
+			? search.prefix.split("/").filter(Boolean)
+			: [];
 	const breadcrumbItems = [
 		<Link
 			className="text-kumo-default no-underline hover:text-kumo-link"
@@ -341,7 +342,7 @@ function BucketView(): JSX.Element {
 					search={{ prefix: segmentPrefix }}
 					to="/r2/$bucketName"
 				>
-					{segment}
+					{segment}/
 				</Link>
 			);
 		}),

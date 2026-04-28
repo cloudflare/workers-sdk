@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
-import * as cliPackages from "@cloudflare/cli/packages";
+import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import {
 	FatalError,
 	readFileSync,

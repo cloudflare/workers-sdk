@@ -17,6 +17,22 @@ export class WorkflowFatalError extends Error {
 	}
 }
 
+export class PreservedNonRetryableError extends WorkflowFatalError {
+	name = "NonRetryableError";
+
+	constructor(err: Error) {
+		// When the error crosses an RPC boundary, the name gets
+		// prepended to the message (e.g. "NonRetryableError: msg",
+		// or just "NonRetryableError" if the original message was empty).
+		// Parse it back out so we surface the original message.
+		const message =
+			err.name === "NonRetryableError"
+				? err.message
+				: err.message.replace(/^NonRetryableError:?\s*/, "");
+		super(message);
+	}
+}
+
 export class WorkflowError extends Error {
 	name = "WorkflowError";
 }
@@ -88,4 +104,13 @@ export function isUserTriggeredRestart(e: unknown): boolean {
 
 export function isUserTriggeredTerminate(e: unknown): boolean {
 	return getErrorMessage(e) === ABORT_REASONS.USER_TERMINATE;
+}
+
+function getCompatFlag(name: string): boolean {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- safe globalThis access for environments where cloudflare global may not exist
+	return (globalThis as any).Cloudflare?.compatibilityFlags?.[name] ?? false;
+}
+
+export function shouldPreserveNonRetryableError(): boolean {
+	return getCompatFlag("workflows_preserve_non_retryable_error_message");
 }

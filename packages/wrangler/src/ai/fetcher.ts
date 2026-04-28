@@ -1,5 +1,6 @@
 import { Headers, Response } from "miniflare";
 import { performApiFetch } from "../cfetch";
+import { logger } from "../logger";
 import { getAccountId } from "../user";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { Request } from "miniflare";
@@ -33,6 +34,23 @@ export function getAIFetcher(complianceConfig: ComplianceConfig) {
 				duplex: "half",
 			}
 		);
+
+		if (res.status === 403) {
+			try {
+				const clonedRes = res.clone();
+				const body = (await clonedRes.json()) as {
+					errors?: Array<{ code?: number; message?: string }>;
+				};
+				const authError = body?.errors?.find((e) => e.code === 1031);
+				if (authError) {
+					logger.error(
+						"Authentication error (code 1031): Your API token may have expired or lacks the required permissions. Please refresh your token by running `wrangler login`."
+					);
+				}
+			} catch {
+				// If we can't parse the response body, fall through to return the original response
+			}
+		}
 
 		const respHeaders = new Headers(res.headers);
 		respHeaders.delete("Host");

@@ -2,9 +2,9 @@ import { randomBytes } from "node:crypto";
 import {
 	createExecutionContext,
 	createMessageBatch,
-	env,
 	getQueueResult,
 } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { it } from "vitest";
 import worker from "../src/index";
 

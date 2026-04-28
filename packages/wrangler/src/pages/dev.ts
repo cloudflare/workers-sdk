@@ -1024,6 +1024,7 @@ export const pagesDevCommand = createCommand({
 					siteExclude: undefined,
 					enableContainers: false,
 					types: false,
+					tunnel: undefined,
 				})
 		);
 

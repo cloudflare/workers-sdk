@@ -12,7 +12,7 @@ import { parseRules } from "./rules";
 import { tryAttachSourcemapToModule } from "./source-maps";
 import type { Entry } from "./entry";
 import type { ParsedRules } from "./rules";
-import type { CfModule, Rule } from "@cloudflare/workers-utils";
+import type { CfModule, CfModuleType, Rule } from "@cloudflare/workers-utils";
 
 async function* getFiles(
 	configPath: string | undefined,
@@ -47,6 +47,31 @@ function isPythonVendorModule(moduleName: string): boolean {
 	// separator should be forward slash, as we always use forward slash for module names
 	// see `getFiles()` for more details
 	return moduleName.startsWith("python_modules/");
+}
+
+const VENDORED_JS_EXTENSIONS = new Set([".mjs", ".js"]);
+
+/**
+ * Returns the module type for vendored modules in Python workers.
+ * This function is used to handle JavaScript files from the Python workers SDK package,
+ * which should be registered as ES modules so they can be dynamically imported at runtime.
+ * @param name The module name
+ * @param fallback The fallback module type
+ */
+function getVendoredModuleType(
+	name: string,
+	fallback: CfModuleType | undefined
+): CfModuleType | undefined {
+	// This is only enabled for python workers SDK package,
+	// which is under the `workers/` directory
+	if (!name.startsWith("workers/")) {
+		return fallback;
+	}
+	const ext = path.extname(name);
+	if (VENDORED_JS_EXTENSIONS.has(ext)) {
+		return "esm";
+	}
+	return fallback;
 }
 
 function removePythonVendorModules(
@@ -160,6 +185,10 @@ export async function findAdditionalModules(
 					return {
 						...m,
 						name: prefixedPath,
+						// JavaScript files from Python workers sdk (workers-runtime-sdk)
+						// are registered as esModule, so that they can be dynamically
+						// imported via import_from_javascript() at runtime.
+						type: getVendoredModuleType(m.name, m.type),
 					};
 				});
 

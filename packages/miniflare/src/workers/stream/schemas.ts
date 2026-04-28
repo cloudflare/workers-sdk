@@ -128,12 +128,13 @@ export type DownloadRow = {
 	url: string | null;
 };
 
-export function rowToStreamVideo(row: VideoRow): StreamVideo {
-	const baseUrl = `https://customer-placeholder.cloudflarestream.com/${row.id}`;
+export function rowToStreamVideo(row: VideoRow, entryUrl: URL): StreamVideo {
+	const placeholderUrl = `https://customer-placeholder.cloudflarestream.com/${row.id}`;
+	const videoUrl = `${entryUrl.origin}/cdn-cgi/mf/stream/${row.id}/watch`;
 	return {
 		id: row.id,
 		creator: row.creator,
-		thumbnail: row.thumbnail || `${baseUrl}/thumbnails/thumbnail.jpg`,
+		thumbnail: row.thumbnail || `${placeholderUrl}/thumbnails/thumbnail.jpg`,
 		thumbnailTimestampPct: row.thumbnail_timestamp_pct,
 		readyToStream: row.ready_to_stream === 1,
 		readyToStreamAt: row.ready_to_stream_at,
@@ -148,7 +149,7 @@ export function rowToStreamVideo(row: VideoRow): StreamVideo {
 		modified: row.modified,
 		scheduledDeletion: row.scheduled_deletion,
 		size: row.size,
-		preview: `${baseUrl}/watch`,
+		preview: videoUrl,
 		allowedOrigins: JSON.parse(row.allowed_origins) as string[],
 		requireSignedURLs:
 			row.require_signed_urls === null ? null : row.require_signed_urls === 1,
@@ -158,8 +159,8 @@ export function rowToStreamVideo(row: VideoRow): StreamVideo {
 		maxDurationSeconds: row.max_duration_seconds,
 		duration: row.duration,
 		input: { width: row.input_width, height: row.input_height },
-		hlsPlaybackUrl: `${baseUrl}/manifest/video.m3u8`,
-		dashPlaybackUrl: `${baseUrl}/manifest/video.mpd`,
+		hlsPlaybackUrl: `${placeholderUrl}/manifest/video.m3u8`,
+		dashPlaybackUrl: `${placeholderUrl}/manifest/video.mpd`,
 		watermark: null,
 		liveInputId: row.live_input_id,
 		clippedFromId: row.clipped_from_id,

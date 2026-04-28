@@ -1,8 +1,13 @@
 import assert from "node:assert";
-import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
+import {
+	configureOpenAPIForContainerPull,
+	getCloudflareContainerRegistry,
+	prepareContainerImagesForDev,
+} from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
-import { CoreHeaders } from "miniflare";
+import { UserError } from "@cloudflare/workers-utils";
+import { buildPublicUrl, CoreHeaders } from "miniflare";
 import colors from "picocolors";
 import { initRunners } from "../cloudflare-environment";
 import {
@@ -69,6 +74,26 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 			let containerTagToOptionsMap = initialOptions.containerTagToOptionsMap;
 
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
+
+			// Once the HTTP server is listening, update Miniflare's publicUrl with
+			// the actual address. This ensures "Cloudflare Stream" preview URLs always reflect
+			// the real server URL — even if Vite bumped the port.
+			if (viteDevServer.httpServer) {
+				viteDevServer.httpServer.on("listening", () => {
+					const addr = viteDevServer.httpServer?.address();
+					if (typeof addr === "object" && addr !== null) {
+						const serverConfig = viteDevServer.config.server;
+						ctx.miniflare.publicUrl = buildPublicUrl({
+							hostname:
+								typeof serverConfig.host === "string"
+									? serverConfig.host
+									: undefined,
+							port: addr.port,
+							secure: !!serverConfig.https,
+						});
+					}
+				});
+			}
 
 			if (ctx.resolvedPluginConfig.type === "workers") {
 				debuglog("Initializing the Vite module runners");
@@ -205,13 +230,39 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						)
 					);
 
+					const hasCFRegistryImages = [
+						...containerTagToOptionsMap.values(),
+					].some(
+						(opts) =>
+							"image_uri" in opts &&
+							new URL(`http://${opts.image_uri}`).hostname ===
+								getCloudflareContainerRegistry()
+					);
+
+					if (hasCFRegistryImages) {
+						const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+						const accountId =
+							ctx.entryWorkerConfig?.account_id ??
+							process.env.CLOUDFLARE_ACCOUNT_ID;
+
+						if (!apiToken || !accountId) {
+							throw new UserError(
+								"To use images from the Cloudflare-managed registry with the Vite plugin, " +
+									"set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID environment variables.\n" +
+									"The API token requires Containers:Edit and Workers Scripts:Edit permissions.\n" +
+									"Alternatively, use a Dockerfile that references the image via FROM."
+							);
+						}
+
+						configureOpenAPIForContainerPull(accountId, apiToken);
+					}
+
 					await prepareContainerImagesForDev({
 						dockerPath: getDockerPath(),
 						containerOptions: [...containerTagToOptionsMap.values()],
 						onContainerImagePreparationStart: () => {},
 						onContainerImagePreparationEnd: () => {},
 						logger: viteDevServer.config.logger,
-						isVite: true,
 					});
 
 					containerImageTags = new Set(containerTagToOptionsMap.keys());

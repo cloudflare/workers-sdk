@@ -20,8 +20,13 @@ export function pickRemoteBindings(
 ): Record<string, Binding> {
 	return Object.fromEntries(
 		Object.entries(bindings ?? {}).filter(([, binding]) => {
-			if (binding.type === "ai" || binding.type === "media") {
-				// AI and 'media' bindings are always remote
+			if (
+				binding.type === "ai" ||
+				binding.type === "media" ||
+				binding.type === "artifacts" ||
+				binding.type === "flagship"
+			) {
+				// AI, media, artifacts, and flagship bindings are always remote
 				return true;
 			}
 
@@ -82,12 +87,13 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	preExistingRemoteProxySessionData?: {
 		session: RemoteProxySession;
 		remoteBindings: Record<string, Binding>;
-		auth?: CfAccount | undefined;
+		auth?: AsyncHook<CfAccount> | undefined;
 	} | null,
-	auth?: CfAccount | undefined
+	auth?: AsyncHook<CfAccount> | undefined
 ): Promise<{
 	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
+	auth?: AsyncHook<CfAccount> | undefined;
 } | null> {
 	let config: Config | undefined;
 	if ("path" in wranglerOrWorkerConfigObject) {
@@ -175,6 +181,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	return {
 		session: remoteProxySession,
 		remoteBindings,
+		auth,
 	};
 }
 
@@ -188,9 +195,9 @@ export async function maybeStartOrUpdateRemoteProxySession(
  * @returns the auth hook to pass to the startRemoteProxy session function if any
  */
 function getAuthHook(
-	auth: CfAccount | undefined,
+	auth: AsyncHook<CfAccount> | undefined,
 	config: Pick<Config, "account_id"> | undefined
-): AsyncHook<CfAccount, [Pick<Config, "account_id">]> | undefined {
+): AsyncHook<CfAccount> | undefined {
 	if (auth) {
 		return auth;
 	}

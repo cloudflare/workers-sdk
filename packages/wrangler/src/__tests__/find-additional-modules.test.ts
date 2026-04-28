@@ -394,4 +394,54 @@ describe("Python modules", () => {
 		expect(moduleNames).not.toContain("python_modules/module.pyc");
 		expect(moduleNames).not.toContain("python_modules/test_module.py");
 	});
+
+	it("should register .mjs and .js files in workers/ as esm type", async ({
+		expect,
+	}) => {
+		await mkdir("./python_modules/workers", { recursive: true });
+		await mkdir("./python_modules/otherpkg", { recursive: true });
+		await writeFile("./index.py", "def fetch(request): pass");
+		await writeFile(
+			"./python_modules/workers/sdk.mjs",
+			"export function patchWaitUntil(ctx) {}"
+		);
+		await writeFile(
+			"./python_modules/workers/helper.js",
+			"export function helper() {}"
+		);
+		await writeFile("./python_modules/workers/__init__.py", "");
+		await writeFile("./python_modules/otherpkg/util.mjs", "export const x = 1");
+
+		const modules = await findAdditionalModules(
+			{
+				file: path.join(process.cwd(), "./index.py"),
+				projectRoot: process.cwd(),
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: process.cwd(),
+				exports: [],
+			},
+			[]
+		);
+
+		const vendored = modules.filter((m) =>
+			m.name.startsWith("python_modules/")
+		);
+
+		const findModule = (name: string) => vendored.find((m) => m.name === name);
+
+		const sdkModule = findModule("python_modules/workers/sdk.mjs");
+		const helperModule = findModule("python_modules/workers/helper.js");
+		const initModule = findModule("python_modules/workers/__init__.py");
+		const utilModule = findModule("python_modules/otherpkg/util.mjs");
+
+		expect(sdkModule).toBeDefined();
+		expect(sdkModule?.type).toBe("esm");
+		expect(helperModule).toBeDefined();
+		expect(helperModule?.type).toBe("esm");
+		expect(initModule).toBeDefined();
+		expect(initModule?.type).toBe("buffer");
+		expect(utilModule).toBeDefined();
+		expect(utilModule?.type).toBe("buffer");
+	});
 });

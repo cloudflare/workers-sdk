@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import * as cliPackages from "@cloudflare/cli/packages";
+import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, assert, describe, test, vi } from "vitest";
 import * as run from "../autoconfig/run";

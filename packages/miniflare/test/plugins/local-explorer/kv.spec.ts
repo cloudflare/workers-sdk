@@ -260,6 +260,19 @@ describe("KV API", () => {
 			expect(response.status).toBe(200);
 			expect(await response.text()).toBe("special-value");
 		});
+
+		test("returns raw bytes for ArrayBuffer values", async ({ expect }) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			const bytes = Uint8Array.from([0, 1, 2, 127, 128, 254, 255]);
+			await kv.put("binary-get-key", bytes.buffer);
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/binary-get-key`
+			);
+
+			expect(response.status).toBe(200);
+			expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes);
+		});
 	});
 
 	describe("PUT /storage/kv/namespaces/:namespaceId/values/:keyName", () => {
@@ -315,6 +328,33 @@ describe("KV API", () => {
 				success: false,
 				errors: [expect.objectContaining({ code: 10013 })],
 			});
+		});
+
+		test("writes streamed binary values", async ({ expect }) => {
+			const bytes = Uint8Array.from([255, 0, 10, 20, 30, 200]);
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/put-stream-key`,
+				{
+					body: new Blob([bytes]).stream(),
+					duplex: "half",
+					headers: {
+						"Content-Type": "application/octet-stream",
+					},
+					method: "PUT",
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({ success: true });
+
+			const kv = await mf.getKVNamespace("TEST_KV");
+			const stored = await kv.get("put-stream-key", { type: "arrayBuffer" });
+
+			expect(stored).not.toBeNull();
+			if (stored === null) {
+				throw new Error("Expected put-stream-key to be stored in KV");
+			}
+			expect(new Uint8Array(stored)).toEqual(bytes);
 		});
 	});
 

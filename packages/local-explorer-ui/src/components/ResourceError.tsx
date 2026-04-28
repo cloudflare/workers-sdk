@@ -4,7 +4,7 @@ import { Link, type ErrorComponentProps } from "@tanstack/react-router";
 import type { WorkersApiResponseCommonFailure } from "../api";
 
 const DEFAULT_ERROR_DESCRIPTION =
-	"An unknown error occured. Please report this issue to Cloudflare.";
+	"An unknown error occurred. Please report this issue to Cloudflare.";
 
 export function ResourceError({
 	error,

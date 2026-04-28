@@ -12,6 +12,7 @@ import {
 	getLocalExplorerEnabledFromEnv,
 } from "@cloudflare/workers-utils";
 import {
+	buildPublicUrl,
 	getDefaultDevRegistryPath,
 	kUnsafeEphemeralUniqueKey,
 	Log,
@@ -385,24 +386,11 @@ export async function getDevMiniflareOptions(
 									],
 									unsafeUseModuleFallbackService: true,
 									unsafeInspectorProxy: inputInspectorPort !== false,
-									unsafeDirectSockets:
-										environmentName ===
-										resolvedPluginConfig.entryWorkerEnvironmentName
-											? [
-													{
-														// This exposes the default entrypoint of the asset proxy worker
-														// on the dev registry with the name of the entry worker
-														serviceName: VITE_PROXY_WORKER_NAME,
-														proxy: true,
-													},
-													...Object.entries(exportTypes)
-														.filter(([_, type]) => type === "WorkerEntrypoint")
-														.map(([entrypoint]) => ({
-															entrypoint,
-															proxy: true,
-														})),
-												]
-											: [],
+									// Route dev registry requests through the vite Assets proxy worker,
+									...(environmentName ===
+										resolvedPluginConfig.entryWorkerEnvironmentName && {
+										unsafeOverrideFetchWorker: VITE_PROXY_WORKER_NAME,
+									}),
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 									serviceBindings: {
 										...workerOptions.serviceBindings,
@@ -459,9 +447,18 @@ export async function getDevMiniflareOptions(
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
+	const serverConfig = viteDevServer.config.server;
+	const publicUrl = buildPublicUrl({
+		hostname:
+			typeof serverConfig.host === "string" ? serverConfig.host : undefined,
+		port: serverConfig.port,
+		secure: !!serverConfig.https,
+	});
+
 	return {
 		miniflareOptions: {
 			log: logger,
+			publicUrl,
 			unsafeProxySharedSecret: PROXY_SHARED_SECRET,
 			logRequests: false,
 			inspectorPort:
@@ -572,7 +569,7 @@ export async function getPreviewMiniflareOptions(
 
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
-			resolvedPluginConfig.workers.map(async (workerConfig, i) => {
+			resolvedPluginConfig.workers.map(async (workerConfig) => {
 				const bindings =
 					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
 						workerConfig
@@ -638,10 +635,6 @@ export async function getPreviewMiniflareOptions(
 						...workerOptions,
 						name: workerOptions.name ?? workerConfig.name,
 						unsafeInspectorProxy: inputInspectorPort !== false,
-						unsafeDirectSockets:
-							// This exposes the default entrypoint of the entry worker on the dev registry
-							// Assuming that the first worker config to be the entry worker.
-							i === 0 ? [{ entrypoint: undefined, proxy: true }] : [],
 						...(miniflareWorkerOptions.main
 							? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
 							: { modules: true, script: "" }),
@@ -654,9 +647,18 @@ export async function getPreviewMiniflareOptions(
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
+	const serverConfig = vitePreviewServer.config.preview;
+	const publicUrl = buildPublicUrl({
+		hostname:
+			typeof serverConfig.host === "string" ? serverConfig.host : undefined,
+		port: serverConfig.port,
+		secure: !!serverConfig.https,
+	});
+
 	return {
 		miniflareOptions: {
 			log: logger,
+			publicUrl,
 			unsafeProxySharedSecret: PROXY_SHARED_SECRET,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,

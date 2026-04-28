@@ -1,10 +1,10 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { expect } from "vitest";
 import { msw } from "./msw";
 import type { RequestHandlerOptions } from "msw";
+import type { ExpectStatic } from "vitest";
 
 export function mockGetZoneWorkerRoutesMulti(
+	expect: ExpectStatic,
 	zones: {
 		[zoneId: string]: { pattern: string; script: string }[];
 	},
@@ -32,9 +32,10 @@ export function mockGetZoneWorkerRoutesMulti(
 }
 
 export function mockGetZoneWorkerRoutes(
+	expect: ExpectStatic,
 	zoneId: string,
 	routes: { pattern: string; script: string }[] = [],
 	options: RequestHandlerOptions = {}
 ) {
-	return mockGetZoneWorkerRoutesMulti({ [zoneId]: routes }, options);
+	return mockGetZoneWorkerRoutesMulti(expect, { [zoneId]: routes }, options);
 }

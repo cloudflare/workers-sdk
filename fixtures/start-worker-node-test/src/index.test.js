@@ -9,7 +9,10 @@ describe("worker", () => {
 	let worker;
 
 	before(async () => {
-		worker = await unstable_startWorker({ config: "wrangler.json" });
+		worker = await unstable_startWorker({
+			config: "wrangler.json",
+			dev: { persist: false },
+		});
 	});
 
 	test("hello world", async () => {

@@ -1,5 +1,5 @@
 import { instrument } from "@microlabs/otel-cf-workers";
-import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { Utils } from "discord-api-types/v10";
 import { value as esmDepValue } from "esm-dep";
 import dep from "ext-dep";
@@ -23,7 +23,9 @@ describe("test", () => {
 	});
 
 	test("can use toucan-js (integration)", async () => {
-		expect((await SELF.fetch("http://example.com")).status).toBe(200);
+		expect((await exports.default.fetch("http://example.com")).status).toBe(
+			200
+		);
 	});
 
 	test("can use toucan-js (unit)", async () => {
