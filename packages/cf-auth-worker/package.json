@@ -1,5 +1,5 @@
 {
-	"name": "@cloudflare/wrangler-auth-worker",
+	"name": "@cloudflare/cf-auth-worker",
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {

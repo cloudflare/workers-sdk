@@ -1,4 +1,4 @@
-# `@cloudflare/wrangler-auth-worker`
+# `@cloudflare/cf-auth-worker`
 
 A Cloudflare Worker that relays OAuth authorization codes between Wrangler and
 the user's browser via a WebSocket. Deployed as a single tenant at
@@ -123,14 +123,14 @@ registered against both Wrangler OAuth client IDs at `dash.cloudflare.com`:
 pnpm install
 
 # run the worker locally with `wrangler dev`
-pnpm --filter @cloudflare/wrangler-auth-worker start
+pnpm --filter @cloudflare/cf-auth-worker start
 
 # run the test suite (vitest-pool-workers)
-pnpm --filter @cloudflare/wrangler-auth-worker test:ci
+pnpm --filter @cloudflare/cf-auth-worker test:ci
 
 # type check
-pnpm --filter @cloudflare/wrangler-auth-worker check:type
-pnpm --filter @cloudflare/wrangler-auth-worker type:tests
+pnpm --filter @cloudflare/cf-auth-worker check:type
+pnpm --filter @cloudflare/cf-auth-worker type:tests
 ```
 
 To point a local Wrangler build at a custom relay (for example, a `wrangler

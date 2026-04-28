@@ -24,7 +24,7 @@ function nextMessage(ws: WebSocket): Promise<string> {
 	});
 }
 
-describe("wrangler-auth-worker", () => {
+describe("cf-auth-worker", () => {
 	describe("GET /session/:state (WebSocket upgrade)", () => {
 		it("should accept a WebSocket connection", async ({ expect }) => {
 			const resp = await SELF.fetch(
