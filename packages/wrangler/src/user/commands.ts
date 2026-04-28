@@ -62,7 +62,7 @@ export const loginCommand = createCommand({
 		"experimental-websocket-callback": {
 			describe:
 				"Experimental: Use WebSocket relay for OAuth callback (useful in containers/remote environments)",
-			type: "boolean" as const,
+			type: "boolean",
 			default: false,
 			hidden: true,
 			alias: "x-websocket-callback",

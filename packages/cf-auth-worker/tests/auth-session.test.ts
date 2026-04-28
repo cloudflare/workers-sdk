@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test";
+import { env, SELF } from "cloudflare:test";
 import { describe, it } from "vitest";
 
 /**
@@ -66,6 +66,16 @@ describe("cf-auth-worker", () => {
 		}) => {
 			const resp = await SELF.fetch(
 				"https://auth.devprod.cloudflare.dev/session/test-no-ws"
+			);
+			expect(resp.status).toBe(426);
+		});
+
+		it("should reject /session/:state requests with a non-websocket Upgrade header", async ({
+			expect,
+		}) => {
+			const resp = await SELF.fetch(
+				"https://auth.devprod.cloudflare.dev/session/test-bad-upgrade",
+				{ headers: { Upgrade: "h2c" } }
 			);
 			expect(resp.status).toBe(426);
 		});
@@ -187,8 +197,8 @@ describe("cf-auth-worker", () => {
 			expect,
 		}) => {
 			// Callback to a session that has no WebSocket connected.
-			// The DO returns 409, which we treat as a denied/error and redirect
-			// the browser to the consent-denied page accordingly.
+			// The DO returns a non-OK status, which we treat as a denied/error
+			// and redirect the browser to the consent-denied page accordingly.
 			const callbackResp = await SELF.fetch(
 				`https://auth.devprod.cloudflare.dev/callback?code=test-code&state=no-ws-connected-${Date.now()}`,
 				{ redirect: "manual" }
@@ -197,6 +207,18 @@ describe("cf-auth-worker", () => {
 			expect(callbackResp.headers.get("Location")).toBe(
 				"https://welcome.developers.workers.dev/wrangler-oauth-consent-denied"
 			);
+		});
+
+		it("DO returns 404 when /callback hits a session with no connected WebSocket", async ({
+			expect,
+		}) => {
+			// Direct DO-level assertion (bypassing the worker's redirect) that
+			// the DO uses 404 for "no active session" rather than 409.
+			const stub = env.AUTH_SESSION.getByName("do-direct-no-ws-" + Date.now());
+			const resp = await stub.fetch(
+				new Request("https://do/callback?code=test-code")
+			);
+			expect(resp.status).toBe(404);
 		});
 	});
 

@@ -1,7 +1,7 @@
 {
 	"name": "cf-auth-worker",
 	"main": "src/index.ts",
-	"compatibility_date": "2025-03-01",
+	"compatibility_date": "2026-04-01",
 	"compatibility_flags": ["nodejs_compat"],
 	"workers_dev": false,
 	"account_id": "e35fd947284363a46fd7061634477114",
