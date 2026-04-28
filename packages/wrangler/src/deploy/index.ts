@@ -286,11 +286,12 @@ export const deployCommand = createCommand({
 	async handler(args, { config }) {
 		const shouldRunAutoConfig =
 			args.experimentalAutoconfig &&
-			// If there is a positional parameter or an assets directory specified via --assets then
-			// we don't want to run autoconfig since we assume that the user knows what they are doing
-			// and that they are specifying what needs to be deployed
+			// If there is a positional parameter, an assets directory specified via --assets, or an
+			// explicit --config path then we don't want to run autoconfig since we assume that the
+			// user knows what they are doing and that they are specifying what needs to be deployed
 			!args.script &&
-			!args.assets;
+			!args.assets &&
+			!args.config;
 
 		if (
 			config.pages_build_output_dir &&
@@ -380,6 +381,8 @@ export const deployCommand = createCommand({
 			// https://github.com/cloudflare/workers-sdk/pull/11694 and https://github.com/cloudflare/workers-sdk/pull/11710)
 			// but as a precaution we're gating the feature under the autoconfig flag for the time being
 			args.experimentalAutoconfig &&
+			// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate to open-next
+			!args.config &&
 			!args.dryRun &&
 			(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
 
