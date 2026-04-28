@@ -1810,7 +1810,7 @@ describe("pages deploy", () => {
 	}) => {
 		vi.mocked(ci).isCI = false;
 		setIsTTY(true);
-		await x("git", ["init"], {throwOnError: true});
+		await x("git", ["init"], { throwOnError: true });
 		writeFileSync("logo.png", "foobar");
 		mockGetUploadTokenRequest(
 			expect,
