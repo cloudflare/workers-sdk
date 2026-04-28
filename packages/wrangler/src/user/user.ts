@@ -221,6 +221,7 @@ import {
 	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
+import * as Sentry from "@sentry/node";
 import ci from "ci-info";
 import TOML from "smol-toml";
 import dedent from "ts-dedent";
@@ -234,6 +235,7 @@ import {
 import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
+import { sendMetricsEvent } from "../metrics";
 import openInBrowser from "../open-in-browser";
 import { domainUsesAccess } from "./access";
 import {
@@ -1098,6 +1100,14 @@ async function getOauthTokenViaWebSocket(options: {
 
 	const ws = new WebSocket(wsUrl);
 
+	// Record that a relay login was attempted. Combined with the `(relay
+	// fallback)` and `login user` events this lets us count relay
+	// success/fallback rates in the wild while the feature is experimental.
+	// Sent after the WebSocket constructor so any tests waiting on the
+	// MockWebSocket instance see it before this synchronous metrics work
+	// runs.
+	sendMetricsEvent("login user (relay attempt)", { authWorkerUrl }, {});
+
 	// Wait for connection to open. Pre-open failures (error event, premature
 	// close, or connect timeout) throw `RelayUnavailableError` so `login()`
 	// can decide whether to fall back to the localhost flow.
@@ -1448,11 +1458,27 @@ export async function login(
 				err instanceof RelayUnavailableError &&
 				getAuthWorkerTimeoutMs() > 0
 			) {
+				const authWorkerUrl = getAuthWorkerUrlFromEnv();
 				logger.warn(
-					`Could not reach the auth relay at ${getAuthWorkerUrlFromEnv()}: ${err.detail}\n` +
+					`Could not reach the auth relay at ${authWorkerUrl}: ${err.detail}\n` +
 						"Falling back to a local callback server. Note: this may not work in " +
 						"container or remote environments where the browser cannot reach localhost. " +
 						"Set WRANGLER_AUTH_WORKER_TIMEOUT=0 to disable this fallback."
+				);
+				// Notify our team via Sentry so we can keep an eye on relay
+				// availability while the feature is experimental. Tagged as a
+				// warning because we recover via the local fallback. Sentry
+				// queues this in memory and only sends after the user opts in
+				// to error reporting (same as other Wrangler error capture).
+				Sentry.captureException(err, {
+					level: "warning",
+					tags: { feature: "wrangler-login-relay" },
+					extra: { authWorkerUrl, detail: err.detail },
+				});
+				sendMetricsEvent(
+					"login user (relay fallback)",
+					{ authWorkerUrl, reason: err.detail },
+					{}
 				);
 				oauth = await getOauthToken({
 					...oauthOptions,
