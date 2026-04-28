@@ -61,7 +61,7 @@ export const loginCommand = createCommand({
 		},
 		"experimental-websocket-callback": {
 			describe:
-				"Use WebSocket relay for OAuth callback (useful in containers/remote environments)",
+				"Experimental: Use WebSocket relay for OAuth callback (useful in containers/remote environments)",
 			type: "boolean" as const,
 			default: false,
 			hidden: true,
@@ -89,7 +89,7 @@ export const loginCommand = createCommand({
 				browser: args.browser,
 				callbackHost: args.callbackHost,
 				callbackPort: args.callbackPort,
-				xWebsocketCallback: args.xWebsocketCallback,
+				experimentalWebsocketCallback: args.experimentalWebsocketCallback,
 			});
 			return;
 		}
@@ -97,7 +97,7 @@ export const loginCommand = createCommand({
 			browser: args.browser,
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
-			xWebsocketCallback: args.xWebsocketCallback,
+			experimentalWebsocketCallback: args.experimentalWebsocketCallback,
 		});
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,

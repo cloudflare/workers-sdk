@@ -9,6 +9,7 @@ import {
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
+import openInBrowser from "../open-in-browser";
 import {
 	getAccountFromCache,
 	getAccountId,
@@ -36,6 +37,7 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { UserAuthConfig } from "../user";
 import type { Config } from "@cloudflare/workers-utils";
+import type { Mock } from "vitest";
 
 describe("User", () => {
 	runInTempDir();
@@ -287,7 +289,7 @@ describe("User", () => {
 		`);
 		});
 
-		describe("with --x-websocket-callback (auth relay)", () => {
+		describe("with --experimental-websocket-callback (auth relay)", () => {
 			const { mockOAuthRelayCallback } = mockOAuthFlow();
 
 			it("should login a user via the WebSocket auth relay", async ({
@@ -320,9 +322,38 @@ describe("User", () => {
 					)
 				);
 
-				await runWrangler("login --x-websocket-callback");
+				await runWrangler("login --experimental-websocket-callback");
 
 				expect(counter).toBe(1);
+				expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+					api_token: undefined,
+					oauth_token: "test-access-token",
+					refresh_token: "test-refresh-token",
+					expiration_time: expect.any(String),
+					scopes: ["account:read"],
+				});
+			});
+
+			it("should accept the --x-websocket-callback alias", async ({
+				expect,
+			}) => {
+				mockOAuthRelayCallback("success");
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						() =>
+							HttpResponse.json({
+								access_token: "test-access-token",
+								expires_in: 100000,
+								refresh_token: "test-refresh-token",
+								scope: "account:read",
+							}),
+						{ once: true }
+					)
+				);
+
+				await runWrangler("login --x-websocket-callback");
+
 				expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
 					api_token: undefined,
 					oauth_token: "test-access-token",
@@ -338,7 +369,7 @@ describe("User", () => {
 				mockOAuthRelayCallback("failure");
 
 				await expect(
-					runWrangler("login --x-websocket-callback")
+					runWrangler("login --experimental-websocket-callback")
 				).rejects.toThrow(/Consent denied/);
 			});
 
@@ -360,7 +391,7 @@ describe("User", () => {
 					)
 				);
 
-				await runWrangler("login --x-websocket-callback");
+				await runWrangler("login --experimental-websocket-callback");
 
 				// The auth URL printed in the console should contain the auth
 				// worker callback URL as redirect_uri (not localhost).
@@ -370,6 +401,39 @@ describe("User", () => {
 				expect(std.out).not.toContain(
 					encodeURIComponent("http://localhost:8976/oauth/callback")
 				);
+			});
+
+			it("should clean up WebSocket listeners on early failure (no orphan rejection)", async ({
+				expect,
+			}) => {
+				// Reproduces the listener-cleanup bug without relying on the
+				// real 120s timeout. We make `openInBrowser` throw *after* the
+				// WebSocket message/close listeners have been attached. If
+				// `getOauthTokenViaWebSocket` skips its listener cleanup on the
+				// throw path, the outer `ws.close()` will fire `onClose`,
+				// which rejects the now-orphaned `messagePromise` and
+				// surfaces as an unhandled rejection.
+				(openInBrowser as Mock).mockImplementation(async () => {
+					throw new Error("simulated browser launch failure");
+				});
+
+				const unhandled: unknown[] = [];
+				const onUnhandled = (reason: unknown) => unhandled.push(reason);
+				process.on("unhandledRejection", onUnhandled);
+
+				try {
+					await expect(
+						runWrangler("login --experimental-websocket-callback")
+					).rejects.toThrow(/simulated browser launch failure/);
+
+					// Give microtasks a tick to flush any orphan rejection
+					// that the WebSocket close event might have produced.
+					await new Promise((r) => setImmediate(r));
+
+					expect(unhandled).toEqual([]);
+				} finally {
+					process.off("unhandledRejection", onUnhandled);
+				}
 			});
 		});
 	});

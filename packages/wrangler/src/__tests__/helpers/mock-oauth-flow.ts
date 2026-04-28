@@ -155,7 +155,7 @@ export const mockOAuthFlow = () => {
 	}
 
 	/**
-	 * Mock out the WebSocket relay used by the `--x-websocket-callback` login flow.
+	 * Mock out the WebSocket relay used by the `--experimental-websocket-callback` login flow.
 	 *
 	 * This replaces the implementation of `openInBrowser()` so that opening
 	 * the auth URL also drives the corresponding `MockWebSocket` instance to

@@ -64,7 +64,20 @@ export class MockWebSocket {
 	}
 
 	close(_code?: number, _reason?: string): void {
+		// Match real WebSocket semantics: closing dispatches a `close` event
+		// (asynchronously) to any registered listeners. We fire it on the next
+		// microtask to mimic the queue-and-deliver behaviour of undici/browser
+		// WebSockets, which is what makes the orphan-rejection bug observable.
+		if (this.readyState === 3) {
+			return;
+		}
 		this.readyState = 3; // CLOSED
+		const listeners = Array.from(this.listeners.close);
+		queueMicrotask(() => {
+			for (const listener of listeners) {
+				listener({});
+			}
+		});
 	}
 
 	// --- Test driver helpers ---
