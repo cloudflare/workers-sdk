@@ -8,8 +8,17 @@
 export class MockWebSocket {
 	static instances: MockWebSocket[] = [];
 
+	/**
+	 * When `true` (default), constructed WebSockets fire `open` on the next
+	 * microtask. Tests that want to simulate a hung or failed connection
+	 * should set this to `false` before triggering the flow under test.
+	 * `MockWebSocket.reset()` resets this back to `true`.
+	 */
+	static autoOpen = true;
+
 	static reset(): void {
 		MockWebSocket.instances = [];
+		MockWebSocket.autoOpen = true;
 	}
 
 	/** The most recently constructed mock WebSocket, or `undefined` if none. */
@@ -36,10 +45,11 @@ export class MockWebSocket {
 		this.url = url;
 		MockWebSocket.instances.push(this);
 		// Auto-open in a microtask, simulating a successful connection. Tests
-		// that want to exercise connection failure can call `triggerError()`
-		// before any `await` lets the microtask fire.
+		// that want to exercise connection failure can set
+		// `MockWebSocket.autoOpen = false` before constructing the socket
+		// (or before any `await` lets the microtask fire).
 		queueMicrotask(() => {
-			if (this.readyState === 0) {
+			if (MockWebSocket.autoOpen && this.readyState === 0) {
 				this.triggerOpen();
 			}
 		});

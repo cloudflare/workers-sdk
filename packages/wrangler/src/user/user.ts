@@ -238,6 +238,7 @@ import { domainUsesAccess } from "./access";
 import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
+	getAuthWorkerTimeoutMs,
 	getAuthWorkerUrlFromEnv,
 	getClientIdFromEnv,
 	getCloudflareAccessHeaders,
@@ -1013,6 +1014,24 @@ export async function getOAuthTokenFromLocalState(): Promise<
 }
 
 /**
+ * Thrown by `getOauthTokenViaWebSocket` when the WebSocket relay can't be
+ * reached *before* the browser is opened (i.e. before the user has committed
+ * to the relay's redirect_uri). When this is thrown, `login()` is free to
+ * fall back to the local callback server.
+ *
+ * Failures *after* the browser is opened (relay disappears mid-flow, the
+ * 120s auth timeout, etc.) keep using `UserError`, since at that point the
+ * user has already authorised at the relay's redirect_uri and falling back
+ * would require re-authorisation.
+ */
+class RelayUnavailableError extends UserError {
+	constructor(public detail: string) {
+		super(`Auth relay is unavailable: ${detail}`);
+		this.name = "RelayUnavailableError";
+	}
+}
+
+/**
  * Gets an OAuth token using a WebSocket relay through the auth worker.
  * This enables `wrangler login` in environments where localhost isn't
  * accessible from the user's browser (containers, remote VMs, Codespaces).
@@ -1049,26 +1068,57 @@ async function getOauthTokenViaWebSocket(options: {
 
 	const ws = new WebSocket(wsUrl);
 
-	// Wait for connection to open. The `error` event on undici's WebSocket is
-	// an `ErrorEvent`, which has a useful `.message` (and sometimes `.error`).
+	// Wait for connection to open. Pre-open failures (error event, premature
+	// close, or connect timeout) throw `RelayUnavailableError` so `login()`
+	// can decide whether to fall back to the localhost flow.
+	const connectTimeoutMs = getAuthWorkerTimeoutMs();
 	await new Promise<void>((resolve, reject) => {
-		ws.addEventListener("open", () => resolve(), { once: true });
+		let connectTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
+		const cleanup = () => {
+			if (connectTimeoutHandle !== undefined) {
+				clearTimeout(connectTimeoutHandle);
+			}
+		};
+
+		ws.addEventListener(
+			"open",
+			() => {
+				cleanup();
+				resolve();
+			},
+			{ once: true }
+		);
 		ws.addEventListener(
 			"error",
 			(event) => {
+				cleanup();
 				const detail =
 					(event as { message?: string; error?: { message?: string } })
 						.message ??
 					(event as { error?: { message?: string } }).error?.message ??
 					"connection failed";
-				reject(
-					new UserError(
-						`Failed to connect to auth relay at ${authWorkerUrl}: ${detail}`
-					)
-				);
+				reject(new RelayUnavailableError(detail));
 			},
 			{ once: true }
 		);
+		ws.addEventListener(
+			"close",
+			() => {
+				cleanup();
+				reject(new RelayUnavailableError("connection closed before open"));
+			},
+			{ once: true }
+		);
+
+		if (connectTimeoutMs > 0) {
+			connectTimeoutHandle = setTimeout(() => {
+				reject(
+					new RelayUnavailableError(
+						`connect timed out after ${connectTimeoutMs}ms`
+					)
+				);
+			}, connectTimeoutMs);
+		}
 	});
 
 	// All paths from here must clean up listeners, clear the timeout, and
@@ -1331,13 +1381,43 @@ export async function login(
 		},
 	};
 
-	const oauth = props.experimentalWebsocketCallback
-		? await getOauthTokenViaWebSocket(oauthOptions)
-		: await getOauthToken({
-				...oauthOptions,
-				callbackHost: props.callbackHost,
-				callbackPort: props.callbackPort,
-			});
+	let oauth: AccessContext;
+	if (props.experimentalWebsocketCallback) {
+		try {
+			oauth = await getOauthTokenViaWebSocket(oauthOptions);
+		} catch (err) {
+			// Fall back to the local callback server only when:
+			//   1. the failure happened *before* the browser was opened
+			//      (signalled via `RelayUnavailableError`), AND
+			//   2. the user hasn't opted out of fallback by setting
+			//      `WRANGLER_AUTH_WORKER_TIMEOUT=0`.
+			// Post-`open` failures keep their existing `UserError` and propagate.
+			if (
+				err instanceof RelayUnavailableError &&
+				getAuthWorkerTimeoutMs() > 0
+			) {
+				logger.warn(
+					`Could not reach the auth relay at ${getAuthWorkerUrlFromEnv()}: ${err.detail}\n` +
+						"Falling back to a local callback server. Note: this may not work in " +
+						"container or remote environments where the browser cannot reach localhost. " +
+						"Set WRANGLER_AUTH_WORKER_TIMEOUT=0 to disable this fallback."
+				);
+				oauth = await getOauthToken({
+					...oauthOptions,
+					callbackHost: props.callbackHost,
+					callbackPort: props.callbackPort,
+				});
+			} else {
+				throw err;
+			}
+		}
+	} else {
+		oauth = await getOauthToken({
+			...oauthOptions,
+			callbackHost: props.callbackHost,
+			callbackPort: props.callbackPort,
+		});
+	}
 
 	writeAuthConfigFile({
 		oauth_token: oauth.token?.value ?? "",
