@@ -86,7 +86,8 @@ function buildTlsConnectionOptions(
 	const options: tls.ConnectionOptions = {
 		socket: dbSocket,
 		host: targetHost,
-		servername: targetHost,
+		// SNI only accepts hostnames. Passing an IP here breaks on Node 25+
+		servername: net.isIP(targetHost) === 0 ? targetHost : undefined,
 		rejectUnauthorized: tlsConfig.rejectUnauthorized,
 		...extra,
 	};
