@@ -267,7 +267,7 @@ describe("inner entrypoint unit tests", () => {
 			},
 		} as Env;
 
-		const response = await worker.fetch(request, env, ctx);
+		const response = await fetchFromInnerEntrypoint(request, env, ctx);
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
