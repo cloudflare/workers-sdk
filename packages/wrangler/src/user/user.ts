@@ -986,7 +986,7 @@ type LoginProps = {
 	browser: boolean;
 	callbackHost: string;
 	callbackPort: number;
-	xWebsocketCallback?: boolean;
+	experimentalWebsocketCallback?: boolean;
 };
 
 export async function loginOrRefreshIfRequired(
@@ -1100,12 +1100,20 @@ async function getOauthTokenViaWebSocket(options: {
 		);
 	});
 
-	// All paths from here must close the WebSocket — wrap in try/finally.
+	// All paths from here must clean up listeners, clear the timeout, and
+	// close the WebSocket. Hoisting `cleanup` and `loginTimeoutHandle` out of
+	// the body lets the single outer `finally` handle every exit path —
+	// successful return, user-denied error, parse error, openInBrowser throw,
+	// or a 120s timeout. Without this, e.g. a throw from `openInBrowser` would
+	// skip the listener cleanup and the outer `ws.close()` would fire `onClose`
+	// against an orphan `messagePromise`, producing an unhandled rejection.
+	let cleanup = () => {};
+	let loginTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
 	try {
 		// 3. Set up the message/close listener BEFORE sending the auth URL to
-		//    the browser. This avoids any chance of missing the message if the
-		//    DO is fast (it shouldn't be, since the user must authorise in the
-		//    browser, but the listener attachment is essentially free).
+		//    the browser. The user has to authorise in the browser before the
+		//    DO can deliver a message, but listener attachment is essentially
+		//    free, so we do it as early as possible.
 		const messagePromise = new Promise<{ code?: string; error?: string }>(
 			(resolve, reject) => {
 				const onMessage = (event: MessageEvent) => {
@@ -1124,7 +1132,7 @@ async function getOauthTokenViaWebSocket(options: {
 						new UserError("Auth relay connection closed before login completed")
 					);
 				};
-				const cleanup = () => {
+				cleanup = () => {
 					ws.removeEventListener("message", onMessage);
 					ws.removeEventListener("close", onClose);
 				};
@@ -1152,10 +1160,7 @@ async function getOauthTokenViaWebSocket(options: {
 			logger.log(`Visit this link to authenticate: ${authUrl}`);
 		}
 
-		// 6. Wait for auth code via WebSocket (with 120s timeout). We capture
-		//    the timer handle so we can clear it when the message arrives,
-		//    avoiding a stray `ws.close()` 120s later.
-		let loginTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
+		// 6. Wait for auth code via WebSocket (with 120s timeout).
 		const timeoutPromise = new Promise<never>((_resolve, reject) => {
 			loginTimeoutHandle = setTimeout(() => {
 				reject(
@@ -1166,14 +1171,7 @@ async function getOauthTokenViaWebSocket(options: {
 			}, 120_000);
 		});
 
-		let result: { code?: string; error?: string };
-		try {
-			result = await Promise.race([messagePromise, timeoutPromise]);
-		} finally {
-			if (loginTimeoutHandle !== undefined) {
-				clearTimeout(loginTimeoutHandle);
-			}
-		}
+		const result = await Promise.race([messagePromise, timeoutPromise]);
 
 		// 7. Handle error (user denied consent)
 		if (result.error) {
@@ -1194,6 +1192,14 @@ async function getOauthTokenViaWebSocket(options: {
 			codeVerifier,
 		});
 	} finally {
+		if (loginTimeoutHandle !== undefined) {
+			clearTimeout(loginTimeoutHandle);
+		}
+		// Remove the WebSocket listeners before closing. After this,
+		// `ws.close()` won't dispatch any listeners, so `messagePromise` either
+		// already settled (consumed by the race) or stays pending forever (and
+		// is GC'd) — never producing an orphan rejection.
+		cleanup();
 		ws.close();
 	}
 }
@@ -1370,7 +1376,7 @@ export async function login(
 		},
 	};
 
-	const oauth = props.xWebsocketCallback
+	const oauth = props.experimentalWebsocketCallback
 		? await getOauthTokenViaWebSocket(oauthOptions)
 		: await getOauthToken({
 				...oauthOptions,
