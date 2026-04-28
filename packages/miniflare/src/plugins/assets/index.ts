@@ -85,7 +85,12 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		}
 
 		let assetDirectory = options.assets.directory;
-		const directoryStats = await fs.stat(assetDirectory).catch(() => undefined);
+		const directoryStats = await fs.stat(assetDirectory).catch((err) => {
+			if (err?.code === "ENOENT") {
+				return undefined;
+			}
+			throw err;
+		});
 		if (!directoryStats) {
 			// If the assets directory doesn't exist yet (e.g. the build output
 			// hasn't been generated), create an empty temp directory so that the
