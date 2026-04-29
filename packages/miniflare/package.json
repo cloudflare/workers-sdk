@@ -107,7 +107,7 @@
 		"zod": "^3.25.76"
 	},
 	"engines": {
-		"node": ">=18.0.0"
+		"node": ">=22.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

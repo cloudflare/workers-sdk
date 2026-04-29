@@ -7,8 +7,5 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:default"
-	},
-	"volta": {
-		"extends": "../../package.json"
 	}
 }
