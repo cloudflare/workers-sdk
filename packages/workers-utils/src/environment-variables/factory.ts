@@ -94,8 +94,8 @@ type VariableNames =
 	| "WRANGLER_TOKEN_URL"
 	/** Custom token revocation URL (usually auto-configured). */
 	| "WRANGLER_REVOKE_URL"
-	/** URL of the auth relay worker for WebSocket-based OAuth callback flow (usually auto-configured). */
-	| "WRANGLER_AUTH_WORKER_URL"
+	/** Origin (scheme + host) of the auth relay worker for WebSocket-based OAuth callback flow (usually auto-configured). */
+	| "WRANGLER_AUTH_WORKER_ORIGIN"
 	/**
 	 * Connect timeout (ms) for the auth relay WebSocket. Defaults to `5000`.
 	 * `0` means "wait indefinitely AND do not fall back to the local callback
