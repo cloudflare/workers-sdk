@@ -157,10 +157,19 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	}
 
 	for (const service of previews?.services ?? []) {
+		// `cross_account_grant` is internal/non-public-facing on the typed
+		// `services` schema (see CfService in workers-utils/src/worker.ts and
+		// the deploy path in create-worker-upload-form.ts:430-449), so we
+		// access it through the runtime shape instead of the public type.
+		const crossAccountGrant = (service as { cross_account_grant?: string })
+			.cross_account_grant;
 		env[service.binding] = {
 			type: "service",
 			service: service.service,
 			entrypoint: service.entrypoint,
+			...(crossAccountGrant !== undefined && {
+				cross_account_grant: crossAccountGrant,
+			}),
 		};
 	}
 
@@ -302,6 +311,16 @@ export function extractConfigBindings(config: Config): EnvBindings {
 
 	if (config.assets?.binding) {
 		env[config.assets.binding] = { type: "assets" };
+	}
+
+	// Mirror the deploy-time behavior in create-worker-upload-form.ts:628-641 —
+	// `unsafe.bindings` declared in the previews block are folded into the
+	// metadata bindings with the `type` passed through verbatim. Without this
+	// loop, internal binding shapes that wrangler doesn't yet model (e.g.
+	// service bindings with `cross_account_grant`) silently drop on previews.
+	for (const binding of previews?.unsafe?.bindings ?? []) {
+		const { name, type, ...rest } = binding;
+		env[name] = { type, ...rest } as Binding;
 	}
 
 	return env;
