@@ -966,7 +966,7 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error when defining text blobs for modules format workers", async ({
+			it("should be able to define text blobs for modules format workers", async ({
 				expect,
 			}) => {
 				writeWranglerConfig({
@@ -977,23 +977,35 @@ describe("deploy", () => {
 				writeWorkerSource({ type: "esm" });
 				fs.mkdirSync("./path/to", { recursive: true });
 				fs.writeFileSync("./path/to/text.file", "SOME TEXT CONTENT");
-
-				await expect(
-					runWrangler("deploy index.js")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml file]`
-				);
+				mockUploadWorkerRequest({
+					expectedType: "esm",
+					expectedModules: { TESTTEXTBLOBNAME: "SOME TEXT CONTENT" },
+					expectedBindings: [
+						{
+							name: "TESTTEXTBLOBNAME",
+							part: "TESTTEXTBLOBNAME",
+							type: "text_blob",
+						},
+					],
+				});
+				mockSubDomainRequest();
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					"
-				`);
-				expect(std.err).toMatchInlineSnapshot(`
-					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml file[0m
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					Binding                                       Resource
+					env.TESTTEXTBLOBNAME (path/to/text.file)      Text Blob
 
-					"
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
 				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
