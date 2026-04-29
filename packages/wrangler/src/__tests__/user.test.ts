@@ -43,6 +43,33 @@ import type { UserAuthConfig } from "../user";
 import type { Config } from "@cloudflare/workers-utils";
 import type { Mock } from "vitest";
 
+// Stubbed WebSocket so the OAuth WebSocket relay flow can be tested without a
+// real network connection. Tests drive instances by calling `triggerOpen` /
+// `triggerMessage` etc. on `MockWebSocket.last`. Scoped to this file rather
+// than `vitest.setup.ts` so other tests (e.g. inspector debugging) keep using
+// the real `ws` package.
+//
+// `MockWebSocket` is loaded with a dynamic import inside the factory: vitest
+// hoists `vi.mock` above all top-level imports, so a direct reference to the
+// imported `MockWebSocket` would hit a TDZ ReferenceError when `ws` is first
+// required (the static import binding is not yet initialised).
+vi.mock("ws", async (importOriginal) => {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	const original = await importOriginal<typeof import("ws")>();
+	const mockModule = await import("./helpers/mock-websocket");
+	return {
+		...original,
+		__esModule: true,
+		default: mockModule.MockWebSocket,
+	};
+});
+
+// Reset the mock WebSocket instance list between tests so each test sees only
+// the instances created during its own execution.
+beforeEach(() => {
+	MockWebSocket.reset();
+});
+
 describe("User", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
