@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { describe, it } from "vitest";
+import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
 
 const USER_ERROR_CONSTRUCTORS = [
@@ -60,13 +61,11 @@ function printCoverageReport(summary: CoverageSummary): void {
 	].join("\n");
 
 	if (coveragePercent < 100) {
-		process.stderr.write(
-			`${report}\n\nWarning: telemetryMessage coverage is below 100%.\n`
-		);
+		logger.warn(`${report}\n\nWarning: telemetryMessage coverage is below 100%.`);
 		return;
 	}
 
-	process.stdout.write(`${report}\n`);
+	logger.log(report);
 }
 
 function getCoveragePercent(summary: CoverageSummary): number {
@@ -81,6 +80,10 @@ function formatPercent(value: number): string {
 	return `${value.toFixed(2)}%`;
 }
 
+/**
+ * Scans Wrangler source files for user-facing error constructors and counts
+ * whether each site passes a safe telemetry label in the expected argument.
+ */
 function getUserErrorTelemetryCoverage(): CoverageSummary {
 	const basePath = getBasePath();
 	const srcPath = path.join(basePath, "src");
@@ -136,6 +139,12 @@ function getUserErrorTelemetryCoverage(): CoverageSummary {
 	return summary;
 }
 
+/**
+ * Builds the set of constructors that behave like `UserError`, including local
+ * subclasses such as Pages or auth-specific errors. This is intentionally based
+ * on inheritance in source rather than a hand-maintained list, so the coverage
+ * report catches new local subclasses automatically.
+ */
 function getUserErrorConstructorNames(sourceFiles: string[]): Set<string> {
 	const constructorNames = new Set<string>(USER_ERROR_CONSTRUCTOR_NAMES);
 	let addedConstructor = true;
@@ -172,6 +181,10 @@ function getUserErrorConstructorNames(sourceFiles: string[]): Set<string> {
 	return constructorNames;
 }
 
+/**
+ * Recursively enumerates Wrangler source files while excluding tests, so the
+ * coverage number reflects production error sites rather than test fixtures.
+ */
 function getSourceFiles(directoryPath: string): string[] {
 	const entries = readdirSync(directoryPath).sort();
 	const files: string[] = [];
@@ -193,6 +206,7 @@ function getSourceFiles(directoryPath: string): string[] {
 	return files;
 }
 
+/** Traverses every AST node in a parsed TypeScript source file. */
 function visitSourceFile(
 	sourceFile: ts.SourceFile,
 	visit: (node: ts.Node) => void
@@ -205,6 +219,7 @@ function visitSourceFile(
 	visitNode(sourceFile);
 }
 
+/** Returns the final identifier for constructor-like expressions. */
 function getConstructorName(
 	expression: ts.NewExpression["expression"]
 ): string | undefined {
@@ -217,6 +232,7 @@ function getConstructorName(
 	}
 }
 
+/** Returns the direct superclass name for a class declaration, if present. */
 function getBaseClassName(node: ts.ClassDeclaration): string | undefined {
 	const extendsClause = node.heritageClauses?.find(
 		(clause) => clause.token === ts.SyntaxKind.ExtendsKeyword
@@ -230,6 +246,10 @@ function getBaseClassName(node: ts.ClassDeclaration): string | undefined {
 	return getConstructorName(baseClass.expression);
 }
 
+/**
+ * Identifies constructor/factory calls that create user-facing errors tracked by
+ * this coverage report.
+ */
 function getErrorSource(
 	node: ts.Node,
 	constructorNames: Set<string>
@@ -255,6 +275,7 @@ function getErrorSource(
 	}
 }
 
+/** Lazily creates per-constructor counters in the aggregate coverage summary. */
 function getConstructorStats(
 	summary: CoverageSummary,
 	constructorName: string
@@ -273,6 +294,11 @@ function getConstructorStats(
 	return stats;
 }
 
+/**
+ * Checks for `telemetryMessage` in the argument position actually consumed by
+ * each known constructor. For local subclasses with unknown signatures, fall
+ * back to accepting any object-literal argument that includes the property.
+ */
 function hasTelemetryMessage(errorSource: ErrorSource): boolean {
 	const telemetryArgIndex = getTelemetryArgIndex(errorSource.name);
 
@@ -283,6 +309,7 @@ function hasTelemetryMessage(errorSource: ErrorSource): boolean {
 	return errorSource.args.some(hasTelemetryMessageProperty);
 }
 
+/** Returns the expected telemetry options argument index for known signatures. */
 function getTelemetryArgIndex(errorSourceName: string): number | undefined {
 	if (
 		errorSourceName === "UserError" ||
@@ -304,6 +331,7 @@ function getTelemetryArgIndex(errorSourceName: string): number | undefined {
 	}
 }
 
+/** Returns whether an expression is an object literal with `telemetryMessage`. */
 function hasTelemetryMessageProperty(arg: ts.Expression | undefined): boolean {
 	return (
 		arg !== undefined &&
@@ -312,6 +340,7 @@ function hasTelemetryMessageProperty(arg: ts.Expression | undefined): boolean {
 	);
 }
 
+/** Checks whether an object-literal member is named `telemetryMessage`. */
 function isTelemetryMessageProperty(
 	property: ts.ObjectLiteralElementLike
 ): boolean {
@@ -326,12 +355,14 @@ function isTelemetryMessageProperty(
 	return false;
 }
 
+/** Extracts a plain string name from supported object-literal property names. */
 function getPropertyName(propertyName: ts.PropertyName): string | undefined {
 	if (ts.isIdentifier(propertyName) || ts.isStringLiteral(propertyName)) {
 		return propertyName.text;
 	}
 }
 
+/** Formats a source location relative to the Wrangler package root. */
 function formatLocation(
 	basePath: string,
 	filePath: string,
