@@ -250,6 +250,7 @@ async function setupDevEnv(
 				registry: args.disableDevRegistry ? undefined : getRegistryPath(),
 				multiworkerPrimary: args.multiworkerPrimary,
 				enableContainers: args.enableContainers,
+				privilegedContainers: args.privilegedContainers,
 				dockerPath: args.dockerPath,
 				// initialise with a random id
 				containerBuildId: generateContainerBuildId(),
