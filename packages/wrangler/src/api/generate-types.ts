@@ -1,46 +1,7 @@
-import { generateTypesFromWranglerOptions } from "../type-generation";
-
-interface GenerateTypesOptions {
-	/**
-	 * Path to the Wrangler config file to use. Can be an array for multi-config type resolution.
-	 */
-	config?: string | string[];
-
-	/**
-	 * Name of the Wrangler environment to generate types for.
-	 */
-	env?: string;
-
-	/**
-	 * Paths to `.env` files to load when inferring local variables and secrets.
-	 */
-	envFile?: string[];
-
-	/**
-	 * Name of the generated environment interface.
-	 */
-	envInterface?: string;
-
-	/**
-	 * Whether to include environment/bindings types in the output.
-	 */
-	includeEnv?: boolean;
-
-	/**
-	 * Whether to include runtime types in the output.
-	 */
-	includeRuntime?: boolean;
-
-	/**
-	 * Path to the declaration file for generated types.
-	 */
-	path?: string;
-
-	/**
-	 * Whether to generate strict literal/union variable types.
-	 */
-	strictVars?: boolean;
-}
+import {
+	generateTypesFromWranglerOptions,
+	type GenerateTypesOptions,
+} from "../type-generation";
 
 export type Unstable_GenerateTypesOptions = GenerateTypesOptions;
 
