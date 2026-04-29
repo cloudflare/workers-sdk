@@ -43,6 +43,68 @@ function chromeBaseUrl(wsEndpoint: string): string {
 	return `http://${u.host}`;
 }
 
+// Substrings of workerd / underlying kj socket error messages that indicate
+// a transient connection failure and are safe to retry. Matched
+// case-insensitively against `Error.message`.
+const RETRYABLE_FETCH_ERROR_SUBSTRINGS = [
+	// kj/async-io-win32.c++ ConnectEx (#1225) — the remote socket refused us.
+	// Surfaces on Windows when Chrome announced the DevTools URL but isn't
+	// quite accepting connections yet.
+	"connection refused",
+	"remote computer refused",
+	// kj/async-io-win32.c++ WSARecv (#64) — the connection went away mid-read.
+	"network name is no longer available",
+	// Generic workerd disconnect classifications.
+	"network connection lost",
+	"disconnected",
+];
+
+function isRetryableFetchError(error: unknown): boolean {
+	const message = (error as { message?: string } | undefined)?.message;
+	if (typeof message !== "string") {
+		return false;
+	}
+	const lower = message.toLowerCase();
+	return RETRYABLE_FETCH_ERROR_SUBSTRINGS.some((needle) =>
+		lower.includes(needle)
+	);
+}
+
+/**
+ * Wrapper around `fetch` that retries on transient connection failures.
+ *
+ * On Windows, the first fetches from this worker to a freshly-launched
+ * Chrome process can occasionally fail with `ConnectEx (#1225)` or
+ * `WSARecv (#64)` even after the readiness probe in `launchBrowser` has
+ * succeeded. We retry a small number of times with exponential backoff so
+ * those transient failures don't surface as `/v1/acquire` errors to the
+ * user worker.
+ */
+async function fetchWithConnectRetry(
+	url: string | URL,
+	init?: RequestInit,
+	{
+		maxAttempts = 5,
+		baseDelayMs = 25,
+		maxDelayMs = 250,
+	}: { maxAttempts?: number; baseDelayMs?: number; maxDelayMs?: number } = {}
+): Promise<Response> {
+	let lastError: unknown;
+	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		try {
+			return await fetch(url, init);
+		} catch (e) {
+			lastError = e;
+			if (!isRetryableFetchError(e) || attempt === maxAttempts - 1) {
+				break;
+			}
+			const delay = Math.min(maxDelayMs, baseDelayMs * 2 ** attempt);
+			await new Promise((resolve) => setTimeout(resolve, delay));
+		}
+	}
+	throw lastError;
+}
+
 // Reserved codes 1005 (No Status Received) and 1006 (Abnormal Closure) are
 // valid in CloseEvent but throw InvalidAccessError when passed to .close().
 function forwardClose(target?: WebSocket, e?: CloseEvent) {
@@ -72,7 +134,9 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 		// This serves as the health indicator for the session and is reused
 		// by the legacy chunked-framing client (/v1/connectDevtools).
 		const wsUrl = this.sessionInfo.wsEndpoint.replace("ws://", "http://");
-		const resp = await fetch(wsUrl, { headers: { Upgrade: "websocket" } });
+		const resp = await fetchWithConnectRetry(wsUrl, {
+			headers: { Upgrade: "websocket" },
+		});
 		assert(resp.webSocket !== null, "Expected a WebSocket response");
 		this.chromeWs = resp.webSocket;
 		this.chromeWs.accept();
@@ -275,9 +339,10 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 
 		server.accept();
 
-		const response = await fetch(targetWsUrl.replace("ws://", "http://"), {
-			headers: { Upgrade: "websocket" },
-		});
+		const response = await fetchWithConnectRetry(
+			targetWsUrl.replace("ws://", "http://"),
+			{ headers: { Upgrade: "websocket" } }
+		);
 
 		assert(response.webSocket !== null, "Expected a WebSocket response");
 		const chrome = response.webSocket;
@@ -309,7 +374,7 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 		if (!this.sessionInfo) {
 			return Response.json({ error: "Browser not found" }, { status: 404 });
 		}
-		const resp = await fetch(
+		const resp = await fetchWithConnectRetry(
 			`${chromeBaseUrl(this.sessionInfo.wsEndpoint)}${chromePath}`,
 			{ method }
 		);
