@@ -36,7 +36,8 @@ export async function deleteCommand(
 		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 	if (!uuidRegex.test(deleteArgs.ID)) {
 		throw new UserError(
-			`Expected a container ID but got ${deleteArgs.ID}. Use \`wrangler containers list\` to view your containers and corresponding IDs.`
+			`Expected a container ID but got ${deleteArgs.ID}. Use \`wrangler containers list\` to view your containers and corresponding IDs.`,
+			{ telemetryMessage: "containers delete invalid container id" }
 		);
 	}
 
@@ -65,7 +66,8 @@ export async function deleteCommand(
 		if (err instanceof ApiError) {
 			if (err.status === 400 || err.status === 404) {
 				throw new UserError(
-					`There has been an error deleting the container.\n${err.body.error}`
+					`There has been an error deleting the container.\n${err.body.error}`,
+					{ telemetryMessage: "containers delete request failed" }
 				);
 			}
 
@@ -108,7 +110,8 @@ export async function infoCommand(
 	);
 	if (err) {
 		throw new UserError(
-			`There has been an internal error requesting your containers.\n ${err.message}`
+			`There has been an internal error requesting your containers.\n ${err.message}`,
+			{ telemetryMessage: "containers info request failed" }
 		);
 	}
 

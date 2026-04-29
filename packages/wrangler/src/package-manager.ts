@@ -52,7 +52,7 @@ export async function getPackageManager(): Promise<PackageManager> {
 		throw new UserError(
 			"Unable to find a package manager. Supported managers are: npm, yarn, pnpm, and bun.",
 			{
-				telemetryMessage: true,
+				telemetryMessage: "package manager detection missing manager",
 			}
 		);
 	}

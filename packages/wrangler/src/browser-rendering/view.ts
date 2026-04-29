@@ -10,10 +10,18 @@ import type { BrowserSession, BrowserTarget } from "./types";
 
 function throwIfNonInteractive(message: string, json: boolean): void {
 	if (json) {
-		throw new JsonFriendlyFatalError(JSON.stringify({ error: message }));
+		throw new JsonFriendlyFatalError(
+			JSON.stringify({ error: message }),
+			undefined,
+			{
+				telemetryMessage: "browser rendering view non interactive prompt unavailable",
+			}
+		);
 	}
 	if (isNonInteractiveOrCI()) {
-		throw new UserError(message);
+		throw new UserError(message, {
+			telemetryMessage: "browser rendering view non interactive prompt unavailable",
+		});
 	}
 }
 
@@ -129,7 +137,8 @@ export const browserViewCommand = createCommand({
 
 			if (sessions.length === 0) {
 				throw new UserError(
-					"No active Browser Run sessions found. Use `wrangler browser create` to create one."
+					"No active Browser Run sessions found. Use `wrangler browser create` to create one.",
+					{ telemetryMessage: "browser rendering view no sessions" }
 				);
 			}
 
@@ -158,7 +167,9 @@ export const browserViewCommand = createCommand({
 		);
 
 		if (targets.length === 0) {
-			throw new UserError(`No targets found for session "${sessionId}"`);
+			throw new UserError(`No targets found for session "${sessionId}"`, {
+				telemetryMessage: "browser rendering view no targets",
+			});
 		}
 
 		// Filter to page targets only for selection (unless using --target which searches all)
@@ -175,7 +186,8 @@ export const browserViewCommand = createCommand({
 				throw new UserError(
 					`No target found matching "${targetSelector}". Available targets:\n${targets
 						.map((t) => `  - ${t.id}: ${formatTargetForDisplay(t)}`)
-						.join("\n")}`
+						.join("\n")}`,
+					{ telemetryMessage: "browser rendering view target not found" }
 				);
 			}
 
@@ -183,7 +195,8 @@ export const browserViewCommand = createCommand({
 				throw new UserError(
 					`Multiple targets match "${targetSelector}". Please be more specific:\n${matchedTargets
 						.map((t) => `  - ${t.id}: ${formatTargetForDisplay(t)}`)
-						.join("\n")}`
+						.join("\n")}`,
+					{ telemetryMessage: "browser rendering view multiple targets match" }
 				);
 			}
 
@@ -210,7 +223,9 @@ export const browserViewCommand = createCommand({
 
 			const found = selectableTargets.find((t) => t.id === selectedId);
 			if (!found) {
-				throw new UserError(`Target "${selectedId}" not found`);
+				throw new UserError(`Target "${selectedId}" not found`, {
+					telemetryMessage: "browser rendering view selected target missing",
+				});
 			}
 			selectedTarget = found;
 		}

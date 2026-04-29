@@ -102,7 +102,7 @@ export const typesCommand = createCommand({
 					"`wrangler types` will now generate runtime types in the same file as the Env types.\n" +
 					"You should delete the old runtime types file, and remove it from your tsconfig.json.\n" +
 					"Then rerun `wrangler types`.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "type generation args include runtime deprecated" }
 			);
 		}
 
@@ -113,7 +113,7 @@ export const typesCommand = createCommand({
 				`The provided env-interface value ("${args.envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`,
 				{
 					telemetryMessage:
-						"The provided env-interface value does not satisfy the validation regex",
+						"type generation args invalid env interface",
 				}
 			);
 		}
@@ -123,7 +123,7 @@ export const typesCommand = createCommand({
 				`The provided output path '${args.path}' does not point to a declaration file - please use the '.d.ts' extension`,
 				{
 					telemetryMessage:
-						"The provided path does not point to a declaration file",
+						"type generation args invalid output path",
 				}
 			);
 		}
@@ -134,7 +134,7 @@ export const typesCommand = createCommand({
 			throw new CommandLineArgsError(
 				`You cannot run this command without including either Env or Runtime types`,
 				{
-					telemetryMessage: true,
+					telemetryMessage: "type generation args missing type selection",
 				}
 			);
 		}
@@ -162,7 +162,7 @@ export const typesCommand = createCommand({
 		) {
 			throw new UserError(
 				`No config file detected${args.config ? ` (at ${args.config})` : ""}. This command requires a Wrangler configuration file.`,
-				{ telemetryMessage: "No config file detected" }
+				{ telemetryMessage: "type generation command missing config" }
 			);
 		}
 
@@ -203,7 +203,8 @@ export const typesCommand = createCommand({
 					}
 				} else {
 					throw new UserError(
-						`Could not resolve entry point for service config '${secondaryConfig}'.`
+						`Could not resolve entry point for service config '${secondaryConfig}'.`,
+						{ telemetryMessage: "type generation command service entrypoint missing" }
 					);
 				}
 			}
@@ -219,7 +220,8 @@ export const typesCommand = createCommand({
 			if (outOfDate) {
 				throw new FatalError(
 					`Types at ${outputPath} are out of date. Run \`wrangler types\` to regenerate.`,
-					1
+					1,
+					{ telemetryMessage: "type generation check types out of date" }
 				);
 			}
 
@@ -460,7 +462,8 @@ export async function generateEnvTypes(
 
 	if (userProvidedEnvInterface && entrypointFormat === "service-worker") {
 		throw new UserError(
-			"An env-interface value has been provided but the worker uses the incompatible Service Worker syntax"
+			"An env-interface value has been provided but the worker uses the incompatible Service Worker syntax",
+			{ telemetryMessage: "type generation command env interface incompatible" }
 		);
 	}
 
@@ -1341,7 +1344,7 @@ const validateTypesFile = (path: string): void => {
 		) {
 			throw new UserError(
 				`A non-Wrangler ${basename(path)} already exists, please rename and try again.`,
-				{ telemetryMessage: "A non-Wrangler .d.ts file already exists" }
+				{ telemetryMessage: "type generation validation conflicting types file" }
 			);
 		}
 	} catch (error) {
@@ -1464,7 +1467,8 @@ function getEnvConfig(
 				? `Available environments: ${availableEnvs.join(", ")}`
 				: "No environments are defined in the configuration file.";
 		throw new UserError(
-			`Environment "${environmentName}" not found in configuration.\n${envList}`
+			`Environment "${environmentName}" not found in configuration.\n${envList}`,
+			{ telemetryMessage: "type generation config missing environment" }
 		);
 	}
 
@@ -1605,7 +1609,8 @@ function collectCoreBindings(
 				throw new UserError(
 					`Binding "${name}" has conflicting types across environments: ` +
 						`"${existing.bindingCategory}" vs "${bindingCategory}" (in ${envName}). ` +
-						`Please use unique binding names for different binding types.`
+						`Please use unique binding names for different binding types.`,
+					{ telemetryMessage: "type generation bindings conflicting types" }
 				);
 			}
 

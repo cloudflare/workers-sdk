@@ -217,7 +217,9 @@ export async function getDetailsForAutoConfig({
 				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
 				: "Failed to detect an output directory for the project";
 
-		const error = new FatalError(errorMessage);
+		const error = new FatalError(errorMessage, undefined, {
+			telemetryMessage: "autoconfig details output directory missing",
+		});
 
 		sendMetricsEvent(
 			"autoconfig_detection_completed",

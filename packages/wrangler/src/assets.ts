@@ -86,7 +86,7 @@ export const syncAssets = async (
 		throw new FatalError(
 			"An unexpected response has been received from the Cloudflare API for assets upload. Please try again.",
 			1,
-			{ telemetryMessage: true }
+			{ telemetryMessage: "assets upload unexpected api response" }
 		);
 	}
 
@@ -96,7 +96,7 @@ export const syncAssets = async (
 			throw new FatalError(
 				"Could not find assets information to attach to deployment. Please try again.",
 				1,
-				{ telemetryMessage: true }
+				{ telemetryMessage: "assets upload missing completion token" }
 			);
 		}
 		logger.info(
@@ -253,7 +253,7 @@ export const syncAssets = async (
 		throw new FatalError(
 			"Failed to complete asset upload. Please try again.",
 			1,
-			{ telemetryMessage: true }
+			{ telemetryMessage: "assets upload completion failed" }
 		);
 	}
 
@@ -420,13 +420,13 @@ export function getAssetsOptions(
 	if (assets.directory === undefined) {
 		throw new UserError(
 			"The `assets` property in your configuration is missing the required `directory` property.",
-			{ telemetryMessage: true }
+			{ telemetryMessage: "assets options missing directory" }
 		);
 	}
 
 	if (assets.directory === "") {
 		throw new UserError("`The assets directory cannot be an empty string.", {
-			telemetryMessage: true,
+			telemetryMessage: "assets options empty directory",
 		});
 	}
 
@@ -445,7 +445,7 @@ export function getAssetsOptions(
 				`${directory}`,
 
 			{
-				telemetryMessage: `The assets directory specified does not exist`,
+				telemetryMessage: "assets directory does not exist",
 			}
 		);
 	}
@@ -456,7 +456,7 @@ export function getAssetsOptions(
 				`${directory}`,
 
 			{
-				telemetryMessage: `The assets directory path specified is not a directory`,
+				telemetryMessage: "assets directory path is not directory",
 			}
 		);
 	}
@@ -496,7 +496,7 @@ export function getAssetsOptions(
 		throw new UserError(
 			"Cannot set run_worker_first without a Worker script.\n" +
 				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`).",
-			{ telemetryMessage: true }
+			{ telemetryMessage: "assets router missing worker script" }
 		);
 	}
 
@@ -555,7 +555,7 @@ export function validateAssetsArgsAndConfig(
 		throw new UserError(
 			"Cannot use assets and Workers Sites in the same Worker.\n" +
 				"Please remove either the `site` or `assets` field from your configuration file.",
-			{ telemetryMessage: true }
+			{ telemetryMessage: "assets validation conflicting sites config" }
 		);
 	}
 
@@ -572,7 +572,7 @@ export function validateAssetsArgsAndConfig(
 		throw new UserError(
 			"Cannot use assets with a binding in an assets-only Worker.\n" +
 				"Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (`main`).",
-			{ telemetryMessage: true }
+			{ telemetryMessage: "assets validation binding without worker script" }
 		);
 	}
 
@@ -613,7 +613,7 @@ function errorOnLegacyPagesWorkerJSAsset(
 			If you do not want to upload this ${workerJsType}, either remove it or add an "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, containing "${WORKER_JS_FILENAME}" to avoid uploading.
 			If you do want to upload this ${workerJsType}, you can add an empty "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, to hide this error.
 		`,
-				{ telemetryMessage: true }
+				{ telemetryMessage: "assets validation legacy pages worker asset" }
 			);
 		}
 	}

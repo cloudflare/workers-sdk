@@ -221,7 +221,9 @@ export function transformViteConfig(
 					  export default defineConfig({
 					    plugins: [cloudflare()]
 					  });
-				`);
+				`, {
+					telemetryMessage: "autoconfig vite config object unsupported",
+				});
 			}
 
 			const pluginsProp = configObject.properties.find((prop) =>
@@ -236,7 +238,9 @@ export function transformViteConfig(
 					  export default defineConfig({
 					    plugins: []
 					  });
-				`);
+				`, {
+					telemetryMessage: "autoconfig vite plugins array missing",
+				});
 			}
 
 			// Only add the Cloudflare plugin if it's not already present

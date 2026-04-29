@@ -46,13 +46,15 @@ export const versionsSecretDeleteCommand = createCommand({
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(
-				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
+				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``,
+				{ telemetryMessage: "versions secrets delete missing worker name" }
 			);
 		}
 
 		if (args.key === undefined) {
 			throw new UserError(
-				"Secret name is required. Please specify the name of your secret."
+				"Secret name is required. Please specify the name of your secret.",
+				{ telemetryMessage: "versions secrets delete missing secret name" }
 			);
 		}
 
@@ -82,7 +84,11 @@ export const versionsSecretDeleteCommand = createCommand({
 			).items;
 			if (versions.length === 0) {
 				throw new UserError(
-					"There are currently no uploaded versions of this Worker - please upload a version before uploading a secret."
+					"There are currently no uploaded versions of this Worker - please upload a version before uploading a secret.",
+					{
+						telemetryMessage:
+							"versions secrets delete no uploaded versions",
+					}
 				);
 			}
 			const latestVersion = versions[0];

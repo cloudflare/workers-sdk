@@ -138,7 +138,8 @@ export const secretPutCommand = createCommand({
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
-					"For Pages, please run `wrangler pages secret put` instead."
+					"For Pages, please run `wrangler pages secret put` instead.",
+				{ telemetryMessage: "secret put pages project" }
 			);
 		}
 
@@ -147,7 +148,8 @@ export const secretPutCommand = createCommand({
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(
-				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
+				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``,
+				{ telemetryMessage: "secret put missing worker name" }
 			);
 		}
 
@@ -189,7 +191,8 @@ export const secretPutCommand = createCommand({
 							"To resolve this, you have two options:\n" +
 							"(1) use the `wrangler versions secret put` instead, which allows you to update secrets without deploying; or\n" +
 							"(2) deploy the latest version first, then modify secrets.\n" +
-							"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version."
+							"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.",
+						{ telemetryMessage: "secret put version not deployed" }
 					);
 				} else {
 					throw e;
@@ -266,14 +269,16 @@ export const secretDeleteCommand = createCommand({
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
-					"For Pages, please run `wrangler pages secret delete` instead."
+					"For Pages, please run `wrangler pages secret delete` instead.",
+				{ telemetryMessage: "secret delete pages project" }
 			);
 		}
 
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(
-				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
+				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``,
+				{ telemetryMessage: "secret delete missing worker name" }
 			);
 		}
 
@@ -344,14 +349,16 @@ export const secretListCommand = createCommand({
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
-					"For Pages, please run `wrangler pages secret list` instead."
+					"For Pages, please run `wrangler pages secret list` instead.",
+				{ telemetryMessage: "secret list pages project" }
 			);
 		}
 
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(
-				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
+				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``,
+				{ telemetryMessage: "secret list missing worker name" }
 			);
 		}
 
@@ -364,7 +371,8 @@ export const secretListCommand = createCommand({
 				throw new UserError(
 					`Worker "${scriptName}"${args.env ? ` (env: ${args.env})` : ""} not found.\n\n` +
 						`If this is a new Worker, run \`wrangler deploy\` first to create it.\n` +
-						`Otherwise, check that the Worker name is correct and you're logged into the right account.`
+						`Otherwise, check that the Worker name is correct and you're logged into the right account.`,
+					{ telemetryMessage: "secret list worker not found" }
 				);
 			}
 
@@ -416,7 +424,8 @@ export const secretBulkCommand = createCommand({
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
-					"For Pages, please run `wrangler pages secret bulk` instead."
+					"For Pages, please run `wrangler pages secret bulk` instead.",
+				{ telemetryMessage: "secret bulk pages project" }
 			);
 		}
 
@@ -424,7 +433,8 @@ export const secretBulkCommand = createCommand({
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			const error = new UserError(
-				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
+				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``,
+				{ telemetryMessage: "secret bulk missing worker name" }
 			);
 			logger.error(error.message);
 			throw error;
@@ -551,14 +561,18 @@ export function validateFileSecrets(
 ): asserts content is Record<string, string> {
 	if (content === null || typeof content !== "object") {
 		throw new FatalError(
-			`The contents of "${jsonFilePath}" is not valid. It should be a JSON object of string values.`
+			`The contents of "${jsonFilePath}" is not valid. It should be a JSON object of string values.`,
+			undefined,
+			{ telemetryMessage: "secret bulk file invalid contents" }
 		);
 	}
 	const entries = Object.entries(content);
 	for (const [key, value] of entries) {
 		if (typeof value !== "string") {
 			throw new FatalError(
-				`The value for "${key}" in "${jsonFilePath}" is not a "string" instead it is of type "${typeof value}"`
+				`The value for "${key}" in "${jsonFilePath}" is not a "string" instead it is of type "${typeof value}"`,
+				undefined,
+				{ telemetryMessage: "secret bulk file invalid value type" }
 			);
 		}
 	}
@@ -598,7 +612,9 @@ export async function parseBulkInputToObject(
 			secretFormat = "dotenv";
 			// dotenvParse does not error unless fileContent is undefined, no keys === error
 			if (Object.keys(content).length === 0) {
-				throw new UserError(`The contents of "${input}" is not valid.`);
+				throw new UserError(`The contents of "${input}" is not valid.`, {
+					telemetryMessage: "secret bulk invalid input",
+				});
 			}
 		}
 		validateFileSecrets(content, input);

@@ -49,7 +49,9 @@ export async function getWorkersDevSubdomain(
 				const solutionMessage = `You can either deploy your worker to one or more routes by specifying them in your ${configFileName(configPath)} file, or register a workers.dev subdomain here:`;
 				const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
-				throw new UserError(`${solutionMessage}\n${onboardingLink}`);
+				throw new UserError(`${solutionMessage}\n${onboardingLink}`, {
+					telemetryMessage: "routes workers dev registration declined",
+				});
 			}
 
 			return await registerSubdomain(complianceConfig, accountId, configPath);
@@ -118,7 +120,9 @@ async function registerSubdomain(
 			const solutionMessage = `You can either deploy your worker to one or more routes by specifying them in your ${configFileName(configPath)} file, or register a workers.dev subdomain here:`;
 			const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
-			throw new UserError(`${solutionMessage}\n${onboardingLink}`);
+			throw new UserError(`${solutionMessage}\n${onboardingLink}`, {
+				telemetryMessage: "routes workers dev registration declined",
+			});
 		}
 
 		try {

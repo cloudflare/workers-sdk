@@ -72,7 +72,9 @@ async function promptWithRetry<T>(
 				defaultValue: true,
 			});
 			if (!retry) {
-				throw new UserError(`${getMessage()} - cancelled`);
+				throw new UserError(`${getMessage()} - cancelled`, {
+					telemetryMessage: "pipelines setup prompt cancelled",
+				});
 			}
 		}
 	}
@@ -103,11 +105,14 @@ async function ensureBucketExists(
 
 function validateBucketName(name: string): void {
 	if (!name) {
-		throw new UserError("Bucket name is required");
+		throw new UserError("Bucket name is required", {
+			telemetryMessage: "pipelines setup missing bucket name",
+		});
 	}
 	if (!isValidR2BucketName(name)) {
 		throw new UserError(
-			`The bucket name "${name}" is invalid. ${bucketFormatMessage}`
+			`The bucket name "${name}" is invalid. ${bucketFormatMessage}`,
+			{ telemetryMessage: "pipelines setup invalid bucket name" }
 		);
 	}
 }
@@ -199,7 +204,9 @@ async function promptRollingPolicy(): Promise<{
 		(value) => {
 			const num = parseInt(value, 10);
 			if (isNaN(num) || num < 5) {
-				throw new UserError("File size must be a number >= 5");
+				throw new UserError("File size must be a number >= 5", {
+					telemetryMessage: "pipelines setup invalid file size",
+				});
 			}
 		}
 	);
@@ -213,7 +220,9 @@ async function promptRollingPolicy(): Promise<{
 		(value) => {
 			const num = parseInt(value, 10);
 			if (isNaN(num) || num < 10) {
-				throw new UserError("Interval must be a number >= 10");
+				throw new UserError("Interval must be a number >= 10", {
+					telemetryMessage: "pipelines setup invalid interval",
+				});
 			}
 		}
 	);
@@ -238,7 +247,9 @@ async function promptCatalogToken(
 				defaultValue: true,
 			});
 			if (!retry) {
-				throw new UserError("Catalog API token - cancelled");
+				throw new UserError("Catalog API token - cancelled", {
+					telemetryMessage: "pipelines setup catalog token cancelled",
+				});
 			}
 			continue;
 		}
@@ -260,7 +271,10 @@ async function promptCatalogToken(
 				defaultValue: true,
 			});
 			if (!retry) {
-				throw new UserError("Catalog API token validation failed");
+				throw new UserError("Catalog API token validation failed", {
+					telemetryMessage:
+						"pipelines setup catalog token validation failed",
+				});
 			}
 		}
 	}
@@ -278,7 +292,9 @@ async function promptR2Credentials(
 				defaultValue: true,
 			});
 			if (!retry) {
-				throw new UserError("R2 Access Key ID - cancelled");
+				throw new UserError("R2 Access Key ID - cancelled", {
+					telemetryMessage: "pipelines setup r2 access key cancelled",
+				});
 			}
 			continue;
 		}
@@ -292,7 +308,9 @@ async function promptR2Credentials(
 				defaultValue: true,
 			});
 			if (!retry) {
-				throw new UserError("R2 Secret Access Key - cancelled");
+				throw new UserError("R2 Secret Access Key - cancelled", {
+					telemetryMessage: "pipelines setup r2 secret key cancelled",
+				});
 			}
 			continue;
 		}
@@ -322,7 +340,10 @@ async function promptR2Credentials(
 				defaultValue: true,
 			});
 			if (!retry) {
-				throw new UserError("R2 credentials validation failed");
+				throw new UserError("R2 credentials validation failed", {
+					telemetryMessage:
+						"pipelines setup r2 credentials validation failed",
+				});
 			}
 		}
 	}
@@ -367,7 +388,8 @@ export const pipelinesSetupCommand = createCommand({
 				throw error;
 			}
 			throw new UserError(
-				`Setup failed: ${error instanceof Error ? error.message : String(error)}`
+				`Setup failed: ${error instanceof Error ? error.message : String(error)}`,
+				{ telemetryMessage: "pipelines setup failed" }
 			);
 		}
 	},
@@ -380,13 +402,15 @@ async function setupPipelineNaming(
 		? providedName
 		: await promptWithRetry(
 				() => "Pipeline name",
-				() => prompt("What would you like to name your pipeline?"),
-				(name) => {
-					if (!name) {
-						throw new UserError("Pipeline name is required");
-					}
-					validateEntityName("pipeline", name);
+			() => prompt("What would you like to name your pipeline?"),
+			(name) => {
+				if (!name) {
+					throw new UserError("Pipeline name is required", {
+						telemetryMessage: "pipelines setup missing pipeline name",
+					});
 				}
+				validateEntityName("pipeline", name);
+			}
 			);
 
 	// If name was provided via args, still validate it (but no retry)
@@ -518,7 +542,9 @@ async function buildField(
 		() => prompt(`${indent}  Name:`),
 		(value) => {
 			if (!value) {
-				throw new UserError("Field name is required");
+				throw new UserError("Field name is required", {
+					telemetryMessage: "pipelines setup missing field name",
+				});
 			}
 		}
 	);
@@ -605,7 +631,9 @@ async function loadSchemaFromFile(): Promise<SchemaField[]> {
 		};
 
 		if (!parsedSchema || !Array.isArray(parsedSchema.fields)) {
-			throw new UserError("Schema file must contain a 'fields' array");
+			throw new UserError("Schema file must contain a 'fields' array", {
+				telemetryMessage: "pipelines setup invalid schema file",
+			});
 		}
 
 		return parsedSchema.fields;
@@ -621,7 +649,9 @@ async function loadSchemaFromFile(): Promise<SchemaField[]> {
 		if (retry) {
 			return loadSchemaFromFile();
 		} else {
-			throw new UserError("Schema file loading cancelled");
+			throw new UserError("Schema file loading cancelled", {
+				telemetryMessage: "pipelines setup schema file loading cancelled",
+			});
 		}
 	}
 }
@@ -633,7 +663,9 @@ async function loadSqlFromFile(): Promise<string> {
 		const sql = readFileSync(filePath, "utf-8").trim();
 
 		if (!sql) {
-			throw new UserError("SQL file is empty");
+			throw new UserError("SQL file is empty", {
+				telemetryMessage: "pipelines setup empty sql file",
+			});
 		}
 
 		return sql;
@@ -649,7 +681,9 @@ async function loadSqlFromFile(): Promise<string> {
 		if (retry) {
 			return loadSqlFromFile();
 		} else {
-			throw new UserError("SQL file loading cancelled");
+			throw new UserError("SQL file loading cancelled", {
+				telemetryMessage: "pipelines setup sql file loading cancelled",
+			});
 		}
 	}
 }
@@ -765,7 +799,9 @@ async function setupSimpleDataCatalogSink(
 		() => prompt("Table name (e.g. events, user_activity):"),
 		(value) => {
 			if (!value) {
-				throw new UserError("Table name is required");
+				throw new UserError("Table name is required", {
+					telemetryMessage: "pipelines setup missing table name",
+				});
 			}
 		}
 	);
@@ -903,7 +939,9 @@ async function setupDataCatalogSink(
 		() => prompt("Namespace:", { defaultValue: "default" }),
 		(value) => {
 			if (!value) {
-				throw new UserError("Namespace is required");
+				throw new UserError("Namespace is required", {
+					telemetryMessage: "pipelines setup missing namespace",
+				});
 			}
 		}
 	);
@@ -913,7 +951,9 @@ async function setupDataCatalogSink(
 		() => prompt("Table name:"),
 		(value) => {
 			if (!value) {
-				throw new UserError("Table name is required");
+				throw new UserError("Table name is required", {
+					telemetryMessage: "pipelines setup missing table name",
+				});
 			}
 		}
 	);
@@ -993,7 +1033,9 @@ async function setupSQLTransformationWithValidation(
 	}
 
 	if (!sql) {
-		throw new UserError("SQL query cannot be empty");
+		throw new UserError("SQL query cannot be empty", {
+			telemetryMessage: "pipelines setup empty sql query",
+		});
 	}
 
 	process.stdout.write("  Validating...");
@@ -1045,7 +1087,8 @@ async function setupSQLTransformationWithValidation(
 			return setupSQLTransformationWithValidation(config, setupConfig);
 		} else {
 			throw new UserError(
-				"SQL validation failed and setup cannot continue without valid pipeline SQL"
+				"SQL validation failed and setup cannot continue without valid pipeline SQL",
+				{ telemetryMessage: "pipelines setup sql validation failed" }
 			);
 		}
 	}
@@ -1115,7 +1158,9 @@ async function reviewAndCreateStreamSink(
 	});
 
 	if (!proceed) {
-		throw new UserError("Setup cancelled");
+		throw new UserError("Setup cancelled", {
+			telemetryMessage: "pipelines setup cancelled",
+		});
 	}
 
 	const created: { stream?: Stream; sink?: Sink } = {};
@@ -1135,7 +1180,9 @@ async function reviewAndCreateStreamSink(
 				defaultValue: true,
 			});
 			if (!retry) {
-				throw new UserError("Stream creation cancelled");
+				throw new UserError("Stream creation cancelled", {
+					telemetryMessage: "pipelines setup stream creation cancelled",
+				});
 			}
 		}
 	}
@@ -1168,7 +1215,9 @@ async function reviewAndCreateStreamSink(
 						`  ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`
 					);
 				}
-				throw new UserError("Sink creation cancelled");
+				throw new UserError("Sink creation cancelled", {
+					telemetryMessage: "pipelines setup sink creation cancelled",
+				});
 			}
 		}
 	}
@@ -1183,7 +1232,9 @@ async function createPipelineIfNeeded(
 	args: { env?: string }
 ): Promise<void> {
 	if (!setupConfig.pipelineConfig) {
-		throw new UserError("Pipeline configuration is missing");
+		throw new UserError("Pipeline configuration is missing", {
+			telemetryMessage: "pipelines setup missing pipeline configuration",
+		});
 	}
 
 	while (true) {

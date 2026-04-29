@@ -406,7 +406,9 @@ async function getIdFromSettings(
 	}
 	const accountId = await requireAuth(config);
 	if (!config.name) {
-		throw new UserError("No Worker name found in config");
+		throw new UserError("No Worker name found in config", {
+			telemetryMessage: "kv binding resolution missing worker name",
+		});
 	}
 	const settings = await getSettings(config, accountId, config.name);
 	const existingKV = settings?.bindings.find(
@@ -414,7 +416,8 @@ async function getIdFromSettings(
 	);
 	if (!existingKV || !("namespace_id" in existingKV)) {
 		throw new UserError(
-			`No namespace ID found for binding "${binding}". Add one to your wrangler config file or pass it via \`--namespace-id\`.`
+			`No namespace ID found for binding "${binding}". Add one to your wrangler config file or pass it via \`--namespace-id\`.`,
+			{ telemetryMessage: "kv namespace id missing from deployed worker binding" }
 		);
 	}
 	return existingKV.namespace_id as string;
@@ -446,7 +449,8 @@ export async function getKVNamespaceId(
 		if (!found) {
 			throw new UserError(
 				`No namespace found with the name "${namespace}". ` +
-					`Use --namespace-id or --binding instead, or check available namespaces with "wrangler kv namespace list".`
+					`Use --namespace-id or --binding instead, or check available namespaces with "wrangler kv namespace list".`,
+				{ telemetryMessage: "kv namespace name not found" }
 			);
 		}
 		return {
@@ -459,21 +463,25 @@ export async function getKVNamespaceId(
 
 	// `--binding` is only valid if there's a wrangler configuration.
 	if (binding && !config) {
-		throw new UserError("--binding specified, but no config file was found.");
+		throw new UserError("--binding specified, but no config file was found.", {
+			telemetryMessage: "kv namespace resolution binding requires config",
+		});
 	}
 
 	// there's no config. abort here
 	if (!config) {
 		throw new UserError(
 			"Failed to find a config file.\n" +
-				"Either use --namespace-id to upload directly or create a configuration file with a binding."
+				"Either use --namespace-id to upload directly or create a configuration file with a binding.",
+			{ telemetryMessage: "kv namespace resolution missing config file" }
 		);
 	}
 
 	// there's no KV namespaces
 	if (!config.kv_namespaces || config.kv_namespaces.length === 0) {
 		throw new UserError(
-			"No KV Namespaces configured! Either use --namespace-id to upload directly or add a KV namespace to your wrangler config file."
+			"No KV Namespaces configured! Either use --namespace-id to upload directly or add a KV namespace to your wrangler config file.",
+			{ telemetryMessage: "kv namespaces not configured" }
 		);
 	}
 
@@ -484,7 +492,8 @@ export async function getKVNamespaceId(
 	// we couldn't find a namespace with that binding
 	if (!configNamespace) {
 		throw new UserError(
-			`A namespace with binding name "${binding}" was not found in the configured "kv_namespaces".`
+			`A namespace with binding name "${binding}" was not found in the configured "kv_namespaces".`,
+			{ telemetryMessage: "kv namespace binding not found in config" }
 		);
 	}
 
@@ -501,7 +510,8 @@ export async function getKVNamespaceId(
 		return { namespaceId: nsId, displayName: formatDisplayName(nsId) };
 	} else if (preview) {
 		throw new UserError(
-			`No preview ID found for ${binding}. Add one to your wrangler config file to use a separate namespace for previewing your worker.`
+			`No preview ID found for ${binding}. Add one to your wrangler config file to use a separate namespace for previewing your worker.`,
+			{ telemetryMessage: "kv namespace preview id missing" }
 		);
 	}
 
@@ -521,7 +531,8 @@ export async function getKVNamespaceId(
 			return { namespaceId: nsId, displayName: formatDisplayName(nsId) };
 		}
 		throw new UserError(
-			`No namespace ID found for ${binding}. Add one to your wrangler config file or pass it via \`--namespace-id\`.`
+			`No namespace ID found for ${binding}. Add one to your wrangler config file or pass it via \`--namespace-id\`.`,
+			{ telemetryMessage: "kv namespace id missing" }
 		);
 	}
 
@@ -543,7 +554,8 @@ export async function getKVNamespaceId(
 		return { namespaceId: nsId, displayName: formatDisplayName(nsId) };
 	} else {
 		throw new UserError(
-			`${binding} has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.`
+			`${binding} has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.`,
+			{ telemetryMessage: "kv namespace requires preview selection" }
 		);
 	}
 }

@@ -45,7 +45,8 @@ export const tunnelRunCommand = createCommand({
 					`Either a tunnel name/UUID or --token must be provided.\n\n` +
 						`Usage:\n` +
 						`  wrangler tunnel run <tunnel>            # Fetch token via API\n` +
-						`  wrangler tunnel run --token <token>     # Use provided token`
+						`  wrangler tunnel run --token <token>     # Use provided token`,
+					{ telemetryMessage: "tunnel run missing tunnel or token" }
 				);
 			}
 			const accountId = await requireAuth(config);
@@ -68,13 +69,15 @@ export const tunnelRunCommand = createCommand({
 						`  - You don't have permission to access this tunnel\n` +
 						`  - The tunnel has been deleted\n\n` +
 						`Use "wrangler tunnel list" to see available tunnels.\n\n` +
-						`Original error: ${e instanceof Error ? e.message : String(e)}`
+						`Original error: ${e instanceof Error ? e.message : String(e)}`,
+					{ telemetryMessage: "tunnel run token fetch failed" }
 				);
 			}
 			if (!tokenStr) {
 				throw new UserError(
 					`Failed to get tunnel token for "${args.tunnel}".\n\n` +
-						`The API returned an empty token. Please ensure the tunnel exists and is properly configured.`
+						`The API returned an empty token. Please ensure the tunnel exists and is properly configured.`,
+					{ telemetryMessage: "tunnel run empty token" }
 				);
 			}
 		} else {
@@ -169,7 +172,11 @@ export const tunnelRunCommand = createCommand({
 						`  wrangler tunnel run ${tunnelId || "--token <token>"}`;
 				}
 
-				reject(new UserError(message));
+				reject(
+					new UserError(message, {
+						telemetryMessage: "tunnel run cloudflared spawn failed",
+					})
+				);
 			});
 
 			cloudflared.on("exit", (code, signal) => {
@@ -198,9 +205,13 @@ export const tunnelRunCommand = createCommand({
 							`Try running with --log-level debug for more information.`;
 					}
 
-					reject(new UserError(message));
-					return;
-				}
+				reject(
+					new UserError(message, {
+						telemetryMessage: "tunnel run cloudflared exited",
+					})
+				);
+				return;
+			}
 
 				resolve();
 			});

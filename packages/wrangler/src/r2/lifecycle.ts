@@ -165,7 +165,9 @@ export const r2BucketLifecycleAddCommand = createCommand({
 		}
 
 		if (!name) {
-			throw new UserError("Must specify a rule name.");
+			throw new UserError("Must specify a rule name.", {
+				telemetryMessage: "r2 lifecycle add missing rule name",
+			});
 		}
 
 		const newRule: LifecycleRule = {
@@ -210,7 +212,9 @@ export const r2BucketLifecycleAddCommand = createCommand({
 		}
 
 		if (selectedActions.length === 0) {
-			throw new UserError("Must specify at least one action.");
+			throw new UserError("Must specify at least one action.", {
+				telemetryMessage: "r2 lifecycle add missing action",
+			});
 		}
 
 		for (const action of selectedActions) {
@@ -226,7 +230,10 @@ export const r2BucketLifecycleAddCommand = createCommand({
 					);
 				}
 				if (!isNonNegativeNumber(String(conditionValue))) {
-					throw new UserError("Must be a positive number.");
+					throw new UserError("Must be a positive number.", {
+						telemetryMessage:
+							"r2 lifecycle add invalid abort multipart days",
+					});
 				}
 
 				conditionType = "Age";
@@ -260,7 +267,11 @@ export const r2BucketLifecycleAddCommand = createCommand({
 						!isValidDate(String(conditionValue))
 					) {
 						throw new UserError(
-							"Must be a positive number or a valid date in the YYYY-MM-DD format."
+							"Must be a positive number or a valid date in the YYYY-MM-DD format.",
+							{
+								telemetryMessage:
+									"r2 lifecycle add invalid action condition",
+							}
 						);
 					}
 				}
@@ -273,7 +284,9 @@ export const r2BucketLifecycleAddCommand = createCommand({
 					const date = new Date(`${conditionValue}T00:00:00.000Z`);
 					conditionValue = date.toISOString();
 				} else {
-					throw new UserError("Invalid condition input.");
+					throw new UserError("Invalid condition input.", {
+						telemetryMessage: "r2 lifecycle add invalid condition input",
+					});
 				}
 
 				if (action === "expire") {
@@ -393,7 +406,8 @@ export const r2BucketLifecycleRemoveCommand = createCommand({
 
 		if (index === -1) {
 			throw new UserError(
-				`Lifecycle rule with ID '${name}' not found in configuration for '${bucket}'.`
+				`Lifecycle rule with ID '${name}' not found in configuration for '${bucket}'.`,
+				{ telemetryMessage: "r2 lifecycle remove rule not found" }
 			);
 		}
 
@@ -455,7 +469,8 @@ export const r2BucketLifecycleSetCommand = createCommand({
 		} catch (e) {
 			if (e instanceof Error) {
 				throw new UserError(
-					`Failed to read or parse the lifecycle configuration config file: '${e.message}'`
+					`Failed to read or parse the lifecycle configuration config file: '${e.message}'`,
+					{ telemetryMessage: "r2 lifecycle set config read failed" }
 				);
 			} else {
 				throw e;
@@ -464,7 +479,8 @@ export const r2BucketLifecycleSetCommand = createCommand({
 
 		if (!lifecyclePolicy.rules || !Array.isArray(lifecyclePolicy.rules)) {
 			throw new UserError(
-				"The lifecycle configuration file must contain a 'rules' array."
+				"The lifecycle configuration file must contain a 'rules' array.",
+				{ telemetryMessage: "r2 lifecycle set config missing rules array" }
 			);
 		}
 

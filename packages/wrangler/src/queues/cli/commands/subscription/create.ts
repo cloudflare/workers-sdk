@@ -35,7 +35,8 @@ function parseSourceArgument(
 		case EventSourceType.WORKERS_AI_MODEL:
 			if (!args.modelName) {
 				throw new UserError(
-					`--model-name is required when using source '${EventSourceType.WORKERS_AI_MODEL}'`
+					`--model-name is required when using source '${EventSourceType.WORKERS_AI_MODEL}'`,
+					{ telemetryMessage: "queues subscription create missing model name" }
 				);
 			}
 			return {
@@ -46,7 +47,8 @@ function parseSourceArgument(
 		case EventSourceType.WORKERS_BUILDS_WORKER:
 			if (!args.workerName) {
 				throw new UserError(
-					`--worker-name is required when using source '${EventSourceType.WORKERS_BUILDS_WORKER}'`
+					`--worker-name is required when using source '${EventSourceType.WORKERS_BUILDS_WORKER}'`,
+					{ telemetryMessage: "queues subscription create missing worker name" }
 				);
 			}
 			return {
@@ -57,7 +59,8 @@ function parseSourceArgument(
 		case EventSourceType.WORKFLOWS_WORKFLOW:
 			if (!args.workflowName) {
 				throw new UserError(
-					`--workflow-name is required when using source '${EventSourceType.WORKFLOWS_WORKFLOW}'`
+					`--workflow-name is required when using source '${EventSourceType.WORKFLOWS_WORKFLOW}'`,
+					{ telemetryMessage: "queues subscription create missing workflow name" }
 				);
 			}
 			return {
@@ -67,7 +70,8 @@ function parseSourceArgument(
 
 		default:
 			throw new UserError(
-				`Unknown source type: ${source}. Supported sources: ${EVENT_SOURCE_TYPES.join(", ")}`
+				`Unknown source type: ${source}. Supported sources: ${EVENT_SOURCE_TYPES.join(", ")}`,
+				{ telemetryMessage: "queues subscription create unknown source" }
 			);
 	}
 }
@@ -132,7 +136,8 @@ export const queuesSubscriptionCreateCommand = createCommand({
 
 		if (events.length === 0) {
 			throw new UserError(
-				"No events specified. Use --events to provide a comma-separated list of event types to subscribe to. For a complete list of sources and corresponding events, please refer to: https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/"
+				"No events specified. Use --events to provide a comma-separated list of event types to subscribe to. For a complete list of sources and corresponding events, please refer to: https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/",
+				{ telemetryMessage: "queues subscription create missing events" }
 			);
 		}
 

@@ -82,7 +82,8 @@ export async function buildFunctions({
 
 	if (!config.routes || config.routes.length === 0) {
 		throw new FunctionsNoRoutesError(
-			`Failed to find any routes while compiling Functions in: ${functionsDirectory}`
+			`Failed to find any routes while compiling Functions in: ${functionsDirectory}`,
+			{ telemetryMessage: "pages functions no routes" }
 		);
 	}
 
@@ -111,7 +112,11 @@ export async function buildFunctions({
 		if (outdir === undefined) {
 			throw new FatalError(
 				"Must specify an output directory when building a Plugin.",
-				1
+				1,
+				{
+					telemetryMessage:
+						"pages functions build plugin missing output directory",
+				}
 			);
 		}
 

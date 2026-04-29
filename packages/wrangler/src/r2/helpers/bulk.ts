@@ -28,14 +28,18 @@ export function validateBulkPutFile(
 	filename: string
 ): { key: string; file: string; size: number }[] {
 	if (!fs.existsSync(filename)) {
-		throw new UserError(`The file "${filename}" does not exist.`);
+		throw new UserError(`The file "${filename}" does not exist.`, {
+			telemetryMessage: "r2 object bulk put manifest file not found",
+		});
 	}
 
 	let fileContent: string;
 	try {
 		fileContent = readFileSync(filename);
 	} catch {
-		throw new UserError(`The file "${filename}" is not readable.`);
+		throw new UserError(`The file "${filename}" is not readable.`, {
+			telemetryMessage: "r2 object bulk put manifest file unreadable",
+		});
 	}
 
 	// The `size` property is added in the for loop below
@@ -43,12 +47,15 @@ export function validateBulkPutFile(
 	try {
 		entries = JSON.parse(fileContent);
 	} catch {
-		throw new UserError(`The file "${filename}" is not a valid JSON.`);
+		throw new UserError(`The file "${filename}" is not a valid JSON.`, {
+			telemetryMessage: "r2 object bulk put manifest invalid json",
+		});
 	}
 
 	if (!Array.isArray(entries)) {
 		throw new UserError(
-			`The file "${filename}" must contain an array of entries.`
+			`The file "${filename}" must contain an array of entries.`,
+			{ telemetryMessage: "r2 object bulk put manifest not array" }
 		);
 	}
 
@@ -60,17 +67,22 @@ export function validateBulkPutFile(
 			!isRequiredProperty(entry, "file", "string")
 		) {
 			throw new UserError(
-				`Each entry in the file "${filename}" must be an object with "key" and "file" string properties.`
+				`Each entry in the file "${filename}" must be an object with "key" and "file" string properties.`,
+				{ telemetryMessage: "r2 object bulk put manifest entry invalid" }
 			);
 		}
 
 		if (!fs.existsSync(entry.file)) {
-			throw new UserError(`The file "${entry.file}" does not exist.`);
+			throw new UserError(`The file "${entry.file}" does not exist.`, {
+				telemetryMessage: "r2 object bulk put entry file not found",
+			});
 		}
 
 		const stat = fs.statSync(entry.file, { throwIfNoEntry: false });
 		if (!stat?.isFile()) {
-			throw new UserError(`The path "${entry.file}" is not a file.`);
+			throw new UserError(`The path "${entry.file}" is not a file.`, {
+				telemetryMessage: "r2 object bulk put entry path not file",
+			});
 		}
 
 		if (stat.size > MAX_UPLOAD_SIZE_BYTES) {
@@ -78,7 +90,8 @@ export function validateBulkPutFile(
 				`The file "${entry.file}" exceeds the maximum upload size of ${prettyBytes(
 					MAX_UPLOAD_SIZE_BYTES,
 					{ binary: true }
-				)}.`
+				)}.`,
+				{ telemetryMessage: "r2 object bulk put entry file too large" }
 			);
 		}
 

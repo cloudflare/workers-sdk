@@ -781,7 +781,8 @@ export async function handlePreviewCommand(
 		if (!previewName) {
 			throw new UserError(
 				"Could not determine Preview name. No git branch detected. " +
-					"Please provide a Preview name using --name <preview-name>."
+					"Please provide a Preview name using --name <preview-name>.",
+				{ telemetryMessage: "preview command missing preview name" }
 			);
 		}
 	}
@@ -909,7 +910,8 @@ export async function handlePreviewDeleteCommand(
 		if (!previewName) {
 			throw new UserError(
 				"Could not determine Preview name. No git branch detected. " +
-					"Please provide a Preview name using --name <preview-name>."
+					"Please provide a Preview name using --name <preview-name>.",
+				{ telemetryMessage: "preview delete command missing preview name" }
 			);
 		}
 		logger.log(`Using git branch "${previewName}" as Preview name.`);
