@@ -23,7 +23,6 @@ const BINDING_LOCAL_SUPPORT: Record<
 	Exclude<Binding["type"], `unsafe_${string}`> | "unsafe_hello_world",
 	BindingLocalSupport
 > = {
-	// Static / no `remote` field in schema.
 	plain_text: "local-only",
 	secret_text: "local-only",
 	json: "local-only",
@@ -53,14 +52,14 @@ const BINDING_LOCAL_SUPPORT: Record<
 	send_email: "local-and-remote",
 	pipeline: "local-and-remote",
 	service: "local-and-remote",
-	// Miniflare currently ignores `remote: true` on queues — see #13727.
+	// TODO: Miniflare currently ignores `remote: true` on queues, tracked in #13727.
 	queue: "local-and-remote",
 
 	vectorize: "remote",
 	mtls_certificate: "remote",
 	dispatch_namespace: "remote",
 
-	// See doc-comment on `BindingLocalSupport` before adding here.
+	// Reach out to the @cloudflare/wrangler team before adding anything here
 	ai: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	ai_search: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	ai_search_namespace:

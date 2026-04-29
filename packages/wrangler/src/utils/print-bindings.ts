@@ -1030,7 +1030,7 @@ export function warnOrError(
 		case "DO-NOT-USE-this-resource-will-never-have-a-local-simulator":
 			if (remote === false) {
 				throw new UserError(
-					`${getBindingTypeFriendlyName(type)} bindings do not support local development. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+					`${getBindingTypeFriendlyName(type)} bindings do not support local development. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
 					{
 						telemetryMessage: true,
 					}
