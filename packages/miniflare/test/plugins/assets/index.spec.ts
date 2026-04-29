@@ -18,7 +18,7 @@ function makeOptions(directory: string) {
 	return {
 		modules: true,
 		script: WORKER_SCRIPT,
-		compatibilityDate: "2024-07-31",
+		compatibilityDate: "2026-04-29",
 		assets: { directory },
 	};
 }

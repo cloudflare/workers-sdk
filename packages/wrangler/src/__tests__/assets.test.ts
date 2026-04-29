@@ -24,7 +24,7 @@ function makeConfig(
 		assets: undefined,
 		main: undefined,
 		configPath: undefined,
-		compatibility_date: "2024-01-01",
+		compatibility_date: "2026-04-29",
 		compatibility_flags: [],
 		...overrides,
 	} as unknown as Config;
