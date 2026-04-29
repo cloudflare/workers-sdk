@@ -1,10 +1,10 @@
 import { describe, test } from "vitest";
 import { stripInternalEnv } from "../env";
+import type { __VITE_RUNNER_OBJECT__ } from "../module-runner";
 
 const internalEnv = {
 	__VITE_RUNNER_OBJECT__: {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		get: () => ({}) as any,
+		get: () => ({}) as __VITE_RUNNER_OBJECT__,
 	},
 	__VITE_INVOKE_MODULE__: {
 		fetch: async () => new Response(),
