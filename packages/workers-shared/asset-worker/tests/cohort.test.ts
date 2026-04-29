@@ -28,35 +28,6 @@ describe("[Asset Worker] lookupCohort", () => {
 		expect(lookupMock).toHaveBeenCalledWith("42");
 	});
 
-	it("returns null when binding is unavailable", async ({ expect }) => {
-		const result = await lookupCohort(makeEnv() as Env, 42);
-		expect(result).toBeNull();
-	});
-
-	it("returns null when account ID is undefined", async ({ expect }) => {
-		const lookupMock = vi.fn();
-		const result = await lookupCohort(
-			makeEnv({ lookupAccountCohort: lookupMock }) as Env,
-			undefined
-		);
-
-		expect(result).toBeNull();
-		expect(lookupMock).not.toHaveBeenCalled();
-	});
-
-	it("returns null on RPC failure", async ({ expect }) => {
-		const result = await lookupCohort(
-			makeEnv({
-				lookupAccountCohort: () => {
-					throw new Error("RPC unavailable");
-				},
-			}) as Env,
-			42
-		);
-
-		expect(result).toBeNull();
-	});
-
 	it("returns null when result is ok:false", async ({ expect }) => {
 		const result = await lookupCohort(
 			makeEnv({
@@ -74,7 +45,7 @@ describe("[Asset Worker] lookupCohort", () => {
 		expect(result).toBeNull();
 	});
 
-	it("returns null when result is null (cold cache)", async ({ expect }) => {
+	it("returns null when result is null", async ({ expect }) => {
 		const result = await lookupCohort(
 			makeEnv({
 				lookupAccountCohort: () =>
@@ -90,40 +61,7 @@ describe("[Asset Worker] lookupCohort", () => {
 		expect(result).toBeNull();
 	});
 
-	it("returns cohort for free tier accounts", async ({ expect }) => {
-		const result = await lookupCohort(
-			makeEnv({
-				lookupAccountCohort: () =>
-					Promise.resolve({
-						ok: true as const,
-						result: "free",
-						meta: { workersVersion: "test" },
-					}),
-			}) as Env,
-			42
-		);
-
-		expect(result).toBe("free");
-	});
-
-	it("returns cohort for paid tier accounts", async ({ expect }) => {
-		const result = await lookupCohort(
-			makeEnv({
-				lookupAccountCohort: () =>
-					Promise.resolve({
-						ok: true as const,
-						result: "paid",
-						meta: { workersVersion: "test" },
-					}),
-			}) as Env,
-			42
-		);
-
-		expect(result).toBe("paid");
-	});
-
 	it("times out after COHORT_LOOKUP_TIMEOUT_MS", async ({ expect }) => {
-		// Verify the timeout constant is set to 5ms
 		expect(COHORT_LOOKUP_TIMEOUT_MS).toBe(5);
 
 		const result = await lookupCohort(

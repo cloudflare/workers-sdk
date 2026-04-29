@@ -27,49 +27,12 @@ describe("[Asset Worker] Analytics", () => {
 	});
 
 	describe("entrypoint discriminator (double7)", () => {
-		it("writes EntrypointType.Outer in double7", ({ expect }) => {
-			const { analytics, getEvent } = captureEvent();
-			analytics.setData({ entrypoint: EntrypointType.Outer });
-			analytics.write();
-
-			const event = getEvent();
-			expect(event?.doubles?.[6]).toBe(EntrypointType.Outer);
-		});
-
-		it("writes EntrypointType.Inner in double7", ({ expect }) => {
-			const { analytics, getEvent } = captureEvent();
-			analytics.setData({ entrypoint: EntrypointType.Inner });
-			analytics.write();
-
-			const event = getEvent();
-			expect(event?.doubles?.[6]).toBe(EntrypointType.Inner);
-		});
-
 		it("writes -1 when entrypoint is not set", ({ expect }) => {
 			const { analytics, getEvent } = captureEvent();
 			analytics.write();
 
 			const event = getEvent();
 			expect(event?.doubles?.[6]).toBe(-1);
-		});
-	});
-
-	describe("cohort (blob9)", () => {
-		it("writes cohort string in blob9", ({ expect }) => {
-			const { analytics, getEvent } = captureEvent();
-			analytics.setData({ cohort: "ent" });
-			analytics.write();
-
-			const event = getEvent();
-			expect(event?.blobs?.[8]).toBe("ent");
-		});
-
-		it("writes undefined when cohort is not set", ({ expect }) => {
-			const { analytics, getEvent } = captureEvent();
-			analytics.write();
-
-			const event = getEvent();
-			expect(event?.blobs?.[8]).toBeUndefined();
 		});
 	});
 

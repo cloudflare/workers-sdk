@@ -357,6 +357,23 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 	extends WorkerEntrypoint<TEnv>
 	implements AssetWorkerMethods
 {
+	private resolvedCohort: string | null | undefined = undefined;
+
+	/**
+	 * Resolves and caches the cohort for this request. The cohort is
+	 * constant for the lifetime of the outer entrypoint instance, so
+	 * we only pay the RPC cost once even if multiple methods are called.
+	 */
+	private async getCohort(): Promise<string | null> {
+		if (this.resolvedCohort === undefined) {
+			this.resolvedCohort = await lookupCohort(
+				this.env,
+				this.env.CONFIG?.account_id
+			);
+		}
+		return this.resolvedCohort;
+	}
+
 	/**
 	 * Gets the inner entrypoint from ctx.exports to forward requests to.
 	 * When a cohort is provided, the runtime routes the inner entrypoint
@@ -415,10 +432,7 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 				this.env.CONFIG?.script_id
 			);
 
-			const cohort = await lookupCohort(
-				this.env,
-				this.env.CONFIG?.account_id
-			);
+			const cohort = await this.getCohort();
 			analytics.setData({ cohort: cohort ?? "unknown" });
 
 			const response = await this.getInnerEntrypoint(cohort).fetch(request);
@@ -437,7 +451,8 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 
 	async unstable_canFetch(request: Request): Promise<boolean> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		return this.getInnerEntrypoint().unstable_canFetch(request);
+		const cohort = await this.getCohort();
+		return this.getInnerEntrypoint(cohort).unstable_canFetch(request);
 	}
 
 	async unstable_getByETag(
@@ -445,7 +460,8 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		request?: Request
 	): Promise<GetByETagResult> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		return this.getInnerEntrypoint().unstable_getByETag(eTag, request);
+		const cohort = await this.getCohort();
+		return this.getInnerEntrypoint(cohort).unstable_getByETag(eTag, request);
 	}
 
 	async unstable_getByPathname(
@@ -453,7 +469,11 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		request?: Request
 	): Promise<GetByETagResult | null> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		return this.getInnerEntrypoint().unstable_getByPathname(pathname, request);
+		const cohort = await this.getCohort();
+		return this.getInnerEntrypoint(cohort).unstable_getByPathname(
+			pathname,
+			request
+		);
 	}
 
 	async unstable_exists(
@@ -461,7 +481,8 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		request?: Request
 	): Promise<string | null> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		return this.getInnerEntrypoint().unstable_exists(pathname, request);
+		const cohort = await this.getCohort();
+		return this.getInnerEntrypoint(cohort).unstable_exists(pathname, request);
 	}
 }
 
