@@ -41,7 +41,11 @@ import type { RestartFromStep } from "./binding";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
 import type { StreamOutputMeta } from "./lib/streams";
-import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
+import type {
+	WorkflowEntrypoint,
+	WorkflowEvent,
+	WorkflowStep,
+} from "cloudflare:workers";
 
 interface Env {
 	ENGINE: DurableObjectNamespace<Engine>;
@@ -1083,7 +1087,10 @@ export class Engine extends DurableObject<Env> {
 		void workflowRunningHandler();
 		try {
 			const target = this.env.USER_WORKFLOW;
-			const result = await target.run(event, stubStep);
+			const result = await target.run(
+				event,
+				stubStep as unknown as WorkflowStep
+			);
 			this.writeLog(InstanceEvent.WORKFLOW_SUCCESS, null, null, {
 				result,
 			});
