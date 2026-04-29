@@ -241,8 +241,8 @@ import { domainUsesAccess } from "./access";
 import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
+	getAuthWorkerOriginFromEnv,
 	getAuthWorkerTimeoutMs,
-	getAuthWorkerUrlFromEnv,
 	getClientIdFromEnv,
 	getCloudflareAccessHeaders,
 	getCloudflareAccountIdFromEnv,
@@ -1065,9 +1065,9 @@ async function getOauthTokenViaWebSocket(options: {
 
 	// 2. Open WebSocket to auth worker. Build the WebSocket URL by mutating
 	//    a parsed `URL` rather than string-replacing schemes — the parsed form
-	//    is robust to trailing slashes and any path on `authWorkerUrl`.
-	const authWorkerUrl = getAuthWorkerUrlFromEnv();
-	const wsUrl = new URL(authWorkerUrl);
+	//    is robust to trailing slashes and any path on `authWorkerOrigin`.
+	const authWorkerOrigin = getAuthWorkerOriginFromEnv();
+	const wsUrl = new URL(authWorkerOrigin);
 	wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
 	wsUrl.pathname = `/session/${stateQueryParam}`;
 
@@ -1079,7 +1079,7 @@ async function getOauthTokenViaWebSocket(options: {
 	// Sent after the WebSocket constructor so any tests waiting on the
 	// MockWebSocket instance see it before this synchronous metrics work
 	// runs.
-	sendMetricsEvent("login user (relay attempt)", { authWorkerUrl }, {});
+	sendMetricsEvent("login user (relay attempt)", { authWorkerOrigin }, {});
 
 	// All paths from here must remove our listeners, clear any pending
 	// timeout, and terminate the WebSocket. Hoisting `cleanup` and
@@ -1179,9 +1179,9 @@ async function getOauthTokenViaWebSocket(options: {
 		);
 
 		// 4. Build auth URL with the auth worker's callback URL as redirect_uri.
-		//    `new URL` resolves the path safely even if `authWorkerUrl` has a
+		//    `new URL` resolves the path safely even if `authWorkerOrigin` has a
 		//    trailing slash (which would otherwise produce `//callback`).
-		const remoteCallbackUrl = new URL("/callback", authWorkerUrl).toString();
+		const remoteCallbackUrl = new URL("/callback", authWorkerOrigin).toString();
 		const authUrl = generateAuthUrl({
 			authUrl: getAuthUrlFromEnv(),
 			clientId: options.clientId,
@@ -1420,9 +1420,9 @@ export async function login(
 				err instanceof RelayUnavailableError &&
 				getAuthWorkerTimeoutMs() > 0
 			) {
-				const authWorkerUrl = getAuthWorkerUrlFromEnv();
+				const authWorkerOrigin = getAuthWorkerOriginFromEnv();
 				logger.warn(
-					`Could not reach the auth relay at ${authWorkerUrl}: ${err.detail}\n` +
+					`Could not reach the auth relay at ${authWorkerOrigin}: ${err.detail}\n` +
 						"Falling back to a local callback server. Note: this may not work in " +
 						"container or remote environments where the browser cannot reach localhost. " +
 						"Set WRANGLER_AUTH_WORKER_TIMEOUT=0 to disable this fallback."
@@ -1435,11 +1435,11 @@ export async function login(
 				Sentry.captureException(err, {
 					level: "warning",
 					tags: { feature: "wrangler-login-relay" },
-					extra: { authWorkerUrl, detail: err.detail },
+					extra: { authWorkerOrigin, detail: err.detail },
 				});
 				sendMetricsEvent(
 					"login user (relay fallback)",
-					{ authWorkerUrl, reason: err.detail },
+					{ authWorkerOrigin, reason: err.detail },
 					{}
 				);
 				oauth = await getOauthToken({

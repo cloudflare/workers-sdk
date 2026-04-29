@@ -507,7 +507,7 @@ describe("User", () => {
 						(e) => e.event === "login user (relay attempt)"
 					);
 					expect(attempt).toBeDefined();
-					expect(attempt?.properties.authWorkerUrl).toBe(
+					expect(attempt?.properties.authWorkerOrigin).toBe(
 						"https://auth.devprod.cloudflare.dev"
 					);
 					expect(
@@ -537,7 +537,7 @@ describe("User", () => {
 						(e) => e.event === "login user (relay fallback)"
 					);
 					expect(fallback).toBeDefined();
-					expect(fallback?.properties.authWorkerUrl).toBe(
+					expect(fallback?.properties.authWorkerOrigin).toBe(
 						"https://auth.devprod.cloudflare.dev"
 					);
 					expect(fallback?.properties.reason).toBe("ECONNREFUSED");

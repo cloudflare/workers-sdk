@@ -99,8 +99,8 @@ export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `WRANGLER_AUTH_WORKER_URL` is the URL of the auth relay worker used for
- * the WebSocket-based OAuth callback flow.
+ * `WRANGLER_AUTH_WORKER_ORIGIN` is the origin (scheme + host, no path) of
+ * the auth relay worker used for the WebSocket-based OAuth callback flow.
  *
  * A single deployment serves all environments (production and staging) since
  * the worker only holds ephemeral relay state and is fully agnostic to the
@@ -108,8 +108,8 @@ export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
  *
  * Normally you should not need to set this explicitly.
  */
-export const getAuthWorkerUrlFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_AUTH_WORKER_URL",
+export const getAuthWorkerOriginFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_AUTH_WORKER_ORIGIN",
 	defaultValue: () => "https://auth.devprod.cloudflare.dev",
 });
 
