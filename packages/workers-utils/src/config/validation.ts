@@ -2694,6 +2694,43 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (hasProperty(value, "schedule") && value.schedule !== undefined) {
+		if (typeof value.schedule === "string") {
+			if (value.schedule.length === 0) {
+				diagnostics.errors.push(
+					`"${field}" bindings "schedule" field must not be an empty string.`
+				);
+				isValid = false;
+			}
+		} else if (Array.isArray(value.schedule)) {
+			if (value.schedule.length === 0) {
+				diagnostics.errors.push(
+					`"${field}" bindings "schedule" field must not be an empty array.`
+				);
+				isValid = false;
+			} else if (!value.schedule.every((s: unknown) => typeof s === "string")) {
+				diagnostics.errors.push(
+					`"${field}" bindings should, optionally, have a string or array of strings "schedule" field but got ${JSON.stringify(
+						value
+					)}.`
+				);
+				isValid = false;
+			} else if (value.schedule.some((s: unknown) => s === "")) {
+				diagnostics.errors.push(
+					`"${field}" bindings "schedule" field must not contain empty strings.`
+				);
+				isValid = false;
+			}
+		} else {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have a string or array of strings "schedule" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		}
+	}
+
 	if (hasProperty(value, "limits") && value.limits !== undefined) {
 		if (
 			typeof value.limits !== "object" ||
@@ -2742,6 +2779,7 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		"script_name",
 		"remote",
 		"limits",
+		"schedule",
 	]);
 
 	return isValid;

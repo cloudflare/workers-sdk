@@ -5171,6 +5171,52 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
+			it("should accept valid workflow bindings with schedule as a string", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: "*/5 * * * *",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should accept valid workflow bindings with schedule as an array of strings", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: ["*/5 * * * *", "0 9 * * 1"],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
 			it("should error if workflow bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -5248,6 +5294,130 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - "workflows[0]" bindings should, optionally, have a string "script_name" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","script_name":123,"remote":"yes"}.
 					  - "workflows[0]" bindings should, optionally, have a boolean "remote" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","script_name":123,"remote":"yes"}."
+				`);
+			});
+
+			it("should error if schedule has wrong type", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: 123,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings should, optionally, have a string or array of strings "schedule" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","schedule":123}."
+				`);
+			});
+
+			it("should error if schedule is an empty string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: "",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "schedule" field must not be an empty string."
+				`);
+			});
+
+			it("should error if schedule is an empty array", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: [],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "schedule" field must not be an empty array."
+				`);
+			});
+
+			it("should error if schedule is an array containing non-strings", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: ["*/5 * * * *", 123],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings should, optionally, have a string or array of strings "schedule" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","schedule":["*/5 * * * *",123]}."
+				`);
+			});
+
+			it("should error if schedule is an array containing empty strings", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: ["*/5 * * * *", ""],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "schedule" field must not contain empty strings."
 				`);
 			});
 
