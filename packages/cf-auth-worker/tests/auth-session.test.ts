@@ -1,4 +1,5 @@
-import { env, SELF } from "cloudflare:test";
+import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { describe, it } from "vitest";
 
 /**
@@ -214,7 +215,9 @@ describe("cf-auth-worker", () => {
 		}) => {
 			// Direct DO-level assertion (bypassing the worker's redirect) that
 			// the DO uses 404 for "no active session" rather than 409.
-			const stub = env.AUTH_SESSION.getByName("do-direct-no-ws-" + Date.now());
+			const stub = exports.AuthSession.getByName(
+				"do-direct-no-ws-" + Date.now()
+			);
 			const resp = await stub.fetch(
 				new Request("https://do/callback?code=test-code")
 			);
