@@ -1147,21 +1147,28 @@ describe("User", () => {
 });
 
 /**
- * Wait for `MockWebSocket.last` to be populated, polling `setImmediate` for up
- * to ~50 ticks (~500ms in the worst case) before giving up. Used by tests
- * that need the relay WebSocket to have been constructed before they drive
- * it. Polling (rather than awaiting a fixed number of ticks) keeps the
- * helper resilient to small timing changes in the login flow.
+ * Wait for `MockWebSocket.last` to be populated, polling on a wall-clock
+ * timeout rather than a fixed iteration count. Used by tests that need the
+ * relay WebSocket to have been constructed before they drive it.
+ *
+ * The login flow does `await generatePKCECodes()` (a `crypto.subtle.digest`
+ * round-trip to libuv) before reaching `new WebSocket(...)`. On a loaded CI
+ * box that handoff can take longer than a flat-out `setImmediate` loop, so we
+ * use `setTimeout(10)` for a real time budget that doesn't depend on event
+ * loop speed.
  */
-async function waitForMockWebSocket(): Promise<MockWebSocket> {
-	for (let i = 0; i < 50; i++) {
+async function waitForMockWebSocket(timeoutMs = 5000): Promise<MockWebSocket> {
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
 		const ws = MockWebSocket.last;
 		if (ws) {
 			return ws;
 		}
-		await new Promise((r) => setImmediate(r));
+		await new Promise((r) => setTimeout(r, 10));
 	}
-	throw new Error("waitForMockWebSocket: no MockWebSocket was constructed");
+	throw new Error(
+		`waitForMockWebSocket: no MockWebSocket was constructed within ${timeoutMs}ms`
+	);
 }
 
 /**
