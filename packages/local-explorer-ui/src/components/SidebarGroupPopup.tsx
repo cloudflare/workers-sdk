@@ -1,12 +1,25 @@
-import { Sidebar, type SidebarMenuButtonProps } from "@cloudflare/kumo";
+import {
+	Button,
+	cn,
+	Sidebar,
+	type SidebarMenuButtonProps,
+} from "@cloudflare/kumo";
 import { Popover } from "@cloudflare/kumo/primitives/popover";
+import { TrashIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import type { FileRouteTypes } from "../routeTree.gen";
+
+type PurgeKind = "d1" | "kv" | "r2" | "workflows";
 
 interface SidebarGroupItem {
 	id: string;
 	isActive: boolean;
 	label: string;
+	purge?: {
+		id: string;
+		kind: PurgeKind;
+		label: string;
+	};
 	link: {
 		params: object;
 		search?: object;
@@ -18,6 +31,7 @@ interface SidebarGroupPopupProps {
 	emptyLabel: string;
 	icon: SidebarMenuButtonProps["icon"];
 	items: SidebarGroupItem[];
+	onPurge: (target: { id: string; kind: PurgeKind; label: string }) => void;
 	title: string;
 }
 
@@ -25,6 +39,7 @@ export function SidebarGroupPopup({
 	emptyLabel,
 	icon,
 	items,
+	onPurge,
 	title,
 }: SidebarGroupPopupProps): JSX.Element {
 	const hasActiveItem = items.some((item) => item.isActive);
@@ -55,21 +70,49 @@ export function SidebarGroupPopup({
 									{emptyLabel}
 								</div>
 							) : (
-								items.map((item) => (
-									<Link
-										className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors outline-none select-none ${
-											item.isActive
-												? "bg-kumo-elevated font-medium text-kumo-default"
-												: "text-kumo-default hover:bg-kumo-elevated"
-										}`}
-										key={item.id}
-										params={item.link.params}
-										search={item.link.search}
-										to={item.link.to}
-									>
-										<span className="truncate">{item.label}</span>
-									</Link>
-								))
+								items.map((item) => {
+									const purgeTarget = item.purge;
+
+									return (
+										<div className="group/item flex items-center" key={item.id}>
+											<Link
+												className={`flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors outline-none select-none ${
+													item.isActive
+														? "bg-kumo-elevated font-medium text-kumo-default"
+														: "text-kumo-default hover:bg-kumo-elevated"
+												}`}
+												params={item.link.params}
+												search={item.link.search}
+												to={item.link.to}
+											>
+												<span className="truncate">{item.label}</span>
+											</Link>
+
+											{purgeTarget && (
+												<Button
+													aria-label={`Purge ${purgeTarget.kind} ${purgeTarget.id}`}
+													className={cn(
+														"ml-1 shrink-0 text-kumo-subtle transition-opacity hover:bg-kumo-elevated hover:text-kumo-danger focus-visible:opacity-100",
+														item.isActive
+															? "opacity-100"
+															: "opacity-0 group-hover/item:opacity-100"
+													)}
+													data-testid={`purge-${purgeTarget.kind}-${purgeTarget.id}`}
+													onClick={(event) => {
+														event.preventDefault();
+														event.stopPropagation();
+														onPurge(purgeTarget);
+													}}
+													shape="square"
+													type="button"
+													variant="ghost"
+												>
+													<TrashIcon size={12} weight="bold" />
+												</Button>
+											)}
+										</div>
+									);
+								})
 							)}
 						</div>
 					</Popover.Popup>

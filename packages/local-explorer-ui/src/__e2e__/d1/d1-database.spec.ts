@@ -149,6 +149,38 @@ describe("D1 Database Studio", () => {
 			const dialogText = await dialog.textContent();
 			expect(dialogText).toContain("users");
 		});
+
+		test("shows purge database confirmation dialog", async () => {
+			await navigateToD1("DB", "users");
+			await waitForTableRows(1);
+
+			await page.locator('[data-testid="purge-d1-DB"]').click();
+			await waitForDialog();
+			await waitForText("Purge resource?");
+		});
+
+		test("purges all database objects", async () => {
+			await navigateToD1("DB", "users");
+			await waitForTableRows(1);
+
+			await page.locator('[data-testid="purge-d1-DB"]').click();
+			await waitForDialog();
+
+			await page
+				.getByRole("dialog")
+				.getByRole("button", { name: "Purge" })
+				.click();
+
+			await page.waitForSelector('[role="dialog"]', {
+				state: "hidden",
+				timeout: 10_000,
+			});
+
+			await waitForQueryEditor();
+			await typeInQueryEditor("SELECT * FROM users;");
+			await runQuery();
+			await waitForText("no such table: users");
+		});
 	});
 
 	describe("refresh functionality", () => {
