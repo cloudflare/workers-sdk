@@ -1023,6 +1023,7 @@ export class Miniflare {
 		}
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
+		this.#hyperdriveProxyController.log = this.#log;
 		this.#structuredWorkerdLogs =
 			this.#sharedOpts.core.structuredWorkerdLogs ??
 			// If there is a `handleStructuredLogs` set then `structuredWorkerdLogs` defaults
@@ -2739,6 +2740,7 @@ export class Miniflare {
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
+		this.#hyperdriveProxyController.log = this.#log;
 		this.#structuredWorkerdLogs =
 			this.#sharedOpts.core.structuredWorkerdLogs ??
 			this.#structuredWorkerdLogs;
