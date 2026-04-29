@@ -56,20 +56,12 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
       # Check for old Node.js version warnings and errors
-      - name: Use Node.js v16
+      - name: Use Node.js v20
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 20
 
-      - name: Check for error message on Node.js < v18
-        run: node packages/wrangler/src/__tests__/test-old-node-version.js error
-
-      - name: Use Node.js v18
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Check for error message on Node.js < v20
+      - name: Check for error message on Node.js < v22
         run: node packages/wrangler/src/__tests__/test-old-node-version.js error
 
   test:

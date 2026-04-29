@@ -54,11 +54,11 @@
 		"vitest": "catalog:default"
 	},
 	"engines": {
-		"node": ">=20.0.0",
+		"node": ">=22.0.0",
 		"pnpm": "^10.33.0"
 	},
 	"volta": {
-		"node": "20.19.3",
+		"node": "22.22.1",
 		"pnpm": "10.33.0"
 	},
 	"packageManager": "pnpm@10.33.0"
