@@ -279,7 +279,9 @@ export const dev = createCommand({
 			);
 		}
 		if (args.tunnel && args.remote) {
-			throw new UserError("--tunnel is only supported in local mode.");
+			throw new UserError("--tunnel is only supported in local mode.", {
+				telemetryMessage: "dev command tunnel remote conflict",
+			});
 		}
 
 		if (isWebContainer()) {

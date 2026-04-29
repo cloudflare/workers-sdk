@@ -60,11 +60,13 @@ function printCoverageReport(summary: CoverageSummary): void {
 	].join("\n");
 
 	if (coveragePercent < 100) {
-		console.warn(`${report}\n\nWarning: telemetryMessage coverage is below 100%.`);
+		process.stderr.write(
+			`${report}\n\nWarning: telemetryMessage coverage is below 100%.\n`
+		);
 		return;
 	}
 
-	console.log(report);
+	process.stdout.write(`${report}\n`);
 }
 
 function getCoveragePercent(summary: CoverageSummary): number {
