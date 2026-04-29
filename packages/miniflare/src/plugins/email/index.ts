@@ -86,7 +86,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			return [];
 		}
 
-		const emailDirectory = path.join(args.tmpPath, EMAIL_PLUGIN_NAME);
+		const emailDirectory = path.join(args.tmpPath, EMAIL_PLUGIN_NAME).replaceAll("\\", "/");
 		await mkdir(emailDirectory, { recursive: true });
 
 		const services: Service[] = [
