@@ -82,6 +82,7 @@ export interface GenerateTypesOptions {
 
 interface ResolvedGenerateTypesOptions {
 	config: Config;
+	envHeaderCommand?: string;
 	env?: string;
 	envFile?: string[];
 	envInterface: string;
@@ -280,8 +281,49 @@ export async function generateTypesFromWranglerOptions(
 		validateOptions: true,
 		validateOutputPath: false,
 	});
+	resolvedOptions.envHeaderCommand = buildGenerateTypesHeaderCommand(
+		options,
+		resolvedOptions
+	);
 
 	return generateTypesFromResolvedOptions(resolvedOptions, false);
+}
+
+function buildGenerateTypesHeaderCommand(
+	options: GenerateTypesOptions,
+	resolvedOptions: ResolvedGenerateTypesOptions
+): string {
+	const commandParts: string[] = ["wrangler", "types"];
+
+	if (options.env !== undefined) {
+		commandParts.push(`--env=${options.env}`);
+	}
+
+	for (const envFile of options.envFile ?? []) {
+		commandParts.push(`--env-file=${envFile}`);
+	}
+
+	if (options.includeRuntime === false) {
+		commandParts.push("--include-runtime=false");
+	}
+
+	if (options.includeEnv === false) {
+		commandParts.push("--include-env=false");
+	}
+
+	if (options.strictVars === false) {
+		commandParts.push("--strict-vars=false");
+	}
+
+	if (options.envInterface !== undefined && options.envInterface !== "Env") {
+		commandParts.push(`--env-interface=${options.envInterface}`);
+	}
+
+	if (resolvedOptions.path !== DEFAULT_WORKERS_TYPES_FILE_NAME) {
+		commandParts.push(resolvedOptions.path);
+	}
+
+	return commandParts.join(" ");
 }
 
 /**
@@ -394,6 +436,7 @@ async function generateTypesFromResolvedOptions(
 			options.path,
 			entrypoint,
 			options.secondaryEntries,
+			options.envHeaderCommand,
 			log
 		);
 		if (envHeader && envTypes) {
@@ -671,6 +714,7 @@ function hasConfigSecrets(rawConfig: RawConfig): boolean {
  * @param outputPath - The file path where the generated types will be written
  * @param entrypoint - Optional entry point information for the Worker
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
+ * @param command - Optional command string used in the generated env header.
  * @param log - Whether to log output to the console (default: true)
  *
  * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
@@ -682,6 +726,7 @@ export async function generateEnvTypes(
 	outputPath: string,
 	entrypoint?: Entry,
 	serviceEntries?: Map<string, Entry>,
+	command?: string,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const collectionArgs = {
@@ -767,6 +812,7 @@ export async function generateEnvTypes(
 			serviceEntries,
 			secrets,
 			perEnvSecrets,
+			command,
 			log
 		);
 	}
@@ -779,6 +825,7 @@ export async function generateEnvTypes(
 		entrypoint,
 		serviceEntries,
 		secrets,
+		command,
 		log
 	);
 }
@@ -795,6 +842,7 @@ export async function generateEnvTypes(
  * @param entrypoint - Optional entry point information for the Worker
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
  * @param secrets - Record of secret variable names to their values
+ * @param command - Optional command string used in the generated env header.
  * @param log - Whether to log output to the console (default: true)
  *
  * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
@@ -807,6 +855,7 @@ async function generateSimpleEnvTypes(
 	entrypoint?: Entry,
 	serviceEntries?: Map<string, Entry>,
 	secrets: Record<string, string> = {},
+	command?: string,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const stringKeys = new Array<string>();
@@ -1076,7 +1125,7 @@ async function generateSimpleEnvTypes(
 		}
 
 		return {
-			envHeader: getEnvHeader(hash),
+			envHeader: getEnvHeader(hash, command),
 			envTypes: fileContent,
 		};
 	} else {
@@ -1104,6 +1153,7 @@ async function generateSimpleEnvTypes(
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
  * @param secrets - Record of secret variable names (fallback for all envs when perEnvSecrets is not provided)
  * @param perEnvSecrets - Optional per-environment secrets map. When provided, each env uses its own secrets instead of the shared fallback.
+ * @param command - Optional command string used in the generated env header.
  * @param log - Whether to log output to the console (default: true)
  *
  * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
@@ -1117,6 +1167,7 @@ async function generatePerEnvironmentTypes(
 	serviceEntries?: Map<string, Entry>,
 	secrets: Record<string, string> = {},
 	perEnvSecrets?: Map<string, Record<string, string>>,
+	command?: string,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const { rawConfig } = experimental_readRawConfig(collectionArgs);
@@ -1522,7 +1573,7 @@ async function generatePerEnvironmentTypes(
 	}
 
 	return {
-		envHeader: getEnvHeader(hash),
+		envHeader: getEnvHeader(hash, command),
 		envTypes: fileContent,
 	};
 }
