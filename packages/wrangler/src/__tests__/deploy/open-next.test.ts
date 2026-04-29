@@ -3,6 +3,7 @@ import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { getDetailsForAutoConfig } from "../../autoconfig/details";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -57,6 +58,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
+vi.mock("../../autoconfig/details");
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
 vi.mock("@cloudflare/cli-shared-helpers/command");
@@ -88,6 +90,12 @@ describe("deploy", () => {
 		);
 		vi.mocked(fetchSecrets).mockResolvedValue([]);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
+		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
+			configured: true,
+			workerName: "test-name",
+			projectPath: process.cwd(),
+			packageManager: { type: "npm" as const, npx: "npx" },
+		} as Awaited<ReturnType<typeof getDetailsForAutoConfig>>);
 	});
 
 	afterEach(() => {
@@ -369,6 +377,38 @@ describe("deploy", () => {
 			fs.rmSync("./open-next.config.ts");
 
 			await runWrangler("deploy --x-autoconfig");
+
+			expect(runCommandSpy).not.toHaveBeenCalledOnce();
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding            Resource
+				env.ASSETS         Assets
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not delegate to open-next deploy when --config is explicitly provided", async ({
+			expect,
+		}) => {
+			const runCommandSpy = (
+				await import("@cloudflare/cli-shared-helpers/command")
+			).runCommand;
+
+			await mockOpenNextLikeProject();
+
+			await runWrangler("deploy --config wrangler.jsonc");
 
 			expect(runCommandSpy).not.toHaveBeenCalledOnce();
 

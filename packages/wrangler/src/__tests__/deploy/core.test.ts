@@ -651,6 +651,39 @@ describe("deploy", () => {
 			"Using fallback value in non-interactive context: yes"
 		);
 	});
+
+	it("should not run autoconfig when --config is explicitly provided", async ({
+		expect,
+	}) => {
+		const getDetailsForAutoConfigSpy = vi.spyOn(
+			await import("../../autoconfig/details"),
+			"getDetailsForAutoConfig"
+		);
+
+		writeWorkerSource();
+		writeWranglerConfig({ main: "../index.js" }, "./config/wrangler.jsonc");
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+
+		await runWrangler("deploy --config config/wrangler.jsonc");
+
+		expect(getDetailsForAutoConfigSpy).not.toHaveBeenCalled();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+	});
+
 	describe("output additional script information", () => {
 		it("for first party workers, it should print worker information at log level", async ({
 			expect,
