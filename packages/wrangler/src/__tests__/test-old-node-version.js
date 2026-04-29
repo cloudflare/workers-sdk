@@ -42,7 +42,7 @@ wranglerProcess.once("exit", (code) => {
 	} catch (err) {
 		console.error("Error:", err);
 		throw new Error(
-			"This test has to be run with a version of Node.js under 20 to pass"
+			"This test has to be run with a version of Node.js under 22 to pass"
 		);
 	}
 });
