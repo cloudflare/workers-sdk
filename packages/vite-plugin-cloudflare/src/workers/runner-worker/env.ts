@@ -12,8 +12,8 @@ export interface WrapperEnv {
 	};
 	/** Binding for evaluating code */
 	__VITE_UNSAFE_EVAL__: {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-		eval: (code: string, filename: string) => Function;
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- unsafe eval is generic so we need to use a generif
+		eval: (code: string, filename: string) => (...args: unknown[]) => unknown;
 	};
 	/** User-defined env */
 	[key: string]: unknown;

@@ -12,7 +12,7 @@ export async function preServe() {
 	mockPg = await createMockPostgresServer({
 		rows: [{ id: "21", name: "mock-row" }],
 	});
-	// eslint-disable-next-line turbo/no-undeclared-env-vars
+	// eslint-disable-next-line turbo/no-undeclared-env-vars -- internal to the test process: set here, read by vite.config.worker-postgres.ts in the same run
 	process.env.MOCK_PG_PORT = String(mockPg.port);
 }
 
