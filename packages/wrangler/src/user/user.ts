@@ -1092,11 +1092,13 @@ async function getOauthTokenViaWebSocket(options: {
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
 	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
-	// 2. Open WebSocket to auth worker
+	// 2. Open WebSocket to auth worker. Build the WebSocket URL by mutating
+	//    a parsed `URL` rather than string-replacing schemes — the parsed form
+	//    is robust to trailing slashes and any path on `authWorkerUrl`.
 	const authWorkerUrl = getAuthWorkerUrlFromEnv();
-	const wsUrl =
-		authWorkerUrl.replace("https://", "wss://").replace("http://", "ws://") +
-		`/session/${stateQueryParam}`;
+	const wsUrl = new URL(authWorkerUrl);
+	wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
+	wsUrl.pathname = `/session/${stateQueryParam}`;
 
 	const ws = new WebSocket(wsUrl);
 
@@ -1205,8 +1207,10 @@ async function getOauthTokenViaWebSocket(options: {
 			}
 		);
 
-		// 4. Build auth URL with the auth worker's callback URL as redirect_uri
-		const remoteCallbackUrl = `${authWorkerUrl}/callback`;
+		// 4. Build auth URL with the auth worker's callback URL as redirect_uri.
+		//    `new URL` resolves the path safely even if `authWorkerUrl` has a
+		//    trailing slash (which would otherwise produce `//callback`).
+		const remoteCallbackUrl = new URL("/callback", authWorkerUrl).toString();
 		const authUrl = generateAuthUrl({
 			authUrl: getAuthUrlFromEnv(),
 			clientId: options.clientId,
