@@ -221,10 +221,12 @@ import {
 	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
+import * as Sentry from "@sentry/node";
 import ci from "ci-info";
 import TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
+import WebSocket from "ws";
 import {
 	getConfigCache,
 	purgeConfigCaches,
@@ -233,11 +235,14 @@ import {
 import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
+import { sendMetricsEvent } from "../metrics";
 import openInBrowser from "../open-in-browser";
 import { domainUsesAccess } from "./access";
 import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
+	getAuthWorkerOriginFromEnv,
+	getAuthWorkerTimeoutMs,
 	getClientIdFromEnv,
 	getCloudflareAccessHeaders,
 	getCloudflareAccountIdFromEnv,
@@ -809,8 +814,18 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 /**
  * Fetch an access token from the remote service.
  */
-async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
-	const { authorizationCode, codeVerifier = "" } = localState;
+async function exchangeAuthCodeForAccessToken(explicitParams?: {
+	code: string;
+	redirectUri: string;
+	clientId: string;
+	codeVerifier: string;
+}): Promise<AccessContext> {
+	const authorizationCode =
+		explicitParams?.code ?? localState.authorizationCode;
+	const codeVerifier =
+		explicitParams?.codeVerifier ?? localState.codeVerifier ?? "";
+	const redirectUri = explicitParams?.redirectUri ?? OAUTH_CALLBACK_URL;
+	const clientId = explicitParams?.clientId ?? getClientIdFromEnv();
 
 	if (!codeVerifier) {
 		logger.warn("No code verifier is being sent.");
@@ -821,8 +836,8 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 	const params = new URLSearchParams({
 		grant_type: `authorization_code`,
 		code: authorizationCode ?? "",
-		redirect_uri: OAUTH_CALLBACK_URL,
-		client_id: getClientIdFromEnv(),
+		redirect_uri: redirectUri,
+		client_id: clientId,
 		code_verifier: codeVerifier,
 	});
 
@@ -946,6 +961,7 @@ type LoginProps = {
 	browser: boolean;
 	callbackHost: string;
 	callbackPort: number;
+	experimentalWebsocketCallback?: boolean;
 };
 
 export async function loginOrRefreshIfRequired(
@@ -998,6 +1014,239 @@ export async function getOAuthTokenFromLocalState(): Promise<
 	}
 
 	return localState.accessToken?.value;
+}
+
+/**
+ * Thrown by `getOauthTokenViaWebSocket` when the WebSocket relay can't be
+ * reached *before* the browser is opened (i.e. before the user has committed
+ * to the relay's redirect_uri). When this is thrown, `login()` is free to
+ * fall back to the local callback server.
+ *
+ * Failures *after* the browser is opened (relay disappears mid-flow, the
+ * 120s auth timeout, etc.) keep using `UserError`, since at that point the
+ * user has already authorised at the relay's redirect_uri and falling back
+ * would require re-authorisation.
+ */
+class RelayUnavailableError extends UserError {
+	constructor(public detail: string) {
+		super(`Auth relay is unavailable: ${detail}`);
+		this.name = "RelayUnavailableError";
+	}
+}
+
+/**
+ * Gets an OAuth token using a WebSocket relay through the auth worker.
+ * This enables `wrangler login` in environments where localhost isn't
+ * accessible from the user's browser (containers, remote VMs, Codespaces).
+ *
+ * Flow:
+ * 1. Generate PKCE codes and state
+ * 2. Open WebSocket to auth worker (the state is the session ID)
+ * 3. Build auth URL with the auth worker's callback URL as redirect_uri
+ * 4. Open browser / print URL
+ * 5. Wait for the auth code to arrive via WebSocket
+ * 6. Exchange auth code for tokens (PKCE ensures only we can do this)
+ */
+async function getOauthTokenViaWebSocket(options: {
+	browser: boolean;
+	scopes: string[];
+	clientId: string;
+	denied: {
+		url: string;
+		error: string;
+	};
+	granted: {
+		url: string;
+	};
+}): Promise<AccessContext> {
+	// 1. Generate PKCE codes and state
+	const { codeChallenge, codeVerifier } = await generatePKCECodes();
+	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
+
+	// 2. Open WebSocket to auth worker. Build the WebSocket URL by mutating
+	//    a parsed `URL` rather than string-replacing schemes — the parsed form
+	//    is robust to trailing slashes and any path on `authWorkerOrigin`.
+	const authWorkerOrigin = getAuthWorkerOriginFromEnv();
+	const wsUrl = new URL(authWorkerOrigin);
+	wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
+	wsUrl.pathname = `/session/${stateQueryParam}`;
+
+	const ws = new WebSocket(wsUrl);
+
+	// Record that a relay login was attempted. Combined with the `(relay
+	// fallback)` and `login user` events this lets us count relay
+	// success/fallback rates in the wild while the feature is experimental.
+	// Sent after the WebSocket constructor so any tests waiting on the
+	// MockWebSocket instance see it before this synchronous metrics work
+	// runs.
+	sendMetricsEvent("login user (relay attempt)", { authWorkerOrigin }, {});
+
+	// All paths from here must remove our listeners, clear any pending
+	// timeout, and terminate the WebSocket. Hoisting `cleanup` and
+	// `loginTimeoutHandle` lets the single outer `finally` handle every
+	// exit path — pre-open relay failure (connect timeout, error, or
+	// premature close), successful return, user-denied error, parse error,
+	// openInBrowser throw, or a 120s post-open timeout. Without this, e.g.
+	// a connect timeout would leak the WebSocket, and a throw from
+	// `openInBrowser` would skip the auth-flow listener cleanup so the
+	// outer `ws.terminate()` would fire `onClose` against an orphan
+	// `messagePromise`, producing an unhandled rejection.
+	let cleanup = () => {};
+	let loginTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
+	try {
+		// Wait for connection to open. Pre-open failures (error event,
+		// premature close, or connect timeout) throw `RelayUnavailableError`
+		// so `login()` can decide whether to fall back to the localhost flow.
+		const connectTimeoutMs = getAuthWorkerTimeoutMs();
+		await new Promise<void>((resolve, reject) => {
+			let connectTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
+			const connectCleanup = () => {
+				if (connectTimeoutHandle !== undefined) {
+					clearTimeout(connectTimeoutHandle);
+				}
+			};
+
+			ws.addEventListener(
+				"open",
+				() => {
+					connectCleanup();
+					resolve();
+				},
+				{ once: true }
+			);
+			ws.addEventListener(
+				"error",
+				(event) => {
+					connectCleanup();
+					const detail =
+						(event as { message?: string; error?: { message?: string } })
+							.message ??
+						(event as { error?: { message?: string } }).error?.message ??
+						"connection failed";
+					reject(new RelayUnavailableError(detail));
+				},
+				{ once: true }
+			);
+			ws.addEventListener(
+				"close",
+				() => {
+					connectCleanup();
+					reject(new RelayUnavailableError("connection closed before open"));
+				},
+				{ once: true }
+			);
+
+			if (connectTimeoutMs > 0) {
+				connectTimeoutHandle = setTimeout(() => {
+					reject(
+						new RelayUnavailableError(
+							`connect timed out after ${connectTimeoutMs}ms`
+						)
+					);
+				}, connectTimeoutMs);
+			}
+		});
+
+		// 3. Set up the message/close listener BEFORE sending the auth URL to
+		//    the browser. The user has to authorise in the browser before the
+		//    DO can deliver a message, but listener attachment is essentially
+		//    free, so we do it as early as possible.
+		const messagePromise = new Promise<{ code?: string; error?: string }>(
+			(resolve, reject) => {
+				const onMessage = (event: WebSocket.MessageEvent) => {
+					cleanup();
+					try {
+						const data =
+							typeof event.data === "string" ? event.data : String(event.data);
+						resolve(JSON.parse(data));
+					} catch {
+						reject(new UserError("Invalid message from auth relay"));
+					}
+				};
+				const onClose = () => {
+					cleanup();
+					reject(
+						new UserError("Auth relay connection closed before login completed")
+					);
+				};
+				cleanup = () => {
+					ws.removeEventListener("message", onMessage);
+					ws.removeEventListener("close", onClose);
+				};
+				ws.addEventListener("message", onMessage);
+				ws.addEventListener("close", onClose);
+			}
+		);
+
+		// 4. Build auth URL with the auth worker's callback URL as redirect_uri.
+		//    `new URL` resolves the path safely even if `authWorkerOrigin` has a
+		//    trailing slash (which would otherwise produce `//callback`).
+		const remoteCallbackUrl = new URL("/callback", authWorkerOrigin).toString();
+		const authUrl = generateAuthUrl({
+			authUrl: getAuthUrlFromEnv(),
+			clientId: options.clientId,
+			scopes: options.scopes,
+			stateQueryParam,
+			codeChallenge,
+			callbackUrl: remoteCallbackUrl,
+		});
+
+		// 5. Open browser or print URL
+		if (options.browser) {
+			logger.log(`Opening a link in your default browser: ${authUrl}`);
+			await openInBrowser(authUrl);
+		} else {
+			logger.log(`Visit this link to authenticate: ${authUrl}`);
+		}
+
+		// 6. Wait for auth code via WebSocket (with 120s timeout).
+		const timeoutPromise = new Promise<never>((_resolve, reject) => {
+			loginTimeoutHandle = setTimeout(() => {
+				reject(
+					new UserError(
+						"Timed out waiting for authorization code, please try again."
+					)
+				);
+			}, 120_000);
+		});
+
+		const result = await Promise.race([messagePromise, timeoutPromise]);
+
+		// 7. Handle error (user denied consent)
+		if (result.error) {
+			throw new UserError(options.denied.error);
+		}
+
+		if (!result.code) {
+			throw new UserError("No authorization code received from auth relay");
+		}
+
+		// 8. Exchange code for token. NOTE: this also writes the resulting
+		//    tokens to the module-level `localState` (same as the localhost
+		//    flow), which is what the rest of the auth code expects.
+		return await exchangeAuthCodeForAccessToken({
+			code: result.code,
+			redirectUri: remoteCallbackUrl,
+			clientId: options.clientId,
+			codeVerifier,
+		});
+	} finally {
+		if (loginTimeoutHandle !== undefined) {
+			clearTimeout(loginTimeoutHandle);
+		}
+		// Remove the WebSocket listeners before closing. After this,
+		// neither `close()` nor `terminate()` will dispatch any listeners, so
+		// `messagePromise` either already settled (consumed by the race) or
+		// stays pending forever (and is GC'd) — never producing an orphan
+		// rejection.
+		cleanup();
+		// Force-destroy the underlying TLS socket. The auth-worker DO has
+		// already done its job and we don't need a graceful close handshake;
+		// waiting for the Cloudflare edge to FIN the TCP connection delays
+		// process exit by ~10s, which the user perceives as wrangler hanging
+		// after "Successfully logged in.".
+		ws.terminate();
+	}
 }
 
 export async function getOauthToken(options: {
@@ -1141,7 +1390,7 @@ export async function login(
 
 	logger.log("Attempting to login via OAuth...");
 
-	const oauth = await getOauthToken({
+	const oauthOptions = {
 		browser: !!props.browser,
 		scopes: props.scopes ?? DefaultScopeKeys,
 		clientId: getClientIdFromEnv(),
@@ -1154,9 +1403,61 @@ export async function login(
 		granted: {
 			url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
 		},
-		callbackHost: props.callbackHost,
-		callbackPort: props.callbackPort,
-	});
+	};
+
+	let oauth: AccessContext;
+	if (props.experimentalWebsocketCallback) {
+		try {
+			oauth = await getOauthTokenViaWebSocket(oauthOptions);
+		} catch (err) {
+			// Fall back to the local callback server only when:
+			//   1. the failure happened *before* the browser was opened
+			//      (signalled via `RelayUnavailableError`), AND
+			//   2. the user hasn't opted out of fallback by setting
+			//      `WRANGLER_AUTH_WORKER_TIMEOUT=0`.
+			// Post-`open` failures keep their existing `UserError` and propagate.
+			if (
+				err instanceof RelayUnavailableError &&
+				getAuthWorkerTimeoutMs() > 0
+			) {
+				const authWorkerOrigin = getAuthWorkerOriginFromEnv();
+				logger.warn(
+					`Could not reach the auth relay at ${authWorkerOrigin}: ${err.detail}\n` +
+						"Falling back to a local callback server. Note: this may not work in " +
+						"container or remote environments where the browser cannot reach localhost. " +
+						"Set WRANGLER_AUTH_WORKER_TIMEOUT=0 to disable this fallback."
+				);
+				// Notify our team via Sentry so we can keep an eye on relay
+				// availability while the feature is experimental. Tagged as a
+				// warning because we recover via the local fallback. Sentry
+				// queues this in memory and only sends after the user opts in
+				// to error reporting (same as other Wrangler error capture).
+				Sentry.captureException(err, {
+					level: "warning",
+					tags: { feature: "wrangler-login-relay" },
+					extra: { authWorkerOrigin, detail: err.detail },
+				});
+				sendMetricsEvent(
+					"login user (relay fallback)",
+					{ authWorkerOrigin, reason: err.detail },
+					{}
+				);
+				oauth = await getOauthToken({
+					...oauthOptions,
+					callbackHost: props.callbackHost,
+					callbackPort: props.callbackPort,
+				});
+			} else {
+				throw err;
+			}
+		}
+	} else {
+		oauth = await getOauthToken({
+			...oauthOptions,
+			callbackHost: props.callbackHost,
+			callbackPort: props.callbackPort,
+		});
+	}
 
 	writeAuthConfigFile({
 		oauth_token: oauth.token?.value ?? "",

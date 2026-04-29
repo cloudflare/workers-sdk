@@ -98,6 +98,60 @@ export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
 	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/revoke`,
 });
 
+/**
+ * `WRANGLER_AUTH_WORKER_ORIGIN` is the origin (scheme + host, no path) of
+ * the auth relay worker used for the WebSocket-based OAuth callback flow.
+ *
+ * A single deployment serves all environments (production and staging) since
+ * the worker only holds ephemeral relay state and is fully agnostic to the
+ * OAuth environment.
+ *
+ * Normally you should not need to set this explicitly.
+ */
+export const getAuthWorkerOriginFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_AUTH_WORKER_ORIGIN",
+	defaultValue: () => "https://auth.devprod.cloudflare.dev",
+});
+
+/**
+ * `WRANGLER_AUTH_WORKER_TIMEOUT` controls the connect timeout (in milliseconds)
+ * for the auth relay WebSocket and whether Wrangler falls back to the local
+ * callback server if the relay can't be reached.
+ *
+ * - Default: `5000` ms — connect timeout of 5s; on timeout/connect-error,
+ *   Wrangler logs a warning and falls back to the local HTTP callback server
+ *   (the `--callback-host`/`--callback-port` flow).
+ * - `0` — no connect timeout (waits indefinitely for `open`/`error`/`close`)
+ *   AND disables the local-server fallback. Useful in container/remote
+ *   environments where the localhost flow can't work anyway and you want
+ *   relay-only behaviour.
+ * - Any other positive number — that many milliseconds for connect timeout,
+ *   with fallback enabled.
+ *
+ * Invalid values fall back to `5000`.
+ */
+const _getAuthWorkerTimeoutFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_AUTH_WORKER_TIMEOUT",
+	defaultValue: () => "5000",
+});
+export function getAuthWorkerTimeoutMs(): number {
+	const raw = _getAuthWorkerTimeoutFromEnv();
+	// Treat empty / whitespace-only values as invalid. Without this guard
+	// `Number("")` and `Number("   ")` both coerce to `0`, which would
+	// silently activate the special "no timeout, no fallback" semantics
+	// instead of the documented 5000ms default — a footgun for users who
+	// set `WRANGLER_AUTH_WORKER_TIMEOUT=` to "clear" the variable or via a
+	// misconfigured `.env`.
+	if (raw.trim() === "") {
+		return 5000;
+	}
+	const num = Number(raw);
+	if (!Number.isFinite(num) || num < 0) {
+		return 5000;
+	}
+	return num;
+}
+
 export const getWranglerR2SqlAuthToken = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_R2_SQL_AUTH_TOKEN",
 });
