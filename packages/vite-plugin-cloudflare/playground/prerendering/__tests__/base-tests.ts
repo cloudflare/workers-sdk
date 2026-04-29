@@ -3,11 +3,11 @@ import {
 	getTextResponse,
 	isBuild,
 	page,
-	satisfiesViteVersion,
+	satisfiesMinimumViteVersion,
 	viteTestUrl,
 } from "../../__test-utils__";
 
-describe.runIf(satisfiesViteVersion("7.0.0"))("pre-rendering", () => {
+describe.runIf(satisfiesMinimumViteVersion("7.0.0"))("pre-rendering", () => {
 	test("returns the static index.html at /", async ({ expect }) => {
 		await page.goto(viteTestUrl);
 		const content = await page.textContent("h1");
