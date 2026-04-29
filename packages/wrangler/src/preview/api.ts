@@ -103,6 +103,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	limits?: CfUserLimits;
 	placement?: CfPlacement;
 	env?: EnvBindings;
+	containers?: Array<{ class_name: string }>;
 };
 
 export type CreatePreviewRequestParams = {

@@ -6,6 +6,7 @@ import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
 import { extractConfigBindings, getBranchName } from "../preview/shared";
+import * as user from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
@@ -1699,6 +1700,615 @@ describe("wrangler preview", () => {
 			expect(deploymentRequestBody?.env).not.toHaveProperty("ASSETS");
 		});
 
+		test("should include containers in deployment metadata and create a preview-scoped container application", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			let createdApplication: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-containers",
+									name: "feature/my-branch",
+									slug: "feature-my-branch",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await request.json()) as Record<
+							string,
+							unknown
+						>;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-containers",
+									preview_id: "preview-id-containers",
+									preview_name: "feature/my-branch",
+									urls: ["https://containers.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {
+										MY_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "MyContainer",
+											namespace_id: "preview-do-ns-id",
+										},
+									},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				),
+				http.get("*/applications", () =>
+					HttpResponse.json({ success: true, result: [] })
+				),
+				http.post("*/applications", async ({ request }) => {
+					createdApplication = (await request.json()) as Record<
+						string,
+						unknown
+					>;
+					return HttpResponse.json({
+						success: true,
+						result: { id: "app-id", ...createdApplication },
+					});
+				})
+			);
+			await runWrangler("preview --name feature/my-branch");
+			expect(deploymentRequestBody?.containers).toEqual([
+				{ class_name: "MyContainer" },
+			]);
+			expect(createdApplication).toMatchObject({
+				name: "test-worker_feature-my-branch_MyContainer",
+				durable_objects: { namespace_id: "preview-do-ns-id" },
+			});
+		});
+
+		test("should not propagate top-level containers into the preview deployment", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					durable_objects: {
+						bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+					},
+					migrations: [{ tag: "v1", new_sqlite_classes: ["MyContainer"] }],
+					containers: [
+						{
+							class_name: "MyContainer",
+							image: "registry.cloudflare.com/some-account-id/test:latest",
+						},
+					],
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+					},
+				})
+			);
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			let listApplicationsCalls = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-no-inherit",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await request.json()) as Record<
+							string,
+							unknown
+						>;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-no-inherit",
+									preview_id: "preview-id-no-inherit",
+									preview_name: "test-preview",
+									urls: ["https://noinherit.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {
+										MY_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "MyContainer",
+											namespace_id: "preview-do-ns-id",
+										},
+									},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.get("*/applications", () => {
+					listApplicationsCalls++;
+					return HttpResponse.json({ success: true, result: [] });
+				})
+			);
+			await runWrangler("preview --name test-preview");
+			expect(deploymentRequestBody).not.toHaveProperty("containers");
+			expect(listApplicationsCalls).toBe(0);
+		});
+
+		test("should omit containers from deployment when none are configured", async ({
+			expect,
+		}) => {
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-no-containers",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await request.json()) as Record<
+							string,
+							unknown
+						>;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-no-containers",
+									preview_id: "preview-id-no-containers",
+									preview_name: "test-preview",
+									urls: ["https://nocontainers.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			await runWrangler("preview --name test-preview");
+			expect(deploymentRequestBody).toBeDefined();
+			expect(deploymentRequestBody).not.toHaveProperty("containers");
+		});
+
+		test("should include only DO-bound container classes in deployment", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class BoundContainer { fetch() { return new Response('ok'); } } export class UnboundContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [
+								{
+									name: "BOUND_CONTAINER",
+									class_name: "BoundContainer",
+								},
+							],
+						},
+						containers: [
+							{
+								class_name: "BoundContainer",
+								image: "registry.cloudflare.com/some-account-id/bound:latest",
+							},
+							{
+								class_name: "UnboundContainer",
+								image: "registry.cloudflare.com/some-account-id/unbound:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-bound-only",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await request.json()) as Record<
+							string,
+							unknown
+						>;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-bound-only",
+									preview_id: "preview-id-bound-only",
+									preview_name: "test-preview",
+									urls: ["https://boundonly.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {
+										BOUND_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "BoundContainer",
+											namespace_id: "preview-do-ns-bound",
+										},
+									},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				),
+				http.get("*/applications", () =>
+					HttpResponse.json({ success: true, result: [] })
+				),
+				http.post("*/applications", async ({ request }) =>
+					HttpResponse.json({
+						success: true,
+						result: { id: "app-id", ...(await request.json()) },
+					})
+				)
+			);
+			await runWrangler("preview --name test-preview");
+			expect(deploymentRequestBody?.containers).toEqual([
+				{ class_name: "BoundContainer" },
+			]);
+		});
+
+		test("should exclude containers whose DO binding has script_name set", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [
+								{
+									name: "EXTERNAL_CONTAINER",
+									class_name: "ExternalContainer",
+									script_name: "owner-worker",
+								},
+							],
+						},
+						containers: [
+							{
+								class_name: "ExternalContainer",
+								image:
+									"registry.cloudflare.com/some-account-id/external:latest",
+							},
+						],
+					},
+				})
+			);
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			let createApplicationCalls = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-cross-script",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await request.json()) as Record<
+							string,
+							unknown
+						>;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-cross-script",
+									preview_id: "preview-id-cross-script",
+									preview_name: "test-preview",
+									urls: ["https://crossscript.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post("*/applications", () => {
+					createApplicationCalls++;
+					return HttpResponse.json({
+						success: true,
+						result: { id: "app-id" },
+					});
+				})
+			);
+			await runWrangler("preview --name test-preview");
+			expect(deploymentRequestBody).not.toHaveProperty("containers");
+			expect(createApplicationCalls).toBe(0);
+		});
+
+		test("should throw a UserError when the preview deployment env is missing namespace_id for a container's class", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-missing-ns",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-missing-ns",
+									preview_id: "preview-id-missing-ns",
+									preview_name: "test-preview",
+									urls: ["https://missingns.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				)
+			);
+			await expect(runWrangler("preview --name test-preview")).rejects.toThrow(
+				/did not return a namespace_id/
+			);
+		});
+
 		test("should include source maps in deployment modules when upload_source_maps is enabled", async ({
 			expect,
 		}) => {
@@ -2925,6 +3535,184 @@ describe("wrangler preview", () => {
 			);
 			await runWrangler("preview delete --env staging --name test-preview -y");
 			expect(deleteUrl).toContain("/workers/workers/staging-worker/previews/");
+		});
+
+		test("should delete preview-scoped container applications when previews.containers is configured", async ({
+			expect,
+		}) => {
+			mkdirSync("src", { recursive: true });
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			const deletedAppIds: string[] = [];
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-cleanup",
+								name: "feature/my-branch",
+								slug: "feature-my-branch",
+								urls: [],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.delete(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => HttpResponse.json({ success: true, result: null })
+				),
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				),
+				http.get("*/applications", () =>
+					HttpResponse.json({
+						success: true,
+						result: [
+							{
+								id: "matching-app-1",
+								name: "test-worker_feature-my-branch_MyContainer",
+							},
+							{
+								id: "matching-app-2",
+								name: "test-worker_feature-my-branch_OtherClass",
+							},
+							{
+								id: "different-preview",
+								name: "test-worker_other-branch_MyContainer",
+							},
+							{
+								id: "different-worker",
+								name: "another-worker_feature-my-branch_MyContainer",
+							},
+							{
+								id: "prod-app",
+								name: "test-worker-MyContainer",
+							},
+						],
+					})
+				),
+				http.delete("*/applications/:id", ({ params }) => {
+					deletedAppIds.push(params.id as string);
+					return HttpResponse.json({ success: true, result: null });
+				})
+			);
+			await runWrangler(
+				"preview delete --name feature/my-branch -y --worker-name test-worker"
+			);
+			expect(deletedAppIds.sort()).toEqual([
+				"matching-app-1",
+				"matching-app-2",
+			]);
+		});
+
+		test("should not list applications when no previews.containers are configured", async ({
+			expect,
+		}) => {
+			let listApplicationsCalls = 0;
+			msw.use(
+				http.delete(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => HttpResponse.json({ success: true, result: null })
+				),
+				http.get("*/applications", () => {
+					listApplicationsCalls++;
+					return HttpResponse.json({ success: true, result: [] });
+				})
+			);
+			await runWrangler(
+				"preview delete --name my-feature -y --worker-name test-worker"
+			);
+			expect(listApplicationsCalls).toBe(0);
+		});
+
+		test("should continue deleting the preview when container cleanup fails", async ({
+			expect,
+		}) => {
+			mkdirSync("src", { recursive: true });
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			let previewDeleted = false;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.delete(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => {
+						previewDeleted = true;
+						return HttpResponse.json({ success: true, result: null });
+					}
+				)
+			);
+			await runWrangler(
+				"preview delete --name my-feature -y --worker-name test-worker"
+			);
+			expect(previewDeleted).toBe(true);
+			expect(std.warn).toContain(
+				'Preview "my-feature" was not found; skipping container application cleanup'
+			);
 		});
 	});
 });
