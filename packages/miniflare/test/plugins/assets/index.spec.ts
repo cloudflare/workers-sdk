@@ -43,7 +43,6 @@ test("starts without error when assets directory does not exist", async ({
 test("starts without error when assets directory is empty", async ({
 	expect,
 }) => {
-	// useTmp() creates the directory for us; we leave it empty
 	const tmp = await useTmp();
 
 	const mf = new Miniflare(makeOptions(tmp));
