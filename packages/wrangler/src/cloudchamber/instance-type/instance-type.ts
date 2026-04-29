@@ -117,7 +117,11 @@ export function checkInstanceType(
 	// memory or vcpu specified in the config
 	if (args.memory !== undefined || args.vcpu !== undefined) {
 		throw new UserError(
-			`Field "instance_type" is mutually exclusive with "memory" and "vcpu". These fields cannot be set together.`
+			`Field "instance_type" is mutually exclusive with "memory" and "vcpu". These fields cannot be set together.`,
+			{
+				telemetryMessage:
+					"cloudchamber instance type conflicting configuration",
+			}
 		);
 	}
 
@@ -125,7 +129,8 @@ export function checkInstanceType(
 		return instance_type as InstanceType;
 	} else {
 		throw new UserError(
-			`"instance_type" field value is expected to be one of 'lite', 'basic', 'standard-1', 'standard-2', 'standard-3', 'standard-4', but got "${instance_type}"`
+			`"instance_type" field value is expected to be one of 'lite', 'basic', 'standard-1', 'standard-2', 'standard-3', 'standard-4', but got "${instance_type}"`,
+			{ telemetryMessage: "cloudchamber instance type invalid value" }
 		);
 	}
 }

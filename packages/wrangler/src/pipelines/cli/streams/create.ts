@@ -60,7 +60,8 @@ export const pipelinesStreamsCreateCommand = createCommand({
 				schemaContent = readFileSync(args.schemaFile, "utf-8");
 			} catch (error) {
 				throw new UserError(
-					`Failed to read schema file '${args.schemaFile}': ${error instanceof Error ? error.message : String(error)}`
+					`Failed to read schema file '${args.schemaFile}': ${error instanceof Error ? error.message : String(error)}`,
+					{ telemetryMessage: "pipelines streams create schema file read failed" }
 				);
 			}
 
@@ -70,12 +71,15 @@ export const pipelinesStreamsCreateCommand = createCommand({
 				};
 			} catch (error) {
 				throw new UserError(
-					`Failed to parse schema file '${args.schemaFile}': ${error instanceof Error ? error.message : String(error)}`
+					`Failed to parse schema file '${args.schemaFile}': ${error instanceof Error ? error.message : String(error)}`,
+					{ telemetryMessage: "pipelines streams create schema file parse failed" }
 				);
 			}
 
 			if (!parsedSchema || !Array.isArray(parsedSchema.fields)) {
-				throw new UserError("Schema file must contain a 'fields' array");
+				throw new UserError("Schema file must contain a 'fields' array", {
+					telemetryMessage: "pipelines streams create invalid schema file",
+				});
 			}
 
 			schema = parsedSchema;
@@ -88,7 +92,8 @@ export const pipelinesStreamsCreateCommand = createCommand({
 
 			if (!confirmNoSchema) {
 				throw new UserError(
-					"Stream creation cancelled. Please provide a schema file using --schema-file"
+					"Stream creation cancelled. Please provide a schema file using --schema-file",
+					{ telemetryMessage: "pipelines streams create cancelled" }
 				);
 			}
 		}

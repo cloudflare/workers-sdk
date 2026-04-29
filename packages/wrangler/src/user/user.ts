@@ -610,31 +610,57 @@ class ErrorUnsupportedGrantType extends ErrorAccessTokenResponse {
 function toErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
 	switch (rawError) {
 		case "invalid_request":
-			return new ErrorInvalidRequest(rawError);
+			return new ErrorInvalidRequest(rawError, {
+				telemetryMessage: "user oauth invalid request",
+			});
 		case "invalid_grant":
-			return new ErrorInvalidGrant(rawError);
+			return new ErrorInvalidGrant(rawError, {
+				telemetryMessage: "user oauth invalid grant",
+			});
 		case "unauthorized_client":
-			return new ErrorUnauthorizedClient(rawError);
+			return new ErrorUnauthorizedClient(rawError, {
+				telemetryMessage: "user oauth unauthorized client",
+			});
 		case "access_denied":
-			return new ErrorAccessDenied(rawError);
+			return new ErrorAccessDenied(rawError, {
+				telemetryMessage: "user oauth access denied",
+			});
 		case "unsupported_response_type":
-			return new ErrorUnsupportedResponseType(rawError);
+			return new ErrorUnsupportedResponseType(rawError, {
+				telemetryMessage: "user oauth unsupported response type",
+			});
 		case "invalid_scope":
-			return new ErrorInvalidScope(rawError);
+			return new ErrorInvalidScope(rawError, {
+				telemetryMessage: "user oauth invalid scope",
+			});
 		case "server_error":
-			return new ErrorServerError(rawError);
+			return new ErrorServerError(rawError, {
+				telemetryMessage: "user oauth server error",
+			});
 		case "temporarily_unavailable":
-			return new ErrorTemporarilyUnavailable(rawError);
+			return new ErrorTemporarilyUnavailable(rawError, {
+				telemetryMessage: "user oauth temporarily unavailable",
+			});
 		case "invalid_client":
-			return new ErrorInvalidClient(rawError);
+			return new ErrorInvalidClient(rawError, {
+				telemetryMessage: "user oauth invalid client",
+			});
 		case "unsupported_grant_type":
-			return new ErrorUnsupportedGrantType(rawError);
+			return new ErrorUnsupportedGrantType(rawError, {
+				telemetryMessage: "user oauth unsupported grant type",
+			});
 		case "invalid_json":
-			return new ErrorInvalidJson(rawError);
+			return new ErrorInvalidJson(rawError, {
+				telemetryMessage: "user oauth invalid json",
+			});
 		case "invalid_token":
-			return new ErrorInvalidToken(rawError);
+			return new ErrorInvalidToken(rawError, {
+				telemetryMessage: "user oauth invalid token",
+			});
 		default:
-			return new ErrorUnknown(rawError);
+			return new ErrorUnknown(rawError, {
+				telemetryMessage: "user oauth unknown error",
+			});
 	}
 }
 
@@ -687,7 +713,9 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 		logger.warn(
 			"Received query string parameter doesn't match the one sent! Possible malicious activity somewhere."
 		);
-		throw new ErrorInvalidReturnedStateParam();
+		throw new ErrorInvalidReturnedStateParam(undefined, {
+			telemetryMessage: "user oauth invalid returned state",
+		});
 	}
 	assert(!Array.isArray(code));
 	state.authorizationCode = code;
@@ -758,7 +786,8 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 				: tokenExchangeResErr;
 		} else {
 			throw new ErrorUnknown(
-				"Failed to parse Error from exchangeRefreshTokenForAccessToken"
+				"Failed to parse Error from exchangeRefreshTokenForAccessToken",
+				{ telemetryMessage: "user oauth refresh token exchange parse error" }
 			);
 		}
 	} else {
@@ -1023,7 +1052,8 @@ export async function getOauthToken(options: {
 			clearTimeout(loginTimeoutHandle);
 			reject(
 				new UserError(
-					"Timed out waiting for authorization code, please try again."
+					"Timed out waiting for authorization code, please try again.",
+					{ telemetryMessage: "user oauth authorization timeout" }
 				)
 			);
 		}, 120000); // wait for 120 seconds for the user to authorize
@@ -1061,7 +1091,12 @@ export async function getOauthToken(options: {
 								Location: options.denied.url,
 							});
 							res.end(() => {
-								finish(null, new UserError(options.denied.error));
+								finish(
+									null,
+									new UserError(options.denied.error, {
+										telemetryMessage: "user oauth consent denied",
+									})
+								);
 							});
 
 							return;
@@ -1072,7 +1107,12 @@ export async function getOauthToken(options: {
 					}
 					if (!hasAuthCode) {
 						// render an error page here
-						finish(null, new ErrorNoAuthCode());
+						finish(
+							null,
+							new ErrorNoAuthCode(undefined, {
+								telemetryMessage: "user oauth missing auth code",
+							})
+						);
 						return;
 					} else {
 						const exchange = await exchangeAuthCodeForAccessToken();
@@ -1136,7 +1176,9 @@ export async function login(
 		throw new UserError(dedent`
 			OAuth login is not supported in the \`${complianceRegion}\` compliance region.
 			Please use a Cloudflare API token (\`CLOUDFLARE_API_TOKEN\` environment variable) or remove the ${configurationSource}.
-		`);
+		`, {
+			telemetryMessage: "user login unsupported compliance region",
+		});
 	}
 
 	logger.log("Attempting to login via OAuth...");
@@ -1307,10 +1349,11 @@ Please set the appropriate \`account_id\` in your ${configFileName(undefined)} f
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
 	.map(
-		(account) =>
-			`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${account.id}\``
-	)
-	.join("\n")}`
+				(account) =>
+					`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${account.id}\``
+			)
+			.join("\n")}`,
+				{ telemetryMessage: "user account selection unavailable" }
 			);
 		}
 		throw e;
@@ -1329,16 +1372,21 @@ export async function requireAuth(
 	if (!loggedIn) {
 		if (isNonInteractiveOrCI()) {
 			throw new UserError(
-				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."
+				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.",
+				{ telemetryMessage: "user auth missing api token non interactive" }
 			);
 		} else {
 			// didn't login, let's just quit
-			throw new UserError("Did not login, quitting...");
+			throw new UserError("Did not login, quitting...", {
+				telemetryMessage: "user login cancelled",
+			});
 		}
 	}
 	const accountId = await getAccountId(config);
 	if (!accountId) {
-		throw new UserError("No account id found, quitting...");
+		throw new UserError("No account id found, quitting...", {
+			telemetryMessage: "user auth missing account id",
+		});
 	}
 
 	return accountId;
@@ -1350,7 +1398,9 @@ export async function requireAuth(
 export function requireApiToken(): ApiCredentials {
 	const credentials = getAPIToken();
 	if (!credentials) {
-		throw new UserError("No API token found.");
+		throw new UserError("No API token found.", {
+			telemetryMessage: "user auth missing api token",
+		});
 	}
 	return credentials;
 }

@@ -44,7 +44,12 @@ export async function whoami(
 	if (json) {
 		const user = await getUserInfo(complianceConfig);
 		if (!user) {
-			throw createFatalError({ loggedIn: false } satisfies WhoamiResult, true);
+			throw createFatalError(
+				{ loggedIn: false } satisfies WhoamiResult,
+				true,
+				undefined,
+				{ telemetryMessage: "user whoami unauthenticated" }
+			);
 		}
 		const result: WhoamiResult = {
 			loggedIn: true,

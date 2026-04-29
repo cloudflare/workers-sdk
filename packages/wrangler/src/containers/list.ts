@@ -59,7 +59,8 @@ async function fetchContainerPage(
 		if (err instanceof ApiError) {
 			if (err.status === 400 || err.status === 404) {
 				throw new UserError(
-					`There has been an error listing containers.\n${err.body.error}`
+					`There has been an error listing containers.\n${err.body.error}`,
+					{ telemetryMessage: "containers list fetch failed" }
 				);
 			}
 
@@ -109,7 +110,9 @@ const listArgs = {
 		default: 25,
 		coerce: (val: number) => {
 			if (val < 1) {
-				throw new UserError("--per-page must be at least 1");
+				throw new UserError("--per-page must be at least 1", {
+					telemetryMessage: "containers list invalid per-page",
+				});
 			}
 			return val;
 		},
@@ -135,7 +138,11 @@ export async function listCommand(args: ListArgs): Promise<void> {
 				throw err;
 			}
 			const message = err instanceof Error ? err.message : "Unknown error";
-			throw new JsonFriendlyFatalError(JSON.stringify({ error: message }));
+			throw new JsonFriendlyFatalError(
+				JSON.stringify({ error: message }),
+				undefined,
+				{ telemetryMessage: "containers list json output failed" }
+			);
 		}
 	}
 

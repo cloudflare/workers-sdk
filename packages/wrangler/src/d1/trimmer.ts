@@ -20,7 +20,11 @@ export function trimSqlQuery(sql: string): string {
 	//if the trimmed output STILL contains transactions, we should just tell them to remove them and try again.
 	if (mayContainTransaction(trimmedSql)) {
 		throw new UserError(
-			"Wrangler could not process the provided SQL file, as it contains several transactions.\nD1 runs your SQL in a transaction for you.\nPlease export an SQL file from your SQLite database and try again."
+			"Wrangler could not process the provided SQL file, as it contains several transactions.\nD1 runs your SQL in a transaction for you.\nPlease export an SQL file from your SQLite database and try again.",
+			{
+				telemetryMessage:
+					"d1 execute sql file contains multiple transactions",
+			}
 		);
 	}
 

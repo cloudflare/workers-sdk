@@ -20,7 +20,7 @@ import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { isKnownFramework } from "../frameworks";
 import { staticFramework } from "../frameworks/all-frameworks";
 import type { PackageManager } from "../../package-manager";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config, TelemetryMessage } from "@cloudflare/workers-utils";
 import type { Settings } from "@netlify/build-info";
 
 /**
@@ -78,7 +78,11 @@ export async function detectFramework(
 
 		if (!workspaceRootIncludesProject) {
 			throw new UserError(
-				"The Wrangler application detection logic has been run in the root of a workspace instead of targeting a specific project. Change your working directory to one of the applications in the workspace and try again."
+				"The Wrangler application detection logic has been run in the root of a workspace instead of targeting a specific project. Change your working directory to one of the applications in the workspace and try again.",
+				{
+					telemetryMessage:
+						"autoconfig detection workspace root unsupported",
+				}
 			);
 		}
 	}
@@ -163,7 +167,12 @@ function convertDetectedPackageManager(
 }
 
 class MultipleFrameworksCIError extends FatalError {
-	constructor(frameworks: string[]) {
+	constructor(
+		frameworks: string[],
+		telemetryOptions: TelemetryMessage = {
+			telemetryMessage: "autoconfig detection multiple frameworks",
+		}
+	) {
 		super(
 			dedent`Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: ${frameworks.join(
 				", "
@@ -177,7 +186,7 @@ class MultipleFrameworksCIError extends FatalError {
 
 			`,
 			1,
-			{ telemetryMessage: true }
+			telemetryOptions
 		);
 	}
 }
@@ -185,7 +194,9 @@ class MultipleFrameworksCIError extends FatalError {
 function throwMultipleFrameworksNonInteractiveError(
 	settings: Settings[]
 ): never {
-	throw new MultipleFrameworksCIError(settings.map((b) => b.name));
+	throw new MultipleFrameworksCIError(settings.map((b) => b.name), {
+		telemetryMessage: "autoconfig detection multiple frameworks",
+	});
 }
 
 type DetectedFramework = {
@@ -313,7 +324,8 @@ function maybeFindDetectedFramework(
 	// (otherwise we just pick the first one as the user is always able to choose a different framework or terminate the process anyways)
 	if (isNonInteractiveOrCI()) {
 		throw new MultipleFrameworksCIError(
-			settingsForOnlyKnownFrameworks.map((b) => b.name)
+			settingsForOnlyKnownFrameworks.map((b) => b.name),
+			{ telemetryMessage: "autoconfig detection multiple frameworks" }
 		);
 	}
 

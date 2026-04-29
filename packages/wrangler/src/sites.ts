@@ -417,7 +417,8 @@ async function validateAssetSize(
 	const { size } = await stat(absFilePath);
 	if (size > 25 * 1024 * 1024) {
 		throw new UserError(
-			`File ${relativeFilePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
+			`File ${relativeFilePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`,
+			{ telemetryMessage: "sites asset size too large" }
 		);
 	}
 }
@@ -425,7 +426,8 @@ async function validateAssetSize(
 function validateAssetKey(assetKey: string) {
 	if (assetKey.length > 512) {
 		throw new UserError(
-			`The asset path key "${assetKey}" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",`
+			`The asset path key "${assetKey}" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",`,
+			{ telemetryMessage: "sites asset key too long" }
 		);
 	}
 }

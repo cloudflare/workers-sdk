@@ -100,7 +100,9 @@ export function readConfig(
 
 	void logWarningsWithUpgradeHint(diagnostics, options?.hideWarnings);
 	if (diagnostics.hasErrors()) {
-		throw new UserError(diagnostics.renderErrors());
+		throw new UserError(diagnostics.renderErrors(), {
+			telemetryMessage: "config wrangler validation failed",
+		});
 	}
 
 	return config;
@@ -135,14 +137,16 @@ export function readPagesConfig(
 		logger.error(e);
 		throw new FatalError(
 			`Your ${configFileName(configPath)} file is not a valid Pages configuration file`,
-			EXIT_CODE_INVALID_PAGES_CONFIG
+			EXIT_CODE_INVALID_PAGES_CONFIG,
+			{ telemetryMessage: "config pages parse failed" }
 		);
 	}
 
 	if (!isPagesConfig(rawConfig)) {
 		throw new FatalError(
 			`Your ${configFileName(configPath)} file is not a valid Pages configuration file`,
-			EXIT_CODE_INVALID_PAGES_CONFIG
+			EXIT_CODE_INVALID_PAGES_CONFIG,
+			{ telemetryMessage: "config pages validation failed" }
 		);
 	}
 
@@ -155,7 +159,9 @@ export function readPagesConfig(
 
 	void logWarningsWithUpgradeHint(diagnostics, options.hideWarnings);
 	if (diagnostics.hasErrors()) {
-		throw new UserError(diagnostics.renderErrors());
+		throw new UserError(diagnostics.renderErrors(), {
+			telemetryMessage: "config pages validation failed",
+		});
 	}
 
 	logger.debug(`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`);
@@ -168,7 +174,9 @@ export function readPagesConfig(
 		logger.warn(pagesDiagnostics.renderWarnings());
 	}
 	if (pagesDiagnostics.hasErrors()) {
-		throw new UserError(pagesDiagnostics.renderErrors());
+		throw new UserError(pagesDiagnostics.renderErrors(), {
+			telemetryMessage: "config pages project validation failed",
+		});
 	}
 
 	return config as Omit<Config, "pages_build_output_dir"> & {

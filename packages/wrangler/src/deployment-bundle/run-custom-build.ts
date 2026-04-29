@@ -54,6 +54,7 @@ export async function runCommand(
 		throw new UserError(
 			`Running custom build \`${command}\` failed. There are likely more logs from your build command above.`,
 			{
+				telemetryMessage: "custom build failed",
 				cause: e,
 			}
 		);
@@ -107,7 +108,8 @@ function assertEntryPointExists(
 				expectedEntryRelative,
 				customBuildCommand,
 				configPath
-			)
+			),
+			{ telemetryMessage: "missing entrypoint after custom build" }
 		);
 	}
 }

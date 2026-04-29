@@ -718,7 +718,9 @@ export function createCLIParser(argv: string[]) {
 		() => {},
 		async (args) => {
 			if (args._.length > 0) {
-				throw new CommandLineArgsError(`Unknown command: ${args._}.`);
+				throw new CommandLineArgsError(`Unknown command: ${args._}.`, {
+					telemetryMessage: "cli command unknown command",
+				});
 			} else {
 				// args.v will exist and be true in the case that no command is called, and the -v
 				// option is present. This is to allow for running asynchronous printWranglerBanner
@@ -2252,7 +2254,9 @@ export async function main(argv: string[]): Promise<void> {
 			logger.info("");
 			logger.error(`Unknown argument: ${subCommand}`);
 			await showHelpWithCategories();
-			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`);
+			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`, {
+				telemetryMessage: "cli help unknown argument",
+			});
 		}
 	}
 

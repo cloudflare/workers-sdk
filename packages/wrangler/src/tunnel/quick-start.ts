@@ -132,7 +132,11 @@ export const tunnelQuickStartCommand = createCommand({
 						`  wrangler tunnel quick-start ${args.url}`;
 				}
 
-				reject(new UserError(message));
+				reject(
+					new UserError(message, {
+						telemetryMessage: "tunnel quick start cloudflared spawn failed",
+					})
+				);
 			});
 
 			cloudflared.on("exit", (code, signal) => {
@@ -162,9 +166,13 @@ export const tunnelQuickStartCommand = createCommand({
 							`Try running with --log-level debug for more information.`;
 					}
 
-					reject(new UserError(message));
-					return;
-				}
+				reject(
+					new UserError(message, {
+						telemetryMessage: "tunnel quick start cloudflared exited",
+					})
+				);
+				return;
+			}
 
 				resolve();
 			});

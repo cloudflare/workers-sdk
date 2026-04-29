@@ -26,7 +26,9 @@ export const queuesPurgeCommand = createCommand({
 	async handler(args, { config }) {
 		if (!args.force && !isInteractive()) {
 			throw new FatalError(
-				"The --force flag is required to purge a Queue in non-interactive mode"
+				"The --force flag is required to purge a Queue in non-interactive mode",
+				undefined,
+				{ telemetryMessage: "queues purge force required" }
 			);
 		}
 
@@ -37,7 +39,9 @@ export const queuesPurgeCommand = createCommand({
 
 			if (result !== args.name) {
 				throw new FatalError(
-					"Incorrect queue name provided. Skipping purge operation"
+					"Incorrect queue name provided. Skipping purge operation",
+					undefined,
+					{ telemetryMessage: "queues purge confirmation mismatch" }
 				);
 			}
 		}

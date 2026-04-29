@@ -119,7 +119,8 @@ async function fetchPage(
 		if (err instanceof ApiError) {
 			if (err.status === 400 || err.status === 404) {
 				throw new UserError(
-					`There has been an error fetching instances.\n${err.body.error}\nUse \`wrangler containers list\` to view your containers and corresponding IDs.`
+					`There has been an error fetching instances.\n${err.body.error}\nUse \`wrangler containers list\` to view your containers and corresponding IDs.`,
+					{ telemetryMessage: "containers instances fetch failed" }
 				);
 			}
 
@@ -216,7 +217,9 @@ const instancesArgs = {
 		default: 25,
 		coerce: (val: number) => {
 			if (val < 1) {
-				throw new UserError("--per-page must be at least 1");
+				throw new UserError("--per-page must be at least 1", {
+					telemetryMessage: "containers instances invalid per-page",
+				});
 			}
 			return val;
 		},
@@ -235,7 +238,8 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 	if (!uuidRegex.test(args.ID)) {
 		throw new UserError(
-			`Expected an application ID but got ${args.ID}. Use \`wrangler containers list\` to view your containers and corresponding IDs.`
+			`Expected an application ID but got ${args.ID}. Use \`wrangler containers list\` to view your containers and corresponding IDs.`,
+			{ telemetryMessage: "containers instances invalid application id" }
 		);
 	}
 
@@ -251,7 +255,11 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 				throw err;
 			}
 			const message = err instanceof Error ? err.message : "Unknown error";
-			throw new JsonFriendlyFatalError(JSON.stringify({ error: message }));
+			throw new JsonFriendlyFatalError(
+				JSON.stringify({ error: message }),
+				undefined,
+				{ telemetryMessage: "containers instances json output failed" }
+			);
 		}
 	}
 

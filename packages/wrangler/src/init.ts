@@ -91,7 +91,7 @@ export const init = createCommand({
 					throw new UserError(
 						"wrangler couldn't find a Worker with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account.",
 						{
-							telemetryMessage: true,
+							telemetryMessage: "init from dash worker not found",
 						}
 					);
 				}
@@ -187,7 +187,9 @@ export async function downloadWorker(accountId: string, workerName: string) {
 
 	if (config.assets) {
 		throw new FatalError(
-			"`wrangler init --from-dash` is not yet supported for Workers with Assets"
+			"`wrangler init --from-dash` is not yet supported for Workers with Assets",
+			undefined,
+			{ telemetryMessage: "init from dash assets unsupported" }
 		);
 	}
 

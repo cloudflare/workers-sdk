@@ -35,7 +35,8 @@ export const pagesFunctionsOptimizeRoutesCommand = createCommand({
 		if (!existsSync(routesPath)) {
 			throw new FatalError(
 				`Oops! File ${routesPath} does not exist. Please make sure --routes-path is a valid file path (for example "/public/_routes.json").`,
-				1
+				1,
+				{ telemetryMessage: "pages functions optimize routes file not found" }
 			);
 		}
 
@@ -46,14 +47,22 @@ export const pagesFunctionsOptimizeRoutesCommand = createCommand({
 		) {
 			throw new FatalError(
 				`Oops! Folder ${routesOutputDirectory} does not exist. Please make sure --output-routes-path is a valid file path (for example "/public/_routes.json").`,
-				1
+				1,
+				{
+					telemetryMessage:
+						"pages functions optimize routes output directory not found",
+				}
 			);
 		}
 
 		try {
 			routesFileContents = readFileSync(routesPath, "utf-8");
 		} catch (err) {
-			throw new FatalError(`Error while reading ${routesPath} file: ${err}`);
+			throw new FatalError(
+				`Error while reading ${routesPath} file: ${err}`,
+				undefined,
+				{ telemetryMessage: "pages functions optimize routes read failed" }
+			);
 		}
 
 		const routes = JSON.parse(routesFileContents);
@@ -68,7 +77,8 @@ export const pagesFunctionsOptimizeRoutesCommand = createCommand({
 		} catch (err) {
 			throw new FatalError(
 				`Error writing to ${outputRoutesPath} file: ${err}`,
-				1
+				1,
+				{ telemetryMessage: "pages functions optimize routes write failed" }
 			);
 		}
 	},

@@ -191,7 +191,8 @@ export function translateCLICommandToFilterMessage(
 function parseSamplingRate(sampling_rate: number): SamplingRateFilter {
 	if (sampling_rate <= 0 || sampling_rate >= 1) {
 		throw new UserError(
-			"A sampling rate must be between 0 and 1 in order to have any effect.\nFor example, a sampling rate of 0.25 means 25% of events will be logged."
+			"A sampling rate must be between 0 and 1 in order to have any effect.\nFor example, a sampling rate of 0.25 means 25% of events will be logged.",
+			{ telemetryMessage: "tail filters invalid sampling rate" }
 		);
 	}
 

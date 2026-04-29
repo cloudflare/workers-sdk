@@ -66,7 +66,8 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 			// Catch-all only supports forward and drop
 			if (args.actionType !== "forward" && args.actionType !== "drop") {
 				throw new UserError(
-					"Catch-all rule only supports 'forward' or 'drop' action types"
+					"Catch-all rule only supports 'forward' or 'drop' action types",
+					{ telemetryMessage: "email routing rules update invalid catch all action" }
 				);
 			}
 			if (
@@ -74,24 +75,28 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 				(!args.actionValue || args.actionValue.length === 0)
 			) {
 				throw new UserError(
-					"--action-value is required when --action-type is 'forward'"
+					"--action-value is required when --action-type is 'forward'",
+					{ telemetryMessage: "email routing rules update missing forward action value" }
 				);
 			}
 		} else {
 			// Regular rules require matcher args
 			if (!args.matchType) {
 				throw new UserError(
-					"--match-type is required when updating a regular rule"
+					"--match-type is required when updating a regular rule",
+					{ telemetryMessage: "email routing rules update missing match type" }
 				);
 			}
 			if (!args.matchField) {
 				throw new UserError(
-					"--match-field is required when updating a regular rule"
+					"--match-field is required when updating a regular rule",
+					{ telemetryMessage: "email routing rules update missing match field" }
 				);
 			}
 			if (!args.matchValue) {
 				throw new UserError(
-					"--match-value is required when updating a regular rule"
+					"--match-value is required when updating a regular rule",
+					{ telemetryMessage: "email routing rules update missing match value" }
 				);
 			}
 			if (
@@ -99,7 +104,8 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 				(!args.actionValue || args.actionValue.length === 0)
 			) {
 				throw new UserError(
-					"--action-value is required when --action-type is not 'drop'"
+					"--action-value is required when --action-type is not 'drop'",
+					{ telemetryMessage: "email routing rules update missing action value" }
 				);
 			}
 		}
@@ -136,7 +142,8 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 		// validateArgs guarantees these are present for regular rules
 		if (!args.matchType || !args.matchField || !args.matchValue) {
 			throw new UserError(
-				"--match-type, --match-field, and --match-value are required when updating a regular rule"
+				"--match-type, --match-field, and --match-value are required when updating a regular rule",
+				{ telemetryMessage: "email routing rules update missing matcher fields" }
 			);
 		}
 

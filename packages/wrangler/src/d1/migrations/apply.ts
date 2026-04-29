@@ -71,7 +71,8 @@ export const d1MigrationsApplyCommand = createCommand({
 	async handler({ database, local, remote, persistTo, preview }, { config }) {
 		if (!config.configPath) {
 			throw new UserError(
-				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
+				"No configuration file found. Create a wrangler.jsonc file to define your D1 database.",
+				{ telemetryMessage: "d1 migrations apply missing config file" }
 			);
 		}
 
@@ -81,7 +82,11 @@ export const d1MigrationsApplyCommand = createCommand({
 
 		if (!databaseInfo && remote) {
 			throw new UserError(
-				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`
+				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`,
+				{
+					telemetryMessage:
+						"d1 migrations apply database not found in config",
+				}
 			);
 		}
 
@@ -224,7 +229,8 @@ Your database may not be available to serve requests during the migration, conti
 						.map((err) => {
 							return err;
 						})
-						.join("\n")
+						.join("\n"),
+					{ telemetryMessage: "d1 migrations apply migration failed" }
 				);
 			}
 		}

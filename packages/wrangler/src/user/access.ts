@@ -117,7 +117,11 @@ export async function getAccessHeaders(
 				`and the current environment is non-interactive.\n` +
 				`Set the CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET environment variables ` +
 				`to authenticate with an Access Service Token.\n` +
-				`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/`
+				`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/`,
+			{
+				telemetryMessage:
+					"user access missing service token non interactive",
+			}
 		);
 	}
 
@@ -126,7 +130,8 @@ export async function getAccessHeaders(
 	const output = spawnSync("cloudflared", ["access", "login", domain]);
 	if (output.error) {
 		throw new UserError(
-			"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
+			"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation",
+			{ telemetryMessage: "user access missing cloudflared" }
 		);
 	}
 	const stringOutput = output.stdout.toString();

@@ -198,7 +198,8 @@ async function getZoneIdFromHost(
 	}
 
 	throw new UserError(
-		`Could not find zone for \`${from.host}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
+		`Could not find zone for \`${from.host}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`,
+		{ telemetryMessage: "zones route zone not found" }
 	);
 }
 
@@ -284,7 +285,8 @@ export async function getWorkerForZone(
 	});
 	if (!zone) {
 		throw new UserError(
-			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`
+			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`,
+			{ telemetryMessage: "zones route outside account zones" }
 		);
 	}
 	const routes = await getRoutesForZone(complianceConfig, zone.id);
@@ -296,11 +298,13 @@ export async function getWorkerForZone(
 
 		if (!closestRoute) {
 			throw new UserError(
-				`The route '${worker}' has no workers assigned. You can assign a worker to it from your ${configFileName(configPath)} file or the Cloudflare dashboard`
+				`The route '${worker}' has no workers assigned. You can assign a worker to it from your ${configFileName(configPath)} file or the Cloudflare dashboard`,
+				{ telemetryMessage: "zones route missing worker assignment" }
 			);
 		} else {
 			throw new UserError(
-				`The route '${worker}' has no workers assigned. Did you mean to tail the route '${closestRoute.pattern}'?`
+				`The route '${worker}' has no workers assigned. Did you mean to tail the route '${closestRoute.pattern}'?`,
+				{ telemetryMessage: "zones route suggested worker assignment" }
 			);
 		}
 	}

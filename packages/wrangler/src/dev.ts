@@ -268,12 +268,14 @@ export const dev = createCommand({
 	async validateArgs(args) {
 		if (args.nodeCompat) {
 			throw new UserError(
-				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`,
+				{ telemetryMessage: "dev command node compat unsupported" }
 			);
 		}
 		if (args.liveReload && args.remote) {
 			throw new UserError(
-				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
+				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload.",
+				{ telemetryMessage: "dev command live reload remote conflict" }
 			);
 		}
 		if (args.tunnel && args.remote) {
@@ -434,7 +436,8 @@ export function getInferredHost(
 		configPath
 	)}
 	\`\`\`
-`
+`,
+				{ telemetryMessage: "dev command host inference failed" }
 			);
 		}
 		return host;

@@ -19,7 +19,8 @@ function parseSinkType(type: string): "r2" | "r2_data_catalog" {
 		return type === "r2-data-catalog" ? "r2_data_catalog" : "r2";
 	}
 	throw new UserError(
-		`Invalid sink type: ${type}. Must be 'r2' or 'r2-data-catalog'`
+		`Invalid sink type: ${type}. Must be 'r2' or 'r2-data-catalog'`,
+		{ telemetryMessage: "pipelines sinks create invalid sink type" }
 	);
 }
 
@@ -113,29 +114,34 @@ export const pipelinesSinksCreateCommand = createCommand({
 
 		if (!isValidR2BucketName(args.bucket)) {
 			throw new CommandLineArgsError(
-				`The bucket name "${args.bucket}" is invalid. ${bucketFormatMessage}`
+				`The bucket name "${args.bucket}" is invalid. ${bucketFormatMessage}`,
+				{ telemetryMessage: "pipelines sinks create invalid bucket name" }
 			);
 		}
 
 		if (sinkType === "r2_data_catalog") {
 			if (!args.namespace) {
 				throw new CommandLineArgsError(
-					"--namespace is required for r2-data-catalog sinks"
+					"--namespace is required for r2-data-catalog sinks",
+					{ telemetryMessage: "pipelines sinks create missing namespace" }
 				);
 			}
 			if (!args.table) {
 				throw new CommandLineArgsError(
-					"--table is required for r2-data-catalog sinks"
+					"--table is required for r2-data-catalog sinks",
+					{ telemetryMessage: "pipelines sinks create missing table" }
 				);
 			}
 			if (!args.catalogToken) {
 				throw new CommandLineArgsError(
-					"--catalog-token is required for r2-data-catalog sinks"
+					"--catalog-token is required for r2-data-catalog sinks",
+					{ telemetryMessage: "pipelines sinks create missing catalog token" }
 				);
 			}
 			if (args.format === "json") {
 				throw new CommandLineArgsError(
-					"r2-data-catalog sinks only support parquet format, not JSON"
+					"r2-data-catalog sinks only support parquet format, not JSON",
+					{ telemetryMessage: "pipelines sinks create invalid format" }
 				);
 			}
 		}
@@ -260,7 +266,8 @@ export const pipelinesSinksCreateCommand = createCommand({
 			}
 
 			throw new UserError(
-				`Failed to create sink '${sinkName}': ${errorMessage}`
+				`Failed to create sink '${sinkName}': ${errorMessage}`,
+				{ telemetryMessage: "pipelines sinks create failed" }
 			);
 		}
 

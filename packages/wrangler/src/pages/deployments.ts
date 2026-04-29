@@ -60,7 +60,9 @@ export const pagesDeploymentListCommand = createCommand({
 		}
 
 		if (!projectName) {
-			throw new FatalError("Must specify a project name.", 1);
+			throw new FatalError("Must specify a project name.", 1, {
+				telemetryMessage: "pages deployments list missing project name",
+			});
 		}
 
 		const deployments: Array<Deployment> = await fetchResult(
@@ -157,7 +159,9 @@ export const pagesDeploymentDeleteCommand = createCommand({
 		}
 
 		if (!projectName) {
-			throw new FatalError("Must specify a project name.", 1);
+			throw new FatalError("Must specify a project name.", 1, {
+				telemetryMessage: "pages deployments delete missing project name",
+			});
 		}
 
 		const confirmed =

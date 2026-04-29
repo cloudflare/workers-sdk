@@ -194,7 +194,8 @@ export async function getQueue(
 	const queues = await listQueues(config, 1, queueName);
 	if (queues.length === 0) {
 		throw new UserError(
-			`Queue "${queueName}" does not exist. To create it, run: wrangler queues create ${queueName}`
+			`Queue "${queueName}" does not exist. To create it, run: wrangler queues create ${queueName}`,
+			{ telemetryMessage: "queues lookup missing queue" }
 		);
 	}
 	return queues[0];
@@ -224,7 +225,8 @@ async function ensureQueuesExist(config: Config, queueNames: string[]) {
 			for (const queue of queueNames) {
 				if (!queueSet.has(queue)) {
 					throw new UserError(
-						`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
+						`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`,
+						{ telemetryMessage: "queues config missing queue" }
 					);
 				}
 			}
@@ -336,7 +338,8 @@ async function resolveWorkerConsumerByName(
 
 	if (consumers.length === 0) {
 		throw new UserError(
-			`No worker consumer '${consumerName}' exists for queue ${queue.queue_name}`
+			`No worker consumer '${consumerName}' exists for queue ${queue.queue_name}`,
+			{ telemetryMessage: "queues worker consumer missing" }
 		);
 	}
 
@@ -351,7 +354,8 @@ async function resolveWorkerConsumerByName(
 
 		if (targetConsumers.length === 0) {
 			throw new UserError(
-				`No worker consumer '${consumerName}' exists for queue ${queueName}`
+				`No worker consumer '${consumerName}' exists for queue ${queueName}`,
+				{ telemetryMessage: "queues worker consumer missing environment" }
 			);
 		}
 		return consumers[0];
@@ -362,7 +366,8 @@ async function resolveWorkerConsumerByName(
 			envName ?? (await getDefaultService(config, consumerName));
 		if (targetEnv != consumers[0].environment) {
 			throw new UserError(
-				`No worker consumer '${consumerName}' exists for queue ${queueName}`
+				`No worker consumer '${consumerName}' exists for queue ${queueName}`,
+				{ telemetryMessage: "queues worker consumer environment mismatch" }
 			);
 		}
 	}
@@ -391,7 +396,9 @@ export async function deletePullConsumer(
 	const queue = await getQueue(config, queueName);
 	const consumer = queue.consumers[0];
 	if (consumer?.type !== "http_pull") {
-		throw new UserError(`No http_pull consumer exists for queue ${queueName}`);
+		throw new UserError(`No http_pull consumer exists for queue ${queueName}`, {
+			telemetryMessage: "queues http pull consumer missing",
+		});
 	}
 	return deleteConsumerById(config, queue.queue_id, consumer.consumer_id);
 }
@@ -557,7 +564,8 @@ export async function getEventSubscriptionForQueue(
 	if (subscription.destination.queue_id !== queue.queue_id) {
 		throw new UserError(
 			`Subscription '${subscriptionId}' does not belong to queue '${queueName}'. ` +
-				`This subscription is configured for a different queue.`
+				`This subscription is configured for a different queue.`,
+			{ telemetryMessage: "queues subscription queue mismatch" }
 		);
 	}
 
