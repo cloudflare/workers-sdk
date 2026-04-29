@@ -10,11 +10,9 @@ describe("isTurborepo", () => {
 		expect(isTurborepo({ TURBO_HASH: "abc123" })).toBe(true);
 	});
 
-	it("returns true when TURBO_TASK is set", ({ expect }) => {
-		expect(isTurborepo({ TURBO_TASK: "dev" })).toBe(true);
-	});
-
-	it("returns true when TURBO_INVOCATION_DIR is set", ({ expect }) => {
-		expect(isTurborepo({ TURBO_INVOCATION_DIR: "/repo" })).toBe(true);
+	it("ignores other turbo env vars without TURBO_HASH", ({ expect }) => {
+		expect(
+			isTurborepo({ TURBO_TASK: "dev", TURBO_INVOCATION_DIR: "/repo" })
+		).toBe(false);
 	});
 });
