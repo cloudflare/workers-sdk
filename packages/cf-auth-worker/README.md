@@ -165,7 +165,7 @@ To point a local Wrangler build at a custom relay (for example, a `wrangler
 dev` instance of this worker), set:
 
 ```sh
-export WRANGLER_AUTH_WORKER_URL="http://127.0.0.1:8787"
+export WRANGLER_AUTH_WORKER_ORIGIN="http://127.0.0.1:8787"
 ```
 
 Wrangler will use that URL for both the WebSocket connection and the
@@ -188,7 +188,7 @@ The Wrangler side of this flow lives in
 [`packages/wrangler/src/user/user.ts`](../wrangler/src/user/user.ts), in
 `getOauthTokenViaWebSocket()`. The `--experimental-websocket-callback` flag is registered
 in [`packages/wrangler/src/user/commands.ts`](../wrangler/src/user/commands.ts)
-and the auth worker URL is configured via `getAuthWorkerUrlFromEnv()` in
+and the auth worker origin is configured via `getAuthWorkerOriginFromEnv()` in
 [`packages/wrangler/src/user/auth-variables.ts`](../wrangler/src/user/auth-variables.ts).
 
 [do]: https://developers.cloudflare.com/durable-objects/
