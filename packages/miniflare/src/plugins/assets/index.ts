@@ -53,6 +53,11 @@ import type { Logger } from "@cloudflare/workers-shared";
 import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
 import type { z } from "zod";
 
+// Cache of temp directories created for missing asset directories, keyed by
+// the configured assets directory path. Prevents accumulating orphaned temp
+// directories when getServices is called repeatedly
+const tempDirCache = new Map<string, string>();
+
 export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 	options: AssetsOptionsSchema,
 	async getBindings(options: z.infer<typeof AssetsOptionsSchema>) {
@@ -95,9 +100,21 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			// If the assets directory doesn't exist yet (e.g. the build output
 			// hasn't been generated), create an empty temp directory so that the
 			// asset services can still start up with zero assets.
-			assetDirectory = await fs.mkdtemp(
-				path.join(os.tmpdir(), "miniflare-assets-")
-			);
+			// Reuse a previously created temp directory for this path to avoid
+			// accumulating orphaned temp directories on repeated calls.
+			const cached = tempDirCache.get(assetDirectory);
+			const cachedExists = cached
+				? await fs.stat(cached).catch(() => undefined)
+				: undefined;
+			if (cached && cachedExists) {
+				assetDirectory = cached;
+			} else {
+				const originalDir = assetDirectory;
+				assetDirectory = await fs.mkdtemp(
+					path.join(os.tmpdir(), "miniflare-assets-")
+				);
+				tempDirCache.set(originalDir, assetDirectory);
+			}
 		}
 
 		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage`;
