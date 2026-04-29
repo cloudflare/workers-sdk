@@ -95,6 +95,20 @@ describe("pages project list", () => {
 		expect(requests.count).toBe(1);
 	});
 
+	it("should error before making a request when CLOUDFLARE_ACCOUNT_ID contains invalid characters", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "ваш-идентификатор-аккаунта");
+		const requests = mockProjectListRequest(expect, []);
+
+		await expect(runWrangler("pages project list")).rejects.toThrowError();
+
+		expect(requests.count).toBe(0);
+		expect(std.err).toContain(
+			"The account ID from the `CLOUDFLARE_ACCOUNT_ID` environment variable contains invalid characters."
+		);
+	});
+
 	it("should return JSON output when --json flag is provided", async ({
 		expect,
 	}) => {

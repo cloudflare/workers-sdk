@@ -235,6 +235,7 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { domainUsesAccess } from "./access";
+import { ensureValidAccountId } from "./account-id";
 import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
@@ -1269,7 +1270,10 @@ export async function getAccountId(
 ): Promise<string> {
 	// TODO: v5 we should prioritise the env var instead of the config value here, for consistency
 	if (config.account_id) {
-		return config.account_id;
+		return ensureValidAccountId(
+			config.account_id,
+			"the `account_id` field in your Wrangler configuration file"
+		);
 	}
 	// check if we have a cached value
 	const cachedAccount = getAccountFromCache();

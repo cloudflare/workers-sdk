@@ -38,6 +38,7 @@ import {
 } from "../cloudchamber/common";
 import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
 import { buildContainer } from "../containers/build";
+import { ensureValidAccountId } from "../user/account-id";
 import { getAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
@@ -386,7 +387,12 @@ export async function apply(
 			: args.imageRef.newTag;
 	log(dim("Container application changes\n"));
 
-	const accountId = config.account_id || (await getAccountId(config));
+	const accountId = config.account_id
+		? ensureValidAccountId(
+				config.account_id,
+				"the `account_id` field in your Wrangler configuration file"
+			)
+		: await getAccountId(config);
 
 	// let's always convert normalised container config -> CreateApplicationRequest
 	// since CreateApplicationRequest is a superset of ModifyApplicationRequestBody
