@@ -2,7 +2,7 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
-import { Analytics } from "./analytics";
+import { Analytics, EntrypointType } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
 import { normalizeConfiguration } from "./configuration";
 import { ExperimentAnalytics } from "./experiment-analytics";
@@ -16,6 +16,7 @@ import type {
 	SpanContext,
 	UnsafePerformanceTimer,
 } from "../../utils/types";
+import type { AccountCohortQuerierBinding } from "../worker-configuration";
 import type { Environment, ReadyAnalytics } from "./types";
 
 // ============================================================
@@ -49,6 +50,7 @@ export type Env = {
 	COLO_METADATA: ColoMetadata;
 	UNSAFE_PERFORMANCE: UnsafePerformanceTimer;
 	VERSION_METADATA: WorkerVersionMetadata;
+	ACCOUNT_COHORT_QUERIER?: AccountCohortQuerierBinding;
 };
 
 export type AssetWorkerEntrypointProps = {
@@ -92,6 +94,7 @@ type AssetWorkerContext = ExecutionContext & {
 	exports?: {
 		AssetWorkerInner?: (options: {
 			props: AssetWorkerEntrypointProps;
+			version?: { cohort?: string };
 		}) => AssetWorkerMethods;
 	};
 	props?: AssetWorkerEntrypointProps;
@@ -209,12 +212,49 @@ async function unstableGetByPathnameImpl(
 	});
 }
 
+export const COHORT_LOOKUP_TIMEOUT_MS = 5;
+
+/**
+ * Resolves the deployment cohort for a customer account via the
+ * AccountCohortQuerier RPC binding. Returns null when the binding is
+ * unavailable, the RPC fails, times out, or the cohort is undetermined
+ * (cold cache). Intentionally fails open — a null cohort means the
+ * request runs under default routing.
+ */
+export async function lookupCohort(
+	env: Env,
+	accountId: number | undefined
+): Promise<string | null> {
+	const querier = env.ACCOUNT_COHORT_QUERIER;
+	if (!querier || !accountId) {
+		return null;
+	}
+	try {
+		const rpc = querier.lookupAccountCohort(accountId.toString());
+		const timeout = new Promise<never>((_, reject) => {
+			setTimeout(() => {
+				reject(new Error("cohort lookup timed out"));
+			}, COHORT_LOOKUP_TIMEOUT_MS);
+		});
+		const res = await Promise.race([rpc, timeout]);
+		if (!res.ok) {
+			console.error("cohort lookup failed", res.errors);
+			return null;
+		}
+		return res.result ?? null;
+	} catch (e: unknown) {
+		console.error("cohort lookup failed", e);
+		return null;
+	}
+}
+
 async function runFetchRequest(
 	request: Request,
 	env: Env,
 	ctx: ExecutionContext,
 	exists: ExistsFn,
-	getByETag: GetByETagFn
+	getByETag: GetByETagFn,
+	cohort?: string
 ): Promise<Response> {
 	let sentry: ReturnType<typeof setupSentry> | undefined;
 	const analytics = new Analytics(env.ANALYTICS);
@@ -262,6 +302,8 @@ async function runFetchRequest(
 				notFoundHandling: config.not_found_handling,
 				compatibilityFlags: config.compatibility_flags,
 				userAgent: userAgent,
+				entrypoint: EntrypointType.Inner,
+				cohort: cohort ?? "unknown",
 			});
 		}
 
@@ -315,10 +357,29 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 	extends WorkerEntrypoint<TEnv>
 	implements AssetWorkerMethods
 {
+	private resolvedCohort: string | null | undefined = undefined;
+
+	/**
+	 * Resolves and caches the cohort for this request. The cohort is
+	 * constant for the lifetime of the outer entrypoint instance, so
+	 * we only pay the RPC cost once even if multiple methods are called.
+	 */
+	private async getCohort(): Promise<string | null> {
+		if (this.resolvedCohort === undefined) {
+			this.resolvedCohort = await lookupCohort(
+				this.env,
+				this.env.CONFIG?.account_id
+			);
+		}
+		return this.resolvedCohort;
+	}
+
 	/**
 	 * Gets the inner entrypoint from ctx.exports to forward requests to.
+	 * When a cohort is provided, the runtime routes the inner entrypoint
+	 * to the version assigned to that cohort in the current deployment.
 	 */
-	private getInnerEntrypoint(): AssetWorkerMethods {
+	private getInnerEntrypoint(cohort?: string | null): AssetWorkerMethods {
 		const loopbackCtx = this.ctx as AssetWorkerContext;
 		const entrypoint = loopbackCtx.exports?.AssetWorkerInner;
 		if (entrypoint === undefined) {
@@ -330,6 +391,7 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		}
 		return entrypoint({
 			props: { traceContext: this.env.JAEGER.getSpanContext() },
+			...(cohort ? { version: { cohort } } : {}),
 		});
 	}
 
@@ -355,6 +417,7 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 					coloRegion: this.env.COLO_METADATA.coloRegion,
 					hostname: url.hostname,
 					version: this.env.VERSION_METADATA.tag,
+					entrypoint: EntrypointType.Outer,
 				});
 			}
 			sentry = setupSentry(
@@ -368,17 +431,28 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 				this.env.CONFIG?.account_id,
 				this.env.CONFIG?.script_id
 			);
-			return await this.getInnerEntrypoint().fetch(request);
-		} catch (err) {
-			const response = handleError(sentry, analytics, err);
-			submitMetrics(analytics, performance, startTimeMs);
+
+			const cohort = await this.getCohort();
+			analytics.setData({ cohort: cohort ?? "unknown" });
+
+			const response = await this.getInnerEntrypoint(cohort).fetch(request);
+			analytics.setData({ status: response.status });
+			if (response.status >= 500) {
+				analytics.setData({ error: "inner entrypoint error" });
+			}
 			return response;
+		} catch (err) {
+			analytics.setData({ status: 500 });
+			return handleError(sentry, analytics, err);
+		} finally {
+			submitMetrics(analytics, performance, startTimeMs);
 		}
 	}
 
 	async unstable_canFetch(request: Request): Promise<boolean> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		return this.getInnerEntrypoint().unstable_canFetch(request);
+		const cohort = await this.getCohort();
+		return this.getInnerEntrypoint(cohort).unstable_canFetch(request);
 	}
 
 	async unstable_getByETag(
@@ -386,7 +460,8 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		request?: Request
 	): Promise<GetByETagResult> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		return this.getInnerEntrypoint().unstable_getByETag(eTag, request);
+		const cohort = await this.getCohort();
+		return this.getInnerEntrypoint(cohort).unstable_getByETag(eTag, request);
 	}
 
 	async unstable_getByPathname(
@@ -394,7 +469,11 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		request?: Request
 	): Promise<GetByETagResult | null> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		return this.getInnerEntrypoint().unstable_getByPathname(pathname, request);
+		const cohort = await this.getCohort();
+		return this.getInnerEntrypoint(cohort).unstable_getByPathname(
+			pathname,
+			request
+		);
 	}
 
 	async unstable_exists(
@@ -402,7 +481,8 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		request?: Request
 	): Promise<string | null> {
 		this.env.JAEGER ??= mockJaegerBinding();
-		return this.getInnerEntrypoint().unstable_exists(pathname, request);
+		const cohort = await this.getCohort();
+		return this.getInnerEntrypoint(cohort).unstable_exists(pathname, request);
 	}
 }
 
@@ -426,6 +506,7 @@ export class AssetWorkerInner<TEnv extends Env = Env>
 		this.env.JAEGER ??= mockJaegerBinding();
 		const loopbackCtx = this.ctx as AssetWorkerContext;
 		const traceContext = loopbackCtx.props?.traceContext ?? null;
+		const cohort = this.ctx.version?.cohort;
 
 		const response = await this.env.JAEGER.runWithSpanContext(
 			traceContext,
@@ -435,7 +516,8 @@ export class AssetWorkerInner<TEnv extends Env = Env>
 					this.env,
 					this.ctx,
 					this.unstable_exists.bind(this),
-					this.unstable_getByETag.bind(this)
+					this.unstable_getByETag.bind(this),
+					cohort
 				)
 		);
 
