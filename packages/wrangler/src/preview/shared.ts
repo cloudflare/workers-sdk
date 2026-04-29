@@ -300,6 +300,10 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[previews.version_metadata.binding] = { type: "version_metadata" };
 	}
 
+	if (config.assets?.binding) {
+		env[config.assets.binding] = { type: "assets" };
+	}
+
 	return env;
 }
 
