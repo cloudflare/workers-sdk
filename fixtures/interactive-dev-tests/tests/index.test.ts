@@ -45,12 +45,19 @@ if (process.platform === "win32") {
 	}
 
 	const pkgRoot = path.resolve(__dirname, "..");
+	function getDefaultPtyEnv(): Record<string, string> {
+		const env = { ...process.env } as Record<string, string>;
+		delete env.TURBO_HASH;
+		delete env.TURBO_TASK;
+		delete env.TURBO_INVOCATION_DIR;
+		return env;
+	}
 	const ptyOptions: pty.IPtyForkOptions = {
 		name: "xterm-color",
 		cols: 80,
 		rows: 30,
 		cwd: pkgRoot,
-		env: process.env as Record<string, string>,
+		env: getDefaultPtyEnv(),
 	};
 
 	// Check `node-pty` installed and working correctly, skipping tests if not
@@ -126,7 +133,7 @@ if (process.platform === "win32") {
 
 		const ptyOptionsWithEnv = {
 			...ptyOptions,
-			env: env ?? (process.env as Record<string, string>),
+			env: env ?? getDefaultPtyEnv(),
 		} satisfies pty.IPtyForkOptions;
 
 		const pty = await import("@cdktf/node-pty-prebuilt-multiarch");
@@ -273,6 +280,19 @@ if (process.platform === "win32") {
 					...args,
 					"--show-interactive-dev-session=false",
 				]);
+				wrangler.pty.kill();
+				expect(wrangler.stdout).not.toContain("open a browser");
+				expect(wrangler.stdout).not.toContain("open devtools");
+				expect(wrangler.stdout).not.toContain("clear console");
+				expect(wrangler.stdout).not.toContain("to exit");
+				expect(wrangler.stdout).not.toContain("rebuild container");
+				expect(wrangler.stdout).not.toContain("open local explorer");
+			});
+			it("should not show hotkeys under turborepo", async () => {
+				const wrangler = await startWranglerDev(args, false, {
+					...getDefaultPtyEnv(),
+					TURBO_HASH: "test-hash",
+				});
 				wrangler.pty.kill();
 				expect(wrangler.stdout).not.toContain("open a browser");
 				expect(wrangler.stdout).not.toContain("open devtools");
