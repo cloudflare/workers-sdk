@@ -16,8 +16,8 @@ import type {
 	SpanContext,
 	UnsafePerformanceTimer,
 } from "../../utils/types";
-import type { Environment, ReadyAnalytics } from "./types";
 import type { AccountCohortQuerierBinding } from "../worker-configuration";
+import type { Environment, ReadyAnalytics } from "./types";
 
 // ============================================================
 // SECTION 1: SHARED TYPES & INTERFACE CONTRACT
