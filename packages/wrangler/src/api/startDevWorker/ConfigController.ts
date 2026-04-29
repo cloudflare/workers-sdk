@@ -158,6 +158,9 @@ async function resolveDevConfig(
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
+		enableContainersPrivilegedMode:
+			input.dev?.enableContainersPrivilegedMode ??
+			config.dev.enable_containers_privileged_mode,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
 		containerEngine: useContainers
 			? (input.dev?.containerEngine ??

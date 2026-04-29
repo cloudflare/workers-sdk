@@ -17,6 +17,9 @@ import type {
 // Options for a container attached to the DO
 export const DOContainerOptionsSchema = z.object({
 	imageName: z.string(),
+	// When true, workerd creates the container with the elevated privileges
+	// needed for FUSE (CAP_SYS_ADMIN, /dev/fuse, AppArmor unconfined).
+	allowPrivileged: z.boolean().optional(),
 });
 export type DOContainerOptions = z.infer<typeof DOContainerOptionsSchema>;
 
