@@ -1,6 +1,8 @@
 import { stripVTControlCharacters } from "node:util";
 import { brandColor, dim, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
+	assertNever,
+	getBindingLocalSupport,
 	getBindingTypeFriendlyName,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -986,35 +988,61 @@ function createGetMode({
 	};
 }
 
+/**
+ * Validates the user's `remote` setting for a given binding against the
+ * binding type's local-development capabilities (sourced from
+ * {@link getBindingLocalSupport}). Throws `UserError` for invalid combinations
+ * and emits warnings for valid-but-noteworthy ones.
+ */
 export function warnOrError(
 	type: Binding["type"],
-	remote: boolean | undefined,
-	supports: "remote-and-local" | "local" | "remote" | "always-remote"
+	remote: boolean | undefined
 ) {
-	if (remote === true && supports === "local") {
-		throw new UserError(
-			`${getBindingTypeFriendlyName(type)} bindings do not support accessing remote resources.`,
-			{
-				telemetryMessage: true,
+	const support = getBindingLocalSupport(type);
+	switch (support) {
+		case "local-and-remote":
+			return;
+		case "local-only":
+			if (remote === true) {
+				throw new UserError(
+					`${getBindingTypeFriendlyName(type)} bindings do not support accessing remote resources.`,
+					{
+						telemetryMessage: true,
+					}
+				);
 			}
-		);
-	}
-	if (remote === false && supports === "remote") {
-		throw new UserError(
-			`${getBindingTypeFriendlyName(type)} bindings do not support local development. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
-			{
-				telemetryMessage: true,
+			return;
+		case "remote":
+			if (remote === false) {
+				throw new UserError(
+					`${getBindingTypeFriendlyName(type)} bindings do not support local development. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
+					{
+						telemetryMessage: true,
+					}
+				);
 			}
-		);
-	}
-	if (remote === undefined && supports === "remote") {
-		logger.warn(
-			`${getBindingTypeFriendlyName(type)} bindings do not support local development, and so parts of your Worker may not work correctly. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
-		);
-	}
-	if (remote === undefined && supports === "always-remote") {
-		logger.warn(
-			`${getBindingTypeFriendlyName(type)} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.`
-		);
+			if (remote === undefined) {
+				logger.warn(
+					`${getBindingTypeFriendlyName(type)} bindings do not support local development, and so parts of your Worker may not work correctly. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+				);
+			}
+			return;
+		case "DO-NOT-USE-this-resource-will-never-have-a-local-simulator":
+			if (remote === false) {
+				throw new UserError(
+					`${getBindingTypeFriendlyName(type)} bindings do not support local development. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+					{
+						telemetryMessage: true,
+					}
+				);
+			}
+			if (remote === undefined) {
+				logger.warn(
+					`${getBindingTypeFriendlyName(type)} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.`
+				);
+			}
+			return;
+		default:
+			assertNever(support);
 	}
 }
