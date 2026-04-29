@@ -936,6 +936,125 @@ describe("wrangler deploy with containers", () => {
 		`);
 	});
 
+	it("skips diffing when rollout_kind is none for an existing application", async ({
+		expect,
+	}) => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					max_instances: 3,
+					rollout_kind: "none",
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container",
+				instances: 0,
+				max_instances: 10,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				rollout_active_grace_period: 0,
+				configuration: {
+					image: "registry.cloudflare.com/some-account-id/hello:world",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tiers: [1, 2],
+				},
+				durable_objects: {
+					namespace_id: "1",
+				},
+			},
+		]);
+		msw.use(
+			http.patch("*/applications/:id", async () => {
+				assert.fail("expected not to modify the application");
+			}),
+			http.post("*/applications/:id/rollouts", async () => {
+				assert.fail("expected not to create an application rollout");
+			})
+		);
+
+		await runWrangler("deploy index.js");
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ SKIP my-container
+			│
+			╰ Applied changes
+
+			"
+		`);
+	});
+
+	it("should still validate the durable object namespace when rollout_kind is none", async ({
+		expect,
+	}) => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					rollout_kind: "none",
+				},
+			],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container",
+				instances: 0,
+				max_instances: 10,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				rollout_active_grace_period: 0,
+				configuration: {
+					image: `${getCloudflareContainerRegistry()}/some-account-id/hello:world`,
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tiers: [1, 2],
+				},
+				durable_objects: {
+					namespace_id: "something-else",
+				},
+			},
+		]);
+
+		await expect(
+			runWrangler("deploy index.js")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: There is already an application with the name my-container deployed that is associated with a different durable object namespace (something-else). Either change the container name or delete the existing application first.]`
+		);
+	});
+
 	it("should error when no scope for containers", async ({ expect }) => {
 		// Reset the spy from setupCommonMocks before setting empty scopes
 		vi.mocked(user.getScopes).mockReset();

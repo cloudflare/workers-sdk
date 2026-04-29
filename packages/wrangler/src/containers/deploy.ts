@@ -350,6 +350,28 @@ function formatContainerSnippetForDisplay<
 	);
 }
 
+function validateDurableObjectNamespace(
+	prevApp: Application,
+	containerName: string,
+	durableObjectNamespaceId: string
+) {
+	if (!prevApp.durable_objects?.namespace_id) {
+		throw new FatalError(
+			"The previous deploy of this container application was not associated with a durable object"
+		);
+	}
+
+	if (prevApp.durable_objects.namespace_id !== durableObjectNamespaceId) {
+		throw new UserError(
+			`There is already an application with the name ${containerName} deployed that is associated with a different durable object namespace (${prevApp.durable_objects.namespace_id}). Either change the container name or delete the existing application first.`,
+			{
+				telemetryMessage:
+					"trying to redeploy container to different durable object",
+			}
+		);
+	}
+}
+
 export async function apply(
 	args: {
 		imageRef: ImageRef;
@@ -402,23 +424,21 @@ export async function apply(
 		containerConfig.name
 	);
 
-	if (prevApp !== undefined && prevApp !== null) {
-		if (!prevApp.durable_objects?.namespace_id) {
-			throw new FatalError(
-				"The previous deploy of this container application was not associated with a durable object"
-			);
-		}
-		if (
-			prevApp.durable_objects.namespace_id !== args.durable_object_namespace_id
-		) {
-			throw new UserError(
-				`There is already an application with the name ${containerConfig.name} deployed that is associated with a different durable object namespace (${prevApp.durable_objects.namespace_id}). Either change the container name or delete the existing application first.`,
-				{
-					telemetryMessage:
-						"trying to redeploy container to different durable object",
-				}
-			);
-		}
+	const existingApp = prevApp !== undefined && prevApp !== null;
+
+	if (existingApp && containerConfig.rollout_kind === "none") {
+		validateDurableObjectNamespace(
+			prevApp,
+			containerConfig.name,
+			args.durable_object_namespace_id
+		);
+		updateStatus(`${brandColor.underline("SKIP")} ${prevApp.name}`, false);
+	} else if (existingApp) {
+		validateDurableObjectNamespace(
+			prevApp,
+			containerConfig.name,
+			args.durable_object_namespace_id
+		);
 
 		// we need to sort the objects (by key) because the diff algorithm works with lines
 		const normalisedPrevApp = sortObjectRecursive<ModifyApplicationRequestBody>(
@@ -462,22 +482,17 @@ export async function apply(
 		diff.print();
 		newline();
 
-		if (containerConfig.rollout_kind !== "none") {
-			await doAction({
-				action: "modify",
-				application: modifyReq,
-				id: prevApp.id,
-				name: prevApp.name,
-				rollout_step_percentage: containerConfig.rollout_step_percentage,
-				rollout_kind:
-					containerConfig.rollout_kind == "full_manual"
-						? CreateApplicationRolloutRequest.kind.FULL_MANUAL
-						: CreateApplicationRolloutRequest.kind.FULL_AUTO,
-			});
-		} else {
-			log("Skipping application rollout");
-			newline();
-		}
+		await doAction({
+			action: "modify",
+			application: modifyReq,
+			id: prevApp.id,
+			name: prevApp.name,
+			rollout_step_percentage: containerConfig.rollout_step_percentage,
+			rollout_kind:
+				containerConfig.rollout_kind == "full_manual"
+					? CreateApplicationRolloutRequest.kind.FULL_MANUAL
+					: CreateApplicationRolloutRequest.kind.FULL_AUTO,
+		});
 	} else {
 		// **************
 		// *** CREATE ***
