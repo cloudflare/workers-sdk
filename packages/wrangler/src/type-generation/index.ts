@@ -214,13 +214,7 @@ export const typesCommand = createCommand({
 			fs.writeFileSync(outputPath, generatedTypes.content, "utf-8");
 			logger.log(`✨ Types written to ${outputPath}\n`);
 		}
-		const configPath = config.configPath;
-		if (configPath === undefined) {
-			throw new UserError(
-				"No config file detected. This command requires a Wrangler configuration file.",
-				{ telemetryMessage: "No config file detected" }
-			);
-		}
+		const configPath = config.configPath as string;
 		const tsconfigPath =
 			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
 		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
