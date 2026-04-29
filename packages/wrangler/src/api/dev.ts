@@ -164,6 +164,7 @@ export async function unstable_dev(
 		d1Databases,
 		disableDevRegistry,
 		testScheduled: testScheduled ?? false,
+		privilegedContainers: false,
 		enablePagesAssetsServiceBinding,
 		forceLocal,
 		liveReload,

@@ -102,6 +102,7 @@ export interface ConfigBundle {
 	containerBuildId: string | undefined;
 	containerEngine: ContainerEngine | undefined;
 	enableContainers: boolean;
+	privilegedContainers: boolean;
 	// Zone to use for the CF-Worker header in outbound fetches
 	zone: string | undefined;
 	sendMetrics: boolean | undefined;
@@ -478,6 +479,7 @@ type MiniflareBindingsConfig = Pick<
 	| "containerDOClassNames"
 	| "containerBuildId"
 	| "enableContainers"
+	| "privilegedContainers"
 > &
 	Partial<
 		Pick<ConfigBundle, "format" | "bundle" | "assets" | "compatibilityFlags">
@@ -734,6 +736,7 @@ export function buildMiniflareBindingOptions(
 								doClassName: className,
 								containerDOClassNames: config.containerDOClassNames,
 								containerBuildId: config.containerBuildId,
+								allowPrivileged: config.privilegedContainers,
 							})
 						: undefined,
 			});
@@ -1007,6 +1010,8 @@ export function buildMiniflareBindingOptions(
 											doClassName: className,
 											containerDOClassNames: config.containerDOClassNames,
 											containerBuildId: config.containerBuildId,
+											allowPrivileged:
+												config.privilegedContainers,
 										})
 									: undefined,
 						},
@@ -1161,6 +1166,7 @@ export function getImageNameFromDOClassName(options: {
 	doClassName: string;
 	containerDOClassNames: Set<string>;
 	containerBuildId: string | undefined;
+	allowPrivileged: boolean;
 }): DOContainerOptions | undefined {
 	assert(
 		options.containerBuildId,
@@ -1173,6 +1179,7 @@ export function getImageNameFromDOClassName(options: {
 				options.doClassName,
 				options.containerBuildId
 			),
+			allowPrivileged: options.allowPrivileged,
 		};
 	}
 }

@@ -296,6 +296,8 @@ async function getMiniflareOptionsFromConfig(args: {
 			),
 			containerBuildId: undefined,
 			enableContainers: config.dev.enable_containers,
+			privilegedContainers:
+				config.dev.privileged_containers,
 		},
 		remoteProxyConnectionString
 	);
@@ -467,6 +469,8 @@ export function unstable_getMiniflareWorkerOptions(
 			containerDOClassNames,
 			containerBuildId: options?.containerBuildId,
 			enableContainers,
+			privilegedContainers:
+				config.dev.privileged_containers,
 		},
 		options?.remoteProxyConnectionString
 	);
