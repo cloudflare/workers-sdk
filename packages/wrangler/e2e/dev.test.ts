@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as nodeNet from "node:net";
 import { setTimeout } from "node:timers/promises";
+import { stripVTControlCharacters } from "node:util";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -2418,7 +2419,8 @@ This is a random email body.
 		);
 
 		const maybeReplyPath = await vi.waitUntil(
-			() => pathRegexp.exec(worker.currentOutput)?.[1],
+			() =>
+				pathRegexp.exec(stripVTControlCharacters(worker.currentOutput))?.[1],
 			{ interval: 100, timeout: 5000 }
 		);
 
@@ -2586,7 +2588,10 @@ This is a random email body.
 		);
 
 		const maybeReplyPath = await vi.waitUntil(
-			() => pathRegexp.exec(worker.currentOutput)?.[1],
+			() =>
+				pathRegexp.exec(
+					worker.currentOutput.replace(/\x1b\[[0-9;]*m/g, "")
+				)?.[1],
 			{ interval: 100, timeout: 5000 }
 		);
 
