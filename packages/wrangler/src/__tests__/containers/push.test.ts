@@ -5,7 +5,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { beforeEach, describe, it, vi } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
-import { mockApiToken } from "../helpers/mock-account-id";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -24,6 +24,7 @@ describe("containers push", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	mockApiToken();
+	mockAccountId();
 	beforeEach(mockAccount);
 
 	beforeEach(() => {
