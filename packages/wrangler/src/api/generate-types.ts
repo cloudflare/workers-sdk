@@ -3,7 +3,7 @@ import {
 	type GenerateTypesOptions,
 } from "../type-generation";
 
-export type Unstable_GenerateTypesOptions = GenerateTypesOptions;
+export type Experimental_GenerateTypesOptions = GenerateTypesOptions;
 
 interface GenerateTypesResult {
 	/**
@@ -27,7 +27,7 @@ interface GenerateTypesResult {
 	runtime: string | null;
 }
 
-export type Unstable_GenerateTypesResult = GenerateTypesResult;
+export type Experimental_GenerateTypesResult = GenerateTypesResult;
 
 /**
  * Generate types from your Worker configuration
@@ -40,8 +40,8 @@ export type Unstable_GenerateTypesResult = GenerateTypesResult;
  * @returns Structured output containing combined content & split env/runtime sections.
  */
 export async function generateTypes(
-	options: Unstable_GenerateTypesOptions
-): Promise<Unstable_GenerateTypesResult> {
+	options: Experimental_GenerateTypesOptions
+): Promise<Experimental_GenerateTypesResult> {
 	const generated = await generateTypesFromWranglerOptions(options);
 	return {
 		content: generated.content,

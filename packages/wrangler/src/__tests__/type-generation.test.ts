@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
-import { unstable_generateTypes } from "../api";
+import { experimental_generateTypes } from "../api";
 import {
 	constructTSModuleGlob,
 	constructTypeKey,
@@ -3574,7 +3574,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const generated = await unstable_generateTypes({
+		const generated = await experimental_generateTypes({
 			includeRuntime: false,
 		});
 
@@ -3599,7 +3599,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const result = await unstable_generateTypes({
+		const result = await experimental_generateTypes({
 			includeEnv: false,
 			includeRuntime: true,
 		});
@@ -3624,7 +3624,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const result = await unstable_generateTypes({
+		const result = await experimental_generateTypes({
 			envInterface: "CustomEnv",
 			includeRuntime: false,
 			path: "./types/custom-worker.d.ts",
@@ -3657,7 +3657,7 @@ describe("generate types - API", () => {
 		process.argv = ["node", "vitest", "run"];
 
 		try {
-			const result = await unstable_generateTypes({
+			const result = await experimental_generateTypes({
 				envInterface: "CustomEnv",
 				includeRuntime: false,
 				path: "./types/custom-worker.d.ts",
@@ -3714,7 +3714,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const result = await unstable_generateTypes({
+		const result = await experimental_generateTypes({
 			config: ["./primary/wrangler.jsonc", "./secondary/wrangler.jsonc"],
 			includeRuntime: false,
 			path: "./primary/worker-configuration.d.ts",
@@ -3736,12 +3736,12 @@ describe("generate types - API", () => {
 			}
 		}
 
-		await expect(unstable_generateTypes({})).rejects.toThrow(
+		await expect(experimental_generateTypes({})).rejects.toThrow(
 			"No config file detected. This command requires a Wrangler configuration file."
 		);
 
 		await expect(
-			unstable_generateTypes({
+			experimental_generateTypes({
 				includeEnv: false,
 				includeRuntime: false,
 			})
@@ -3750,7 +3750,7 @@ describe("generate types - API", () => {
 		);
 
 		await expect(
-			unstable_generateTypes({
+			experimental_generateTypes({
 				path: "worker-configuration.txt",
 			})
 		).rejects.toThrow(
@@ -3758,7 +3758,7 @@ describe("generate types - API", () => {
 		);
 
 		await expect(
-			unstable_generateTypes({
+			experimental_generateTypes({
 				envInterface: "123Bad",
 			})
 		).rejects.toThrow(
@@ -3788,7 +3788,7 @@ describe("generate types - API", () => {
 			const cliOutput = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
 
 			process.argv = ["node", "wrangler", "types", "--include-runtime=false"];
-			const apiOutput = await unstable_generateTypes({
+			const apiOutput = await experimental_generateTypes({
 				includeRuntime: false,
 			});
 
@@ -3822,7 +3822,7 @@ describe("generate types - API", () => {
 			const cliOutput = fs.readFileSync("./custom-types.d.ts", "utf-8");
 
 			process.argv = ["node", "wrangler", "types", "custom-types.d.ts"];
-			const apiOutput = await unstable_generateTypes({
+			const apiOutput = await experimental_generateTypes({
 				path: "custom-types.d.ts",
 			});
 
