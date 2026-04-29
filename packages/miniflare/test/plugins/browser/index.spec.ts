@@ -47,7 +47,9 @@ async function waitForClosedConnection(ws: WebSocket): Promise<void> {
 	}
 	await new Promise<void>((resolve) => {
 		ws.addEventListener("close", () => {
-			ws.close();
+			if (ws.readyState !== ws.CLOSED) {
+				ws.close();
+			}
 			resolve();
 		});
 	});

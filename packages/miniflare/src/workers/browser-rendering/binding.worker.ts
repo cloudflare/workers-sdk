@@ -108,7 +108,7 @@ async function fetchWithConnectRetry(
 // Reserved codes 1005 (No Status Received) and 1006 (Abnormal Closure) are
 // valid in CloseEvent but throw InvalidAccessError when passed to .close().
 function forwardClose(target?: WebSocket, e?: CloseEvent) {
-	if (!target) {
+	if (!target || target.readyState === WebSocket.CLOSED) {
 		return;
 	}
 	if (!e?.code || e?.code === 1005 || e?.code === 1006) {
