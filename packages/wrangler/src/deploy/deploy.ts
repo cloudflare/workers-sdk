@@ -141,6 +141,8 @@ type Props = {
 	tag: string | undefined;
 	message: string | undefined;
 	secretsFile: string | undefined;
+	/** Detected framework name from autoconfig (e.g. "astro", "next", "static") */
+	framework: string | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -912,10 +914,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			streaming_tail_consumers: config.streaming_tail_consumers,
 			limits: config.limits,
 			annotations:
-				props.tag || props.message
+				props.tag || props.message || props.framework
 					? {
 							"workers/message": props.message,
 							"workers/tag": props.tag,
+							"workers/framework": props.framework,
 						}
 					: undefined,
 			assets:

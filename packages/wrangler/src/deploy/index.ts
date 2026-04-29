@@ -305,6 +305,8 @@ export const deployCommand = createCommand({
 			);
 		}
 
+		let detectedFramework: string | undefined;
+
 		if (shouldRunAutoConfig) {
 			sendAutoConfigProcessStartedMetricsEvent({
 				command: "wrangler deploy",
@@ -315,6 +317,8 @@ export const deployCommand = createCommand({
 				const details = await getDetailsForAutoConfig({
 					wranglerConfig: config,
 				});
+
+				detectedFramework = details.framework?.id;
 
 				if (details.framework?.id === "cloudflare-pages") {
 					// If the project is a Pages project then warn the user but allow them to proceed if they wish so
@@ -516,6 +520,7 @@ export const deployCommand = createCommand({
 			tag: args.tag,
 			message: args.message,
 			secretsFile: args.secretsFile,
+			framework: detectedFramework,
 		});
 
 		writeOutput({
