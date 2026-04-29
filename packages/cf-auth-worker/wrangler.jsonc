@@ -8,9 +8,9 @@
 	"routes": [
 		{ "pattern": "auth.devprod.cloudflare.dev", "custom_domain": true },
 	],
-	"durable_objects": {
-		"bindings": [{ "name": "AUTH_SESSION", "class_name": "AuthSession" }],
-	},
+	// No `durable_objects.bindings` — `AuthSession` is accessed via
+	// `ctx.exports.AuthSession` (loopback binding inferred from the top-level
+	// export). The migration is still required to configure SQLite storage.
 	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["AuthSession"] }],
 	"observability": {
 		"enabled": true,
