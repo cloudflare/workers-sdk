@@ -475,9 +475,8 @@ export async function getDevMiniflareOptions(
 			),
 			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
-				// Parse the request using the protocol-aware parser
-				// This handles both V1 (GET with query params) and V2 (POST with JSON body)
 				const parsed = await parseModuleFallbackRequest(request);
+
 				if (!parsed) {
 					return new MiniflareResponse("Invalid module fallback request", {
 						status: 400,
@@ -489,7 +488,6 @@ export async function getDevMiniflareOptions(
 					rawSpecifier,
 					`Unexpected error: no specifier in request to module fallback service.`
 				);
-
 				const match = additionalModuleRE.exec(rawSpecifier);
 				assert(
 					match,

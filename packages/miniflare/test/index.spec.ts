@@ -27,6 +27,7 @@ import {
 } from "miniflare";
 import { onTestFinished, test } from "vitest";
 import { WebSocketServer } from "ws";
+import { assertIsV2ModuleFallbackProtocol } from "../src/plugins/core/module-fallback";
 import {
 	FIXTURES_PATH,
 	TestLog,
@@ -3531,13 +3532,8 @@ test("Miniflare: can use module fallback service with V2 protocol", async ({
 			// V2 protocol uses POST with JSON body instead of GET with query params
 			assert(request.method === "POST", "V2 protocol should use POST method");
 
-			const body = (await request.json()) as {
-				type: string;
-				specifier: string;
-				rawSpecifier: string;
-				referrer: string;
-				attributes: Array<{ name: string; value: string }>;
-			};
+			const body = await request.json();
+			assertIsV2ModuleFallbackProtocol(body);
 
 			assert(
 				body.type === "import" || body.type === "require",

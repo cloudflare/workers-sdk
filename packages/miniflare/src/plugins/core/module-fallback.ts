@@ -7,6 +7,7 @@
  *
  * The protocol version is determined by the `new_module_registry` compatibility flag.
  */
+import assert from "node:assert";
 import type { Request } from "../../http";
 
 /** V1 protocol request (legacy module registry) */
@@ -42,15 +43,6 @@ export type ParsedModuleFallbackRequest =
 	| V1ModuleFallbackRequest
 	| V2ModuleFallbackRequest;
 
-/** V2 protocol JSON body structure */
-interface V2RequestBody {
-	type?: string;
-	specifier?: string;
-	rawSpecifier?: string;
-	referrer?: string;
-	attributes?: Array<{ name: string; value: string }>;
-}
-
 /**
  * Checks if a request is a module fallback service request.
  * This detects both V1 (GET with X-Resolve-Method header) and V2 (POST) protocols.
@@ -67,6 +59,12 @@ export function isModuleFallbackRequest(request: Request): boolean {
 	}
 
 	return false;
+}
+
+export function assertIsV2ModuleFallbackProtocol(
+	body: unknown
+): asserts body is Omit<V2ModuleFallbackRequest, "protocol"> {
+	assert(typeof body === "object" && body !== null && "specifier" in body);
 }
 
 /**
@@ -102,26 +100,12 @@ export async function parseModuleFallbackRequest(
 	// V2 Protocol: POST with JSON body
 	if (request.method === "POST") {
 		try {
-			const body = (await request.json()) as V2RequestBody;
-
-			if (!body.specifier) {
-				return null;
-			}
-
-			const type =
-				body.type === "require"
-					? "require"
-					: body.type === "internal"
-						? "internal"
-						: "import";
+			const body = await request.json();
+			assertIsV2ModuleFallbackProtocol(body);
 
 			return {
+				...body,
 				protocol: "v2",
-				type,
-				specifier: body.specifier,
-				rawSpecifier: body.rawSpecifier,
-				referrer: body.referrer,
-				attributes: body.attributes,
 			};
 		} catch {
 			return null;
