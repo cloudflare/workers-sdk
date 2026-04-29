@@ -334,19 +334,20 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 	}
 
 	async #proxyRawWebSocket(targetWsUrl: string): Promise<Response> {
-		const webSocketPair = new WebSocketPair();
-		const [client, server] = Object.values(webSocketPair);
-
-		server.accept();
-
 		const response = await fetchWithConnectRetry(
 			targetWsUrl.replace("ws://", "http://"),
-			{ headers: { Upgrade: "websocket" } }
+			{
+				headers: { Upgrade: "websocket" },
+			}
 		);
 
 		assert(response.webSocket !== null, "Expected a WebSocket response");
 		const chrome = response.webSocket;
 		chrome.accept();
+
+		const webSocketPair = new WebSocketPair();
+		const [client, server] = Object.values(webSocketPair);
+		server.accept();
 
 		const pair = { chrome, server };
 		this.wss.push(pair);
