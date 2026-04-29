@@ -48,8 +48,6 @@ if (process.platform === "win32") {
 	function getDefaultPtyEnv(): Record<string, string> {
 		const env = { ...process.env } as Record<string, string>;
 		delete env.TURBO_HASH;
-		delete env.TURBO_TASK;
-		delete env.TURBO_INVOCATION_DIR;
 		return env;
 	}
 	const ptyOptions: pty.IPtyForkOptions = {
