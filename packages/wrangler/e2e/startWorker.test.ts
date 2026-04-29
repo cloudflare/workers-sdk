@@ -958,4 +958,50 @@ describe("DevEnv", { sequential: true }, () => {
 			`);
 		});
 	});
+
+	it("origin override preserves port in Origin and Referer headers", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"src/index.ts": dedent`
+				export default {
+					fetch(request) {
+						return Response.json({
+							host: request.headers.get("host"),
+							origin: request.headers.get("origin"),
+							referer: request.headers.get("referer"),
+						});
+					}
+				}
+			`,
+		});
+
+		const worker = await startWorker({
+			name: "test-worker",
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+			dev: {
+				remote: false,
+				origin: {
+					hostname: "localhost:4000",
+				},
+				server: { port: 0 },
+				inspector: false,
+			},
+		});
+		onTestFinished(worker?.dispose);
+
+		const url = await worker.url;
+		const res = await worker.fetch(`${url.origin}/test/path`, {
+			headers: {
+				Origin: url.origin,
+				Referer: `${url.origin}/some/path`,
+			},
+		});
+
+		await expect(res.json()).resolves.toEqual({
+			host: "localhost:4000",
+			origin: url.origin,
+			referer: `${url.origin}/some/path`,
+		});
+	});
 });
