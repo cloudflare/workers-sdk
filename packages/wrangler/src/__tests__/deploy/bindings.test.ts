@@ -84,7 +84,7 @@ describe("deploy", () => {
 		// Pretend all Agent Memory namespaces exist for the same reason.
 		msw.use(
 			http.get(
-				"*/accounts/:accountId/agentmemory/namespaces/:namespaceName",
+				"*/accounts/:accountId/agent-memory/namespaces/:namespaceName",
 				async () => {
 					return HttpResponse.json(createFetchResult({}));
 				}
@@ -2169,7 +2169,7 @@ describe("deploy", () => {
 					expectedBindings: [
 						{
 							name: "MEMORY",
-							type: "agent_memory_namespace",
+							type: "agent_memory",
 							namespace: "my-agent-namespace",
 						},
 					],

@@ -1334,7 +1334,7 @@ describe("resource provisioning", () => {
 				result: {
 					bindings: [
 						{
-							type: "agent_memory_namespace",
+							type: "agent_memory",
 							name: "MEMORY",
 							namespace: "my-agent-namespace",
 						},
@@ -1364,7 +1364,7 @@ describe("resource provisioning", () => {
 				expectedBindings: [
 					{
 						name: "MEMORY",
-						type: "agent_memory_namespace",
+						type: "agent_memory",
 						namespace: "my-agent-namespace",
 					},
 				],
@@ -1387,7 +1387,7 @@ describe("resource provisioning", () => {
 				expectedBindings: [
 					{
 						name: "MEMORY",
-						type: "agent_memory_namespace",
+						type: "agent_memory",
 						namespace: "my-agent-namespace",
 					},
 				],
@@ -1521,7 +1521,7 @@ function mockGetAgentMemoryNamespace(
 ) {
 	msw.use(
 		http.get(
-			"*/accounts/:accountId/agentmemory/namespaces/:namespaceName",
+			"*/accounts/:accountId/agent-memory/namespaces/:namespaceName",
 			async ({ params }) => {
 				expect(params.namespaceName).toEqual(namespaceName);
 				if (missing) {
@@ -1550,7 +1550,7 @@ function mockCreateAgentMemoryNamespace(
 ) {
 	msw.use(
 		http.post(
-			"*/accounts/:accountId/agentmemory/namespaces",
+			"*/accounts/:accountId/agent-memory/namespaces",
 			async ({ request }) => {
 				if (options.assertName) {
 					const requestBody = await request.json();

@@ -93,7 +93,7 @@ describe("agent-memory namespace commands", () => {
 	it("should create a namespace", async ({ expect }) => {
 		msw.use(
 			http.post(
-				"*/accounts/:accountId/agentmemory/namespaces",
+				"*/accounts/:accountId/agent-memory/namespaces",
 				async ({ request }) => {
 					const body = (await request.json()) as { name: string };
 					expect(body.name).toBe("my-namespace");
@@ -116,7 +116,7 @@ describe("agent-memory namespace commands", () => {
 	}) => {
 		msw.use(
 			http.post(
-				"*/accounts/:accountId/agentmemory/namespaces",
+				"*/accounts/:accountId/agent-memory/namespaces",
 				async ({ request }) => {
 					const body = (await request.json()) as { name: string };
 					expect(body.name).toBe("my-namespace");
@@ -138,7 +138,7 @@ describe("agent-memory namespace commands", () => {
 	it("should list namespaces in a table", async ({ expect }) => {
 		msw.use(
 			http.get(
-				"*/accounts/:accountId/agentmemory/namespaces",
+				"*/accounts/:accountId/agent-memory/namespaces",
 				() => {
 					return HttpResponse.json(
 						createFetchResult([TEST_NAMESPACE], true, [], [], {
@@ -162,7 +162,7 @@ describe("agent-memory namespace commands", () => {
 	it("should list namespaces as JSON with --json", async ({ expect }) => {
 		msw.use(
 			http.get(
-				"*/accounts/:accountId/agentmemory/namespaces",
+				"*/accounts/:accountId/agent-memory/namespaces",
 				() => {
 					return HttpResponse.json(
 						createFetchResult([TEST_NAMESPACE], true, [], [], {
@@ -186,7 +186,7 @@ describe("agent-memory namespace commands", () => {
 	it("should print a message when no namespaces exist", async ({ expect }) => {
 		msw.use(
 			http.get(
-				"*/accounts/:accountId/agentmemory/namespaces",
+				"*/accounts/:accountId/agent-memory/namespaces",
 				() => {
 					return HttpResponse.json(
 						createFetchResult([], true, [], [], {
@@ -211,7 +211,7 @@ describe("agent-memory namespace commands", () => {
 	it("should get a namespace in a table", async ({ expect }) => {
 		msw.use(
 			http.get(
-				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.name}`,
+				`*/accounts/:accountId/agent-memory/namespaces/${TEST_NAMESPACE.name}`,
 				() => {
 					return HttpResponse.json(createFetchResult(TEST_NAMESPACE, true));
 				},
@@ -229,7 +229,7 @@ describe("agent-memory namespace commands", () => {
 	it("should get a namespace as JSON with --json", async ({ expect }) => {
 		msw.use(
 			http.get(
-				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.name}`,
+				`*/accounts/:accountId/agent-memory/namespaces/${TEST_NAMESPACE.name}`,
 				() => {
 					return HttpResponse.json(createFetchResult(TEST_NAMESPACE, true));
 				},
@@ -257,7 +257,7 @@ describe("agent-memory namespace commands", () => {
 
 		msw.use(
 			http.delete(
-				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.name}`,
+				`*/accounts/:accountId/agent-memory/namespaces/${TEST_NAMESPACE.name}`,
 				() => {
 					return HttpResponse.json(createFetchResult(null, true));
 				},
@@ -291,7 +291,7 @@ describe("agent-memory namespace commands", () => {
 	}) => {
 		msw.use(
 			http.delete(
-				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.name}`,
+				`*/accounts/:accountId/agent-memory/namespaces/${TEST_NAMESPACE.name}`,
 				() => {
 					return HttpResponse.json(createFetchResult(null, true));
 				},
@@ -313,7 +313,7 @@ describe("agent-memory namespace commands", () => {
 	it("should throw a UserError when `get` hits a 404", async ({ expect }) => {
 		msw.use(
 			http.get(
-				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.name}`,
+				`*/accounts/:accountId/agent-memory/namespaces/${TEST_NAMESPACE.name}`,
 				() => {
 					return HttpResponse.json(
 						createFetchResult(null, false, [
@@ -339,7 +339,7 @@ describe("agent-memory namespace commands", () => {
 	}) => {
 		msw.use(
 			http.delete(
-				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.name}`,
+				`*/accounts/:accountId/agent-memory/namespaces/${TEST_NAMESPACE.name}`,
 				() => {
 					return HttpResponse.json(
 						createFetchResult(null, false, [
@@ -367,7 +367,7 @@ describe("agent-memory namespace commands", () => {
 	}) => {
 		msw.use(
 			http.post(
-				"*/accounts/:accountId/agentmemory/namespaces",
+				"*/accounts/:accountId/agent-memory/namespaces",
 				() => {
 					return HttpResponse.json(
 						createFetchResult(null, false, [
@@ -400,7 +400,7 @@ describe("agent-memory namespace commands", () => {
 	}) => {
 		msw.use(
 			http.post(
-				"*/accounts/:accountId/agentmemory/namespaces",
+				"*/accounts/:accountId/agent-memory/namespaces",
 				() => {
 					return HttpResponse.json(
 						createFetchResult(null, false, [

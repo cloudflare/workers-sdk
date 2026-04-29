@@ -282,8 +282,8 @@ class AISearchNamespaceHandler extends ProvisionResourceHandler<
 }
 
 class AgentMemoryNamespaceHandler extends ProvisionResourceHandler<
-	"agent_memory_namespace",
-	Extract<Binding, { type: "agent_memory_namespace" }>
+	"agent_memory",
+	Extract<Binding, { type: "agent_memory" }>
 > {
 	get name(): string | undefined {
 		return this.binding.namespace as string;
@@ -300,12 +300,12 @@ class AgentMemoryNamespaceHandler extends ProvisionResourceHandler<
 
 	constructor(
 		bindingName: string,
-		binding: Extract<Binding, { type: "agent_memory_namespace" }>,
+		binding: Extract<Binding, { type: "agent_memory" }>,
 		complianceConfig: ComplianceConfig,
 		accountId: string
 	) {
 		super(
-			"agent_memory_namespace",
+			"agent_memory",
 			bindingName,
 			binding,
 			"namespace",
@@ -469,7 +469,7 @@ type ProvisionableBinding =
 	| Extract<Binding, { type: "d1" }>
 	| Extract<Binding, { type: "r2_bucket" }>
 	| Extract<Binding, { type: "ai_search_namespace" }>
-	| Extract<Binding, { type: "agent_memory_namespace" }>;
+	| Extract<Binding, { type: "agent_memory" }>;
 
 const HANDLERS = {
 	kv_namespace: {
@@ -569,7 +569,7 @@ const HANDLERS = {
 			};
 		},
 	},
-	agent_memory_namespace: {
+	agent_memory: {
 		Handler: AgentMemoryNamespaceHandler,
 		sort: 4,
 		name: "Agent Memory",
@@ -582,7 +582,7 @@ const HANDLERS = {
 		},
 		toConfig: (
 			bindingName: string,
-			binding: Extract<Binding, { type: "agent_memory_namespace" }>
+			binding: Extract<Binding, { type: "agent_memory" }>
 		): CfAgentMemory => {
 			const { type: _, ...rest } = binding;
 			return {
@@ -600,7 +600,7 @@ type PendingResource = {
 		| "d1"
 		| "r2_bucket"
 		| "ai_search_namespace"
-		| "agent_memory_namespace";
+		| "agent_memory";
 	handler:
 		| KVHandler
 		| D1Handler
@@ -640,7 +640,7 @@ function createHandler(
 				complianceConfig,
 				accountId
 			);
-		case "agent_memory_namespace":
+		case "agent_memory":
 			return new AgentMemoryNamespaceHandler(
 				bindingName,
 				binding,
@@ -668,8 +668,8 @@ function toConfigBinding(
 			return HANDLERS.r2_bucket.toConfig(bindingName, binding);
 		case "ai_search_namespace":
 			return HANDLERS.ai_search_namespace.toConfig(bindingName, binding);
-		case "agent_memory_namespace":
-			return HANDLERS.agent_memory_namespace.toConfig(bindingName, binding);
+		case "agent_memory":
+			return HANDLERS.agent_memory.toConfig(bindingName, binding);
 	}
 }
 
