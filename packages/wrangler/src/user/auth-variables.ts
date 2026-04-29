@@ -136,6 +136,15 @@ const _getAuthWorkerTimeoutFromEnv = getEnvironmentVariableFactory({
 });
 export function getAuthWorkerTimeoutMs(): number {
 	const raw = _getAuthWorkerTimeoutFromEnv();
+	// Treat empty / whitespace-only values as invalid. Without this guard
+	// `Number("")` and `Number("   ")` both coerce to `0`, which would
+	// silently activate the special "no timeout, no fallback" semantics
+	// instead of the documented 5000ms default — a footgun for users who
+	// set `WRANGLER_AUTH_WORKER_TIMEOUT=` to "clear" the variable or via a
+	// misconfigured `.env`.
+	if (raw.trim() === "") {
+		return 5000;
+	}
 	const num = Number(raw);
 	if (!Number.isFinite(num) || num < 0) {
 		return 5000;

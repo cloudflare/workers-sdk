@@ -718,6 +718,32 @@ describe("User", () => {
 					expect(std.warn).not.toContain("Falling back");
 				});
 
+				it("treats empty WRANGLER_AUTH_WORKER_TIMEOUT as the default (still falls back)", async ({
+					expect,
+				}) => {
+					// `Number("") === 0` would otherwise activate the special
+					// "no timeout, no fallback" semantics. An empty value
+					// (e.g. set via `WRANGLER_AUTH_WORKER_TIMEOUT=` or a
+					// misconfigured `.env`) must keep the default 5s timeout
+					// and fallback behaviour.
+					vi.stubEnv("WRANGLER_AUTH_WORKER_TIMEOUT", "");
+					mockOAuthServerCallback("success");
+
+					await runAndFailWebSocket(
+						"login --experimental-websocket-callback",
+						(ws) => ws.triggerError("ECONNREFUSED")
+					);
+
+					expect(std.warn).toContain("Could not reach the auth relay");
+					expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+						api_token: undefined,
+						oauth_token: "test-access-token",
+						refresh_token: "test-refresh-token",
+						expiration_time: expect.any(String),
+						scopes: ["account:read"],
+					});
+				});
+
 				it("does not fall back once the browser has been opened", async ({
 					expect,
 				}) => {
