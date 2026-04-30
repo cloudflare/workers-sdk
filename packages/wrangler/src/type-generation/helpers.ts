@@ -168,7 +168,8 @@ export const checkTypesUpToDate = async (
 	primaryConfig: Config,
 	envInterface?: string,
 	typesPath: string = DEFAULT_WORKERS_TYPES_FILE_PATH,
-	serviceEntries: Map<string, Entry> = new Map()
+	serviceEntries: Map<string, Entry> = new Map(),
+	cliEnvFile?: string[] | undefined
 ): Promise<boolean> => {
 	let typesFileLines = new Array<string>();
 	try {
@@ -203,6 +204,15 @@ export const checkTypesUpToDate = async (
 	// Note: `yargs` doesn't automatically handle aliases, so we check both forms
 	const rawArgs = yargs(wranglerCommand).parseSync();
 
+	// Use the CLI-provided envFile as the source of truth so that --check
+	// re-runs type generation with the same --env-file flag the user passed,
+	// avoiding a stale mismatch when .dev.vars happens to exist locally
+	const rawEnvFile = rawArgs.envFile;
+	const envFile: string[] | undefined = cliEnvFile ??
+		(typeof rawEnvFile === "string" ? [rawEnvFile]
+		: Array.isArray(rawEnvFile) ? rawEnvFile
+		: undefined);
+
 	// Determine what was included based on what headers exist
 	// If no env header exists, env types were not included (--include-env=false)
 	// If no runtime header exists, runtime types were not included (--include-runtime=false)
@@ -215,7 +225,8 @@ export const checkTypesUpToDate = async (
 			: false,
 		envInterface: envInterface ?? ((rawArgs.envInterface ?? "Env") as string),
 		strictVars: unsafeParseBooleanString(rawArgs.strictVars ?? "true"),
-	} satisfies Record<string, string | number | boolean>;
+		envFile,
+	} satisfies Record<string, string | number | boolean | string[] | undefined>;
 
 	const configContainsEntrypoint =
 		primaryConfig.main !== undefined || !!primaryConfig.site?.["entry-point"];
@@ -232,7 +243,7 @@ export const checkTypesUpToDate = async (
 		try {
 			const { envHeader } = await generateEnvTypes(
 				primaryConfig,
-				{ strictVars: args.strictVars },
+				{ strictVars: args.strictVars, envFile: args.envFile },
 				args.envInterface,
 				typesPath,
 				entrypoint,

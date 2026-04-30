@@ -220,7 +220,8 @@ export const typesCommand = createCommand({
 				config,
 				envInterface,
 				outputPath,
-				secondaryEntries
+				secondaryEntries,
+				args.envFile
 			);
 			if (outOfDate) {
 				throw new FatalError(
