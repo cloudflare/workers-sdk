@@ -648,4 +648,50 @@ describe("getPlatformProxy()", () => {
 			);
 		}
 	);
+
+	describe("send_email", () => {
+		let root: string;
+
+		beforeEach(async () => {
+			root = makeRoot();
+
+			await seed(root, {
+				"wrangler.jsonc": JSON.stringify({
+					name: "email-app",
+					compatibility_date: "2025-03-17",
+					send_email: [{ name: "EMAIL" }],
+				}),
+				"index.mjs": dedent /* javascript */ `
+						import { getPlatformProxy } from "${WRANGLER_IMPORT}";
+
+						const { env, dispose } = await getPlatformProxy();
+						const result = await env.EMAIL.send({
+							from: "sender@sender.domain",
+							to: "recipient@example.com",
+							subject: "s",
+							text: "t",
+						});
+
+						console.log(result.messageId);
+						await dispose();
+				`,
+				"package.json": dedent`
+						{
+							"name": "email-app",
+							"version": "0.0.0",
+							"private": true
+						}
+				`,
+			});
+		});
+
+		it("can send a MessageBuilder email", async ({ expect }) => {
+			const stdout = execSync(`node index.mjs`, {
+				cwd: root,
+				encoding: "utf-8",
+			});
+
+			expect(stdout).toMatch(/^<[A-Za-z0-9]{36}@sender\.domain>/);
+		});
+	});
 });
