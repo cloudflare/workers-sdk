@@ -1444,9 +1444,6 @@ describe("deploy", () => {
 
 			await runWrangler("deploy ./index.js --name test-name --dry-run");
 			expect(std.out).toContain("--dry-run: exiting now.");
-			expect(std.out).toContain(
-				"To avoid this prompt, add `compatibility_date` to your wrangler.toml file or pass `--compatibility-date 2024-06-15` via CLI."
-			);
 		});
 
 		it("should error when user declines the prompt", async ({ expect }) => {

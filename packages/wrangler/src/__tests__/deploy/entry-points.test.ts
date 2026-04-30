@@ -935,8 +935,6 @@ addEventListener('fetch', event => {});`
 
 					
 
-					To avoid this prompt, add \`compatibility_date\` to your Wrangler configuration file or pass \`--compatibility-date 2024-01-01\` via CLI.
-					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.
 					Wrote
 					{
 					  "name": "test-name",
@@ -1020,8 +1018,6 @@ addEventListener('fetch', event => {});`
 
 					
 
-					To avoid this prompt, add \`compatibility_date\` to your Wrangler configuration file or pass \`--compatibility-date 2024-01-01\` via CLI.
-					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.
 					Wrote
 					{
 					  "name": "test-name",
@@ -1093,8 +1089,6 @@ addEventListener('fetch', event => {});`
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
-					To avoid this prompt, add \`compatibility_date\` to your Wrangler configuration file or pass \`--compatibility-date 2024-01-01\` via CLI.
-					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.
 					Wrote
 					{
 					  "name": "test-name",
@@ -1173,8 +1167,6 @@ addEventListener('fetch', event => {});`
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
-					To avoid this prompt, add \`compatibility_date\` to your Wrangler configuration file or pass \`--compatibility-date 2024-01-01\` via CLI.
-					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.
 					Wrote
 					{
 					  "name": "test-name",
@@ -1260,8 +1252,6 @@ addEventListener('fetch', event => {});`
 
 					
 
-					To avoid this prompt, add \`compatibility_date\` to your Wrangler configuration file or pass \`--compatibility-date 2024-01-01\` via CLI.
-					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.
 					Wrote
 					{
 					  "name": "test-name",
@@ -1388,8 +1378,6 @@ addEventListener('fetch', event => {});`
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
-					To avoid this prompt, add \`compatibility_date\` to your Wrangler configuration file or pass \`--compatibility-date 2024-01-01\` via CLI.
-					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.
 					You should run wrangler deploy --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.
 
 					Proceeding with deployment...

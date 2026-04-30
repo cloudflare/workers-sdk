@@ -627,9 +627,6 @@ export async function promptForMissingDeployConfig(
 		) {
 			args.compatibilityDate = compatibilityDateStr;
 			promptedForMissing = true;
-			logger.log(
-				`To avoid this prompt, add \`compatibility_date\` to your ${configFileName(config.configPath)} file or pass \`--compatibility-date ${compatibilityDateStr}\` via CLI.\nSee https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`
-			);
 		} else {
 			throw new UserError(
 				`A compatibility_date is required when publishing. Add it to your ${configFileName(config.configPath)} file or pass \`--compatibility-date\` via CLI.\nSee https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
