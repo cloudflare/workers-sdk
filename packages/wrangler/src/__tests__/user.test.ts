@@ -663,7 +663,7 @@ describe("User", () => {
 			await expect(
 				getAccountId({ account_id: "ваш-идентификатор-аккаунта" })
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The account ID from the \`account_id\` field in your Wrangler configuration file contains invalid characters. Account IDs may only contain letters, numbers, hyphens, and underscores.]`
+				`[Error: \`account_id\` in your Wrangler config contains invalid characters. Account IDs may only contain letters, numbers, hyphens, and underscores.]`
 			);
 		});
 

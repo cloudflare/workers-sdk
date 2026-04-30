@@ -105,7 +105,7 @@ describe("pages project list", () => {
 
 		expect(requests.count).toBe(0);
 		expect(std.err).toContain(
-			"The account ID from the `CLOUDFLARE_ACCOUNT_ID` environment variable contains invalid characters."
+			"`CLOUDFLARE_ACCOUNT_ID` contains invalid characters."
 		);
 	});
 
