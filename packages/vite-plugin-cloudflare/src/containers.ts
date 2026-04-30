@@ -1,6 +1,6 @@
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared/src/knobs";
-import { isDockerfile } from "@cloudflare/workers-utils";
+import { isDockerfile, UserError } from "@cloudflare/workers-utils";
 import type { ResolvedWorkerConfig } from "./plugin-config";
 
 /**
@@ -32,6 +32,12 @@ export function getContainerOptions(options: {
 	}
 
 	return containersConfig.map((container) => {
+		if (container.image === undefined) {
+			throw new UserError(
+				`The container ${container.name} is missing an image. Set "containers.image" to a Dockerfile path or registry image URI.`
+			);
+		}
+
 		if (isDockerfile(container.image, configPath)) {
 			return {
 				dockerfile: container.image,
