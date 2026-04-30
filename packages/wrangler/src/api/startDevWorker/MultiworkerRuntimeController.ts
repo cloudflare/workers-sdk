@@ -10,6 +10,7 @@ import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
 	getContainerDevOptions,
+	getUserWorkerInnerUrlOverrides,
 	LocalRuntimeController,
 } from "./LocalRuntimeController";
 import type { RemoteProxySession } from "../remoteBindings";
@@ -238,10 +239,9 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 							port: userWorkerInspectorUrl.port,
 							pathname: `/core:user:${data.config.name}`,
 						},
-						userWorkerInnerUrlOverrides: {
-							protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
-							hostname: data.config?.dev?.origin?.hostname,
-						},
+						userWorkerInnerUrlOverrides: getUserWorkerInnerUrlOverrides(
+							data.config
+						),
 						headers: {
 							// Passing this signature from Proxy Worker allows the User Worker to trust the request.
 							"MF-Proxy-Shared-Secret":
