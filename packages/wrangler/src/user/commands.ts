@@ -73,7 +73,8 @@ export const loginCommand = createCommand({
 			}
 			if (!validateScopeKeys(args.scopes)) {
 				throw new CommandLineArgsError(
-					`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`
+					`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`,
+					{ telemetryMessage: "user login invalid scope" }
 				);
 			}
 			await login(config, {
@@ -206,7 +207,8 @@ export const authTokenCommand = createCommand({
 			const token = await getOAuthTokenFromLocalState();
 			if (!token) {
 				throw new UserError(
-					"Not logged in. Please run `wrangler login` to authenticate."
+					"Not logged in. Please run `wrangler login` to authenticate.",
+					{ telemetryMessage: "user auth token not logged in" }
 				);
 			}
 			result = { type: "oauth", token };
@@ -219,7 +221,10 @@ export const authTokenCommand = createCommand({
 			if (result.type === "api_key") {
 				throw new UserError(
 					"Cannot output a single token when using CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL.\n" +
-						"Use --json to get both key and email, or use CLOUDFLARE_API_TOKEN instead."
+						"Use --json to get both key and email, or use CLOUDFLARE_API_TOKEN instead.",
+					{
+						telemetryMessage: "user auth token unsupported credentials output",
+					}
 				);
 			}
 			logger.log(result.token);

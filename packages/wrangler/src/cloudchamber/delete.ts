@@ -69,7 +69,8 @@ async function handleDeleteCommand(
 	);
 	if (err) {
 		throw new UserError(
-			`There has been an internal error deleting your deployment.\n ${err.message}`
+			`There has been an internal error deleting your deployment.\n ${err.message}`,
+			{ telemetryMessage: "cloudchamber delete request failed" }
 		);
 	}
 	endSection("Your container has been deleted");

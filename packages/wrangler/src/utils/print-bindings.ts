@@ -995,7 +995,7 @@ export function warnOrError(
 		throw new UserError(
 			`${getBindingTypeFriendlyName(type)} bindings do not support accessing remote resources.`,
 			{
-				telemetryMessage: true,
+				telemetryMessage: "utils bindings unsupported remote resources",
 			}
 		);
 	}
@@ -1003,7 +1003,7 @@ export function warnOrError(
 		throw new UserError(
 			`${getBindingTypeFriendlyName(type)} bindings do not support local development. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
 			{
-				telemetryMessage: true,
+				telemetryMessage: "utils bindings unsupported local development",
 			}
 		);
 	}

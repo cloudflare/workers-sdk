@@ -622,7 +622,8 @@ export async function provisionBindings(
 
 		if (useServiceEnvironments(config)) {
 			throw new UserError(
-				"Provisioning resources is not supported with a service environment"
+				"Provisioning resources is not supported with a service environment",
+				{ telemetryMessage: "provision resources with service environment" }
 			);
 		}
 		logger.log();

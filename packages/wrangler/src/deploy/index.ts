@@ -279,7 +279,7 @@ export const deployCommand = createCommand({
 		if (args.nodeCompat) {
 			throw new UserError(
 				"The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "deploy command node compat unsupported" }
 			);
 		}
 	},
@@ -301,7 +301,7 @@ export const deployCommand = createCommand({
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
 					"For Pages, please run `wrangler pages deploy` instead.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "deploy command pages project mismatch" }
 			);
 		}
 
@@ -416,7 +416,10 @@ export const deployCommand = createCommand({
 		const entry = await getEntry(args, config, "deploy");
 		validateAssetsArgsAndConfig(args, config);
 
-		const assetsOptions = getAssetsOptions(args, config);
+		const assetsOptions = getAssetsOptions({
+			args,
+			config,
+		});
 
 		if (args.latest) {
 			logger.warn(
@@ -455,7 +458,7 @@ export const deployCommand = createCommand({
 		if (!name) {
 			throw new UserError(
 				'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-				{ telemetryMessage: true }
+				{ telemetryMessage: "deploy command missing worker name" }
 			);
 		}
 

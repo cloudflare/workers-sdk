@@ -66,12 +66,14 @@ export const throwMissingBindingError = ({
 
 	if (isTopLevel) {
 		throw new UserError(
-			`Processing ${configFile} configuration:\n  - ${bindingError}`
+			`Processing ${configFile} configuration:\n  - ${bindingError}`,
+			{ telemetryMessage: "type generation config missing binding field" }
 		);
 	}
 
 	throw new UserError(
-		`Processing ${configFile} configuration:\n  - "env.${envName}" environment configuration\n    - ${bindingError}`
+		`Processing ${configFile} configuration:\n  - "env.${envName}" environment configuration\n    - ${bindingError}`,
+		{ telemetryMessage: "type generation config missing binding field" }
 	);
 };
 
@@ -125,6 +127,7 @@ const unsafeParseBooleanString = (value: unknown): boolean => {
 		throw new ParseError({
 			text: `Invalid value: ${value}`,
 			kind: "error",
+			telemetryMessage: false,
 		});
 	}
 
@@ -138,6 +141,7 @@ const unsafeParseBooleanString = (value: unknown): boolean => {
 	throw new ParseError({
 		text: `Invalid value: ${value}`,
 		kind: "error",
+		telemetryMessage: false,
 	});
 };
 
@@ -171,7 +175,9 @@ export const checkTypesUpToDate = async (
 		typesFileLines = readFileSync(typesPath, "utf-8").split("\n");
 	} catch (e) {
 		if ((e as NodeJS.ErrnoException).code === "ENOENT") {
-			throw new UserError(`Types file not found at ${typesPath}.`);
+			throw new UserError(`Types file not found at ${typesPath}.`, {
+				telemetryMessage: "type generation check types file missing",
+			});
 		}
 
 		throw e;
@@ -184,7 +190,9 @@ export const checkTypesUpToDate = async (
 		line.startsWith(RUNTIME_HEADER_COMMENT_PREFIX)
 	);
 	if (!existingEnvHeader && !existingRuntimeHeader) {
-		throw new UserError(`No generated types found in ${typesPath}.`);
+		throw new UserError(`No generated types found in ${typesPath}.`, {
+			telemetryMessage: "type generation check generated types missing",
+		});
 	}
 
 	const { command: wranglerCommand = "", hash: maybeExistingHash } =
@@ -229,6 +237,7 @@ export const checkTypesUpToDate = async (
 				typesPath,
 				entrypoint,
 				serviceEntries,
+				undefined,
 				false // don't log anything
 			);
 			const newHash = envHeader?.match(/hash: (?<hash>.*)\)/)?.groups?.hash;
@@ -306,6 +315,7 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 			DEFAULT_WORKERS_TYPES_FILE_NAME,
 			entry,
 			new Map(),
+			undefined,
 			// don't log anything
 			false
 		);
@@ -440,13 +450,15 @@ export const validateEnvInterfaceNames = (envNames: Array<string>): void => {
 			if (existingEnv === "(reserved)") {
 				throw new UserError(
 					`Environment name "${envName}" converts to reserved interface name "${interfaceName}". ` +
-						`Please rename this environment to avoid conflicts.`
+						`Please rename this environment to avoid conflicts.`,
+					{ telemetryMessage: "type generation environment interface reserved" }
 				);
 			}
 
 			throw new UserError(
 				`Environment names "${existingEnv}" and "${envName}" both convert to interface name "${interfaceName}". ` +
-					`Please rename one of these environments to avoid conflicts.`
+					`Please rename one of these environments to avoid conflicts.`,
+				{ telemetryMessage: "type generation environment interface duplicate" }
 			);
 		}
 

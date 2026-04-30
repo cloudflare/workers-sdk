@@ -283,10 +283,10 @@ describe("writeOutput()", () => {
 		vi.mock("../user/whoami", () => {
 			return {
 				whoami: vi.fn().mockImplementation(() => {
-					throw new FatalError(
-						"A request to the Cloudflare API failed.",
-						10211
-					);
+					throw new FatalError("A request to the Cloudflare API failed.", {
+						code: 10211,
+						telemetryMessage: false,
+					});
 				}),
 			};
 		});

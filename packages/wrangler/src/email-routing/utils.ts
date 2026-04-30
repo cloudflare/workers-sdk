@@ -17,7 +17,9 @@ export async function resolveZoneId(
 		return await getZoneIdByDomain(config, args.domain, accountId);
 	}
 
-	throw new UserError("You must provide a domain or --zone-id.");
+	throw new UserError("You must provide a domain or --zone-id.", {
+		telemetryMessage: "email routing missing domain or zone id",
+	});
 }
 
 async function getZoneIdByDomain(
@@ -40,7 +42,8 @@ async function getZoneIdByDomain(
 	const zoneId = zones[0]?.id;
 	if (!zoneId) {
 		throw new UserError(
-			`Could not find zone for \`${domain}\`. Make sure the domain exists in your account.`
+			`Could not find zone for \`${domain}\`. Make sure the domain exists in your account.`,
+			{ telemetryMessage: "email routing zone not found" }
 		);
 	}
 
@@ -101,6 +104,7 @@ export async function resolveDomain(
 	}
 
 	throw new UserError(
-		`Could not find a zone for \`${domain}\`. Make sure the domain or its parent zone exists in your account.`
+		`Could not find a zone for \`${domain}\`. Make sure the domain or its parent zone exists in your account.`,
+		{ telemetryMessage: "email routing domain zone not found" }
 	);
 }

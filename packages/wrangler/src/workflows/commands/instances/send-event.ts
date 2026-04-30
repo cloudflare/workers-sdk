@@ -50,7 +50,8 @@ export const workflowsInstancesSendEventCommand = createCommand({
 			payload = JSON.parse(args.payload);
 		} catch (e) {
 			throw new UserError(
-				`Error while parsing event payload: "${args.payload}" with ${e}' `
+				`Error while parsing event payload: "${args.payload}" with ${e}' `,
+				{ telemetryMessage: "workflows instances send event invalid payload" }
 			);
 		}
 

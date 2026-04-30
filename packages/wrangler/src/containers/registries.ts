@@ -126,7 +126,10 @@ async function registryConfigureCommand(
 				: registryType.type === ExternalRegistryKind.ECR
 					? "aws-access-key-id"
 					: "public-credential";
-		throw new UserError(`Missing required argument: ${arg}`);
+		throw new UserError(`Missing required argument: ${arg}`, {
+			telemetryMessage:
+				"containers registries configure missing public credential",
+		});
 	}
 
 	log(`Configuring ${registryType.name} registry: ${configureArgs.DOMAIN}\n`);
@@ -136,13 +139,21 @@ async function registryConfigureCommand(
 	if (isFedRAMPHigh) {
 		if (!configureArgs.disableSecretsStore) {
 			throw new UserError(
-				"Secrets Store is not supported in FedRAMP compliance regions. You must set --disable-secrets-store."
+				"Secrets Store is not supported in FedRAMP compliance regions. You must set --disable-secrets-store.",
+				{
+					telemetryMessage:
+						"containers registries configure secrets store unsupported",
+				}
 			);
 		}
 	} else {
 		if (configureArgs.disableSecretsStore) {
 			throw new UserError(
-				"Secrets Store can only be disabled in FedRAMP compliance regions."
+				"Secrets Store can only be disabled in FedRAMP compliance regions.",
+				{
+					telemetryMessage:
+						"containers registries configure disable secrets store unsupported",
+				}
 			);
 		}
 	}
@@ -186,7 +197,11 @@ async function registryConfigureCommand(
 			} else if (stores.length > 1) {
 				// note you can only have one secret store per account for now
 				throw new UserError(
-					`Multiple Secret Stores found. Please specify a Secret Store ID using --secret-store-id.`
+					`Multiple Secret Stores found. Please specify a Secret Store ID using --secret-store-id.`,
+					{
+						telemetryMessage:
+							"containers registries configure multiple secret stores",
+					}
 				);
 			} else {
 				secretStoreId = stores[0].id;
@@ -232,12 +247,17 @@ async function registryConfigureCommand(
 		if (e instanceof ApiError) {
 			if (e.status === 409) {
 				throw new UserError(
-					`A registry with the domain ${configureArgs.DOMAIN} already exists. Use "wrangler containers registries delete ${configureArgs.DOMAIN}" to delete it first if you want to reconfigure it.`
+					`A registry with the domain ${configureArgs.DOMAIN} already exists. Use "wrangler containers registries delete ${configureArgs.DOMAIN}" to delete it first if you want to reconfigure it.`,
+					{
+						telemetryMessage:
+							"containers registries configure registry already exists",
+					}
 				);
 			}
 			throw new APIError({
 				status: e.status,
 				text: "Error configuring container registry:\n" + formatError(e),
+				telemetryMessage: false,
 			});
 		} else {
 			throw e;
@@ -341,7 +361,11 @@ async function promptForRegistryPrivateCredential(
 		const stdinInput = trimTrailingWhitespace(await readFromStdin());
 		if (!stdinInput) {
 			throw new UserError(
-				`No input provided. In non-interactive mode, please pipe in the ${secretType} secret via stdin.`
+				`No input provided. In non-interactive mode, please pipe in the ${secretType} secret via stdin.`,
+				{
+					telemetryMessage:
+						"containers registries configure missing secret input",
+				}
 			);
 		}
 		return stdinInput;
@@ -350,7 +374,9 @@ async function promptForRegistryPrivateCredential(
 		isSecret: true,
 	});
 	if (!secret) {
-		throw new UserError("Secret cannot be empty.");
+		throw new UserError("Secret cannot be empty.", {
+			telemetryMessage: "containers registries configure empty secret",
+		});
 	}
 	return secret;
 }
@@ -389,6 +415,7 @@ async function registryListCommand(
 			throw new APIError({
 				status: e.status,
 				text: "Error listing container registries:\n" + formatError(e),
+				telemetryMessage: false,
 			});
 		} else {
 			throw e;
@@ -436,12 +463,16 @@ async function registryDeleteCommand(
 		if (e instanceof ApiError) {
 			if (e.status === 404) {
 				throw new UserError(
-					`The registry ${deleteArgs.DOMAIN} does not exist.`
+					`The registry ${deleteArgs.DOMAIN} does not exist.`,
+					{
+						telemetryMessage: "containers registries delete registry not found",
+					}
 				);
 			}
 			throw new APIError({
 				status: e.status,
 				text: `Error deleting container registry:\n` + formatError(e),
+				telemetryMessage: false,
 			});
 		} else {
 			throw e;
@@ -486,6 +517,7 @@ async function registryDeleteCommand(
 				throw new APIError({
 					status: e.status,
 					text: `Error deleting secret:\n` + formatError(e),
+					telemetryMessage: false,
 				});
 			} else {
 				throw e;
@@ -508,7 +540,11 @@ async function registryCredentialsCommand(credentialsArgs: {
 	const domain = credentialsArgs.DOMAIN || cloudflareRegistry;
 	if (domain !== cloudflareRegistry) {
 		throw new UserError(
-			`The credentials command only accepts the Cloudflare managed registry (${cloudflareRegistry}).`
+			`The credentials command only accepts the Cloudflare managed registry (${cloudflareRegistry}).`,
+			{
+				telemetryMessage:
+					"containers registries credentials unsupported registry",
+			}
 		);
 	}
 
@@ -518,7 +554,11 @@ async function registryCredentialsCommand(credentialsArgs: {
 		!credentialsArgs.libraryPush
 	) {
 		throw new UserError(
-			"You have to specify either --push or --pull in the command."
+			"You have to specify either --push or --pull in the command.",
+			{
+				telemetryMessage:
+					"containers registries credentials missing permission",
+			}
 		);
 	}
 
@@ -562,7 +602,11 @@ export const containersRegistriesConfigureCommand = createCommand({
 			!args.disableSecretsStore
 		) {
 			throw new UserError(
-				"--secret-name is required when using --skip-confirmation"
+				"--secret-name is required when using --skip-confirmation",
+				{
+					telemetryMessage:
+						"containers registries configure missing secret name",
+				}
 			);
 		}
 	},

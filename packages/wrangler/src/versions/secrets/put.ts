@@ -47,13 +47,15 @@ export const versionsSecretPutCommand = createCommand({
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(
-				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
+				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``,
+				{ telemetryMessage: "versions secrets put missing worker name" }
 			);
 		}
 
 		if (args.key === undefined) {
 			throw new UserError(
-				"Secret name is required. Please specify the name of your secret."
+				"Secret name is required. Please specify the name of your secret.",
+				{ telemetryMessage: "versions secrets put missing secret name" }
 			);
 		}
 
@@ -79,7 +81,8 @@ export const versionsSecretPutCommand = createCommand({
 		).items;
 		if (versions.length === 0) {
 			throw new UserError(
-				"There are currently no uploaded versions of this Worker. Please upload a version before uploading a secret."
+				"There are currently no uploaded versions of this Worker. Please upload a version before uploading a secret.",
+				{ telemetryMessage: "versions secrets put no uploaded versions" }
 			);
 		}
 		const latestVersion = versions[0];

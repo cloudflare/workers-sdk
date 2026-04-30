@@ -112,7 +112,8 @@ export async function prepareContainerImagesForDev(args: {
 	let aborted = false;
 	if (process.platform === "win32") {
 		throw new UserError(
-			"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container part of your application."
+			"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container part of your application.",
+			{ telemetryMessage: false }
 		);
 	}
 	await verifyDockerInstalled(dockerPath);
@@ -266,7 +267,8 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 			.map((r) => r.name)
 			.join(", ");
 		throw new UserError(
-			`${url.hostname} is not a supported image registry.\nCurrently we support the following non-Cloudflare registries: ${supportedRegistries}.\nTo use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images`
+			`${url.hostname} is not a supported image registry.\nCurrently we support the following non-Cloudflare registries: ${supportedRegistries}.\nTo use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images`,
+			{ telemetryMessage: false }
 		);
 	}
 

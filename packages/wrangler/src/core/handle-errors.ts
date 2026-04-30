@@ -571,6 +571,7 @@ export async function handleError(
 		const error = new APIError({
 			text: `A request to the Cloudflare API failed.`,
 			notes: [...e.errors.map((err) => ({ text: renderError(err) }))],
+			telemetryMessage: false,
 		});
 		error.notes.push({
 			text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",

@@ -197,7 +197,9 @@ export function createWorkerUploadForm(
 		}
 
 		if (id === undefined) {
-			throw new UserError(`${binding} bindings must have an "id" field`);
+			throw new UserError(`${binding} bindings must have an "id" field`, {
+				telemetryMessage: "kv namespace binding missing id",
+			});
 		}
 
 		if (id === INHERIT_SYMBOL) {
@@ -274,7 +276,8 @@ export function createWorkerUploadForm(
 		}
 		if (bucket_name === undefined) {
 			throw new UserError(
-				`${binding} bindings must have a "bucket_name" field`
+				`${binding} bindings must have a "bucket_name" field`,
+				{ telemetryMessage: "r2 bucket binding missing bucket_name" }
 			);
 		}
 
@@ -301,7 +304,8 @@ export function createWorkerUploadForm(
 			}
 			if (database_id === undefined) {
 				throw new UserError(
-					`${binding} bindings must have a "database_id" field`
+					`${binding} bindings must have a "database_id" field`,
+					{ telemetryMessage: "d1 database binding missing database_id" }
 				);
 			}
 
@@ -336,7 +340,9 @@ export function createWorkerUploadForm(
 			namespace ??= INHERIT_SYMBOL;
 		}
 		if (namespace === undefined) {
-			throw new UserError(`${binding} bindings must have a "namespace" field`);
+			throw new UserError(`${binding} bindings must have a "namespace" field`, {
+				telemetryMessage: "ai search namespace binding missing namespace",
+			});
 		}
 
 		if (namespace === INHERIT_SYMBOL) {

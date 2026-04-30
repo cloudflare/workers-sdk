@@ -119,7 +119,8 @@ export const aiSearchCreateCommand = createCommand({
 				throw new UserError(
 					`No AI Search API token found. Create one at:\n` +
 						`  https://dash.cloudflare.com/${accountId}/ai/ai-search/tokens\n` +
-						`Then re-run this command.`
+						`Then re-run this command.`,
+					{ telemetryMessage: "ai search create missing api token" }
 				);
 			}
 			logger.log(
@@ -130,7 +131,9 @@ export const aiSearchCreateCommand = createCommand({
 			while (!hasToken) {
 				const ready = await confirm("Have you created a token?");
 				if (!ready) {
-					throw new UserError("AI Search instance creation cancelled.");
+					throw new UserError("AI Search instance creation cancelled.", {
+						telemetryMessage: "ai search create cancelled",
+					});
 				}
 				const tokens = await listTokens(config, accountId);
 				if (tokens.length > 0) {
@@ -208,7 +211,8 @@ export const aiSearchCreateCommand = createCommand({
 			if (isNonInteractiveOrCI()) {
 				throw new UserError(
 					"Missing required flag in non-interactive mode: --type\n" +
-						"  Pass --type r2 or --type web-crawler."
+						"  Pass --type r2 or --type web-crawler.",
+					{ telemetryMessage: "ai search create missing type" }
 				);
 			}
 			instanceType = await select("Select the source type:", {
@@ -237,7 +241,8 @@ export const aiSearchCreateCommand = createCommand({
 			if (isNonInteractiveOrCI()) {
 				throw new UserError(
 					"Missing required flag in non-interactive mode: --source\n" +
-						"  Pass --source <r2-bucket-name>."
+						"  Pass --source <r2-bucket-name>.",
+					{ telemetryMessage: "ai search create missing r2 source" }
 				);
 			}
 			// 2.1 R2: list buckets and let user pick, with "Create new" option
@@ -278,7 +283,8 @@ export const aiSearchCreateCommand = createCommand({
 			if (isNonInteractiveOrCI()) {
 				throw new UserError(
 					"Missing required flag in non-interactive mode: --source\n" +
-						"  Pass --source <url> (e.g. --source https://example.com)."
+						"  Pass --source <url> (e.g. --source https://example.com).",
+					{ telemetryMessage: "ai search create missing web crawler source" }
 				);
 			}
 			// 2.2 Web: select source type (sitemap only for now), then list zones

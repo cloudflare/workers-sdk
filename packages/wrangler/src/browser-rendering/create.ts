@@ -50,7 +50,8 @@ export const browserCreateCommand = createCommand({
 				keepAlive <= MAX_KEEP_ALIVE_SECONDS;
 			if (!inRange) {
 				throw new UserError(
-					`--keep-alive must be between ${MIN_KEEP_ALIVE_SECONDS} and ${MAX_KEEP_ALIVE_SECONDS} seconds`
+					`--keep-alive must be between ${MIN_KEEP_ALIVE_SECONDS} and ${MAX_KEEP_ALIVE_SECONDS} seconds`,
+					{ telemetryMessage: "browser rendering create invalid keep alive" }
 				);
 			}
 		}
@@ -77,7 +78,8 @@ export const browserCreateCommand = createCommand({
 
 		if (response.targets.length === 0) {
 			throw new UserError(
-				`Session created (${response.sessionId}) but no targets found`
+				`Session created (${response.sessionId}) but no targets found`,
+				{ telemetryMessage: "browser rendering create no targets" }
 			);
 		}
 

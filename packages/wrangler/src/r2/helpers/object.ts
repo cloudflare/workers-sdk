@@ -59,7 +59,7 @@ export function validateUploadSize(key: string, sizeBytes: number): void {
 			)} in size\n${key} is ${prettyBytes(sizeBytes, {
 				binary: true,
 			})} in size`,
-			1
+			{ code: 1, telemetryMessage: "r2 object upload too large" }
 		);
 	}
 }
@@ -117,7 +117,9 @@ export async function putRemoteObject(
 		}
 	);
 	if (result === null) {
-		throw new UserError("The specified bucket does not exist.");
+		throw new UserError("The specified bucket does not exist.", {
+			telemetryMessage: "r2 object put bucket not found",
+		});
 	}
 }
 /**
@@ -214,13 +216,15 @@ export function validateAndReturnBucketAndKey(objectPath: string): {
 	const match = /^(?<bucket>[^/]+)\/(?<key>.*)/.exec(objectPath);
 	if (match === null || !match.groups) {
 		throw new UserError(
-			`The object path must be in the form of {bucket}/{key} you provided ${objectPath}`
+			`The object path must be in the form of {bucket}/{key} you provided ${objectPath}`,
+			{ telemetryMessage: "r2 object path invalid format" }
 		);
 	}
 	const { bucket, key } = match.groups;
 	if (!isValidR2BucketName(bucket)) {
 		throw new UserError(
-			`The bucket name "${bucket}" is invalid. ${bucketFormatMessage}`
+			`The bucket name "${bucket}" is invalid. ${bucketFormatMessage}`,
+			{ telemetryMessage: "r2 object path invalid bucket name" }
 		);
 	}
 

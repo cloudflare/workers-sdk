@@ -1,5 +1,15 @@
 # @cloudflare/workflows-shared
 
+## 0.10.0
+
+### Minor Changes
+
+- [#13565](https://github.com/cloudflare/workers-sdk/pull/13565) [`b04eedf`](https://github.com/cloudflare/workers-sdk/commit/b04eedfcdc713d04cbb4f1722ebe056c9dc4cb6e) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Add restart from step support for local Workflows development
+
+  Workflow instances can now be restarted from a specific step in local development. When restarting from a step, all earlier steps preserve their cached results and replay instantly, while the target step and everything after it re-execute.
+
+  The `WorkflowInstance.restart()` method now accepts an optional `{ from: { name, count?, type? } }` parameter to specify which step to restart from.
+
 ## 0.9.1
 
 ### Patch Changes
