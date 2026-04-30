@@ -64,6 +64,11 @@ function formatMessageBuilder(builder: MessageBuilder): string {
 	return lines.join("\n");
 }
 
+function joinPath(base: string, ...segments: string[]): string {
+	const separator = base.includes("\\") ? "\\" : "/";
+	return [base.replace(/[\\/]+$/, ""), ...segments].join(separator);
+}
+
 interface SendEmailEnv {
 	MINIFLARE_EMAIL_DISK: Fetcher;
 	email_directory: string;
@@ -107,7 +112,8 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			method: "PUT",
 			body,
 		});
-		return `${this.env.email_directory}/${prefix}/${fileName}`;
+
+		return joinPath(this.env.email_directory, prefix, fileName);
 	}
 
 	private checkDestinationAllowed(to: string) {

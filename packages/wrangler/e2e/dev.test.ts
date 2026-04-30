@@ -2589,9 +2589,7 @@ This is a random email body.
 
 		const maybeReplyPath = await vi.waitUntil(
 			() =>
-				pathRegexp.exec(
-					worker.currentOutput.replace(/\x1b\[[0-9;]*m/g, "")
-				)?.[1],
+				pathRegexp.exec(stripVTControlCharacters(worker.currentOutput))?.[1],
 			{ interval: 100, timeout: 5000 }
 		);
 

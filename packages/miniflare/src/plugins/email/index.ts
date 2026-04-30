@@ -5,8 +5,8 @@ import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
 import {
 	getUserBindingServiceName,
-	ProxyNodeBinding,
 	remoteProxyClientWorker,
+	ProxyNodeBinding,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
@@ -86,7 +86,9 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			return [];
 		}
 
-		const emailDirectory = path.join(args.tmpPath, EMAIL_PLUGIN_NAME).replaceAll("\\", "/");
+		const emailDirectory = path
+			.join(args.tmpPath, EMAIL_PLUGIN_NAME)
+			.replaceAll("\\", "/");
 		await mkdir(emailDirectory, { recursive: true });
 
 		const services: Service[] = [
