@@ -24,6 +24,7 @@ const reorderableBindings = {
 	vectorize: true,
 	ai_search_namespaces: true,
 	ai_search: true,
+	agent_memory: true,
 	hyperdrive: true,
 	workflows: true,
 	dispatch_namespaces: true,
@@ -233,6 +234,12 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 
 	if (normalizedConfig.ai_search?.length) {
 		normalizedConfig.ai_search = normalizedConfig.ai_search.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.agent_memory?.length) {
+		normalizedConfig.agent_memory = normalizedConfig.agent_memory.map(
 			({ remote: _, ...binding }) => binding
 		);
 	}
