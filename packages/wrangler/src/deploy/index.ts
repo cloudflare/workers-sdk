@@ -610,7 +610,7 @@ export async function promptForMissingDeployConfig(
 			.cwd()
 			.split(path.sep)
 			.pop()
-			?.replace("_", "-")
+			?.replaceAll("_", "-")
 			.trim();
 		const isValidName = defaultName && /^[a-zA-Z0-9-]+$/.test(defaultName);
 		const projectName = await prompt("What do you want to name your project?", {
