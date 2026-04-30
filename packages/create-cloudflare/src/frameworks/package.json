@@ -18,7 +18,7 @@
 		"create-waku": "0.12.5-1.0.0-alpha.8-0",
 		"gatsby": "5.16.1",
 		"nuxi": "3.35.1",
-		"sv": "0.15.1"
+		"sv": "0.15.2"
 	},
 	"info": [
 		"This package.json is only used to keep track of the frameworks cli dependencies",
