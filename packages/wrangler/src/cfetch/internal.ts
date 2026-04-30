@@ -306,7 +306,9 @@ export async function requireLoggedIn(
 ): Promise<void> {
 	const loggedIn = await loginOrRefreshIfRequired(complianceConfig);
 	if (!loggedIn) {
-		throw new UserError("Not logged in.");
+		throw new UserError("Not logged in.", {
+			telemetryMessage: "cfetch auth login required",
+		});
 	}
 }
 

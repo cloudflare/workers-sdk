@@ -29,7 +29,9 @@ export const pagesProjectValidateCommand = createCommand({
 	positionalArgs: ["directory"],
 	async handler({ directory }) {
 		if (!directory) {
-			throw new FatalError("Must specify a directory.", 1);
+			throw new FatalError("Must specify a directory.", 1, {
+				telemetryMessage: "pages validate missing directory",
+			});
 		}
 
 		const fileCountLimit = process.env.CF_PAGES_UPLOAD_JWT
@@ -89,7 +91,9 @@ export const validate = async (args: {
 		} catch (e) {
 			if ((e as NodeJS.ErrnoException).code === "ENOENT") {
 				// File not found exeptions should be marked as user error
-				throw new FatalError((e as NodeJS.ErrnoException).message);
+				throw new FatalError((e as NodeJS.ErrnoException).message, undefined, {
+					telemetryMessage: "pages validate directory not found",
+				});
 			}
 			throw e;
 		}
@@ -123,7 +127,8 @@ export const validate = async (args: {
 							)} in size\n${name} is ${prettyBytes(filestat.size, {
 								binary: true,
 							})} in size`,
-							1
+							1,
+							{ telemetryMessage: "pages validate file too large" }
 						);
 					}
 
@@ -146,7 +151,8 @@ export const validate = async (args: {
 	if (fileMap.size > fileCountLimit) {
 		throw new FatalError(
 			`Error: Pages only supports up to ${fileCountLimit.toLocaleString()} files in a deployment for your current plan. Ensure you have specified your build output directory correctly.`,
-			1
+			1,
+			{ telemetryMessage: "pages validate too many files" }
 		);
 	}
 

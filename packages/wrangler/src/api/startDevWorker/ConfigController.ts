@@ -80,7 +80,8 @@ async function resolveDevConfig(
 			const isLoggedIn = await loginOrRefreshIfRequired(config);
 			if (!isLoggedIn) {
 				throw new UserError(
-					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
+					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local.",
+					{ telemetryMessage: "api dev remote login required" }
 				);
 			}
 		}
@@ -277,7 +278,8 @@ async function resolveConfig(
 		input.dev?.multiworkerPrimary === false
 	) {
 		throw new UserError(
-			`You cannot use a Pages project as a service binding target.\nIf you are trying to develop Pages and Workers together, please use \`wrangler pages dev\`. Note the first config file specified must be for the Pages project`
+			`You cannot use a Pages project as a service binding target.\nIf you are trying to develop Pages and Workers together, please use \`wrangler pages dev\`. Note the first config file specified must be for the Pages project`,
+			{ telemetryMessage: "api dev pages service binding target invalid" }
 		);
 	}
 	const legacySite = unwrapHook(input.legacy?.site, config);

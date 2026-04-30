@@ -325,7 +325,9 @@ export const pagesDownloadConfigCommand = createCommand({
 		projectName ??= projectConfig.project_name;
 
 		if (!projectName) {
-			throw new FatalError("Must specify a project name.", 1);
+			throw new FatalError("Must specify a project name.", 1, {
+				telemetryMessage: "pages download config missing project name",
+			});
 		}
 		const config = await downloadProject(accountId, projectName);
 		if (!force && existsSync("wrangler.toml")) {
@@ -335,7 +337,9 @@ export const pagesDownloadConfigCommand = createCommand({
 			);
 			if (!overwrite) {
 				throw new FatalError(
-					"Not overwriting existing Wrangler configuration file"
+					"Not overwriting existing Wrangler configuration file",
+					undefined,
+					{ telemetryMessage: "pages download config overwrite declined" }
 				);
 			}
 		}

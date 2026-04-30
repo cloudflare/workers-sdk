@@ -184,11 +184,15 @@ export async function updateLegacyPipeline(
 			destination.credentials.secret_access_key = auth.secretAccessKey;
 		}
 		if (!destination.credentials.access_key_id) {
-			throw new FatalError("Requires a r2 access key id");
+			throw new FatalError("Requires a r2 access key id", undefined, {
+				telemetryMessage: "pipelines legacy missing r2 access key",
+			});
 		}
 
 		if (!destination.credentials.secret_access_key) {
-			throw new FatalError("Requires a r2 secret access key");
+			throw new FatalError("Requires a r2 secret access key", undefined, {
+				telemetryMessage: "pipelines legacy missing r2 secret key",
+			});
 		}
 	}
 
@@ -232,7 +236,8 @@ export async function updateLegacyPipeline(
 
 	if (pipelineConfig.source.length === 0) {
 		throw new UserError(
-			"No sources have been enabled. At least one source (HTTP or Worker Binding) should be enabled"
+			"No sources have been enabled. At least one source (HTTP or Worker Binding) should be enabled",
+			{ telemetryMessage: "pipelines legacy missing sources" }
 		);
 	}
 

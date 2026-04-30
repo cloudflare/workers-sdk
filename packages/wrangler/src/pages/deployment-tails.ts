@@ -134,7 +134,9 @@ export const pagesDeploymentTailCommand = createCommand({
 		if (status && !isStatusChoiceList(status)) {
 			throw new FatalError(
 				"Invalid value for `--status`. Valid options: " +
-					statusChoices.join(", ")
+					statusChoices.join(", "),
+				undefined,
+				{ telemetryMessage: "pages deployment tail invalid status" }
 			);
 		}
 
@@ -150,14 +152,16 @@ export const pagesDeploymentTailCommand = createCommand({
 			if (!deploymentId) {
 				throw new FatalError(
 					"Must specify a deployment in non-interactive mode.",
-					1
+					1,
+					{ telemetryMessage: "pages deployment tail missing deployment" }
 				);
 			}
 
 			if (!projectName) {
 				throw new FatalError(
 					"Must specify a project name in non-interactive mode.",
-					1
+					1,
+					{ telemetryMessage: "pages deployment tail missing project name" }
 				);
 			}
 		}
@@ -167,7 +171,9 @@ export const pagesDeploymentTailCommand = createCommand({
 		}
 
 		if (!deployment && !projectName) {
-			throw new FatalError("Must specify a project name or deployment.", 1);
+			throw new FatalError("Must specify a project name or deployment.", 1, {
+				telemetryMessage: "pages deployment tail missing target",
+			});
 		}
 
 		const deployments: Array<Deployment> = await fetchResult(
@@ -194,7 +200,8 @@ export const pagesDeploymentTailCommand = createCommand({
 			if (!targetDeployment) {
 				throw new FatalError(
 					"Could not find deployment match url: " + deployment,
-					1
+					1,
+					{ telemetryMessage: "pages deployment tail deployment url not found" }
 				);
 			}
 
@@ -203,7 +210,8 @@ export const pagesDeploymentTailCommand = createCommand({
 			if (envDeployments.length === 0) {
 				throw new FatalError(
 					"No deployments for environment: " + environment,
-					1
+					1,
+					{ telemetryMessage: "pages deployment tail no deployments" }
 				);
 			}
 

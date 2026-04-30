@@ -121,14 +121,19 @@ export const kvNamespaceCreateCommand = createCommand({
 				e instanceof Cloudflare.APIError &&
 				e.errors.some((err) => err.code === 10014)
 			) {
-				throw new UserError(dedent`
+				throw new UserError(
+					dedent`
 					A KV namespace with the title "${title}" already exists.
 
 					You can list existing namespaces with their IDs by running:
 					  wrangler kv namespace list
 
 					Or choose a different namespace name.
-				`);
+				`,
+					{
+						telemetryMessage: "kv namespace create namespace already exists",
+					}
+				);
 			}
 			throw e;
 		}
@@ -229,13 +234,18 @@ export const kvNamespaceDeleteCommand = createCommand({
 
 		if (providedOptions.length === 0) {
 			throw new CommandLineArgsError(
-				"Must specify one of: namespace name (as positional argument), --binding, or --namespace-id"
+				"Must specify one of: namespace name (as positional argument), --binding, or --namespace-id",
+				{ telemetryMessage: "kv namespace delete missing namespace selector" }
 			);
 		}
 
 		if (providedOptions.length > 1) {
 			throw new CommandLineArgsError(
-				"Cannot specify multiple of: namespace name (as positional argument), --binding, or --namespace-id. Use only one."
+				"Cannot specify multiple of: namespace name (as positional argument), --binding, or --namespace-id. Use only one.",
+				{
+					telemetryMessage:
+						"kv namespace delete conflicting namespace selectors",
+				}
 			);
 		}
 	},
@@ -255,7 +265,8 @@ export const kvNamespaceDeleteCommand = createCommand({
 			));
 		} catch (e) {
 			throw new CommandLineArgsError(
-				"Not able to delete namespace.\n" + ((e as Error).message ?? e)
+				"Not able to delete namespace.\n" + ((e as Error).message ?? e),
+				{ telemetryMessage: "kv namespace delete namespace resolution failed" }
 			);
 		}
 
@@ -325,21 +336,27 @@ export const kvNamespaceRenameCommand = createCommand({
 		// Check if both name and namespace-id are provided
 		if (args.oldName && args.namespaceId) {
 			throw new CommandLineArgsError(
-				"Cannot specify both old-name and --namespace-id. Use either old-name (as first argument) or --namespace-id flag, not both."
+				"Cannot specify both old-name and --namespace-id. Use either old-name (as first argument) or --namespace-id flag, not both.",
+				{
+					telemetryMessage:
+						"kv namespace rename conflicting namespace selectors",
+				}
 			);
 		}
 
 		// Require either old-name or namespace-id
 		if (!args.namespaceId && !args.oldName) {
 			throw new CommandLineArgsError(
-				"Either old-name (as first argument) or --namespace-id must be specified"
+				"Either old-name (as first argument) or --namespace-id must be specified",
+				{ telemetryMessage: "kv namespace rename missing namespace selector" }
 			);
 		}
 
 		// Validate new-name length (API limit is 512 characters)
 		if (args.newName && args.newName.length > 512) {
 			throw new CommandLineArgsError(
-				`new-name must be 512 characters or less (current: ${args.newName.length})`
+				`new-name must be 512 characters or less (current: ${args.newName.length})`,
+				{ telemetryMessage: "kv namespace rename new name too long" }
 			);
 		}
 	},
@@ -359,7 +376,8 @@ export const kvNamespaceRenameCommand = createCommand({
 			if (!namespace) {
 				throw new UserError(
 					`No namespace found with the name "${args.oldName}". ` +
-						`Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".`
+						`Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".`,
+					{ telemetryMessage: "kv namespace rename namespace not found" }
 				);
 			}
 			namespaceId = namespace.id;
@@ -838,7 +856,8 @@ export const kvBulkGetCommand = createCommand({
 		if (!Array.isArray(content)) {
 			throw new UserError(
 				`Unexpected JSON input from "${filename}".\n` +
-					`Expected an array of strings but got:\n${content}`
+					`Expected an array of strings but got:\n${content}`,
+				{ telemetryMessage: "kv bulk get invalid json array" }
 			);
 		}
 
@@ -863,7 +882,8 @@ export const kvBulkGetCommand = createCommand({
 			throw new UserError(
 				`Unexpected JSON input from "${filename}".\n` +
 					`Expected an array of strings or objects with a "name" key.\n` +
-					errors.join("\n")
+					errors.join("\n"),
+				{ telemetryMessage: "kv bulk get invalid json item" }
 			);
 		}
 
@@ -933,7 +953,8 @@ export const kvBulkPutCommand = createCommand({
 		if (!Array.isArray(content)) {
 			throw new UserError(
 				`Unexpected JSON input from "${filename}".\n` +
-					`Expected an array of key-value objects but got type "${typeof content}".`
+					`Expected an array of key-value objects but got type "${typeof content}".`,
+				{ telemetryMessage: "kv bulk put invalid json array" }
 			);
 		}
 
@@ -984,7 +1005,8 @@ export const kvBulkPutCommand = createCommand({
 					`  metadata?: object;\n` +
 					`  base64?: boolean;\n` +
 					`}\n\n` +
-					errors.join("\n")
+					errors.join("\n"),
+				{ telemetryMessage: "kv bulk put invalid key value item" }
 			);
 		}
 
@@ -1075,7 +1097,8 @@ export const kvBulkDeleteCommand = createCommand({
 		if (!Array.isArray(content)) {
 			throw new UserError(
 				`Unexpected JSON input from "${filename}".\n` +
-					`Expected an array of strings but got:\n${content}`
+					`Expected an array of strings but got:\n${content}`,
+				{ telemetryMessage: "kv bulk delete invalid json array" }
 			);
 		}
 
@@ -1099,7 +1122,8 @@ export const kvBulkDeleteCommand = createCommand({
 			throw new UserError(
 				`Unexpected JSON input from "${filename}".\n` +
 					`Expected an array of strings or objects with a "name" key.\n` +
-					errors.join("\n")
+					errors.join("\n"),
+				{ telemetryMessage: "kv bulk delete invalid json item" }
 			);
 		}
 

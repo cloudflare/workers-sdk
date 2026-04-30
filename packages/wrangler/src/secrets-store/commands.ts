@@ -83,7 +83,7 @@ export const secretsStoreStoreCreateCommand = createCommand({
 		} else {
 			throw new UserError(
 				"Local secrets stores are automatically created for you on use. To create a Secrets Store on your account, use the --remote flag.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "secrets store create local unsupported" }
 			);
 		}
 		logger.log(`✅ Created store! (Name: ${args.name}, ID: ${store.id})`);
@@ -118,7 +118,7 @@ export const secretsStoreStoreDeleteCommand = createCommand({
 		} else {
 			throw new UserError(
 				"This command is not supported in local mode. Use `wrangler <cmd> --remote` to delete a Secrets Store from your account.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "secrets store delete local unsupported" }
 			);
 		}
 		logger.log(`✅ Deleted store! (ID: ${args.storeId})`);
@@ -164,13 +164,13 @@ export const secretsStoreStoreListCommand = createCommand({
 		} else {
 			throw new UserError(
 				"This command is not supported in local mode. Use `wrangler <cmd> --remote` to list Secrets Stores on your account.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "secrets store list local unsupported" }
 			);
 		}
 
 		if (stores.length === 0) {
 			throw new UserError("List request returned no stores.", {
-				telemetryMessage: true,
+				telemetryMessage: "secrets store list no stores",
 			});
 		} else {
 			const prettierStores = stores
@@ -262,7 +262,7 @@ export const secretsStoreSecretListCommand = createCommand({
 
 		if (secrets.length === 0) {
 			throw new FatalError("List request returned no secrets.", 1, {
-				telemetryMessage: true,
+				telemetryMessage: "secrets store secret list no secrets",
 			});
 		} else {
 			const prettierSecrets = secrets.map((secret) => ({
@@ -416,7 +416,9 @@ export const secretsStoreSecretCreateCommand = createCommand({
 		}
 
 		if (!secretValue) {
-			throw new UserError("Need to pass in a value when creating a secret.");
+			throw new UserError("Need to pass in a value when creating a secret.", {
+				telemetryMessage: "secrets store secret create missing value",
+			});
 		}
 
 		logger.log(
@@ -455,7 +457,7 @@ export const secretsStoreSecretCreateCommand = createCommand({
 
 		if (secrets.length === 0) {
 			throw new FatalError("Failed to create a secret.", 1, {
-				telemetryMessage: true,
+				telemetryMessage: "secrets store secret create failed",
 			});
 		}
 		const secret = secrets[0];
@@ -544,7 +546,8 @@ export const secretsStoreSecretUpdateCommand = createCommand({
 
 		if (!secretValue && !args.scopes && !args.comment) {
 			throw new UserError(
-				"Need to pass in a new field using `--value`, `--scopes`, or `--comment` to update a secret."
+				"Need to pass in a new field using `--value`, `--scopes`, or `--comment` to update a secret.",
+				{ telemetryMessage: "secrets store secret update missing field" }
 			);
 		}
 
@@ -758,7 +761,8 @@ export const validateSecretName = (name: string) => {
 	const validName = /^[A-z0-9-_]+$/;
 	if (!validName.test(name)) {
 		throw new UserError(
-			"Secret name may only contain alphanumeric characters, underscores, or dashes."
+			"Secret name may only contain alphanumeric characters, underscores, or dashes.",
+			{ telemetryMessage: "secrets store secret invalid name" }
 		);
 	}
 };

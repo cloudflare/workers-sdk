@@ -245,19 +245,33 @@ async function parseModules(
 		// Workers Sites is not supported
 		if (formData.get("__STATIC_CONTENT_MANIFEST") !== null) {
 			throw new UserError(
-				"Workers Sites does not support updating secrets through `wrangler versions secret put`. You must use `wrangler secret put` instead."
+				"Workers Sites does not support updating secrets through `wrangler versions secret put`. You must use `wrangler secret put` instead.",
+				{ telemetryMessage: "versions secrets sites unsupported" }
 			);
 		}
 
 		// Load the main module and any additionals
 		const entrypoint = contentRes.headers.get("cf-entrypoint");
 		if (entrypoint === null) {
-			throw new FatalError("Got modules without cf-entrypoint header");
+			throw new FatalError(
+				"Got modules without cf-entrypoint header",
+				undefined,
+				{
+					telemetryMessage:
+						"versions secrets modules missing entrypoint header",
+				}
+			);
 		}
 
 		const entrypointPart = formData.get(entrypoint) as File | null;
 		if (entrypointPart === null) {
-			throw new FatalError("Could not find entrypoint in form-data");
+			throw new FatalError(
+				"Could not find entrypoint in form-data",
+				undefined,
+				{
+					telemetryMessage: "versions secrets modules missing entrypoint part",
+				}
+			);
 		}
 
 		const mainModule: CfModule = {
@@ -303,7 +317,9 @@ async function parseModules(
 		const contentType = contentRes.headers.get("content-type");
 		if (contentType === null) {
 			throw new FatalError(
-				"No content-type header was provided for non-module Worker content"
+				"No content-type header was provided for non-module Worker content",
+				undefined,
+				{ telemetryMessage: "versions secrets content missing content type" }
 			);
 		}
 

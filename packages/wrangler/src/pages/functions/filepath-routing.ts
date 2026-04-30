@@ -33,7 +33,9 @@ export async function generateConfigFromFileTree({
 				bundle: false,
 				entryPoints: [path.resolve(filepath)],
 			}).catch((e) => {
-				throw new FunctionsBuildError(e.message);
+				throw new FunctionsBuildError(e.message, {
+					telemetryMessage: "pages functions route build failed",
+				});
 			});
 			const exportNames: string[] = [];
 			if (metafile) {
@@ -218,7 +220,9 @@ function convertCatchallParams(routePath: string): string {
 			return `:${param}*`;
 		} else {
 			throw new FatalError(
-				`Invalid Pages function route parameter - "[[${param}]]". Parameters names must only contain alphanumeric and underscore characters.`
+				`Invalid Pages function route parameter - "[[${param}]]". Parameters names must only contain alphanumeric and underscore characters.`,
+				undefined,
+				{ telemetryMessage: "pages functions invalid catchall route parameter" }
 			);
 		}
 	});
@@ -233,7 +237,9 @@ function convertSimpleParams(routePath: string): string {
 			return `:${param}`;
 		} else {
 			throw new FatalError(
-				`Invalid Pages function route parameter - "[${param}]". Parameter names must only contain alphanumeric and underscore characters.`
+				`Invalid Pages function route parameter - "[${param}]". Parameter names must only contain alphanumeric and underscore characters.`,
+				undefined,
+				{ telemetryMessage: "pages functions invalid route parameter" }
 			);
 		}
 	});

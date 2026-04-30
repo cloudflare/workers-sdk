@@ -51,10 +51,15 @@ async function withTunnelErrorHandling<T>(
 		return await operation();
 	} catch (error) {
 		if (isTunnelPermissionError(error)) {
-			throw new UserError(TUNNEL_PERMISSION_ERROR_MESSAGE);
+			throw new UserError(TUNNEL_PERMISSION_ERROR_MESSAGE, {
+				telemetryMessage: "tunnel api permission error",
+			});
 		}
 		if (error instanceof CloudflareSDK.APIError) {
-			throw new UserError(error.message, { cause: error });
+			throw new UserError(error.message, {
+				cause: error,
+				telemetryMessage: "tunnel api error",
+			});
 		}
 		throw error;
 	}
@@ -214,20 +219,23 @@ export async function resolveTunnelId(
 
 	if (tunnels.length === 0) {
 		throw new UserError(
-			`"${input}" is neither the ID nor the name of any of your tunnels`
+			`"${input}" is neither the ID nor the name of any of your tunnels`,
+			{ telemetryMessage: "tunnel resolve missing tunnel" }
 		);
 	}
 
 	if (tunnels.length > 1) {
 		throw new UserError(
-			`Found multiple tunnels named "${input}". Please use the tunnel ID instead.`
+			`Found multiple tunnels named "${input}". Please use the tunnel ID instead.`,
+			{ telemetryMessage: "tunnel resolve multiple tunnels" }
 		);
 	}
 
 	const tunnelId = tunnels[0].id;
 	if (!tunnelId) {
 		throw new UserError(
-			`Tunnel "${input}" was found but has no ID. This is unexpected — please try again or use the tunnel ID directly.`
+			`Tunnel "${input}" was found but has no ID. This is unexpected — please try again or use the tunnel ID directly.`,
+			{ telemetryMessage: "tunnel resolve missing tunnel id" }
 		);
 	}
 	return tunnelId;
