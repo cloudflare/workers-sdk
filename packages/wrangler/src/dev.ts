@@ -398,7 +398,12 @@ export async function getHostAndRoutes(
 		}
 	});
 	if (routes) {
-		const assetOptions = getAssetsOptions({ assets: args.assets }, config);
+		const assetOptions = getAssetsOptions({
+			args: {
+				assets: args.assets,
+			},
+			config,
+		});
 		validateRoutes(routes, assetOptions);
 	}
 	return { host, routes };

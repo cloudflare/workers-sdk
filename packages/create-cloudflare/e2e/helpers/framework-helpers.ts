@@ -76,7 +76,7 @@ export async function runC3ForFrameworkTest(
 
 	const match = output.replaceAll("\n", "").match(deployedUrlRe);
 	if (!match || !match[1]) {
-		// eslint-disable-next-line no-console
+		// eslint-disable-next-line no-console -- we dump raw C3 output for tests debugging
 		console.error(output);
 		expect(false, "Couldn't find deployment url in C3 output").toBe(true);
 		return "";
@@ -87,8 +87,7 @@ export async function runC3ForFrameworkTest(
 
 export function updateWranglerConfig(
 	projectPath: string,
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	handleUpdate: <T extends Record<string, any>>(config: T) => T
+	handleUpdate: <T extends Record<string, unknown>>(config: T) => T
 ) {
 	const wranglerTomlPath = join(projectPath, "wrangler.toml");
 	const wranglerJsoncPath = join(projectPath, "wrangler.jsonc");
@@ -131,7 +130,7 @@ export async function addTestVarsToWranglerToml(projectPath: string) {
 		return {
 			...config,
 			vars: {
-				...config.vars,
+				...(config.vars as Record<string, unknown>),
 				TEST: "C3_TEST",
 			},
 		};
@@ -223,7 +222,7 @@ export async function verifyDevScript(
 			restoreConfig = updateWranglerConfig(projectPath, (config) => ({
 				...config,
 				vars: {
-					...config.vars,
+					...(config.vars as Record<string, unknown>),
 					...updatedVars,
 				},
 			}));

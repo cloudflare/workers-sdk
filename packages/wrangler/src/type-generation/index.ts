@@ -38,6 +38,70 @@ import type {
 	RawEnvironment,
 } from "@cloudflare/workers-utils";
 
+export interface GenerateTypesOptions {
+	/**
+	 * Path to the Wrangler config file to use. Can be an array for multi-config type resolution.
+	 */
+	config?: string | string[];
+
+	/**
+	 * Name of the Wrangler environment to generate types for.
+	 */
+	env?: string;
+
+	/**
+	 * Paths to `.env` files to load when inferring local variables and secrets.
+	 */
+	envFile?: string[];
+
+	/**
+	 * Name of the generated environment interface.
+	 */
+	envInterface?: string;
+
+	/**
+	 * Whether to include environment/bindings types in the output.
+	 */
+	includeEnv?: boolean;
+
+	/**
+	 * Whether to include runtime types in the output.
+	 */
+	includeRuntime?: boolean;
+
+	/**
+	 * Path to the declaration file for generated types.
+	 */
+	path?: string;
+
+	/**
+	 * Whether to generate strict literal/union variable types.
+	 */
+	strictVars?: boolean;
+}
+
+interface ResolvedGenerateTypesOptions {
+	config: Config;
+	envHeaderCommand?: string;
+	env?: string;
+	envFile?: string[];
+	envInterface: string;
+	includeEnv: boolean;
+	includeRuntime: boolean;
+	path: string;
+	secondaryEntries: Map<string, Entry>;
+	strictVars: boolean;
+}
+
+interface GeneratedTypesResult {
+	config: Config;
+	content: string;
+	env: string | null;
+	path: string;
+	runtime: string | null;
+	shouldWriteFile: boolean;
+}
+
 export const typesCommand = createCommand({
 	metadata: {
 		description: "📝 Generate types from your Worker configuration\n",
@@ -140,74 +204,18 @@ export const typesCommand = createCommand({
 		}
 	},
 	async handler(args) {
-		let config: Config;
-		const secondaryConfigs: Config[] = [];
-		if (Array.isArray(args.config)) {
-			config = readConfig({ ...args, config: args.config[0] });
-			for (const configPath of args.config.slice(1)) {
-				secondaryConfigs.push(readConfig({ config: configPath }));
-			}
-		} else {
-			config = readConfig(args);
-		}
+		const resolvedOptions = await resolveGenerateTypesOptions(args, {
+			logSecondaryEntries: true,
+			validateOptions: false,
+			validateOutputPath: false,
+		});
 
-		const { envInterface, path: outputPath } = args;
-
-		if (
-			config.configPath == null ||
-			(fs
-				.statSync(config.configPath, { throwIfNoEntry: false })
-				?.isDirectory() ??
-				true)
-		) {
-			throw new UserError(
-				`No config file detected${args.config ? ` (at ${args.config})` : ""}. This command requires a Wrangler configuration file.`,
-				{ telemetryMessage: "No config file detected" }
-			);
-		}
-
-		const secondaryEntries: Map<string, Entry> = new Map();
-
-		if (secondaryConfigs.length > 0) {
-			for (const secondaryConfig of secondaryConfigs) {
-				const serviceEntry = await getEntry({}, secondaryConfig, "types");
-
-				if (serviceEntry.name) {
-					const key = serviceEntry.name;
-					if (secondaryEntries.has(key)) {
-						logger.warn(
-							`Configuration file for Worker '${key}' has been passed in more than once using \`--config\`. To remove this warning, only pass each unique Worker config file once.`
-						);
-					}
-					secondaryEntries.set(key, serviceEntry);
-					logger.log(
-						chalk.dim(
-							`- Found Worker '${key}' at '${relative(process.cwd(), serviceEntry.file)}' (${secondaryConfig.configPath})`
-						)
-					);
-
-					// Also register environment-specific names (e.g. "worker-foo" for env "foo")
-					// so that service/DO bindings referencing those names can be resolved.
-					const { rawConfig } = experimental_readRawConfig({
-						config: secondaryConfig.configPath,
-					});
-					for (const envName of Object.keys(rawConfig.env ?? {})) {
-						const envConfig = readConfig({
-							config: secondaryConfig.configPath,
-							env: envName,
-						});
-						const envKey = envConfig.name;
-						if (envKey && envKey !== key && !secondaryEntries.has(envKey)) {
-							secondaryEntries.set(envKey, serviceEntry);
-						}
-					}
-				} else {
-					throw new UserError(
-						`Could not resolve entry point for service config '${secondaryConfig}'.`
-					);
-				}
-			}
-		}
+		const {
+			config,
+			envInterface,
+			path: outputPath,
+			secondaryEntries,
+		} = resolvedOptions;
 
 		if (args.check) {
 			const outOfDate = await checkTypesUpToDate(
@@ -227,78 +235,402 @@ export const typesCommand = createCommand({
 			return;
 		}
 
-		const configContainsEntrypoint =
-			config.main !== undefined || !!config.site?.["entry-point"];
-
-		let entrypoint: Entry | undefined;
-		if (configContainsEntrypoint) {
-			// this will throw if an entrypoint is expected, but doesn't exist
-			// e.g. before building. however someone might still want to generate types
-			// so we default to module worker
-			try {
-				entrypoint = await getEntry({}, config, "types");
-			} catch {
-				entrypoint = undefined;
-			}
-		}
-		const entrypointFormat = entrypoint?.format ?? "modules";
-
-		const header = ["/* eslint-disable */"];
-		const content = [];
-		if (args.includeEnv) {
-			logger.log(`Generating project types...\n`);
-
-			const { envHeader, envTypes } = await generateEnvTypes(
-				config,
-				args,
-				envInterface,
-				outputPath,
-				entrypoint,
-				secondaryEntries
-			);
-			if (envHeader && envTypes) {
-				header.push(envHeader);
-				content.push(envTypes);
-			}
-		}
-
-		if (args.includeRuntime) {
-			logger.log("Generating runtime types...\n");
-			const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
-				config,
-				outFile: outputPath || undefined,
-			});
-			header.push(runtimeHeader);
-			content.push(`// Begin runtime types\n${runtimeTypes}`);
-			logger.log(chalk.dim("Runtime types generated.\n"));
-		}
+		const generatedTypes = await generateTypesFromResolvedOptions(
+			resolvedOptions,
+			true
+		);
 
 		logHorizontalRule();
 
-		// don't write an empty Env type for service worker syntax
-		if ((header.length && content.length) || entrypointFormat === "modules") {
-			fs.writeFileSync(
-				outputPath,
-				`${header.join("\n")}\n${content.join("\n")}`,
-				"utf-8"
-			);
+		if (generatedTypes.shouldWriteFile) {
+			fs.writeFileSync(outputPath, generatedTypes.content, "utf-8");
 			logger.log(`✨ Types written to ${outputPath}\n`);
 		}
+		const configPath = config.configPath as string;
 		const tsconfigPath =
-			config.tsconfig ?? join(dirname(config.configPath), "tsconfig.json");
+			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
 		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
 		const { mode } = getNodeCompat(
 			config.compatibility_date,
 			config.compatibility_flags
 		);
-		if (args.includeRuntime) {
+		if (resolvedOptions.includeRuntime) {
 			logRuntimeTypesMessage(tsconfigTypes, mode !== null);
 		}
 		logger.log(
-			`📣 Remember to rerun 'wrangler types' after you change your ${configFileName(config.configPath)} file.\n`
+			`📣 Remember to rerun 'wrangler types' after you change your ${configFileName(configPath)} file.\n`
 		);
 	},
 });
+
+/**
+ * Generates Wrangler types programmatically from an options object.
+ *
+ * This API mirrors the `wrangler types` command flags, but returns the generated
+ * declaration content as structured strings instead of writing to disk.
+ *
+ * @param options - Programmatic options equivalent to `wrangler types` flags.
+ *
+ * @returns Generated env/runtime sections, combined content, and metadata.
+ */
+export async function generateTypesFromWranglerOptions(
+	options: GenerateTypesOptions
+): Promise<GeneratedTypesResult> {
+	const resolvedOptions = await resolveGenerateTypesOptions(options, {
+		logSecondaryEntries: false,
+		validateOptions: true,
+		validateOutputPath: false,
+	});
+	resolvedOptions.envHeaderCommand = buildGenerateTypesHeaderCommand(
+		options,
+		resolvedOptions
+	);
+
+	return generateTypesFromResolvedOptions(resolvedOptions, false);
+}
+
+function buildGenerateTypesHeaderCommand(
+	options: GenerateTypesOptions,
+	resolvedOptions: ResolvedGenerateTypesOptions
+): string {
+	const commandParts: string[] = ["wrangler", "types"];
+
+	if (options.env !== undefined) {
+		commandParts.push(`--env=${options.env}`);
+	}
+
+	for (const envFile of options.envFile ?? []) {
+		commandParts.push(`--env-file=${envFile}`);
+	}
+
+	if (options.includeRuntime === false) {
+		commandParts.push("--include-runtime=false");
+	}
+
+	if (options.includeEnv === false) {
+		commandParts.push("--include-env=false");
+	}
+
+	if (options.strictVars === false) {
+		commandParts.push("--strict-vars=false");
+	}
+
+	if (options.envInterface !== undefined && options.envInterface !== "Env") {
+		commandParts.push(`--env-interface=${options.envInterface}`);
+	}
+
+	if (resolvedOptions.path !== DEFAULT_WORKERS_TYPES_FILE_NAME) {
+		commandParts.push(resolvedOptions.path);
+	}
+
+	return commandParts.join(" ");
+}
+
+/**
+ * Resolves user-provided generation options into a fully-populated shape.
+ *
+ * This function applies defaults, validates option combinations, reads the
+ * primary config, and resolves secondary worker entries used for cross-worker
+ * service and Durable Object type references.
+ *
+ * @param options - Raw generation options from CLI/API call sites.
+ * @param controls - Internal behavior toggles for validation and logging.
+ *
+ * @returns Fully-resolved options ready for type generation.
+ */
+async function resolveGenerateTypesOptions(
+	options: GenerateTypesOptions,
+	{
+		logSecondaryEntries,
+		validateOptions,
+		validateOutputPath,
+	}: {
+		logSecondaryEntries: boolean;
+		validateOptions: boolean;
+		validateOutputPath: boolean;
+	}
+): Promise<ResolvedGenerateTypesOptions> {
+	const envInterface = options.envInterface ?? "Env";
+	const includeEnv = options.includeEnv ?? true;
+	const includeRuntime = options.includeRuntime ?? true;
+	const path = options.path ?? DEFAULT_WORKERS_TYPES_FILE_NAME;
+	const strictVars = options.strictVars ?? true;
+
+	if (validateOptions) {
+		validateGenerateTypesOptions({
+			envInterface,
+			includeEnv,
+			includeRuntime,
+			path,
+			validateOutputPath,
+		});
+	}
+
+	let config: Config;
+	const secondaryConfigs: Config[] = [];
+	if (Array.isArray(options.config)) {
+		config = readConfig({ config: options.config[0], env: options.env });
+		for (const configPath of options.config.slice(1)) {
+			secondaryConfigs.push(readConfig({ config: configPath }));
+		}
+	} else {
+		config = readConfig({ config: options.config, env: options.env });
+	}
+
+	assertConfigFileDetected(config, options.config);
+
+	const secondaryEntries = await resolveSecondaryEntries(
+		secondaryConfigs,
+		logSecondaryEntries
+	);
+
+	return {
+		config,
+		env: options.env,
+		envFile: options.envFile,
+		envInterface,
+		includeEnv,
+		includeRuntime,
+		path,
+		secondaryEntries,
+		strictVars,
+	};
+}
+
+/**
+ * Generates environment & runtime type sections using pre-resolved options.
+ *
+ * Unlike the CLI command handler, this function does not write to disk; instead
+ * it returns the generated pieces and whether the CLI should write a file for
+ * this result.
+ *
+ * @param options - Fully-resolved generation options.
+ * @param log - Whether generation progress should be logged.
+ *
+ * @returns Combined and split generated type sections plus write metadata.
+ */
+async function generateTypesFromResolvedOptions(
+	options: ResolvedGenerateTypesOptions,
+	log: boolean
+): Promise<GeneratedTypesResult> {
+	const entrypoint = await getTypesEntrypoint(options.config);
+	const entrypointFormat = entrypoint?.format ?? "modules";
+
+	const header: string[] = ["/* eslint-disable */"];
+	const content: string[] = [];
+
+	let env: string | null = null;
+	if (options.includeEnv) {
+		if (log) {
+			logger.log(`Generating project types...\n`);
+		}
+
+		const { envHeader, envTypes } = await generateEnvTypes(
+			options.config,
+			{
+				env: options.env,
+				envFile: options.envFile,
+				strictVars: options.strictVars,
+			},
+			options.envInterface,
+			options.path,
+			entrypoint,
+			options.secondaryEntries,
+			options.envHeaderCommand,
+			log
+		);
+		if (envHeader && envTypes) {
+			env = envTypes;
+			header.push(envHeader);
+			content.push(envTypes);
+		}
+	}
+
+	let runtime: string | null = null;
+	if (options.includeRuntime) {
+		if (log) {
+			logger.log("Generating runtime types...\n");
+		}
+
+		const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
+			config: options.config,
+			outFile: options.path || undefined,
+		});
+		runtime = runtimeTypes;
+		header.push(runtimeHeader);
+		content.push(`// Begin runtime types\n${runtimeTypes}`);
+		if (log) {
+			logger.log(chalk.dim("Runtime types generated.\n"));
+		}
+	}
+
+	const shouldWriteFile =
+		(header.length > 1 && content.length > 0) || entrypointFormat === "modules";
+
+	return {
+		config: options.config,
+		content: shouldWriteFile
+			? `${header.join("\n")}\n${content.join("\n")}`
+			: "",
+		env,
+		path: options.path,
+		runtime,
+		shouldWriteFile,
+	};
+}
+
+/**
+ * Resolves additional worker configs into a name-to-entrypoint map.
+ *
+ * The resulting map includes both base worker names and environment-specific
+ * worker names so cross-worker references in bindings can be typed correctly.
+ *
+ * @param secondaryConfigs - Non-primary configs passed for cross-worker typing.
+ * @param logSecondaryEntries - Whether discovered workers should be logged.
+ *
+ * @returns Mapping from worker name to resolved entrypoint metadata.
+ */
+async function resolveSecondaryEntries(
+	secondaryConfigs: Config[],
+	logSecondaryEntries: boolean
+): Promise<Map<string, Entry>> {
+	const secondaryEntries = new Map<string, Entry>();
+
+	for (const secondaryConfig of secondaryConfigs) {
+		const serviceEntry = await getEntry({}, secondaryConfig, "types");
+		if (!serviceEntry.name) {
+			throw new UserError(
+				`Could not resolve entry point for service config '${secondaryConfig}'.`
+			);
+		}
+
+		const key = serviceEntry.name;
+		if (secondaryEntries.has(key)) {
+			logger.warn(
+				`Configuration file for Worker '${key}' has been passed in more than once using \`--config\`. To remove this warning, only pass each unique Worker config file once.`
+			);
+		}
+		secondaryEntries.set(key, serviceEntry);
+		if (logSecondaryEntries) {
+			logger.log(
+				chalk.dim(
+					`- Found Worker '${key}' at '${relative(process.cwd(), serviceEntry.file)}' (${secondaryConfig.configPath})`
+				)
+			);
+		}
+
+		const { rawConfig } = experimental_readRawConfig({
+			config: secondaryConfig.configPath,
+		});
+		for (const envName of Object.keys(rawConfig.env ?? {})) {
+			const envConfig = readConfig({
+				config: secondaryConfig.configPath,
+				env: envName,
+			});
+			const envKey = envConfig.name;
+			if (envKey && envKey !== key && !secondaryEntries.has(envKey)) {
+				secondaryEntries.set(envKey, serviceEntry);
+			}
+		}
+	}
+
+	return secondaryEntries;
+}
+
+/**
+ * Attempts to resolve the primary worker entrypoint for type generation.
+ *
+ * If the config does not declare an entrypoint, or entrypoint resolution fails,
+ * this returns `undefined` so generation can continue with module defaults.
+ *
+ * @param config - Parsed Wrangler config for the primary worker.
+ *
+ * @returns Resolved entrypoint metadata when available.
+ */
+async function getTypesEntrypoint(config: Config): Promise<Entry | undefined> {
+	const configContainsEntrypoint =
+		config.main !== undefined || !!config.site?.["entry-point"];
+	if (!configContainsEntrypoint) {
+		return undefined;
+	}
+
+	try {
+		return await getEntry({}, config, "types");
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Ensures that type generation is operating against a concrete config file.
+ *
+ * @param config - Parsed Wrangler config object.
+ * @param requestedConfig - User-provided config input, used for error context.
+ *
+ * @throws {UserError} When no valid config file was detected.
+ */
+function assertConfigFileDetected(
+	config: Config,
+	requestedConfig: string | string[] | undefined
+): void {
+	if (
+		config.configPath == null ||
+		(fs.statSync(config.configPath, { throwIfNoEntry: false })?.isDirectory() ??
+			true)
+	) {
+		throw new UserError(
+			`No config file detected${requestedConfig ? ` (at ${requestedConfig})` : ""}. This command requires a Wrangler configuration file.`,
+			{ telemetryMessage: "No config file detected" }
+		);
+	}
+}
+
+/**
+ * Validates programmatic type-generation options.
+ *
+ * Applies the same constraints as CLI argument validation for env interface
+ * naming, output file extension, and include-env/include-runtime combinations.
+ *
+ * @param options - Normalized options to validate.
+ *
+ * @throws {UserError} When any option is invalid.
+ */
+function validateGenerateTypesOptions({
+	envInterface,
+	includeEnv,
+	includeRuntime,
+	path,
+	validateOutputPath,
+}: {
+	envInterface: string;
+	includeEnv: boolean;
+	includeRuntime: boolean;
+	path: string;
+	validateOutputPath: boolean;
+}): void {
+	const validInterfaceRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+	if (!validInterfaceRegex.test(envInterface)) {
+		throw new UserError(
+			`The provided env-interface value ("${envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`
+		);
+	}
+
+	if (!path.endsWith(".d.ts")) {
+		throw new UserError(
+			`The provided output path '${path}' does not point to a declaration file - please use the '.d.ts' extension`
+		);
+	}
+
+	if (validateOutputPath) {
+		validateTypesFile(path);
+	}
+
+	if (!includeEnv && !includeRuntime) {
+		throw new UserError(
+			`You cannot run this command without including either Env or Runtime types`
+		);
+	}
+}
 
 /**
  * Check if a string is a valid TypeScript identifier. This is a naive check and doesn't cover all cases
@@ -382,6 +714,7 @@ function hasConfigSecrets(rawConfig: RawConfig): boolean {
  * @param outputPath - The file path where the generated types will be written
  * @param entrypoint - Optional entry point information for the Worker
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
+ * @param command - Optional command string used in the generated env header.
  * @param log - Whether to log output to the console (default: true)
  *
  * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
@@ -393,6 +726,7 @@ export async function generateEnvTypes(
 	outputPath: string,
 	entrypoint?: Entry,
 	serviceEntries?: Map<string, Entry>,
+	command?: string,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const collectionArgs = {
@@ -478,6 +812,7 @@ export async function generateEnvTypes(
 			serviceEntries,
 			secrets,
 			perEnvSecrets,
+			command,
 			log
 		);
 	}
@@ -490,6 +825,7 @@ export async function generateEnvTypes(
 		entrypoint,
 		serviceEntries,
 		secrets,
+		command,
 		log
 	);
 }
@@ -506,6 +842,7 @@ export async function generateEnvTypes(
  * @param entrypoint - Optional entry point information for the Worker
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
  * @param secrets - Record of secret variable names to their values
+ * @param command - Optional command string used in the generated env header.
  * @param log - Whether to log output to the console (default: true)
  *
  * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
@@ -518,6 +855,7 @@ async function generateSimpleEnvTypes(
 	entrypoint?: Entry,
 	serviceEntries?: Map<string, Entry>,
 	secrets: Record<string, string> = {},
+	command?: string,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const stringKeys = new Array<string>();
@@ -787,7 +1125,7 @@ async function generateSimpleEnvTypes(
 		}
 
 		return {
-			envHeader: getEnvHeader(hash),
+			envHeader: getEnvHeader(hash, command),
 			envTypes: fileContent,
 		};
 	} else {
@@ -815,6 +1153,7 @@ async function generateSimpleEnvTypes(
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
  * @param secrets - Record of secret variable names (fallback for all envs when perEnvSecrets is not provided)
  * @param perEnvSecrets - Optional per-environment secrets map. When provided, each env uses its own secrets instead of the shared fallback.
+ * @param command - Optional command string used in the generated env header.
  * @param log - Whether to log output to the console (default: true)
  *
  * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
@@ -828,6 +1167,7 @@ async function generatePerEnvironmentTypes(
 	serviceEntries?: Map<string, Entry>,
 	secrets: Record<string, string> = {},
 	perEnvSecrets?: Map<string, Record<string, string>>,
+	command?: string,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const { rawConfig } = experimental_readRawConfig(collectionArgs);
@@ -1233,7 +1573,7 @@ async function generatePerEnvironmentTypes(
 	}
 
 	return {
-		envHeader: getEnvHeader(hash),
+		envHeader: getEnvHeader(hash, command),
 		envTypes: fileContent,
 	};
 }

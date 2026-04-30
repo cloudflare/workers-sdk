@@ -5,7 +5,7 @@ import {
 	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
 import { kCurrentWorker, Miniflare } from "miniflare";
-import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
+import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
@@ -268,17 +268,14 @@ async function getMiniflareOptionsFromConfig(args: {
 	// Only resolve assets if a directory is configured. When assets are configured
 	// without a directory (e.g. via @cloudflare/vite-plugin), skip asset setup.
 	if (config.assets?.directory) {
-		try {
-			processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
-		} catch (e) {
-			const isNonExistentError = e instanceof NonExistentAssetsDirError;
-			// we want to loosen up the assets directory existence restriction here,
-			// since `getPlatformProxy` can be run when the assets directory doesn't
-			// actually exist, but all other exceptions should still be thrown
-			if (!isNonExistentError) {
-				throw e;
-			}
-		}
+		processedAssetOptions = getAssetsOptions({
+			args: {
+				assets: undefined,
+			},
+			config,
+			// For getPlatformProxy/local dev we don't need to validate the directory's existence
+			validateDirectoryExistence: false,
+		});
 	}
 
 	const assetOptions = processedAssetOptions
@@ -507,11 +504,15 @@ export function unstable_getMiniflareWorkerOptions(
 	const hasAssetsDirectory =
 		config.assets?.directory || options?.overrides?.assets?.directory;
 	const processedAssetOptions = hasAssetsDirectory
-		? getAssetsOptions(
-				{ assets: undefined },
+		? getAssetsOptions({
+				args: {
+					assets: undefined,
+				},
 				config,
-				options?.overrides?.assets
-			)
+				// For getPlatformProxy we don't need to validate the directory's existence
+				validateDirectoryExistence: false,
+				overrides: options?.overrides?.assets,
+			})
 		: undefined;
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
