@@ -515,7 +515,7 @@ const bindingsConfigMock: Omit<
 		},
 		{ type: "CompiledWasm", globs: ["**/*.wasm"], fallthrough: true },
 	],
-	pipelines: [{ binding: "PIPELINE", pipeline: "my-pipeline" }],
+	pipelines: [{ binding: "PIPELINE", stream: "my-pipeline" }],
 	assets: {
 		binding: "ASSETS_BINDING",
 		directory: "/assets",
@@ -3639,7 +3639,7 @@ describe("pipeline schema type generation", () => {
 				name: "test-worker",
 				main: "./index.ts",
 				compatibility_date: "2024-01-01",
-				pipelines: [{ binding: "ANALYTICS", pipeline: "analytics-stream-id" }],
+				pipelines: [{ binding: "ANALYTICS", stream: "analytics-stream-id" }],
 			})
 		);
 		fs.writeFileSync("./index.ts", "export default { fetch() {} }");
@@ -3696,7 +3696,7 @@ describe("pipeline schema type generation", () => {
 				name: "test-worker",
 				main: "./index.ts",
 				compatibility_date: "2024-01-01",
-				pipelines: [{ binding: "LOGS", pipeline: "unstructured-stream-id" }],
+				pipelines: [{ binding: "LOGS", stream: "unstructured-stream-id" }],
 			})
 		);
 		fs.writeFileSync("./index.ts", "export default { fetch() {} }");
@@ -3750,7 +3750,7 @@ describe("pipeline schema type generation", () => {
 				name: "test-worker",
 				main: "./index.ts",
 				compatibility_date: "2024-01-01",
-				pipelines: [{ binding: "MISSING", pipeline: "non-existent-stream" }],
+				pipelines: [{ binding: "MISSING", stream: "non-existent-stream" }],
 			})
 		);
 		fs.writeFileSync("./index.ts", "export default { fetch() {} }");
@@ -3844,8 +3844,8 @@ describe("pipeline schema type generation", () => {
 				main: "./index.ts",
 				compatibility_date: "2024-01-01",
 				pipelines: [
-					{ binding: "EVENTS", pipeline: "events-stream" },
-					{ binding: "METRICS", pipeline: "metrics-stream" },
+					{ binding: "EVENTS", stream: "events-stream" },
+					{ binding: "METRICS", stream: "metrics-stream" },
 				],
 			})
 		);
@@ -3915,7 +3915,7 @@ describe("pipeline schema type generation", () => {
 				name: "test-worker",
 				main: "./index.ts",
 				compatibility_date: "2024-01-01",
-				pipelines: [{ binding: "NESTED", pipeline: "nested-stream" }],
+				pipelines: [{ binding: "NESTED", stream: "nested-stream" }],
 			})
 		);
 		fs.writeFileSync("./index.ts", "export default { fetch() {} }");
@@ -3981,7 +3981,7 @@ describe("pipeline schema type generation", () => {
 				name: "test-worker",
 				main: "./index.js",
 				compatibility_date: "2024-01-01",
-				pipelines: [{ binding: "EVENTS", pipeline: "events-stream" }],
+				pipelines: [{ binding: "EVENTS", stream: "events-stream" }],
 			})
 		);
 
