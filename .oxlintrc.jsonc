@@ -202,7 +202,6 @@
 		// TODO: Remove the following overrides.
 		{
 			"files": [
-				"packages/create-cloudflare/**",
 				"packages/local-explorer-ui/**",
 				"packages/miniflare/**",
 				"packages/quick-edit-extension/**",

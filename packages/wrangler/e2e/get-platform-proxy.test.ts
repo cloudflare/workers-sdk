@@ -393,6 +393,16 @@ describe("getPlatformProxy()", () => {
 					if (scheme === "mysql") {
 						socket.write(MYSQL_INITIAL_HANDSHAKE_PACKET);
 					}
+					// When the spawned child process exits after `dispose()`, workerd's
+					// outbound TCP connection (now direct, not via the Hyperdrive proxy
+					// for `sslmode=disable`) can close with RST rather than FIN — most
+					// reliably reproduced on Windows. Swallow the resulting ECONNRESET
+					// so it doesn't leak as an `uncaughtException` in the test process.
+					socket.on("error", (err: NodeJS.ErrnoException) => {
+						if (err.code !== "ECONNRESET") {
+							throw err;
+						}
+					});
 					socket.on("data", (chunk) => {
 						// Handle PostgreSQL SSL request packet
 						if (

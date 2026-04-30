@@ -7,7 +7,7 @@ import { version as wranglerVersion } from "../package.json";
 import { logger } from "./logger";
 import { updateCheck } from "./update-check";
 
-const MIN_NODE_VERSION = "20.0.0";
+const MIN_NODE_VERSION = "22.0.0";
 
 // Grace period for a cached update-check result to settle. One event loop
 // tick is enough for a /tmp readFile (<1 ms on SSD). On cache miss the
