@@ -64,7 +64,8 @@ export const queuesSubscriptionUpdateCommand = createCommand({
 
 			if (events.length === 0) {
 				throw new UserError(
-					"No events specified. Use --events to provide a comma-separated list of event types to subscribe to. For a complete list of sources and corresponding events, please refer to: https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/"
+					"No events specified. Use --events to provide a comma-separated list of event types to subscribe to. For a complete list of sources and corresponding events, please refer to: https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/",
+					{ telemetryMessage: "queues subscription update missing events" }
 				);
 			}
 
@@ -78,7 +79,8 @@ export const queuesSubscriptionUpdateCommand = createCommand({
 		// Check if any updates were provided
 		if (Object.keys(updateRequest).length === 0) {
 			throw new UserError(
-				"No fields specified for update. Provide at least one of --name, --events, or --enabled to update the subscription."
+				"No fields specified for update. Provide at least one of --name, --events, or --enabled to update the subscription.",
+				{ telemetryMessage: "queues subscription update missing fields" }
 			);
 		}
 

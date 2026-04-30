@@ -28,7 +28,8 @@ export const vectorizeDeleteVectorsCommand = createCommand({
 	async handler(args, { config }) {
 		if (args.ids.length === 0) {
 			throw new UserError(
-				"🚨 Please provide valid vector identifiers for deletion."
+				"🚨 Please provide valid vector identifiers for deletion.",
+				{ telemetryMessage: "vectorize delete missing ids" }
 			);
 		}
 

@@ -155,7 +155,9 @@ export const completionsCommand = createCommand({
 		}
 
 		if (!args.shell) {
-			throw new CommandLineArgsError("Missing required argument: shell");
+			throw new CommandLineArgsError("Missing required argument: shell", {
+				telemetryMessage: "cli completions missing shell",
+			});
 		}
 
 		setupCompletions();

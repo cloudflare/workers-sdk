@@ -302,14 +302,15 @@ export const versionsUploadCommand = createCommand({
 
 		if (args.nodeCompat) {
 			throw new UserError(
-				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`,
+				{ telemetryMessage: "versions upload node compat unsupported" }
 			);
 		}
 
 		if (args.site || config.site) {
 			throw new UserError(
 				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "versions upload sites unsupported" }
 			);
 		}
 
@@ -353,7 +354,7 @@ export const versionsUploadCommand = createCommand({
 		if (!name) {
 			throw new UserError(
 				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-				{ telemetryMessage: true }
+				{ telemetryMessage: "versions upload missing worker name" }
 			);
 		}
 
@@ -491,12 +492,17 @@ export default async function versionsUpload(props: Props): Promise<{
 	if (!compatibilityDate) {
 		const compatibilityDateStr = getTodaysCompatDate();
 
-		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
+		throw new UserError(
+			`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
 	${(formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath), false)}
     \`\`\`
     Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
-See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
+See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
+			{
+				telemetryMessage: "versions upload missing compatibility date",
+			}
+		);
 	}
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
@@ -523,7 +529,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (config.site && !config.site.bucket) {
 		throw new UserError(
-			"A [site] definition requires a `bucket` field with a path to the site's assets directory."
+			"A [site] definition requires a `bucket` field with a path to the site's assets directory.",
+			{ telemetryMessage: "versions upload sites missing bucket" }
 		);
 	}
 
@@ -550,19 +557,31 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (config.wasm_modules && format === "modules") {
 		throw new UserError(
-			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"
+			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code",
+			{
+				telemetryMessage:
+					"versions upload wasm modules unsupported module worker",
+			}
 		);
 	}
 
 	if (config.text_blobs && format === "modules") {
 		throw new UserError(
-			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
+			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			{
+				telemetryMessage:
+					"versions upload text blobs unsupported module worker",
+			}
 		);
 	}
 
 	if (config.data_blobs && format === "modules") {
 		throw new UserError(
-			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
+			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			{
+				telemetryMessage:
+					"versions upload data blobs unsupported module worker",
+			}
 		);
 	}
 
@@ -936,7 +955,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		return { versionId, workerTag };
 	}
 	if (!accountId) {
-		throw new UserError("Missing accountId");
+		throw new UserError("Missing accountId", {
+			telemetryMessage: "versions upload missing account id",
+		});
 	}
 
 	const uploadMs = Date.now() - start;

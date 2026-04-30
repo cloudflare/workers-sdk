@@ -223,6 +223,7 @@ export async function fetchInternal<ResponseType>(
 				...(rayId ? [{ text: `Cloudflare Ray ID: ${rayId}` }] : []),
 			],
 			status: response.status,
+			telemetryMessage: false,
 		});
 	}
 }
@@ -294,6 +295,7 @@ function throwWAFBlockError(
 			},
 		],
 		status,
+		telemetryMessage: false,
 	});
 }
 
@@ -306,7 +308,9 @@ export async function requireLoggedIn(
 ): Promise<void> {
 	const loggedIn = await loginOrRefreshIfRequired(complianceConfig);
 	if (!loggedIn) {
-		throw new UserError("Not logged in.");
+		throw new UserError("Not logged in.", {
+			telemetryMessage: "cfetch auth login required",
+		});
 	}
 }
 
@@ -426,6 +430,7 @@ export async function fetchR2Objects(
 			text: `Failed to fetch ${resource} - ${response.status}: ${response.statusText};`,
 			status: response.status,
 			notes,
+			telemetryMessage: false,
 		});
 		if (errorCode !== undefined) {
 			apiError.code = errorCode;

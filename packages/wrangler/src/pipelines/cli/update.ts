@@ -119,7 +119,8 @@ export const pipelinesUpdateCommand = createCommand({
 		try {
 			await getPipeline(config, pipelineId);
 			throw new UserError(
-				"Pipelines created with the V1 API cannot be updated. To modify your pipeline, delete and recreate it with your new SQL."
+				"Pipelines created with the V1 API cannot be updated. To modify your pipeline, delete and recreate it with your new SQL.",
+				{ telemetryMessage: "pipelines update v1 unsupported" }
 			);
 		} catch (error) {
 			if (
@@ -131,7 +132,8 @@ export const pipelinesUpdateCommand = createCommand({
 				} catch (legacyError) {
 					if (legacyError instanceof APIError && legacyError.code === 1000) {
 						throw new UserError(
-							`Pipeline "${pipelineId}" not found. The update command only works with legacy pipelines. Pipelines created with the V1 API cannot be updated and must be recreated to modify.`
+							`Pipeline "${pipelineId}" not found. The update command only works with legacy pipelines. Pipelines created with the V1 API cannot be updated and must be recreated to modify.`,
+							{ telemetryMessage: "pipelines update legacy pipeline missing" }
 						);
 					}
 					throw legacyError;

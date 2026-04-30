@@ -48,7 +48,9 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			expect,
 		}) => {
 			vi.mocked(execFileSync).mockImplementation(() => {
-				throw new UserError("Docker command failed");
+				throw new UserError("Docker command failed", {
+					telemetryMessage: false,
+				});
 			});
 
 			const result = resolveDockerHost("/no/op/docker");

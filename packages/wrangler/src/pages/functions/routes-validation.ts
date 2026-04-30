@@ -39,7 +39,7 @@ export function validateRoutes(routesJSON: RoutesJSONSpec, routesPath: string) {
 				RoutesValidationError.INVALID_JSON_SPEC,
 				routesPath
 			),
-			1
+			{ code: 1, telemetryMessage: "pages functions routes invalid json spec" }
 		);
 	}
 
@@ -49,7 +49,10 @@ export function validateRoutes(routesJSON: RoutesJSONSpec, routesPath: string) {
 				RoutesValidationError.NO_INCLUDE_RULES,
 				routesPath
 			),
-			1
+			{
+				code: 1,
+				telemetryMessage: "pages functions routes missing include rules",
+			}
 		);
 	}
 
@@ -59,7 +62,7 @@ export function validateRoutes(routesJSON: RoutesJSONSpec, routesPath: string) {
 				RoutesValidationError.TOO_MANY_RULES,
 				routesPath
 			),
-			1
+			{ code: 1, telemetryMessage: "pages functions routes too many rules" }
 		);
 	}
 
@@ -69,7 +72,7 @@ export function validateRoutes(routesJSON: RoutesJSONSpec, routesPath: string) {
 				RoutesValidationError.RULE_TOO_LONG,
 				routesPath
 			),
-			1
+			{ code: 1, telemetryMessage: "pages functions routes rule too long" }
 		);
 	}
 
@@ -79,7 +82,7 @@ export function validateRoutes(routesJSON: RoutesJSONSpec, routesPath: string) {
 				RoutesValidationError.INVALID_RULES,
 				routesPath
 			),
-			1
+			{ code: 1, telemetryMessage: "pages functions routes invalid rules" }
 		);
 	}
 
@@ -92,7 +95,7 @@ export function validateRoutes(routesJSON: RoutesJSONSpec, routesPath: string) {
 				RoutesValidationError.OVERLAPPING_RULES,
 				routesPath
 			),
-			1
+			{ code: 1, telemetryMessage: "pages functions routes overlapping rules" }
 		);
 	}
 }

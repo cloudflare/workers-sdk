@@ -129,7 +129,9 @@ describe.sequential("wrangler dev", () => {
 			.spyOn(ConfigController.prototype, "emitConfigUpdateEvent")
 			.mockImplementation(() => {
 				// In unit tests of `wrangler dev` we only care about the first config parse event, so exit early
-				throw new FatalError("Bailing early in tests");
+				throw new FatalError("Bailing early in tests", {
+					telemetryMessage: false,
+				});
 			});
 		msw.use(
 			...mswZoneHandlers,
@@ -3064,7 +3066,9 @@ describe.sequential("wrangler dev", () => {
 			setSpy.mockImplementation(async () => {
 				setCallCount++;
 				if (setCallCount >= 2) {
-					throw new FatalError("Bailing early in tests");
+					throw new FatalError("Bailing early in tests", {
+						telemetryMessage: false,
+					});
 				}
 				return undefined;
 			});

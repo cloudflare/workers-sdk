@@ -53,7 +53,9 @@ vi.mock("../deploy/deploy", async (importOriginal) => ({
 	...(await importOriginal()),
 	default: () => {
 		// In unit tests of autoconfig we only care about the configuration aspect, so bail before any actual deployment happens
-		throw new FatalError("Bailing early in tests");
+		throw new FatalError("Bailing early in tests", {
+			telemetryMessage: false,
+		});
 	},
 }));
 

@@ -146,7 +146,10 @@ export const pagesProjectCreateCommand = createCommand({
 		}
 
 		if (!projectName) {
-			throw new FatalError("Must specify a project name.", 1);
+			throw new FatalError("Must specify a project name.", {
+				code: 1,
+				telemetryMessage: "pages projects create missing project name",
+			});
 		}
 
 		if (!productionBranch && isInteractive) {
@@ -187,7 +190,10 @@ export const pagesProjectCreateCommand = createCommand({
 		}
 
 		if (!productionBranch) {
-			throw new FatalError("Must specify a production branch.", 1);
+			throw new FatalError("Must specify a production branch.", {
+				code: 1,
+				telemetryMessage: "pages projects create missing production branch",
+			});
 		}
 
 		const deploymentConfig = {

@@ -344,7 +344,11 @@ export async function generateR2ServiceToken(
 			const secretAccessKey = searchParams.get("secret-access-key");
 
 			if (!accessKeyId || !secretAccessKey) {
-				reject(new UserError("Missing required URL parameters"));
+				reject(
+					new UserError("Missing required URL parameters", {
+						telemetryMessage: "pipelines oauth missing url parameters",
+					})
+				);
 				return;
 			}
 
@@ -378,7 +382,8 @@ export async function generateR2ServiceToken(
 	controller.abort();
 	if (result === "timeout") {
 		throw new UserError(
-			"Timed out waiting for authorization code, please try again."
+			"Timed out waiting for authorization code, please try again.",
+			{ telemetryMessage: "pipelines oauth authorization timed out" }
 		);
 	}
 
