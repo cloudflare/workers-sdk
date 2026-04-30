@@ -100,7 +100,7 @@ export const main = async (argv: string[]) => {
 
 // Entrypoint to c3
 export const runCli = async (args: Partial<C3Args>) => {
-	printBanner(args);
+	await printBanner(args);
 
 	checkMacOSVersion({ shouldThrow: true });
 
@@ -205,18 +205,17 @@ const deploy = async (ctx: C3Context) => {
 	endSection("Done");
 };
 
-const printBanner = (args: Partial<C3Args>) => {
-	printWelcomeMessage(version, reporter.isEnabled, args);
+const printBanner = async (args: Partial<C3Args>) => {
+	await printWelcomeMessage(version, reporter.isEnabled, args);
 	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
 };
 
 const offerAgentsMd = async (ctx: C3Context) => {
 	ctx.args.agents ??= await processArgument(ctx.args, "agents", {
 		type: "confirm",
-		question:
+		message:
 			"Do you want to add an AGENTS.md file to help AI coding tools understand Cloudflare APIs?",
-		label: "agents",
-		defaultValue: C3_DEFAULTS.agents,
+		initialValue: C3_DEFAULTS.agents,
 	});
 
 	if (!ctx.args.agents) {

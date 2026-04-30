@@ -38,19 +38,29 @@ export const mockSpinner = () => {
 	}
 
 	const start = vi.fn();
-	const update = vi.fn();
+	const message = vi.fn();
 	const stop = vi.fn();
+	const cancel = vi.fn();
+	const error = vi.fn();
+	const clear = vi.fn();
 
 	vi.mocked(spinner).mockImplementation(() => ({
 		start,
 		stop,
-		update,
+		message,
+		cancel,
+		error,
+		clear,
+		isCancelled: false,
 	}));
 
 	return {
 		start,
 		stop,
-		update,
+		message,
+		cancel,
+		error,
+		clear,
 	};
 };
 

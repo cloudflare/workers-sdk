@@ -1,3 +1,4 @@
+import { updateCheck } from "../update-check";
 import assert from "node:assert";
 import path from "node:path";
 import { FatalError, UserError } from "@cloudflare/workers-utils";

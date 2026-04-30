@@ -107,12 +107,11 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				context
 			);
 
-			expect(std.out).toContain(
-				dedent`
-				📦 Install packages:
-				 - wrangler (devDependency)
-				`
-			);
+			// Output is rendered via `clack.note` so the literal title
+			// is `📦 Install packages` (no trailing colon) followed by
+			// the body wrapped in a gutter-attached box.
+			expect(std.out).toContain("📦 Install packages");
+			expect(std.out).toContain("- wrangler (devDependency)");
 
 			expect(summary).toMatchInlineSnapshot(`
 				{
@@ -167,12 +166,8 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				context
 			);
 
-			expect(std.out).toContain(
-				dedent`
-				📦 Install packages:
-				 - wrangler (devDependency)
-				`
-			);
+			expect(std.out).toContain("📦 Install packages");
+			expect(std.out).toContain("- wrangler (devDependency)");
 
 			expect(summary).toMatchInlineSnapshot(`
 				{

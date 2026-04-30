@@ -1,5 +1,4 @@
 import { join } from "node:path";
-import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import {
@@ -30,7 +29,6 @@ const generate = async (ctx: C3Context) => {
 
 	writeFile(join(ctx.project.path, ".node-version"), "22.23.1");
 
-	logRaw(""); // newline
 };
 
 const configure = async () => {
@@ -48,7 +46,7 @@ const configure = async () => {
 	await installPackages(packages, {
 		dev: true,
 		startText: "Installing nitro module `nitro-cloudflare-dev`",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+		doneText: `${brandColor("Installed")} dependencies via ${dim(`\`${npm} install\``)}`,
 	});
 	updateNuxtConfig();
 };
@@ -100,7 +98,7 @@ const updateNuxtConfig = () => {
 		},
 	});
 
-	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
+	s.stop(`${brandColor("Updated")} ${dim(configFile)}`);
 };
 
 const config: TemplateConfig = {

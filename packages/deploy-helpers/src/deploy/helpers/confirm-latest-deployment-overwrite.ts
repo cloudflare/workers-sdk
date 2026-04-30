@@ -1,6 +1,6 @@
 import * as cli from "@cloudflare/cli-shared-helpers";
 import { brandColor, gray, white } from "@cloudflare/cli-shared-helpers/colors";
-import { inputPrompt, leftT } from "@cloudflare/cli-shared-helpers/interactive";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { fetchDeploymentVersions, fetchLatestDeployment } from "./versions-api";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
@@ -51,8 +51,7 @@ export async function confirmLatestDeploymentOverwriteAndGetLatest(
 			const versionCache: VersionCache = new Map();
 
 			cli.warn(
-				`Your last deployment has multiple versions. To progress that deployment use "${versionsDeployCommand}" instead.`,
-				{ shape: cli.shapes.corners.tl, newlineBefore: false }
+				`Your last deployment has multiple versions. To progress that deployment use "${versionsDeployCommand}" instead.`
 			);
 			cli.newline();
 			await printDeployment(
@@ -66,9 +65,8 @@ export async function confirmLatestDeploymentOverwriteAndGetLatest(
 
 			const confirmed = await inputPrompt<boolean>({
 				type: "confirm",
-				question: `"${deployCommand}" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
-				label: "",
-				defaultValue: isNonInteractiveOrCI(),
+				message: `"${deployCommand}" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
+				initialValue: isNonInteractiveOrCI(),
 				acceptDefault: isNonInteractiveOrCI(),
 			});
 			return { confirmed, latestDeployment: latest };
@@ -98,7 +96,7 @@ async function printDeployment(
 		versionCache
 	);
 	cli.logRaw(
-		`${leftT} Your ${adjective} deployment has ${versions.length} version(s):`
+		`Your ${adjective} deployment has ${versions.length} version(s):`
 	);
 	printVersions(versions, traffic);
 }

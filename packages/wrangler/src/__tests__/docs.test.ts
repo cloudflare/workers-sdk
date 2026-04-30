@@ -70,8 +70,8 @@ describe("wrangler docs", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Opening a link in your default browser: https://developers.cloudflare.com/workers/wrangler/commands/",
 			  "warn": "",
 			}
@@ -92,8 +92,8 @@ describe("wrangler docs", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=dev&hitsPerPage=1&getRankingInfo=0"}",
 			  "warn": "",
 			}
@@ -114,8 +114,8 @@ describe("wrangler docs", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=foo+bar&hitsPerPage=1&getRankingInfo=0"}",
 			  "warn": "",
 			}

@@ -15,8 +15,8 @@ describe("wrangler banner", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────"
+			⛅️ wrangler · vx.x.x
+			────────────────────"
 		`);
 	});
 
@@ -37,8 +37,8 @@ describe("wrangler banner", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────"
+			⛅️ wrangler · vx.x.x
+			────────────────────"
 		`);
 	});
 });

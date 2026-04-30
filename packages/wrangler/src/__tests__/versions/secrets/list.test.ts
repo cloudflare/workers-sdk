@@ -108,8 +108,8 @@ describe("versions secret list", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			-- Version version-id-1 (100%) secrets --
 			Secret Name: SECRET_1
 			Secret Name: SECRET_2
@@ -128,8 +128,8 @@ describe("versions secret list", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			-- Version version-id-1 (50%) secrets --
 			Secret Name: SECRET_1
 			Secret Name: SECRET_2
@@ -156,8 +156,8 @@ describe("versions secret list", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			-- Version version-id-1 (100%) secrets --
 			Secret Name: SECRET_1
 			Secret Name: SECRET_2
@@ -263,8 +263,8 @@ describe("versions secret list", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			-- Version version-id-3 (0%) secrets --
 			Secret Name: SECRET_1
 			Secret Name: SECRET_1

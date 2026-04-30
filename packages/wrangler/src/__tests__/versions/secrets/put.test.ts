@@ -42,8 +42,8 @@ describe("versions secret put", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Creating the secret for the Worker "script-name"
 			✨ Success! Created version id with secret NEW_SECRET.
 			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command "wrangler versions deploy"."
@@ -106,8 +106,8 @@ describe("versions secret put", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🌀 Creating the secret for the Worker "script-name"
 				✨ Success! Created version id with secret NEW_SECRET.
 				➡️  To deploy this version with secret NEW_SECRET to production traffic use the command "wrangler versions deploy"."
@@ -136,8 +136,8 @@ describe("versions secret put", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Creating the secret for the Worker "script-name"
 			✨ Success! Created version id with secret NEW_SECRET.
 			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command "wrangler versions deploy"."
@@ -168,8 +168,8 @@ describe("versions secret put", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Creating the secret for the Worker "script-name"
 			✨ Success! Created version id with secret NEW_SECRET.
 			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command "wrangler versions deploy"."
@@ -203,8 +203,8 @@ describe("versions secret put", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Creating the secret for the Worker "script-name"
 			✨ Success! Created version id with secret NEW_SECRET.
 			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command "wrangler versions deploy"."

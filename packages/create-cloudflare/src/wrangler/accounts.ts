@@ -36,11 +36,9 @@ export async function chooseAccount(ctx: C3Context) {
 	let account: C3Context["account"];
 	if (accounts.length === 1) {
 		account = accounts[0];
-		s.stop(`${brandColor("account")} ${dim(account.name)}`);
+		s.stop(`${brandColor("Selected")} account ${dim(account.name)}`);
 	} else {
-		s.stop(
-			`${brandColor("account")} ${dim("more than one account available")}`
-		);
+		s.stop(`${brandColor("Found")} multiple accounts — pick one below`);
 		const accountOptions = accounts.map(({ name, id }) => ({
 			label: `${name} (${id})`,
 			value: id,
@@ -48,10 +46,9 @@ export async function chooseAccount(ctx: C3Context) {
 
 		const accountId = await inputPrompt({
 			type: "select",
-			question: "Which account do you want to use?",
+			message: "Which account do you want to use?",
 			options: accountOptions,
-			label: "account",
-			defaultValue: accountOptions[0].value,
+			initialValue: accountOptions[0].value,
 		});
 		const selectedAccount = accounts.find(({ id }) => id === accountId);
 		if (!selectedAccount) {
@@ -89,7 +86,11 @@ export const login = async (ctx: C3Context) => {
 			const isAlreadyLoggedIn = useCf
 				? await cf.isLoggedIn()
 				: await isLoggedIn();
-			s.stop(brandColor(isAlreadyLoggedIn ? "logged in" : "not logged in"));
+			s.stop(
+				isAlreadyLoggedIn
+					? `${brandColor("Already logged in")} to Cloudflare`
+					: `${brandColor("Not logged in")} to Cloudflare`
+			);
 
 			reporter.setEventProperty("isAlreadyLoggedIn", isAlreadyLoggedIn);
 
@@ -117,8 +118,11 @@ export const login = async (ctx: C3Context) => {
 			});
 			const success = /Successfully logged in/.test(output);
 
-			const verb = success ? "allowed" : "denied";
-			s.stop(`${brandColor(verb)} ${dim("via `wrangler login`")}`);
+			s.stop(
+				success
+					? `${brandColor("Logged in")} to Cloudflare ${dim("via `wrangler login`")}`
+					: `${brandColor("Login denied")} ${dim("via `wrangler login`")}`
+			);
 
 			reporter.setEventProperty("isLoginSuccessful", success);
 

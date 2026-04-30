@@ -47,9 +47,8 @@ export const offerToDeploy = async (ctx: C3Context) => {
 
 	const shouldDeploy = await processArgument(ctx.args, "deploy", {
 		type: "confirm",
-		question: "Do you want to deploy your application?",
-		label,
-		defaultValue: C3_DEFAULTS.deploy,
+		message: "Do you want to deploy your application?",
+		initialValue: C3_DEFAULTS.deploy,
 	});
 
 	if (!shouldDeploy) {
@@ -130,7 +129,7 @@ export const runDeploy = async (ctx: C3Context) => {
 			WRANGLER_OUTPUT_FILE_PATH: outputFile,
 		},
 		startText: "Deploying your application",
-		doneText: `${brandColor("deployed")} ${dim(
+		doneText: `${brandColor("Deployed")} application ${dim(
 			`via \`${quoteShellArgs(baseDeployCmd)}\``
 		)}`,
 	});

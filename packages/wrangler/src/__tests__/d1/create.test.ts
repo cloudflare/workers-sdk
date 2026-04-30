@@ -76,8 +76,8 @@ describe("create", () => {
 		await runWrangler("d1 create test --location oc --binding MY_TEST_DB");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✅ Successfully created DB 'test' in region OC
 			Created your new D1 database.
 
@@ -133,8 +133,8 @@ describe("create", () => {
 		await runWrangler("d1 create test --jurisdiction us --binding MY_TEST_DB");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✅ Successfully created DB 'test' in region WEUR
 			Created your new D1 database.
 

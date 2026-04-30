@@ -68,7 +68,7 @@ async function generateWorkersTypes(ctx: C3Context, npm: string) {
 		cwd: ctx.project.path,
 		silent: true,
 		startText: "Generating types for your application",
-		doneText: `${brandColor("generated")} ${dim(`to \`${getTypesPath(ctx)}\` via \`${typesCmd.join(" ")}\``)}`,
+		doneText: `${brandColor("Generated")} types at ${dim(`\`${getTypesPath(ctx)}\``)} via ${dim(`\`${typesCmd.join(" ")}\``)}`,
 	});
 
 	if (packageManifest["devDependencies"]?.["@cloudflare/workers-types"]) {
@@ -105,7 +105,7 @@ const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
 		await installPackages(["@types/node"], {
 			dev: true,
 			startText: "Installing @types/node",
-			doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
+			doneText: `${brandColor("Installed")} @types/node ${dim(`via ${npm}`)}`,
 		});
 		return true;
 	}
@@ -243,6 +243,6 @@ async function installWorkersTypes(npm: string) {
 	await installPackages(["@cloudflare/workers-types"], {
 		dev: true,
 		startText: "Installing @cloudflare/workers-types",
-		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
+		doneText: `${brandColor("Installed")} @cloudflare/workers-types ${dim(`via ${npm}`)}`,
 	});
 }

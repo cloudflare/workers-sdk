@@ -1,3 +1,4 @@
+import { note, success } from "@cloudflare/cli-shared-helpers";
 import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
@@ -653,11 +654,7 @@ export async function buildOperationsSummary(
 	}
 
 	if (packagesToInstall.size > 0) {
-		logger.log("📦 Install packages:");
-		for (const packageName of packagesToInstall) {
-			logger.log(` - ${packageName} (devDependency)`);
-		}
-		logger.log("");
+		note([...packagesToInstall].map((packageName) => `- ${packageName} (devDependency)`).join("\n"), "📦 Install packages");
 	}
 
 	if (autoConfigDetails.packageJson) {
@@ -691,11 +688,7 @@ export async function buildOperationsSummary(
 				(target === "cf" ? "cf workers types" : "wrangler types");
 		}
 
-		logger.log("📝 Update package.json scripts:");
-		for (const [name, script] of Object.entries(summary.scripts)) {
-			logger.log(` - "${name}": "${script}"`);
-		}
-		logger.log("");
+		note(Object.entries(summary.scripts).map(([name, script]) => `- "${name}": "${script}"`).join("\n"), "📝 Update package.json scripts");
 	}
 
 	// Projects with Worker code (an entrypoint) get the `cf-typegen` script. Its output in
@@ -741,13 +734,7 @@ export async function buildOperationsSummary(
 			"wrangler.jsonc"
 		);
 		const configExists = existsSync(wranglerConfigPath);
-		logger.log(
-			configExists ? "📄 Update wrangler.jsonc:" : "📄 Create wrangler.jsonc:"
-		);
-		logger.log(
-			"  " + JSON.stringify(wranglerConfig, null, 2).replace(/\n/g, "\n  ")
-		);
-		logger.log("");
+		note(JSON.stringify(wranglerConfig, null, 2), configExists ? "📄 Update wrangler.jsonc" : "📄 Create wrangler.jsonc");
 	}
 
 	if (
@@ -761,7 +748,7 @@ export async function buildOperationsSummary(
 			autoConfigDetails.framework.configurationDescription ??
 			`Configuring project for ${autoConfigDetails.framework.name}`;
 
-		logger.log(`🛠️  ${summary.frameworkConfiguration}`);
+		success(`🛠️  ${summary.frameworkConfiguration}`);
 		logger.log("");
 	}
 

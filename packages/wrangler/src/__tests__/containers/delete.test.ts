@@ -92,8 +92,7 @@ describe("containers delete", () => {
 		`);
 		expect(stdCli.stderr).toMatchInlineSnapshot(`""`);
 		expect(stdCli.stdout).toMatchInlineSnapshot(`
-			"╭ Delete your container
-			│
+			"┌  Delete your container
 			"
 		`);
 	}
@@ -128,8 +127,7 @@ describe("containers delete", () => {
 		`);
 		expect(stdCli.stderr).toMatchInlineSnapshot(`""`);
 		expect(stdCli.stdout).toMatchInlineSnapshot(`
-			"╭ Delete your container
-			│
+			"┌  Delete your container
 			"
 		`);
 	});

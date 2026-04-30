@@ -1,4 +1,3 @@
-import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { runFrameworkGenerator } from "frameworks/index";
@@ -19,15 +18,13 @@ const generate = async (ctx: C3Context) => {
 		// c3 will later ask users if they want to use git
 		"--no-git",
 	]);
-
-	logRaw(""); // newline
 };
 
 const configure = async () => {
 	await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
 		silent: true,
 		startText: "Installing adapter",
-		doneText: `${brandColor("installed")} ${dim(
+		doneText: `${brandColor("Installed")} Cloudflare adapter ${dim(
 			`via \`${npx} astro add cloudflare\``
 		)}`,
 	});

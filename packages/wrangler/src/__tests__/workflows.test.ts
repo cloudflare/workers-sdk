@@ -298,8 +298,8 @@ describe("wrangler workflows", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				┌─┬─┬─┬─┬─┐
 				│ Name │ Script name │ Class name │ Created │ Modified │
 				├─┼─┼─┼─┼─┤
@@ -551,8 +551,8 @@ describe("wrangler workflows", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				┌─┬─┬─┬─┬─┐
 				│ Instance ID │ Version │ Created │ Modified │ Status │
 				├─┼─┼─┼─┼─┤
@@ -1182,8 +1182,8 @@ describe("wrangler workflows", () => {
 			await runWrangler(`workflows instances describe some-workflow bar`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				  Name:      event
 				  Type:      👀 Waiting for event
 				  Start:     [mock-start-date]
@@ -1214,8 +1214,8 @@ describe("wrangler workflows", () => {
 			await runWrangler(`workflows instances describe some-workflow`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				  Name:      event
 				  Type:      👀 Waiting for event
 				  Start:     [mock-start-date]
@@ -2147,8 +2147,8 @@ describe("wrangler workflows", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✅ Workflow "some-workflow" removed successfully.
 				 Note that running instances might take a few minutes to be properly terminated."
 			`

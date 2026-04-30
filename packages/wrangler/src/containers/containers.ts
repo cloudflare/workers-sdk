@@ -3,6 +3,7 @@ import {
 	endSection,
 	startSection,
 } from "@cloudflare/cli-shared-helpers";
+import * as clack from "@clack/prompts";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
 import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
@@ -44,10 +45,9 @@ export async function deleteCommand(
 
 	if (!isNonInteractiveOrCI()) {
 		const yes = await inputPrompt({
-			question:
+			message:
 				"Are you sure that you want to delete these containers? The associated DO container will lose access to the containers.",
 			type: "confirm",
-			label: "",
 		});
 		if (!yes) {
 			cancel("The operation has been cancelled");
@@ -114,16 +114,17 @@ export async function infoCommand(
 		);
 	}
 
-	const applicationDetails = {
-		label: `${application.name} (${application.created_at})`,
-		details: YAML.stringify(application).split("\n"),
-		value: application.id,
-	};
-	await inputPrompt({
-		type: "list",
-		question: "Container",
-		options: [applicationDetails],
-		label: "Exiting",
+	// Print the container's YAML details inside a clack `note` block,
+	// then wait for the user to acknowledge. This replaces the older
+	// "list" prompt which used multi-line option `details` to display
+	// the same info.
+	clack.note(
+		YAML.stringify(application).trimEnd(),
+		`${application.name} (${application.created_at})`
+	);
+	await clack.confirm({
+		message: "Press enter to exit",
+		initialValue: true,
 	});
 }
 

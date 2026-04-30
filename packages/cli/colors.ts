@@ -2,7 +2,8 @@ import chalk from "chalk";
 
 const { white, gray, dim, hidden, bold, cyanBright, bgCyan } = chalk;
 
-const brandColor = chalk.hex("#BD5B08");
+export const brandColorHex = "#F6821F";
+const brandColor = chalk.hex(brandColorHex);
 
 const black = chalk.hex("#111");
 const blue = chalk.hex("#0E838F");

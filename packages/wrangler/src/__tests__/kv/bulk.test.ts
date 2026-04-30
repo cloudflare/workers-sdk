@@ -72,8 +72,8 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Success!"
@@ -97,8 +97,8 @@ describe("kv", () => {
 				expect(requests.count).toEqual(12);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Uploaded 0% (0 out of 12,000)
@@ -132,13 +132,13 @@ describe("kv", () => {
 				Expected an array of key-value objects but got type "object".]
 			`);
 				expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Resource location: remote
+					"
+					⛅️ wrangler · vx.x.x
+					────────────────────
+					Resource location: remote
 
-				"
-			`);
+					"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
@@ -203,8 +203,8 @@ describe("kv", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					"
@@ -342,8 +342,8 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Success!"
@@ -372,8 +372,8 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Success!"
@@ -398,8 +398,8 @@ describe("kv", () => {
 				expect(requests.count).toEqual(12);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Deleted 0% (0 out of 12,000)
@@ -436,8 +436,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Not deleting keys read from "keys.json"."
@@ -459,8 +459,8 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Success!"
@@ -481,8 +481,8 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Success!"
@@ -509,8 +509,8 @@ describe("kv", () => {
 			`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					"
@@ -540,8 +540,8 @@ describe("kv", () => {
 				`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					"

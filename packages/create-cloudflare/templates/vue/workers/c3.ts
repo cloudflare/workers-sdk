@@ -1,4 +1,3 @@
-import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	inputPrompt,
@@ -18,8 +17,7 @@ const generate = async (ctx: C3Context) => {
 		ctx.args.lang ??
 		(await inputPrompt({
 			type: "select",
-			question: "Would you like to use TypeScript?",
-			label: "Language",
+			message: "Would you like to use TypeScript?",
 			options: [
 				{ label: "TypeScript", value: "ts" },
 				{ label: "JavaScript", value: "js" },
@@ -30,14 +28,13 @@ const generate = async (ctx: C3Context) => {
 		"--router",
 		...(lang === "ts" ? ["--ts"] : []),
 	]);
-	logRaw("");
 };
 
 const configure = async (ctx: C3Context) => {
 	await installPackages(["@cloudflare/vite-plugin"], {
 		dev: true,
 		startText: "Installing the Cloudflare Vite plugin",
-		doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
+		doneText: `${brandColor("Installed")} @cloudflare/vite-plugin`,
 	});
 
 	if (usesTypescript(ctx)) {
@@ -58,7 +55,7 @@ function updateTsconfigJson() {
 		tsconfig.references.push({ path: "./tsconfig.worker.json" });
 	}
 	writeJSON("tsconfig.json", tsconfig);
-	s.stop(`${brandColor(`updated`)} ${dim(`\`tsconfig.json\``)}`);
+	s.stop(`${brandColor("Updated")} tsconfig.json`);
 }
 
 const config: TemplateConfig = {
