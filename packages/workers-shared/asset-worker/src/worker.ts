@@ -229,15 +229,16 @@ export async function lookupCohort(
 	if (!querier || !accountId) {
 		return null;
 	}
-	let timer: number | null = null;
+	const ac = new AbortController();
 	try {
 		const rpc = querier.lookupAccountCohort(accountId.toString());
 		// Prevent unhandled rejection if timeout wins but RPC later rejects.
 		rpc.catch(() => {});
 		const timeout = new Promise<never>((_, reject) => {
-			timer = setTimeout(() => {
+			const id = setTimeout(() => {
 				reject(new Error("cohort lookup timed out"));
 			}, COHORT_LOOKUP_TIMEOUT_MS);
+			ac.signal.addEventListener("abort", () => clearTimeout(id));
 		});
 		const res = await Promise.race([rpc, timeout]);
 		if (!res.ok) {
@@ -249,7 +250,7 @@ export async function lookupCohort(
 		console.error("cohort lookup failed", e);
 		return null;
 	} finally {
-		clearTimeout(timer);
+		ac.abort();
 	}
 }
 
