@@ -36,7 +36,7 @@ export type BuildArgs = {
 };
 
 export type ContainerNormalizedConfig = SharedContainerConfig &
-	(ImageURIConfig | DockerfileConfig);
+	(ImageURIConfig | DockerfileConfig | { image: undefined });
 export type DockerfileConfig = {
 	/** absolute path, resolved relative to the wrangler config file */
 	dockerfile: string;

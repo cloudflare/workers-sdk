@@ -83,7 +83,7 @@ export async function deployContainers(
 		config.durable_objects.bindings.map((b) => b.class_name)
 	);
 
-	let imageRef: ImageRef;
+	let imageRef: ImageRef | undefined;
 	let maybeVersionInfo: ApiVersion | undefined;
 	let maybeAllDurableObjects: DurableObjectNamespace[] | undefined;
 
@@ -95,8 +95,10 @@ export async function deployContainers(
 				false, // dry runs will have already exited by this point
 				pathToDocker
 			);
-		} else {
+		} else if ("image_uri" in container) {
 			imageRef = { newTag: container.image_uri };
+		} else {
+			imageRef = undefined;
 		}
 
 		// Only bound DOs are returned in version info. For unbound DOs, we need to list all DO namespaces.
@@ -374,7 +376,7 @@ function validateDurableObjectNamespace(
 
 export async function apply(
 	args: {
-		imageRef: ImageRef;
+		imageRef?: ImageRef;
 		durable_object_namespace_id: string;
 	},
 	containerConfig: ContainerNormalizedConfig,
@@ -399,6 +401,28 @@ export async function apply(
 		(app) => app.name === containerConfig.name
 	);
 
+	const existingApp = prevApp !== undefined && prevApp !== null;
+
+	log(dim("Container application changes\n"));
+
+	if (existingApp && containerConfig.rollout_kind === "none") {
+		validateDurableObjectNamespace(
+			prevApp,
+			containerConfig.name,
+			args.durable_object_namespace_id
+		);
+		updateStatus(`${brandColor.underline("SKIP")} ${prevApp.name}`, false);
+		newline();
+		endSection("Applied changes");
+		return;
+	}
+
+	if (args.imageRef === undefined) {
+		throw new UserError(
+			`The container ${containerConfig.name} is missing an image. Set "containers.image" to a Dockerfile path or registry image URI.`
+		);
+	}
+
 	// if there is a remote digest, it indicates that the image already exists in the managed registry
 	// so we should try and use the tag from the previous deployment if possible.
 	// however deployments that fail after push may result in no previous app but the image still existing
@@ -406,7 +430,6 @@ export async function apply(
 		"remoteDigest" in args.imageRef
 			? (prevApp?.configuration.image ?? args.imageRef.remoteDigest)
 			: args.imageRef.newTag;
-	log(dim("Container application changes\n"));
 
 	const accountId = config.account_id || (await getAccountId(config));
 
@@ -424,16 +447,7 @@ export async function apply(
 		containerConfig.name
 	);
 
-	const existingApp = prevApp !== undefined && prevApp !== null;
-
-	if (existingApp && containerConfig.rollout_kind === "none") {
-		validateDurableObjectNamespace(
-			prevApp,
-			containerConfig.name,
-			args.durable_object_namespace_id
-		);
-		updateStatus(`${brandColor.underline("SKIP")} ${prevApp.name}`, false);
-	} else if (existingApp) {
+	if (existingApp) {
 		validateDurableObjectNamespace(
 			prevApp,
 			containerConfig.name,

@@ -190,13 +190,25 @@ export const getNormalizedContainerOptions = async (
 				image_build_context: imageBuildContext,
 				image_vars: container.image_vars,
 			});
-		} else {
+		} else if (container.image) {
 			normalizedContainers.push({
 				...shared,
 				...instanceTypeOrLimits,
 				image_uri: args.dryRun
 					? container.image
 					: resolveImageName(await getAccountId(config), container.image), // if it is not a dockerfile, it must be an image uri or have thrown an error
+			});
+		} else {
+			// this should be enforced by the config validation
+			assert(
+				container.rollout_kind === "none",
+				"container image should be defined"
+			)
+
+			normalizedContainers.push({
+				...shared,
+				...instanceTypeOrLimits,
+				image: undefined,
 			});
 		}
 	}
