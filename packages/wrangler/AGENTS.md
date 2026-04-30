@@ -26,6 +26,9 @@ Main CLI for Cloudflare Workers. ~2k-line yargs command tree in `src/index.ts`. 
 - No `__dirname` / `__filename` — use `getBasePath()`
 - No global `fetch` — use undici's fetch
 - No direct Cloudflare REST API calls — use the Cloudflare TypeScript SDK
+- `telemetryMessage` values for `UserError`-compatible errors must be static, safe labels. Do not use `telemetryMessage: true` unless the user-facing message cannot include user input, file paths, resource names, IDs, secret names, raw API messages, or command input. Even when safe, `telemetryMessage: true` is usually less useful because user-facing copy is harder to group and parse than a stable telemetry label.
+- Format `telemetryMessage` values as lower-case phrases: `<service or area> <command or sub-area> <failure>`, for example `kv namespace binding not found in config`, `r2 object put file not found`, or `pages deploy project name missing`.
+- Keep the service/area first and the failure last so telemetry groups consistently. Prefer stable categories over user-facing copy; telemetry labels should not change just because CLI wording changes.
 
 ## Build
 

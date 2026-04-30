@@ -128,7 +128,7 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 });
 
 function makeScriptSizeError(text: string): ParseError {
-	const error = new ParseError({ text });
+	const error = new ParseError({ text, telemetryMessage: false });
 	Object.assign(error, { code: 10027 });
 	return error;
 }
@@ -137,6 +137,7 @@ function makeStartupError(message: string): ParseError {
 	const error = new ParseError({
 		text: "Deploy failed",
 		notes: [{ text: message }],
+		telemetryMessage: false,
 	});
 	Object.assign(error, { code: 10021 });
 	return error;

@@ -47,7 +47,11 @@ describe("routes module", () => {
 					srcDir: String.raw`C:\project`,
 					outfile: "_routes.js",
 				})
-			).rejects.toThrow(new UserError(`Invalid module path "${modulePath}"`));
+			).rejects.toThrow(
+				new UserError(`Invalid module path "${modulePath}"`, {
+					telemetryMessage: "pages functions invalid module path",
+				})
+			);
 		}
 	);
 });

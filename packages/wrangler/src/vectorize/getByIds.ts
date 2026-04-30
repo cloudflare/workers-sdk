@@ -27,7 +27,9 @@ export const vectorizeGetVectorsCommand = createCommand({
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
 		if (args.ids.length === 0) {
-			throw new UserError("🚨 Please provide valid vector identifiers.");
+			throw new UserError("🚨 Please provide valid vector identifiers.", {
+				telemetryMessage: "vectorize get missing ids",
+			});
 		}
 
 		logger.log(`📋 Fetching vectors...`);

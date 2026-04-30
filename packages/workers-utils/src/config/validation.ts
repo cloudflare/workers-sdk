@@ -553,7 +553,8 @@ function applyPythonConfig(
 		}
 		if (!config.compatibility_flags.includes("python_workers")) {
 			throw new UserError(
-				"The `python_workers` compatibility flag is required to use Python."
+				"The `python_workers` compatibility flag is required to use Python.",
+				{ telemetryMessage: false }
 			);
 		}
 	}
@@ -5919,7 +5920,8 @@ export function isDockerfile(
 	if (fs.existsSync(maybeDockerfile)) {
 		if (isDirectory(maybeDockerfile)) {
 			throw new UserError(
-				`${imagePath} is a directory, you should specify a path to the Dockerfile`
+				`${imagePath} is a directory, you should specify a path to the Dockerfile`,
+				{ telemetryMessage: false }
 			);
 		}
 		return true;
@@ -5931,7 +5933,9 @@ export function isDockerfile(
 		new URL(`https://${imagePath}`);
 	} catch (e) {
 		if (e instanceof Error) {
-			throw new UserError(errorPrefix + e.message);
+			throw new UserError(errorPrefix + e.message, {
+				telemetryMessage: false,
+			});
 		}
 		throw e;
 	}
@@ -5940,14 +5944,16 @@ export function isDockerfile(
 	if (!imageParts[imageParts.length - 1]?.includes(":")) {
 		throw new UserError(
 			errorPrefix +
-				`If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)`
+				`If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)`,
+			{ telemetryMessage: false }
 		);
 	}
 	// validate URL
 	if (imagePath.includes("://")) {
 		throw new UserError(
 			errorPrefix +
-				`Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
+				`Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`,
+			{ telemetryMessage: false }
 		);
 	}
 	return false;

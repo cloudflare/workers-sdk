@@ -78,7 +78,7 @@ export async function getEntry(
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
 					"For Pages, please run `wrangler pages dev` instead.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "worker entry pages project command mismatch" }
 			);
 		}
 
