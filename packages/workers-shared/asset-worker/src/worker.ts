@@ -229,7 +229,7 @@ export async function lookupCohort(
 	if (!querier || !accountId) {
 		return null;
 	}
-	let timer: ReturnType<typeof setTimeout> | undefined;
+	let timer: number | null = null;
 	try {
 		const rpc = querier.lookupAccountCohort(accountId.toString());
 		// Prevent unhandled rejection if timeout wins but RPC later rejects.
