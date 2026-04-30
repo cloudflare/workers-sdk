@@ -166,13 +166,13 @@ export const tunnelQuickStartCommand = createCommand({
 							`Try running with --log-level debug for more information.`;
 					}
 
-				reject(
-					new UserError(message, {
-						telemetryMessage: "tunnel quick start cloudflared exited",
-					})
-				);
-				return;
-			}
+					reject(
+						new UserError(message, {
+							telemetryMessage: "tunnel quick start cloudflared exited",
+						})
+					);
+					return;
+				}
 
 				resolve();
 			});

@@ -411,7 +411,9 @@ export async function apply(
 			throw new FatalError(
 				"The previous deploy of this container application was not associated with a durable object",
 				undefined,
-				{ telemetryMessage: "containers deploy previous durable object missing" }
+				{
+					telemetryMessage: "containers deploy previous durable object missing",
+				}
 			);
 		}
 		if (

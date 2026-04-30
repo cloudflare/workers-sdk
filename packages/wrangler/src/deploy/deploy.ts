@@ -1398,7 +1398,10 @@ async function publishRoutesFallback(
 		throw new UserError(
 			"Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.\n" +
 				"Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth",
-			{ telemetryMessage: "deploy service environments require all zones permission" }
+			{
+				telemetryMessage:
+					"deploy service environments require all zones permission",
+			}
 		);
 	}
 	logger.info(

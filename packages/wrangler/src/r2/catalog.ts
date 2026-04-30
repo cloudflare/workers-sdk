@@ -221,9 +221,12 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 
 		// Validate namespace and table are provided together
 		if (args.namespace && !args.table) {
-			throw new UserError("Table name is required when namespace is specified", {
-				telemetryMessage: "r2 catalog compaction enable missing table",
-			});
+			throw new UserError(
+				"Table name is required when namespace is specified",
+				{
+					telemetryMessage: "r2 catalog compaction enable missing table",
+				}
+			);
 		}
 		if (!args.namespace && args.table) {
 			throw new UserError("Namespace is required when table is specified", {
@@ -251,8 +254,7 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 				throw new UserError(
 					"Token is required for catalog-level compaction. Use --token flag to provide a Cloudflare API token.",
 					{
-						telemetryMessage:
-							"r2 catalog compaction enable missing token",
+						telemetryMessage: "r2 catalog compaction enable missing token",
 					}
 				);
 			}
@@ -312,9 +314,12 @@ export const r2BucketCatalogCompactionDisableCommand = createCommand({
 
 		// Validate namespace and table are provided together
 		if (args.namespace && !args.table) {
-			throw new UserError("Table name is required when namespace is specified", {
-				telemetryMessage: "r2 catalog compaction disable missing table",
-			});
+			throw new UserError(
+				"Table name is required when namespace is specified",
+				{
+					telemetryMessage: "r2 catalog compaction disable missing table",
+				}
+			);
 		}
 		if (!args.namespace && args.table) {
 			throw new UserError("Namespace is required when table is specified", {
@@ -419,10 +424,13 @@ export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
 
 		// Validate namespace and table are provided together
 		if (args.namespace && !args.table) {
-			throw new UserError("Table name is required when namespace is specified", {
-				telemetryMessage:
-					"r2 catalog snapshot expiration enable missing table",
-			});
+			throw new UserError(
+				"Table name is required when namespace is specified",
+				{
+					telemetryMessage:
+						"r2 catalog snapshot expiration enable missing table",
+				}
+			);
 		}
 		if (!args.namespace && args.table) {
 			throw new UserError("Namespace is required when table is specified", {
@@ -520,10 +528,13 @@ export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
 
 		// Validate namespace and table are provided together
 		if (args.namespace && !args.table) {
-			throw new UserError("Table name is required when namespace is specified", {
-				telemetryMessage:
-					"r2 catalog snapshot expiration disable missing table",
-			});
+			throw new UserError(
+				"Table name is required when namespace is specified",
+				{
+					telemetryMessage:
+						"r2 catalog snapshot expiration disable missing table",
+				}
+			);
 		}
 		if (!args.namespace && args.table) {
 			throw new UserError("Namespace is required when table is specified", {

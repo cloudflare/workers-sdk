@@ -16,7 +16,10 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 			if (!durableObjectClassNameToUseSQLiteMap.delete(deleted_class)) {
 				throw new UserError(
 					`Cannot apply deleted_classes migration to non-existent class ${deleted_class}`,
-					{ telemetryMessage: "durable object deleted class migration missing class" }
+					{
+						telemetryMessage:
+							"durable object deleted class migration missing class",
+					}
 				);
 			}
 		});
@@ -26,7 +29,10 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 			if (useSQLite === undefined) {
 				throw new UserError(
 					`Cannot apply renamed_classes migration to non-existent class ${from}`,
-					{ telemetryMessage: "durable object renamed class migration missing class" }
+					{
+						telemetryMessage:
+							"durable object renamed class migration missing class",
+					}
 				);
 			} else {
 				durableObjectClassNameToUseSQLiteMap.delete(from);
@@ -38,7 +44,10 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 			if (durableObjectClassNameToUseSQLiteMap.has(new_class)) {
 				throw new UserError(
 					`Cannot apply new_classes migration to existing class ${new_class}`,
-					{ telemetryMessage: "durable object new class migration existing class" }
+					{
+						telemetryMessage:
+							"durable object new class migration existing class",
+					}
 				);
 			} else {
 				durableObjectClassNameToUseSQLiteMap.set(new_class, false);

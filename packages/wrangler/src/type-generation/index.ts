@@ -112,8 +112,7 @@ export const typesCommand = createCommand({
 			throw new CommandLineArgsError(
 				`The provided env-interface value ("${args.envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`,
 				{
-					telemetryMessage:
-						"type generation args invalid env interface",
+					telemetryMessage: "type generation args invalid env interface",
 				}
 			);
 		}
@@ -122,8 +121,7 @@ export const typesCommand = createCommand({
 			throw new CommandLineArgsError(
 				`The provided output path '${args.path}' does not point to a declaration file - please use the '.d.ts' extension`,
 				{
-					telemetryMessage:
-						"type generation args invalid output path",
+					telemetryMessage: "type generation args invalid output path",
 				}
 			);
 		}
@@ -204,7 +202,10 @@ export const typesCommand = createCommand({
 				} else {
 					throw new UserError(
 						`Could not resolve entry point for service config '${secondaryConfig}'.`,
-						{ telemetryMessage: "type generation command service entrypoint missing" }
+						{
+							telemetryMessage:
+								"type generation command service entrypoint missing",
+						}
 					);
 				}
 			}
@@ -1344,7 +1345,9 @@ const validateTypesFile = (path: string): void => {
 		) {
 			throw new UserError(
 				`A non-Wrangler ${basename(path)} already exists, please rename and try again.`,
-				{ telemetryMessage: "type generation validation conflicting types file" }
+				{
+					telemetryMessage: "type generation validation conflicting types file",
+				}
 			);
 		}
 	} catch (error) {

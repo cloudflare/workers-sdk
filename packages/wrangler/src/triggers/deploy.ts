@@ -267,7 +267,10 @@ export default async function triggersDeploy(
 					throw new UserError(
 						`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
 							`Configure limits on the worker that defines the workflow.`,
-						{ telemetryMessage: "triggers deploy workflow limits external script" }
+						{
+							telemetryMessage:
+								"triggers deploy workflow limits external script",
+						}
 					);
 				}
 				continue;

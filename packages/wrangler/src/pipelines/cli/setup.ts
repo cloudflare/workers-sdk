@@ -272,8 +272,7 @@ async function promptCatalogToken(
 			});
 			if (!retry) {
 				throw new UserError("Catalog API token validation failed", {
-					telemetryMessage:
-						"pipelines setup catalog token validation failed",
+					telemetryMessage: "pipelines setup catalog token validation failed",
 				});
 			}
 		}
@@ -341,8 +340,7 @@ async function promptR2Credentials(
 			});
 			if (!retry) {
 				throw new UserError("R2 credentials validation failed", {
-					telemetryMessage:
-						"pipelines setup r2 credentials validation failed",
+					telemetryMessage: "pipelines setup r2 credentials validation failed",
 				});
 			}
 		}
@@ -402,15 +400,15 @@ async function setupPipelineNaming(
 		? providedName
 		: await promptWithRetry(
 				() => "Pipeline name",
-			() => prompt("What would you like to name your pipeline?"),
-			(name) => {
-				if (!name) {
-					throw new UserError("Pipeline name is required", {
-						telemetryMessage: "pipelines setup missing pipeline name",
-					});
+				() => prompt("What would you like to name your pipeline?"),
+				(name) => {
+					if (!name) {
+						throw new UserError("Pipeline name is required", {
+							telemetryMessage: "pipelines setup missing pipeline name",
+						});
+					}
+					validateEntityName("pipeline", name);
 				}
-				validateEntityName("pipeline", name);
-			}
 			);
 
 	// If name was provided via args, still validate it (but no retry)

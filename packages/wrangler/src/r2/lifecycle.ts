@@ -231,8 +231,7 @@ export const r2BucketLifecycleAddCommand = createCommand({
 				}
 				if (!isNonNegativeNumber(String(conditionValue))) {
 					throw new UserError("Must be a positive number.", {
-						telemetryMessage:
-							"r2 lifecycle add invalid abort multipart days",
+						telemetryMessage: "r2 lifecycle add invalid abort multipart days",
 					});
 				}
 
@@ -269,8 +268,7 @@ export const r2BucketLifecycleAddCommand = createCommand({
 						throw new UserError(
 							"Must be a positive number or a valid date in the YYYY-MM-DD format.",
 							{
-								telemetryMessage:
-									"r2 lifecycle add invalid action condition",
+								telemetryMessage: "r2 lifecycle add invalid action condition",
 							}
 						);
 					}

@@ -119,8 +119,7 @@ export async function getAccessHeaders(
 				`to authenticate with an Access Service Token.\n` +
 				`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/`,
 			{
-				telemetryMessage:
-					"user access missing service token non interactive",
+				telemetryMessage: "user access missing service token non interactive",
 			}
 		);
 	}

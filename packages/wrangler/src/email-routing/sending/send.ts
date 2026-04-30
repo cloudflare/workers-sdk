@@ -150,7 +150,9 @@ function parseAttachments(attachmentPaths: string[] | undefined): Array<{
 		} catch (e) {
 			throw new UserError(
 				`Failed to read attachment file '${filePath}': ${e instanceof Error ? e.message : e}`,
-				{ telemetryMessage: "email routing sending send attachment read failed" }
+				{
+					telemetryMessage: "email routing sending send attachment read failed",
+				}
 			);
 		}
 		const filename = path.basename(filePath);

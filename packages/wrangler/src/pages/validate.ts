@@ -91,11 +91,9 @@ export const validate = async (args: {
 		} catch (e) {
 			if ((e as NodeJS.ErrnoException).code === "ENOENT") {
 				// File not found exeptions should be marked as user error
-				throw new FatalError(
-					(e as NodeJS.ErrnoException).message,
-					undefined,
-					{ telemetryMessage: "pages validate directory not found" }
-				);
+				throw new FatalError((e as NodeJS.ErrnoException).message, undefined, {
+					telemetryMessage: "pages validate directory not found",
+				});
 			}
 			throw e;
 		}

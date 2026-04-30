@@ -556,8 +556,7 @@ export async function apply(
 					throw new UserError(
 						`Unexpected error creating application: ${err.message}`,
 						{
-							telemetryMessage:
-								"cloudchamber apply create unexpected error",
+							telemetryMessage: "cloudchamber apply create unexpected error",
 						}
 					);
 				}
@@ -566,8 +565,7 @@ export async function apply(
 					throw new UserError(
 						`Error creating application due to a misconfiguration\n${formatError(err)}`,
 						{
-							telemetryMessage:
-								"cloudchamber apply create misconfiguration",
+							telemetryMessage: "cloudchamber apply create misconfiguration",
 						}
 					);
 				}
@@ -609,8 +607,7 @@ export async function apply(
 					throw new UserError(
 						`Unexpected error modifying application ${action.name}: ${err.message}`,
 						{
-							telemetryMessage:
-								"cloudchamber apply modify unexpected error",
+							telemetryMessage: "cloudchamber apply modify unexpected error",
 						}
 					);
 				}
@@ -619,8 +616,7 @@ export async function apply(
 					throw new UserError(
 						`Error modifying application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`,
 						{
-							telemetryMessage:
-								"cloudchamber apply modify misconfiguration",
+							telemetryMessage: "cloudchamber apply modify misconfiguration",
 						}
 					);
 				}
@@ -656,8 +652,7 @@ export async function apply(
 						throw new UserError(
 							`Unexpected error rolling out application ${action.name}:\n${err.message}`,
 							{
-								telemetryMessage:
-									"cloudchamber apply rollout unexpected error",
+								telemetryMessage: "cloudchamber apply rollout unexpected error",
 							}
 						);
 					}
@@ -666,8 +661,7 @@ export async function apply(
 						throw new UserError(
 							`Error rolling out application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`,
 							{
-								telemetryMessage:
-									"cloudchamber apply rollout misconfiguration",
+								telemetryMessage: "cloudchamber apply rollout misconfiguration",
 							}
 						);
 					}

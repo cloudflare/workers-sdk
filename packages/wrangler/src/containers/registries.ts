@@ -462,7 +462,9 @@ async function registryDeleteCommand(
 			if (e.status === 404) {
 				throw new UserError(
 					`The registry ${deleteArgs.DOMAIN} does not exist.`,
-					{ telemetryMessage: "containers registries delete registry not found" }
+					{
+						telemetryMessage: "containers registries delete registry not found",
+					}
 				);
 			}
 			throw new APIError({

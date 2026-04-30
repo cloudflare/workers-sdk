@@ -80,8 +80,7 @@ export async function detectFramework(
 			throw new UserError(
 				"The Wrangler application detection logic has been run in the root of a workspace instead of targeting a specific project. Change your working directory to one of the applications in the workspace and try again.",
 				{
-					telemetryMessage:
-						"autoconfig detection workspace root unsupported",
+					telemetryMessage: "autoconfig detection workspace root unsupported",
 				}
 			);
 		}
@@ -194,9 +193,12 @@ class MultipleFrameworksCIError extends FatalError {
 function throwMultipleFrameworksNonInteractiveError(
 	settings: Settings[]
 ): never {
-	throw new MultipleFrameworksCIError(settings.map((b) => b.name), {
-		telemetryMessage: "autoconfig detection multiple frameworks",
-	});
+	throw new MultipleFrameworksCIError(
+		settings.map((b) => b.name),
+		{
+			telemetryMessage: "autoconfig detection multiple frameworks",
+		}
+	);
 }
 
 type DetectedFramework = {

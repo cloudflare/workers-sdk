@@ -771,8 +771,7 @@ export function validateTrafficSubtotal(
 		throw new UserError(
 			`Sum of specified percentages (${subtotal}%) must be at most ${max}%`,
 			{
-				telemetryMessage:
-					"versions deploy traffic subtotal above maximum",
+				telemetryMessage: "versions deploy traffic subtotal above maximum",
 			}
 		);
 	}
@@ -780,8 +779,7 @@ export function validateTrafficSubtotal(
 		throw new UserError(
 			`Sum of specified percentages (${subtotal}%) must be at least ${min}%`,
 			{
-				telemetryMessage:
-					"versions deploy traffic subtotal below minimum",
+				telemetryMessage: "versions deploy traffic subtotal below minimum",
 			}
 		);
 	}

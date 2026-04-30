@@ -61,7 +61,10 @@ export const pipelinesStreamsCreateCommand = createCommand({
 			} catch (error) {
 				throw new UserError(
 					`Failed to read schema file '${args.schemaFile}': ${error instanceof Error ? error.message : String(error)}`,
-					{ telemetryMessage: "pipelines streams create schema file read failed" }
+					{
+						telemetryMessage:
+							"pipelines streams create schema file read failed",
+					}
 				);
 			}
 
@@ -72,7 +75,10 @@ export const pipelinesStreamsCreateCommand = createCommand({
 			} catch (error) {
 				throw new UserError(
 					`Failed to parse schema file '${args.schemaFile}': ${error instanceof Error ? error.message : String(error)}`,
-					{ telemetryMessage: "pipelines streams create schema file parse failed" }
+					{
+						telemetryMessage:
+							"pipelines streams create schema file parse failed",
+					}
 				);
 			}
 

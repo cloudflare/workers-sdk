@@ -205,13 +205,13 @@ export const tunnelRunCommand = createCommand({
 							`Try running with --log-level debug for more information.`;
 					}
 
-				reject(
-					new UserError(message, {
-						telemetryMessage: "tunnel run cloudflared exited",
-					})
-				);
-				return;
-			}
+					reject(
+						new UserError(message, {
+							telemetryMessage: "tunnel run cloudflared exited",
+						})
+					);
+					return;
+				}
 
 				resolve();
 			});

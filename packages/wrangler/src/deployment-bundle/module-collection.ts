@@ -379,7 +379,9 @@ export function createModuleCollector(props: {
 									} matched a module rule in your configuration (${JSON.stringify(
 										rule
 									)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`,
-									{ telemetryMessage: "module rule ignored without fallthrough" }
+									{
+										telemetryMessage: "module rule ignored without fallthrough",
+									}
 								);
 							}
 						);

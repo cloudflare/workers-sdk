@@ -1173,12 +1173,15 @@ export async function login(
 		const configurationSource = complianceConfig?.compliance_region
 			? "`compliance_region` configuration property"
 			: "`CLOUDFLARE_API_ENVIRONMENT` environment variable";
-		throw new UserError(dedent`
+		throw new UserError(
+			dedent`
 			OAuth login is not supported in the \`${complianceRegion}\` compliance region.
 			Please use a Cloudflare API token (\`CLOUDFLARE_API_TOKEN\` environment variable) or remove the ${configurationSource}.
-		`, {
-			telemetryMessage: "user login unsupported compliance region",
-		});
+		`,
+			{
+				telemetryMessage: "user login unsupported compliance region",
+			}
+		);
 	}
 
 	logger.log("Attempting to login via OAuth...");
@@ -1349,10 +1352,10 @@ Please set the appropriate \`account_id\` in your ${configFileName(undefined)} f
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
 	.map(
-				(account) =>
-					`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${account.id}\``
-			)
-			.join("\n")}`,
+		(account) =>
+			`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${account.id}\``
+	)
+	.join("\n")}`,
 				{ telemetryMessage: "user account selection unavailable" }
 			);
 		}
