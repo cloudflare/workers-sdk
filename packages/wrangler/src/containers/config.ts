@@ -203,7 +203,7 @@ export const getNormalizedContainerOptions = async (
 			assert(
 				container.rollout_kind === "none",
 				"container image should be defined"
-			)
+			);
 
 			normalizedContainers.push({
 				...shared,
