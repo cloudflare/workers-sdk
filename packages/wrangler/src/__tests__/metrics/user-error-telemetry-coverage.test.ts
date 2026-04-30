@@ -61,7 +61,9 @@ function printCoverageReport(summary: CoverageSummary): void {
 	].join("\n");
 
 	if (coveragePercent < 100) {
-		logger.warn(`${report}\n\nWarning: telemetryMessage coverage is below 100%.`);
+		logger.warn(
+			`${report}\n\nWarning: telemetryMessage coverage is below 100%.`
+		);
 		return;
 	}
 
@@ -125,8 +127,7 @@ function getUserErrorTelemetryCoverage(): CoverageSummary {
 				constructorStats.withoutTelemetryMessage++;
 
 				if (
-					summary.missingLocationExamples.length <
-					MAX_MISSING_LOCATION_EXAMPLES
+					summary.missingLocationExamples.length < MAX_MISSING_LOCATION_EXAMPLES
 				) {
 					summary.missingLocationExamples.push(
 						formatLocation(basePath, filePath, sourceFile, node)
@@ -256,7 +257,10 @@ function getErrorSource(
 ): ErrorSource | undefined {
 	if (ts.isNewExpression(node)) {
 		const constructorName = getConstructorName(node.expression);
-		if (constructorName !== undefined && constructorNames.has(constructorName)) {
+		if (
+			constructorName !== undefined &&
+			constructorNames.has(constructorName)
+		) {
 			return {
 				name: constructorName,
 				args: node.arguments ?? ts.factory.createNodeArray(),

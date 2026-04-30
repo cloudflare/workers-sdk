@@ -14,13 +14,15 @@ function throwIfNonInteractive(message: string, json: boolean): void {
 			JSON.stringify({ error: message }),
 			undefined,
 			{
-				telemetryMessage: "browser rendering view non interactive prompt unavailable",
+				telemetryMessage:
+					"browser rendering view non interactive prompt unavailable",
 			}
 		);
 	}
 	if (isNonInteractiveOrCI()) {
 		throw new UserError(message, {
-			telemetryMessage: "browser rendering view non interactive prompt unavailable",
+			telemetryMessage:
+				"browser rendering view non interactive prompt unavailable",
 		});
 	}
 }

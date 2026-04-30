@@ -417,7 +417,10 @@ async function getIdFromSettings(
 	if (!existingKV || !("namespace_id" in existingKV)) {
 		throw new UserError(
 			`No namespace ID found for binding "${binding}". Add one to your wrangler config file or pass it via \`--namespace-id\`.`,
-			{ telemetryMessage: "kv namespace id missing from deployed worker binding" }
+			{
+				telemetryMessage:
+					"kv namespace id missing from deployed worker binding",
+			}
 		);
 	}
 	return existingKV.namespace_id as string;

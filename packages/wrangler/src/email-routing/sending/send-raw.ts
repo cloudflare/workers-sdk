@@ -52,7 +52,10 @@ export const emailSendingSendRawCommand = createCommand({
 			} catch (e) {
 				throw new UserError(
 					`Failed to read MIME file '${args.mimeFile}': ${e instanceof Error ? e.message : e}`,
-					{ telemetryMessage: "email routing sending send raw mime file read failed" }
+					{
+						telemetryMessage:
+							"email routing sending send raw mime file read failed",
+					}
 				);
 			}
 		} else {

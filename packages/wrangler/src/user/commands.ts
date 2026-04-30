@@ -223,8 +223,7 @@ export const authTokenCommand = createCommand({
 					"Cannot output a single token when using CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL.\n" +
 						"Use --json to get both key and email, or use CLOUDFLARE_API_TOKEN instead.",
 					{
-						telemetryMessage:
-							"user auth token unsupported credentials output",
+						telemetryMessage: "user auth token unsupported credentials output",
 					}
 				);
 			}

@@ -253,18 +253,25 @@ async function parseModules(
 		// Load the main module and any additionals
 		const entrypoint = contentRes.headers.get("cf-entrypoint");
 		if (entrypoint === null) {
-			throw new FatalError("Got modules without cf-entrypoint header", undefined, {
-				telemetryMessage:
-					"versions secrets modules missing entrypoint header",
-			});
+			throw new FatalError(
+				"Got modules without cf-entrypoint header",
+				undefined,
+				{
+					telemetryMessage:
+						"versions secrets modules missing entrypoint header",
+				}
+			);
 		}
 
 		const entrypointPart = formData.get(entrypoint) as File | null;
 		if (entrypointPart === null) {
-			throw new FatalError("Could not find entrypoint in form-data", undefined, {
-				telemetryMessage:
-					"versions secrets modules missing entrypoint part",
-			});
+			throw new FatalError(
+				"Could not find entrypoint in form-data",
+				undefined,
+				{
+					telemetryMessage: "versions secrets modules missing entrypoint part",
+				}
+			);
 		}
 
 		const mainModule: CfModule = {

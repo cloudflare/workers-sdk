@@ -131,8 +131,7 @@ export const kvNamespaceCreateCommand = createCommand({
 					Or choose a different namespace name.
 				`,
 					{
-						telemetryMessage:
-							"kv namespace create namespace already exists",
+						telemetryMessage: "kv namespace create namespace already exists",
 					}
 				);
 			}

@@ -69,8 +69,7 @@ export const d1MigrationsListCommand = createCommand({
 			throw new UserError(
 				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`,
 				{
-					telemetryMessage:
-						"d1 migrations list database not found in config",
+					telemetryMessage: "d1 migrations list database not found in config",
 				}
 			);
 		}

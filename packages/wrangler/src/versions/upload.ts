@@ -492,14 +492,17 @@ export default async function versionsUpload(props: Props): Promise<{
 	if (!compatibilityDate) {
 		const compatibilityDateStr = getTodaysCompatDate();
 
-		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
+		throw new UserError(
+			`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
 	${(formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath), false)}
     \`\`\`
     Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
-See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`, {
-			telemetryMessage: "versions upload missing compatibility date",
-		});
+See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
+			{
+				telemetryMessage: "versions upload missing compatibility date",
+			}
+		);
 	}
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;

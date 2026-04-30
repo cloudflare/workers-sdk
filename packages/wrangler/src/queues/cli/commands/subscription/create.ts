@@ -60,7 +60,10 @@ function parseSourceArgument(
 			if (!args.workflowName) {
 				throw new UserError(
 					`--workflow-name is required when using source '${EventSourceType.WORKFLOWS_WORKFLOW}'`,
-					{ telemetryMessage: "queues subscription create missing workflow name" }
+					{
+						telemetryMessage:
+							"queues subscription create missing workflow name",
+					}
 				);
 			}
 			return {

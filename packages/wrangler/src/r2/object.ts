@@ -316,9 +316,12 @@ export const r2ObjectPutCommand = createCommand({
 				stdin.on("end", () => resolve(Buffer.concat(chunks)));
 				stdin.on("error", (err) =>
 					reject(
-						new CommandLineArgsError(`Could not pipe. Reason: "${err.message}"`, {
-							telemetryMessage: "r2 object put pipe read failed",
-						})
+						new CommandLineArgsError(
+							`Could not pipe. Reason: "${err.message}"`,
+							{
+								telemetryMessage: "r2 object put pipe read failed",
+							}
+						)
 					)
 				);
 			});

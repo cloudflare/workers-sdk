@@ -86,8 +86,7 @@ export const versionsSecretDeleteCommand = createCommand({
 				throw new UserError(
 					"There are currently no uploaded versions of this Worker - please upload a version before uploading a secret.",
 					{
-						telemetryMessage:
-							"versions secrets delete no uploaded versions",
+						telemetryMessage: "versions secrets delete no uploaded versions",
 					}
 				);
 			}

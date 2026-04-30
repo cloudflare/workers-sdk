@@ -67,7 +67,10 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 			if (args.actionType !== "forward" && args.actionType !== "drop") {
 				throw new UserError(
 					"Catch-all rule only supports 'forward' or 'drop' action types",
-					{ telemetryMessage: "email routing rules update invalid catch all action" }
+					{
+						telemetryMessage:
+							"email routing rules update invalid catch all action",
+					}
 				);
 			}
 			if (
@@ -76,7 +79,10 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 			) {
 				throw new UserError(
 					"--action-value is required when --action-type is 'forward'",
-					{ telemetryMessage: "email routing rules update missing forward action value" }
+					{
+						telemetryMessage:
+							"email routing rules update missing forward action value",
+					}
 				);
 			}
 		} else {
@@ -105,7 +111,9 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 			) {
 				throw new UserError(
 					"--action-value is required when --action-type is not 'drop'",
-					{ telemetryMessage: "email routing rules update missing action value" }
+					{
+						telemetryMessage: "email routing rules update missing action value",
+					}
 				);
 			}
 		}
@@ -143,7 +151,9 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 		if (!args.matchType || !args.matchField || !args.matchValue) {
 			throw new UserError(
 				"--match-type, --match-field, and --match-value are required when updating a regular rule",
-				{ telemetryMessage: "email routing rules update missing matcher fields" }
+				{
+					telemetryMessage: "email routing rules update missing matcher fields",
+				}
 			);
 		}
 
