@@ -223,3 +223,99 @@ jobs:
         with:
           name: turbo-runs-${{ matrix.os }}-${{ matrix.suite }}
           path: .turbo/runs
+
+  # ---------------------------------------------------------------------
+  # Backwards-compatibility status-check aliases.
+  #
+  # The `test` matrix above replaced the previous suite values
+  # (`packages-and-tools`, `fixtures`) with five new sharded values
+  # (`packages-wrangler`, `packages-runtime`, `packages-other`,
+  # `fixtures-heavy`, `fixtures-light`). Branch protection on `main`
+  # is configured externally and may still reference the old check
+  # names (e.g. `Tests (Linux, packages-and-tools)`).
+  #
+  # These six alias jobs report under the OLD names and depend on the
+  # entire `test` matrix. If any matrix cell fails or is cancelled,
+  # every alias fails; if the whole matrix is skipped (markdown-only
+  # PR), every alias passes — preserving the prior fast-path behaviour.
+  #
+  # Remove these aliases once branch protection is updated to reference
+  # the new sharded check names.
+  # ---------------------------------------------------------------------
+  alias-tests-linux-packages-and-tools:
+    name: "Tests (Linux, packages-and-tools)"
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate test matrix result
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "cancelled" ]; then
+            echo "Test matrix did not succeed (result=${{ needs.test.result }})"
+            exit 1
+          fi
+
+  alias-tests-linux-fixtures:
+    name: "Tests (Linux, fixtures)"
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate test matrix result
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "cancelled" ]; then
+            echo "Test matrix did not succeed (result=${{ needs.test.result }})"
+            exit 1
+          fi
+
+  alias-tests-macos-packages-and-tools:
+    name: "Tests (macOS, packages-and-tools)"
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate test matrix result
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "cancelled" ]; then
+            echo "Test matrix did not succeed (result=${{ needs.test.result }})"
+            exit 1
+          fi
+
+  alias-tests-macos-fixtures:
+    name: "Tests (macOS, fixtures)"
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate test matrix result
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "cancelled" ]; then
+            echo "Test matrix did not succeed (result=${{ needs.test.result }})"
+            exit 1
+          fi
+
+  alias-tests-windows-packages-and-tools:
+    name: "Tests (Windows, packages-and-tools)"
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate test matrix result
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "cancelled" ]; then
+            echo "Test matrix did not succeed (result=${{ needs.test.result }})"
+            exit 1
+          fi
+
+  alias-tests-windows-fixtures:
+    name: "Tests (Windows, fixtures)"
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate test matrix result
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "cancelled" ]; then
+            echo "Test matrix did not succeed (result=${{ needs.test.result }})"
+            exit 1
+          fi

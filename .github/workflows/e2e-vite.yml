@@ -82,3 +82,57 @@ jobs:
         with:
           name: turbo-runs-${{ matrix.os }}-shard-${{ matrix.shard }}
           path: .turbo/runs
+
+  # ---------------------------------------------------------------------
+  # Backwards-compatibility status-check aliases.
+  #
+  # The matrix above added a `shard` axis, renaming jobs from
+  # `Vite Plugin E2E (<OS>)` to `Vite Plugin E2E (<OS>, shard {1,2}/2)`.
+  # Branch protection on `main` may still reference the old names.
+  #
+  # These three alias jobs report under the OLD names and depend on the
+  # entire `e2e-vite-plugin-test` matrix. If any matrix cell fails or is
+  # cancelled, every alias fails; if the whole matrix is skipped
+  # (markdown-only PR), every alias passes.
+  #
+  # Remove these aliases once branch protection is updated to reference
+  # the new sharded check names.
+  # ---------------------------------------------------------------------
+  alias-vite-plugin-e2e-linux:
+    name: "Vite Plugin E2E (Linux)"
+    needs: e2e-vite-plugin-test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate matrix result
+        run: |
+          if [ "${{ needs.e2e-vite-plugin-test.result }}" = "failure" ] || [ "${{ needs.e2e-vite-plugin-test.result }}" = "cancelled" ]; then
+            echo "Vite Plugin E2E matrix did not succeed (result=${{ needs.e2e-vite-plugin-test.result }})"
+            exit 1
+          fi
+
+  alias-vite-plugin-e2e-macos:
+    name: "Vite Plugin E2E (macOS)"
+    needs: e2e-vite-plugin-test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate matrix result
+        run: |
+          if [ "${{ needs.e2e-vite-plugin-test.result }}" = "failure" ] || [ "${{ needs.e2e-vite-plugin-test.result }}" = "cancelled" ]; then
+            echo "Vite Plugin E2E matrix did not succeed (result=${{ needs.e2e-vite-plugin-test.result }})"
+            exit 1
+          fi
+
+  alias-vite-plugin-e2e-windows:
+    name: "Vite Plugin E2E (Windows)"
+    needs: e2e-vite-plugin-test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate matrix result
+        run: |
+          if [ "${{ needs.e2e-vite-plugin-test.result }}" = "failure" ] || [ "${{ needs.e2e-vite-plugin-test.result }}" = "cancelled" ]; then
+            echo "Vite Plugin E2E matrix did not succeed (result=${{ needs.e2e-vite-plugin-test.result }})"
+            exit 1
+          fi
