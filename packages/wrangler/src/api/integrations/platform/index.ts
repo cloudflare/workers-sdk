@@ -259,6 +259,8 @@ async function getMiniflareOptionsFromConfig(args: {
 			),
 			containerBuildId: undefined,
 			enableContainers: config.dev.enable_containers,
+			enableContainersPrivilegedMode:
+				config.dev.enable_containers_privileged_mode,
 		},
 		remoteProxyConnectionString
 	);
@@ -429,6 +431,8 @@ export function unstable_getMiniflareWorkerOptions(
 			containerDOClassNames,
 			containerBuildId: options?.containerBuildId,
 			enableContainers,
+			enableContainersPrivilegedMode:
+				config.dev.enable_containers_privileged_mode,
 		},
 		options?.remoteProxyConnectionString
 	);
@@ -487,6 +491,8 @@ export function unstable_getMiniflareWorkerOptions(
 										doClassName: binding.class_name,
 										containerDOClassNames,
 										containerBuildId: options?.containerBuildId,
+										allowPrivileged:
+											config.dev.enable_containers_privileged_mode,
 									})
 								: undefined,
 					} satisfies DurableObjectDefinition,

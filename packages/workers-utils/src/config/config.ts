@@ -255,6 +255,15 @@ export interface DevConfig {
 	enable_containers: boolean;
 
 	/**
+	 * When developing, whether to launch containers with the elevated privileges
+	 * required for FUSE mounts (CAP_SYS_ADMIN, /dev/fuse, AppArmor unconfined).
+	 * Off by default — only enable when your container needs FUSE locally.
+	 *
+	 * @default false
+	 */
+	enable_containers_privileged_mode: boolean;
+
+	/**
 	 * Either the Docker unix socket i.e. `unix:///var/run/docker.sock` or a full configuration.
 	 * Note that windows is only supported via WSL at the moment
 	 */
@@ -312,6 +321,7 @@ export const defaultWranglerConfig: Config = {
 		host: undefined,
 		// Note this one is also workers only
 		enable_containers: true,
+		enable_containers_privileged_mode: false,
 		container_engine: undefined,
 		generate_types: false,
 	},

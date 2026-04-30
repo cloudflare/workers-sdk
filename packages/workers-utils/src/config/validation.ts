@@ -230,6 +230,7 @@ export type NormalizeAndValidateConfigArgs = {
 	upstreamProtocol?: string;
 	script?: string;
 	enableContainers?: boolean;
+	enableContainersPrivilegedMode?: boolean;
 	generateTypes?: boolean;
 };
 
@@ -684,6 +685,7 @@ function normalizeAndValidateDev(
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
 		enableContainers: enableContainersArg,
+		enableContainersPrivilegedMode: enableContainersPrivilegedModeArg,
 		generateTypes: generateTypesArg,
 	} = args;
 	assert(
@@ -700,6 +702,10 @@ function normalizeAndValidateDev(
 	assert(
 		enableContainersArg === undefined ||
 			typeof enableContainersArg === "boolean"
+	);
+	assert(
+		enableContainersPrivilegedModeArg === undefined ||
+			typeof enableContainersPrivilegedModeArg === "boolean"
 	);
 	assert(
 		generateTypesArg === undefined || typeof generateTypesArg === "boolean"
@@ -723,6 +729,7 @@ function normalizeAndValidateDev(
 			: local_protocol,
 		host,
 		enable_containers = enableContainersArg ?? true,
+		enable_containers_privileged_mode = enableContainersPrivilegedModeArg ?? false,
 		container_engine,
 		generate_types = generateTypesArg ?? false,
 		...rest
@@ -773,6 +780,14 @@ function normalizeAndValidateDev(
 	validateOptionalProperty(
 		diagnostics,
 		"dev",
+		"enable_containers_privileged_mode",
+		enable_containers_privileged_mode,
+		"boolean"
+	);
+
+	validateOptionalProperty(
+		diagnostics,
+		"dev",
 		"container_engine",
 		container_engine,
 		"string"
@@ -795,6 +810,7 @@ function normalizeAndValidateDev(
 		upstream_protocol,
 		host,
 		enable_containers,
+		enable_containers_privileged_mode,
 		container_engine,
 		generate_types,
 	};
