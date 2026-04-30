@@ -1,5 +1,55 @@
 # wrangler
 
+## 4.87.0
+
+### Minor Changes
+
+- [#13726](https://github.com/cloudflare/workers-sdk/pull/13726) [`b5ac54b`](https://github.com/cloudflare/workers-sdk/commit/b5ac54baa4a6e40b7352f7d3ed0d3531a37a5e8f) Thanks [@penalosa](https://github.com/penalosa)! - Hard fail on Node.js < 22
+
+  Wrangler no longer supports Node.js 20.x, as it reached end-of-life on 2026-04-30. The minimum supported Node.js version is now 22.0.0. See https://github.com/nodejs/release?tab=readme-ov-file#end-of-life-releases.
+
+- [#13717](https://github.com/cloudflare/workers-sdk/pull/13717) [`9a1f014`](https://github.com/cloudflare/workers-sdk/commit/9a1f014991a5fc044f601a0ab0b7dae5dabf6621) Thanks [@NuroDev](https://github.com/NuroDev)! - Add an experimental `experimental_generateTypes()` programmatic API.
+
+  Wrangler now exposes `experimental_generateTypes()` from the package root so you can generate Worker types in code using the same logic as `wrangler types`. The API supports the same core type-generation options (include env/runtime toggles) and returns structured output with separate `env` and `runtime` content alongside the combined formatted output.
+
+### Patch Changes
+
+- [#13732](https://github.com/cloudflare/workers-sdk/pull/13732) [`22e1a61`](https://github.com/cloudflare/workers-sdk/commit/22e1a6176da1ff0e91e3d27b41c3770b323b56a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260426.1 | 1.20260429.1 |
+
+- [#13754](https://github.com/cloudflare/workers-sdk/pull/13754) [`00523c8`](https://github.com/cloudflare/workers-sdk/commit/00523c89b91aa7addd0ccbf3864dbce2a218c6d4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260429.1 | 1.20260430.1 |
+
+- [#13711](https://github.com/cloudflare/workers-sdk/pull/13711) [`1c4d850`](https://github.com/cloudflare/workers-sdk/commit/1c4d850b22f03d087112b61e1f6969e81398cd6e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: skip auto-config and OpenNext delegation when `--config` is explicitly provided
+
+  When `--config` is passed to `wrangler deploy`, the user is explicitly targeting a specific Worker configuration. Previously, wrangler would ignore `--config` and delegate to `opennextjs-cloudflare deploy` if it detected an OpenNext project in the working directory, silently deploying the wrong Worker. Now, both auto-config detection and OpenNext delegation are skipped when `--config` is provided, matching the existing behavior for `--script` and `--assets`.
+
+- [#13735](https://github.com/cloudflare/workers-sdk/pull/13735) [`6d28037`](https://github.com/cloudflare/workers-sdk/commit/6d28037f6face1ee1d025d57e0d0b2f175ae2eb3) Thanks [@edmundhung](https://github.com/edmundhung)! - Improve `config-schema.json` hover text in more editors
+
+  Wrangler now emits `markdownDescription` in `config-schema.json` alongside the existing `description` field. Editors that support rich JSON Schema hovers can use that markdown directly instead of rendering escaped links and formatting.
+
+- [#13722](https://github.com/cloudflare/workers-sdk/pull/13722) [`0827815`](https://github.com/cloudflare/workers-sdk/commit/0827815ee4f46f8535192d9832b0adb4028d8c5d) Thanks [@MattieTK](https://github.com/MattieTK)! - Improve safe telemetry categorisation for user-facing Wrangler errors.
+
+- [#13116](https://github.com/cloudflare/workers-sdk/pull/13116) [`e539008`](https://github.com/cloudflare/workers-sdk/commit/e5390082ff85f3d39c702895d72c7172776506c0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Allow `getPlatformProxy` and `unstable_getMiniflareWorkerOptions` to start when the assets directory does not exist yet
+
+  Previously, `getPlatformProxy` would catch and swallow `NonExistentAssetsDirError` internally when the configured assets directory was absent on disk. This has been refactored so that the directory-existence check is skipped entirely for `getPlatformProxy` and `unstable_getMiniflareWorkerOptions`, since these APIs are typically used at dev time in frameworks where the assets directory is a build output that may not exist yet.
+
+  `wrangler dev`, `wrangler deploy`, `wrangler versions upload`, and `wrangler triggers deploy` continue to require the assets directory to exist when specified.
+
+- Updated dependencies [[`22e1a61`](https://github.com/cloudflare/workers-sdk/commit/22e1a6176da1ff0e91e3d27b41c3770b323b56a7), [`00523c8`](https://github.com/cloudflare/workers-sdk/commit/00523c89b91aa7addd0ccbf3864dbce2a218c6d4), [`b5ac54b`](https://github.com/cloudflare/workers-sdk/commit/b5ac54baa4a6e40b7352f7d3ed0d3531a37a5e8f), [`e653edf`](https://github.com/cloudflare/workers-sdk/commit/e653edf7446817c2ca36515e9cefd2f5bd16f98f), [`e1eff94`](https://github.com/cloudflare/workers-sdk/commit/e1eff943ec4c073c3d1ba2c1910806d68f98e5a3), [`e539008`](https://github.com/cloudflare/workers-sdk/commit/e5390082ff85f3d39c702895d72c7172776506c0), [`0bf64a7`](https://github.com/cloudflare/workers-sdk/commit/0bf64a79678fb08158e341ed1e0cc21341a770a7), [`b04eedf`](https://github.com/cloudflare/workers-sdk/commit/b04eedfcdc713d04cbb4f1722ebe056c9dc4cb6e), [`6457fb3`](https://github.com/cloudflare/workers-sdk/commit/6457fb38c7fbce39c396562bc3324b945114c672), [`c07d0cb`](https://github.com/cloudflare/workers-sdk/commit/c07d0cb4fafbcf3a60c46e1aa6a48ed63de598da)]:
+  - miniflare@4.20260430.0
+  - @cloudflare/kv-asset-handler@0.5.0
+
 ## 4.86.0
 
 ### Minor Changes
