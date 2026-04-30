@@ -657,6 +657,16 @@ describe("User", () => {
 			expect(cachedAccount).toBeUndefined();
 		});
 
+		it("should reject config account_id values with invalid characters", async ({
+			expect,
+		}) => {
+			await expect(
+				getAccountId({ account_id: "ваш-идентификатор-аккаунта" })
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: \`account_id\` in your Wrangler configuration must only contain letters, numbers, hyphens, and underscores.]`
+			);
+		});
+
 		it("should cache account when only one account is available (no prompt needed)", async ({
 			expect,
 		}) => {

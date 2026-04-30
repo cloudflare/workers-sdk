@@ -1,17 +1,35 @@
 import {
 	getCloudflareApiEnvironmentFromEnv,
 	getEnvironmentVariableFactory,
+	UserError,
 } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import { getAccessHeaders } from "./access";
+import { isValidAccountId } from "./account-id";
 
 /**
  * `CLOUDFLARE_ACCOUNT_ID` overrides the account inferred from the current user.
  */
-export const getCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
+
+const getCloudflareAccountIdValueFromEnv = getEnvironmentVariableFactory({
 	variableName: "CLOUDFLARE_ACCOUNT_ID",
 	deprecatedName: "CF_ACCOUNT_ID",
 });
+
+export function getCloudflareAccountIdFromEnv() {
+	const accountId = getCloudflareAccountIdValueFromEnv();
+	if (accountId === undefined || accountId === "") {
+		return undefined;
+	}
+
+	if (!isValidAccountId(accountId)) {
+		throw new UserError(
+			"`CLOUDFLARE_ACCOUNT_ID` must only contain letters, numbers, hyphens, and underscores."
+		);
+	}
+
+	return accountId;
+}
 
 export const getCloudflareAPITokenFromEnv = getEnvironmentVariableFactory({
 	variableName: "CLOUDFLARE_API_TOKEN",

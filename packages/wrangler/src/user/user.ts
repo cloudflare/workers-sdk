@@ -235,6 +235,7 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { domainUsesAccess } from "./access";
+import { isValidAccountId } from "./account-id";
 import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
@@ -1269,6 +1270,12 @@ export async function getAccountId(
 ): Promise<string> {
 	// TODO: v5 we should prioritise the env var instead of the config value here, for consistency
 	if (config.account_id) {
+		if (!isValidAccountId(config.account_id)) {
+			throw new UserError(
+				"`account_id` in your Wrangler configuration must only contain letters, numbers, hyphens, and underscores."
+			);
+		}
+
 		return config.account_id;
 	}
 	// check if we have a cached value

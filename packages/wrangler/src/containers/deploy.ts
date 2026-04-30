@@ -386,7 +386,7 @@ export async function apply(
 			: args.imageRef.newTag;
 	log(dim("Container application changes\n"));
 
-	const accountId = config.account_id || (await getAccountId(config));
+	const accountId = await getAccountId(config);
 
 	// let's always convert normalised container config -> CreateApplicationRequest
 	// since CreateApplicationRequest is a superset of ModifyApplicationRequestBody
