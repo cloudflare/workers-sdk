@@ -1,4 +1,4 @@
-import { appendFile } from "node:fs/promises";
+import { appendFile, readdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 import {
@@ -38,8 +38,50 @@ function getDebugFilepath() {
 	return path.resolve(filepath);
 }
 
+/**
+ * Deletes log files older than WRANGLER_LOG_MAX_AGE_DAYS (default: 7) from the
+ * given log directory. Runs silently — errors are ignored so startup is never
+ * blocked by log cleanup.
+ */
+export async function cleanupOldLogFiles(logsDir: string): Promise<void> {
+	const maxAgeDaysEnv = process.env.WRANGLER_LOG_MAX_AGE_DAYS;
+	const maxAgeDays =
+		maxAgeDaysEnv !== undefined ? parseInt(maxAgeDaysEnv, 10) : 7;
+	if (!isFinite(maxAgeDays) || maxAgeDays <= 0) {
+		return;
+	}
+	const cutoffMs = maxAgeDays * 24 * 60 * 60 * 1000;
+	try {
+		const files = await readdir(logsDir);
+		const now = Date.now();
+		await Promise.all(
+			files
+				.filter((f) => f.startsWith("wrangler-") && f.endsWith(".log"))
+				.map(async (f) => {
+					const filePath = path.join(logsDir, f);
+					try {
+						const fileStat = await stat(filePath);
+						if (now - fileStat.mtimeMs > cutoffMs) {
+							await unlink(filePath);
+						}
+					} catch {
+						// silently ignore errors for individual files
+					}
+				})
+		);
+	} catch {
+		// silently ignore errors (e.g. logs directory doesn't exist yet)
+	}
+}
+
 export const debugLogFilepath = getDebugFilepath();
 const mutex = new Mutex();
+
+// Kick off log cleanup in the background at startup (fire-and-forget).
+// Only run when the user hasn't set a custom exact log file path.
+if (!getDebugFileDir().endsWith(".log")) {
+	void cleanupOldLogFiles(getDebugFileDir());
+}
 
 let hasLoggedLocation = false;
 let hasLoggedError = false;

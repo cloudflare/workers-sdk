@@ -1,7 +1,20 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
+import { utimes } from "node:fs/promises";
 import { join } from "node:path";
-import { beforeEach, describe, it, vi } from "vitest";
-import { appendToDebugLogFile, debugLogFilepath } from "../../utils/log-file";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in helper function at module scope */
+import { beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
+import {
+	appendToDebugLogFile,
+	cleanupOldLogFiles,
+	debugLogFilepath,
+} from "../../utils/log-file";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import type { ExpectStatic } from "vitest";
 
@@ -117,5 +130,64 @@ describe("appendToDebugLogFile", () => {
 		expect(logContent).toMatch(
 			/--- \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z log/
 		);
+	});
+});
+
+describe("cleanupOldLogFiles", () => {
+	runInTempDir();
+
+	async function createLogFile(logsDir: string, name: string, ageDays: number) {
+		mkdirSync(logsDir, { recursive: true });
+		const filePath = join(logsDir, name);
+		writeFileSync(filePath, "test log content");
+		// Set the file's modification time to simulate its age
+		const mtime = new Date(Date.now() - ageDays * 24 * 60 * 60 * 1000);
+		await utimes(filePath, mtime, mtime);
+		return filePath;
+	}
+
+	it("should delete log files older than 7 days by default", async () => {
+		const logsDir = "test-logs";
+		const oldFile = await createLogFile(
+			logsDir,
+			"wrangler-old.log",
+			8 // 8 days old — should be deleted
+		);
+		const recentFile = await createLogFile(
+			logsDir,
+			"wrangler-recent.log",
+			3 // 3 days old — should be kept
+		);
+
+		await cleanupOldLogFiles(logsDir);
+
+		expect(existsSync(oldFile)).toBe(false);
+		expect(existsSync(recentFile)).toBe(true);
+	});
+
+	it("should respect the WRANGLER_LOG_MAX_AGE_DAYS env variable", async () => {
+		vi.stubEnv("WRANGLER_LOG_MAX_AGE_DAYS", "30");
+
+		const logsDir = "test-logs-custom";
+		const oldFile = await createLogFile(logsDir, "wrangler-old.log", 31);
+		const recentFile = await createLogFile(logsDir, "wrangler-recent.log", 10);
+
+		await cleanupOldLogFiles(logsDir);
+
+		expect(existsSync(oldFile)).toBe(false);
+		expect(existsSync(recentFile)).toBe(true);
+	});
+
+	it("should not delete non-wrangler log files", async () => {
+		const logsDir = "test-logs-other";
+		const otherFile = await createLogFile(logsDir, "other-app.log", 10);
+
+		await cleanupOldLogFiles(logsDir);
+
+		expect(existsSync(otherFile)).toBe(true);
+	});
+
+	it("should silently succeed if the logs directory does not exist", async () => {
+		await expect(cleanupOldLogFiles("nonexistent-dir")).resolves.not.toThrow();
 	});
 });
