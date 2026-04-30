@@ -1,5 +1,8 @@
 import assert from "node:assert";
-import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
+import {
+	getBindingLocalSupport,
+	getCloudflareComplianceRegion,
+} from "@cloudflare/workers-utils";
 import { readConfig } from "../../config";
 import { requireApiToken, requireAuth } from "../../user";
 import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
@@ -21,33 +24,11 @@ export function pickRemoteBindings(
 	return Object.fromEntries(
 		Object.entries(bindings ?? {}).filter(([, binding]) => {
 			if (
-				binding.type === "ai" ||
-				binding.type === "media" ||
-				binding.type === "artifacts" ||
-				binding.type === "flagship"
+				getBindingLocalSupport(binding.type) ===
+				"DO-NOT-USE-this-resource-will-never-have-a-local-simulator"
 			) {
-				// AI, media, artifacts, and flagship bindings are always remote
 				return true;
 			}
-
-			if (binding.type === "vpc_service") {
-				// VPC Service is always remote
-				return true;
-			}
-
-			if (binding.type === "vpc_network") {
-				// VPC Network is always remote
-				return true;
-			}
-
-			if (
-				binding.type === "ai_search_namespace" ||
-				binding.type === "ai_search"
-			) {
-				// AI Search bindings are always remote
-				return true;
-			}
-
 			return "remote" in binding && binding["remote"];
 		})
 	);
