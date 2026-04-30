@@ -181,6 +181,35 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					);
 				}
 
+				// Pre-middleware that honours an inbound MF-Route-Override header by
+				// dispatching directly to Miniflare, bypassing Vite's HTML/transform
+				// middlewares. This lets external Vite plugins (e.g. host-based
+				// routers) target an auxiliary worker for paths Vite would otherwise
+				// serve itself, such as `/`. Repositioned below in Vite 6 so it runs
+				// after the host-check middleware. In Vite 7+ pre-middleware is
+				// already in the correct position.
+				const routeOverrideHandler = createRequestHandler((request) =>
+					ctx.miniflare.dispatchFetch(request, { redirect: "manual" })
+				);
+				viteDevServer.middlewares.use(
+					async function cloudflareRouteOverrideMiddleware(req, res, next) {
+						let hasRouteOverride = false;
+						for (let i = 0; i < req.rawHeaders.length; i += 2) {
+							if (
+								req.rawHeaders[i]?.toLowerCase() ===
+								CoreHeaders.ROUTE_OVERRIDE.toLowerCase()
+							) {
+								hasRouteOverride = true;
+								break;
+							}
+						}
+						if (!hasRouteOverride) {
+							return next();
+						}
+						return routeOverrideHandler(req, res, next);
+					}
+				);
+
 				const staticRouting: StaticRouting | undefined =
 					entryWorkerConfig.assets?.run_worker_first === true
 						? { user_worker: ["/*"] }
@@ -194,7 +223,9 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						staticRouting.user_worker
 					);
 					const userWorkerHandler = createRequestHandler(async (request) => {
-						request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+						if (!request.headers.has(CoreHeaders.ROUTE_OVERRIDE)) {
+							request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+						}
 
 						return ctx.miniflare.dispatchFetch(request, {
 							redirect: "manual",
@@ -305,21 +336,28 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 				// correct position so no action is needed.
 				if (!satisfiesMinimumViteVersion("7.0.0")) {
 					const middlewareStack = viteDevServer.middlewares.stack;
-					const preMiddlewareIndex = middlewareStack.findIndex(
-						(middleware) =>
-							"name" in middleware.handle &&
-							middleware.handle.name === "cloudflarePreMiddleware"
-					);
 
-					if (preMiddlewareIndex !== -1) {
+					// Move our pre-middlewares (added earlier in `configureServer`)
+					// from before the host-check middleware to after it, by
+					// re-inserting them just before viteCachedTransformMiddleware.
+					for (const name of [
+						"cloudflarePreMiddleware",
+						"cloudflareRouteOverrideMiddleware",
+					]) {
+						const preMiddlewareIndex = middlewareStack.findIndex(
+							(middleware) =>
+								"name" in middleware.handle && middleware.handle.name === name
+						);
+
+						if (preMiddlewareIndex === -1) {
+							continue;
+						}
+
 						const [preMiddleware] = middlewareStack.splice(
 							preMiddlewareIndex,
 							1
 						);
-						assert(
-							preMiddleware,
-							"Failed to remove cloudflarePreMiddleware from stack"
-						);
+						assert(preMiddleware, `Failed to remove ${name} from stack`);
 
 						const cachedTransformMiddlewareIndex = middlewareStack.findIndex(
 							(middleware) =>
@@ -341,25 +379,18 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 				// post middleware
 				viteDevServer.middlewares.use(
 					createRequestHandler(async (request, req) => {
-						if (req[kRequestType] === "asset") {
+						if (!request.headers.has(CoreHeaders.ROUTE_OVERRIDE)) {
 							request.headers.set(
 								CoreHeaders.ROUTE_OVERRIDE,
-								ASSET_WORKER_NAME
+								req[kRequestType] === "asset"
+									? ASSET_WORKER_NAME
+									: ROUTER_WORKER_NAME
 							);
-
-							return ctx.miniflare.dispatchFetch(request, {
-								redirect: "manual",
-							});
-						} else {
-							request.headers.set(
-								CoreHeaders.ROUTE_OVERRIDE,
-								ROUTER_WORKER_NAME
-							);
-
-							return ctx.miniflare.dispatchFetch(request, {
-								redirect: "manual",
-							});
 						}
+
+						return ctx.miniflare.dispatchFetch(request, {
+							redirect: "manual",
+						});
 					})
 				);
 			};
