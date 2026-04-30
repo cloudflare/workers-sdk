@@ -71,6 +71,10 @@ jobs:
       cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
 
     name: ${{ format('Tests ({0}, {1})', matrix.description, matrix.suite) }}
+    # The packages-and-tools suite is split into 3 shards (wrangler / runtime / other)
+    # and the fixtures suite into 2 shards (heavy / light) so that no single matrix
+    # cell waits on the wrangler suite or the heaviest fixtures, which previously
+    # dominated the critical path. See PR commit message for measurement details.
     strategy:
       fail-fast: false
       matrix:
@@ -79,8 +83,11 @@ jobs:
           - ubuntu-latest
           - windows-latest
         suite:
-          - packages-and-tools
-          - fixtures
+          - packages-wrangler
+          - packages-runtime
+          - packages-other
+          - fixtures-heavy
+          - fixtures-light
         include:
           - os: macos-latest
             description: macOS
@@ -119,40 +126,95 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      # ------------------------------------------------------------------
+      # packages-wrangler shard
+      # Wrangler alone, on its own runner. Wrangler has ~260 test files and
+      # uses pool: forks with heavy global mocking, so isolating it lets it
+      # use the whole runner without contending with other suites.
+      # ------------------------------------------------------------------
+      - name: Run tests (wrangler)
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-wrangler'
+        run: pnpm run test:ci --log-order=stream --filter="wrangler"
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages-wrangler/index.html
+          CI_OS: ${{ matrix.description }}
+
+      # ------------------------------------------------------------------
+      # packages-runtime shard
+      # Runtime-heavy packages (miniflare/workerd, vitest-pool-workers/Verdaccio,
+      # workers-shared, workers-utils). Concurrency capped at 2 because these
+      # spawn workerd processes that are CPU-hungry.
+      # vitest-pool-workers is excluded on Windows because it is flaky there
+      # (preserves prior behaviour from the merged packages-and-tools suite).
+      # ------------------------------------------------------------------
+      - name: Run tests (runtime packages)
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-runtime'
+        run: pnpm run test:ci --log-order=stream --concurrency=2 --filter="miniflare" --filter="@cloudflare/workers-shared" --filter="@cloudflare/workers-utils" ${{ matrix.os != 'windows-latest' && '--filter="@cloudflare/vitest-pool-workers"' || '' }}
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages-runtime/index.html
+          CI_OS: ${{ matrix.description }}
+
+      # ------------------------------------------------------------------
+      # packages-other shard
+      # All remaining packages plus the @cloudflare/tools workspace member
+      # (Linux-only — tools are CI-only utilities). These suites are mostly
+      # small/fast, so concurrency is raised to 4.
+      # ------------------------------------------------------------------
+      - name: Run tests (other packages)
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-other'
+        run: pnpm run test:ci --log-order=stream --concurrency=4 --filter="./packages/*" --filter="!wrangler" --filter="!miniflare" --filter="!@cloudflare/vitest-pool-workers" --filter="!@cloudflare/workers-shared" --filter="!@cloudflare/workers-utils"
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages-other/index.html
+          CI_OS: ${{ matrix.description }}
+
       - name: Run tests (tools only)
         # tools _only_ needs to be tested on Linux because they're only intended to run in CI
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-other' && matrix.os == 'ubuntu-latest'
         run: pnpm run test:ci --log-order=stream --filter="@cloudflare/tools"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/tools/index.html
           CI_OS: ${{ matrix.description }}
 
-      - name: Run tests (packages)
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools'
-        # We skip @cloudflare/vitest-pool-workers tests in CI on Windows because they're very flaky. We still run the vitest-pool-workers-examples fixture, which is a comprehensive set of example tests and gives us a lot of confidence.
-        # The @cloudflare/vitest-pool-workers tests skipped are things like watch mode, which constantly times out probably due to the github runners in use.
-        # Package tests are well-isolated (separate processes, temp dirs, random ports, MSW mocks) and can safely run in parallel.
-        # Concurrency is capped at 3 to avoid CPU starvation on 4-vCPU CI runners when heavyweight suites
-        # (wrangler/forks, miniflare/workerd, vitest-pool-workers/Verdaccio) overlap.
-        run: pnpm run test:ci --log-order=stream --concurrency=3 --filter="./packages/*" ${{ matrix.os == 'windows-latest' && '--filter="!./packages/vitest-pool-workers"' || '' }}
+      # ------------------------------------------------------------------
+      # fixtures-heavy shard
+      # Allowlist of the heaviest fixtures (workerd-spawning, comprehensive
+      # examples, and the start-worker-node-test which previously needed serial
+      # execution). Concurrency capped at 2 — Windows runners struggle when
+      # multiple workerd processes overlap.
+      # If a fixture's tail time grows, move it to this list. If a heavy fixture
+      # becomes lightweight, move it back. Recalibrate when this shard exceeds
+      # ~400s on the worst OS.
+      # ------------------------------------------------------------------
+      - name: Run tests (heavy fixtures)
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures-heavy'
+        run: pnpm run test:ci --log-order=stream --concurrency=2 --filter="@fixture/vitest-pool-workers" --filter="@fixture/vitest-pool-workers-remote-bindings" --filter="@fixture/multi-worker" --filter="@fixture/dev-registry" --filter="@fixture/dynamic-worker-loading" --filter="@fixture/entrypoints-rpc" --filter="@fixture/get-platform-proxy" --filter="@fixture/start-worker-node" --filter="@fixture/interactive-dev"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/fixtures-heavy/index.html
           CI_OS: ${{ matrix.description }}
 
-      - name: Run tests (fixtures)
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
-        # Browser Run fixture is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
-        # Since the dev registry is now file-based (not network-based), fixture tests can safely run in parallel.
-        # Concurrency is capped at 2 to avoid CPU starvation on CI runners when multiple fixtures
-        # spawn workerd processes simultaneously (Windows runners are especially slow under load).
-        run: pnpm run test:ci --concurrency=2 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-run"' || '' }}
+      # ------------------------------------------------------------------
+      # fixtures-light shard
+      # All remaining fixtures. Concurrency raised to 4 — these are mostly
+      # lightweight and don't spawn workerd. browser-run is excluded on Ubuntu
+      # because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
+      # (preserves prior behaviour).
+      # ------------------------------------------------------------------
+      - name: Run tests (light fixtures)
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures-light'
+        run: pnpm run test:ci --log-order=stream --concurrency=4 --filter="./fixtures/*" --filter="!@fixture/vitest-pool-workers" --filter="!@fixture/vitest-pool-workers-remote-bindings" --filter="!@fixture/multi-worker" --filter="!@fixture/dev-registry" --filter="!@fixture/dynamic-worker-loading" --filter="!@fixture/entrypoints-rpc" --filter="!@fixture/get-platform-proxy" --filter="!@fixture/start-worker-node" --filter="!@fixture/interactive-dev" ${{ matrix.os == 'ubuntu-latest' && '--filter="!@fixture/browser-run"' || '' }}
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/fixtures-light/index.html
           CI_OS: ${{ matrix.description }}
 
       - name: Upload turbo logs
@@ -161,3 +223,99 @@ jobs:
         with:
           name: turbo-runs-${{ matrix.os }}-${{ matrix.suite }}
           path: .turbo/runs
+
+  # ---------------------------------------------------------------------
+  # Backwards-compatibility status-check aliases.
+  #
+  # The `test` matrix above replaced the previous suite values
+  # (`packages-and-tools`, `fixtures`) with five new sharded values
+  # (`packages-wrangler`, `packages-runtime`, `packages-other`,
+  # `fixtures-heavy`, `fixtures-light`). Branch protection on `main`
+  # is configured externally and may still reference the old check
+  # names (e.g. `Tests (Linux, packages-and-tools)`).
+  #
+  # These six alias jobs report under the OLD names and depend on the
+  # entire `test` matrix. If any matrix cell fails or is cancelled,
+  # every alias fails; if the whole matrix is skipped (markdown-only
+  # PR), every alias passes — preserving the prior fast-path behaviour.
+  #
+  # Remove these aliases once branch protection is updated to reference
+  # the new sharded check names.
+  # ---------------------------------------------------------------------
+  alias-tests-linux-packages-and-tools:
+    name: "Tests (Linux, packages-and-tools)"
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate test matrix result
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "cancelled" ]; then
+            echo "Test matrix did not succeed (result=${{ needs.test.result }})"
+            exit 1
+          fi
+
+  alias-tests-linux-fixtures:
+    name: "Tests (Linux, fixtures)"
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate test matrix result
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "cancelled" ]; then
+            echo "Test matrix did not succeed (result=${{ needs.test.result }})"
+            exit 1
+          fi
+
+  alias-tests-macos-packages-and-tools:
+    name: "Tests (macOS, packages-and-tools)"
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate test matrix result
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "cancelled" ]; then
+            echo "Test matrix did not succeed (result=${{ needs.test.result }})"
+            exit 1
+          fi
+
+  alias-tests-macos-fixtures:
+    name: "Tests (macOS, fixtures)"
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate test matrix result
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "cancelled" ]; then
+            echo "Test matrix did not succeed (result=${{ needs.test.result }})"
+            exit 1
+          fi
+
+  alias-tests-windows-packages-and-tools:
+    name: "Tests (Windows, packages-and-tools)"
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate test matrix result
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "cancelled" ]; then
+            echo "Test matrix did not succeed (result=${{ needs.test.result }})"
+            exit 1
+          fi
+
+  alias-tests-windows-fixtures:
+    name: "Tests (Windows, fixtures)"
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate test matrix result
+        run: |
+          if [ "${{ needs.test.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "cancelled" ]; then
+            echo "Test matrix did not succeed (result=${{ needs.test.result }})"
+            exit 1
+          fi
