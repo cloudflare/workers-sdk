@@ -71,9 +71,9 @@ https://developers.cloudflare.com/ai-search/ to get started.`);
 			instances.map((instance) => ({
 				name: instance.id,
 				namespace: instance.namespace ?? args.namespace,
-				type: instance.type,
+				type: instance.type ?? "builtin",
 				status: instance.status ?? "",
-				source: instance.source,
+				source: instance.source ?? "-",
 				created: instance.created_at,
 			}))
 		);

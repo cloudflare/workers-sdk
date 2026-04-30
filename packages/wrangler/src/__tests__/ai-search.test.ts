@@ -839,6 +839,116 @@ describe("ai-search commands", () => {
 			).rejects.toThrowError(/Missing required flag.*--source/);
 		});
 
+		it("should create a builtin instance and omit type/source from the request body", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult(
+								{
+									id: "my-instance",
+									created_at: "2025-01-01T00:00:00Z",
+									modified_at: "2025-01-02T00:00:00Z",
+									namespace: "default",
+									status: "active",
+								},
+								true
+							)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type builtin"
+			);
+			expect(capturedBody).toBeDefined();
+			expect(capturedBody).not.toHaveProperty("type");
+			expect(capturedBody).not.toHaveProperty("source");
+			expect(capturedBody).toMatchObject({ id: "my-instance" });
+			expect(std.out).toContain(
+				'Successfully created AI Search instance "my-instance"'
+			);
+			expect(std.out).toContain("Type:       builtin");
+			expect(std.out).toContain("Source:     -");
+		});
+
+		it("should error when --source is passed with --type builtin", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type builtin --source my-bucket"
+				)
+			).rejects.toThrowError(/not supported with --type builtin.*--source/);
+		});
+
+		it("should error when source_params flags are passed with --type builtin", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					'ai-search create my-instance --namespace default --type builtin --prefix docs/ --include-items "*.md" --exclude-items "*.tmp"'
+				)
+			).rejects.toThrowError(
+				/not supported with --type builtin.*--prefix.*--include-items.*--exclude-items/
+			);
+		});
+
+		it("should interactively select builtin and omit type from the request body", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockSelect({
+				text: "Select the source type:",
+				result: "builtin",
+			});
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult(
+								{
+									id: "my-instance",
+									created_at: "2025-01-01T00:00:00Z",
+									modified_at: "2025-01-02T00:00:00Z",
+									namespace: "default",
+									status: "active",
+								},
+								true
+							)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler("ai-search create my-instance --namespace default");
+			expect(capturedBody).not.toHaveProperty("type");
+			expect(capturedBody).not.toHaveProperty("source");
+			expect(std.out).toContain(
+				'Successfully created AI Search instance "my-instance"'
+			);
+		});
+
 		// ── custom_metadata ─────────────────────────────────────────────────────
 
 		it("should send custom_metadata when --custom-metadata is provided", async ({
