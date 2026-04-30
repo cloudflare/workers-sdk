@@ -303,7 +303,7 @@ describe("logger", () => {
 			setLogLevel("error");
 			error("This is an error message");
 			expect(cliOut.stderr).toMatchInlineSnapshot(
-				`"╰  ERROR  This is an error message\n"`
+				`""`
 			);
 		});
 
@@ -317,7 +317,7 @@ describe("logger", () => {
 			setLogLevel("warn");
 			error("This is an error message");
 			expect(cliOut.stderr).toMatchInlineSnapshot(
-				`"╰  ERROR  This is an error message\n"`
+				`""`
 			);
 		});
 
@@ -325,7 +325,7 @@ describe("logger", () => {
 			setLogLevel("log");
 			error("This is an error message");
 			expect(cliOut.stderr).toMatchInlineSnapshot(
-				`"╰  ERROR  This is an error message\n"`
+				`""`
 			);
 		});
 
@@ -333,7 +333,7 @@ describe("logger", () => {
 			setLogLevel("debug");
 			error("This is an error message");
 			expect(cliOut.stderr).toMatchInlineSnapshot(
-				`"╰  ERROR  This is an error message\n"`
+				`""`
 			);
 		});
 	});

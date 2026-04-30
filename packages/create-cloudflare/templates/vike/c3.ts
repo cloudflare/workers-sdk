@@ -1,4 +1,3 @@
-import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { runFrameworkGenerator } from "frameworks/index";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
@@ -10,8 +9,6 @@ const generate = async (ctx: C3Context) => {
 		// to prevent asking about git twice, just let c3 do it
 		"--no-git",
 	]);
-
-	logRaw(""); // newline
 };
 
 const config: TemplateConfig = {

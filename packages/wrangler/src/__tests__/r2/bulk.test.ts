@@ -58,8 +58,8 @@ describe("r2", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Starting bulk upload of 2 objects to bucket bulk-bucket using a concurrency of 20
@@ -87,8 +87,8 @@ describe("r2", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Starting bulk upload of 2 objects to bucket bulk-bucket with InfrequentAccess storage class using a concurrency of 20
@@ -251,8 +251,8 @@ describe("r2", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Starting bulk upload of 2 objects to bucket bulk-bucket using a concurrency of 20

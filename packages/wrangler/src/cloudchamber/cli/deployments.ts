@@ -6,6 +6,7 @@ import {
 	log,
 	newline,
 } from "@cloudflare/cli-shared-helpers";
+import * as clack from "@clack/prompts";
 import { processArgument } from "@cloudflare/cli-shared-helpers/args";
 import { brandColor, dim, yellow } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
@@ -143,24 +144,35 @@ export async function listDeploymentsAndChoose(
 		ipsList.push(`IPV6: ${dim(ipv6(d.current_placement))}`);
 		return ipsList;
 	};
+
+	// Print each deployment's details as a clack `note` block, then
+	// pick by short id with a plain select. Replaces the old list-with-
+	// per-option-details prompt.
+	if (!args.deploymentId) {
+		for (const d of deployments) {
+			clack.note(
+				[
+					`ID: ${dim(`${d.id}`)}`,
+					`Uptime: ${dim(`${uptime(d.current_placement)}`)}`,
+					`Version: ${dim(`${d.version}`)}`,
+					`Location: ${dim(`${idToLocationName(d.location.name)}`)}`,
+					`Image: ${dim(d.image)}`,
+					...ips(d),
+					`Current Placement${version(d)}: ${health(d.current_placement)}`,
+				].join("\n"),
+				`Deployment ${d.id.slice(0, 8)}`
+			);
+		}
+	}
+
 	const deployment = await processArgument(args, "deploymentId", {
-		type: "list",
-		question: "Deployments",
-		helpText: "Choose one by pressing the enter/return key",
+		type: "select",
+		message: "Pick a deployment",
 		options: deployments.map((d) => ({
-			label: "Deployment " + d.id,
+			label: `Deployment ${d.id.slice(0, 8)}`,
 			value: d.id,
-			details: [
-				`ID: ${dim(`${d.id}`)}`,
-				`Uptime: ${dim(`${uptime(d.current_placement)}`)}`,
-				`Version: ${dim(`${d.version}`)}`,
-				`Location: ${dim(`${idToLocationName(d.location.name)}`)}`,
-				`Image: ${dim(d.image)}`,
-				...ips(d),
-				`Current Placement${version(d)}: ${health(d.current_placement)}`,
-			],
+			hint: idToLocationName(d.location.name),
 		})),
-		label: "deployment",
 	});
 	const chosenDeployment = deployments.find((d) => d.id === deployment);
 	assert(chosenDeployment);

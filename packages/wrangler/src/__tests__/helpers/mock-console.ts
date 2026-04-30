@@ -7,6 +7,11 @@ import { logger } from "../../logger";
  *
  * This augments the mockConsoleMethods from `@cloudflare/workers-utils` by also setting logger.columns to 100
  * before each test, ensuring consistent formatting in console outputs.
+ *
+ * Note: cli-shared-helpers code (banner, clack helpers) writes via the
+ * `cli-shared-helpers/streams` PassThrough mocked in `vitest.setup.ts`.
+ * That setup pipes those writes through `console.log` so the chrono-
+ * logical interleaving with logger calls is preserved here in `out`.
  */
 export function mockConsoleMethods(): {
 	debug: string;

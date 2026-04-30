@@ -54,8 +54,8 @@ describe("r2", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Downloading "wormhole-img.png" from "bucket-object-test".
@@ -82,8 +82,8 @@ describe("r2", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Creating object "wormhole-img.png" in bucket "bucket-object-test".
@@ -101,8 +101,8 @@ describe("r2", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Creating object "wormhole-img.png" with InfrequentAccess storage class in bucket "bucket-object-test".
@@ -191,8 +191,8 @@ describe("r2", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Creating object "wormhole-img.png" in bucket "bucket-object-test".
@@ -207,8 +207,8 @@ describe("r2", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Deleting object "wormhole-img.png" from bucket "bucket-object-test".

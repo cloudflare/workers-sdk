@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { cp, mkdtemp, rename } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { shapes, updateStatus, warn } from "@cloudflare/cli-shared-helpers";
+import { updateStatus, warn } from "@cloudflare/cli-shared-helpers";
 import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import deepmerge from "deepmerge";
@@ -461,17 +461,13 @@ export const createContext = async (
 	const backOption: Option = {
 		label: "Go back",
 		value: BACK_VALUE,
-		activeIcon: shapes.backActive,
-		inactiveIcon: shapes.backInactive,
 	};
 
 	const defaultName = args.existingScript || C3_DEFAULTS.projectName;
 	const projectName = await processArgument(args, "projectName", {
 		type: "text",
-		question: `In which directory do you want to create your application?`,
-		helpText: "also used as application name",
+		message: `In which directory do you want to create your application? ${dim("(also used as application name)")}`,
 		defaultValue: prevArgs?.projectName ?? defaultName,
-		label: "dir",
 		validate: (value) =>
 			validateProjectDirectory(String(value) || C3_DEFAULTS.projectName, args),
 		format: (val) => `./${val}`,
@@ -482,41 +478,37 @@ export const createContext = async (
 		categoryOptions.push({
 			label: "Hello World example",
 			value: "hello-world",
-			description: "Select from barebones examples to get started with Workers",
+			hint: "Select from barebones examples to get started with Workers",
 		});
 	}
 	if (Object.keys(frameworkMap).length) {
 		categoryOptions.push({
 			label: "Framework Starter",
 			value: "web-framework",
-			description: "Select from the most popular full-stack web frameworks",
+			hint: "Select from the most popular full-stack web frameworks",
 		});
 	}
 	if (Object.keys(otherTemplateMap).length) {
 		categoryOptions.push({
 			label: "Application Starter",
 			value: "demo",
-			description:
-				"Select from a range of starter applications using various Cloudflare products",
+			hint: "Select from a range of starter applications using various Cloudflare products",
 		});
 	}
 	categoryOptions.push(
 		{
 			label: "Template from a GitHub repo",
 			value: "remote-template",
-			description: "Start from an existing GitHub repo link",
+			hint: "Start from an existing GitHub repo link",
 		},
-		// This is used only if the type is `pre-existing`
-		{ label: "Others", value: "others", hidden: true },
 		backOption
 	);
 
 	const category = await processArgument(args, "category", {
 		type: "select",
-		question: "What would you like to start with?",
-		label: "category",
+		message: "What would you like to start with?",
 		options: categoryOptions,
-		defaultValue: prevArgs?.category ?? C3_DEFAULTS.category,
+		initialValue: prevArgs?.category ?? C3_DEFAULTS.category,
 	});
 	linesPrinted += 6;
 
@@ -544,10 +536,9 @@ export const createContext = async (
 
 		const framework = await processArgument(args, "framework", {
 			type: "select",
-			label: "framework",
-			question: "Which development framework do you want to use?",
+			message: "Which development framework do you want to use?",
 			options: frameworkOptions.concat(backOption),
-			defaultValue: prevArgs?.framework ?? C3_DEFAULTS.framework,
+			initialValue: prevArgs?.framework ?? C3_DEFAULTS.framework,
 		});
 		linesPrinted += 3;
 
@@ -575,8 +566,7 @@ export const createContext = async (
 
 			const platform = await processArgument(args, "platform", {
 				type: "select",
-				label: "platform",
-				question: "Select your deployment platform",
+				message: "Select your deployment platform",
 				options: [
 					...(args.platform === "workers" ||
 					!frameworkConfig.platformVariants.workers.hidden
@@ -584,8 +574,7 @@ export const createContext = async (
 								{
 									label: "Workers with Assets",
 									value: "workers",
-									description:
-										"Take advantage of the full Developer Platform, including R2, Queues, Durable Objects and more.",
+									hint: "Take advantage of the full Developer Platform, including R2, Queues, Durable Objects and more.",
 								},
 							]
 						: []),
@@ -595,13 +584,13 @@ export const createContext = async (
 								{
 									label: "Pages",
 									value: "pages",
-									description: "Great for simple websites and applications.",
+									hint: "Great for simple websites and applications.",
 								},
 							]
 						: []),
 					backOption,
 				],
-				defaultValue: "workers",
+				initialValue: "workers",
 			});
 			linesPrinted += 3;
 			if ((platform as string) === BACK_VALUE) {
@@ -625,16 +614,19 @@ export const createContext = async (
 	} else {
 		const templateMap =
 			category === "hello-world" ? helloWorldTemplateMap : otherTemplateMap;
-		const templateOptions: Option[] = Object.entries(templateMap).map(
-			([value, { displayName, description, hidden }]) => {
+		// Filter out any templates marked `hidden` in their config —
+		// the previous prompt renderer did this transparently via an
+		// `Option.hidden` field; with clack-prompts the filter has to
+		// happen at the call site.
+		const templateOptions: Option[] = Object.entries(templateMap)
+			.filter(([_, { hidden }]) => !hidden)
+			.map(([value, { displayName, description }]) => {
 				return {
 					value,
 					label: displayName,
-					description,
-					hidden: hidden,
+					hint: description,
 				};
-			}
-		);
+			});
 
 		// If no templates are available for the specified language, throw an error
 		if (args.lang && templateOptions.length === 0) {
@@ -645,10 +637,9 @@ export const createContext = async (
 
 		const type = await processArgument(args, "type", {
 			type: "select",
-			question: "Which template would you like to use?",
-			label: "type",
+			message: "Which template would you like to use?",
 			options: templateOptions.concat(backOption),
-			defaultValue: prevArgs?.type ?? C3_DEFAULTS.type,
+			initialValue: prevArgs?.type ?? C3_DEFAULTS.type,
 		});
 		linesPrinted += 3;
 
@@ -698,13 +689,12 @@ export const createContext = async (
 
 			const lang = await processArgument(args, "lang", {
 				type: "select",
-				question: "Which language do you want to use?",
-				label: "lang",
+				message: "Which language do you want to use?",
 				options: languageOptions
 					.filter((option) => languageVariants.includes(option.value))
 					// Allow going back only if the user is not selecting a remote template
 					.concat(args.template ? [] : backOption),
-				defaultValue: C3_DEFAULTS.lang,
+				initialValue: C3_DEFAULTS.lang,
 			});
 			linesPrinted += 3;
 
@@ -773,7 +763,7 @@ export async function copyTemplateFiles(ctx: C3Context) {
 		await rename(dummyGitIgnorePath, join(destdir, ".gitignore"));
 	}
 
-	s.stop(`${brandColor("files")} ${dim("copied to project directory")}`);
+	s.stop(`${brandColor("Copied")} template files to project directory`);
 }
 
 /**
@@ -794,9 +784,8 @@ export function writeAgentsMd(projectPath: string): void {
 export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 	const templateUrl = await processArgument(args, "template", {
 		type: "text",
-		question:
+		message:
 			"What's the url of git repo containing the template you'd like to use?",
-		label: "repository",
 		validate: (val) => validateTemplateUrl(val || C3_DEFAULTS.template),
 		defaultValue: C3_DEFAULTS.template,
 	});
@@ -972,7 +961,7 @@ function updatePythonPackageName(path: string, projectName: string) {
 		.replace('"TBD"', `"${projectName}"`)
 		.replace('"<PROJECT_NAME>"', `"${projectName}"`);
 	writeFile(pyProjectFile, pyProject);
-	s.stop(`${brandColor("updated")} ${dim("`pyproject.toml`")}`);
+	s.stop(`${brandColor("Updated")} project name in pyproject.toml`);
 }
 
 /**
@@ -1002,7 +991,7 @@ export const updatePackageName = (ctx: C3Context): void => {
 	s.start("Updating name in `package.json`");
 	pkgJson.name = ctx.project.name;
 	writeJSON(pkgJsonPath, pkgJson);
-	s.stop(`${brandColor("updated")} ${dim("`package.json`")}`);
+	s.stop(`${brandColor("Updated")} project name in package.json`);
 
 	updatePythonPackageName(ctx.project.path, ctx.project.name);
 };
@@ -1023,7 +1012,7 @@ export const updatePackageScripts = async (ctx: C3Context) => {
 	pkgJson = deepmerge(pkgJson, transformed as PackageJson);
 
 	writeJSON(pkgJsonPath, pkgJson);
-	s.stop(`${brandColor("updated")} ${dim("`package.json`")}`);
+	s.stop(`${brandColor("Updated")} scripts in package.json`);
 };
 
 export const getTemplatePath = (ctx: C3Context) => {

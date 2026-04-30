@@ -175,8 +175,8 @@ describe("info", () => {
 		await runWrangler("d1 info northwind");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┐
 			│ DB │ d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06 │
 			├─┼─┤

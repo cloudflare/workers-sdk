@@ -144,28 +144,28 @@ describe("cloudchamber apply", () => {
 		await runWrangler("cloudchamber apply");
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  NEW my-container-app
+			  [[containers]]
+			  name = "my-container-app"
+			  instances = 3
+			  scheduling_policy = "default"
+
+			  [containers.constraints]
+			  tier = 2
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/something:hello"
+			  instance_type = "lite"
+
 			│
-			├ NEW my-container-app
+			◇  Created application my-container-app (Application ID: abc)
+
 			│
-			│   [[containers]]
-			│   name = "my-container-app"
-			│   instances = 3
-			│   scheduling_policy = "default"
-			│
-			│   [containers.constraints]
-			│   tier = 2
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/something:hello"
-			│   instance_type = "lite"
-			│
-			│
-			│  SUCCESS  Created application my-container-app (Application ID: abc)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -214,29 +214,30 @@ describe("cloudchamber apply", () => {
 		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  [[containers]]
+			- instances = 3
+			+ instances = 4
+			  name = "my-container-app"
+			  scheduling_policy = "default"
+
+			  ...
+
+			  instance_type = "lite"
+			  [containers.constraints]
+			- tier = 3
+			+ tier = 2
+
 			│
-			├ EDIT my-container-app
+			◇  Modified application my-container-app
+
 			│
-			│   [[containers]]
-			│ - instances = 3
-			│ + instances = 4
-			│   name = "my-container-app"
-			│   scheduling_policy = "default"
-			│
-			│   ...
-			│
-			│   instance_type = "lite"
-			│   [containers.constraints]
-			│ - tier = 3
-			│ + tier = 2
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -298,39 +299,40 @@ describe("cloudchamber apply", () => {
 		const body = await res;
 		expect(body).not.toHaveProperty("instances");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  [[containers]]
+			  instances = 0
+			- max_instances = 4
+			+ max_instances = 3
+			  name = "my-container-app"
+			  scheduling_policy = "default"
+
 			│
-			├ EDIT my-container-app
+			◇  NEW my-container-app-2
+			  [[containers]]
+			  name = "my-container-app-2"
+			  max_instances = 3
+			  scheduling_policy = "default"
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/other-app:boop"
+			  instance_type = "lite"
+
+			  [containers.constraints]
+			  tier = 1
+
 			│
-			│   [[containers]]
-			│   instances = 0
-			│ - max_instances = 4
-			│ + max_instances = 3
-			│   name = "my-container-app"
-			│   scheduling_policy = "default"
+			◇  Modified application my-container-app
 			│
-			├ NEW my-container-app-2
+			◇  Created application my-container-app-2 (Application ID: abc)
+
 			│
-			│   [[containers]]
-			│   name = "my-container-app-2"
-			│   max_instances = 3
-			│   scheduling_policy = "default"
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/other-app:boop"
-			│   instance_type = "lite"
-			│
-			│   [containers.constraints]
-			│   tier = 1
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -387,38 +389,39 @@ describe("cloudchamber apply", () => {
 		await runWrangler("cloudchamber apply");
 
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  [[containers]]
+			- instances = 3
+			+ instances = 4
+			  name = "my-container-app"
+			  scheduling_policy = "default"
+
+			Skipping application rollout
+
 			│
-			├ EDIT my-container-app
+			◇  NEW my-container-app-2
+			  [[containers]]
+			  name = "my-container-app-2"
+			  instances = 1
+			  scheduling_policy = "default"
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/other-app:boop"
+			  instance_type = "lite"
+
+			  [containers.constraints]
+			  tier = 1
+
 			│
-			│   [[containers]]
-			│ - instances = 3
-			│ + instances = 4
-			│   name = "my-container-app"
-			│   scheduling_policy = "default"
+			◇  Created application my-container-app-2 (Application ID: abc)
+
 			│
-			│ Skipping application rollout
-			│
-			├ NEW my-container-app-2
-			│
-			│   [[containers]]
-			│   name = "my-container-app-2"
-			│   instances = 1
-			│   scheduling_policy = "default"
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/other-app:boop"
-			│   instance_type = "lite"
-			│
-			│   [containers.constraints]
-			│   tier = 1
-			│
-			│
-			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -475,38 +478,39 @@ describe("cloudchamber apply", () => {
 		await runWrangler("cloudchamber apply");
 		await res;
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  [[containers]]
+			- instances = 3
+			+ instances = 4
+			  name = "my-container-app"
+			  scheduling_policy = "default"
+
 			│
-			├ EDIT my-container-app
+			◇  NEW my-container-app-2
+			  [[containers]]
+			  name = "my-container-app-2"
+			  instances = 1
+			  scheduling_policy = "default"
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/other-app:boop"
+			  instance_type = "lite"
+
+			  [containers.constraints]
+			  tier = 1
+
 			│
-			│   [[containers]]
-			│ - instances = 3
-			│ + instances = 4
-			│   name = "my-container-app"
-			│   scheduling_policy = "default"
+			◇  Modified application my-container-app
 			│
-			├ NEW my-container-app-2
+			◇  Created application my-container-app-2 (Application ID: abc)
+
 			│
-			│   [[containers]]
-			│   name = "my-container-app-2"
-			│   instances = 1
-			│   scheduling_policy = "default"
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/other-app:boop"
-			│   instance_type = "lite"
-			│
-			│   [containers.constraints]
-			│   tier = 1
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -611,44 +615,45 @@ describe("cloudchamber apply", () => {
 		await runWrangler("cloudchamber apply");
 		await res;
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  [[containers]]
+			- instances = 3
+			+ instances = 4
+			  name = "my-container-app"
+			  scheduling_policy = "default"
+
+			  ...
+
+			  value = "value"
+			  [[containers.configuration.labels]]
+			+ name = "name-1"
+			+ value = "value-1"
+			+ [[containers.configuration.labels]]
+			  name = "name-2"
+			  value = "value-2"
+
+			  ...
+
+			  type = "env"
+			  [[containers.configuration.secrets]]
+			- name = "MY_SECRET_1"
+			- secret = "SECRET_NAME_1"
+			- type = "env"
+			- [[containers.configuration.secrets]]
+			  name = "MY_SECRET_2"
+			  secret = "SECRET_NAME_2"
+			  type = "env"
+
 			│
-			├ EDIT my-container-app
+			◇  Modified application my-container-app
+
 			│
-			│   [[containers]]
-			│ - instances = 3
-			│ + instances = 4
-			│   name = "my-container-app"
-			│   scheduling_policy = "default"
-			│
-			│   ...
-			│
-			│   value = "value"
-			│   [[containers.configuration.labels]]
-			│ + name = "name-1"
-			│ + value = "value-1"
-			│ + [[containers.configuration.labels]]
-			│   name = "name-2"
-			│   value = "value-2"
-			│
-			│   ...
-			│
-			│   type = "env"
-			│   [[containers.configuration.secrets]]
-			│ - name = "MY_SECRET_1"
-			│ - secret = "SECRET_NAME_1"
-			│ - type = "env"
-			│ - [[containers.configuration.secrets]]
-			│   name = "MY_SECRET_2"
-			│   secret = "SECRET_NAME_2"
-			│   type = "env"
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -753,13 +758,13 @@ describe("cloudchamber apply", () => {
 		]);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  no changes my-container-app
 			│
-			├ no changes my-container-app
-			│
-			╰ No changes to be made
+			└  No changes to be made
 
 			"
 		`);
@@ -867,15 +872,15 @@ describe("cloudchamber apply", () => {
 		]);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  no changes my-container-app
 			│
-			├ no changes my-container-app
+			◇  no changes my-container-app-2
 			│
-			├ no changes my-container-app-2
-			│
-			╰ No changes to be made
+			└  No changes to be made
 
 			"
 		`);
@@ -980,13 +985,13 @@ describe("cloudchamber apply", () => {
 		]);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  no changes my-container-app
 			│
-			├ no changes my-container-app
-			│
-			╰ No changes to be made
+			└  No changes to be made
 
 			"
 		`);
@@ -1036,23 +1041,24 @@ describe("cloudchamber apply", () => {
 		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  image = "registry.cloudflare.com/some-account-id/beep:boop"
+			  instance_type = "lite"
+			+ [containers.configuration.observability.logs]
+			+ enabled = true
+			  [containers.constraints]
+			  tier = 1
+
 			│
-			├ EDIT my-container-app
+			◇  Modified application my-container-app
+
 			│
-			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
-			│   instance_type = "lite"
-			│ + [containers.configuration.observability.logs]
-			│ + enabled = true
-			│   [containers.constraints]
-			│   tier = 1
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1103,23 +1109,24 @@ describe("cloudchamber apply", () => {
 		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  image = "registry.cloudflare.com/some-account-id/beep:boop"
+			  instance_type = "lite"
+			+ [containers.configuration.observability.logs]
+			+ enabled = true
+			  [containers.constraints]
+			  tier = 1
+
 			│
-			├ EDIT my-container-app
+			◇  Modified application my-container-app
+
 			│
-			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
-			│   instance_type = "lite"
-			│ + [containers.configuration.observability.logs]
-			│ + enabled = true
-			│   [containers.constraints]
-			│   tier = 1
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1177,23 +1184,24 @@ describe("cloudchamber apply", () => {
 		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  instance_type = "lite"
+			  [containers.configuration.observability.logs]
+			- enabled = true
+			+ enabled = false
+			  [containers.constraints]
+			  tier = 1
+
 			│
-			├ EDIT my-container-app
+			◇  Modified application my-container-app
+
 			│
-			│   instance_type = "lite"
-			│   [containers.configuration.observability.logs]
-			│ - enabled = true
-			│ + enabled = false
-			│   [containers.constraints]
-			│   tier = 1
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1249,23 +1257,24 @@ describe("cloudchamber apply", () => {
 		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  instance_type = "lite"
+			  [containers.configuration.observability.logs]
+			- enabled = true
+			+ enabled = false
+			  [containers.constraints]
+			  tier = 1
+
 			│
-			├ EDIT my-container-app
+			◇  Modified application my-container-app
+
 			│
-			│   instance_type = "lite"
-			│   [containers.configuration.observability.logs]
-			│ - enabled = true
-			│ + enabled = false
-			│   [containers.constraints]
-			│   tier = 1
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1320,23 +1329,24 @@ describe("cloudchamber apply", () => {
 		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  instance_type = "lite"
+			  [containers.configuration.observability.logs]
+			- enabled = true
+			+ enabled = false
+			  [containers.constraints]
+			  tier = 1
+
 			│
-			├ EDIT my-container-app
+			◇  Modified application my-container-app
+
 			│
-			│   instance_type = "lite"
-			│   [containers.configuration.observability.logs]
-			│ - enabled = true
-			│ + enabled = false
-			│   [containers.constraints]
-			│   tier = 1
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1391,13 +1401,13 @@ describe("cloudchamber apply", () => {
 		]);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  no changes my-container-app
 			│
-			├ no changes my-container-app
-			│
-			╰ No changes to be made
+			└  No changes to be made
 
 			"
 		`);
@@ -1445,13 +1455,13 @@ describe("cloudchamber apply", () => {
 		]);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  no changes my-container-app
 			│
-			├ no changes my-container-app
-			│
-			╰ No changes to be made
+			└  No changes to be made
 
 			"
 		`);
@@ -1504,13 +1514,13 @@ describe("cloudchamber apply", () => {
 		]);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  no changes my-container-app
 			│
-			├ no changes my-container-app
-			│
-			╰ No changes to be made
+			└  No changes to be made
 
 			"
 		`);
@@ -1538,28 +1548,28 @@ describe("cloudchamber apply", () => {
 		mockCreateApplication(expect, { id: "abc" });
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  NEW my-container-app
+			  [[containers]]
+			  name = "my-container-app"
+			  instances = 3
+			  scheduling_policy = "default"
+
+			  [containers.constraints]
+			  tier = 2
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/beep:boop"
+			  instance_type = "lite"
+
 			│
-			├ NEW my-container-app
+			◇  Created application my-container-app (Application ID: abc)
+
 			│
-			│   [[containers]]
-			│   name = "my-container-app"
-			│   instances = 3
-			│   scheduling_policy = "default"
-			│
-			│   [containers.constraints]
-			│   tier = 2
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
-			│   instance_type = "lite"
-			│
-			│
-			│  SUCCESS  Created application my-container-app (Application ID: abc)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1593,32 +1603,32 @@ describe("cloudchamber apply", () => {
 		mockCreateApplication(expect, { id: "abc" });
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  NEW my-container-app
+			  [[containers]]
+			  name = "my-container-app"
+			  instances = 3
+			  scheduling_policy = "default"
+
+			  [containers.constraints]
+			  tier = 2
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/beep:boop"
+			  vcpu = 1
+			  memory_mib = 1024
+
+			  [containers.configuration.disk]
+			  size_mb = 2000
+
 			│
-			├ NEW my-container-app
+			◇  Created application my-container-app (Application ID: abc)
+
 			│
-			│   [[containers]]
-			│   name = "my-container-app"
-			│   instances = 3
-			│   scheduling_policy = "default"
-			│
-			│   [containers.constraints]
-			│   tier = 2
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
-			│   vcpu = 1
-			│   memory_mib = 1024
-			│
-			│   [containers.configuration.disk]
-			│   size_mb = 2000
-			│
-			│
-			│  SUCCESS  Created application my-container-app (Application ID: abc)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1671,29 +1681,30 @@ describe("cloudchamber apply", () => {
 		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  [[containers]]
+			- instances = 3
+			+ instances = 4
+			  name = "my-container-app"
+			  scheduling_policy = "regional"
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/beep:boop"
+			- instance_type = "lite"
+			+ instance_type = "standard"
+			  [containers.constraints]
+			- tier = 3
+			+ tier = 2
+
 			│
-			├ EDIT my-container-app
+			◇  Modified application my-container-app
+
 			│
-			│   [[containers]]
-			│ - instances = 3
-			│ + instances = 4
-			│   name = "my-container-app"
-			│   scheduling_policy = "regional"
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
-			│ - instance_type = "lite"
-			│ + instance_type = "standard"
-			│   [containers.constraints]
-			│ - tier = 3
-			│ + tier = 2
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1752,36 +1763,37 @@ describe("cloudchamber apply", () => {
 		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  [[containers]]
+			- instances = 3
+			+ instances = 4
+			  name = "my-container-app"
+			  scheduling_policy = "regional"
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/beep:boop"
+			  memory = "256MB"
+			- memory_mib = 256
+			+ memory_mib = 1024
+			- vcpu = 0.0625
+			+ vcpu = 1
+			  [containers.configuration.disk]
+			  size = "2GB"
+			- size_mb = 2000
+			+ size_mb = 6000
+			  [containers.constraints]
+			- tier = 3
+			+ tier = 2
+
 			│
-			├ EDIT my-container-app
+			◇  Modified application my-container-app
+
 			│
-			│   [[containers]]
-			│ - instances = 3
-			│ + instances = 4
-			│   name = "my-container-app"
-			│   scheduling_policy = "regional"
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
-			│   memory = "256MB"
-			│ - memory_mib = 256
-			│ + memory_mib = 1024
-			│ - vcpu = 0.0625
-			│ + vcpu = 1
-			│   [containers.configuration.disk]
-			│   size = "2GB"
-			│ - size_mb = 2000
-			│ + size_mb = 6000
-			│   [containers.constraints]
-			│ - tier = 3
-			│ + tier = 2
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1835,29 +1847,30 @@ describe("cloudchamber apply", () => {
 		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  [[containers]]
+			- instances = 3
+			+ instances = 4
+			  name = "my-container-app"
+			  scheduling_policy = "regional"
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/beep:boop"
+			- instance_type = "basic"
+			+ instance_type = "lite"
+			  [containers.constraints]
+			- tier = 3
+			+ tier = 2
+
 			│
-			├ EDIT my-container-app
+			◇  Modified application my-container-app
+
 			│
-			│   [[containers]]
-			│ - instances = 3
-			│ + instances = 4
-			│   name = "my-container-app"
-			│   scheduling_policy = "regional"
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
-			│ - instance_type = "basic"
-			│ + instance_type = "lite"
-			│   [containers.constraints]
-			│ - tier = 3
-			│ + tier = 2
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1900,28 +1913,28 @@ describe("cloudchamber apply", () => {
 		await runWrangler("cloudchamber apply");
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  NEW my-container-app
+			  [[containers]]
+			  name = "my-container-app"
+			  instances = 3
+			  scheduling_policy = "default"
+
+			  [containers.constraints]
+			  tier = 2
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/hello:1.0"
+			  instance_type = "lite"
+
 			│
-			├ NEW my-container-app
+			◇  Created application my-container-app (Application ID: abc)
+
 			│
-			│   [[containers]]
-			│   name = "my-container-app"
-			│   instances = 3
-			│   scheduling_policy = "default"
-			│
-			│   [containers.constraints]
-			│   tier = 2
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/hello:1.0"
-			│   instance_type = "lite"
-			│
-			│
-			│  SUCCESS  Created application my-container-app (Application ID: abc)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1976,24 +1989,25 @@ describe("cloudchamber apply", () => {
 		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/hello:1.0"
+			- instance_type = "lite"
+			+ instance_type = "standard"
+			  [containers.constraints]
+			- tier = 3
+			+ tier = 2
+
 			│
-			├ EDIT my-container-app
+			◇  Modified application my-container-app
+
 			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/hello:1.0"
-			│ - instance_type = "lite"
-			│ + instance_type = "standard"
-			│   [containers.constraints]
-			│ - tier = 3
-			│ + tier = 2
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -2055,23 +2069,24 @@ describe("cloudchamber apply", () => {
 		const applicationReqBodyPromise = mockModifyApplication(expect);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container-app
+
+			  scheduling_policy = "regional"
+			  [containers.affinities]
+			- colocation = "datacenter"
+			+ hardware_generation = "highest-overall-performance"
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/hello:1.0"
+
 			│
-			├ EDIT my-container-app
+			◇  Modified application my-container-app
+
 			│
-			│   scheduling_policy = "regional"
-			│   [containers.affinities]
-			│ - colocation = "datacenter"
-			│ + hardware_generation = "highest-overall-performance"
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/hello:1.0"
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);

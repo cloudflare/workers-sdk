@@ -87,8 +87,8 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				┌─┬─┬─┬─┐
 				│ Session ID │ Start Time │ Connection ID │ Connected At │
 				├─┼─┼─┼─┤
@@ -106,8 +106,8 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				No active Browser Run sessions found."
 			`);
 		});
@@ -165,8 +165,8 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Opening live browser session "session-123"..."
 			`);
 			expect(openInBrowser).toHaveBeenCalledWith(
@@ -194,8 +194,8 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				https://live.browser.run/ui/inspector?wss=..."
 			`);
 			expect(openInBrowser).not.toHaveBeenCalled();
@@ -292,8 +292,8 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				https://live.browser.run/ui/inspector?wss=..."
 			`);
 			expect(openInBrowser).not.toHaveBeenCalled();
@@ -718,8 +718,8 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Session created: new-session-123
 				Opening DevTools..."
 			`);
@@ -751,8 +751,8 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Session created: ci-session
 				https://live.browser.run/inspector/ci"
 			`);
@@ -782,8 +782,8 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Session created: no-open-session
 				https://live.browser.run/inspector/no-open"
 			`);
@@ -954,8 +954,8 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Session session-to-close closed."
 			`);
 		});
@@ -967,8 +967,8 @@ describe("wrangler browser", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Session session-closing closing."
 			`);
 		});

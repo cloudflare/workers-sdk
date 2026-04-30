@@ -346,8 +346,8 @@ describe.sequential("wrangler dev", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -993,8 +993,8 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				[custom build] Running: node -e "4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')"
 				"
 			`
@@ -1020,8 +1020,8 @@ describe.sequential("wrangler dev", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					[custom build] Running: echo "export default { fetch(){ return new Response(123) } }" > index.js
 					"
 				`
@@ -1046,8 +1046,8 @@ describe.sequential("wrangler dev", () => {
 			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				[custom build] Running: node -e "4+4;"
 				"
 			`);
@@ -1707,8 +1707,8 @@ describe.sequential("wrangler dev", () => {
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Your Worker has access to the following bindings:
 				Binding                                        Resource            Mode
 				env.NAME_1 (CLASS_1)                           Durable Object      local
@@ -1759,8 +1759,8 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev --var CLI_VAR:from_cli");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Using secrets defined in .dev.vars
 				Your Worker has access to the following bindings:
 				Binding                               Resource                  Mode
@@ -1830,8 +1830,8 @@ describe.sequential("wrangler dev", () => {
 			});
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Using secrets defined in .dev.vars
 				Your Worker has access to the following bindings:
 				Binding                                        Resource                  Mode
@@ -1874,8 +1874,8 @@ describe.sequential("wrangler dev", () => {
 			expect(varBindings).toEqual({ CUSTOM_VAR: "custom" });
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Using secrets defined in .dev.vars.custom
 				Your Worker has access to the following bindings:
 				Binding                          Resource                  Mode
@@ -2512,8 +2512,8 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Your Worker has access to the following bindings:
 				Binding              Resource      Mode
 				env.WorkerA (A)      Worker        local [not connected]
@@ -2540,8 +2540,8 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Your Worker has access to the following bindings:
 				Binding                                 Resource      Mode
 				env.SELF (my-worker)                    Worker        local [connected]
@@ -2565,8 +2565,8 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Your Worker has access to the following bindings:
 				Binding              Resource      Mode
 				env.WorkerA (A)      Worker        local [not connected]
@@ -2597,8 +2597,8 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Using secrets defined in .dev.vars
 				Your Worker has access to the following bindings:
 				Binding                         Resource                  Mode

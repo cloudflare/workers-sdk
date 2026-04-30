@@ -2,8 +2,8 @@
 
 exports[`wrangler > queues > create > wrangler.json > should create a queue 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 🌀 Creating queue 'testQueue'
 ✅ Created queue 'testQueue'
 
@@ -34,8 +34,8 @@ Configure your Worker to consume messages from this queue:
 
 exports[`wrangler > queues > create > wrangler.json > should send queue settings with delivery delay 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 🌀 Creating queue 'testQueue'
 ✅ Created queue 'testQueue'
 
@@ -66,8 +66,8 @@ Configure your Worker to consume messages from this queue:
 
 exports[`wrangler > queues > create > wrangler.toml > should create a queue 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 🌀 Creating queue 'testQueue'
 ✅ Created queue 'testQueue'
 
@@ -86,8 +86,8 @@ queue = "testQueue"
 
 exports[`wrangler > queues > create > wrangler.toml > should send queue settings with delivery delay 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 🌀 Creating queue 'testQueue'
 ✅ Created queue 'testQueue'
 

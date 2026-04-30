@@ -9,7 +9,7 @@ import {
 import PQueue from "p-queue";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
-import isInteractive from "../is-interactive";
+import isInteractive from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import {
 	BULK_UPLOAD_CONCURRENCY,
@@ -456,7 +456,7 @@ function renderProgress(done: number, total: number) {
 	if (isInteractive()) {
 		s.start(`Uploading... (${done}/${total})\n`);
 		return {
-			update: (d: number, t: number) => s.update(`Uploading... (${d}/${t})\n`),
+			update: (d: number, t: number) => s.message(`Uploading... (${d}/${t})\n`),
 			stop: s.stop,
 		};
 	} else {

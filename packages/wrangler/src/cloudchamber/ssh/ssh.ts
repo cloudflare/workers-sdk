@@ -6,9 +6,9 @@ import {
 	logRaw,
 	newline,
 	startSection,
-	status,
 	success,
 	updateStatus,
+	warn,
 } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import {
@@ -18,7 +18,7 @@ import {
 import { SshPublicKeysService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../../core/create-command";
-import { isNonInteractiveOrCI } from "../../is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../../logger";
 import { pollSSHKeysUntilCondition } from "../cli";
 import {
@@ -85,12 +85,8 @@ export async function sshPrompts(
 	const [key, prompt] = await shouldPromptForNewSSHKeyAppear(keys);
 	if (prompt) {
 		const yes = await inputPrompt({
-			question:
-				"You didn't add any public keys from your .ssh folder, do you want to add one?",
-			label: "",
-			defaultValue: false,
-			helpText:
-				"If you don't add a public ssh key, you won't be able to ssh into your container unless you set it up",
+			message: `You didn't add any public keys from your .ssh folder, do you want to add one? ${dim("(without a public ssh key you won't be able to ssh into your container unless you set it up)")}`,
+			initialValue: false,
 			type: "confirm",
 		});
 		if (yes) {
@@ -205,10 +201,8 @@ async function shouldPromptForNewSSHKeyAppear(
 				: await wrap(pollSSHKeysUntilCondition(() => true));
 		stop();
 		if (err !== null) {
-			log(
-				"\n" +
-					status.warning +
-					" We couldn't load the ssh public keys of the account, so Wrangler doesn't know if you have your SSH keys configured right. Try again?\n"
+			warn(
+				"We couldn't load the ssh public keys of the account, so Wrangler doesn't know if you have your SSH keys configured right. Try again?"
 			);
 			// we couldn't get ssh keys, don't prompt for adding a ssh key
 			return [undefined, false];
@@ -248,7 +242,7 @@ async function shouldPromptForNewSSHKeyAppear(
 }
 
 async function handleListSSHKeysCommand(_args: unknown, _config: Config) {
-	startSection("SSH Keys", "", false);
+	startSection("SSH Keys");
 	const { start, stop } = spinner();
 	start("Loading your ssh keys");
 	const [sshKeys, err] = await wrap(pollSSHKeysUntilCondition(() => true));
@@ -270,8 +264,7 @@ async function handleListSSHKeysCommand(_args: unknown, _config: Config) {
 		updateStatus(
 			`${sshKey.name}\nID: ${dim(sshKey.id)}\nKey: ${dim(
 				(sshKey.public_key ?? "").trim()
-			)}`,
-			false
+			)}`
 		);
 	}
 
@@ -308,8 +301,7 @@ async function promptForSSHKey(
 ): Promise<SSHPublicKeyItem> {
 	const { username } = userInfo();
 	const name = await inputPrompt({
-		question: "Name your ssh key in a recognisable format for later",
-		label: "name",
+		message: `Name your ssh key in a recognisable format for later ${dim(`(for example: 'ssh-key-${username || "me"}')`)}`,
 		validate: (value) => {
 			if (typeof value !== "string") {
 				return "unknown error";
@@ -320,7 +312,6 @@ async function promptForSSHKey(
 		},
 		defaultValue: args.name ?? "",
 		initialValue: args.name ?? "",
-		helpText: `for example: 'ssh-key-${username || "me"}'`,
 		type: "text",
 	});
 
@@ -328,8 +319,7 @@ async function promptForSSHKey(
 	const defaultSSHKeyPath = await tryToRetrieveADefaultPath();
 
 	const sshKeyPath = await inputPrompt({
-		question: "Insert the path to your public ssh key",
-		label: "ssh_key",
+		message: `Insert the path to your public ssh key ${dim("(or paste the key directly)")}`,
 		validate: (value) => {
 			if (typeof value !== "string") {
 				return "unknown error";
@@ -340,7 +330,6 @@ async function promptForSSHKey(
 		},
 		defaultValue: args.publicKey ?? defaultSSHKeyPath,
 		initialValue: args.publicKey ?? defaultSSHKeyPath,
-		helpText: "Or insert the key directly",
 		type: "text",
 	});
 

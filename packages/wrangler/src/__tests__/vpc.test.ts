@@ -120,8 +120,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🚧 Creating VPC service 'test-http-ipv4'
 			✅ Created VPC service: service-uuid
 			   Name: test-http-ipv4
@@ -179,8 +179,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Listing VPC services
 			┌─┬─┬─┬─┬─┬─┬─┬─┐
 			│ id │ name │ type │ ports │ host │ tunnel │ created │ modified │
@@ -196,8 +196,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🔍 Getting VPC service 'service-uuid'
 			✅ Retrieved VPC service: service-uuid
 			   Name: test-web-service
@@ -218,8 +218,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🗑️  Deleting VPC service 'service-uuid'
 			✅ Deleted VPC service: service-uuid"
 		`);
@@ -276,8 +276,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🔍 Getting VPC service 'service-uuid'
 			✅ Retrieved VPC service: service-uuid
 			   Name: test-web-service
@@ -327,8 +327,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🚧 Creating VPC service 'test-no-resolver'
 			✅ Created VPC service: service-uuid
 			   Name: test-no-resolver
@@ -362,8 +362,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🚧 Creating VPC service 'test-tcp-db'
 			✅ Created VPC service: service-uuid
 			   Name: test-tcp-db
@@ -437,8 +437,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🔍 Getting VPC service 'tcp-service-uuid'
 			✅ Retrieved VPC service: tcp-service-uuid
 			   Name: test-tcp-service
@@ -460,8 +460,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Listing VPC services
 			┌─┬─┬─┬─┬─┬─┬─┬─┐
 			│ id │ name │ type │ ports │ host │ tunnel │ created │ modified │
@@ -496,8 +496,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🚧 Creating VPC service 'test-pg'
 			✅ Created VPC service: service-uuid
 			   Name: test-pg
@@ -596,8 +596,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🚧 Creating VPC service 'test-tcp-tls'
 			✅ Created VPC service: service-uuid
 			   Name: test-tcp-tls
@@ -636,8 +636,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🚧 Creating VPC service 'test-http-tls'
 			✅ Created VPC service: service-uuid
 			   Name: test-http-tls
@@ -685,8 +685,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🔍 Getting VPC service 'tcp-service-uuid'
 			✅ Retrieved VPC service: tcp-service-uuid
 			   Name: test-tcp-service
@@ -764,8 +764,8 @@ describe("vpc service commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🚧 Creating VPC service 'test-tcp-hostport'
 			✅ Created VPC service: service-uuid
 			   Name: test-tcp-hostport

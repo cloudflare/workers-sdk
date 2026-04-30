@@ -1,4 +1,5 @@
-import { logRaw, shapes, space } from "@cloudflare/cli-shared-helpers";
+import { logRaw, space } from "@cloudflare/cli-shared-helpers";
+import * as clack from "@clack/prompts";
 import {
 	bgCyan,
 	bgRed,
@@ -9,16 +10,13 @@ import {
 	white,
 	yellow,
 } from "@cloudflare/cli-shared-helpers/colors";
-import {
-	inputPrompt,
-	spinner,
-} from "@cloudflare/cli-shared-helpers/interactive";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	DeploymentsService,
 	PlacementsService,
 } from "@cloudflare/containers-shared";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { capitalize } from "../utils/strings";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
@@ -144,55 +142,47 @@ const listCommandHandle = async (
 ) => {
 	const keepListIter = true;
 	while (keepListIter) {
-		logRaw(gray(shapes.bar));
+		logRaw(gray("│"));
 		const deployments = await loadDeployments(deploymentIdPrefix, args);
 		const deployment = await listDeploymentsAndChoose(deployments);
-		const placementToOptions = (p: PlacementWithEvents) => {
-			return {
-				label: `Placement ${p.id.slice(0, 6)} (${p.created_at})`,
-				details: [
+		const renderPlacement = (p: PlacementWithEvents) => {
+			clack.note(
+				[
 					`ID: ${dim(p.id)}`,
 					`Version: ${dim(`${p.deployment_version}`)}`,
 					`Status: ${statusToColored(p.status["health"])}`,
-					`${bgCyan(white(`Events`))}`,
+					`${bgCyan(white("Events"))}`,
 					...p.events.map(
 						(event, i) =>
 							space(1) + eventMessage(event, i === p.events.length - 1)
 					),
-				],
-				value: p.id,
-			};
+				].join("\n"),
+				`Placement ${p.id.slice(0, 6)} (${p.created_at})`
+			);
 		};
 
-		const loadPlacements = () => {
-			return PlacementsService.listPlacements(deployment.id);
-		};
-		const placements = await promiseSpinner(loadPlacements(), {
-			message: "Loading placements",
-		});
-		const { start, stop } = spinner();
-		let refresh = false;
-		await inputPrompt({
-			type: "list",
-			question: "Placements",
-			helpText: "Hint: Press R to refresh! Or press return to go back",
-			options: placements.map(placementToOptions),
-			label: "going back",
-			onRefresh: async () => {
-				start("Refreshing placements");
-				const options = (await loadPlacements()).map(placementToOptions);
-				if (refresh) {
-					return [];
-				}
-				stop();
-				if (options.length) {
-					options[0].label += ", last refresh: " + new Date().toLocaleString();
-				}
-				return options;
-			},
-		});
-		refresh = true;
-		stop();
+		const loadPlacements = () => PlacementsService.listPlacements(deployment.id);
+
+		// Browse-with-refresh loop. The previous custom
+		// `SelectRefreshablePrompt` allowed pressing R inside the
+		// prompt to re-fetch; replaced here with a plain confirm so
+		// we can drop the bespoke prompt class entirely.
+		while (true) {
+			const placements = await promiseSpinner(loadPlacements(), {
+				message: "Loading placements",
+			});
+			for (const p of placements) {
+				renderPlacement(p);
+			}
+			const refresh = await clack.confirm({
+				message: "Refresh placements?",
+				initialValue: false,
+			});
+			if (!refresh || clack.isCancel(refresh)) {
+				break;
+			}
+		}
+		break;
 	}
 };
 

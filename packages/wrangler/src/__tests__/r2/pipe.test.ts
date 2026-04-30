@@ -22,8 +22,8 @@ describe("pipe test", () => {
 		expect(stdSpy).not.toBeCalled();
 		expect(consoleSpy.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Resource location: local
 
 			Use --remote if you want to access the remote instance.
@@ -31,8 +31,8 @@ describe("pipe test", () => {
 			Creating object "wormhole.txt" in bucket "bucket-object-test".
 			Upload complete.
 
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Resource location: local
 
 			Use --remote if you want to access the remote instance.

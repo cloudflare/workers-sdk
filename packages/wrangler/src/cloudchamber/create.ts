@@ -18,7 +18,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { parseByteSize } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
@@ -223,11 +223,9 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 
 	if (keys.length === 1) {
 		const yes = await inputPrompt({
-			question: `Do you want to add the SSH key ${keyItems[0].name}?`,
+			message: `Do you want to add the SSH key ${keyItems[0].name}? ${dim("(needed to SSH into the VM)")}`,
 			type: "confirm",
-			helpText: "You need this to SSH into the VM",
-			defaultValue: false,
-			label: "",
+			initialValue: false,
 		});
 		if (yes) {
 			return keys;
@@ -241,11 +239,9 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 	}
 
 	const res = await inputPrompt({
-		question:
+		message:
 			"You have multiple SSH keys in your account, what do you want to do for this new deployment?",
-		label: "ssh",
-		defaultValue: false,
-		helpText: "",
+		initialValue: undefined,
 		type: "select",
 		options: [
 			{ label: "Add all of them", value: "all" },
@@ -259,25 +255,14 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 
 	if (res === "select") {
 		const resKeys = await inputPrompt<string[]>({
-			question: "Select the keys you want to add",
-			label: "",
-			defaultValue: [],
-			helpText: "Select one key with the 'space' key. Submit with 'enter'",
+			message: `Select the keys you want to add ${dim("(space to select, enter to submit)")}`,
+			initialValues: [],
 			type: "multiselect",
 			options: keyItems.map((keyOpt) => ({
 				label: keyOpt.name,
 				value: keyOpt.id,
 			})),
-			validate: (values: Arg) => {
-				if (!Array.isArray(values)) {
-					return "unknown error";
-				}
-				if (values.length === 0) {
-					return "Select atleast one ssh key!";
-				}
-
-				return;
-			},
+			required: true,
 		});
 
 		return resKeys;
@@ -298,8 +283,7 @@ async function handleInteractiveCloudchamberCreateCommand(
 	const sshKeyID = await promptForSSHKeyAndGetAddedSSHKey(args);
 	const givenImage = args.image ?? config.cloudchamber.image;
 	const image = await processArgument<string>({ image: givenImage }, "image", {
-		question: whichImageQuestion,
-		label: "image",
+		message: `${whichImageQuestion} ${dim('NAME:TAG ("latest" tag is not allowed)')}`,
 		validate: (value) => {
 			if (typeof value !== "string") {
 				return "Unknown error";
@@ -315,7 +299,6 @@ async function handleInteractiveCloudchamberCreateCommand(
 			return err;
 		},
 		defaultValue: givenImage ?? defaultContainerImage,
-		helpText: 'NAME:TAG ("latest" tag is not allowed)',
 		type: "text",
 	});
 
@@ -359,8 +342,7 @@ async function handleInteractiveCloudchamberCreateCommand(
 
 	const yes = await inputPrompt({
 		type: "confirm",
-		question: "Proceed?",
-		label: "",
+		message: "Proceed?",
 	});
 	if (!yes) {
 		cancel("Not creating the container");
@@ -368,7 +350,9 @@ async function handleInteractiveCloudchamberCreateCommand(
 	}
 
 	const { start, stop } = spinner();
-	start("Creating your container", "your container will be created shortly");
+	start(
+		`Creating your container ${dim("your container will be created shortly")}`
+	);
 	const deploymentRequest: CreateDeploymentV2RequestBody = {
 		image,
 		location,
@@ -394,7 +378,7 @@ async function handleInteractiveCloudchamberCreateCommand(
 	}
 
 	stop();
-	updateStatus("Created deployment", false);
+	updateStatus("Created deployment");
 	log(`${brandColor("id")} ${dim(deployment.id)}\n`);
 
 	endSection("Creating a placement for your container");

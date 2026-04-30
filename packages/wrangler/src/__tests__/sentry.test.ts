@@ -65,8 +65,8 @@ describe("sentry", () => {
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Getting User settings...
 
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
@@ -95,8 +95,8 @@ describe("sentry", () => {
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				"
 			`);
 			expect(sentryRequests?.length).toEqual(0);
@@ -127,8 +127,8 @@ describe("sentry", () => {
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Getting User settings...
 
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
@@ -157,8 +157,8 @@ describe("sentry", () => {
 			).rejects.toMatchInlineSnapshot(`[TypeError: Failed to fetch]`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Getting User settings...
 
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
@@ -191,8 +191,8 @@ describe("sentry", () => {
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Getting User settings...
 
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
@@ -498,8 +498,8 @@ describe("sentry", () => {
 			).rejects.toMatchInlineSnapshot(`[TypeError: Failed to fetch]`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Getting User settings...
 
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"

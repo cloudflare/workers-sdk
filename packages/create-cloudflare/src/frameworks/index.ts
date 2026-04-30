@@ -50,8 +50,5 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 		)}`
 	);
 
-	// newline
-	logRaw("");
-
 	await runCommand(cmd, { env });
 };

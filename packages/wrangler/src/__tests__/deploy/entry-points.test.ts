@@ -113,8 +113,8 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
@@ -140,8 +140,8 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
@@ -164,8 +164,8 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
@@ -190,8 +190,8 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
@@ -211,8 +211,8 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
@@ -236,8 +236,8 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
@@ -274,8 +274,8 @@ export default{
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
@@ -304,8 +304,8 @@ export default{
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
@@ -328,8 +328,8 @@ export default{
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
@@ -400,8 +400,8 @@ export default {};`
 				  "err": "",
 				  "info": "",
 				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				No bindings found.
 				--dry-run: exiting now.",
@@ -440,8 +440,8 @@ addEventListener('fetch', event => {});`
 				  "err": "",
 				  "info": "",
 				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				No bindings found.
 				--dry-run: exiting now.",
@@ -468,8 +468,8 @@ addEventListener('fetch', event => {});`
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
@@ -499,8 +499,8 @@ addEventListener('fetch', event => {});`
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -562,8 +562,8 @@ addEventListener('fetch', event => {});`
 				Uploading 2 new assets...
 				Uploaded 100% [2 out of 2]",
 				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -625,8 +625,8 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -708,8 +708,8 @@ addEventListener('fetch', event => {});`
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -926,8 +926,8 @@ addEventListener('fetch', event => {});`
 					`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 
 
 
@@ -1007,8 +1007,8 @@ addEventListener('fetch', event => {});`
 					`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 
 
 
@@ -1078,8 +1078,8 @@ addEventListener('fetch', event => {});`
 					`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 
 
 					No compatibility date found Defaulting to today: 2024-01-01
@@ -1155,8 +1155,8 @@ addEventListener('fetch', event => {});`
 					`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 
 
 					No compatibility date found Defaulting to today: 2024-01-01
@@ -1237,8 +1237,8 @@ addEventListener('fetch', event => {});`
 					`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 
 
 
@@ -1359,8 +1359,8 @@ addEventListener('fetch', event => {});`
 				expect(fs.existsSync("wrangler.jsonc")).toBe(false);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 
 
 					No compatibility date found Defaulting to today: 2024-01-01

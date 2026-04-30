@@ -105,8 +105,8 @@ describe("dataset upsert", () => {
 		expect(insertRequestCount).toBe(2);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Uploading vector batch (3 vectors)
 			✨ Uploading vector batch (2 vectors)
 			✅ Successfully inserted 5 vectors into index 'my-index'"
@@ -170,8 +170,8 @@ describe("dataset upsert", () => {
 			std.out.replaceAll(mutationId, "00000000-0000-0000-0000-000000000000")
 		).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Enqueued 3 vectors into index 'my-index' for insertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
 			✨ Enqueued 2 vectors into index 'my-index' for insertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
 			✅ Successfully enqueued 5 vectors into index 'my-index' for insertion."
@@ -235,8 +235,8 @@ describe("dataset upsert", () => {
 			std.out.replaceAll(mutationId, "00000000-0000-0000-0000-000000000000")
 		).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Enqueued 3 vectors into index 'my-index' for upsertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
 			✨ Enqueued 2 vectors into index 'my-index' for upsertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
 			✅ Successfully enqueued 5 vectors into index 'my-index' for upsertion."

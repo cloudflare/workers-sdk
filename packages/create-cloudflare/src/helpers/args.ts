@@ -1,3 +1,4 @@
+import { seedDefault } from "@cloudflare/cli-shared-helpers/args";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
@@ -431,17 +432,21 @@ export const processArgument = async <Key extends keyof C3Args>(
 		disableTelemetry: args[key] !== undefined,
 		async promise() {
 			const value = args[key];
-			const validationResult = promptConfig.validate?.(value);
+			// Only the text prompt config carries a `validate` callback —
+			// access it via a structural cast so the type-narrowing
+			// requirements of the discriminated union don't get in the way.
+			const validate = (
+				promptConfig as { validate?: (v: unknown) => string | Error | undefined }
+			).validate;
+			const validationResult = validate?.(value);
 			const error =
 				validationResult instanceof Error
 					? validationResult.message
 					: (validationResult ?? null);
 			const result = await inputPrompt<Required<C3Args>[Key]>({
-				...promptConfig,
-				// Accept the default value if the arg is already set
+				...seedDefault(promptConfig, value),
 				acceptDefault:
 					promptConfig.acceptDefault ?? (value !== undefined && !error),
-				defaultValue: value ?? promptConfig.defaultValue,
 				initialErrorMessage: error,
 				throwOnError: true,
 			});

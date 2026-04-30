@@ -7,7 +7,6 @@ import {
 	endSection,
 	log,
 	newline,
-	shapes,
 	startSection,
 	success,
 	updateStatus,
@@ -463,7 +462,7 @@ export async function apply(
 			return;
 		}
 
-		updateStatus(`${brandColor.underline("EDIT")} ${prevApp.name}`, false);
+		updateStatus(`${brandColor.underline("EDIT")} ${prevApp.name}`);
 
 		newline();
 		diff.print();
@@ -602,10 +601,7 @@ const doAction = async (
 		}
 
 		success(
-			`Created application ${brandColor(action.application.name)} (Application ID: ${application.id})`,
-			{
-				shape: shapes.bar,
-			}
+			`Created application ${brandColor(action.application.name)} (Application ID: ${application.id})`
 		);
 	}
 
@@ -679,10 +675,7 @@ const doAction = async (
 		}
 
 		success(
-			`Modified application ${brandColor(action.name)} (Application ID: ${action.id})`,
-			{
-				shape: shapes.bar,
-			}
+			`Modified application ${brandColor(action.name)} (Application ID: ${action.id})`
 		);
 	}
 };

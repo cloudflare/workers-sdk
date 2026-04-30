@@ -34,11 +34,10 @@ export async function getLocation(
 
 	if (args.location !== undefined) {
 		const location = await processArgument<string>(args, "location", {
-			question: whichLocationQuestion,
-			label: "location",
-			defaultValue: args.location ?? "",
+			message: whichLocationQuestion,
+			initialValue: args.location ?? "",
 			type: "select",
-			maxItemsPerPage: 6,
+			maxItems: 6,
 			options: locations.map((locationOption) => ({
 				label: locationOption.name,
 				value: locationOption.location,
@@ -59,11 +58,10 @@ export async function getLocation(
 	}
 
 	const region = await inputPrompt({
-		question: whichRegionQuestion,
-		label: "region",
-		defaultValue: args.location ?? "",
+		message: whichRegionQuestion,
+		initialValue: args.location ?? "",
 		type: "select",
-		maxItemsPerPage: 4,
+		maxItems: 4,
 		options: Object.keys(regionsToLocation).map((r) => ({
 			value: r,
 			label: `${r} ${
@@ -89,11 +87,10 @@ export async function getLocation(
 	}
 
 	const location = await inputPrompt({
-		question: whichLocationQuestion,
-		label: "location",
-		defaultValue: args.location ?? "",
+		message: whichLocationQuestion,
+		initialValue: args.location ?? "",
 		type: "select",
-		maxItemsPerPage: 6,
+		maxItems: 6,
 		options: Object.keys(locationToPops).map((locationOption) => ({
 			value: locationOption,
 			label: locationOption,
@@ -108,11 +105,10 @@ export async function getLocation(
 	}
 
 	const chosenPop = await inputPrompt({
-		question: `There is multiple points of presence in ${location}, which one do you want to be in?`,
-		label: "location",
-		defaultValue: args.location ?? "",
+		message: `There is multiple points of presence in ${location}, which one do you want to be in?`,
+		initialValue: args.location ?? "",
 		type: "select",
-		maxItemsPerPage: 6,
+		maxItems: 6,
 		options: pops.map((locationOpt) => ({
 			label: `${locationOpt.name} (${locationOpt.location})`,
 			value: locationOpt.location,

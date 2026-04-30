@@ -2,7 +2,7 @@ import { describe, it, vi } from "vitest";
 import { displayAutoConfigDetails } from "../../../autoconfig/details";
 import { Static } from "../../../autoconfig/frameworks/static";
 import { NpmPackageManager } from "../../../package-manager";
-import { mockConsoleMethods } from "../../helpers/mock-console";
+import { collectCLIOutput } from "../../helpers/collect-cli-output";
 import type { Framework } from "../../../autoconfig/frameworks";
 
 vi.mock("../../../package-manager", async (importOriginal) => ({
@@ -16,7 +16,11 @@ vi.mock("../../../package-manager", async (importOriginal) => ({
 }));
 
 describe("autoconfig details - displayAutoConfigDetails()", () => {
-	const std = mockConsoleMethods();
+	// `displayAutoConfigDetails` writes via `clack.note(...)`, which
+	// emits to `process.stdout` (rerouted in the vitest setup to the
+	// `cli-shared-helpers/streams` PassThrough). `collectCLIOutput`
+	// listens on that PassThrough.
+	const std = collectCLIOutput();
 
 	it("should cleanly handle a case in which only the worker name has been detected", ({
 		expect,
@@ -31,11 +35,13 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 		});
 		expect(std.out).toMatchInlineSnapshot(
 			`
-			"
-			Detected Project Settings:
-			 - Worker Name: my-project
-			 - Framework: Static
-			 - Output Directory: ./public
+			"◇  Detected Project Settings ──╮
+			│                              │
+			│  Worker Name: my-project     │
+			│  Framework: Static           │
+			│  Output Directory: ./public  │
+			│                              │
+			╰──────────────────────────────╯
 			"
 		`
 		);
@@ -62,12 +68,14 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			packageManager: NpmPackageManager,
 		});
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			Detected Project Settings:
-			 - Worker Name: my-astro-app
-			 - Framework: Astro
-			 - Build Command: astro build
-			 - Output Directory: dist
+			"◇  Detected Project Settings ──╮
+			│                              │
+			│  Worker Name: my-astro-app   │
+			│  Framework: Astro            │
+			│  Build Command: astro build  │
+			│  Output Directory: dist      │
+			│                              │
+			╰──────────────────────────────╯
 			"
 		`);
 	});
@@ -84,11 +92,13 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			packageManager: NpmPackageManager,
 		});
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			Detected Project Settings:
-			 - Worker Name: my-site
-			 - Framework: Static
-			 - Output Directory: dist
+			"◇  Detected Project Settings ─╮
+			│                             │
+			│  Worker Name: my-site       │
+			│  Framework: Static          │
+			│  Output Directory: dist     │
+			│                             │
+			╰─────────────────────────────╯
 			"
 		`);
 	});

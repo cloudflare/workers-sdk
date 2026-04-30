@@ -81,8 +81,8 @@ describe("versions view", () => {
 
 			expect(cnsl.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Your Worker has access to the following bindings:
 				Binding                                Resource
 				env.KV (kv-namespace-id)               KV Namespace
@@ -194,8 +194,8 @@ describe("versions view", () => {
 			`);
 			expect(cnsl.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Your Worker has access to the following bindings:
 				Binding                                Resource
 				env.KV (kv-namespace-id)               KV Namespace
@@ -664,8 +664,8 @@ describe("versions view", () => {
 			`);
 			expect(cnsl.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Your Worker has access to the following bindings:
 				Binding                                                                  Resource
 				env.DO (DurableObject)                                                   Durable Object

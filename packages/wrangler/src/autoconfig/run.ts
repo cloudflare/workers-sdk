@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { note, success } from "@cloudflare/cli-shared-helpers";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
@@ -167,10 +168,7 @@ export async function runAutoConfig(
 		}
 
 		if (dryRun) {
-			logger.log(
-				`✋  ${"Autoconfig process run in dry-run mode, existing now."}`
-			);
-			logger.log("");
+			success("Dry-run complete — no changes written");
 
 			sendMetricsEvent(
 				"autoconfig_configuration_completed",
@@ -258,6 +256,8 @@ export async function runAutoConfig(
 		if (buildCommand && runBuild) {
 			await runCommand(buildCommand, autoConfigDetails.projectPath, "[build]");
 		}
+
+		success("Setup complete");
 	} catch (error) {
 		sendMetricsEvent(
 			"autoconfig_configuration_completed",
@@ -361,8 +361,6 @@ export async function buildOperationsSummary(
 	},
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
 ): Promise<AutoConfigSummary> {
-	logger.log("");
-
 	const summary: AutoConfigSummary = {
 		wranglerInstall: false,
 		scripts: {},
@@ -382,9 +380,7 @@ export async function buildOperationsSummary(
 		// If there is a package.json file we will want to install wrangler
 		summary.wranglerInstall = true;
 
-		logger.log("📦 Install packages:");
-		logger.log(` - wrangler (devDependency)`);
-		logger.log("");
+		note(`- wrangler (devDependency)`, "📦 Install packages");
 
 		summary.scripts = {
 			deploy:
@@ -413,11 +409,10 @@ export async function buildOperationsSummary(
 				packageJsonScriptsOverrides?.typegen ?? "wrangler types";
 		}
 
-		logger.log("📝 Update package.json scripts:");
-		for (const [name, script] of Object.entries(summary.scripts)) {
-			logger.log(` - "${name}": "${script}"`);
-		}
-		logger.log("");
+		const scriptLines = Object.entries(summary.scripts).map(
+			([name, script]) => `- "${name}": "${script}"`
+		);
+		note(scriptLines.join("\n"), "📝 Update package.json scripts");
 	}
 
 	if (wranglerConfigToWrite) {
@@ -426,14 +421,10 @@ export async function buildOperationsSummary(
 			"wrangler.jsonc"
 		);
 		const configExists = existsSync(wranglerConfigPath);
-		logger.log(
-			configExists ? "📄 Update wrangler.jsonc:" : "📄 Create wrangler.jsonc:"
+		note(
+			JSON.stringify(wranglerConfigToWrite, null, 2),
+			configExists ? "📄 Update wrangler.jsonc" : "📄 Create wrangler.jsonc"
 		);
-		logger.log(
-			"  " +
-				JSON.stringify(wranglerConfigToWrite, null, 2).replace(/\n/g, "\n  ")
-		);
-		logger.log("");
 	}
 
 	if (
@@ -445,8 +436,7 @@ export async function buildOperationsSummary(
 			autoConfigDetails.framework.configurationDescription ??
 			`Configuring project for ${autoConfigDetails.framework.name}`;
 
-		logger.log(`🛠️  ${summary.frameworkConfiguration}`);
-		logger.log("");
+		success(`🛠️  ${summary.frameworkConfiguration}`);
 	}
 
 	return summary;

@@ -4,8 +4,8 @@ exports[`pages deploy > with wrangler.json configuration > should always deploy 
 
 exports[`pages deploy > with wrangler.json configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 2`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 ✨ Success! Uploaded 1 files (TIMINGS)
 
 ✨ Compiled Worker successfully
@@ -20,8 +20,8 @@ exports[`pages deploy > with wrangler.json configuration > should support wrangl
 
 exports[`pages deploy > with wrangler.json configuration > should support wrangler.json 2`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 ✨ Success! Uploaded 1 files (TIMINGS)
 
 ✨ Compiled Worker successfully
@@ -36,8 +36,8 @@ exports[`pages deploy > with wrangler.toml configuration > should always deploy 
 
 exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 2`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 ✨ Success! Uploaded 1 files (TIMINGS)
 
 ✨ Compiled Worker successfully
@@ -52,8 +52,8 @@ exports[`pages deploy > with wrangler.toml configuration > should support wrangl
 
 exports[`pages deploy > with wrangler.toml configuration > should support wrangler.toml 2`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 ✨ Success! Uploaded 1 files (TIMINGS)
 
 ✨ Compiled Worker successfully

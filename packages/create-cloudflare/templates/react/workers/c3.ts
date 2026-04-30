@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	inputPrompt,
@@ -29,15 +28,13 @@ const generate = async (ctx: C3Context) => {
 		variant.value,
 		"--no-immediate",
 	]);
-
-	logRaw("");
 };
 
 const configure = async (ctx: C3Context) => {
 	await installPackages(["@cloudflare/vite-plugin"], {
 		dev: true,
 		startText: "Installing the Cloudflare Vite plugin",
-		doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
+		doneText: `${brandColor("Installed")} @cloudflare/vite-plugin`,
 	});
 
 	transformViteConfig(ctx);
@@ -115,7 +112,7 @@ function updateTsconfigJson() {
 		tsconfig.references.push({ path: "./tsconfig.worker.json" });
 	}
 	writeJSON("tsconfig.json", tsconfig);
-	s.stop(`${brandColor(`updated`)} ${dim(`\`tsconfig.json\``)}`);
+	s.stop(`${brandColor("Updated")} tsconfig.json`);
 }
 
 async function getVariant(ctx: C3Context) {
@@ -163,10 +160,9 @@ async function getVariant(ctx: C3Context) {
 
 	const value = await inputPrompt({
 		type: "select",
-		question: "Select a variant:",
-		label: "variant",
+		message: "Select a variant:",
 		options: variantsOptions,
-		defaultValue: variantsOptions[0].value,
+		initialValue: variantsOptions[0].value,
 	});
 
 	const selected = variantsOptions.find((variant) => variant.value === value);

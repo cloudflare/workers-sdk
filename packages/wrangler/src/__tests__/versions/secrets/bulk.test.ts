@@ -29,8 +29,8 @@ describe("versions secret bulk", () => {
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Creating the secrets for the Worker "script-name" "
 		`
 		);
@@ -72,8 +72,8 @@ describe("versions secret bulk", () => {
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
@@ -96,8 +96,8 @@ describe("versions secret bulk", () => {
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
@@ -149,8 +149,8 @@ describe("versions secret bulk", () => {
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
@@ -198,8 +198,8 @@ describe("versions secret bulk", () => {
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Creating the secrets for the Worker "script-name" "
 		`
 		);
@@ -246,8 +246,8 @@ describe("versions secret bulk", () => {
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
@@ -296,8 +296,8 @@ describe("versions secret bulk", () => {
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2

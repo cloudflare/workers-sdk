@@ -2,15 +2,19 @@ import assert from "node:assert";
 import * as cli from "@cloudflare/cli-shared-helpers";
 import { brandColor, gray, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
-	grayBar,
 	inputPrompt,
-	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli-shared-helpers/interactive";
+
+// Local box-drawing shapes for the bespoke deploy table rendering — these
+// used to be imported from cli-shared-helpers but were dropped during the
+// clack-prompts migration since no other consumer needs them.
+const grayBar = gray("│");
+const leftT = gray("├");
 import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
@@ -120,8 +124,7 @@ export const versionsDeployCommand = createCommand({
 
 		cli.startSection(
 			"Deploy Worker Versions",
-			"by splitting traffic between multiple versions",
-			true
+			"by splitting traffic between multiple versions"
 		);
 
 		await printLatestDeployment(config, accountId, workerName, versionCache);
@@ -161,11 +164,9 @@ export const versionsDeployCommand = createCommand({
 		// prompt for deployment message
 		const message = await inputPrompt<string | undefined>({
 			type: "text",
-			label: "Deployment message",
 			defaultValue: args.message,
 			acceptDefault: args.yes,
-			question: "Add a deployment message",
-			helpText: "(optional)",
+			message: `Add a deployment message ${gray("(optional)")}`,
 		});
 
 		if (args.dryRun) {
@@ -242,8 +243,7 @@ export async function confirmLatestDeploymentOverwrite(
 			// Print message and confirmation.
 
 			cli.warn(
-				`Your last deployment has multiple versions. To progress that deployment use "wrangler versions deploy" instead.`,
-				{ shape: cli.shapes.corners.tl, newlineBefore: false }
+				`Your last deployment has multiple versions. To progress that deployment use "wrangler versions deploy" instead.`
 			);
 			cli.newline();
 			await printDeployment(
@@ -257,9 +257,8 @@ export async function confirmLatestDeploymentOverwrite(
 
 			return inputPrompt<boolean>({
 				type: "confirm",
-				question: `"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
-				label: "",
-				defaultValue: isNonInteractiveOrCI(), // defaults to true in CI for back-compat
+				message: `"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
+				initialValue: isNonInteractiveOrCI(), // defaults to true in CI for back-compat
 				acceptDefault: isNonInteractiveOrCI(),
 			});
 		}
@@ -397,62 +396,21 @@ async function promptVersionsToDeploy(
 
 	const result = await inputPrompt<string[]>({
 		type: "multiselect",
-		question,
+		message: `${question} ${gray("(SPACE to select, ENTER to submit)")}`,
 		options: selectableVersions.map((version) => ({
 			value: version.id,
 			label: version.id,
-			sublabel: gray(`
-${ZERO_WIDTH_SPACE}       Created:  ${version.metadata.created_on}
-${ZERO_WIDTH_SPACE}           Tag:  ${
-				version.annotations?.["workers/tag"] ?? BLANK_INPUT
-			}
-${ZERO_WIDTH_SPACE}       Message:  ${
-				version.annotations?.["workers/message"] ?? BLANK_INPUT
-			}
-            `),
+			hint: gray(
+				`Created ${version.metadata.created_on} · Tag ${
+					version.annotations?.["workers/tag"] ?? BLANK_INPUT
+				} · ${
+					version.annotations?.["workers/message"] ?? BLANK_INPUT
+				}`
+			),
 		})),
-		label: "",
-		helpText: "Use SPACE to select/unselect version(s) and ENTER to submit.",
-		defaultValue: defaultSelectedVersionIds,
+		initialValues: defaultSelectedVersionIds,
 		acceptDefault: yesFlag,
-		validate(versionIds) {
-			if (versionIds === undefined) {
-				return `You must select at least 1 version to deploy.`;
-			}
-		},
-		renderers: {
-			submit({ value: versionIds }) {
-				assert(Array.isArray(versionIds));
-
-				const label = brandColor(
-					`${versionIds.length} Worker Version(s) selected`
-				);
-
-				const versions = versionIds?.map((versionId, i) => {
-					const version = versionCache.get(versionId);
-					assert(version);
-
-					return `${grayBar}
-${leftT} ${white(`    Worker Version ${i + 1}: `, version.id)}
-${grayBar} ${gray("             Created: ", version.metadata.created_on)}
-${grayBar} ${gray(
-						"                 Tag: ",
-						version.annotations?.["workers/tag"] ?? BLANK_INPUT
-					)}
-${grayBar} ${gray(
-						"             Message: ",
-						version.annotations?.["workers/message"] ?? BLANK_INPUT
-					)}`;
-				});
-
-				return [
-					`${leftT} ${question}`,
-					`${leftT} ${label}`,
-					...versions,
-					grayBar,
-				];
-			},
-		},
+		required: true,
 	});
 
 	return result;
@@ -492,9 +450,7 @@ async function promptPercentages(
 
 		const answer = await inputPrompt({
 			type: "text",
-			question,
-			helpText: "(0-100)",
-			label: `Traffic`,
+			message: `${question} ${gray("(0-100)")}`,
 			defaultValue,
 			initialValue: confirmedVersionTraffic.get(versionId)?.toString(), // if the user already entered a value, override the default
 			acceptDefault: yesFlag,
@@ -506,20 +462,6 @@ async function promptPercentages(
 				if (isNaN(percentage) || percentage < 0 || percentage > 100) {
 					return "Please enter a number between 0 and 100.";
 				}
-			},
-			renderers: {
-				submit({ value }) {
-					const percentage = parseFloat(value?.toString() ?? "");
-
-					return [
-						leftT + cli.space() + white(question),
-						leftT +
-							cli.space() +
-							brandColor(`${percentage}%`) +
-							gray(" of traffic"),
-						leftT,
-					];
-				},
 			},
 		});
 
@@ -544,7 +486,7 @@ async function promptPercentages(
 				throw err;
 			}
 
-			cli.error(err.message, undefined, leftT);
+			cli.error(err.message);
 
 			return promptPercentages(
 				versionIds,

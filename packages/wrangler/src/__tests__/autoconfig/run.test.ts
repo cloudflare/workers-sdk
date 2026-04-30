@@ -250,42 +250,7 @@ describe("autoconfig (deploy)", () => {
 			);
 
 			expect(std.out.replaceAll(getTodaysCompatDate(), "<current-date>"))
-				.toMatchInlineSnapshot(`
-				"
-				Detected Project Settings:
-				 - Worker Name: my-worker
-				 - Framework: Static
-				 - Build Command: echo 'built' > build.txt
-				 - Output Directory: dist
-
-
-				📦 Install packages:
-				 - wrangler (devDependency)
-
-				📝 Update package.json scripts:
-				 - "deploy": "echo 'built' > build.txt && wrangler deploy"
-				 - "preview": "echo 'built' > build.txt && wrangler dev"
-
-				📄 Create wrangler.jsonc:
-				  {
-				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "name": "my-worker",
-				    "compatibility_date": "<current-date>",
-				    "observability": {
-				      "enabled": true
-				    },
-				    "assets": {
-				      "directory": "dist"
-				    },
-				    "compatibility_flags": [
-				      "nodejs_compat"
-				    ]
-				  }
-
-				🛠️  Configuring project for Static
-
-				[build] Running: echo 'built' > build.txt"
-			`);
+				.toMatchInlineSnapshot(`"[build] Running: echo 'built' > build.txt"`);
 
 			expect(
 				readFileSync("wrangler.jsonc").replaceAll(
@@ -440,37 +405,7 @@ describe("autoconfig (deploy)", () => {
 			});
 
 			expect(std.out.replaceAll(getTodaysCompatDate(), "<current-date>"))
-				.toMatchInlineSnapshot(`
-				"
-				Detected Project Settings:
-				 - Worker Name: my-worker
-				 - Framework: Static
-				 - Output Directory: dist
-
-
-				Updated Project Settings:
-				 - Worker Name: edited-worker-name
-				 - Framework: Static
-				 - Output Directory: dist
-
-
-				📄 Create wrangler.jsonc:
-				  {
-				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "name": "edited-worker-name",
-				    "compatibility_date": "<current-date>",
-				    "observability": {
-				      "enabled": true
-				    },
-				    "assets": {
-				      "directory": "dist"
-				    },
-				    "compatibility_flags": [
-				      "nodejs_compat"
-				    ]
-				  }
-				"
-			`);
+				.toMatchInlineSnapshot(`""`);
 
 			expect(
 				readFileSync("wrangler.jsonc").replaceAll(

@@ -135,8 +135,8 @@ describe("tunnel commands", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Creating tunnel "my-new-tunnel"
 				Created tunnel.
 				ID: f70ff985-a4ef-4643-bbbc-4a0ed4fc8415

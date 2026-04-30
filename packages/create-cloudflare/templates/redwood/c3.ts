@@ -1,4 +1,3 @@
-import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../src/templates";
@@ -8,8 +7,6 @@ const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [ctx.project.name]);
-
-	logRaw("");
 };
 
 const config: TemplateConfig = {

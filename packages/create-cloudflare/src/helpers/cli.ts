@@ -1,9 +1,5 @@
 import { updateStatus, warn } from "@cloudflare/cli-shared-helpers";
-import { blue } from "@cloudflare/cli-shared-helpers/colors";
-import {
-	spinner,
-	spinnerFrames,
-} from "@cloudflare/cli-shared-helpers/interactive";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import Haikunator from "haikunator";
 import { getLatestPackageVersion } from "helpers/packages";
 import open from "open";
@@ -30,8 +26,8 @@ export async function openInBrowser(url: string): Promise<void> {
 // Detects if a newer version of c3 is available by comparing the version
 // specified in package.json with the `latest` tag from npm
 export const isUpdateAvailable = async () => {
-	// Use a spinner when running this check since it may take some time
-	const s = spinner(spinnerFrames.vertical, blue);
+	// Use a spinner when running this check since it may take some time.
+	const s = spinner();
 	s.start("Checking if a newer version is available");
 	try {
 		const latestVersion = await getLatestPackageVersion("create-cloudflare");
@@ -41,7 +37,7 @@ export const isUpdateAvailable = async () => {
 			semver.gt(latestVersion, version)
 		);
 	} catch {
-		s.update("Failed to read latest version from npm.");
+		s.message("Failed to read latest version from npm.");
 		return false;
 	} finally {
 		s.stop();

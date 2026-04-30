@@ -271,8 +271,8 @@ describe("pages deploy", () => {
 		expect(getProjectRequestCount).toBe(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			🌎 Deploying...
@@ -445,8 +445,8 @@ describe("pages deploy", () => {
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			🌎 Deploying...
@@ -612,8 +612,8 @@ describe("pages deploy", () => {
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			🌎 Deploying...
@@ -836,8 +836,8 @@ describe("pages deploy", () => {
 		expect(getDeploymentDetailsRequestCount).toEqual(3);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Compiled Worker successfully
 			✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -1054,8 +1054,8 @@ describe("pages deploy", () => {
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			🌎 Deploying...
@@ -1254,8 +1254,8 @@ describe("pages deploy", () => {
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Success! Uploaded 4 files (TIMINGS)
 
 			🌎 Deploying...
@@ -1451,8 +1451,8 @@ describe("pages deploy", () => {
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Success! Uploaded 4 files (TIMINGS)
 
 			🌎 Deploying...
@@ -1650,8 +1650,8 @@ describe("pages deploy", () => {
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Success! Uploaded 4 files (TIMINGS)
 
 			🌎 Deploying...
@@ -1999,8 +1999,8 @@ describe("pages deploy", () => {
 		expect(getProjectRequestCount).toBe(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Successfully created the 'foo' project.
 			✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -2251,8 +2251,8 @@ describe("pages deploy", () => {
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Compiled Worker successfully
 				✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -2512,8 +2512,8 @@ async function onRequest() {
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Compiled Worker successfully
 				✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -2786,8 +2786,8 @@ async function onRequest() {
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Compiled Worker successfully
 				✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -3330,8 +3330,8 @@ and that at least one include rule is provided.
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Compiled Worker successfully
@@ -3606,8 +3606,8 @@ and that at least one include rule is provided.
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Compiled Worker successfully
@@ -3879,8 +3879,8 @@ and that at least one include rule is provided.
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Compiled Worker successfully
@@ -4250,8 +4250,8 @@ and that at least one include rule is provided.
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Compiled Worker successfully
@@ -4565,8 +4565,8 @@ and that at least one include rule is provided.
 
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Success! Uploaded 1 files (TIMINGS)
 
 				✨ Uploading Worker bundle
@@ -5707,8 +5707,8 @@ and that at least one include rule is provided.
 
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Success! Uploaded 1 files (TIMINGS)
 
 				🌎 Deploying...
@@ -5730,8 +5730,8 @@ and that at least one include rule is provided.
 
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Success! Uploaded 1 files (TIMINGS)
 
 				🌎 Deploying...
@@ -5752,8 +5752,8 @@ and that at least one include rule is provided.
 
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Success! Uploaded 1 files (TIMINGS)
 
 				🌎 Deploying...

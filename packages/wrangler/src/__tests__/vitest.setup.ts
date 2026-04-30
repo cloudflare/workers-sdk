@@ -124,7 +124,10 @@ vi.mock("../package-manager", async (importOriginal) => {
 	return mocked;
 });
 
-vi.mock("../update-check");
+// Neutralise update-check so tests don't make real npm requests.
+vi.mock("@cloudflare/cli-shared-helpers/update-check", () => ({
+	updateCheck: vi.fn().mockResolvedValue(undefined),
+}));
 
 beforeAll(() => {
 	msw.listen({
@@ -221,16 +224,38 @@ vi.mock("../metrics/metrics-config", async (importOriginal) => {
 	return realModule;
 });
 
-vi.mock("prompts", () => {
-	return {
-		__esModule: true,
-		default: vi.fn((...args) => {
+// Mock @clack/prompts so wrangler's `confirm`/`prompt`/`select`/
+// `multiselect` (in `dialogs.ts`) reject any unexpected interactive
+// call. Tests must declare expectations via `mockConfirm()` /
+// `mockPrompt()` / `mockSelect()` / `mockMultiselect()`.
+//
+// Non-prompt clack APIs (`isCancel`, `cancel`, `intro`, `outro`,
+// `note`, `log.*`, `spinner`) are passthrough so test code paths that
+// emit informational output (autoconfig sections, etc.) work as
+// expected. Clack's output stream is rerouted to the
+// cli-shared-helpers `stdout` PassThrough (mocked below) so existing
+// helpers like `collectCLIOutput()` and `mockCLIOutput()` capture
+// clack output too.
+vi.mock("@clack/prompts", async (importOriginal) => {
+	const real =
+		await importOriginal<typeof import("@clack/prompts")>();
+	const { stdout } = await import("@cloudflare/cli-shared-helpers/streams");
+	real.updateSettings({ output: stdout });
+	const reject = (kind: string) =>
+		vi.fn((opts: unknown) => {
 			throw new Error(
-				`Unexpected call to \`prompts("${JSON.stringify(
-					args
-				)}")\`.\nYou should use \`mockConfirm()/mockSelect()/mockPrompt()\` to mock calls to \`confirm()\` with expectations.`
+				`Unexpected call to \`@clack/prompts.${kind}(${JSON.stringify(
+					opts
+				)})\`.\nUse \`mockConfirm()\` / \`mockSelect()\` / \`mockPrompt()\` / \`mockMultiselect()\` to mock prompt calls.`
 			);
-		}),
+		});
+	return {
+		...real,
+		confirm: reject("confirm"),
+		text: reject("text"),
+		password: reject("password"),
+		select: reject("select"),
+		multiselect: reject("multiselect"),
 	};
 });
 
@@ -261,6 +286,14 @@ afterEach(() => {
 	vi.clearAllMocks();
 });
 
+// Mock cli-shared-helpers' stdout/stderr to PassThrough streams so
+// `collectCLIOutput()` / `mockCLIOutput()` can capture clack output
+// (`note`, `log.step`, etc.) without it polluting the real terminal.
+//
+// Wrangler's banner is intentionally *not* captured here: it routes
+// through wrangler's `logger.log` (→ `console.log`) so it's captured
+// by `mockConsoleMethods` instead, matching pre-migration behavior
+// where snapshot tests asserted on the banner via `std.out`.
 vi.mock("@cloudflare/cli-shared-helpers/streams", async () => {
 	const stdout = new PassThrough();
 	const stderr = new PassThrough();
@@ -274,6 +307,7 @@ vi.mock("@cloudflare/cli-shared-helpers/streams", async () => {
 
 vi.mock("../../package.json", () => {
 	return {
+		name: "wrangler",
 		version: "x.x.x",
 	};
 });

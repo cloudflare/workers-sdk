@@ -7,7 +7,7 @@ import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { logDeployment, pickDeployment } from "./cli/deployments";
 import { cloudchamberScope, fillOpenAPIConfiguration } from "./common";
@@ -55,9 +55,8 @@ async function handleDeleteCommand(
 	const deployment = await pickDeployment(args.deploymentId);
 	logDeployment(deployment);
 	const yes = await inputPrompt({
-		question: "Are you sure that you want to delete this deployment?",
+		message: "Are you sure that you want to delete this deployment?",
 		type: "confirm",
-		label: "",
 	});
 	if (!yes) {
 		cancel("The operation has been cancelled");

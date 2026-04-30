@@ -32,11 +32,9 @@ export const chooseAccount = async (ctx: C3Context) => {
 	} else if (numAccounts === 1) {
 		const accountName = Object.keys(accounts)[0];
 		accountId = accounts[accountName];
-		s.stop(`${brandColor("account")} ${dim(accountName)}`);
+		s.stop(`${brandColor("Selected")} account ${dim(accountName)}`);
 	} else {
-		s.stop(
-			`${brandColor("account")} ${dim("more than one account available")}`
-		);
+		s.stop(`${brandColor("Found")} multiple accounts — pick one below`);
 		const accountOptions = Object.entries(accounts).map(
 			([accountName, id]) => ({
 				label: accountName,
@@ -46,10 +44,9 @@ export const chooseAccount = async (ctx: C3Context) => {
 
 		accountId = await inputPrompt({
 			type: "select",
-			question: "Which account do you want to use?",
+			message: "Which account do you want to use?",
 			options: accountOptions,
-			label: "account",
-			defaultValue: accountOptions[0].value,
+			initialValue: accountOptions[0].value,
 		});
 	}
 	const accountName = Object.keys(accounts).find(
@@ -73,7 +70,11 @@ export const wranglerLogin = async (ctx: C3Context) => {
 				`Logging into Cloudflare ${dim("checking authentication status")}`
 			);
 			const isAlreadyLoggedIn = await isLoggedIn();
-			s.stop(brandColor(isAlreadyLoggedIn ? "logged in" : "not logged in"));
+			s.stop(
+				isAlreadyLoggedIn
+					? `${brandColor("Already logged in")} to Cloudflare`
+					: `${brandColor("Not logged in")} to Cloudflare`
+			);
 
 			reporter.setEventProperty("isAlreadyLoggedIn", isAlreadyLoggedIn);
 
@@ -92,8 +93,11 @@ export const wranglerLogin = async (ctx: C3Context) => {
 			});
 			const success = /Successfully logged in/.test(output);
 
-			const verb = success ? "allowed" : "denied";
-			s.stop(`${brandColor(verb)} ${dim("via `wrangler login`")}`);
+			s.stop(
+				success
+					? `${brandColor("Logged in")} to Cloudflare ${dim("via `wrangler login`")}`
+					: `${brandColor("Login denied")} ${dim("via `wrangler login`")}`
+			);
 
 			reporter.setEventProperty("isLoginSuccessful", success);
 

@@ -436,8 +436,8 @@ describe("kv", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					About to delete remote KV namespace binding: "someBinding" (id: "env-bound-id").
@@ -690,8 +690,8 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Renaming KV namespace some-namespace-id to "new-namespace-name".
@@ -718,8 +718,8 @@ describe("kv", () => {
 				expect(updateRequests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Renaming KV namespace some-namespace-id to "new-namespace-name".

@@ -31,8 +31,8 @@ describe("pages project validate", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────"
+			⛅️ wrangler · vx.x.x
+			────────────────────"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -111,8 +111,8 @@ describe("pages project validate", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────"
+			⛅️ wrangler · vx.x.x
+			────────────────────"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});

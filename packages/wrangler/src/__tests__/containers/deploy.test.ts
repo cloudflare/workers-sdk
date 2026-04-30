@@ -128,8 +128,8 @@ describe("wrangler deploy with containers", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -149,33 +149,33 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  NEW my-container
+			  [[containers]]
+			  name = "my-container"
+			  scheduling_policy = "default"
+			  instances = 0
+			  max_instances = 10
+			  rollout_active_grace_period = 0
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/my-container:Galaxy"
+			  instance_type = "lite"
+
+			  [containers.constraints]
+			  tiers = [ 1, 2 ]
+
+			  [containers.durable_objects]
+			  namespace_id = "1"
+
 			│
-			├ NEW my-container
+			◇  Created application my-container (Application ID: undefined)
+
 			│
-			│   [[containers]]
-			│   name = "my-container"
-			│   scheduling_policy = "default"
-			│   instances = 0
-			│   max_instances = 10
-			│   rollout_active_grace_period = 0
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/my-container:Galaxy"
-			│   instance_type = "lite"
-			│
-			│   [containers.constraints]
-			│   tiers = [ 1, 2 ]
-			│
-			│   [containers.durable_objects]
-			│   namespace_id = "1"
-			│
-			│
-			│  SUCCESS  Created application my-container (Application ID: undefined)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -212,8 +212,8 @@ describe("wrangler deploy with containers", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -231,35 +231,35 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  NEW my-container
+			  [[containers]]
+			  name = "my-container"
+			  scheduling_policy = "default"
+			  instances = 0
+			  max_instances = 10
+			  rollout_active_grace_period = 600
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/hello:world"
+			  instance_type = "lite"
+
+			  [containers.constraints]
+			  tiers = [ 1, 2 ]
+			  regions = [ "ENAM", "WNAM" ]
+			  jurisdiction = "fedramp"
+
+			  [containers.durable_objects]
+			  namespace_id = "1"
+
 			│
-			├ NEW my-container
+			◇  Created application my-container (Application ID: undefined)
+
 			│
-			│   [[containers]]
-			│   name = "my-container"
-			│   scheduling_policy = "default"
-			│   instances = 0
-			│   max_instances = 10
-			│   rollout_active_grace_period = 600
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/hello:world"
-			│   instance_type = "lite"
-			│
-			│   [containers.constraints]
-			│   tiers = [ 1, 2 ]
-			│   regions = [ "ENAM", "WNAM" ]
-			│   jurisdiction = "fedramp"
-			│
-			│   [containers.durable_objects]
-			│   namespace_id = "1"
-			│
-			│
-			│  SUCCESS  Created application my-container (Application ID: undefined)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -305,8 +305,8 @@ describe("wrangler deploy with containers", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -332,37 +332,37 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  NEW my-container
+			  [[containers]]
+			  name = "my-container"
+			  scheduling_policy = "default"
+			  instances = 0
+			  max_instances = 10
+			  rollout_active_grace_period = 0
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/hello:world"
+			  memory_mib = 1000
+			  vcpu = 1
+
+			  [containers.configuration.disk]
+			  size_mb = 2000
+
+			  [containers.constraints]
+			  tiers = [ 1, 2 ]
+
+			  [containers.durable_objects]
+			  namespace_id = "1"
+
 			│
-			├ NEW my-container
+			◇  Created application my-container (Application ID: undefined)
+
 			│
-			│   [[containers]]
-			│   name = "my-container"
-			│   scheduling_policy = "default"
-			│   instances = 0
-			│   max_instances = 10
-			│   rollout_active_grace_period = 0
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/hello:world"
-			│   memory_mib = 1000
-			│   vcpu = 1
-			│
-			│   [containers.configuration.disk]
-			│   size_mb = 2000
-			│
-			│   [containers.constraints]
-			│   tiers = [ 1, 2 ]
-			│
-			│   [containers.durable_objects]
-			│   namespace_id = "1"
-			│
-			│
-			│  SUCCESS  Created application my-container (Application ID: undefined)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -408,8 +408,8 @@ describe("wrangler deploy with containers", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -429,37 +429,37 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  NEW my-container
+			  [[containers]]
+			  name = "my-container"
+			  scheduling_policy = "default"
+			  instances = 0
+			  max_instances = 10
+			  rollout_active_grace_period = 0
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/hello:world"
+			  memory_mib = 1000
+			  vcpu = 1
+
+			  [containers.configuration.disk]
+			  size_mb = 2000
+
+			  [containers.constraints]
+			  tiers = [ 1, 2 ]
+
+			  [containers.durable_objects]
+			  namespace_id = "1"
+
 			│
-			├ NEW my-container
+			◇  Created application my-container (Application ID: undefined)
+
 			│
-			│   [[containers]]
-			│   name = "my-container"
-			│   scheduling_policy = "default"
-			│   instances = 0
-			│   max_instances = 10
-			│   rollout_active_grace_period = 0
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/hello:world"
-			│   memory_mib = 1000
-			│   vcpu = 1
-			│
-			│   [containers.configuration.disk]
-			│   size_mb = 2000
-			│
-			│   [containers.constraints]
-			│   tiers = [ 1, 2 ]
-			│
-			│   [containers.durable_objects]
-			│   namespace_id = "1"
-			│
-			│
-			│  SUCCESS  Created application my-container (Application ID: undefined)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -519,8 +519,8 @@ describe("wrangler deploy with containers", () => {
 		expect(std.out.replace(wranglerCWD.join("/"), "<test-cwd>"))
 			.toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -588,8 +588,8 @@ describe("wrangler deploy with containers", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -673,29 +673,30 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container
+
+			  [[containers]]
+			- max_instances = 2
+			+ max_instances = 10
+			  name = "my-container"
+			- rollout_active_grace_period = 500
+			+ rollout_active_grace_period = 600
+			  scheduling_policy = "default"
+			  [containers.configuration]
+			- image = "registry.cloudflare.com/some-account-id/my-container:old"
+			+ image = "registry.cloudflare.com/some-account-id/my-container:Galaxy"
+			  instance_type = "lite"
+			  [containers.constraints]
+
 			│
-			├ EDIT my-container
+			◇  Modified application my-container (Application ID: abc)
+
 			│
-			│   [[containers]]
-			│ - max_instances = 2
-			│ + max_instances = 10
-			│   name = "my-container"
-			│ - rollout_active_grace_period = 500
-			│ + rollout_active_grace_period = 600
-			│   scheduling_policy = "default"
-			│   [containers.configuration]
-			│ - image = "registry.cloudflare.com/some-account-id/my-container:old"
-			│ + image = "registry.cloudflare.com/some-account-id/my-container:Galaxy"
-			│   instance_type = "lite"
-			│   [containers.constraints]
-			│
-			│
-			│  SUCCESS  Modified application my-container (Application ID: abc)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -823,56 +824,57 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
-			│
-			│ Container application changes
-			│
-			├ EDIT my-container
-			│
-			│   [[containers]]
-			│ - max_instances = 2
-			│ + max_instances = 10
-			│   name = "my-container"
-			│   rollout_active_grace_period = 0
-			│   scheduling_policy = "default"
-			│   [containers.configuration]
-			│ - image = "registry.cloudflare.com/some-account-id/my-container:old"
-			│ + image = "registry.cloudflare.com/some-account-id/my-container:Galaxy"
-			│   instance_type = "lite"
-			│   [containers.constraints]
-			│
-			│
-			│  SUCCESS  Modified application my-container (Application ID: abc)
-			│
-			╰ Applied changes
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
 
-			╭ Deploy a container application deploy changes to your application
 			│
-			│ Container application changes
+			◇  EDIT my-container
+
+			  [[containers]]
+			- max_instances = 2
+			+ max_instances = 10
+			  name = "my-container"
+			  rollout_active_grace_period = 0
+			  scheduling_policy = "default"
+			  [containers.configuration]
+			- image = "registry.cloudflare.com/some-account-id/my-container:old"
+			+ image = "registry.cloudflare.com/some-account-id/my-container:Galaxy"
+			  instance_type = "lite"
+			  [containers.constraints]
+
 			│
-			├ NEW my-container-app-2
+			◇  Modified application my-container (Application ID: abc)
+
 			│
-			│   [[containers]]
-			│   name = "my-container-app-2"
-			│   scheduling_policy = "default"
-			│   instances = 0
-			│   max_instances = 3
-			│   rollout_active_grace_period = 0
+			└  Applied changes
+
+			┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/hello:world"
-			│   instance_type = "lite"
+			◇  NEW my-container-app-2
+			  [[containers]]
+			  name = "my-container-app-2"
+			  scheduling_policy = "default"
+			  instances = 0
+			  max_instances = 3
+			  rollout_active_grace_period = 0
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/hello:world"
+			  instance_type = "lite"
+
+			  [containers.constraints]
+			  tiers = [ 1, 2 ]
+
+			  [containers.durable_objects]
+			  namespace_id = "2"
+
 			│
-			│   [containers.constraints]
-			│   tiers = [ 1, 2 ]
+			◇  Created application my-container-app-2 (Application ID: undefined)
+
 			│
-			│   [containers.durable_objects]
-			│   namespace_id = "2"
-			│
-			│
-			│  SUCCESS  Created application my-container-app-2 (Application ID: undefined)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -924,13 +926,13 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  no changes my-container
 			│
-			├ no changes my-container
-			│
-			╰ No changes to be made
+			└  No changes to be made
 
 			"
 		`);
@@ -1182,23 +1184,24 @@ describe("wrangler deploy with containers", () => {
 			await runWrangler("deploy index.js");
 
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
+				"┌  Deploy a container application · deploy changes to your application
+				Container application changes
+
 				│
-				│ Container application changes
+				◇  EDIT my-container
+
+				  image = "registry.cloudflare.com/some-account-id/hello:world"
+				  instance_type = "lite"
+				+ [containers.configuration.observability.logs]
+				+ enabled = true
+				  [containers.constraints]
+				  tiers = [ 1, 2 ]
+
 				│
-				├ EDIT my-container
+				◇  Modified application my-container (Application ID: abc)
+
 				│
-				│   image = "registry.cloudflare.com/some-account-id/hello:world"
-				│   instance_type = "lite"
-				│ + [containers.configuration.observability.logs]
-				│ + enabled = true
-				│   [containers.constraints]
-				│   tiers = [ 1, 2 ]
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
+				└  Applied changes
 
 				"
 			`);
@@ -1227,23 +1230,24 @@ describe("wrangler deploy with containers", () => {
 
 			await runWrangler("deploy index.js");
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
+				"┌  Deploy a container application · deploy changes to your application
+				Container application changes
+
 				│
-				│ Container application changes
+				◇  EDIT my-container
+
+				  image = "registry.cloudflare.com/some-account-id/hello:world"
+				  instance_type = "lite"
+				+ [containers.configuration.observability.logs]
+				+ enabled = true
+				  [containers.constraints]
+				  tiers = [ 1, 2 ]
+
 				│
-				├ EDIT my-container
+				◇  Modified application my-container (Application ID: abc)
+
 				│
-				│   image = "registry.cloudflare.com/some-account-id/hello:world"
-				│   instance_type = "lite"
-				│ + [containers.configuration.observability.logs]
-				│ + enabled = true
-				│   [containers.constraints]
-				│   tiers = [ 1, 2 ]
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
+				└  Applied changes
 
 				"
 			`);
@@ -1285,23 +1289,24 @@ describe("wrangler deploy with containers", () => {
 			await runWrangler("deploy index.js");
 
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
+				"┌  Deploy a container application · deploy changes to your application
+				Container application changes
+
 				│
-				│ Container application changes
+				◇  EDIT my-container
+
+				  instance_type = "lite"
+				  [containers.configuration.observability.logs]
+				- enabled = true
+				+ enabled = false
+				  [containers.constraints]
+				  tiers = [ 1, 2 ]
+
 				│
-				├ EDIT my-container
+				◇  Modified application my-container (Application ID: abc)
+
 				│
-				│   instance_type = "lite"
-				│   [containers.configuration.observability.logs]
-				│ - enabled = true
-				│ + enabled = false
-				│   [containers.constraints]
-				│   tiers = [ 1, 2 ]
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
+				└  Applied changes
 
 				"
 			`);
@@ -1343,23 +1348,24 @@ describe("wrangler deploy with containers", () => {
 			await runWrangler("deploy index.js");
 
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
+				"┌  Deploy a container application · deploy changes to your application
+				Container application changes
+
 				│
-				│ Container application changes
+				◇  EDIT my-container
+
+				  instance_type = "lite"
+				  [containers.configuration.observability.logs]
+				- enabled = true
+				+ enabled = false
+				  [containers.constraints]
+				  tiers = [ 1, 2 ]
+
 				│
-				├ EDIT my-container
+				◇  Modified application my-container (Application ID: abc)
+
 				│
-				│   instance_type = "lite"
-				│   [containers.configuration.observability.logs]
-				│ - enabled = true
-				│ + enabled = false
-				│   [containers.constraints]
-				│   tiers = [ 1, 2 ]
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
+				└  Applied changes
 
 				"
 			`);
@@ -1397,23 +1403,24 @@ describe("wrangler deploy with containers", () => {
 			mockCreateApplicationRollout(expect);
 			await runWrangler("deploy index.js");
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
+				"┌  Deploy a container application · deploy changes to your application
+				Container application changes
+
 				│
-				│ Container application changes
+				◇  EDIT my-container
+
+				  instance_type = "lite"
+				  [containers.configuration.observability.logs]
+				- enabled = true
+				+ enabled = false
+				  [containers.constraints]
+				  tiers = [ 1, 2 ]
+
 				│
-				├ EDIT my-container
+				◇  Modified application my-container (Application ID: abc)
+
 				│
-				│   instance_type = "lite"
-				│   [containers.configuration.observability.logs]
-				│ - enabled = true
-				│ + enabled = false
-				│   [containers.constraints]
-				│   tiers = [ 1, 2 ]
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
+				└  Applied changes
 
 				"
 			`);
@@ -1451,13 +1458,13 @@ describe("wrangler deploy with containers", () => {
 
 			await runWrangler("deploy index.js");
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
+				"┌  Deploy a container application · deploy changes to your application
+				Container application changes
+
 				│
-				│ Container application changes
+				◇  no changes my-container
 				│
-				├ no changes my-container
-				│
-				╰ No changes to be made
+				└  No changes to be made
 
 				"
 			`);
@@ -1489,13 +1496,13 @@ describe("wrangler deploy with containers", () => {
 			await runWrangler("deploy index.js");
 
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
+				"┌  Deploy a container application · deploy changes to your application
+				Container application changes
+
 				│
-				│ Container application changes
+				◇  no changes my-container
 				│
-				├ no changes my-container
-				│
-				╰ No changes to be made
+				└  No changes to be made
 
 				"
 			`);
@@ -1535,33 +1542,33 @@ describe("wrangler deploy with containers", () => {
 		await runWrangler("deploy index.js");
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  NEW my-container
+			  [[containers]]
+			  name = "my-container"
+			  scheduling_policy = "default"
+			  instances = 0
+			  max_instances = 10
+			  rollout_active_grace_period = 0
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/hello:1.0"
+			  instance_type = "lite"
+
+			  [containers.constraints]
+			  tiers = [ 2 ]
+
+			  [containers.durable_objects]
+			  namespace_id = "1"
+
 			│
-			├ NEW my-container
+			◇  Created application my-container (Application ID: undefined)
+
 			│
-			│   [[containers]]
-			│   name = "my-container"
-			│   scheduling_policy = "default"
-			│   instances = 0
-			│   max_instances = 10
-			│   rollout_active_grace_period = 0
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/hello:1.0"
-			│   instance_type = "lite"
-			│
-			│   [containers.constraints]
-			│   tiers = [ 2 ]
-			│
-			│   [containers.durable_objects]
-			│   namespace_id = "1"
-			│
-			│
-			│  SUCCESS  Created application my-container (Application ID: undefined)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1589,36 +1596,36 @@ describe("wrangler deploy with containers", () => {
 			await runWrangler("deploy index.js");
 
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
+				"┌  Deploy a container application · deploy changes to your application
+				Container application changes
+
 				│
-				│ Container application changes
+				◇  NEW my-container
+				  [[containers]]
+				  name = "my-container"
+				  scheduling_policy = "default"
+				  instances = 0
+				  max_instances = 10
+				  rollout_active_grace_period = 0
+
+				  [containers.configuration]
+				  image = "registry.cloudflare.com/some-account-id/hello:world"
+				  instance_type = "lite"
+
+				  [containers.constraints]
+				  tiers = [ 1, 2 ]
+
+				  [containers.affinities]
+				  hardware_generation = "highest-overall-performance"
+
+				  [containers.durable_objects]
+				  namespace_id = "1"
+
 				│
-				├ NEW my-container
+				◇  Created application my-container (Application ID: undefined)
+
 				│
-				│   [[containers]]
-				│   name = "my-container"
-				│   scheduling_policy = "default"
-				│   instances = 0
-				│   max_instances = 10
-				│   rollout_active_grace_period = 0
-				│
-				│   [containers.configuration]
-				│   image = "registry.cloudflare.com/some-account-id/hello:world"
-				│   instance_type = "lite"
-				│
-				│   [containers.constraints]
-				│   tiers = [ 1, 2 ]
-				│
-				│   [containers.affinities]
-				│   hardware_generation = "highest-overall-performance"
-				│
-				│   [containers.durable_objects]
-				│   namespace_id = "1"
-				│
-				│
-				│  SUCCESS  Created application my-container (Application ID: undefined)
-				│
-				╰ Applied changes
+				└  Applied changes
 
 				"
 			`);
@@ -1683,21 +1690,22 @@ describe("wrangler deploy with containers", () => {
 			await runWrangler("deploy index.js");
 
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
+				"┌  Deploy a container application · deploy changes to your application
+				Container application changes
+
 				│
-				│ Container application changes
+				◇  EDIT my-container
+
+				  [containers.constraints]
+				  tiers = [ 1, 2 ]
+				+ [containers.affinities]
+				+ hardware_generation = "highest-overall-performance"
+
 				│
-				├ EDIT my-container
+				◇  Modified application my-container (Application ID: abc)
+
 				│
-				│   [containers.constraints]
-				│   tiers = [ 1, 2 ]
-				│ + [containers.affinities]
-				│ + hardware_generation = "highest-overall-performance"
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
+				└  Applied changes
 
 				"
 			`);
@@ -1807,13 +1815,13 @@ describe("wrangler deploy with containers", () => {
 
 		expect(std.out).toContain("Image already exists remotely, skipping push");
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  no changes my-container
 			│
-			├ no changes my-container
-			│
-			╰ No changes to be made
+			└  No changes to be made
 
 			"
 		`);
@@ -1873,41 +1881,41 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toBe("");
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  NEW my-container
+			  [[containers]]
+			  name = "my-container"
+			  scheduling_policy = "default"
+			  instances = 0
+			  max_instances = 10
+			  rollout_active_grace_period = 0
+
+			  [containers.configuration]
+			  image = "registry.cloudflare.com/some-account-id/hello:world"
+			  instance_type = "lite"
+
+			  [containers.configuration.ssh]
+			  enabled = true
+			  port = 1010
+
+			  [[containers.configuration.authorized_keys]]
+			  name = "jeff"
+			  public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm"
+
+			  [containers.constraints]
+			  tiers = [ 1, 2 ]
+
+			  [containers.durable_objects]
+			  namespace_id = "1"
+
 			│
-			├ NEW my-container
+			◇  Created application my-container (Application ID: undefined)
+
 			│
-			│   [[containers]]
-			│   name = "my-container"
-			│   scheduling_policy = "default"
-			│   instances = 0
-			│   max_instances = 10
-			│   rollout_active_grace_period = 0
-			│
-			│   [containers.configuration]
-			│   image = "registry.cloudflare.com/some-account-id/hello:world"
-			│   instance_type = "lite"
-			│
-			│   [containers.configuration.ssh]
-			│   enabled = true
-			│   port = 1010
-			│
-			│   [[containers.configuration.authorized_keys]]
-			│   name = "jeff"
-			│   public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm"
-			│
-			│   [containers.constraints]
-			│   tiers = [ 1, 2 ]
-			│
-			│   [containers.durable_objects]
-			│   namespace_id = "1"
-			│
-			│
-			│  SUCCESS  Created application my-container (Application ID: undefined)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -1983,34 +1991,35 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
+			"┌  Deploy a container application · deploy changes to your application
+			Container application changes
+
 			│
-			│ Container application changes
+			◇  EDIT my-container
+
+			  name = "my-container"
+			  scheduling_policy = "default"
+			  version = 1
+			+ rollout_active_grace_period = 0
+			  [containers.configuration]
+			- image = "registry.cloudflare.com/hello:world"
+			+ image = "registry.cloudflare.com/some-account-id/hello:world"
+			+ instance_type = "lite"
+			+ [[containers.configuration.authorized_keys]]
+			+ name = "jeff"
+			+ public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm"
+			+ [containers.configuration.ssh]
+			+ enabled = true
+			  [containers.durable_objects]
+			  namespace_id = "1"
+			+ [containers.constraints]
+			+ tiers = [ 1, 2 ]
+
 			│
-			├ EDIT my-container
+			◇  Modified application my-container (Application ID: abc)
+
 			│
-			│   name = "my-container"
-			│   scheduling_policy = "default"
-			│   version = 1
-			│ + rollout_active_grace_period = 0
-			│   [containers.configuration]
-			│ - image = "registry.cloudflare.com/hello:world"
-			│ + image = "registry.cloudflare.com/some-account-id/hello:world"
-			│ + instance_type = "lite"
-			│ + [[containers.configuration.authorized_keys]]
-			│ + name = "jeff"
-			│ + public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm"
-			│ + [containers.configuration.ssh]
-			│ + enabled = true
-			│   [containers.durable_objects]
-			│   namespace_id = "1"
-			│ + [containers.constraints]
-			│ + tiers = [ 1, 2 ]
-			│
-			│
-			│  SUCCESS  Modified application my-container (Application ID: abc)
-			│
-			╰ Applied changes
+			└  Applied changes
 
 			"
 		`);
@@ -2161,8 +2170,8 @@ describe("wrangler deploy with containers", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				The following containers are available:
@@ -2176,33 +2185,33 @@ describe("wrangler deploy with containers", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
+				"┌  Deploy a container application · deploy changes to your application
+				Container application changes
+
 				│
-				│ Container application changes
+				◇  NEW my-container
+				  [[containers]]
+				  name = "my-container"
+				  scheduling_policy = "default"
+				  instances = 0
+				  max_instances = 10
+				  rollout_active_grace_period = 600
+
+				  [containers.configuration]
+				  image = "registry.cloudflare.com/some-account-id/hello:world"
+				  instance_type = "lite"
+
+				  [containers.constraints]
+				  tiers = [ 1, 2 ]
+
+				  [containers.durable_objects]
+				  namespace_id = "some-id"
+
 				│
-				├ NEW my-container
+				◇  Created application my-container (Application ID: undefined)
+
 				│
-				│   [[containers]]
-				│   name = "my-container"
-				│   scheduling_policy = "default"
-				│   instances = 0
-				│   max_instances = 10
-				│   rollout_active_grace_period = 600
-				│
-				│   [containers.configuration]
-				│   image = "registry.cloudflare.com/some-account-id/hello:world"
-				│   instance_type = "lite"
-				│
-				│   [containers.constraints]
-				│   tiers = [ 1, 2 ]
-				│
-				│   [containers.durable_objects]
-				│   namespace_id = "some-id"
-				│
-				│
-				│  SUCCESS  Created application my-container (Application ID: undefined)
-				│
-				╰ Applied changes
+				└  Applied changes
 
 				"
 			`);
@@ -2348,25 +2357,26 @@ describe("wrangler deploy with containers", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
+				"┌  Deploy a container application · deploy changes to your application
+				Container application changes
+
 				│
-				│ Container application changes
+				◇  EDIT my-container
+
+				  [[containers]]
+				- max_instances = 2
+				+ max_instances = 10
+				  name = "my-container"
+				- rollout_active_grace_period = 500
+				+ rollout_active_grace_period = 600
+				  scheduling_policy = "default"
+				  [containers.configuration]
+
 				│
-				├ EDIT my-container
+				◇  Modified application my-container (Application ID: abc)
+
 				│
-				│   [[containers]]
-				│ - max_instances = 2
-				│ + max_instances = 10
-				│   name = "my-container"
-				│ - rollout_active_grace_period = 500
-				│ + rollout_active_grace_period = 600
-				│   scheduling_policy = "default"
-				│   [containers.configuration]
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
+				└  Applied changes
 
 				"
 			`);
@@ -2418,8 +2428,8 @@ describe("wrangler deploy with containers dry run", () => {
 		await runWrangler("deploy --dry-run index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Building image my-container:worker
 			Your Worker has access to the following bindings:
@@ -2449,8 +2459,8 @@ describe("wrangler deploy with containers dry run", () => {
 		await runWrangler("deploy --dry-run index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Your Worker has access to the following bindings:
 			Binding                                            Resource

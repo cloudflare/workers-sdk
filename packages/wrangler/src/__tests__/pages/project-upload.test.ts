@@ -101,8 +101,8 @@ describe("pages project upload", () => {
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			✨ Upload complete!"
@@ -231,8 +231,8 @@ describe("pages project upload", () => {
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Success! Uploaded 3 files (TIMINGS)
 
 			✨ Upload complete!"
@@ -328,8 +328,8 @@ describe("pages project upload", () => {
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			✨ Upload complete!"
@@ -412,8 +412,8 @@ describe("pages project upload", () => {
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			✨ Upload complete!"
@@ -531,8 +531,8 @@ describe("pages project upload", () => {
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Success! Uploaded 4 files (TIMINGS)
 
 			✨ Upload complete!"

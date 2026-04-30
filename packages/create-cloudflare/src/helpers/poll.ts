@@ -34,9 +34,7 @@ export const poll = async (url: string): Promise<boolean> => {
 	}
 
 	s.stop(
-		`${brandColor(
-			"timed out"
-		)} while waiting for ${url} - try accessing it in a few minutes.`
+		`${brandColor("Timed out")} waiting for ${url} — try accessing it in a few minutes.`
 	);
 	return false;
 };
@@ -47,11 +45,11 @@ const pollDns = async (
 	s: ReturnType<typeof spinner>
 ) => {
 	while (Date.now() - start < TIMEOUT_MS) {
-		s.update(
+		s.message(
 			`Waiting for DNS to propagate. This might take a few minutes. (${secondsSince(start)}s)`
 		);
 		if (await isDomainResolvable(domain)) {
-			s.stop(`${brandColor("DNS propagation")} ${dim("complete")}.`);
+			s.stop(`${brandColor("DNS propagation complete")}`);
 			return;
 		}
 		await setTimeout(POLL_INTERVAL_MS);
@@ -65,7 +63,7 @@ const pollHttp = async (
 ) => {
 	s.start("Waiting for deployment to become available");
 	while (Date.now() - start < TIMEOUT_MS) {
-		s.update(
+		s.message(
 			`Waiting for deployment to become available (${secondsSince(start)}s)`
 		);
 		try {
@@ -75,7 +73,7 @@ const pollHttp = async (
 			});
 			if (statusCode === 200) {
 				s.stop(
-					`${brandColor("deployment")} ${dim("is ready at:")} ${blue(url)}`
+					`${brandColor("Deployment ready")} at ${blue(url)}`
 				);
 				return true;
 			}

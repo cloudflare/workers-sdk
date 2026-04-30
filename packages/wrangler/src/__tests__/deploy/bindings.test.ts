@@ -308,8 +308,8 @@ describe("deploy", () => {
 			await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -449,8 +449,8 @@ describe("deploy", () => {
 			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -565,8 +565,8 @@ describe("deploy", () => {
 			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -724,8 +724,8 @@ describe("deploy", () => {
 			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -779,8 +779,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -815,8 +815,8 @@ describe("deploy", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -862,8 +862,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -907,8 +907,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Uploaded test-name (TIMINGS)
@@ -949,8 +949,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -985,8 +985,8 @@ describe("deploy", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -1036,8 +1036,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1082,8 +1082,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1118,8 +1118,8 @@ describe("deploy", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -1169,8 +1169,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1213,8 +1213,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1246,8 +1246,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js --var CLI_VAR:from_cli");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1274,8 +1274,8 @@ describe("deploy", () => {
 					  "err": "",
 					  "info": "",
 					  "out": "
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1309,8 +1309,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1363,8 +1363,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1443,8 +1443,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1497,8 +1497,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1546,8 +1546,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1599,8 +1599,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1658,8 +1658,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js --outdir tmp --dry-run");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Your Worker has access to the following bindings:
 					Binding                                            Resource
@@ -1719,8 +1719,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js --outdir tmp --dry-run");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Your Worker has access to the following bindings:
 					Binding                                            Resource
@@ -1792,8 +1792,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1839,8 +1839,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1882,8 +1882,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1928,8 +1928,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -1964,8 +1964,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -2008,8 +2008,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -2072,8 +2072,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -2129,8 +2129,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
@@ -2177,8 +2177,8 @@ describe("deploy", () => {
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						The following unsafe metadata will be attached to your Worker:
@@ -2224,8 +2224,8 @@ describe("deploy", () => {
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						Your Worker has access to the following bindings:
@@ -2277,8 +2277,8 @@ describe("deploy", () => {
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						Your Worker has access to the following bindings:
@@ -2324,8 +2324,8 @@ describe("deploy", () => {
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						Uploaded test-name (TIMINGS)
@@ -2435,8 +2435,8 @@ describe("deploy", () => {
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						Uploaded test-name (TIMINGS)

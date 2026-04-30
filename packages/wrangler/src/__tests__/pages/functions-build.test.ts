@@ -52,8 +52,8 @@ describe("pages functions build", () => {
 		expect(existsSync("_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Compiled Worker successfully"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -95,8 +95,8 @@ describe("pages functions build", () => {
 		expect(existsSync("_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Compiled Worker successfully"
 		`);
 
@@ -174,8 +174,8 @@ describe("pages functions build", () => {
 		expect(existsSync("dist")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Compiled Worker successfully"
 		`);
 
@@ -248,8 +248,8 @@ export default {
 		expect(existsSync("_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Compiled Worker successfully"
 		`);
 
@@ -331,8 +331,8 @@ export default {
 		expect(existsSync("_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Compiled Worker successfully"
 		`);
 
@@ -409,8 +409,8 @@ export default {
 		expect(existsSync("public/_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Compiled Worker successfully"
 		`);
 
@@ -475,8 +475,8 @@ export default {
 		expect(existsSync("public/_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Compiled Worker successfully"
 		`);
 
@@ -547,8 +547,8 @@ export const cat = "dog";`
 		expect(existsSync("public/_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┬─┐
 			│ Name │ Type │ Size │
 			├─┼─┼─┤
@@ -756,8 +756,8 @@ export default {
 		expect(existsSync("_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Compiled Worker successfully"
 		`);
 
@@ -933,8 +933,8 @@ export default {
 		expect(existsSync("_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Compiled Worker successfully"
 		`);
 
@@ -1108,8 +1108,8 @@ export default {
 		expect(existsSync("_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Compiled Worker successfully"
 		`);
 
@@ -1202,8 +1202,8 @@ export default {
 		expect(existsSync("_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Compiled Worker successfully"
 		`);
 

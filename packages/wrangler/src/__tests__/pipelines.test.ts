@@ -432,8 +432,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				┌─┬─┬─┬─┐
 				│ Name │ ID │ Created │ Modified │
 				├─┼─┼─┼─┤
@@ -453,8 +453,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				No pipelines found."
 			`);
 		});
@@ -530,8 +530,8 @@ describe("wrangler pipelines", () => {
 			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				┌─┬─┬─┬─┬─┐
 				│ Name │ ID │ Created │ Modified │ Type │
 				├─┼─┼─┼─┼─┤
@@ -635,8 +635,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				General:
 				  ID:           pipeline_123
 				  Name:         my_pipeline
@@ -731,8 +731,8 @@ describe("wrangler pipelines", () => {
 			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Id:    legacy_123
 				Name:  my-legacy-pipeline
 				Sources:
@@ -853,8 +853,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Successfully deleted pipeline 'my_pipeline' with id 'pipeline_123'."
 			`);
 		});
@@ -925,8 +925,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Successfully deleted legacy pipeline 'my-legacy-pipeline'."
 			`);
 		});
@@ -1058,8 +1058,8 @@ describe("wrangler pipelines", () => {
 			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🌀 Updating pipeline "my-legacy-pipeline"
 				✨ Successfully updated pipeline "my-legacy-pipeline" with ID legacy_123
 				"
@@ -1168,8 +1168,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🌀 Creating stream 'my_stream'...
 				✨ Successfully created stream 'my_stream' with id 'stream_123'.
 
@@ -1215,8 +1215,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🌀 Creating stream 'my_stream'...
 				✨ Successfully created stream 'my_stream' with id 'stream_123'.
 
@@ -1301,8 +1301,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				┌─┬─┬─┬─┐
 				│ Name │ ID │ HTTP │ Created │
 				├─┼─┼─┼─┤
@@ -1339,8 +1339,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				┌─┬─┬─┬─┐
 				│ Name │ ID │ HTTP │ Created │
 				├─┼─┼─┼─┤
@@ -1420,8 +1420,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Stream ID: stream_123
 
 				Configuration:
@@ -1536,8 +1536,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Successfully deleted stream 'my_stream' with id 'stream_123'."
 			`);
 		});
@@ -1649,8 +1649,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🌀 Creating sink 'my_sink'...
 				✨ Successfully created sink 'my_sink' with id 'sink_123'.
 
@@ -1687,8 +1687,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🌀 Creating sink 'my_sink'...
 				✨ Successfully created sink 'my_sink' with id 'sink_123'.
 
@@ -1779,8 +1779,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				┌─┬─┬─┬─┬─┐
 				│ Name │ ID │ Type │ Destination │ Created │
 				├─┼─┼─┼─┼─┤
@@ -1815,8 +1815,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				┌─┬─┬─┬─┬─┐
 				│ Name │ ID │ Type │ Destination │ Created │
 				├─┼─┼─┼─┼─┤
@@ -1903,8 +1903,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				ID:    sink_123
 				Name:  my_sink
 				General:
@@ -2011,8 +2011,8 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Successfully deleted sink 'my_sink' with id 'sink_123'."
 			`);
 		});

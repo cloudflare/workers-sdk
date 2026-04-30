@@ -135,8 +135,8 @@ describe("deploy", () => {
 		await runWrangler("deploy ./index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Uploaded test-name (TIMINGS)
@@ -195,8 +195,8 @@ describe("deploy", () => {
 		await runWrangler("deploy ./index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Uploaded test-name (TIMINGS)
@@ -229,8 +229,8 @@ describe("deploy", () => {
 		await runWrangler("deploy ./index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Uploaded test-name (TIMINGS)
@@ -259,8 +259,8 @@ describe("deploy", () => {
 		await runWrangler("deploy ./index.js --env staging");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Uploaded test-name (TIMINGS)
@@ -325,8 +325,8 @@ describe("deploy", () => {
 		await runWrangler("deploy ./some-path/worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -369,8 +369,8 @@ describe("deploy", () => {
 		await runWrangler("deploy ./my-worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -447,8 +447,8 @@ describe("deploy", () => {
 		await runWrangler("deploy ./my-worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -509,8 +509,8 @@ describe("deploy", () => {
 			",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 
 			📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
 			Please ensure it has the correct permissions for this operation.
@@ -671,8 +671,8 @@ describe("deploy", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Uploaded test-name (TIMINGS)
@@ -715,8 +715,8 @@ describe("deploy", () => {
 				  "err": "",
 				  "info": "",
 				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Worker ID:  abc12345
@@ -756,8 +756,8 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Attempting to login via OAuth...
 				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in.
@@ -802,8 +802,8 @@ describe("deploy", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Attempting to login via OAuth...
 					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 					Successfully logged in.
@@ -834,8 +834,8 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
@@ -879,8 +879,8 @@ describe("deploy", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Uploaded test-name (TIMINGS)
@@ -908,8 +908,8 @@ describe("deploy", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Uploaded test-name (TIMINGS)
@@ -1127,8 +1127,8 @@ describe("deploy", () => {
 			await runWrangler("deploy index.js --env some-env");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name-some-env (TIMINGS)
@@ -1154,8 +1154,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Uploaded test-name (TIMINGS)
@@ -1181,8 +1181,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js --env some-env --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Uploaded test-name-some-env (TIMINGS)
@@ -1208,8 +1208,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js --env some-env --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Uploaded test-name-some-env (TIMINGS)
@@ -1286,8 +1286,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Uploaded test-name (TIMINGS)
@@ -1320,8 +1320,8 @@ describe("deploy", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Uploaded test-name (some-env) (TIMINGS)
@@ -1370,8 +1370,8 @@ describe("deploy", () => {
 		await runWrangler("deploy ./some-path/worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:

@@ -84,10 +84,8 @@ export async function promptForInstanceType(
 		options = [{ label: "Do not set", value: "skip" }].concat(options);
 	}
 	const action = await inputPrompt({
-		question: "Which instance type should we use for your container?",
-		label: "",
-		defaultValue: false,
-		helpText: "",
+		message: "Which instance type should we use for your container?",
+		initialValue: undefined,
 		type: "select",
 		options,
 	});

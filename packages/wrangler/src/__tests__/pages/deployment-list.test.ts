@@ -53,8 +53,8 @@ describe("pages deployment list", () => {
 		expect(requests.count).toBe(1);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┬─┬─┬─┬─┬─┐
 			│ Id │ Environment │ Branch │ Source │ Deployment │ Status │ Build │
 			├─┼─┼─┼─┼─┼─┼─┤

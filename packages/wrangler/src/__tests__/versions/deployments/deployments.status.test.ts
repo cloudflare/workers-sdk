@@ -38,21 +38,21 @@ describe("deployments list", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Created:     2021-01-04T00:00:00.000Z
-			Author:      Jean-Luc-Picard@federation.org
-			Source:      Rollback
-			Message:     -
-			Version(s):  (10%) 10000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				"Created:     2021-01-04T00:00:00.000Z
+				Author:      Jean-Luc-Picard@federation.org
+				Source:      Rollback
+				Message:     -
+				Version(s):  (10%) 10000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			             (90%) 20000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
-			"
-		`);
+				             (90%) 20000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
+				"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -99,21 +99,21 @@ describe("deployments list", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Created:     2021-01-04T00:00:00.000Z
-			Author:      Jean-Luc-Picard@federation.org
-			Source:      Rollback
-			Message:     -
-			Version(s):  (10%) 10000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				"Created:     2021-01-04T00:00:00.000Z
+				Author:      Jean-Luc-Picard@federation.org
+				Source:      Rollback
+				Message:     -
+				Version(s):  (10%) 10000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			             (90%) 20000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
-			"
-		`);
+				             (90%) 20000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
+				"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});

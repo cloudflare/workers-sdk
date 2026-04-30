@@ -7,7 +7,6 @@ import {
 	log,
 	logRaw,
 	newline,
-	shapes,
 	startSection,
 	success,
 	updateStatus,
@@ -445,8 +444,7 @@ export async function apply(
 			}
 
 			updateStatus(
-				`${brandColor.underline("EDIT")} ${application.name}`,
-				false
+				`${brandColor.underline("EDIT")} ${application.name}`
 			);
 
 			newline();
@@ -578,10 +576,7 @@ export async function apply(
 			}
 
 			success(
-				`Created application ${brandColor(action.application.name)} (Application ID: ${application.id})`,
-				{
-					shape: shapes.bar,
-				}
+				`Created application ${brandColor(action.application.name)} (Application ID: ${application.id})`
 			);
 
 			continue;
@@ -674,9 +669,7 @@ export async function apply(
 				}
 			}
 
-			success(`Modified application ${brandColor(action.name)}`, {
-				shape: shapes.bar,
-			});
+			success(`Modified application ${brandColor(action.name)}`);
 
 			continue;
 		}

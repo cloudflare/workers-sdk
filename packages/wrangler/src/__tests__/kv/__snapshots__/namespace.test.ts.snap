@@ -2,8 +2,8 @@
 
 exports[`kv > namespace > create > wrangler.json > should create a namespace 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 Resource location: remote
 
 🌀 Creating namespace with title "UnitTestNamespace"
@@ -34,8 +34,8 @@ exports[`kv > namespace > create > wrangler.json > should create a namespace 2`]
 
 exports[`kv > namespace > create > wrangler.json > should create a namespace in an environment if configured to do so 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 Resource location: remote
 
 🌀 Creating namespace with title "customEnv-UnitTestNamespace"
@@ -72,8 +72,8 @@ exports[`kv > namespace > create > wrangler.json > should create a namespace in 
 
 exports[`kv > namespace > create > wrangler.json > should create a namespace using configured worker name 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 Resource location: remote
 
 🌀 Creating namespace with title "UnitTestNamespace"
@@ -106,8 +106,8 @@ exports[`kv > namespace > create > wrangler.json > should create a namespace usi
 
 exports[`kv > namespace > create > wrangler.json > should create a namespace with custom binding name 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 Resource location: remote
 
 🌀 Creating namespace with title "UnitTestNamespace"
@@ -139,8 +139,8 @@ exports[`kv > namespace > create > wrangler.json > should create a namespace wit
 
 exports[`kv > namespace > create > wrangler.json > should create a preview namespace if configured to do so 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 Resource location: remote
 
 🌀 Creating namespace with title "UnitTestNamespace_preview"
@@ -158,8 +158,8 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 
 exports[`kv > namespace > create > wrangler.toml > should create a namespace 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 Resource location: remote
 
 🌀 Creating namespace with title "UnitTestNamespace"
@@ -179,8 +179,8 @@ name = "worker"
 
 exports[`kv > namespace > create > wrangler.toml > should create a namespace in an environment if configured to do so 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 Resource location: remote
 
 🌀 Creating namespace with title "customEnv-UnitTestNamespace"
@@ -203,8 +203,8 @@ name = "worker"
 
 exports[`kv > namespace > create > wrangler.toml > should create a namespace using configured worker name 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 Resource location: remote
 
 🌀 Creating namespace with title "UnitTestNamespace"
@@ -225,8 +225,8 @@ name = "other-worker"
 
 exports[`kv > namespace > create > wrangler.toml > should create a namespace with custom binding name 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 Resource location: remote
 
 🌀 Creating namespace with title "UnitTestNamespace"
@@ -246,8 +246,8 @@ name = "worker"
 
 exports[`kv > namespace > create > wrangler.toml > should create a preview namespace if configured to do so 1`] = `
 "
- ⛅️ wrangler x.x.x
-──────────────────
+⛅️ wrangler · vx.x.x
+────────────────────
 Resource location: remote
 
 🌀 Creating namespace with title "UnitTestNamespace_preview"
