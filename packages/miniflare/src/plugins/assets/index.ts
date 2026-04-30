@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path, { join } from "node:path";
 import {
 	CONTENT_HASH_OFFSET,
@@ -52,6 +53,11 @@ import type { Logger } from "@cloudflare/workers-shared";
 import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
 import type { z } from "zod";
 
+// Cache of temp directories created for missing asset directories, keyed by
+// the Worker's name followed by the assets directory path. Prevents accumulating
+// orphaned temp directories when getServices is called repeatedly
+const tempDirCache = new Map<string, string>();
+
 export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 	options: AssetsOptionsSchema,
 	async getBindings(options: z.infer<typeof AssetsOptionsSchema>) {
@@ -83,22 +89,49 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			return [];
 		}
 
+		let assetDirectory = options.assets.directory;
+		const directoryStats = await fs.stat(assetDirectory).catch((err) => {
+			if (err?.code === "ENOENT") {
+				return undefined;
+			}
+			throw err;
+		});
+		if (!directoryStats) {
+			// If the assets directory doesn't exist yet (e.g. the build output
+			// hasn't been generated), create an empty temp directory so that the
+			// asset services can still start up with zero assets.
+			// Reuse a previously created temp directory for this path to avoid
+			// accumulating orphaned temp directories on repeated calls.
+			const cacheKey = `${options.assets.workerName}:${assetDirectory}`;
+			const cached = tempDirCache.get(cacheKey);
+			const cachedExists = cached
+				? await fs.stat(cached).catch(() => undefined)
+				: undefined;
+			if (cached && cachedExists) {
+				assetDirectory = cached;
+			} else {
+				assetDirectory = await fs.mkdtemp(
+					path.join(os.tmpdir(), "miniflare-assets-")
+				);
+				tempDirCache.set(cacheKey, assetDirectory);
+			}
+		}
+
 		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage`;
 		const storageService: Service = {
 			name: storageServiceName,
 			disk: {
-				path: options.assets.directory,
+				path: assetDirectory,
 				writable: true,
 				allowDotfiles: true,
 			},
 		};
 
-		const { encodedAssetManifest, assetsReverseMap } = await buildAssetManifest(
-			options.assets.directory
-		);
+		const { encodedAssetManifest, assetsReverseMap } =
+			await buildAssetManifest(assetDirectory);
 
-		const redirectsFile = join(options.assets.directory, REDIRECTS_FILENAME);
-		const headersFile = join(options.assets.directory, HEADERS_FILENAME);
+		const redirectsFile = join(assetDirectory, REDIRECTS_FILENAME);
+		const headersFile = join(assetDirectory, HEADERS_FILENAME);
 
 		const redirectsContents = maybeGetFile(redirectsFile);
 		const headersContents = maybeGetFile(headersFile);

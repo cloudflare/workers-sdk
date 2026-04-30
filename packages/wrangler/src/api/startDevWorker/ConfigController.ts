@@ -302,13 +302,13 @@ async function resolveConfig(
 		input
 	);
 
-	const assetsOptions = getAssetsOptions(
-		{
+	const assetsOptions = getAssetsOptions({
+		args: {
 			assets: input?.assets,
 			script: input.entrypoint,
 		},
-		config
-	);
+		config,
+	});
 
 	const resolved = {
 		name:

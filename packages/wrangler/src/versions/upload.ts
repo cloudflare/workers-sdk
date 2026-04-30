@@ -322,7 +322,10 @@ export const versionsUploadCommand = createCommand({
 			config
 		);
 
-		const assetsOptions = getAssetsOptions(args, config);
+		const assetsOptions = getAssetsOptions({
+			args,
+			config,
+		});
 
 		if (args.latest) {
 			logger.warn(

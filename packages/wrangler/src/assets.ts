@@ -402,11 +402,17 @@ export class NonExistentAssetsDirError extends UserError {}
 
 export class NonDirectoryAssetsDirError extends UserError {}
 
-export function getAssetsOptions(
-	args: { assets: string | undefined; script?: string },
-	config: Config,
-	overrides?: Partial<AssetsOptions>
-): AssetsOptions | undefined {
+export function getAssetsOptions({
+	args,
+	config,
+	validateDirectoryExistence = true,
+	overrides,
+}: {
+	args: { assets: string | undefined; script?: string };
+	config: Config;
+	validateDirectoryExistence?: boolean;
+	overrides?: Partial<AssetsOptions>;
+}): AssetsOptions | undefined {
 	if (!overrides && !config.assets && !args.assets) {
 		return;
 	}
@@ -434,12 +440,13 @@ export function getAssetsOptions(
 	const directory = path.resolve(assetsBasePath, assets.directory);
 
 	const directoryStat = statSync(directory, { throwIfNoEntry: false });
+	const directoryExists = !!directoryStat;
 
 	const sourceOfTruthMessage = args.assets
 		? '"--assets" command line argument'
 		: '"assets.directory" field in your configuration file';
 
-	if (!directoryStat) {
+	if (validateDirectoryExistence && !directoryExists) {
 		throw new NonExistentAssetsDirError(
 			`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
 				`${directory}`,
@@ -450,7 +457,7 @@ export function getAssetsOptions(
 		);
 	}
 
-	if (!directoryStat.isDirectory()) {
+	if (directoryExists && !directoryStat.isDirectory()) {
 		throw new NonDirectoryAssetsDirError(
 			`The path specified by the ${sourceOfTruthMessage} doesn't point to a directory:\n` +
 				`${directory}`,
@@ -500,8 +507,12 @@ export function getAssetsOptions(
 		);
 	}
 
-	const _redirects = maybeGetFile(path.join(directory, REDIRECTS_FILENAME));
-	const _headers = maybeGetFile(path.join(directory, HEADERS_FILENAME));
+	const _redirects = directoryExists
+		? maybeGetFile(path.join(directory, REDIRECTS_FILENAME))
+		: undefined;
+	const _headers = directoryExists
+		? maybeGetFile(path.join(directory, HEADERS_FILENAME))
+		: undefined;
 
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
