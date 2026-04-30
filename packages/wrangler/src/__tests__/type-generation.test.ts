@@ -1527,6 +1527,38 @@ describe("generate types", () => {
 		expect(out).not.toContain("ANOTHER_SECRET");
 	});
 
+	it("should not report stale types when --env-file is used and .dev.vars exists (--check)", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				vars: {
+					myTomlVarA: "A from wrangler toml",
+				},
+			}),
+			"utf-8"
+		);
+
+		// Create .dev.vars with secrets that should NOT appear
+		const devVarsContent = dedent`
+			SECRET_FROM_DEV_VARS="should not appear"
+		`;
+		fs.writeFileSync(".dev.vars", devVarsContent, "utf8");
+
+		// Generate types with --env-file /dev/null (no .dev.vars loading)
+		await runWrangler(
+			"types --include-runtime=false --env-file=/dev/null"
+		);
+
+		// Run --check with --env-file /dev/null - should not report stale
+		await runWrangler(
+			"types --check --include-runtime=false --env-file=/dev/null"
+		);
+
+		expect(std.out).toContain("Types at worker-configuration.d.ts are up to date.");
+	});
+
 	it("should include secret keys from .env, if there is no .dev.vars", async ({
 		expect,
 	}) => {

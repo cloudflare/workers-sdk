@@ -167,7 +167,7 @@ export const typesCommand = createCommand({
 		}
 
 		if (args.check) {
-			const outOfDate = await checkTypesUpToDate(config, outputPath);
+			const outOfDate = await checkTypesUpToDate(config, outputPath, args.envFile);
 			if (outOfDate) {
 				throw new FatalError(
 					`Types at ${outputPath} are out of date. Run \`wrangler types\` to regenerate.`,

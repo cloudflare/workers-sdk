@@ -151,7 +151,8 @@ const unsafeParseBooleanString = (value: unknown): boolean => {
  */
 export const checkTypesUpToDate = async (
 	primaryConfig: Config,
-	typesPath: string = DEFAULT_WORKERS_TYPES_FILE_PATH
+	typesPath: string = DEFAULT_WORKERS_TYPES_FILE_PATH,
+	cliEnvFile?: string[] | undefined
 ): Promise<boolean> => {
 	let typesFileLines = new Array<string>();
 	try {
@@ -185,6 +186,12 @@ export const checkTypesUpToDate = async (
 	// Determine what was included based on what headers exist
 	// If no env header exists, env types were not included (--include-env=false)
 	// If no runtime header exists, runtime types were not included (--include-runtime=false)
+	const rawEnvFile = rawArgs.envFile;
+	const envFile: string[] | undefined = cliEnvFile ??
+		(typeof rawEnvFile === "string" ? [rawEnvFile]
+		: Array.isArray(rawEnvFile) ? rawEnvFile
+		: undefined);
+
 	const args = {
 		includeEnv: existingEnvHeader
 			? unsafeParseBooleanString(rawArgs.includeEnv ?? "true")
@@ -194,7 +201,8 @@ export const checkTypesUpToDate = async (
 			: false,
 		envInterface: (rawArgs.envInterface ?? "Env") as string,
 		strictVars: unsafeParseBooleanString(rawArgs.strictVars ?? "true"),
-	} satisfies Record<string, string | number | boolean>;
+		envFile,
+	} satisfies Record<string, string | number | boolean | string[] | undefined>;
 
 	const configContainsEntrypoint =
 		primaryConfig.main !== undefined || !!primaryConfig.site?.["entry-point"];
@@ -211,7 +219,7 @@ export const checkTypesUpToDate = async (
 		try {
 			const { envHeader } = await generateEnvTypes(
 				primaryConfig,
-				{ strictVars: args.strictVars },
+				{ strictVars: args.strictVars, envFile: args.envFile },
 				args.envInterface,
 				typesPath,
 				entrypoint,
