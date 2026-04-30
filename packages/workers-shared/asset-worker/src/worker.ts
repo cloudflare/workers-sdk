@@ -229,10 +229,13 @@ export async function lookupCohort(
 	if (!querier || !accountId) {
 		return null;
 	}
+	let timer: ReturnType<typeof setTimeout> | undefined;
 	try {
 		const rpc = querier.lookupAccountCohort(accountId.toString());
+		// Prevent unhandled rejection if timeout wins but RPC later rejects.
+		rpc.catch(() => {});
 		const timeout = new Promise<never>((_, reject) => {
-			setTimeout(() => {
+			timer = setTimeout(() => {
 				reject(new Error("cohort lookup timed out"));
 			}, COHORT_LOOKUP_TIMEOUT_MS);
 		});
@@ -245,6 +248,8 @@ export async function lookupCohort(
 	} catch (e: unknown) {
 		console.error("cohort lookup failed", e);
 		return null;
+	} finally {
+		clearTimeout(timer);
 	}
 }
 
