@@ -229,6 +229,7 @@ export const checkTypesUpToDate = async (
 				typesPath,
 				entrypoint,
 				serviceEntries,
+				undefined,
 				false // don't log anything
 			);
 			const newHash = envHeader?.match(/hash: (?<hash>.*)\)/)?.groups?.hash;
@@ -306,6 +307,7 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 			DEFAULT_WORKERS_TYPES_FILE_NAME,
 			entry,
 			new Map(),
+			undefined,
 			// don't log anything
 			false
 		);
