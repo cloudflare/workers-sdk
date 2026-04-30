@@ -10,21 +10,27 @@ permissions:
 
 jobs:
   e2e-vite-plugin-test:
-    name: ${{ format('Vite Plugin E2E ({0})', matrix.description) }}
+    name: ${{ format('Vite Plugin E2E ({0}, shard {1}/2)', matrix.description, matrix.shard) }}
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.shard }}
       cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
     timeout-minutes: 60
+    # Vite Plugin E2E (Windows) was the PR-to-green critical path at ~797s.
+    # Splitting 9 e2e test files into 2 shards via Vitest --shard=i/n halves
+    # the worst cell to ~400s. Each shard runs its own global setup (mock npm
+    # registry + temp dir) independently.
     strategy:
       fail-fast: false
       matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        shard: [1, 2]
         include:
           - os: macos-latest
             description: macOS
-          - os: windows-latest
-            description: Windows
           - os: ubuntu-latest
             description: Linux
+          - os: windows-latest
+            description: Windows
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -60,7 +66,7 @@ jobs:
 
       - name: Run Vite plugin E2E tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
+        run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream -- --shard=${{ matrix.shard }}/2
         timeout-minutes: 20
         env:
           NODE_DEBUG: "vite-plugin:test"
@@ -74,5 +80,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}
+          name: turbo-runs-${{ matrix.os }}-shard-${{ matrix.shard }}
           path: .turbo/runs
