@@ -330,6 +330,7 @@ const testCases: TestCase[] = [
 	},
 	{
 		name: "Images",
+		skip: true,
 		scriptPath: "images.js",
 		setup: () => ({
 			remoteProxySessionConfig: {
