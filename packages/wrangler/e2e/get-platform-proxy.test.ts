@@ -656,12 +656,11 @@ describe("getPlatformProxy()", () => {
 			root = makeRoot();
 
 			await seed(root, {
-				"wrangler.toml": dedent`
-						name = "email-app"
-						compatibility_date = "2025-03-17"
-
-						send_email = [{ name = "EMAIL" }]
-				`,
+				"wrangler.jsonc": JSON.stringify({
+					name: "email-app",
+					compatibility_date: "2025-03-17",
+					send_email: [{ name: "EMAIL" }],
+				}),
 				"index.mjs": dedent /* javascript */ `
 						import { getPlatformProxy } from "${WRANGLER_IMPORT}";
 

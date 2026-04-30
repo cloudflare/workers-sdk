@@ -64,6 +64,11 @@ function formatMessageBuilder(builder: MessageBuilder): string {
 	return lines.join("\n");
 }
 
+/**
+ * Appends path segments to a base path using the separator already implied by
+ * the base path string. This trims trailing `/` and `\` from the base before
+ * joining, but does not otherwise normalize the full path.
+ */
 function joinPath(base: string, ...segments: string[]): string {
 	const separator = base.includes("\\") ? "\\" : "/";
 	return [base.replace(/[\\/]+$/, ""), ...segments].join(separator);
