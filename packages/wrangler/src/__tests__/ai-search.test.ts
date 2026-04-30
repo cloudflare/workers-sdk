@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
@@ -292,6 +293,10 @@ describe("ai-search commands", () => {
 			let capturedBody: Record<string, unknown> | undefined;
 			let capturedNamespace: string | undefined;
 			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
 			msw.use(
 				http.post(
 					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
@@ -328,6 +333,10 @@ describe("ai-search commands", () => {
 		}) => {
 			let capturedNamespace: string | undefined;
 			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
 			msw.use(
 				http.post(
 					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
@@ -349,6 +358,10 @@ describe("ai-search commands", () => {
 
 		it("should create instance and print details", async ({ expect }) => {
 			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
 			mockCreateInstance(MOCK_INSTANCE);
 			await runWrangler(
 				"ai-search create my-instance --namespace default --type r2 --source my-bucket"
@@ -404,6 +417,10 @@ describe("ai-search commands", () => {
 				text: "Select a namespace:",
 				result: "blog",
 			});
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
 			msw.use(
 				http.post(
 					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
@@ -432,6 +449,10 @@ describe("ai-search commands", () => {
 			mockSelect({
 				text: "Select a namespace:",
 				result: "default",
+			});
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
 			});
 			msw.use(
 				http.post(
@@ -487,6 +508,10 @@ describe("ai-search commands", () => {
 				text: "Enter a name for the new namespace:",
 				result: "my-new-ns",
 			});
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
 			msw.use(
 				http.post(
 					"*/accounts/:accountId/ai-search/namespaces",
@@ -537,6 +562,10 @@ describe("ai-search commands", () => {
 		}) => {
 			let capturedBody: Record<string, unknown> | undefined;
 			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
 			msw.use(
 				http.post(
 					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
@@ -593,10 +622,16 @@ describe("ai-search commands", () => {
 			// second call (with token) first, then first call (empty) on top.
 			mockListTokens([MOCK_TOKEN]);
 			mockListTokens([]);
-			mockConfirm({
-				text: "Have you created a token?",
-				result: true,
-			});
+			mockConfirm(
+				{
+					text: "Have you created a token?",
+					result: true,
+				},
+				{
+					text: "Configure custom metadata fields? (optional)",
+					result: false,
+				}
+			);
 			mockCreateInstance(MOCK_INSTANCE);
 			await runWrangler(
 				"ai-search create my-instance --namespace default --type r2 --source my-bucket"
@@ -631,6 +666,10 @@ describe("ai-search commands", () => {
 			mockSelect({
 				text: "Select an R2 bucket:",
 				result: "my-bucket",
+			});
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
 			});
 			mockCreateInstance(MOCK_INSTANCE);
 			await runWrangler("ai-search create my-instance --namespace default");
@@ -668,6 +707,10 @@ describe("ai-search commands", () => {
 					{ once: true }
 				)
 			);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
 			mockCreateInstance({
 				...MOCK_INSTANCE,
 				source: "new-bucket",
@@ -705,6 +748,10 @@ describe("ai-search commands", () => {
 				text: "Select a zone:",
 				result: "example.com",
 			});
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
 			mockCreateInstance({
 				...MOCK_INSTANCE,
 				type: "web-crawler",
@@ -734,6 +781,10 @@ describe("ai-search commands", () => {
 			mockPrompt({
 				text: "Enter the website URL to index:",
 				result: "https://my-site.com",
+			});
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
 			});
 			mockCreateInstance({
 				...MOCK_INSTANCE,
@@ -786,6 +837,390 @@ describe("ai-search commands", () => {
 					"ai-search create my-instance --namespace default --type web-crawler"
 				)
 			).rejects.toThrowError(/Missing required flag.*--source/);
+		});
+
+		// ── custom_metadata ─────────────────────────────────────────────────────
+
+		it("should send custom_metadata when --custom-metadata is provided", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata title:text"
+			);
+			expect(capturedBody).toMatchObject({
+				custom_metadata: [{ field_name: "title", data_type: "text" }],
+			});
+		});
+
+		it("should accept multiple --custom-metadata flags", async ({ expect }) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata title:text --custom-metadata views:number --custom-metadata published:boolean"
+			);
+			expect(capturedBody).toMatchObject({
+				custom_metadata: [
+					{ field_name: "title", data_type: "text" },
+					{ field_name: "views", data_type: "number" },
+					{ field_name: "published", data_type: "boolean" },
+				],
+			});
+		});
+
+		it("should reject --custom-metadata with an invalid data_type", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata title:bogus"
+				)
+			).rejects.toThrowError(
+				/data_type must be one of text, number, boolean, datetime/
+			);
+		});
+
+		it("should reject --custom-metadata that is missing a separator", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata title"
+				)
+			).rejects.toThrowError(/Expected format: field_name:data_type/);
+		});
+
+		it("should reject --custom-metadata with a reserved field name", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata timestamp:number"
+				)
+			).rejects.toThrowError(/reserved field name/);
+		});
+
+		it("should interactively configure custom_metadata when the flag is omitted", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: true,
+			});
+			mockPrompt({
+				text: "Field name:",
+				result: "category",
+			});
+			mockSelect({
+				text: "Data type:",
+				result: "text",
+			});
+			mockConfirm({
+				text: "Add another field?",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket"
+			);
+			expect(capturedBody).toMatchObject({
+				custom_metadata: [{ field_name: "category", data_type: "text" }],
+			});
+		});
+
+		it("should not send custom_metadata when the user declines the optional step", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket"
+			);
+			expect(capturedBody).not.toHaveProperty("custom_metadata");
+		});
+
+		it("should skip the custom_metadata prompt in non-interactive mode", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			setIsTTY(false);
+			mockListTokens([MOCK_TOKEN]);
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket"
+			);
+			expect(capturedBody).not.toHaveProperty("custom_metadata");
+		});
+
+		it("should skip the custom_metadata prompt when --json is passed", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --json"
+			);
+			expect(capturedBody).not.toHaveProperty("custom_metadata");
+		});
+
+		it("should print the custom_metadata fields in the success summary", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			mockCreateInstance({
+				...MOCK_INSTANCE,
+				custom_metadata: [
+					{ field_name: "title", data_type: "text" },
+					{ field_name: "views", data_type: "number" },
+				],
+			});
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata title:text --custom-metadata views:number"
+			);
+			expect(std.out).toContain("Metadata:   title:text, views:number");
+		});
+
+		it("should load custom_metadata from --custom-metadata-schema (object form)", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			writeFileSync(
+				"schema.json",
+				JSON.stringify({
+					custom_metadata: [
+						{ field_name: "title", data_type: "text" },
+						{ field_name: "views", data_type: "number" },
+					],
+				})
+			);
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
+			);
+			expect(capturedBody).toMatchObject({
+				custom_metadata: [
+					{ field_name: "title", data_type: "text" },
+					{ field_name: "views", data_type: "number" },
+				],
+			});
+		});
+
+		it("should load custom_metadata from --custom-metadata-schema (bare array form)", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			writeFileSync(
+				"schema.json",
+				JSON.stringify([
+					{ field_name: "category", data_type: "text" },
+					{ field_name: "published", data_type: "boolean" },
+				])
+			);
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
+			);
+			expect(capturedBody).toMatchObject({
+				custom_metadata: [
+					{ field_name: "category", data_type: "text" },
+					{ field_name: "published", data_type: "boolean" },
+				],
+			});
+		});
+
+		it("should reject --custom-metadata-schema with malformed JSON", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			writeFileSync("schema.json", "{ not valid json");
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
+				)
+			).rejects.toThrowError();
+		});
+
+		it("should reject --custom-metadata-schema with an unsupported shape", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			writeFileSync(
+				"schema.json",
+				JSON.stringify({ fields: [{ field_name: "title", data_type: "text" }] })
+			);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
+				)
+			).rejects.toThrowError(
+				/Expected either an array of \{ field_name, data_type \} objects/
+			);
+		});
+
+		it("should reject --custom-metadata-schema with an invalid data_type", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			writeFileSync(
+				"schema.json",
+				JSON.stringify([{ field_name: "title", data_type: "bogus" }])
+			);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
+				)
+			).rejects.toThrowError(
+				/"data_type" must be one of text, number, boolean, datetime/
+			);
+		});
+
+		it("should reject --custom-metadata-schema with a reserved field name", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			writeFileSync(
+				"schema.json",
+				JSON.stringify([{ field_name: "timestamp", data_type: "number" }])
+			);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
+				)
+			).rejects.toThrowError(/reserved field name/);
+		});
+
+		it("should reject combining --custom-metadata and --custom-metadata-schema", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			writeFileSync(
+				"schema.json",
+				JSON.stringify([{ field_name: "title", data_type: "text" }])
+			);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata title:text --custom-metadata-schema schema.json"
+				)
+			).rejects.toThrowError(
+				/--custom-metadata and --custom-metadata-schema are mutually exclusive/
+			);
+		});
+
+		it("should skip the interactive prompt when --custom-metadata-schema is provided", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			// No mockConfirm for "Configure custom metadata fields? (optional)" — if
+			// the prompt fires the test will fail with an unexpected-call error.
+			writeFileSync(
+				"schema.json",
+				JSON.stringify([{ field_name: "title", data_type: "text" }])
+			);
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(createFetchResult(MOCK_INSTANCE, true));
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --custom-metadata-schema schema.json"
+			);
+			expect(capturedBody).toMatchObject({
+				custom_metadata: [{ field_name: "title", data_type: "text" }],
+			});
 		});
 	});
 
