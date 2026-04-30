@@ -146,6 +146,7 @@ describe("LocalRuntimeController", () => {
 			expect(
 				getUserWorkerInnerUrlOverrides({
 					dev: {
+						persist: "./persist",
 						origin: {
 							hostname: "localhost:4000",
 							secure: false,
@@ -165,6 +166,7 @@ describe("LocalRuntimeController", () => {
 			expect(
 				getUserWorkerInnerUrlOverrides({
 					dev: {
+						persist: "./persist",
 						origin: {
 							hostname: "www.example.com",
 							secure: false,
