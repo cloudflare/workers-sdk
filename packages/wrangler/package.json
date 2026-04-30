@@ -82,6 +82,7 @@
 		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
 	},
 	"dependencies": {
+"@clack/prompts": "^1.2.0",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",

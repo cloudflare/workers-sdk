@@ -14,7 +14,7 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
-import { printWranglerBanner } from "./wrangler-banner";
+import { printWranglerBanner } from "./banner";
 import type { CommonYargsOptions } from "./yargs-types";
 import type {
 	ComplianceConfig,
