@@ -62,8 +62,6 @@ describe("[Asset Worker] lookupCohort", () => {
 	});
 
 	it("times out after COHORT_LOOKUP_TIMEOUT_MS", async ({ expect }) => {
-		expect(COHORT_LOOKUP_TIMEOUT_MS).toBe(5);
-
 		const result = await lookupCohort(
 			makeEnv({
 				lookupAccountCohort: () =>
@@ -75,7 +73,7 @@ describe("[Asset Worker] lookupCohort", () => {
 									result: "ent",
 									meta: { workersVersion: "test" },
 								}),
-							100
+							COHORT_LOOKUP_TIMEOUT_MS * 2
 						);
 					}),
 			}) as Env,
