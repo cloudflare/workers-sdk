@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.19.4
+
+### Patch Changes
+
+- [#13363](https://github.com/cloudflare/workers-sdk/pull/13363) [`6457fb3`](https://github.com/cloudflare/workers-sdk/commit/6457fb38c7fbce39c396562bc3324b945114c672) Thanks [@courtney-sims](https://github.com/courtney-sims)! - Prepares router-worker for a more gradual rollout by refactoring and separating out the invocation from the business logic. In the future, this will provide space for us to route requests to new versions of router-worker based on their plan, but should make no functional difference today.
+
 ## 0.19.3
 
 ### Patch Changes
