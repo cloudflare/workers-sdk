@@ -105,7 +105,7 @@ describe("pages project list", () => {
 
 		expect(requests.count).toBe(0);
 		expect(std.err).toContain(
-			"`CLOUDFLARE_ACCOUNT_ID` contains invalid characters."
+			"`CLOUDFLARE_ACCOUNT_ID` must only contain letters, numbers, hyphens, and underscores."
 		);
 	});
 

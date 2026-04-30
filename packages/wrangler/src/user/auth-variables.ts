@@ -24,7 +24,7 @@ export function getCloudflareAccountIdFromEnv() {
 
 	if (!isValidAccountId(accountId)) {
 		throw new UserError(
-			"`CLOUDFLARE_ACCOUNT_ID` contains invalid characters. Account IDs may only contain letters, numbers, hyphens, and underscores."
+			"`CLOUDFLARE_ACCOUNT_ID` must only contain letters, numbers, hyphens, and underscores."
 		);
 	}
 

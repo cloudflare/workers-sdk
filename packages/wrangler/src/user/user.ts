@@ -1272,7 +1272,7 @@ export async function getAccountId(
 	if (config.account_id) {
 		if (!isValidAccountId(config.account_id)) {
 			throw new UserError(
-				"`account_id` in your Wrangler config contains invalid characters. Account IDs may only contain letters, numbers, hyphens, and underscores."
+				"`account_id` in your Wrangler configuration must only contain letters, numbers, hyphens, and underscores."
 			);
 		}
 
