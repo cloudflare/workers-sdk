@@ -34,7 +34,8 @@ export function getContainerOptions(options: {
 	return containersConfig.map((container) => {
 		if (container.image === undefined) {
 			throw new UserError(
-				`The container ${container.name} is missing an image. Set "containers.image" to a Dockerfile path or registry image URI.`
+				`The container ${container.name} is missing an image. Set "containers.image" to a Dockerfile path or registry image URI.`,
+				{ telemetryMessage: "vite plugin containers image missing" }
 			);
 		}
 

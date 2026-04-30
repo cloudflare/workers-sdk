@@ -493,7 +493,8 @@ export async function getContainerDevOptions(
 			});
 		} else {
 			throw new UserError(
-				`The container ${container.name} is missing an image. Set "containers.image" to a Dockerfile path or registry image URI.`
+				`The container ${container.name} is missing an image. Set "containers.image" to a Dockerfile path or registry image URI.`,
+				{ telemetryMessage: "containers dev image missing" }
 			);
 		}
 	}

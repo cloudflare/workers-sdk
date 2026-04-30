@@ -426,7 +426,8 @@ export async function apply(
 
 	if (args.imageRef === undefined) {
 		throw new UserError(
-			`The container ${containerConfig.name} is missing an image. Set "containers.image" to a Dockerfile path or registry image URI.`
+			`The container ${containerConfig.name} is missing an image. Set "containers.image" to a Dockerfile path or registry image URI.`,
+			{ telemetryMessage: "containers deploy image missing" }
 		);
 	}
 

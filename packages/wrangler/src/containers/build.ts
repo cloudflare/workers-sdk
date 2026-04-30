@@ -8,7 +8,10 @@ import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { containersScope } from ".";
 import type { ImageRef } from "../cloudchamber/build";
-import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
+import type {
+	ContainerNormalizedConfig,
+	DockerfileConfig,
+} from "@cloudflare/containers-shared";
 
 // --- Command definitions ---
 
@@ -88,10 +91,7 @@ export const containersPushCommand = createCommand({
 // --- Helper functions ---
 
 export async function buildContainer(
-	containerConfig: ContainerNormalizedConfig & {
-		dockerfile: string;
-		image_build_context: string;
-	},
+	containerConfig: Extract<ContainerNormalizedConfig, DockerfileConfig>,
 	/** just the tag component. will be prefixed with the container name */
 	imageTag: string,
 	dryRun: boolean,
