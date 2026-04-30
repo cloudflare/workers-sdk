@@ -1,10 +1,12 @@
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
 import {
 	getUserBindingServiceName,
 	remoteProxyClientWorker,
-	WORKER_BINDING_SERVICE_LOOPBACK,
+	ProxyNodeBinding,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
@@ -41,6 +43,8 @@ export const EmailOptionsSchema = z.object({
 
 export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
+const EMAIL_DISK_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:disk`;
+const EMAIL_DISK_BINDING_NAME = "MINIFLARE_EMAIL_DISK";
 
 function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	return Object.entries(bindings).map(([name, value]) => ({
@@ -68,11 +72,34 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			},
 		}));
 	},
-	getNodeBindings(_options) {
-		return {};
+	getNodeBindings(options) {
+		if (!options.email?.send_email) {
+			return {};
+		}
+
+		return Object.fromEntries(
+			options.email.send_email.map(({ name }) => [name, new ProxyNodeBinding()])
+		);
 	},
 	async getServices(args) {
-		const services: Service[] = [];
+		if (!args.options.email?.send_email) {
+			return [];
+		}
+
+		const emailDirectory = path
+			.join(args.tmpPath, EMAIL_PLUGIN_NAME)
+			.replaceAll("\\", "/");
+		await mkdir(emailDirectory, { recursive: true });
+
+		const services: Service[] = [
+			{
+				name: EMAIL_DISK_SERVICE_NAME,
+				disk: {
+					path: emailDirectory,
+					writable: true,
+				},
+			},
+		];
 
 		for (const { name, remoteProxyConnectionString, ...config } of args.options
 			.email?.send_email ?? []) {
@@ -90,7 +117,14 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 							],
 							bindings: [
 								...buildJsonBindings(config),
-								WORKER_BINDING_SERVICE_LOOPBACK,
+								{
+									name: EMAIL_DISK_BINDING_NAME,
+									service: { name: EMAIL_DISK_SERVICE_NAME },
+								},
+								{
+									name: "email_directory",
+									json: JSON.stringify(emailDirectory),
+								},
 							],
 						},
 			});

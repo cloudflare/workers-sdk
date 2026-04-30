@@ -1,8 +1,6 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { blue } from "kleur/colors";
-import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime from "postal-mime";
-import { CoreBindings } from "../core/constants";
 import { RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
 import type { EmailAddress, MessageBuilder } from "./types";
@@ -66,8 +64,14 @@ function formatMessageBuilder(builder: MessageBuilder): string {
 	return lines.join("\n");
 }
 
+function joinPath(base: string, ...segments: string[]): string {
+	const separator = base.includes("\\") ? "\\" : "/";
+	return [base.replace(/[\\/]+$/, ""), ...segments].join(separator);
+}
+
 interface SendEmailEnv {
-	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	MINIFLARE_EMAIL_DISK: Fetcher;
+	email_directory: string;
 	destination_address: string | undefined;
 	allowed_destination_addresses: string[] | undefined;
 	allowed_sender_addresses: string[] | undefined;
@@ -75,22 +79,13 @@ interface SendEmailEnv {
 
 export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	/**
-	 * Logs a message via the loopback service
+	 * Logs a message via the runtime console.
 	 */
-	private log(message: string, level: LogLevel = LogLevel.INFO): void {
-		this.ctx.waitUntil(
-			this.env[CoreBindings.SERVICE_LOOPBACK].fetch(
-				"http://localhost/core/log",
-				{
-					method: "POST",
-					headers: { [SharedHeaders.LOG_LEVEL]: level.toString() },
-					body: message,
-				}
-			)
-		);
+	private log(message: string): void {
+		console.log(message);
 	}
 	/**
-	 * Stores content to a temporary file via the loopback service
+	 * Stores content to a temporary file via the disk service.
 	 */
 	private async storeTempFile(
 		content: string | ArrayBuffer | ArrayBufferView,
@@ -111,14 +106,14 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			);
 		}
 
-		const resp = await this.env[CoreBindings.SERVICE_LOOPBACK].fetch(
-			`http://localhost/core/store-temp-file?extension=${extension}&prefix=${prefix}`,
-			{
-				method: "POST",
-				body,
-			}
-		);
-		return await resp.text();
+		const fileName = `${crypto.randomUUID()}.${extension}`;
+		const url = new URL(`${prefix}/${fileName}`, "http://placeholder/");
+		await this.env.MINIFLARE_EMAIL_DISK.fetch(url, {
+			method: "PUT",
+			body,
+		});
+
+		return joinPath(this.env.email_directory, prefix, fileName);
 	}
 
 	private checkDestinationAllowed(to: string) {
