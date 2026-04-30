@@ -646,7 +646,8 @@ export async function promptForMissingDeployConfig(
 		// When --latest was used, the compat date prompt was skipped but we still
 		// need a concrete date in the config file for future deploys without --latest
 		const effectiveCompatDate =
-			args.compatibilityDate ?? (args.latest ? getTodaysCompatDate() : undefined);
+			args.compatibilityDate ??
+			(args.latest ? getTodaysCompatDate() : undefined);
 
 		const configContent: Record<string, unknown> = {
 			name: args.name,
