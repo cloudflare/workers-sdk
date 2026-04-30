@@ -1543,13 +1543,14 @@ describe("deploy", () => {
 
 			await runWrangler("deploy ./index.js --dry-run");
 			expect(std.out).toContain("--dry-run: exiting now.");
-			// Config file should be written without an assets key
+			// Config file should be written with main but without an assets key
 			const writtenConfig = JSON.parse(
 				fs.readFileSync("wrangler.jsonc", "utf-8")
 			);
 			expect(writtenConfig).toEqual({
 				name: "test-worker",
 				compatibility_date: "2024-06-15",
+				main: "./index.js",
 			});
 			expect(writtenConfig).not.toHaveProperty("assets");
 			expect(std.out).toContain(
@@ -1582,10 +1583,70 @@ describe("deploy", () => {
 			expect(std.out).toContain("--dry-run: exiting now.");
 			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
 			expect(std.out).toContain(
-				"wrangler deploy --name test-worker --compatibility-date 2024-06-15"
+				"wrangler deploy ./index.js --name test-worker --compatibility-date 2024-06-15"
 			);
 			// Should not include --assets since no assets were used
 			expect(std.out).not.toContain("--assets");
+			expect(std.out).toContain("Proceeding with deployment...");
+		});
+
+		it("should write config with today's compat date when --latest is used and no config file exists", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			// No writeWranglerConfig call — no config file exists
+			mockPrompt({
+				text: "What do you want to name your project?",
+				result: "test-worker",
+			});
+			// No compat date prompt — --latest skips it
+			mockConfirm({
+				text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				result: true,
+			});
+
+			await runWrangler("deploy ./index.js --latest --dry-run");
+			expect(std.out).toContain("--dry-run: exiting now.");
+			// Config file should include today's date even though --latest was used
+			const writtenConfig = JSON.parse(
+				fs.readFileSync("wrangler.jsonc", "utf-8")
+			);
+			expect(writtenConfig).toEqual({
+				name: "test-worker",
+				compatibility_date: "2024-06-15",
+				main: "./index.js",
+			});
+			expect(std.out).not.toContain("No compatibility date is set");
+			expect(std.out).toContain("Proceeding with deployment...");
+		});
+
+		it("should include compat date in suggested CLI command when --latest is used and config write declined", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			// No writeWranglerConfig call — no config file exists
+			mockPrompt({
+				text: "What do you want to name your project?",
+				result: "test-worker",
+			});
+			// No compat date prompt — --latest skips it
+			mockConfirm({
+				text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				result: false,
+			});
+
+			await runWrangler("deploy ./index.js --latest --dry-run");
+			expect(std.out).toContain("--dry-run: exiting now.");
+			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+			// Suggested command should include the resolved compat date
+			expect(std.out).toContain(
+				"wrangler deploy ./index.js --name test-worker --compatibility-date 2024-06-15"
+			);
+			expect(std.out).not.toContain("No compatibility date is set");
 			expect(std.out).toContain("Proceeding with deployment...");
 		});
 

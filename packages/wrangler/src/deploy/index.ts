@@ -643,10 +643,18 @@ export async function promptForMissingDeployConfig(
 
 	// When no config file exists and we prompted for missing config, offer to write one
 	if (!hasConfigFile && promptedForMissing) {
+		// When --latest was used, the compat date prompt was skipped but we still
+		// need a concrete date in the config file for future deploys without --latest
+		const effectiveCompatDate =
+			args.compatibilityDate ?? (args.latest ? getTodaysCompatDate() : undefined);
+
 		const configContent: Record<string, unknown> = {
 			name: args.name,
-			compatibility_date: args.compatibilityDate,
+			compatibility_date: effectiveCompatDate,
 		};
+		if (args.script) {
+			configContent.main = args.script;
+		}
 		if (args.assets) {
 			configContent.assets = { directory: args.assets };
 		}
@@ -674,10 +682,11 @@ export async function promptForMissingDeployConfig(
 				);
 			}
 		} else {
+			const scriptPart = args.script ? `${args.script} ` : "";
 			const flagParts = [
 				args.name ? `--name ${args.name}` : "",
-				args.compatibilityDate
-					? `--compatibility-date ${args.compatibilityDate}`
+				effectiveCompatDate
+					? `--compatibility-date ${effectiveCompatDate}`
 					: "",
 				args.assets ? `--assets ${args.assets}` : "",
 			]
@@ -685,7 +694,7 @@ export async function promptForMissingDeployConfig(
 				.join(" ");
 			logger.log(
 				`You should run ${chalk.bold(
-					`wrangler deploy ${flagParts}`
+					`wrangler deploy ${scriptPart}${flagParts}`
 				)} next time to deploy this Worker without going through this flow again.`
 			);
 		}
