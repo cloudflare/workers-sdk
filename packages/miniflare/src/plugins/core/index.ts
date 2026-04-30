@@ -999,6 +999,8 @@ export interface GlobalServicesOptions {
 	workflowOptions?: Map<string, WorkflowOption>;
 	/** All worker options for building per-worker resource bindings */
 	allWorkerOpts?: PluginWorkerOptions[];
+	/** Service name for the images delivery endpoint, if images binding is configured */
+	imagesServiceName?: string;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -1010,6 +1012,7 @@ export function getGlobalServices({
 	durableObjectClassNames,
 	workflowOptions,
 	allWorkerOpts,
+	imagesServiceName,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1077,6 +1080,12 @@ export function getGlobalServices({
 				name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
 				entrypoint: "StreamBinding",
 			},
+		});
+	}
+	if (imagesServiceName) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_IMAGES_DELIVERY,
+			service: { name: imagesServiceName },
 		});
 	}
 	if (sharedOptions.upstream !== undefined) {
