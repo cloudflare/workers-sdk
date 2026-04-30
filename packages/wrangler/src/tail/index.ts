@@ -11,7 +11,7 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import { printWranglerBanner } from "../wrangler-banner";
+import { printWranglerBanner } from "../banner";
 import { getWorkerForZone } from "../zones";
 import {
 	createTail,

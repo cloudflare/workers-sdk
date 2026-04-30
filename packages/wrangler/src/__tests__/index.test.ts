@@ -1,7 +1,7 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { getPackageManager } from "../package-manager";
-import { updateCheck } from "../update-check";
+import { updateCheck } from "@cloudflare/cli-shared-helpers/update-check";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -381,8 +381,8 @@ describe("wrangler", () => {
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			No bindings found.
 			--dry-run: exiting now."

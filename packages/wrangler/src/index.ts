@@ -463,7 +463,7 @@ import { workflowsInstancesTerminateCommand } from "./workflows/commands/instanc
 import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/instances/terminate-all";
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
-import { printWranglerBanner } from "./wrangler-banner";
+import { printWranglerBanner } from "./banner";
 import type { ReadConfigCommandArgs } from "./config";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";

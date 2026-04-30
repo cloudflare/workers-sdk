@@ -4,7 +4,7 @@ import { configFileName, UserError } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
-import { isNonInteractiveOrCI } from "../../is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../../logger";
 import { isLocal } from "../../utils/is-local";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";

@@ -1,5 +1,6 @@
 import { space, updateStatus } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import chalk from "chalk";
 import {
 	inputPrompt,
 	spinner,
@@ -17,10 +18,10 @@ import {
 import { addAuthorizationHeader, addUserAgent } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { constructStatusMessage } from "../core/CommandRegistry";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { getScopes, printScopes, requireApiToken, requireAuth } from "../user";
-import { printWranglerBanner } from "../wrangler-banner";
+import { printWranglerBanner } from "../banner";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName } from "./locations";
 import type { containersScope } from "../containers";
@@ -433,11 +434,9 @@ export async function promptForEnvironmentVariables(
 		options = [{ label: "Do not modify", value: "skip" }].concat(options);
 	}
 	const action = await inputPrompt({
-		question:
+		message:
 			"You have environment variables defined, what do you want to do for this deployment?",
-		label: "",
-		defaultValue: false,
-		helpText: "",
+		initialValue: undefined,
 		type: "select",
 		options,
 	});
@@ -451,20 +450,13 @@ export async function promptForEnvironmentVariables(
 
 	if (action === "select") {
 		const selectedNames = await inputPrompt<string[]>({
-			question: "Select the environment variables you want to use",
-			label: "",
-			defaultValue: initiallySelected,
-			helpText: "Use the 'space' key to select. Submit with 'enter'",
+			message: `Select the environment variables you want to use ${chalk.dim("(space to select, enter to submit)")}`,
+			initialValues: initiallySelected,
 			type: "multiselect",
 			options: environmentVariables.map((ev) => ({
 				label: ev.name,
 				value: ev.name,
 			})),
-			validate: (values: Arg) => {
-				if (!Array.isArray(values)) {
-					return "unknown error";
-				}
-			},
 		});
 
 		const selectedNamesSet = new Set(selectedNames);
@@ -531,11 +523,9 @@ export async function promptForLabels(
 		options = [{ label: "Do not modify", value: "skip" }].concat(options);
 	}
 	const action = await inputPrompt({
-		question:
+		message:
 			"You have labels defined, what do you want to do for this deployment?",
-		label: "",
-		defaultValue: false,
-		helpText: "",
+		initialValue: undefined,
 		type: "select",
 		options,
 	});
@@ -549,20 +539,13 @@ export async function promptForLabels(
 
 	if (action === "select") {
 		const selectedNames = await inputPrompt<string[]>({
-			question: "Select the labels you want to use",
-			label: "",
-			defaultValue: initiallySelected,
-			helpText: "Use the 'space' key to select. Submit with 'enter'",
+			message: `Select the labels you want to use ${chalk.dim("(space to select, enter to submit)")}`,
+			initialValues: initiallySelected,
 			type: "multiselect",
 			options: labels.map((label) => ({
 				label: label.name,
 				value: label.name,
 			})),
-			validate: (values: Arg) => {
-				if (!Array.isArray(values)) {
-					return "unknown error";
-				}
-			},
 		});
 
 		const selectedNamesSet = new Set(selectedNames);

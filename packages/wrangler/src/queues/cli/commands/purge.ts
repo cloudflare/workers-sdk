@@ -1,7 +1,7 @@
 import { FatalError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../../core/create-command";
 import { prompt } from "../../../dialogs";
-import isInteractive from "../../../is-interactive";
+import isInteractive from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../../../logger";
 import { purgeQueue } from "../../client";
 

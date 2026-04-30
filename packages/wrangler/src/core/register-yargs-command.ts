@@ -22,7 +22,7 @@ import { writeOutput } from "../output";
 import { addBreadcrumb } from "../sentry";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
-import { printWranglerBanner } from "../wrangler-banner";
+import { printWranglerBanner } from "../banner";
 import { CommandHandledError } from "./CommandHandledError";
 import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";

@@ -8,7 +8,7 @@ import chalk from "chalk";
 import dedent from "ts-dedent";
 import { getCacheFolder } from "../../config-cache";
 import { confirm } from "../../dialogs";
-import { isNonInteractiveOrCI } from "../../is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../../logger";
 import {
 	BunPackageManager,

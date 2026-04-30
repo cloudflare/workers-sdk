@@ -16,7 +16,11 @@ import { withSourceURLs } from "../../deployment-bundle/source-url";
 import { logger } from "../../logger";
 import { getMetricsConfig } from "../../metrics";
 import { getSourceMappedString } from "../../sourcemap";
-import { updateCheck } from "../../update-check";
+import { updateCheck } from "@cloudflare/cli-shared-helpers/update-check";
+import {
+	name as wranglerName,
+	version as wranglerVersion,
+} from "../../../package.json";
 import { warnOrError } from "../../utils/print-bindings";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
@@ -126,7 +130,7 @@ export class WranglerLog extends Log {
 				return;
 			}
 			this.#warnedCompatibilityDateFallback = true;
-			return void updateCheck().then((maybeNewVersion) => {
+			return void updateCheck(wranglerName, wranglerVersion).then((maybeNewVersion: string | undefined) => {
 				if (maybeNewVersion === undefined) {
 					return;
 				}

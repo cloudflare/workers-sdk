@@ -5,7 +5,7 @@ import {
 	removeDirSync,
 } from "@cloudflare/workers-utils";
 import * as find from "empathic/find";
-import { isNonInteractiveOrCI } from "./is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "./logger";
 
 let cacheMessageShown = false;

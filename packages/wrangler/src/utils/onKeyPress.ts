@@ -1,6 +1,6 @@
 import readline from "node:readline";
 import { PassThrough } from "node:stream";
-import isInteractive from "../is-interactive";
+import isInteractive from "@cloudflare/cli-shared-helpers/is-interactive";
 import type { Key } from "node:readline";
 
 type OnKeyPressOptions = {

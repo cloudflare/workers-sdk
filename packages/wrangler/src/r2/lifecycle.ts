@@ -1,7 +1,7 @@
 import { readFileSync, UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, multiselect, prompt } from "../dialogs";
-import isInteractive from "../is-interactive";
+import isInteractive from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";

@@ -11,7 +11,7 @@ import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
 import { convertStartDevOptionsToBindings } from "../api/startDevWorker/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
-import isInteractive from "../is-interactive";
+import isInteractive from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
 import { requireApiToken, requireAuth } from "../user";

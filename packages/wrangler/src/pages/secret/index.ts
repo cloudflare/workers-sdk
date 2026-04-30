@@ -10,7 +10,7 @@ import { readPagesConfig } from "../../config";
 import { getConfigCache } from "../../config-cache";
 import { createCommand, createNamespace } from "../../core/create-command";
 import { confirm, prompt } from "../../dialogs";
-import isInteractive from "../../is-interactive";
+import isInteractive from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../../logger";
 import * as metrics from "../../metrics";
 import { parseBulkInputToObject } from "../../secret";

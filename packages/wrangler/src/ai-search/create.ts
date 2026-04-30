@@ -2,7 +2,7 @@ import { UserError } from "@cloudflare/workers-utils";
 import { fetchPagedListResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { confirm, prompt, select } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { createR2Bucket, listR2Buckets } from "../r2/helpers/bucket";
 import { requireAuth } from "../user";

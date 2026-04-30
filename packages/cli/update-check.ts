@@ -1,8 +1,4 @@
 import checkForUpdate from "update-check";
-import {
-	name as wranglerName,
-	version as wranglerVersion,
-} from "../package.json";
 import type { Result } from "update-check";
 
 // Safety-net timeout for the update check network request.
@@ -11,9 +7,12 @@ import type { Result } from "update-check";
 // This caps the total wall-clock time for the entire operation.
 const UPDATE_CHECK_TIMEOUT_MS = 3000;
 
-async function doUpdateCheck(): Promise<string | undefined> {
+async function doUpdateCheck(
+	name: string,
+	version: string
+): Promise<string | undefined> {
 	let update: Result | null = null;
-	const pkg = { name: wranglerName, version: wranglerVersion };
+	const pkg = { name, version };
 	try {
 		// Race with a timeout as a safety net — the library's own 2s socket
 		// timeout handles most cases, but the auth-retry path can take up to 4s.
@@ -21,14 +20,12 @@ async function doUpdateCheck(): Promise<string | undefined> {
 			checkForUpdate(pkg, {
 				distTag: pkg.version.startsWith("0.0.0") ? "beta" : "latest",
 			}),
-			new Promise<null>((resolve) => {
-				const timer = setTimeout(() => resolve(null), UPDATE_CHECK_TIMEOUT_MS);
-				// Don't let the orphaned timer prevent process exit
-				timer.unref();
-			}),
+			new Promise<null>((resolve) =>
+				setTimeout(() => resolve(null), UPDATE_CHECK_TIMEOUT_MS)
+			),
 		]);
-	} catch {
-		// ignore error
+	} catch (err) {
+		// Ignore any errors for failed update checks.
 	}
 	return update?.latest;
 }
@@ -37,6 +34,9 @@ async function doUpdateCheck(): Promise<string | undefined> {
 // without having to prop drill the result. It's unlikely to change through the
 // process lifetime.
 let updateCheckPromise: Promise<string | undefined>;
-export function updateCheck(): Promise<string | undefined> {
-	return (updateCheckPromise ??= doUpdateCheck());
+export function updateCheck(
+	name: string,
+	version: string
+): Promise<string | undefined> {
+	return (updateCheckPromise ??= doUpdateCheck(name, version));
 }

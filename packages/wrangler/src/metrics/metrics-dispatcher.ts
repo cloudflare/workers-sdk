@@ -3,7 +3,7 @@ import { detectAgenticEnvironment } from "am-i-vibing";
 import chalk from "chalk";
 import ci from "ci-info";
 import { fetch } from "undici";
-import isInteractive from "../is-interactive";
+import isInteractive from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
 import {

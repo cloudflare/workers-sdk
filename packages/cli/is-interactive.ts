@@ -1,5 +1,5 @@
-import { isInteractive as __isInteractive } from "@cloudflare/cli-shared-helpers/interactive";
 import ci from "ci-info";
+import { isInteractive as __isInteractive } from "./interactive";
 
 /**
  * Returns whether the process can handle interactive input (e.g. hotkeys).

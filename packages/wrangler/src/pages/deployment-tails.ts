@@ -8,7 +8,7 @@ import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
-import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
+import isInteractive, { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import {

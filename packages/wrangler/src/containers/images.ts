@@ -8,7 +8,7 @@ import {
 	promiseSpinner,
 } from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { getAccountId } from "../user";
 import { containersScope } from ".";

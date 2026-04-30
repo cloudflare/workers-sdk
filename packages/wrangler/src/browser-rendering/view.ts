@@ -1,7 +1,7 @@
 import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { select } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { requireAuth } from "../user";
