@@ -606,7 +606,12 @@ export async function promptForMissingDeployConfig(
 
 	// Prompt for name when missing from both CLI args and config
 	if (!args.name && !config.name) {
-		const defaultName = process.cwd().split(path.sep).pop()?.replace("_", "-");
+		const defaultName = process
+			.cwd()
+			.split(path.sep)
+			.pop()
+			?.replace("_", "-")
+			.trim();
 		const isValidName = defaultName && /^[a-zA-Z0-9-]+$/.test(defaultName);
 		const projectName = await prompt("What do you want to name your project?", {
 			defaultValue: isValidName ? defaultName : "my-project",
