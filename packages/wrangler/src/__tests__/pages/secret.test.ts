@@ -2,6 +2,8 @@ import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../../config-cache";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -12,6 +14,7 @@ import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { PagesProject } from "../../pages/download-config";
+import type { PagesConfigCache } from "../../pages/types";
 import type { Interface } from "node:readline";
 import type { ExpectStatic } from "vitest";
 
@@ -824,6 +827,56 @@ describe("wrangler pages secret", () => {
 				  "warn": "",
 				}
 			`);
+		});
+	});
+
+	describe("account id resolution", () => {
+		beforeEach(() => {
+			setIsTTY(true);
+		});
+
+		it("should prefer CLOUDFLARE_ACCOUNT_ID over cached account id", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-var-account-id");
+
+			saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+				account_id: "stale-cached-account-id",
+				project_name: "some-project-name",
+			});
+
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/pages/projects/:project",
+					({ params }) => {
+						expect(params.accountId).toEqual("env-var-account-id");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									name: "some-project-name",
+									deployment_configs: {
+										production: {
+											wrangler_config_hash: "wch",
+											env_vars: {
+												"the-secret": {
+													type: "secret_text",
+												},
+											},
+										},
+										preview: {},
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages secret list --project some-project-name");
 		});
 	});
 });

@@ -1,5 +1,3 @@
-/* eslint-disable unused-imports/no-unused-vars */
-
 /**
  * Note about this file:
  *
@@ -42,7 +40,7 @@ export class CacheStorage {
 		});
 	}
 
-	async open(cacheName: string): Promise<Cache> {
+	async open(_cacheName: string): Promise<Cache> {
 		return new Cache();
 	}
 
@@ -65,20 +63,20 @@ type CacheResponse = any;
  */
 class Cache {
 	async delete(
-		request: CacheRequest,
-		options?: CacheQueryOptions
+		_request: CacheRequest,
+		_options?: CacheQueryOptions
 	): Promise<boolean> {
 		return false;
 	}
 
 	async match(
-		request: CacheRequest,
-		options?: CacheQueryOptions
+		_request: CacheRequest,
+		_options?: CacheQueryOptions
 	): Promise<CacheResponse | undefined> {
 		return undefined;
 	}
 
-	async put(request: CacheRequest, response: CacheResponse): Promise<void> {}
+	async put(_request: CacheRequest, _response: CacheResponse): Promise<void> {}
 }
 
 type CacheQueryOptions = {

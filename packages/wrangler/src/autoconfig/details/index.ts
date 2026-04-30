@@ -14,7 +14,7 @@ import { confirm, prompt, select } from "../../dialogs";
 import { logger } from "../../logger";
 import { sendMetricsEvent } from "../../metrics";
 import { NpmPackageManager } from "../../package-manager";
-import { getFrameworkClass } from "../frameworks";
+import { getFrameworkClassInstance } from "../frameworks";
 import {
 	allFrameworksInfos,
 	staticFramework,
@@ -158,7 +158,7 @@ export async function getDetailsForAutoConfig({
 	const { detectedFramework, packageManager, isWorkspaceRoot } =
 		await detectFramework(projectPath, wranglerConfig);
 
-	const framework = getFrameworkClass(detectedFramework.framework.id);
+	const framework = getFrameworkClassInstance(detectedFramework.framework.id);
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
@@ -445,7 +445,7 @@ export async function confirmAutoConfigDetails(
 		}
 	);
 
-	updatedAutoConfigDetails.framework = getFrameworkClass(frameworkId);
+	updatedAutoConfigDetails.framework = getFrameworkClassInstance(frameworkId);
 
 	const outputDir = await prompt(
 		"What directory contains your applications' output/asset files?",

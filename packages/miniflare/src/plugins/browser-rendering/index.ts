@@ -54,7 +54,7 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 				service: {
 					name: getUserBindingServiceName(
 						BROWSER_RENDERING_PLUGIN_NAME,
-						options.browserRendering.binding,
+						"service",
 						options.browserRendering.remoteProxyConnectionString
 					),
 				},
@@ -78,7 +78,7 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 			{
 				name: getUserBindingServiceName(
 					BROWSER_RENDERING_PLUGIN_NAME,
-					options.browserRendering.binding,
+					"service",
 					options.browserRendering.remoteProxyConnectionString
 				),
 				worker: options.browserRendering.remoteProxyConnectionString
@@ -107,6 +107,7 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 							durableObjectNamespaces: [
 								{
 									className: "BrowserSession",
+									uniqueKey: "miniflare-BrowserSession",
 								},
 							],
 							durableObjectStorage: { inMemory: kVoid },

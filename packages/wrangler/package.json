@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.85.0",
+	"version": "4.86.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -72,7 +72,7 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20260424.1"
+		"workerd": "1.20260429.1"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -88,7 +88,7 @@
 		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
-		"@netlify/build-info": "^10.2.0",
+		"@netlify/build-info": "^10.5.1",
 		"@sentry/node": "^7.86.0",
 		"@sentry/types": "^7.86.0",
 		"@sentry/utils": "^7.86.0",
@@ -180,7 +180,7 @@
 		"fsevents": "~2.3.2"
 	},
 	"engines": {
-		"node": ">=20.3.0"
+		"node": ">=22.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

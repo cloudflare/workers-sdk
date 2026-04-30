@@ -6,7 +6,12 @@ import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterAll, beforeAll, beforeEach, describe, test, vi } from "vitest";
 import { PluginContext } from "../context";
 import { resolvePluginConfig } from "../plugin-config";
-import { addBindingsShortcut, addExplorerShortcut } from "../plugins/shortcuts";
+import {
+	addBindingsShortcut,
+	addExplorerShortcut,
+	addTunnelShortcut,
+} from "../plugins/shortcuts";
+import * as tunnelPlugin from "../plugins/tunnel";
 import { satisfiesMinimumViteVersion } from "../utils";
 import type * as vite from "vite";
 
@@ -123,6 +128,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
 			restartingDevServerCount: 0,
+			tunnelHostnames: new Set(),
 		});
 		mockContext.setResolvedPluginConfig(
 			resolvePluginConfig(
@@ -152,6 +158,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
 			restartingDevServerCount: 0,
+			tunnelHostnames: new Set(),
 		});
 
 		mockContext.setResolvedPluginConfig(
@@ -200,6 +207,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
 			restartingDevServerCount: 0,
+			tunnelHostnames: new Set(),
 		});
 
 		mockContext.setResolvedPluginConfig(
@@ -273,5 +281,31 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		expect(mockOpen).toHaveBeenCalledWith(
 			expect.stringMatching(/^http:\/\/localhost:\d+\/cdn-cgi\/explorer$/)
 		);
+	});
+
+	test("registers tunnel shortcut and extends expiry", async ({ expect }) => {
+		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
+		const extendExpirySpy = vi
+			.spyOn(tunnelPlugin, "extendTunnelExpiry")
+			.mockImplementation(() => {});
+
+		addTunnelShortcut(mockServer);
+
+		expect(mockBindCLIShortcuts).toHaveBeenCalledWith({
+			customShortcuts: [
+				{
+					key: "t",
+					description: "extend tunnel by 1 hour",
+					action: expect.any(Function),
+				},
+			],
+		});
+
+		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
+		const tunnelShortcut = customShortcuts?.find((s) => s.key === "t");
+
+		await tunnelShortcut?.action?.(mockServer);
+
+		expect(extendExpirySpy).toHaveBeenCalledTimes(1);
 	});
 });

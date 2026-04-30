@@ -24,7 +24,7 @@ export interface TunnelResult {
 
 export interface Tunnel {
 	ready: () => Promise<TunnelResult>;
-	dispose: () => Promise<void>;
+	dispose: () => void;
 	extendExpiry: (ms?: number) => void;
 }
 
@@ -50,6 +50,7 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 	let reminderInterval: ReturnType<typeof setInterval> | undefined;
 	let expiryTimeout: ReturnType<typeof setTimeout> | undefined;
 	let expiresAt = 0;
+	let cloudflaredProcess: ChildProcess | undefined;
 
 	const logger = options.logger;
 	const timeoutMs = options.timeoutMs ?? TUNNEL_STARTUP_TIMEOUT_MS;
@@ -71,6 +72,8 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 		skipVersionCheck: true,
 		logger,
 	}).then((process) => {
+		cloudflaredProcess = process;
+
 		if (disposed) {
 			terminateCloudflared(process);
 		}
@@ -94,12 +97,12 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 			return result;
 		});
 
-	async function disposeTunnel() {
+	function disposeTunnel() {
 		disposed = true;
 		clearTunnelTimers();
-		const process = await cloudflaredPromise.catch(() => undefined);
-		if (process) {
-			terminateCloudflared(process);
+
+		if (cloudflaredProcess) {
+			terminateCloudflared(cloudflaredProcess);
 		}
 	}
 
@@ -151,7 +154,7 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 				}
 
 				logger?.log("Tunnel expired. Closing tunnel.");
-				void disposeTunnel();
+				disposeTunnel();
 			},
 			Math.max(0, expiresAt - Date.now())
 		);
@@ -213,6 +216,7 @@ function terminateCloudflared(cloudflared: ChildProcess) {
 		return;
 	}
 
+	cloudflared.unref();
 	cloudflared.kill("SIGTERM");
 
 	const forceKillTimer = setTimeout(() => {

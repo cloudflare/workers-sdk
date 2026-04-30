@@ -83,7 +83,7 @@ describe("Workflows", () => {
 			await waitForText("Trigger this workflow?");
 		});
 
-		test("triggers a new instance with params", async () => {
+		test("triggers a new instance and navigates to its detail page", async () => {
 			await navigateToWorkflow(WORKFLOW_NAME);
 
 			await clickButton("Trigger");
@@ -95,10 +95,9 @@ describe("Workflows", () => {
 
 			await dialog.getByRole("button", { name: "Trigger Instance" }).click();
 
-			await page.waitForSelector('[role="dialog"]', {
-				state: "hidden",
-				timeout: 10_000,
-			});
+			// Should navigate to the instance detail page
+			await waitForText("Steps Completed", { timeout: 10_000 });
+			await waitForText("Input params", { timeout: 10_000 });
 		});
 
 		test("cancels the trigger dialog", async () => {

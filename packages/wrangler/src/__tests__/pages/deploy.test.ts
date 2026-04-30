@@ -9,8 +9,12 @@ import dedent from "ts-dedent";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { version } from "../../../package.json";
+import { saveToConfigCache } from "../../config-cache";
 import { logger } from "../../logger";
-import { ROUTES_SPEC_VERSION } from "../../pages/constants";
+import {
+	PAGES_CONFIG_CACHE_FILENAME,
+	ROUTES_SPEC_VERSION,
+} from "../../pages/constants";
 import { ApiErrorCodes } from "../../pages/errors";
 import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
 import { endEventLoop } from "../helpers/end-event-loop";
@@ -28,7 +32,11 @@ import {
 	formDataToObject,
 	toString,
 } from "../helpers/serialize-form-data-entry";
-import type { Project, UploadPayloadFile } from "../../pages/types";
+import type {
+	PagesConfigCache,
+	Project,
+	UploadPayloadFile,
+} from "../../pages/types";
 import type { StrictRequest } from "msw";
 import type { FormDataEntryValue } from "undici";
 
@@ -6274,6 +6282,46 @@ and that at least one include rule is provided.
 
 			expect(std.out).toContain("Success! Uploaded 6 files");
 			expect(std.out).toContain("Deployment complete!");
+		});
+	});
+
+	describe("account id resolution", () => {
+		it("should prefer the CLOUDFLARE_ACCOUNT_ID environment variable over a stale cached account id in pages.json", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-var-account-id");
+
+			// Seed the Pages config cache with a stale account id, simulating
+			// a previous deploy against a different account.
+			saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+				account_id: "stale-cached-account-id",
+				project_name: "foo",
+			});
+
+			writeFileSync("logo.png", "foobar");
+
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					({ params }) => {
+						expect(params.accountId).toEqual("env-var-account-id");
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 10000, message: "Authentication error" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 401 }
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(
+				runWrangler("pages deploy . --project-name=foo")
+			).rejects.toThrow();
 		});
 	});
 });

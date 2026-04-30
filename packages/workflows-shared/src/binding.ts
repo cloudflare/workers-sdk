@@ -21,6 +21,17 @@ type Env = {
 	BINDING_NAME: string;
 };
 
+// TODO(vaish): import from @cloudflare/workers-types once restart options are published
+export interface RestartFromStep {
+	name: string;
+	count?: number;
+	type?: "do" | "sleep" | "waitForEvent";
+}
+
+export interface WorkflowInstanceRestartOptions {
+	from?: RestartFromStep;
+}
+
 // this.env.WORKFLOW is WorkflowBinding
 export class WorkflowBinding extends WorkerEntrypoint<Env> {
 	constructor(ctx: ExecutionContext, env: Env) {
@@ -208,9 +219,11 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 		}
 	}
 
-	public async restart(): Promise<void> {
+	public async restart(
+		options?: WorkflowInstanceRestartOptions
+	): Promise<void> {
 		try {
-			await this.stub.changeInstanceStatus("restart");
+			await this.stub.changeInstanceStatus("restart", options?.from);
 		} catch (e) {
 			// restart causes instance abortion
 			if (!isUserTriggeredRestart(e)) {

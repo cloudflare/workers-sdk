@@ -48,15 +48,56 @@ export type AllowList = Record<string, AllowedArgs>;
  * - ALLOW: all values for that arg are allowed
  */
 export const COMMAND_ARG_ALLOW_LIST: AllowList = {
-	// * applies to all commands
+	// * applies to all commands.
+	// Boolean flags are inherently safe (values are only true/false).
 	"*": {
 		format: ALLOW,
 		logLevel: ALLOW,
+		json: ALLOW,
+		force: ALLOW,
+		remote: ALLOW,
+		local: ALLOW,
+		dryRun: ALLOW,
+		preview: ALLOW,
+		yes: ALLOW,
+		skipConfirmation: ALLOW,
+		noBundle: ALLOW,
+		bundle: ALLOW,
+		minify: ALLOW,
+		latest: ALLOW,
+		uploadSourceMaps: ALLOW,
+		legacyEnv: ALLOW,
+		liveReload: ALLOW,
+		keepVars: ALLOW,
+		logpush: ALLOW,
+		strict: ALLOW,
+		testScheduled: ALLOW,
+		showInteractiveDevSession: ALLOW,
+		skipCaching: ALLOW,
+		commitDirty: ALLOW,
+		includeRuntime: ALLOW,
+		includeEnv: ALLOW,
+		strictVars: ALLOW,
+		check: ALLOW,
+		useRemote: ALLOW,
+		updateConfig: ALLOW,
+		nodeCompat: ALLOW,
+		enableContainers: ALLOW,
+		xAutoconfig: ALLOW,
+		ignoreDefaults: ALLOW,
 	},
 	tail: { status: ALLOW },
 	types: {
 		xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
 		path: ["worker-configuration.d.ts"],
+	},
+	// Fixed-choice args scoped to their commands.
+	dev: {
+		localProtocol: ["http", "https"],
+		upstreamProtocol: ["http", "https"],
+	},
+	deploy: {
+		containersRollout: ["immediate", "gradual"],
 	},
 };
 

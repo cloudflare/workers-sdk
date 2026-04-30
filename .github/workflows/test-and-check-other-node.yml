@@ -24,7 +24,6 @@ jobs:
         # These versions are skipped on normal PRs but run on Version Packages PRs
         # (changeset-release/main) or when the 'test all node versions' label is added.
         include:
-          - { node_version: 20, description: "Node 20" }
           - { node_version: 24, description: "Node 24", expected_to_fail: true }
           - { node_version: 25, description: "Node 25", expected_to_fail: true }
 

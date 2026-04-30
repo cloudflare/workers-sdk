@@ -242,8 +242,9 @@ function handleNodeJSGlobals(
 				module
 			);
 		}
-		// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
-		injectsByModule.get(module)!.push({ injectedName, exportName, importName });
+		const moduleInjects = injectsByModule.get(module);
+		assert(moduleInjects);
+		moduleInjects.push({ injectedName, exportName, importName });
 	}
 
 	build.initialOptions.inject = [

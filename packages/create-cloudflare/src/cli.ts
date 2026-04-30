@@ -52,7 +52,7 @@ export const main = async (argv: string[]) => {
 		}
 
 		if (result.errorMessage) {
-			// eslint-disable-next-line no-console
+			// eslint-disable-next-line no-console -- display raw error message before exit
 			console.error(`\n${result.errorMessage}`);
 		}
 

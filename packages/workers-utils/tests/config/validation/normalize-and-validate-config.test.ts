@@ -1,6 +1,6 @@
 import path from "node:path";
 import TOML from "smol-toml";
-import { describe, it, test, vi } from "vitest";
+import { assert, describe, it, test, vi } from "vitest";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
 import type {
@@ -1067,8 +1067,8 @@ describe("normalizeAndValidateConfig()", () => {
 				{ env: undefined }
 			);
 
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			expect({ ...config, tsconfig: normalizePath(config.tsconfig!) }).toEqual(
+			assert(config.tsconfig);
+			expect({ ...config, tsconfig: normalizePath(config.tsconfig) }).toEqual(
 				expect.objectContaining({
 					...expectedConfig,
 					main: resolvedMain,
@@ -7404,8 +7404,8 @@ describe("normalizeAndValidateConfig()", () => {
 						{ env: "ENV1" }
 					);
 
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					expect(config).toEqual(expect.objectContaining(rawConfig.env!.ENV1));
+					assert(rawConfig.env);
+					expect(config).toEqual(expect.objectContaining(rawConfig.env.ENV1));
 					expect(diagnostics.hasWarnings()).toBe(false);
 					expect(diagnostics.hasErrors()).toBe(false);
 				});
@@ -7432,8 +7432,8 @@ describe("normalizeAndValidateConfig()", () => {
 						{ env: "ENV1" }
 					);
 
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					expect(config).toEqual(expect.objectContaining(rawConfig.env!.ENV1));
+					assert(rawConfig.env);
+					expect(config).toEqual(expect.objectContaining(rawConfig.env.ENV1));
 					expect(diagnostics.hasWarnings()).toBe(false);
 					expect(diagnostics.hasErrors()).toBe(true);
 
@@ -7470,8 +7470,8 @@ describe("normalizeAndValidateConfig()", () => {
 						{ env: "ENV1" }
 					);
 
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					expect(config).toEqual(expect.objectContaining(rawConfig.env!.ENV1));
+					assert(rawConfig.env);
+					expect(config).toEqual(expect.objectContaining(rawConfig.env.ENV1));
 					expect(diagnostics.hasWarnings()).toBe(true);
 					expect(diagnostics.hasErrors()).toBe(false);
 
@@ -7522,8 +7522,8 @@ describe("normalizeAndValidateConfig()", () => {
 						{ env: "ENV1" }
 					);
 
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					expect(config).toEqual(expect.objectContaining(rawConfig.env!.ENV1));
+					assert(rawConfig.env);
+					expect(config).toEqual(expect.objectContaining(rawConfig.env.ENV1));
 					expect(diagnostics.hasWarnings()).toBe(false);
 					expect(diagnostics.hasErrors()).toBe(true);
 
