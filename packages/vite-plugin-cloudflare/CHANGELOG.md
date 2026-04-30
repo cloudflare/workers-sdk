@@ -1,5 +1,21 @@
 # @cloudflare/vite-plugin
 
+## 1.35.0
+
+### Minor Changes
+
+- [#13618](https://github.com/cloudflare/workers-sdk/pull/13618) [`c07d0cb`](https://github.com/cloudflare/workers-sdk/commit/c07d0cb4fafbcf3a60c46e1aa6a48ed63de598da) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support V2 protocol for module fallback service
+
+  When the `new_module_registry` compatibility flag is set, requests sent to `unsafeModuleFallbackService()` use a different protocol. The Vite plugin now supports both protocols in its handling of additional module types.
+
+### Patch Changes
+
+- [#13363](https://github.com/cloudflare/workers-sdk/pull/13363) [`6457fb3`](https://github.com/cloudflare/workers-sdk/commit/6457fb38c7fbce39c396562bc3324b945114c672) Thanks [@courtney-sims](https://github.com/courtney-sims)! - Prepares router-worker for a more gradual rollout by refactoring and separating out the invocation from the business logic. In the future, this will provide space for us to route requests to new versions of router-worker based on their plan, but should make no functional difference today.
+
+- Updated dependencies [[`22e1a61`](https://github.com/cloudflare/workers-sdk/commit/22e1a6176da1ff0e91e3d27b41c3770b323b56a7), [`00523c8`](https://github.com/cloudflare/workers-sdk/commit/00523c89b91aa7addd0ccbf3864dbce2a218c6d4), [`b5ac54b`](https://github.com/cloudflare/workers-sdk/commit/b5ac54baa4a6e40b7352f7d3ed0d3531a37a5e8f), [`e1eff94`](https://github.com/cloudflare/workers-sdk/commit/e1eff943ec4c073c3d1ba2c1910806d68f98e5a3), [`1c4d850`](https://github.com/cloudflare/workers-sdk/commit/1c4d850b22f03d087112b61e1f6969e81398cd6e), [`6d28037`](https://github.com/cloudflare/workers-sdk/commit/6d28037f6face1ee1d025d57e0d0b2f175ae2eb3), [`9a1f014`](https://github.com/cloudflare/workers-sdk/commit/9a1f014991a5fc044f601a0ab0b7dae5dabf6621), [`e539008`](https://github.com/cloudflare/workers-sdk/commit/e5390082ff85f3d39c702895d72c7172776506c0), [`0bf64a7`](https://github.com/cloudflare/workers-sdk/commit/0bf64a79678fb08158e341ed1e0cc21341a770a7), [`b04eedf`](https://github.com/cloudflare/workers-sdk/commit/b04eedfcdc713d04cbb4f1722ebe056c9dc4cb6e), [`6457fb3`](https://github.com/cloudflare/workers-sdk/commit/6457fb38c7fbce39c396562bc3324b945114c672), [`c07d0cb`](https://github.com/cloudflare/workers-sdk/commit/c07d0cb4fafbcf3a60c46e1aa6a48ed63de598da), [`e539008`](https://github.com/cloudflare/workers-sdk/commit/e5390082ff85f3d39c702895d72c7172776506c0)]:
+  - miniflare@4.20260430.0
+  - wrangler@4.87.0
+
 ## 1.34.0
 
 ### Minor Changes
