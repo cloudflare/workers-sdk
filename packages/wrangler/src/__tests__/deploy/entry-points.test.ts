@@ -897,6 +897,10 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
 					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: true,
 				});
@@ -929,10 +933,10 @@ addEventListener('fetch', event => {});`
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
+					
 
-
-					No compatibility date found Defaulting to today: 2024-01-01
-
+					To avoid this prompt, add \`compatibility_date\` to your Wrangler configuration file or pass \`--compatibility-date 2024-01-01\` via CLI.
+					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.
 					Wrote
 					{
 					  "name": "test-name",
@@ -978,6 +982,10 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
 					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: true,
 				});
@@ -1010,10 +1018,10 @@ addEventListener('fetch', event => {});`
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
+					
 
-
-					No compatibility date found Defaulting to today: 2024-01-01
-
+					To avoid this prompt, add \`compatibility_date\` to your Wrangler configuration file or pass \`--compatibility-date 2024-01-01\` via CLI.
+					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.
 					Wrote
 					{
 					  "name": "test-name",
@@ -1049,6 +1057,10 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
 					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: true,
 				});
@@ -1081,9 +1093,8 @@ addEventListener('fetch', event => {});`
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
-
-					No compatibility date found Defaulting to today: 2024-01-01
-
+					To avoid this prompt, add \`compatibility_date\` to your Wrangler configuration file or pass \`--compatibility-date 2024-01-01\` via CLI.
+					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.
 					Wrote
 					{
 					  "name": "test-name",
@@ -1126,6 +1137,10 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
 					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: true,
 				});
@@ -1158,9 +1173,8 @@ addEventListener('fetch', event => {});`
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
-
-					No compatibility date found Defaulting to today: 2024-01-01
-
+					To avoid this prompt, add \`compatibility_date\` to your Wrangler configuration file or pass \`--compatibility-date 2024-01-01\` via CLI.
+					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.
 					Wrote
 					{
 					  "name": "test-name",
@@ -1208,6 +1222,10 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
 					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: true,
 				});
@@ -1240,10 +1258,10 @@ addEventListener('fetch', event => {});`
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
+					
 
-
-					No compatibility date found Defaulting to today: 2024-01-01
-
+					To avoid this prompt, add \`compatibility_date\` to your Wrangler configuration file or pass \`--compatibility-date 2024-01-01\` via CLI.
+					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.
 					Wrote
 					{
 					  "name": "test-name",
@@ -1280,6 +1298,10 @@ addEventListener('fetch', event => {});`
 					// not [blah] because it is an invalid worker name
 					options: { defaultValue: "my-project" },
 					result: "test-name",
+				});
+				mockConfirm({
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
 				});
 				mockConfirm({
 					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
@@ -1339,6 +1361,10 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
 					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: false,
 				});
@@ -1362,9 +1388,8 @@ addEventListener('fetch', event => {});`
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
-
-					No compatibility date found Defaulting to today: 2024-01-01
-
+					To avoid this prompt, add \`compatibility_date\` to your Wrangler configuration file or pass \`--compatibility-date 2024-01-01\` via CLI.
+					See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.
 					You should run wrangler deploy --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.
 
 					Proceeding with deployment...

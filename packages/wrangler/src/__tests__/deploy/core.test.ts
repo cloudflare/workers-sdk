@@ -17,7 +17,7 @@ import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import {
 	mockExchangeRefreshTokenForAccessToken,
@@ -1480,6 +1480,158 @@ describe("deploy", () => {
 			await expect(
 				runWrangler("deploy ./index.js --name test-name")
 			).rejects.toThrow("A compatibility_date is required when publishing");
+		});
+
+		it("should not show config-write prompt when config file already exists", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			writeWranglerConfig(
+				{ compatibility_date: undefined as unknown as string },
+				"./wrangler.toml"
+			);
+			mockConfirm({
+				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+				result: true,
+			});
+
+			await runWrangler("deploy ./index.js --name test-name --dry-run");
+			expect(std.out).toContain("--dry-run: exiting now.");
+			// Should NOT be asked to write a config file since one already exists
+			expect(std.out).not.toContain(
+				"Do you want Wrangler to write a wrangler.json config file"
+			);
+			expect(std.out).not.toContain("Proceeding with deployment...");
+		});
+
+		it("should skip the compat date prompt when --latest is passed", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+			writeWorkerSource();
+			writeWranglerConfig(
+				{ compatibility_date: undefined as unknown as string },
+				"./wrangler.toml"
+			);
+
+			await runWrangler(
+				"deploy ./index.js --name test-name --latest --dry-run"
+			);
+			expect(std.out).toContain("--dry-run: exiting now.");
+			// No compat date prompt should have been shown
+			expect(std.out).not.toContain("No compatibility date is set");
+		});
+
+		it("should prompt for name, compat date, and offer to write config when no config file exists", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			// No writeWranglerConfig call — no config file exists
+			mockPrompt({
+				text: "What do you want to name your project?",
+				result: "test-worker",
+			});
+			mockConfirm({
+				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+				result: true,
+			});
+			mockConfirm({
+				text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				result: true,
+			});
+
+			await runWrangler("deploy ./index.js --dry-run");
+			expect(std.out).toContain("--dry-run: exiting now.");
+			// Config file should be written without an assets key
+			const writtenConfig = JSON.parse(
+				fs.readFileSync("wrangler.jsonc", "utf-8")
+			);
+			expect(writtenConfig).toEqual({
+				name: "test-worker",
+				compatibility_date: "2024-06-15",
+			});
+			expect(writtenConfig).not.toHaveProperty("assets");
+			expect(std.out).toContain(
+				"Next time you run `wrangler deploy` Wrangler will automatically use the configuration saved to wrangler.jsonc."
+			);
+			expect(std.out).toContain("Proceeding with deployment...");
+		});
+
+		it("should show suggested CLI flags when user declines config file write", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			// No writeWranglerConfig call — no config file exists
+			mockPrompt({
+				text: "What do you want to name your project?",
+				result: "test-worker",
+			});
+			mockConfirm({
+				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+				result: true,
+			});
+			mockConfirm({
+				text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				result: false,
+			});
+
+			await runWrangler("deploy ./index.js --dry-run");
+			expect(std.out).toContain("--dry-run: exiting now.");
+			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+			expect(std.out).toContain(
+				"wrangler deploy --name test-worker --compatibility-date 2024-06-15"
+			);
+			// Should not include --assets since no assets were used
+			expect(std.out).not.toContain("--assets");
+			expect(std.out).toContain("Proceeding with deployment...");
+		});
+
+		it("should prompt for name when config file exists but has no name", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			writeWranglerConfig({ name: undefined as unknown as string });
+			mockPrompt({
+				text: "What do you want to name your project?",
+				result: "prompted-name",
+			});
+
+			await runWrangler("deploy ./index.js --dry-run");
+			expect(std.out).toContain("--dry-run: exiting now.");
+			// Should NOT be asked to write a config file since one already exists
+			expect(std.out).not.toContain(
+				"Do you want Wrangler to write a wrangler.json config file"
+			);
+			expect(std.out).not.toContain("Proceeding with deployment...");
+		});
+
+		it("should not prompt for name when config file provides one", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			writeWranglerConfig({
+				name: "config-provided-name",
+				compatibility_date: undefined as unknown as string,
+			});
+			mockConfirm({
+				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+				result: true,
+			});
+
+			await runWrangler("deploy ./index.js --dry-run");
+			expect(std.out).toContain("--dry-run: exiting now.");
+			// Should NOT have been asked for a name
+			expect(std.out).not.toContain("What do you want to name your project?");
 		});
 	});
 });
