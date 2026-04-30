@@ -935,6 +935,7 @@ addEventListener('fetch', event => {});`
 
 					
 
+					
 					Wrote
 					{
 					  "name": "test-name",
@@ -1018,6 +1019,7 @@ addEventListener('fetch', event => {});`
 
 					
 
+					
 					Wrote
 					{
 					  "name": "test-name",
@@ -1089,6 +1091,7 @@ addEventListener('fetch', event => {});`
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
+					
 					Wrote
 					{
 					  "name": "test-name",
@@ -1167,6 +1170,7 @@ addEventListener('fetch', event => {});`
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
+					
 					Wrote
 					{
 					  "name": "test-name",
@@ -1252,6 +1256,7 @@ addEventListener('fetch', event => {});`
 
 					
 
+					
 					Wrote
 					{
 					  "name": "test-name",
@@ -1378,6 +1383,7 @@ addEventListener('fetch', event => {});`
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
+					
 					You should run wrangler deploy --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.
 
 					Proceeding with deployment...
