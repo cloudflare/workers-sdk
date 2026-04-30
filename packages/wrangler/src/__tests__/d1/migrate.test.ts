@@ -1,6 +1,7 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { describe, it, vi } from "vitest";
+import { logger } from "../../logger";
 import { reinitialiseAuthTokens } from "../../user";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -56,6 +57,7 @@ describe("migrate", () => {
 	describe("apply", () => {
 		mockAccountId({ accountId: null });
 		mockApiToken();
+
 		it("should not attempt to login in local mode", async ({ expect }) => {
 			setIsTTY(false);
 			writeWranglerConfig({
@@ -157,7 +159,7 @@ Your database may not be available to serve requests during the migration, conti
 			expect,
 		}) => {
 			setIsTTY(false);
-			const std = mockConsoleMethods();
+
 			msw.use(
 				http.post(
 					"*/accounts/:accountId/d1/database/:databaseId/query",
@@ -226,7 +228,80 @@ Your database may not be available to serve requests during the migration, conti
 				result: true,
 			});
 			await runWrangler("d1 migrations apply db --remote");
-			expect(std.out).toBe("");
+			expect(mockStd.out).toBe("");
+		});
+
+		it("should not prompt when --force is passed", async ({ expect }) => {
+			vi.stubEnv("WRANGLER_LOG", "debug");
+			logger.loggerLevel = "debug";
+			setIsTTY(false);
+
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/d1/database/:databaseId/query",
+					async () => {
+						return HttpResponse.json(
+							{
+								result: [
+									{
+										results: [],
+										success: true,
+										meta: {},
+									},
+								],
+								success: true,
+								errors: [],
+								messages: [],
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database/:databaseId", async () => {
+					return HttpResponse.json(
+						{
+							result: {
+								file_size: 123,
+								name: "testdb",
+								num_tables: 0,
+								uuid: "uuid",
+								version: "production",
+							},
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				})
+			);
+
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "migrations",
+					},
+				],
+			});
+
+			// Ensure account selection works in non-interactive mode
+			mockGetMemberships([
+				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+			]);
+
+			await runWrangler("d1 migrations create db test");
+
+			await runWrangler("d1 migrations apply db --remote --force");
+
+			expect(mockStd.out).toContain(
+				"--force passed, applying 1 migration(s) without prompt."
+			);
 		});
 	});
 
