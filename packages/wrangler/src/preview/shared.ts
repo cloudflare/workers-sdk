@@ -341,6 +341,10 @@ export function assemblePreviewDefaults(config: Config): PreviewDefaults {
 		previewDefaults.limits = previews?.limits ?? config.limits;
 	}
 
+	if (previews?.cache || config.cache) {
+		previewDefaults.cache = previews?.cache ?? config.cache;
+	}
+
 	if (config.placement) {
 		previewDefaults.placement = parseConfigPlacement(config);
 	}

@@ -103,6 +103,10 @@ type MergedVersionLevel = {
 		value: { mode: string };
 		fromConfig: boolean;
 	};
+	cache?: {
+		value: Config["cache"];
+		fromConfig: boolean;
+	};
 	assets?: {
 		value: {
 			directory?: string;
@@ -381,6 +385,11 @@ async function assemblePreviewDeploymentSettings(
 	} else if (config.limits !== undefined) {
 		request.limits = config.limits;
 	}
+	if (previews?.cache !== undefined) {
+		request.cache = previews.cache;
+	} else if (config.cache !== undefined) {
+		request.cache = config.cache;
+	}
 	if (config.placement) {
 		request.placement = parseConfigPlacement(config);
 	}
@@ -475,6 +484,14 @@ function buildMergedVersionLevel(
 		result.placement = {
 			value: { mode: deployment.placement.mode },
 			fromConfig: !!config.placement?.mode,
+		};
+	}
+	if (deployment.cache !== undefined) {
+		result.cache = {
+			value: deployment.cache,
+			fromConfig: !!(
+				previews?.cache !== undefined || config.cache !== undefined
+			),
 		};
 	}
 	if (config.assets) {
@@ -667,6 +684,13 @@ function formatDeploymentResource(
 			"placement",
 			versionLevel.placement.value.mode,
 			versionLevel.placement.fromConfig,
+		]);
+	}
+	if (versionLevel.cache) {
+		settingsRows.push([
+			"cache",
+			versionLevel.cache.value?.enabled ? "enabled" : "disabled",
+			versionLevel.cache.fromConfig,
 		]);
 	}
 	if (settingsRows.length > 0) {
