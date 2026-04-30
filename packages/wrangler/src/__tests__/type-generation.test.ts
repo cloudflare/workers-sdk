@@ -3554,6 +3554,16 @@ describe("generate types - API", () => {
 	runInTempDir();
 
 	beforeEach(() => {
+		for (const configPath of [
+			"./wrangler.jsonc",
+			"./wrangler.json",
+			"./wrangler.toml",
+		]) {
+			if (fs.existsSync(configPath)) {
+				fs.unlinkSync(configPath);
+			}
+		}
+
 		vi.spyOn(generateRuntime, "generateRuntimeTypes").mockImplementation(
 			async () => ({
 				runtimeHeader: "// Runtime types generated with workerd@",
@@ -3726,16 +3736,6 @@ describe("generate types - API", () => {
 	});
 
 	it("validates API options", async ({ expect }) => {
-		for (const configPath of [
-			"./wrangler.jsonc",
-			"./wrangler.json",
-			"./wrangler.toml",
-		]) {
-			if (fs.existsSync(configPath)) {
-				fs.unlinkSync(configPath);
-			}
-		}
-
 		await expect(experimental_generateTypes({})).rejects.toThrow(
 			"No config file detected. This command requires a Wrangler configuration file."
 		);
