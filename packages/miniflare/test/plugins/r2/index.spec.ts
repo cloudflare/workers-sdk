@@ -1609,6 +1609,222 @@ test("list: is multipart aware", async ({ expect }) => {
 	expect(object?.httpMetadata).toEqual({ contentType: "text/plain" });
 });
 
+test("listParts", async ({ expect }) => {
+	const { r2, ns } = ctx;
+	const PART_SIZE = 5 * 1024 * 1024; // 5MB
+
+	// Test listing parts for in-progress upload
+	const upload = await r2.createMultipartUpload("key");
+
+	// Initially no parts
+	let result = await (upload as any).listParts();
+	expect(result.parts).toEqual([]);
+	expect(result.truncated).toBe(false);
+
+	// Upload some parts
+	const part1 = await upload.uploadPart(1, "a".repeat(PART_SIZE));
+	const part2 = await upload.uploadPart(2, "b".repeat(PART_SIZE));
+	const part3 = await upload.uploadPart(3, "c".repeat(10));
+
+	// List all parts
+	result = await (upload as any).listParts();
+	expect(result.parts).toHaveLength(3);
+	expect(result.parts[0].partNumber).toBe(1);
+	expect(result.parts[0].etag).toBe(part1.etag);
+	expect(result.parts[0].size).toBe(PART_SIZE);
+	expect(result.parts[1].partNumber).toBe(2);
+	expect(result.parts[1].etag).toBe(part2.etag);
+	expect(result.parts[1].size).toBe(PART_SIZE);
+	expect(result.parts[2].partNumber).toBe(3);
+	expect(result.parts[2].etag).toBe(part3.etag);
+	expect(result.parts[2].size).toBe(10);
+	expect(result.truncated).toBe(false);
+
+	// Test pagination with maxParts
+	result = await (upload as any).listParts({ maxParts: 2 });
+	expect(result.parts).toHaveLength(2);
+	expect(result.parts[0].partNumber).toBe(1);
+	expect(result.parts[1].partNumber).toBe(2);
+	expect(result.truncated).toBe(true);
+	expect(result.partNumberMarker).toBe(2);
+
+	// Test pagination with partNumberMarker
+	result = await (upload as any).listParts({ partNumberMarker: 1 });
+	expect(result.parts).toHaveLength(2);
+	expect(result.parts[0].partNumber).toBe(2);
+	expect(result.parts[1].partNumber).toBe(3);
+	expect(result.truncated).toBe(false);
+
+	// Test pagination with both
+	result = await (upload as any).listParts({
+		partNumberMarker: 1,
+		maxParts: 1,
+	});
+	expect(result.parts).toHaveLength(1);
+	expect(result.parts[0].partNumber).toBe(2);
+	expect(result.truncated).toBe(true);
+	expect(result.partNumberMarker).toBe(2);
+
+	// Test overriding a part
+	const part1b = await upload.uploadPart(1, "d".repeat(PART_SIZE));
+	result = await (upload as any).listParts();
+	expect(result.parts).toHaveLength(3);
+	expect(result.parts[0].etag).toBe(part1b.etag); // Should show new etag
+	expect(result.parts[0].etag).not.toBe(part1.etag); // Different from old etag
+
+	// Test that completed upload can't list parts
+	await upload.complete([part1b, part2, part3]);
+	await expect((upload as any).listParts()).rejects.toThrow(
+		/multipart upload does not exist/i
+	);
+
+	// Test that aborted upload can't list parts
+	const upload2 = await r2.createMultipartUpload("key2");
+	await upload2.uploadPart(1, "data");
+	await upload2.abort();
+	await expect((upload2 as any).listParts()).rejects.toThrow(
+		/multipart upload does not exist/i
+	);
+
+	// Test non-existent upload
+	const badUpload = r2.resumeMultipartUpload("key3", "bad-upload-id");
+	await expect((badUpload as any).listParts()).rejects.toThrow(
+		/multipart upload does not exist/i
+	);
+});
+
+test("listMultipartUploads", async ({ expect }) => {
+	const { r2, ns } = ctx;
+	const PART_SIZE = 5 * 1024 * 1024; // 5MB
+	const listUploads = (options: Record<string, unknown> = {}) =>
+		(r2 as any).listMultipartUploads({ prefix: ns, ...options });
+
+	// Initially no uploads
+	let result = await listUploads();
+	expect(result.uploads).toEqual([]);
+	expect(result.truncated).toBe(false);
+	expect(result.delimitedPrefixes).toEqual([]);
+
+	// Create some uploads
+	const upload1 = await r2.createMultipartUpload("key1");
+	const upload2 = await r2.createMultipartUpload("key2");
+	const upload3 = await r2.createMultipartUpload("folder/key3");
+	const upload4 = await r2.createMultipartUpload("folder/key4");
+
+	// List all uploads
+	result = await listUploads();
+	expect(result.uploads).toHaveLength(4);
+	expect(result.uploads[0].key).toBe(`${ns}folder/key3`);
+	expect(result.uploads[0].uploadId).toBe(upload3.uploadId);
+	expect(result.uploads[1].key).toBe(`${ns}folder/key4`);
+	expect(result.uploads[1].uploadId).toBe(upload4.uploadId);
+	expect(result.uploads[2].key).toBe(`${ns}key1`);
+	expect(result.uploads[2].uploadId).toBe(upload1.uploadId);
+	expect(result.uploads[3].key).toBe(`${ns}key2`);
+	expect(result.uploads[3].uploadId).toBe(upload2.uploadId);
+	expect(result.truncated).toBe(false);
+
+	// Test prefix filtering
+	result = await listUploads({ prefix: `${ns}folder/` });
+	expect(result.uploads).toHaveLength(2);
+	expect(result.uploads[0].key).toBe(`${ns}folder/key3`);
+	expect(result.uploads[1].key).toBe(`${ns}folder/key4`);
+
+	// Test delimiter
+	result = await listUploads({ delimiter: "/" });
+	expect(result.uploads).toHaveLength(2); // Only root level keys
+	expect(result.uploads[0].key).toBe(`${ns}key1`);
+	expect(result.uploads[1].key).toBe(`${ns}key2`);
+	expect(result.delimitedPrefixes).toEqual([`${ns}folder/`]);
+
+	// Test pagination with limit
+	result = await listUploads({ limit: 2 });
+	expect(result.uploads).toHaveLength(2);
+	expect(result.uploads[0].key).toBe(`${ns}folder/key3`);
+	expect(result.uploads[1].key).toBe(`${ns}folder/key4`);
+	expect(result.truncated).toBe(true);
+	expect(result.cursor).toBeDefined();
+
+	// Continue with cursor
+	const cursor = result.cursor;
+	result = await listUploads({ cursor });
+	expect(result.uploads).toHaveLength(2);
+	expect(result.uploads[0].key).toBe(`${ns}key1`);
+	expect(result.uploads[1].key).toBe(`${ns}key2`);
+	expect(result.truncated).toBe(false);
+
+	// Test startAfter
+	result = await listUploads({ startAfter: `${ns}key1` });
+	expect(result.uploads).toHaveLength(1);
+	expect(result.uploads[0].key).toBe(`${ns}key2`);
+
+	// Test that completed uploads are not listed
+	const part1 = await upload1.uploadPart(1, "a".repeat(PART_SIZE));
+	await upload1.complete([part1]);
+	result = await listUploads();
+	expect(result.uploads).toHaveLength(3); // One less than before
+
+	// Test that aborted uploads are not listed
+	await upload2.abort();
+	result = await listUploads();
+	expect(result.uploads).toHaveLength(2); // Two less than original
+
+	// Test multiple uploads for same key
+	const upload5 = await r2.createMultipartUpload("key1");
+	const upload6 = await r2.createMultipartUpload("key1");
+	result = await listUploads({ prefix: `${ns}key1` });
+	expect(result.uploads).toHaveLength(2); // Both new uploads for key1
+	expect(result.uploads[0].uploadId).toBe(upload5.uploadId);
+	expect(result.uploads[1].uploadId).toBe(upload6.uploadId);
+
+	// Test storage class field
+	result = await listUploads();
+	for (const upload of result.uploads) {
+		expect(upload.storageClass).toBe("Standard");
+	}
+});
+
+test("backwards compatibility for timestamps", async ({ expect }) => {
+	const { r2, object: objectStub, ns } = ctx;
+	const PART_SIZE = 5 * 1024 * 1024; // 5MB
+	const listUploads = (options: Record<string, unknown> = {}) =>
+		(r2 as any).listMultipartUploads({ prefix: ns, ...options });
+
+	// Create an upload and parts
+	const upload = await r2.createMultipartUpload("test-key");
+	await upload.uploadPart(1, "a".repeat(PART_SIZE));
+	await upload.uploadPart(2, "b".repeat(PART_SIZE));
+
+	// Manually set timestamps to NULL to simulate old data
+	await objectStub.sqlQuery(
+		`UPDATE _mf_multipart_uploads SET initiated_at = NULL WHERE upload_id = ?`,
+		upload.uploadId
+	);
+	await objectStub.sqlQuery(
+		`UPDATE _mf_multipart_parts SET uploaded_at = NULL WHERE upload_id = ?`,
+		upload.uploadId
+	);
+
+	// Test that listParts still works with NULL timestamps
+	const partsResult = await (upload as any).listParts();
+	expect(partsResult.parts).toHaveLength(2);
+	// Should have fallback timestamps
+	expect(partsResult.parts[0].uploaded).toBeTruthy();
+	expect(partsResult.parts[1].uploaded).toBeTruthy();
+
+	// Test that listMultipartUploads still works with NULL timestamps
+	const uploadsResult = await listUploads();
+	const thisUpload = uploadsResult.uploads.find(
+		(u: any) => u.uploadId === upload.uploadId
+	);
+	expect(thisUpload).toBeTruthy();
+	// initiated field is optional, so it can be undefined for old data
+	expect(
+		thisUpload.initiated === undefined ||
+			typeof thisUpload.initiated === "number"
+	).toBe(true);
+});
+
 test("migrates database to new location", async ({ expect }) => {
 	// Copy legacy data to temporary directory
 	const tmp = await useTmp();
