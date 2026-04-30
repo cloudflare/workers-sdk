@@ -3221,9 +3221,7 @@ function validateContainerApp(
 			let resolvedBuildContextPath: string | undefined = undefined;
 			try {
 				if (isDockerfile(resolvedImage, configPath)) {
-					const baseDir = configPath
-						? path.dirname(configPath)
-						: process.cwd();
+					const baseDir = configPath ? path.dirname(configPath) : process.cwd();
 
 					resolvedImage = path.resolve(baseDir, resolvedImage);
 					resolvedBuildContextPath = containerAppOptional.image_build_context
