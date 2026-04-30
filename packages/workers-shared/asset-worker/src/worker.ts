@@ -233,7 +233,7 @@ export async function lookupCohort(
 	try {
 		const rpc = querier.lookupAccountCohort(accountId.toString());
 		// Prevent unhandled rejection if timeout wins but RPC later rejects.
-		rpc.catch(() => {});
+		void rpc.catch(() => {});
 		const timeout = new Promise<never>((_, reject) => {
 			const id = setTimeout(() => {
 				reject(new Error("cohort lookup timed out"));
