@@ -261,7 +261,8 @@ export const secretsStoreSecretListCommand = createCommand({
 		}
 
 		if (secrets.length === 0) {
-			throw new FatalError("List request returned no secrets.", 1, {
+			throw new FatalError("List request returned no secrets.", {
+				code: 1,
 				telemetryMessage: "secrets store secret list no secrets",
 			});
 		} else {
@@ -456,7 +457,8 @@ export const secretsStoreSecretCreateCommand = createCommand({
 		}
 
 		if (secrets.length === 0) {
-			throw new FatalError("Failed to create a secret.", 1, {
+			throw new FatalError("Failed to create a secret.", {
+				code: 1,
 				telemetryMessage: "secrets store secret create failed",
 			});
 		}

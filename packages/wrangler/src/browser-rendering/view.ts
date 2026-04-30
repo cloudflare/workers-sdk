@@ -10,14 +10,10 @@ import type { BrowserSession, BrowserTarget } from "./types";
 
 function throwIfNonInteractive(message: string, json: boolean): void {
 	if (json) {
-		throw new JsonFriendlyFatalError(
-			JSON.stringify({ error: message }),
-			undefined,
-			{
-				telemetryMessage:
-					"browser rendering view non interactive prompt unavailable",
-			}
-		);
+		throw new JsonFriendlyFatalError(JSON.stringify({ error: message }), {
+			telemetryMessage:
+				"browser rendering view non interactive prompt unavailable",
+		});
 	}
 	if (isNonInteractiveOrCI()) {
 		throw new UserError(message, {

@@ -37,12 +37,12 @@ export const pagesFunctionsBuildEnvCommand = createCommand({
 	positionalArgs: ["projectDir"],
 	async handler(args) {
 		if (!args.projectDir) {
-			throw new FatalError("No Pages project location specified", undefined, {
+			throw new FatalError("No Pages project location specified", {
 				telemetryMessage: "pages build env missing project directory",
 			});
 		}
 		if (!args.outfile) {
-			throw new FatalError("No outfile specified", undefined, {
+			throw new FatalError("No outfile specified", {
 				telemetryMessage: "pages build env missing outfile",
 			});
 		}

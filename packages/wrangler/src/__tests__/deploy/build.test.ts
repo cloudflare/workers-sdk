@@ -1162,7 +1162,7 @@ export default { fetch() { return new Response(foo); } }`
 				};
 
 				const message = diagnoseScriptSizeError(
-					new ParseError({ text: "too big" }),
+					new ParseError({ text: "too big", telemetryMessage: false }),
 					deps
 				);
 				expect(message).toMatchInlineSnapshot(`

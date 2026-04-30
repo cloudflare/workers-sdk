@@ -53,8 +53,11 @@ export function validatePagesConfig(
 ): Diagnostics {
 	// exhaustive check
 	if (!config.pages_build_output_dir) {
-		throw new FatalError(`Attempting to validate Pages configuration file, but "pages_build_output_dir" field was not found.
-		"pages_build_output_dir" is required for Pages projects.`);
+		throw new FatalError(
+			`Attempting to validate Pages configuration file, but "pages_build_output_dir" field was not found.
+		"pages_build_output_dir" is required for Pages projects.`,
+			{ telemetryMessage: false }
+		);
 	}
 
 	const diagnostics = new Diagnostics(

@@ -127,6 +127,7 @@ const unsafeParseBooleanString = (value: unknown): boolean => {
 		throw new ParseError({
 			text: `Invalid value: ${value}`,
 			kind: "error",
+			telemetryMessage: false,
 		});
 	}
 
@@ -140,6 +141,7 @@ const unsafeParseBooleanString = (value: unknown): boolean => {
 	throw new ParseError({
 		text: `Invalid value: ${value}`,
 		kind: "error",
+		telemetryMessage: false,
 	});
 };
 

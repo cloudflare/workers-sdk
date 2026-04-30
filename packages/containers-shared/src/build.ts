@@ -77,7 +77,11 @@ export function dockerBuild(
 			resolve();
 		} else if (!errorHandled) {
 			errorHandled = true;
-			reject(new UserError(`Docker build exited with code: ${code}`));
+			reject(
+				new UserError(`Docker build exited with code: ${code}`, {
+					telemetryMessage: false,
+				})
+			);
 		}
 	});
 	child.on("error", (err) => {

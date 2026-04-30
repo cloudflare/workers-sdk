@@ -54,7 +54,11 @@ export async function dockerLoginImageRegistry(
 			if (code === 0) {
 				resolve();
 			} else {
-				reject(new UserError(`Login failed with code: ${code}`));
+				reject(
+					new UserError(`Login failed with code: ${code}`, {
+						telemetryMessage: false,
+					})
+				);
 			}
 		});
 	});

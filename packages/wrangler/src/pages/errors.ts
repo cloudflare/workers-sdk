@@ -27,7 +27,7 @@ export const EXIT_CODE_INVALID_PAGES_CONFIG = 159;
  * Pages error when building a script from the functions directory fails
  */
 export class FunctionsBuildError extends UserError {
-	constructor(message: string, options?: TelemetryMessage) {
+	constructor(message: string, options: TelemetryMessage) {
 		super(message, options);
 	}
 }
@@ -36,7 +36,7 @@ export class FunctionsBuildError extends UserError {
  * Pages error when no routes are found in the functions directory
  */
 export class FunctionsNoRoutesError extends UserError {
-	constructor(message: string, options?: TelemetryMessage) {
+	constructor(message: string, options: TelemetryMessage) {
 		super(message, options);
 	}
 }

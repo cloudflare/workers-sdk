@@ -112,8 +112,8 @@ export async function buildFunctions({
 		if (outdir === undefined) {
 			throw new FatalError(
 				"Must specify an output directory when building a Plugin.",
-				1,
 				{
+					code: 1,
 					telemetryMessage:
 						"pages functions build plugin missing output directory",
 				}

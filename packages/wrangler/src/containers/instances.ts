@@ -255,11 +255,9 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 				throw err;
 			}
 			const message = err instanceof Error ? err.message : "Unknown error";
-			throw new JsonFriendlyFatalError(
-				JSON.stringify({ error: message }),
-				undefined,
-				{ telemetryMessage: "containers instances json output failed" }
-			);
+			throw new JsonFriendlyFatalError(JSON.stringify({ error: message }), {
+				telemetryMessage: "containers instances json output failed",
+			});
 		}
 	}
 

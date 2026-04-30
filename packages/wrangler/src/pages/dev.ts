@@ -327,16 +327,14 @@ export const pagesDevCommand = createCommand({
 		if (args.config && !Array.isArray(args.config)) {
 			throw new FatalError(
 				"Pages does not support custom paths for the Wrangler configuration file",
-				1,
-				{ telemetryMessage: "pages dev custom config unsupported" }
+				{ code: 1, telemetryMessage: "pages dev custom config unsupported" }
 			);
 		}
 
 		if (args.env) {
 			throw new FatalError(
 				"Pages does not support targeting an environment with the --env flag during local development.",
-				1,
-				{ telemetryMessage: "pages dev env unsupported" }
+				{ code: 1, telemetryMessage: "pages dev env unsupported" }
 			);
 		}
 
@@ -362,7 +360,6 @@ export const pagesDevCommand = createCommand({
 			throw new FatalError(
 				"The first `--config` argument must point to your Pages configuration file: " +
 					path.relative(process.cwd(), config.configPath),
-				undefined,
 				{ telemetryMessage: "pages dev config path mismatch" }
 			);
 		}
@@ -375,8 +372,7 @@ export const pagesDevCommand = createCommand({
 		if (directory !== undefined && command.length > 0) {
 			throw new FatalError(
 				"Specify either a directory OR a proxy command, not both.",
-				1,
-				{ telemetryMessage: "pages dev conflicting serve targets" }
+				{ code: 1, telemetryMessage: "pages dev conflicting serve targets" }
 			);
 		} else if (directory === undefined) {
 			proxyPort = await spawnProxyProcess({
@@ -622,11 +618,9 @@ export const pagesDevCommand = createCommand({
 				 * Worker. These flag underlying issues in the _worker.js code, and
 				 * should be addressed before starting the dev process
 				 */
-				throw new FatalError(
-					`Failed to build ${singleWorkerScriptPath}.`,
-					undefined,
-					{ telemetryMessage: "pages dev worker build failed" }
-				);
+				throw new FatalError(`Failed to build ${singleWorkerScriptPath}.`, {
+					telemetryMessage: "pages dev worker build failed",
+				});
 			}
 		} else if (usingFunctions) {
 			// Try to use Functions
@@ -811,7 +805,6 @@ export const pagesDevCommand = createCommand({
 					 */
 					throw new FatalError(
 						`Failed to build Functions at ${functionsDirectory}.`,
-						undefined,
 						{ telemetryMessage: "pages dev functions build failed" }
 					);
 				}
@@ -894,8 +887,10 @@ export const pagesDevCommand = createCommand({
 					} else {
 						throw new FatalError(
 							`Could not validate _routes.json at ${directory}: ${err}`,
-							1,
-							{ telemetryMessage: "pages dev routes validation failed" }
+							{
+								code: 1,
+								telemetryMessage: "pages dev routes validation failed",
+							}
 						);
 					}
 				}
@@ -1140,8 +1135,7 @@ async function spawnProxyProcess({
 		CLEANUP();
 		throw new FatalError(
 			`Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in your Wrangler configuration file.`,
-			1,
-			{ telemetryMessage: "pages dev missing serve target" }
+			{ code: 1, telemetryMessage: "pages dev missing serve target" }
 		);
 	}
 
@@ -1193,8 +1187,7 @@ async function spawnProxyProcess({
 			CLEANUP();
 			throw new FatalError(
 				"Could not automatically determine proxy port. Please specify the proxy port with --proxy.",
-				1,
-				{ telemetryMessage: "pages dev proxy port not found" }
+				{ code: 1, telemetryMessage: "pages dev proxy port not found" }
 			);
 		} else {
 			logger.log(`Automatically determined the proxy port to be ${port}.`);

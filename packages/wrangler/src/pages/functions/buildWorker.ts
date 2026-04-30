@@ -377,8 +377,10 @@ function blockWorkerJsImports(nodejsCompatMode: NodeJSCompatMode): Plugin {
 					"_worker.js is not being bundled by Wrangler but it is importing from another file.\n" +
 						"This will throw an error if deployed.\n" +
 						"You should bundle the Worker in a pre-build step, remove the import if it is unused, or ask Wrangler to bundle it by setting `--bundle`.",
-					1,
-					{ telemetryMessage: "pages functions worker imports blocked" }
+					{
+						code: 1,
+						telemetryMessage: "pages functions worker imports blocked",
+					}
 				);
 			});
 		},

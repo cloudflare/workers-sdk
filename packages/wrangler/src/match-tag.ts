@@ -39,7 +39,6 @@ export async function verifyWorkerMatchesCITag(
 	if (accountId !== envAccountID) {
 		throw new FatalError(
 			`The \`account_id\` in your ${configFileName(configPath)} file must match the \`account_id\` for this account. Please update your ${configFileName(configPath)} file with \`${formatConfigSnippet({ account_id: envAccountID }, configPath, false)}\``,
-			undefined,
 			{ telemetryMessage: "ci match tag account mismatch" }
 		);
 	}
@@ -58,7 +57,6 @@ export async function verifyWorkerMatchesCITag(
 		if (isWorkerNotFoundError(e)) {
 			throw new FatalError(
 				`The name in your ${configFileName(configPath)} file (${workerName}) must match the name of your Worker. Please update the name field in your ${configFileName(configPath)} file.`,
-				undefined,
 				{ telemetryMessage: "ci match tag worker not found" }
 			);
 		} else if (e instanceof APIError) {
@@ -67,14 +65,12 @@ export async function verifyWorkerMatchesCITag(
 					e.message +
 					"\n" +
 					e.notes.map((note) => note.text).join("\n"),
-				undefined,
 				{ telemetryMessage: "ci match tag validation api error" }
 			);
 		} else {
 			throw new FatalError(
 				"Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build. " +
 					"If the problem persists, please contact support.",
-				undefined,
 				{ telemetryMessage: "ci match tag validation failed" }
 			);
 		}
@@ -85,7 +81,6 @@ export async function verifyWorkerMatchesCITag(
 		);
 		throw new FatalError(
 			`The name in your ${configFileName(configPath)} file (${workerName}) must match the name of your Worker. Please update the name field in your ${configFileName(configPath)} file.`,
-			undefined,
 			{ telemetryMessage: "ci match tag tag mismatch" }
 		);
 	}

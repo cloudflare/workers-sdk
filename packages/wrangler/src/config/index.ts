@@ -137,16 +137,20 @@ export function readPagesConfig(
 		logger.error(e);
 		throw new FatalError(
 			`Your ${configFileName(configPath)} file is not a valid Pages configuration file`,
-			EXIT_CODE_INVALID_PAGES_CONFIG,
-			{ telemetryMessage: "config pages parse failed" }
+			{
+				code: EXIT_CODE_INVALID_PAGES_CONFIG,
+				telemetryMessage: "config pages parse failed",
+			}
 		);
 	}
 
 	if (!isPagesConfig(rawConfig)) {
 		throw new FatalError(
 			`Your ${configFileName(configPath)} file is not a valid Pages configuration file`,
-			EXIT_CODE_INVALID_PAGES_CONFIG,
-			{ telemetryMessage: "config pages validation failed" }
+			{
+				code: EXIT_CODE_INVALID_PAGES_CONFIG,
+				telemetryMessage: "config pages validation failed",
+			}
 		);
 	}
 

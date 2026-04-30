@@ -184,8 +184,7 @@ class MultipleFrameworksCIError extends FatalError {
 				    you can specify what framework you want to target
 
 			`,
-			1,
-			telemetryOptions
+			{ ...telemetryOptions, code: 1 }
 		);
 	}
 }

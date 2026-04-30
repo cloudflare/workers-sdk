@@ -670,7 +670,7 @@ export const r2BulkPutCommand = createCommand({
 						await Promise.race([queue.onError(), queue.onIdle()]);
 					} catch (error) {
 						queue.pause();
-						throw new FatalError(`R2 bulk upload failed\n${error}`, undefined, {
+						throw new FatalError(`R2 bulk upload failed\n${error}`, {
 							telemetryMessage: "r2 object bulk upload failed",
 						});
 					}
@@ -737,11 +737,9 @@ export const r2BulkPutCommand = createCommand({
 							yArgs.storageClass
 						);
 					} catch (e) {
-						throw new FatalError(
-							`Error uploading "${entry.file}"\n${e}`,
-							undefined,
-							{ telemetryMessage: "r2 object bulk upload object failed" }
-						);
+						throw new FatalError(`Error uploading "${entry.file}"\n${e}`, {
+							telemetryMessage: "r2 object bulk upload object failed",
+						});
 					}
 				})
 			);
@@ -750,7 +748,7 @@ export const r2BulkPutCommand = createCommand({
 				await Promise.race([queue.onError(), queue.onIdle()]);
 			} catch (error) {
 				queue.pause();
-				throw new FatalError(`R2 bulk upload failed\n${error}`, undefined, {
+				throw new FatalError(`R2 bulk upload failed\n${error}`, {
 					telemetryMessage: "r2 object bulk upload failed",
 				});
 			}

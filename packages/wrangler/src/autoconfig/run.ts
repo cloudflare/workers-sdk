@@ -91,7 +91,6 @@ export async function runAutoConfig(
 					autoConfigDetails.framework.id === "cloudflare-pages"
 						? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.`
 						: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`,
-					undefined,
 					{ telemetryMessage: "autoconfig run framework unsupported" }
 				);
 			}
@@ -162,7 +161,7 @@ export async function runAutoConfig(
 		);
 
 		if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
-			throw new FatalError("Setup cancelled", undefined, {
+			throw new FatalError("Setup cancelled", {
 				telemetryMessage: "autoconfig run setup cancelled",
 			});
 		}

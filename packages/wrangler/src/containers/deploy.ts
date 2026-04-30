@@ -410,7 +410,6 @@ export async function apply(
 		if (!prevApp.durable_objects?.namespace_id) {
 			throw new FatalError(
 				"The previous deploy of this container application was not associated with a durable object",
-				undefined,
 				{
 					telemetryMessage: "containers deploy previous durable object missing",
 				}
@@ -586,7 +585,6 @@ const doAction = async (
 			if (!(err instanceof ApiError)) {
 				throw new FatalError(
 					`Unexpected error creating application: ${err.message}`,
-					undefined,
 					{ telemetryMessage: "containers deploy create unexpected error" }
 				);
 			}

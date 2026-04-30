@@ -124,7 +124,6 @@ export const d1ExecuteCommand = createCommand({
 			throw createFatalError(
 				`Error: can't provide both --command and --file.`,
 				json,
-				undefined,
 				{ telemetryMessage: "d1 execute conflicting command and file" }
 			);
 		}
@@ -181,7 +180,6 @@ export const d1ExecuteCommand = createCommand({
 					error.name === "APIError" ? error : { text: error.message };
 				throw new JsonFriendlyFatalError(
 					JSON.stringify({ error: messageToDisplay }, null, 2),
-					undefined,
 					{ telemetryMessage: "d1 execute query failed" }
 				);
 			} else {
@@ -454,7 +452,10 @@ async function executeRemotely({
 		);
 
 		if (finalResponse.status !== "complete") {
-			throw new APIError({ text: `D1 reset before execute completed!` });
+			throw new APIError({
+				text: `D1 reset before execute completed!`,
+				telemetryMessage: false,
+			});
 		}
 
 		const {
@@ -573,6 +574,7 @@ async function pollUntilComplete(
 		throw new APIError({
 			text: response.errors?.join("\n"),
 			notes: response.messages.map((text) => ({ text })),
+			telemetryMessage: false,
 		});
 	} else {
 		const newResponse = await d1ApiPost<ImportPollingResponse | PollingFailure>(

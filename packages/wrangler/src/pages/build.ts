@@ -200,11 +200,10 @@ export const pagesFunctionsBuildCommand = createCommand({
 				});
 			} catch (e) {
 				if (e instanceof FunctionsNoRoutesError) {
-					throw new FatalError(
-						getFunctionsNoRoutesWarning(directory),
-						EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
-						{ telemetryMessage: "pages build functions no routes" }
-					);
+					throw new FatalError(getFunctionsNoRoutesWarning(directory), {
+						code: EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
+						telemetryMessage: "pages build functions no routes",
+					});
 				} else {
 					throw e;
 				}
@@ -306,11 +305,10 @@ export const pagesFunctionsBuildCommand = createCommand({
 					});
 				} catch (e) {
 					if (e instanceof FunctionsNoRoutesError) {
-						throw new FatalError(
-							getFunctionsNoRoutesWarning(directory),
-							EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
-							{ telemetryMessage: "pages build functions no routes" }
-						);
+						throw new FatalError(getFunctionsNoRoutesWarning(directory), {
+							code: EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
+							telemetryMessage: "pages build functions no routes",
+						});
 					} else {
 						throw e;
 					}
@@ -421,8 +419,7 @@ const validateArgs = async (
 	if (args.outdir && args.outfile) {
 		throw new FatalError(
 			"Cannot specify both an `--outdir` and an `--outfile`.",
-			1,
-			{ telemetryMessage: "pages build conflicting output targets" }
+			{ code: 1, telemetryMessage: "pages build conflicting output targets" }
 		);
 	}
 
@@ -447,16 +444,15 @@ const validateArgs = async (
 		if (args.bindings) {
 			throw new FatalError(
 				"The `--bindings` flag cannot be used when creating a Pages Plugin with `--plugin`.",
-				1,
-				{ telemetryMessage: "pages build plugin bindings unsupported" }
+				{ code: 1, telemetryMessage: "pages build plugin bindings unsupported" }
 			);
 		}
 
 		if (args.buildOutputDirectory) {
 			throw new FatalError(
 				"The `--build-output-directory` flag cannot be used when creating a Pages Plugin with `--plugin`.",
-				1,
 				{
+					code: 1,
 					telemetryMessage:
 						"pages build plugin build output directory unsupported",
 				}
@@ -523,8 +519,10 @@ We first looked inside the build output directory (${basename(
 				)}) but couldn't find anything to build.
 	➤ If you are trying to build _worker.js, please make sure you provide the [--build-output-directory] containing your static files.
 	➤ If you are trying to build Pages Functions, please make sure [directory] points to the location of your Functions files.`,
-				EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
-				{ telemetryMessage: "pages build nothing to build" }
+				{
+					code: EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
+					telemetryMessage: "pages build nothing to build",
+				}
 			);
 		}
 	} else if (!existsSync(args.directory)) {
@@ -534,8 +532,10 @@ We looked for the Functions directory (${basename(
 				args.directory
 			)}) but couldn't find anything to build.
 	➤ Please make sure [directory] points to the location of your Functions files.`,
-			EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
-			{ telemetryMessage: "pages build nothing to build" }
+			{
+				code: EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
+				telemetryMessage: "pages build nothing to build",
+			}
 		);
 	}
 
