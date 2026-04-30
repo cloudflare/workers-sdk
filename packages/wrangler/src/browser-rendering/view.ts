@@ -12,7 +12,6 @@ function throwIfNonInteractive(message: string, json: boolean): void {
 	if (json) {
 		throw new JsonFriendlyFatalError(
 			JSON.stringify({ error: message }),
-			undefined,
 			{
 				telemetryMessage:
 					"browser rendering view non interactive prompt unavailable",

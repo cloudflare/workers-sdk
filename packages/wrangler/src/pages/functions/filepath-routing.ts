@@ -221,7 +221,6 @@ function convertCatchallParams(routePath: string): string {
 		} else {
 			throw new FatalError(
 				`Invalid Pages function route parameter - "[[${param}]]". Parameters names must only contain alphanumeric and underscore characters.`,
-				undefined,
 				{ telemetryMessage: "pages functions invalid catchall route parameter" }
 			);
 		}
@@ -238,7 +237,6 @@ function convertSimpleParams(routePath: string): string {
 		} else {
 			throw new FatalError(
 				`Invalid Pages function route parameter - "[${param}]". Parameter names must only contain alphanumeric and underscore characters.`,
-				undefined,
 				{ telemetryMessage: "pages functions invalid route parameter" }
 			);
 		}

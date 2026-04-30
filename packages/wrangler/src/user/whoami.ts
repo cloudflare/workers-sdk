@@ -47,7 +47,6 @@ export async function whoami(
 			throw createFatalError(
 				{ loggedIn: false } satisfies WhoamiResult,
 				true,
-				undefined,
 				{ telemetryMessage: "user whoami unauthenticated" }
 			);
 		}

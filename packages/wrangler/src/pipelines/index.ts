@@ -96,7 +96,6 @@ export async function authorizeR2Bucket(
 			if (err.code == 10006) {
 				throw new FatalError(
 					`The R2 bucket [${bucketName}] doesn't exist`,
-					undefined,
 					{ telemetryMessage: "pipelines r2 authorization missing bucket" }
 				);
 			}

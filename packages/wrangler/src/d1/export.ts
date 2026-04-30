@@ -217,7 +217,10 @@ async function exportRemotely(
 	});
 
 	if (finalResponse.status !== "complete") {
-		throw new APIError({ text: `D1 reset before export completed!` });
+		throw new APIError({
+			text: `D1 reset before export completed!`,
+			telemetryMessage: false,
+		});
 	}
 
 	logger.log(
@@ -291,6 +294,7 @@ async function pollExport(
 		throw new APIError({
 			text: response.error,
 			notes: response.messages.map((text) => ({ text })),
+			telemetryMessage: false,
 		});
 	} else {
 		return await pollExport(

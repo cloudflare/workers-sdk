@@ -85,8 +85,7 @@ export const syncAssets = async (
 	if (!initializeAssetsResponse) {
 		throw new FatalError(
 			"An unexpected response has been received from the Cloudflare API for assets upload. Please try again.",
-			1,
-			{ telemetryMessage: "assets upload unexpected api response" }
+			{ code: 1, telemetryMessage: "assets upload unexpected api response" }
 		);
 	}
 
@@ -95,8 +94,7 @@ export const syncAssets = async (
 		if (!initializeAssetsResponse.jwt) {
 			throw new FatalError(
 				"Could not find assets information to attach to deployment. Please try again.",
-				1,
-				{ telemetryMessage: "assets upload missing completion token" }
+				{ code: 1, telemetryMessage: "assets upload missing completion token" }
 			);
 		}
 		logger.info(
@@ -125,8 +123,8 @@ export const syncAssets = async (
 			if (manifestEntry === undefined) {
 				throw new FatalError(
 					`A file was requested that does not appear to exist.`,
-					1,
 					{
+						code: 1,
 						telemetryMessage:
 							"A file was requested that does not appear to exist. (asset manifest upload)",
 					}
@@ -222,7 +220,6 @@ export const syncAssets = async (
 								initializeAssetsResponse.buckets.length
 							}. Please try again.\n` +
 							`Assets already uploaded have been saved, so the next attempt will automatically resume from this point.`,
-						undefined,
 						{ telemetryMessage: "Asset upload took too long" }
 					);
 				} else {
@@ -252,8 +249,7 @@ export const syncAssets = async (
 	if (!completionJwt) {
 		throw new FatalError(
 			"Failed to complete asset upload. Please try again.",
-			1,
-			{ telemetryMessage: "assets upload completion failed" }
+			{ code: 1, telemetryMessage: "assets upload completion failed" }
 		);
 	}
 

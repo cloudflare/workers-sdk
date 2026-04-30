@@ -257,6 +257,7 @@ async function registryConfigureCommand(
 			throw new APIError({
 				status: e.status,
 				text: "Error configuring container registry:\n" + formatError(e),
+				telemetryMessage: false,
 			});
 		} else {
 			throw e;
@@ -414,6 +415,7 @@ async function registryListCommand(
 			throw new APIError({
 				status: e.status,
 				text: "Error listing container registries:\n" + formatError(e),
+				telemetryMessage: false,
 			});
 		} else {
 			throw e;
@@ -470,6 +472,7 @@ async function registryDeleteCommand(
 			throw new APIError({
 				status: e.status,
 				text: `Error deleting container registry:\n` + formatError(e),
+				telemetryMessage: false,
 			});
 		} else {
 			throw e;
@@ -514,6 +517,7 @@ async function registryDeleteCommand(
 				throw new APIError({
 					status: e.status,
 					text: `Error deleting secret:\n` + formatError(e),
+					telemetryMessage: false,
 				});
 			} else {
 				throw e;

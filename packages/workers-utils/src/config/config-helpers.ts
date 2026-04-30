@@ -116,7 +116,7 @@ function findRedirectedWranglerConfig(
 	} catch (e) {
 		throw new UserError(
 			`Failed to parse the deploy configuration file at ${path.relative(".", deployConfigPath)}`,
-			{ cause: e }
+			{ cause: e, telemetryMessage: false }
 		);
 	}
 	if (!redirectedConfigPath) {
@@ -127,14 +127,14 @@ function findRedirectedWranglerConfig(
 			\`\`\`
 			${deployConfigFile}
 			\`\`\`
-		`);
+		`, { telemetryMessage: false });
 	}
 
 	if (!existsSync(redirectedConfigPath)) {
 		throw new UserError(dedent`
 				There is a deploy configuration at "${path.relative(".", deployConfigPath)}".
 				But the redirected configuration path it points to, "${path.relative(".", redirectedConfigPath)}", does not exist.
-			`);
+			`, { telemetryMessage: false });
 	}
 	if (userConfigPath) {
 		if (
@@ -145,7 +145,7 @@ function findRedirectedWranglerConfig(
 					Found both a user configuration file at "${path.relative(".", userConfigPath)}"
 					and a deploy configuration file at "${path.relative(".", deployConfigPath)}".
 					But these do not share the same base path so it is not clear which should be used.
-				`);
+				`, { telemetryMessage: false });
 		}
 	}
 

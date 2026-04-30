@@ -29,7 +29,8 @@ export const pagesProjectValidateCommand = createCommand({
 	positionalArgs: ["directory"],
 	async handler({ directory }) {
 		if (!directory) {
-			throw new FatalError("Must specify a directory.", 1, {
+			throw new FatalError("Must specify a directory.", {
+				code: 1,
 				telemetryMessage: "pages validate missing directory",
 			});
 		}
@@ -91,7 +92,7 @@ export const validate = async (args: {
 		} catch (e) {
 			if ((e as NodeJS.ErrnoException).code === "ENOENT") {
 				// File not found exeptions should be marked as user error
-				throw new FatalError((e as NodeJS.ErrnoException).message, undefined, {
+				throw new FatalError((e as NodeJS.ErrnoException).message, {
 					telemetryMessage: "pages validate directory not found",
 				});
 			}
@@ -120,16 +121,15 @@ export const validate = async (args: {
 					const name = relativeFilepath.split(sep).join("/");
 
 					if (filestat.size > MAX_ASSET_SIZE) {
-						throw new FatalError(
+					throw new FatalError(
 							`Error: Pages only supports files up to ${prettyBytes(
 								MAX_ASSET_SIZE,
 								{ binary: true }
 							)} in size\n${name} is ${prettyBytes(filestat.size, {
 								binary: true,
 							})} in size`,
-							1,
-							{ telemetryMessage: "pages validate file too large" }
-						);
+						{ code: 1, telemetryMessage: "pages validate file too large" }
+					);
 					}
 
 					// We don't want to hold the content in memory. We instead only want to read it when it's needed
@@ -151,8 +151,7 @@ export const validate = async (args: {
 	if (fileMap.size > fileCountLimit) {
 		throw new FatalError(
 			`Error: Pages only supports up to ${fileCountLimit.toLocaleString()} files in a deployment for your current plan. Ensure you have specified your build output directory correctly.`,
-			1,
-			{ telemetryMessage: "pages validate too many files" }
+			{ code: 1, telemetryMessage: "pages validate too many files" }
 		);
 	}
 

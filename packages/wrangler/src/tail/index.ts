@@ -248,8 +248,7 @@ export const tailCommand = createCommand({
 					throw createFatalError(
 						"Tail disconnected, exiting.",
 						args.format === "json",
-						1,
-						{ telemetryMessage: "tail stream disconnected" }
+						{ code: 1, telemetryMessage: "tail stream disconnected" }
 					);
 				}
 				waitingForPong = true;

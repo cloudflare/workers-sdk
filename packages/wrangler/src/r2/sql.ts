@@ -149,6 +149,7 @@ export const r2SqlQueryCommand = createCommand({
 		} catch (error) {
 			throw new APIError({
 				text: `Failed to connect to R2 SQL API: ${error instanceof Error ? error.message : String(error)}`,
+				telemetryMessage: false,
 			});
 		}
 
@@ -174,6 +175,7 @@ export const r2SqlQueryCommand = createCommand({
 					},
 				],
 				status: responseStatus,
+				telemetryMessage: false,
 			});
 		}
 

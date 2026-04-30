@@ -59,8 +59,7 @@ export function validateUploadSize(key: string, sizeBytes: number): void {
 			)} in size\n${key} is ${prettyBytes(sizeBytes, {
 				binary: true,
 			})} in size`,
-			1,
-			{ telemetryMessage: "r2 object upload too large" }
+			{ code: 1, telemetryMessage: "r2 object upload too large" }
 		);
 	}
 }

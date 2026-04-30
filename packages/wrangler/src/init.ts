@@ -188,7 +188,6 @@ export async function downloadWorker(accountId: string, workerName: string) {
 	if (config.assets) {
 		throw new FatalError(
 			"`wrangler init --from-dash` is not yet supported for Workers with Assets",
-			undefined,
 			{ telemetryMessage: "init from dash assets unsupported" }
 		);
 	}

@@ -255,7 +255,6 @@ async function parseModules(
 		if (entrypoint === null) {
 			throw new FatalError(
 				"Got modules without cf-entrypoint header",
-				undefined,
 				{
 					telemetryMessage:
 						"versions secrets modules missing entrypoint header",
@@ -267,7 +266,6 @@ async function parseModules(
 		if (entrypointPart === null) {
 			throw new FatalError(
 				"Could not find entrypoint in form-data",
-				undefined,
 				{
 					telemetryMessage: "versions secrets modules missing entrypoint part",
 				}
@@ -318,7 +316,6 @@ async function parseModules(
 		if (contentType === null) {
 			throw new FatalError(
 				"No content-type header was provided for non-module Worker content",
-				undefined,
 				{ telemetryMessage: "versions secrets content missing content type" }
 			);
 		}

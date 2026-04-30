@@ -221,8 +221,10 @@ export const typesCommand = createCommand({
 			if (outOfDate) {
 				throw new FatalError(
 					`Types at ${outputPath} are out of date. Run \`wrangler types\` to regenerate.`,
-					1,
-					{ telemetryMessage: "type generation check types out of date" }
+					{
+						code: 1,
+						telemetryMessage: "type generation check types out of date",
+					}
 				);
 			}
 

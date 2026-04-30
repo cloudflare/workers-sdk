@@ -140,7 +140,6 @@ export async function listCommand(args: ListArgs): Promise<void> {
 			const message = err instanceof Error ? err.message : "Unknown error";
 			throw new JsonFriendlyFatalError(
 				JSON.stringify({ error: message }),
-				undefined,
 				{ telemetryMessage: "containers list json output failed" }
 			);
 		}

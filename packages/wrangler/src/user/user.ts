@@ -713,7 +713,7 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 		logger.warn(
 			"Received query string parameter doesn't match the one sent! Possible malicious activity somewhere."
 		);
-		throw new ErrorInvalidReturnedStateParam(undefined, {
+		throw new ErrorInvalidReturnedStateParam("", {
 			telemetryMessage: "user oauth invalid returned state",
 		});
 	}
@@ -1109,7 +1109,7 @@ export async function getOauthToken(options: {
 						// render an error page here
 						finish(
 							null,
-							new ErrorNoAuthCode(undefined, {
+							new ErrorNoAuthCode("", {
 								telemetryMessage: "user oauth missing auth code",
 							})
 						);

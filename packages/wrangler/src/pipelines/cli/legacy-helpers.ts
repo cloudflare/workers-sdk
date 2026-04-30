@@ -184,13 +184,13 @@ export async function updateLegacyPipeline(
 			destination.credentials.secret_access_key = auth.secretAccessKey;
 		}
 		if (!destination.credentials.access_key_id) {
-			throw new FatalError("Requires a r2 access key id", undefined, {
+			throw new FatalError("Requires a r2 access key id", {
 				telemetryMessage: "pipelines legacy missing r2 access key",
 			});
 		}
 
 		if (!destination.credentials.secret_access_key) {
-			throw new FatalError("Requires a r2 secret access key", undefined, {
+			throw new FatalError("Requires a r2 secret access key", {
 				telemetryMessage: "pipelines legacy missing r2 secret key",
 			});
 		}

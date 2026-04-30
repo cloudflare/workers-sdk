@@ -181,19 +181,20 @@ export function getBooleanEnvironmentVariableFactory(options: {
 				: options.defaultValue;
 		}
 
-		switch (process.env[options.variableName]?.toLowerCase()) {
-			case "true":
-				return true;
-			case "false":
-				return false;
-			default:
-				throw new UserError(
-					`Expected ${options.variableName} to be "true" or "false", but got ${JSON.stringify(
-						process.env[options.variableName]
-					)}`
-				);
-		}
-	};
+			switch (process.env[options.variableName]?.toLowerCase()) {
+				case "true":
+					return true;
+				case "false":
+					return false;
+				default:
+					throw new UserError(
+						`Expected ${options.variableName} to be "true" or "false", but got ${JSON.stringify(
+							process.env[options.variableName]
+						)}`,
+						{ telemetryMessage: false }
+					);
+			}
+		};
 }
 
 /**
@@ -279,7 +280,8 @@ function assertOneOf<Choices extends readonly string[]>(
 ): asserts value is ElementType<Choices> {
 	if (Array.isArray(choices) && !choices.includes(value)) {
 		throw new UserError(
-			`Expected ${JSON.stringify(value)} to be one of ${JSON.stringify(choices)}`
+			`Expected ${JSON.stringify(value)} to be one of ${JSON.stringify(choices)}`,
+			{ telemetryMessage: false }
 		);
 	}
 }

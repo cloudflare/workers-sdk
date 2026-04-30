@@ -40,8 +40,7 @@ async function pagesProject(
 	if (!isPagesEnv(env)) {
 		throw new FatalError(
 			`Pages does not support the "${env}" named environment. Please specify "production" (default) or "preview"`,
-			1,
-			{ telemetryMessage: "pages secret env unsupported" }
+			{ code: 1, telemetryMessage: "pages secret env unsupported" }
 		);
 	}
 	let config: Config | undefined;
@@ -98,14 +97,16 @@ async function pagesProject(
 		} catch (err) {
 			// code `8000007` corresponds to project not found
 			if ((err as { code: number }).code === 8000007) {
-				throw new FatalError(`Project "${projectName}" does not exist.`, 1, {
+				throw new FatalError(`Project "${projectName}" does not exist.`, {
+					code: 1,
 					telemetryMessage: "pages secret project not found",
 				});
 			}
 			throw err;
 		}
 	} else {
-		throw new FatalError("Must specify a project name.", 1, {
+		throw new FatalError("Must specify a project name.", {
+			code: 1,
 			telemetryMessage: "pages secret missing project name",
 		});
 	}
@@ -234,7 +235,6 @@ export const pagesSecretBulkCommand = createCommand({
 		if (!result) {
 			throw new FatalError(
 				`🚨 No content found in file or piped input.`,
-				undefined,
 				{ telemetryMessage: "pages secret bulk missing content" }
 			);
 		}

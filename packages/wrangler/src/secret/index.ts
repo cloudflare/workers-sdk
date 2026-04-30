@@ -562,7 +562,6 @@ export function validateFileSecrets(
 	if (content === null || typeof content !== "object") {
 		throw new FatalError(
 			`The contents of "${jsonFilePath}" is not valid. It should be a JSON object of string values.`,
-			undefined,
 			{ telemetryMessage: "secret bulk file invalid contents" }
 		);
 	}
@@ -571,7 +570,6 @@ export function validateFileSecrets(
 		if (typeof value !== "string") {
 			throw new FatalError(
 				`The value for "${key}" in "${jsonFilePath}" is not a "string" instead it is of type "${typeof value}"`,
-				undefined,
 				{ telemetryMessage: "secret bulk file invalid value type" }
 			);
 		}

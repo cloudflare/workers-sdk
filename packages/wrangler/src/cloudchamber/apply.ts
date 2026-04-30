@@ -266,7 +266,8 @@ function containerAppToCreateApplication(
 
 	// this should have been set to a default value of worker-name-class-name if unspecified by the user
 	if (containerApp.name === undefined) {
-		throw new FatalError("Container application name failed to be set", 1, {
+		throw new FatalError("Container application name failed to be set", {
+			code: 1,
 			telemetryMessage: "cloudchamber apply application name missing",
 		});
 	}
