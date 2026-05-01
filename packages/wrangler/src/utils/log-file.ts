@@ -77,11 +77,12 @@ const mutex = new Mutex();
 let hasStartedLogCleanup = false;
 
 export function tryCleanupLogs(): void {
-	if (hasStartedLogCleanup || getDebugFileDir().endsWith(".log")) {
+	const debugFileDir = getDebugFileDir();
+	if (hasStartedLogCleanup || debugFileDir.endsWith(".log")) {
 		return;
 	}
 	hasStartedLogCleanup = true;
-	void cleanupOldLogFiles(getDebugFileDir());
+	void cleanupOldLogFiles(debugFileDir);
 }
 
 let hasLoggedLocation = false;
