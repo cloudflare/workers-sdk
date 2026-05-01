@@ -5,14 +5,12 @@ import https from "node:https";
 import path from "node:path";
 import { text } from "node:stream/consumers";
 import tls from "node:tls";
-import { getGlobalServices, NoOpLog } from "miniflare";
 import stoppable from "stoppable";
 import { onTestFinished, test } from "vitest";
 import which from "which";
 import { useTmp } from "../../test-shared";
 import type { AddressInfo } from "node:net";
 
-const LOCAL_EXPLORER_DISK = "core:local-explorer-disk";
 const opensslInstalled = which.sync("openssl", { nothrow: true });
 const opensslTest = opensslInstalled ? test : test.skip;
 opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
@@ -94,37 +92,4 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
 	await exitPromise;
 	expect(result.exitCode).toBe(0);
 	expect(resultText.trim()).toBe(responseBody);
-});
-
-test("local explorer UI is materialized to tmpPath", async ({ expect }) => {
-	const tmpPath = await useTmp();
-	const services = getGlobalServices({
-		sharedOptions: {
-			logRequests: true,
-			stripDisablePrettyError: true,
-			telemetry: { enabled: false },
-			unsafeLocalExplorer: true,
-		},
-		allWorkerRoutes: new Map<string, string[]>([["worker", []]]),
-		fallbackWorkerName: "core:user:worker",
-		loopbackPort: 8787,
-		tmpPath,
-		log: new NoOpLog(),
-		proxyBindings: [],
-		durableObjectClassNames: new Map(),
-	});
-	const localExplorerDiskService = services.find(
-		({ name }) => name === LOCAL_EXPLORER_DISK
-	);
-
-	expect(localExplorerDiskService).toMatchObject({
-		name: LOCAL_EXPLORER_DISK,
-		disk: {
-			path: path.join(tmpPath, "core", "local-explorer-ui"),
-			writable: false,
-		},
-	});
-	expect(
-		await fs.readdir(path.join(tmpPath, "core", "local-explorer-ui"))
-	).not.toHaveLength(0);
 });

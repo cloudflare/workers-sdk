@@ -5,7 +5,6 @@ import {
 	readdirSync,
 	readFileSync,
 	renameSync,
-	rmSync,
 	statSync,
 	writeFileSync,
 } from "node:fs";
@@ -15,7 +14,7 @@ import { Readable } from "node:stream";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
+import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
@@ -1193,7 +1192,10 @@ export function getGlobalServices({
  * workerd can't mount a directory from inside the zip as a disk service.
  */
 function materializeLocalExplorerUi(tmpPath: string) {
-	const bundledLocalExplorerUiPath = path.join(__dirname, "../local-explorer-ui");
+	const bundledLocalExplorerUiPath = path.join(
+		__dirname,
+		"../local-explorer-ui"
+	);
 	if (!existsSync(bundledLocalExplorerUiPath)) {
 		throw new MiniflareCoreError(
 			"ERR_MISSING_EXPLORER_UI",
@@ -1218,7 +1220,7 @@ function materializeLocalExplorerUi(tmpPath: string) {
 			copyDirectorySync(bundledLocalExplorerUiPath, stagedLocalExplorerUiPath);
 			renameSync(stagedLocalExplorerUiPath, localExplorerUiPath);
 		} catch (error) {
-			rmSync(stagedLocalExplorerUiPath, { force: true, recursive: true });
+			removeDirSync(stagedLocalExplorerUiPath);
 			throw error;
 		}
 	}
