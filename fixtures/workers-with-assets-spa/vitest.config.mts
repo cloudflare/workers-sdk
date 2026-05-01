@@ -1,9 +1,9 @@
-import { defineProject, mergeConfig } from "vitest/config";
+import { defineConfig, mergeConfig } from "vitest/config";
 import configShared from "../../vitest.shared";
 
 export default mergeConfig(
 	configShared,
-	defineProject({
+	defineConfig({
 		test: {
 			// The `runWranglerDev` helper will wait up to 50 secs for Wrangler to boot up
 			// The `chromium.launch` helper will wait up to 30 secs for the browser to boot up.

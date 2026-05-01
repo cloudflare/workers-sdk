@@ -1,9 +1,9 @@
-import { defineProject, mergeConfig } from "vitest/config";
+import { defineConfig, mergeConfig } from "vitest/config";
 import configShared from "../../vitest.shared";
 
 export default mergeConfig(
 	configShared,
-	defineProject({
+	defineConfig({
 		test: {
 			// The three test files in this fixture each spawn their own
 			// `wrangler dev` against the same working directory, so they share
