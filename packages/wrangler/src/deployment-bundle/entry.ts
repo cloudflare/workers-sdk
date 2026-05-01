@@ -153,6 +153,19 @@ export async function getEntry(
 		);
 	}
 
+	if (format === "service-worker" && config.migrations?.length) {
+		const errorMessage =
+			"Durable Object migrations require ES Module format Workers, but yours is being built as service-worker format. Migrations cannot be applied to service-worker format Workers.";
+		const migrateText =
+			"Migrate your worker to ES Module syntax to use Durable Object migrations:";
+		const migrateUrl =
+			"https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/";
+		throw new UserError(
+			`${errorMessage}\n${migrateText}\n${migrateUrl}`,
+			{ telemetryMessage: "durable object migrations unsupported service worker" }
+		);
+	}
+
 	return {
 		file: paths.absolutePath,
 		projectRoot,

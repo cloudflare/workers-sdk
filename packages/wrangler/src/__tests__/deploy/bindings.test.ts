@@ -1763,6 +1763,31 @@ describe("deploy", () => {
 					https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/]
 				`);
 			});
+
+			it("should error when deploying service-worker worker with migrations", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [],
+					},
+					migrations: [
+						{
+							tag: "v1",
+							new_classes: ["ExampleDurableObject"],
+						},
+					],
+				});
+				writeWorkerSource({ type: "sw" });
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy index.js")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Durable Object migrations require ES Module format Workers, but yours is being built as service-worker format. Migrations cannot be applied to service-worker format Workers.
+					Migrate your worker to ES Module syntax to use Durable Object migrations:
+					https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/]
+				`);
+			});
 		});
 
 		describe("[services]", () => {
