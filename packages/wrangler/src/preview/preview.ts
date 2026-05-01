@@ -7,6 +7,7 @@ import { buildWorker } from "../deployment-bundle/maybe-build-worker";
 import { cleanupDestination } from "../deployment-bundle/merge-config-args";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
+import { deployPreviewContainers } from "./containers";
 
 export const previewCommand = createCommand({
 	metadata: {
@@ -98,7 +99,8 @@ export const previewCommand = createCommand({
 			args,
 			config,
 			buildResult,
-			assetsOptions
+			assetsOptions,
+			{ deployPreviewContainers }
 		);
 		cleanupDestination(destination);
 
