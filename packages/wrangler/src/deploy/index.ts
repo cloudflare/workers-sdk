@@ -396,7 +396,7 @@ export const deployCommand = createCommand({
 					const stats = statSync(args.script);
 					if (stats.isDirectory()) {
 						scriptIsDirectory = true;
-						args = await handleMaybeAssetsDeployment(args.script, args);
+						args = await promptForMissingAssetFlag(args.script, args);
 					}
 				} catch (error) {
 					// If this is our UserError, re-throw it
@@ -556,7 +556,7 @@ export type DeployArgs = (typeof deployCommand)["args"];
  * @param args - The current deploy command arguments (mutated in place)
  * @returns The updated deploy args with `assets` set and `script` cleared if the user confirmed
  */
-export async function handleMaybeAssetsDeployment(
+export async function promptForMissingAssetFlag(
 	assetDirectory: string,
 	args: DeployArgs
 ): Promise<DeployArgs> {
