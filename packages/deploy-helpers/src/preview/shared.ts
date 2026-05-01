@@ -344,6 +344,22 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	return env;
 }
 
+/**
+ * Returns the set of DO `class_name`s that are bound in the preview AND
+ * implemented by THIS script (i.e. no `script_name` override). DOs implemented
+ * by another worker have their containers managed by that worker, so we
+ * intentionally exclude them.
+ */
+export function getOwnPreviewBoundDOClassNames(
+	previews: PreviewsConfig | undefined
+): Set<string> {
+	return new Set(
+		(previews?.durable_objects?.bindings ?? [])
+			.filter((b) => b.script_name === undefined)
+			.map((b) => b.class_name)
+	);
+}
+
 export function assemblePreviewScriptSettings(config: Config) {
 	const previews = config.previews;
 	const result: Record<string, unknown> = {};

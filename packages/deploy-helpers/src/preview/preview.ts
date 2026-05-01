@@ -25,6 +25,7 @@ import {
 	getBranchName,
 	getHeadCommitMessage,
 	getHeadCommitRef,
+	getOwnPreviewBoundDOClassNames,
 	resolveWorkerName,
 	shouldUseCIMetadataFallback,
 } from "./shared";
@@ -35,7 +36,11 @@ import type {
 	DeploymentResource,
 	PreviewResource,
 } from "./api";
-import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	ContainerApp,
+	PreviewsConfig,
+} from "@cloudflare/workers-utils";
 
 type PreviewDeploymentModule = {
 	name: string;
@@ -76,6 +81,32 @@ export type PreviewResult = {
 	preview: PreviewResource;
 	deployment: DeploymentResource;
 	isNewPreview: boolean;
+};
+
+// Container applications are built and deployed to Cloudchamber, which
+// deploy-helpers has no direct dependency on. As with `DeployCallbacks`
+// (see ../deploy/deploy.ts), the wrangler-specific implementation is
+// injected by the caller.
+export type PreviewCallbacks = {
+	deployPreviewContainers:
+		| ((
+				config: Config,
+				workerName: string,
+				previewSlug: string,
+				deployment: DeploymentResource,
+				previewContainers: ContainerApp[]
+		  ) => Promise<void>)
+		| undefined;
+};
+
+export type PreviewDeleteCallbacks = {
+	deletePreviewContainers:
+		| ((
+				config: Config,
+				workerName: string,
+				previewSlug: string
+		  ) => Promise<void>)
+		| undefined;
 };
 
 function toBase64(content: string | Uint8Array): string {
@@ -277,6 +308,30 @@ async function assemblePreviewDeploymentSettings(
 		request.placement = parseConfigPlacement(config);
 	}
 
+	// Containers: declare which DO classes are container-backed so the runtime
+	// populates `ctx.container` on those DO instances, mirroring the metadata
+	// emitted by `wrangler deploy`.
+	//
+	// Container config is non-inheritable: only `previews.containers` is read,
+	// not the top-level `containers` field. This matches the behavior of
+	// `previews.durable_objects` and forces users to explicitly opt-in to
+	// containers in previews.
+	//
+	// We only emit `class_name`s that are bound as DOs in this preview AND
+	// where the DO is implemented by THIS script (i.e. no `script_name` is set
+	// — those bindings reference DOs implemented by another worker, which owns
+	// their own container application).
+	const previewContainers = previews?.containers ?? [];
+	if (previewContainers.length > 0) {
+		const ownBoundDOClasses = getOwnPreviewBoundDOClassNames(previews);
+		const containers = previewContainers
+			.filter((c) => ownBoundDOClasses.has(c.class_name))
+			.map((c) => ({ class_name: c.class_name }));
+		if (containers.length > 0) {
+			request.containers = containers;
+		}
+	}
+
 	const env = extractConfigBindings(config);
 	if (Object.keys(env).length > 0) {
 		request.env = env;
@@ -358,7 +413,8 @@ export async function preview(
 	args: PreviewArgs,
 	config: Config,
 	buildResult: WorkerBuildResult,
-	assetsOptions: PreviewAssetsOptions | undefined
+	assetsOptions: PreviewAssetsOptions | undefined,
+	callbacks: PreviewCallbacks
 ): Promise<PreviewResult> {
 	const workerName = resolveWorkerName(args, config);
 
@@ -444,6 +500,18 @@ export async function preview(
 		{ ignoreDefaults }
 	);
 
+	const previewContainers =
+		(config.previews as PreviewsConfig | undefined)?.containers ?? [];
+	if (previewContainers.length > 0 && callbacks.deployPreviewContainers) {
+		await callbacks.deployPreviewContainers(
+			config,
+			workerName,
+			previewResource.slug,
+			deployment,
+			previewContainers
+		);
+	}
+
 	if (args.json) {
 		logger.log(
 			JSON.stringify({ preview: previewResource, deployment }, null, 2)
@@ -477,7 +545,8 @@ export async function preview(
 export async function previewDelete(
 	accountId: string,
 	args: PreviewDeleteArgs,
-	config: Config
+	config: Config,
+	callbacks: PreviewDeleteCallbacks
 ): Promise<void> {
 	const workerName = resolveWorkerName(args, config);
 	let previewName = args.name;
@@ -501,6 +570,35 @@ export async function previewDelete(
 		if (!confirmed) {
 			logger.log("Aborted.");
 			return;
+		}
+	}
+
+	const hasPreviewContainers =
+		((config.previews as PreviewsConfig | undefined)?.containers?.length ??
+			0) > 0;
+	if (hasPreviewContainers && callbacks.deletePreviewContainers) {
+		try {
+			const previewResource = await getPreview(
+				config,
+				accountId,
+				workerName,
+				previewName
+			);
+			await callbacks.deletePreviewContainers(
+				config,
+				workerName,
+				previewResource.slug
+			);
+		} catch (error) {
+			if (error instanceof Error && "code" in error && error.code === 10025) {
+				logger.warn(
+					`Preview "${previewName}" was not found; skipping container application cleanup.`
+				);
+			} else {
+				logger.warn(
+					`Failed to clean up preview container applications: ${error instanceof Error ? error.message : String(error)}`
+				);
+			}
 		}
 	}
 
