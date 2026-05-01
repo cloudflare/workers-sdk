@@ -207,9 +207,12 @@ export class Logger {
 			: args;
 
 		// unless in unit-tests, send ALL logs to the debug log file (even non-debug logs for context & order)
-		// users can opt out of disk logging entirely by setting WRANGLER_LOG_DISK=false
+		// users can opt out of disk logging entirely by setting WRANGLER_LOG_DISK=false (or "0")
 		const inUnitTests = typeof vitest !== "undefined";
-		if (!inUnitTests && process.env.WRANGLER_LOG_DISK !== "false") {
+		const logToDiskSetting = process.env.WRANGLER_LOG_DISK?.toLowerCase();
+		const diskLoggingDisabled =
+			logToDiskSetting === "false" || logToDiskSetting === "0";
+		if (!inUnitTests && !diskLoggingDisabled) {
 			void appendToDebugLogFile(messageLevel, message);
 		}
 

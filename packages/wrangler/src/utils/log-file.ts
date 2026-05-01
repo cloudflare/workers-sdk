@@ -54,21 +54,19 @@ export async function cleanupOldLogFiles(logsDir: string): Promise<void> {
 	try {
 		const files = await readdir(logsDir);
 		const now = Date.now();
-		await Promise.all(
-			files
-				.filter((f) => f.startsWith("wrangler-") && f.endsWith(".log"))
-				.map(async (f) => {
-					const filePath = path.join(logsDir, f);
-					try {
-						const fileStat = await stat(filePath);
-						if (now - fileStat.mtimeMs > cutoffMs) {
-							await unlink(filePath);
-						}
-					} catch {
-						// silently ignore errors for individual files
-					}
-				})
-		);
+		for (const f of files.filter(
+			(f) => f.startsWith("wrangler-") && f.endsWith(".log")
+		)) {
+			const filePath = path.join(logsDir, f);
+			try {
+				const fileStat = await stat(filePath);
+				if (now - fileStat.mtimeMs > cutoffMs) {
+					await unlink(filePath);
+				}
+			} catch {
+				// silently ignore errors for individual files
+			}
+		}
 	} catch {
 		// silently ignore errors (e.g. logs directory doesn't exist yet)
 	}
@@ -79,7 +77,8 @@ const mutex = new Mutex();
 
 // Kick off log cleanup in the background at startup (fire-and-forget).
 // Only run when the user hasn't set a custom exact log file path.
-if (!getDebugFileDir().endsWith(".log")) {
+// Skip during tests to avoid deleting real ~/.wrangler/logs files.
+if (!getDebugFileDir().endsWith(".log") && typeof vitest === "undefined") {
 	void cleanupOldLogFiles(getDebugFileDir());
 }
 
