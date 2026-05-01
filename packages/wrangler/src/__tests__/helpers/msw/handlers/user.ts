@@ -1,6 +1,23 @@
 import { http, HttpResponse } from "msw";
 import { createFetchResult } from "../index";
 
+// Keep `/accounts` and `/memberships` aligned by default. Wrangler now
+// intersects these two endpoints to determine which accounts the current
+// login auth can use, so the default fixtures must agree on the same set
+// of accounts.
+//
+// The `/accounts` and `/memberships` handlers are registered without
+// `{ once: true }` so a single test that triggers multiple requests to
+// either endpoint (e.g. `wrangler whoami --account ...` which calls
+// `/memberships` from both `fetchAllAccounts` and `fetchMembershipRoles`)
+// resolves consistently. Tests that need a different response can still
+// register a `once: true` override on top.
+const DEFAULT_ACCOUNTS = [
+	{ name: "Account One", id: "account-1" },
+	{ name: "Account Two", id: "account-2" },
+	{ name: "Account Three", id: "account-3" },
+];
+
 export const mswSuccessUserHandlers = [
 	http.get(
 		"*/user",
@@ -24,35 +41,17 @@ export const mswSuccessUserHandlers = [
 		},
 		{ once: true }
 	),
-	http.get(
-		"*/accounts",
-		() => {
-			return HttpResponse.json(
-				createFetchResult([
-					{ name: "Account One", id: "account-1" },
-					{ name: "Account Two", id: "account-2" },
-					{ name: "Account Three", id: "account-3" },
-				])
-			);
-		},
-		{ once: true }
-	),
-	http.get(
-		"*/memberships",
-		() => {
-			return HttpResponse.json(
-				createFetchResult([
-					{
-						id: "membership-id-1",
-						account: { id: "account-id-1", name: "My Personal Account" },
-					},
-					{
-						id: "membership-id-2",
-						account: { id: "account-id-2", name: "Enterprise Account" },
-					},
-				])
-			);
-		},
-		{ once: true }
-	),
+	http.get("*/accounts", () => {
+		return HttpResponse.json(createFetchResult(DEFAULT_ACCOUNTS));
+	}),
+	http.get("*/memberships", () => {
+		return HttpResponse.json(
+			createFetchResult(
+				DEFAULT_ACCOUNTS.map((account, index) => ({
+					id: `membership-id-${index + 1}`,
+					account,
+				}))
+			)
+		);
+	}),
 ];

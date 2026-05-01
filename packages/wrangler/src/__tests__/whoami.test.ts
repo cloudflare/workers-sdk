@@ -291,16 +291,26 @@ describe("whoami", () => {
 		expect,
 	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		// `whoami` makes two calls to `/memberships`: one inside `fetchAllAccounts`
+		// (to filter accounts by what the current login auth can use) and one
+		// inside `fetchMembershipRoles`. Use a non-once handler so both calls
+		// see the same response.
 		msw.use(
-			http.get(
-				"*/memberships",
-				() =>
-					HttpResponse.json(
-						createFetchResult([
-							{ account: { id: "account-2" }, roles: ["Test role"] },
-						])
-					),
-				{ once: true }
+			http.get("*/memberships", () =>
+				HttpResponse.json(
+					createFetchResult([
+						{
+							account: { id: "account-1", name: "Account One" },
+						},
+						{
+							account: { id: "account-2", name: "Account Two" },
+							roles: ["Test role"],
+						},
+						{
+							account: { id: "account-3", name: "Account Three" },
+						},
+					])
+				)
 			)
 		);
 		await runWrangler(`whoami --account "account-2"`);
@@ -360,15 +370,21 @@ describe("whoami", () => {
 		setIsTTY(false);
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		msw.use(
-			http.get(
-				"*/memberships",
-				() =>
-					HttpResponse.json(
-						createFetchResult([
-							{ account: { id: "account-2" }, roles: ["Test role"] },
-						])
-					),
-				{ once: true }
+			http.get("*/memberships", () =>
+				HttpResponse.json(
+					createFetchResult([
+						{
+							account: { id: "account-1", name: "Account One" },
+						},
+						{
+							account: { id: "account-2", name: "Account Two" },
+							roles: ["Test role"],
+						},
+						{
+							account: { id: "account-3", name: "Account Three" },
+						},
+					])
+				)
 			)
 		);
 		await runWrangler(`whoami --account "account-2"`);
@@ -473,16 +489,17 @@ describe("whoami", () => {
 		expect,
 	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		// Both `/memberships` calls (in `fetchAllAccounts` and
+		// `fetchMembershipRoles`) should fail. `fetchAllAccounts` runs in
+		// `permissive` mode for whoami so it falls back to `/accounts`, while
+		// `fetchMembershipRoles` surfaces the auth error to the user.
 		msw.use(
-			http.get(
-				"*/memberships",
-				() =>
-					HttpResponse.json(
-						createFetchResult(undefined, false, [
-							{ code: 10000, message: "Authentication error" },
-						])
-					),
-				{ once: true }
+			http.get("*/memberships", () =>
+				HttpResponse.json(
+					createFetchResult(undefined, false, [
+						{ code: 10000, message: "Authentication error" },
+					])
+				)
 			)
 		);
 		await runWrangler(`whoami --account "account-2"`);

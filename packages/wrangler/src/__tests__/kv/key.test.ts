@@ -1427,6 +1427,20 @@ function mockGetMemberships(
 			{ once: true }
 		)
 	);
+	// Wrangler intersects `/memberships` with `/accounts` to determine the
+	// accounts available to the current login auth. Mirror the same accounts
+	// on `/accounts` so the intersection yields the same set as `/memberships`.
+	msw.use(
+		http.get(
+			"*/accounts",
+			() => {
+				return HttpResponse.json(
+					createFetchResult(accounts.map(({ account }) => account))
+				);
+			},
+			{ once: true }
+		)
+	);
 }
 
 function mockKeyListRequest(

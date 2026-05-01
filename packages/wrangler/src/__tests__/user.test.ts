@@ -31,6 +31,7 @@ import {
 	mockOAuthFlow,
 } from "./helpers/mock-oauth-flow";
 import {
+	createFetchResult,
 	msw,
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
@@ -757,7 +758,9 @@ describe("User", () => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-api-token");
 		});
 
-		it("should return accounts from the API", async ({ expect }) => {
+		it("should return the intersection of /accounts and /memberships", async ({
+			expect,
+		}) => {
 			mockGetMemberships([
 				{
 					id: "membership-1",
@@ -776,6 +779,83 @@ describe("User", () => {
 			]);
 		});
 
+		it("should drop accounts present in /accounts but not /memberships", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/accounts",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{ id: "account-1", name: "Account One" },
+								{ id: "account-2", name: "Account Two" },
+								{ id: "account-3", name: "Orphan account" },
+							])
+						),
+					{ once: true }
+				),
+				http.get(
+					"*/memberships",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{
+									id: "membership-1",
+									account: { id: "account-1", name: "Account One" },
+								},
+								{
+									id: "membership-2",
+									account: { id: "account-2", name: "Account Two" },
+								},
+							])
+						),
+					{ once: true }
+				)
+			);
+
+			const accounts = await fetchAllAccounts({});
+			expect(accounts).toEqual([
+				{ id: "account-1", name: "Account One" },
+				{ id: "account-2", name: "Account Two" },
+			]);
+		});
+
+		it("should drop accounts present in /memberships but not /accounts", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/accounts",
+					() =>
+						HttpResponse.json(
+							createFetchResult([{ id: "account-1", name: "Account One" }])
+						),
+					{ once: true }
+				),
+				http.get(
+					"*/memberships",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{
+									id: "membership-1",
+									account: { id: "account-1", name: "Account One" },
+								},
+								{
+									id: "membership-2",
+									account: { id: "account-2", name: "Phantom account" },
+								},
+							])
+						),
+					{ once: true }
+				)
+			);
+
+			const accounts = await fetchAllAccounts({});
+			expect(accounts).toEqual([{ id: "account-1", name: "Account One" }]);
+		});
+
 		it("should throw when no accounts are found", async ({ expect }) => {
 			mockGetMemberships([]);
 
@@ -784,10 +864,78 @@ describe("User", () => {
 			);
 		});
 
-		it("should throw a helpful error on 9109 permission error", async ({
+		it("should throw when /accounts and /memberships have no overlap", async ({
 			expect,
 		}) => {
 			msw.use(
+				http.get(
+					"*/accounts",
+					() =>
+						HttpResponse.json(
+							createFetchResult([{ id: "account-1", name: "Account One" }])
+						),
+					{ once: true }
+				),
+				http.get(
+					"*/memberships",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{
+									id: "membership-1",
+									account: { id: "account-2", name: "Account Two" },
+								},
+							])
+						),
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/Failed to automatically retrieve account IDs for the logged in user/
+			);
+		});
+
+		it("should fall back to /accounts when /memberships returns 9109 (Account API Token path)", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/accounts",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{ id: "account-only", name: "Single Account" },
+							])
+						),
+					{ once: true }
+				),
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [{ code: 9109, message: "Insufficient permissions" }],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			const accounts = await fetchAllAccounts({});
+			expect(accounts).toEqual([
+				{ id: "account-only", name: "Single Account" },
+			]);
+		});
+
+		it("should throw a helpful error on 9109 when /accounts is also unusable", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get("*/accounts", () => HttpResponse.json(createFetchResult([])), {
+					once: true,
+				}),
 				http.get(
 					"*/memberships",
 					() => {
@@ -804,6 +952,72 @@ describe("User", () => {
 			await expect(fetchAllAccounts({})).rejects.toThrowError(
 				/incorrect permissions on your API token/
 			);
+		});
+
+		it("should propagate non-9109 /memberships errors by default", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [{ code: 10000, message: "Authentication error" }],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/A request to the Cloudflare API \(\/memberships\) failed/
+			);
+		});
+
+		it("should fall back to /accounts in permissive mode when /memberships fails", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/accounts",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{ id: "account-1", name: "Account One" },
+								{ id: "account-2", name: "Account Two" },
+							])
+						),
+					{ once: true }
+				),
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [{ code: 10000, message: "Authentication error" }],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			const accounts = await fetchAllAccounts({}, { permissive: true });
+			expect(accounts).toEqual([
+				{ id: "account-1", name: "Account One" },
+				{ id: "account-2", name: "Account Two" },
+			]);
+		});
+
+		it("should return an empty array instead of throwing when throwOnEmpty is false", async ({
+			expect,
+		}) => {
+			mockGetMemberships([]);
+
+			const accounts = await fetchAllAccounts({}, { throwOnEmpty: false });
+			expect(accounts).toEqual([]);
 		});
 	});
 

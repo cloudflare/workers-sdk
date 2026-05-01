@@ -3,10 +3,11 @@ import {
 	getCloudflareComplianceRegion,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { fetchPagedListResult, fetchResult } from "../cfetch";
+import { fetchResult } from "../cfetch";
 import { isAuthenticationError } from "../core/handle-errors";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
+import { fetchAllAccounts } from "./fetch-accounts";
 import { fetchMembershipRoles } from "./membership";
 import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { ApiCredentials, Scope } from ".";
@@ -345,7 +346,23 @@ type AccountInfo = { name: string; id: string };
 async function getAccounts(
 	complianceConfig: ComplianceConfig
 ): Promise<AccountInfo[]> {
-	return await fetchPagedListResult<AccountInfo>(complianceConfig, "/accounts");
+	// Use the shared intersection helper so that `whoami` only displays accounts
+	// that the current login auth can actually use (i.e. those present in both
+	// `/accounts` and `/memberships`). For Account API Tokens — where
+	// `/memberships` returns 9109 — this falls back to `/accounts`, which is
+	// already scoped to the single account the token can access.
+	//
+	// `throwOnEmpty: false` — `whoami` is informational and should render an
+	// empty list rather than fail when the intersection is empty.
+	//
+	// `permissive: true` — `whoami` should still display the accounts table
+	// even if `/memberships` is temporarily unavailable. Failure handling for
+	// the per-account membership-roles section happens separately via
+	// `fetchMembershipRoles`.
+	return await fetchAllAccounts(complianceConfig, {
+		throwOnEmpty: false,
+		permissive: true,
+	});
 }
 
 async function getTokenPermissions(): Promise<string[] | undefined> {

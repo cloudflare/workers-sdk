@@ -17,11 +17,35 @@ export function mockGetMemberships(
 			{ once: true }
 		)
 	);
+	// Wrangler intersects `/memberships` with `/accounts` to determine the
+	// accounts available to the current login auth. Register a matching
+	// `/accounts` handler so any code path that hits both endpoints sees a
+	// consistent set of accounts.
+	msw.use(
+		http.get(
+			"*/accounts",
+			() => {
+				return HttpResponse.json(
+					createFetchResult(accounts.map(({ account }) => account))
+				);
+			},
+			{ once: true }
+		)
+	);
 }
 export function mockGetMembershipsFail() {
 	msw.use(
 		http.get(
 			"*/memberships",
+			() => {
+				return HttpResponse.json(createFetchResult([], false));
+			},
+			{ once: true }
+		)
+	);
+	msw.use(
+		http.get(
+			"*/accounts",
 			() => {
 				return HttpResponse.json(createFetchResult([], false));
 			},
