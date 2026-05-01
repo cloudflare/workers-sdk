@@ -661,7 +661,7 @@ export async function promptForMissingDeployConfig(
 		}
 
 		const writeConfigFile = await confirm(
-			`Do you want Wrangler to write a wrangler.json config file to store this configuration?\n${chalk.dim(
+			`Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\n${chalk.dim(
 				"This will allow you to simply run `wrangler deploy` on future deployments."
 			)}`
 		);
