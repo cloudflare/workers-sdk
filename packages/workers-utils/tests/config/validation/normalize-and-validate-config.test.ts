@@ -9599,6 +9599,81 @@ describe("normalizeAndValidateConfig()", () => {
 					'The field "previews.browser" should be an object'
 				);
 			});
+
+			it("should accept previews.containers without a name", ({ expect }) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject previews.containers entries that set a name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+								name: "custom-name",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"name" is not allowed on "previews.containers" entries'
+				);
+			});
+
+			it("should reject previews.containers entries missing image", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [{ class_name: "MyContainer" }],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"containers.image" field must be defined'
+				);
+			});
 		});
 	});
 });
