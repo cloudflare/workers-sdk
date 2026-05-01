@@ -126,11 +126,13 @@ describe("entrypoints", () => {
 		`,
 		});
 
-		const response = await fetch(url);
-		// Check protocol, host, and cf preserved
-		expect(await response.text()).toBe(
-			'POST https://placeholder:9999/loopback {"thing":true}'
-		);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			// Check protocol, host, and cf preserved
+			expect(await response.text()).toBe(
+				'POST https://placeholder:9999/loopback {"thing":true}'
+			);
+		});
 	});
 
 	test("should support default ExportedHandler entrypoints", async ({
@@ -266,11 +268,13 @@ describe("entrypoints", () => {
 		};
 		const { url } = await dev(files, ["--test-scheduled"]);
 
-		let response = await fetch(url);
-		expect(await response.text()).toBe("GET /");
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(await response.text()).toBe("GET /");
+		});
 
 		// Check other events can be dispatched
-		response = await fetch(new URL("/__scheduled?cron=* * * * 30", url));
+		let response = await fetch(new URL("/__scheduled?cron=* * * * 30", url));
 		expect(response.status).toBe(200);
 		expect(await response.text()).toBe("Ran scheduled event");
 		response = await fetch(new URL("/controller", url));
@@ -319,11 +323,13 @@ describe("entrypoints", () => {
 		`,
 		});
 
-		const response = await fetch(url);
-		// Check protocol, host, and cf preserved
-		expect(await response.text()).toBe(
-			'POST https://placeholder:9999/ {"thing":true}'
-		);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			// Check protocol, host, and cf preserved
+			expect(await response.text()).toBe(
+				'POST https://placeholder:9999/ {"thing":true}'
+			);
+		});
 	});
 
 	test("should support named ExportedHandler entrypoints", async ({
@@ -642,8 +648,10 @@ describe("entrypoints", () => {
 		`,
 		});
 
-		const response = await fetch(url);
-		expect(await response.text()).toBe("pong");
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(await response.text()).toBe("pong");
+		});
 	});
 
 	test("should support binding to Durable Object in same worker with explicit script_name", async ({
@@ -677,8 +685,10 @@ describe("entrypoints", () => {
 		`,
 		});
 
-		const response = await fetch(url);
-		expect(await response.text()).toBe("pong");
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(await response.text()).toBe("pong");
+		});
 	});
 
 	test("should throw if binding to named entrypoint exported by version of wrangler without entrypoints support", async ({
@@ -706,11 +716,13 @@ describe("entrypoints", () => {
 			}
 		`,
 		});
-		let response = await fetch(url);
-		expect(response.status).toBe(503);
-		expect(await response.text()).toBe(
-			'Worker "bound" not found. Make sure it is running locally.'
-		);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(response.status).toBe(503);
+			expect(await response.text()).toBe(
+				'Worker "bound" not found. Make sure it is running locally.'
+			);
+		});
 
 		await writeFile(
 			path.join(isolatedDevRegistryPath, "bound"),
@@ -759,10 +771,12 @@ describe("entrypoints", () => {
 			}
 		`,
 		});
-		let response = await fetch(url);
-		expect(await response.text()).toBe(
-			'Worker "bound" not found. Make sure it is running locally.'
-		);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(await response.text()).toBe(
+				'Worker "bound" not found. Make sure it is running locally.'
+			);
+		});
 
 		// Start up the bound worker without the expected entrypoint
 		await dev({
@@ -813,10 +827,12 @@ describe("entrypoints", () => {
 			}
 		`,
 		});
-		let response = await fetch(url);
-		expect(await response.text()).toBe(
-			'Worker "bound" not found. Make sure it is running locally.'
-		);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(await response.text()).toBe(
+				'Worker "bound" not found. Make sure it is running locally.'
+			);
+		});
 
 		// Start up the bound worker using HTTPS
 		const files: Record<string, string> = {
@@ -864,10 +880,12 @@ describe("entrypoints", () => {
 			}
 		`,
 		});
-		let response = await fetch(url);
-		expect(await response.text()).toBe(
-			'Worker "bound" not found. Make sure it is running locally.'
-		);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(await response.text()).toBe(
+				'Worker "bound" not found. Make sure it is running locally.'
+			);
+		});
 
 		const boundWorker = new Miniflare({
 			name: "bound",
@@ -919,13 +937,15 @@ describe("entrypoints", () => {
 		`,
 		});
 
-		const response = await fetch(url);
-		const errors = await response.json();
-		expect(errors).toMatchInlineSnapshot(`
-			[
-			  "Error: Worker "bound" not found. Make sure it is running locally.",
-			  "Error: Worker "bound" not found. Make sure it is running locally.",
-			]
-		`);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			const errors = await response.json();
+			expect(errors).toMatchInlineSnapshot(`
+				[
+				  "Error: Worker "bound" not found. Make sure it is running locally.",
+				  "Error: Worker "bound" not found. Make sure it is running locally.",
+				]
+			`);
+		});
 	});
 });

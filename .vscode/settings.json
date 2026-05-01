@@ -106,5 +106,7 @@
 	},
 	"[json]": {
 		"editor.defaultFormatter": "oxc.oxc-vscode"
-	}
+	},
+	"oxc.path.oxfmt": "node_modules/.bin/oxfmt",
+	"oxc.path.oxlint": "node_modules/.bin/oxlint"
 }
