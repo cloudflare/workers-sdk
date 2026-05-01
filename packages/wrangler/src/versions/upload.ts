@@ -22,6 +22,7 @@ import {
 } from "../assets";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
+import { validateArgs } from "../deploy/shared";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -288,6 +289,9 @@ export const versionsUploadCommand = createCommand({
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
+	validateArgs(args) {
+		validateArgs(args);
+	},
 	handler: async function versionsUploadHandler(args, { config }) {
 		const entry = await getEntry(args, config, "versions upload");
 		metrics.sendMetricsEvent(
@@ -300,12 +304,6 @@ export const versionsUploadCommand = createCommand({
 			}
 		);
 
-		if (args.nodeCompat) {
-			throw new UserError(
-				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`,
-				{ telemetryMessage: "versions upload node compat unsupported" }
-			);
-		}
 
 		if (args.site || config.site) {
 			throw new UserError(
@@ -327,12 +325,6 @@ export const versionsUploadCommand = createCommand({
 			args,
 			config,
 		});
-
-		if (args.latest) {
-			logger.warn(
-				`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(config.configPath)} file.\n`
-			);
-		}
 
 		const cliVars = collectKeyValues(args.var);
 		const cliDefines = collectKeyValues(args.define);

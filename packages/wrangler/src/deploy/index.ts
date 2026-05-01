@@ -2,7 +2,6 @@ import assert from "node:assert";
 import { statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
-	configFileName,
 	getTodaysCompatDate,
 	getCIOverrideName,
 	UserError,
@@ -32,6 +31,7 @@ import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import deploy from "./deploy";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
+import { validateArgs } from "./shared";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -276,12 +276,7 @@ export const deployCommand = createCommand({
 		printMetricsBanner: true,
 	},
 	validateArgs(args) {
-		if (args.nodeCompat) {
-			throw new UserError(
-				"The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.",
-				{ telemetryMessage: "deploy command node compat unsupported" }
-			);
-		}
+		validateArgs(args);
 	},
 	async handler(args, { config }) {
 		const shouldRunAutoConfig =
@@ -425,14 +420,6 @@ export const deployCommand = createCommand({
 			args,
 			config,
 		});
-
-		if (args.latest) {
-			logger.warn(
-				`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(
-					config.configPath
-				)} file.`
-			);
-		}
 
 		const cliVars = collectKeyValues(args.var);
 		const cliDefines = collectKeyValues(args.define);
