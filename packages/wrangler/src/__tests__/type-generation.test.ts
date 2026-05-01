@@ -1697,7 +1697,7 @@ describe("generate types - CLI", () => {
 			"./wrangler.jsonc",
 			JSON.stringify({
 				vars: {
-					myTomlVarA: "A from wrangler toml",
+					myTomlVarA: "A from wrangler jsonc",
 				},
 			}),
 			"utf-8"
