@@ -160,10 +160,17 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	}
 
 	for (const service of previews?.services ?? []) {
+		// `cross_account_grant` is internal/non-public-facing, so we access it
+		// through the runtime shape instead of the public type.
+		const crossAccountGrant = (service as { cross_account_grant?: string })
+			.cross_account_grant;
 		env[service.binding] = {
 			type: "service",
 			service: service.service,
 			entrypoint: service.entrypoint,
+			...(crossAccountGrant !== undefined && {
+				cross_account_grant: crossAccountGrant,
+			}),
 		};
 	}
 
@@ -315,6 +322,11 @@ export function extractConfigBindings(config: Config): EnvBindings {
 
 	if (config.assets?.binding) {
 		env[config.assets.binding] = { type: "assets" };
+	}
+
+	for (const binding of previews?.unsafe?.bindings ?? []) {
+		const { name, type, ...rest } = binding;
+		env[name] = { type, ...rest } as Binding;
 	}
 
 	return env;
