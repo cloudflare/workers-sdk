@@ -5,6 +5,7 @@ import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
+import { logMissingPreviewsBindingsWarning } from "../preview/preview";
 import { extractConfigBindings, getBranchName } from "../preview/shared";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -16,7 +17,11 @@ import {
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
 import type { OutputEntry } from "../output";
-import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
+import type {
+	Binding,
+	Config,
+	PreviewsConfig,
+} from "@cloudflare/workers-utils";
 
 vi.mock("node:child_process", async () => {
 	const actual =
@@ -207,6 +212,58 @@ describe("wrangler preview", () => {
 				MY_STREAM: { type: "stream" },
 				MY_VERSION_METADATA: { type: "version_metadata" },
 			});
+		});
+	});
+
+	describe("logMissingPreviewsBindingsWarning", () => {
+		test("warns about a likely Wrangler bug when an inheritable binding is missing from the preview deployment", async ({
+			expect,
+		}) => {
+			const topLevelBindings: Record<string, Binding> = {
+				ASSETS: { type: "assets" },
+			};
+
+			await logMissingPreviewsBindingsWarning(topLevelBindings, undefined, {});
+
+			const normalizedWarningOutput = stripVTControlCharacters(
+				std.warn
+			).replace(/\s+/g, " ");
+
+			expect(normalizedWarningOutput).toContain(
+				"should have been inherited from your top-level Wrangler config but are missing from the Preview deployment"
+			);
+			expect(normalizedWarningOutput).toContain("ASSETS");
+			expect(normalizedWarningOutput).toContain(
+				"This is likely a bug in Wrangler."
+			);
+			expect(normalizedWarningOutput).not.toContain(
+				"Your configuration has diverged."
+			);
+		});
+
+		test("warns about diverged config when a non-inheritable binding is missing from the preview settings", async ({
+			expect,
+		}) => {
+			const topLevelBindings: Record<string, Binding> = {
+				IMPORTANT_BINDING: { type: "kv_namespace", id: "kv-id-123" },
+			};
+
+			await logMissingPreviewsBindingsWarning(topLevelBindings, undefined, {});
+
+			const normalizedWarningOutput = stripVTControlCharacters(
+				std.warn
+			).replace(/\s+/g, " ");
+
+			expect(normalizedWarningOutput).toContain(
+				"Your configuration has diverged."
+			);
+			expect(normalizedWarningOutput).toContain("IMPORTANT_BINDING");
+			expect(normalizedWarningOutput).toContain(
+				'Either include these bindings in the "previews" field'
+			);
+			expect(normalizedWarningOutput).not.toContain(
+				"This is likely a bug in Wrangler."
+			);
 		});
 	});
 
@@ -1518,6 +1575,100 @@ describe("wrangler preview", () => {
 			});
 			expect(deploymentRequestBody?.main_module).toBeDefined();
 			expect(Array.isArray(deploymentRequestBody?.modules)).toBe(true);
+			// No assets binding configured, so no env entry should be emitted
+			const env = deploymentRequestBody?.env as
+				| Record<string, { type: string }>
+				| undefined;
+			const assetsEntries = Object.values(env ?? {}).filter(
+				(b) => b.type === "assets"
+			);
+			expect(assetsEntries).toHaveLength(0);
+		});
+
+		test("should include the assets binding in env using the configured binding name", async ({
+			expect,
+		}) => {
+			mkdirSync("public", { recursive: true });
+			writeFileSync("public/index.html", "<h1>Hello</h1>");
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					assets: { directory: "public", binding: "MY_ASSETS" },
+				})
+			);
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-custom-binding",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:workerId/assets-upload-session`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: { buckets: [], jwt: "assets-jwt-from-session" },
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await request.json()) as Record<
+							string,
+							unknown
+						>;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-custom-binding",
+									preview_id: "preview-id-custom-binding",
+									preview_name: "test-preview",
+									urls: ["https://custom-bind.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			await runWrangler("preview --name test-preview");
+			expect(deploymentRequestBody?.env).toMatchObject({
+				MY_ASSETS: { type: "assets" },
+			});
+			expect(deploymentRequestBody?.env).not.toHaveProperty("ASSETS");
 		});
 
 		test("should include source maps in deployment modules when upload_source_maps is enabled", async ({
