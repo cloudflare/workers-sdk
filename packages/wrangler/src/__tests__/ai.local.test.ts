@@ -17,7 +17,9 @@ describe("ai", () => {
 
 		describe("local", () => {
 			it("should send x-forwarded header", async ({ expect }) => {
-				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
+				vi.spyOn(user, "getOrSelectAccountId").mockImplementation(
+					async () => "123"
+				);
 				vi.spyOn(internal, "performApiFetch").mockImplementation(
 					async (config, resource, init = {}) => {
 						const headers = new Headers(init.headers);
@@ -45,7 +47,9 @@ describe("ai", () => {
 			});
 
 			it("account id should be set", async ({ expect }) => {
-				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
+				vi.spyOn(user, "getOrSelectAccountId").mockImplementation(
+					async () => "123"
+				);
 				vi.spyOn(internal, "performApiFetch").mockImplementation(
 					async (config, resource) => {
 						return Response.json({
@@ -74,7 +78,9 @@ describe("ai", () => {
 			it("should log error on 403 with auth error code 1031", async ({
 				expect,
 			}) => {
-				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
+				vi.spyOn(user, "getOrSelectAccountId").mockImplementation(
+					async () => "123"
+				);
 				vi.spyOn(internal, "performApiFetch").mockImplementation(async () => {
 					return new Response(
 						JSON.stringify({
@@ -98,7 +104,9 @@ describe("ai", () => {
 			it("should not log error on 403 without auth error code 1031", async ({
 				expect,
 			}) => {
-				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
+				vi.spyOn(user, "getOrSelectAccountId").mockImplementation(
+					async () => "123"
+				);
 				vi.spyOn(internal, "performApiFetch").mockImplementation(async () => {
 					return new Response(
 						JSON.stringify({
@@ -120,7 +128,9 @@ describe("ai", () => {
 			it("should not throw on 403 with unparseable body", async ({
 				expect,
 			}) => {
-				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
+				vi.spyOn(user, "getOrSelectAccountId").mockImplementation(
+					async () => "123"
+				);
 				vi.spyOn(internal, "performApiFetch").mockImplementation(async () => {
 					return new Response("not json", { status: 403 });
 				});
