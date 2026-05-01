@@ -1,5 +1,12 @@
 import assert from "node:assert";
-import { existsSync, readFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -990,6 +997,7 @@ export interface GlobalServicesOptions {
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
 	loopbackPort: number;
+	tmpPath: string;
 	log: Log;
 	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */
 	proxyBindings: Worker_Binding[];
@@ -1005,6 +1013,7 @@ export function getGlobalServices({
 	allWorkerRoutes,
 	fallbackWorkerName,
 	loopbackPort,
+	tmpPath,
 	log,
 	proxyBindings,
 	durableObjectClassNames,
@@ -1147,16 +1156,7 @@ export function getGlobalServices({
 	];
 
 	if (sharedOptions.unsafeLocalExplorer) {
-		// Local explorer UI assets path
-		// The UI dist is copied to miniflare's dist/local-explorer-ui at build time.
-		// In the bundled CJS output, __dirname is dist/src/ so we need ../local-explorer-ui
-		const localExplorerUiPath = path.join(__dirname, "../local-explorer-ui");
-		if (!existsSync(localExplorerUiPath)) {
-			throw new MiniflareCoreError(
-				"ERR_MISSING_EXPLORER_UI",
-				`Local Explorer UI assets not found at expected path: ${localExplorerUiPath}`
-			);
-		}
+		const localExplorerUiPath = materializeLocalExplorerUi(tmpPath);
 		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
 			proxyBindings,
 			durableObjectClassNames,
@@ -1182,6 +1182,43 @@ export function getGlobalServices({
 	}
 
 	return services;
+}
+
+function materializeLocalExplorerUi(tmpPath: string) {
+	const bundledLocalExplorerUiPath = path.join(__dirname, "../local-explorer-ui");
+	if (!existsSync(bundledLocalExplorerUiPath)) {
+		throw new MiniflareCoreError(
+			"ERR_MISSING_EXPLORER_UI",
+			`Local Explorer UI assets not found at expected path: ${bundledLocalExplorerUiPath}`
+		);
+	}
+
+	const localExplorerUiPath = path.join(
+		tmpPath,
+		CORE_PLUGIN_NAME,
+		"local-explorer-ui"
+	);
+	if (!existsSync(localExplorerUiPath)) {
+		mkdirSync(path.dirname(localExplorerUiPath), { recursive: true });
+		copyDirectorySync(bundledLocalExplorerUiPath, localExplorerUiPath);
+	}
+
+	return localExplorerUiPath;
+}
+
+function copyDirectorySync(sourcePath: string, destinationPath: string) {
+	mkdirSync(destinationPath, { recursive: true });
+	for (const entry of readdirSync(sourcePath)) {
+		const sourceEntryPath = path.join(sourcePath, entry);
+		const destinationEntryPath = path.join(destinationPath, entry);
+		const sourceEntryStats = statSync(sourceEntryPath);
+
+		if (sourceEntryStats.isDirectory()) {
+			copyDirectorySync(sourceEntryPath, destinationEntryPath);
+		} else {
+			writeFileSync(destinationEntryPath, readFileSync(sourceEntryPath));
+		}
+	}
 }
 
 function getWorkerScript(
