@@ -404,8 +404,18 @@ export async function generateHandler<
 						(async () => {
 							try {
 								const links: { href: string; rel: string; as?: string }[] = [];
+								let baseHref: string | undefined;
 
 								const transformedResponse = new HTMLRewriter()
+									.on("base[href]", {
+										element(element) {
+											const href =
+												element.getAttribute("href") || undefined;
+											if (href) {
+												baseHref = href;
+											}
+										},
+									})
 									.on(
 										"link[rel~=preconnect],link[rel~=preload],link[rel~=modulepreload]",
 										{
@@ -434,8 +444,14 @@ export async function generateHandler<
 								// Needed to actually execute the HTMLRewriter handlers
 								await transformedResponse.text();
 
-								links.forEach(({ href, rel, as }) => {
-									let link = `<${href}>; rel="${rel}"`;
+							links.forEach(({ href, rel, as }) => {
+								const resolvedHref =
+									baseHref && !href.startsWith("/") && !href.startsWith("http")
+										? baseHref.endsWith("/")
+											? baseHref + href
+											: baseHref + "/" + href
+										: href;
+								let link = `<${resolvedHref}>; rel="${rel}"`;
 									if (as) {
 										link += `; as=${as}`;
 									}

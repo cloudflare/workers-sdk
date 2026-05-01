@@ -632,6 +632,58 @@ describe("asset-server handler", () => {
 		expect(response2.headers.get("link")).toBeNull();
 	});
 
+	test("early hints should resolve relative link hrefs against base href", async ({
+		expect,
+	}) => {
+		const deploymentId = "deployment-" + Math.random();
+		const metadata = createMetadataObject({ deploymentId }) as Metadata;
+
+		const findAssetEntryForPath = async (path: string) => {
+			if (path === "/index.html") {
+				return "asset-key-index-with-base.html";
+			}
+			return null;
+		};
+		const fetchAsset = () =>
+			Promise.resolve(
+				Object.assign(
+					new Response(`
+					<!DOCTYPE html>
+					<html>
+						<head>
+							<base href="/" />
+							<link rel="modulepreload" href="module.js" />
+						</head>
+					</html>`),
+					{ contentType: "text/html" }
+				)
+			);
+
+		const getResponse = async () =>
+			getTestResponse({
+				request: new Request("https://example.com/"),
+				metadata,
+				findAssetEntryForPath,
+				caches,
+				fetchAsset,
+			});
+
+		const { response, spies } = await getResponse();
+		expect(response.status).toBe(200);
+		await Promise.all(spies.waitUntil);
+
+		const earlyHintsCache = await caches.open(`eh:${deploymentId}`);
+		const earlyHintsRes = await earlyHintsCache.match(
+			"https://example.com/asset-key-index-with-base.html"
+		);
+		expect(earlyHintsRes).not.toBeNull();
+
+		const linkHeader = earlyHintsRes!.headers.get("Link");
+		// Relative href "module.js" resolved against base "/" → "/module.js"
+		expect(linkHeader).toContain("</module.js>");
+		expect(linkHeader).not.toContain("<module.js");
+	});
+
 	test.todo("early hints should temporarily cache failures to parse links", async () => {
 		// I couldn't figure out a way to make HTMLRewriter error out
 	});
