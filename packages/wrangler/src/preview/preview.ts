@@ -43,6 +43,11 @@ import {
 	getWorkerPreviewDefaults,
 } from "./api";
 import {
+	deletePreviewContainers,
+	deployPreviewContainers,
+	getOwnPreviewBoundDOClassNames,
+} from "./containers";
+import {
 	assemblePreviewScriptSettings,
 	extractConfigBindings,
 	getBindingValue,
@@ -392,6 +397,30 @@ async function assemblePreviewDeploymentSettings(
 	}
 	if (config.placement) {
 		request.placement = parseConfigPlacement(config);
+	}
+
+	// Containers: declare which DO classes are container-backed so the runtime
+	// populates `ctx.container` on those DO instances, mirroring the metadata
+	// emitted by `wrangler deploy`.
+	//
+	// Container config is non-inheritable: only `previews.containers` is read,
+	// not the top-level `containers` field. This matches the behavior of
+	// `previews.durable_objects` and forces users to explicitly opt-in to
+	// containers in previews.
+	//
+	// We only emit `class_name`s that are bound as DOs in this preview AND
+	// where the DO is implemented by THIS script (i.e. no `script_name` is set
+	// — those bindings reference DOs implemented by another worker, which owns
+	// their own container application).
+	const previewContainers = previews?.containers ?? [];
+	if (previewContainers.length > 0) {
+		const ownBoundDOClasses = getOwnPreviewBoundDOClassNames(previews);
+		const containers = previewContainers
+			.filter((c) => ownBoundDOClasses.has(c.class_name))
+			.map((c) => ({ class_name: c.class_name }));
+		if (containers.length > 0) {
+			request.containers = containers;
+		}
 	}
 
 	const env = extractConfigBindings(config);
@@ -869,6 +898,18 @@ export async function handlePreviewCommand(
 		{ ignoreDefaults }
 	);
 
+	const previewContainers =
+		(config.previews as PreviewsConfig | undefined)?.containers ?? [];
+	if (previewContainers.length > 0) {
+		await deployPreviewContainers(
+			config,
+			workerName,
+			preview.slug,
+			deployment,
+			previewContainers
+		);
+	}
+
 	writeOutput({
 		type: "preview",
 		version: 1,
@@ -944,6 +985,32 @@ export async function handlePreviewDeleteCommand(
 	}
 
 	const accountId = await requireAuth(config);
+
+	const hasPreviewContainers =
+		((config.previews as PreviewsConfig | undefined)?.containers?.length ?? 0) >
+		0;
+	if (hasPreviewContainers) {
+		try {
+			const preview = await getPreview(
+				config,
+				accountId,
+				workerName,
+				previewName
+			);
+			await deletePreviewContainers(config, workerName, preview.slug);
+		} catch (error) {
+			if (error instanceof Error && "code" in error && error.code === 10025) {
+				logger.warn(
+					`Preview "${previewName}" was not found; skipping container application cleanup.`
+				);
+			} else {
+				logger.warn(
+					`Failed to clean up preview container applications: ${error instanceof Error ? error.message : String(error)}`
+				);
+			}
+		}
+	}
+
 	await deletePreview(config, accountId, workerName, previewName);
 	logger.log(`\n✨ Preview "${previewName}" deleted successfully.`);
 }
