@@ -25,7 +25,12 @@ export function getGlobalWranglerConfigPath() {
 		try {
 			fs.renameSync(brokenConfigDir, configDir);
 		} catch {
-			// If rename fails, use the broken path to avoid data loss
+			// Another process may have completed the migration first.
+			// If the new path exists now, prefer it; otherwise fall back
+			// to the broken path to avoid data loss.
+			if (isDirectory(configDir)) {
+				return configDir;
+			}
 			return brokenConfigDir;
 		}
 	}
@@ -34,5 +39,19 @@ export function getGlobalWranglerConfigPath() {
 }
 
 export function getGlobalWranglerCachePath() {
-	return xdgAppPaths("wrangler").cache();
+	const brokenCacheDir = xdgAppPaths(".wrangler").cache(); // ~/.cache/.wrangler/ (incorrect — from versions with this bug)
+	const cacheDir = xdgAppPaths("wrangler").cache(); // Correct XDG-compliant cache path
+
+	if (isDirectory(brokenCacheDir) && !isDirectory(cacheDir)) {
+		try {
+			fs.renameSync(brokenCacheDir, cacheDir);
+		} catch {
+			if (isDirectory(cacheDir)) {
+				return cacheDir;
+			}
+			return brokenCacheDir;
+		}
+	}
+
+	return cacheDir;
 }

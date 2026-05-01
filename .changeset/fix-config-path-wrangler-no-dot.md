@@ -1,7 +1,8 @@
 ---
-"wrangler": patch
-"miniflare": patch
+"@cloudflare/workers-utils": patch
 "create-cloudflare": patch
+"miniflare": patch
+"wrangler": patch
 ---
 
-fix: store config in ~/.config/wrangler/ instead of the incorrectly-hidden ~/.config/.wrangler/ on Linux. Existing data is automatically migrated.
+fix: store config in ~/.config/wrangler/ instead of the incorrectly-hidden ~/.config/.wrangler/. Existing data is automatically migrated.
