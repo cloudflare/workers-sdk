@@ -1365,14 +1365,13 @@ export async function getOrSelectAccountId(
 
 	try {
 		const accountID = await select("Select an account", {
-			choices: accounts.map((account: Account) => ({
+			choices: accounts.map((account) => ({
 				title: account.name,
 				value: account.id,
 			})),
 		});
-		const account = accounts.find(
-			(a: Account) => a.id === accountID
-		) as Account;
+		const account = accounts.find((a) => a.id === accountID);
+		assert(account, "Selected account not found in accounts list");
 		saveAccountToCache({ id: account.id, name: account.name });
 		return accountID;
 	} catch (e) {
