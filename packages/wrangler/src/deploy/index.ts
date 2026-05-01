@@ -602,7 +602,6 @@ export async function promptForMissingDeployConfig(
 	}
 
 	let promptedForMissing = false;
-	const hasConfigFile = !!config.configPath;
 
 	// Prompt for name when missing from both CLI args and config
 	if (!args.name && !config.name) {
@@ -640,6 +639,8 @@ export async function promptForMissingDeployConfig(
 			);
 		}
 	}
+
+	const hasConfigFile = !!config.configPath;
 
 	// When no config file exists and we prompted for missing config, offer to write one
 	if (!hasConfigFile && promptedForMissing) {
