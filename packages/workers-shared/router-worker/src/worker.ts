@@ -1,16 +1,23 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { generateStaticRoutingRuleMatcher } from "../../asset-worker/src/utils/rules-engine";
+import { lookupCohort } from "../../utils/cohort";
 import { PerformanceTimer } from "../../utils/performance";
 import { TemporaryRedirectResponse } from "../../utils/responses";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
-import { Analytics, DISPATCH_TYPE, STATIC_ROUTING_DECISION } from "./analytics";
+import {
+	Analytics,
+	DISPATCH_TYPE,
+	EntrypointType,
+	STATIC_ROUTING_DECISION,
+} from "./analytics";
 import {
 	applyEyeballConfigDefaults,
 	applyRouterConfigDefaults,
 } from "./configuration";
 import { renderLimitedResponse } from "./limited-response";
 import type AssetWorker from "../../asset-worker";
+import type { AccountCohortQuerierBinding } from "../../utils/cohort";
 import type {
 	EyeballRouterConfig,
 	JaegerTracing,
@@ -35,45 +42,50 @@ export interface Env {
 
 	SENTRY_ACCESS_CLIENT_ID: string;
 	SENTRY_ACCESS_CLIENT_SECRET: string;
+
+	ACCOUNT_COHORT_QUERIER?: AccountCohortQuerierBinding;
 }
 
 type LoopbackExecutionContext = ExecutionContext & {
 	exports: {
-		RouterInnerEntrypoint(options: { props: Record<string, never> }): {
+		RouterInnerEntrypoint(options: {
+			props: Record<string, never>;
+			version?: { cohort?: string };
+		}): {
 			fetch(request: Request): Promise<Response>;
 		};
 	};
 };
 
+export class RouterPlatformError extends Error {
+	constructor(public readonly cause: unknown) {
+		super(cause instanceof Error ? cause.message : "unknown platform error");
+		this.name = "RouterPlatformError";
+	}
+}
+
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-		// Router worker is typechecked both in this package and as a transitive
-		// dependency during miniflare builds. In the miniflare type context,
-		// Cloudflare.Exports may not include this worker's mainModule mapping from
-		// worker-configuration.d.ts, so `ctx.exports.RouterInnerEntrypoint` does not
-		// resolve structurally. Keep this narrow cast so loopback typechecks in both
-		// compilation contexts without changing runtime behavior.
-		const loopbackCtx = ctx as LoopbackExecutionContext;
-
 		const analytics = new Analytics(env.ANALYTICS);
-		let inner;
+		const performance = new PerformanceTimer(env.UNSAFE_PERFORMANCE);
+		const startTimeMs = performance.now();
+		let sentry: ReturnType<typeof setupSentry> | undefined;
+		let innerCalled = false;
+
 		try {
-			if (env.COLO_METADATA && env.VERSION_METADATA && env.CONFIG) {
-				const url = new URL(request.url);
-				analytics.setData({
-					accountId: env.CONFIG.account_id,
-					scriptId: env.CONFIG.script_id,
-					coloId: env.COLO_METADATA.coloId,
-					metalId: env.COLO_METADATA.metalId,
-					coloTier: env.COLO_METADATA.coloTier,
-					coloRegion: env.COLO_METADATA.coloRegion,
-					hostname: url.hostname,
-					version: env.VERSION_METADATA.tag,
-				});
-			}
-			inner = loopbackCtx.exports.RouterInnerEntrypoint({ props: {} });
-		} catch (err) {
-			const sentry = setupSentry(
+			analytics.setData({
+				entrypoint: EntrypointType.Outer,
+				accountId: env.CONFIG?.account_id,
+				scriptId: env.CONFIG?.script_id,
+				coloId: env.COLO_METADATA?.coloId,
+				metalId: env.COLO_METADATA?.metalId,
+				coloTier: env.COLO_METADATA?.coloTier,
+				coloRegion: env.COLO_METADATA?.coloRegion,
+				version: env.VERSION_METADATA?.tag,
+				hostname: new URL(request.url).hostname,
+			});
+
+			sentry = setupSentry(
 				request,
 				ctx,
 				env.SENTRY_DSN,
@@ -84,17 +96,48 @@ export default {
 				env.CONFIG?.account_id,
 				env.CONFIG?.script_id
 			);
-			sentry?.captureException(err);
 
-			if (err instanceof Error) {
+			// Cohort lookup
+			const cohort = await lookupCohort(
+				env.ACCOUNT_COHORT_QUERIER,
+				env.CONFIG?.account_id
+			);
+			analytics.setData({ cohort: cohort ?? "unknown" });
+
+			// Create inner entrypoint with cohort
+			// Router worker is typechecked both in this package and as a transitive
+			// dependency during miniflare builds. In the miniflare type context,
+			// Cloudflare.Exports may not include this worker's mainModule mapping from
+			// worker-configuration.d.ts, so `ctx.exports.RouterInnerEntrypoint` does not
+			// resolve structurally. Keep this narrow cast so loopback typechecks in both
+			// compilation contexts without changing runtime behavior.
+			const loopbackCtx = ctx as LoopbackExecutionContext;
+			const inner = loopbackCtx.exports.RouterInnerEntrypoint({
+				props: {},
+				...(cohort ? { version: { cohort } } : {}),
+			});
+
+			innerCalled = true;
+			const response = await inner.fetch(request);
+			return response;
+		} catch (err) {
+			if (err instanceof RouterPlatformError) {
+				// Inner platform error
 				analytics.setData({ error: err.message });
+				sentry?.captureException(err.cause);
+			} else if (!innerCalled) {
+				// Outer-originated error (before inner.fetch)
+				analytics.setData({
+					error: err instanceof Error ? err.message : "unknown",
+				});
+				sentry?.captureException(err);
 			}
-			analytics.write();
-
+			// User worker errors (innerCalled=true, not PlatformError): no error blob
 			throw err;
+		} finally {
+			analytics.setData({ requestTime: performance.now() - startTimeMs });
+			analytics.write();
 		}
-
-		return inner.fetch(request);
 	},
 };
 
@@ -146,6 +189,8 @@ export class RouterInnerEntrypoint extends WorkerEntrypoint<Env> {
 					hostname: url.hostname,
 					version: this.env.VERSION_METADATA.tag,
 					userWorkerAhead: config.invoke_user_worker_ahead_of_assets,
+					entrypoint: EntrypointType.Inner,
+					cohort: this.ctx.version?.cohort ?? "unknown",
 				});
 			}
 
@@ -336,18 +381,13 @@ export class RouterInnerEntrypoint extends WorkerEntrypoint<Env> {
 			return await routeToAssets({ asset: assetsExist ? "found" : "none" });
 		} catch (err) {
 			if (userWorkerInvocation) {
-				// Don't send user Worker errors to sentry; we have no way to distinguish between
-				// CF errors and errors from the user's code.
 				throw err;
-			} else if (err instanceof Error) {
-				analytics.setData({ error: err.message });
 			}
-
-			// Log to Sentry if we can
-			if (sentry) {
-				sentry.captureException(err);
-			}
-			throw err;
+			analytics.setData({
+				error: err instanceof Error ? err.message : "unknown",
+			});
+			sentry?.captureException(err);
+			throw new RouterPlatformError(err);
 		} finally {
 			analytics.setData({ requestTime: performance.now() - startTimeMs });
 			analytics.write();

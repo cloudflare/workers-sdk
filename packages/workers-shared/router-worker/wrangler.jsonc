@@ -48,6 +48,13 @@
 				"name": "workers-router-worker",
 				"type": "internal_capability_grants",
 			},
+			{
+				"name": "ACCOUNT_COHORT_QUERIER",
+				"type": "service",
+				"service": "account-services-production",
+				"entrypoint": "AccountCohortQuerier",
+				"cross_account_grant": "workers-router-worker",
+			},
 		],
 		"metadata": {
 			"build_options": {
@@ -59,6 +66,14 @@
 	"env": {
 		"staging": {
 			"name": "router-worker-staging",
+			// enable_version_api is set per-environment (not top-level) because
+			// the local workerd in vitest-pool-workers does not support it yet.
+			"compatibility_flags": [
+				"nodejs_compat",
+				"no_nodejs_compat_v2",
+				"enable_ctx_exports",
+				"enable_version_api",
+			],
 			"version_metadata": {
 				"binding": "VERSION_METADATA",
 			},
@@ -82,6 +97,13 @@
 						"name": "workers-router-worker-staging",
 						"type": "internal_capability_grants",
 					},
+					{
+						"name": "ACCOUNT_COHORT_QUERIER",
+						"type": "service",
+						"service": "account-services-staging",
+						"entrypoint": "AccountCohortQuerier",
+						"cross_account_grant": "workers-router-worker-staging",
+					},
 				],
 				"metadata": {
 					"build_options": {
@@ -94,6 +116,14 @@
 		"fed-prod": {
 			"name": "router-worker-fed-prod",
 			"account_id": "fca6c231dc1d1780777997c5bce5a5e3", // workers assets
+			// enable_version_api is set per-environment (not top-level) because
+			// the local workerd in vitest-pool-workers does not support it yet.
+			"compatibility_flags": [
+				"nodejs_compat",
+				"no_nodejs_compat_v2",
+				"enable_ctx_exports",
+				"enable_version_api",
+			],
 			"version_metadata": {
 				"binding": "VERSION_METADATA",
 			},
@@ -117,6 +147,13 @@
 					{
 						"name": "workers-router-worker",
 						"type": "internal_capability_grants",
+					},
+					{
+						"name": "ACCOUNT_COHORT_QUERIER",
+						"type": "service",
+						"service": "account-services-production",
+						"entrypoint": "AccountCohortQuerier",
+						"cross_account_grant": "workers-router-worker",
 					},
 				],
 				"metadata": {

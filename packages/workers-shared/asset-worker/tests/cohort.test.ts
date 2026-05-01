@@ -1,15 +1,9 @@
 import { describe, it, vi } from "vitest";
-import { COHORT_LOOKUP_TIMEOUT_MS, lookupCohort } from "../src/worker";
-import type { Env } from "../src/worker";
-import type { AccountCohortQuerierBinding } from "../worker-configuration";
-
-function makeEnv(
-	querier?: Partial<AccountCohortQuerierBinding>
-): Pick<Env, "ACCOUNT_COHORT_QUERIER"> {
-	return {
-		ACCOUNT_COHORT_QUERIER: querier as AccountCohortQuerierBinding | undefined,
-	};
-}
+import {
+	COHORT_LOOKUP_TIMEOUT_MS,
+	lookupCohort,
+} from "../../utils/cohort";
+import type { AccountCohortQuerierBinding } from "../../utils/cohort";
 
 describe("[Asset Worker] lookupCohort", () => {
 	it("calls querier with account ID as string", async ({ expect }) => {
@@ -20,7 +14,7 @@ describe("[Asset Worker] lookupCohort", () => {
 		});
 
 		const result = await lookupCohort(
-			makeEnv({ lookupAccountCohort: lookupMock }) as Env,
+			{ lookupAccountCohort: lookupMock } as AccountCohortQuerierBinding,
 			42
 		);
 
@@ -30,7 +24,7 @@ describe("[Asset Worker] lookupCohort", () => {
 
 	it("returns null when result is ok:false", async ({ expect }) => {
 		const result = await lookupCohort(
-			makeEnv({
+			{
 				lookupAccountCohort: () =>
 					Promise.resolve({
 						ok: false as const,
@@ -38,7 +32,7 @@ describe("[Asset Worker] lookupCohort", () => {
 							{ name: "Error", message: "invalid account", code: "ERR" },
 						],
 					}),
-			}) as Env,
+			},
 			42
 		);
 
@@ -47,14 +41,14 @@ describe("[Asset Worker] lookupCohort", () => {
 
 	it("returns null when result is null", async ({ expect }) => {
 		const result = await lookupCohort(
-			makeEnv({
+			{
 				lookupAccountCohort: () =>
 					Promise.resolve({
 						ok: true as const,
 						result: null,
 						meta: { workersVersion: "test" },
 					}),
-			}) as Env,
+			},
 			42
 		);
 
@@ -63,7 +57,7 @@ describe("[Asset Worker] lookupCohort", () => {
 
 	it("times out after COHORT_LOOKUP_TIMEOUT_MS", async ({ expect }) => {
 		const result = await lookupCohort(
-			makeEnv({
+			{
 				lookupAccountCohort: () =>
 					new Promise((resolve) => {
 						setTimeout(
@@ -76,7 +70,7 @@ describe("[Asset Worker] lookupCohort", () => {
 							COHORT_LOOKUP_TIMEOUT_MS * 2
 						);
 					}),
-			}) as Env,
+			},
 			42
 		);
 

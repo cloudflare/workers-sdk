@@ -1,4 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { lookupCohort } from "../../utils/cohort";
 import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
@@ -16,7 +17,7 @@ import type {
 	SpanContext,
 	UnsafePerformanceTimer,
 } from "../../utils/types";
-import type { AccountCohortQuerierBinding } from "../worker-configuration";
+import type { AccountCohortQuerierBinding } from "../../utils/cohort";
 import type { Environment, ReadyAnalytics } from "./types";
 
 // ============================================================
@@ -212,48 +213,6 @@ async function unstableGetByPathnameImpl(
 	});
 }
 
-export const COHORT_LOOKUP_TIMEOUT_MS = 5;
-
-/**
- * Resolves the deployment cohort for a customer account via the
- * AccountCohortQuerier RPC binding. Returns null when the binding is
- * unavailable, the RPC fails, times out, or the cohort is undetermined
- * (cold cache). Intentionally fails open — a null cohort means the
- * request runs under default routing.
- */
-export async function lookupCohort(
-	env: Env,
-	accountId: number | undefined
-): Promise<string | null> {
-	const querier = env.ACCOUNT_COHORT_QUERIER;
-	if (!querier || !accountId) {
-		return null;
-	}
-	const ac = new AbortController();
-	try {
-		const rpc = querier.lookupAccountCohort(accountId.toString());
-		// Prevent unhandled rejection if timeout wins but RPC later rejects.
-		void rpc.catch(() => {});
-		const timeout = new Promise<never>((_, reject) => {
-			const id = setTimeout(() => {
-				reject(new Error("cohort lookup timed out"));
-			}, COHORT_LOOKUP_TIMEOUT_MS);
-			ac.signal.addEventListener("abort", () => clearTimeout(id));
-		});
-		const res = await Promise.race([rpc, timeout]);
-		if (!res.ok) {
-			console.error("cohort lookup failed", res.errors);
-			return null;
-		}
-		return res.result ?? null;
-	} catch (e: unknown) {
-		console.error("cohort lookup failed", e);
-		return null;
-	} finally {
-		ac.abort();
-	}
-}
-
 async function runFetchRequest(
 	request: Request,
 	env: Env,
@@ -373,7 +332,7 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 	private async getCohort(): Promise<string | null> {
 		if (this.resolvedCohort === undefined) {
 			this.resolvedCohort = await lookupCohort(
-				this.env,
+				this.env.ACCOUNT_COHORT_QUERIER,
 				this.env.CONFIG?.account_id
 			);
 		}
