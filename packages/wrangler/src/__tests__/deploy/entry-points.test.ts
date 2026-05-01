@@ -945,7 +945,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
-					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
 
@@ -1029,7 +1029,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
-					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
 
@@ -1101,7 +1101,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
-					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
 
@@ -1180,7 +1180,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
-					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
 
@@ -1266,7 +1266,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
-					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
 

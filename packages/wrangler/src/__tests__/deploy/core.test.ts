@@ -1554,7 +1554,7 @@ describe("deploy", () => {
 			});
 			expect(writtenConfig).not.toHaveProperty("assets");
 			expect(std.out).toContain(
-				"Next time you run `wrangler deploy` Wrangler will automatically use the configuration saved to wrangler.jsonc."
+				"Simply run `wrangler deploy` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc."
 			);
 			expect(std.out).toContain("Proceeding with deployment...");
 		});

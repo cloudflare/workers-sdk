@@ -671,17 +671,9 @@ export async function promptForMissingDeployConfig(
 			const jsonString = JSON.stringify(configContent, null, 2);
 			writeFileSync(configPath, jsonString);
 			logger.log(`Wrote \n${jsonString}\n to ${chalk.bold(configPath)}.`);
-			if (args.assets) {
-				logger.log(
-					`Please run ${chalk.bold("`wrangler deploy`")} instead of ${chalk.bold(
-						`\`wrangler deploy ${args.assets}\``
-					)} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
-				);
-			} else {
-				logger.log(
-					`Next time you run ${chalk.bold("`wrangler deploy`")} Wrangler will automatically use the configuration saved to wrangler.jsonc.`
-				);
-			}
+			logger.log(
+				`Simply run ${chalk.bold("`wrangler deploy`")} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
+			);
 		} else {
 			const scriptPart = args.script ? `${args.script} ` : "";
 			const flagParts = [
