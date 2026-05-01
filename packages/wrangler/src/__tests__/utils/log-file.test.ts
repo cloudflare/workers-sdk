@@ -3,17 +3,17 @@ import {
 	mkdirSync,
 	readdirSync,
 	readFileSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { utimes } from "node:fs/promises";
 import { join } from "node:path";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in helper function at module scope */
-import { beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { beforeEach, describe, it, vi } from "vitest";
 import {
 	appendToDebugLogFile,
 	cleanupOldLogFiles,
 	debugLogFilepath,
+	tryCleanupLogs,
 } from "../../utils/log-file";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import type { ExpectStatic } from "vitest";
@@ -146,17 +146,19 @@ describe("cleanupOldLogFiles", () => {
 		return filePath;
 	}
 
-	it("should delete log files older than 7 days by default", async () => {
+	it("should delete log files older than 30 days by default", async ({
+		expect,
+	}) => {
 		const logsDir = "test-logs";
 		const oldFile = await createLogFile(
 			logsDir,
 			"wrangler-old.log",
-			8 // 8 days old — should be deleted
+			31 // 31 days old — should be deleted
 		);
 		const recentFile = await createLogFile(
 			logsDir,
 			"wrangler-recent.log",
-			3 // 3 days old — should be kept
+			10 // 10 days old — should be kept
 		);
 
 		await cleanupOldLogFiles(logsDir);
@@ -165,20 +167,7 @@ describe("cleanupOldLogFiles", () => {
 		expect(existsSync(recentFile)).toBe(true);
 	});
 
-	it("should respect the WRANGLER_LOG_MAX_AGE_DAYS env variable", async () => {
-		vi.stubEnv("WRANGLER_LOG_MAX_AGE_DAYS", "30");
-
-		const logsDir = "test-logs-custom";
-		const oldFile = await createLogFile(logsDir, "wrangler-old.log", 31);
-		const recentFile = await createLogFile(logsDir, "wrangler-recent.log", 10);
-
-		await cleanupOldLogFiles(logsDir);
-
-		expect(existsSync(oldFile)).toBe(false);
-		expect(existsSync(recentFile)).toBe(true);
-	});
-
-	it("should not delete non-wrangler log files", async () => {
+	it("should not delete non-wrangler log files", async ({ expect }) => {
 		const logsDir = "test-logs-other";
 		const otherFile = await createLogFile(logsDir, "other-app.log", 10);
 
@@ -187,37 +176,33 @@ describe("cleanupOldLogFiles", () => {
 		expect(existsSync(otherFile)).toBe(true);
 	});
 
-	it("should silently succeed if the logs directory does not exist", async () => {
-		await expect(cleanupOldLogFiles("nonexistent-dir")).resolves.not.toThrow();
+	it("should silently succeed if the logs directory does not exist", async ({
+		expect,
+	}) => {
+		if (existsSync("nonexistent-dir")) {
+			rmSync("nonexistent-dir", { recursive: true, force: true });
+		}
+		await expect(
+			cleanupOldLogFiles("nonexistent-dir")
+		).resolves.not.toThrow();
 	});
 });
 
-describe("initLogFileCleanup", () => {
+describe("tryCleanupLogs", () => {
 	runInTempDir();
 
 	beforeEach(() => {
 		vi.stubEnv("WRANGLER_LOG_PATH", "logs");
 	});
 
-	afterEach(async () => {
-		vi.unstubAllEnvs();
-		// Reset the log-file module so the cleanup guard flag starts fresh
-		await vi.resetModules();
+	it("should not throw when called", ({ expect }) => {
+		expect(() => tryCleanupLogs()).not.toThrow();
 	});
 
-	async function importFreshInit() {
-		const mod = await import("../../utils/log-file");
-		return mod.initLogFileCleanup;
-	}
-
-	it("should not throw when called", async () => {
-		const init = await importFreshInit();
-		expect(() => init()).not.toThrow();
-	});
-
-	it("should skip cleanup when WRANGLER_LOG_PATH points to an exact .log file", async () => {
+	it("should skip cleanup when WRANGLER_LOG_PATH points to an exact .log file", ({
+		expect,
+	}) => {
 		vi.stubEnv("WRANGLER_LOG_PATH", "custom-debug.log");
-		const init = await importFreshInit();
-		expect(() => init()).not.toThrow();
+		expect(() => tryCleanupLogs()).not.toThrow();
 	});
 });
