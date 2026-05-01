@@ -6,6 +6,7 @@ export default mergeConfig(
 	defineProject({
 		test: {
 			include: ["**/__tests__/**/*.{test,spec}.{ts,js,tsx,jsx}"],
+			reporters: ["default"],
 			setupFiles: "./vite.setup.ts",
 		},
 	})

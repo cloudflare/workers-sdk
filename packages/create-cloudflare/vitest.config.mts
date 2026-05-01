@@ -9,6 +9,7 @@ export default mergeConfig(
 		test: {
 			include: ["src/**/__tests__/**.test.ts"],
 			mockReset: true,
+			reporters: ["default"],
 			setupFiles: ["vitest.setup.ts"],
 		},
 	})

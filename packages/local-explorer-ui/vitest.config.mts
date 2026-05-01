@@ -6,6 +6,7 @@ export default mergeConfig(
 	defineProject({
 		test: {
 			include: ["src/**/__tests__/**/*.test.ts"],
+			reporters: ["default"],
 		},
 	})
 );

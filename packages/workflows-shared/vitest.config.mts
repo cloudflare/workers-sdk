@@ -5,6 +5,9 @@ import configShared from "../../vitest.shared";
 export default mergeConfig(
 	configShared,
 	defineConfig({
+		test: {
+			reporters: ["default"],
+		},
 		plugins: [
 			cloudflareTest({
 				miniflare: {
