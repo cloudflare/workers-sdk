@@ -25,7 +25,7 @@ import {
 	Response,
 	viewToBuffer,
 } from "miniflare";
-import { onTestFinished, test } from "vitest";
+import { afterEach, test, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { assertIsV2ModuleFallbackProtocol } from "../src/plugins/core/module-fallback";
 import {
@@ -65,7 +65,11 @@ const ADD_WASM_MODULE = Buffer.from(
 	"base64"
 );
 
-test("Miniflare: validates options", async ({ expect }) => {
+afterEach(() => {
+	vi.unstubAllEnvs();
+});
+
+test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	// Check empty workers array rejected
 	expect(() => new Miniflare({ workers: [] })).toThrow(
 		new MiniflareCoreError("ERR_NO_WORKERS", "No workers defined")
@@ -639,7 +643,10 @@ test("Miniflare: custom service using Set-Cookie header", async ({
 	expect(await res.json()).toEqual(testCookies);
 });
 
-test("Miniflare: web socket kitchen sink", async ({ expect }) => {
+test("Miniflare: web socket kitchen sink", async ({
+	expect,
+	onTestFinished,
+}) => {
 	// Create deferred promises for asserting asynchronous event results
 	const clientEventPromise = new DeferredPromise<MessageEvent>();
 	const serverMessageEventPromise = new DeferredPromise<StandardMessageEvent>();
@@ -2036,7 +2043,10 @@ test("Miniflare: dispose() immediately after construction", async ({
 	await readyAssertion;
 });
 
-test("Miniflare: getBindings() returns all bindings", async ({ expect }) => {
+test("Miniflare: getBindings() returns all bindings", async ({
+	expect,
+	onTestFinished,
+}) => {
 	const tmp = await useTmp();
 	const blobPath = path.join(tmp, "blob.txt");
 	await fs.writeFile(blobPath, "blob");
@@ -2643,7 +2653,7 @@ const isWindows = process.platform === "win32";
 const unixSerialTest = isWindows ? test.skip : test.sequential;
 unixSerialTest(
 	"Miniflare: MINIFLARE_WORKERD_PATH overrides workerd path",
-	async ({ expect }) => {
+	async ({ expect, onTestFinished }) => {
 		const workerdPath = path.join(FIXTURES_PATH, "little-workerd.mjs");
 
 		const original = process.env.MINIFLARE_WORKERD_PATH;
@@ -2663,6 +2673,47 @@ unixSerialTest(
 		);
 	}
 );
+
+const TIMEZONE_WORKER = `
+	export default {
+		fetch() {
+			return Response.json({
+				tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+			});
+		}
+	}
+`;
+
+test.sequential("Miniflare: workerd subprocess defaults to TZ=UTC to match production", async ({
+	expect,
+}) => {
+	// Deliberately set the host TZ to a non-UTC value, otherwise the test
+	// would falsely pass: the test-runner's vitest globalSetup already sets
+	// `process.env.TZ = "UTC"`, which would propagate to workerd via the
+	// inherited `process.env`.
+	vi.stubEnv("TZ", "America/Chicago");
+	const mf = new Miniflare({ modules: true, script: TIMEZONE_WORKER });
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.json()).toEqual({ tz: "UTC" });
+});
+
+test.sequential("Miniflare: unsafeRuntimeEnv overrides the default workerd subprocess env", async ({
+	expect,
+}) => {
+	vi.stubEnv("TZ", "UTC");
+
+	const mf = new Miniflare({
+		modules: true,
+		script: TIMEZONE_WORKER,
+		unsafeRuntimeEnv: { TZ: "America/Chicago" },
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.json()).toEqual({ tz: "America/Chicago" });
+});
 
 test("Miniflare: exits cleanly", async ({ expect }) => {
 	const miniflarePath = require.resolve("miniflare");
@@ -3800,6 +3851,7 @@ test("Miniflare: setOptions: can restart workerd multiple times in succession", 
 
 test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file creation", async ({
 	expect,
+	onTestFinished,
 }) => {
 	const originalEnv = process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
 	const configFilePath = "workerd-config.json";

@@ -44,6 +44,10 @@ export interface RuntimeOptions {
 	verbose?: boolean;
 	handleRuntimeStdio?: (stdout: Readable, stderr: Readable) => void;
 	handleStructuredLogs?: StructuredLogsHandler;
+	// Extra environment variables to set on the spawned `workerd` subprocess.
+	// Merged on top of `process.env` and Miniflare's own defaults
+	// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults.
+	runtimeEnv?: Record<string, string>;
 }
 
 async function waitForPorts(
@@ -228,9 +232,17 @@ export class Runtime {
 		// By default, `workerd` will only log with colours if it detects a TTY.
 		// `"pipe"` doesn't create a TTY, so we force enable colours if supported.
 		const FORCE_COLOR = $colors.enabled ? "1" : "0";
+		// Default `TZ` to `UTC` to match the production Cloudflare runtime.
+		// Callers can override via `options.runtimeEnv` (e.g. for tests of
+		// timezone-dependent behaviour).
 		const runtimeProcess = childProcess.spawn(command, args, {
 			stdio: ["pipe", "pipe", "pipe", "pipe"],
-			env: { ...process.env, FORCE_COLOR },
+			env: {
+				...process.env,
+				TZ: "UTC",
+				FORCE_COLOR,
+				...options.runtimeEnv,
+			},
 		});
 		const startupLogBuffer = new StartupLogBuffer();
 		this.#process = runtimeProcess;

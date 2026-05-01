@@ -300,6 +300,11 @@ export const CoreSharedOptionsSchema = z
 		unsafeStickyBlobs: z.boolean().optional(),
 		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/handler/scheduled`
 		unsafeTriggerHandlers: z.boolean().optional(),
+		// Extra environment variables to set on the spawned `workerd` subprocess.
+		// Merged on top of `process.env` and Miniflare's own defaults
+		// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults
+		// (for example, to test timezone-dependent behaviour).
+		unsafeRuntimeEnv: z.record(z.string()).optional(),
 		// Enable the local explorer at /cdn-cgi/explorer
 		unsafeLocalExplorer: z.boolean().optional(),
 		// Enable logging requests

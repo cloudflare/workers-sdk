@@ -2413,6 +2413,7 @@ export class Miniflare {
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
+			runtimeEnv: this.#sharedOpts.core.unsafeRuntimeEnv,
 		};
 		const maybeSocketPorts = await this.#runtime.updateConfig(
 			configBuffer,
