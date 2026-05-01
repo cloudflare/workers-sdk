@@ -1709,14 +1709,17 @@ describe("generate types - CLI", () => {
 		`;
 		fs.writeFileSync(".dev.vars", devVarsContent, "utf8");
 
-		// Generate types with --env-file /dev/null (no .dev.vars loading)
+		// Create an empty env file (cross-platform alternative to /dev/null)
+		fs.writeFileSync(".env.empty", "", "utf8");
+
+		// Generate types with --env-file pointing at an empty file (no .dev.vars loading)
 		await runWrangler(
-			"types --include-runtime=false --env-file=/dev/null"
+			"types --include-runtime=false --env-file=.env.empty"
 		);
 
-		// Run --check with --env-file /dev/null - should not report stale
+		// Run --check with --env-file pointing at empty file - should not report stale
 		await runWrangler(
-			"types --check --include-runtime=false --env-file=/dev/null"
+			"types --check --include-runtime=false --env-file=.env.empty"
 		);
 
 		expect(std.out).toContain("Types at worker-configuration.d.ts are up to date.");

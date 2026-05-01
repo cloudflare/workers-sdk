@@ -169,7 +169,8 @@ export const checkTypesUpToDate = async (
 	envInterface?: string,
 	typesPath: string = DEFAULT_WORKERS_TYPES_FILE_PATH,
 	serviceEntries: Map<string, Entry> = new Map(),
-	cliEnvFile?: string[] | undefined
+	cliEnvFile?: string[] | undefined,
+	cliEnv?: string | undefined
 ): Promise<boolean> => {
 	let typesFileLines = new Array<string>();
 	try {
@@ -213,6 +214,10 @@ export const checkTypesUpToDate = async (
 		: Array.isArray(rawEnvFile) ? rawEnvFile
 		: undefined);
 
+	// Likewise for --env: use the CLI-provided value so that --check uses the
+	// same named environment the user originally generated types against
+	const env: string | undefined = cliEnv ?? (rawArgs.env as string | undefined);
+
 	// Determine what was included based on what headers exist
 	// If no env header exists, env types were not included (--include-env=false)
 	// If no runtime header exists, runtime types were not included (--include-runtime=false)
@@ -226,6 +231,7 @@ export const checkTypesUpToDate = async (
 		envInterface: envInterface ?? ((rawArgs.envInterface ?? "Env") as string),
 		strictVars: unsafeParseBooleanString(rawArgs.strictVars ?? "true"),
 		envFile,
+		env,
 	} satisfies Record<string, string | number | boolean | string[] | undefined>;
 
 	const configContainsEntrypoint =
@@ -243,7 +249,7 @@ export const checkTypesUpToDate = async (
 		try {
 			const { envHeader } = await generateEnvTypes(
 				primaryConfig,
-				{ strictVars: args.strictVars, envFile: args.envFile },
+				{ strictVars: args.strictVars, envFile: args.envFile, env: args.env },
 				args.envInterface,
 				typesPath,
 				entrypoint,
