@@ -1,12 +1,11 @@
-import { defineConfig, mergeConfig } from "vitest/config";
+import { defineProject, mergeConfig } from "vitest/config";
 import configShared from "../vitest.shared";
 
 export default mergeConfig(
 	configShared,
-	defineConfig({
+	defineProject({
 		test: {
 			include: ["**/__tests__/*.test.ts"],
-			reporters: ["default"],
 			retry: 0,
 		},
 	})
