@@ -77,17 +77,16 @@ const mutex = new Mutex();
 
 let hasStartedLogCleanup = false;
 
-/**
- * Starts background cleanup of old Wrangler log files.
- * Call this from an explicit Wrangler startup path rather than on import
- * so importing utilities remains side-effect free and tests are safe.
- */
-export function initLogFileCleanup(): void {
+function startLogCleanupIfNeeded(): void {
 	if (hasStartedLogCleanup || getDebugFileDir().endsWith(".log")) {
 		return;
 	}
 	hasStartedLogCleanup = true;
 	void cleanupOldLogFiles(getDebugFileDir());
+}
+
+export function initLogFileCleanup(): void {
+	startLogCleanupIfNeeded();
 }
 
 let hasLoggedLocation = false;
@@ -101,6 +100,8 @@ export async function appendToDebugLogFile(
 	messageLevel: LoggerLevel,
 	message: string
 ) {
+	startLogCleanupIfNeeded();
+
 	const entry = `
 --- ${new Date().toISOString()} ${messageLevel}
 ${stripVTControlCharacters(message)}

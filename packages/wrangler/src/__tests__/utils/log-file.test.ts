@@ -14,7 +14,6 @@ import {
 	appendToDebugLogFile,
 	cleanupOldLogFiles,
 	debugLogFilepath,
-	initLogFileCleanup,
 } from "../../utils/log-file";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import type { ExpectStatic } from "vitest";
@@ -200,13 +199,25 @@ describe("initLogFileCleanup", () => {
 		vi.stubEnv("WRANGLER_LOG_PATH", "logs");
 	});
 
-	it("should be idempotent (calling it twice does not throw)", () => {
-		expect(() => initLogFileCleanup()).not.toThrow();
-		expect(() => initLogFileCleanup()).not.toThrow();
+	afterEach(async () => {
+		vi.unstubAllEnvs();
+		// Reset the log-file module so the cleanup guard flag starts fresh
+		await vi.resetModules();
 	});
 
-	it("should skip cleanup when WRANGLER_LOG_PATH points to an exact .log file", () => {
+	async function importFreshInit() {
+		const mod = await import("../../utils/log-file");
+		return mod.initLogFileCleanup;
+	}
+
+	it("should not throw when called", async () => {
+		const init = await importFreshInit();
+		expect(() => init()).not.toThrow();
+	});
+
+	it("should skip cleanup when WRANGLER_LOG_PATH points to an exact .log file", async () => {
 		vi.stubEnv("WRANGLER_LOG_PATH", "custom-debug.log");
-		expect(() => initLogFileCleanup()).not.toThrow();
+		const init = await importFreshInit();
+		expect(() => init()).not.toThrow();
 	});
 });
