@@ -4,6 +4,8 @@ import {
 	mkdirSync,
 	readdirSync,
 	readFileSync,
+	renameSync,
+	rmSync,
 	statSync,
 	writeFileSync,
 } from "node:fs";
@@ -1184,6 +1186,12 @@ export function getGlobalServices({
 	return services;
 }
 
+/**
+ * workerd's disk service needs a real filesystem directory. Under Yarn PnP,
+ * these bundled assets can live inside a real `.yarn/cache/*.zip` archive.
+ * Node can still read those paths through Yarn's patched filesystem hooks, but
+ * workerd can't mount a directory from inside the zip as a disk service.
+ */
 function materializeLocalExplorerUi(tmpPath: string) {
 	const bundledLocalExplorerUiPath = path.join(__dirname, "../local-explorer-ui");
 	if (!existsSync(bundledLocalExplorerUiPath)) {
@@ -1199,13 +1207,31 @@ function materializeLocalExplorerUi(tmpPath: string) {
 		"local-explorer-ui"
 	);
 	if (!existsSync(localExplorerUiPath)) {
-		mkdirSync(path.dirname(localExplorerUiPath), { recursive: true });
-		copyDirectorySync(bundledLocalExplorerUiPath, localExplorerUiPath);
+		const localExplorerUiRoot = path.dirname(localExplorerUiPath);
+		const stagedLocalExplorerUiPath = path.join(
+			localExplorerUiRoot,
+			`local-explorer-ui-staging-${process.pid}-${Date.now()}`
+		);
+
+		mkdirSync(localExplorerUiRoot, { recursive: true });
+		try {
+			copyDirectorySync(bundledLocalExplorerUiPath, stagedLocalExplorerUiPath);
+			renameSync(stagedLocalExplorerUiPath, localExplorerUiPath);
+		} catch (error) {
+			rmSync(stagedLocalExplorerUiPath, { force: true, recursive: true });
+			throw error;
+		}
 	}
 
 	return localExplorerUiPath;
 }
 
+/**
+ * `cpSync()` treats the PnP source path like a normal on-disk directory and
+ * hits `ENOTDIR` when that path actually points inside a `.zip` archive.
+ * `readdirSync()`, `statSync()`, and `readFileSync()` still work through
+ * Yarn's patched fs hooks, so copy the tree entry-by-entry instead.
+ */
 function copyDirectorySync(sourcePath: string, destinationPath: string) {
 	mkdirSync(destinationPath, { recursive: true });
 	for (const entry of readdirSync(sourcePath)) {
