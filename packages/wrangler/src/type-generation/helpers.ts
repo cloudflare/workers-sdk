@@ -211,17 +211,17 @@ export const checkTypesUpToDate = async (
 	// Note: `yargs` doesn't automatically handle aliases, so we check both forms
 	const rawArgs = yargs(wranglerCommand).parseSync();
 
-	// Use the CLI-provided envFile as the source of truth so that --check
-	// re-runs type generation with the same --env-file flag the user passed,
-	// avoiding a stale mismatch when .dev.vars happens to exist locally
+	// Extract --env-file and --env from the active CLI invocation, falling back
+	// to parsing them from the header command. The CLI-provided values are the
+	// source of truth so --check re-runs generation with the same flags the user
+	// passed, avoiding a stale mismatch when .dev.vars or a named environment
+	// happens to differ from what was recorded.
 	const rawEnvFile = rawArgs.envFile;
 	const envFile: string[] | undefined = cliEnvFile ??
 		(typeof rawEnvFile === "string" ? [rawEnvFile]
 		: Array.isArray(rawEnvFile) ? rawEnvFile
 		: undefined);
 
-	// Likewise for --env: use the CLI-provided value so that --check uses the
-	// same named environment the user originally generated types against
 	const env: string | undefined = cliEnv ?? (rawArgs.env as string | undefined);
 
 	// Determine what was included based on what headers exist
