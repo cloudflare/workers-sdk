@@ -500,6 +500,11 @@ const bindingsConfigMock: Omit<
 		bindings: [
 			{ name: "testing_unsafe", type: "plain_text" },
 			{ name: "UNSAFE_RATELIMIT", type: "ratelimit" },
+			{
+				name: "UNSAFE_SERVICE_BINDING",
+				type: "service",
+				service: "some-unsafe-service",
+			},
 		],
 		metadata: { some_key: "some_value" },
 	},
@@ -809,6 +814,7 @@ describe("generate types - CLI", () => {
 					MY_WORKFLOW: Workflow<Parameters<import("./index").MyWorkflow['run']>[0]['payload']>;
 					testing_unsafe: any;
 					UNSAFE_RATELIMIT: RateLimit;
+					UNSAFE_SERVICE_BINDING: Fetcher;
 					SOME_DATA_BLOB1: ArrayBuffer;
 					SOME_DATA_BLOB2: ArrayBuffer;
 					SOME_TEXT_BLOB1: string;
@@ -927,6 +933,7 @@ describe("generate types - CLI", () => {
 					MY_WORKFLOW: Workflow<Parameters<import("./index").MyWorkflow['run']>[0]['payload']>;
 					testing_unsafe: any;
 					UNSAFE_RATELIMIT: RateLimit;
+					UNSAFE_SERVICE_BINDING: Fetcher;
 					SOME_DATA_BLOB1: ArrayBuffer;
 					SOME_DATA_BLOB2: ArrayBuffer;
 					SOME_TEXT_BLOB1: string;
@@ -1107,6 +1114,7 @@ describe("generate types - CLI", () => {
 					MY_WORKFLOW: Workflow<Parameters<import("./index").MyWorkflow['run']>[0]['payload']>;
 					testing_unsafe: any;
 					UNSAFE_RATELIMIT: RateLimit;
+					UNSAFE_SERVICE_BINDING: Fetcher;
 					SOME_DATA_BLOB1: ArrayBuffer;
 					SOME_DATA_BLOB2: ArrayBuffer;
 					SOME_TEXT_BLOB1: string;
@@ -1474,6 +1482,7 @@ describe("generate types - CLI", () => {
 			declare global {
 				const testing_unsafe: any;
 				const UNSAFE_RATELIMIT: RateLimit;
+				const UNSAFE_SERVICE_BINDING: Fetcher;
 			}
 
 			────────────────────────────────────────────────────────────
