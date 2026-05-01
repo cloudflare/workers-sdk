@@ -11,6 +11,7 @@ export default mergeConfig(
 			// `SQLITE_BUSY` intermittently and causes workerd to abort with
 			// "The Workers runtime failed to start", leaving tests to fail with
 			// ECONNREFUSED. Run the files serially to avoid the contention.
+			reporters: ["default"],
 			fileParallelism: false,
 		},
 	})

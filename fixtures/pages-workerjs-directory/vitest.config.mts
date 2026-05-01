@@ -4,6 +4,6 @@ import configShared from "../../vitest.shared";
 export default mergeConfig(
 	configShared,
 	defineProject({
-		test: {},
+		test: { reporters: ["default"] },
 	})
 );

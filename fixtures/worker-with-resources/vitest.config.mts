@@ -5,6 +5,7 @@ export default mergeConfig(
 	configShared,
 	defineProject({
 		test: {
+			reporters: ["default"],
 			maxConcurrency: 1,
 			fileParallelism: false,
 		},
