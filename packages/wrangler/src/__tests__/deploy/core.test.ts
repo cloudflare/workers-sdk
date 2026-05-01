@@ -1537,7 +1537,7 @@ describe("deploy", () => {
 				result: true,
 			});
 			mockConfirm({
-				text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 				result: true,
 			});
 
@@ -1575,7 +1575,7 @@ describe("deploy", () => {
 				result: true,
 			});
 			mockConfirm({
-				text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 				result: false,
 			});
 
@@ -1603,7 +1603,7 @@ describe("deploy", () => {
 			});
 			// No compat date prompt — --latest skips it
 			mockConfirm({
-				text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 				result: true,
 			});
 
@@ -1635,7 +1635,7 @@ describe("deploy", () => {
 			});
 			// No compat date prompt — --latest skips it
 			mockConfirm({
-				text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 				result: false,
 			});
 
