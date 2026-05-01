@@ -413,7 +413,7 @@ import {
 	whoamiCommand,
 } from "./user/commands";
 import { noProxy, proxy } from "./utils/constants";
-import { debugLogFilepath } from "./utils/log-file";
+import { debugLogFilepath, initLogFileCleanup } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
 import { vectorizeDeleteCommand } from "./vectorize/delete";
@@ -2229,6 +2229,7 @@ export function createCLIParser(argv: string[]) {
 }
 
 export async function main(argv: string[]): Promise<void> {
+	initLogFileCleanup();
 	setupSentry();
 
 	checkMacOSVersion({ shouldThrow: false });

@@ -14,6 +14,7 @@ import {
 	appendToDebugLogFile,
 	cleanupOldLogFiles,
 	debugLogFilepath,
+	initLogFileCleanup,
 } from "../../utils/log-file";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import type { ExpectStatic } from "vitest";
@@ -189,5 +190,23 @@ describe("cleanupOldLogFiles", () => {
 
 	it("should silently succeed if the logs directory does not exist", async () => {
 		await expect(cleanupOldLogFiles("nonexistent-dir")).resolves.not.toThrow();
+	});
+});
+
+describe("initLogFileCleanup", () => {
+	runInTempDir();
+
+	beforeEach(() => {
+		vi.stubEnv("WRANGLER_LOG_PATH", "logs");
+	});
+
+	it("should be idempotent (calling it twice does not throw)", () => {
+		expect(() => initLogFileCleanup()).not.toThrow();
+		expect(() => initLogFileCleanup()).not.toThrow();
+	});
+
+	it("should skip cleanup when WRANGLER_LOG_PATH points to an exact .log file", () => {
+		vi.stubEnv("WRANGLER_LOG_PATH", "custom-debug.log");
+		expect(() => initLogFileCleanup()).not.toThrow();
 	});
 });

@@ -75,10 +75,18 @@ export async function cleanupOldLogFiles(logsDir: string): Promise<void> {
 export const debugLogFilepath = getDebugFilepath();
 const mutex = new Mutex();
 
-// Kick off log cleanup in the background at startup (fire-and-forget).
-// Only run when the user hasn't set a custom exact log file path.
-// Skip during tests to avoid deleting real ~/.wrangler/logs files.
-if (!getDebugFileDir().endsWith(".log") && typeof vitest === "undefined") {
+let hasStartedLogCleanup = false;
+
+/**
+ * Starts background cleanup of old Wrangler log files.
+ * Call this from an explicit Wrangler startup path rather than on import
+ * so importing utilities remains side-effect free and tests are safe.
+ */
+export function initLogFileCleanup(): void {
+	if (hasStartedLogCleanup || getDebugFileDir().endsWith(".log")) {
+		return;
+	}
+	hasStartedLogCleanup = true;
 	void cleanupOldLogFiles(getDebugFileDir());
 }
 

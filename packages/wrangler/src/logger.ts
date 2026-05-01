@@ -68,6 +68,21 @@ export const runWithLogLevel = <V>(
 	cb: () => V
 ) => overrideLoggerLevel.run({ logLevel: overrideLogLevel }, cb);
 
+/**
+ * Determines whether Wrangler should write logs to disk.
+ * Exported for testability — skips disk logging in unit tests
+ * and when WRANGLER_LOG_DISK is "false" or "0".
+ */
+export function shouldLogToDisk(
+	isTestEnvironment = typeof vitest !== "undefined"
+): boolean {
+	if (isTestEnvironment) {
+		return false;
+	}
+	const setting = process.env.WRANGLER_LOG_DISK?.toLowerCase();
+	return setting !== "false" && setting !== "0";
+}
+
 export type TableRow<Keys extends string> = Record<Keys, string>;
 
 function consoleMethodToLoggerLevel(
@@ -208,11 +223,7 @@ export class Logger {
 
 		// unless in unit-tests, send ALL logs to the debug log file (even non-debug logs for context & order)
 		// users can opt out of disk logging entirely by setting WRANGLER_LOG_DISK=false (or "0")
-		const inUnitTests = typeof vitest !== "undefined";
-		const logToDiskSetting = process.env.WRANGLER_LOG_DISK?.toLowerCase();
-		const diskLoggingDisabled =
-			logToDiskSetting === "false" || logToDiskSetting === "0";
-		if (!inUnitTests && !diskLoggingDisabled) {
+		if (shouldLogToDisk()) {
 			void appendToDebugLogFile(messageLevel, message);
 		}
 
