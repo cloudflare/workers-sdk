@@ -400,6 +400,12 @@ export async function deploy({
 				if (err instanceof FatalError) {
 					throw err;
 				}
+				if (err instanceof SyntaxError) {
+					throw new FatalError(
+						`Invalid _routes.json file at ${directory}: ${err.message}`,
+						1
+					);
+				}
 			}
 		}
 	}
@@ -412,8 +418,8 @@ export async function deploy({
 		const workerBundleContents = await createUploadWorkerBundleContents(
 			workerBundle as BundleResult,
 			config
-		);
 
+		);
 		formData.append(
 			"_worker.bundle",
 			new File([workerBundleContents], "_worker.bundle")
@@ -435,7 +441,12 @@ export async function deploy({
 				if (err instanceof FatalError) {
 					throw err;
 				}
-			}
+				if (err instanceof SyntaxError) {
+					throw new FatalError(
+						`Invalid _routes.json file at ${directory}: ${err.message}`,
+						1
+					);
+				}
 		} else if (routesOutputPath) {
 			// no custom _routes.json file found, so fallback to the generated one
 			try {
