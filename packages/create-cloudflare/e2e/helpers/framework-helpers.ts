@@ -337,7 +337,7 @@ export async function verifyTypes(
 			line === `interface ${envInterfaceName} {` ||
 			// new after importable env change
 			line ===
-				`interface ${envInterfaceName} extends Internal${envInterfaceName} {}`
+				`interface ${envInterfaceName} extends __EnvShape_${envInterfaceName} {}`
 	);
 	expect(hasEnvInterface).toBe(true);
 
