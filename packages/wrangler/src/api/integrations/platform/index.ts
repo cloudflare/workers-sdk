@@ -4,7 +4,7 @@ import {
 	getRegistryPath,
 	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
-import { Miniflare } from "miniflare";
+import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
@@ -431,6 +431,24 @@ export function unstable_getMiniflareWorkerOptions(
 		},
 		options?.remoteProxyConnectionString
 	);
+
+	// Rewrite self-referencing service bindings to use `kCurrentWorker`. Some
+	// consumers (notably vitest-pool-workers) rename the worker before passing
+	// it to Miniflare, which would break self-references that use the literal
+	// `config.name`. `kCurrentWorker` resolves at request time relative to the
+	// referer worker, so it survives any rename.
+	if (bindingOptions.serviceBindings) {
+		for (const [key, sb] of Object.entries(bindingOptions.serviceBindings)) {
+			if (
+				typeof sb === "object" &&
+				sb !== null &&
+				"name" in sb &&
+				sb.name === config.name
+			) {
+				bindingOptions.serviceBindings[key] = { ...sb, name: kCurrentWorker };
+			}
+		}
+	}
 
 	const sitesAssetPaths = getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });

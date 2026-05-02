@@ -2,6 +2,8 @@
 "wrangler": patch
 ---
 
-Remove redundant dev-registry filtering in `unstable_getMiniflareWorkerOptions`
+Fix `props` and fetcher-type service bindings being dropped in `unstable_getMiniflareWorkerOptions`
 
-The code that rewrote `serviceBindings` and `durableObjects` in `unstable_getMiniflareWorkerOptions` was originally needed to avoid relying on the dev registry for the Workers Vitest pool. Since the dev registry is now entirely defined in Miniflare, this rewriting is no longer necessary — `buildMiniflareBindingOptions` already produces the correct bindings. Removing this code also means `props` on service bindings are no longer dropped.
+The post-processing in `unstable_getMiniflareWorkerOptions` was rebuilding `serviceBindings` from scratch, which silently dropped `props` on service bindings and dropped `fetcher`-type bindings entirely. It was also re-deriving `durableObjects` identically to what `buildMiniflareBindingOptions` already produces.
+
+The post-processing has been simplified to only rewrite self-referencing service bindings (where `service === config.name`) to use the `kCurrentWorker` symbol, which is necessary so self-references survive consumer-specific worker renames (e.g. vitest-pool-workers renames the runner to `vitest-pool-workers-runner-<project>`). All other fields — including `props` and fetcher-type bindings — are now preserved, and the redundant `durableObjects` re-derivation has been removed.
