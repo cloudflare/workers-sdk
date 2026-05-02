@@ -45,6 +45,30 @@ function getName(config: StartDevWorkerOptions) {
 	return config.name;
 }
 
+export function getUserWorkerInnerUrlOverrides(
+	config: Pick<StartDevWorkerOptions, "dev">
+) {
+	const protocol = config.dev?.origin?.secure ? "https:" : "http:";
+	const host = config.dev?.origin?.hostname;
+	if (!host) {
+		return { protocol };
+	}
+
+	try {
+		const parsedHost = new URL(`http://${host}`);
+		return {
+			protocol,
+			hostname: parsedHost.hostname,
+			port: parsedHost.port,
+		};
+	} catch {
+		return {
+			protocol,
+			hostname: host,
+		};
+	}
+}
+
 export async function convertToConfigBundle(
 	event: BundleCompleteEvent
 ): Promise<MF.ConfigBundle> {
@@ -350,11 +374,9 @@ export class LocalRuntimeController extends RuntimeController {
 								},
 							}
 						: {}),
-					userWorkerInnerUrlOverrides: {
-						protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
-						hostname: data.config?.dev?.origin?.hostname,
-						port: data.config?.dev?.origin?.hostname ? "" : undefined,
-					},
+					userWorkerInnerUrlOverrides: getUserWorkerInnerUrlOverrides(
+						data.config
+					),
 					headers: {
 						// Passing this signature from Proxy Worker allows the User Worker to trust the request.
 						"MF-Proxy-Shared-Secret":
