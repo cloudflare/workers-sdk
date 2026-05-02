@@ -2699,62 +2699,29 @@ test.sequential("Miniflare: workerd subprocess defaults to TZ=UTC to match produ
 	expect(await res.json()).toEqual({ tz: "UTC" });
 });
 
-test.sequential("Miniflare: unsafeRuntimeEnv overrides the default workerd subprocess env", async ({
-	expect,
-}) => {
-	vi.stubEnv("TZ", "UTC");
+// Skipped on Windows because workerd-on-Windows always reports `UTC` from
+// `Intl.DateTimeFormat().resolvedOptions().timeZone` regardless of the `TZ`
+// env var. A diagnostic probe on Windows CI showed that every value tried
+// (`America/Chicago`, `Asia/Tokyo`, `Europe/London`, `Etc/GMT+5`, `Etc/UTC`,
+// `UTC`, `PST8PDT`) all resolved to `UTC`. This is a workerd limitation on
+// Windows; the override mechanism itself (passing the env var through) is
+// platform-independent and exercised on macOS/Linux.
+unixSerialTest(
+	"Miniflare: unsafeRuntimeEnv overrides the default workerd subprocess env",
+	async ({ expect }) => {
+		vi.stubEnv("TZ", "UTC");
 
-	const mf = new Miniflare({
-		modules: true,
-		script: TIMEZONE_WORKER,
-		unsafeRuntimeEnv: { TZ: "America/Chicago" },
-	});
-	useDispose(mf);
-
-	const res = await mf.dispatchFetch("http://localhost");
-	expect(await res.json()).toEqual({ tz: "America/Chicago" });
-});
-
-// DIAGNOSTIC: probe how workerd resolves several TZ values across platforms.
-// This test always passes; it just emits the resolved zone for each input via
-// console.log so we can see the data in CI logs.
-test.sequential("DIAGNOSTIC: workerd TZ resolution probe", async ({
-	expect,
-}) => {
-	vi.stubEnv("TZ", "UTC");
-
-	const probes = [
-		"America/Chicago",
-		"Asia/Tokyo",
-		"Europe/London",
-		"Etc/GMT+5",
-		"Etc/UTC",
-		"UTC",
-		"PST8PDT",
-	];
-
-	const results: Record<string, string> = {};
-	for (const tz of probes) {
 		const mf = new Miniflare({
 			modules: true,
 			script: TIMEZONE_WORKER,
-			unsafeRuntimeEnv: { TZ: tz },
+			unsafeRuntimeEnv: { TZ: "America/Chicago" },
 		});
-		try {
-			const res = await mf.dispatchFetch("http://localhost");
-			const data = (await res.json()) as { tz: string };
-			results[tz] = data.tz;
-		} finally {
-			await mf.dispose();
-		}
-	}
+		useDispose(mf);
 
-	// eslint-disable-next-line no-console
-	console.log(
-		`DIAGNOSTIC TZ resolution on ${process.platform}: ${JSON.stringify(results, null, 2)}`
-	);
-	expect(results).toBeDefined();
-});
+		const res = await mf.dispatchFetch("http://localhost");
+		expect(await res.json()).toEqual({ tz: "America/Chicago" });
+	}
+);
 
 test("Miniflare: exits cleanly", async ({ expect }) => {
 	const miniflarePath = require.resolve("miniflare");
