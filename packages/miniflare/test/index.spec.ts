@@ -2715,6 +2715,47 @@ test.sequential("Miniflare: unsafeRuntimeEnv overrides the default workerd subpr
 	expect(await res.json()).toEqual({ tz: "America/Chicago" });
 });
 
+// DIAGNOSTIC: probe how workerd resolves several TZ values across platforms.
+// This test always passes; it just emits the resolved zone for each input via
+// console.log so we can see the data in CI logs.
+test.sequential("DIAGNOSTIC: workerd TZ resolution probe", async ({
+	expect,
+}) => {
+	vi.stubEnv("TZ", "UTC");
+
+	const probes = [
+		"America/Chicago",
+		"Asia/Tokyo",
+		"Europe/London",
+		"Etc/GMT+5",
+		"Etc/UTC",
+		"UTC",
+		"PST8PDT",
+	];
+
+	const results: Record<string, string> = {};
+	for (const tz of probes) {
+		const mf = new Miniflare({
+			modules: true,
+			script: TIMEZONE_WORKER,
+			unsafeRuntimeEnv: { TZ: tz },
+		});
+		try {
+			const res = await mf.dispatchFetch("http://localhost");
+			const data = (await res.json()) as { tz: string };
+			results[tz] = data.tz;
+		} finally {
+			await mf.dispose();
+		}
+	}
+
+	// eslint-disable-next-line no-console
+	console.log(
+		`DIAGNOSTIC TZ resolution on ${process.platform}: ${JSON.stringify(results, null, 2)}`
+	);
+	expect(results).toBeDefined();
+});
+
 test("Miniflare: exits cleanly", async ({ expect }) => {
 	const miniflarePath = require.resolve("miniflare");
 	const result = childProcess.spawn(
