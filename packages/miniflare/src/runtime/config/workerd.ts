@@ -195,7 +195,13 @@ export type Worker_DurableObjectNamespace = {
 	className?: string;
 	preventEviction?: boolean;
 	enableSql?: boolean;
+	container?: Worker_ContainerOptions;
 } & ({ uniqueKey?: string } | { ephemeralLocal?: Void });
+
+export type Worker_ContainerOptions = {
+	imageName?: string;
+	allowPrivileged?: boolean;
+};
 
 export type ExternalServer = { address?: string } & (
 	| { http: HttpOptions }

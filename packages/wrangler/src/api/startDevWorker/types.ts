@@ -178,6 +178,12 @@ export interface StartDevWorkerInput {
 		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
 		enableContainers?: boolean;
 
+		/**
+		 * Whether to launch local containers with the elevated privileges needed for FUSE
+		 * (CAP_SYS_ADMIN, /dev/fuse, AppArmor unconfined). Defaults to false.
+		 */
+		privilegedContainers?: boolean;
+
 		/** Path to the dev registry directory */
 		registry?: string;
 

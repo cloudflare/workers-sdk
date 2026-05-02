@@ -1677,6 +1677,44 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
+	describe("privileged containers", () => {
+		it("should default to false", async ({ expect }) => {
+			writeWranglerConfig({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev");
+			expect(config.dev.privilegedContainers).toBe(false);
+		});
+
+		it("should be true when `dev.privileged_containers` is set in the Wrangler config", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				dev: {
+					privileged_containers: true,
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev");
+			expect(config.dev.privilegedContainers).toBe(true);
+		});
+
+		it("should be true when `--privileged-containers` is passed on the CLI", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --privileged-containers"
+			);
+			expect(config.dev.privilegedContainers).toBe(true);
+		});
+	});
+
 	describe("durable_objects", () => {
 		it("should warn if there are remote Durable Objects, or missing migrations for local Durable Objects", async ({
 			expect,
