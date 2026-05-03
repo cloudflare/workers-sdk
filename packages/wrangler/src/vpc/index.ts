@@ -19,6 +19,13 @@ export const vpcServiceNamespace = createNamespace({
 
 export enum ServiceType {
 	Http = "http",
+	Tcp = "tcp",
+}
+
+export type CertVerificationMode = "verify_full" | "verify_ca" | "disabled";
+
+export interface TlsSettings {
+	cert_verification_mode: CertVerificationMode;
 }
 
 export interface ServicePortOptions {
@@ -66,6 +73,7 @@ export interface ConnectivityService {
 	http_port?: number;
 	https_port?: number;
 	host: ServiceHost;
+	tls_settings?: TlsSettings;
 	created_at: string;
 	updated_at: string;
 }
@@ -78,6 +86,7 @@ export interface ConnectivityServiceRequest {
 	http_port?: number;
 	https_port?: number;
 	host: ServiceHost;
+	tls_settings?: TlsSettings;
 }
 
 export interface ConnectivityServiceListParams {
@@ -94,17 +103,32 @@ export const serviceOptions = {
 	type: {
 		type: "string",
 		demandOption: true,
-		choices: ["http"],
+		choices: ["tcp", "http"],
 		group: "Required Configuration",
 		description: "The type of the VPC service",
 	},
+	"tcp-port": {
+		type: "number",
+		conflicts: ["http-port", "https-port"],
+		description: "TCP port number",
+		group: "TCP Options",
+	},
+	"app-protocol": {
+		type: "string",
+		choices: ["postgresql", "mysql"] as const,
+		conflicts: ["http-port", "https-port"],
+		description: "Application protocol for the TCP service",
+		group: "TCP Options",
+	},
 	"http-port": {
 		type: "number",
+		conflicts: ["tcp-port"],
 		description: "HTTP port (default: 80)",
 		group: "Port Configuration",
 	},
 	"https-port": {
 		type: "number",
+		conflicts: ["tcp-port"],
 		description: "HTTPS port number (default: 443)",
 		group: "Port Configuration",
 	},
@@ -138,5 +162,12 @@ export const serviceOptions = {
 		demandOption: true,
 		group: "Required Configuration",
 		description: "UUID of the Cloudflare tunnel",
+	},
+	"cert-verification-mode": {
+		type: "string",
+		choices: ["verify_full", "verify_ca", "disabled"] as const,
+		description:
+			"TLS certificate verification mode for the connection to the origin",
+		group: "TLS Options",
 	},
 } as const;

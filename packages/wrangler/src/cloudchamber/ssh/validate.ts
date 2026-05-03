@@ -51,7 +51,9 @@ export function validatePublicSSHKeyCLI(
 ) {
 	const bail = (reason: string) => {
 		if (!json) {
-			throw new UserError(reason);
+			throw new UserError(reason, {
+				telemetryMessage: "cloudchamber ssh public key invalid",
+			});
 		} else {
 			logger.json({ error: reason });
 			exit(1);

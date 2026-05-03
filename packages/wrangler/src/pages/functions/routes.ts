@@ -63,6 +63,7 @@ export async function writeRoutesModule({
 }
 
 function parseConfig(config: Config, baseDir: string) {
+	baseDir = path.resolve(baseDir);
 	const routes: RoutesCollection = [];
 	const importMap: ImportMap = new Map();
 	const identifierCount = new Map<string, number>(); // to keep track of identifier collisions
@@ -77,23 +78,36 @@ function parseConfig(config: Config, baseDir: string) {
 		}
 
 		return paths.map((modulePath) => {
-			const [filepath, name = "default"] = modulePath.split(":");
-			let { identifier } = importMap.get(modulePath) ?? {};
+			const resolvedPath = path.resolve(baseDir, modulePath);
+			const moduleRoot = path.parse(resolvedPath).root;
 
-			const resolvedPath = path.resolve(baseDir, filepath);
+			// Strip the drive letter (if any) to avoid confusing the drive colon with the export name separator
+			const strippedPath = resolvedPath.slice(moduleRoot.length - 1);
+			const [filepath, name = "default"] = strippedPath.split(":");
+
+			const fullFilepath = path.resolve(moduleRoot, filepath);
+			const relativePath = path.relative(baseDir, fullFilepath);
 
 			// ensure the filepath isn't attempting to resolve to anything outside of the project
-			if (path.relative(baseDir, resolvedPath).startsWith("..")) {
-				throw new UserError(`Invalid module path "${filepath}"`);
+			if (
+				moduleRoot !== path.parse(baseDir).root ||
+				relativePath.startsWith("..")
+			) {
+				throw new UserError(`Invalid module path "${fullFilepath}"`, {
+					telemetryMessage: "pages functions invalid module path",
+				});
 			}
 
 			// ensure the module name (if provided) is a valid identifier to guard against injection attacks
 			if (name !== "default" && !isValidIdentifier(name)) {
-				throw new UserError(`Invalid module identifier "${name}"`);
+				throw new UserError(`Invalid module identifier "${name}"`, {
+					telemetryMessage: "pages functions invalid module identifier",
+				});
 			}
 
+			let { identifier } = importMap.get(resolvedPath) ?? {};
 			if (!identifier) {
-				identifier = normalizeIdentifier(`__${filepath}_${name}`);
+				identifier = normalizeIdentifier(`__${relativePath}_${name}`);
 
 				let count = identifierCount.get(identifier) ?? 0;
 				identifierCount.set(identifier, ++count);
@@ -102,7 +116,11 @@ function parseConfig(config: Config, baseDir: string) {
 					identifier += `_${count}`;
 				}
 
-				importMap.set(modulePath, { filepath: resolvedPath, name, identifier });
+				importMap.set(resolvedPath, {
+					filepath: fullFilepath,
+					name,
+					identifier,
+				});
 			}
 
 			return identifier;

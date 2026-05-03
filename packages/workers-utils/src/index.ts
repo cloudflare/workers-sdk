@@ -4,6 +4,7 @@ export type {
 	RawDevConfig,
 	ConfigFields,
 	RawEnvironment,
+	ConfigBindingOptions,
 } from "./config";
 export * from "./config/environment";
 export {
@@ -54,6 +55,8 @@ export {
 
 export { validatePagesConfig } from "./config/validation-pages";
 
+export { Diagnostics } from "./config/diagnostics";
+
 export {
 	hasProperty,
 	isRequiredProperty,
@@ -82,13 +85,16 @@ export * from "./environment-variables/misc-variables";
 
 export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 
-export {
-	getLocalWorkerdCompatibilityDate,
-	formatCompatibilityDate,
-	isCompatDate,
-} from "./compatibility-date";
+export { isCompatDate, getTodaysCompatDate } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
 
 export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
+
+export { MetricsRegistry } from "./prometheus-metrics";
+export type { Counter } from "./prometheus-metrics";
+
+export type { Tunnel, TunnelOptions } from "./tunnel";
+export { startTunnel } from "./tunnel";
+export { spawnCloudflared } from "./cloudflared";

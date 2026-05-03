@@ -21,7 +21,7 @@ describe("traverse module graph", () => {
 	it("should not detect JS without module rules", async ({ expect }) => {
 		await writeFile(
 			"./index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "./other.js"
 			export default {
 				async fetch(request) {
@@ -32,7 +32,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -58,7 +58,7 @@ describe("traverse module graph", () => {
 	])("should detect JS as %s", async ([type, format], { expect }) => {
 		await writeFile(
 			"./index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "./other.js"
 			export default {
 				async fetch(request) {
@@ -69,7 +69,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -93,7 +93,7 @@ describe("traverse module graph", () => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "../other.js"
 			export default {
 				async fetch(request) {
@@ -104,7 +104,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -129,7 +129,7 @@ describe("traverse module graph", () => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "../other.js"
 			export default {
 				async fetch(request) {
@@ -140,7 +140,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -165,7 +165,7 @@ describe("traverse module graph", () => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "../other.js"
 			export default {
 				async fetch(request) {
@@ -176,7 +176,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -201,7 +201,7 @@ describe("traverse module graph", () => {
 		await mkdir("./src", { recursive: true });
 		await writeFile(
 			"./src/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "./other.js"
 			export default {
 				async fetch(request) {
@@ -212,7 +212,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/wrangler.jsonc",
-			dedent/* jsonc */ `
+			dedent /* jsonc */ `
 			{
 				"compatibility_date": "2025/01/01"
 			}
@@ -252,7 +252,7 @@ describe("traverse module graph", () => {
 		await mkdir("./src", { recursive: true });
 		await writeFile(
 			"./src/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import HELLO from "../other.txt"
 			export default {
 				async fetch(request) {
@@ -263,7 +263,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.txt",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -290,7 +290,7 @@ describe("traverse module graph", () => {
 		await mkdir("./src", { recursive: true });
 		await writeFile(
 			"./src/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export default {
 				async fetch(request) {
 					return new Response(HELLO)
@@ -300,7 +300,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.txt",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -393,5 +393,55 @@ describe("Python modules", () => {
 		expect(moduleNames).toContain("python_modules/module.py");
 		expect(moduleNames).not.toContain("python_modules/module.pyc");
 		expect(moduleNames).not.toContain("python_modules/test_module.py");
+	});
+
+	it("should register .mjs and .js files in workers/ as esm type", async ({
+		expect,
+	}) => {
+		await mkdir("./python_modules/workers", { recursive: true });
+		await mkdir("./python_modules/otherpkg", { recursive: true });
+		await writeFile("./index.py", "def fetch(request): pass");
+		await writeFile(
+			"./python_modules/workers/sdk.mjs",
+			"export function patchWaitUntil(ctx) {}"
+		);
+		await writeFile(
+			"./python_modules/workers/helper.js",
+			"export function helper() {}"
+		);
+		await writeFile("./python_modules/workers/__init__.py", "");
+		await writeFile("./python_modules/otherpkg/util.mjs", "export const x = 1");
+
+		const modules = await findAdditionalModules(
+			{
+				file: path.join(process.cwd(), "./index.py"),
+				projectRoot: process.cwd(),
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: process.cwd(),
+				exports: [],
+			},
+			[]
+		);
+
+		const vendored = modules.filter((m) =>
+			m.name.startsWith("python_modules/")
+		);
+
+		const findModule = (name: string) => vendored.find((m) => m.name === name);
+
+		const sdkModule = findModule("python_modules/workers/sdk.mjs");
+		const helperModule = findModule("python_modules/workers/helper.js");
+		const initModule = findModule("python_modules/workers/__init__.py");
+		const utilModule = findModule("python_modules/otherpkg/util.mjs");
+
+		expect(sdkModule).toBeDefined();
+		expect(sdkModule?.type).toBe("esm");
+		expect(helperModule).toBeDefined();
+		expect(helperModule?.type).toBe("esm");
+		expect(initModule).toBeDefined();
+		expect(initModule?.type).toBe("buffer");
+		expect(utilModule).toBeDefined();
+		expect(utilModule?.type).toBe("buffer");
 	});
 });

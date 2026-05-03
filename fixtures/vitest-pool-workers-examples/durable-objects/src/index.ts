@@ -1,34 +1,43 @@
-export class Counter implements DurableObject {
+import { DurableObject } from "cloudflare:workers";
+
+export class Counter extends DurableObject {
 	count: number = 0;
 
-	constructor(readonly state: DurableObjectState) {
-		void state.blockConcurrencyWhile(async () => {
-			this.count = (await state.storage.get("count")) ?? 0;
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env);
+		void ctx.blockConcurrencyWhile(async () => {
+			this.count = (await ctx.storage.get("count")) ?? 0;
 		});
 	}
 
 	increment(by = 1) {
 		this.count += by;
-		void this.state.storage.put("count", this.count);
+		void this.ctx.storage.put("count", this.count);
 	}
 
 	fetch(request: Request) {
+		const url = new URL(request.url);
+		if (url.pathname === "/redirect") {
+			return Response.redirect("https://example.com/redirected", 302);
+		}
 		this.increment();
 		return new Response(this.count.toString());
 	}
 
 	alarm() {
 		this.count = 0;
-		void this.state.storage.put("count", this.count);
+		void this.ctx.storage.put("count", this.count);
 	}
 
 	scheduleReset(afterMillis: number) {
-		void this.state.storage.setAlarm(Date.now() + afterMillis);
+		void this.ctx.storage.setAlarm(Date.now() + afterMillis);
 	}
 }
 
-export class SQLiteDurableObject implements DurableObject {
-	constructor(readonly ctx: DurableObjectState) {}
+export class SQLiteDurableObject extends DurableObject {
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env);
+	}
 	fetch() {
 		return new Response(this.ctx.storage.sql.databaseSize.toString());
 	}

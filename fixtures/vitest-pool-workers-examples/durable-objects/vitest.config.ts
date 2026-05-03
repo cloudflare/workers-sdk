@@ -1,15 +1,19 @@
-import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineProject, mergeConfig } from "vitest/config";
+import configShared from "../../../vitest.shared";
 
-export default defineWorkersProject({
-	test: {
-		name: "@scoped/durable-objects",
-		poolOptions: {
-			workers: {
-				singleWorker: true,
+export default mergeConfig(
+	configShared,
+	defineProject({
+		plugins: [
+			cloudflareTest({
 				wrangler: {
 					configPath: "./wrangler.jsonc",
 				},
-			},
+			}),
+		],
+		test: {
+			name: "@scoped/durable-objects",
 		},
-	},
-});
+	})
+);

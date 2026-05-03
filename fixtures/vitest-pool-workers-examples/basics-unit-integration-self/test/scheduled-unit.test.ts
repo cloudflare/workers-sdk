@@ -1,9 +1,9 @@
 import {
 	createExecutionContext,
 	createScheduledController,
-	env,
 	waitOnExecutionContext,
 } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { it } from "vitest";
 import worker from "../src/index";
 

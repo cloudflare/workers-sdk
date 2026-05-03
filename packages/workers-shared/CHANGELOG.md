@@ -1,5 +1,33 @@
 # @cloudflare/workers-shared
 
+## 0.19.4
+
+### Patch Changes
+
+- [#13363](https://github.com/cloudflare/workers-sdk/pull/13363) [`6457fb3`](https://github.com/cloudflare/workers-sdk/commit/6457fb38c7fbce39c396562bc3324b945114c672) Thanks [@courtney-sims](https://github.com/courtney-sims)! - Prepares router-worker for a more gradual rollout by refactoring and separating out the invocation from the business logic. In the future, this will provide space for us to route requests to new versions of router-worker based on their plan, but should make no functional difference today.
+
+## 0.19.3
+
+### Patch Changes
+
+- [#13668](https://github.com/cloudflare/workers-sdk/pull/13668) [`ef24ff2`](https://github.com/cloudflare/workers-sdk/commit/ef24ff28d905ca3706a272653c52a342de3c4339) Thanks [@for-the-kidz](https://github.com/for-the-kidz)! - Fix `TypeError: rules is not iterable` in the router-worker when `static_routing` is configured without `user_worker` rules
+
+  The router-worker's static-routing include-rule evaluation passed `config.static_routing.user_worker` directly to the matcher, which iterates with `for...of`. When `static_routing` was set but `user_worker` was omitted, the matcher threw `TypeError: rules is not iterable` and failed the request. The adjacent `asset_worker` branch already falls back to `[]` in this case; the `user_worker` branch now does the same.
+
+## 0.19.2
+
+### Patch Changes
+
+- [#13354](https://github.com/cloudflare/workers-sdk/pull/13354) [`854d66c`](https://github.com/cloudflare/workers-sdk/commit/854d66c30428cb3fe9ad8629089d9307c33d8b61) Thanks [@courtney-sims](https://github.com/courtney-sims)! - Prepares asset-worker for a more gradual rollout by refactoring and separating out the invocation from the business logic. In the future, this will provide space for us to route requests to new versions of asset-worker based on their plan, but should make no functional difference today.
+
+## 0.19.1
+
+### Patch Changes
+
+- [#12752](https://github.com/cloudflare/workers-sdk/pull/12752) [`00a4356`](https://github.com/cloudflare/workers-sdk/commit/00a43568d9dc3152befa278cdb61b4c7e89b42fa) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - fix: Normalize backslash characters in `/cdn-cgi` paths
+
+  Requests containing backslash characters in `/cdn-cgi` paths are now redirected to their normalized equivalents with forward slashes. This ensures consistent URL handling across different browsers and HTTP clients.
+
 ## 0.19.0
 
 ### Minor Changes

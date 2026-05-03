@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import colors from "picocolors";
 import { VIRTUAL_CLIENT_FALLBACK_ENTRY } from "./plugins/virtual-modules";
-import { satisfiesViteVersion } from "./utils";
+import { satisfiesMinimumViteVersion } from "./utils";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
@@ -74,7 +74,7 @@ export function createBuildApp(
 			await fallbackBuild(builder, clientEnvironment);
 		} else {
 			// In Vite 7 and above we do this in the `buildApp` hook
-			if (!satisfiesViteVersion("7.0.0")) {
+			if (!satisfiesMinimumViteVersion("7.0.0")) {
 				removeAssetsField(entryWorkerBuildDirectory);
 			}
 
@@ -112,7 +112,9 @@ export function createBuildApp(
 		if (movedAssetPaths.length) {
 			builder.config.logger.info(
 				[
-					`${colors.green("✓")} ${movedAssetPaths.length} asset${movedAssetPaths.length > 1 ? "s" : ""} moved from "${entryWorkerEnvironmentName}" to "client" build output.`,
+					`${colors.green("✓")} ${movedAssetPaths.length} asset${
+						movedAssetPaths.length > 1 ? "s" : ""
+					} moved from "${entryWorkerEnvironmentName}" to "client" build output.`,
 					...movedAssetPaths.map((assetPath) =>
 						colors.dim(path.relative(builder.config.root, assetPath))
 					),

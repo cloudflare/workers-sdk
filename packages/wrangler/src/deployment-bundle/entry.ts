@@ -1,7 +1,7 @@
 import path from "node:path";
 import {
 	configFileName,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	formatConfigSnippet,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -78,11 +78,11 @@ export async function getEntry(
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
 					"For Pages, please run `wrangler pages dev` instead.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "worker entry pages project command mismatch" }
 			);
 		}
 
-		const compatibilityDateStr = formatCompatibilityDate(new Date());
+		const compatibilityDateStr = getTodaysCompatDate();
 
 		const updateConfigMessage = (snippet: RawConfig) => dedent`
 			${

@@ -2,9 +2,9 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import {
 	makeFetch,
 	makeRemoteProxyStub,
-	RemoteBindingEnv,
 	throwRemoteRequired,
 } from "./remote-bindings-utils";
+import type { RemoteBindingEnv } from "./remote-bindings-utils";
 
 /** Generic remote proxy client for bindings. */
 export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
@@ -19,11 +19,7 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 		super(ctx, env);
 
 		const stub = env.remoteProxyConnectionString
-			? makeRemoteProxyStub(
-					env.remoteProxyConnectionString,
-					env.binding,
-					env.bindingType ? { "MF-Binding-Type": env.bindingType } : undefined
-				)
+			? makeRemoteProxyStub(env.remoteProxyConnectionString, env.binding)
 			: undefined;
 
 		return new Proxy(this, {

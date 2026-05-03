@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import * as path from "node:path";
+import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp, removeAssetsField } from "../build";
 import {
@@ -11,6 +12,7 @@ import { hasLocalDevVarsFileChanged } from "../dev-vars";
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
+import { QUICK_TUNNEL_ALLOWED_HOST } from "./tunnel";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
 
@@ -21,7 +23,18 @@ export const configPlugin = createPlugin("config", (ctx) => {
 	return {
 		config(userConfig, env) {
 			if (ctx.resolvedPluginConfig.type === "preview") {
-				return { appType: "custom" };
+				return {
+					appType: "custom",
+					preview: {
+						allowedHosts: getAllowedHosts(
+							ctx.resolvedPluginConfig.tunnel
+								? [QUICK_TUNNEL_ALLOWED_HOST]
+								: [],
+							userConfig.preview?.allowedHosts ??
+								userConfig.server?.allowedHosts
+						),
+					},
+				};
 			}
 
 			if (!ctx.hasShownWorkerConfigWarnings) {
@@ -39,13 +52,26 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				".env.*",
 				"*.{crt,pem}",
 				"**/.git/**",
+				".dev.vars",
+				".dev.vars.*",
+				"**/.wrangler/**",
 			];
 
 			return {
 				appType: "custom",
 				server: {
+					allowedHosts: getAllowedHosts(
+						ctx.getTunnelHostnames(),
+						userConfig.server?.allowedHosts
+					),
 					fs: {
-						deny: [...defaultDeniedFiles, ".dev.vars", ".dev.vars.*"],
+						deny: [
+							...defaultDeniedFiles,
+							...Array.from(
+								ctx.resolvedPluginConfig.configPaths,
+								(configPath) => normalizePath(configPath)
+							),
+						],
 					},
 				},
 				environments: getEnvironmentsConfig(ctx, userConfig, env.mode),
@@ -215,4 +241,15 @@ function getEnvironmentsConfig(
 			},
 		},
 	};
+}
+
+function getAllowedHosts(
+	tunnelHostnames: string[],
+	userAllowedHosts: true | string[] | undefined
+): true | string[] | undefined {
+	if (tunnelHostnames.length === 0 || userAllowedHosts === true) {
+		return userAllowedHosts;
+	}
+
+	return Array.from(new Set([...(userAllowedHosts ?? []), ...tunnelHostnames]));
 }

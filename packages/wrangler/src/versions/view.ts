@@ -1,4 +1,4 @@
-import { logRaw } from "@cloudflare/cli";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { UserError } from "@cloudflare/workers-utils";
 import { convertWorkerMetadataBindingsToFlatBindings } from "../api/startDevWorker/utils";
 import { createCommand } from "../core/create-command";
@@ -33,7 +33,7 @@ export const versionsViewCommand = createCommand({
 			requiresArg: true,
 		},
 		json: {
-			describe: "Display output as clean JSON",
+			describe: "Display output as JSON",
 			type: "boolean",
 			default: false,
 		},
@@ -50,7 +50,7 @@ export const versionsViewCommand = createCommand({
 		if (workerName === undefined) {
 			throw new UserError(
 				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-				{ telemetryMessage: true }
+				{ telemetryMessage: "versions view missing worker name" }
 			);
 		}
 

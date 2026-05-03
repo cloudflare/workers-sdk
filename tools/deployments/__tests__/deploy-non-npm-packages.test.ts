@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { afterEach, describe, expect, it, vitest } from "vitest";
+import { afterEach, describe, it, vitest } from "vitest";
 import {
 	deployNonNpmPackages,
 	deployPackage,
@@ -22,11 +22,11 @@ describe("getUpdatedPackages()", () => {
 		process.env = originalEnv;
 	});
 
-	it("should default to an empty array", () => {
+	it("should default to an empty array", ({ expect }) => {
 		expect(getUpdatedPackages()).toEqual([]);
 	});
 
-	it("should parse JSON from the PUBLISHED_PACKAGES env var", () => {
+	it("should parse JSON from the PUBLISHED_PACKAGES env var", ({ expect }) => {
 		const expectedPackages = [
 			{ name: "a", version: "1.0.0" },
 			{ name: "b", version: "2.3.4" },
@@ -37,7 +37,9 @@ describe("getUpdatedPackages()", () => {
 		expect(getUpdatedPackages()).toEqual(expectedPackages);
 	});
 
-	it("should validate the shape of the PUBLISHED_PACKAGES JSON", () => {
+	it("should validate the shape of the PUBLISHED_PACKAGES JSON", ({
+		expect,
+	}) => {
 		process.env = {
 			PUBLISHED_PACKAGES: `"bad"`,
 		};
@@ -90,7 +92,9 @@ describe("getUpdatedPackages()", () => {
 });
 
 describe("findDeployablePackageNames()", () => {
-	it("should return all the private packages which contain deploy scripts", () => {
+	it("should return all the private packages which contain deploy scripts", ({
+		expect,
+	}) => {
 		expect(findDeployablePackageNames()).toMatchInlineSnapshot(`
 			Set {
 			  "@cloudflare/chrome-devtools-patches",
@@ -108,7 +112,9 @@ describe("findDeployablePackageNames()", () => {
 });
 
 describe("deployPackage", () => {
-	it("should run `pnpm deploy` for the given package via `spawnSync`", () => {
+	it("should run `pnpm deploy` for the given package via `spawnSync`", ({
+		expect,
+	}) => {
 		deployPackage("foo", new Map());
 		expect(spawnSync).toHaveBeenCalledWith(
 			"pnpm",
@@ -117,7 +123,7 @@ describe("deployPackage", () => {
 		);
 	});
 
-	it("should ignore failures in `spawnSync`", () => {
+	it("should ignore failures in `spawnSync`", ({ expect }) => {
 		(spawnSync as Mock).mockImplementationOnce(() => {
 			throw new Error("Bad deployment");
 		});
@@ -129,7 +135,9 @@ describe("deployPackage", () => {
 });
 
 describe("deployNonNpmPackages()", () => {
-	it("should run `pnpm deploy` on each deployable updated package", () => {
+	it("should run `pnpm deploy` on each deployable updated package", ({
+		expect,
+	}) => {
 		const updatedPackages: UpdatedPackage[] = [
 			{ name: "a", version: "1.0.0" },
 			{ name: "b", version: "2.0.4" },
@@ -151,7 +159,9 @@ describe("deployNonNpmPackages()", () => {
 		`);
 	});
 
-	it("should run display an informative message if no packages to deploy", () => {
+	it("should run display an informative message if no packages to deploy", ({
+		expect,
+	}) => {
 		const updatedPackages: UpdatedPackage[] = [];
 		const deployablePackageNames = new Set(["a", "c", "e"]);
 		vitest.spyOn(console, "log").mockImplementation(() => {});

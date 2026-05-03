@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { existsSync } from "node:fs";
+import { statSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
@@ -71,23 +71,30 @@ export const syncAssets = async (
 
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
-	const initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
-		complianceConfig,
-		url,
-		{
+	const initializeAssetsResponse =
+		await fetchResult<InitializeAssetsResponse | null>(complianceConfig, url, {
 			headers: { "Content-Type": "application/json" },
 			method: "POST",
 			body: JSON.stringify({ manifest: manifest }),
-		}
-	);
+		});
+
+	// In the past we've seen the endpoint return that incorrectly doesn't contain
+	// a null response (see: https://github.com/cloudflare/workers-sdk/issues/9465).
+	// So just to be extra sure here we check the object and provide a clear error message to the user
+	// if it is falsy.
+	if (!initializeAssetsResponse) {
+		throw new FatalError(
+			"An unexpected response has been received from the Cloudflare API for assets upload. Please try again.",
+			{ code: 1, telemetryMessage: "assets upload unexpected api response" }
+		);
+	}
 
 	// if nothing to upload, return
 	if (initializeAssetsResponse.buckets.flat().length === 0) {
 		if (!initializeAssetsResponse.jwt) {
 			throw new FatalError(
 				"Could not find assets information to attach to deployment. Please try again.",
-				1,
-				{ telemetryMessage: true }
+				{ code: 1, telemetryMessage: "assets upload missing completion token" }
 			);
 		}
 		logger.info(
@@ -99,7 +106,9 @@ export const syncAssets = async (
 	// 3. fill buckets and upload assets
 	const numberFilesToUpload = initializeAssetsResponse.buckets.flat().length;
 	logger.info(
-		`🌀 Found ${numberFilesToUpload} new or modified static asset${numberFilesToUpload > 1 ? "s" : ""} to upload. Proceeding with upload...`
+		`🌀 Found ${numberFilesToUpload} new or modified static asset${
+			numberFilesToUpload > 1 ? "s" : ""
+		} to upload. Proceeding with upload...`
 	);
 
 	// Create the buckets outside of doUpload so we can retry without losing track of potential duplicate files
@@ -114,8 +123,8 @@ export const syncAssets = async (
 			if (manifestEntry === undefined) {
 				throw new FatalError(
 					`A file was requested that does not appear to exist.`,
-					1,
 					{
+						code: 1,
 						telemetryMessage:
 							"A file was requested that does not appear to exist. (asset manifest upload)",
 					}
@@ -207,9 +216,10 @@ export const syncAssets = async (
 				} else if (isJwtExpired(initializeAssetsResponse.jwt)) {
 					throw new FatalError(
 						`Upload took too long.\n` +
-							`Asset upload took too long on bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length}. Please try again.\n` +
+							`Asset upload took too long on bucket ${bucketIndex + 1}/${
+								initializeAssetsResponse.buckets.length
+							}. Please try again.\n` +
 							`Assets already uploaded have been saved, so the next attempt will automatically resume from this point.`,
-						undefined,
 						{ telemetryMessage: "Asset upload took too long" }
 					);
 				} else {
@@ -237,11 +247,10 @@ export const syncAssets = async (
 	// if queue finishes without receiving JWT from asset upload service (AUS)
 	// AUS only returns this in the final bucket upload response
 	if (!completionJwt) {
-		throw new FatalError(
-			"Failed to complete asset upload. Please try again.",
-			1,
-			{ telemetryMessage: true }
-		);
+		throw new FatalError("Failed to complete asset upload. Please try again.", {
+			code: 1,
+			telemetryMessage: "assets upload completion failed",
+		});
 	}
 
 	const uploadMs = Date.now() - start;
@@ -249,13 +258,15 @@ export const syncAssets = async (
 	const skippedMessage = skipped > 0 ? `(${skipped} already uploaded) ` : "";
 
 	logger.log(
-		`✨ Success! Uploaded ${numberFilesToUpload} file${numberFilesToUpload > 1 ? "s" : ""} ${skippedMessage}${formatTime(uploadMs)}\n`
+		`✨ Success! Uploaded ${numberFilesToUpload} file${
+			numberFilesToUpload > 1 ? "s" : ""
+		} ${skippedMessage}${formatTime(uploadMs)}\n`
 	);
 
 	return completionJwt;
 };
 
-const buildAssetManifest = async (dir: string) => {
+export const buildAssetManifest = async (dir: string) => {
 	const files = await readdir(dir, { recursive: true });
 	logReadFilesFromDirectory(dir, files);
 
@@ -339,7 +350,9 @@ function logAssetsUploadStatus(
 	uploadedAssetFiles: string[]
 ) {
 	logger.info(
-		`Uploaded ${uploadedAssetsCount} of ${numberFilesToUpload} asset${numberFilesToUpload === 1 ? "" : "s"}`
+		`Uploaded ${uploadedAssetsCount} of ${numberFilesToUpload} asset${
+			numberFilesToUpload === 1 ? "" : "s"
+		}`
 	);
 	uploadedAssetFiles.forEach((file) => logger.debug(`✨ ${file}`));
 }
@@ -351,7 +364,9 @@ function logAssetsUploadStatus(
  */
 function logReadFilesFromDirectory(directory: string, assetFiles: string[]) {
 	logger.info(
-		`✨ Read ${assetFiles.length} file${assetFiles.length === 1 ? "" : "s"} from the assets directory ${directory}`
+		`✨ Read ${assetFiles.length} file${
+			assetFiles.length === 1 ? "" : "s"
+		} from the assets directory ${directory}`
 	);
 	assetFiles.forEach((file) => logger.debug(`/${file}`));
 }
@@ -381,11 +396,19 @@ export type AssetsOptions = {
 
 export class NonExistentAssetsDirError extends UserError {}
 
-export function getAssetsOptions(
-	args: { assets: string | undefined; script?: string },
-	config: Config,
-	overrides?: Partial<AssetsOptions>
-): AssetsOptions | undefined {
+export class NonDirectoryAssetsDirError extends UserError {}
+
+export function getAssetsOptions({
+	args,
+	config,
+	validateDirectoryExistence = true,
+	overrides,
+}: {
+	args: { assets: string | undefined; script?: string };
+	config: Config;
+	validateDirectoryExistence?: boolean;
+	overrides?: Partial<AssetsOptions>;
+}): AssetsOptions | undefined {
 	if (!overrides && !config.assets && !args.assets) {
 		return;
 	}
@@ -399,30 +422,44 @@ export function getAssetsOptions(
 	if (assets.directory === undefined) {
 		throw new UserError(
 			"The `assets` property in your configuration is missing the required `directory` property.",
-			{ telemetryMessage: true }
+			{ telemetryMessage: "assets options missing directory" }
 		);
 	}
 
 	if (assets.directory === "") {
 		throw new UserError("`The assets directory cannot be an empty string.", {
-			telemetryMessage: true,
+			telemetryMessage: "assets options empty directory",
 		});
 	}
 
 	const assetsBasePath = getAssetsBasePath(config, args.assets);
 	const directory = path.resolve(assetsBasePath, assets.directory);
 
-	if (!existsSync(directory)) {
-		const sourceOfTruthMessage = args.assets
-			? '"--assets" command line argument'
-			: '"assets.directory" field in your configuration file';
+	const directoryStat = statSync(directory, { throwIfNoEntry: false });
+	const directoryExists = !!directoryStat;
 
+	const sourceOfTruthMessage = args.assets
+		? '"--assets" command line argument'
+		: '"assets.directory" field in your configuration file';
+
+	if (validateDirectoryExistence && !directoryExists) {
 		throw new NonExistentAssetsDirError(
 			`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
 				`${directory}`,
 
 			{
-				telemetryMessage: `The assets directory specified does not exist`,
+				telemetryMessage: "assets directory does not exist",
+			}
+		);
+	}
+
+	if (directoryExists && !directoryStat.isDirectory()) {
+		throw new NonDirectoryAssetsDirError(
+			`The path specified by the ${sourceOfTruthMessage} doesn't point to a directory:\n` +
+				`${directory}`,
+
+			{
+				telemetryMessage: "assets directory path is not directory",
 			}
 		);
 	}
@@ -462,12 +499,16 @@ export function getAssetsOptions(
 		throw new UserError(
 			"Cannot set run_worker_first without a Worker script.\n" +
 				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`).",
-			{ telemetryMessage: true }
+			{ telemetryMessage: "assets router missing worker script" }
 		);
 	}
 
-	const _redirects = maybeGetFile(path.join(directory, REDIRECTS_FILENAME));
-	const _headers = maybeGetFile(path.join(directory, HEADERS_FILENAME));
+	const _redirects = directoryExists
+		? maybeGetFile(path.join(directory, REDIRECTS_FILENAME))
+		: undefined;
+	const _headers = directoryExists
+		? maybeGetFile(path.join(directory, HEADERS_FILENAME))
+		: undefined;
 
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
@@ -521,7 +562,7 @@ export function validateAssetsArgsAndConfig(
 		throw new UserError(
 			"Cannot use assets and Workers Sites in the same Worker.\n" +
 				"Please remove either the `site` or `assets` field from your configuration file.",
-			{ telemetryMessage: true }
+			{ telemetryMessage: "assets validation conflicting sites config" }
 		);
 	}
 
@@ -538,7 +579,7 @@ export function validateAssetsArgsAndConfig(
 		throw new UserError(
 			"Cannot use assets with a binding in an assets-only Worker.\n" +
 				"Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (`main`).",
-			{ telemetryMessage: true }
+			{ telemetryMessage: "assets validation binding without worker script" }
 		);
 	}
 
@@ -579,7 +620,7 @@ function errorOnLegacyPagesWorkerJSAsset(
 			If you do not want to upload this ${workerJsType}, either remove it or add an "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, containing "${WORKER_JS_FILENAME}" to avoid uploading.
 			If you do want to upload this ${workerJsType}, you can add an empty "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, to hide this error.
 		`,
-				{ telemetryMessage: true }
+				{ telemetryMessage: "assets validation legacy pages worker asset" }
 			);
 		}
 	}

@@ -1,16 +1,13 @@
-import path from "path";
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
+		reporters: ["default"],
 		testTimeout: 30_000,
 		hookTimeout: 30_000,
 		pool: "forks",
-		poolOptions: {
-			forks: {
-				singleFork: true,
-			},
-		},
+		maxWorkers: 1,
 		include: ["test/**/*.spec.ts"],
 		setupFiles: [path.resolve(__dirname, "test/setup.mjs")],
 		globals: true,

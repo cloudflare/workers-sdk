@@ -19,6 +19,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
+import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { diagnoseStartupError } from "../utils/friendly-validator-errors";
 import {
 	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
@@ -126,14 +127,14 @@ export const pagesDeployCommand = createCommand({
 		if (args.config) {
 			throw new FatalError(
 				"Pages does not support custom paths for the Wrangler configuration file",
-				1
+				{ code: 1, telemetryMessage: "pages deploy custom config unsupported" }
 			);
 		}
 
 		if (args.env) {
 			throw new FatalError(
 				"Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch",
-				1
+				{ code: 1, telemetryMessage: "pages deploy env unsupported" }
 			);
 		}
 
@@ -179,14 +180,15 @@ export const pagesDeployCommand = createCommand({
 		if (!directory) {
 			throw new FatalError(
 				`Must specify a directory of assets to deploy. Please specify the [<directory>] argument in the \`pages deploy\` command, or configure \`pages_build_output_dir\` in your ${configFileName(configPath)} file.`,
-				1
+				{ code: 1, telemetryMessage: "pages deploy missing directory" }
 			);
 		}
 
 		const configCache = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(configCache);
+		const accountId =
+			getCloudflareAccountIdFromEnv() ?? (await requireAuth(configCache));
 
 		let projectName =
 			args.projectName ?? config?.name ?? configCache.project_name;
@@ -274,7 +276,10 @@ export const pagesDeployCommand = createCommand({
 						projectName = await prompt("Enter the name of your new project:");
 
 						if (!projectName) {
-							throw new FatalError("Must specify a project name.", 1);
+							throw new FatalError("Must specify a project name.", {
+								code: 1,
+								telemetryMessage: "pages deploy missing project name",
+							});
 						}
 					}
 
@@ -317,7 +322,10 @@ export const pagesDeployCommand = createCommand({
 					});
 
 					if (!productionBranch) {
-						throw new FatalError("Must specify a production branch.", 1);
+						throw new FatalError("Must specify a production branch.", {
+							code: 1,
+							telemetryMessage: "pages deploy missing production branch",
+						});
 					}
 
 					await fetchResult<Project>(
@@ -345,7 +353,10 @@ export const pagesDeployCommand = createCommand({
 		}
 
 		if (!projectName) {
-			throw new FatalError("Must specify a project name.", 1);
+			throw new FatalError("Must specify a project name.", {
+				code: 1,
+				telemetryMessage: "pages deploy missing project name",
+			});
 		}
 
 		// We infer git info by default is not passed in
@@ -516,7 +527,10 @@ export const pagesDeployCommand = createCommand({
 				.trim();
 
 			if (failureMessage.includes("Script startup exceeded CPU time limit")) {
-				const startupError = new ParseError({ text: failureMessage });
+				const startupError = new ParseError({
+					text: failureMessage,
+					telemetryMessage: false,
+				});
 				Object.assign(startupError, { code: 10021 }); // Startup error code
 				const workerBundle = formData.get("_worker.bundle") as File;
 				const filePath = path.join(getPagesTmpDir(), "_worker.bundle");
@@ -526,14 +540,15 @@ export const pagesDeployCommand = createCommand({
 						startupError,
 						filePath,
 						getPagesProjectRoot()
-					)
+					),
+					{ telemetryMessage: "pages deploy startup error" }
 				);
 			}
 
 			throw new FatalError(
 				`Deployment failed!
 	${failureMessage}`,
-				1
+				{ code: 1, telemetryMessage: "pages deploy deployment failed" }
 			);
 		} else {
 			logger.log(

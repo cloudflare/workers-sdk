@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import dedent from "ts-dedent";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER_IMPORT } from "./helpers/wrangler";
@@ -16,7 +16,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("switching runtimes", () => {
 					account_id = "${CLOUDFLARE_ACCOUNT_ID}"
 					compatibility_date = "2023-01-01"
 			`,
-			"index.ts": dedent/*javascript*/ `
+			"index.ts": dedent /*javascript*/ `
 				export default {
 					async fetch(request, env) {
 						return new Response(
@@ -25,7 +25,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("switching runtimes", () => {
 					},
 				};
 			`,
-			"index.mjs": dedent/*javascript*/ `
+			"index.mjs": dedent /*javascript*/ `
 				import { setTimeout } from "timers/promises";
 				import { unstable_startWorker as startWorker } from "${WRANGLER_IMPORT}";
 
@@ -100,7 +100,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("switching runtimes", () => {
             `,
 		});
 	});
-	it("can switch from local to remote", async () => {
+	it("can switch from local to remote", async ({ expect }) => {
 		const stdout = execSync(`node index.mjs local`, {
 			timeout: 20_000,
 			encoding: "utf-8",
@@ -110,7 +110,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("switching runtimes", () => {
 		expect(stdout).toContain("1: I am local");
 		expect(stdout).toContain("2: I am remote");
 	});
-	it("can switch from remote to local", async () => {
+	it("can switch from remote to local", async ({ expect }) => {
 		const stdout = execSync(`node index.mjs remote`, {
 			timeout: 20_000,
 			encoding: "utf-8",

@@ -1,12 +1,12 @@
-import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineProject, mergeConfig } from "vitest/config";
+import configShared from "../../../vitest.shared";
 
-export default defineWorkersProject({
-	test: {
-		name: "misc-assets",
-		include: ["test/assets.test.ts"],
-		poolOptions: {
-			workers: {
-				singleWorker: true,
+export default mergeConfig(
+	configShared,
+	defineProject({
+		plugins: [
+			cloudflareTest({
 				miniflare: {
 					assets: {
 						directory: "./public",
@@ -16,7 +16,12 @@ export default defineWorkersProject({
 				wrangler: {
 					configPath: "./wrangler.assets.jsonc",
 				},
-			},
+			}),
+		],
+
+		test: {
+			name: "misc-assets",
+			include: ["test/assets.test.ts"],
 		},
-	},
-});
+	})
+);

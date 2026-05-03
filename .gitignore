@@ -236,3 +236,5 @@ dist/**
 
 AGENTS.local.md
 .opencode/plans/
+.agents/skills
+.opencode/package-lock.json

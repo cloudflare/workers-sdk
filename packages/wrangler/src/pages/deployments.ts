@@ -11,6 +11,7 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
+import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import type { PagesConfigCache } from "./types";
@@ -40,7 +41,7 @@ export const pagesDeploymentListCommand = createCommand({
 		},
 		json: {
 			type: "boolean",
-			description: "Return output as clean JSON",
+			description: "Return output as JSON",
 			default: false,
 		},
 	},
@@ -48,7 +49,8 @@ export const pagesDeploymentListCommand = createCommand({
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(config);
+		const accountId =
+			getCloudflareAccountIdFromEnv() ?? (await requireAuth(config));
 
 		projectName ??= config.project_name;
 
@@ -58,7 +60,10 @@ export const pagesDeploymentListCommand = createCommand({
 		}
 
 		if (!projectName) {
-			throw new FatalError("Must specify a project name.", 1);
+			throw new FatalError("Must specify a project name.", {
+				code: 1,
+				telemetryMessage: "pages deployments list missing project name",
+			});
 		}
 
 		const deployments: Array<Deployment> = await fetchResult(
@@ -135,7 +140,7 @@ export const pagesDeploymentDeleteCommand = createCommand({
 		force: {
 			type: "boolean",
 			alias: "f",
-			description: "Skip confirmation",
+			description: "Delete even if the deployment has an active alias",
 			default: false,
 		},
 	},
@@ -144,7 +149,8 @@ export const pagesDeploymentDeleteCommand = createCommand({
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(config);
+		const accountId =
+			getCloudflareAccountIdFromEnv() ?? (await requireAuth(config));
 
 		projectName ??= config.project_name;
 
@@ -154,7 +160,10 @@ export const pagesDeploymentDeleteCommand = createCommand({
 		}
 
 		if (!projectName) {
-			throw new FatalError("Must specify a project name.", 1);
+			throw new FatalError("Must specify a project name.", {
+				code: 1,
+				telemetryMessage: "pages deployments delete missing project name",
+			});
 		}
 
 		const confirmed =
@@ -173,7 +182,8 @@ export const pagesDeploymentDeleteCommand = createCommand({
 		await fetchResult(
 			COMPLIANCE_REGION_CONFIG_PUBLIC,
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}`,
-			{ method: "DELETE" }
+			{ method: "DELETE" },
+			new URLSearchParams({ force: force.toString() })
 		);
 
 		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {

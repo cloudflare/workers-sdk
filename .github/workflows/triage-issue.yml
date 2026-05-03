@@ -17,7 +17,7 @@ permissions:
 # Cancel in-progress runs for the same issue
 concurrency:
   group: triage-${{ github.event.issue.number || inputs.issue-number }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
 
 jobs:
   triage:
@@ -27,7 +27,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (!github.event.issue.pull_request &&
       github.event.issue.user.type != 'Bot')
-    timeout-minutes: 15
+    timeout-minutes: 60
     steps:
       - name: Resolve issue number
         id: issue

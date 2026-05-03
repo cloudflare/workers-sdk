@@ -51,6 +51,13 @@ export class WranglerLongLivedCommand extends LongLivedCommand {
 	}
 }
 
+function isDevCommand(command: string) {
+	return (
+		command.startsWith("wrangler dev") ||
+		command.startsWith("wrangler pages dev")
+	);
+}
+
 function getWranglerCommand(command: string) {
 	// Enforce a `wrangler` prefix to make commands clearer to read
 	assert(
@@ -61,15 +68,13 @@ function getWranglerCommand(command: string) {
 
 	// If the user hasn't specifically set an inspector port, set it to 0 to reduce port conflicts
 	const inspectorPort =
-		command.includes(`--inspector-port`) || !command.startsWith("wrangler dev")
+		command.includes(`--inspector-port`) || !isDevCommand(command)
 			? ""
 			: " --inspector-port 0";
 
 	// If the user hasn't specifically set a Worker port, set it to 0 to reduce port conflicts
 	const workerPort =
-		command.includes(`--port`) || !command.startsWith("wrangler dev")
-			? ""
-			: " --port 0";
+		command.includes(`--port`) || !isDevCommand(command) ? "" : " --port 0";
 	return `${WRANGLER} ${command.slice("wrangler ".length)}${inspectorPort}${workerPort}`;
 }
 

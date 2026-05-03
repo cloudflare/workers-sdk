@@ -20,6 +20,11 @@ export default defineConfig({
 		svgr(),
 		tailwindcss(),
 	],
+	resolve: {
+		alias: {
+			"react/jsx-runtime.js": "react/jsx-runtime",
+		},
+	},
 	define: {
 		"import.meta.env.VITE_LOCAL_EXPLORER_API_PATH": JSON.stringify(
 			LOCAL_EXPLORER_API_PATH

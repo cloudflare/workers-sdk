@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { spinner } from "@cloudflare/cli/interactive";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	APIError,
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
@@ -53,11 +53,17 @@ export const pagesProjectUploadCommand = createCommand({
 	positionalArgs: ["directory"],
 	async handler({ directory, outputManifestPath, skipCaching }) {
 		if (!directory) {
-			throw new FatalError("Must specify a directory.", 1);
+			throw new FatalError("Must specify a directory.", {
+				code: 1,
+				telemetryMessage: "pages upload missing directory",
+			});
 		}
 
 		if (!process.env.CF_PAGES_UPLOAD_JWT) {
-			throw new FatalError("No JWT given.", 1);
+			throw new FatalError("No JWT given.", {
+				code: 1,
+				telemetryMessage: "pages upload missing jwt",
+			});
 		}
 
 		const fileMap = await validate({
@@ -295,7 +301,10 @@ export const upload = async (
 								`Failed to upload files. Please try again. Error: ${JSON.stringify(
 									error
 								)})`,
-								error.code || 1
+								{
+									code: error.code || 1,
+									telemetryMessage: "pages upload files failed",
+								}
 							)
 						);
 					}

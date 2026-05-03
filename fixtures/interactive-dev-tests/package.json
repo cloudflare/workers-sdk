@@ -6,15 +6,11 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@fixture/shared": "workspace:*",
 		"undici": "catalog:default",
 		"vitest": "catalog:default"
 	},
 	"optionalDependencies": {
 		"@cdktf/node-pty-prebuilt-multiarch": "0.10.2"
-	},
-	"volta": {
-		"extends": "../../package.json"
 	}
 }

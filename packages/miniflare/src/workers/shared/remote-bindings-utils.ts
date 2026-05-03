@@ -6,12 +6,10 @@ import { newWebSocketRpcSession } from "capnweb";
 export type RemoteBindingEnv = {
 	remoteProxyConnectionString?: string;
 	binding: string;
-	bindingType?: string;
 };
 
 /** Headers sent alongside proxy requests to provide additional context. */
 export type ProxyMetadata = {
-	"MF-Binding-Type"?: string;
 	"MF-Dispatch-Namespace-Options"?: string;
 };
 

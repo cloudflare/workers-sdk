@@ -1,16 +1,12 @@
 import path from "node:path";
-import {
-	Miniflare,
-	MiniflareCoreError,
-	MiniflareOptions,
-	WorkerOptions,
-} from "miniflare";
+import { Miniflare, MiniflareCoreError } from "miniflare";
 import { test } from "vitest";
 import {
 	EXPORTED_FIXTURES,
 	FIXTURES_PATH,
 	useDispose,
 } from "../../test-shared";
+import type { MiniflareOptions, WorkerOptions } from "miniflare";
 
 /**
  * Use the plugin located in `test/fixtures/unsafe-plugin`

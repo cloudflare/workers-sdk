@@ -1,3 +1,26 @@
+/**
+ * Reserved `/cdn-cgi/` paths for internal Miniflare endpoints.
+ * These paths are reserved by Cloudflare's network and won't conflict with user routes.
+ */
+export const CorePaths = {
+	/** Magic proxy used by getPlatformProxy */
+	PLATFORM_PROXY: "/cdn-cgi/platform-proxy",
+	/** Trigger scheduled event handlers */
+	SCHEDULED: "/cdn-cgi/handler/scheduled",
+	/** Trigger email event handlers */
+	EMAIL: "/cdn-cgi/handler/email",
+	/** Handler path prefix for validation */
+	HANDLER_PREFIX: "/cdn-cgi/handler/",
+	/** Live reload WebSocket endpoint */
+	LIVE_RELOAD: "/cdn-cgi/mf/reload",
+	/** Local explorer UI and API */
+	EXPLORER: "/cdn-cgi/explorer",
+	/** Legacy way to trigger scheduled event handlers */
+	LEGACY_SCHEDULED: "/cdn-cgi/mf/scheduled",
+	/** Stream video serving endpoint */
+	STREAM_VIDEO: "/cdn-cgi/mf/stream",
+} as const;
+
 export const CoreHeaders = {
 	CUSTOM_FETCH_SERVICE: "MF-Custom-Fetch-Service",
 	CUSTOM_NODE_SERVICE: "MF-Custom-Node-Service",
@@ -25,6 +48,7 @@ export const CoreHeaders = {
 	OP_SYNC: "MF-Op-Sync",
 	OP_STRINGIFIED_SIZE: "MF-Op-Stringified-Size",
 	OP_RESULT_TYPE: "MF-Op-Result-Type",
+	OP_ORIGINAL_URL: "MF-Op-Original-URL",
 } as const;
 
 export const CoreBindings = {
@@ -47,7 +71,13 @@ export const CoreBindings = {
 	SERVICE_LOCAL_EXPLORER: "MINIFLARE_LOCAL_EXPLORER",
 	EXPLORER_DISK: "MINIFLARE_EXPLORER_DISK",
 	JSON_LOCAL_EXPLORER_BINDING_MAP: "LOCAL_EXPLORER_BINDING_MAP",
+	JSON_LOCAL_EXPLORER_WORKER_NAMES: "LOCAL_EXPLORER_WORKER_NAMES",
+	JSON_EXPLORER_WORKER_OPTS: "MINIFLARE_EXPLORER_WORKER_OPTS",
 	SERVICE_CACHE: "MINIFLARE_CACHE",
+	SERVICE_DEV_REGISTRY_PROXY: "MINIFLARE_DEV_REGISTRY_PROXY",
+	JSON_TELEMETRY_CONFIG: "MINIFLARE_TELEMETRY_CONFIG",
+	DEV_REGISTRY_DEBUG_PORT: "DEV_REGISTRY_DEBUG_PORT",
+	SERVICE_STREAM: "MINIFLARE_STREAM",
 } as const;
 
 export const ProxyOps = {

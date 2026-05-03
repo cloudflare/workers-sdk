@@ -61,7 +61,7 @@ export async function applyMiddlewareLoaderFacade(
 	if (entry.format === "modules") {
 		await fs.promises.writeFile(
 			dynamicFacadePath,
-			dedent/*javascript*/ `
+			dedent /*javascript*/ `
 				import worker, * as OTHER_EXPORTS from "${prepareFilePath(entry.file)}";
 				${imports}
 
@@ -110,7 +110,7 @@ export async function applyMiddlewareLoaderFacade(
 
 		await fs.promises.writeFile(
 			dynamicFacadePath,
-			dedent/*javascript*/ `
+			dedent /*javascript*/ `
 				import { __facade_registerInternal__ } from "${prepareFilePath(loaderSwPath)}";
 				${imports}
 				__facade_registerInternal__([${middlewareFns}])

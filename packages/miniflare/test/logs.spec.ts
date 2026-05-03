@@ -1,6 +1,7 @@
-import { Miniflare, MiniflareCoreError, WorkerdStructuredLog } from "miniflare";
+import { Miniflare, MiniflareCoreError } from "miniflare";
 import { assert, test } from "vitest";
 import { useDispose } from "./test-shared";
+import type { WorkerdStructuredLog } from "miniflare";
 
 test("logs are treated as standard stdout/stderr chunks by default", async ({
 	expect,

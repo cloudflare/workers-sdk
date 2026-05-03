@@ -1,12 +1,12 @@
 import { randomBytes } from "node:crypto";
-import { env, SELF } from "cloudflare:test";
+import { env, exports } from "cloudflare:workers";
 import { it } from "vitest";
 
 it("consumes queue messages", async ({ expect }) => {
-	// `SELF` here points to the worker running in the current isolate.
+	// `exports.default` here points to the worker running in the current isolate.
 	// This gets its handler from the `main` option in `vitest.config.mts`.
 	// Importantly, it uses the exact `import("../src").default` instance we could
-	// import in this file as its handler. Note the `SELF.queue()` method
+	// import in this file as its handler. Note the `exports.default.queue()` method
 	// is experimental, and requires the `service_binding_extra_handlers`
 	// compatibility flag to be enabled.
 	const messages: ServiceBindingQueueMessage<QueueJob>[] = [
@@ -23,7 +23,7 @@ it("consumes queue messages", async ({ expect }) => {
 			body: { key: "/2", value: "two" },
 		},
 	];
-	const result = await SELF.queue("queue", messages);
+	const result = await exports.default.queue("queue", messages);
 	expect(result.outcome).toBe("ok");
 	expect(result.retryBatch.retry).toBe(false); // `true` if `batch.retryAll()` called
 	expect(result.ackAll).toBe(false); // `true` if `batch.ackAll()` called

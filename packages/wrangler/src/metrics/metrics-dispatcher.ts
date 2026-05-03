@@ -188,7 +188,9 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		logger.debug(`Metrics dispatcher: Posting data ${JSON.stringify(body)}`);
 
 		// Don't await fetch but make sure requests are resolved (with a timeout)
-		// before exiting Wrangler
+		// before exiting Wrangler. The exit handler in index.ts races
+		// allMetricsDispatchesCompleted() against a 1s timeout, which is the
+		// real protection against slow connections at shutdown.
 		const request = fetch(`${SPARROW_URL}/api/v1/event`, {
 			method: "POST",
 			headers: {

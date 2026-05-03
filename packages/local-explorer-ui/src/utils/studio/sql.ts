@@ -69,7 +69,6 @@ const TOKEN_DEFINITIONS = [
  *
  * @returns A list of SQL tokens
  */
-
 export function tokenizeSQL(
 	sql: string,
 	_dialect: StudioDialect
@@ -93,11 +92,17 @@ export function tokenizeSQL(
 				const match = matchToken(remainingSQL);
 				if (match) {
 					if (accumulateUnknown !== "") {
-						tokens.push({ type: "UNKNOWN", value: accumulateUnknown });
+						tokens.push({
+							type: "UNKNOWN",
+							value: accumulateUnknown,
+						});
 						accumulateUnknown = "";
 					}
 
-					tokens.push({ type, value: match });
+					tokens.push({
+						type,
+						value: match,
+					});
 					cursor += match.length;
 					matched = true;
 					break;
@@ -111,7 +116,10 @@ export function tokenizeSQL(
 		}
 
 		if (accumulateUnknown !== "") {
-			tokens.push({ type: "UNKNOWN", value: accumulateUnknown });
+			tokens.push({
+				type: "UNKNOWN",
+				value: accumulateUnknown,
+			});
 		}
 
 		return tokens;

@@ -1,15 +1,16 @@
-import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineProject, mergeConfig } from "vitest/config";
+import configShared from "../../../vitest.shared";
 
-export default defineWorkersProject({
-	test: {
-		globalSetup: ["./global-setup.ts"],
-		poolOptions: {
-			workers: ({ inject }) => {
+export default mergeConfig(
+	configShared,
+	defineProject({
+		plugins: [
+			cloudflareTest(({ inject }) => {
 				// Provided in `global-setup.ts`
 				const echoServerPort = inject("echoServerPort");
 
 				return {
-					singleWorker: true,
 					miniflare: {
 						hyperdrives: {
 							ECHO_SERVER_HYPERDRIVE: `postgres://user:pass@127.0.0.1:${echoServerPort}/db`,
@@ -19,7 +20,10 @@ export default defineWorkersProject({
 						configPath: "./wrangler.jsonc",
 					},
 				};
-			},
+			}),
+		],
+		test: {
+			globalSetup: ["./global-setup.ts"],
 		},
-	},
-});
+	})
+);

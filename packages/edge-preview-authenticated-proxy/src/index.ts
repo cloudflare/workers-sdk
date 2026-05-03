@@ -1,5 +1,5 @@
+import { MetricsRegistry } from "@cloudflare/workers-utils/prometheus-metrics";
 import cookie from "cookie";
-import prom from "promjs";
 import { Toucan } from "toucan-js";
 
 class HttpError extends Error {
@@ -55,7 +55,7 @@ class ExchangeFailed extends HttpError {
 
 class TokenUpdateFailed extends HttpError {
 	constructor() {
-		super("Provide token, prewarmUrl and remote", 400, false);
+		super("Provide token and remote", 400, false);
 	}
 }
 
@@ -121,23 +121,19 @@ function isRawHttpRequest(url: URL, env: Env) {
 	return url.hostname.endsWith(env.RAW_HTTP);
 }
 
-async function handleRequest(
-	request: Request,
-	env: Env,
-	ctx: ExecutionContext
-) {
+async function handleRequest(request: Request, env: Env) {
 	const url = new URL(request.url);
 
 	if (isTokenExchangeRequest(request, url, env)) {
-		return handleTokenExchange(url);
+		return await handleTokenExchange(url);
 	}
 
 	if (isPreviewUpdateRequest(request, url, env)) {
-		return updatePreviewToken(url, env, ctx);
+		return await updatePreviewToken(url, env);
 	}
 
 	if (isRawHttpRequest(url, env)) {
-		return handleRawHttp(request, url);
+		return await handleRawHttp(request, url);
 	}
 
 	/**
@@ -204,7 +200,7 @@ async function handleRawHttp(request: Request, url: URL) {
 	const token = requestHeaders.get("X-CF-Token");
 	const remote = requestHeaders.get("X-CF-Remote");
 
-	// Fallback to the request method for backward compatiblility
+	// Fallback to the request method for backward compatibility
 	const method = requestHeaders.get("X-CF-Http-Method") ?? request.method;
 
 	if (!token || !remote) {
@@ -295,26 +291,14 @@ async function handleRawHttp(request: Request, url: URL) {
  * It will redirect to the suffix provide, setting a cookie with the `token` and `remote`
  * for future use.
  */
-async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
+async function updatePreviewToken(url: URL, env: Env) {
 	const token = url.searchParams.get("token");
-	const prewarmUrl = url.searchParams.get("prewarm");
 	const remote = url.searchParams.get("remote");
-	// return Response.json([...url.searchParams.entries()]);
-	if (!token || !prewarmUrl || !remote) {
+	if (!token || !remote) {
 		throw new TokenUpdateFailed();
 	}
 
-	assertValidURL(prewarmUrl);
 	assertValidURL(remote);
-
-	ctx.waitUntil(
-		fetch(prewarmUrl, {
-			method: "POST",
-			headers: {
-				"cf-workers-preview-token": token,
-			},
-		})
-	);
 
 	// The token can sometimes be too large for a cookie (4096 bytes).
 	// Store the token in KV, and allow lookups
@@ -345,7 +329,6 @@ async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
 /**
  * Request the preview session associated with a given exchange_url
  * exchange_url comes from an authenticated core API call made in the client
- * It doesn't have CORS set up, so needs to be proxied
  */
 async function handleTokenExchange(url: URL) {
 	const exchangeUrl = url.searchParams.get("exchange_url");
@@ -397,9 +380,8 @@ export default {
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<Response> {
-		const registry = prom();
-		const requestCounter = registry.create(
-			"counter",
+		const registry = new MetricsRegistry();
+		const requestCounter = registry.createCounter(
 			"devprod_edge_preview_authenticated_proxy_request_total",
 			"Request counter for DevProd's edge-preview-authenticated-proxy service"
 		);
@@ -429,7 +411,7 @@ export default {
 		});
 
 		try {
-			return await handleRequest(request, env, ctx);
+			return await handleRequest(request, env);
 		} catch (e) {
 			console.error(e);
 			if (e instanceof HttpError) {
@@ -440,8 +422,7 @@ export default {
 				return e.toResponse();
 			} else {
 				sentry.captureException(e);
-				const errorCounter = registry.create(
-					"counter",
+				const errorCounter = registry.createCounter(
 					"devprod_edge_preview_authenticated_proxy_error_total",
 					"Error counter for DevProd's edge-preview-authenticated-proxy service"
 				);

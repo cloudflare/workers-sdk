@@ -1,8 +1,5 @@
-import {
-	env,
-	runDurableObjectAlarm,
-	runInDurableObject,
-} from "cloudflare:test";
+import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { it } from "vitest";
 import { Counter } from "../src/";
 

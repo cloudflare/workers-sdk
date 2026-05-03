@@ -1,11 +1,10 @@
 import { z } from "zod";
 import {
 	getUserBindingServiceName,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 } from "../shared";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const AISchema = z.object({
 	binding: z.string(),
@@ -70,8 +69,7 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 				),
 				worker: remoteProxyClientWorker(
 					options.ai.remoteProxyConnectionString,
-					options.ai.binding,
-					"ai"
+					options.ai.binding
 				),
 			},
 		];

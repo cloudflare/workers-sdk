@@ -59,7 +59,7 @@ export function validateUploadSize(key: string, sizeBytes: number): void {
 			)} in size\n${key} is ${prettyBytes(sizeBytes, {
 				binary: true,
 			})} in size`,
-			1
+			{ code: 1, telemetryMessage: "r2 object upload too large" }
 		);
 	}
 }
@@ -84,6 +84,7 @@ export async function putRemoteObject(
 	objectName: string,
 	object: Readable | ReadableStream | Buffer,
 	options: Record<(typeof putHeaderKeys)[number], string | undefined>,
+	force: boolean,
 	jurisdiction?: string,
 	storageClass?: string
 ): Promise<void> {
@@ -101,6 +102,9 @@ export async function putRemoteObject(
 	if (storageClass !== undefined) {
 		headers["cf-r2-storage-class"] = storageClass;
 	}
+	if (!force) {
+		headers["cf-r2-data-catalog-check"] = "true";
+	}
 
 	const result = await fetchR2Objects(
 		complianceConfig,
@@ -113,7 +117,9 @@ export async function putRemoteObject(
 		}
 	);
 	if (result === null) {
-		throw new UserError("The specified bucket does not exist.");
+		throw new UserError("The specified bucket does not exist.", {
+			telemetryMessage: "r2 object put bucket not found",
+		});
 	}
 }
 /**
@@ -124,11 +130,15 @@ export async function deleteR2Object(
 	accountId: string,
 	bucketName: string,
 	objectName: string,
+	force: boolean,
 	jurisdiction?: string
 ): Promise<void> {
 	const headers: HeadersInit = {};
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	if (!force) {
+		headers["cf-r2-data-catalog-check"] = "true";
 	}
 	await fetchR2Objects(
 		complianceConfig,
@@ -206,13 +216,15 @@ export function validateAndReturnBucketAndKey(objectPath: string): {
 	const match = /^(?<bucket>[^/]+)\/(?<key>.*)/.exec(objectPath);
 	if (match === null || !match.groups) {
 		throw new UserError(
-			`The object path must be in the form of {bucket}/{key} you provided ${objectPath}`
+			`The object path must be in the form of {bucket}/{key} you provided ${objectPath}`,
+			{ telemetryMessage: "r2 object path invalid format" }
 		);
 	}
 	const { bucket, key } = match.groups;
 	if (!isValidR2BucketName(bucket)) {
 		throw new UserError(
-			`The bucket name "${bucket}" is invalid. ${bucketFormatMessage}`
+			`The bucket name "${bucket}" is invalid. ${bucketFormatMessage}`,
+			{ telemetryMessage: "r2 object path invalid bucket name" }
 		);
 	}
 

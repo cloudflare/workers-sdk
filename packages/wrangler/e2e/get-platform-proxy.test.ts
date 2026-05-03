@@ -1,7 +1,7 @@
 import { execSync, spawn } from "node:child_process";
 import * as nodeNet from "node:net";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -37,7 +37,7 @@ describe("getPlatformProxy()", () => {
 						[ai]
 						binding = "AI"
 				`,
-				"index.mjs": dedent/*javascript*/ `
+				"index.mjs": dedent /*javascript*/ `
 						import { getPlatformProxy } from "${WRANGLER_IMPORT}"
 
 						const { env } = await getPlatformProxy();
@@ -66,7 +66,7 @@ describe("getPlatformProxy()", () => {
 						`,
 			});
 		});
-		it("can run ai inference", async () => {
+		it("can run ai inference", async ({ expect }) => {
 			const stdout = execSync(`node index.mjs`, {
 				cwd: root,
 				encoding: "utf-8",
@@ -114,7 +114,7 @@ describe("getPlatformProxy()", () => {
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
 					`,
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 						export default {
 							fetch(req, env) {
 								return new Response("Hello from Worker!")
@@ -139,7 +139,7 @@ describe("getPlatformProxy()", () => {
 			await w.waitForReady();
 
 			await seed(app, {
-				"index.mjs": dedent/*javascript*/ `
+				"index.mjs": dedent /*javascript*/ `
 						import { getPlatformProxy } from "${WRANGLER_IMPORT}"
 
 						const { env } = await getPlatformProxy();
@@ -158,7 +158,7 @@ describe("getPlatformProxy()", () => {
 			return stdout;
 		}
 
-		it("can fetch service binding", async () => {
+		it("can fetch service binding", async ({ expect }) => {
 			await expect(
 				runInNode(
 					/* javascript */ `await env.WORKER.fetch("http://example.com/").then(r => r.text())`
@@ -166,7 +166,7 @@ describe("getPlatformProxy()", () => {
 			).resolves.toContain("Hello from Worker");
 		});
 
-		it("can fetch durable object", async () => {
+		it("can fetch durable object", async ({ expect }) => {
 			await seed(app, {
 				"wrangler.toml": dedent`
 						name = "app"
@@ -181,7 +181,7 @@ describe("getPlatformProxy()", () => {
 				`,
 			});
 			await seed(worker, {
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 					import { DurableObject } from "cloudflare:workers";
 					export default {
 						async fetch(): Promise<Response> {
@@ -220,7 +220,7 @@ describe("getPlatformProxy()", () => {
 		describe("provides rpc service bindings to external local workers", () => {
 			beforeEach(async () => {
 				await seed(worker, {
-					"src/index.ts": dedent/* javascript */ `
+					"src/index.ts": dedent /* javascript */ `
 							import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 
 							export default {
@@ -307,12 +307,12 @@ describe("getPlatformProxy()", () => {
 				});
 			});
 
-			it("can call RPC methods returning a string", async () => {
+			it("can call RPC methods returning a string", async ({ expect }) => {
 				await expect(
 					runInNode(/* javascript */ `await env.WORKER.sum([1, 2, 3])`)
 				).resolves.toContain("6");
 			});
-			it("can call RPC methods returning an object", async () => {
+			it("can call RPC methods returning an object", async ({ expect }) => {
 				await expect(
 					runInNode(
 						/* javascript */ `JSON.stringify(await env.WORKER.sumObj([1, 2, 3, 5]))`
@@ -322,7 +322,7 @@ describe("getPlatformProxy()", () => {
 					"
 				`);
 			});
-			it("can call RPC methods returning a Response", async () => {
+			it("can call RPC methods returning a Response", async ({ expect }) => {
 				await expect(
 					runInNode(/* javascript */ `await (async () => {
 							const r = await env.WORKER.asJsonResponse([1, 2, 3]);
@@ -333,7 +333,7 @@ describe("getPlatformProxy()", () => {
 					"
 				`);
 			});
-			it("can obtain and interact with RpcStubs", async () => {
+			it("can obtain and interact with RpcStubs", async ({ expect }) => {
 				await expect(
 					runInNode(/* javascript */ `await (async () => {
 							const counter = await env.WORKER.getCounter();
@@ -349,7 +349,9 @@ describe("getPlatformProxy()", () => {
 					"
 				`);
 			});
-			it("can obtain and interact with returned functions", async () => {
+			it("can obtain and interact with returned functions", async ({
+				expect,
+			}) => {
 				await expect(
 					runInNode(/* javascript */ `await (async () => {
 							const helloWorldFn = await env.WORKER.getHelloWorldFn();
@@ -391,6 +393,16 @@ describe("getPlatformProxy()", () => {
 					if (scheme === "mysql") {
 						socket.write(MYSQL_INITIAL_HANDSHAKE_PACKET);
 					}
+					// When the spawned child process exits after `dispose()`, workerd's
+					// outbound TCP connection (now direct, not via the Hyperdrive proxy
+					// for `sslmode=disable`) can close with RST rather than FIN — most
+					// reliably reproduced on Windows. Swallow the resulting ECONNRESET
+					// so it doesn't leak as an `uncaughtException` in the test process.
+					socket.on("error", (err: NodeJS.ErrnoException) => {
+						if (err.code !== "ECONNRESET") {
+							throw err;
+						}
+					});
 					socket.on("data", (chunk) => {
 						// Handle PostgreSQL SSL request packet
 						if (
@@ -467,7 +479,9 @@ describe("getPlatformProxy()", () => {
 				});
 			}
 
-			it("can connect to a TCP socket via the hyperdrive connect method", async () => {
+			it("can connect to a TCP socket via the hyperdrive connect method", async ({
+				expect,
+			}) => {
 				// set worker per test
 				root = makeRoot();
 				await seed(root, {
@@ -481,7 +495,7 @@ describe("getPlatformProxy()", () => {
 							id = "hyperdrive_id"
 							localConnectionString = "${scheme}://user:%21pass@127.0.0.1:${port}/some_db"
 					`,
-					"index.mjs": dedent/*javascript*/ `
+					"index.mjs": dedent /*javascript*/ `
 							// Windows socket cleanup error handler
 							if (process.platform === 'win32') {
 								process.on('uncaughtException', (err) => {
@@ -524,7 +538,7 @@ describe("getPlatformProxy()", () => {
 			// PostgreSQL-specific sslmode tests
 			it.skipIf(scheme !== "postgresql")(
 				"sslmode - 'prefer' can connect to a TCP socket via the hyperdrive connect method",
-				async () => {
+				async ({ expect }) => {
 					// set worker per test
 					root = makeRoot();
 					await seed(root, {
@@ -538,7 +552,7 @@ describe("getPlatformProxy()", () => {
 							id = "hyperdrive_id"
 							localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db?sslmode=prefer"
 					`,
-						"index.mjs": dedent/*javascript*/ `
+						"index.mjs": dedent /*javascript*/ `
 							// Windows socket cleanup error handler
 							if (process.platform === 'win32') {
 								process.on('uncaughtException', (err) => {
@@ -580,7 +594,7 @@ describe("getPlatformProxy()", () => {
 
 			it.skipIf(scheme !== "postgresql")(
 				"sslmode - 'require' fails hyperdrive connection method",
-				async () => {
+				async ({ expect }) => {
 					// set worker per test
 					root = makeRoot();
 					await seed(root, {
@@ -594,7 +608,7 @@ describe("getPlatformProxy()", () => {
 						id = "hyperdrive_id"
 						localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db?sslmode=require"
 					`,
-						"index.mjs": dedent/*javascript*/ `
+						"index.mjs": dedent /*javascript*/ `
 						// Windows socket cleanup error handler
 						if (process.platform === 'win32') {
 							process.on('uncaughtException', (err) => {
@@ -634,4 +648,50 @@ describe("getPlatformProxy()", () => {
 			);
 		}
 	);
+
+	describe("send_email", () => {
+		let root: string;
+
+		beforeEach(async () => {
+			root = makeRoot();
+
+			await seed(root, {
+				"wrangler.jsonc": JSON.stringify({
+					name: "email-app",
+					compatibility_date: "2025-03-17",
+					send_email: [{ name: "EMAIL" }],
+				}),
+				"index.mjs": dedent /* javascript */ `
+						import { getPlatformProxy } from "${WRANGLER_IMPORT}";
+
+						const { env, dispose } = await getPlatformProxy();
+						const result = await env.EMAIL.send({
+							from: "sender@sender.domain",
+							to: "recipient@example.com",
+							subject: "s",
+							text: "t",
+						});
+
+						console.log(result.messageId);
+						await dispose();
+				`,
+				"package.json": dedent`
+						{
+							"name": "email-app",
+							"version": "0.0.0",
+							"private": true
+						}
+				`,
+			});
+		});
+
+		it("can send a MessageBuilder email", async ({ expect }) => {
+			const stdout = execSync(`node index.mjs`, {
+				cwd: root,
+				encoding: "utf-8",
+			});
+
+			expect(stdout).toMatch(/^<[A-Za-z0-9]{36}@sender\.domain>/);
+		});
+	});
 });

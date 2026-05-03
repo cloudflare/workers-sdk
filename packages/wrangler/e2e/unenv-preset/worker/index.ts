@@ -15,7 +15,7 @@ export default {
 
 				return Response.json(
 					flagName
-						? getRuntimeFlagValue(flagName) ?? "undefined"
+						? (getRuntimeFlagValue(flagName) ?? "undefined")
 						: "The request is missing the `name` query parameter"
 				);
 			}
@@ -58,7 +58,7 @@ function generateTestListResponse(testName: string): Response {
 
 // Test functions executed on worked.
 // The test can be executing by fetching the `/${testName}` url.
-export const WorkerdTests: Record<string, () => void> = {
+export const WorkerdTests: Record<string, () => Promise<void>> = {
 	async testConsole() {
 		const importNamespace = await import("node:console");
 		const globalObject = globalThis.console;
@@ -131,7 +131,9 @@ export const WorkerdTests: Record<string, () => void> = {
 		if (removeEolV22) {
 			assert.strictEqual(crypto.Cipher, undefined);
 			assert.strictEqual(crypto.Decipher, undefined);
+			// @ts-expect-error createCipher removed from @types/node@22
 			assert.strictEqual(crypto.createCipher, undefined);
+			// @ts-expect-error createDecipher removed from @types/node@22
 			assert.strictEqual(crypto.createDecipher, undefined);
 		} else {
 			assertTypeOfProperties(crypto, {
@@ -755,7 +757,6 @@ export const WorkerdTests: Record<string, () => void> = {
 			// As `node:sqlite` has only be added in Node 22.5.0, we need to try/catch to not error with older versions.
 			// Note: This test is not meant to be executed by the Node runtime,
 			// but only by workerd where `node:sqlite` is available.
-			// @ts-expect-error TS2307 - node:sqlite is only available in Node 22.5.0+
 			sqlite = await import("node:sqlite");
 		} catch {
 			throw new Error(
@@ -1061,6 +1062,50 @@ export const WorkerdTests: Record<string, () => void> = {
 				createInterface: "function",
 			});
 		}
+	},
+
+	async testPerfHooks() {
+		assertTypeOf(globalThis, "performance", "object");
+		assertTypeOf(globalThis, "PerformanceObserver", "function");
+
+		assert.doesNotThrow(() => globalThis.performance.now());
+		assert.doesNotThrow(() => globalThis.performance.mark("test"));
+		assert.doesNotThrow(() => globalThis.performance.measure("test"));
+
+		const perfHooks = await import("node:perf_hooks");
+
+		assertTypeOfProperties(perfHooks, {
+			performance: "object",
+			PerformanceObserver: "function",
+			constants: "object",
+		});
+
+		assert.doesNotThrow(() => perfHooks.performance.now());
+		assert.doesNotThrow(() => perfHooks.performance.mark("test"));
+		assert.doesNotThrow(() => perfHooks.performance.measure("test"));
+
+		// Test performance.nodeTiming (Node.js-specific property)
+		const nodeTiming = perfHooks.performance.nodeTiming;
+		assertTypeOf(perfHooks.performance, "nodeTiming", "object");
+		assert.strictEqual(nodeTiming.name, "node");
+		assert.strictEqual(nodeTiming.entryType, "node");
+		assertTypeOfProperties(nodeTiming, {
+			startTime: "number",
+			duration: "number",
+			nodeStart: "number",
+			v8Start: "number",
+			bootstrapComplete: "number",
+			environment: "number",
+			loopStart: "number",
+			loopExit: "number",
+			idleTime: "number",
+		});
+
+		// Test performance.markResourceTiming() doesn't throw
+		// Note: Both workerd and unenv polyfill accept no arguments (stub implementations)
+		assert.doesNotThrow(() =>
+			(perfHooks.performance.markResourceTiming as unknown as () => void)()
+		);
 	},
 };
 

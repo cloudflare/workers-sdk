@@ -2,6 +2,7 @@ import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { requireAuth } from "../../user";
+import { fetchLocalResult, localWorkflowArgs } from "../local";
 import type { InstanceWithoutDates } from "../types";
 
 export const workflowsTriggerCommand = createCommand({
@@ -11,8 +12,8 @@ export const workflowsTriggerCommand = createCommand({
 		owner: "Product: Workflows",
 		status: "stable",
 	},
-
 	args: {
+		...localWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -33,33 +34,60 @@ export const workflowsTriggerCommand = createCommand({
 	positionalArgs: ["name", "params"],
 
 	async handler(args, { config, logger }) {
-		const accountId = await requireAuth(config);
-
 		if (args.params.length != 0) {
 			try {
 				JSON.parse(args.params);
 			} catch (e) {
 				throw new UserError(
-					`Error while parsing instance parameters: "${args.params}" with ${e}' `
+					`Error while parsing instance parameters: "${args.params}" with ${e}' `,
+					{ telemetryMessage: "workflows trigger invalid params" }
 				);
 			}
 		}
 
-		const response = await fetchResult<InstanceWithoutDates>(
-			config,
-			`/accounts/${accountId}/workflows/${args.name}/instances`,
-			{
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					instance_id: args.id,
-					params: args.params.length != 0 ? JSON.parse(args.params) : undefined,
-				}),
-			}
-		);
+		const parsedParams =
+			args.params.length != 0 ? JSON.parse(args.params) : undefined;
 
-		logger.info(
-			`🚀 Workflow instance "${response.id}" has been queued successfully`
-		);
+		let instanceId: string;
+
+		if (args.local) {
+			const response = await fetchLocalResult<{ id: string }>(
+				args.port,
+				`/workflows/${encodeURIComponent(args.name)}/instances`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						id: args.id,
+						params: parsedParams,
+					}),
+				}
+			);
+			instanceId = response.id;
+
+			logger.info(
+				`🚀 Workflow instance "${instanceId}" has been triggered successfully`
+			);
+		} else {
+			const accountId = await requireAuth(config);
+
+			const response = await fetchResult<InstanceWithoutDates>(
+				config,
+				`/accounts/${accountId}/workflows/${args.name}/instances`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						instance_id: args.id,
+						params: parsedParams,
+					}),
+				}
+			);
+			instanceId = response.id;
+
+			logger.info(
+				`🚀 Workflow instance "${instanceId}" has been queued successfully`
+			);
+		}
 	},
 });

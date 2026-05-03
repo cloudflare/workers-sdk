@@ -10,9 +10,15 @@ This fixture demonstrates that the Vitest integration correctly resolves modules
 [Dependency Pre-Bundling](https://vite.dev/guide/dep-pre-bundling) is a Vite feature that converts dependencies shipped as CommonJS or UMD into ESM. If you encounter module resolution issues—such as: `Error: Cannot use require() to import an ES Module` or `Error: No such module`—you can pre-bundle these dependencies using the [deps.optimizer](https://vitest.dev/config/#deps-optimizer) option:
 
 ```ts
-import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineConfig } from "vitest/config";
 
-export default defineWorkersConfig({
+export default defineConfig({
+	plugins: [
+		cloudflareTest({
+			wrangler: { configPath: "./wrangler.jsonc" },
+		}),
+	],
 	test: {
 		deps: {
 			optimizer: {
@@ -20,11 +26,6 @@ export default defineWorkersConfig({
 					enabled: true,
 					include: ["your-package-name"],
 				},
-			},
-		},
-		poolOptions: {
-			workers: {
-				// ...
 			},
 		},
 	},

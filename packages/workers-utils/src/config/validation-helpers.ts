@@ -632,6 +632,7 @@ export const validateAdditionalProperties = (
 		diagnostics.warnings.push(
 			`Unexpected fields found in ${fieldPath} field: ${fields}`
 		);
+		diagnostics.hasUnexpectedFields = true;
 		return false;
 	}
 	return true;

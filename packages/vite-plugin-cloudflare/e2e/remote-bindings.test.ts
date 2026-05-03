@@ -12,6 +12,9 @@ import {
 
 const commands = ["dev", "buildAndPreview"] as const;
 const isWindows = process.platform === "win32";
+const workersDomain =
+	process.env.E2E_ACCOUNT_WORKERS_DEV_DOMAIN ??
+	"devprod-testing7928.workers.dev";
 
 // Remote bindings tests are skipped on Windows due to slow/unreliable remote proxy
 // session initialization times in CI, which causes intermittent timeout failures.
@@ -28,123 +31,120 @@ if (isWindows) {
 		// Note: the reload test applies changes to the fixture files, so we do want the
 		//       tests to run sequentially in order to avoid race conditions
 		.sequential("remote bindings tests", () => {
-			const replacements = {
-				"<<REMOTE_WORKER_PLACEHOLDER>>": `preserve-e2e-vite-remote`,
-				"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `preserve-e2e-vite-remote-alt`,
-			};
+		const replacements = {
+			"<<REMOTE_WORKER_PLACEHOLDER>>": `preserve-e2e-vite-remote`,
+			"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `preserve-e2e-vite-remote-alt`,
+		};
 
-			const projectPath = seed("remote-bindings", { pm: "pnpm", replacements });
+		const projectPath = seed("remote-bindings", { pm: "pnpm", replacements });
 
-			beforeAll(async () => {
-				try {
-					assert(
-						(
-							await fetch(
-								"https://preserve-e2e-vite-remote.devprod-testing7928.workers.dev/"
-							)
-						).status !== 404
-					);
-				} catch (e) {
-					runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker`);
-				}
-				try {
-					assert(
-						(
-							await fetch(
-								"https://preserve-e2e-vite-remote-alt.devprod-testing7928.workers.dev/"
-							)
-						).status !== 404
-					);
-				} catch {
-					runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker-alt`);
-				}
-			}, 35_000);
-
-			describe.each(commands)('with "%s" command', (command) => {
-				test.skipIf(isBuildAndPreviewOnWindows(command))(
-					"can fetch from both local (/auxiliary) and remote workers",
-					async ({ expect }) => {
-						const proc = await runLongLived("pnpm", command, projectPath);
-						const url = await waitForReady(proc);
-						expect(await fetchJson(url)).toEqual({
-							localWorkerResponse: {
-								remoteWorkerResponse: "Hello from an alternative remote worker",
-							},
-							remoteWorkerResponse: "Hello from a remote worker",
-						});
-					}
+		beforeAll(async () => {
+			try {
+				assert(
+					(await fetch(`https://preserve-e2e-vite-remote.${workersDomain}/`))
+						.status !== 404
 				);
-
-				// This test checks that wrapped bindings (e.g. AI) which rely on additional workers with an authed connection to the CF API work
-				test.skipIf(isBuildAndPreviewOnWindows(command))(
-					"Wrapped bindings (e.g. Workers AI) can serve a request",
-					async ({ expect }) => {
-						const proc = await runLongLived("pnpm", command, projectPath);
-						const url = await waitForReady(proc);
-
-						expect(await fetchJson(url + "/ai/")).toEqual({
-							response: expect.stringContaining("Workers AI"),
-						});
-					}
-				);
-			});
-
-			test("reflects changes applied during dev", async ({ expect }) => {
-				const proc = await runLongLived("pnpm", "dev", projectPath);
-				const url = await waitForReady(proc);
-				expect(await fetchJson(url)).toEqual({
-					localWorkerResponse: {
-						remoteWorkerResponse: "Hello from an alternative remote worker",
-					},
-					remoteWorkerResponse: "Hello from a remote worker",
-				});
-
-				const entryWorkerPath = `${projectPath}/entry-worker/src/index.ts`;
-				const entryWorkerContent = await readFile(entryWorkerPath, "utf8");
-
-				await writeFile(
-					entryWorkerPath,
-					entryWorkerContent
-						.replace(
-							"localWorkerResponse: await",
-							"localWorkerResponseJson: await"
+			} catch {
+				runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker`);
+			}
+			try {
+				assert(
+					(
+						await fetch(
+							`https://preserve-e2e-vite-remote-alt.${workersDomain}/`
 						)
-						.replace(
-							"remoteWorkerResponse: await",
-							"remoteWorkerResponseText: await"
-						),
-					"utf8"
+					).status !== 404
 				);
+			} catch {
+				runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker-alt`);
+			}
+		}, 35_000);
 
-				await setTimeout(500);
+		describe.each(commands)('with "%s" command', (command) => {
+			test.skipIf(isBuildAndPreviewOnWindows(command))(
+				"can fetch from both local (/auxiliary) and remote workers",
+				async ({ expect }) => {
+					const proc = await runLongLived("pnpm", command, projectPath);
+					const url = await waitForReady(proc);
+					expect(await fetchJson(url)).toEqual({
+						localWorkerResponse: {
+							remoteWorkerResponse: "Hello from an alternative remote worker",
+						},
+						remoteWorkerResponse: "Hello from a remote worker",
+					});
+				}
+			);
 
-				await vi.waitFor(
-					async () => {
-						expect(await fetchJson(url)).toEqual({
-							localWorkerResponseJson: {
-								remoteWorkerResponse: "Hello from an alternative remote worker",
-							},
-							remoteWorkerResponseText: "Hello from a remote worker",
-						});
-					},
-					{ timeout: 5_000, interval: 250 }
-				);
+			// This test checks that wrapped bindings (e.g. AI) which rely on additional workers with an authed connection to the CF API work
+			test.skipIf(isBuildAndPreviewOnWindows(command))(
+				"Wrapped bindings (e.g. Workers AI) can serve a request",
+				async ({ expect }) => {
+					const proc = await runLongLived("pnpm", command, projectPath);
+					const url = await waitForReady(proc);
 
-				await writeFile(entryWorkerPath, entryWorkerContent, "utf8");
-
-				await vi.waitFor(
-					async () => {
-						expect(await fetchJson(url)).toEqual({
-							localWorkerResponse: {
-								remoteWorkerResponse: "Hello from an alternative remote worker",
-							},
-							remoteWorkerResponse: "Hello from a remote worker",
-						});
-					},
-					{ timeout: 5_000, interval: 250 }
-				);
-			});
+					expect(await fetchJson(url + "/ai/")).toEqual({
+						response: expect.stringContaining("Workers AI"),
+					});
+				}
+			);
 		});
+
+		test("reflects changes applied during dev", async ({ expect }) => {
+			const proc = await runLongLived("pnpm", "dev", projectPath);
+			const url = await waitForReady(proc);
+			expect(await fetchJson(url)).toEqual({
+				localWorkerResponse: {
+					remoteWorkerResponse: "Hello from an alternative remote worker",
+				},
+				remoteWorkerResponse: "Hello from a remote worker",
+			});
+
+			const entryWorkerPath = `${projectPath}/entry-worker/src/index.ts`;
+			const entryWorkerContent = await readFile(entryWorkerPath, "utf8");
+
+			await writeFile(
+				entryWorkerPath,
+				entryWorkerContent
+					.replace(
+						"localWorkerResponse: await",
+						"localWorkerResponseJson: await"
+					)
+					.replace(
+						"remoteWorkerResponse: await",
+						"remoteWorkerResponseText: await"
+					),
+				"utf8"
+			);
+
+			await setTimeout(500);
+
+			await vi.waitFor(
+				async () => {
+					expect(await fetchJson(url)).toEqual({
+						localWorkerResponseJson: {
+							remoteWorkerResponse: "Hello from an alternative remote worker",
+						},
+						remoteWorkerResponseText: "Hello from a remote worker",
+					});
+				},
+				{ timeout: 5_000, interval: 250 }
+			);
+
+			await writeFile(entryWorkerPath, entryWorkerContent, "utf8");
+
+			await vi.waitFor(
+				async () => {
+					expect(await fetchJson(url)).toEqual({
+						localWorkerResponse: {
+							remoteWorkerResponse: "Hello from an alternative remote worker",
+						},
+						remoteWorkerResponse: "Hello from a remote worker",
+					});
+				},
+				{ timeout: 5_000, interval: 250 }
+			);
+		});
+	});
 
 	describe("remote bindings without actually establishing a remote connection", () => {
 		const projectPath = seed("remote-bindings-config-account-id", {

@@ -58,7 +58,7 @@ export default async function triggersDeploy(
 	if (!scriptName) {
 		throw new UserError(
 			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-			{ telemetryMessage: true }
+			{ telemetryMessage: "triggers deploy missing worker name" }
 		);
 	}
 
@@ -85,7 +85,9 @@ export default async function triggersDeploy(
 	}
 
 	if (!accountId) {
-		throw new UserError("Missing accountId", { telemetryMessage: true });
+		throw new UserError("Missing accountId", {
+			telemetryMessage: "triggers deploy missing account id",
+		});
 	}
 
 	const uploadMs = Date.now() - start;
@@ -190,7 +192,9 @@ export default async function triggersDeploy(
 			);
 			const dashLink = `Visit ${dashHref} to unassign a worker from a route.`;
 
-			throw new UserError(`${errorMessage}\n${resolution}\n${dashLink}`);
+			throw new UserError(`${errorMessage}\n${resolution}\n${dashLink}`, {
+				telemetryMessage: "triggers deploy routes assigned",
+			});
 		}
 	}
 
@@ -259,6 +263,16 @@ export default async function triggersDeploy(
 				workflow.script_name !== undefined &&
 				workflow.script_name !== scriptName
 			) {
+				if (workflow.limits) {
+					throw new UserError(
+						`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
+							`Configure limits on the worker that defines the workflow.`,
+						{
+							telemetryMessage:
+								"triggers deploy workflow limits external script",
+						}
+					);
+				}
 				continue;
 			}
 
@@ -271,6 +285,7 @@ export default async function triggersDeploy(
 						body: JSON.stringify({
 							script_name: scriptName,
 							class_name: workflow.class_name,
+							...(workflow.limits && { limits: workflow.limits }),
 						}),
 						headers: {
 							"Content-Type": "application/json",

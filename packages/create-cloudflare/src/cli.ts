@@ -9,12 +9,14 @@ import {
 	error,
 	logRaw,
 	startSection,
-} from "@cloudflare/cli";
-import { CancelError } from "@cloudflare/cli/error";
-import { isInteractive } from "@cloudflare/cli/interactive";
+} from "@cloudflare/cli-shared-helpers";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { CancelError } from "@cloudflare/cli-shared-helpers/error";
+import { maybeAppendWranglerToGitIgnore } from "@cloudflare/cli-shared-helpers/gitignore";
+import { isInteractive } from "@cloudflare/cli-shared-helpers/interactive";
 import { cliDefinition, parseArgs, processArgument } from "helpers/args";
 import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
-import { runCommand } from "helpers/command";
+import { runWranglerCommand } from "helpers/command";
 import {
 	detectPackageManager,
 	rectifyPmMismatch,
@@ -28,7 +30,6 @@ import { showHelp } from "./help";
 import { reporter, runTelemetryCommand } from "./metrics";
 import { createProject } from "./pages";
 import {
-	addWranglerToGitIgnore,
 	copyTemplateFiles,
 	createContext,
 	updatePackageName,
@@ -51,7 +52,7 @@ export const main = async (argv: string[]) => {
 		}
 
 		if (result.errorMessage) {
-			// eslint-disable-next-line no-console
+			// eslint-disable-next-line no-console -- display raw error message before exit
 			console.error(`\n${result.errorMessage}`);
 		}
 
@@ -165,8 +166,10 @@ const create = async (ctx: C3Context) => {
 
 const configure = async (ctx: C3Context) => {
 	startSection(
-		`Configuring your application for Cloudflare${ctx.args.experimental ? ` via \`wrangler setup\`` : ""}`,
-		"Step 2 of 3",
+		`Configuring your application for Cloudflare${
+			ctx.args.experimental ? ` via \`wrangler setup\`` : ""
+		}`,
+		"Step 2 of 3"
 	);
 
 	// This is kept even in the autoconfig case because autoconfig will ultimately end up installing Wrangler anyway
@@ -176,7 +179,7 @@ const configure = async (ctx: C3Context) => {
 	if (ctx.args.experimental) {
 		const { npx } = detectPackageManager();
 
-		await runCommand([
+		await runWranglerCommand([
 			npx,
 			"wrangler",
 			"setup",
@@ -194,7 +197,7 @@ const configure = async (ctx: C3Context) => {
 			await template.configure({ ...ctx });
 		}
 
-		addWranglerToGitIgnore(ctx);
+		maybeAppendWranglerToGitIgnore(ctx.project.path);
 
 		await updatePackageScripts(ctx);
 

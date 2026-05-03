@@ -1,161 +1,321 @@
-import { Collapsible } from "@base-ui/react/collapsible";
-import { cn } from "@cloudflare/kumo";
-import { CaretRightIcon, DatabaseIcon } from "@phosphor-icons/react";
-import { Link } from "@tanstack/react-router";
-import CloudflareLogo from "../assets/icons/cloudflare-logo.svg?react";
+import {
+	Badge,
+	CloudflareLogo,
+	cn,
+	Sidebar,
+	useSidebar,
+} from "@cloudflare/kumo";
+import { MonitorIcon, MoonIcon, SunIcon } from "@phosphor-icons/react";
+import { useRouter } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
+import D1Icon from "../assets/icons/d1.svg?react";
+import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
-import type { D1DatabaseResponse, WorkersKvNamespace } from "../api";
+import R2Icon from "../assets/icons/r2.svg?react";
+import WorkflowsIcon from "../assets/icons/workflows.svg?react";
+import { loadGroupState, saveGroupState } from "../utils/sidebar-state";
+import { getNextThemeMode } from "../utils/theme-state";
+import { SidebarGroupPopup } from "./SidebarGroupPopup";
+import { WorkerSelector, type LocalExplorerWorker } from "./WorkerSelector";
+import type { LocalExplorerWorkerBindings } from "../api";
 import type { FileRouteTypes } from "../routeTree.gen";
+import type { SidebarGroupId, SidebarGroupState } from "../utils/sidebar-state";
+import type { ThemeMode } from "../utils/theme-state";
 import type { FC } from "react";
 
-interface SidebarItemGroupProps {
-	emptyLabel: string;
-	error: string | null;
-	icon: FC<{ className?: string }>;
-	items: Array<{
-		id: string;
-		isActive: boolean;
+const THEME_MODE_CONFIG = {
+	light: {
+		icon: SunIcon,
+		label: "Light",
+	},
+	dark: {
+		icon: MoonIcon,
+		label: "Dark",
+	},
+	system: {
+		icon: MonitorIcon,
+		label: "System",
+	},
+} satisfies Record<
+	ThemeMode,
+	{
+		icon: typeof SunIcon;
 		label: string;
-		link: {
-			params: object;
-			search?: object;
-			to: FileRouteTypes["to"];
-		};
-	}>;
-	loading: boolean;
-	title: string;
-}
-
-function SidebarItemGroup({
-	emptyLabel,
-	error,
-	icon: Icon,
-	items,
-	loading,
-	title,
-}: SidebarItemGroupProps): JSX.Element {
-	return (
-		<Collapsible.Root defaultOpen className="py-0.5">
-			<Collapsible.Trigger className="group flex items-center gap-2 w-[calc(100%-0.25rem)] ml-1 p-3 bg-transparent font-semibold text-xs text-text cursor-pointer transition-colors rounded-l-md hover:bg-surface-tertiary">
-				<CaretRightIcon
-					className="w-3.5 h-3.5 text-muted transition-transform duration-200 group-data-panel-open:rotate-90"
-					weight="bold"
-				/>
-				<Icon className="w-4 h-4 text-muted" />
-				{title}
-			</Collapsible.Trigger>
-
-			<Collapsible.Panel className="overflow-hidden transition-[height,opacity] duration-200 ease-out data-starting-style:h-0 data-starting-style:opacity-0 data-ending-style:h-0 data-ending-style:opacity-0">
-				<ul className="list-none ml-3 pl-3 space-y-0.5 border-l border-border">
-					{loading ? (
-						<li className="py-1.5 px-2 text-text-secondary text-sm">
-							Loading...
-						</li>
-					) : null}
-
-					{error ? (
-						<li className="py-1.5 px-2 text-danger text-sm">{error}</li>
-					) : null}
-
-					{!loading && !error
-						? items.map((item) => (
-								<li key={item.id}>
-									<Link
-										className={cn(
-											"block py-2.5 px-2 text-text text-sm no-underline rounded-l-md cursor-pointer transition-colors hover:bg-surface-tertiary",
-											{
-												"bg-primary/10 text-primary font-medium": item.isActive,
-											}
-										)}
-										params={item.link.params}
-										search={item.link.search}
-										to={item.link.to}
-									>
-										{item.label}
-									</Link>
-								</li>
-							))
-						: null}
-
-					{!loading && !error && items.length === 0 && (
-						<li className="py-1.5 px-2 text-text-secondary text-sm italic">
-							{emptyLabel}
-						</li>
-					)}
-				</ul>
-			</Collapsible.Panel>
-		</Collapsible.Root>
-	);
-}
+	}
+>;
 
 interface SidebarProps {
+	bindings?: LocalExplorerWorkerBindings;
 	currentPath: string;
-	d1Error: string | null;
-	databases: D1DatabaseResponse[];
-	kvError: string | null;
-	loading: boolean;
-	namespaces: WorkersKvNamespace[];
+	onCycleTheme: () => void;
+	onWorkerChange: (workerName: string) => void;
+	selectedWorker: string;
+	themeMode: ThemeMode;
+	workers: LocalExplorerWorker[];
 }
 
-export function Sidebar({
+export function AppSidebar({
+	bindings,
 	currentPath,
-	d1Error,
-	databases,
-	kvError,
-	loading,
-	namespaces,
+	onCycleTheme,
+	onWorkerChange,
+	selectedWorker,
+	themeMode,
+	workers,
 }: SidebarProps) {
+	const router = useRouter();
+	const sidebar = useSidebar();
+
+	const [groupOpen, setGroupOpen] = useState<SidebarGroupState>(loadGroupState);
+
+	const handleGroupOpenChange = useCallback(
+		(groupId: SidebarGroupId, open: boolean) => {
+			setGroupOpen((prev) => {
+				const next = { ...prev, [groupId]: open };
+				saveGroupState(next);
+				return next;
+			});
+		},
+		[]
+	);
+
+	const showWorkerSelector = workers.length > 1;
+	const workerSearch = workers.length > 1 ? { worker: selectedWorker } : {};
+
+	const d1Databases = bindings?.d1 ?? [];
+	const doNamespaces = (bindings?.do ?? []).filter((ns) => ns.useSqlite);
+	const kvNamespaces = bindings?.kv ?? [];
+	const r2Buckets = bindings?.r2 ?? [];
+	const workflows = bindings?.workflows ?? [];
+
+	const sidebarItemGroups = [
+		{
+			emptyLabel: "No databases",
+			groupId: "d1" as const,
+			icon: D1Icon,
+			items: d1Databases.map((db) => ({
+				id: db.id,
+				isActive: currentPath === `/d1/${db.id}`,
+				label: db.bindingName,
+				link: {
+					params: { databaseId: db.id },
+					search: { table: undefined, ...workerSearch },
+					to: "/d1/$databaseId",
+				},
+			})),
+			title: "D1 Databases",
+		},
+		{
+			emptyLabel: "No SQLite namespaces",
+			groupId: "do" as const,
+			icon: DOIcon,
+			items: doNamespaces.map((ns) => ({
+				id: ns.id,
+				isActive:
+					currentPath === `/do/${ns.className}` ||
+					currentPath.startsWith(`/do/${ns.className}/`),
+				label: ns.className,
+				link: {
+					params: { className: ns.className },
+					search: workerSearch,
+					to: "/do/$className",
+				},
+			})),
+			title: "Durable Objects",
+		},
+		{
+			emptyLabel: "No namespaces",
+			groupId: "kv" as const,
+			icon: KVIcon,
+			items: kvNamespaces.map((ns) => ({
+				id: ns.id,
+				isActive: currentPath === `/kv/${ns.id}`,
+				label: ns.bindingName,
+				link: {
+					params: { namespaceId: ns.id },
+					search: workerSearch,
+					to: "/kv/$namespaceId",
+				},
+			})),
+			title: "KV Namespaces",
+		},
+		{
+			emptyLabel: "No buckets",
+			groupId: "r2" as const,
+			icon: R2Icon,
+			items: r2Buckets.map((bucket) => ({
+				id: bucket.id,
+				isActive:
+					currentPath === `/r2/${bucket.id}` ||
+					currentPath.startsWith(`/r2/${bucket.id}/`),
+				label: bucket.bindingName,
+				link: {
+					params: { bucketName: bucket.id },
+					search: workerSearch,
+					to: "/r2/$bucketName",
+				},
+			})),
+			title: "R2 Buckets",
+		},
+		{
+			emptyLabel: "No workflows",
+			groupId: "workflows" as const,
+			icon: WorkflowsIcon,
+			items: workflows.map((wf) => ({
+				id: wf.id,
+				isActive:
+					currentPath === `/workflows/${wf.id}` ||
+					currentPath.startsWith(`/workflows/${wf.id}/`),
+				label: wf.bindingName,
+				link: {
+					params: { workflowName: wf.id },
+					search: workerSearch,
+					to: "/workflows/$workflowName",
+				},
+			})),
+			title: "Workflows",
+		},
+	] satisfies Array<{
+		emptyLabel: string;
+		groupId: SidebarGroupId;
+		icon: FC<{ className?: string }>;
+		items: Array<{
+			id: string;
+			isActive: boolean;
+			label: string;
+			link: {
+				params: object;
+				search?: object;
+				to: FileRouteTypes["to"];
+			};
+		}>;
+		title: string;
+	}>;
+
 	return (
-		<aside className="w-sidebar bg-bg-secondary border-r border-border flex flex-col">
-			<a
-				className="flex items-center gap-2.5 p-4 min-h-16.75 box-border"
-				href="/"
-			>
-				<CloudflareLogo className="shrink-0 text-primary" />
-				<div className="flex flex-col gap-px">
-					<span className="text-sm font-semibold text-text leading-tight">
-						Local Explorer
-					</span>
-					<span className="text-[10px] font-medium text-text-secondary uppercase tracking-wide">
-						Cloudflare DevTools
-					</span>
+		<Sidebar className="bg-kumo-elevated">
+			<Sidebar.Header className="min-h-14.5 border-b">
+				<div className="flex w-full items-center justify-between">
+					<a
+						className="box-border flex items-center gap-2.5 px-1"
+						href="/cdn-cgi/explorer/"
+					>
+						<CloudflareLogo
+							className={cn(
+								"shrink-0 transition-all duration-200",
+								sidebar.open ? "h-8 w-8" : "h-6 w-6"
+							)}
+							variant="glyph"
+						/>
+
+						{sidebar.open ? (
+							<div className="flex flex-col gap-px">
+								<h3 className="text-text text-sm leading-tight font-semibold">
+									Local Explorer
+								</h3>
+
+								<p className="text-text-secondary text-[9px] font-medium tracking-wide uppercase">
+									Cloudflare DevTools
+								</p>
+							</div>
+						) : null}
+					</a>
+
+					{sidebar.open ? (
+						<Badge className="mr-1" variant="beta">
+							Beta
+						</Badge>
+					) : null}
 				</div>
-			</a>
+			</Sidebar.Header>
 
-			<SidebarItemGroup
-				emptyLabel="No namespaces"
-				error={kvError}
-				icon={KVIcon}
-				items={namespaces.map((ns) => ({
-					id: ns.id,
-					isActive: currentPath === `/kv/${ns.id}`,
-					label: ns.title,
-					link: {
-						params: { namespaceId: ns.id },
-						to: "/kv/$namespaceId",
-					},
-				}))}
-				loading={loading}
-				title="KV Namespaces"
-			/>
+			<Sidebar.Content>
+				{showWorkerSelector && (
+					<WorkerSelector
+						workers={workers}
+						selectedWorker={selectedWorker}
+						onWorkerChange={onWorkerChange}
+					/>
+				)}
 
-			<SidebarItemGroup
-				emptyLabel="No databases"
-				error={d1Error}
-				icon={DatabaseIcon}
-				items={databases.map((db) => ({
-					id: db.uuid as string,
-					isActive: currentPath === `/d1/${db.uuid}`,
-					label: db.name as string,
-					link: {
-						params: { databaseId: db.uuid },
-						search: { table: undefined },
-						to: "/d1/$databaseId",
-					},
-				}))}
-				loading={loading}
-				title="D1 Databases"
-			/>
-		</aside>
+				{sidebar.open ? (
+					<Sidebar.MenuItem className="space-y-1">
+						{sidebarItemGroups.map((group) => (
+							<Sidebar.Collapsible
+								key={group.groupId}
+								open={groupOpen[group.groupId]}
+								onOpenChange={(open) => {
+									handleGroupOpenChange(group.groupId, open);
+								}}
+							>
+								<Sidebar.CollapsibleTrigger
+									render={
+										<Sidebar.MenuButton
+											icon={<group.icon width={20} height={20} />}
+										>
+											{group.title} <Sidebar.MenuChevron />
+										</Sidebar.MenuButton>
+									}
+								/>
+
+								<Sidebar.CollapsibleContent>
+									<Sidebar.MenuSub className="mt-1 ml-5.5 space-y-0.5">
+										{group.items.length === 0 ? (
+											<div className="text-text-secondary ml-8 px-2 py-1.5 text-sm italic">
+												{group.emptyLabel}
+											</div>
+										) : (
+											group.items.map((item) => (
+												<Sidebar.MenuSubButton
+													active={item.isActive}
+													className="cursor-pointer"
+													href={router.buildLocation(item.link).href}
+													key={item.id}
+												>
+													{item.label}
+												</Sidebar.MenuSubButton>
+											))
+										)}
+									</Sidebar.MenuSub>
+								</Sidebar.CollapsibleContent>
+							</Sidebar.Collapsible>
+						))}
+					</Sidebar.MenuItem>
+				) : (
+					<Sidebar.MenuItem className="space-y-1">
+						{sidebarItemGroups.map((group) => (
+							<SidebarGroupPopup
+								emptyLabel={group.emptyLabel}
+								icon={<group.icon width={20} height={20} />}
+								items={group.items}
+								key={group.groupId}
+								title={group.title}
+							/>
+						))}
+					</Sidebar.MenuItem>
+				)}
+			</Sidebar.Content>
+
+			<Sidebar.Footer className="gap-1">
+				{(() => {
+					const { icon: Icon, label } = THEME_MODE_CONFIG[themeMode];
+					const nextLabel =
+						THEME_MODE_CONFIG[getNextThemeMode(themeMode)].label;
+
+					return (
+						<Sidebar.MenuButton
+							aria-label={`Theme: ${label}. Switch to ${nextLabel}`}
+							className="px-2"
+							icon={<Icon size={18} weight="bold" />}
+							onClick={onCycleTheme}
+							tooltip={`Theme: ${label}`}
+							type="button"
+						/>
+					);
+				})()}
+
+				<Sidebar.Trigger className="cursor-pointer hover:bg-kumo-tint" />
+			</Sidebar.Footer>
+		</Sidebar>
 	);
 }

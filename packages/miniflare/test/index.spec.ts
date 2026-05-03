@@ -6,21 +6,11 @@ import { once } from "node:events";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import http from "node:http";
-import { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { Writable } from "node:stream";
 import { json, text } from "node:stream/consumers";
 import url from "node:url";
 import util from "node:util";
-import {
-	D1Database,
-	DurableObjectNamespace,
-	Fetcher,
-	KVNamespace,
-	Queue,
-	R2Bucket,
-} from "@cloudflare/workers-types/experimental";
 import {
 	_forceColour,
 	_transformsForContentEncodingAndContentType,
@@ -28,24 +18,16 @@ import {
 	DeferredPromise,
 	fetch,
 	kCurrentWorker,
-	MessageEvent,
 	Miniflare,
 	MiniflareCoreError,
-	MiniflareOptions,
 	parseWithRootPath,
 	PLUGINS,
-	ReplaceWorkersTypes,
 	Response,
 	viewToBuffer,
-	Worker_Module,
-	WorkerOptions,
 } from "miniflare";
 import { onTestFinished, test } from "vitest";
-import {
-	CloseEvent as StandardCloseEvent,
-	MessageEvent as StandardMessageEvent,
-	WebSocketServer,
-} from "ws";
+import { WebSocketServer } from "ws";
+import { assertIsV2ModuleFallbackProtocol } from "../src/plugins/core/module-fallback";
 import {
 	FIXTURES_PATH,
 	TestLog,
@@ -55,6 +37,27 @@ import {
 	useTmp,
 	utf8Encode,
 } from "./test-shared";
+import type {
+	D1Database,
+	DurableObjectNamespace,
+	Fetcher,
+	KVNamespace,
+	Queue,
+	R2Bucket,
+} from "@cloudflare/workers-types/experimental";
+import type {
+	MessageEvent,
+	MiniflareOptions,
+	ReplaceWorkersTypes,
+	Worker_Module,
+	WorkerOptions,
+} from "miniflare";
+import type { AddressInfo } from "node:net";
+import type { Writable } from "node:stream";
+import type {
+	CloseEvent as StandardCloseEvent,
+	MessageEvent as StandardMessageEvent,
+} from "ws";
 
 // (base64 encoded module containing a single `add(i32, i32): i32` export)
 const ADD_WASM_MODULE = Buffer.from(
@@ -137,6 +140,53 @@ test("Miniflare: validates options", async ({ expect }) => {
 	);
 });
 
+test("Miniflare: accepts mixed r2Buckets record", () => {
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		r2Buckets: {
+			LOCAL_BUCKET: "local-bucket",
+			REMOTE_BUCKET: { id: "remote-bucket" },
+		},
+	});
+	useDispose(mf);
+});
+
+test("Miniflare: accepts mixed kvNamespaces record", () => {
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		kvNamespaces: {
+			LOCAL_NS: "local-ns",
+			REMOTE_NS: { id: "remote-ns" },
+		},
+	});
+	useDispose(mf);
+});
+
+test("Miniflare: accepts mixed d1Databases record", () => {
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		d1Databases: {
+			LOCAL_DB: "local-db",
+			REMOTE_DB: { id: "remote-db" },
+		},
+	});
+	useDispose(mf);
+});
+
+test("Miniflare: accepts mixed pipelines record", () => {
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		pipelines: {
+			LOCAL_PIPELINE: "local-pipeline",
+			REMOTE_PIPELINE: { pipeline: "remote-pipeline" },
+		},
+	});
+	useDispose(mf);
+});
 test("Miniflare: ready returns copy of entry URL", async ({ expect }) => {
 	const mf = new Miniflare({
 		port: 0,
@@ -231,6 +281,31 @@ const localInterface = (interfaces["en0"] ?? interfaces["eth0"])?.find(
 		expect(await res.text()).toBe("body");
 	}
 );
+
+test("Miniflare: can use localhost as host", async ({ expect }) => {
+	const mf = new Miniflare({
+		host: "localhost",
+		modules: true,
+		script: `export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`,
+		serviceBindings: {
+			SERVICE() {
+				return new Response("body");
+			},
+		},
+	});
+	useDispose(mf);
+
+	const url = await mf.ready;
+	expect(url.hostname).toBe("localhost");
+
+	let res = await mf.dispatchFetch("https://example.com");
+	expect(await res.text()).toBe("body");
+
+	const worker = await mf.getWorker();
+	res = await worker.fetch("https://example.com");
+	expect(await res.text()).toBe("body");
+});
+
 test("Miniflare: can use IPv6 loopback as host", async ({ expect }) => {
 	const mf = new Miniflare({
 		host: "::1",
@@ -1869,6 +1944,58 @@ test("Miniflare: other /cdn-cgi/ routes", async ({ expect }) => {
 	expect(res.status).toBe(200);
 });
 
+test("Miniflare: blocks non-local Host headers from reaching /cdn-cgi/ routes", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+			export default {
+				fetch() {
+					return new Response("Hello world");
+				}
+			}
+		`,
+		unsafeTriggerHandlers: true,
+	});
+	useDispose(mf);
+
+	const url = await mf.ready;
+	const directUrlStatus = await new Promise<number>((resolve, reject) => {
+		const req = http.get(
+			`${url.origin}/cdn-cgi/foo`,
+			{ setHost: false, headers: { Host: "example.trycloudflare.com" } },
+			(res) => {
+				res.resume();
+				resolve(res.statusCode ?? 0);
+			}
+		);
+		req.on("error", reject);
+	});
+
+	expect(directUrlStatus).toBe(403);
+
+	const originalUrlStatus = await new Promise<number>((resolve, reject) => {
+		const req = http.get(
+			`${url.origin}/foo`,
+			{
+				setHost: false,
+				headers: {
+					Host: "example.trycloudflare.com",
+					"MF-Original-URL": "http://localhost/cdn-cgi/handler/scheduled",
+				},
+			},
+			(res) => {
+				res.resume();
+				resolve(res.statusCode ?? 0);
+			}
+		);
+		req.on("error", reject);
+	});
+
+	expect(originalUrlStatus).toBe(403);
+});
+
 test("Miniflare: listens on ipv6", async ({ expect }) => {
 	const log = new TestLog();
 
@@ -3306,6 +3433,7 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 	};
 
 	const mf = new Miniflare({
+		host: "localhost",
 		unsafeModuleFallbackService(request) {
 			const resolveMethod = request.headers.get("X-Resolve-Method");
 			assert(resolveMethod === "import" || resolveMethod === "require");
@@ -3374,6 +3502,88 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 	res = await mf.dispatchFetch("http://localhost/b");
 	expect(res.status).toBe(500);
 	expect(await res.text()).toBe('Error: No such module "virtual/a.mjs".');
+});
+
+test("Miniflare: can use module fallback service with V2 protocol", async ({
+	expect,
+}) => {
+	// V2 protocol uses file:// URLs instead of paths
+	// Module keys are paths (without the /bundle prefix that workerd adds)
+	const modules: Record<string, Omit<Worker_Module, "name">> = {
+		"/virtual/a.mjs": {
+			esModule: `
+			import { b } from "./dir/b.mjs";
+			export default "a" + b;
+			`,
+		},
+		"/virtual/dir/b.mjs": {
+			esModule: 'export { default as b } from "./c.cjs";',
+		},
+		"/virtual/dir/c.cjs": {
+			commonJsModule: 'module.exports = "c" + require("./sub/d.cjs");',
+		},
+		"/virtual/dir/sub/d.cjs": {
+			commonJsModule: 'module.exports = "d";',
+		},
+	};
+
+	const mf = new Miniflare({
+		async unsafeModuleFallbackService(request) {
+			// V2 protocol uses POST with JSON body instead of GET with query params
+			assert(request.method === "POST", "V2 protocol should use POST method");
+
+			const body = await request.json();
+			assertIsV2ModuleFallbackProtocol(body);
+
+			assert(
+				body.type === "import" || body.type === "require",
+				`Expected type to be "import" or "require", got "${body.type}"`
+			);
+			assert(
+				body.specifier.startsWith("file://"),
+				`V2 specifier should be a file:// URL, got "${body.specifier}"`
+			);
+
+			// V2 specifier is a file:// URL like "file:///bundle/virtual/a.mjs"
+			// Extract the path and strip the "/bundle" prefix to match our modules map
+			const specifierUrl = new URL(body.specifier);
+			const modulePath = specifierUrl.pathname.replace(/^\/bundle/, "");
+			const maybeModule = modules[modulePath];
+			if (maybeModule === undefined) {
+				return new Response(null, { status: 404 });
+			}
+
+			// V2 protocol expects name to match the full URL specifier
+			return Response.json({ name: body.specifier, ...maybeModule });
+		},
+		workers: [
+			{
+				name: "a",
+				routes: ["*/a"],
+				compatibilityFlags: ["export_commonjs_default", "new_module_registry"],
+				modulesRoot: "/",
+				modules: [
+					{
+						type: "ESModule",
+						path: "/virtual/index.mjs",
+						contents: `
+							import a from "./a.mjs";
+							export default {
+								async fetch() {
+									return new Response(a);
+								}
+							}
+						`,
+					},
+				],
+				unsafeUseModuleFallbackService: true,
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost/a");
+	expect(await res.text()).toBe("acd");
 });
 
 test("Miniflare: respects rootPath for path-valued options", async ({
@@ -3643,4 +3853,61 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 	// workerd-config.json should be created when MINIFLARE_WORKERD_CONFIG_DEBUG=true
 	expect(existsSync(configFilePath)).toBe(true);
 	await mf.dispose();
+});
+
+// https://github.com/cloudflare/workers-sdk/issues/13013
+test("Miniflare: dispatchFetch handles POST/PUT with non-2xx status", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `export default {
+			async fetch(request) {
+				const url = new URL(request.url);
+				const status = parseInt(url.searchParams.get("status") ?? "200");
+				return Response.json(
+					{ method: request.method, status },
+					{ status }
+				);
+			}
+		}`,
+	});
+	useDispose(mf);
+
+	// GET + non-2xx (worked before the fix too)
+	for (const status of [400, 401, 403, 404, 500]) {
+		const res = await mf.dispatchFetch(`http://localhost/?status=${status}`);
+		expect(res.status).toBe(status);
+		expect(await res.json()).toEqual({ method: "GET", status });
+	}
+
+	// POST + 2xx
+	for (const status of [200, 201]) {
+		const res = await mf.dispatchFetch(`http://localhost/?status=${status}`, {
+			method: "POST",
+			body: JSON.stringify({ data: "test" }),
+		});
+		expect(res.status).toBe(status);
+		expect(await res.json()).toEqual({ method: "POST", status });
+	}
+
+	// POST + non-2xx (previously threw "fetch failed" due to undici bug)
+	for (const status of [400, 401, 403, 404, 500]) {
+		const res = await mf.dispatchFetch(`http://localhost/?status=${status}`, {
+			method: "POST",
+			body: JSON.stringify({ data: "test" }),
+		});
+		expect(res.status).toBe(status);
+		expect(await res.json()).toEqual({ method: "POST", status });
+	}
+
+	// PUT + non-2xx (also affected by the same bug)
+	for (const status of [400, 401, 403, 404, 500]) {
+		const res = await mf.dispatchFetch(`http://localhost/?status=${status}`, {
+			method: "PUT",
+			body: JSON.stringify({ data: "test" }),
+		});
+		expect(res.status).toBe(status);
+		expect(await res.json()).toEqual({ method: "PUT", status });
+	}
 });

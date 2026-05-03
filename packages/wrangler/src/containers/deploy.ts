@@ -11,8 +11,13 @@ import {
 	startSection,
 	success,
 	updateStatus,
-} from "@cloudflare/cli";
-import { bold, brandColor, dim, green } from "@cloudflare/cli/colors";
+} from "@cloudflare/cli-shared-helpers";
+import {
+	bold,
+	brandColor,
+	dim,
+	green,
+} from "@cloudflare/cli-shared-helpers/colors";
 import {
 	ApiError,
 	ApplicationsService,
@@ -33,7 +38,7 @@ import {
 } from "../cloudchamber/common";
 import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
 import { buildContainer } from "../containers/build";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
 	sortObjectRecursive,
@@ -117,7 +122,11 @@ export async function deployContainers(
 			);
 			if (!targetDurableObject) {
 				throw new UserError(
-					"Could not deploy container application as durable object was not found in list of bindings"
+					"Could not deploy container application as durable object was not found in list of bindings",
+					{
+						telemetryMessage:
+							"containers deploy durable object binding missing",
+					}
 				);
 			}
 			assert(
@@ -315,6 +324,36 @@ function containerConfigToCreateRequest(
 	};
 }
 
+function formatContainerSnippetForDisplay<
+	T extends {
+		configuration?: ModifyApplicationRequestBody["configuration"];
+	},
+>(container: T, configPath: Config["configPath"]) {
+	// Normalize field names from the API into the Wrangler specific format
+	// Example: `container.configuration.wrangler_ssh` (API) => `container.configuration.ssh` (Wrangler)
+	const configurationForDisplay =
+		container.configuration === undefined
+			? undefined
+			: Object.fromEntries(
+					Object.entries(container.configuration).map(([key, value]) => [
+						key === "wrangler_ssh" ? "ssh" : key,
+						value,
+					])
+				);
+
+	return formatConfigSnippet(
+		{
+			containers: [
+				{
+					...container,
+					configuration: configurationForDisplay,
+				} as unknown as ContainerApp,
+			],
+		},
+		configPath
+	);
+}
+
 export async function apply(
 	args: {
 		imageRef: ImageRef;
@@ -347,11 +386,11 @@ export async function apply(
 	// however deployments that fail after push may result in no previous app but the image still existing
 	const imageRef =
 		"remoteDigest" in args.imageRef
-			? prevApp?.configuration.image ?? args.imageRef.remoteDigest
+			? (prevApp?.configuration.image ?? args.imageRef.remoteDigest)
 			: args.imageRef.newTag;
 	log(dim("Container application changes\n"));
 
-	const accountId = config.account_id || (await getAccountId(config));
+	const accountId = await getOrSelectAccountId(config);
 
 	// let's always convert normalised container config -> CreateApplicationRequest
 	// since CreateApplicationRequest is a superset of ModifyApplicationRequestBody
@@ -370,7 +409,10 @@ export async function apply(
 	if (prevApp !== undefined && prevApp !== null) {
 		if (!prevApp.durable_objects?.namespace_id) {
 			throw new FatalError(
-				"The previous deploy of this container application was not associated with a durable object"
+				"The previous deploy of this container application was not associated with a durable object",
+				{
+					telemetryMessage: "containers deploy previous durable object missing",
+				}
 			);
 		}
 		if (
@@ -404,15 +446,13 @@ export async function apply(
 			sortObjectRecursive<ModifyApplicationRequestBody>(modifyReq)
 		);
 
-		const prev = formatConfigSnippet(
-			// note this really is a CreateApplicationRequest, not a ContainerApp
-			// but this function doesn't actually care about the type
-			{ containers: [normalisedPrevApp as ContainerApp] },
+		const prev = formatContainerSnippetForDisplay(
+			normalisedPrevApp,
 			config.configPath
 		);
 
-		const now = formatConfigSnippet(
-			{ containers: [nowContainer as ContainerApp] },
+		const now = formatContainerSnippetForDisplay(
+			nowContainer,
 			config.configPath
 		);
 		const diff = new Diff(prev, now);
@@ -453,8 +493,8 @@ export async function apply(
 		// print the header of the app
 		updateStatus(bold.underline(green.underline("NEW")) + ` ${appConfig.name}`);
 
-		const configStr = formatConfigSnippet(
-			{ containers: [appConfig as ContainerApp] },
+		const configStr = formatContainerSnippetForDisplay(
+			appConfig,
 			config.configPath
 		);
 
@@ -544,17 +584,21 @@ const doAction = async (
 
 			if (!(err instanceof ApiError)) {
 				throw new FatalError(
-					`Unexpected error creating application: ${err.message}`
+					`Unexpected error creating application: ${err.message}`,
+					{ telemetryMessage: "containers deploy create unexpected error" }
 				);
 			}
 
 			if (err.status === 400) {
 				throw new UserError(
-					`Error creating application due to a misconfiguration:\n${formatError(err)}`
+					`Error creating application due to a misconfiguration:\n${formatError(err)}`,
+					{ telemetryMessage: "containers deploy create misconfiguration" }
 				);
 			}
 
-			throw new UserError(`Error creating application:\n${formatError(err)}`);
+			throw new UserError(`Error creating application:\n${formatError(err)}`, {
+				telemetryMessage: "containers deploy create request failed",
+			});
 		}
 
 		success(
@@ -578,18 +622,21 @@ const doAction = async (
 
 			if (!(err instanceof ApiError)) {
 				throw new UserError(
-					`Unexpected error modifying application "${action.name}": ${err.message}`
+					`Unexpected error modifying application "${action.name}": ${err.message}`,
+					{ telemetryMessage: "containers deploy modify unexpected error" }
 				);
 			}
 
 			if (err.status === 400) {
 				throw new UserError(
-					`Error modifying application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`
+					`Error modifying application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`,
+					{ telemetryMessage: "containers deploy modify misconfiguration" }
 				);
 			}
 
 			throw new UserError(
-				`Error modifying application "${action.name}":\n${formatError(err)}`
+				`Error modifying application "${action.name}":\n${formatError(err)}`,
+				{ telemetryMessage: "containers deploy modify request failed" }
 			);
 		}
 
@@ -613,18 +660,21 @@ const doAction = async (
 
 			if (!(err instanceof ApiError)) {
 				throw new UserError(
-					`Unexpected error rolling out application "${action.name}":\n${err.message}`
+					`Unexpected error rolling out application "${action.name}":\n${err.message}`,
+					{ telemetryMessage: "containers deploy rollout unexpected error" }
 				);
 			}
 
 			if (err.status === 400) {
 				throw new UserError(
-					`Error rolling out application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`
+					`Error rolling out application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`,
+					{ telemetryMessage: "containers deploy rollout misconfiguration" }
 				);
 			}
 
 			throw new UserError(
-				`Error rolling out application "${action.name}":\n${formatError(err)}`
+				`Error rolling out application "${action.name}":\n${formatError(err)}`,
+				{ telemetryMessage: "containers deploy rollout request failed" }
 			);
 		}
 

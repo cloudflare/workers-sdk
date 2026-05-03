@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, test, vi } from "vitest";
 import { StudioSQLiteDriver } from "../../drivers/sqlite";
 import type {
 	IStudioConnection,
@@ -35,7 +35,7 @@ function createMockConnection(
 
 describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 	describe("escapeValue", () => {
-		test("delegates to `escapeSqlValue` utility", () => {
+		test("delegates to `escapeSqlValue` utility", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -47,7 +47,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 	});
 
 	describe("query", () => {
-		test("delegates to connection query", async () => {
+		test("delegates to connection query", async ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -57,7 +57,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 	});
 
 	describe("transaction", () => {
-		test("delegates to connection transaction", async () => {
+		test("delegates to connection transaction", async ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -67,7 +67,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 	});
 
 	describe("batch", () => {
-		test("delegates to connection batch when available", async () => {
+		test("delegates to connection batch when available", async ({ expect }) => {
 			const batchFn = vi.fn().mockResolvedValue([EMPTY_RESULT]);
 			const conn = createMockConnection({ batch: batchFn });
 			const driver = new StudioSQLiteDriver(conn);
@@ -76,7 +76,9 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			expect(batchFn).toHaveBeenCalledWith(["SELECT 1", "SELECT 2"]);
 		});
 
-		test("falls back to individual queries when batch is not supported", async () => {
+		test("falls back to individual queries when batch is not supported", async ({
+			expect,
+		}) => {
 			const queryFn = vi.fn().mockResolvedValue(EMPTY_RESULT);
 			const conn = createMockConnection({ query: queryFn });
 
@@ -92,7 +94,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 	});
 
 	describe("dropTable", () => {
-		test("generates `DROP TABLE` SQL", async () => {
+		test("generates `DROP TABLE` SQL", async ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -102,7 +104,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 	});
 
 	describe("findFirst", () => {
-		test("generates `SELECT` with `WHERE` clause", async () => {
+		test("generates `SELECT` with `WHERE` clause", async ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -112,7 +114,9 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			);
 		});
 
-		test("generates `SELECT` without `WHERE` when key is empty", async () => {
+		test("generates `SELECT` without `WHERE` when key is empty", async ({
+			expect,
+		}) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -124,7 +128,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 	});
 
 	describe("createMutationStatements", () => {
-		test("generates `INSERT` statement", () => {
+		test("generates `INSERT` statement", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -149,7 +153,9 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			expect(result[0]).toContain("RETURNING rowid, *");
 		});
 
-		test("generates `INSERT` without `RETURNING` when not supported", () => {
+		test("generates `INSERT` without `RETURNING` when not supported", ({
+			expect,
+		}) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 			driver.isSupportReturningValue = false;
@@ -170,7 +176,9 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			expect(result[0]).not.toContain("RETURNING");
 		});
 
-		test("generates `INSERT` without rowid when not supported", () => {
+		test("generates `INSERT` without rowid when not supported", ({
+			expect,
+		}) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 			driver.isSupportRowid = false;
@@ -194,7 +202,9 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			expect(result[0]).not.toContain("rowid");
 		});
 
-		test("generates `INSERT` without rowid for `WITHOUT ROWID` tables", () => {
+		test("generates `INSERT` without rowid for `WITHOUT ROWID` tables", ({
+			expect,
+		}) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -224,7 +234,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			expect(result[0]).not.toContain("rowid,");
 		});
 
-		test("generates `UPDATE` statement", () => {
+		test("generates `UPDATE` statement", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -250,7 +260,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			expect(result[0]).toContain("RETURNING rowid, *");
 		});
 
-		test("generates `DELETE` statement", () => {
+		test("generates `DELETE` statement", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -273,7 +283,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			expect(result[0]).toContain('WHERE "id" = 1');
 		});
 
-		test("generates `WHERE IS NULL` for null values", () => {
+		test("generates `WHERE IS NULL` for null values", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -293,7 +303,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			expect(result[0]).toContain('"id" IS NULL');
 		});
 
-		test("handles multiple mutations", () => {
+		test("handles multiple mutations", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -354,7 +364,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			schemaName: "main",
 		} satisfies StudioTableSchema;
 
-		test("throws when table has no primary key", () => {
+		test("throws when table has no primary key", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -375,7 +385,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			).toThrow("no primary key");
 		});
 
-		test("throws when deleting with `NULL` in primary key", () => {
+		test("throws when deleting with `NULL` in primary key", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -396,7 +406,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			).toThrow("Cannot delete a row with NULL in primary key");
 		});
 
-		test("throws when updating with `NULL` in primary key", () => {
+		test("throws when updating with `NULL` in primary key", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -420,7 +430,9 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			).toThrow("Cannot update a row with NULL in primary key");
 		});
 
-		test("throws when update would cause `NULL` in primary key", () => {
+		test("throws when update would cause `NULL` in primary key", ({
+			expect,
+		}) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -444,7 +456,9 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			).toThrow("Cannot update a row causing NULL in primary key");
 		});
 
-		test("throws when inserting `NULL` into auto-increment PK", () => {
+		test("throws when inserting `NULL` into auto-increment PK", ({
+			expect,
+		}) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -468,7 +482,9 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			);
 		});
 
-		test("throws when inserting `NULL` into non-auto-increment PK", () => {
+		test("throws when inserting `NULL` into non-auto-increment PK", ({
+			expect,
+		}) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 
@@ -490,7 +506,7 @@ describe("StudioDriverCommon (via StudioSQLiteDriver)", () => {
 			).toThrow("Cannot insert a row with NULL in primary key");
 		});
 
-		test("does not validate when no schema is provided", () => {
+		test("does not validate when no schema is provided", ({ expect }) => {
 			const conn = createMockConnection();
 			const driver = new StudioSQLiteDriver(conn);
 

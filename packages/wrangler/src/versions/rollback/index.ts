@@ -1,5 +1,5 @@
-import * as cli from "@cloudflare/cli";
-import { spinnerWhile } from "@cloudflare/cli/interactive";
+import * as cli from "@cloudflare/cli-shared-helpers";
+import { spinnerWhile } from "@cloudflare/cli-shared-helpers/interactive";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { confirm, prompt } from "../../dialogs";
@@ -50,7 +50,7 @@ export const versionsRollbackCommand = createCommand({
 		if (workerName === undefined) {
 			throw new UserError(
 				'You need to provide a name for your Worker. Either pass it as a cli arg with `--name <name>` or in your configuration file as `name = "<name>"`',
-				{ telemetryMessage: true }
+				{ telemetryMessage: "versions rollback missing worker name" }
 			);
 		}
 

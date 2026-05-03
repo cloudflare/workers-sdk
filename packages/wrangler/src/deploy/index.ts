@@ -3,7 +3,7 @@ import { statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	configFileName,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	getCIOverrideName,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -258,6 +258,12 @@ export const deployCommand = createCommand({
 			type: "boolean",
 			default: true,
 		},
+		"secrets-file": {
+			describe:
+				"Path to a file containing secrets to upload with the deployment (JSON or .env format). Secrets from previous deployments will not be deleted - see `--keep-secrets`",
+			type: "string",
+			requiresArg: true,
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -273,18 +279,19 @@ export const deployCommand = createCommand({
 		if (args.nodeCompat) {
 			throw new UserError(
 				"The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "deploy command node compat unsupported" }
 			);
 		}
 	},
 	async handler(args, { config }) {
 		const shouldRunAutoConfig =
 			args.experimentalAutoconfig &&
-			// If there is a positional parameter or an assets directory specified via --assets then
-			// we don't want to run autoconfig since we assume that the user knows what they are doing
-			// and that they are specifying what needs to be deployed
+			// If there is a positional parameter, an assets directory specified via --assets, or an
+			// explicit --config path then we don't want to run autoconfig since we assume that the
+			// user knows what they are doing and that they are specifying what needs to be deployed
 			!args.script &&
-			!args.assets;
+			!args.assets &&
+			!args.config;
 
 		if (
 			config.pages_build_output_dir &&
@@ -294,7 +301,7 @@ export const deployCommand = createCommand({
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
 					"For Pages, please run `wrangler pages deploy` instead.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "deploy command pages project mismatch" }
 			);
 		}
 
@@ -374,6 +381,8 @@ export const deployCommand = createCommand({
 			// https://github.com/cloudflare/workers-sdk/pull/11694 and https://github.com/cloudflare/workers-sdk/pull/11710)
 			// but as a precaution we're gating the feature under the autoconfig flag for the time being
 			args.experimentalAutoconfig &&
+			// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate to open-next
+			!args.config &&
 			!args.dryRun &&
 			(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
 
@@ -407,11 +416,16 @@ export const deployCommand = createCommand({
 		const entry = await getEntry(args, config, "deploy");
 		validateAssetsArgsAndConfig(args, config);
 
-		const assetsOptions = getAssetsOptions(args, config);
+		const assetsOptions = getAssetsOptions({
+			args,
+			config,
+		});
 
 		if (args.latest) {
 			logger.warn(
-				`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(config.configPath)} file.`
+				`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(
+					config.configPath
+				)} file.`
 			);
 		}
 
@@ -444,7 +458,7 @@ export const deployCommand = createCommand({
 		if (!name) {
 			throw new UserError(
 				'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-				{ telemetryMessage: true }
+				{ telemetryMessage: "deploy command missing worker name" }
 			);
 		}
 
@@ -471,7 +485,7 @@ export const deployCommand = createCommand({
 			entry,
 			env: args.env,
 			compatibilityDate: args.latest
-				? formatCompatibilityDate(new Date())
+				? getTodaysCompatDate()
 				: args.compatibilityDate,
 			compatibilityFlags: args.compatibilityFlags,
 			vars: cliVars,
@@ -504,6 +518,7 @@ export const deployCommand = createCommand({
 			strict: args.strict,
 			tag: args.tag,
 			message: args.message,
+			secretsFile: args.secretsFile,
 		});
 
 		writeOutput({
@@ -579,7 +594,7 @@ export async function handleMaybeAssetsDeployment(
 
 	// Set compatibility date if not provided
 	if (!args.compatibilityDate) {
-		const compatibilityDate = formatCompatibilityDate(new Date());
+		const compatibilityDate = getTodaysCompatDate();
 		args.compatibilityDate = compatibilityDate;
 		logger.log(
 			`${chalk.bold("No compatibility date found")} Defaulting to today:`,
@@ -590,7 +605,9 @@ export async function handleMaybeAssetsDeployment(
 
 	// Ask if user wants to write config file
 	const writeConfig = await confirm(
-		`Do you want Wrangler to write a wrangler.json config file to store this configuration?\n${chalk.dim("This will allow you to simply run `wrangler deploy` on future deployments.")}`
+		`Do you want Wrangler to write a wrangler.json config file to store this configuration?\n${chalk.dim(
+			"This will allow you to simply run `wrangler deploy` on future deployments."
+		)}`
 	);
 
 	if (writeConfig) {
@@ -607,7 +624,9 @@ export async function handleMaybeAssetsDeployment(
 		writeFileSync(configPath, jsonString);
 		logger.log(`Wrote \n${jsonString}\n to ${chalk.bold(configPath)}.`);
 		logger.log(
-			`Please run ${chalk.bold("`wrangler deploy`")} instead of ${chalk.bold(`\`wrangler deploy ${args.assets}\``)} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
+			`Please run ${chalk.bold("`wrangler deploy`")} instead of ${chalk.bold(
+				`\`wrangler deploy ${args.assets}\``
+			)} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
 		);
 	} else {
 		logger.log(

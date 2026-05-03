@@ -30,7 +30,7 @@ export class Container extends DurableObject<Env> {
 			case "/start":
 				this.container.start({
 					entrypoint: ["node", "app.js"],
-					env: { A: "B", C: "D", L: "F" },
+					env: { A: "B", C: "D", L: "F", MESSAGE: "from vite" },
 					enableInternet: false,
 				});
 				// this doesn't instantly start, so we will need to poll /fetch

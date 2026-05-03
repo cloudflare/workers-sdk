@@ -7,6 +7,7 @@ import chalk from "chalk";
 import { fetchResult } from "./cfetch";
 import { confirm, prompt } from "./dialogs";
 import { logger } from "./logger";
+import type { ApiCredentials } from "./user/user";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
@@ -15,13 +16,19 @@ import type { ComplianceConfig } from "@cloudflare/workers-utils";
 export async function getWorkersDevSubdomain(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	configPath: string | undefined
+	configPath: string | undefined,
+	apiToken?: ApiCredentials,
+	abortSignal?: AbortSignal
 ): Promise<string> {
 	try {
 		// note: API docs say that this field is "name", but they're lying.
 		const { subdomain } = await fetchResult<{ subdomain: string }>(
 			complianceConfig,
-			`/accounts/${accountId}/workers/subdomain`
+			`/accounts/${accountId}/workers/subdomain`,
+			undefined,
+			undefined,
+			abortSignal,
+			apiToken
 		);
 		return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
 	} catch (e) {
@@ -42,7 +49,9 @@ export async function getWorkersDevSubdomain(
 				const solutionMessage = `You can either deploy your worker to one or more routes by specifying them in your ${configFileName(configPath)} file, or register a workers.dev subdomain here:`;
 				const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
-				throw new UserError(`${solutionMessage}\n${onboardingLink}`);
+				throw new UserError(`${solutionMessage}\n${onboardingLink}`, {
+					telemetryMessage: "routes workers dev registration declined",
+				});
 			}
 
 			return await registerSubdomain(complianceConfig, accountId, configPath);
@@ -111,7 +120,9 @@ async function registerSubdomain(
 			const solutionMessage = `You can either deploy your worker to one or more routes by specifying them in your ${configFileName(configPath)} file, or register a workers.dev subdomain here:`;
 			const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
-			throw new UserError(`${solutionMessage}\n${onboardingLink}`);
+			throw new UserError(`${solutionMessage}\n${onboardingLink}`, {
+				telemetryMessage: "routes workers dev registration declined",
+			});
 		}
 
 		try {

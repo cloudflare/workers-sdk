@@ -3,6 +3,11 @@ import { fetchResult } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
+import {
+	fetchLocalResult,
+	getLocalInstanceIdFromArgs,
+	localWorkflowArgs,
+} from "../../local";
 import { getInstanceIdFromArgs } from "../../utils";
 
 export const workflowsInstancesSendEventCommand = createCommand({
@@ -11,9 +16,9 @@ export const workflowsInstancesSendEventCommand = createCommand({
 		owner: "Product: Workflows",
 		status: "stable",
 	},
-
 	positionalArgs: ["name", "id"],
 	args: {
+		...localWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -40,30 +45,45 @@ export const workflowsInstancesSendEventCommand = createCommand({
 	},
 
 	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-
-		const id = await getInstanceIdFromArgs(accountId, args, config);
-
 		let payload;
 		try {
 			payload = JSON.parse(args.payload);
 		} catch (e) {
 			throw new UserError(
-				`Error while parsing event payload: "${args.payload}" with ${e}' `
+				`Error while parsing event payload: "${args.payload}" with ${e}' `,
+				{ telemetryMessage: "workflows instances send event invalid payload" }
 			);
 		}
 
-		await fetchResult(
-			config,
-			`/accounts/${accountId}/workflows/${args.name}/instances/${id}/events/${args.type}`,
-			{
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: args.payload,
-			}
-		);
+		let id: string;
+
+		if (args.local) {
+			id = await getLocalInstanceIdFromArgs(args.port, args);
+
+			await fetchLocalResult(
+				args.port,
+				`/workflows/${encodeURIComponent(args.name)}/instances/${encodeURIComponent(id)}/events/${encodeURIComponent(args.type)}`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: args.payload,
+				}
+			);
+		} else {
+			const accountId = await requireAuth(config);
+
+			id = await getInstanceIdFromArgs(accountId, args, config);
+
+			await fetchResult(
+				config,
+				`/accounts/${accountId}/workflows/${args.name}/instances/${id}/events/${args.type}`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: args.payload,
+				}
+			);
+		}
 
 		const payloadInfo =
 			Object.keys(payload).length > 0 ? ` and payload "${args.payload}"` : "";

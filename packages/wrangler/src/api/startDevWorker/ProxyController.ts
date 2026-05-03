@@ -403,21 +403,19 @@ export class ProxyController extends Controller {
 	}
 
 	get inspectorEnabled() {
+		// In remote mode, there's no inspector URL available — logs use tail_url instead
+		if (this.latestConfig?.dev.remote) {
+			return false;
+		}
+
 		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
 		// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
 		// inspector endpoint.
 		const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
 
-		const shouldEnableInspector =
-			this.latestConfig?.dev.inspector !== false && !inVscodeJsDebugTerminal;
-
-		if (this.latestConfig?.dev.remote) {
-			// In `wrangler dev --remote`, only enable the inspector if the `--x-tail-logs` flag is disabled
-			return (
-				shouldEnableInspector && !this.latestConfig?.experimental?.tailLogs
-			);
-		}
-		return shouldEnableInspector;
+		return (
+			this.latestConfig?.dev.inspector !== false && !inVscodeJsDebugTerminal
+		);
 	}
 
 	// ******************
@@ -473,6 +471,15 @@ export class ProxyController extends Controller {
 				break;
 			case "debug-log":
 				logger.debug("[ProxyWorker]", ...message.args);
+
+				break;
+			case "sseResponseDetected":
+				// Only warn about SSE if a quick tunnel is active
+				if (this.latestConfig?.dev?.tunnel) {
+					logger.once.warn(
+						"Quick tunnels do not support Server-Sent Events (SSE). Use a named Cloudflare Tunnel if you need SSE over a public URL."
+					);
+				}
 
 				break;
 			default:

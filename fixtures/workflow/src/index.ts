@@ -142,6 +142,18 @@ export default class extends WorkerEntrypoint<Env> {
 				type: "event-1",
 				payload: await req.json(),
 			});
+		} else if (url.pathname === "/pause") {
+			handle = await this.env.WORKFLOW2.get(id);
+			await handle.pause();
+		} else if (url.pathname === "/resume") {
+			handle = await this.env.WORKFLOW2.get(id);
+			await handle.resume();
+		} else if (url.pathname === "/restart") {
+			handle = await this.env.WORKFLOW2.get(id);
+			await handle.restart();
+		} else if (url.pathname === "/terminate") {
+			handle = await this.env.WORKFLOW2.get(id);
+			await handle.terminate();
 		} else if (url.pathname === "/get2") {
 			handle = await this.env.WORKFLOW2.get(id);
 		} else if (url.pathname === "/get3") {

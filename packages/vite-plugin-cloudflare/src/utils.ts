@@ -10,6 +10,7 @@ import semverGte from "semver/functions/gte";
 import { version as viteVersion } from "vite";
 import * as vite from "vite";
 import { PROXY_SHARED_SECRET } from "./constants";
+import { warnIfQuickTunnelSseResponse } from "./plugins/tunnel";
 import type { PluginContext } from "./context";
 import type * as http from "node:http";
 
@@ -90,6 +91,8 @@ export function createRequestHandler(
 				response.headers.delete("transfer-encoding");
 			}
 
+			warnIfQuickTunnelSseResponse(response.headers.get("content-type"));
+
 			await sendResponse(res, response as unknown as Response);
 		} catch (error) {
 			if (request?.signal.aborted) {
@@ -102,7 +105,7 @@ export function createRequestHandler(
 	};
 }
 
-export function satisfiesViteVersion(minVersion: string): boolean {
+export function satisfiesMinimumViteVersion(minVersion: string): boolean {
 	return semverGte(viteVersion, minVersion);
 }
 

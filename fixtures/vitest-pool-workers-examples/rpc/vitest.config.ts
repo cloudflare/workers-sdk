@@ -1,23 +1,24 @@
-import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineProject, mergeConfig } from "vitest/config";
+import configShared from "../../../vitest.shared";
 
-export default defineWorkersProject({
-	esbuild: {
-		// Required for `using` support
-		target: "ES2022",
-	},
-	test: {
-		poolOptions: {
-			workers: {
-				singleWorker: true,
+export default mergeConfig(
+	configShared,
+	defineProject({
+		plugins: [
+			cloudflareTest({
 				miniflare: {
-					// Required to use `SELF.scheduled()`. This is an experimental
+					// Required to use `exports.default.scheduled()`. This is an experimental
 					// compatibility flag, and cannot be enabled in production.
-					compatibilityFlags: ["service_binding_extra_handlers"],
+					compatibilityFlags: [
+						"service_binding_extra_handlers",
+						"nodejs_compat",
+					],
 				},
 				wrangler: {
 					configPath: "./wrangler.jsonc",
 				},
-			},
-		},
-	},
-});
+			}),
+		],
+	})
+);

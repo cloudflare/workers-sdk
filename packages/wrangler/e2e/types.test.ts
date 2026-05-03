@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { dedent } from "../src/utils/dedent";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 
@@ -31,7 +31,7 @@ const seed = {
 };
 
 describe("types", () => {
-	it("should generate runtime types without a flag", async () => {
+	it("should generate runtime types without a flag", async ({ expect }) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seed);
 		const output = await helper.run(`wrangler types`);
@@ -44,7 +44,9 @@ describe("types", () => {
 		expect(output.stdout).toContain("📖 Read about runtime types");
 	});
 
-	it("should generate runtime types and env types in one file at the default path", async () => {
+	it("should generate runtime types and env types in one file at the default path", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seed);
 		const output = await helper.run(`wrangler types`);
@@ -63,7 +65,7 @@ describe("types", () => {
 		expect(file).contains("interface Env");
 	});
 
-	it("should be able to generate an Env type only", async () => {
+	it("should be able to generate an Env type only", async ({ expect }) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seed);
 		const output = await helper.run(`wrangler types --include-runtime=false`);
@@ -88,7 +90,9 @@ describe("types", () => {
 		`);
 	});
 
-	it("should include header with version information in the generated types", async () => {
+	it("should include header with version information in the generated types", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seed);
 		await helper.run(`wrangler types "./types.d.ts" `);
@@ -106,7 +110,9 @@ describe("types", () => {
 		);
 	});
 
-	it("should include header with wrangler command that generated it", async () => {
+	it("should include header with wrangler command that generated it", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			...seed,
@@ -133,7 +139,9 @@ describe("types", () => {
 		);
 	});
 
-	it("should not regenerate runtime types if the header matches, but should regenerate env types", async () => {
+	it("should not regenerate runtime types if the header matches, but should regenerate env types", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seed);
 		await helper.run(`wrangler types`);
@@ -164,7 +172,7 @@ describe("types", () => {
 		expect(file2).toContain("FAKE RUNTIME");
 	});
 
-	it("should read .env files for secret env vars", async () => {
+	it("should read .env files for secret env vars", async ({ expect }) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seed);
 		await helper.seed({
@@ -203,7 +211,7 @@ describe("types", () => {
 			await helper.seed(seed);
 		});
 
-		it("should not error when types are up to date", async () => {
+		it("should not error when types are up to date", async ({ expect }) => {
 			await helper.run(`wrangler types`);
 			const output = await helper.run(`wrangler types --check`);
 			expect(output.stderr).toBeFalsy();
@@ -211,7 +219,7 @@ describe("types", () => {
 			expect(output.status).toBe(0);
 		});
 
-		it("should error when env types are out of date", async () => {
+		it("should error when env types are out of date", async ({ expect }) => {
 			await helper.run(`wrangler types`);
 
 			await helper.seed({
@@ -232,7 +240,9 @@ describe("types", () => {
 			expect(output.status).toBe(1);
 		});
 
-		it("should error when runtime types are out of date", async () => {
+		it("should error when runtime types are out of date", async ({
+			expect,
+		}) => {
 			await helper.run(`wrangler types`);
 
 			await helper.seed({
@@ -253,7 +263,7 @@ describe("types", () => {
 			expect(output.status).toBe(1);
 		});
 
-		it("should work with custom output path", async () => {
+		it("should work with custom output path", async ({ expect }) => {
 			await helper.run(`wrangler types ./custom.d.ts`);
 
 			const output = await helper.run(`wrangler types ./custom.d.ts --check`);
@@ -263,7 +273,9 @@ describe("types", () => {
 			expect(output.status).toBe(0);
 		});
 
-		it("should not error on `--check` if types generated with `--include-env=false`", async () => {
+		it("should not error on `--check` if types generated with `--include-env=false`", async ({
+			expect,
+		}) => {
 			await helper.run(`wrangler types --include-env=false`);
 
 			const output = await helper.run(`wrangler types --check`);
@@ -272,7 +284,9 @@ describe("types", () => {
 			expect(output.status).toBe(0);
 		});
 
-		it("should not error on `--check` if types generated with `--include-runtime=false`", async () => {
+		it("should not error on `--check` if types generated with `--include-runtime=false`", async ({
+			expect,
+		}) => {
 			await helper.run(`wrangler types --include-runtime=false`);
 
 			const output = await helper.run(`wrangler types --check`);
@@ -281,13 +295,15 @@ describe("types", () => {
 			expect(output.status).toBe(0);
 		});
 
-		it("should error if types file does not exist", async () => {
+		it("should error if types file does not exist", async ({ expect }) => {
 			const output = await helper.run(`wrangler types --check`);
 			expect(output.stderr).toContain("not found");
 			expect(output.status).toBe(1);
 		});
 
-		it("should error if types file was not generated by wrangler", async () => {
+		it("should error if types file was not generated by wrangler", async ({
+			expect,
+		}) => {
 			await writeFile(
 				path.join(helper.tmpPath, "worker-configuration.d.ts"),
 				"// Some other content\ninterface Foo {}"
@@ -296,6 +312,137 @@ describe("types", () => {
 			const output = await helper.run(`wrangler types --check`);
 			expect(output.stderr).toContain("non-Wrangler");
 			expect(output.status).toBe(1);
+		});
+
+		it("should not error on `--check` when types generated with a boolean flag like `--strict-vars`", async ({
+			expect,
+		}) => {
+			// Regression test: yargs parses boolean flags (e.g. --strict-vars) as
+			// actual booleans, not strings. Previously, `unsafeParseBooleanString` would
+			// throw when given a boolean value, causing `--check` to fail.
+			await helper.run(`wrangler types --strict-vars`);
+
+			const output = await helper.run(`wrangler types --check`);
+			expect(output.stderr).toBeFalsy();
+			expect(output.stdout).toContain("up to date");
+			expect(output.status).toBe(0);
+		});
+
+		describe("--env-interface", () => {
+			it("should not error when --check uses same --env-interface as generation", async ({
+				expect,
+			}) => {
+				await helper.run(
+					`wrangler types --include-runtime=false --env-interface MyEnv`
+				);
+				const output = await helper.run(
+					`wrangler types --check --include-runtime=false --env-interface MyEnv`
+				);
+				expect(output.stderr).toBeFalsy();
+				expect(output.stdout).toContain("up to date");
+				expect(output.status).toBe(0);
+			});
+
+			it("should error when --check uses different --env-interface than generation", async ({
+				expect,
+			}) => {
+				await helper.run(
+					`wrangler types --include-runtime=false --env-interface MyEnv`
+				);
+				const output = await helper.run(
+					`wrangler types --check --include-runtime=false --env-interface DifferentEnv`
+				);
+				expect(output.stderr).toContain("out of date");
+				expect(output.status).toBe(1);
+			});
+
+			it("should error when --check uses --env-interface but types were generated with default", async ({
+				expect,
+			}) => {
+				await helper.run(`wrangler types --include-runtime=false`);
+				const output = await helper.run(
+					`wrangler types --check --include-runtime=false --env-interface CustomEnv`
+				);
+				expect(output.stderr).toContain("out of date");
+				expect(output.status).toBe(1);
+			});
+		});
+
+		describe("multiple --config (secondary configs)", () => {
+			beforeEach(async () => {
+				await helper.seed({
+					"primary/index.ts":
+						"export default { async fetch() { return new Response('ok'); } };",
+					"primary/wrangler.jsonc": JSON.stringify({
+						compatibility_date: "2022-01-12",
+						name: "primary-worker",
+						main: "./index.ts",
+						services: [
+							{
+								binding: "SECONDARY_SERVICE",
+								service: "secondary-worker",
+							},
+						],
+					}),
+					"secondary/index.ts":
+						"export default { async fetch() { return new Response('ok'); } };",
+					"secondary/wrangler.jsonc": JSON.stringify({
+						compatibility_date: "2022-01-12",
+						name: "secondary-worker",
+						main: "./index.ts",
+						vars: { WORKER_B_VAR: "worker b var" },
+					}),
+				});
+			});
+
+			it("should not error when --check includes same secondary configs", async ({
+				expect,
+			}) => {
+				await helper.run(
+					`wrangler types --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts`
+				);
+				const output = await helper.run(
+					`wrangler types --check --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts`
+				);
+				expect(output.stderr).toBeFalsy();
+				expect(output.stdout).toContain("up to date");
+				expect(output.status).toBe(0);
+			});
+
+			it("should error when secondary config changes", async ({ expect }) => {
+				await helper.run(
+					`wrangler types --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts`
+				);
+
+				await helper.seed({
+					"secondary/wrangler.jsonc": JSON.stringify({
+						compatibility_date: "2022-01-12",
+						name: "renamed-secondary-worker",
+						main: "./index.ts",
+						vars: { WORKER_B_VAR: "worker b var" },
+					}),
+				});
+
+				const output = await helper.run(
+					`wrangler types --check --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts`
+				);
+				expect(output.stderr).toContain("out of date");
+				expect(output.status).toBe(1);
+			});
+
+			it("should error when --check omits secondary configs that were used during generation", async ({
+				expect,
+			}) => {
+				await helper.run(
+					`wrangler types --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts`
+				);
+
+				const output = await helper.run(
+					`wrangler types --check --include-runtime=false -c primary/wrangler.jsonc --path primary/worker-configuration.d.ts`
+				);
+				expect(output.stderr).toContain("out of date");
+				expect(output.status).toBe(1);
+			});
 		});
 	});
 });

@@ -1,11 +1,13 @@
 import { BinocularsIcon, PencilIcon, TableIcon } from "@phosphor-icons/react";
+import { StudioCreateUpdateTableTab } from "./Tabs/CreateUpdateTable";
+import { StudioQueryTab } from "./Tabs/Query";
 import { StudioTableExplorerTab } from "./Tabs/TableExplorer";
 import type { Icon } from "@phosphor-icons/react";
 import type { ReactElement } from "react";
 
 const QueryTab: TabDefinition<{ id: string; type: "query" }> = {
 	icon: BinocularsIcon,
-	makeComponent: () => <></>,
+	makeComponent: () => <StudioQueryTab />,
 	makeIdentifier: (tab) => `query/${tab.id}`,
 	makeTitle: () => "Query",
 	type: "query",
@@ -31,7 +33,9 @@ const EditTableTab: TabDefinition<{
 	type: "edit-table";
 }> = {
 	icon: PencilIcon,
-	makeComponent: () => <></>,
+	makeComponent: ({ schemaName, tableName }) => (
+		<StudioCreateUpdateTableTab schemaName={schemaName} tableName={tableName} />
+	),
 	makeIdentifier: (tab) => `edit-table/${tab.schemaName}.${tab.tableName}`,
 	makeTitle: ({ tableName }) => tableName,
 	type: "edit-table",
@@ -41,7 +45,7 @@ const NewTableTab: TabDefinition<{
 	type: "create-table";
 }> = {
 	icon: PencilIcon,
-	makeComponent: () => <></>,
+	makeComponent: () => <StudioCreateUpdateTableTab />,
 	makeIdentifier: () => `create-table`,
 	makeTitle: () => "Create table",
 	type: "create-table",

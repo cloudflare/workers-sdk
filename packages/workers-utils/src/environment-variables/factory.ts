@@ -77,6 +77,8 @@ type VariableNames =
 
 	/** Custom directory for Wrangler's cache files (overrides `node_modules/.cache/wrangler`). */
 	| "WRANGLER_CACHE_DIR"
+	/** Custom path to cloudflared binary (overrides automatic binary management). */
+	| "CLOUDFLARED_PATH"
 
 	// ## Advanced Configuration
 
@@ -95,10 +97,19 @@ type VariableNames =
 	/** Direct authorization token for API requests. */
 	| "WRANGLER_CF_AUTHORIZATION_TOKEN"
 
+	// ## Cloudflare Access Service Token (for CI/non-interactive environments)
+
+	/** Cloudflare Access Service Token Client ID. Used to authenticate with Access-protected domains in non-interactive environments (e.g. CI). */
+	| "CLOUDFLARE_ACCESS_CLIENT_ID"
+	/** Cloudflare Access Service Token Client Secret. Used with CLOUDFLARE_ACCESS_CLIENT_ID. */
+	| "CLOUDFLARE_ACCESS_CLIENT_SECRET"
+
 	// ## Experimental Feature Flags
 
 	/** Enable the local explorer UI at /cdn-cgi/explorer (experimental, default: false). */
 	| "X_LOCAL_EXPLORER"
+	/** Open the browser in headful (visible) mode when using the Browser Run API in local dev (default: false). */
+	| "X_BROWSER_HEADFUL"
 
 	// ## CI-specific Variables (Internal Use)
 
@@ -179,7 +190,8 @@ export function getBooleanEnvironmentVariableFactory(options: {
 				throw new UserError(
 					`Expected ${options.variableName} to be "true" or "false", but got ${JSON.stringify(
 						process.env[options.variableName]
-					)}`
+					)}`,
+					{ telemetryMessage: false }
 				);
 		}
 	};
@@ -236,8 +248,7 @@ export function getEnvironmentVariableFactory<
 		if (deprecatedName && deprecatedName in process.env) {
 			if (!hasWarned) {
 				hasWarned = true;
-				// Ideally we'd use `logger.warn` here, but that creates a circular dependency that Vitest is unable to resolve
-				// eslint-disable-next-line no-console
+				// eslint-disable-next-line no-console -- ideally we'd use `logger.warn` here, but that creates a circular dependency that Vitest is unable to resolve
 				console.warn(
 					`Using "${deprecatedName}" environment variable. This is deprecated. Please use "${variableName}", instead.`
 				);
@@ -269,7 +280,8 @@ function assertOneOf<Choices extends readonly string[]>(
 ): asserts value is ElementType<Choices> {
 	if (Array.isArray(choices) && !choices.includes(value)) {
 		throw new UserError(
-			`Expected ${JSON.stringify(value)} to be one of ${JSON.stringify(choices)}`
+			`Expected ${JSON.stringify(value)} to be one of ${JSON.stringify(choices)}`,
+			{ telemetryMessage: false }
 		);
 	}
 }

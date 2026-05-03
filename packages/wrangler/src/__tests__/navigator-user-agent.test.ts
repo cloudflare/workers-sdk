@@ -105,7 +105,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 		expect,
 	}) => {
 		await seedFs({
-			"src/index.js": dedent/* javascript */ `
+			"src/index.js": dedent /* javascript */ `
 			function randomBytes(length) {
 				if (navigator.userAgent !== "Cloudflare-Workers") {
 					return new Uint8Array(require("node:crypto").randomBytes(length));
@@ -159,7 +159,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 		expect,
 	}) => {
 		await seedFs({
-			"src/index.js": dedent/* javascript */ `
+			"src/index.js": dedent /* javascript */ `
 			function randomBytes(length) {
 				if (navigator.userAgent !== "Cloudflare-Workers") {
 					return new Uint8Array(require("node:crypto").randomBytes(length));
@@ -205,7 +205,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 		expect,
 	}) => {
 		await seedFs({
-			"src/index.js": dedent/* javascript */ `
+			"src/index.js": dedent /* javascript */ `
 			function randomBytes(length) {
 				if (navigator.userAgent !== "Cloudflare-Workers") {
 					return new Uint8Array(require("node:crypto").randomBytes(length));

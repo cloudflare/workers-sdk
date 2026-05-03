@@ -1,21 +1,32 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, it, test } from "vitest";
+import { createMockPostgresServer } from "../../shared/src/mock-postgres-server";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("nodejs compat", () => {
 	let wrangler: Awaited<ReturnType<typeof runWranglerDev>>;
+	let mockPg: Awaited<ReturnType<typeof createMockPostgresServer>>;
 
 	beforeAll(async () => {
+		// Start a local mock Postgres server that returns canned results
+		mockPg = await createMockPostgresServer({
+			rows: [{ id: "1", name: "test-row" }],
+		});
+
 		wrangler = await runWranglerDev(resolve(__dirname, "../src"), [
 			"--port=0",
 			"--inspector-port=0",
+			`--var`,
+			`DB_PORT:${mockPg.port}`,
 		]);
 	});
 
 	afterAll(async () => {
 		await wrangler.stop();
+		await mockPg.stop();
 	});
+
 	it("should work when running code requiring polyfills", async ({
 		expect,
 	}) => {
@@ -23,14 +34,6 @@ describe("nodejs compat", () => {
 		const response = await fetch(`http://${ip}:${port}/test-process`);
 		const body = await response.text();
 		expect(body).toMatchInlineSnapshot(`"OK!"`);
-
-		// Disabling actually querying the database since we are getting this error:
-		// > too many connections for role 'reader'
-		// const response = await fetch(`http://${ip}:${port}/query`);
-		// const body = await response.text();
-		// console.log(body);
-		// const result = JSON.parse(body) as { id: string };
-		// expect(result.id).toEqual("1");
 	});
 
 	it("should be able to call `getRandomValues()` bound to any object", async ({
@@ -113,7 +116,7 @@ describe("nodejs compat", () => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/process-env`);
 		await expect(response.json()).resolves.toMatchObject({
-			DB_HOSTNAME: "hh-pgsql-public.ebi.ac.uk",
+			DB_HOSTNAME: "127.0.0.1",
 			DEV_VAR_FROM_DOT_ENV: "dev-var-from-dot-env",
 		});
 	});
@@ -122,7 +125,7 @@ describe("nodejs compat", () => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/env`);
 		await expect(response.json()).resolves.toMatchObject({
-			DB_HOSTNAME: "hh-pgsql-public.ebi.ac.uk",
+			DB_HOSTNAME: "127.0.0.1",
 			DEV_VAR_FROM_DOT_ENV: "dev-var-from-dot-env",
 		});
 	});
@@ -131,5 +134,7 @@ describe("nodejs compat", () => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/query`);
 		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body).toMatchObject({ id: "1" });
 	});
 });

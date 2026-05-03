@@ -1,7 +1,6 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
 	"compilerOptions": {
-		"esModuleInterop": false,
 		"skipLibCheck": true,
 		"target": "ES2022",
 		"resolveJsonModule": true,

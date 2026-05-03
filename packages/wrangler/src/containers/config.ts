@@ -7,7 +7,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { isDockerfile, UserError } from "@cloudflare/workers-utils";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import type {
 	ApplicationAffinities,
 	ApplicationAffinityColocation,
@@ -115,6 +115,7 @@ export const getNormalizedContainerOptions = async (
 				regions: container.constraints?.regions?.map((region) =>
 					region.toUpperCase()
 				),
+				jurisdiction: container.constraints?.jurisdiction?.toLowerCase(),
 				cities: container.constraints?.cities?.map((city) =>
 					city.toLowerCase()
 				),
@@ -123,7 +124,8 @@ export const getNormalizedContainerOptions = async (
 			rollout_step_percentage:
 				args?.containersRollout === "immediate"
 					? 100
-					: container.rollout_step_percentage ?? rolloutStepPercentageFallback,
+					: (container.rollout_step_percentage ??
+						rolloutStepPercentageFallback),
 			rollout_kind: container.rollout_kind ?? "full_auto",
 			rollout_active_grace_period: container.rollout_active_grace_period ?? 0,
 			observability: {
@@ -194,7 +196,10 @@ export const getNormalizedContainerOptions = async (
 				...instanceTypeOrLimits,
 				image_uri: args.dryRun
 					? container.image
-					: resolveImageName(await getAccountId(config), container.image), // if it is not a dockerfile, it must be an image uri or have thrown an error
+					: resolveImageName(
+							await getOrSelectAccountId(config),
+							container.image
+						), // if it is not a dockerfile, it must be an image uri or have thrown an error
 			});
 		}
 	}

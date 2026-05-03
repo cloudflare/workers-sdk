@@ -1,9 +1,7 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { WORKFLOW_NOT_FOUND_CODE } from "../../deploy/check-workflow-conflicts";
 import { clearOutputFilePath } from "../../output";
@@ -24,6 +22,7 @@ import {
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
 } from "./helpers";
+import type { ExpectStatic } from "vitest";
 
 vi.mock("command-exists");
 vi.mock("../../check/commands", async (importOriginal) => {
@@ -50,7 +49,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("../../autoconfig/c3-vendor/command");
+vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -88,7 +87,10 @@ describe("deploy", () => {
 	});
 
 	describe("workflows", () => {
-		function mockDeployWorkflow(expectedWorkflowName?: string) {
+		function mockDeployWorkflow(
+			expect: ExpectStatic,
+			expectedWorkflowName?: string
+		) {
 			const handler = http.put(
 				"*/accounts/:accountId/workflows/:workflowName",
 				({ params }) => {
@@ -119,7 +121,7 @@ describe("deploy", () => {
 			);
 		});
 
-		it("should deploy a workflow", async () => {
+		it("should deploy a workflow", async ({ expect }) => {
 			writeWranglerConfig({
 				main: "index.js",
 				workflows: [
@@ -139,7 +141,7 @@ describe("deploy", () => {
             `
 			);
 
-			mockDeployWorkflow("my-workflow");
+			mockDeployWorkflow(expect, "my-workflow");
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedBindings: [
@@ -173,7 +175,64 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should not call Workflow's API if the workflow binds to another script", async () => {
+		it("should deploy a workflow with limits", async ({ expect }) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 5000 },
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			const handler = http.put(
+				"*/accounts/:accountId/workflows/:workflowName",
+				async ({ params, request }) => {
+					expect(params.workflowName).toBe("my-workflow");
+					const body = (await request.json()) as Record<string, unknown>;
+					expect(body).toEqual({
+						script_name: "test-name",
+						class_name: "MyWorkflow",
+						limits: { steps: 5000 },
+					});
+					return HttpResponse.json(
+						createFetchResult({ id: "mock-new-workflow-id" })
+					);
+				}
+			);
+			msw.use(handler);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("workflow: my-workflow");
+		});
+
+		it("should not call Workflow's API if the workflow binds to another script", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "index.js",
 				name: "this-script",
@@ -237,6 +296,188 @@ describe("deploy", () => {
 			`);
 		});
 
+		it("should error when deploying a workflow with limits that references an external script", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				name: "this-script",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+						limits: { steps: 5000 },
+					},
+				],
+			});
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedScriptName: "this-script",
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                export default {};
+            `
+			);
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'Workflow "my-workflow" has "limits" configured but references external script "another-script"'
+			);
+		});
+
+		describe("workflow script_name validation with environments", () => {
+			it("should error when script_name matches top-level name but not env-suffixed name and limits are set", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					name: "my-app",
+					env: {
+						staging: {
+							workflows: [
+								{
+									binding: "WORKFLOW",
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									script_name: "my-app",
+									limits: { steps: 5000 },
+								},
+							],
+						},
+					},
+				});
+				await fs.promises.writeFile("index.js", `export default {};`);
+
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedScriptName: "my-app-staging",
+				});
+
+				await expect(runWrangler("deploy --env staging")).rejects.toThrow(
+					'Workflow "my-workflow" has "limits" configured but references external script "my-app"'
+				);
+			});
+
+			it("should allow limits when script_name matches the env-suffixed name", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					name: "my-app",
+					env: {
+						staging: {
+							workflows: [
+								{
+									binding: "WORKFLOW",
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									script_name: "my-app-staging",
+									limits: { steps: 5000 },
+								},
+							],
+						},
+					},
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				const handler = http.put(
+					"*/accounts/:accountId/workflows/:workflowName",
+					async ({ params, request }) => {
+						expect(params.workflowName).toBe("my-workflow");
+						const body = (await request.json()) as Record<string, unknown>;
+						expect(body).toEqual({
+							script_name: "my-app-staging",
+							class_name: "MyWorkflow",
+							limits: { steps: 5000 },
+						});
+						return HttpResponse.json(
+							createFetchResult({ id: "mock-new-workflow-id" })
+						);
+					}
+				);
+				msw.use(handler);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedScriptName: "my-app-staging",
+				});
+
+				await runWrangler("deploy --env staging");
+
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+				expect(std.out).toContain("workflow: my-workflow");
+			});
+
+			it("should deploy external script_name under env without limits", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					name: "my-app",
+					env: {
+						staging: {
+							workflows: [
+								{
+									binding: "WORKFLOW",
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									script_name: "another-script",
+								},
+							],
+						},
+					},
+				});
+				await fs.promises.writeFile("index.js", `export default {};`);
+
+				const handler = http.put(
+					"*/accounts/:accountId/workflows/:workflowName",
+					() => {
+						expect(
+							false,
+							"Workflows API should not be called for external bindings."
+						);
+					}
+				);
+				msw.use(handler);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedScriptName: "my-app-staging",
+					expectedBindings: [
+						{
+							type: "workflow",
+							name: "WORKFLOW",
+							workflow_name: "my-workflow",
+							class_name: "MyWorkflow",
+							script_name: "another-script",
+						},
+					],
+				});
+
+				await runWrangler("deploy --env staging");
+
+				expect(std.out).toContain("Uploaded my-app-staging");
+			});
+		});
+
 		describe("workflow conflict detection", () => {
 			function mockGetWorkflow(
 				workflowsByName: Record<
@@ -280,7 +521,9 @@ describe("deploy", () => {
 				);
 			}
 
-			it("should warn when deploying a workflow that belongs to a different worker", async () => {
+			it("should warn when deploying a workflow that belongs to a different worker", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					workflows: [
@@ -313,7 +556,7 @@ describe("deploy", () => {
 
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
-				mockDeployWorkflow("my-workflow");
+				mockDeployWorkflow(expect, "my-workflow");
 
 				mockConfirm({
 					text: "Do you want to continue?",
@@ -333,7 +576,9 @@ describe("deploy", () => {
 				);
 			});
 
-			it("should abort deploy when user declines the workflow conflict confirmation", async () => {
+			it("should abort deploy when user declines the workflow conflict confirmation", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					workflows: [
@@ -377,7 +622,9 @@ describe("deploy", () => {
 				expect(std.out).not.toContain("Uploaded");
 			});
 
-			it("should not warn when workflow belongs to the same worker", async () => {
+			it("should not warn when workflow belongs to the same worker", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					workflows: [
@@ -410,7 +657,7 @@ describe("deploy", () => {
 
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
-				mockDeployWorkflow("my-workflow");
+				mockDeployWorkflow(expect, "my-workflow");
 
 				await runWrangler("deploy");
 
@@ -420,7 +667,9 @@ describe("deploy", () => {
 				expect(std.out).toContain("Uploaded test-name");
 			});
 
-			it("should not warn when workflow does not exist yet", async () => {
+			it("should not warn when workflow does not exist yet", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					workflows: [
@@ -446,7 +695,7 @@ describe("deploy", () => {
 
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
-				mockDeployWorkflow("my-workflow");
+				mockDeployWorkflow(expect, "my-workflow");
 
 				await runWrangler("deploy");
 
@@ -456,7 +705,9 @@ describe("deploy", () => {
 				expect(std.out).toContain("Uploaded test-name");
 			});
 
-			it("should warn about multiple conflicting workflows", async () => {
+			it("should warn about multiple conflicting workflows", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					workflows: [
@@ -503,7 +754,7 @@ describe("deploy", () => {
 
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
-				mockDeployWorkflow();
+				mockDeployWorkflow(expect);
 
 				mockConfirm({
 					text: "Do you want to continue?",
@@ -520,7 +771,9 @@ describe("deploy", () => {
 				);
 			});
 
-			it("should skip workflow conflict check in non-interactive mode without --strict", async () => {
+			it("should skip workflow conflict check in non-interactive mode without --strict", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 
 				writeWranglerConfig({
@@ -545,7 +798,7 @@ describe("deploy", () => {
 				// Note: we don't mock the workflows API endpoint - if it's called, the test will fail
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
-				mockDeployWorkflow("my-workflow");
+				mockDeployWorkflow(expect, "my-workflow");
 
 				await runWrangler("deploy");
 
@@ -556,7 +809,9 @@ describe("deploy", () => {
 				expect(std.out).toContain("Uploaded test-name");
 			});
 
-			it("should abort deploy in non-interactive strict mode when workflow belongs to different worker", async () => {
+			it("should abort deploy in non-interactive strict mode when workflow belongs to different worker", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 
 				writeWranglerConfig({

@@ -1,5 +1,27 @@
 # @cloudflare/unenv-preset
 
+## 2.16.1
+
+### Patch Changes
+
+- [#13647](https://github.com/cloudflare/workers-sdk/pull/13647) [`0a95061`](https://github.com/cloudflare/workers-sdk/commit/0a95061dbbd3c013a257c8ece99ed3f50e1a9870) Thanks [@vicb](https://github.com/vicb)! - refactor: simplify workerd peer dependency range
+
+## 2.16.0
+
+### Minor Changes
+
+- [#12763](https://github.com/cloudflare/workers-sdk/pull/12763) [`d028ffb`](https://github.com/cloudflare/workers-sdk/commit/d028ffb40c308e4ad7b2a98c6ae0577a2f4e8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Graduate experimental Node.js module flags to date-gated flags
+
+  The following Node.js module compatibility flags are no longer experimental and are now automatically enabled for workers using `nodejs_compat` with a compatibility date of `2026-03-17` or later: `perf_hooks`, `v8`, `tty`, `child_process`, `worker_threads`, `readline`, and `repl`. Each flag can still be explicitly enabled or disabled via the corresponding `enable_`/`disable_` compatibility flags.
+
+## 2.15.0
+
+### Minor Changes
+
+- [#10618](https://github.com/cloudflare/workers-sdk/pull/10618) [`5cc8fcf`](https://github.com/cloudflare/workers-sdk/commit/5cc8fcfdeaf521c33de7df86c011f7059d3d93da) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use the native workerd `node:perf_hooks` module and `Performance` global classes when available
+
+  They are enabled when the `enable_nodejs_perf_hooks_module` compatibility flag is set. This feature is currently experimental and requires the above flag and `experimental` compatibility flag to be set.
+
 ## 2.14.0
 
 ### Minor Changes
@@ -103,7 +125,7 @@
 
   ```jsonc
   {
-  	"compatibility_flags": ["experimental", "enable_nodejs_inspector_module"],
+    "compatibility_flags": ["experimental", "enable_nodejs_inspector_module"]
   }
   ```
 
@@ -123,7 +145,7 @@
 
   ```jsonc
   {
-  	"compatibility_flags": ["experimental", "enable_nodejs_inspector_module"],
+    "compatibility_flags": ["experimental", "enable_nodejs_inspector_module"]
   }
   ```
 

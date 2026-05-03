@@ -1,5 +1,3 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
@@ -9,7 +7,7 @@ import {
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -56,7 +54,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("../../autoconfig/c3-vendor/command");
+vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -94,7 +92,9 @@ describe("deploy", () => {
 	});
 
 	describe("upload rules", () => {
-		it("should be able to define rules for uploading non-js modules (sw)", async () => {
+		it("should be able to define rules for uploading non-js modules (sw)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
 			});
@@ -132,7 +132,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to define rules for uploading non-js modules (esm)", async () => {
+		it("should be able to define rules for uploading non-js modules (esm)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
 			});
@@ -166,7 +168,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to use fallthrough:true for multiple rules", async () => {
+		it("should be able to use fallthrough:true for multiple rules", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				rules: [
 					{ type: "Text", globs: ["**/*.file"], fallthrough: true },
@@ -206,7 +210,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to use fallthrough:false for multiple rules", async () => {
+		it("should be able to use fallthrough:false for multiple rules", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				rules: [
 					{ type: "Text", globs: ["**/*.file"], fallthrough: false },
@@ -233,7 +239,9 @@ describe("deploy", () => {
 			);
 		});
 
-		it("should warn when multiple rules for the same type do not have fallback defined", async () => {
+		it("should warn when multiple rules for the same type do not have fallback defined", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				rules: [
 					{ type: "Text", globs: ["**/*.file"] },
@@ -272,7 +280,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should be able to preserve file names when defining rules for uploading non-js modules (sw)", async () => {
+		it("should be able to preserve file names when defining rules for uploading non-js modules (sw)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
 				preserve_file_names: true,
@@ -310,7 +320,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to preserve file names when defining rules for uploading non-js modules (esm)", async () => {
+		it("should be able to preserve file names when defining rules for uploading non-js modules (esm)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
 				preserve_file_names: true,
@@ -344,12 +356,59 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should strip query string suffixes from module names (esm)", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"./index.js",
+				`import hello from './hello.wasm?module'; export default {};`
+			);
+			fs.writeFileSync("./hello.wasm", "SOME WASM CONTENT");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedType: "esm",
+				expectedBindings: [],
+				expectedModules: {
+					"./94b240d0d692281e6467aa42043986e5c7eea034-hello.wasm":
+						"SOME WASM CONTENT",
+				},
+			});
+			await runWrangler("deploy index.js");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should strip query string suffixes from module names with preserve_file_names (esm)", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				preserve_file_names: true,
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`import hello from './hello.wasm?module'; export default {};`
+			);
+			fs.writeFileSync("./hello.wasm", "SOME WASM CONTENT");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedType: "esm",
+				expectedBindings: [],
+				expectedModules: {
+					"./hello.wasm": "SOME WASM CONTENT",
+				},
+			});
+			await runWrangler("deploy index.js");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
 		describe("inject process.env.NODE_ENV", () => {
 			beforeEach(() => {
 				vi.stubEnv("NODE_ENV", "some-node-env");
 			});
 
-			it("should replace `process.env.NODE_ENV` in scripts", async () => {
+			it("should replace `process.env.NODE_ENV` in scripts", async ({
+				expect,
+			}) => {
 				writeWranglerConfig();
 				fs.writeFileSync(
 					"./index.js",
@@ -381,7 +440,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("service worker format", () => {
-		it("should error if trying to import a cloudflare prefixed external when in service worker format", async () => {
+		it("should error if trying to import a cloudflare prefixed external when in service worker format", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"dep-1.js",
@@ -427,7 +488,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error if importing a node.js library when in service worker format", async () => {
+		it("should error if importing a node.js library when in service worker format", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"index.js",
@@ -458,7 +521,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error if nodejs_compat (v2) is turned on when in service worker format", async () => {
+		it("should error if nodejs_compat (v2) is turned on when in service worker format", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				compatibility_date: "2024-09-23", // Sept 23 to turn on nodejs compat v2 mode
 				compatibility_flags: ["nodejs_compat"],
@@ -491,7 +556,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("legacy module specifiers", () => {
-		it("should work with legacy module specifiers, with a deprecation warning (1)", async () => {
+		it("should work with legacy module specifiers, with a deprecation warning (1)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: false }],
 			});
@@ -527,7 +594,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should work with legacy module specifiers, with a deprecation warning (2)", async () => {
+		it("should work with legacy module specifiers, with a deprecation warning (2)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"./index.js",
@@ -561,7 +630,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should work with legacy module specifiers, with a deprecation warning (3)", async () => {
+		it("should work with legacy module specifiers, with a deprecation warning (3)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: false }],
 			});
@@ -597,7 +668,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should not match regular module specifiers when there aren't any possible legacy module matches", async () => {
+		it("should not match regular module specifiers when there aren't any possible legacy module matches", async ({
+			expect,
+		}) => {
 			// see https://github.com/cloudflare/workers-sdk/issues/655 for bug details
 
 			fs.writeFileSync(
@@ -628,7 +701,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("tsconfig", () => {
-		it("should use compilerOptions.paths to resolve modules", async () => {
+		it("should use compilerOptions.paths to resolve modules", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "index.ts",
 			});
@@ -673,7 +748,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should use compilerOptions.paths to resolve non-js modules with module rules", async () => {
+		it("should use compilerOptions.paths to resolve non-js modules with module rules", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "index.ts",
 				rules: [{ type: "Text", globs: ["**/*.graphql"], fallthrough: true }],
@@ -706,7 +783,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should output to target es2022 even if tsconfig says otherwise", async () => {
+		it("should output to target es2022 even if tsconfig says otherwise", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			fs.writeFileSync(
@@ -762,7 +841,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("--outdir", () => {
-		it("should generate built assets at --outdir if specified", async () => {
+		it("should generate built assets at --outdir if specified", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -789,7 +870,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should copy any module imports related assets to --outdir if specified", async () => {
+		it("should copy any module imports related assets to --outdir if specified", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"./index.js",
@@ -848,9 +931,57 @@ export default{
 				}
 			`);
 		});
+
+		it("should copy source phase wasm imports to --outdir if specified", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"./index.js",
+				`
+import txt from './textfile.txt';
+import source hello from './hello.wasm';
+export default {
+  async fetch() {
+    return new Response(txt + hello);
+  }
+}
+`
+			);
+			fs.writeFileSync("./textfile.txt", "Hello, World!");
+			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
+						"Hello, World!",
+					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
+						"Hello wasm World!",
+				},
+			});
+			await runWrangler("deploy index.js --outdir some-dir");
+
+			expect(fs.existsSync("some-dir/index.js")).toBe(true);
+			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
+			expect(fs.readFileSync("some-dir/index.js", "utf8")).toContain(
+				'import source hello from "./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm";'
+			);
+			expect(
+				fs.existsSync(
+					"some-dir/0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt"
+				)
+			).toBe(true);
+			expect(
+				fs.existsSync(
+					"some-dir/d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm"
+				)
+			).toBe(true);
+		});
 	});
 	describe("--outfile", () => {
-		it("should generate worker bundle at --outfile if specified", async () => {
+		it("should generate worker bundle at --outfile if specified", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -876,7 +1007,9 @@ export default{
 			`);
 		});
 
-		it("should include any module imports related assets in the worker bundle", async () => {
+		it("should include any module imports related assets in the worker bundle", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"./index.js",
@@ -969,7 +1102,57 @@ export default{
 			`);
 		});
 
-		it("should include bindings in the worker bundle", async () => {
+		it("should include source phase wasm imports in the worker bundle", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"./index.js",
+				`
+import txt from './textfile.txt';
+import source hello from './hello.wasm';
+export default {
+  async fetch() {
+    return new Response(txt + hello);
+  }
+}
+`
+			);
+			fs.writeFileSync("./textfile.txt", "Hello, World!");
+			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
+						"Hello, World!",
+					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
+						"Hello wasm World!",
+				},
+			});
+			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
+
+			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
+			expect(
+				fs
+					.readFileSync("some-dir/worker.bundle", "utf8")
+					.replace(
+						/------formdata-undici-0.[0-9]*/g,
+						"------formdata-undici-0.test"
+					)
+					.replace(/wrangler_(.+?)_default/g, "wrangler_default")
+			).toContain(
+				dedent`
+					// index.js
+					import txt from "./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt";
+					import source hello from "./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm";
+				`
+			);
+			expect(fs.readFileSync("some-dir/worker.bundle", "utf8")).toContain(
+				'Content-Disposition: form-data; name="./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm"; filename="./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm"'
+			);
+		});
+
+		it("should include bindings in the worker bundle", async ({ expect }) => {
 			writeWranglerConfig({
 				kv_namespaces: [{ binding: "KV", id: "kv-namespace-id" }],
 			});
@@ -1069,7 +1252,9 @@ export default{
 		});
 	});
 	describe("--metafile", () => {
-		it("should output a metafile when --metafile is set", async () => {
+		it("should output a metafile when --metafile is set", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			await runWrangler("deploy index.js --metafile --dry-run --outdir=dist");
@@ -1082,7 +1267,9 @@ export default{
 			expect(metafile.outputs).toBeDefined();
 		});
 
-		it("should output a metafile when --metafile=./meta.json is set", async () => {
+		it("should output a metafile when --metafile=./meta.json is set", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			await runWrangler("deploy index.js --metafile=./meta.json --dry-run");

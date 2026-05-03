@@ -19,11 +19,23 @@ export default defineConfig([
 				},
 			},
 		},
+		define: {
+			__VITE_PLUGIN_DEFAULT_COMPAT_DATE__: JSON.stringify(
+				new Date().toISOString().slice(0, 10)
+			),
+		},
 		ignoreWatch,
 	},
 	worker("asset-worker"),
 	worker("router-worker"),
-	worker("runner-worker", { noExternal: ["vite/module-runner"] }),
+	worker("runner-worker", {
+		entry: {
+			index: "src/workers/runner-worker/index.ts",
+			"module-runner": "vite/module-runner",
+			"module-runner-legacy": "vite-legacy/module-runner",
+		},
+		external: ["cloudflare:workers", "vite/module-runner"],
+	}),
 	worker("vite-proxy-worker"),
 ]);
 
@@ -32,8 +44,8 @@ export default defineConfig([
  */
 function worker(name: string, options: UserConfig = {}): UserConfig {
 	return {
-		entry: { [name]: `src/workers/${name}/index.ts` },
-		outDir: "dist/workers",
+		entry: { index: `src/workers/${name}/index.ts` },
+		outDir: `dist/workers/${name}`,
 		platform: "neutral",
 		inputOptions: {
 			resolve: {

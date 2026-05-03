@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
-import { afterEach, assert, beforeEach, describe, test } from "vitest";
+import { afterEach, assert, beforeEach, describe, test, vi } from "vitest";
 import { resolvePluginConfig } from "../plugin-config";
 import type {
 	AssetsOnlyResolvedConfig,
@@ -553,9 +553,8 @@ describe("resolvePluginConfig - zero-config mode", () => {
 
 		expect(result.type).toBe("assets-only");
 		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
-		expect(assetsOnlyResult.config.compatibility_date).toMatch(
-			/^\d{4}-\d{2}-\d{2}$/
-		);
+		// The compatibility date is mocked for the tests
+		expect(assetsOnlyResult.config.compatibility_date).toBe("2024-01-01");
 	});
 
 	test("should allow config() to add main in zero-config mode", ({
@@ -585,6 +584,127 @@ describe("resolvePluginConfig - zero-config mode", () => {
 		);
 		assert(entryWorker);
 		expect(entryWorker.config.name).toBe("my-worker");
+	});
+});
+
+describe("resolvePluginConfig - internal config path env fallback", () => {
+	let tempDir: string;
+	let originalConfigPathEnvVar: string | undefined;
+
+	beforeEach(() => {
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
+		originalConfigPathEnvVar = process.env.CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH;
+	});
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
+		if (originalConfigPathEnvVar === undefined) {
+			delete process.env.CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH;
+		} else {
+			process.env.CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH =
+				originalConfigPathEnvVar;
+		}
+		removeDirSync(tempDir);
+	});
+
+	const viteEnv = { mode: "development", command: "serve" as const };
+
+	function createWorkerConfig(dir: string, name: string) {
+		const configPath = path.join(dir, "wrangler.jsonc");
+		fs.mkdirSync(path.join(dir, "src"), { recursive: true });
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({
+				name,
+				main: "./src/index.ts",
+				compatibility_date: "2024-01-01",
+			})
+		);
+		fs.writeFileSync(path.join(dir, "src/index.ts"), "export default {}");
+		return configPath;
+	}
+
+	test("should resolve entry worker config from CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH loaded from env files", ({
+		expect,
+	}) => {
+		const hiddenConfigPath = createWorkerConfig(
+			path.join(tempDir, ".sst"),
+			"hidden-worker"
+		);
+		fs.writeFileSync(
+			path.join(tempDir, ".env.development"),
+			"CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH=.sst/wrangler.jsonc\n"
+		);
+
+		const result = resolvePluginConfig(
+			{},
+			{ root: tempDir },
+			viteEnv
+		) as WorkersResolvedConfig;
+
+		expect(result.type).toBe("workers");
+		const entryWorker = result.environmentNameToWorkerMap.get(
+			result.entryWorkerEnvironmentName
+		);
+		assert(entryWorker);
+		expect(entryWorker.config.name).toBe("hidden-worker");
+		expect(entryWorker.config.main).toBe(
+			path.join(tempDir, ".sst", "src/index.ts")
+		);
+		expect([...result.configPaths]).toEqual([hiddenConfigPath]);
+	});
+
+	test("should prefer CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH over auto-discovered config", ({
+		expect,
+	}) => {
+		createWorkerConfig(tempDir, "root-worker");
+		const hiddenConfigPath = createWorkerConfig(
+			path.join(tempDir, ".sst"),
+			"hidden-worker"
+		);
+		vi.stubEnv("CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH", ".sst/wrangler.jsonc");
+
+		const result = resolvePluginConfig(
+			{},
+			{ root: tempDir },
+			viteEnv
+		) as WorkersResolvedConfig;
+
+		expect(result.type).toBe("workers");
+		const entryWorker = result.environmentNameToWorkerMap.get(
+			result.entryWorkerEnvironmentName
+		);
+		assert(entryWorker);
+		expect(entryWorker.config.name).toBe("hidden-worker");
+		expect([...result.configPaths]).toEqual([hiddenConfigPath]);
+	});
+
+	test("should prefer explicit configPath over CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH", ({
+		expect,
+	}) => {
+		createWorkerConfig(path.join(tempDir, ".sst"), "hidden-worker");
+		const explicitConfigPath = createWorkerConfig(
+			path.join(tempDir, "visible"),
+			"explicit-worker"
+		);
+		vi.stubEnv("CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH", ".sst/wrangler.jsonc");
+
+		const result = resolvePluginConfig(
+			{ configPath: explicitConfigPath },
+			{ root: tempDir },
+			viteEnv
+		) as WorkersResolvedConfig;
+
+		expect(result.type).toBe("workers");
+		const entryWorker = result.environmentNameToWorkerMap.get(
+			result.entryWorkerEnvironmentName
+		);
+		assert(entryWorker);
+		expect(entryWorker.config.name).toBe("explicit-worker");
+		expect(entryWorker.config.main).toBe(
+			path.join(tempDir, "visible", "src/index.ts")
+		);
+		expect([...result.configPaths]).toEqual([explicitConfigPath]);
 	});
 });
 

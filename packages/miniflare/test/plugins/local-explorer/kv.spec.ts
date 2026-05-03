@@ -1,6 +1,6 @@
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
+import { CorePaths } from "../../../src/workers/core/constants";
 import {
 	zWorkersKvNamespaceDeleteKeyValuePairResponse,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsResponse,
@@ -11,7 +11,7 @@ import {
 import { disposeWithRetry } from "../../test-shared";
 import { expectValidResponse } from "./helpers";
 
-const BASE_URL = `http://localhost${LOCAL_EXPLORER_API_PATH}`;
+const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
 describe("KV API", () => {
 	let mf: Miniflare;
@@ -36,16 +36,15 @@ describe("KV API", () => {
 	});
 
 	describe("GET /storage/kv/namespaces", () => {
-		test("lists available KV namespaces with default pagination", async ({
-			expect,
-		}) => {
+		test("lists all available KV namespaces", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces`
 			);
 
 			const data = await expectValidResponse(
 				response,
-				zWorkersKvNamespaceListNamespacesResponse
+				zWorkersKvNamespaceListNamespacesResponse,
+				expect
 			);
 			expect(data.result).toEqual(
 				expect.arrayContaining([
@@ -56,9 +55,6 @@ describe("KV API", () => {
 			);
 			expect(data.result_info).toMatchObject({
 				count: 3,
-				page: 1,
-				per_page: 20,
-				total_count: 3,
 			});
 		});
 
@@ -104,42 +100,6 @@ describe("KV API", () => {
 				],
 			});
 		});
-
-		test("pagination works", async ({ expect }) => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces?per_page=2&page=2`
-			);
-
-			expect(response.status).toBe(200);
-			// Sorted by ID: "another-kv-id", "test-kv-id", "zebra-kv-id"
-			// Page 2 with per_page=2 should return only "zebra-kv-id"
-			expect(await response.json()).toMatchObject({
-				result: [expect.objectContaining({ id: "zebra-kv-id" })],
-				result_info: {
-					count: 1,
-					page: 2,
-					per_page: 2,
-					total_count: 3,
-				},
-			});
-		});
-
-		test("returns empty result for page beyond total", async ({ expect }) => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces?per_page=20&page=100`
-			);
-
-			expect(response.status).toBe(200);
-			expect(await response.json()).toMatchObject({
-				result: [],
-				result_info: {
-					count: 0,
-					page: 100,
-					per_page: 20,
-					total_count: 3,
-				},
-			});
-		});
 	});
 
 	describe("GET /storage/kv/namespaces/:namespaceId/keys", () => {
@@ -154,7 +114,8 @@ describe("KV API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zWorkersKvNamespaceListANamespaceSKeysResponse
+				zWorkersKvNamespaceListANamespaceSKeysResponse,
+				expect
 			);
 			expect(data.result).toEqual(
 				expect.arrayContaining([
@@ -189,7 +150,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 
@@ -269,7 +230,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Key not found" })],
+				errors: [expect.objectContaining({ code: 10009 })],
 			});
 		});
 
@@ -281,7 +242,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 
@@ -291,11 +252,26 @@ describe("KV API", () => {
 			await kv.put(specialKey, "special-value");
 
 			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/${encodeURIComponent(specialKey)}`
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/${encodeURIComponent(
+					specialKey
+				)}`
 			);
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toBe("special-value");
+		});
+
+		test("returns raw bytes for ArrayBuffer values", async ({ expect }) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			const bytes = Uint8Array.from([0, 1, 2, 127, 128, 254, 255]);
+			await kv.put("binary-get-key", bytes.buffer);
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/binary-get-key`
+			);
+
+			expect(response.status).toBe(200);
+			expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes);
 		});
 	});
 
@@ -311,7 +287,8 @@ describe("KV API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zWorkersKvNamespaceWriteKeyValuePairWithMetadataResponse
+				zWorkersKvNamespaceWriteKeyValuePairWithMetadataResponse,
+				expect
 			);
 			expect(data.success).toBe(true);
 
@@ -349,8 +326,35 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
+		});
+
+		test("writes streamed binary values", async ({ expect }) => {
+			const bytes = Uint8Array.from([255, 0, 10, 20, 30, 200]);
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/put-stream-key`,
+				{
+					body: new Blob([bytes]).stream(),
+					duplex: "half",
+					headers: {
+						"Content-Type": "application/octet-stream",
+					},
+					method: "PUT",
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({ success: true });
+
+			const kv = await mf.getKVNamespace("TEST_KV");
+			const stored = await kv.get("put-stream-key", { type: "arrayBuffer" });
+
+			expect(stored).not.toBeNull();
+			if (stored === null) {
+				throw new Error("Expected put-stream-key to be stored in KV");
+			}
+			expect(new Uint8Array(stored)).toEqual(bytes);
 		});
 	});
 
@@ -368,7 +372,8 @@ describe("KV API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zWorkersKvNamespaceDeleteKeyValuePairResponse
+				zWorkersKvNamespaceDeleteKeyValuePairResponse,
+				expect
 			);
 			expect(data.success).toBe(true);
 
@@ -400,7 +405,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 
@@ -410,7 +415,9 @@ describe("KV API", () => {
 			await kv.put(specialKey, "value");
 
 			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/${encodeURIComponent(specialKey)}`,
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/${encodeURIComponent(
+					specialKey
+				)}`,
 				{
 					method: "DELETE",
 				}
@@ -449,7 +456,8 @@ describe("KV API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zWorkersKvNamespaceGetMultipleKeyValuePairsResponse
+				zWorkersKvNamespaceGetMultipleKeyValuePairsResponse,
+				expect
 			);
 			expect(data.success).toBe(true);
 			expect(data.result).toMatchObject({
@@ -501,7 +509,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 	});

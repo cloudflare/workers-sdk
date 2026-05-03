@@ -1,28 +1,28 @@
-import { inputPrompt } from "@cloudflare/cli/interactive";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
-import { runCommand } from "helpers/command";
 import { readFile } from "helpers/files";
 import { beforeEach, describe, test, vi } from "vitest";
 import { offerToDeploy, runDeploy } from "../deploy";
 import { chooseAccount, wranglerLogin } from "../wrangler/accounts";
 import { createTestContext } from "./helpers";
 
-vi.mock("helpers/command");
+vi.mock("@cloudflare/cli-shared-helpers/command");
 vi.mock("../wrangler/accounts");
-vi.mock("@cloudflare/cli/interactive");
+vi.mock("@cloudflare/cli-shared-helpers/interactive");
 vi.mock("which-pm-runs");
 vi.mock("helpers/files");
 
 const mockInsideGitRepo = (isInside = true) => {
 	if (isInside) {
 		vi.mocked(runCommand).mockResolvedValueOnce(
-			"On branch master\nnothing to commit, working tree clean",
+			"On branch master\nnothing to commit, working tree clean"
 		);
 	} else {
 		vi.mocked(runCommand).mockRejectedValueOnce(
 			new Error(
-				"fatal: not a git repository (or any of the parent directories): .git",
-			),
+				"fatal: not a git repository (or any of the parent directories): .git"
+			)
 		);
 	}
 };
@@ -37,7 +37,7 @@ describe("deploy helpers", async () => {
 			}
 
 			throw new Error(
-				"If you don't want to accept the default, you must mock this function.",
+				"If you don't want to accept the default, you must mock this function."
 			);
 		});
 	});
@@ -134,12 +134,12 @@ describe("deploy helpers", async () => {
 			mockInsideGitRepo(false);
 			vi.mocked(runCommand).mockResolvedValueOnce("");
 			vi.mocked(readFile).mockImplementationOnce(
-				() => `{"type":"deploy", "targets":["${deployedUrl}"]}`,
+				() => `{"type":"deploy", "targets":["${deployedUrl}"]}`
 			);
 			await runDeploy(ctx);
 			expect(runCommand).toHaveBeenCalledWith(
 				["npm", "run", "deploy", "--", "--commit-message", `"${commitMsg}"`],
-				expect.any(Object),
+				expect.any(Object)
 			);
 			expect(ctx.deployment.url).toBe(deployedUrl);
 		});
@@ -148,7 +148,7 @@ describe("deploy helpers", async () => {
 			const ctx = createTestContext();
 			ctx.account = undefined;
 			await expect(() => runDeploy(ctx)).rejects.toThrow(
-				"Failed to read Cloudflare account.",
+				"Failed to read Cloudflare account."
 			);
 		});
 
@@ -161,7 +161,7 @@ describe("deploy helpers", async () => {
 			vi.mocked(runCommand).mockResolvedValueOnce("");
 
 			await expect(() => runDeploy(ctx)).rejects.toThrow(
-				"Failed to find deployment url.",
+				"Failed to find deployment url."
 			);
 		});
 	});

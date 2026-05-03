@@ -5,9 +5,9 @@ import {
 	newline,
 	status,
 	updateStatus,
-} from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+} from "@cloudflare/cli-shared-helpers";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	DeploymentsService,
 	ImageRegistriesService,
@@ -214,7 +214,9 @@ async function waitForImagePull(deployment: DeploymentV2) {
 	);
 	s.stop();
 	if (err) {
-		throw new UserError(err.message);
+		throw new UserError(err.message, {
+			telemetryMessage: "cloudchamber placement image pull wait failed",
+		});
 	}
 
 	if (
@@ -235,11 +237,14 @@ async function waitForImagePull(deployment: DeploymentV2) {
 				"Your container image couldn't be pulled, (404 not found). Did you specify the correct URL?\n\t" +
 					`Run ${brandColor(
 						process.argv0 + " cloudchamber modify " + deployment.id
-					)} to change the deployment image`
+					)} to change the deployment image`,
+				{ telemetryMessage: "cloudchamber placement image not found" }
 			);
 		}
 
-		throw new UserError(capitalize(eventPlacement.event.message));
+		throw new UserError(capitalize(eventPlacement.event.message), {
+			telemetryMessage: "cloudchamber placement image pull failed",
+		});
 	}
 
 	updateStatus("Pulled your image");
@@ -271,7 +276,9 @@ async function waitForVMToStart(deployment: DeploymentV2) {
 	);
 	s.stop();
 	if (err) {
-		throw new UserError(err.message);
+		throw new UserError(err.message, {
+			telemetryMessage: "cloudchamber placement vm start wait failed",
+		});
 	}
 
 	if (!eventPlacement.event) {
@@ -338,7 +345,9 @@ async function waitForPlacementInstance(deployment: DeploymentV2) {
 	}
 
 	if (err) {
-		throw new UserError(err.message);
+		throw new UserError(err.message, {
+			telemetryMessage: "cloudchamber placement assignment failed",
+		});
 	}
 
 	updateStatus(
@@ -379,7 +388,11 @@ export async function waitForPlacement(deployment: DeploymentV2) {
 				);
 				if (getDeploymentError) {
 					throw new UserError(
-						"Couldn't retrieve a new deployment: " + getDeploymentError.message
+						"Couldn't retrieve a new deployment: " + getDeploymentError.message,
+						{
+							telemetryMessage:
+								"cloudchamber placement deployment refresh failed",
+						}
 					);
 				}
 

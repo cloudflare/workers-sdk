@@ -2,16 +2,16 @@ import fs from "node:fs/promises";
 import BINDING_SCRIPT from "worker:hello-world/binding";
 import OBJECT_SCRIPT from "worker:hello-world/object";
 import { z } from "zod";
-import { Service, Worker_Binding } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	PersistenceSchema,
-	Plugin,
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
 } from "../shared";
+import type { Service, Worker_Binding } from "../../runtime";
+import type { Plugin } from "../shared";
 
 export const HELLO_WORLD_PLUGIN_NAME = "hello-world";
 

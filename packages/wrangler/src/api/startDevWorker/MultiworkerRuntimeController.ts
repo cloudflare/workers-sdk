@@ -10,6 +10,7 @@ import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
 	getContainerDevOptions,
+	getUserWorkerInnerUrlOverrides,
 	LocalRuntimeController,
 } from "./LocalRuntimeController";
 import type { RemoteProxySession } from "../remoteBindings";
@@ -118,9 +119,8 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 			if (data.config.dev?.remote !== false) {
 				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
-				const { maybeStartOrUpdateRemoteProxySession } = await import(
-					"../remoteBindings"
-				);
+				const { maybeStartOrUpdateRemoteProxySession } =
+					await import("../remoteBindings");
 				const remoteProxySession = await maybeStartOrUpdateRemoteProxySession(
 					{
 						name: configBundle.name,
@@ -167,11 +167,11 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 						this.containerBeingBuilt = undefined;
 					},
 					logger: logger,
-					isVite: false,
 				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;
 				}
+
 				this.#currentContainerBuildId = data.config.dev.containerBuildId;
 				// Miniflare will have logged 'Ready on...' before the containers are built, but that is actually the proxy server :/
 				// The actual user worker's miniflare instance is blocked until the containers are built
@@ -239,11 +239,9 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 							port: userWorkerInspectorUrl.port,
 							pathname: `/core:user:${data.config.name}`,
 						},
-						userWorkerInnerUrlOverrides: {
-							protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
-							hostname: data.config?.dev?.origin?.hostname,
-							port: data.config?.dev?.origin?.hostname ? "" : undefined,
-						},
+						userWorkerInnerUrlOverrides: getUserWorkerInnerUrlOverrides(
+							data.config
+						),
 						headers: {
 							// Passing this signature from Proxy Worker allows the User Worker to trust the request.
 							"MF-Proxy-Shared-Secret":
@@ -256,6 +254,17 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				});
 			}
 		} catch (error) {
+			if (
+				this.containerBeingBuilt?.abortRequested &&
+				error instanceof Error &&
+				error.message.startsWith("Docker build exited with code:")
+			) {
+				// The user caused the container image build to be aborted (e.g. via
+				// the rebuild hotkey), so a non-zero exit from `docker build` is
+				// expected here and can be safely ignored — after this the dev
+				// process either terminates or reloads the container.
+				return;
+			}
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Error reloading local server",

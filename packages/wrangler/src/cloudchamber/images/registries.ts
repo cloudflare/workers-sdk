@@ -3,9 +3,9 @@ import {
 	newline,
 	startSection,
 	updateStatus,
-} from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
-import { brandColor, dim } from "@cloudflare/cli/colors";
+} from "@cloudflare/cli-shared-helpers";
+import { processArgument } from "@cloudflare/cli-shared-helpers/args";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	ApiError,
 	ImageRegistriesService,
@@ -74,7 +74,11 @@ async function registriesCredentialsHandler(imageArgs: {
 }) {
 	if (!imageArgs.pull && !imageArgs.push) {
 		throw new UserError(
-			"You have to specify either --push or --pull in the command."
+			"You have to specify either --push or --pull in the command.",
+			{
+				telemetryMessage:
+					"cloudchamber registries credentials missing permission",
+			}
 		);
 	}
 
@@ -195,20 +199,33 @@ async function handleConfigureImageRegistryCommand(
 		const { error: errString } = err.body as { error: string };
 		switch (errString) {
 			case ImageRegistryAlreadyExistsError.error.IMAGE_REGISTRY_ALREADY_EXISTS:
-				throw new UserError("The domain already exists!");
+				throw new UserError("The domain already exists!", {
+					telemetryMessage:
+						"cloudchamber registries configure registry already exists",
+				});
 			case ImageRegistryNotAllowedError.error.IMAGE_REGISTRY_NOT_ALLOWED:
-				throw new UserError("This domain is not allowed!");
+				throw new UserError("This domain is not allowed!", {
+					telemetryMessage:
+						"cloudchamber registries configure registry not allowed",
+				});
 			default:
 				throw new UserError(
 					"An unexpected error happened, please try again or send us the error for troubleshooting\n" +
-						errString
+						errString,
+					{
+						telemetryMessage:
+							"cloudchamber registries configure unexpected api error",
+					}
 				);
 		}
 	}
 
 	if (err) {
 		throw new UserError(
-			"There has been an internal error: " + JSON.stringify(err)
+			"There has been an internal error: " + JSON.stringify(err),
+			{
+				telemetryMessage: "cloudchamber registries configure internal error",
+			}
 		);
 	}
 

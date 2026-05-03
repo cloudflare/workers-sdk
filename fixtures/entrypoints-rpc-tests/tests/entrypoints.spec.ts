@@ -11,9 +11,9 @@ import {
 } from "../../shared/src/run-wrangler-long-lived";
 
 const timeoutAgent = new Agent({
-	connectTimeout: 500,
-	bodyTimeout: 500,
-	headersTimeout: 500,
+	connectTimeout: 2_000,
+	bodyTimeout: 2_000,
+	headersTimeout: 2_000,
 });
 setGlobalDispatcher(timeoutAgent);
 
@@ -34,10 +34,13 @@ export async function seed(root: string, files: Record<string, string>) {
 	}
 }
 
-function waitFor<T>(callback: Parameters<typeof vi.waitFor<T>>[0]) {
+function waitFor<T>(
+	callback: Parameters<typeof vi.waitFor<T>>[0],
+	timeout = 5_000
+) {
 	// The default timeout of `vi.waitFor()` is only 1s, which is a little
 	// short for some of these tests, especially on Windows.
-	return vi.waitFor(callback, { timeout: 5_000, interval: 250 });
+	return vi.waitFor(callback, { timeout, interval: 250 });
 }
 
 const test = baseTest.extend<{
@@ -123,11 +126,13 @@ describe("entrypoints", () => {
 		`,
 		});
 
-		const response = await fetch(url);
-		// Check protocol, host, and cf preserved
-		expect(await response.text()).toBe(
-			'POST https://placeholder:9999/loopback {"thing":true}'
-		);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			// Check protocol, host, and cf preserved
+			expect(await response.text()).toBe(
+				'POST https://placeholder:9999/loopback {"thing":true}'
+			);
+		});
 	});
 
 	test("should support default ExportedHandler entrypoints", async ({
@@ -263,11 +268,13 @@ describe("entrypoints", () => {
 		};
 		const { url } = await dev(files, ["--test-scheduled"]);
 
-		let response = await fetch(url);
-		expect(await response.text()).toBe("GET /");
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(await response.text()).toBe("GET /");
+		});
 
 		// Check other events can be dispatched
-		response = await fetch(new URL("/__scheduled?cron=* * * * 30", url));
+		let response = await fetch(new URL("/__scheduled?cron=* * * * 30", url));
 		expect(response.status).toBe(200);
 		expect(await response.text()).toBe("Ran scheduled event");
 		response = await fetch(new URL("/controller", url));
@@ -316,11 +323,13 @@ describe("entrypoints", () => {
 		`,
 		});
 
-		const response = await fetch(url);
-		// Check protocol, host, and cf preserved
-		expect(await response.text()).toBe(
-			'POST https://placeholder:9999/ {"thing":true}'
-		);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			// Check protocol, host, and cf preserved
+			expect(await response.text()).toBe(
+				'POST https://placeholder:9999/ {"thing":true}'
+			);
+		});
 	});
 
 	test("should support named ExportedHandler entrypoints", async ({
@@ -527,8 +536,6 @@ describe("entrypoints", () => {
 		dev,
 		expect,
 	}) => {
-		// RPC isn't supported in this case yet :(
-
 		await dev({
 			"wrangler.toml": dedent`
 			name = "bound"
@@ -574,10 +581,10 @@ describe("entrypoints", () => {
 
 					const { pathname } = new URL(request.url);
 					if (pathname === "/rpc") {
-						const errors = [];
-						try { await stub.property; } catch (e) { errors.push(e); }
-						try { await stub.method(); } catch (e) { errors.push(e); }
-						return Response.json(errors.map(String));
+						const results = [];
+						results.push(await stub.property)
+						results.push(await stub.method())
+						return Response.json(results.map(String));
 					}
 
 					return stub.fetch("https://placeholder:9999/", {
@@ -596,14 +603,16 @@ describe("entrypoints", () => {
 			expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
 		});
 
-		const rpcResponse = await fetch(new URL("/rpc", url));
-		const errors = await rpcResponse.json();
-		expect(errors).toMatchInlineSnapshot(`
-			[
-			  "Error: Cannot access "ThingObject#property" as Durable Object RPC is not yet supported between multiple dev sessions.",
-			  "Error: Cannot access "ThingObject#method" as Durable Object RPC is not yet supported between multiple dev sessions.",
-			]
-		`);
+		await waitFor(async () => {
+			const rpcResponse = await fetch(new URL("/rpc", url));
+			const errors = await rpcResponse.json();
+			expect(errors).toMatchInlineSnapshot(`
+				[
+				  "property:ping",
+				  "method:ping",
+				]
+			`);
+		});
 	});
 
 	test("should support binding to Durable Object in same worker", async ({
@@ -639,8 +648,10 @@ describe("entrypoints", () => {
 		`,
 		});
 
-		const response = await fetch(url);
-		expect(await response.text()).toBe("pong");
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(await response.text()).toBe("pong");
+		});
 	});
 
 	test("should support binding to Durable Object in same worker with explicit script_name", async ({
@@ -674,8 +685,10 @@ describe("entrypoints", () => {
 		`,
 		});
 
-		const response = await fetch(url);
-		expect(await response.text()).toBe("pong");
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(await response.text()).toBe("pong");
+		});
 	});
 
 	test("should throw if binding to named entrypoint exported by version of wrangler without entrypoints support", async ({
@@ -703,11 +716,13 @@ describe("entrypoints", () => {
 			}
 		`,
 		});
-		let response = await fetch(url);
-		expect(response.status).toBe(503);
-		expect(await response.text()).toBe(
-			'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
-		);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(response.status).toBe(503);
+			expect(await response.text()).toBe(
+				'Worker "bound" not found. Make sure it is running locally.'
+			);
+		});
 
 		await writeFile(
 			path.join(isolatedDevRegistryPath, "bound"),
@@ -727,7 +742,7 @@ describe("entrypoints", () => {
 			let response = await fetch(url);
 			expect(response.status).toBe(503);
 			expect(await response.text()).toBe(
-				'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
+				'Worker "bound" not found. Make sure it is running locally.'
 			);
 		});
 	});
@@ -756,10 +771,12 @@ describe("entrypoints", () => {
 			}
 		`,
 		});
-		let response = await fetch(url);
-		expect(await response.text()).toBe(
-			'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
-		);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(await response.text()).toBe(
+				'Worker "bound" not found. Make sure it is running locally.'
+			);
+		});
 
 		// Start up the bound worker without the expected entrypoint
 		await dev({
@@ -782,7 +799,7 @@ describe("entrypoints", () => {
 		await waitFor(async () => {
 			let response = await fetch(url);
 			expect(await response.text()).toBe(
-				'Couldn\'t find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to'
+				'Worker "bound" not found. Make sure it is running locally.'
 			);
 		});
 	});
@@ -810,10 +827,12 @@ describe("entrypoints", () => {
 			}
 		`,
 		});
-		let response = await fetch(url);
-		expect(await response.text()).toBe(
-			'Couldn\'t find a local dev session for the "default" entrypoint of service "bound" to proxy to'
-		);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(await response.text()).toBe(
+				'Worker "bound" not found. Make sure it is running locally.'
+			);
+		});
 
 		// Start up the bound worker using HTTPS
 		const files: Record<string, string> = {
@@ -835,7 +854,7 @@ describe("entrypoints", () => {
 			const response = await fetch(url);
 			const text = await response.text();
 			expect(text).toBe("secure");
-		});
+		}, 10_000);
 	});
 
 	test("should support binding to version of wrangler without entrypoints support over HTTPS", async ({
@@ -861,10 +880,12 @@ describe("entrypoints", () => {
 			}
 		`,
 		});
-		let response = await fetch(url);
-		expect(await response.text()).toBe(
-			'Couldn\'t find a local dev session for the "default" entrypoint of service "bound" to proxy to'
-		);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			expect(await response.text()).toBe(
+				'Worker "bound" not found. Make sure it is running locally.'
+			);
+		});
 
 		const boundWorker = new Miniflare({
 			name: "bound",
@@ -887,7 +908,7 @@ describe("entrypoints", () => {
 		await waitFor(async () => {
 			let response = await fetch(url);
 			expect(await response.text()).toBe("Hello from bound!");
-		});
+		}, 10_000);
 	});
 
 	test("should throw if performing RPC with session that hasn't started", async ({
@@ -916,13 +937,15 @@ describe("entrypoints", () => {
 		`,
 		});
 
-		const response = await fetch(url);
-		const errors = await response.json();
-		expect(errors).toMatchInlineSnapshot(`
-			[
-			  "Error: Cannot access "property" as we couldn't find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to.",
-			  "Error: Cannot access "method" as we couldn't find a local dev session for the "ThingEntrypoint" entrypoint of service "bound" to proxy to.",
-			]
-		`);
+		await waitFor(async () => {
+			const response = await fetch(url);
+			const errors = await response.json();
+			expect(errors).toMatchInlineSnapshot(`
+				[
+				  "Error: Worker "bound" not found. Make sure it is running locally.",
+				  "Error: Worker "bound" not found. Make sure it is running locally.",
+				]
+			`);
+		});
 	});
 });

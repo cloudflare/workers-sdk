@@ -11,6 +11,7 @@ function buildDetailedError(message: string, ...extra: string[]) {
 	return new ParseError({
 		text: message,
 		notes: extra.map((text) => ({ text })),
+		telemetryMessage: false,
 	});
 }
 

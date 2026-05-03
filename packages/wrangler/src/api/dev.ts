@@ -222,8 +222,8 @@ export async function unstable_dev(
 		enableContainers: options?.experimental?.enableContainers ?? false,
 		dockerPath,
 		containerEngine: options?.experimental?.containerEngine,
-		experimentalTailLogs: true,
 		types: false,
+		tunnel: undefined,
 	};
 
 	//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
@@ -243,9 +243,6 @@ export async function unstable_dev(
 		address,
 		stop: async () => {
 			await devServer.devEnv.teardown.bind(devServer.devEnv)();
-			const teardownRegistry = await devServer.teardownRegistryPromise;
-			await teardownRegistry?.(devServer.devEnv.config.latestConfig?.name);
-
 			devServer.unregisterHotKeys?.();
 		},
 		fetch: async (input?: RequestInfo, init?: RequestInit) => {

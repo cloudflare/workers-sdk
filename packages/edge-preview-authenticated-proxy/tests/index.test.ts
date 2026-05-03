@@ -18,9 +18,15 @@ function createMockFetchImplementation() {
 		const request = new Request(input, init);
 		const url = new URL(request.url);
 
+		if (url.origin === "https://workers-logging.cfdata.org") {
+			// Ignore prometheus logging requests
+			return new Response("OK", { status: 200 });
+		}
+
 		// Only intercept requests to our mock remote URL
 		if (url.origin !== MOCK_REMOTE_URL) {
-			return new Response("OK", { status: 200 });
+			console.error(`Request to unexpected URL: ${request.url}`);
+			return new Response("BAD", { status: 500 });
 		}
 
 		if (url.pathname === "/exchange") {
@@ -55,10 +61,6 @@ function createMockFetchImplementation() {
 			headers.append("Set-Cookie", "bar=2");
 			return new Response(undefined, { headers });
 		}
-		if (url.pathname === "/prewarm") {
-			return new Response("OK");
-		}
-
 		return Response.json(
 			{
 				url: request.url,
@@ -80,8 +82,6 @@ afterEach(() => {
 });
 
 describe("Preview Worker", () => {
-	let tokenId: string | null = null;
-
 	it("should obtain token from exchange_url", async ({ expect }) => {
 		const resp = await SELF.fetch(
 			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=${encodeURIComponent(
@@ -120,8 +120,6 @@ describe("Preview Worker", () => {
 		let resp = await SELF.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=${encodeURIComponent(
 				token
-			)}&prewarm=${encodeURIComponent(
-				`${MOCK_REMOTE_URL}/prewarm`
 			)}&remote=${encodeURIComponent(
 				MOCK_REMOTE_URL
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
@@ -139,7 +137,7 @@ describe("Preview Worker", () => {
 		).toMatchInlineSnapshot(
 			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None"'
 		);
-		tokenId = (resp.headers.get("set-cookie") ?? "")
+		const tokenId = (resp.headers.get("set-cookie") ?? "")
 			.split(";")[0]
 			.split("=")[1];
 		resp = await SELF.fetch(
@@ -152,9 +150,7 @@ describe("Preview Worker", () => {
 			}
 		);
 
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ignoring this test type error for sake of turborepo PR
-		const json = (await resp.json()) as any;
-
+		const json = await resp.json();
 		expect(json).toMatchObject({
 			url: `${MOCK_REMOTE_URL}/`,
 			headers: expect.arrayContaining([["cf-workers-preview-token", token]]),
@@ -162,9 +158,7 @@ describe("Preview Worker", () => {
 	});
 	it("should be redirected with cookie", async ({ expect }) => {
 		const resp = await SELF.fetch(
-			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
-				`${MOCK_REMOTE_URL}/prewarm`
-			)}&remote=${encodeURIComponent(
+			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&remote=${encodeURIComponent(
 				MOCK_REMOTE_URL
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
@@ -180,28 +174,24 @@ describe("Preview Worker", () => {
 		).toMatchInlineSnapshot(
 			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None"'
 		);
-		tokenId = (resp.headers.get("set-cookie") ?? "")
-			.split(";")[0]
-			.split("=")[1];
 	});
-	it("should reject invalid prewarm url", async ({ expect }) => {
-		vi.spyOn(console, "error").mockImplementation(() => {});
+
+	async function getToken() {
 		const resp = await SELF.fetch(
-			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=not_a_prewarm_url&remote=${encodeURIComponent(
+			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&remote=${encodeURIComponent(
 				MOCK_REMOTE_URL
-			)}&suffix=${encodeURIComponent("/hello?world")}`
+			)}&suffix=${encodeURIComponent("/hello?world")}`,
+			{
+				method: "GET",
+				redirect: "manual",
+			}
 		);
-		expect(resp.status).toBe(400);
-		expect(await resp.text()).toMatchInlineSnapshot(
-			`"{"error":"Error","message":"Invalid URL"}"`
-		);
-	});
+		return (resp.headers.get("set-cookie") ?? "").split(";")[0].split("=")[1];
+	}
 	it("should reject invalid remote url", async ({ expect }) => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		const resp = await SELF.fetch(
-			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
-				`${MOCK_REMOTE_URL}/prewarm`
-			)}&remote=not_a_remote_url&suffix=${encodeURIComponent("/hello?world")}`
+			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&remote=not_a_remote_url&suffix=${encodeURIComponent("/hello?world")}`
 		);
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(
@@ -210,6 +200,7 @@ describe("Preview Worker", () => {
 	});
 
 	it("should convert cookie to header", async ({ expect }) => {
+		const tokenId = await getToken();
 		const resp = await SELF.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev`,
 			{
@@ -229,6 +220,7 @@ describe("Preview Worker", () => {
 		});
 	});
 	it("should not follow redirects", async ({ expect }) => {
+		const tokenId = await getToken();
 		const resp = await SELF.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/redirect`,
 			{
@@ -247,6 +239,7 @@ describe("Preview Worker", () => {
 		expect(await resp.text()).toMatchInlineSnapshot('""');
 	});
 	it("should return method", async ({ expect }) => {
+		const tokenId = await getToken();
 		const resp = await SELF.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/method`,
 			{
@@ -261,6 +254,7 @@ describe("Preview Worker", () => {
 		expect(await resp.text()).toMatchInlineSnapshot('"PUT"');
 	});
 	it("should return header", async ({ expect }) => {
+		const tokenId = await getToken();
 		const resp = await SELF.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/header`,
 			{
@@ -276,6 +270,7 @@ describe("Preview Worker", () => {
 		expect(await resp.text()).toMatchInlineSnapshot('"custom"');
 	});
 	it("should return status", async ({ expect }) => {
+		const tokenId = await getToken();
 		const resp = await SELF.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/status`,
 			{

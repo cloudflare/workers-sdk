@@ -1,8 +1,6 @@
 /**
- * This file contains:
- *
- * - The main entrypoint for the CLI, which calls `main()` from `index.ts`.
- * - The exports for the public API of the package.
+ * This file is the main entrypoint for the CLI, which calls `main()` from `index.ts`.
+ * It also re-exports the public API of the package.
  */
 
 import "cloudflare/shims/web";
@@ -17,6 +15,7 @@ import {
 	startRemoteProxySession,
 	startWorker,
 	unstable_dev,
+	experimental_generateTypes,
 	unstable_getDevCompatibilityDate,
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
 	unstable_getMiniflareWorkerOptions,
@@ -36,6 +35,8 @@ import type {
 	Unstable_Config,
 	Unstable_DevOptions,
 	Unstable_DevWorker,
+	Experimental_GenerateTypesOptions,
+	Experimental_GenerateTypesResult,
 	Unstable_MiniflareWorkerOptions,
 	Unstable_RawConfig,
 	Unstable_RawEnvironment,
@@ -68,6 +69,7 @@ export {
 	startWorker as unstable_startWorker,
 	unstable_getVarsForDev,
 	unstable_readConfig,
+	experimental_generateTypes,
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
 	unstable_getDevCompatibilityDate,
 	unstable_getWorkerNameFromProject,
@@ -85,6 +87,8 @@ export type {
 	PlatformProxy,
 	SourcelessWorkerOptions,
 	Unstable_MiniflareWorkerOptions,
+	Experimental_GenerateTypesOptions,
+	Experimental_GenerateTypesResult,
 };
 
 export { printBindings as unstable_printBindings } from "./utils/print-bindings";
@@ -103,6 +107,7 @@ export interface Unstable_ASSETSBindingsOptions {
 	log: Logger;
 	proxyPort?: number;
 	directory?: string;
+	signal?: AbortSignal;
 }
 export const unstable_generateASSETSBinding: (
 	opts: Unstable_ASSETSBindingsOptions
@@ -129,6 +134,6 @@ export type { StartRemoteProxySessionOptions, Binding, RemoteProxySession };
 
 export { getDetailsForAutoConfig as experimental_getDetailsForAutoConfig } from "./autoconfig/details";
 export { runAutoConfig as experimental_runAutoConfig } from "./autoconfig/run";
-export { Framework as experimental_AutoConfigFramework } from "./autoconfig/frameworks/index";
+export { Framework as experimental_AutoConfigFramework } from "./autoconfig/frameworks/framework-class";
 
 export { experimental_getWranglerCommands } from "./experimental-commands-api";

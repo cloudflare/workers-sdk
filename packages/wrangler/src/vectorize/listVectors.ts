@@ -42,7 +42,7 @@ export const vectorizeListVectorsCommand = createCommand({
 		json: {
 			type: "boolean",
 			default: false,
-			description: "Return output as clean JSON",
+			description: "Return output as JSON",
 		},
 	},
 	positionalArgs: ["name"],
@@ -61,13 +61,13 @@ export const vectorizeListVectorsCommand = createCommand({
 
 		const result = await listVectors(config, args.name, options);
 
-		if (result.vectors.length === 0) {
-			logger.warn("No vectors found in this index.");
+		if (args.json) {
+			logger.log(JSON.stringify(result, null, 2));
 			return;
 		}
 
-		if (args.json) {
-			logger.log(JSON.stringify(result, null, 2));
+		if (result.vectors.length === 0) {
+			logger.warn("No vectors found in this index.");
 			return;
 		}
 

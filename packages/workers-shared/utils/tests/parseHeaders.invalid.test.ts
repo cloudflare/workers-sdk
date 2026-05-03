@@ -1,8 +1,7 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { parseHeaders } from "../configuration/parseHeaders";
 
-test("parseHeaders should reject malformed initial lines", () => {
+test("parseHeaders should reject malformed initial lines", ({ expect }) => {
 	const input = `
     # A single token before a path
     c
@@ -28,7 +27,7 @@ test("parseHeaders should reject malformed initial lines", () => {
 	});
 });
 
-test("parseHeaders should reject invalid headers", () => {
+test("parseHeaders should reject invalid headers", ({ expect }) => {
 	const input = `
     # Valid header sails through
     /a
@@ -66,7 +65,9 @@ test("parseHeaders should reject invalid headers", () => {
 	});
 });
 
-test("parseHeaders should reject lines longer than 2000 chars", () => {
+test("parseHeaders should reject lines longer than 2000 chars", ({
+	expect,
+}) => {
 	const huge_line = `${Array(1001).fill("a").join("")}: ${Array(1001)
 		.fill("b")
 		.join("")}`;
@@ -95,7 +96,9 @@ test("parseHeaders should reject lines longer than 2000 chars", () => {
 	});
 });
 
-test("parseHeaders should reject any rules after the first 100", () => {
+test("parseHeaders should reject any rules after the first 100", ({
+	expect,
+}) => {
 	const input = `
     # COMMENTS DON'T COUNT TOWARDS TOTAL VALID RULES
     ${Array(150)
@@ -121,7 +124,94 @@ test("parseHeaders should reject any rules after the first 100", () => {
 	});
 });
 
-test("parseHeaders should reject malformed URLs", () => {
+test("parseHeaders should reject paths with multiple wildcards", ({
+	expect,
+}) => {
+	const input = `
+  # Multiple wildcards in an absolute URL
+  https://*.pages.dev/*
+    x-custom: value
+  # Multiple wildcards in a relative path
+  /blog/*/posts/*
+    x-custom: value
+  # Single wildcard is fine
+  https://*.pages.dev/
+    x-custom: value
+  /blog/*
+    x-custom: value
+`;
+	const result = parseHeaders(input);
+	expect(result).toEqual({
+		rules: [
+			{
+				path: "https://*.pages.dev/",
+				headers: { "x-custom": "value" },
+				unsetHeaders: [],
+			},
+			{
+				path: "/blog/*",
+				headers: { "x-custom": "value" },
+				unsetHeaders: [],
+			},
+		],
+		invalid: [
+			{
+				line: "https://*.pages.dev/*",
+				lineNumber: 3,
+				message:
+					"Only one wildcard is allowed per rule. Use a named placeholder (e.g. :project) instead. Skipping https://*.pages.dev/*.",
+			},
+			{
+				line: "/blog/*/posts/*",
+				lineNumber: 6,
+				message:
+					"Only one wildcard is allowed per rule. Use a named placeholder (e.g. :project) instead. Skipping /blog/*/posts/*.",
+			},
+		],
+	});
+});
+
+test("parseHeaders should reject paths combining wildcard with :splat placeholder", ({
+	expect,
+}) => {
+	const input = `
+  # Wildcard + :splat in an absolute URL
+  https://*.pages.dev/:splat
+    x-custom: value
+  # Wildcard + :splat in a relative path
+  /blog/*/:splat
+    x-custom: value
+  # Just :splat without wildcard is fine
+  /blog/:splat
+    x-custom: value
+`;
+	const result = parseHeaders(input);
+	expect(result).toEqual({
+		rules: [
+			{
+				path: "/blog/:splat",
+				headers: { "x-custom": "value" },
+				unsetHeaders: [],
+			},
+		],
+		invalid: [
+			{
+				line: "https://*.pages.dev/:splat",
+				lineNumber: 3,
+				message:
+					"Cannot combine a wildcard * with a :splat placeholder because wildcards are converted to :splat at runtime. Skipping https://*.pages.dev/:splat.",
+			},
+			{
+				line: "/blog/*/:splat",
+				lineNumber: 6,
+				message:
+					"Cannot combine a wildcard * with a :splat placeholder because wildcards are converted to :splat at runtime. Skipping /blog/*/:splat.",
+			},
+		],
+	});
+});
+
+test("parseHeaders should reject malformed URLs", ({ expect }) => {
 	const input = `
   # Spaces should be URI encoded
   /some page with spaces
@@ -165,31 +255,16 @@ test("parseHeaders should reject malformed URLs", () => {
 					'URLs should either be relative (e.g. begin with a forward-slash), or use HTTPS (e.g. begin with "https://").',
 			},
 			{
-				line: "invalid: things",
-				lineNumber: 17,
-				message: "Path should come before header (invalid: things)",
-			},
-			{
 				line: "https://nah.com:8080",
 				lineNumber: 19,
 				message:
 					"Specifying ports is not supported. Skipping absolute URL https://nah.com:8080.",
 			},
 			{
-				line: "invalid: also",
-				lineNumber: 20,
-				message: "Path should come before header (invalid: also)",
-			},
-			{
 				line: "https://nah.com:8080/blog",
 				lineNumber: 21,
 				message:
 					"Specifying ports is not supported. Skipping absolute URL https://nah.com:8080/blog.",
-			},
-			{
-				line: "invalid: 2",
-				lineNumber: 22,
-				message: "Path should come before header (invalid: 2)",
 			},
 			{
 				line: "nah.com",

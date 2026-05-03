@@ -41,7 +41,7 @@ export const d1TimeTravelRestoreCommand = createCommand({
 		},
 		json: {
 			type: "boolean",
-			description: "Return output as clean JSON",
+			description: "Return output as JSON",
 			default: false,
 		},
 	},
@@ -49,10 +49,17 @@ export const d1TimeTravelRestoreCommand = createCommand({
 	validateArgs(args) {
 		if (args.timestamp && args.bookmark) {
 			throw new UserError(
-				"Provide either a timestamp, or a bookmark - not both."
+				"Provide either a timestamp, or a bookmark - not both.",
+				{
+					telemetryMessage:
+						"d1 time travel restore conflicting timestamp and bookmark",
+				}
 			);
 		} else if (!args.timestamp && !args.bookmark) {
-			throw new UserError("Provide either a timestamp or a bookmark");
+			throw new UserError("Provide either a timestamp or a bookmark", {
+				telemetryMessage:
+					"d1 time travel restore missing timestamp or bookmark",
+			});
 		}
 	},
 	async handler({ database, json, timestamp, bookmark }, { config }) {

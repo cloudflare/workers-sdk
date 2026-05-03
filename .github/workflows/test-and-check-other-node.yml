@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.node_version }}-test-other-node-versions
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
     name: ${{ format('Tests ({0})', matrix.description) }}
     strategy:
       fail-fast: false
@@ -24,7 +24,6 @@ jobs:
         # These versions are skipped on normal PRs but run on Version Packages PRs
         # (changeset-release/main) or when the 'test all node versions' label is added.
         include:
-          - { node_version: 20, description: "Node 20" }
           - { node_version: 24, description: "Node 24", expected_to_fail: true }
           - { node_version: 25, description: "Node 25", expected_to_fail: true }
 
@@ -35,7 +34,7 @@ jobs:
           fetch-depth: 1
 
       - name: Filter changed paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
         id: changes
         with:
           filters: |

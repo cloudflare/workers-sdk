@@ -1,11 +1,11 @@
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import {
 	getDockerPath,
-	getLocalWorkerdCompatibilityDate,
 	getRegistryPath,
+	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
-import { kCurrentWorker, Miniflare } from "miniflare";
-import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
+import { Miniflare } from "miniflare";
+import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
@@ -15,7 +15,6 @@ import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
-	getImageNameFromDOClassName,
 } from "../../../dev/miniflare";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
@@ -46,12 +45,10 @@ export { readConfig as unstable_readConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
 
 /**
- * @deprecated use `getLocalWorkerdCompatibilityDate` from "@cloudflare/workers-utils" instead.
- *
- * We're keeping this function only not to break the vite plugin that relies on it, we should remove it as soon as possible.
+ * @deprecated Use today's date as the compatibility date instead.
  */
 export function unstable_getDevCompatibilityDate() {
-	return getLocalWorkerdCompatibilityDate().date;
+	return getTodaysCompatDate();
 }
 
 export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
@@ -267,16 +264,17 @@ async function getMiniflareOptionsFromConfig(args: {
 
 	let processedAssetOptions: AssetsOptions | undefined;
 
-	try {
-		processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
-	} catch (e) {
-		const isNonExistentError = e instanceof NonExistentAssetsDirError;
-		// we want to loosen up the assets directory existence restriction here,
-		// since `getPlatformProxy` can be run when the assets directory doesn't actual
-		// exist, but all other exceptions should still be thrown
-		if (!isNonExistentError) {
-			throw e;
-		}
+	// Only resolve assets if a directory is configured. When assets are configured
+	// without a directory (e.g. via @cloudflare/vite-plugin), skip asset setup.
+	if (config.assets?.directory) {
+		processedAssetOptions = getAssetsOptions({
+			args: {
+				assets: undefined,
+			},
+			config,
+			// For getPlatformProxy/local dev we don't need to validate the directory's existence
+			validateDirectoryExistence: false,
+		});
 	}
 
 	const assetOptions = processedAssetOptions
@@ -304,7 +302,6 @@ async function getMiniflareOptionsFromConfig(args: {
 		modules: true,
 		...miniflareOptions,
 		unsafeDevRegistryPath: getRegistryPath(),
-		unsafeDevRegistryDurableObjectProxy: true,
 	};
 }
 
@@ -435,75 +432,25 @@ export function unstable_getMiniflareWorkerOptions(
 		options?.remoteProxyConnectionString
 	);
 
-	// This function is currently only exported for the Workers Vitest pool.
-	// In tests, we don't want to rely on the dev registry, as we can't guarantee
-	// which sessions will be running. Instead, we rewrite `serviceBindings` and
-	// `durableObjects` to use more traditional Miniflare config expecting the
-	// user to define workers with the required names in the `workers` array.
-	// These will run the same `workerd` processes as tests.
-	const serviceBindings = extractBindingsOfType("service", bindings);
-	if (serviceBindings.length > 0) {
-		bindingOptions.serviceBindings = Object.fromEntries(
-			serviceBindings.map((binding) => {
-				const name =
-					binding.service === config.name ? kCurrentWorker : binding.service;
-				if (options?.remoteProxyConnectionString && binding.remote) {
-					return [
-						binding.binding,
-						{
-							name,
-							entrypoint: binding.entrypoint,
-							remoteProxyConnectionString: options.remoteProxyConnectionString,
-						},
-					];
-				}
-				return [binding.binding, { name, entrypoint: binding.entrypoint }];
-			})
-		);
-	}
-	const durableObjectBindings = extractBindingsOfType(
-		"durable_object_namespace",
-		bindings
-	);
-	if (durableObjectBindings.length > 0) {
-		type DurableObjectDefinition = NonNullable<
-			typeof bindingOptions.durableObjects
-		>[string];
-
-		const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
-			config.migrations
-		);
-
-		bindingOptions.durableObjects = Object.fromEntries(
-			durableObjectBindings.map((binding) => {
-				const useSQLite = classNameToUseSQLite.get(binding.class_name);
-				return [
-					binding.name,
-					{
-						className: binding.class_name,
-						scriptName: binding.script_name,
-						useSQLite,
-						container:
-							enableContainers && config.containers?.length
-								? getImageNameFromDOClassName({
-										doClassName: binding.class_name,
-										containerDOClassNames,
-										containerBuildId: options?.containerBuildId,
-									})
-								: undefined,
-					} satisfies DurableObjectDefinition,
-				];
-			})
-		);
-	}
-
 	const sitesAssetPaths = getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
-	const processedAssetOptions = getAssetsOptions(
-		{ assets: undefined },
-		config,
-		options?.overrides?.assets
-	);
+	// Only resolve assets if a directory is available (from config or overrides).
+	// When assets are configured without a directory (e.g. when using
+	// @cloudflare/vite-plugin, which handles asset serving independently),
+	// there's nothing for Miniflare to serve, so skip asset setup entirely.
+	const hasAssetsDirectory =
+		config.assets?.directory || options?.overrides?.assets?.directory;
+	const processedAssetOptions = hasAssetsDirectory
+		? getAssetsOptions({
+				args: {
+					assets: undefined,
+				},
+				config,
+				// For getPlatformProxy we don't need to validate the directory's existence
+				validateDirectoryExistence: false,
+				overrides: options?.overrides?.assets,
+			})
+		: undefined;
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};
@@ -515,7 +462,7 @@ export function unstable_getMiniflareWorkerOptions(
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
 		containerEngine: useContainers
-			? config.dev.container_engine ?? resolveDockerHost(getDockerPath())
+			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
 			: undefined,
 
 		...bindingOptions,

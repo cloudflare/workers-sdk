@@ -1,11 +1,25 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { blue } from "kleur/colors";
-import { LogLevel, SharedHeaders } from "miniflare:shared";
-import PostalMime, { Email } from "postal-mime";
-import { CoreBindings } from "../core/constants";
+import PostalMime from "postal-mime";
 import { RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
 import type { EmailAddress, MessageBuilder } from "./types";
+import type { Email } from "postal-mime";
+
+/**
+ * Build a Message-ID in the shape the production `send_email` binding returns:
+ * `<{36 alphanumeric chars}@{sender domain}>`, brackets included. The body is
+ * random — production synthesizes its own id rather than echoing any header
+ * present in the submitted email.
+ */
+function synthesizeMessageId(senderEmail: string): string {
+	const alphabet =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	const bytes = crypto.getRandomValues(new Uint8Array(36));
+	const id = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+	const domain = senderEmail.slice(senderEmail.lastIndexOf("@") + 1);
+	return `<${id}@${domain}>`;
+}
 
 /**
  * Extracts email address from string or EmailAddress object
@@ -50,8 +64,19 @@ function formatMessageBuilder(builder: MessageBuilder): string {
 	return lines.join("\n");
 }
 
+/**
+ * Appends path segments to a base path using the separator already implied by
+ * the base path string. This trims trailing `/` and `\` from the base before
+ * joining, but does not otherwise normalize the full path.
+ */
+function joinPath(base: string, ...segments: string[]): string {
+	const separator = base.includes("\\") ? "\\" : "/";
+	return [base.replace(/[\\/]+$/, ""), ...segments].join(separator);
+}
+
 interface SendEmailEnv {
-	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	MINIFLARE_EMAIL_DISK: Fetcher;
+	email_directory: string;
 	destination_address: string | undefined;
 	allowed_destination_addresses: string[] | undefined;
 	allowed_sender_addresses: string[] | undefined;
@@ -59,22 +84,13 @@ interface SendEmailEnv {
 
 export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	/**
-	 * Logs a message via the loopback service
+	 * Logs a message via the runtime console.
 	 */
-	private log(message: string, level: LogLevel = LogLevel.INFO): void {
-		this.ctx.waitUntil(
-			this.env[CoreBindings.SERVICE_LOOPBACK].fetch(
-				"http://localhost/core/log",
-				{
-					method: "POST",
-					headers: { [SharedHeaders.LOG_LEVEL]: level.toString() },
-					body: message,
-				}
-			)
-		);
+	private log(message: string): void {
+		console.log(message);
 	}
 	/**
-	 * Stores content to a temporary file via the loopback service
+	 * Stores content to a temporary file via the disk service.
 	 */
 	private async storeTempFile(
 		content: string | ArrayBuffer | ArrayBufferView,
@@ -95,14 +111,14 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			);
 		}
 
-		const resp = await this.env[CoreBindings.SERVICE_LOOPBACK].fetch(
-			`http://localhost/core/store-temp-file?extension=${extension}&prefix=${prefix}`,
-			{
-				method: "POST",
-				body,
-			}
-		);
-		return await resp.text();
+		const fileName = `${crypto.randomUUID()}.${extension}`;
+		const url = new URL(`${prefix}/${fileName}`, "http://placeholder/");
+		await this.env.MINIFLARE_EMAIL_DISK.fetch(url, {
+			method: "PUT",
+			body,
+		});
+
+		return joinPath(this.env.email_directory, prefix, fileName);
 	}
 
 	private checkDestinationAllowed(to: string) {
@@ -167,7 +183,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 
 	async send(
 		emailMessageOrBuilder: EmailMessage | MessageBuilder
-	): Promise<void> {
+	): Promise<EmailSendResult> {
 		// Check if this is an EmailMessage (has RAW_EMAIL symbol) or MessageBuilder
 		if (this.isEmailMessage(emailMessageOrBuilder)) {
 			// Original EmailMessage API - validate and parse MIME
@@ -216,6 +232,8 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			this.log(
 				`${blue("send_email binding called with the following message:")}\n  ${file}`
 			);
+
+			return { messageId: synthesizeMessageId(emailMessage.from) };
 		} else {
 			// New MessageBuilder API - just validate and log
 			const builder = emailMessageOrBuilder;
@@ -268,6 +286,10 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			this.log(
 				`${blue("send_email binding called with MessageBuilder:")}\n${formatted}${fileInfo}`
 			);
+
+			return {
+				messageId: synthesizeMessageId(extractEmailAddress(builder.from)),
+			};
 		}
 	}
 }

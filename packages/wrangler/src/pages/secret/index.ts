@@ -15,6 +15,7 @@ import { logger } from "../../logger";
 import * as metrics from "../../metrics";
 import { parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
+import { getCloudflareAccountIdFromEnv } from "../../user/auth-variables";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../constants";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../errors";
@@ -39,7 +40,7 @@ async function pagesProject(
 	if (!isPagesEnv(env)) {
 		throw new FatalError(
 			`Pages does not support the "${env}" named environment. Please specify "production" (default) or "preview"`,
-			1
+			{ code: 1, telemetryMessage: "pages secret env unsupported" }
 		);
 	}
 	let config: Config | undefined;
@@ -79,7 +80,8 @@ async function pagesProject(
 	const configCache = getConfigCache<PagesConfigCache>(
 		PAGES_CONFIG_CACHE_FILENAME
 	);
-	const accountId = await requireAuth(configCache);
+	const accountId =
+		getCloudflareAccountIdFromEnv() ?? (await requireAuth(configCache));
 
 	const projectName =
 		cliProjectName ?? config?.name ?? configCache.project_name;
@@ -95,12 +97,18 @@ async function pagesProject(
 		} catch (err) {
 			// code `8000007` corresponds to project not found
 			if ((err as { code: number }).code === 8000007) {
-				throw new FatalError(`Project "${projectName}" does not exist.`, 1);
+				throw new FatalError(`Project "${projectName}" does not exist.`, {
+					code: 1,
+					telemetryMessage: "pages secret project not found",
+				});
 			}
 			throw err;
 		}
 	} else {
-		throw new FatalError("Must specify a project name.", 1);
+		throw new FatalError("Must specify a project name.", {
+			code: 1,
+			telemetryMessage: "pages secret missing project name",
+		});
 	}
 	return { env, project, accountId, config };
 }
@@ -225,7 +233,9 @@ export const pagesSecretBulkCommand = createCommand({
 		const result = await parseBulkInputToObject(args.file);
 
 		if (!result) {
-			throw new FatalError(`🚨 No content found in file or piped input.`);
+			throw new FatalError(`🚨 No content found in file or piped input.`, {
+				telemetryMessage: "pages secret bulk missing content",
+			});
 		}
 
 		const { content, secretSource, secretFormat } = result;

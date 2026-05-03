@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
-import { brandColor, dim, white } from "@cloudflare/cli/colors";
+import { brandColor, dim, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	getBindingTypeFriendlyName,
 	UserError,
@@ -83,6 +83,11 @@ export function printBindings(
 	const queues = extractBindingsOfType("queue", bindings);
 	const d1_databases = extractBindingsOfType("d1", bindings);
 	const vectorize = extractBindingsOfType("vectorize", bindings);
+	const ai_search_namespaces = extractBindingsOfType(
+		"ai_search_namespace",
+		bindings
+	);
+	const ai_search = extractBindingsOfType("ai_search", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const r2_buckets = extractBindingsOfType("r2_bucket", bindings);
 	const logfwdr = extractBindingsOfType("logfwdr", bindings);
@@ -90,8 +95,10 @@ export function printBindings(
 		"secrets_store_secret",
 		bindings
 	);
+	const artifacts = extractBindingsOfType("artifacts", bindings);
 	const services = extractBindingsOfType("service", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
+	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
 	const analytics_engine_datasets = extractBindingsOfType(
 		"analytics_engine",
 		bindings
@@ -99,6 +106,7 @@ export function printBindings(
 	const text_blobs = extractBindingsOfType("text_blob", bindings);
 	const browser = extractBindingsOfType("browser", bindings);
 	const images = extractBindingsOfType("images", bindings);
+	const stream = extractBindingsOfType("stream", bindings);
 	const ai = extractBindingsOfType("ai", bindings);
 	const version_metadata = extractBindingsOfType("version_metadata", bindings);
 	// Extract all vars (plain_text, json, secret_text) together to preserve insertion order
@@ -129,6 +137,7 @@ export function printBindings(
 		"unsafe_hello_world",
 		bindings
 	);
+	const flagship = extractBindingsOfType("flagship", bindings);
 	const media = extractBindingsOfType("media", bindings);
 	const worker_loaders = extractBindingsOfType("worker_loader", bindings);
 
@@ -162,12 +171,7 @@ export function printBindings(
 						const registryDefinition = context.registry?.[script_name];
 
 						hasConnectionStatus = true;
-						if (
-							registryDefinition &&
-							registryDefinition.durableObjects.some(
-								(d) => d.className === class_name
-							)
-						) {
+						if (registryDefinition && registryDefinition.debugPortAddress) {
 							value += `, defined in ${script_name}`;
 							mode = getMode({ isSimulatedLocally: true, connected: true });
 						} else {
@@ -292,7 +296,7 @@ export function printBindings(
 					const value =
 						typeof database_id == "symbol"
 							? database_id
-							: preview_database_id ?? database_name ?? database_id;
+							: (preview_database_id ?? database_name ?? database_id);
 
 					return {
 						name: binding,
@@ -323,6 +327,32 @@ export function printBindings(
 		);
 	}
 
+	if (ai_search_namespaces.length > 0) {
+		output.push(
+			...ai_search_namespaces.map(({ binding, namespace }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("ai_search_namespace"),
+				// Preserve `namespace` as-is so `typeof === "symbol"` handling
+				// downstream can render INHERIT_SYMBOL as `"inherited"`. Using
+				// `String(namespace)` would stringify it to
+				// `"Symbol(inherit_binding)"` and defeat that check.
+				value: namespace ?? undefined,
+				mode: getMode({ isSimulatedLocally: false }),
+			}))
+		);
+	}
+
+	if (ai_search.length > 0) {
+		output.push(
+			...ai_search.map(({ binding, instance_name }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("ai_search"),
+				value: instance_name ? String(instance_name) : undefined,
+				mode: getMode({ isSimulatedLocally: false }),
+			}))
+		);
+	}
+
 	if (hyperdrive.length > 0) {
 		output.push(
 			...hyperdrive.map(({ binding, id }) => {
@@ -343,6 +373,22 @@ export function printBindings(
 					name: binding,
 					type: getBindingTypeFriendlyName("vpc_service"),
 					value: service_id,
+					mode: getMode({
+						isSimulatedLocally:
+							remote && !context.remoteBindingsDisabled ? false : undefined,
+					}),
+				};
+			})
+		);
+	}
+
+	if (vpc_networks.length > 0) {
+		output.push(
+			...vpc_networks.map(({ binding, tunnel_id, network_id, remote }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("vpc_network"),
+					value: tunnel_id ?? network_id,
 					mode: getMode({
 						isSimulatedLocally:
 							remote && !context.remoteBindingsDisabled ? false : undefined,
@@ -400,6 +446,19 @@ export function printBindings(
 		);
 	}
 
+	if (artifacts.length > 0) {
+		output.push(
+			...artifacts.map(({ binding, namespace }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("artifacts"),
+					value: namespace,
+					mode: getMode({ isSimulatedLocally: false }),
+				};
+			})
+		);
+	}
+
 	if (unsafe_hello_world.length > 0) {
 		output.push(
 			...unsafe_hello_world.map(({ binding, enable_timer }) => {
@@ -408,6 +467,23 @@ export function printBindings(
 					type: getBindingTypeFriendlyName("unsafe_hello_world"),
 					value: enable_timer ? `Timer enabled` : `Timer disabled`,
 					mode: getMode({ isSimulatedLocally: true }),
+				};
+			})
+		);
+	}
+
+	if (flagship.length > 0) {
+		output.push(
+			...flagship.map(({ binding, app_id }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("flagship"),
+					value: app_id,
+					mode: getMode({
+						isSimulatedLocally: !context.remoteBindingsDisabled
+							? false
+							: undefined,
+					}),
 				};
 			})
 		);
@@ -435,11 +511,7 @@ export function printBindings(
 						const registryDefinition = context.registry?.[service];
 						hasConnectionStatus = true;
 
-						if (
-							registryDefinition &&
-							(!entrypoint ||
-								registryDefinition.entrypointAddresses?.[entrypoint])
-						) {
+						if (registryDefinition && registryDefinition.debugPortAddress) {
 							mode = getMode({ isSimulatedLocally: true, connected: true });
 						} else {
 							mode = getMode({ isSimulatedLocally: true, connected: false });
@@ -507,6 +579,23 @@ export function printBindings(
 				value: undefined,
 				mode: getMode({
 					isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+				}),
+			}))
+		);
+	}
+
+	if (stream.length > 0) {
+		output.push(
+			...stream.map(({ binding, remote }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("stream"),
+				value: undefined,
+				mode: getMode({
+					isSimulatedLocally:
+						(remote === true || remote === undefined) &&
+						!context.remoteBindingsDisabled
+							? false
+							: undefined,
 				}),
 			}))
 		);
@@ -718,7 +807,9 @@ export function printBindings(
 
 		const maxValueLength = Math.max(
 			...output.map((b) =>
-				typeof b.value === "symbol" ? "inherited".length : b.value?.length ?? 0
+				typeof b.value === "symbol"
+					? "inherited".length
+					: (b.value?.length ?? 0)
 			)
 		);
 		const maxNameLength = Math.max(...output.map((b) => b.name.length));
@@ -765,7 +856,7 @@ export function printBindings(
 			const bindingValue = dim(
 				typeof binding.value === "symbol"
 					? chalk.italic("inherited")
-					: binding.value ?? ""
+					: (binding.value ?? "")
 			);
 			const bindingString = padEndAnsi(
 				`${white(`env.${binding.name}`)}${binding.value && !shouldWrap ? ` (${bindingValue})` : ""}`,
@@ -904,7 +995,7 @@ export function warnOrError(
 		throw new UserError(
 			`${getBindingTypeFriendlyName(type)} bindings do not support accessing remote resources.`,
 			{
-				telemetryMessage: true,
+				telemetryMessage: "utils bindings unsupported remote resources",
 			}
 		);
 	}
@@ -912,7 +1003,7 @@ export function warnOrError(
 		throw new UserError(
 			`${getBindingTypeFriendlyName(type)} bindings do not support local development. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
 			{
-				telemetryMessage: true,
+				telemetryMessage: "utils bindings unsupported local development",
 			}
 		);
 	}

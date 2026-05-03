@@ -24,7 +24,7 @@ describe("json helpers", () => {
 	describe("readJSONWithComments", () => {
 		test("reads and parses JSON file with comments", ({ expect }) => {
 			mockReadFile.mockReturnValue(
-				'{\n/* a comment */\n "name": "test"\n}\n// post-comment',
+				'{\n/* a comment */\n "name": "test"\n}\n// post-comment'
 			);
 			const result = readJSONWithComments("/path/to/file.json");
 			expect(mockReadFile).toHaveBeenCalledWith("/path/to/file.json");
@@ -41,12 +41,11 @@ describe("json helpers", () => {
 						value: "<REPLACE_ME>",
 						list: [["<REPLACE_ME>"], "<DO_NOT_REPLACE_ME>"],
 					},
-				}),
+				})
 			);
 
-			const result = readJSONWithComments(
-				"/path/to/file.json",
-				(_key, value) => (value === "<REPLACE_ME>" ? "REPLACED" : value),
+			const result = readJSONWithComments("/path/to/file.json", (_key, value) =>
+				value === "<REPLACE_ME>" ? "REPLACED" : value
 			);
 			expect(mockReadFile).toHaveBeenCalledWith("/path/to/file.json");
 			expect(result).toEqual({
@@ -64,12 +63,12 @@ describe("json helpers", () => {
 	describe("writeJSONWithComments", () => {
 		test("stringifies and writes JSON object with comments", ({ expect }) => {
 			mockReadFile.mockReturnValue(
-				'{\n\t/* a comment */\n\t"name": "test"\n}\n// post-comment',
+				'{\n\t/* a comment */\n\t"name": "test"\n}\n// post-comment'
 			);
 			const result = readJSONWithComments("/path/to/file.json");
 			writeJSONWithComments("/path/to/file.json", result);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -89,7 +88,7 @@ describe("json helpers", () => {
 
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -109,7 +108,7 @@ describe("json helpers", () => {
 
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -128,7 +127,7 @@ describe("json helpers", () => {
 
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -145,14 +144,14 @@ describe("json helpers", () => {
 			expect,
 		}) => {
 			mockReadFile.mockReturnValue(
-				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment',
+				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment'
 			);
 			let jsonObject = readJSONWithComments("/path/to/file.json");
 			jsonObject = appendJSONProperty(jsonObject, "newProp", "newValue");
 			expect(jsonObject).toEqual({ existing: "value", newProp: "newValue" });
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -170,14 +169,14 @@ describe("json helpers", () => {
 			expect,
 		}) => {
 			mockReadFile.mockReturnValue(
-				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment',
+				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment'
 			);
 			let jsonObject = readJSONWithComments("/path/to/file.json");
 			jsonObject = insertJSONProperty(jsonObject, "newProp", "newValue");
 			expect(jsonObject).toEqual({ existing: "value", newProp: "newValue" });
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{

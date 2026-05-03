@@ -1,6 +1,9 @@
-import { space, updateStatus } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { space, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import {
+	inputPrompt,
+	spinner,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	ApiError,
 	DeploymentMutationError,
@@ -25,7 +28,7 @@ import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Arg } from "@cloudflare/cli/interactive";
+import type { Arg } from "@cloudflare/cli-shared-helpers/interactive";
 import type {
 	CompleteAccountCustomer,
 	EnvironmentVariable,
@@ -109,10 +112,9 @@ export function handleFailure<
 		const isJson = "json" in args ? args.json === true : false;
 		if (!isNonInteractiveOrCI() && !isJson) {
 			await printWranglerBanner();
-			const commandStatus = command.includes("cloudchamber")
-				? "alpha"
-				: "open beta";
-			logger.warn(constructStatusMessage(command, commandStatus));
+			if (scope === cloudchamberScope) {
+				logger.warn(constructStatusMessage(command, "alpha"));
+			}
 		}
 		const config = readConfig(args);
 		await fillOpenAPIConfiguration(config, scope);
@@ -172,7 +174,8 @@ export async function fillOpenAPIConfiguration(
 		logger.error(`You don't have '${scope}' in your list of scopes`);
 		printScopes(scopes ?? []);
 		throw new UserError(
-			`You need '${scope}', try logging in again or creating an appropiate API token`
+			`You need '${scope}', try logging in again or creating an appropiate API token`,
+			{ telemetryMessage: "cloudchamber auth missing scope" }
 		);
 	}
 
@@ -183,7 +186,9 @@ export async function fillOpenAPIConfiguration(
 	if (OpenAPI.BASE.length === 0) {
 		const [base, errApiURL] = await wrap(getAPIUrl(config, accountId, scope));
 		if (errApiURL) {
-			throw new UserError("getting the API url: " + errApiURL.message);
+			throw new UserError("getting the API url: " + errApiURL.message, {
+				telemetryMessage: "cloudchamber auth api url failed",
+			});
 		}
 
 		OpenAPI.BASE = base;
@@ -302,20 +307,28 @@ export function renderDeploymentMutationError(
 	err: Error
 ) {
 	if (!(err instanceof ApiError)) {
-		throw new UserError(err.message);
+		throw new UserError(err.message, {
+			telemetryMessage: "cloudchamber deployment mutation unexpected error",
+		});
 	}
 
 	if (typeof err.body === "string") {
-		throw new UserError("There has been an internal error, please try again!");
+		throw new UserError("There has been an internal error, please try again!", {
+			telemetryMessage: "cloudchamber deployment mutation internal error",
+		});
 	}
 
 	if (!("error" in err.body)) {
-		throw new UserError(err.message);
+		throw new UserError(err.message, {
+			telemetryMessage: "cloudchamber deployment mutation malformed response",
+		});
 	}
 
 	const errorMessage = err.body.error;
 	if (!(errorMessage in DeploymentMutationError)) {
-		throw new UserError(err.message);
+		throw new UserError(err.message, {
+			telemetryMessage: "cloudchamber deployment mutation unknown error",
+		});
 	}
 
 	const details: Record<string, string> = err.body.details ?? {};
@@ -355,7 +368,8 @@ export function renderDeploymentMutationError(
 		};
 
 	throw new UserError(
-		details["reason"] ?? errorEnumToErrorMessage[errorEnum]()
+		details["reason"] ?? errorEnumToErrorMessage[errorEnum](),
+		{ telemetryMessage: "cloudchamber deployment mutation failed" }
 	);
 }
 

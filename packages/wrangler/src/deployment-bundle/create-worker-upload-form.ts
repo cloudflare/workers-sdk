@@ -126,17 +126,25 @@ export function createWorkerUploadForm(
 	const r2_buckets = extractBindingsOfType("r2_bucket", bindings);
 	const d1_databases = extractBindingsOfType("d1", bindings);
 	const vectorize = extractBindingsOfType("vectorize", bindings);
+	const ai_search_namespaces = extractBindingsOfType(
+		"ai_search_namespace",
+		bindings
+	);
+	const ai_search = extractBindingsOfType("ai_search", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
 		"secrets_store_secret",
 		bindings
 	);
+	const artifacts = extractBindingsOfType("artifacts", bindings);
 	const unsafe_hello_world = extractBindingsOfType(
 		"unsafe_hello_world",
 		bindings
 	);
+	const flagship = extractBindingsOfType("flagship", bindings);
 	const ratelimits = extractBindingsOfType("ratelimit", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
+	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
 	const services = extractBindingsOfType("service", bindings);
 	const analytics_engine_datasets = extractBindingsOfType(
 		"analytics_engine",
@@ -154,6 +162,7 @@ export function createWorkerUploadForm(
 	const browser = extractBindingsOfType("browser", bindings)[0];
 	const ai = extractBindingsOfType("ai", bindings)[0];
 	const images = extractBindingsOfType("images", bindings)[0];
+	const stream = extractBindingsOfType("stream", bindings)[0];
 	const media = extractBindingsOfType("media", bindings)[0];
 	const version_metadata = extractBindingsOfType(
 		"version_metadata",
@@ -188,7 +197,9 @@ export function createWorkerUploadForm(
 		}
 
 		if (id === undefined) {
-			throw new UserError(`${binding} bindings must have an "id" field`);
+			throw new UserError(`${binding} bindings must have an "id" field`, {
+				telemetryMessage: "kv namespace binding missing id",
+			});
 		}
 
 		if (id === INHERIT_SYMBOL) {
@@ -265,7 +276,8 @@ export function createWorkerUploadForm(
 		}
 		if (bucket_name === undefined) {
 			throw new UserError(
-				`${binding} bindings must have a "bucket_name" field`
+				`${binding} bindings must have a "bucket_name" field`,
+				{ telemetryMessage: "r2 bucket binding missing bucket_name" }
 			);
 		}
 
@@ -292,7 +304,8 @@ export function createWorkerUploadForm(
 			}
 			if (database_id === undefined) {
 				throw new UserError(
-					`${binding} bindings must have a "database_id" field`
+					`${binding} bindings must have a "database_id" field`,
+					{ telemetryMessage: "d1 database binding missing database_id" }
 				);
 			}
 
@@ -322,6 +335,38 @@ export function createWorkerUploadForm(
 		});
 	});
 
+	ai_search_namespaces.forEach(({ binding, namespace }) => {
+		if (options?.dryRun) {
+			namespace ??= INHERIT_SYMBOL;
+		}
+		if (namespace === undefined) {
+			throw new UserError(`${binding} bindings must have a "namespace" field`, {
+				telemetryMessage: "ai search namespace binding missing namespace",
+			});
+		}
+
+		if (namespace === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "ai_search_namespace",
+				namespace,
+			});
+		}
+	});
+
+	ai_search.forEach(({ binding, instance_name }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "ai_search",
+			instance_name,
+		});
+	});
+
 	hyperdrive.forEach(({ binding, id }) => {
 		metadataBindings.push({
 			name: binding,
@@ -339,11 +384,27 @@ export function createWorkerUploadForm(
 		});
 	});
 
+	artifacts.forEach(({ binding, namespace }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "artifacts",
+			namespace,
+		});
+	});
+
 	unsafe_hello_world.forEach(({ binding, enable_timer }) => {
 		metadataBindings.push({
 			name: binding,
 			type: "unsafe_hello_world",
 			enable_timer,
+		});
+	});
+
+	flagship.forEach(({ binding, app_id }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "flagship",
+			app_id,
 		});
 	});
 
@@ -361,6 +422,14 @@ export function createWorkerUploadForm(
 			name: binding,
 			type: "vpc_service",
 			service_id,
+		});
+	});
+
+	vpc_networks.forEach(({ binding, tunnel_id, network_id }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "vpc_network",
+			...(tunnel_id !== undefined ? { tunnel_id } : { network_id }),
 		});
 	});
 
@@ -456,7 +525,7 @@ export function createWorkerUploadForm(
 						? source.contents
 						: readFileSync(source.path as string),
 				],
-				"path" in source ? source.path ?? name : name,
+				"path" in source ? (source.path ?? name) : name,
 				{ type: "application/wasm" }
 			)
 		);
@@ -484,6 +553,13 @@ export function createWorkerUploadForm(
 			name: images.binding,
 			type: "images",
 			raw: images.raw,
+		});
+	}
+
+	if (stream !== undefined) {
+		metadataBindings.push({
+			name: stream.binding,
+			type: "stream",
 		});
 	}
 
@@ -549,7 +625,7 @@ export function createWorkerUploadForm(
 						? source.contents
 						: readFileSync(source.path as string),
 				],
-				"path" in source ? source.path ?? name : name,
+				"path" in source ? (source.path ?? name) : name,
 				{ type: "application/octet-stream" }
 			)
 		);

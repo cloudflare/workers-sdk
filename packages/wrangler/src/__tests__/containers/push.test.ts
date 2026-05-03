@@ -5,7 +5,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { beforeEach, describe, it, vi } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
-import { mockApiToken } from "../helpers/mock-account-id";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -23,6 +23,7 @@ describe("containers push", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 
+	mockAccountId();
 	mockApiToken();
 	beforeEach(mockAccount);
 
@@ -38,7 +39,7 @@ describe("containers push", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers push <TAG>
 
-			Push a local image to the Cloudflare managed registry [open beta]
+			Push a local image to the Cloudflare managed registry
 
 			POSITIONALS
 			  TAG  The tag of the local image to push  [string] [required]

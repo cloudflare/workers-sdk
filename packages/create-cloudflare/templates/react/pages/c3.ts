@@ -1,5 +1,5 @@
-import { logRaw } from "@cloudflare/cli";
-import { inputPrompt } from "@cloudflare/cli/interactive";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../../src/templates";
@@ -10,7 +10,12 @@ const { npm } = detectPackageManager();
 const generate = async (ctx: C3Context) => {
 	const variant = await getVariant(ctx);
 
-	await runFrameworkGenerator(ctx, [ctx.project.name, "--template", variant]);
+	await runFrameworkGenerator(ctx, [
+		ctx.project.name,
+		"--template",
+		variant,
+		"--no-immediate",
+	]);
 
 	logRaw("");
 };
@@ -39,7 +44,7 @@ async function getVariant(ctx: C3Context) {
 		const selected = variantsOptions.find((v) => v.value === ctx.args.variant);
 		if (!selected) {
 			throw new Error(
-				`Unknown variant "${ctx.args.variant}". Valid variants are: ${variantsOptions.map((v) => v.value).join(", ")}`,
+				`Unknown variant "${ctx.args.variant}". Valid variants are: ${variantsOptions.map((v) => v.value).join(", ")}`
 			);
 		}
 		return selected.value;

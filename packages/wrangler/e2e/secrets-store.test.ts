@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -35,7 +35,7 @@ describe.each(RUNTIMES)(
 			});
 		};
 
-		it("creates a store", async () => {
+		it("creates a store", async ({ expect }) => {
 			const output = await helper.run(
 				`wrangler secrets-store store create ${storeName} ${flags}`
 			);
@@ -62,7 +62,7 @@ describe.each(RUNTIMES)(
 			);
 		});
 
-		it("lists stores", async () => {
+		it("lists stores", async ({ expect }) => {
 			const output = await helper.run(
 				`wrangler secrets-store store list --per-page 100 ${flags}`
 			);
@@ -78,7 +78,7 @@ describe.each(RUNTIMES)(
 			);
 		});
 
-		it("creates a secret", async () => {
+		it("creates a secret", async ({ expect }) => {
 			const output = await helper.run(
 				`wrangler secrets-store secret create ${cachedStoreId} --name ${secretName} --value shh --scopes workers --comment test ${flags}`
 			);
@@ -98,7 +98,7 @@ describe.each(RUNTIMES)(
 			);
 		});
 
-		it("gets a secret", async () => {
+		it("gets a secret", async ({ expect }) => {
 			const output = await helper.run(
 				`wrangler secrets-store secret get ${cachedStoreId} --secret-id ${cachedSecretId} ${flags}`
 			);
@@ -111,7 +111,7 @@ describe.each(RUNTIMES)(
 			);
 		});
 
-		it("updates a secret", async () => {
+		it("updates a secret", async ({ expect }) => {
 			const output = await helper.run(
 				`wrangler secrets-store secret update ${cachedStoreId} --secret-id ${cachedSecretId} --value shh ${flags}`
 			);
@@ -124,7 +124,7 @@ describe.each(RUNTIMES)(
 			);
 		});
 
-		it("deletes a secret", async () => {
+		it("deletes a secret", async ({ expect }) => {
 			const output = await helper.run(
 				`wrangler secrets-store secret delete ${cachedStoreId} --secret-id ${cachedSecretId} ${flags}`
 			);
@@ -134,7 +134,7 @@ describe.each(RUNTIMES)(
 ✅ Deleted secret! (ID: 00000000000000000000000000000000)`);
 		});
 
-		it("validates a secret is deleted", async () => {
+		it("validates a secret is deleted", async ({ expect }) => {
 			const output = await helper.run(
 				`wrangler secrets-store secret get ${cachedStoreId} --secret-id ${cachedSecretId} ${flags}`
 			);
@@ -151,7 +151,7 @@ describe.each(RUNTIMES)(
 			}
 		});
 
-		it.skipIf(runtime === "local")("deletes a store", async () => {
+		it.skipIf(runtime === "local")("deletes a store", async ({ expect }) => {
 			const output = await helper.run(
 				`wrangler secrets-store store delete ${cachedStoreId} ${flags}`
 			);
@@ -167,17 +167,20 @@ describe.each(RUNTIMES)(
 ✅ Deleted store! (ID: 00000000000000000000000000000000)`);
 		});
 
-		it.skipIf(runtime === "local")("validates a store is deleted", async () => {
-			const output = await helper.run(
-				`wrangler secrets-store secret get ${cachedStoreId} --secret-id ${cachedSecretId} ${flags}`
-			);
+		it.skipIf(runtime === "local")(
+			"validates a store is deleted",
+			async ({ expect }) => {
+				const output = await helper.run(
+					`wrangler secrets-store secret get ${cachedStoreId} --secret-id ${cachedSecretId} ${flags}`
+				);
 
-			expect(normalize(output.stdout)).toContain(
-				"🔐 Getting secret... (ID: 00000000000000000000000000000000)"
-			);
-			expect(normalize(output.stderr)).toContain(
-				"store_not_found [code: 1001]"
-			);
-		});
+				expect(normalize(output.stdout)).toContain(
+					"🔐 Getting secret... (ID: 00000000000000000000000000000000)"
+				);
+				expect(normalize(output.stderr)).toContain(
+					"store_not_found [code: 1001]"
+				);
+			}
+		);
 	}
 );

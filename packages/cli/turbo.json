@@ -1,5 +1,11 @@
 {
 	"$schema": "http://turbo.build/schema.json",
 	"extends": ["//"],
-	"tasks": {}
+	"tasks": {
+		"build": {
+			"inputs": ["$TURBO_DEFAULT$", "!**/__tests__/**"],
+			"outputs": ["dist/**"],
+			"env": ["SOURCEMAPS"]
+		}
+	}
 }

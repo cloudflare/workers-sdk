@@ -1,6 +1,5 @@
-declare module "cloudflare:test" {
-	// Controls the type of `import("cloudflare:test").env`
-	interface ProvidedEnv extends Env {
+declare namespace Cloudflare {
+	interface Env {
 		TEST_AUTH_PUBLIC_KEY: string; // Defined in `vitest.config.mts`
 	}
 }

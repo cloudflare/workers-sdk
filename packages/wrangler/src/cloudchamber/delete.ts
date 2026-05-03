@@ -1,5 +1,9 @@
-import { cancel, endSection, startSection } from "@cloudflare/cli";
-import { inputPrompt } from "@cloudflare/cli/interactive";
+import {
+	cancel,
+	endSection,
+	startSection,
+} from "@cloudflare/cli-shared-helpers";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
@@ -65,7 +69,8 @@ async function handleDeleteCommand(
 	);
 	if (err) {
 		throw new UserError(
-			`There has been an internal error deleting your deployment.\n ${err.message}`
+			`There has been an internal error deleting your deployment.\n ${err.message}`,
+			{ telemetryMessage: "cloudchamber delete request failed" }
 		);
 	}
 	endSection("Your container has been deleted");

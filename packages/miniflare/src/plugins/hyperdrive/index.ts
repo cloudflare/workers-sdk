@@ -1,7 +1,8 @@
 import assert from "node:assert";
 import { z } from "zod";
-import { Worker_Binding } from "../../runtime";
-import { Plugin, ProxyNodeBinding } from "../shared";
+import { ProxyNodeBinding } from "../shared";
+import type { Worker_Binding } from "../../runtime";
+import type { Plugin } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
 
@@ -119,18 +120,33 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 		const services = [];
 		for (const [name, url] of Object.entries(options.hyperdrives ?? {})) {
 			const scheme = url.protocol.replace(":", "");
+			const sslmode = parseSslMode(url, scheme);
+			const targetPort = getPort(url);
 
-			const proxyPort = await hyperdriveProxyController.createProxyServer({
-				name,
-				targetHost: url.hostname,
-				targetPort: getPort(url),
-				scheme,
-				sslmode: parseSslMode(url, scheme),
-			});
+			let address: string;
+			if (sslmode === "disable") {
+				// No SSL requested (either explicitly disabled or not specified):
+				// connect directly to the database without a proxy server, avoiding
+				// potential issues with local proxy port binding or firewall rules
+				address = `${url.hostname}:${targetPort}`;
+			} else {
+				// SSL modes (require, prefer) need the proxy to handle
+				// TLS negotiation with the target database
+				const proxyPort = await hyperdriveProxyController.createProxyServer({
+					name,
+					targetHost: url.hostname,
+					targetPort,
+					scheme,
+					sslmode,
+					sslrootcert: parseSslRootCert(url),
+				});
+				address = `127.0.0.1:${proxyPort}`;
+			}
+
 			services.push({
 				name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
 				external: {
-					address: `127.0.0.1:${proxyPort}`,
+					address,
 					tcp: {},
 				},
 			});
@@ -156,8 +172,12 @@ function parseSslMode(url: URL, scheme: string): string {
 		// Parse different variations for mysql sslmode
 		const sslmode = params["ssl-mode"] || params["ssl"] || params["sslmode"];
 
-		// Normalize to postgres values
+		// Normalize to postgres-equivalent values
 		switch (sslmode) {
+			case "verify_identity":
+				return "verify-full";
+			case "verify_ca":
+				return "verify-ca";
 			case "required":
 			case "true":
 			case "1":
@@ -173,6 +193,13 @@ function parseSslMode(url: URL, scheme: string): string {
 
 	// default to disable
 	return "disable";
+}
+
+function parseSslRootCert(url: URL): string | undefined {
+	const params = Object.fromEntries(
+		Array.from(url.searchParams.entries()).map(([k, v]) => [k.toLowerCase(), v])
+	);
+	return params["sslrootcert"] || undefined;
 }
 
 export type {

@@ -51,7 +51,8 @@ export const queuesConsumerAddCommand = createCommand({
 	async handler(args, { config }) {
 		if (Array.isArray(args.retryDelaySecs)) {
 			throw new CommandLineArgsError(
-				`Cannot specify --retry-delay-secs multiple times`
+				`Cannot specify --retry-delay-secs multiple times`,
+				{ telemetryMessage: "queues worker consumer add duplicate retry delay" }
 			);
 		}
 

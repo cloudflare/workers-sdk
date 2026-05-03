@@ -43,7 +43,7 @@ export const vectorizeInsertCommand = createCommand({
 			default: VECTORIZE_UPSERT_BATCH_SIZE,
 		},
 		json: {
-			describe: "return output as clean JSON",
+			describe: "return output as JSON",
 			type: "boolean",
 			default: false,
 		},
@@ -58,7 +58,8 @@ export const vectorizeInsertCommand = createCommand({
 	async handler(args, { config }) {
 		if (!(await isValidFile(args.file))) {
 			throw new UserError(
-				`🚨 Cannot read invalid or empty file: ${args.file}.`
+				`🚨 Cannot read invalid or empty file: ${args.file}.`,
+				{ telemetryMessage: "vectorize insert invalid file" }
 			);
 		}
 
@@ -69,14 +70,16 @@ export const vectorizeInsertCommand = createCommand({
 			Number(args.batchSize) > VECTORIZE_V1_MAX_BATCH_SIZE
 		) {
 			throw new UserError(
-				`🚨 Vectorize currently limits upload batches to ${VECTORIZE_V1_MAX_BATCH_SIZE} records at a time.`
+				`🚨 Vectorize currently limits upload batches to ${VECTORIZE_V1_MAX_BATCH_SIZE} records at a time.`,
+				{ telemetryMessage: "vectorize insert v1 batch size too large" }
 			);
 		} else if (
 			!args.deprecatedV1 &&
 			Number(args.batchSize) > VECTORIZE_MAX_BATCH_SIZE
 		) {
 			throw new UserError(
-				`🚨 The global rate limit for the Cloudflare API is 1200 requests per five minutes. Vectorize V2 indexes currently limit upload batches to ${VECTORIZE_MAX_BATCH_SIZE} records at a time to stay within the service limits.`
+				`🚨 The global rate limit for the Cloudflare API is 1200 requests per five minutes. Vectorize V2 indexes currently limit upload batches to ${VECTORIZE_MAX_BATCH_SIZE} records at a time to stay within the service limits.`,
+				{ telemetryMessage: "vectorize insert batch size too large" }
 			);
 		}
 
@@ -90,21 +93,27 @@ export const vectorizeInsertCommand = createCommand({
 				})
 			);
 			if (args.deprecatedV1) {
-				logger.log(`✨ Uploading vector batch (${batch.length} vectors)`);
+				if (!args.json) {
+					logger.log(`✨ Uploading vector batch (${batch.length} vectors)`);
+				}
 				const idxPart = await insertIntoIndexV1(config, args.name, formData);
 				vectorInsertCount += idxPart.count;
 			} else {
 				const mutation = await insertIntoIndex(config, args.name, formData);
 				vectorInsertCount += batch.length;
-				logger.log(
-					`✨ Enqueued ${batch.length} vectors into index '${args.name}' for insertion. Mutation changeset identifier: ${mutation.mutationId}`
-				);
+				if (!args.json) {
+					logger.log(
+						`✨ Enqueued ${batch.length} vectors into index '${args.name}' for insertion. Mutation changeset identifier: ${mutation.mutationId}`
+					);
+				}
 			}
 
 			if (vectorInsertCount > VECTORIZE_MAX_UPSERT_VECTOR_RECORDS) {
-				logger.warn(
-					`🚧 While Vectorize is in beta, we've limited uploads to 100k vectors per run. You may run this again with another batch to upload further`
-				);
+				if (!args.json) {
+					logger.warn(
+						`🚧 While Vectorize is in beta, we've limited uploads to 100k vectors per run. You may run this again with another batch to upload further`
+					);
+				}
 				break;
 			}
 		}

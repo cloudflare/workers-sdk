@@ -12,6 +12,7 @@ import {
 } from "./helpers/bucket";
 import {
 	formatActionDescription,
+	isDataCatalogConflict,
 	isNonNegativeNumber,
 	isValidDate,
 } from "./helpers/misc";
@@ -129,7 +130,7 @@ export const r2BucketLifecycleAddCommand = createCommand({
 			type: "string",
 		},
 		force: {
-			describe: "Skip confirmation",
+			describe: "Skip confirmation and data catalog validation prompt",
 			type: "boolean",
 			alias: "y",
 			default: false,
@@ -164,7 +165,9 @@ export const r2BucketLifecycleAddCommand = createCommand({
 		}
 
 		if (!name) {
-			throw new UserError("Must specify a rule name.");
+			throw new UserError("Must specify a rule name.", {
+				telemetryMessage: "r2 lifecycle add missing rule name",
+			});
 		}
 
 		const newRule: LifecycleRule = {
@@ -209,7 +212,9 @@ export const r2BucketLifecycleAddCommand = createCommand({
 		}
 
 		if (selectedActions.length === 0) {
-			throw new UserError("Must specify at least one action.");
+			throw new UserError("Must specify at least one action.", {
+				telemetryMessage: "r2 lifecycle add missing action",
+			});
 		}
 
 		for (const action of selectedActions) {
@@ -225,7 +230,9 @@ export const r2BucketLifecycleAddCommand = createCommand({
 					);
 				}
 				if (!isNonNegativeNumber(String(conditionValue))) {
-					throw new UserError("Must be a positive number.");
+					throw new UserError("Must be a positive number.", {
+						telemetryMessage: "r2 lifecycle add invalid abort multipart days",
+					});
 				}
 
 				conditionType = "Age";
@@ -259,7 +266,10 @@ export const r2BucketLifecycleAddCommand = createCommand({
 						!isValidDate(String(conditionValue))
 					) {
 						throw new UserError(
-							"Must be a positive number or a valid date in the YYYY-MM-DD format."
+							"Must be a positive number or a valid date in the YYYY-MM-DD format.",
+							{
+								telemetryMessage: "r2 lifecycle add invalid action condition",
+							}
 						);
 					}
 				}
@@ -272,7 +282,9 @@ export const r2BucketLifecycleAddCommand = createCommand({
 					const date = new Date(`${conditionValue}T00:00:00.000Z`);
 					conditionValue = date.toISOString();
 				} else {
-					throw new UserError("Invalid condition input.");
+					throw new UserError("Invalid condition input.", {
+						telemetryMessage: "r2 lifecycle add invalid condition input",
+					});
 				}
 
 				if (action === "expire") {
@@ -313,13 +325,38 @@ export const r2BucketLifecycleAddCommand = createCommand({
 
 		lifecycleRules.push(newRule);
 		logger.log(`Adding lifecycle rule '${name}' to bucket '${bucket}'...`);
-		await putLifecycleRules(
-			config,
-			accountId,
-			bucket,
-			lifecycleRules,
-			jurisdiction
-		);
+		try {
+			await putLifecycleRules(
+				config,
+				accountId,
+				bucket,
+				lifecycleRules,
+				force,
+				jurisdiction
+			);
+		} catch (error) {
+			if (!force && isDataCatalogConflict(error)) {
+				const confirmed = await confirm(
+					"Data catalog is enabled for this bucket. " +
+						"Proceeding may leave the data catalog in an invalid state. Continue?",
+					{ defaultValue: false, fallbackValue: true }
+				);
+				if (!confirmed) {
+					logger.log("Operation cancelled.");
+					return;
+				}
+				await putLifecycleRules(
+					config,
+					accountId,
+					bucket,
+					lifecycleRules,
+					true,
+					jurisdiction
+				);
+			} else {
+				throw error;
+			}
+		}
 		logger.log(`✨ Added lifecycle rule '${name}' to bucket '${bucket}'.`);
 	},
 });
@@ -367,7 +404,8 @@ export const r2BucketLifecycleRemoveCommand = createCommand({
 
 		if (index === -1) {
 			throw new UserError(
-				`Lifecycle rule with ID '${name}' not found in configuration for '${bucket}'.`
+				`Lifecycle rule with ID '${name}' not found in configuration for '${bucket}'.`,
+				{ telemetryMessage: "r2 lifecycle remove rule not found" }
 			);
 		}
 
@@ -379,6 +417,7 @@ export const r2BucketLifecycleRemoveCommand = createCommand({
 			accountId,
 			bucket,
 			lifecycleRules,
+			true, // Always bypass validation
 			jurisdiction
 		);
 		logger.log(`Lifecycle rule '${name}' removed from bucket '${bucket}'.`);
@@ -412,7 +451,7 @@ export const r2BucketLifecycleSetCommand = createCommand({
 			type: "string",
 		},
 		force: {
-			describe: "Skip confirmation",
+			describe: "Skip confirmation and data catalog validation prompt",
 			type: "boolean",
 			alias: "y",
 			default: false,
@@ -428,7 +467,8 @@ export const r2BucketLifecycleSetCommand = createCommand({
 		} catch (e) {
 			if (e instanceof Error) {
 				throw new UserError(
-					`Failed to read or parse the lifecycle configuration config file: '${e.message}'`
+					`Failed to read or parse the lifecycle configuration config file: '${e.message}'`,
+					{ telemetryMessage: "r2 lifecycle set config read failed" }
 				);
 			} else {
 				throw e;
@@ -437,7 +477,8 @@ export const r2BucketLifecycleSetCommand = createCommand({
 
 		if (!lifecyclePolicy.rules || !Array.isArray(lifecyclePolicy.rules)) {
 			throw new UserError(
-				"The lifecycle configuration file must contain a 'rules' array."
+				"The lifecycle configuration file must contain a 'rules' array.",
+				{ telemetryMessage: "r2 lifecycle set config missing rules array" }
 			);
 		}
 
@@ -453,13 +494,38 @@ export const r2BucketLifecycleSetCommand = createCommand({
 		logger.log(
 			`Setting lifecycle configuration (${lifecyclePolicy.rules.length} rules) for bucket '${bucket}'...`
 		);
-		await putLifecycleRules(
-			config,
-			accountId,
-			bucket,
-			lifecyclePolicy.rules,
-			jurisdiction
-		);
+		try {
+			await putLifecycleRules(
+				config,
+				accountId,
+				bucket,
+				lifecyclePolicy.rules,
+				force,
+				jurisdiction
+			);
+		} catch (error) {
+			if (!force && isDataCatalogConflict(error)) {
+				const confirmed = await confirm(
+					"Data catalog is enabled for this bucket. " +
+						"Proceeding may leave the data catalog in an invalid state. Continue?",
+					{ defaultValue: false, fallbackValue: true }
+				);
+				if (!confirmed) {
+					logger.log("Operation cancelled.");
+					return;
+				}
+				await putLifecycleRules(
+					config,
+					accountId,
+					bucket,
+					lifecyclePolicy.rules,
+					true,
+					jurisdiction
+				);
+			} else {
+				throw error;
+			}
+		}
 		logger.log(`✨ Set lifecycle configuration for bucket '${bucket}'.`);
 	},
 });

@@ -1,4 +1,6 @@
-import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineProject, mergeConfig } from "vitest/config";
+import configShared from "../../../vitest.shared";
 
 // Configuration for the "auxiliary" Worker under test.
 // Unfortunately, auxiliary Workers cannot load their configuration
@@ -15,11 +17,11 @@ export const auxiliaryWorker = {
 	},
 };
 
-export default defineWorkersProject({
-	test: {
-		globalSetup: ["./global-setup.ts"],
-		poolOptions: {
-			workers: {
+export default mergeConfig(
+	configShared,
+	defineProject({
+		plugins: [
+			cloudflareTest({
 				wrangler: { configPath: "./src/wrangler.jsonc" },
 				miniflare: {
 					workers: [auxiliaryWorker],
@@ -28,12 +30,15 @@ export default defineWorkersProject({
 					// This entrypoint is wildcard re-exported from a virtual module so we cannot automatically infer it.
 					ConfiguredVirtualEntryPoint: "WorkerEntrypoint",
 				},
+			}),
+		],
+		test: {
+			globalSetup: ["./global-setup.ts"],
+			alias: {
+				// This alias is used to simulate a virtual module that Vitest and TypeScript can understand,
+				// but esbuild (used by the vitest-pool-workers to guess exports) cannot.
+				"@virtual-module": "./virtual.ts",
 			},
 		},
-		alias: {
-			// This alias is used to simulate a virtual module that Vitest and TypeScript can understand,
-			// but esbuild (used by the vitest-pool-workers to guess exports) cannot.
-			"@virtual-module": "./virtual.ts",
-		},
-	},
-});
+	})
+);

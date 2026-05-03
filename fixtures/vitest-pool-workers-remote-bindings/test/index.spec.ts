@@ -1,9 +1,8 @@
 import {
 	createExecutionContext,
-	env,
-	SELF,
 	waitOnExecutionContext,
 } from "cloudflare:test";
+import { env, exports } from "cloudflare:workers";
 import { describe, test } from "vitest";
 
 describe("Vitest pool workers remote bindings", () => {
@@ -23,7 +22,7 @@ describe("Vitest pool workers remote bindings", () => {
 	test("fetching integration-style from the local worker (which uses remote bindings)", async ({
 		expect,
 	}) => {
-		const response = await SELF.fetch("https://example.com");
+		const response = await exports.default.fetch("https://example.com");
 		expect(await response.text()).toMatchInlineSnapshot(
 			`"Response from remote worker: Hello from a remote Worker part of the vitest-pool-workers remote bindings fixture!"`
 		);

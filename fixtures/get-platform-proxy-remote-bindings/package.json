@@ -3,19 +3,15 @@
 	"private": true,
 	"description": "A test for the getPlatformProxy utility used with remote bindings",
 	"scripts": {
-		"test:e2e": "vitest run",
+		"test:e2e": "vitest run --reporter=default",
 		"type:tests": "tsc --noEmit -p tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"miniflare": "workspace:*",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
 	}
 }

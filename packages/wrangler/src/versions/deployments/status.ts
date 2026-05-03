@@ -1,6 +1,6 @@
 import assert from "node:assert";
-import { logRaw } from "@cloudflare/cli";
-import { brandColor, gray } from "@cloudflare/cli/colors";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
+import { brandColor, gray } from "@cloudflare/cli-shared-helpers/colors";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import * as metrics from "../../metrics";
@@ -25,7 +25,7 @@ export const deploymentsStatusCommand = createCommand({
 			requiresArg: true,
 		},
 		json: {
-			describe: "Display output as clean JSON",
+			describe: "Display output as JSON",
 			type: "boolean",
 			default: false,
 		},
@@ -44,7 +44,9 @@ export const deploymentsStatusCommand = createCommand({
 		if (workerName === undefined) {
 			throw new UserError(
 				'You need to provide a name for your Worker. Either pass it as a cli arg with `--name <name>` or in your configuration file as `name = "<name>"`',
-				{ telemetryMessage: true }
+				{
+					telemetryMessage: "versions deployments status missing worker name",
+				}
 			);
 		}
 

@@ -89,10 +89,10 @@ describe("Package Managers", () => {
 				["bun.lockb", true],
 			] as const)("with %s", ([file, isMismatch], { expect }) => {
 				vi.mocked(existsSync).mockImplementationOnce(
-					(path) => !!(path as string).includes(file),
+					(path) => !!(path as string).includes(file)
 				);
 				expect(detectPmMismatch({ project: { path: "" } } as C3Context)).toBe(
-					isMismatch,
+					isMismatch
 				);
 			});
 		});
@@ -109,10 +109,10 @@ describe("Package Managers", () => {
 				["bun.lockb", true],
 			] as const)("with %s", ([file, isMismatch], { expect }) => {
 				vi.mocked(existsSync).mockImplementationOnce(
-					(path) => !!(path as string).includes(file),
+					(path) => !!(path as string).includes(file)
 				);
 				expect(detectPmMismatch({ project: { path: "" } } as C3Context)).toBe(
-					isMismatch,
+					isMismatch
 				);
 			});
 		});
@@ -129,10 +129,10 @@ describe("Package Managers", () => {
 				["bun.lockb", false],
 			] as const)("with %s", ([file, isMismatch], { expect }) => {
 				vi.mocked(existsSync).mockImplementationOnce(
-					(path) => !!(path as string).includes(file),
+					(path) => !!(path as string).includes(file)
 				);
 				expect(detectPmMismatch({ project: { path: "" } } as C3Context)).toBe(
-					isMismatch,
+					isMismatch
 				);
 			});
 		});

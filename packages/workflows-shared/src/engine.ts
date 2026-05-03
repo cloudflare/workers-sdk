@@ -9,20 +9,48 @@ import {
 	toInstanceStatus,
 } from "./instance";
 import { computeHash } from "./lib/cache";
-import { WorkflowFatalError } from "./lib/errors";
+import {
+	ABORT_REASONS,
+	createWorkflowError,
+	isAbortError,
+	PreservedNonRetryableError,
+	shouldPreserveNonRetryableError,
+	stepNotFoundError,
+	WorkflowFatalError,
+} from "./lib/errors";
 import {
 	ENGINE_TIMEOUT,
 	GracePeriodSemaphore,
 	startGracePeriod,
 } from "./lib/gracePeriodSemaphore";
+import {
+	readAndClearRestartFromStep,
+	resolveGroupKeysToWipe,
+	storeRestartFromStep,
+	wipeRestartState,
+} from "./lib/restart";
+import {
+	createReplayReadableStream,
+	getInvalidStoredStreamOutputError,
+	getStoredStreamOutputPreview,
+	StreamOutputState,
+} from "./lib/streams";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
-import { WorkflowInstanceModifier } from "./modifier";
+import { MODIFIER_KEYS, WorkflowInstanceModifier } from "./modifier";
+import type { RestartFromStep } from "./binding";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
-import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
+import type { StreamOutputMeta } from "./lib/streams";
+import type {
+	WorkflowEntrypoint,
+	WorkflowEvent,
+	WorkflowStep,
+} from "cloudflare:workers";
 
 interface Env {
+	ENGINE: DurableObjectNamespace<Engine>;
 	USER_WORKFLOW: WorkflowEntrypoint;
+	STEP_LIMIT?: string; // JSON-encoded number from miniflare binding
 }
 
 export type DatabaseWorkflow = {
@@ -74,6 +102,10 @@ const ENGINE_STATUS_KEY = "ENGINE_STATUS";
 
 const EVENT_MAP_PREFIX = "EVENT_MAP";
 
+export const DEFAULT_STEP_LIMIT = 10_000;
+
+const PAUSE_DATETIME = "PAUSE_DATETIME";
+
 export class Engine extends DurableObject<Env> {
 	logs: Array<unknown> = [];
 
@@ -83,13 +115,25 @@ export class Engine extends DurableObject<Env> {
 	workflowName: string | undefined;
 	timeoutHandler: GracePeriodSemaphore;
 	priorityQueue: TimePriorityQueue | undefined;
+	stepLimit: number;
+	engineAbortController: AbortController = new AbortController();
+	pauseController: AbortController = new AbortController();
 
-	waiters: Map<string, Array<(event: Event | PromiseLike<Event>) => void>> =
-		new Map();
+	waiters: Map<
+		string,
+		Array<
+			[cacheKey: string, resolve: (event: Event | PromiseLike<Event>) => void]
+		>
+	> = new Map();
 	eventMap: Map<string, Array<Event>> = new Map();
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
+
+		this.stepLimit = env.STEP_LIMIT
+			? JSON.parse(env.STEP_LIMIT)
+			: DEFAULT_STEP_LIMIT;
+
 		void this.ctx.blockConcurrencyWhile(async () => {
 			this.ctx.storage.transactionSync(() => {
 				try {
@@ -104,14 +148,22 @@ export class Engine extends DurableObject<Env> {
 							CHECK (action IN (0, 1)), -- guararentee that action can only be 0 or 1
 							UNIQUE (action, entryType, hash)
 						);
-						CREATE TABLE IF NOT EXISTS states (
-							id INTEGER PRIMARY KEY NOT NULL,
-							groupKey TEXT,
-							target TEXT,
-							metadata TEXT,
-							event INTEGER NOT NULL
-						)
-					`);
+				CREATE TABLE IF NOT EXISTS states (
+					id INTEGER PRIMARY KEY NOT NULL,
+					timestamp TIMESTAMP DEFAULT (DATETIME('now','subsec')),
+					groupKey TEXT,
+					target TEXT,
+					metadata TEXT,
+					event INTEGER NOT NULL
+				);
+				CREATE TABLE IF NOT EXISTS streaming_step_chunks (
+					cache_key TEXT NOT NULL,
+					attempt INTEGER NOT NULL,
+					chunk_index INTEGER NOT NULL,
+					chunk BLOB NOT NULL,
+					PRIMARY KEY (cache_key, attempt, chunk_index)
+				) WITHOUT ROWID
+				`);
 				} catch (e) {
 					console.error(e);
 					throw e;
@@ -160,12 +212,109 @@ export class Engine extends DurableObject<Env> {
 		];
 
 		return {
-			logs: logs.map((log) => ({
-				...log,
-				metadata: JSON.parse(log.metadata),
-				group: log.groupKey,
-			})),
+			logs: logs.map((log) => {
+				const metadata = JSON.parse(log.metadata);
+
+				if (
+					log.event !== InstanceEvent.STEP_SUCCESS ||
+					!metadata.streamOutput
+				) {
+					return { ...log, metadata, group: log.groupKey };
+				}
+
+				const { cacheKey, meta } = metadata.streamOutput as {
+					cacheKey: string;
+					meta: StreamOutputMeta;
+				};
+				try {
+					const preview = getStoredStreamOutputPreview({
+						storage: this.ctx.storage,
+						cacheKey,
+						meta,
+						maxChars: 1024,
+					});
+					metadata.result =
+						preview.type === "text"
+							? preview.output
+							: `[ReadableStream (binary): ${meta.totalBytes} bytes]`;
+				} catch {
+					metadata.result = `[ReadableStream: ${meta.totalBytes} bytes]`;
+				}
+				delete metadata.streamOutput;
+
+				return { ...log, metadata, group: log.groupKey };
+			}),
 		};
+	}
+
+	/**
+	 * Returns detailed logs including timestamps, ordered by ID.
+	 * Used by the local explorer to reconstruct step-level detail.
+	 */
+	readDetailedLogs(): Array<{
+		id: number;
+		timestamp: string;
+		event: number;
+		group: string | null;
+		target: string | null;
+		metadata: Record<string, unknown>;
+	}> {
+		const rows = [
+			...this.ctx.storage.sql.exec<{
+				id: number;
+				timestamp: string;
+				event: number;
+				groupKey: string | null;
+				target: string | null;
+				metadata: string;
+			}>(
+				"SELECT id, timestamp, event, groupKey, target, metadata FROM states ORDER BY id ASC"
+			),
+		];
+
+		return rows.map((row) => {
+			const metadata = JSON.parse(row.metadata) as Record<string, unknown>;
+
+			if (row.event !== InstanceEvent.STEP_SUCCESS || !metadata.streamOutput) {
+				return {
+					id: row.id,
+					timestamp: String(row.timestamp).replace(" ", "T") + "Z",
+					event: row.event,
+					group: row.groupKey,
+					target: row.target,
+					metadata,
+				};
+			}
+
+			const { cacheKey, meta } = metadata.streamOutput as {
+				cacheKey: string;
+				meta: StreamOutputMeta;
+			};
+			try {
+				const preview = getStoredStreamOutputPreview({
+					storage: this.ctx.storage,
+					cacheKey,
+					meta,
+					maxChars: 1024,
+				});
+				metadata.result =
+					preview.type === "text"
+						? preview.output
+						: `[ReadableStream (binary): ${meta.totalBytes} bytes]`;
+			} catch {
+				metadata.result = `[ReadableStream: ${meta.totalBytes} bytes]`;
+			}
+			delete metadata.streamOutput;
+
+			return {
+				id: row.id,
+				timestamp: String(row.timestamp).replace(" ", "T") + "Z",
+				event: row.event,
+				group: row.groupKey,
+				target: row.target,
+				metadata,
+			};
+		});
 	}
 
 	readLogsFromEvent(eventType: InstanceEvent): EngineLogs {
@@ -212,6 +361,51 @@ export class Engine extends DurableObject<Env> {
 			return InstanceStatus.Queued;
 		}
 		return res;
+	}
+
+	// Returns instance metadata for the local explorer.
+	async getInstanceMetadata(): Promise<{
+		instanceId: string;
+		status: InstanceStatus;
+		createdOn: string;
+	}> {
+		const status = await this.getStatus();
+		// Read the full metadata to get the created_on timestamp
+		const metadata =
+			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+		let createdOn = metadata?.instance?.created_on ?? "";
+
+		// Backfill for instances created before created_on was populated:
+		// try the earliest log entry, then the earliest priority queue entry.
+		if (!createdOn) {
+			const queries = [
+				"SELECT timestamp AS ts FROM states ORDER BY id ASC LIMIT 1",
+				"SELECT created_on AS ts FROM priority_queue ORDER BY id ASC LIMIT 1",
+			];
+			for (const query of queries) {
+				if (createdOn) {
+					break;
+				}
+				try {
+					for (const row of this.ctx.storage.sql.exec(query)) {
+						if (row.ts) {
+							// SQLite DATETIME('now','subsec') returns "YYYY-MM-DD HH:MM:SS.sss"
+							// which is not valid ISO 8601 (needs T separator and Z timezone).
+							const raw = String(row.ts).replace(" ", "T") + "Z";
+							createdOn = raw;
+						}
+					}
+				} catch {
+					// Table may not exist
+				}
+			}
+		}
+
+		return {
+			instanceId: this.instanceId ?? "",
+			status,
+			createdOn,
+		};
 	}
 
 	async setStatus(
@@ -303,7 +497,13 @@ export class Engine extends DurableObject<Env> {
 				if (waiter) {
 					waiter.reject(
 						new Error(
-							`[WorkflowIntrospector] The Workflow instance ${this.instanceId} has reached status '${instanceStatusName(reachedStatus)}'. This is a finite status that prevents it from ever reaching the expected status of '${instanceStatusName(unreachableStatus)}'.`
+							`[WorkflowIntrospector] The Workflow instance ${
+								this.instanceId
+							} has reached status '${instanceStatusName(
+								reachedStatus
+							)}'. This is a finite status that prevents it from ever reaching the expected status of '${instanceStatusName(
+								unreachableStatus
+							)}'.`
 						)
 					);
 					this.statusWaiters.delete(unreachableStatus);
@@ -311,6 +511,32 @@ export class Engine extends DurableObject<Env> {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Create a replay ReadableStream from stored stream output metadata.
+	 * Returns undefined if the stream data is not in a valid/complete state.
+	 */
+	private replayStreamFromMeta(streamOutput: {
+		cacheKey: string;
+		meta: StreamOutputMeta;
+	}): ReadableStream<Uint8Array> | undefined {
+		if (streamOutput.meta.state !== StreamOutputState.Complete) {
+			return undefined;
+		}
+		const integrityError = getInvalidStoredStreamOutputError(
+			this.ctx.storage,
+			streamOutput.cacheKey,
+			streamOutput.meta
+		);
+		if (integrityError !== undefined) {
+			return undefined;
+		}
+		return createReplayReadableStream({
+			storage: this.ctx.storage,
+			cacheKey: streamOutput.cacheKey,
+			meta: streamOutput.meta,
+		});
 	}
 
 	private stepResultWaiters: Map<
@@ -340,6 +566,9 @@ export class Engine extends DurableObject<Env> {
 			const { event, metadata } = rows[0];
 			const parsed = JSON.parse(metadata);
 			if (event === InstanceEvent.STEP_SUCCESS) {
+				if (parsed?.streamOutput) {
+					return this.replayStreamFromMeta(parsed.streamOutput);
+				}
 				return parsed?.result;
 			}
 			if (event === InstanceEvent.STEP_FAILURE) {
@@ -363,8 +592,18 @@ export class Engine extends DurableObject<Env> {
 			return;
 		}
 		if (event === InstanceEvent.STEP_SUCCESS) {
-			const result = metadata?.result;
-			waiter.resolve(result);
+			if (metadata?.streamOutput) {
+				waiter.resolve(
+					this.replayStreamFromMeta(
+						metadata.streamOutput as {
+							cacheKey: string;
+							meta: StreamOutputMeta;
+						}
+					)
+				);
+			} else {
+				waiter.resolve(metadata?.result);
+			}
 			this.stepResultWaiters.delete(group);
 		} else if (event === InstanceEvent.STEP_FAILURE) {
 			const error = metadata?.error ?? new Error("Step failed");
@@ -379,7 +618,9 @@ export class Engine extends DurableObject<Env> {
 		if (isOutput) {
 			if (status !== InstanceStatus.Complete) {
 				throw new Error(
-					`Cannot retrieve output: Workflow instance is in status "${instanceStatusName(status)}" but must be "complete" to have an output available`
+					`Cannot retrieve output: Workflow instance is in status "${instanceStatusName(
+						status
+					)}" but must be "complete" to have an output available`
 				);
 			}
 			const logs = this.readLogsFromEvent(InstanceEvent.WORKFLOW_SUCCESS).logs;
@@ -387,7 +628,9 @@ export class Engine extends DurableObject<Env> {
 		} else {
 			if (status !== InstanceStatus.Errored) {
 				throw new Error(
-					`Cannot retrieve error: Workflow instance is in status "${instanceStatusName(status)}" but must be "errored" to have error information available`
+					`Cannot retrieve error: Workflow instance is in status "${instanceStatusName(
+						status
+					)}" but must be "errored" to have error information available`
 				);
 			}
 			const logs = this.readLogsFromEvent(InstanceEvent.WORKFLOW_FAILURE).logs;
@@ -401,8 +644,14 @@ export class Engine extends DurableObject<Env> {
 		}
 	}
 
-	async abort(_reason: string) {
-		// TODO: Maybe don't actually kill but instead check a flag and return early if true
+	async abort(reason: string) {
+		await this.ctx.storage.sync();
+
+		// Clean up pending JS operations
+		this.timeoutHandler.dispose();
+		this.engineAbortController.abort(new Error(reason));
+
+		this.ctx.abort(reason);
 	}
 
 	// Called by the dispose function when introspecting the instance in tests
@@ -415,15 +664,15 @@ export class Engine extends DurableObject<Env> {
 	}
 
 	async storeEventMap() {
-		// TODO: this can be more efficient, but oh well
 		await this.ctx.blockConcurrencyWhile(async () => {
-			for (const [key, value] of this.eventMap.entries()) {
-				for (const eventIdx in value) {
-					await this.ctx.storage.put(
-						`${EVENT_MAP_PREFIX}\n${key}\n${eventIdx}`,
-						value[eventIdx]
-					);
+			const entries: Record<string, Event> = {};
+			for (const [type, events] of this.eventMap.entries()) {
+				for (let i = 0; i < events.length; i++) {
+					entries[`${EVENT_MAP_PREFIX}\n${type}\n${i}`] = events[i];
 				}
+			}
+			if (Object.keys(entries).length > 0) {
+				await this.ctx.storage.put(entries);
 			}
 		});
 	}
@@ -450,8 +699,6 @@ export class Engine extends DurableObject<Env> {
 		payload: unknown;
 		type: string;
 	}) {
-		// Always queue the event first
-		// TODO: Persist it across lifetimes
 		// There are four possible cases here:
 		// - There is a callback waiting, send it
 		// - There is no callback waiting but engine is alive, store it
@@ -460,18 +707,19 @@ export class Engine extends DurableObject<Env> {
 		// - Engine is not awake and is Errored or Terminated, this should not get called
 		let eventTypeQueue = this.eventMap.get(event.type) ?? [];
 		eventTypeQueue.push(event as Event);
-		await this.storeEventMap();
-		// TODO: persist eventMap - it can be over 2MiB
+
 		this.eventMap.set(event.type, eventTypeQueue);
+		await this.storeEventMap();
 
 		// if the engine is running
 		if (this.isRunning) {
 			// Attempt to get the callback and run it
 			const callbacks = this.waiters.get(event.type);
 			if (callbacks) {
-				const callback = callbacks[0];
-				if (callback) {
-					callback(event);
+				const entry = callbacks[0];
+				if (entry) {
+					const [, resolve] = entry;
+					resolve(event);
 					// Remove it from the list of callbacks
 					callbacks.shift();
 					this.waiters.set(event.type, callbacks);
@@ -484,7 +732,9 @@ export class Engine extends DurableObject<Env> {
 				}
 			}
 		} else {
-			const mockEvent = await this.ctx.storage.get(`mock-event-${event.type}`);
+			const mockEvent = await this.ctx.storage.get(
+				`${MODIFIER_KEYS.MOCK_EVENT}${event.type}`
+			);
 			if (mockEvent) {
 				return;
 			}
@@ -510,7 +760,241 @@ export class Engine extends DurableObject<Env> {
 		return new WorkflowInstanceModifier(this, this.ctx);
 	}
 
-	async userTriggeredTerminate() {}
+	async changeInstanceStatus(
+		newStatus: "resume" | "pause" | "terminate" | "restart",
+		from?: RestartFromStep
+	) {
+		const metadata =
+			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+
+		if (metadata === undefined) {
+			throw createWorkflowError(
+				"Instance does not exist",
+				"instance.not_found"
+			);
+		}
+
+		switch (newStatus) {
+			case "pause":
+				await this.userTriggeredPause();
+				break;
+			case "resume": {
+				const currentStatus = await this.getStatus();
+				if (currentStatus === InstanceStatus.WaitingForPause) {
+					// Engine is still running — cancel the pending pause
+					this.timeoutHandler.cancelWaitingPromisesByType("pause");
+					await this.setStatus(
+						metadata.accountId,
+						metadata.instance.id,
+						InstanceStatus.Running
+					);
+				} else if (currentStatus === InstanceStatus.Paused) {
+					await this.attemptResume();
+				}
+				break;
+			}
+			case "terminate": {
+				const currentStatus = await this.getStatus();
+				if (
+					[
+						InstanceStatus.Terminated,
+						InstanceStatus.Complete,
+						InstanceStatus.Errored,
+					].includes(currentStatus)
+				) {
+					throw createWorkflowError(
+						"Cannot terminate instance since its on a finite state",
+						"instance.cannot_terminate"
+					);
+				}
+				await this.userTriggeredTerminate();
+				break;
+			}
+			case "restart":
+				if (from) {
+					if (!resolveGroupKeysToWipe(this.ctx.storage.sql, from)) {
+						throw stepNotFoundError(from.name);
+					}
+					await storeRestartFromStep(this.ctx.storage, from);
+				}
+				await this.userTriggeredRestart();
+				break;
+		}
+	}
+
+	async userTriggeredTerminate() {
+		const metadata =
+			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+
+		if (metadata === undefined) {
+			throw createWorkflowError(
+				"Instance does not exist",
+				"instance.not_found"
+			);
+		}
+
+		this.writeLog(InstanceEvent.WORKFLOW_TERMINATED, null, null, {
+			trigger: {
+				source: InstanceTrigger.API,
+			},
+		});
+
+		await this.setStatus(
+			metadata.accountId,
+			metadata.instance.id,
+			InstanceStatus.Terminated
+		);
+
+		await this.abort(ABORT_REASONS.USER_TERMINATE);
+	}
+
+	async userTriggeredPause() {
+		const status = await this.getStatus();
+
+		if (
+			status === InstanceStatus.Paused ||
+			status === InstanceStatus.WaitingForPause
+		) {
+			return;
+		}
+
+		if (
+			status !== InstanceStatus.Running &&
+			status !== InstanceStatus.Waiting
+		) {
+			return;
+		}
+
+		const metadata =
+			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+
+		if (metadata === undefined) {
+			throw createWorkflowError(
+				"Instance does not exist",
+				"instance.not_found"
+			);
+		}
+
+		await this.setStatus(
+			metadata.accountId,
+			metadata.instance.id,
+			InstanceStatus.WaitingForPause
+		);
+
+		void this.timeoutHandler
+			.waitUntilNothingIsRunning("pause", async () => {
+				await this.ctx.storage.put(PAUSE_DATETIME, new Date());
+				await this.setStatus(
+					metadata.accountId,
+					metadata.instance.id,
+					InstanceStatus.Paused
+				);
+				// Signal the pause controller to interrupt any active
+				// scheduler.wait (sleep/waitForEvent). The workflow will
+				// throw a pause error at the next step boundary via
+				// #checkForPendingPause()
+				this.pauseController.abort(ABORT_REASONS.USER_PAUSE);
+			})
+			.catch(() => {});
+	}
+
+	async userTriggeredRestart() {
+		// cleanup is done in attemptRestart() on the fresh DO instance
+
+		await this.abort(ABORT_REASONS.USER_RESTART);
+	}
+
+	async attemptRestart() {
+		const restartFromStep = await readAndClearRestartFromStep(this.ctx.storage);
+
+		let groupKeysToWipe: Set<string> | null = null;
+		if (restartFromStep) {
+			groupKeysToWipe = resolveGroupKeysToWipe(
+				this.ctx.storage.sql,
+				restartFromStep
+			);
+			if (!groupKeysToWipe) {
+				throw stepNotFoundError(restartFromStep.name);
+			}
+		}
+
+		await wipeRestartState(
+			this.ctx.storage,
+			ENGINE_STATUS_KEY,
+			PAUSE_DATETIME,
+			groupKeysToWipe
+		);
+
+		const metadata =
+			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+
+		if (metadata === undefined) {
+			throw createWorkflowError(
+				"Instance does not exist",
+				"instance.not_found"
+			);
+		}
+
+		const { accountId, workflow, version, instance, event } = metadata;
+
+		if (!groupKeysToWipe) {
+			this.writeLog(InstanceEvent.WORKFLOW_QUEUED, null, null, {
+				params: event.payload,
+				versionId: version.id,
+				trigger: {
+					source: InstanceTrigger.API,
+				},
+			});
+			this.writeLog(InstanceEvent.WORKFLOW_START, null, null, {});
+		}
+
+		void this.init(accountId, workflow, version, instance, event);
+	}
+
+	async attemptResume() {
+		const metadata =
+			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+
+		if (metadata === undefined) {
+			throw createWorkflowError(
+				"Instance does not exist",
+				"instance.not_found"
+			);
+		}
+
+		const status =
+			await this.ctx.storage.get<InstanceStatus>(ENGINE_STATUS_KEY);
+		if (status !== InstanceStatus.Paused) {
+			return;
+		}
+
+		// Offset priority queue timers by the pause duration so that
+		// sleeps/retries resume from where they left off
+		const pausedDate = await this.ctx.storage.get<Date>(PAUSE_DATETIME);
+		if (pausedDate !== undefined) {
+			const offset = Date.now() - new Date(pausedDate).valueOf();
+			if (this.priorityQueue) {
+				this.priorityQueue.offsetAll(offset);
+			} else {
+				const pq = new TimePriorityQueue(this.ctx, metadata);
+				pq.offsetAll(offset);
+			}
+		}
+		await this.ctx.storage.delete(PAUSE_DATETIME);
+
+		const { accountId, workflow, version, instance, event } = metadata;
+
+		await this.ctx.storage.put(ENGINE_STATUS_KEY, InstanceStatus.Queued);
+
+		// Reset pause state for the new run. The DO stays alive across
+		// pause/resume (no this.ctx.abort()), so we need to clear stale
+		// in-memory state from the previous run to avoid duplicates.
+		this.pauseController = new AbortController();
+		this.waiters = new Map();
+		this.eventMap = new Map();
+
+		void this.init(accountId, workflow, version, instance, event);
+	}
 
 	async init(
 		accountId: number,
@@ -551,8 +1035,17 @@ export class Engine extends DurableObject<Env> {
 				InstanceStatus.Errored, // TODO (WOR-85): Remove this once upgrade story is done
 				InstanceStatus.Terminated,
 				InstanceStatus.Complete,
+				InstanceStatus.Paused,
 			].includes(status)
 		) {
+			return;
+		}
+
+		// If the DO restarted (e.g. from alarm) while in WaitingForPause state,
+		// transition to Paused and return early — same as production behaviour.
+		if (status === InstanceStatus.WaitingForPause) {
+			await this.ctx.storage.put(PAUSE_DATETIME, new Date());
+			await this.setStatus(accountId, instance.id, InstanceStatus.Paused);
 			return;
 		}
 
@@ -567,7 +1060,6 @@ export class Engine extends DurableObject<Env> {
 			await this.ctx.storage.put(INSTANCE_METADATA, instanceMetadata);
 
 			// TODO (WOR-78): We currently don't have a queue mechanism
-			// WORKFLOW_QUEUED should happen before engine is spun up
 			this.writeLog(InstanceEvent.WORKFLOW_QUEUED, null, null, {
 				params: event.payload,
 				versionId: version.id,
@@ -595,7 +1087,10 @@ export class Engine extends DurableObject<Env> {
 		void workflowRunningHandler();
 		try {
 			const target = this.env.USER_WORKFLOW;
-			const result = await target.run(event, stubStep);
+			const result = await target.run(
+				event,
+				stubStep as unknown as WorkflowStep
+			);
 			this.writeLog(InstanceEvent.WORKFLOW_SUCCESS, null, null, {
 				result,
 			});
@@ -606,20 +1101,29 @@ export class Engine extends DurableObject<Env> {
 			});
 			this.isRunning = false;
 		} catch (err) {
+			if (isAbortError(err)) {
+				this.isRunning = false;
+				return;
+			}
+
 			let error;
 			if (err instanceof Error) {
 				if (
 					err.name === "NonRetryableError" ||
 					err.message.startsWith("NonRetryableError")
 				) {
+					const fatalError = shouldPreserveNonRetryableError()
+						? new PreservedNonRetryableError(err)
+						: new WorkflowFatalError(
+								`The execution of the Workflow instance was terminated, as a step threw an NonRetryableError and it was not handled`
+							);
+
 					this.writeLog(InstanceEvent.WORKFLOW_FAILURE, null, null, {
-						error: new WorkflowFatalError(
-							`The execution of the Workflow instance was terminated, as a step threw an NonRetryableError and it was not handled`
-						),
+						error: fatalError,
 					});
 
 					await this.setStatus(accountId, instance.id, InstanceStatus.Errored);
-					await this.abort(`A step threw a NonRetryableError`);
+					await this.abort(ABORT_REASONS.NON_RETRYABLE_ERROR);
 					this.isRunning = false;
 					return;
 				}

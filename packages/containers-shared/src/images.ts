@@ -17,29 +17,35 @@ import type {
 	WranglerLogger,
 } from "./types";
 
+export const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
+	"cloudflare/proxy-everything:3cb1195@sha256:0ef6716c52430096900b150d84a3302057d6cd2319dae7987128c85d0733e3c8";
+
+export function getEgressInterceptorImage(): string {
+	return (
+		process.env.MINIFLARE_CONTAINER_EGRESS_IMAGE ??
+		DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE
+	);
+}
+
+export async function pullEgressInterceptorImage(
+	dockerPath: string
+): Promise<void> {
+	const image = getEgressInterceptorImage();
+	await runDockerCmd(dockerPath, ["pull", image, "--platform", "linux/amd64"]);
+}
+
 export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,
-	logger: WranglerLogger | ViteLogger,
-	isVite: boolean
+	logger: WranglerLogger | ViteLogger
 ): Promise<{ abort: () => void; ready: Promise<void> }> {
 	const domain = new URL(`http://${options.image_uri}`).hostname;
 
 	const isExternalRegistry = domain !== getCloudflareContainerRegistry();
 	try {
-		// this will fail in two cases:
-		// 1. this is being called from the vite plugin (doesn't have the appropriate auth context)
-		// 2. the user has not run `wrangler containers registries configure` yet to set up credentials
 		await dockerLoginImageRegistry(dockerPath, domain);
 	} catch (e) {
 		if (!isExternalRegistry) {
-			if (isVite) {
-				throw new UserError(
-					`Using images from the Cloudflare-managed registry is not currently supported with the Vite plugin.\n` +
-						`You should use a Dockerfile or a supported external registry and authenticate to that registry separately using \`docker login\` or similar.\n` +
-						`Supported external registries are currently: ${Object.values(ExternalRegistryKind).join(", ")}.`
-				);
-			}
 			throw e;
 		}
 		logger?.warn(
@@ -96,7 +102,6 @@ export async function prepareContainerImagesForDev(args: {
 		containerOptions: ContainerDevOptions;
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
-	isVite: boolean;
 }): Promise<void> {
 	const {
 		dockerPath,
@@ -107,7 +112,8 @@ export async function prepareContainerImagesForDev(args: {
 	let aborted = false;
 	if (process.platform === "win32") {
 		throw new UserError(
-			"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container part of your application."
+			"Local development with containers is currently not supported on Windows. You should use WSL instead. You can also set `enable_containers` to false if you do not need to develop the container part of your application.",
+			{ telemetryMessage: false }
 		);
 	}
 	await verifyDockerInstalled(dockerPath);
@@ -127,12 +133,7 @@ export async function prepareContainerImagesForDev(args: {
 				containerOptions: options,
 			});
 		} else {
-			const pull = await pullImage(
-				dockerPath,
-				options,
-				args.logger,
-				args.isVite
-			);
+			const pull = await pullImage(dockerPath, options, args.logger);
 			onContainerImagePreparationStart({
 				containerOptions: options,
 				abort: () => {
@@ -151,6 +152,12 @@ export async function prepareContainerImagesForDev(args: {
 
 			await checkExposedPorts(dockerPath, options);
 		}
+	}
+
+	// Pull the egress interceptor image used to intercept outbound HTTP from
+	// containers and route it back to workerd (e.g. for interceptOutboundHttp).
+	if (!aborted) {
+		await pullEgressInterceptorImage(dockerPath);
 	}
 }
 
@@ -235,6 +242,12 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 			secretType: "AWS Secret Access Key",
 		},
 		{
+			type: ExternalRegistryKind.DOCKER_HUB,
+			pattern: /^docker\.io$/,
+			name: "DockerHub",
+			secretType: "DockerHub PAT Token",
+		},
+		{
 			type: "cloudflare",
 			// Make a regex based on the env var CLOUDFLARE_CONTAINER_REGISTRY
 			pattern: new RegExp(
@@ -254,7 +267,8 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 			.map((r) => r.name)
 			.join(", ");
 		throw new UserError(
-			`${url.hostname} is not a supported image registry.\nCurrently we support the following non-Cloudflare registries: ${supportedRegistries}.\nTo use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images`
+			`${url.hostname} is not a supported image registry.\nCurrently we support the following non-Cloudflare registries: ${supportedRegistries}.\nTo use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images`,
+			{ telemetryMessage: false }
 		);
 	}
 

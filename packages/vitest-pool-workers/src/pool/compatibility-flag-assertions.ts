@@ -62,8 +62,10 @@ export class CompatibilityFlagAssertions {
 		disableFlag: string,
 		defaultOnDate?: string
 	): boolean {
+		if (this.#flagExists(disableFlag)) {
+			return false;
+		}
 		return (
-			!this.#flagExists(disableFlag) ||
 			this.#flagExists(enableFlag) ||
 			isDateSufficient(this.#compatibilityDate, defaultOnDate)
 		);

@@ -1,14 +1,14 @@
 import { existsSync } from "node:fs";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- extends vitest expect with custom matcher
+// eslint-disable-next-line no-restricted-imports -- We need to import `expect` from "vitest" so that we can extend it
 import { expect } from "vitest";
 
 declare module "vitest" {
 	interface CustomMatchers<R = unknown> {
 		toExist(): R;
 	}
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- required by vitest's module augmentation pattern
 	interface Assertion<T> extends CustomMatchers<T> {}
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- required by vitest's module augmentation pattern
 	interface AsymmetricMatchersContaining extends CustomMatchers {}
 }
 

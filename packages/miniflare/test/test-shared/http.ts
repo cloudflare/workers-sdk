@@ -1,9 +1,10 @@
 import http from "node:http";
-import { AddressInfo } from "node:net";
 import { URL } from "node:url";
 import stoppable from "stoppable";
 import { onTestFinished } from "vitest";
-import NodeWebSocket, { WebSocketServer } from "ws";
+import { WebSocketServer } from "ws";
+import type { AddressInfo } from "node:net";
+import type NodeWebSocket from "ws";
 
 export async function useServer(
 	listener: http.RequestListener,

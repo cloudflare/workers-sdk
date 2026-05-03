@@ -1,9 +1,8 @@
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers and module-level helpers */
+// eslint-disable-next-line no-restricted-imports
 import { beforeEach, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { actionsForEventCategories } from "../../r2/helpers/notification";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -172,6 +171,60 @@ describe("r2", () => {
 
 		describe("list", () => {
 			it("should list buckets & check request inputs", async () => {
+				const mockBuckets = [
+					{
+						name: "bucket-1-local-once",
+						creation_date: "01-01-2001",
+					},
+					{
+						name: "bucket-2-local-once",
+						creation_date: "01-01-2001",
+					},
+				];
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/r2/buckets",
+						async ({ request, params }) => {
+							const { accountId } = params;
+							expect(accountId).toEqual("some-account-id");
+							expect(await request.text()).toEqual("");
+							return HttpResponse.json(
+								createFetchResult({
+									buckets: mockBuckets,
+								})
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler(`r2 bucket list`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Listing buckets...
+					name:           bucket-1-local-once
+					creation_date:  01-01-2001
+
+					name:           bucket-2-local-once
+					creation_date:  01-01-2001"
+				`);
+			});
+
+			it("should list buckets even if the local wrangler config is invalid", async () => {
+				writeWranglerConfig(
+					{
+						r2_buckets: [
+							{
+								binding: "BUCKET",
+								bucket_name: "Invalid_Bucket",
+							},
+						],
+					},
+					"./wrangler.jsonc"
+				);
+
 				const mockBuckets = [
 					{
 						name: "bucket-1-local-once",
@@ -3416,7 +3469,7 @@ describe("r2", () => {
 						Lifecycle rule 'my-rule' removed from bucket 'my-bucket'."
 					`);
 				});
-				it("should handle removing non-existant rule ID as expected", async () => {
+				it("should handle removing non-existent rule ID as expected", async () => {
 					const bucketName = "my-bucket";
 					const ruleId = "my-rule";
 					const lifecycleRules = {
@@ -3551,6 +3604,48 @@ describe("r2", () => {
 				});
 			});
 			describe("set", () => {
+				it("should reject AWS S3 format with CORSRules key", async () => {
+					const filePath = "cors-s3-format.json";
+					const s3Config = {
+						CORSRules: [
+							{
+								AllowedOrigins: ["*"],
+								AllowedMethods: ["GET"],
+							},
+						],
+					};
+
+					fs.writeFileSync(filePath, JSON.stringify(s3Config));
+
+					await expect(
+						runWrangler(
+							`r2 bucket cors set my-bucket --file ${filePath} --force`
+						)
+					).rejects.toThrowError(
+						/Wrangler detected an AWS S3 CORS configuration format/
+					);
+				});
+
+				it("should reject AWS S3 style PascalCase keys in rules", async () => {
+					const filePath = "cors-s3-keys.json";
+					const s3StyleConfig = {
+						rules: [
+							{
+								AllowedOrigins: ["*"],
+								AllowedMethods: ["GET"],
+							},
+						],
+					};
+
+					fs.writeFileSync(filePath, JSON.stringify(s3StyleConfig));
+
+					await expect(
+						runWrangler(
+							`r2 bucket cors set my-bucket --file ${filePath} --force`
+						)
+					).rejects.toThrowError(/Wrangler detected AWS S3 style keys/);
+				});
+
 				it("should set CORS configuration from a JSON file", async () => {
 					const bucketName = "my-bucket";
 					const filePath = "cors-configuration.json";
@@ -4048,7 +4143,7 @@ describe("r2", () => {
 						Lock rule 'my-rule' removed from bucket 'my-bucket'."
 					`);
 				});
-				it("should handle removing non-existant rule ID as expected", async () => {
+				it("should handle removing non-existent rule ID as expected", async () => {
 					const bucketName = "my-bucket";
 					const ruleId = "my-rule";
 

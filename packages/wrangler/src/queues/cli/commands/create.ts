@@ -95,7 +95,8 @@ function createBody(args: typeof queuesCreateCommand.args): PostQueueBody {
 			args.deliveryDelaySecs > MAX_DELIVERY_DELAY_SECS
 		) {
 			throw new CommandLineArgsError(
-				`Invalid --delivery-delay-secs value: ${args.deliveryDelaySecs}. Must be between ${MIN_DELIVERY_DELAY_SECS} and ${MAX_DELIVERY_DELAY_SECS}`
+				`Invalid --delivery-delay-secs value: ${args.deliveryDelaySecs}. Must be between ${MIN_DELIVERY_DELAY_SECS} and ${MAX_DELIVERY_DELAY_SECS}`,
+				{ telemetryMessage: "queues create invalid delivery delay" }
 			);
 		}
 		body.settings.delivery_delay = args.deliveryDelaySecs;
@@ -107,7 +108,8 @@ function createBody(args: typeof queuesCreateCommand.args): PostQueueBody {
 			args.messageRetentionPeriodSecs > MAX_MESSAGE_RETENTION_PERIOD_SECS
 		) {
 			throw new CommandLineArgsError(
-				`Invalid --message-retention-period-secs value: ${args.messageRetentionPeriodSecs}. Must be between ${MIN_MESSAGE_RETENTION_PERIOD_SECS} and ${MAX_MESSAGE_RETENTION_PERIOD_SECS}`
+				`Invalid --message-retention-period-secs value: ${args.messageRetentionPeriodSecs}. Must be between ${MIN_MESSAGE_RETENTION_PERIOD_SECS} and ${MAX_MESSAGE_RETENTION_PERIOD_SECS}`,
+				{ telemetryMessage: "queues create invalid retention period" }
 			);
 		}
 		body.settings.message_retention_period = args.messageRetentionPeriodSecs;

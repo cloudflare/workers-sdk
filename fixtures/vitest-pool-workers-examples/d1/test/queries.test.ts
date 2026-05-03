@@ -1,6 +1,6 @@
-import { env } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { it } from "vitest";
-import { listPosts, readPost, upsertPost } from "../src/";
+import { listPosts, readPost, upsertPost } from "../src/utils";
 
 it("should create and read post", async ({ expect }) => {
 	await upsertPost(env, "/hello", "👋");
@@ -25,8 +25,9 @@ it("should list posts", async ({ expect }) => {
 	await upsertPost(env, "/three", "3");
 
 	const posts = await listPosts(env);
-	expect(posts.length).toBe(3); // Note changes from previous test undone
-	expect(posts[0].body).toBe("1");
-	expect(posts[1].body).toBe("2");
-	expect(posts[2].body).toBe("3");
+	expect(posts.length).toBe(4);
+	expect(posts[0].body).toBe("👋");
+	expect(posts[1].body).toBe("1");
+	expect(posts[2].body).toBe("2");
+	expect(posts[3].body).toBe("3");
 });

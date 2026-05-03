@@ -39,7 +39,9 @@ export async function getMigrationsPath({
 		logger.warn(warning);
 	}
 
-	throw new UserError(`No migrations present at ${dir}.`);
+	throw new UserError(`No migrations present at ${dir}.`, {
+		telemetryMessage: "d1 migrations missing migrations directory",
+	});
 }
 
 export async function getUnappliedMigrations({
@@ -132,8 +134,8 @@ const listAppliedMigrations = async ({
  * Returns the names of all migrations in the given directory.
  * A migration is either a .sql file or a directory containing .sql files.
  */
-function getMigrationNames(migrationsPath: string): string[] {
-	const migrations: string[] = [];
+export function getMigrationNames(migrationsPath: string): Array<string> {
+	const migrations = [];
 
 	const dir = fs.opendirSync(migrationsPath);
 
@@ -153,7 +155,7 @@ function getMigrationNames(migrationsPath: string): string[] {
 
 	dir.closeSync();
 
-	return migrations;
+	return migrations.toSorted();
 }
 
 /**

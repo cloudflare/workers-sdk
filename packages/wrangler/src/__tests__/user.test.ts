@@ -9,11 +9,14 @@ import {
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../config-cache";
 import {
+	fetchAllAccounts,
 	getAccountFromCache,
-	getAccountId,
+	getActiveAccountId,
 	getAuthConfigFilePath,
 	getOAuthTokenFromLocalState,
+	getOrSelectAccountId,
 	loginOrRefreshIfRequired,
 	readAuthConfigFile,
 	requireAuth,
@@ -80,7 +83,7 @@ describe("User", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -126,7 +129,7 @@ describe("User", () => {
 				Temporary login server listening on 0.0.0.0:8976
 				Note that the OAuth login page will always redirect to \`localhost:8976\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -172,7 +175,7 @@ describe("User", () => {
 				Temporary login server listening on mylocalhost.local:8976
 				Note that the OAuth login page will always redirect to \`localhost:8976\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -218,7 +221,7 @@ describe("User", () => {
 				Temporary login server listening on localhost:8787
 				Note that the OAuth login page will always redirect to \`localhost:8976\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -260,7 +263,7 @@ describe("User", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=4b2ea6cc-9421-4761-874b-ce550e0e3def&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=4b2ea6cc-9421-4761-874b-ce550e0e3def&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 
@@ -389,7 +392,7 @@ describe("User", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Attempting to login via OAuth...
-			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 			Successfully logged in."
 		`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -600,7 +603,7 @@ describe("User", () => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-api-token");
 		});
 
-		it("should only prompt for account selection once when getAccountId is called multiple times", async ({
+		it("should only prompt for account selection once when getOrSelectAccountId is called multiple times", async ({
 			expect,
 		}) => {
 			setIsTTY(true);
@@ -626,7 +629,7 @@ describe("User", () => {
 			});
 
 			// First call - should prompt for account selection
-			const firstAccountId = await getAccountId({});
+			const firstAccountId = await getOrSelectAccountId({});
 			expect(firstAccountId).toBe("account-1");
 
 			// Verify account is cached
@@ -634,11 +637,11 @@ describe("User", () => {
 			expect(cachedAccount).toEqual({ id: "account-1", name: "Account One" });
 
 			// Second call - should use cached account, not prompt again
-			const secondAccountId = await getAccountId({});
+			const secondAccountId = await getOrSelectAccountId({});
 			expect(secondAccountId).toBe("account-1");
 
 			// Third call - should still use cached account
-			const thirdAccountId = await getAccountId({});
+			const thirdAccountId = await getOrSelectAccountId({});
 			expect(thirdAccountId).toBe("account-1");
 
 			// If mockSelect was called more than once, the test would fail because
@@ -649,7 +652,9 @@ describe("User", () => {
 			expect,
 		}) => {
 			// When config has account_id, it should be used directly without prompting
-			const accountId = await getAccountId({ account_id: "config-account-id" });
+			const accountId = await getOrSelectAccountId({
+				account_id: "config-account-id",
+			});
 			expect(accountId).toBe("config-account-id");
 
 			// Cache should not be populated when using config account_id
@@ -668,7 +673,7 @@ describe("User", () => {
 				},
 			]);
 
-			const accountId = await getAccountId({});
+			const accountId = await getOrSelectAccountId({});
 			expect(accountId).toBe("single-account");
 
 			// Account should still be cached even without prompting
@@ -688,8 +693,186 @@ describe("User", () => {
 			]);
 
 			// Second call should use cache
-			const secondAccountId = await getAccountId({});
+			const secondAccountId = await getOrSelectAccountId({});
 			expect(secondAccountId).toBe("single-account");
+		});
+	});
+
+	describe("getActiveAccountId", () => {
+		it("should return config.account_id when set", ({ expect }) => {
+			const result = getActiveAccountId({ account_id: "from-config" });
+			expect(result).toBe("from-config");
+		});
+
+		it("should return CLOUDFLARE_ACCOUNT_ID env var when config has no account_id", ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "from-env");
+			const result = getActiveAccountId({});
+			expect(result).toBe("from-env");
+		});
+
+		it("should prefer config.account_id over env var and cache", ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "from-env");
+			// Prime the cache via the config cache file
+			saveToConfigCache("wrangler-account.json", {
+				account: { id: "from-cache", name: "Cached Account" },
+			});
+
+			const result = getActiveAccountId({ account_id: "from-config" });
+			expect(result).toBe("from-config");
+		});
+
+		it("should prefer env var over cache", ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "from-env");
+			saveToConfigCache("wrangler-account.json", {
+				account: { id: "from-cache", name: "Cached Account" },
+			});
+
+			const result = getActiveAccountId({});
+			expect(result).toBe("from-env");
+		});
+
+		it("should return cached account when config and env var are not set", ({
+			expect,
+		}) => {
+			saveToConfigCache("wrangler-account.json", {
+				account: { id: "from-cache", name: "Cached Account" },
+			});
+
+			const result = getActiveAccountId({});
+			expect(result).toBe("from-cache");
+		});
+
+		it("should return undefined when no source is available", ({ expect }) => {
+			const result = getActiveAccountId({});
+			expect(result).toBeUndefined();
+		});
+	});
+
+	describe("fetchAllAccounts", () => {
+		beforeEach(() => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-api-token");
+		});
+
+		it("should return accounts from the API", async ({ expect }) => {
+			mockGetMemberships([
+				{
+					id: "membership-1",
+					account: { id: "account-1", name: "Account One" },
+				},
+				{
+					id: "membership-2",
+					account: { id: "account-2", name: "Account Two" },
+				},
+			]);
+
+			const accounts = await fetchAllAccounts({});
+			expect(accounts).toEqual([
+				{ id: "account-1", name: "Account One" },
+				{ id: "account-2", name: "Account Two" },
+			]);
+		});
+
+		it("should throw when no accounts are found", async ({ expect }) => {
+			mockGetMemberships([]);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/Failed to automatically retrieve account IDs for the logged in user/
+			);
+		});
+
+		it("should throw a helpful error on 9109 permission error", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [{ code: 9109, message: "Insufficient permissions" }],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/incorrect permissions on your API token/
+			);
+		});
+	});
+
+	describe("getOrSelectAccountId with env var", () => {
+		beforeEach(() => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-api-token");
+		});
+
+		it("should return env var without making API calls", async ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-account-id");
+
+			// No mockGetMemberships — if an API call is made, it will fail
+			const accountId = await getOrSelectAccountId({});
+			expect(accountId).toBe("env-account-id");
+		});
+
+		it("should prefer env var over cached account", async ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-account-id");
+			saveToConfigCache("wrangler-account.json", {
+				account: { id: "cached-account-id", name: "Cached Account" },
+			});
+
+			const accountId = await getOrSelectAccountId({});
+			expect(accountId).toBe("env-account-id");
+		});
+
+		it("should not write to cache when using env var", async ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-account-id");
+
+			const accountId = await getOrSelectAccountId({});
+			expect(accountId).toBe("env-account-id");
+
+			// Cache should remain empty — env var path is side-effect-free
+			const cachedAccount = getAccountFromCache();
+			expect(cachedAccount).toBeUndefined();
+		});
+
+		it("should not write to cache when using config account_id", async ({
+			expect,
+		}) => {
+			const accountId = await getOrSelectAccountId({
+				account_id: "config-account-id",
+			});
+			expect(accountId).toBe("config-account-id");
+
+			// Cache should remain empty — config path is side-effect-free
+			const cachedAccount = getAccountFromCache();
+			expect(cachedAccount).toBeUndefined();
+		});
+
+		it("should write to cache when account is resolved via API", async ({
+			expect,
+		}) => {
+			mockGetMemberships([
+				{
+					id: "membership-1",
+					account: { id: "api-account", name: "API Account" },
+				},
+			]);
+
+			const accountId = await getOrSelectAccountId({});
+			expect(accountId).toBe("api-account");
+
+			// Cache should be populated from the API path
+			const cachedAccount = getAccountFromCache();
+			expect(cachedAccount).toEqual({
+				id: "api-account",
+				name: "API Account",
+			});
 		});
 	});
 });

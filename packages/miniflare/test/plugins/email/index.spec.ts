@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { LogLevel, Miniflare } from "miniflare";
 import dedent from "ts-dedent";
-import { test, vi } from "vitest";
+import { type ExpectStatic, test, vi } from "vitest";
 import { TestLog, useDispose } from "../../test-shared";
 
-const SEND_EMAIL_WORKER = dedent/* javascript */ `
+const SEND_EMAIL_WORKER = dedent /* javascript */ `
 	import { EmailMessage } from "cloudflare:email";
 
 	export default {
@@ -23,7 +23,7 @@ const SEND_EMAIL_WORKER = dedent/* javascript */ `
 	};
 `;
 
-const REPLY_EMAIL_WORKER = (email = "message.raw") => dedent/* javascript */ `
+const REPLY_EMAIL_WORKER = (email = "message.raw") => dedent /* javascript */ `
 	import { EmailMessage } from "cloudflare:email";
 
 	export default {
@@ -43,6 +43,9 @@ test("Unbound send_email binding works", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: SEND_EMAIL_WORKER,
 		email: {
@@ -132,6 +135,9 @@ test("Single allowed destination send_email binding works", async ({
 
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: SEND_EMAIL_WORKER,
 		email: {
@@ -426,6 +432,9 @@ test("reply validation: x-auto-response-suppress", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER(),
 		unsafeTriggerHandlers: true,
@@ -463,6 +472,9 @@ test("reply validation: Auto-Submitted", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER(),
 		unsafeTriggerHandlers: true,
@@ -500,6 +512,9 @@ test("reply validation: only In-Reply-To", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER(),
 		unsafeTriggerHandlers: true,
@@ -537,6 +552,9 @@ test("reply validation: only References", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER(),
 		unsafeTriggerHandlers: true,
@@ -574,6 +592,9 @@ test("reply validation: >100 References", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER(),
 		unsafeTriggerHandlers: true,
@@ -616,6 +637,9 @@ test("reply: mismatched From: header", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER(),
 		unsafeTriggerHandlers: true,
@@ -653,6 +677,9 @@ test("reply: unparseable", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER('""'),
 		unsafeTriggerHandlers: true,
@@ -690,6 +717,9 @@ test("reply: no message id", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER(
 			JSON.stringify(dedent`
@@ -735,6 +765,9 @@ test("reply: disallowed header", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER(
 			JSON.stringify(dedent`
@@ -782,6 +815,9 @@ test("reply: missing In-Reply-To", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER(
 			JSON.stringify(dedent`
@@ -830,6 +866,9 @@ test("reply: wrong In-Reply-To", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER(
 			JSON.stringify(dedent`
@@ -881,6 +920,9 @@ test("reply: invalid references", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER(
 			JSON.stringify(dedent`
@@ -928,6 +970,9 @@ test("reply: references generated correctly", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: REPLY_EMAIL_WORKER(
 			JSON.stringify(dedent`
@@ -984,7 +1029,7 @@ test("reply: references generated correctly", async ({ expect }) => {
 	).toBe(true);
 });
 
-const MESSAGE_BUILDER_WORKER = dedent/* javascript */ `
+const MESSAGE_BUILDER_WORKER = dedent /* javascript */ `
 	export default {
 		async fetch(request, env) {
 			const builder = await request.json();
@@ -998,6 +1043,9 @@ test("MessageBuilder with text only", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
 		email: {
@@ -1041,6 +1089,11 @@ test("MessageBuilder with text only", async ({ expect }) => {
 			expect(message).toContain("To: recipient@example.com");
 			expect(message).toContain("Subject: Test Email");
 			expect(message).toContain("Text: ");
+			const textFile = message.match(/^Text: (.+)$/m)?.[1];
+			expect(textFile).toBeDefined();
+			expect(await readFile(String(textFile), "utf-8")).toBe(
+				"Hello, this is a test email!"
+			);
 		},
 		{ timeout: 5_000, interval: 100 }
 	);
@@ -1103,6 +1156,9 @@ test("MessageBuilder with attachments", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
 		email: {
@@ -1148,6 +1204,13 @@ test("MessageBuilder with attachments", async ({ expect }) => {
 
 			// Verify attachment file path is logged
 			expect(message).toContain("Attachment (attachment): test.txt ->");
+			const attachmentFile = message.match(
+				/^Attachment \(attachment\): test\.txt -> (.+)$/m
+			)?.[1];
+			expect(attachmentFile).toBeDefined();
+			expect(await readFile(String(attachmentFile), "utf-8")).toBe(
+				"base64content"
+			);
 		},
 		{ timeout: 5_000, interval: 100 }
 	);
@@ -1157,6 +1220,9 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
 		email: {
@@ -1277,6 +1343,9 @@ test("MessageBuilder with EmailAddress objects", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
 		email: {
@@ -1325,6 +1394,9 @@ test("MessageBuilder with multiple recipients", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
 		email: {
@@ -1507,4 +1579,138 @@ test("MessageBuilder backward compatibility - old EmailMessage API still works",
 
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
+});
+
+const SEND_EMAIL_RETURNS_RESULT_WORKER = dedent /* javascript */ `
+	import { EmailMessage } from "cloudflare:email";
+
+	export default {
+		async fetch(request, env) {
+			const url = new URL(request.url);
+			const result = await env.SEND_EMAIL.send(new EmailMessage(
+				url.searchParams.get("from"),
+				url.searchParams.get("to"),
+				request.body
+			));
+			return Response.json(result);
+		},
+	};
+`;
+
+// Both branches return an id in the shape production returns:
+// `<{36 alphanumeric chars}@{sender domain}>`, angle brackets included.
+function synthesizedMessageId(expect: ExpectStatic, domain: string) {
+	return expect.stringMatching(
+		new RegExp(`^<[A-Za-z0-9]{36}@${domain.replace(/\./g, "\\.")}>$`)
+	);
+}
+
+test("send() on an EmailMessage returns a synthesized messageId", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: SEND_EMAIL_RETURNS_RESULT_WORKER,
+		email: {
+			send_email: [{ name: "SEND_EMAIL" }],
+		},
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	const email = dedent`
+		From: someone <someone@sender.domain>
+		To: someone else <someone-else@example.com>
+		Message-ID: <do-not-echo-this@example.com>
+		MIME-Version: 1.0
+		Content-Type: text/plain
+
+		body`;
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/?" +
+			new URLSearchParams({
+				from: "someone@sender.domain",
+				to: "someone-else@example.com",
+			}).toString(),
+		{ body: email, method: "POST" }
+	);
+
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual({
+		messageId: synthesizedMessageId(expect, "sender.domain"),
+	});
+});
+
+test("send() on a MessageBuilder returns a synthesized messageId", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: dedent /* javascript */ `
+			export default {
+				async fetch(request, env) {
+					const builder = await request.json();
+					const result = await env.SEND_EMAIL.send(builder);
+					return Response.json(result);
+				},
+			};
+		`,
+		email: {
+			send_email: [{ name: "SEND_EMAIL" }],
+		},
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@sender.domain",
+			to: "recipient@example.com",
+			subject: "s",
+			text: "t",
+		}),
+	});
+
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual({
+		messageId: synthesizedMessageId(expect, "sender.domain"),
+	});
+});
+
+test("send_email binding is available from getBindings", async ({ expect }) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		email: {
+			send_email: [{ name: "SEND_EMAIL" }],
+		},
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	const env = await mf.getBindings<{
+		SEND_EMAIL: {
+			send(message: {
+				from: string;
+				to: string;
+				subject: string;
+				text: string;
+			}): Promise<{ messageId: string }>;
+		};
+	}>();
+	const result = await env.SEND_EMAIL.send({
+		from: "sender@sender.domain",
+		to: "recipient@example.com",
+		subject: "s",
+		text: "t",
+	});
+
+	expect(result).toEqual({
+		messageId: synthesizedMessageId(expect, "sender.domain"),
+	});
 });

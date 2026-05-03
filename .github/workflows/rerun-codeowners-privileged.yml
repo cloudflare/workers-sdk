@@ -1,0 +1,67 @@
+name: "Rerun Code Owners (Privileged)"
+
+# Privileged companion to rerun-codeowners.yml.
+#
+# Runs after the "Rerun Code Owners" trigger workflow completes. The
+# workflow_run event always executes from the default branch with full
+# permissions — this is what allows us to call the Actions API even when the
+# original event (pull_request_review) came from a fork PR, where the
+# GITHUB_TOKEN would otherwise be read-only.
+#
+# The PR head SHA is read from github.event.workflow_run.head_sha — this is
+# GitHub-provided metadata and cannot be manipulated by fork code (unlike
+# the previous artifact-based approach).
+#
+# Strategy: CHECK-NAME LOOKUP
+# ----------------------------
+# The codeowners.yml workflow uses pull_request_target, which means its
+# workflow runs are indexed by the BASE branch SHA (e.g. main), NOT the PR
+# head SHA. So we cannot find the run via:
+#
+#   GET /actions/workflows/codeowners.yml/runs?head_sha=<PR_HEAD>
+#
+# That query returns nothing because the run's head_sha is main's HEAD.
+#
+# However, the codeowners-plus action creates its CHECK RUN on the PR head
+# commit (so the status appears on the PR). The check-runs API lets us look
+# up by check name + commit SHA:
+#
+#   GET /commits/<PR_HEAD>/check-runs?check_name=Run+Codeowners+Plus
+#
+# From the check run's details_url we extract the Actions job ID, then
+# re-run that specific job.
+on:
+  workflow_run:
+    workflows: ["Rerun Code Owners"]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  rerun-codeowners:
+    name: "Rerun Codeowners Plus"
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    permissions:
+      actions: write
+      checks: read
+    steps:
+      - name: Re-run Codeowners check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Find the "Run Codeowners Plus" check run on the PR head commit
+          # and extract the Actions job ID from the check run's details URL
+          # (the last path segment before any query string).
+          job_id=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/check-runs?check_name=Run+Codeowners+Plus" \
+            --jq '(.check_runs[0].details_url // "") | split("/") | last | split("?") | first' || true)
+
+          if [ -n "$job_id" ]; then
+            gh api "repos/${REPO}/actions/jobs/${job_id}/rerun" --method POST \
+              || echo "::warning::Job ${job_id} may already be running"
+            echo "Re-triggered 'Run Codeowners Plus' (job ${job_id})"
+          else
+            echo "::warning::Check 'Run Codeowners Plus' not found for SHA ${HEAD_SHA}"
+          fi

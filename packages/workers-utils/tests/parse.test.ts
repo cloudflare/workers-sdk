@@ -1,5 +1,4 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import {
 	indexLocation,
 	parseByteSize,
@@ -10,11 +9,11 @@ import {
 } from "../src/parse";
 
 describe("parseTOML", () => {
-	it("should parse toml that is empty", () => {
+	it("should parse toml that is empty", ({ expect }) => {
 		expect(parseTOML("")).toStrictEqual({});
 	});
 
-	it("should parse toml with basic values", () => {
+	it("should parse toml with basic values", ({ expect }) => {
 		expect(
 			parseTOML(`
         name = "basic"
@@ -26,7 +25,7 @@ describe("parseTOML", () => {
 		});
 	});
 
-	it("should parse toml with complex values", () => {
+	it("should parse toml with complex values", ({ expect }) => {
 		expect(
 			parseTOML(`
         name = 'complex'
@@ -50,7 +49,7 @@ describe("parseTOML", () => {
 		});
 	});
 
-	it("should fail to parse toml with invalid string", () => {
+	it("should fail to parse toml with invalid string", ({ expect }) => {
 		try {
 			parseTOML(`name = 'fail"`);
 			expect.fail("parseTOML did not throw");
@@ -72,7 +71,7 @@ describe("parseTOML", () => {
 		}
 	});
 
-	it("should fail to parse toml with invalid header", () => {
+	it("should fail to parse toml with invalid header", ({ expect }) => {
 		try {
 			parseTOML(`\n[name`, "config.toml");
 			expect.fail("parseTOML did not throw");
@@ -94,7 +93,7 @@ describe("parseTOML", () => {
 		}
 	});
 
-	it("should cope with Windows line-endings", () => {
+	it("should cope with Windows line-endings", ({ expect }) => {
 		expect(
 			parseTOML(
 				"# A comment with a Windows line-ending\r\n# Another comment with a Windows line-ending\r\n"
@@ -104,11 +103,11 @@ describe("parseTOML", () => {
 });
 
 describe("parseJSON", () => {
-	it("should parse json that is empty", () => {
+	it("should parse json that is empty", ({ expect }) => {
 		expect(parseJSON("{}")).toStrictEqual({});
 	});
 
-	it("should parse json with basic values", () => {
+	it("should parse json with basic values", ({ expect }) => {
 		expect(
 			parseJSON(`
       {
@@ -121,7 +120,7 @@ describe("parseJSON", () => {
 		});
 	});
 
-	it("should parse json with complex values", () => {
+	it("should parse json with complex values", ({ expect }) => {
 		expect(
 			parseJSON(
 				`{
@@ -141,7 +140,7 @@ describe("parseJSON", () => {
 		});
 	});
 
-	it("should fail to parse json with invalid string", () => {
+	it("should fail to parse json with invalid string", ({ expect }) => {
 		try {
 			parseJSON(`\n{\n"version" "1\n}\n`);
 			expect.fail("parseJSON did not throw");
@@ -165,7 +164,7 @@ describe("parseJSON", () => {
 		}
 	});
 
-	it("should fail to parse json with invalid number", () => {
+	it("should fail to parse json with invalid number", ({ expect }) => {
 		const file = "config.json",
 			fileText = `{\n\t"a":{\n\t\t"b":{\n\t\t\t"c":[012345]\n}\n}\n}`;
 		try {
@@ -191,11 +190,11 @@ describe("parseJSON", () => {
 	});
 });
 describe("parseJSONC", () => {
-	it("should parse jsonc that is empty", () => {
+	it("should parse jsonc that is empty", ({ expect }) => {
 		expect(parseJSONC("{}")).toStrictEqual({});
 	});
 
-	it("should parse jsonc with basic values", () => {
+	it("should parse jsonc with basic values", ({ expect }) => {
 		expect(
 			parseJSONC(`
       {
@@ -208,7 +207,7 @@ describe("parseJSONC", () => {
 		});
 	});
 
-	it("should parse jsonc with complex values", () => {
+	it("should parse jsonc with complex values", ({ expect }) => {
 		expect(
 			parseJSONC(
 				`{
@@ -228,7 +227,7 @@ describe("parseJSONC", () => {
 		});
 	});
 
-	it("should parse jsonc with comments", () => {
+	it("should parse jsonc with comments", ({ expect }) => {
 		expect(
 			parseJSONC(
 				`{
@@ -250,7 +249,7 @@ describe("parseJSONC", () => {
 		});
 	});
 
-	it("should fail to parse jsonc with invalid string", () => {
+	it("should fail to parse jsonc with invalid string", ({ expect }) => {
 		try {
 			parseJSONC(`\n{\n"version" "1\n}\n`);
 			expect.fail("parseJSONC did not throw");
@@ -273,7 +272,7 @@ describe("parseJSONC", () => {
 		}
 	});
 
-	it("should fail to parse jsonc with invalid number", () => {
+	it("should fail to parse jsonc with invalid number", ({ expect }) => {
 		const file = "config.json",
 			fileText = `{\n\t"a":{\n\t\t"b":{\n\t\t\t"c":[012345]\n}\n}\n}`;
 		try {
@@ -299,7 +298,7 @@ describe("parseJSONC", () => {
 	});
 });
 describe("indexLocation", () => {
-	it("should calculate location from one-line input", () => {
+	it("should calculate location from one-line input", ({ expect }) => {
 		const fileText = "";
 		expect(indexLocation({ fileText }, 1)).toStrictEqual({
 			fileText,
@@ -309,7 +308,7 @@ describe("indexLocation", () => {
 		});
 	});
 
-	it("should calculate location from multi-line input", () => {
+	it("should calculate location from multi-line input", ({ expect }) => {
 		const file = "package.json",
 			fileText = `\n{\n\t"hello":"world"\n}\n`;
 		expect(indexLocation({ file, fileText }, 11)).toStrictEqual({
@@ -321,7 +320,7 @@ describe("indexLocation", () => {
 		});
 	});
 
-	it("should calculate location when index is out of bounds", () => {
+	it("should calculate location when index is out of bounds", ({ expect }) => {
 		const fileText = `\n\n\n\n`;
 		expect(indexLocation({ fileText }, 10)).toStrictEqual({
 			fileText,
@@ -333,7 +332,7 @@ describe("indexLocation", () => {
 });
 
 describe("searchLocation", () => {
-	it("should calculate location from one-line match", () => {
+	it("should calculate location from one-line match", ({ expect }) => {
 		const file = "config.toml",
 			fileText = `name = 'coolthing'`;
 		expect(searchLocation({ file, fileText }, "coolthing")).toStrictEqual({
@@ -346,7 +345,7 @@ describe("searchLocation", () => {
 		});
 	});
 
-	it("should calculate location from multi-line match", () => {
+	it("should calculate location from multi-line match", ({ expect }) => {
 		const fileText = `\n{"versions":[\n\t"1.2.3",\n\t"1.2.4",\n\t"1.2.5"\n]}\n`;
 		expect(searchLocation({ fileText }, "1.2.4")).toStrictEqual({
 			fileText,
@@ -357,7 +356,7 @@ describe("searchLocation", () => {
 		});
 	});
 
-	it("should calculate location from no match", () => {
+	it("should calculate location from no match", ({ expect }) => {
 		const fileText = `\n{}\n`;
 		expect(searchLocation({ fileText }, "apple")).toStrictEqual({
 			fileText,
@@ -370,7 +369,7 @@ describe("searchLocation", () => {
 });
 
 describe("parseByteSize", () => {
-	it("should calculate valid byte sizes", () => {
+	it("should calculate valid byte sizes", ({ expect }) => {
 		const cases: [string, number][] = [
 			["3", 3],
 			["3B", 3],
@@ -395,7 +394,7 @@ describe("parseByteSize", () => {
 		}
 	});
 
-	it("should return NaN for invalid input", () => {
+	it("should return NaN for invalid input", ({ expect }) => {
 		expect(parseByteSize("")).toBeNaN();
 		expect(parseByteSize("foo")).toBeNaN();
 		expect(parseByteSize("B")).toBeNaN();

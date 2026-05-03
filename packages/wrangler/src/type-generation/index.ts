@@ -32,7 +32,75 @@ import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Entry } from "../deployment-bundle/entry";
-import type { Config, RawEnvironment } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	RawConfig,
+	RawEnvironment,
+} from "@cloudflare/workers-utils";
+
+export interface GenerateTypesOptions {
+	/**
+	 * Path to the Wrangler config file to use. Can be an array for multi-config type resolution.
+	 */
+	config?: string | string[];
+
+	/**
+	 * Name of the Wrangler environment to generate types for.
+	 */
+	env?: string;
+
+	/**
+	 * Paths to `.env` files to load when inferring local variables and secrets.
+	 */
+	envFile?: string[];
+
+	/**
+	 * Name of the generated environment interface.
+	 */
+	envInterface?: string;
+
+	/**
+	 * Whether to include environment/bindings types in the output.
+	 */
+	includeEnv?: boolean;
+
+	/**
+	 * Whether to include runtime types in the output.
+	 */
+	includeRuntime?: boolean;
+
+	/**
+	 * Path to the declaration file for generated types.
+	 */
+	path?: string;
+
+	/**
+	 * Whether to generate strict literal/union variable types.
+	 */
+	strictVars?: boolean;
+}
+
+interface ResolvedGenerateTypesOptions {
+	config: Config;
+	envHeaderCommand?: string;
+	env?: string;
+	envFile?: string[];
+	envInterface: string;
+	includeEnv: boolean;
+	includeRuntime: boolean;
+	path: string;
+	secondaryEntries: Map<string, Entry>;
+	strictVars: boolean;
+}
+
+interface GeneratedTypesResult {
+	config: Config;
+	content: string;
+	env: string | null;
+	path: string;
+	runtime: string | null;
+	shouldWriteFile: boolean;
+}
 
 export const typesCommand = createCommand({
 	metadata: {
@@ -98,7 +166,7 @@ export const typesCommand = createCommand({
 					"`wrangler types` will now generate runtime types in the same file as the Env types.\n" +
 					"You should delete the old runtime types file, and remove it from your tsconfig.json.\n" +
 					"Then rerun `wrangler types`.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "type generation args include runtime deprecated" }
 			);
 		}
 
@@ -108,8 +176,7 @@ export const typesCommand = createCommand({
 			throw new CommandLineArgsError(
 				`The provided env-interface value ("${args.envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`,
 				{
-					telemetryMessage:
-						"The provided env-interface value does not satisfy the validation regex",
+					telemetryMessage: "type generation args invalid env interface",
 				}
 			);
 		}
@@ -118,8 +185,7 @@ export const typesCommand = createCommand({
 			throw new CommandLineArgsError(
 				`The provided output path '${args.path}' does not point to a declaration file - please use the '.d.ts' extension`,
 				{
-					telemetryMessage:
-						"The provided path does not point to a declaration file",
+					telemetryMessage: "type generation args invalid output path",
 				}
 			);
 		}
@@ -130,44 +196,39 @@ export const typesCommand = createCommand({
 			throw new CommandLineArgsError(
 				`You cannot run this command without including either Env or Runtime types`,
 				{
-					telemetryMessage: true,
+					telemetryMessage: "type generation args missing type selection",
 				}
 			);
 		}
 	},
 	async handler(args) {
-		let config: Config;
-		const secondaryConfigs: Config[] = [];
-		if (Array.isArray(args.config)) {
-			config = readConfig({ ...args, config: args.config[0] });
-			for (const configPath of args.config.slice(1)) {
-				secondaryConfigs.push(readConfig({ config: configPath }));
-			}
-		} else {
-			config = readConfig(args);
-		}
+		const resolvedOptions = await resolveGenerateTypesOptions(args, {
+			logSecondaryEntries: true,
+			validateOptions: false,
+			validateOutputPath: false,
+		});
 
-		const { envInterface, path: outputPath } = args;
-
-		if (
-			config.configPath == null ||
-			(fs
-				.statSync(config.configPath, { throwIfNoEntry: false })
-				?.isDirectory() ??
-				true)
-		) {
-			throw new UserError(
-				`No config file detected${args.config ? ` (at ${args.config})` : ""}. This command requires a Wrangler configuration file.`,
-				{ telemetryMessage: "No config file detected" }
-			);
-		}
+		const {
+			config,
+			envInterface,
+			path: outputPath,
+			secondaryEntries,
+		} = resolvedOptions;
 
 		if (args.check) {
-			const outOfDate = await checkTypesUpToDate(config, outputPath);
+			const outOfDate = await checkTypesUpToDate(
+				config,
+				envInterface,
+				outputPath,
+				secondaryEntries
+			);
 			if (outOfDate) {
 				throw new FatalError(
 					`Types at ${outputPath} are out of date. Run \`wrangler types\` to regenerate.`,
-					1
+					{
+						code: 1,
+						telemetryMessage: "type generation check types out of date",
+					}
 				);
 			}
 
@@ -175,105 +236,409 @@ export const typesCommand = createCommand({
 			return;
 		}
 
-		const secondaryEntries: Map<string, Entry> = new Map();
-
-		if (secondaryConfigs.length > 0) {
-			for (const secondaryConfig of secondaryConfigs) {
-				const serviceEntry = await getEntry({}, secondaryConfig, "types");
-
-				if (serviceEntry.name) {
-					const key = serviceEntry.name;
-					if (secondaryEntries.has(key)) {
-						logger.warn(
-							`Configuration file for Worker '${key}' has been passed in more than once using \`--config\`. To remove this warning, only pass each unique Worker config file once.`
-						);
-					}
-					secondaryEntries.set(key, serviceEntry);
-					logger.log(
-						chalk.dim(
-							`- Found Worker '${key}' at '${relative(process.cwd(), serviceEntry.file)}' (${secondaryConfig.configPath})`
-						)
-					);
-				} else {
-					throw new UserError(
-						`Could not resolve entry point for service config '${secondaryConfig}'.`
-					);
-				}
-			}
-		}
-
-		const configContainsEntrypoint =
-			config.main !== undefined || !!config.site?.["entry-point"];
-
-		let entrypoint: Entry | undefined;
-		if (configContainsEntrypoint) {
-			// this will throw if an entrypoint is expected, but doesn't exist
-			// e.g. before building. however someone might still want to generate types
-			// so we default to module worker
-			try {
-				entrypoint = await getEntry({}, config, "types");
-			} catch {
-				entrypoint = undefined;
-			}
-		}
-		const entrypointFormat = entrypoint?.format ?? "modules";
-
-		const header = ["/* eslint-disable */"];
-		const content = [];
-		if (args.includeEnv) {
-			logger.log(`Generating project types...\n`);
-
-			const { envHeader, envTypes } = await generateEnvTypes(
-				config,
-				args,
-				envInterface,
-				outputPath,
-				entrypoint,
-				secondaryEntries
-			);
-			if (envHeader && envTypes) {
-				header.push(envHeader);
-				content.push(envTypes);
-			}
-		}
-
-		if (args.includeRuntime) {
-			logger.log("Generating runtime types...\n");
-			const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
-				config,
-				outFile: outputPath || undefined,
-			});
-			header.push(runtimeHeader);
-			content.push(`// Begin runtime types\n${runtimeTypes}`);
-			logger.log(chalk.dim("Runtime types generated.\n"));
-		}
+		const generatedTypes = await generateTypesFromResolvedOptions(
+			resolvedOptions,
+			true
+		);
 
 		logHorizontalRule();
 
-		// don't write an empty Env type for service worker syntax
-		if ((header.length && content.length) || entrypointFormat === "modules") {
-			fs.writeFileSync(
-				outputPath,
-				`${header.join("\n")}\n${content.join("\n")}`,
-				"utf-8"
-			);
+		if (generatedTypes.shouldWriteFile) {
+			fs.writeFileSync(outputPath, generatedTypes.content, "utf-8");
 			logger.log(`✨ Types written to ${outputPath}\n`);
 		}
+		const configPath = config.configPath as string;
 		const tsconfigPath =
-			config.tsconfig ?? join(dirname(config.configPath), "tsconfig.json");
+			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
 		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
 		const { mode } = getNodeCompat(
 			config.compatibility_date,
 			config.compatibility_flags
 		);
-		if (args.includeRuntime) {
+		if (resolvedOptions.includeRuntime) {
 			logRuntimeTypesMessage(tsconfigTypes, mode !== null);
 		}
 		logger.log(
-			`📣 Remember to rerun 'wrangler types' after you change your ${configFileName(config.configPath)} file.\n`
+			`📣 Remember to rerun 'wrangler types' after you change your ${configFileName(configPath)} file.\n`
 		);
 	},
 });
+
+/**
+ * Generates Wrangler types programmatically from an options object.
+ *
+ * This API mirrors the `wrangler types` command flags, but returns the generated
+ * declaration content as structured strings instead of writing to disk.
+ *
+ * @param options - Programmatic options equivalent to `wrangler types` flags.
+ *
+ * @returns Generated env/runtime sections, combined content, and metadata.
+ */
+export async function generateTypesFromWranglerOptions(
+	options: GenerateTypesOptions
+): Promise<GeneratedTypesResult> {
+	const resolvedOptions = await resolveGenerateTypesOptions(options, {
+		logSecondaryEntries: false,
+		validateOptions: true,
+		validateOutputPath: false,
+	});
+	resolvedOptions.envHeaderCommand = buildGenerateTypesHeaderCommand(
+		options,
+		resolvedOptions
+	);
+
+	return generateTypesFromResolvedOptions(resolvedOptions, false);
+}
+
+function buildGenerateTypesHeaderCommand(
+	options: GenerateTypesOptions,
+	resolvedOptions: ResolvedGenerateTypesOptions
+): string {
+	const commandParts: string[] = ["wrangler", "types"];
+
+	if (options.env !== undefined) {
+		commandParts.push(`--env=${options.env}`);
+	}
+
+	for (const envFile of options.envFile ?? []) {
+		commandParts.push(`--env-file=${envFile}`);
+	}
+
+	if (options.includeRuntime === false) {
+		commandParts.push("--include-runtime=false");
+	}
+
+	if (options.includeEnv === false) {
+		commandParts.push("--include-env=false");
+	}
+
+	if (options.strictVars === false) {
+		commandParts.push("--strict-vars=false");
+	}
+
+	if (options.envInterface !== undefined && options.envInterface !== "Env") {
+		commandParts.push(`--env-interface=${options.envInterface}`);
+	}
+
+	if (resolvedOptions.path !== DEFAULT_WORKERS_TYPES_FILE_NAME) {
+		commandParts.push(resolvedOptions.path);
+	}
+
+	return commandParts.join(" ");
+}
+
+/**
+ * Resolves user-provided generation options into a fully-populated shape.
+ *
+ * This function applies defaults, validates option combinations, reads the
+ * primary config, and resolves secondary worker entries used for cross-worker
+ * service and Durable Object type references.
+ *
+ * @param options - Raw generation options from CLI/API call sites.
+ * @param controls - Internal behavior toggles for validation and logging.
+ *
+ * @returns Fully-resolved options ready for type generation.
+ */
+async function resolveGenerateTypesOptions(
+	options: GenerateTypesOptions,
+	{
+		logSecondaryEntries,
+		validateOptions,
+		validateOutputPath,
+	}: {
+		logSecondaryEntries: boolean;
+		validateOptions: boolean;
+		validateOutputPath: boolean;
+	}
+): Promise<ResolvedGenerateTypesOptions> {
+	const envInterface = options.envInterface ?? "Env";
+	const includeEnv = options.includeEnv ?? true;
+	const includeRuntime = options.includeRuntime ?? true;
+	const path = options.path ?? DEFAULT_WORKERS_TYPES_FILE_NAME;
+	const strictVars = options.strictVars ?? true;
+
+	if (validateOptions) {
+		validateGenerateTypesOptions({
+			envInterface,
+			includeEnv,
+			includeRuntime,
+			path,
+			validateOutputPath,
+		});
+	}
+
+	let config: Config;
+	const secondaryConfigs: Config[] = [];
+	if (Array.isArray(options.config)) {
+		config = readConfig({ config: options.config[0], env: options.env });
+		for (const configPath of options.config.slice(1)) {
+			secondaryConfigs.push(readConfig({ config: configPath }));
+		}
+	} else {
+		config = readConfig({ config: options.config, env: options.env });
+	}
+
+	assertConfigFileDetected(config, options.config);
+
+	const secondaryEntries = await resolveSecondaryEntries(
+		secondaryConfigs,
+		logSecondaryEntries
+	);
+
+	return {
+		config,
+		env: options.env,
+		envFile: options.envFile,
+		envInterface,
+		includeEnv,
+		includeRuntime,
+		path,
+		secondaryEntries,
+		strictVars,
+	};
+}
+
+/**
+ * Generates environment & runtime type sections using pre-resolved options.
+ *
+ * Unlike the CLI command handler, this function does not write to disk; instead
+ * it returns the generated pieces and whether the CLI should write a file for
+ * this result.
+ *
+ * @param options - Fully-resolved generation options.
+ * @param log - Whether generation progress should be logged.
+ *
+ * @returns Combined and split generated type sections plus write metadata.
+ */
+async function generateTypesFromResolvedOptions(
+	options: ResolvedGenerateTypesOptions,
+	log: boolean
+): Promise<GeneratedTypesResult> {
+	const entrypoint = await getTypesEntrypoint(options.config);
+	const entrypointFormat = entrypoint?.format ?? "modules";
+
+	const header: string[] = ["/* eslint-disable */"];
+	const content: string[] = [];
+
+	let env: string | null = null;
+	if (options.includeEnv) {
+		if (log) {
+			logger.log(`Generating project types...\n`);
+		}
+
+		const { envHeader, envTypes } = await generateEnvTypes(
+			options.config,
+			{
+				env: options.env,
+				envFile: options.envFile,
+				strictVars: options.strictVars,
+			},
+			options.envInterface,
+			options.path,
+			entrypoint,
+			options.secondaryEntries,
+			options.envHeaderCommand,
+			log
+		);
+		if (envHeader && envTypes) {
+			env = envTypes;
+			header.push(envHeader);
+			content.push(envTypes);
+		}
+	}
+
+	let runtime: string | null = null;
+	if (options.includeRuntime) {
+		if (log) {
+			logger.log("Generating runtime types...\n");
+		}
+
+		const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
+			config: options.config,
+			outFile: options.path || undefined,
+		});
+		runtime = runtimeTypes;
+		header.push(runtimeHeader);
+		content.push(`// Begin runtime types\n${runtimeTypes}`);
+		if (log) {
+			logger.log(chalk.dim("Runtime types generated.\n"));
+		}
+	}
+
+	const shouldWriteFile =
+		(header.length > 1 && content.length > 0) || entrypointFormat === "modules";
+
+	return {
+		config: options.config,
+		content: shouldWriteFile
+			? `${header.join("\n")}\n${content.join("\n")}`
+			: "",
+		env,
+		path: options.path,
+		runtime,
+		shouldWriteFile,
+	};
+}
+
+/**
+ * Resolves additional worker configs into a name-to-entrypoint map.
+ *
+ * The resulting map includes both base worker names and environment-specific
+ * worker names so cross-worker references in bindings can be typed correctly.
+ *
+ * @param secondaryConfigs - Non-primary configs passed for cross-worker typing.
+ * @param logSecondaryEntries - Whether discovered workers should be logged.
+ *
+ * @returns Mapping from worker name to resolved entrypoint metadata.
+ */
+async function resolveSecondaryEntries(
+	secondaryConfigs: Config[],
+	logSecondaryEntries: boolean
+): Promise<Map<string, Entry>> {
+	const secondaryEntries = new Map<string, Entry>();
+
+	for (const secondaryConfig of secondaryConfigs) {
+		const serviceEntry = await getEntry({}, secondaryConfig, "types");
+		if (!serviceEntry.name) {
+			throw new UserError(
+				`Could not resolve entry point for service config '${secondaryConfig}'.`,
+				{
+					telemetryMessage:
+						"type generation command service entrypoint missing",
+				}
+			);
+		}
+
+		const key = serviceEntry.name;
+		if (secondaryEntries.has(key)) {
+			logger.warn(
+				`Configuration file for Worker '${key}' has been passed in more than once using \`--config\`. To remove this warning, only pass each unique Worker config file once.`
+			);
+		}
+		secondaryEntries.set(key, serviceEntry);
+		if (logSecondaryEntries) {
+			logger.log(
+				chalk.dim(
+					`- Found Worker '${key}' at '${relative(process.cwd(), serviceEntry.file)}' (${secondaryConfig.configPath})`
+				)
+			);
+		}
+
+		const { rawConfig } = experimental_readRawConfig({
+			config: secondaryConfig.configPath,
+		});
+		for (const envName of Object.keys(rawConfig.env ?? {})) {
+			const envConfig = readConfig({
+				config: secondaryConfig.configPath,
+				env: envName,
+			});
+			const envKey = envConfig.name;
+			if (envKey && envKey !== key && !secondaryEntries.has(envKey)) {
+				secondaryEntries.set(envKey, serviceEntry);
+			}
+		}
+	}
+
+	return secondaryEntries;
+}
+
+/**
+ * Attempts to resolve the primary worker entrypoint for type generation.
+ *
+ * If the config does not declare an entrypoint, or entrypoint resolution fails,
+ * this returns `undefined` so generation can continue with module defaults.
+ *
+ * @param config - Parsed Wrangler config for the primary worker.
+ *
+ * @returns Resolved entrypoint metadata when available.
+ */
+async function getTypesEntrypoint(config: Config): Promise<Entry | undefined> {
+	const configContainsEntrypoint =
+		config.main !== undefined || !!config.site?.["entry-point"];
+	if (!configContainsEntrypoint) {
+		return undefined;
+	}
+
+	try {
+		return await getEntry({}, config, "types");
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Ensures that type generation is operating against a concrete config file.
+ *
+ * @param config - Parsed Wrangler config object.
+ * @param requestedConfig - User-provided config input, used for error context.
+ *
+ * @throws {UserError} When no valid config file was detected.
+ */
+function assertConfigFileDetected(
+	config: Config,
+	requestedConfig: string | string[] | undefined
+): void {
+	if (
+		config.configPath == null ||
+		(fs.statSync(config.configPath, { throwIfNoEntry: false })?.isDirectory() ??
+			true)
+	) {
+		throw new UserError(
+			`No config file detected${requestedConfig ? ` (at ${requestedConfig})` : ""}. This command requires a Wrangler configuration file.`,
+			{ telemetryMessage: "type generation command missing config" }
+		);
+	}
+}
+
+/**
+ * Validates programmatic type-generation options.
+ *
+ * Applies the same constraints as CLI argument validation for env interface
+ * naming, output file extension, and include-env/include-runtime combinations.
+ *
+ * @param options - Normalized options to validate.
+ *
+ * @throws {UserError} When any option is invalid.
+ */
+function validateGenerateTypesOptions({
+	envInterface,
+	includeEnv,
+	includeRuntime,
+	path,
+	validateOutputPath,
+}: {
+	envInterface: string;
+	includeEnv: boolean;
+	includeRuntime: boolean;
+	path: string;
+	validateOutputPath: boolean;
+}): void {
+	const validInterfaceRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+	if (!validInterfaceRegex.test(envInterface)) {
+		throw new UserError(
+			`The provided env-interface value ("${envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`,
+			{ telemetryMessage: "type generation args invalid env interface" }
+		);
+	}
+
+	if (!path.endsWith(".d.ts")) {
+		throw new UserError(
+			`The provided output path '${path}' does not point to a declaration file - please use the '.d.ts' extension`,
+			{ telemetryMessage: "type generation args invalid output path" }
+		);
+	}
+
+	if (validateOutputPath) {
+		validateTypesFile(path);
+	}
+
+	if (!includeEnv && !includeRuntime) {
+		throw new UserError(
+			`You cannot run this command without including either Env or Runtime types`,
+			{ telemetryMessage: "type generation args missing type selection" }
+		);
+	}
+}
 
 /**
  * Check if a string is a valid TypeScript identifier. This is a naive check and doesn't cover all cases
@@ -331,6 +696,20 @@ export function generateImportSpecifier(from: string, to: string) {
 }
 
 /**
+ * Checks whether any config level (top-level or any named environment) declares
+ * `secrets`. Used to determine if the project has opted into config-based
+ * secret declarations, which replaces `.dev.vars`/`.env` inference for type generation.
+ */
+function hasConfigSecrets(rawConfig: RawConfig): boolean {
+	if (rawConfig.secrets !== undefined) {
+		return true;
+	}
+	return Object.values(rawConfig.env ?? {}).some(
+		(env) => env.secrets !== undefined
+	);
+}
+
+/**
  * Generates TypeScript environment type definitions from a Wrangler configuration.
  *
  * This function collects all bindings (KV, R2, D1, Durable Objects, Services, etc.),
@@ -343,6 +722,7 @@ export function generateImportSpecifier(from: string, to: string) {
  * @param outputPath - The file path where the generated types will be written
  * @param entrypoint - Optional entry point information for the Worker
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
+ * @param command - Optional command string used in the generated env header.
  * @param log - Whether to log output to the console (default: true)
  *
  * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
@@ -354,29 +734,61 @@ export async function generateEnvTypes(
 	outputPath: string,
 	entrypoint?: Entry,
 	serviceEntries?: Map<string, Entry>,
+	command?: string,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
-	// Get secret vars from .dev.vars/.env files for type generation.
-	// We pass an empty vars object because we only want the secret keys,
-	// not merged with config vars.
-	const secretBindings = getVarsForDev(
-		config.userConfigPath,
-		args.envFile,
-		{},
-		args.env,
-		true
-	);
-	// Extract just the keys as a Record<string, string> for compatibility
-	// (type generation only needs the names, not the values)
-	const secrets: Record<string, string> = {};
-	for (const key of Object.keys(secretBindings)) {
-		secrets[key] = "";
-	}
-
 	const collectionArgs = {
 		...args,
 		config: config.configPath,
 	} satisfies Partial<(typeof typesCommand)["args"]>;
+
+	const { rawConfig } = experimental_readRawConfig(collectionArgs);
+
+	// Determine secrets source: if any config level declares `secrets`,
+	// the project is opted into config-based secrets (replaces .dev.vars inference).
+	let secrets: Record<string, string> = {};
+	let perEnvSecrets: Map<string, Record<string, string>> | undefined;
+	const useConfigSecrets = hasConfigSecrets(rawConfig);
+
+	if (useConfigSecrets) {
+		// Config-based: build per-env secrets maps
+		perEnvSecrets = new Map();
+
+		// Top-level secrets
+		const topLevelKeys: Record<string, string> = {};
+		for (const key of rawConfig.secrets?.required ?? []) {
+			topLevelKeys[key] = "";
+		}
+		perEnvSecrets.set(TOP_LEVEL_ENV_NAME, topLevelKeys);
+
+		// Per named env secrets
+		for (const [envName, envConfig] of Object.entries(rawConfig.env ?? {})) {
+			const envKeys: Record<string, string> = {};
+			for (const key of envConfig.secrets?.required ?? []) {
+				envKeys[key] = "";
+			}
+			perEnvSecrets.set(envName, envKeys);
+		}
+
+		// For the simple path: use the specific env's secrets (or top-level)
+		secrets = perEnvSecrets.get(args.env ?? TOP_LEVEL_ENV_NAME) ?? {};
+	} else {
+		// Fall back to .dev.vars/.env inference.
+		// We pass an empty vars object because we only want the secret keys,
+		// not merged with config vars.
+		const secretBindings = getVarsForDev(
+			config.userConfigPath,
+			args.envFile,
+			{},
+			args.env,
+			true
+		);
+		// Extract just the keys as a Record<string, string> for compatibility
+		// (type generation only needs the names, not the values)
+		for (const key of Object.keys(secretBindings)) {
+			secrets[key] = "";
+		}
+	}
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
 
@@ -390,11 +802,13 @@ export async function generateEnvTypes(
 
 	if (userProvidedEnvInterface && entrypointFormat === "service-worker") {
 		throw new UserError(
-			"An env-interface value has been provided but the worker uses the incompatible Service Worker syntax"
+			"An env-interface value has been provided but the worker uses the incompatible Service Worker syntax",
+			{
+				telemetryMessage: "type generation command env interface incompatible",
+			}
 		);
 	}
 
-	const { rawConfig } = experimental_readRawConfig(collectionArgs);
 	const hasEnvironments =
 		!!rawConfig.env && Object.keys(rawConfig.env).length > 0;
 
@@ -408,6 +822,8 @@ export async function generateEnvTypes(
 			entrypoint,
 			serviceEntries,
 			secrets,
+			perEnvSecrets,
+			command,
 			log
 		);
 	}
@@ -420,6 +836,7 @@ export async function generateEnvTypes(
 		entrypoint,
 		serviceEntries,
 		secrets,
+		command,
 		log
 	);
 }
@@ -436,6 +853,7 @@ export async function generateEnvTypes(
  * @param entrypoint - Optional entry point information for the Worker
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
  * @param secrets - Record of secret variable names to their values
+ * @param command - Optional command string used in the generated env header.
  * @param log - Whether to log output to the console (default: true)
  *
  * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
@@ -448,6 +866,7 @@ async function generateSimpleEnvTypes(
 	entrypoint?: Entry,
 	serviceEntries?: Map<string, Entry>,
 	secrets: Record<string, string> = {},
+	command?: string,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const stringKeys = new Array<string>();
@@ -640,6 +1059,14 @@ async function generateSimpleEnvTypes(
 			continue;
 		}
 
+		if (unsafe.type === "service") {
+			envTypeStructure.push({
+				key: constructTypeKey(unsafe.name),
+				type: "Fetcher",
+			});
+			continue;
+		}
+
 		envTypeStructure.push({
 			key: constructTypeKey(unsafe.name),
 			type: "any",
@@ -717,7 +1144,7 @@ async function generateSimpleEnvTypes(
 		}
 
 		return {
-			envHeader: getEnvHeader(hash),
+			envHeader: getEnvHeader(hash, command),
 			envTypes: fileContent,
 		};
 	} else {
@@ -743,7 +1170,9 @@ async function generateSimpleEnvTypes(
  * @param outputPath - The file path where the generated types will be written
  * @param entrypoint - Optional entry point information for the Worker
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
- * @param secrets - Record of secret variable names to their values
+ * @param secrets - Record of secret variable names (fallback for all envs when perEnvSecrets is not provided)
+ * @param perEnvSecrets - Optional per-environment secrets map. When provided, each env uses its own secrets instead of the shared fallback.
+ * @param command - Optional command string used in the generated env header.
  * @param log - Whether to log output to the console (default: true)
  *
  * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
@@ -756,6 +1185,8 @@ async function generatePerEnvironmentTypes(
 	entrypoint?: Entry,
 	serviceEntries?: Map<string, Entry>,
 	secrets: Record<string, string> = {},
+	perEnvSecrets?: Map<string, Record<string, string>>,
+	command?: string,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const { rawConfig } = experimental_readRawConfig(collectionArgs);
@@ -898,6 +1329,7 @@ async function generatePerEnvironmentTypes(
 	for (const envName of envNames) {
 		const interfaceName = toEnvInterfaceName(envName);
 		const envBindings = new Array<{ key: string; value: string }>();
+		const envSecrets = perEnvSecrets?.get(envName) ?? secrets;
 
 		const bindings = bindingsPerEnv.get(envName) ?? [];
 		for (const binding of bindings) {
@@ -910,7 +1342,7 @@ async function generatePerEnvironmentTypes(
 
 		const vars = varsPerEnv.get(envName) ?? {};
 		for (const [varName, varValues] of Object.entries(vars)) {
-			if (varName in secrets) {
+			if (varName in envSecrets) {
 				continue;
 			}
 
@@ -923,8 +1355,9 @@ async function generatePerEnvironmentTypes(
 			}
 		}
 
-		for (const secretName in secrets) {
+		for (const secretName in envSecrets) {
 			envBindings.push({ key: constructTypeKey(secretName), value: "string" });
+			trackBinding(secretName, "string", envName);
 			if (!stringKeys.includes(secretName)) {
 				stringKeys.push(secretName);
 			}
@@ -959,7 +1392,12 @@ async function generatePerEnvironmentTypes(
 
 		const unsafeBindings = unsafePerEnv.get(envName) ?? [];
 		for (const unsafe of unsafeBindings) {
-			const type = unsafe.type === "ratelimit" ? "RateLimit" : "any";
+			const type =
+				unsafe.type === "ratelimit"
+					? "RateLimit"
+					: unsafe.type === "service"
+						? "Fetcher"
+						: "any";
 			envBindings.push({ key: constructTypeKey(unsafe.name), value: type });
 			trackBinding(unsafe.name, type, envName);
 		}
@@ -1002,9 +1440,11 @@ async function generatePerEnvironmentTypes(
 		trackBinding(binding.name, binding.type, TOP_LEVEL_ENV_NAME);
 	}
 
+	const topLevelSecrets = perEnvSecrets?.get(TOP_LEVEL_ENV_NAME) ?? secrets;
+
 	const topLevelVars = varsPerEnv.get(TOP_LEVEL_ENV_NAME) ?? {};
 	for (const [varName, varValues] of Object.entries(topLevelVars)) {
-		if (varName in secrets) {
+		if (varName in topLevelSecrets) {
 			continue;
 		}
 
@@ -1013,6 +1453,13 @@ async function generatePerEnvironmentTypes(
 		trackBinding(varName, varType, TOP_LEVEL_ENV_NAME);
 		if (!stringKeys.includes(varName)) {
 			stringKeys.push(varName);
+		}
+	}
+
+	for (const secretName in topLevelSecrets) {
+		trackBinding(secretName, "string", TOP_LEVEL_ENV_NAME);
+		if (!stringKeys.includes(secretName)) {
+			stringKeys.push(secretName);
 		}
 	}
 
@@ -1063,19 +1510,7 @@ async function generatePerEnvironmentTypes(
 		type: string;
 	}>();
 
-	for (const secretName in secrets) {
-		aggregatedEnvBindings.push({
-			key: constructTypeKey(secretName),
-			required: true,
-			type: "string",
-		});
-	}
-
 	for (const [name, types] of aggregatedBindings.entries()) {
-		if (name in secrets) {
-			continue;
-		}
-
 		const typeArray = Array.from(types);
 		const unionType =
 			typeArray.length === 1 ? typeArray[0] : typeArray.join(" | ");
@@ -1162,7 +1597,7 @@ async function generatePerEnvironmentTypes(
 	}
 
 	return {
-		envHeader: getEnvHeader(hash),
+		envHeader: getEnvHeader(hash, command),
 		envTypes: fileContent,
 	};
 }
@@ -1270,7 +1705,9 @@ const validateTypesFile = (path: string): void => {
 		) {
 			throw new UserError(
 				`A non-Wrangler ${basename(path)} already exists, please rename and try again.`,
-				{ telemetryMessage: "A non-Wrangler .d.ts file already exists" }
+				{
+					telemetryMessage: "type generation validation conflicting types file",
+				}
 			);
 		}
 	} catch (error) {
@@ -1393,7 +1830,8 @@ function getEnvConfig(
 				? `Available environments: ${availableEnvs.join(", ")}`
 				: "No environments are defined in the configuration file.";
 		throw new UserError(
-			`Environment "${environmentName}" not found in configuration.\n${envList}`
+			`Environment "${environmentName}" not found in configuration.\n${envList}`,
+			{ telemetryMessage: "type generation config missing environment" }
 		);
 	}
 
@@ -1534,7 +1972,8 @@ function collectCoreBindings(
 				throw new UserError(
 					`Binding "${name}" has conflicting types across environments: ` +
 						`"${existing.bindingCategory}" vs "${bindingCategory}" (in ${envName}). ` +
-						`Please use unique binding names for different binding types.`
+						`Please use unique binding names for different binding types.`,
+					{ telemetryMessage: "type generation bindings conflicting types" }
 				);
 			}
 
@@ -1731,6 +2170,21 @@ function collectCoreBindings(
 			);
 		}
 
+		for (const [index, artifact] of (env.artifacts ?? []).entries()) {
+			if (!artifact.binding) {
+				throwMissingBindingError({
+					binding: artifact,
+					bindingType: "artifacts",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(artifact.binding, "Artifacts", "artifacts", envName);
+		}
+
 		for (const [index, helloWorld] of (
 			env.unsafe_hello_world ?? []
 		).entries()) {
@@ -1751,6 +2205,21 @@ function collectCoreBindings(
 				"unsafe_hello_world",
 				envName
 			);
+		}
+
+		for (const [index, flagshipBinding] of (env.flagship ?? []).entries()) {
+			if (!flagshipBinding.binding) {
+				throwMissingBindingError({
+					binding: flagshipBinding,
+					bindingType: "flagship",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(flagshipBinding.binding, "Flagship", "flagship", envName);
 		}
 
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
@@ -1803,6 +2272,58 @@ function collectCoreBindings(
 			addBinding(vpcService.binding, "Fetcher", "vpc_services", envName);
 		}
 
+		for (const [index, vpcNetwork] of (env.vpc_networks ?? []).entries()) {
+			if (!vpcNetwork.binding) {
+				throwMissingBindingError({
+					binding: vpcNetwork,
+					bindingType: "vpc_networks",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(vpcNetwork.binding, "Fetcher", "vpc_networks", envName);
+		}
+
+		for (const [index, aiSearchNamespace] of (
+			env.ai_search_namespaces ?? []
+		).entries()) {
+			if (!aiSearchNamespace.binding) {
+				throwMissingBindingError({
+					binding: aiSearchNamespace,
+					bindingType: "ai_search_namespaces",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(
+				aiSearchNamespace.binding,
+				"AiSearchNamespace",
+				"ai_search_namespaces",
+				envName
+			);
+		}
+
+		for (const [index, aiSearch] of (env.ai_search ?? []).entries()) {
+			if (!aiSearch.binding) {
+				throwMissingBindingError({
+					binding: aiSearch,
+					bindingType: "ai_search",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(aiSearch.binding, "AiSearchInstance", "ai_search", envName);
+		}
+
 		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
@@ -1848,6 +2369,20 @@ function collectCoreBindings(
 				});
 			} else {
 				addBinding(env.images.binding, "ImagesBinding", "images", envName);
+			}
+		}
+
+		if (env.stream) {
+			if (!env.stream.binding) {
+				throwMissingBindingError({
+					binding: env.stream,
+					bindingType: "stream",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				addBinding(env.stream.binding, "StreamBinding", "stream", envName);
 			}
 		}
 
@@ -2282,6 +2817,53 @@ interface PerEnvBinding {
 	type: string;
 }
 
+interface InheritableBindingDefinition {
+	/**
+	 * The category name for this binding (used for identification)
+	 */
+	bindingCategory: string;
+
+	/**
+	 * Extract the binding name from the raw environment config
+	 */
+	getBindingName: (env: RawEnvironment | undefined) => string | undefined;
+
+	/**
+	 * Check if the environment defines this inheritable property at all.
+	 *
+	 * This is used to determine if inheritance should be skipped, even when
+	 * the environment doesn't define a binding.
+	 *
+	 * For example, if an environment defines `assets: { directory: "/path" }`
+	 * without a `binding`, this method returns `true`, indicating the property
+	 * is defined and inheritance should be skipped.
+	 */
+	hasProperty: (env: RawEnvironment | undefined) => boolean;
+
+	/**
+	 * The TypeScript type for this binding
+	 */
+	type: string;
+}
+
+/**
+ * List of bindings that come from inheritable config properties.
+ *
+ * These bindings, when defined at the top-level config, are inherited by
+ * all named environments.
+ *
+ * The type generation needs to account for this inheritance when determining
+ * if a binding should be required or optional in the aggregated `Env` interface.
+ */
+const INHERITABLE_BINDINGS = [
+	{
+		bindingCategory: "assets",
+		getBindingName: (env) => env?.assets?.binding,
+		hasProperty: (env) => env?.assets !== undefined,
+		type: "Fetcher",
+	},
+] satisfies InheritableBindingDefinition[];
+
 /**
  * Collects vars per environment, returning a map from environment name to vars.
  *
@@ -2582,6 +3164,25 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
+		for (const [index, artifact] of (env.artifacts ?? []).entries()) {
+			if (!artifact.binding) {
+				throwMissingBindingError({
+					binding: artifact,
+					bindingType: "artifacts",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "artifacts",
+				name: artifact.binding,
+				type: "Artifacts",
+			});
+		}
+
 		for (const [index, helloWorld] of (
 			env.unsafe_hello_world ?? []
 		).entries()) {
@@ -2600,6 +3201,25 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "unsafe_hello_world",
 				name: helloWorld.binding,
 				type: "HelloWorldBinding",
+			});
+		}
+
+		for (const [index, flagshipBinding] of (env.flagship ?? []).entries()) {
+			if (!flagshipBinding.binding) {
+				throwMissingBindingError({
+					binding: flagshipBinding,
+					bindingType: "flagship",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "flagship",
+				name: flagshipBinding.binding,
+				type: "Flagship",
 			});
 		}
 
@@ -2656,6 +3276,25 @@ function collectCoreBindingsPerEnvironment(
 			bindings.push({
 				bindingCategory: "vpc_services",
 				name: vpcService.binding,
+				type: "Fetcher",
+			});
+		}
+
+		for (const [index, vpcNetwork] of (env.vpc_networks ?? []).entries()) {
+			if (!vpcNetwork.binding) {
+				throwMissingBindingError({
+					binding: vpcNetwork,
+					bindingType: "vpc_networks",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "vpc_networks",
+				name: vpcNetwork.binding,
 				type: "Fetcher",
 			});
 		}
@@ -2724,6 +3363,24 @@ function collectCoreBindingsPerEnvironment(
 			}
 		}
 
+		if (env.stream) {
+			if (!env.stream.binding) {
+				throwMissingBindingError({
+					binding: env.stream,
+					bindingType: "stream",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				bindings.push({
+					bindingCategory: "stream",
+					name: env.stream.binding,
+					type: "StreamBinding",
+				});
+			}
+		}
+
 		if (env.media) {
 			if (!env.media.binding) {
 				throwMissingBindingError({
@@ -2768,10 +3425,70 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
+		for (const [index, aiSearchNamespace] of (
+			env.ai_search_namespaces ?? []
+		).entries()) {
+			if (!aiSearchNamespace.binding) {
+				throwMissingBindingError({
+					binding: aiSearchNamespace,
+					bindingType: "ai_search_namespaces",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "ai_search_namespaces",
+				name: aiSearchNamespace.binding,
+				type: "AiSearchNamespace",
+			});
+		}
+
+		for (const [index, aiSearch] of (env.ai_search ?? []).entries()) {
+			if (!aiSearch.binding) {
+				throwMissingBindingError({
+					binding: aiSearch,
+					bindingType: "ai_search",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "ai_search",
+				name: aiSearch.binding,
+				type: "AiSearchInstance",
+			});
+		}
+
 		return bindings;
 	}
 
 	const { rawConfig } = experimental_readRawConfig(args);
+
+	const topLevelInheritableBindings: Array<{
+		binding: PerEnvBinding;
+		definition: InheritableBindingDefinition;
+	}> = [];
+	for (const inheritableDef of INHERITABLE_BINDINGS) {
+		const bindingName = inheritableDef.getBindingName(rawConfig);
+		if (!bindingName) {
+			continue;
+		}
+
+		topLevelInheritableBindings.push({
+			binding: {
+				bindingCategory: inheritableDef.bindingCategory,
+				name: bindingName,
+				type: inheritableDef.type,
+			},
+			definition: inheritableDef,
+		});
+	}
 
 	const topLevelBindings = collectEnvironmentBindings(
 		rawConfig,
@@ -2783,6 +3500,25 @@ function collectCoreBindingsPerEnvironment(
 
 	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
 		const envBindings = collectEnvironmentBindings(env, envName);
+
+		// Add top-level inheritable bindings if not already present in this environment
+		// (i.e., the environment doesn't override the inheritable property)
+		for (const inheritable of topLevelInheritableBindings) {
+			const alreadyHasBinding = envBindings.some(
+				(b) => b.bindingCategory === inheritable.binding.bindingCategory
+			);
+			if (alreadyHasBinding) {
+				continue;
+			}
+
+			// Skip inheriting if the env defines the property at all (even without a binding)
+			if (inheritable.definition.hasProperty(env)) {
+				continue;
+			}
+
+			envBindings.push(inheritable.binding);
+		}
+
 		if (envBindings.length > 0) {
 			result.set(envName, envBindings);
 		}

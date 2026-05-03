@@ -3,10 +3,10 @@ import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { blue, gray } from "@cloudflare/cli/colors";
+import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	configFileName,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	formatConfigSnippet,
 	getCIGeneratePreviewAlias,
 	getCIOverrideName,
@@ -34,6 +34,10 @@ import {
 } from "../deployment-bundle/module-collection";
 import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
+import {
+	addRequiredSecretsInheritBindings,
+	handleMissingSecretsError,
+} from "../deployment-bundle/secrets-validation";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -52,6 +56,7 @@ import { writeOutput } from "../output";
 import { getWranglerTmpDir } from "../paths";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
+import { parseBulkInputToObject } from "../secret";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -104,6 +109,7 @@ type Props = {
 	tag: string | undefined;
 	message: string | undefined;
 	previewAlias: string | undefined;
+	secretsFile: string | undefined;
 };
 
 export const versionsUploadCommand = createCommand({
@@ -266,6 +272,12 @@ export const versionsUploadCommand = createCommand({
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		"secrets-file": {
+			describe:
+				"Path to a file containing secrets to upload with the version (JSON or .env format). Secrets from previous deployments will not be deleted - see `--keep-secrets`",
+			type: "string",
+			requiresArg: true,
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -290,14 +302,15 @@ export const versionsUploadCommand = createCommand({
 
 		if (args.nodeCompat) {
 			throw new UserError(
-				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`,
+				{ telemetryMessage: "versions upload node compat unsupported" }
 			);
 		}
 
 		if (args.site || config.site) {
 			throw new UserError(
 				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "versions upload sites unsupported" }
 			);
 		}
 
@@ -310,7 +323,10 @@ export const versionsUploadCommand = createCommand({
 			config
 		);
 
-		const assetsOptions = getAssetsOptions(args, config);
+		const assetsOptions = getAssetsOptions({
+			args,
+			config,
+		});
 
 		if (args.latest) {
 			logger.warn(
@@ -338,7 +354,7 @@ export const versionsUploadCommand = createCommand({
 		if (!name) {
 			throw new UserError(
 				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-				{ telemetryMessage: true }
+				{ telemetryMessage: "versions upload missing worker name" }
 			);
 		}
 
@@ -368,7 +384,7 @@ export const versionsUploadCommand = createCommand({
 				useServiceEnvironments: useServiceEnvironments(config),
 				env: args.env,
 				compatibilityDate: args.latest
-					? formatCompatibilityDate(new Date())
+					? getTodaysCompatDate()
 					: args.compatibilityDate,
 				compatibilityFlags: args.compatibilityFlags,
 				vars: cliVars,
@@ -391,6 +407,7 @@ export const versionsUploadCommand = createCommand({
 				previewAlias: previewAlias,
 				experimentalAutoCreate: args.experimentalAutoCreate,
 				outFile: args.outfile,
+				secretsFile: args.secretsFile,
 			});
 
 		writeOutput({
@@ -473,14 +490,19 @@ export default async function versionsUpload(props: Props): Promise<{
 		props.compatibilityFlags ?? config.compatibility_flags;
 
 	if (!compatibilityDate) {
-		const compatibilityDateStr = formatCompatibilityDate(new Date());
+		const compatibilityDateStr = getTodaysCompatDate();
 
-		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
+		throw new UserError(
+			`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
 	${(formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath), false)}
     \`\`\`
     Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
-See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
+See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
+			{
+				telemetryMessage: "versions upload missing compatibility date",
+			}
+		);
 	}
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
@@ -507,7 +529,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (config.site && !config.site.bucket) {
 		throw new UserError(
-			"A [site] definition requires a `bucket` field with a path to the site's assets directory."
+			"A [site] definition requires a `bucket` field with a path to the site's assets directory.",
+			{ telemetryMessage: "versions upload sites missing bucket" }
 		);
 	}
 
@@ -534,19 +557,31 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (config.wasm_modules && format === "modules") {
 		throw new UserError(
-			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"
+			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code",
+			{
+				telemetryMessage:
+					"versions upload wasm modules unsupported module worker",
+			}
 		);
 	}
 
 	if (config.text_blobs && format === "modules") {
 		throw new UserError(
-			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
+			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			{
+				telemetryMessage:
+					"versions upload text blobs unsupported module worker",
+			}
 		);
 	}
 
 	if (config.data_blobs && format === "modules") {
 		throw new UserError(
-			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
+			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			{
+				telemetryMessage:
+					"versions upload data blobs unsupported module worker",
+			}
 		);
 	}
 
@@ -687,6 +722,22 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
+		if (props.secretsFile) {
+			const secretsResult = await parseBulkInputToObject(props.secretsFile);
+			if (secretsResult) {
+				for (const [secretName, secretValue] of Object.entries(
+					secretsResult.content
+				)) {
+					bindings[secretName] = {
+						type: "secret_text",
+						value: secretValue,
+					};
+				}
+			}
+		}
+
+		addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
+
 		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
@@ -708,7 +759,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars: props.keepVars ?? false,
-			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
+			// we never delete secret bindings when uploading, even if we are setting secrets from a file
+			// so inherit all unchanged secrets from the previous Worker Version
+			keepSecrets: true,
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
@@ -785,11 +838,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						metadata: {
 							has_preview: boolean;
 						};
-					}>(config, `${workerUrl}/versions`, {
-						method: "POST",
-						body: workerBundle,
-						headers: await getMetricsUsageHeaders(config.send_metrics),
-					})
+					}>(
+						config,
+						`${workerUrl}/versions`,
+						{
+							method: "POST",
+							body: workerBundle,
+							headers: await getMetricsUsageHeaders(config.send_metrics),
+						},
+						new URLSearchParams({ bindings_inherit: "strict" })
+					)
 				);
 
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
@@ -823,6 +881,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				if (message) {
 					logger.error(message);
 				}
+
+				handleMissingSecretsError(err, config, { type: "upload" });
 
 				// Apply source mapping to validation startup errors if possible
 				if (
@@ -895,7 +955,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		return { versionId, workerTag };
 	}
 	if (!accountId) {
-		throw new UserError("Missing accountId");
+		throw new UserError("Missing accountId", {
+			telemetryMessage: "versions upload missing account id",
+		});
 	}
 
 	const uploadMs = Date.now() - start;

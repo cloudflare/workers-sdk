@@ -43,7 +43,10 @@ describe("Workers + Assets + SPA", () => {
 		await page.goto("/");
 		if (process.platform === "darwin") {
 			// different platforms render the page differently (fonts?)
-			expect(await page.screenshot()).toMatchImageSnapshot();
+			expect(await page.screenshot()).toMatchImageSnapshot({
+				failureThreshold: 0.02,
+				failureThresholdType: "percent",
+			});
 		}
 
 		const mathResultLocator = page.getByText("1 + 1 = 2");

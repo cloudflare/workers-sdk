@@ -1,19 +1,32 @@
-import { Select } from "@base-ui/react/select";
+import { Button } from "@cloudflare/kumo";
 import {
-	CaretUpDownIcon,
-	CheckIcon,
-	DatabaseIcon,
-	TableIcon,
+	ArrowsCounterClockwiseIcon,
+	PencilIcon,
+	TrashIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useMemo, useRef } from "react";
+import {
+	createFileRoute,
+	getRouteApi,
+	useNavigate,
+	useRouter,
+	useRouterState,
+} from "@tanstack/react-router";
+import { useCallback, useMemo, useRef, useState } from "react";
+import D1Icon from "../../assets/icons/d1.svg?react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
+import { ResourceError } from "../../components/ResourceError";
 import { Studio } from "../../components/studio";
+import { DropTableConfirmationModal } from "../../components/studio/Modal/DropTableConfirmation";
+import { StudioTableActionsDropdown } from "../../components/studio/Table/ActionsDropdown";
+import { TableSelect } from "../../components/TableSelect";
+import { getSelectedWorker } from "../../components/WorkerSelector";
 import { LocalD1Driver } from "../../drivers/d1";
+import type { StudioRef } from "../../components/studio";
 import type { StudioResource } from "../../types/studio";
 
 export const Route = createFileRoute("/d1/$databaseId")({
 	component: DatabaseView,
+	errorComponent: ResourceError,
 	loader: async (ctx) => {
 		const driver = new LocalD1Driver(ctx.params.databaseId);
 		const schemas = await driver.schemas();
@@ -27,22 +40,51 @@ export const Route = createFileRoute("/d1/$databaseId")({
 			tables,
 		};
 	},
-	validateSearch: (search) => ({
+	validateSearch: (search): { table?: string; worker?: string } => ({
 		table: typeof search.table === "string" ? search.table : undefined,
+		worker: typeof search.worker === "string" ? search.worker : undefined,
 	}),
 });
 
+const rootRoute = getRouteApi("__root__");
+
 function DatabaseView(): JSX.Element {
 	const params = Route.useParams();
+	const loaderData = Route.useLoaderData();
 	const searchParams = Route.useSearch();
 	const navigate = useNavigate();
+	const router = useRouter();
+	const rootData = rootRoute.useLoaderData();
+	const routerState = useRouterState();
 
 	const lastSyncedTable = useRef<string | undefined>(searchParams.table);
+	const studioRef = useRef<StudioRef>(null);
+
+	const [currentTable, setCurrentTable] = useState<string | undefined>(
+		searchParams.table
+	);
+	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+	const [deleteTarget, setDeleteTarget] = useState<{
+		schemaName: string;
+		tableName: string;
+	} | null>(null);
 
 	const driver = useMemo<LocalD1Driver>(
 		() => new LocalD1Driver(params.databaseId),
 		[params.databaseId]
 	);
+
+	// Get database binding name from selected worker's bindings
+	const databaseName = useMemo(() => {
+		const worker = getSelectedWorker(
+			rootData.workers,
+			routerState.location.searchStr
+		);
+		const binding = worker?.bindings?.d1?.find(
+			(db) => db.id === params.databaseId
+		);
+		return binding?.bindingName;
+	}, [rootData.workers, routerState.location.searchStr, params.databaseId]);
 
 	const resource = useMemo<StudioResource>(
 		() => ({
@@ -54,7 +96,9 @@ function DatabaseView(): JSX.Element {
 
 	const handleTableChange = useCallback(
 		(tableName: string | undefined) => {
-			// Skip if the table hasn't changed to avoid unnecessary navigation
+			setCurrentTable(tableName);
+
+			// Skip URL navigation if the table hasn't changed
 			if (lastSyncedTable.current === tableName) {
 				return;
 			}
@@ -63,117 +107,153 @@ function DatabaseView(): JSX.Element {
 
 			void navigate({
 				replace: true,
-				search: {
-					table: tableName,
-				},
+				search: (prev) => ({ ...prev, table: tableName }),
 				to: ".",
 			});
 		},
 		[navigate]
 	);
 
+	const handleTableRefresh = useCallback(async (): Promise<void> => {
+		setIsRefreshing(true);
+		try {
+			// Route invalidation can often be so quick the loading state doesn't show
+			// so we add an artificial delay to ensure the user see's something happen.
+			await Promise.all([
+				router.invalidate(),
+				studioRef.current?.refreshSchema(),
+				new Promise((resolve) => setTimeout(resolve, 250)),
+			]);
+		} finally {
+			setIsRefreshing(false);
+		}
+	}, [router]);
+
+	const handleTableDeleted = useCallback(async (): Promise<void> => {
+		await handleTableRefresh();
+		void navigate({
+			replace: true,
+			search: (prev) => ({ ...prev, table: undefined }),
+			to: ".",
+		});
+	}, [handleTableRefresh, navigate]);
+
+	const handleDeleteClick = useCallback((): void => {
+		if (!currentTable) {
+			return;
+		}
+
+		setDeleteTarget({
+			schemaName: "main",
+			tableName: currentTable,
+		});
+	}, [currentTable]);
+
+	const handleCloseDeleteModal = useCallback((): void => {
+		setDeleteTarget(null);
+	}, []);
+
+	const handleDeleteSuccess = useCallback((): void => {
+		if (!deleteTarget) {
+			return;
+		}
+
+		studioRef.current?.closeTableTabs(
+			deleteTarget.schemaName,
+			deleteTarget.tableName
+		);
+		void handleTableDeleted();
+	}, [deleteTarget, handleTableDeleted]);
+
 	return (
-		<div className="flex flex-col h-full">
+		<div className="flex h-full flex-col">
 			<Breadcrumbs
-				icon={DatabaseIcon}
+				icon={D1Icon}
 				title="D1"
 				items={[
-					<Link
-						className="flex items-center gap-1.5"
-						key="database-id"
-						params={{ databaseId: params.databaseId }}
-						search={{ table: undefined }}
-						to="/d1/$databaseId"
-					>
-						{params.databaseId}
-					</Link>,
-					<TableSelect key="table-selector" />,
+					<span className="flex items-center gap-1.5" key="database-id">
+						{databaseName && databaseName !== params.databaseId ? (
+							<>
+								{databaseName}
+								<span className="text-kumo-subtle">({params.databaseId})</span>
+							</>
+						) : (
+							params.databaseId
+						)}
+					</span>,
+					<TableSelect
+						key="table-selector"
+						selectedTable={searchParams.table}
+						studioRef={studioRef}
+						tables={loaderData.tables}
+					/>,
 				]}
-			/>
+			>
+				<div className="flex-1" />
 
-			<div className="flex-1 overflow-hidden">
+				<Button
+					aria-label="Refresh tables"
+					className="disabled:cursor-progress"
+					disabled={isRefreshing}
+					onClick={handleTableRefresh}
+					shape="square"
+				>
+					<ArrowsCounterClockwiseIcon
+						className={isRefreshing ? "animate-spin" : undefined}
+						size={14}
+					/>
+				</Button>
+
+				<StudioTableActionsDropdown
+					currentTable={currentTable}
+					driver={driver}
+				/>
+
+				<Button
+					aria-label="Edit table schema"
+					disabled={!currentTable}
+					icon={PencilIcon}
+					onClick={(): void => {
+						if (currentTable) {
+							studioRef.current?.openEditTableTab("main", currentTable);
+						}
+					}}
+				>
+					Edit Schema
+				</Button>
+
+				<Button
+					aria-label="Delete table"
+					disabled={!currentTable}
+					icon={TrashIcon}
+					onClick={handleDeleteClick}
+					variant="secondary-destructive"
+				>
+					Delete Table
+				</Button>
+			</Breadcrumbs>
+
+			{deleteTarget && (
+				<DropTableConfirmationModal
+					closeModal={handleCloseDeleteModal}
+					driver={driver}
+					isOpen={true}
+					onSuccess={handleDeleteSuccess}
+					schemaName={deleteTarget.schemaName}
+					tableName={deleteTarget.tableName}
+				/>
+			)}
+
+			<div className="flex-1 overflow-hidden bg-kumo-elevated">
 				<Studio
 					driver={driver}
 					initialTable={searchParams.table}
 					key={params.databaseId}
 					onTableChange={handleTableChange}
+					ref={studioRef}
 					resource={resource}
 				/>
 			</div>
 		</div>
-	);
-}
-
-function TableSelect(): JSX.Element {
-	const data = Route.useLoaderData();
-	const navigate = useNavigate();
-	const searchParams = Route.useSearch();
-
-	const handleTableChange = useCallback(
-		(tableName: string | null) => {
-			if (tableName === null) {
-				return;
-			}
-
-			void navigate({
-				search: { table: tableName },
-				to: ".",
-			});
-		},
-		[navigate]
-	);
-
-	if (data.tables.length <= 0) {
-		return (
-			<span className="flex items-center gap-1.5" key="empty-tables-select">
-				No tables
-			</span>
-		);
-	}
-
-	return (
-		<Select.Root
-			key="table-select"
-			onValueChange={handleTableChange}
-			value={searchParams.table ?? null}
-		>
-			<Select.Trigger className="inline-flex items-center gap-1 px-2 py-1 -mx-1.5 rounded-md bg-transparent text-sm text-text cursor-pointer border-none transition-colors hover:bg-border/50 data-popup-open:bg-border/50">
-				<Select.Value placeholder="Select table" />
-				<Select.Icon>
-					<CaretUpDownIcon className="w-3.5 h-3.5 text-text-secondary" />
-				</Select.Icon>
-			</Select.Trigger>
-
-			<Select.Portal>
-				<Select.Positioner
-					align="start"
-					alignItemWithTrigger={false}
-					side="bottom"
-					sideOffset={4}
-				>
-					<Select.Popup className="min-w-36 max-h-72 bg-bg border border-border rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-100 overflow-hidden transition-[opacity,transform] duration-150 data-starting-style:opacity-0 data-starting-style:-translate-y-1 data-ending-style:opacity-0 data-ending-style:-translate-y-1">
-						<Select.List className="p-1">
-							{data.tables.map((table) => {
-								const Icon =
-									searchParams.table === table.value ? CheckIcon : TableIcon;
-
-								return (
-									<Select.Item
-										className="flex items-center gap-2 w-full py-1.5 px-2 rounded-md text-sm text-text cursor-pointer transition-colors select-none outline-none data-highlighted:bg-bg-secondary dark:data-highlighted:bg-bg-tertiary"
-										key={table.value}
-										value={table.value}
-									>
-										<span className="flex items-center w-4">
-											<Icon className="w-3.5 h-3.5" />
-										</span>
-										<Select.ItemText>{table.label}</Select.ItemText>
-									</Select.Item>
-								);
-							})}
-						</Select.List>
-					</Select.Popup>
-				</Select.Positioner>
-			</Select.Portal>
-		</Select.Root>
 	);
 }

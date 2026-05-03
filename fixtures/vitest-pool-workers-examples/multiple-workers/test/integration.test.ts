@@ -1,4 +1,4 @@
-import { env, SELF } from "cloudflare:test";
+import { env, exports } from "cloudflare:workers";
 import { importSPKI, jwtVerify } from "jose"; // Check importing external module
 import { it } from "vitest";
 import type { ExpectStatic } from "vitest";
@@ -11,7 +11,7 @@ async function login(
 	const formData = new FormData();
 	formData.set("username", username);
 	formData.set("password", password);
-	const response = await SELF.fetch("https://example.com/login", {
+	const response = await exports.default.fetch("https://example.com/login", {
 		method: "POST",
 		body: formData,
 	});
@@ -46,13 +46,13 @@ it("stores in user's database", async ({ expect }) => {
 	const token = await login("admin", "lovelace", expect);
 
 	// Read and write from the database
-	let response = await SELF.fetch("https://example.com/key", {
+	let response = await exports.default.fetch("https://example.com/key", {
 		method: "PUT",
 		body: "value",
 		headers: { Authorization: `Bearer ${token}` },
 	});
 	expect(response.status).toBe(204);
-	response = await SELF.fetch("https://example.com/key", {
+	response = await exports.default.fetch("https://example.com/key", {
 		headers: { Authorization: `Bearer ${token}` },
 	});
 	expect(response.status).toBe(200);

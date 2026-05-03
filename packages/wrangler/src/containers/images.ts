@@ -10,7 +10,7 @@ import {
 import { createCommand, createNamespace } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import { containersScope } from ".";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
@@ -25,7 +25,7 @@ interface Repository {
 export const containersImagesNamespace = createNamespace({
 	metadata: {
 		description: "Manage images in the Cloudflare managed registry",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 });
@@ -35,7 +35,7 @@ export const containersImagesNamespace = createNamespace({
 export const containersImagesListCommand = createCommand({
 	metadata: {
 		description: "List images in the Cloudflare managed registry",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
@@ -61,7 +61,7 @@ export const containersImagesListCommand = createCommand({
 export const containersImagesDeleteCommand = createCommand({
 	metadata: {
 		description: "Remove an image from the Cloudflare managed registry",
-		status: "open beta",
+		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
@@ -93,7 +93,7 @@ async function handleDeleteImageCommand(
 
 	const digest = await promiseSpinner(
 		getCreds().then(async (creds) => {
-			const accountId = await getAccountId(config);
+			const accountId = await getOrSelectAccountId(config);
 			const url = new URL(`https://${getCloudflareContainerRegistry()}`);
 			const baseUrl = `${url.protocol}//${url.host}`;
 			const [image, tag] = args.image.split(":");
@@ -130,7 +130,7 @@ async function handleListImagesCommand(
 		getCreds().then(async (creds) => {
 			const repos = await listReposWithTags(creds);
 			const processed: Repository[] = [];
-			const accountId = await getAccountId(config);
+			const accountId = await getOrSelectAccountId(config);
 			const accountIdPrefix = new RegExp(`^${accountId}/`);
 			const filter = new RegExp(args.filter ?? "");
 			for (const [repo, tags] of Object.entries(repos)) {

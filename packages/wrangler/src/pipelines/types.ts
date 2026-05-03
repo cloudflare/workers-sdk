@@ -31,8 +31,9 @@ export interface CloudflareAPIResponse<T> {
 	result: T;
 }
 
-export interface PipelineListResponse
-	extends CloudflareAPIResponse<Pipeline[]> {
+export interface PipelineListResponse extends CloudflareAPIResponse<
+	Pipeline[]
+> {
 	result_info: PaginationInfo;
 }
 

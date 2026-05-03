@@ -32,10 +32,12 @@ export function checkMacOSVersion(options: { shouldThrow: boolean }): void {
 			throw new UserError(
 				`Unsupported macOS version: The Cloudflare Workers runtime cannot run on the current version of macOS (${macOSVersion}). ` +
 					`The minimum requirement is macOS ${MINIMUM_MACOS_VERSION}+. See https://github.com/cloudflare/workerd?tab=readme-ov-file#running-workerd ` +
-					`If you cannot upgrade your version of macOS, you could try running in a DevContainer setup with a supported version of Linux (glibc 2.35+ required).`
+					`If you cannot upgrade your version of macOS, you could try running in a DevContainer setup with a supported version of Linux (glibc 2.35+ required).`,
+				{ telemetryMessage: false }
 			);
 		} else {
-			// eslint-disable-next-line no-console
+			/* eslint-disable-next-line no-console -- this package has no logger to use
+			   (TODO: disable the `no-console` rule on packages that do not use a logger) */
 			console.warn(
 				`⚠️  Warning: Unsupported macOS version detected (${macOSVersion}). ` +
 					`The Cloudflare Workers runtime may not work correctly on macOS versions below ${MINIMUM_MACOS_VERSION}. ` +

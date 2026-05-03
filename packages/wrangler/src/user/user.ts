@@ -239,7 +239,7 @@ import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
 	getClientIdFromEnv,
-	getCloudflareAccessToken,
+	getCloudflareAccessHeaders,
 	getCloudflareAccountIdFromEnv,
 	getCloudflareAPITokenFromEnv,
 	getCloudflareGlobalAuthEmailFromEnv,
@@ -247,7 +247,7 @@ import {
 	getRevokeUrlFromEnv,
 	getTokenUrlFromEnv,
 } from "./auth-variables";
-import { getAccountChoices } from "./choose-account";
+import { fetchAllAccounts } from "./fetch-accounts";
 import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { Account } from "./shared";
@@ -374,10 +374,18 @@ const DefaultScopes = {
 		"See and change Cloudflare Pipelines configurations and data",
 	"secrets_store:write":
 		"See and change secrets + stores within the Secrets Store",
+	"artifacts:write":
+		"See and change Cloudflare Artifacts data such as registries and artifacts",
+	"flagship:write": "See and change Flagship feature flags and apps",
 	"containers:write": "Manage Workers Containers",
 	"cloudchamber:write": "Manage Cloudchamber",
 	"connectivity:admin":
-		" See, change, and bind to Connectivity Directory services, including creating services targeting Cloudflare Tunnel.",
+		"See, change, and bind to Connectivity Directory services, including creating services targeting Cloudflare Tunnel.",
+	"email_routing:write":
+		"See and change Email Routing settings, rules, and destination addresses.",
+	"email_sending:write":
+		"See and change Email Sending settings and configuration.",
+	"browser:write": "See and manage Browser Run sessions",
 } as const;
 
 /**
@@ -602,31 +610,57 @@ class ErrorUnsupportedGrantType extends ErrorAccessTokenResponse {
 function toErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
 	switch (rawError) {
 		case "invalid_request":
-			return new ErrorInvalidRequest(rawError);
+			return new ErrorInvalidRequest(rawError, {
+				telemetryMessage: "user oauth invalid request",
+			});
 		case "invalid_grant":
-			return new ErrorInvalidGrant(rawError);
+			return new ErrorInvalidGrant(rawError, {
+				telemetryMessage: "user oauth invalid grant",
+			});
 		case "unauthorized_client":
-			return new ErrorUnauthorizedClient(rawError);
+			return new ErrorUnauthorizedClient(rawError, {
+				telemetryMessage: "user oauth unauthorized client",
+			});
 		case "access_denied":
-			return new ErrorAccessDenied(rawError);
+			return new ErrorAccessDenied(rawError, {
+				telemetryMessage: "user oauth access denied",
+			});
 		case "unsupported_response_type":
-			return new ErrorUnsupportedResponseType(rawError);
+			return new ErrorUnsupportedResponseType(rawError, {
+				telemetryMessage: "user oauth unsupported response type",
+			});
 		case "invalid_scope":
-			return new ErrorInvalidScope(rawError);
+			return new ErrorInvalidScope(rawError, {
+				telemetryMessage: "user oauth invalid scope",
+			});
 		case "server_error":
-			return new ErrorServerError(rawError);
+			return new ErrorServerError(rawError, {
+				telemetryMessage: "user oauth server error",
+			});
 		case "temporarily_unavailable":
-			return new ErrorTemporarilyUnavailable(rawError);
+			return new ErrorTemporarilyUnavailable(rawError, {
+				telemetryMessage: "user oauth temporarily unavailable",
+			});
 		case "invalid_client":
-			return new ErrorInvalidClient(rawError);
+			return new ErrorInvalidClient(rawError, {
+				telemetryMessage: "user oauth invalid client",
+			});
 		case "unsupported_grant_type":
-			return new ErrorUnsupportedGrantType(rawError);
+			return new ErrorUnsupportedGrantType(rawError, {
+				telemetryMessage: "user oauth unsupported grant type",
+			});
 		case "invalid_json":
-			return new ErrorInvalidJson(rawError);
+			return new ErrorInvalidJson(rawError, {
+				telemetryMessage: "user oauth invalid json",
+			});
 		case "invalid_token":
-			return new ErrorInvalidToken(rawError);
+			return new ErrorInvalidToken(rawError, {
+				telemetryMessage: "user oauth invalid token",
+			});
 		default:
-			return new ErrorUnknown(rawError);
+			return new ErrorUnknown(rawError, {
+				telemetryMessage: "user oauth unknown error",
+			});
 	}
 }
 
@@ -679,7 +713,9 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 		logger.warn(
 			"Received query string parameter doesn't match the one sent! Possible malicious activity somewhere."
 		);
-		throw new ErrorInvalidReturnedStateParam();
+		throw new ErrorInvalidReturnedStateParam("", {
+			telemetryMessage: "user oauth invalid returned state",
+		});
 	}
 	assert(!Array.isArray(code));
 	state.authorizationCode = code;
@@ -750,7 +786,8 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 				: tokenExchangeResErr;
 		} else {
 			throw new ErrorUnknown(
-				"Failed to parse Error from exchangeRefreshTokenForAccessToken"
+				"Failed to parse Error from exchangeRefreshTokenForAccessToken",
+				{ telemetryMessage: "user oauth refresh token exchange parse error" }
 			);
 		}
 	} else {
@@ -1015,7 +1052,8 @@ export async function getOauthToken(options: {
 			clearTimeout(loginTimeoutHandle);
 			reject(
 				new UserError(
-					"Timed out waiting for authorization code, please try again."
+					"Timed out waiting for authorization code, please try again.",
+					{ telemetryMessage: "user oauth authorization timeout" }
 				)
 			);
 		}, 120000); // wait for 120 seconds for the user to authorize
@@ -1053,7 +1091,12 @@ export async function getOauthToken(options: {
 								Location: options.denied.url,
 							});
 							res.end(() => {
-								finish(null, new UserError(options.denied.error));
+								finish(
+									null,
+									new UserError(options.denied.error, {
+										telemetryMessage: "user oauth consent denied",
+									})
+								);
 							});
 
 							return;
@@ -1064,7 +1107,12 @@ export async function getOauthToken(options: {
 					}
 					if (!hasAuthCode) {
 						// render an error page here
-						finish(null, new ErrorNoAuthCode());
+						finish(
+							null,
+							new ErrorNoAuthCode("", {
+								telemetryMessage: "user oauth missing auth code",
+							})
+						);
 						return;
 					} else {
 						const exchange = await exchangeAuthCodeForAccessToken();
@@ -1125,10 +1173,15 @@ export async function login(
 		const configurationSource = complianceConfig?.compliance_region
 			? "`compliance_region` configuration property"
 			: "`CLOUDFLARE_API_ENVIRONMENT` environment variable";
-		throw new UserError(dedent`
+		throw new UserError(
+			dedent`
 			OAuth login is not supported in the \`${complianceRegion}\` compliance region.
 			Please use a Cloudflare API token (\`CLOUDFLARE_API_TOKEN\` environment variable) or remove the ${configurationSource}.
-		`);
+		`,
+			{
+				telemetryMessage: "user login unsupported compliance region",
+			}
+		);
 	}
 
 	logger.log("Attempting to login via OAuth...");
@@ -1253,23 +1306,58 @@ export function listScopes(message = "💁 Available scopes:"): void {
 }
 
 /**
+ * Returns the active account ID without side effects.
  *
- * Returns account_id preferentially from config.account_id > CLOUDFLARE_ACCOUNT_ID env var > cache > or user selection.
+ * Resolves the account ID from static sources only — no API calls, no
+ * interactive prompts. Tries the following sources in order:
+ * 1. `config.account_id` from the wrangler configuration file
+ * 2. `CLOUDFLARE_ACCOUNT_ID` environment variable
+ * 3. Cached account from a previous interactive selection
+ *
+ * @param config - The config object potentially containing an `account_id`
+ * @returns The active account ID, or `undefined` if none can be determined
  */
-export async function getAccountId(
-	config: ComplianceConfig & { account_id?: string }
-): Promise<string> {
-	// TODO: v5 we should prioritise the env var instead of the config value here, for consistency
+export function getActiveAccountId(config: {
+	account_id?: string;
+}): string | undefined {
 	if (config.account_id) {
 		return config.account_id;
 	}
-	// check if we have a cached value
-	const cachedAccount = getAccountFromCache();
-	if (cachedAccount && !getCloudflareAccountIdFromEnv()) {
-		return cachedAccount.id;
+	const envAccountId = getCloudflareAccountIdFromEnv();
+	if (envAccountId) {
+		return envAccountId;
+	}
+	return getAccountFromCache()?.id;
+}
+
+/**
+ * Resolves the account ID to use for API requests.
+ *
+ * First tries static sources via {@link getActiveAccountId} (config, env var,
+ * cache). If none are available, falls back to fetching accounts from the API:
+ * - Auto-selects if only one account is available
+ * - Prompts the user to select an account interactively if multiple are available
+ *
+ * When an account is resolved via API fetch or interactive prompt,
+ * it is cached for subsequent calls.
+ *
+ * @param config - Configuration containing an optional `account_id` and compliance settings
+ * @returns The resolved account ID
+ * @throws {UserError} If in a non-interactive environment and multiple accounts are
+ *   available (the user must set `account_id` in config or `CLOUDFLARE_ACCOUNT_ID` env var)
+ * @throws {UserError} If no accounts are found for the authenticated user
+ */
+export async function getOrSelectAccountId(
+	config: ComplianceConfig & { account_id?: string }
+): Promise<string> {
+	// TODO: v5 we should prioritise the env var instead of the config value here,
+	// for consistency with other env vars.
+	const activeAccountId = getActiveAccountId(config);
+	if (activeAccountId) {
+		return activeAccountId;
 	}
 
-	const accounts = await getAccountChoices(config);
+	const accounts = await fetchAllAccounts(config);
 	if (accounts.length === 1) {
 		saveAccountToCache({ id: accounts[0].id, name: accounts[0].name });
 		return accounts[0].id;
@@ -1282,7 +1370,8 @@ export async function getAccountId(
 				value: account.id,
 			})),
 		});
-		const account = accounts.find((a) => a.id === accountID) as Account;
+		const account = accounts.find((a) => a.id === accountID);
+		assert(account, "Selected account not found in accounts list");
 		saveAccountToCache({ id: account.id, name: account.name });
 		return accountID;
 	} catch (e) {
@@ -1299,10 +1388,11 @@ Please set the appropriate \`account_id\` in your ${configFileName(undefined)} f
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
 	.map(
-		(account) =>
+		(account: Account) =>
 			`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${account.id}\``
 	)
-	.join("\n")}`
+	.join("\n")}`,
+				{ telemetryMessage: "user account selection unavailable" }
 			);
 		}
 		throw e;
@@ -1310,7 +1400,15 @@ ${accounts
 }
 
 /**
- * Ensure that a user is logged in, and a valid account_id is available.
+ * Ensures the user is logged in and resolves a valid account ID.
+ *
+ * First checks/refreshes authentication, then delegates to
+ * {@link getOrSelectAccountId} to resolve the account.
+ *
+ * @param config - Configuration containing an optional `account_id` and compliance settings
+ * @returns The resolved account ID
+ * @throws {UserError} If the user is not logged in and cannot authenticate
+ * @throws {UserError} If no account ID can be resolved (see {@link getOrSelectAccountId})
  */
 export async function requireAuth(
 	config: ComplianceConfig & {
@@ -1321,16 +1419,21 @@ export async function requireAuth(
 	if (!loggedIn) {
 		if (isNonInteractiveOrCI()) {
 			throw new UserError(
-				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."
+				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.",
+				{ telemetryMessage: "user auth missing api token non interactive" }
 			);
 		} else {
 			// didn't login, let's just quit
-			throw new UserError("Did not login, quitting...");
+			throw new UserError("Did not login, quitting...", {
+				telemetryMessage: "user login cancelled",
+			});
 		}
 	}
-	const accountId = await getAccountId(config);
+	const accountId = await getOrSelectAccountId(config);
 	if (!accountId) {
-		throw new UserError("No account id found, quitting...");
+		throw new UserError("No account id found, quitting...", {
+			telemetryMessage: "user auth missing account id",
+		});
 	}
 
 	return accountId;
@@ -1342,7 +1445,9 @@ export async function requireAuth(
 export function requireApiToken(): ApiCredentials {
 	const credentials = getAPIToken();
 	if (!credentials) {
-		throw new UserError("No API token found.");
+		throw new UserError("No API token found.", {
+			telemetryMessage: "user auth missing api token",
+		});
 	}
 	return credentials;
 }
@@ -1401,8 +1506,9 @@ async function fetchAuthToken(body: URLSearchParams) {
 		logger.debug(
 			"Using Cloudflare Access to get an access token for the auth request"
 		);
-		// We are trying to access the staging API so we need an "access token".
-		headers["Cookie"] = `CF_Authorization=${await getCloudflareAccessToken()}`;
+		// We are trying to access a domain behind Access so we need auth headers.
+		const accessHeaders = await getCloudflareAccessHeaders();
+		Object.assign(headers, accessHeaders);
 	}
 	logger.debug("Fetching auth token from", getTokenUrlFromEnv());
 	try {

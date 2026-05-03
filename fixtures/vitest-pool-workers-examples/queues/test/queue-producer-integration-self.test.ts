@@ -1,9 +1,9 @@
-import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { it, vi } from "vitest";
 
 it("produces and consumers queue message", async ({ expect }) => {
 	// Enqueue job on queue
-	let response = await SELF.fetch("https://example.com/key", {
+	let response = await exports.default.fetch("https://example.com/key", {
 		method: "POST",
 		body: "value",
 	});
@@ -12,7 +12,7 @@ it("produces and consumers queue message", async ({ expect }) => {
 
 	// Wait for job to be processed
 	const result = await vi.waitUntil(async () => {
-		const response = await SELF.fetch("https://example.com/key");
+		const response = await exports.default.fetch("https://example.com/key");
 		const text = await response.text();
 		if (response.ok) return text;
 	});

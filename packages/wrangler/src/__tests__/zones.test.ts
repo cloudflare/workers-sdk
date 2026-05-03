@@ -1,8 +1,7 @@
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- uses .each */
+// eslint-disable-next-line no-restricted-imports
 import { describe, expect, test } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getHostFromUrl, getZoneForRoute } from "../zones";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { msw } from "./helpers/msw";

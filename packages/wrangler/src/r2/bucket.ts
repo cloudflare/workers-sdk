@@ -73,13 +73,18 @@ export const r2BucketCreateCommand = createCommand({
 
 		if (!isValidR2BucketName(name)) {
 			throw new UserError(
-				`The bucket name "${name}" is invalid. ${bucketFormatMessage}`
+				`The bucket name "${name}" is invalid. ${bucketFormatMessage}`,
+				{ telemetryMessage: "r2 bucket create invalid bucket name" }
 			);
 		}
 
 		if (jurisdiction && location) {
 			throw new UserError(
-				"Provide either a jurisdiction or location hint - not both."
+				"Provide either a jurisdiction or location hint - not both.",
+				{
+					telemetryMessage:
+						"r2 bucket create conflicting jurisdiction and location",
+				}
 			);
 		}
 
@@ -182,6 +187,12 @@ export const r2BucketListCommand = createCommand({
 		description: "List R2 buckets",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		// This is an account-level command and does not require a valid project config.
+		// Keeping config parsing out of the critical path avoids blocking users who are
+		// using `wrangler r2 bucket list` to debug/fix an invalid wrangler.jsonc/toml.
+		provideConfig: false,
 	},
 	args: {
 		jurisdiction: {

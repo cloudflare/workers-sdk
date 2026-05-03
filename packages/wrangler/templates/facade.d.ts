@@ -1,6 +1,6 @@
 declare module "__ENTRY_POINT__" {
-	import { Middleware } from "./middleware/common";
 	import { WorkerEntrypoint } from "cloudflare:workers";
+	import { Middleware } from "./middleware/common";
 
 	export type WorkerEntrypointConstructor = typeof WorkerEntrypoint;
 

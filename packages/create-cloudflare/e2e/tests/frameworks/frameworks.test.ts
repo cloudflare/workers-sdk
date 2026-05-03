@@ -1,8 +1,7 @@
 import { existsSync } from "node:fs";
 import { cp } from "node:fs/promises";
 import { join } from "node:path";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- e2e test with complex patterns
-import { beforeAll, describe, expect } from "vitest";
+import { beforeAll, describe } from "vitest";
 import { deleteProject, deleteWorker } from "../../../scripts/common";
 import {
 	frameworkToTestFilter,
@@ -26,13 +25,15 @@ import {
 import { test } from "../../helpers/index";
 import { recreateLogFolder } from "../../helpers/log-stream";
 import { getFrameworksTests } from "./test-config";
+import type { RunnerTestSuite } from "vitest";
 
 const frameworkTests = getFrameworksTests();
 
 describe
 	.skipIf(frameworkTests.length === 0)
 	.concurrent(`E2E: Web frameworks`, () => {
-		beforeAll((ctx) => {
+		// eslint-disable-next-line no-empty-pattern -- Vitest requires the 1st argument to use object destructuring
+		beforeAll(({}, ctx) => {
 			if (frameworkToTestFilter) {
 				debuglog("Running framework tests with filter:", frameworkToTestFilter);
 				frameworkTests.forEach((testConfig) => {
@@ -40,7 +41,7 @@ describe
 				});
 			}
 
-			recreateLogFolder(ctx);
+			recreateLogFolder(ctx as RunnerTestSuite);
 		});
 
 		frameworkTests.forEach((testConfig) => {
@@ -56,17 +57,18 @@ describe
 					retry: testRetries,
 					timeout: testConfig.timeout || TEST_TIMEOUT,
 				},
-				async ({ logStream, project }) => {
+				async ({ expect, logStream, project }) => {
 					if (!testConfig.verifyDeploy) {
 						expect(
 							true,
-							"A `deploy` configuration must be defined for all framework tests",
+							"A `deploy` configuration must be defined for all framework tests"
 						).toBe(false);
 						return;
 					}
 
 					try {
 						const deploymentUrl = await runC3ForFrameworkTest(
+							expect,
 							frameworkConfig.id,
 							project.path,
 							logStream,
@@ -79,7 +81,7 @@ describe
 								],
 								promptHandlers: testConfig.promptHandlers,
 								extraEnv: testConfig.extraEnv,
-							},
+							}
 						);
 
 						// Relevant project files should have been created
@@ -95,19 +97,21 @@ describe
 
 						if (testConfig.testCommitMessage) {
 							await testGitCommitMessage(
+								expect,
 								project.name,
 								frameworkConfig.id,
-								project.path,
+								project.path
 							);
 						}
 
 						// Make a request to the deployed project and verify it was successful
 						await verifyDeployment(
+							expect,
 							testConfig,
 							frameworkConfig.id,
 							project.name,
 							`${deploymentUrl}${testConfig.verifyDeploy.route}`,
-							testConfig.verifyDeploy.expectedText,
+							testConfig.verifyDeploy.expectedText
 						);
 
 						// Copy over any platform specific test fixture files
@@ -115,7 +119,7 @@ describe
 							__dirname,
 							"fixtures",
 							frameworkConfig.id,
-							frameworkConfig.platform,
+							frameworkConfig.platform
 						);
 						if (existsSync(platformFixturePath)) {
 							await cp(platformFixturePath, project.path, {
@@ -127,7 +131,7 @@ describe
 							const fixturePath = join(
 								__dirname,
 								"fixtures",
-								frameworkConfig.id,
+								frameworkConfig.id
 							);
 							if (existsSync(fixturePath)) {
 								await cp(fixturePath, project.path, {
@@ -138,29 +142,37 @@ describe
 						}
 
 						await verifyDevScript(
+							expect,
 							testConfig,
 							frameworkConfig,
 							project.path,
-							logStream,
+							logStream
 						);
 
 						await verifyPreviewScript(
+							expect,
 							testConfig,
 							frameworkConfig,
 							project.path,
-							logStream,
+							logStream
 						);
 
-						await verifyTypes(testConfig, frameworkConfig, project.path);
+						await verifyTypes(
+							expect,
+							testConfig,
+							frameworkConfig,
+							project.path
+						);
 
 						await verifyCloudflareVitePluginConfigured(
+							expect,
 							testConfig,
-							project.path,
+							project.path
 						);
 					} catch (e) {
 						expect.fail(
 							"Failed due to an exception while running C3. See logs for more details. Error: " +
-								e,
+								e
 						);
 					} finally {
 						// Cleanup the project in case we need to retry it
@@ -170,7 +182,7 @@ describe
 							await deleteProject(project.name);
 						}
 					}
-				},
+				}
 			);
 		});
 	});

@@ -1,4 +1,4 @@
-import { cloudflareD1RawDatabaseQuery } from "../api";
+import { d1RawDatabaseQuery } from "../api";
 import { transformStudioArrayBasedResult } from "../utils/studio";
 import { StudioSQLiteDriver } from "./sqlite";
 import type { D1RawResultResponse } from "../api";
@@ -52,7 +52,7 @@ export class LocalD1Connection implements IStudioConnection {
 			s.trim().replace(/;+$/, "")
 		);
 
-		const response = await cloudflareD1RawDatabaseQuery({
+		const response = await d1RawDatabaseQuery({
 			body: {
 				sql: trimmedStatements.join(";"),
 			},

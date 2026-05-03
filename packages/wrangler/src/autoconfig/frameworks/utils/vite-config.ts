@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { transformFile } from "@cloudflare/codemod";
 import { UserError } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import dedent from "ts-dedent";
 import { logger } from "../../../logger";
-import { transformFile } from "../../c3-vendor/codemod";
 import type { types } from "recast";
 
 const b = recast.types.builders;
@@ -207,7 +207,8 @@ export function transformViteConfig(
 			const configObject = extractConfigObject(n.node.arguments[0]);
 			if (!configObject) {
 				const argType = n.node.arguments[0]?.type ?? "unknown";
-				throw new UserError(dedent`
+				throw new UserError(
+					dedent`
 					Cannot modify Vite config: could not extract a config object (found ${argType}).
 
 					The Cloudflare plugin can only be automatically added to Vite configs that use:
@@ -221,14 +222,19 @@ export function transformViteConfig(
 					  export default defineConfig({
 					    plugins: [cloudflare()]
 					  });
-				`);
+				`,
+					{
+						telemetryMessage: "autoconfig vite config object unsupported",
+					}
+				);
 			}
 
 			const pluginsProp = configObject.properties.find((prop) =>
 				isPluginsProp(prop)
 			);
 			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
-				throw new UserError(dedent`
+				throw new UserError(
+					dedent`
 					Cannot modify Vite config: could not find a valid plugins array.
 
 					Please ensure your Vite config has a plugins array:
@@ -236,7 +242,11 @@ export function transformViteConfig(
 					  export default defineConfig({
 					    plugins: []
 					  });
-				`);
+				`,
+					{
+						telemetryMessage: "autoconfig vite plugins array missing",
+					}
+				);
 			}
 
 			// Only add the Cloudflare plugin if it's not already present

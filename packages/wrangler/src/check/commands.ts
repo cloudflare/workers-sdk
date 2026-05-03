@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import events from "node:events";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { log } from "@cloudflare/cli";
-import { spinnerWhile } from "@cloudflare/cli/interactive";
+import { log } from "@cloudflare/cli-shared-helpers";
+import { spinnerWhile } from "@cloudflare/cli-shared-helpers/interactive";
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Miniflare } from "miniflare";
@@ -125,13 +125,15 @@ export const checkStartupCommand = createCommand({
 	validateArgs({ args, workerBundle }) {
 		if (workerBundle && args) {
 			throw new UserError(
-				"`--args` and `--worker` are mutually exclusive—please only specify one"
+				"`--args` and `--worker` are mutually exclusive—please only specify one",
+				{ telemetryMessage: "check startup args mutually exclusive" }
 			);
 		}
 
 		if (args?.includes("outfile") || args?.includes("outdir")) {
 			throw new UserError(
-				"`--args` should not contain `--outfile` or `--outdir`"
+				"`--args` should not contain `--outfile` or `--outdir`",
+				{ telemetryMessage: "check startup args output option disallowed" }
 			);
 		}
 	},
@@ -213,7 +215,8 @@ export async function analyseBundle(
 
 	if (!("main_module" in metadata)) {
 		throw new UserError(
-			"`wrangler check startup` does not support service-worker format Workers. Refer to https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/ for migration guidance."
+			"`wrangler check startup` does not support service-worker format Workers. Refer to https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/ for migration guidance.",
+			{ telemetryMessage: "check startup service worker format unsupported" }
 		);
 	}
 	const mf = new Miniflare({

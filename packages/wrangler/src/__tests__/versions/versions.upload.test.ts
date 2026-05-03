@@ -3,9 +3,8 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handler callbacks */
+// eslint-disable-next-line no-restricted-imports
 import { assert, beforeEach, describe, expect, it, test, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
@@ -337,7 +336,7 @@ describe("versions upload", () => {
 
 		await runWrangler("versions upload");
 
-		assertApiRequest(/.*?workers\/scripts\/test-name\/versions/, {
+		assertApiRequest(expect, /.*?workers\/scripts\/test-name\/versions/, {
 			method: "POST",
 			// Make sure the main module (index.py) has a text/x-python content type
 			body: /Content-Disposition: form-data; name="index.py"; filename="index.py"\nContent-Type: text\/x-python/,
