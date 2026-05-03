@@ -81,7 +81,7 @@ export default {
 			const stream = await (
 				await fetch("https://thispersondoesnotexist.com/")
 			).body;
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- we are sure that at this point there will be a stream
 			const transform = await env.IMAGES.input(stream!)
 				.transform({ blur: 250 })
 				.output({ format: "image/avif" });
