@@ -79,7 +79,7 @@ export function readConfig(
 	if (diagnostics.hasErrors()) {
 		if (options?.skipValidationErrors) {
 			logger.warn(
-				`This command does not require a valid Wrangler configuration, but the following errors were found:\n${diagnostics.renderErrors()}`
+				`Ignoring the following configuration validation errors${configPath ? ` in "${path.relative(".", configPath)}"` : ""}:\n${diagnostics.renderErrors()}`
 			);
 		} else {
 			throw new UserError(diagnostics.renderErrors());
