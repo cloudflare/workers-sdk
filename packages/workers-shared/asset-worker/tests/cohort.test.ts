@@ -1,8 +1,5 @@
 import { describe, it, vi } from "vitest";
-import {
-	COHORT_LOOKUP_TIMEOUT_MS,
-	lookupCohort,
-} from "../../utils/cohort";
+import { COHORT_LOOKUP_TIMEOUT_MS, lookupCohort } from "../../utils/cohort";
 import type { AccountCohortQuerierBinding } from "../../utils/cohort";
 
 describe("[Asset Worker] lookupCohort", () => {

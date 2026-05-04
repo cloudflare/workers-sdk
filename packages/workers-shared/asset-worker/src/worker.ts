@@ -10,6 +10,7 @@ import { ExperimentAnalytics } from "./experiment-analytics";
 import { canFetch, handleRequest } from "./handler";
 import { handleError, submitMetrics } from "./utils/final-operations";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
+import type { AccountCohortQuerierBinding } from "../../utils/cohort";
 import type {
 	AssetConfig,
 	ColoMetadata,
@@ -17,7 +18,6 @@ import type {
 	SpanContext,
 	UnsafePerformanceTimer,
 } from "../../utils/types";
-import type { AccountCohortQuerierBinding } from "../../utils/cohort";
 import type { Environment, ReadyAnalytics } from "./types";
 
 // ============================================================

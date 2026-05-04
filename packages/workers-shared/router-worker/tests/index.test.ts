@@ -4,10 +4,7 @@ import {
 	env as runtimeEnv,
 } from "cloudflare:test";
 import { describe, it, vi } from "vitest";
-import {
-	COHORT_LOOKUP_TIMEOUT_MS,
-	lookupCohort,
-} from "../../utils/cohort";
+import { COHORT_LOOKUP_TIMEOUT_MS, lookupCohort } from "../../utils/cohort";
 import { EntrypointType } from "../src/analytics";
 import routerWorker, {
 	RouterInnerEntrypoint,
@@ -1309,9 +1306,7 @@ describe("gateway (outer entrypoint)", () => {
 	});
 
 	it("sets error blob for platform errors from inner", async ({ expect }) => {
-		const platformError = new RouterPlatformError(
-			new Error("platform boom")
-		);
+		const platformError = new RouterPlatformError(new Error("platform boom"));
 		const ctx = createGatewayCtx(async () => {
 			throw platformError;
 		});
