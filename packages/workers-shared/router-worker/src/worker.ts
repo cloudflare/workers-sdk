@@ -63,9 +63,11 @@ type LoopbackExecutionContext = ExecutionContext & {
 };
 
 export class RouterPlatformError extends Error {
-	constructor(public readonly cause: unknown) {
+	public override readonly cause: unknown;
+	constructor(cause: unknown) {
 		super(cause instanceof Error ? cause.message : "unknown platform error");
 		this.name = "RouterPlatformError";
+		this.cause = cause;
 	}
 }
 
