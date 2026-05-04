@@ -1076,7 +1076,7 @@ describe("inner entrypoint unit tests", () => {
 // ============================================================
 
 type InnerEntrypointOptions = {
-	props: Record<string, never>;
+	props: { timeToHandoff?: number };
 	version?: { cohort?: string };
 };
 
@@ -1252,6 +1252,7 @@ describe("gateway (outer entrypoint)", () => {
 
 		expect(capturedOptions).toHaveLength(1);
 		expect(capturedOptions[0].version).toEqual({ cohort: "ent" });
+		expect(capturedOptions[0].props.timeToHandoff).toBeGreaterThanOrEqual(0);
 	});
 
 	it("does not pass version when cohort is null", async ({ expect }) => {
@@ -1357,6 +1358,7 @@ describe("inner entrypoint analytics", () => {
 		const request = new Request("https://example.com");
 		const ctx = Object.assign(createExecutionContext(), {
 			version: { cohort: "ent" },
+			props: { timeToHandoff: 3 },
 		});
 
 		const env = {
@@ -1391,6 +1393,7 @@ describe("inner entrypoint analytics", () => {
 
 		expect(analyticsEvents).toHaveLength(1);
 		expect(analyticsEvents[0].doubles?.[9]).toBe(EntrypointType.Inner);
+		expect(analyticsEvents[0].doubles?.[10]).toBe(3); // double11 = timeToHandoff
 		expect(analyticsEvents[0].blobs?.[8]).toBe("ent");
 	});
 

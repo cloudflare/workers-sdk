@@ -46,6 +46,8 @@ type Data = {
 	timeToDispatch?: number;
 	// double10 - Entrypoint type (0 = Outer, 1 = Inner)
 	entrypoint?: EntrypointType;
+	// double11 - Time from outer entrypoint start until handoff to RouterInnerEntrypoint
+	timeToHandoff?: number;
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -113,6 +115,7 @@ export class Analytics {
 				this.data.userWorkerFreeTierLimiting ? 1 : 0, // double8
 				this.data.timeToDispatch ?? -1, // double9
 				this.data.entrypoint ?? -1, // double10
+				this.data.timeToHandoff ?? -1, // double11
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes

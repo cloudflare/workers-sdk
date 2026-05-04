@@ -46,15 +46,20 @@ export interface Env {
 	ACCOUNT_COHORT_QUERIER?: AccountCohortQuerierBinding;
 }
 
+type RouterInnerEntrypointProps = {
+	timeToHandoff?: number;
+};
+
 type LoopbackExecutionContext = ExecutionContext & {
 	exports: {
 		RouterInnerEntrypoint(options: {
-			props: Record<string, never>;
+			props: RouterInnerEntrypointProps;
 			version?: { cohort?: string };
 		}): {
 			fetch(request: Request): Promise<Response>;
 		};
 	};
+	props?: RouterInnerEntrypointProps;
 };
 
 export class RouterPlatformError extends Error {
@@ -111,9 +116,10 @@ export default {
 			// worker-configuration.d.ts, so `ctx.exports.RouterInnerEntrypoint` does not
 			// resolve structurally. Keep this narrow cast so loopback typechecks in both
 			// compilation contexts without changing runtime behavior.
+			const timeToHandoff = performance.now() - startTimeMs;
 			const loopbackCtx = ctx as LoopbackExecutionContext;
 			const inner = loopbackCtx.exports.RouterInnerEntrypoint({
-				props: {},
+				props: { timeToHandoff },
 				...(cohort ? { version: { cohort } } : {}),
 			});
 
@@ -143,6 +149,7 @@ export default {
 
 export class RouterInnerEntrypoint extends WorkerEntrypoint<Env> {
 	override async fetch(request: Request): Promise<Response> {
+		const loopbackCtx = this.ctx as LoopbackExecutionContext;
 		let sentry: ReturnType<typeof setupSentry> | undefined;
 		let userWorkerInvocation = false;
 		const analytics = new Analytics(this.env.ANALYTICS);
@@ -191,6 +198,7 @@ export class RouterInnerEntrypoint extends WorkerEntrypoint<Env> {
 					userWorkerAhead: config.invoke_user_worker_ahead_of_assets,
 					entrypoint: EntrypointType.Inner,
 					cohort: this.ctx.version?.cohort ?? "unknown",
+					timeToHandoff: loopbackCtx.props?.timeToHandoff ?? -1,
 				});
 			}
 
