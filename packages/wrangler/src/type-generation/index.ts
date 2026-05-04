@@ -1059,6 +1059,14 @@ async function generateSimpleEnvTypes(
 			continue;
 		}
 
+		if (unsafe.type === "service") {
+			envTypeStructure.push({
+				key: constructTypeKey(unsafe.name),
+				type: "Fetcher",
+			});
+			continue;
+		}
+
 		envTypeStructure.push({
 			key: constructTypeKey(unsafe.name),
 			type: "any",
@@ -1384,7 +1392,12 @@ async function generatePerEnvironmentTypes(
 
 		const unsafeBindings = unsafePerEnv.get(envName) ?? [];
 		for (const unsafe of unsafeBindings) {
-			const type = unsafe.type === "ratelimit" ? "RateLimit" : "any";
+			const type =
+				unsafe.type === "ratelimit"
+					? "RateLimit"
+					: unsafe.type === "service"
+						? "Fetcher"
+						: "any";
 			envBindings.push({ key: constructTypeKey(unsafe.name), value: type });
 			trackBinding(unsafe.name, type, envName);
 		}

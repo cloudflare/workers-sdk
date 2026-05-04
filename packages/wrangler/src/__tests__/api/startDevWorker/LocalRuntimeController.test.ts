@@ -10,7 +10,10 @@ import { fetch } from "undici";
 import { assert, describe, it } from "vitest";
 import WebSocket from "ws";
 import { createPostgresEchoHandler } from "../../../../e2e/helpers/postgres-echo-handler";
-import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
+import {
+	getUserWorkerInnerUrlOverrides,
+	LocalRuntimeController,
+} from "../../../api/startDevWorker/LocalRuntimeController";
 import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { RuleTypeToModuleType } from "../../../deployment-bundle/module-collection";
 import { usingLocalSecretsStoreSecretAPI } from "../../../secrets-store/commands";
@@ -135,6 +138,48 @@ describe("LocalRuntimeController", () => {
 	runInTempDir();
 	// Make sure teardown is declared after runInTempDir so it runs before we delete the temp directory
 	const teardown = useTeardown();
+
+	describe("getUserWorkerInnerUrlOverrides", () => {
+		it("parses host and port when origin hostname includes a port", ({
+			expect,
+		}) => {
+			expect(
+				getUserWorkerInnerUrlOverrides({
+					dev: {
+						persist: "./persist",
+						origin: {
+							hostname: "localhost:4000",
+							secure: false,
+						},
+					},
+				})
+			).toEqual({
+				protocol: "http:",
+				hostname: "localhost",
+				port: "4000",
+			});
+		});
+
+		it("clears the local dev port when origin hostname does not include one", ({
+			expect,
+		}) => {
+			expect(
+				getUserWorkerInnerUrlOverrides({
+					dev: {
+						persist: "./persist",
+						origin: {
+							hostname: "www.example.com",
+							secure: false,
+						},
+					},
+				})
+			).toEqual({
+				protocol: "http:",
+				hostname: "www.example.com",
+				port: "",
+			});
+		});
+	});
 
 	describe("Core", () => {
 		it("should start Miniflare with module worker", async ({ expect }) => {

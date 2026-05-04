@@ -1,16 +1,19 @@
 import { describe, test } from "vitest";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
+import type {
+	AssetsOnlyResolvedConfig,
+	WorkersResolvedConfig,
+} from "../plugin-config";
+import type { ResolvedConfig } from "vite";
 
 describe("validateWorkerEnvironmentOptions", () => {
 	test("doesn't throw if there are no config violations", ({ expect }) => {
 		const resolvedPluginConfig = {
 			environmentNameToWorkerMap: new Map([["worker", { config: {} }]]),
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		} as any;
+		} as unknown as AssetsOnlyResolvedConfig | WorkersResolvedConfig;
 		const resolvedViteConfig = {
 			environments: { worker: { resolve: { external: [] } } },
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		} as any;
+		} as unknown as ResolvedConfig;
 
 		expect(() =>
 			validateWorkerEnvironmentOptions(resolvedPluginConfig, resolvedViteConfig)
@@ -22,12 +25,10 @@ describe("validateWorkerEnvironmentOptions", () => {
 	}) => {
 		const resolvedPluginConfig = {
 			environmentNameToWorkerMap: new Map([["worker", { config: {} }]]),
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		} as any;
+		} as unknown as AssetsOnlyResolvedConfig | WorkersResolvedConfig;
 		const resolvedViteConfig = {
 			environments: { worker: { resolve: { external: true } } },
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		} as any;
+		} as unknown as ResolvedConfig;
 
 		expect(() =>
 			validateWorkerEnvironmentOptions(resolvedPluginConfig, resolvedViteConfig)
@@ -50,8 +51,7 @@ describe("validateWorkerEnvironmentOptions", () => {
 				["workerB", { config: {} }],
 				["workerC", { config: {} }],
 			]),
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		} as any;
+		} as unknown as AssetsOnlyResolvedConfig | WorkersResolvedConfig;
 		const resolvedViteConfig = {
 			environments: {
 				workerA: {
@@ -66,8 +66,7 @@ describe("validateWorkerEnvironmentOptions", () => {
 				},
 				workerC: { resolve: { external: [] } },
 			},
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		} as any;
+		} as unknown as ResolvedConfig;
 
 		expect(() =>
 			validateWorkerEnvironmentOptions(resolvedPluginConfig, resolvedViteConfig)

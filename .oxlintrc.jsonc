@@ -205,7 +205,6 @@
 				"packages/local-explorer-ui/**",
 				"packages/miniflare/**",
 				"packages/quick-edit-extension/**",
-				"packages/vite-plugin-cloudflare/**",
 				"packages/vitest-pool-workers/**",
 				"packages/workers-editor-shared/**",
 				"packages/workers-shared/**",
