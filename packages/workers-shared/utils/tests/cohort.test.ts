@@ -1,9 +1,9 @@
 import { describe, it, vi } from "vitest";
-import { COHORT_LOOKUP_TIMEOUT_MS, lookupCohort } from "../../utils/cohort";
-import type { AccountCohortQuerierBinding } from "../../utils/cohort";
+import { COHORT_LOOKUP_TIMEOUT_MS, lookupCohort } from "../cohort";
+import type { AccountCohortQuerierBinding } from "../cohort";
 
-describe("[Asset Worker] lookupCohort", () => {
-	it("calls querier with account ID as string", async ({ expect }) => {
+describe("lookupCohort", () => {
+	it("returns cohort on success", async ({ expect }) => {
 		const lookupMock = vi.fn().mockResolvedValue({
 			ok: true,
 			result: "ent",
@@ -19,7 +19,37 @@ describe("[Asset Worker] lookupCohort", () => {
 		expect(lookupMock).toHaveBeenCalledWith("42");
 	});
 
-	it("returns null when result is ok:false", async ({ expect }) => {
+	it("returns null when binding is unavailable", async ({ expect }) => {
+		const result = await lookupCohort(undefined, 42);
+		expect(result).toBeNull();
+	});
+
+	it("returns null when accountId is undefined", async ({ expect }) => {
+		const result = await lookupCohort(
+			{
+				lookupAccountCohort: () =>
+					Promise.resolve({
+						ok: true as const,
+						result: "ent",
+						meta: { workersVersion: "test" },
+					}),
+			},
+			undefined
+		);
+		expect(result).toBeNull();
+	});
+
+	it("returns null on RPC failure", async ({ expect }) => {
+		const result = await lookupCohort(
+			{
+				lookupAccountCohort: () => Promise.reject(new Error("rpc broke")),
+			},
+			42
+		);
+		expect(result).toBeNull();
+	});
+
+	it("returns null when ok:false", async ({ expect }) => {
 		const result = await lookupCohort(
 			{
 				lookupAccountCohort: () =>
@@ -32,11 +62,10 @@ describe("[Asset Worker] lookupCohort", () => {
 			},
 			42
 		);
-
 		expect(result).toBeNull();
 	});
 
-	it("returns null when result is null", async ({ expect }) => {
+	it("returns null when result is null (cold cache)", async ({ expect }) => {
 		const result = await lookupCohort(
 			{
 				lookupAccountCohort: () =>
@@ -48,7 +77,6 @@ describe("[Asset Worker] lookupCohort", () => {
 			},
 			42
 		);
-
 		expect(result).toBeNull();
 	});
 
@@ -70,7 +98,6 @@ describe("[Asset Worker] lookupCohort", () => {
 			},
 			42
 		);
-
 		expect(result).toBeNull();
 	});
 });
