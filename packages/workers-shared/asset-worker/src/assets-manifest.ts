@@ -98,14 +98,16 @@ function comparePathHashWithEntry(
 	for (let offset = 0; offset < PATH_HASH_SIZE; offset++, pathHashOffset++) {
 		const s = searchValue[offset];
 		const e = manifest[pathHashOffset];
-		// Note: both values should be defined but we check just in case
-		if (s !== undefined && e !== undefined) {
-			if (s < e) {
-				return -1;
-			}
-			if (s > e) {
-				return 1;
-			}
+		if (s === undefined || e === undefined) {
+			throw new TypeError(
+				`Unexpected undefined value at offset ${offset} during path hash comparison`
+			);
+		}
+		if (s < e) {
+			return -1;
+		}
+		if (s > e) {
+			return 1;
 		}
 	}
 
