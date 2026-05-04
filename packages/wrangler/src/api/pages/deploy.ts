@@ -403,7 +403,7 @@ export async function deploy({
 				if (err instanceof SyntaxError) {
 					throw new FatalError(
 						`Invalid _routes.json file at ${directory}: ${err.message}`,
-						1
+						{ telemetryMessage: "pages deploy routes json parse error" }
 					);
 				}
 			}
@@ -444,9 +444,10 @@ export async function deploy({
 				if (err instanceof SyntaxError) {
 					throw new FatalError(
 						`Invalid _routes.json file at ${directory}: ${err.message}`,
-						1
+						{ telemetryMessage: "pages deploy routes json parse error" }
 					);
 				}
+			}
 		} else if (routesOutputPath) {
 			// no custom _routes.json file found, so fallback to the generated one
 			try {
