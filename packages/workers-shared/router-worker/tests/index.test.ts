@@ -1281,9 +1281,10 @@ describe("inner entrypoint analytics", () => {
 		await fetchFromInnerEntrypoint(request, env, ctx);
 
 		expect(analyticsEvents).toHaveLength(1);
-		expect(analyticsEvents[0].doubles?.[9]).toBe(EntrypointType.Inner);
+		expect(analyticsEvents[0].doubles?.[8]).toBeGreaterThanOrEqual(0); // double9 = timeToDispatch
+		expect(analyticsEvents[0].doubles?.[9]).toBe(EntrypointType.Inner); // double10 = entrypoint
 		expect(analyticsEvents[0].doubles?.[10]).toBe(3); // double11 = timeToHandoff
-		expect(analyticsEvents[0].blobs?.[8]).toBe("ent");
+		expect(analyticsEvents[0].blobs?.[8]).toBe("ent"); // blob9 = cohort
 	});
 
 	it("writes cohort as 'unknown' when ctx.version has no cohort", async ({
@@ -1324,7 +1325,9 @@ describe("inner entrypoint analytics", () => {
 		await fetchFromInnerEntrypoint(request, env, ctx);
 
 		expect(analyticsEvents).toHaveLength(1);
-		expect(analyticsEvents[0].doubles?.[9]).toBe(EntrypointType.Inner);
-		expect(analyticsEvents[0].blobs?.[8]).toBe("unknown");
+		expect(analyticsEvents[0].doubles?.[8]).toBeGreaterThanOrEqual(0); // double9 = timeToDispatch
+		expect(analyticsEvents[0].doubles?.[9]).toBe(EntrypointType.Inner); // double10 = entrypoint
+		expect(analyticsEvents[0].doubles?.[10]).toBe(-1); // double11 = timeToHandoff (not passed)
+		expect(analyticsEvents[0].blobs?.[8]).toBe("unknown"); // blob9 = cohort
 	});
 });
