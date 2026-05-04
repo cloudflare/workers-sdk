@@ -289,7 +289,9 @@ export const artifactsReposIssueTokenCommand = createCommand({
 			description: "The token TTL in seconds",
 			coerce: (value: number | undefined) => {
 				if (value !== undefined && value <= 0) {
-					throw new UserError("--ttl must be greater than 0");
+					throw new UserError("--ttl must be greater than 0", {
+						telemetryMessage: "artifacts repo token ttl invalid",
+					});
 				}
 				return value;
 			},
