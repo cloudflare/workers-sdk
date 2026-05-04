@@ -24,7 +24,7 @@ import type { Environment, ReadyAnalytics } from "./types";
 // SECTION 1: SHARED TYPES & INTERFACE CONTRACT
 // ============================================================
 
-export type Env = {
+export interface Env {
 	/*
 	 * ASSETS_MANIFEST is a pipeline binding to an ArrayBuffer containing the
 	 * binary-encoded site manifest
@@ -52,7 +52,7 @@ export type Env = {
 	UNSAFE_PERFORMANCE: UnsafePerformanceTimer;
 	VERSION_METADATA: WorkerVersionMetadata;
 	ACCOUNT_COHORT_QUERIER?: AccountCohortQuerierBinding;
-};
+}
 
 export type AssetWorkerEntrypointProps = {
 	traceContext?: SpanContext | null;
