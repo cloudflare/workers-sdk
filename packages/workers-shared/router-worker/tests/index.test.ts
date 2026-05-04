@@ -1122,13 +1122,15 @@ function createGatewayEnv(overrides?: Record<string, unknown>): {
 // ============================================================
 
 describe("gateway (outer entrypoint)", () => {
-	it("passes cohort through ctx.version to inner", async ({ expect }) => {
+	it("passes cohort and timeToHandoff to inner and writes outer analytics", async ({
+		expect,
+	}) => {
 		const capturedOptions: InnerEntrypointOptions[] = [];
 		const ctx = createGatewayCtx(
 			async () => new Response("ok"),
 			capturedOptions
 		);
-		const { env } = createGatewayEnv({
+		const { env, analyticsEvents } = createGatewayEnv({
 			ACCOUNT_COHORT_QUERIER: {
 				lookupAccountCohort: () =>
 					Promise.resolve({
@@ -1141,9 +1143,15 @@ describe("gateway (outer entrypoint)", () => {
 
 		await routerWorker.fetch(new Request("https://example.com"), env, ctx);
 
+		// Verify inner entrypoint received cohort and timeToHandoff
 		expect(capturedOptions).toHaveLength(1);
 		expect(capturedOptions[0].version).toEqual({ cohort: "ent" });
 		expect(capturedOptions[0].props.timeToHandoff).toBeGreaterThanOrEqual(0);
+
+		// Verify outer analytics
+		expect(analyticsEvents).toHaveLength(1);
+		expect(analyticsEvents[0].doubles?.[9]).toBe(EntrypointType.Outer);
+		expect(analyticsEvents[0].blobs?.[8]).toBe("ent");
 	});
 
 	it("does not pass version when cohort is null", async ({ expect }) => {
@@ -1159,28 +1167,6 @@ describe("gateway (outer entrypoint)", () => {
 
 		expect(capturedOptions).toHaveLength(1);
 		expect(capturedOptions[0].version).toBeUndefined();
-	});
-
-	it("writes entrypoint = Outer and cohort in analytics", async ({
-		expect,
-	}) => {
-		const ctx = createGatewayCtx(async () => new Response("ok"));
-		const { env, analyticsEvents } = createGatewayEnv({
-			ACCOUNT_COHORT_QUERIER: {
-				lookupAccountCohort: () =>
-					Promise.resolve({
-						ok: true as const,
-						result: "ent",
-						meta: { workersVersion: "test" },
-					}),
-			},
-		});
-
-		await routerWorker.fetch(new Request("https://example.com"), env, ctx);
-
-		expect(analyticsEvents).toHaveLength(1);
-		expect(analyticsEvents[0].doubles?.[9]).toBe(EntrypointType.Outer);
-		expect(analyticsEvents[0].blobs?.[8]).toBe("ent");
 	});
 
 	it("does not set error blob for user worker errors", async ({ expect }) => {
