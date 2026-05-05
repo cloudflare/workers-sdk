@@ -1,5 +1,15 @@
 # @cloudflare/workers-shared
 
+## 0.19.5
+
+### Patch Changes
+
+- [#13740](https://github.com/cloudflare/workers-sdk/pull/13740) [`6d2a573`](https://github.com/cloudflare/workers-sdk/commit/6d2a5736c6682882ba48aa3e272d9114bc821c47) Thanks [@courtney-sims](https://github.com/courtney-sims)! - During deployment, routes requests to new versions of asset-worker based on customer account plan.
+
+- [#12276](https://github.com/cloudflare/workers-sdk/pull/12276) [`926bad5`](https://github.com/cloudflare/workers-sdk/commit/926bad5c75882e2dabb700f60f0da6ba3c4298f5) Thanks [@penalosa](https://github.com/penalosa)! - Warn when `_headers` rules contain multiple wildcards or wildcard combined with `:splat`
+
+  Rules containing multiple wildcards (e.g. `https://*.workers.dev/*`) or combining a wildcard with a `:splat` placeholder (e.g. `https://*.pages.dev/:splat`) are now rejected during parsing. Previously this would fail silently during dev.
+
 ## 0.19.4
 
 ### Patch Changes

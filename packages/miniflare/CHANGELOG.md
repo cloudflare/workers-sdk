@@ -1,5 +1,33 @@
 # miniflare
 
+## 4.20260504.0
+
+### Patch Changes
+
+- [#13765](https://github.com/cloudflare/workers-sdk/pull/13765) [`3020214`](https://github.com/cloudflare/workers-sdk/commit/3020214014066aafd2369469e92f4b91e979ebb4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260430.1 | 1.20260501.1 |
+
+- [#13800](https://github.com/cloudflare/workers-sdk/pull/13800) [`0099265`](https://github.com/cloudflare/workers-sdk/commit/00992655695093ce644bb2916ffd0d924d5abbab) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260501.1 | 1.20260504.1 |
+
+- [#13737](https://github.com/cloudflare/workers-sdk/pull/13737) [`bb27219`](https://github.com/cloudflare/workers-sdk/commit/bb27219651142036180cb1d01650df48d5282800) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Fix race condition that broke Browser Run on Windows when Chrome had not yet started accepting connections
+
+  When Miniflare launched Chrome for Browser Run bindings, it returned the WebSocket endpoint as soon as Chrome printed its `DevTools listening on ws://...` banner. On Windows the underlying listening socket is occasionally not yet accepting connections at that point, causing the first request from workerd to Chrome to fail with `ConnectEx (#1225) The remote computer refused the network connection.` and the user worker to receive an error response from `/v1/acquire`.
+
+  Miniflare now probes Chrome's `/json/version` HTTP endpoint with retry/backoff after the banner is logged, only declaring the browser ready once the socket actually accepts connections. As an additional safety net, the browser binding worker also retries transient `ConnectEx`/`WSARecv` failures when establishing connections to Chrome.
+
+- [#13767](https://github.com/cloudflare/workers-sdk/pull/13767) [`12fb5db`](https://github.com/cloudflare/workers-sdk/commit/12fb5db89a31cc6ecccf022dfc7de4622973129d) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix local explorer startup in Yarn Plug'n'Play projects by copying the explorer UI assets to a real temporary directory before registering the workerd disk service.
+
 ## 4.20260430.0
 
 ### Minor Changes

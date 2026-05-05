@@ -1,5 +1,41 @@
 # create-cloudflare
 
+## 2.68.1
+
+### Patch Changes
+
+- [#13793](https://github.com/cloudflare/workers-sdk/pull/13793) [`e414059`](https://github.com/cloudflare/workers-sdk/commit/e414059eae03ac05b3ecae0054ba431f8132f1d7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From    | To      |
+  | ---------------------- | ------- | ------- |
+  | @tanstack/create-start | 0.59.26 | 0.59.28 |
+
+- [#13794](https://github.com/cloudflare/workers-sdk/pull/13794) [`556a58c`](https://github.com/cloudflare/workers-sdk/commit/556a58c6b40020cc5fe7a09ac802dada7a5a9a5e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From                   | To                     |
+  | ----------- | ---------------------- | ---------------------- |
+  | create-waku | 0.12.5-1.0.0-alpha.8-0 | 0.12.5-1.0.0-alpha.9-0 |
+
+- [#13795](https://github.com/cloudflare/workers-sdk/pull/13795) [`7c9161a`](https://github.com/cloudflare/workers-sdk/commit/7c9161a768a26f5d258543a39430be3e76187709) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From   | To     |
+  | ----------------- | ------ | ------ |
+  | create-docusaurus | 3.10.0 | 3.10.1 |
+
+- [#13796](https://github.com/cloudflare/workers-sdk/pull/13796) [`e8496b6`](https://github.com/cloudflare/workers-sdk/commit/e8496b6483017d77340b5e86eb05ae4544955f72) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.2.8 | 21.2.9 |
+
 ## 2.68.0
 
 ### Minor Changes
