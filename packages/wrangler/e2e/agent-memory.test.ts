@@ -21,7 +21,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 		expect(normalize(output.stdout)).toContain(
 			`✅ Created Agent Memory namespace "tmp-e2e-agent-memory"`
 		);
-		expect(output.stderr).toBe("");
+		expect(normalize(output.stderr)).toMatchInlineSnapshot(`
+			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace create\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+		`);
 
 		// Extract the namespace ID for use in subsequent tests
 		const match = output.stdout.match(/ID:\s+(\S+)/);
@@ -35,7 +37,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 		const output = await helper.run(`wrangler agent-memory namespace list`);
 
 		expect(normalize(output.stdout)).toContain("tmp-e2e-agent-memory");
-		expect(output.stderr).toBe("");
+		expect(normalize(output.stderr)).toMatchInlineSnapshot(`
+			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace list\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+		`);
 	});
 
 	it("list namespaces --json", async ({ expect }) => {
@@ -50,7 +54,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 		const found = parsed.find((ns) => ns.name === namespaceName);
 		expect(found).toBeDefined();
 		expect(found?.id).toBe(namespaceId);
-		expect(output.stderr).toBe("");
+		expect(normalize(output.stderr)).toMatchInlineSnapshot(`
+			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace list\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+		`);
 	});
 
 	it("get namespace", async ({ expect }) => {
@@ -60,7 +66,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 
 		expect(normalize(output.stdout)).toContain("tmp-e2e-agent-memory");
 		expect(output.stdout).toContain(namespaceId);
-		expect(output.stderr).toBe("");
+		expect(normalize(output.stderr)).toMatchInlineSnapshot(`
+			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace get\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+		`);
 	});
 
 	it("delete namespace", async ({ expect }) => {
@@ -71,6 +79,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 		expect(normalize(output.stdout)).toContain(
 			`✅ Deleted Agent Memory namespace tmp-e2e-agent-memory`
 		);
-		expect(output.stderr).toBe("");
+		expect(normalize(output.stderr)).toMatchInlineSnapshot(`
+			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace delete\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+		`);
 	});
 });
