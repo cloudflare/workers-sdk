@@ -33,7 +33,7 @@ export const agentMemoryNamespaceGetCommand = createCommand({
 			if (e instanceof APIError && e.status === 404) {
 				throw new UserError(
 					`Agent Memory namespace "${namespace_name}" not found. Use 'wrangler agent-memory namespace list' to see available namespaces.`,
-					{ telemetryMessage: "Agent Memory namespace not found" }
+					{ telemetryMessage: "agent-memory namespace not found" }
 				);
 			}
 			throw e;
