@@ -23,11 +23,11 @@ export interface EmailAddress {
 
 export interface MessageBuilder {
 	from: string | EmailAddress;
-	to: string | EmailAddress | (string | EmailAddress)[];
+	to: string | string[];
 	subject: string;
 	replyTo?: string | EmailAddress;
-	cc?: string | EmailAddress | (string | EmailAddress)[];
-	bcc?: string | EmailAddress | (string | EmailAddress)[];
+	cc?: string | string[];
+	bcc?: string | string[];
 	headers?: Record<string, string>;
 	text?: string;
 	html?: string;
