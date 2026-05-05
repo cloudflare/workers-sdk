@@ -1,5 +1,8 @@
 ---
 "@cloudflare/workers-utils": minor
+"wrangler": minor
+"@cloudflare/vite-plugin": minor
+"@cloudflare/vitest-pool-workers": minor
 ---
 
 Stabilize the `secrets` configuration property
