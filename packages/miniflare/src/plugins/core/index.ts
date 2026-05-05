@@ -1,12 +1,20 @@
 import assert from "node:assert";
-import { existsSync, readFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	renameSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
+import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
@@ -990,6 +998,7 @@ export interface GlobalServicesOptions {
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
 	loopbackPort: number;
+	tmpPath: string;
 	log: Log;
 	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */
 	proxyBindings: Worker_Binding[];
@@ -1005,6 +1014,7 @@ export function getGlobalServices({
 	allWorkerRoutes,
 	fallbackWorkerName,
 	loopbackPort,
+	tmpPath,
 	log,
 	proxyBindings,
 	durableObjectClassNames,
@@ -1147,16 +1157,7 @@ export function getGlobalServices({
 	];
 
 	if (sharedOptions.unsafeLocalExplorer) {
-		// Local explorer UI assets path
-		// The UI dist is copied to miniflare's dist/local-explorer-ui at build time.
-		// In the bundled CJS output, __dirname is dist/src/ so we need ../local-explorer-ui
-		const localExplorerUiPath = path.join(__dirname, "../local-explorer-ui");
-		if (!existsSync(localExplorerUiPath)) {
-			throw new MiniflareCoreError(
-				"ERR_MISSING_EXPLORER_UI",
-				`Local Explorer UI assets not found at expected path: ${localExplorerUiPath}`
-			);
-		}
+		const localExplorerUiPath = resolveLocalExplorerUi(tmpPath);
 		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
 			proxyBindings,
 			durableObjectClassNames,
@@ -1182,6 +1183,91 @@ export function getGlobalServices({
 	}
 
 	return services;
+}
+
+/**
+ * workerd's disk service needs a real filesystem directory. Under Yarn PnP,
+ * these bundled assets can live inside a real `.yarn/cache/*.zip` archive.
+ * Node can still read those paths through Yarn's patched filesystem hooks, but
+ * workerd can't mount a directory from inside the zip as a disk service.
+ */
+function resolveLocalExplorerUi(tmpPath: string) {
+	const bundledLocalExplorerUiPath = path.join(
+		__dirname,
+		"../local-explorer-ui"
+	);
+	if (!existsSync(bundledLocalExplorerUiPath)) {
+		throw new MiniflareCoreError(
+			"ERR_MISSING_EXPLORER_UI",
+			`Local Explorer UI assets not found at expected path: ${bundledLocalExplorerUiPath}`
+		);
+	}
+	if (!isPathInsideZip(bundledLocalExplorerUiPath)) {
+		return bundledLocalExplorerUiPath;
+	}
+
+	const localExplorerUiPath = path.join(
+		tmpPath,
+		CORE_PLUGIN_NAME,
+		"local-explorer-ui"
+	);
+	if (!existsSync(localExplorerUiPath)) {
+		const localExplorerUiRoot = path.dirname(localExplorerUiPath);
+		const stagedLocalExplorerUiPath = path.join(
+			localExplorerUiRoot,
+			`local-explorer-ui-staging-${process.pid}-${Date.now()}`
+		);
+
+		mkdirSync(localExplorerUiRoot, { recursive: true });
+		try {
+			copyDirectorySync(bundledLocalExplorerUiPath, stagedLocalExplorerUiPath);
+			renameSync(stagedLocalExplorerUiPath, localExplorerUiPath);
+		} catch (error) {
+			removeDirSync(stagedLocalExplorerUiPath);
+			throw error;
+		}
+	}
+
+	return localExplorerUiPath;
+}
+
+function isPathInsideZip(filePath: string) {
+	let currentPath = path.dirname(filePath);
+
+	while (currentPath !== path.dirname(currentPath)) {
+		if (path.extname(currentPath) === ".zip") {
+			const zipStats = statSync(currentPath, { throwIfNoEntry: false });
+			if (zipStats?.isFile()) {
+				return true;
+			}
+		}
+
+		currentPath = path.dirname(currentPath);
+	}
+
+	return false;
+}
+
+/**
+ * `cpSync()` treats the zip-backed PnP source path like a normal on-disk
+ * directory and hits `ENOTDIR` when that path actually points inside a `.zip`
+ * archive.
+ * `readdirSync()`, `statSync()`, and `readFileSync()` still work through
+ * Yarn's patched fs hooks, so copy the tree entry-by-entry instead.
+ */
+function copyDirectorySync(sourcePath: string, destinationPath: string) {
+	mkdirSync(destinationPath, { recursive: true });
+	for (const entry of readdirSync(sourcePath)) {
+		const sourceEntryPath = path.join(sourcePath, entry);
+		const destinationEntryPath = path.join(destinationPath, entry);
+		const sourceEntryStats = statSync(sourceEntryPath);
+
+		if (sourceEntryStats.isDirectory()) {
+			copyDirectorySync(sourceEntryPath, destinationEntryPath);
+		} else {
+			writeFileSync(destinationEntryPath, readFileSync(sourceEntryPath));
+		}
+	}
 }
 
 function getWorkerScript(
