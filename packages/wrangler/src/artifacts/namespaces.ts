@@ -10,6 +10,25 @@ import {
 } from "./client";
 import type { ArtifactsNamespace } from "./types";
 
+const namespaceNameArg = {
+	type: "string",
+	demandOption: true,
+	description: "The Artifacts namespace name",
+} as const;
+
+const jsonArg = {
+	type: "boolean",
+	default: false,
+	description: "Return output as JSON",
+} as const;
+
+const forceArg = {
+	type: "boolean",
+	alias: "y",
+	default: false,
+	description: "Skip confirmation",
+} as const;
+
 export const artifactsNamespacesNamespace = createNamespace({
 	metadata: {
 		description: "Manage Artifacts namespaces",
@@ -21,13 +40,19 @@ export const artifactsNamespacesNamespace = createNamespace({
 function formatNamespaceDetails(
 	namespace: ArtifactsNamespace
 ): Record<string, string> {
+	return formatDefinedValues([
+		["name", namespace.name],
+		["id", namespace.id],
+		["created_at", namespace.created_at],
+		["updated_at", namespace.updated_at],
+	]);
+}
+
+function formatDefinedValues(
+	values: [string, string | undefined][]
+): Record<string, string> {
 	return Object.fromEntries(
-		[
-			["name", namespace.name],
-			namespace.id ? ["id", namespace.id] : undefined,
-			namespace.created_at ? ["created_at", namespace.created_at] : undefined,
-			namespace.updated_at ? ["updated_at", namespace.updated_at] : undefined,
-		].filter((entry): entry is [string, string] => entry !== undefined)
+		values.filter((entry): entry is [string, string] => entry[1] !== undefined)
 	);
 }
 
@@ -42,16 +67,8 @@ export const artifactsNamespacesCreateCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	args: {
-		name: {
-			type: "string",
-			demandOption: true,
-			description: "The Artifacts namespace name",
-		},
-		json: {
-			type: "boolean",
-			default: false,
-			description: "Return output as JSON",
-		},
+		name: namespaceNameArg,
+		json: jsonArg,
 	},
 	async handler({ name, json }, { config }) {
 		const namespace = await createArtifactsNamespace(config, name);
@@ -76,11 +93,7 @@ export const artifactsNamespacesListCommand = createCommand({
 		printBanner: (args) => !args.json,
 	},
 	args: {
-		json: {
-			type: "boolean",
-			default: false,
-			description: "Return output as JSON",
-		},
+		json: jsonArg,
 	},
 	async handler({ json }, { config }) {
 		const namespaces = await listNamespaces(config);
@@ -116,16 +129,8 @@ export const artifactsNamespacesGetCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	args: {
-		name: {
-			type: "string",
-			demandOption: true,
-			description: "The Artifacts namespace name",
-		},
-		json: {
-			type: "boolean",
-			default: false,
-			description: "Return output as JSON",
-		},
+		name: namespaceNameArg,
+		json: jsonArg,
 	},
 	async handler({ name, json }, { config }) {
 		const namespace = await getNamespace(config, name);
@@ -150,22 +155,9 @@ export const artifactsNamespacesDeleteCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	args: {
-		name: {
-			type: "string",
-			demandOption: true,
-			description: "The Artifacts namespace name",
-		},
-		force: {
-			type: "boolean",
-			alias: "y",
-			default: false,
-			description: "Skip confirmation",
-		},
-		json: {
-			type: "boolean",
-			default: false,
-			description: "Return output as JSON",
-		},
+		name: namespaceNameArg,
+		force: forceArg,
+		json: jsonArg,
 	},
 	async handler({ name, force, json }, { config }) {
 		if (!force) {
