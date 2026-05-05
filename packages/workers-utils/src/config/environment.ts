@@ -768,6 +768,8 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#secrets-configuration-property
+	 *
 	 * @nonInheritable
 	 */
 	secrets?: {
