@@ -486,7 +486,7 @@ const testCases: TestCase[] = [
 		name: "Agent Memory",
 		scriptPath: "agent-memory.js",
 		setup: async (helper) => {
-			const namespace = generateResourceName("agent-memory");
+			const namespace = generateResourceName("agent-memory", 8);
 			await helper.run(`wrangler agent-memory namespace create ${namespace}`);
 
 			return {
