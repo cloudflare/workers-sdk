@@ -835,6 +835,36 @@ describe("versions upload", () => {
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async () => {
+			vi.stubEnv("CLOUDFLARE_ENV", "test");
+			mockGetScript();
+			mockUploadVersion(true);
+			mockPatchScriptSettings();
+			mockGetWorkerSubdomain({
+				enabled: true,
+				previews_enabled: false,
+				useServiceEnvironments: false,
+				env: "test",
+			});
+
+			// Setup
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			const result = runWrangler("versions upload");
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 
 	describe("keep_vars", () => {

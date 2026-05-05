@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { FormData } from "undici";
-import { afterEach, describe, it, test } from "vitest";
+import { afterEach, describe, it, test, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs, mockPrompt } from "../../helpers/mock-dialogs";
@@ -518,6 +518,28 @@ describe("versions secret put", () => {
 		}) => {
 			writeWranglerConfig({
 				name: "script-name",
+			});
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
+
+			mockStdIn.send(
+				`the`,
+				`-`,
+				`secret
+			` // whitespace & newline being removed
+			);
+			await runWrangler("versions secret put NEW_SECRET");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ENV", "test");
+			writeWranglerConfig({
+				name: "script-name",
+				env: { test: {} },
 			});
 			mockSetupApiCalls(expect);
 			mockPostVersion(expect);

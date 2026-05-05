@@ -375,5 +375,25 @@ describe("versions secret bulk", () => {
 			await runWrangler(`versions secret bulk --name script-name`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ENV", "test");
+			vi.spyOn(readline, "createInterface").mockImplementation(
+				() =>
+					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
+					JSON.stringify({
+						SECRET_1: "secret-1",
+					}) as unknown as Interface
+			);
+
+			writeWranglerConfig({ env: { test: {} } });
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
+
+			await runWrangler(`versions secret bulk --name script-name`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 });
