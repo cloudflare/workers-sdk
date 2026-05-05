@@ -2169,7 +2169,7 @@ describe("deploy", () => {
 					expectedBindings: [
 						{
 							name: "MEMORY",
-							type: "agent_memory_namespace",
+							type: "agent_memory",
 							namespace: "my-agent-namespace",
 						},
 					],
