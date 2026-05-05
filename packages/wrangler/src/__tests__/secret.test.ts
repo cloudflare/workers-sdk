@@ -445,9 +445,8 @@ describe("wrangler secret", () => {
 				}) => {
 					msw.use(...getMswSuccessMembershipHandlers());
 
-					await expect(
-						runWrangler("secret put the-key --name script-name")
-					).rejects.toThrowErrorMatchingInlineSnapshot(`
+					await expect(runWrangler("secret put the-key --name script-name"))
+						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):

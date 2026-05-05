@@ -77,7 +77,7 @@ export async function fetchAllAccounts(
 		}
 		throw new UserError(
 			`Failed to automatically retrieve account IDs for the logged in user.
-You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your ${configFileName(undefined)} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID"`,
+You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your ${configFileName(undefined)} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 			{ telemetryMessage: "user account fetch permission denied" }
 		);
 	}

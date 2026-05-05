@@ -275,7 +275,9 @@ describe("export", () => {
 
 		await expect(
 			runWrangler("d1 export D1 --output test-remote.sql --remote")
-		).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Found a database with name or binding D1 but it is missing a database_id, which is needed for operations on remote resources. Please create the remote D1 database by deploying your project or running 'wrangler d1 create D1'.]`);
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Found a database with name or binding D1 but it is missing a database_id, which is needed for operations on remote resources. Please create the remote D1 database by deploying your project or running 'wrangler d1 create D1'.]`
+		);
 	});
 
 	it("should handle multiple tables", async ({ expect }) => {

@@ -940,9 +940,8 @@ describe("deploy", () => {
 					])
 				);
 
-				await expect(
-					runWrangler("deploy index.js")
-				).rejects.toMatchInlineSnapshot(`
+				await expect(runWrangler("deploy index.js")).rejects
+					.toMatchInlineSnapshot(`
 					[Error: More than one account available but unable to select one in non-interactive mode.
 					Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 					Available accounts are (\`<name>\`: \`<account_id>\`):
@@ -972,9 +971,8 @@ describe("deploy", () => {
 					])
 				);
 
-				await expect(
-					runWrangler("deploy index.js")
-				).rejects.toMatchInlineSnapshot(`
+				await expect(runWrangler("deploy index.js")).rejects
+					.toMatchInlineSnapshot(`
 					[Error: More than one account available but unable to select one in non-interactive mode.
 					Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 					Available accounts are (\`<name>\`: \`<account_id>\`):
