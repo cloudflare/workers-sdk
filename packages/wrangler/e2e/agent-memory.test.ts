@@ -19,9 +19,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 		);
 
 		expect(normalize(output.stdout)).toContain(
-			"✅ Created Agent Memory namespace"
+			`✅ Created Agent Memory namespace: "tmp-e2e-agent-memory"`
 		);
-		expect(normalize(output.stdout)).toContain(`Name: tmp-e2e-agent-memory`);
 		expect(output.stderr).toBe("");
 
 		// Extract the namespace ID for use in subsequent tests
