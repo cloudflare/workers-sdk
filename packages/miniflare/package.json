@@ -36,6 +36,7 @@
 	"scripts": {
 		"build": "node scripts/build.mjs && pnpm run types:build",
 		"capnp:workerd": "capnp-es node_modules/workerd/workerd.capnp -ots:src/runtime/config/generated --src-prefix=node_modules/workerd",
+		"check:generate-api": "node -r esbuild-register scripts/check-generate-api.ts",
 		"check:type": "tsc",
 		"clean": "node -r esbuild-register ../../tools/clean/clean.ts ./dist ./dist-types",
 		"dev": "concurrently -n esbuild,typechk,typewrk -c yellow,blue,blue.dim \"node scripts/build.mjs --watch\" \"node scripts/types.mjs tsconfig.json --bundle --watch\" \"node scripts/types.mjs src/workers/tsconfig.json --watch\"",
