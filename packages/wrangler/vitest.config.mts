@@ -59,7 +59,6 @@ function embedWorkersPlugin() {
 export default defineConfig({
 	plugins: [embedWorkersPlugin()],
 	test: {
-		testTimeout: 15_000,
 		pool: "forks",
 		retry: 0,
 		include: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
