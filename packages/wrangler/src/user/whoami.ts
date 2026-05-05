@@ -351,8 +351,6 @@ async function getAccounts(
 	return await fetchAllAccounts(complianceConfig, {
 		// `whoami` is informational and should render an empty list rather than fail when the intersection is empty.
 		throwOnEmpty: false,
-		// `whoami` should be tolerant and still display the accounts table even if the `/memberships` is broken for any reason.
-		permissive: true,
 	});
 }
 

@@ -966,41 +966,6 @@ describe("User", () => {
 			);
 		});
 
-		it("should fall back to /accounts in permissive mode when /memberships fails", async ({
-			expect,
-		}) => {
-			msw.use(
-				http.get(
-					"*/accounts",
-					() =>
-						HttpResponse.json(
-							createFetchResult([
-								{ id: "account-1", name: "Account One" },
-								{ id: "account-2", name: "Account Two" },
-							])
-						),
-					{ once: true }
-				),
-				http.get(
-					"*/memberships",
-					() => {
-						return HttpResponse.json({
-							success: false,
-							errors: [{ code: 10000, message: "Authentication error" }],
-							result: null,
-						});
-					},
-					{ once: true }
-				)
-			);
-
-			const accounts = await fetchAllAccounts({}, { permissive: true });
-			expect(accounts).toEqual([
-				{ id: "account-1", name: "Account One" },
-				{ id: "account-2", name: "Account Two" },
-			]);
-		});
-
 		it("should return an empty array instead of throwing when throwOnEmpty is false", async ({
 			expect,
 		}) => {

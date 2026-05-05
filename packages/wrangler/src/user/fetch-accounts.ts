@@ -19,15 +19,6 @@ export interface FetchAllAccountsOptions {
 	 * at least one account, such as account selection.
 	 */
 	throwOnEmpty?: boolean;
-	/**
-	 * When `true`, falls back to the `/accounts` response if `/memberships`
-	 * fails for *any* reason (not just 9109). When `false` (the default), only
-	 * a 9109 (Insufficient permissions) failure on `/memberships` triggers the
-	 * fallback — other errors propagate. Use `true` for informational commands
-	 * like `wrangler whoami` that should be tolerant to any `/memberships` outage.
-	 * Use `false` (the default) for flows where the auth-scoped list must be authoritative.
-	 */
-	permissive?: boolean;
 }
 
 /**
@@ -40,13 +31,15 @@ export interface FetchAllAccountsOptions {
  * Intersecting these two avoids displaying accounts that the current credentials
  * cannot meaningfully use. Account metadata (e.g. name) is taken from `/accounts`.
  *
- * For Account API Tokens, `/memberships` returns a 9109 (Insufficient permissions)
- * error because the token does not have user-level membership read permission. In
- * that case we fall back to the `/accounts` response, which itself is already
- * scoped to the single account that the token can access.
+ * Both endpoints must succeed for the intersection to be computed. The single
+ * exception is Account API Tokens, where `/memberships` returns 9109
+ * (Insufficient permissions) by design — the token does not have user-level
+ * membership read permission. In that case we fall back to the `/accounts`
+ * response, which itself is already scoped to the single account that the
+ * token can access. Any other failure on either endpoint is propagated.
  *
  * @param complianceConfig - The compliance configuration for API requests
- * @param options - Optional flags controlling empty-result and error handling
+ * @param options - Optional flags controlling empty-result handling
  * @returns The list of accounts the current login auth has access to
  * @throws {UserError} If no accounts are found and `throwOnEmpty` is `true`
  * @throws {UserError} If `/memberships` returns 9109 and `/accounts` is unusable
@@ -55,7 +48,7 @@ export async function fetchAllAccounts(
 	complianceConfig: ComplianceConfig,
 	options: FetchAllAccountsOptions = {}
 ): Promise<Account[]> {
-	const { throwOnEmpty = true, permissive = false } = options;
+	const { throwOnEmpty = true } = options;
 
 	const [accountsRes, membershipsRes] = await Promise.allSettled([
 		fetchPagedListResult<Account>(complianceConfig, `/accounts`),
@@ -82,28 +75,13 @@ You may have incorrect permissions on your API token. You can skip this account 
 		);
 	}
 
+	// Any other failure on either endpoint is a real failure — surface it so
+	// the user can see the underlying API error.
 	if (membershipsRes.status === "rejected") {
-		// Permissive callers (e.g. `wrangler whoami`) treat /memberships as
-		// best-effort: if it fails for any reason, fall back to /accounts so
-		// the user can still see something useful.
-		if (
-			permissive &&
-			accountsRes.status === "fulfilled" &&
-			accountsRes.value.length > 0
-		) {
-			return accountsRes.value;
-		}
 		throw membershipsRes.reason;
 	}
 	if (accountsRes.status === "rejected") {
-		// /accounts failed but /memberships succeeded — fall back to the membership
-		// list so the user is not blocked when /accounts is temporarily unavailable
-		// or restricted.
-		const membershipAccounts = membershipsRes.value.map((m) => m.account);
-		if (membershipAccounts.length === 0) {
-			throw accountsRes.reason;
-		}
-		return membershipAccounts;
+		throw accountsRes.reason;
 	}
 
 	const membershipIds = new Set(membershipsRes.value.map((m) => m.account.id));

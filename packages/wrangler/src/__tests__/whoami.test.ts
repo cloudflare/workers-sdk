@@ -485,15 +485,21 @@ describe("whoami", () => {
 		expect(output.email).toBe("user@example.com");
 	});
 
-	it("should display membership error on authentication error 10000", async ({
+	it("should fail when /memberships fails with a non-9109 error", async ({
 		expect,
 	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
-		// Both `/memberships` calls (in `fetchAllAccounts` and
-		// `fetchMembershipRoles`) should fail. `fetchAllAccounts` runs in
-		// `permissive` mode for whoami so it falls back to `/accounts`, while
-		// `fetchMembershipRoles` surfaces the auth error to the user.
+		// `fetchAllAccounts` only falls back to `/accounts` when `/memberships`
+		// fails with 9109 (Insufficient permissions). For any other failure —
+		// such as a 10000 authentication error — the underlying API error is
+		// surfaced to the user and `whoami` fails rather than rendering the
+		// accounts table from `/accounts` alone. Use non-once handlers because
+		// `handleError` re-invokes `whoami` to display user info on auth
+		// errors, so `/user` and `/memberships` are each called twice.
 		msw.use(
+			http.get("*/user", () =>
+				HttpResponse.json(createFetchResult({ email: "user@example.com" }))
+			),
 			http.get("*/memberships", () =>
 				HttpResponse.json(
 					createFetchResult(undefined, false, [
@@ -502,55 +508,10 @@ describe("whoami", () => {
 				)
 			)
 		);
-		await runWrangler(`whoami --account "account-2"`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			Getting User settings...
-			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
-			┌─┬─┐
-			│ Account Name │ Account ID │
-			├─┼─┤
-			│ Account One │ account-1 │
-			├─┼─┤
-			│ Account Two │ account-2 │
-			├─┼─┤
-			│ Account Three │ account-3 │
-			└─┴─┘
-			🔓 Token Permissions:
-			Scope (Access)
-
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
-
-			  - account:read
-			  - user:read
-			  - workers:write
-			  - workers_kv:write
-			  - workers_routes:write
-			  - workers_scripts:write
-			  - workers_tail:read
-			  - d1:write
-			  - pages:write
-			  - zone:read
-			  - ssl_certs:write
-			  - ai:write
-			  - ai-search:write
-			  - ai-search:run
-			  - queues:write
-			  - pipelines:write
-			  - secrets_store:write
-			  - artifacts:write
-			  - flagship:write
-			  - containers:write
-			  - cloudchamber:write
-			  - connectivity:admin
-			  - email_routing:write
-			  - email_sending:write
-			  - browser:write
-
-
-			🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"
-		`);
+		await expect(
+			runWrangler(`whoami --account "account-2"`)
+		).rejects.toThrowError(
+			/A request to the Cloudflare API \(\/memberships\) failed/
+		);
 	});
 });
