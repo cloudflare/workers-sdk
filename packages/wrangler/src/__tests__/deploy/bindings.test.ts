@@ -86,7 +86,7 @@ describe("deploy", () => {
 		// Pretend all Agent Memory namespaces exist for the same reason.
 		msw.use(
 			http.get(
-				"*/accounts/:accountId/agentmemory/namespaces/:namespaceName",
+				"*/accounts/:accountId/agent-memory/namespaces/:namespaceName",
 				async () => {
 					return HttpResponse.json(createFetchResult({}));
 				}
