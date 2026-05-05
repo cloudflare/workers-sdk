@@ -4,7 +4,6 @@
 	"type": "module",
 	"scripts": {
 		"build:default": "vite build",
-		"build:no-ssr": "vite build -c ./vite.config.no-ssr.ts",
 		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"preview": "vite preview"
