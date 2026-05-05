@@ -1,6 +1,7 @@
 import {
 	defaultWranglerConfig,
 	FatalError,
+	getCloudflareEnv,
 	getWranglerHideBanner,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -199,7 +200,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				});
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
-					if (!("env" in args) && config.configPath) {
+					if (!("env" in args) && !getCloudflareEnv() && config.configPath) {
 						const { rawConfig } = experimental_readRawConfig(
 							{
 								config: config.configPath,
