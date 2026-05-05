@@ -1602,7 +1602,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))
 
   packages/containers-shared:
     devDependencies:
@@ -4175,8 +4175,8 @@ importers:
         specifier: ^4.0.2
         version: 4.0.2
       tinyexec:
-        specifier: ^1.1.1
-        version: 1.1.1
+        specifier: ^1.1.2
+        version: 1.1.2
       tree-kill:
         specifier: catalog:default
         version: 1.2.2
@@ -5104,8 +5104,8 @@ packages:
   '@cloudflare/util-en-garde@8.0.10':
     resolution: {integrity: sha512-qdCFf90hoZzT4o4xEmxOKUf9+bEJNGh4ANnRYApo6BMyVnHoHEHAQ3nWmGSHBmo+W9hOk2Ik7r1oHLbI0O/RRg==}
 
-  '@cloudflare/util-en-garde@8.0.13':
-    resolution: {integrity: sha512-TJc3D+aA7bU/exJJbKgc07SLpYn1cpDMiYaz8NIxI4MJ8ZbAbZIWt6WYJKrh0m7sUu6+F2eIJPIV5/CFXOWmMw==}
+  '@cloudflare/util-en-garde@8.0.14':
+    resolution: {integrity: sha512-JdXMTsNxfhnGzByaOnQ9dtxI7aug7TgP/pje+gcd3zJNJGRPLTrjnnV60bX3U8EDzpVYJSD4IsW6JLHwOfR+Gw==}
 
   '@cloudflare/util-hooks@1.3.1':
     resolution: {integrity: sha512-gIsPlzgUbMswIE1h8vGK6LZr/Io5yocUl01WCLy5fxEajhCQ0mNLixkD2Uqne+WPTfqzu4jgC5NxYXgl+Hf6yQ==}
@@ -14059,12 +14059,8 @@ packages:
   tinyexec@0.3.2:
     resolution: {integrity: sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==}
 
-  tinyexec@1.0.2:
-    resolution: {integrity: sha512-W/KYk+NFhkmsYpuHq5JykngiOCnxeVL8v8dFnqxSD8qEEdRfXk1SDM6JzNqcERbcGYj9tMrDQBYV9cjgnunFIg==}
-    engines: {node: '>=18'}
-
-  tinyexec@1.1.1:
-    resolution: {integrity: sha512-VKS/ZaQhhkKFMANmAOhhXVoIfBXblQxGX1myCQ2faQrfmobMftXeJPcZGp0gS07ocvGJWDLZGyOZDadDBqYIJg==}
+  tinyexec@1.1.2:
+    resolution: {integrity: sha512-dAqSqE/RabpBKI8+h26GfLq6Vb3JVXs30XYQjdMjaj/c2tS8IYYMbIzP599KtRj7c57/wYApb3QjgRgXmrCukA==}
     engines: {node: '>=18'}
 
   tinyglobby@0.2.15:
@@ -16449,7 +16445,7 @@ snapshots:
   '@cloudflare/types@6.29.1(react@19.2.4)':
     dependencies:
       '@cloudflare/intl-types': 1.5.7(react@19.2.4)
-      '@cloudflare/util-en-garde': 8.0.13
+      '@cloudflare/util-en-garde': 8.0.14
       react: 19.2.4
 
   '@cloudflare/unenv-preset@2.16.0(unenv@2.0.0-rc.24)(workerd@1.20260317.1)':
@@ -16463,7 +16459,7 @@ snapshots:
       fp-ts: 2.13.1
       io-ts: 2.2.19(fp-ts@2.13.1)
 
-  '@cloudflare/util-en-garde@8.0.13':
+  '@cloudflare/util-en-garde@8.0.14':
     dependencies:
       fp-ts: 2.16.11
       io-ts: 2.2.22(fp-ts@2.16.11)
@@ -19907,14 +19903,14 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))':
+  '@vitest/mocker@4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))':
     dependencies:
       '@vitest/spy': 4.1.0
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
       msw: 2.12.4(@types/node@22.15.17)(typescript@5.8.3)
-      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)
+      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)
 
   '@vitest/mocker@4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))':
     dependencies:
@@ -23329,7 +23325,7 @@ snapshots:
     dependencies:
       citty: 0.2.0
       pathe: 2.0.3
-      tinyexec: 1.1.1
+      tinyexec: 1.1.2
 
   object-assign@4.1.1: {}
 
@@ -25362,9 +25358,7 @@ snapshots:
 
   tinyexec@0.3.2: {}
 
-  tinyexec@1.0.2: {}
-
-  tinyexec@1.1.1: {}
+  tinyexec@1.1.2: {}
 
   tinyglobby@0.2.15:
     dependencies:
@@ -25464,7 +25458,7 @@ snapshots:
       rolldown: 1.0.0-beta.44
       rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44)(typescript@5.8.3)
       semver: 7.7.3
-      tinyexec: 1.0.2
+      tinyexec: 1.1.2
       tinyglobby: 0.2.15
       tree-kill: 1.2.2
       unconfig: 7.3.3
@@ -25489,7 +25483,7 @@ snapshots:
       rolldown: 1.0.0-beta.44
       rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44)(typescript@5.9.3)
       semver: 7.7.3
-      tinyexec: 1.0.2
+      tinyexec: 1.1.2
       tinyglobby: 0.2.15
       tree-kill: 1.2.2
       unconfig: 7.3.3
@@ -25514,7 +25508,7 @@ snapshots:
       rolldown: 1.0.0-beta.49
       rolldown-plugin-dts: 0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49)(typescript@5.8.3)
       semver: 7.7.3
-      tinyexec: 1.0.2
+      tinyexec: 1.1.2
       tinyglobby: 0.2.15
       tree-kill: 1.2.2
       unconfig-core: 7.4.1
@@ -26101,7 +26095,7 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.8.1
 
-  vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1):
+  vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.3
@@ -26110,7 +26104,7 @@ snapshots:
       tinyglobby: 0.2.15
     optionalDependencies:
       '@types/node': 22.15.17
-      esbuild: 0.23.1
+      esbuild: 0.27.3
       fsevents: 2.3.3
       jiti: 2.6.1
       tsx: 3.12.10
@@ -26137,10 +26131,10 @@ snapshots:
       mock-socket: 9.3.1
       vitest: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
-  vitest@4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)):
+  vitest@4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)):
     dependencies:
       '@vitest/expect': 4.1.0
-      '@vitest/mocker': 4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))
+      '@vitest/mocker': 4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))
       '@vitest/pretty-format': 4.1.0
       '@vitest/runner': 4.1.0
       '@vitest/snapshot': 4.1.0
@@ -26154,10 +26148,10 @@ snapshots:
       picomatch: 4.0.3
       std-env: 4.0.0
       tinybench: 2.9.0
-      tinyexec: 1.0.2
+      tinyexec: 1.1.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)
+      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
@@ -26183,7 +26177,7 @@ snapshots:
       picomatch: 4.0.3
       std-env: 4.0.0
       tinybench: 2.9.0
-      tinyexec: 1.0.2
+      tinyexec: 1.1.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
       vite: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
@@ -26212,7 +26206,7 @@ snapshots:
       picomatch: 4.0.3
       std-env: 4.0.0
       tinybench: 2.9.0
-      tinyexec: 1.0.2
+      tinyexec: 1.1.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
       vite: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
