@@ -72,7 +72,7 @@ export const versionsDeployCommand = createCommand({
 		},
 		"version-specs": {
 			describe:
-				"Shorthand notation to deploy Worker Version(s) [<version-id>@<percentage>..]",
+				"Shorthand notation to deploy Worker Version(s) [<version-id>@<percentage>..]. Omitted percentages share the remaining traffic.",
 			type: "string",
 			array: true,
 		},
