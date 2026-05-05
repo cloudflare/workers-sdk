@@ -1,3 +1,4 @@
+import { setTimeout } from "node:timers/promises";
 import checkForUpdate from "update-check";
 import type { Result } from "update-check";
 
@@ -15,10 +16,11 @@ const UPDATE_CHECK_TIMEOUT_MS = 3000;
  * "beta" for pre-release versions (0.0.0-*) and "latest" for stable versions.
  *
  * @param name - The npm package name to check
- * @param version - The currently installed version
- * @returns The latest available version string if an update is available, or `undefined` if the package is up-to-date or the check fails
+ * @param version - The current version to compare against
+ * @returns The latest available version string if an update is available,
+ *   or `undefined` if the package is already up-to-date or the check fails
  */
-export async function doUpdateCheck(
+export async function fetchLatestNpmVersion(
 	name: string,
 	version: string
 ): Promise<string | undefined> {
@@ -33,11 +35,7 @@ export async function doUpdateCheck(
 					distTag: version.startsWith("0.0.0") ? "beta" : "latest",
 				}
 			),
-			new Promise<null>((resolve) => {
-				const timer = setTimeout(() => resolve(null), UPDATE_CHECK_TIMEOUT_MS);
-				// Don't let the orphaned timer prevent process exit
-				timer.unref();
-			}),
+			setTimeout(UPDATE_CHECK_TIMEOUT_MS, null),
 		]);
 	} catch {
 		// ignore error

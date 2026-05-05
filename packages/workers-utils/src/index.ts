@@ -99,4 +99,4 @@ export type { Tunnel, TunnelOptions } from "./tunnel";
 export { startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
 
-export { doUpdateCheck } from "./update-check";
+export { fetchLatestNpmVersion } from "./update-check";

@@ -1,4 +1,4 @@
-import { doUpdateCheck } from "@cloudflare/workers-utils";
+import { fetchLatestNpmVersion } from "@cloudflare/workers-utils";
 import {
 	name as wranglerName,
 	version as wranglerVersion,
@@ -19,5 +19,8 @@ let updateCheckPromise: Promise<string | undefined>;
  * @returns The latest available version string if an update exists, or `undefined` if up-to-date or the check fails
  */
 export function updateCheck(): Promise<string | undefined> {
-	return (updateCheckPromise ??= doUpdateCheck(wranglerName, wranglerVersion));
+	return (updateCheckPromise ??= fetchLatestNpmVersion(
+		wranglerName,
+		wranglerVersion
+	));
 }

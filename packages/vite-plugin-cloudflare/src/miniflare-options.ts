@@ -33,7 +33,7 @@ import { getContainerOptions, getDockerPath } from "./containers";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
-import { updateCheck } from "./update-check";
+import { checkForNpmUpdate } from "./update-check";
 import { satisfiesMinimumViteVersion, withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
@@ -678,14 +678,6 @@ export async function getPreviewMiniflareOptions(
 }
 
 /**
- * Prefix of the workerd warning emitted when the requested compatibility date
- * is newer than the binary supports. Used to intercept the message and
- * conditionally suppress it when no plugin update is available.
- */
-const COMPAT_DATE_FALLBACK_WARNING_PREFIX =
-	"The latest compatibility date supported by";
-
-/**
  * A Miniflare logger that forwards messages onto a Vite logger.
  */
 class ViteMiniflareLogger extends Log {
@@ -710,7 +702,11 @@ class ViteMiniflareLogger extends Log {
 	}
 
 	override warn(message: string): void {
-		if (!message.startsWith(COMPAT_DATE_FALLBACK_WARNING_PREFIX)) {
+		// workerd emits a warning when the requested compatibility date is newer
+		// than the binary supports. We intercept it here so we only show it once
+		// and only when a newer version of the plugin is actually available on
+		// npm — otherwise the warning is just noise the user cannot act on.
+		if (!message.startsWith("The latest compatibility date supported by")) {
 			this.logger.warn(message);
 			return;
 		}
@@ -720,7 +716,7 @@ class ViteMiniflareLogger extends Log {
 		}
 		this.#warnedCompatibilityDateFallback = true;
 
-		return void updateCheck().then((maybeNewVersion) => {
+		return void checkForNpmUpdate().then((maybeNewVersion) => {
 			if (maybeNewVersion === undefined) {
 				return;
 			}
