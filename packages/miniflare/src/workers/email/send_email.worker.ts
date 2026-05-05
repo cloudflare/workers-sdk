@@ -22,10 +22,16 @@ function synthesizeMessageId(senderEmail: string): string {
 }
 
 /**
- * Extracts email address from string or EmailAddress object
+ * Extracts the bare email address from a string (which may be in
+ * `"Name" <address>` or plain address format) or EmailAddress object.
  */
 function extractEmailAddress(addr: string | EmailAddress): string {
-	return typeof addr === "string" ? addr : addr.email;
+	if (typeof addr !== "string") {
+		return addr.email;
+	}
+	// Match "Name" <address> or Name <address> or just address
+	const match = addr.match(/<([^>]+)>$/);
+	return match ? match[1].trim() : addr.trim();
 }
 
 /**
