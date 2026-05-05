@@ -352,7 +352,7 @@ export const listTmpAgentMemoryNamespaces = async () => {
 		const queryString = cursor
 			? "?" + new URLSearchParams({ cursor }).toString()
 			: "";
-		const url = `${baseUrl}/agentmemory/namespaces${queryString}`;
+		const url = `${baseUrl}/agent-memory/namespaces${queryString}`;
 
 		const response = await fetch(url, {
 			method: "GET",
@@ -393,7 +393,7 @@ export const listTmpAgentMemoryNamespaces = async () => {
 };
 
 export const deleteAgentMemoryNamespace = async (name: string) => {
-	return await apiFetch(`/agentmemory/namespaces/${name}`, "DELETE");
+	return await apiFetch(`/agent-memory/namespaces/${name}`, "DELETE");
 };
 
 // Note: the container images functions below don't directly use the REST API since
