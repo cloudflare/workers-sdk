@@ -1,4 +1,4 @@
-import { setTimeout } from "node:timers/promises";
+import * as timersPromises from "node:timers/promises";
 import checkForUpdate from "update-check";
 import type { Result } from "update-check";
 
@@ -45,7 +45,7 @@ export async function fetchLatestNpmVersion(
 					distTag: version.startsWith("0.0.0") ? "beta" : "latest",
 				}
 			),
-			setTimeout(UPDATE_CHECK_TIMEOUT_MS, TIMED_OUT, { ref: false }),
+			timersPromises.setTimeout(UPDATE_CHECK_TIMEOUT_MS, TIMED_OUT, { ref: false }),
 		]);
 	} catch {
 		return { status: "failed" };
