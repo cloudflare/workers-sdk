@@ -5,7 +5,7 @@ import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
-	const namespaceName = generateResourceName("agent-memory");
+	const namespaceName = generateResourceName("agent-memory", 8);
 	let namespaceId = "";
 
 	const helper = new WranglerE2ETestHelper();
