@@ -14,19 +14,20 @@ export class DeferredPromise<T> extends Promise<T> {
 			reject: (reason?: any) => void
 		) => void = () => {}
 	) {
-		let promiseResolve: DeferredPromiseResolve<T>;
-		let promiseReject: DeferredPromiseReject;
+		let promiseResolve: DeferredPromiseResolve<T> | undefined = undefined;
+		let promiseReject: DeferredPromiseReject | undefined = undefined;
 		super((resolve, reject) => {
 			promiseResolve = resolve;
 			promiseReject = reject;
 			return executor(resolve, reject);
 		});
-		// Cannot access `this` until after `super`
-		// Safety of `!`: callback passed to `super()` is executed immediately
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		this.resolve = promiseResolve!;
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		this.reject = promiseReject!;
+		// Note: `promiseResolve` and `promiseReject` should be defined
+		//        since `super()` is executed immediately
+		assert(promiseResolve);
+		assert(promiseReject);
+		// Note: Cannot access `this` until after `super`
+		this.resolve = promiseResolve;
+		this.reject = promiseReject;
 	}
 }
 

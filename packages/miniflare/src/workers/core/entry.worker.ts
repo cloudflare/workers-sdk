@@ -282,9 +282,7 @@ function maybeInjectLiveReload(
 	}
 
 	const headers = new Headers(response.headers);
-	// Safety of `!`: `parseInt(null)` is `NaN`
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	const contentLength = parseInt(headers.get("content-length")!);
+	const contentLength = parseInt(headers.get("content-length") ?? "NaN");
 	if (!isNaN(contentLength)) {
 		headers.set(
 			"content-length",

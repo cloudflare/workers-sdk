@@ -391,13 +391,15 @@ export const deployCommand = createCommand({
 			return;
 		}
 
+		let scriptIsDirectory = false;
 		if (!config.configPath) {
 			// Attempt to interactively handle `wrangler deploy <directory>`
 			if (args.script) {
 				try {
 					const stats = statSync(args.script);
 					if (stats.isDirectory()) {
-						args = await handleMaybeAssetsDeployment(args.script, args);
+						scriptIsDirectory = true;
+						args = await promptForMissingAssetFlag(args.script, args);
 					}
 				} catch (error) {
 					// If this is our UserError, re-throw it
@@ -407,10 +409,13 @@ export const deployCommand = createCommand({
 					// If stat fails, let the original flow handle the error
 				}
 			}
-			// attempt to interactively handle `wrangler deploy --assets <directory>` missing compat date or name
-			else if (args.assets && (!args.compatibilityDate || !args.name)) {
-				args = await handleMaybeAssetsDeployment(args.assets, args);
-			}
+		}
+
+		// Interactively prompt for missing deployment config (compat date, and name + config file when no config exists).
+		// Skip when the user was offered an assets deployment and declined (script is still a directory) —
+		// getEntry will produce the appropriate error about the directory entry point.
+		if (!(scriptIsDirectory && !args.assets)) {
+			args = await promptForMissingDeployConfig(args, config);
 		}
 
 		const entry = await getEntry(args, config, "deploy");
@@ -549,14 +554,15 @@ export const deployCommand = createCommand({
 export type DeployArgs = (typeof deployCommand)["args"];
 
 /**
- * Handles the case where:
- * - a user provides a directory as a positional argument probably intending to deploy static assets. e.g. wrangler deploy ./public
- * - a user provides `--assets` but does not provide a name or compatibility date.
- * We then interactively take the user through deployment (missing name and/or compatibility date)
- * and ask to output this as a wrangler.jsonc for future deployments.
- * If this successfully completes, continue deploying with the updated values.
+ * Handles the case where a user provides a directory as a positional argument,
+ * probably intending to deploy static assets. e.g. `wrangler deploy ./public`.
+ * If the user confirms, sets `args.assets` and clears `args.script`.
+ *
+ * @param assetDirectory - The directory path the user provided as the positional argument
+ * @param args - The current deploy command arguments (mutated in place)
+ * @returns The updated deploy args with `assets` set and `script` cleared if the user confirmed
  */
-export async function handleMaybeAssetsDeployment(
+export async function promptForMissingAssetFlag(
 	assetDirectory: string,
 	args: DeployArgs
 ): Promise<DeployArgs> {
@@ -581,60 +587,119 @@ export async function handleMaybeAssetsDeployment(
 		}
 	}
 
-	// Check if name is provided, if not ask for it
-	if (!args.name) {
-		const defaultName = process.cwd().split(path.sep).pop()?.replace("_", "-");
+	return args;
+}
+
+/**
+ * Interactively prompts for missing deployment configuration (name, compatibility date,
+ * and optionally config file writing when no config file exists).
+ * No-op in non-interactive/CI environments or when all required config is already present.
+ *
+ * @param args - The current deploy command arguments (mutated in place)
+ * @param config - The resolved wrangler config, used to check for existing configPath, name, and compatibility_date
+ * @returns The updated deploy args with any prompted values filled in
+ */
+export async function promptForMissingDeployConfig(
+	args: DeployArgs,
+	config: { configPath?: string; compatibility_date?: string; name?: string }
+): Promise<DeployArgs> {
+	if (isNonInteractiveOrCI()) {
+		return args;
+	}
+
+	let promptedForMissing = false;
+
+	// Prompt for name when missing from both CLI args and config
+	if (!args.name && !config.name) {
+		const defaultName = process
+			.cwd()
+			.split(path.sep)
+			.pop()
+			?.replaceAll("_", "-")
+			.trim();
 		const isValidName = defaultName && /^[a-zA-Z0-9-]+$/.test(defaultName);
 		const projectName = await prompt("What do you want to name your project?", {
 			defaultValue: isValidName ? defaultName : "my-project",
 		});
 		args.name = projectName;
 		logger.log("");
+		promptedForMissing = true;
 	}
 
-	// Set compatibility date if not provided
-	if (!args.compatibilityDate) {
-		const compatibilityDate = getTodaysCompatDate();
-		args.compatibilityDate = compatibilityDate;
-		logger.log(
-			`${chalk.bold("No compatibility date found")} Defaulting to today:`,
-			compatibilityDate
-		);
-		logger.log("");
+	// Prompt for compatibility date when missing
+	if (!args.latest && !args.compatibilityDate && !config.compatibility_date) {
+		const compatibilityDateStr = getTodaysCompatDate();
+
+		if (
+			await confirm(
+				`No compatibility date is set. Would you like to use today's date (${compatibilityDateStr})?`
+			)
+		) {
+			args.compatibilityDate = compatibilityDateStr;
+			promptedForMissing = true;
+			logger.log("");
+		} else {
+			throw new UserError(
+				`A compatibility_date is required when publishing. Add it to your ${configFileName(config.configPath)} file or pass \`--compatibility-date\` via CLI.\nSee https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
+				{ telemetryMessage: "missing compatibility date when deploying" }
+			);
+		}
 	}
 
-	// Ask if user wants to write config file
-	const writeConfig = await confirm(
-		`Do you want Wrangler to write a wrangler.json config file to store this configuration?\n${chalk.dim(
-			"This will allow you to simply run `wrangler deploy` on future deployments."
-		)}`
-	);
+	const hasConfigFile = !!config.configPath;
 
-	if (writeConfig) {
-		const configPath = path.join(process.cwd(), "wrangler.jsonc");
-		const jsonString = JSON.stringify(
-			{
-				name: args.name,
-				compatibility_date: args.compatibilityDate,
-				assets: { directory: args.assets },
-			},
-			null,
-			2
+	// When no config file exists and we prompted for missing config, offer to write one
+	if (!hasConfigFile && promptedForMissing) {
+		// When --latest was used, the compat date prompt was skipped but we still
+		// need a concrete date in the config file for future deploys without --latest
+		const effectiveCompatDate =
+			args.compatibilityDate ??
+			(args.latest ? getTodaysCompatDate() : undefined);
+
+		const configContent: Record<string, unknown> = {
+			name: args.name,
+			compatibility_date: effectiveCompatDate,
+		};
+		if (args.script) {
+			configContent.main = args.script;
+		}
+		if (args.assets) {
+			configContent.assets = { directory: args.assets };
+		}
+
+		const writeConfigFile = await confirm(
+			`Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\n${chalk.dim(
+				"This will allow you to simply run `wrangler deploy` on future deployments."
+			)}`
 		);
-		writeFileSync(configPath, jsonString);
-		logger.log(`Wrote \n${jsonString}\n to ${chalk.bold(configPath)}.`);
-		logger.log(
-			`Please run ${chalk.bold("`wrangler deploy`")} instead of ${chalk.bold(
-				`\`wrangler deploy ${args.assets}\``
-			)} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
-		);
-	} else {
-		logger.log(
-			`You should run ${chalk.bold(
-				`wrangler deploy --name ${args.name} --compatibility-date ${args.compatibilityDate} --assets ${args.assets}`
-			)} next time to deploy this Worker without going through this flow again.`
-		);
+
+		if (writeConfigFile) {
+			const configPath = path.join(process.cwd(), "wrangler.jsonc");
+			const jsonString = JSON.stringify(configContent, null, 2);
+			writeFileSync(configPath, jsonString);
+			logger.log(`Wrote \n${jsonString}\n to ${chalk.bold(configPath)}.`);
+			logger.log(
+				`Simply run ${chalk.bold("`wrangler deploy`")} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
+			);
+		} else {
+			const scriptPart = args.script ? `${args.script} ` : "";
+			const flagParts = [
+				args.name ? `--name ${args.name}` : "",
+				effectiveCompatDate
+					? `--compatibility-date ${effectiveCompatDate}`
+					: "",
+				args.assets ? `--assets ${args.assets}` : "",
+			]
+				.filter(Boolean)
+				.join(" ");
+			logger.log(
+				`You should run ${chalk.bold(
+					`wrangler deploy ${scriptPart}${flagParts}`
+				)} next time to deploy this Worker without going through this flow again.`
+			);
+		}
+		logger.log("\nProceeding with deployment...\n");
 	}
-	logger.log("\nProceeding with deployment...\n");
+
 	return args;
 }

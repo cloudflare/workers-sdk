@@ -1,5 +1,31 @@
 # @cloudflare/vite-plugin
 
+## 1.36.0
+
+### Minor Changes
+
+- [#13810](https://github.com/cloudflare/workers-sdk/pull/13810) [`2b8c0cc`](https://github.com/cloudflare/workers-sdk/commit/2b8c0ccb9ede7487bd96cfc51b3262a717bb532c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Stabilize the `secrets` configuration property
+
+  The `secrets` property in the Wrangler config file is no longer experimental and will no longer emit an experimental warning when used. Required secrets are validated during local development and deploy, and used as the source of truth for type generation.
+
+  ```json
+  {
+    "secrets": {
+      "required": ["API_KEY", "DB_PASSWORD"]
+    }
+  }
+  ```
+
+### Patch Changes
+
+- [#13814](https://github.com/cloudflare/workers-sdk/pull/13814) [`a2f9c26`](https://github.com/cloudflare/workers-sdk/commit/a2f9c26b0281cc9d08f19d6f518211442052fec2) Thanks [@edmundhung](https://github.com/edmundhung)! - Deny additional credential files from the Vite dev server
+
+  The Cloudflare Vite plugin now adds `.npmrc`, `.yarnrc`, `.yarnrc.yml`, and more certificate and key file extensions to `server.fs.deny`. This prevents common credential files from being fetched directly during local development.
+
+- Updated dependencies [[`e07825a`](https://github.com/cloudflare/workers-sdk/commit/e07825aa10a4fccae4aa8274032f31d83def0573), [`58899d8`](https://github.com/cloudflare/workers-sdk/commit/58899d8a289d653e5c77398640bd4df64eb2d0ca), [`3020214`](https://github.com/cloudflare/workers-sdk/commit/3020214014066aafd2369469e92f4b91e979ebb4), [`0099265`](https://github.com/cloudflare/workers-sdk/commit/00992655695093ce644bb2916ffd0d924d5abbab), [`25f5ef2`](https://github.com/cloudflare/workers-sdk/commit/25f5ef2a1c93896964fc25ddc40a2e5f8c96d6a4), [`bb27219`](https://github.com/cloudflare/workers-sdk/commit/bb27219651142036180cb1d01650df48d5282800), [`194d75e`](https://github.com/cloudflare/workers-sdk/commit/194d75e3e9af63e60cf4c06b4be5faa92a739c8c), [`12fb5db`](https://github.com/cloudflare/workers-sdk/commit/12fb5db89a31cc6ecccf022dfc7de4622973129d), [`18b9d5b`](https://github.com/cloudflare/workers-sdk/commit/18b9d5b48a6f28f6a0cd4bd9b00919de80463beb), [`9f532f7`](https://github.com/cloudflare/workers-sdk/commit/9f532f7f004329d4ceb0a9ece0527a1eb3d14f2d), [`1127114`](https://github.com/cloudflare/workers-sdk/commit/11271143f0f1ab76497d395712842af8e1ca330d), [`3ceadef`](https://github.com/cloudflare/workers-sdk/commit/3ceadef6abeaf90301e70069a9709b4f5aa400c6), [`2b8c0cc`](https://github.com/cloudflare/workers-sdk/commit/2b8c0ccb9ede7487bd96cfc51b3262a717bb532c), [`1a5cc86`](https://github.com/cloudflare/workers-sdk/commit/1a5cc8680ead7ee02dd45b3e5720ad5dce415e58)]:
+  - wrangler@4.88.0
+  - miniflare@4.20260504.0
+
 ## 1.35.0
 
 ### Minor Changes

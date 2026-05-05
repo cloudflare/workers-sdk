@@ -118,6 +118,8 @@ export function getBindingValue(binding: Binding): string {
 				: String(binding.store_id ?? "");
 		case "artifacts":
 			return String(binding.namespace ?? "");
+		case "flagship":
+			return String(binding.app_id ?? "");
 		case "ratelimit":
 			return String(binding.namespace_id ?? "");
 		case "vpc_service":
@@ -258,6 +260,13 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[artifact.binding] = {
 			type: "artifacts",
 			namespace: artifact.namespace,
+		};
+	}
+
+	for (const flagship of previews?.flagship ?? []) {
+		env[flagship.binding] = {
+			type: "flagship",
+			app_id: flagship.app_id,
 		};
 	}
 

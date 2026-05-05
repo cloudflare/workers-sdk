@@ -50,7 +50,10 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			const defaultDeniedFiles = [
 				".env",
 				".env.*",
-				"*.{crt,pem}",
+				".npmrc",
+				".yarnrc",
+				".yarnrc.yml",
+				"*.{crt,pem,key,pfx,p12,p8,jks}",
 				"**/.git/**",
 				".dev.vars",
 				".dev.vars.*",

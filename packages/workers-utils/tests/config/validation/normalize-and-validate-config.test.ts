@@ -7425,11 +7425,7 @@ describe("normalizeAndValidateConfig()", () => {
 					required: ["API_KEY", "DATABASE_PASSWORD"],
 				});
 				expect(diagnostics.hasErrors()).toBe(false);
-				// Expect experimental warning
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toContain(
-					'"secrets" fields are experimental'
-				);
+				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
 			it("should error if secrets is not an object", ({ expect }) => {
@@ -9476,6 +9472,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 						kv_namespaces: [{ binding: "MY_KV", id: "preview-kv-id" }],
 						r2_buckets: [{ binding: "MY_R2", bucket_name: "preview-bucket" }],
+						flagship: [{ binding: "FLAGS", app_id: "flagship-app-id" }],
 						observability: { enabled: true },
 						limits: { cpu_ms: 50 },
 					},
