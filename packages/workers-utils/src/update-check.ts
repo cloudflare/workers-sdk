@@ -6,7 +6,7 @@ import type { Result } from "update-check";
 // The `update-check` library has its own 2s socket timeout, but if the first
 // request gets a 4xx it retries with auth — potentially doubling the wait.
 // This caps the total wall-clock time for the entire operation.
-const UPDATE_CHECK_TIMEOUT_MS = 3000;
+const UPDATE_CHECK_TIMEOUT_MS = 3_000;
 
 // Sentinel value used to distinguish a timeout from the library returning null
 // (which means "already up-to-date").
