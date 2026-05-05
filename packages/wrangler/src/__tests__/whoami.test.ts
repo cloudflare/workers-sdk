@@ -485,15 +485,83 @@ describe("whoami", () => {
 		expect(output.email).toBe("user@example.com");
 	});
 
-	it("should fail when /memberships fails with a non-9109 error", async ({
+	it("should display membership error on authentication error 10000", async ({
 		expect,
 	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
-		// `fetchAllAccounts` only falls back to `/accounts` when `/memberships`
-		// fails with 9109 (Insufficient permissions). For any other failure —
-		// such as a 10000 authentication error — the underlying API error is
-		// surfaced to the user and `whoami` fails rather than rendering the
-		// accounts table from `/accounts` alone. Use non-once handlers because
+		// `fetchAllAccounts` falls back to `/accounts` when `/memberships`
+		// fails with 9109 (Insufficient permissions) or 10000 (Authentication
+		// error), so the accounts table still renders. The separate
+		// `fetchMembershipRoles` call also fails with 10000 and surfaces the
+		// "Unable to get membership roles" hint to the user.
+		msw.use(
+			http.get("*/memberships", () =>
+				HttpResponse.json(
+					createFetchResult(undefined, false, [
+						{ code: 10000, message: "Authentication error" },
+					])
+				)
+			)
+		);
+		await runWrangler(`whoami --account "account-2"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Getting User settings...
+			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			┌─┬─┐
+			│ Account Name │ Account ID │
+			├─┼─┤
+			│ Account One │ account-1 │
+			├─┼─┤
+			│ Account Two │ account-2 │
+			├─┼─┤
+			│ Account Three │ account-3 │
+			└─┴─┘
+			🔓 Token Permissions:
+			Scope (Access)
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
+
+			  - account:read
+			  - user:read
+			  - workers:write
+			  - workers_kv:write
+			  - workers_routes:write
+			  - workers_scripts:write
+			  - workers_tail:read
+			  - d1:write
+			  - pages:write
+			  - zone:read
+			  - ssl_certs:write
+			  - ai:write
+			  - ai-search:write
+			  - ai-search:run
+			  - queues:write
+			  - pipelines:write
+			  - secrets_store:write
+			  - artifacts:write
+			  - flagship:write
+			  - containers:write
+			  - cloudchamber:write
+			  - connectivity:admin
+			  - email_routing:write
+			  - email_sending:write
+			  - browser:write
+
+
+			🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"
+		`);
+	});
+
+	it("should fail when /memberships fails with a non-tolerated error", async ({
+		expect,
+	}) => {
+		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		// `fetchAllAccounts` only tolerates 9109 (Insufficient permissions) and
+		// 10000 (Authentication error) on `/memberships`. Any other failure is
+		// propagated and `whoami` fails. Use non-once handlers because
 		// `handleError` re-invokes `whoami` to display user info on auth
 		// errors, so `/user` and `/memberships` are each called twice.
 		msw.use(
@@ -503,7 +571,7 @@ describe("whoami", () => {
 			http.get("*/memberships", () =>
 				HttpResponse.json(
 					createFetchResult(undefined, false, [
-						{ code: 10000, message: "Authentication error" },
+						{ code: 1003, message: "Invalid something" },
 					])
 				)
 			)

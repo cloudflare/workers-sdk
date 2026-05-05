@@ -3,10 +3,20 @@ import { fetchPagedListResult } from "../cfetch";
 import type { Account } from "./shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
-const INSUFFICIENT_PERMISSIONS_CODE = 9109;
+// Cloudflare API error codes returned by `/memberships` that mean "the
+// current auth cannot read memberships". When `/memberships` fails with one
+// of these we fall back to `/accounts` so the user is not blocked by an
+// auth-specific limitation on a single endpoint:
+//   - 9109 (Insufficient permissions): structural for Account API Tokens,
+//     which cannot read user-level memberships at all.
+//   - 10000 (Authentication error): the token is not accepted by the
+//     `/memberships` endpoint, but `/accounts` may still work for the same
+//     auth (e.g. tokens missing the membership read scope).
+const MEMBERSHIPS_INACCESSIBLE_CODES = new Set([9109, 10000]);
 
-function isCode(err: unknown, code: number): boolean {
-	return (err as { code?: number } | undefined)?.code === code;
+function isMembershipsInaccessible(err: unknown): boolean {
+	const code = (err as { code?: number } | undefined)?.code;
+	return code !== undefined && MEMBERSHIPS_INACCESSIBLE_CODES.has(code);
 }
 
 export interface FetchAllAccountsOptions {
@@ -31,18 +41,17 @@ export interface FetchAllAccountsOptions {
  * Intersecting these two avoids displaying accounts that the current credentials
  * cannot meaningfully use. Account metadata (e.g. name) is taken from `/accounts`.
  *
- * Both endpoints must succeed for the intersection to be computed. The single
- * exception is Account API Tokens, where `/memberships` returns 9109
- * (Insufficient permissions) by design — the token does not have user-level
- * membership read permission. In that case we fall back to the `/accounts`
- * response, which itself is already scoped to the single account that the
- * token can access. Any other failure on either endpoint is propagated.
+ * If `/memberships` returns a code that indicates it is inaccessible to the
+ * current auth — 9109 (Insufficient permissions) or 10000 (Authentication
+ * error) — we fall back to the `/accounts` response, which is itself scoped
+ * to what the auth can access. Any other failure on either endpoint is
+ * propagated so the underlying API error reaches the user.
  *
  * @param complianceConfig - The compliance configuration for API requests
  * @param options - Optional flags controlling empty-result handling
  * @returns The list of accounts the current login auth has access to
  * @throws {UserError} If no accounts are found and `throwOnEmpty` is `true`
- * @throws {UserError} If `/memberships` returns 9109 and `/accounts` is unusable
+ * @throws {UserError} If `/memberships` is inaccessible and `/accounts` is unusable
  */
 export async function fetchAllAccounts(
 	complianceConfig: ComplianceConfig,
@@ -58,12 +67,12 @@ export async function fetchAllAccounts(
 		),
 	]);
 
-	// Account API Tokens cannot read /memberships — fall back to /accounts only.
-	// This preserves prior behavior where Account API Tokens see their single
-	// associated account.
+	// `/memberships` is inaccessible for this auth (e.g. Account API Tokens
+	// hit 9109; tokens missing the membership read scope hit 10000). Fall
+	// back to `/accounts`, which is already scoped to what the auth can use.
 	if (
 		membershipsRes.status === "rejected" &&
-		isCode(membershipsRes.reason, INSUFFICIENT_PERMISSIONS_CODE)
+		isMembershipsInaccessible(membershipsRes.reason)
 	) {
 		if (accountsRes.status === "fulfilled" && accountsRes.value.length > 0) {
 			return accountsRes.value;

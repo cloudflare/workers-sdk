@@ -944,7 +944,67 @@ describe("User", () => {
 			);
 		});
 
-		it("should propagate non-9109 /memberships errors by default", async ({
+		it("should fall back to /accounts when /memberships returns 10000 (Authentication error)", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/accounts",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{ id: "account-1", name: "Account One" },
+								{ id: "account-2", name: "Account Two" },
+							])
+						),
+					{ once: true }
+				),
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [{ code: 10000, message: "Authentication error" }],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			const accounts = await fetchAllAccounts({});
+			expect(accounts).toEqual([
+				{ id: "account-1", name: "Account One" },
+				{ id: "account-2", name: "Account Two" },
+			]);
+		});
+
+		it("should throw a helpful error on 10000 when /accounts is also unusable", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get("*/accounts", () => HttpResponse.json(createFetchResult([])), {
+					once: true,
+				}),
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [{ code: 10000, message: "Authentication error" }],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/incorrect permissions on your API token/
+			);
+		});
+
+		it("should propagate /memberships errors that are not 9109 or 10000", async ({
 			expect,
 		}) => {
 			msw.use(
@@ -953,7 +1013,7 @@ describe("User", () => {
 					() => {
 						return HttpResponse.json({
 							success: false,
-							errors: [{ code: 10000, message: "Authentication error" }],
+							errors: [{ code: 1003, message: "Invalid something" }],
 							result: null,
 						});
 					},
