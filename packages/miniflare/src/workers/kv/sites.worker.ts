@@ -69,7 +69,10 @@ async function* walkDirectory(
 }
 
 const encoder = new TextEncoder();
-function arrayCompare(a: Uint8Array, b: Uint8Array): number {
+function arrayCompare(
+	a: Uint8Array = new Uint8Array(),
+	b: Uint8Array = new Uint8Array()
+): number {
 	const minLength = Math.min(a.length, b.length);
 	for (let i = 0; i < minLength; i++) {
 		const aElement = a[i];
@@ -104,9 +107,7 @@ async function handleListRequest(
 		if (prefix !== undefined && !name.startsWith(prefix)) continue;
 		keys.push({ name, encodedName: encoder.encode(name) });
 	}
-	// Safety of `!`: all objects we just pushed to `keys` define `encodedName`
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	keys.sort((a, b) => arrayCompare(a.encodedName!, b.encodedName!));
+	keys.sort((a, b) => arrayCompare(a.encodedName, b.encodedName));
 	// Remove `encodedName`s, so they don't get returned
 	for (const key of keys) delete key.encodedName;
 

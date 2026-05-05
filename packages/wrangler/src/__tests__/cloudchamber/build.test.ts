@@ -461,7 +461,11 @@ describe("buildAndMaybePush", () => {
 		});
 		await expect(
 			runWrangler("containers build ./container-context -t test-app:tag")
-		).rejects.toThrow(new UserError(errorMessage));
+		).rejects.toThrow(
+			new UserError(errorMessage, {
+				telemetryMessage: "cloudchamber build image operation failed",
+			})
+		);
 	});
 
 	it("should throw UserError when docker login fails", async ({ expect }) => {
@@ -472,6 +476,10 @@ describe("buildAndMaybePush", () => {
 		);
 		await expect(
 			runWrangler("containers build ./container-context -t test-app:tag -p")
-		).rejects.toThrow(new UserError(errorMessage));
+		).rejects.toThrow(
+			new UserError(errorMessage, {
+				telemetryMessage: "cloudchamber build image operation failed",
+			})
+		);
 	});
 });

@@ -279,18 +279,19 @@ export const deployCommand = createCommand({
 		if (args.nodeCompat) {
 			throw new UserError(
 				"The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "deploy command node compat unsupported" }
 			);
 		}
 	},
 	async handler(args, { config }) {
 		const shouldRunAutoConfig =
 			args.experimentalAutoconfig &&
-			// If there is a positional parameter or an assets directory specified via --assets then
-			// we don't want to run autoconfig since we assume that the user knows what they are doing
-			// and that they are specifying what needs to be deployed
+			// If there is a positional parameter, an assets directory specified via --assets, or an
+			// explicit --config path then we don't want to run autoconfig since we assume that the
+			// user knows what they are doing and that they are specifying what needs to be deployed
 			!args.script &&
-			!args.assets;
+			!args.assets &&
+			!args.config;
 
 		if (
 			config.pages_build_output_dir &&
@@ -300,7 +301,7 @@ export const deployCommand = createCommand({
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
 					"For Pages, please run `wrangler pages deploy` instead.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "deploy command pages project mismatch" }
 			);
 		}
 
@@ -380,6 +381,8 @@ export const deployCommand = createCommand({
 			// https://github.com/cloudflare/workers-sdk/pull/11694 and https://github.com/cloudflare/workers-sdk/pull/11710)
 			// but as a precaution we're gating the feature under the autoconfig flag for the time being
 			args.experimentalAutoconfig &&
+			// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate to open-next
+			!args.config &&
 			!args.dryRun &&
 			(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
 
@@ -413,7 +416,10 @@ export const deployCommand = createCommand({
 		const entry = await getEntry(args, config, "deploy");
 		validateAssetsArgsAndConfig(args, config);
 
-		const assetsOptions = getAssetsOptions(args, config);
+		const assetsOptions = getAssetsOptions({
+			args,
+			config,
+		});
 
 		if (args.latest) {
 			logger.warn(
@@ -452,7 +458,7 @@ export const deployCommand = createCommand({
 		if (!name) {
 			throw new UserError(
 				'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-				{ telemetryMessage: true }
+				{ telemetryMessage: "deploy command missing worker name" }
 			);
 		}
 

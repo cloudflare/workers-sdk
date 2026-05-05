@@ -4,7 +4,13 @@
  * Set to `true` to duplicate `message`.
  *  */
 export type TelemetryMessage = {
-	telemetryMessage?: string | true;
+	telemetryMessage: string | boolean;
+};
+
+type UserErrorOptions = ErrorOptions & TelemetryMessage;
+
+type FatalErrorOptions = UserErrorOptions & {
+	code?: number;
 };
 /**
  * Base class for errors where the user has done something wrong. These are not
@@ -14,32 +20,32 @@ export type TelemetryMessage = {
  */
 export class UserError extends Error {
 	telemetryMessage: string | undefined;
-	constructor(
-		message?: string | undefined,
-		options?: (ErrorOptions & TelemetryMessage) | undefined
-	) {
+	constructor(message: string, options: UserErrorOptions) {
 		super(message, options);
 		// Restore prototype chain:
 		// https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-2.html#support-for-newtarget
 		Object.setPrototypeOf(this, new.target.prototype);
 		this.telemetryMessage =
-			options?.telemetryMessage === true ? message : options?.telemetryMessage;
+			typeof options?.telemetryMessage === "string"
+				? options.telemetryMessage
+				: options?.telemetryMessage
+					? message
+					: undefined;
 	}
 }
 
 export class DeprecationError extends UserError {
-	constructor(message: string, options?: TelemetryMessage) {
+	constructor(message: string, options: TelemetryMessage) {
 		super(`Deprecation:\n${message}`, options);
 	}
 }
 
 export class FatalError extends UserError {
-	constructor(
-		message?: string,
-		readonly code?: number | undefined,
-		options?: TelemetryMessage
-	) {
+	readonly code: number | undefined;
+
+	constructor(message: string, options: FatalErrorOptions) {
 		super(message, options);
+		this.code = options.code;
 	}
 }
 
@@ -50,18 +56,12 @@ export class CommandLineArgsError extends UserError {}
  *
  * To use, pass stringify'd json into the constructor like so:
  * ```js
- * throw new JsonFriendlyFatalError(JSON.stringify({ error: messageToDisplay });
+ * throw new JsonFriendlyFatalError(JSON.stringify({ error: messageToDisplay }), {
+ *   telemetryMessage: false,
+ * });
  * ```
  */
-export class JsonFriendlyFatalError extends FatalError {
-	constructor(
-		message?: string,
-		readonly code?: number,
-		options?: TelemetryMessage
-	) {
-		super(message, code, options);
-	}
-}
+export class JsonFriendlyFatalError extends FatalError {}
 
 export class MissingConfigError extends Error {
 	telemetryMessage: string | undefined;
@@ -79,16 +79,11 @@ export class MissingConfigError extends Error {
 export function createFatalError(
 	message: unknown,
 	isJson: boolean,
-	code?: number,
-	telemetryMessage?: TelemetryMessage
+	options: FatalErrorOptions
 ): Error {
 	if (isJson) {
-		return new JsonFriendlyFatalError(
-			JSON.stringify(message),
-			code,
-			telemetryMessage
-		);
-	} else {
-		return new FatalError(`${message}`, code, telemetryMessage);
+		return new JsonFriendlyFatalError(JSON.stringify(message), options);
 	}
+
+	return new FatalError(`${message}`, options);
 }

@@ -313,7 +313,7 @@ function createTunnelStartupError(
 			: `Check the cloudflared output above for more details, and verify that ${origin.href} is reachable from this machine if this keeps happening.`);
 
 	if (isQuickTunnelRateLimited) {
-		return new UserError(errorMessage);
+		return new UserError(errorMessage, { telemetryMessage: false });
 	}
 
 	return new Error(errorMessage);

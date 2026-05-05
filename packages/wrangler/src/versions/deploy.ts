@@ -111,7 +111,7 @@ export const versionsDeployCommand = createCommand({
 		if (workerName === undefined) {
 			throw new UserError(
 				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-				{ telemetryMessage: true }
+				{ telemetryMessage: "versions deploy missing worker name" }
 			);
 		}
 
@@ -139,7 +139,7 @@ export const versionsDeployCommand = createCommand({
 		// validate we have at least 1 version
 		if (confirmedVersionsToDeploy.length === 0) {
 			throw new UserError("You must select at least 1 version to deploy.", {
-				telemetryMessage: true,
+				telemetryMessage: "versions deploy missing selected versions",
 			});
 		}
 
@@ -147,7 +147,7 @@ export const versionsDeployCommand = createCommand({
 		if (confirmedVersionsToDeploy.length > args.maxVersions) {
 			throw new UserError(
 				`You must select at most ${args.maxVersions} versions to deploy.`,
-				{ telemetryMessage: "You must select at most 2 versions to deploy.`" }
+				{ telemetryMessage: "versions deploy too many selected versions" }
 			);
 		}
 
@@ -656,13 +656,18 @@ export function parseVersionSpecs(
 		if (percentage !== null) {
 			if (isNaN(percentage)) {
 				throw new UserError(
-					`Could not parse percentage value from version-spec positional arg "${spec}"`
+					`Could not parse percentage value from version-spec positional arg "${spec}"`,
+					{ telemetryMessage: "versions deploy percentage parse failed" }
 				);
 			}
 
 			if (percentage < 0 || percentage > 100) {
 				throw new UserError(
-					`Percentage value (${percentage}%) parsed from version-spec positional arg "${spec}" must be between 0 and 100.`
+					`Percentage value (${percentage}%) parsed from version-spec positional arg "${spec}" must be between 0 and 100.`,
+					{
+						telemetryMessage:
+							"versions deploy positional percentage out of range",
+					}
 				);
 			}
 		}
@@ -678,7 +683,9 @@ export function parseVersionSpecs(
 		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 	for (const versionId of args.versionId ?? []) {
 		if (!UUID_REGEX.test(versionId)) {
-			throw new UserError(`Version ID must be a valid UUID (${versionId}).`);
+			throw new UserError(`Version ID must be a valid UUID (${versionId}).`, {
+				telemetryMessage: "versions deploy invalid version id",
+			});
 		}
 
 		versionIds.push(versionId);
@@ -687,7 +694,8 @@ export function parseVersionSpecs(
 	for (const percentage of args.percentage ?? []) {
 		if (percentage < 0 || percentage > 100) {
 			throw new UserError(
-				`Percentage value (${percentage}%) must be between 0 and 100.`
+				`Percentage value (${percentage}%) must be between 0 and 100.`,
+				{ telemetryMessage: "versions deploy percentage out of range" }
 			);
 		}
 
@@ -755,17 +763,24 @@ export function validateTrafficSubtotal(
 
 	if (max === min && (isAbove || isBelow)) {
 		throw new UserError(
-			`Sum of specified percentages (${subtotal}%) must be ${max}%`
+			`Sum of specified percentages (${subtotal}%) must be ${max}%`,
+			{ telemetryMessage: "versions deploy traffic subtotal mismatch" }
 		);
 	}
 	if (isAbove) {
 		throw new UserError(
-			`Sum of specified percentages (${subtotal}%) must be at most ${max}%`
+			`Sum of specified percentages (${subtotal}%) must be at most ${max}%`,
+			{
+				telemetryMessage: "versions deploy traffic subtotal above maximum",
+			}
 		);
 	}
 	if (isBelow) {
 		throw new UserError(
-			`Sum of specified percentages (${subtotal}%) must be at least ${min}%`
+			`Sum of specified percentages (${subtotal}%) must be at least ${min}%`,
+			{
+				telemetryMessage: "versions deploy traffic subtotal below minimum",
+			}
 		);
 	}
 }

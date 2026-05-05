@@ -97,7 +97,9 @@ type SshArgs = HandlerArgs<typeof sshArgDefs>;
 
 async function sshCommand(sshArgs: SshArgs, _config: Config) {
 	if (sshArgs.ID.length !== 64) {
-		throw new UserError(`Expected an instance ID but got ${sshArgs.ID}`);
+		throw new UserError(`Expected an instance ID but got ${sshArgs.ID}`, {
+			telemetryMessage: "containers ssh invalid instance id",
+		});
 	}
 
 	// Check that ssh is enabled

@@ -10,6 +10,7 @@
 		"build:default": "vite build --app",
 		"check:type": "tsc --build",
 		"dev": "vite dev",
+		"dev:new-module-registry": "vite dev -c ./vite.config.new-module-registry.ts",
 		"preview": "vite preview"
 	},
 	"devDependencies": {

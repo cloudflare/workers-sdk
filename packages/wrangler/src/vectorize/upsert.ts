@@ -49,7 +49,8 @@ export const vectorizeUpsertCommand = createCommand({
 	async handler(args, { config }) {
 		if (!(await isValidFile(args.file))) {
 			throw new UserError(
-				`🚨 Cannot read invalid or empty file: ${args.file}.`
+				`🚨 Cannot read invalid or empty file: ${args.file}.`,
+				{ telemetryMessage: "vectorize upsert invalid file" }
 			);
 		}
 
@@ -57,7 +58,8 @@ export const vectorizeUpsertCommand = createCommand({
 
 		if (Number(args.batchSize) > VECTORIZE_MAX_BATCH_SIZE) {
 			throw new UserError(
-				`🚨 The global rate limit for the Cloudflare API is 1200 requests per five minutes. Vectorize indexes currently limit upload batches to ${VECTORIZE_MAX_BATCH_SIZE} records at a time to stay within the service limits.`
+				`🚨 The global rate limit for the Cloudflare API is 1200 requests per five minutes. Vectorize indexes currently limit upload batches to ${VECTORIZE_MAX_BATCH_SIZE} records at a time to stay within the service limits.`,
+				{ telemetryMessage: "vectorize upsert batch size too large" }
 			);
 		}
 

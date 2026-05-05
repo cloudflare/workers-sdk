@@ -124,8 +124,7 @@ export const d1ExecuteCommand = createCommand({
 			throw createFatalError(
 				`Error: can't provide both --command and --file.`,
 				json,
-				undefined,
-				{ telemetryMessage: true }
+				{ telemetryMessage: "d1 execute conflicting command and file" }
 			);
 		}
 
@@ -180,7 +179,8 @@ export const d1ExecuteCommand = createCommand({
 				const messageToDisplay =
 					error.name === "APIError" ? error : { text: error.message };
 				throw new JsonFriendlyFatalError(
-					JSON.stringify({ error: messageToDisplay }, null, 2)
+					JSON.stringify({ error: messageToDisplay }, null, 2),
+					{ telemetryMessage: "d1 execute query failed" }
 				);
 			} else {
 				throw error;
@@ -228,18 +228,27 @@ export async function executeSql({
 			? ({ command } as ExecuteInput)
 			: null;
 	if (!input) {
-		throw new UserError(`Error: must provide --command or --file.`);
+		throw new UserError(`Error: must provide --command or --file.`, {
+			telemetryMessage: "d1 execute missing command or file",
+		});
 	}
 	if (local && remote) {
 		throw new UserError(
-			`Error: can't use --local and --remote at the same time`
+			`Error: can't use --local and --remote at the same time`,
+			{
+				telemetryMessage: "d1 execute conflicting local and remote flags",
+			}
 		);
 	}
 	if (preview && !remote) {
-		throw new UserError(`Error: can't use --preview without --remote`);
+		throw new UserError(`Error: can't use --preview without --remote`, {
+			telemetryMessage: "d1 execute preview requires remote",
+		});
 	}
 	if (persistTo && !local) {
-		throw new UserError(`Error: can't use --persist-to without --local`);
+		throw new UserError(`Error: can't use --persist-to without --local`, {
+			telemetryMessage: "d1 execute persist-to requires local",
+		});
 	}
 	if (input.file) {
 		await checkForSQLiteBinary(input.file);
@@ -283,7 +292,8 @@ async function executeLocally({
 	});
 	if (!localDB) {
 		throw new UserError(
-			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`
+			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`,
+			{ telemetryMessage: "d1 execute local database not found in config" }
 		);
 	}
 
@@ -316,7 +326,9 @@ async function executeLocally({
 		results = await db.batch(queries.map((query) => db.prepare(query)));
 	} catch (e: unknown) {
 		const cause = ((e as { cause?: unknown })?.cause ?? e) as Error;
-		throw new UserError(cause.message);
+		throw new UserError(cause.message, {
+			telemetryMessage: "d1 execute local query failed",
+		});
 	} finally {
 		await mf.dispose();
 	}
@@ -378,7 +390,8 @@ async function executeRemotely({
 	if (preview) {
 		if (!db.previewDatabaseUuid) {
 			throw new UserError(
-				`Please define a \`preview_database_id\` in your ${configFileName(config.configPath)} file to execute your queries against a preview database`
+				`Please define a \`preview_database_id\` in your ${configFileName(config.configPath)} file to execute your queries against a preview database`,
+				{ telemetryMessage: "d1 execute missing preview database id" }
 			);
 		}
 		db.uuid = db.previewDatabaseUuid;
@@ -439,7 +452,10 @@ async function executeRemotely({
 		);
 
 		if (finalResponse.status !== "complete") {
-			throw new APIError({ text: `D1 reset before execute completed!` });
+			throw new APIError({
+				text: `D1 reset before execute completed!`,
+				telemetryMessage: false,
+			});
 		}
 
 		const {
@@ -509,17 +525,21 @@ async function uploadAndBeginIngestion(
 
 	if (uploadResponse.status !== 200) {
 		throw new UserError(
-			`File could not be uploaded. Please retry.\nGot response: ${await uploadResponse.text()}`
+			`File could not be uploaded. Please retry.\nGot response: ${await uploadResponse.text()}`,
+			{ telemetryMessage: "d1 execute import file upload failed" }
 		);
 	}
 
 	const etagResponse = uploadResponse.headers.get("etag");
 	if (!etagResponse) {
-		throw new UserError(`File did not upload successfully. Please retry.`);
+		throw new UserError(`File did not upload successfully. Please retry.`, {
+			telemetryMessage: "d1 execute import upload missing etag",
+		});
 	}
 	if (etag !== etagResponse.replace(/^"|"$/g, "")) {
 		throw new UserError(
-			`File contents did not upload successfully. Please retry.`
+			`File contents did not upload successfully. Please retry.`,
+			{ telemetryMessage: "d1 execute import upload etag mismatch" }
 		);
 	}
 
@@ -539,7 +559,9 @@ async function pollUntilComplete(
 	db: Database
 ): Promise<ImportPollingResponse> {
 	if (!response.success) {
-		throw new UserError(response.error);
+		throw new UserError(response.error, {
+			telemetryMessage: "d1 execute import polling failed",
+		});
 	}
 
 	response.messages.forEach((line) => {
@@ -552,6 +574,7 @@ async function pollUntilComplete(
 		throw new APIError({
 			text: response.errors?.join("\n"),
 			notes: response.messages.map((text) => ({ text })),
+			telemetryMessage: false,
 		});
 	} else {
 		const newResponse = await d1ApiPost<ImportPollingResponse | PollingFailure>(
@@ -630,7 +653,8 @@ async function checkForSQLiteBinary(filename: string) {
 		await fd.read(buffer, 0, 15);
 	} catch {
 		throw new UserError(
-			`Unable to read SQL text file "${filename}". Please check the file path and try again.`
+			`Unable to read SQL text file "${filename}". Please check the file path and try again.`,
+			{ telemetryMessage: "d1 execute unable to read sql file" }
 		);
 	} finally {
 		await fd?.close();
@@ -638,7 +662,8 @@ async function checkForSQLiteBinary(filename: string) {
 
 	if (buffer.toString("utf8") === "SQLite format 3") {
 		throw new UserError(
-			"Provided file is a binary SQLite database file instead of an SQL text file. The execute command can only process SQL text files. Please export an SQL file from your SQLite database and try again."
+			"Provided file is a binary SQLite database file instead of an SQL text file. The execute command can only process SQL text files. Please export an SQL file from your SQLite database and try again.",
+			{ telemetryMessage: "d1 execute provided sqlite binary file" }
 		);
 	}
 }

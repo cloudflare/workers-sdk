@@ -293,6 +293,26 @@ async function buildProjectWorkerOptions(
 	);
 	const runnerWorker = customOptions.miniflare ?? {};
 
+	// `unstable_getMiniflareWorkerOptions` returns service bindings whose `name`
+	// is the literal `config.name` for self-references (e.g. `{ name: "my-worker" }`
+	// when the wrangler config has `name: "my-worker"`). We rename the runner
+	// worker below, so rewrite those self-references to `kCurrentWorker` first.
+	// That symbol resolves at request time relative to the referer worker, so it
+	// survives the rename.
+	const wranglerWorkerName = getWranglerWorkerName(relativeWranglerConfigPath);
+	if (wranglerWorkerName && runnerWorker.serviceBindings) {
+		for (const [key, sb] of Object.entries(runnerWorker.serviceBindings)) {
+			if (
+				typeof sb === "object" &&
+				sb !== null &&
+				"name" in sb &&
+				sb.name === wranglerWorkerName
+			) {
+				runnerWorker.serviceBindings[key] = { ...sb, name: kCurrentWorker };
+			}
+		}
+	}
+
 	runnerWorker.name = getRunnerName(project);
 
 	// Make sure the worker has the `nodejs_compat` and `export_commonjs_default`

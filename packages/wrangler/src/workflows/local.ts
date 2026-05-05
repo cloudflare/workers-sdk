@@ -66,7 +66,8 @@ export async function fetchLocalResult<T>(
 		const message =
 			error instanceof Error ? error.message : "Unknown network error";
 		throw new UserError(
-			`Could not connect to local dev session on port ${port}. Make sure "wrangler dev" is running.\n  ${message}`
+			`Could not connect to local dev session on port ${port}. Make sure "wrangler dev" is running.\n  ${message}`,
+			{ telemetryMessage: "workflows local connection failed" }
 		);
 	}
 
@@ -76,14 +77,18 @@ export async function fetchLocalResult<T>(
 			.catch(() => null)) as LocalApiResponse<T | null> | null;
 		const errorMessage =
 			json?.errors?.[0]?.message ?? `HTTP ${response.status}`;
-		throw new UserError(`Local API error: ${errorMessage}`);
+		throw new UserError(`Local API error: ${errorMessage}`, {
+			telemetryMessage: "workflows local api error response",
+		});
 	}
 
 	const json = (await response.json()) as LocalApiResponse<T>;
 
 	if (!json.success) {
 		const errorMessage = json.errors?.[0]?.message ?? "Unknown local API error";
-		throw new UserError(`Local API error: ${errorMessage}`);
+		throw new UserError(`Local API error: ${errorMessage}`, {
+			telemetryMessage: "workflows local api unsuccessful response",
+		});
 	}
 
 	return json.result;
@@ -109,7 +114,9 @@ export async function getLocalInstanceIdFromArgs(
 		>(port, `/workflows/${encodeURIComponent(args.name)}/instances`);
 
 		if (instances.length === 0) {
-			throw new UserError(`There are no instances in workflow "${args.name}"`);
+			throw new UserError(`There are no instances in workflow "${args.name}"`, {
+				telemetryMessage: "workflows local latest instance missing",
+			});
 		}
 
 		// Sort by created_on descending if available, otherwise take first (already sorted by server)

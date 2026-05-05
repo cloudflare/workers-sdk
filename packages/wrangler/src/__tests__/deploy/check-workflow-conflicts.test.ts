@@ -19,7 +19,10 @@ function mockWorkflowGet(workflowsByName: Record<string, Workflow | null>) {
 				const workflowName = match[1];
 				const workflow = workflowsByName[workflowName];
 				if (workflow === null || workflow === undefined) {
-					const error = new APIError({ text: "Workflow not found" });
+					const error = new APIError({
+						text: "Workflow not found",
+						telemetryMessage: false,
+					});
 					error.code = WORKFLOW_NOT_FOUND_CODE;
 					throw error;
 				}

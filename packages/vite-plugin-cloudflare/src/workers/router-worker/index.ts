@@ -1,1 +1,4 @@
-export { default } from "@cloudflare/workers-shared/router-worker";
+export {
+	default,
+	RouterInnerEntrypoint,
+} from "@cloudflare/workers-shared/router-worker";

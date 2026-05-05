@@ -42,13 +42,21 @@ export const runDockerCmd = (
 			resolve({ aborted });
 		} else if (!errorHandled) {
 			errorHandled = true;
-			reject(new UserError(`Docker command exited with code: ${code}`));
+			reject(
+				new UserError(`Docker command exited with code: ${code}`, {
+					telemetryMessage: false,
+				})
+			);
 		}
 	});
 	child.on("error", (err) => {
 		if (!errorHandled) {
 			errorHandled = true;
-			reject(new UserError(`Docker command failed: ${err.message}`));
+			reject(
+				new UserError(`Docker command failed: ${err.message}`, {
+					telemetryMessage: false,
+				})
+			);
 		}
 	});
 	return {
@@ -78,7 +86,8 @@ export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
 		return stdout.trim();
 	} catch (error) {
 		throw new UserError(
-			`Failed running docker command: ${(error as Error).message}. Command: ${dockerPath} ${args.join(" ")}`
+			`Failed running docker command: ${(error as Error).message}. Command: ${dockerPath} ${args.join(" ")}`,
+			{ telemetryMessage: false }
 		);
 	}
 };
@@ -104,7 +113,8 @@ export const verifyDockerInstalled = async (
 		throw new UserError(
 			`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.\n` +
 				`Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with DOCKER_HOST.` +
-				`${isDev ? "\nTo suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false." : ""}`
+				`${isDev ? "\nTo suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false." : ""}`,
+			{ telemetryMessage: false }
 		);
 	}
 };
@@ -190,7 +200,8 @@ export async function checkExposedPorts(
 	if (output === "0") {
 		throw new UserError(
 			`The container "${options.class_name}" does not expose any ports. In your Dockerfile, please expose any ports you intend to connect to.\n` +
-				"For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.\n"
+				"For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.\n",
+			{ telemetryMessage: false }
 		);
 	}
 }

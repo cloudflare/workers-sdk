@@ -304,10 +304,10 @@ async function assemblePreviewDeploymentSettings(
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
 	const request: CreatePreviewDeploymentRequestParams = {};
-	const assetsOptions = getAssetsOptions(
-		{ assets: undefined, script: scriptPath },
-		config
-	);
+	const assetsOptions = getAssetsOptions({
+		args: { assets: undefined, script: scriptPath },
+		config,
+	});
 	const deploymentModules = await getDeploymentModules(config, scriptPath, {
 		_headers: assetsOptions?._headers,
 		_redirects: assetsOptions?._redirects,
@@ -781,7 +781,8 @@ export async function handlePreviewCommand(
 		if (!previewName) {
 			throw new UserError(
 				"Could not determine Preview name. No git branch detected. " +
-					"Please provide a Preview name using --name <preview-name>."
+					"Please provide a Preview name using --name <preview-name>.",
+				{ telemetryMessage: "preview command missing preview name" }
 			);
 		}
 	}
@@ -909,7 +910,8 @@ export async function handlePreviewDeleteCommand(
 		if (!previewName) {
 			throw new UserError(
 				"Could not determine Preview name. No git branch detected. " +
-					"Please provide a Preview name using --name <preview-name>."
+					"Please provide a Preview name using --name <preview-name>.",
+				{ telemetryMessage: "preview delete command missing preview name" }
 			);
 		}
 		logger.log(`Using git branch "${previewName}" as Preview name.`);

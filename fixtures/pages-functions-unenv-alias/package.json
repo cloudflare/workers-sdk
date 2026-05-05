@@ -16,11 +16,5 @@
 		"undici": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
-	},
-	"engines": {
-		"node": ">=18"
-	},
-	"volta": {
-		"extends": "../../package.json"
 	}
 }
