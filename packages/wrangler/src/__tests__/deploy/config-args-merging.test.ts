@@ -686,11 +686,7 @@ describe("config/args merging", () => {
 			});
 
 			it("--alias resolves module at bundle time", async ({ expect }) => {
-				writeWranglerConfig({
-					// deploy on main doesn't merge CLI --alias over config.alias,
-					// so we set it in config instead
-					alias: { "some-module": "./aliased.js" },
-				});
+				writeWranglerConfig();
 				fs.writeFileSync(
 					"index.js",
 					`import foo from "some-module"; export default { fetch() { return new Response(foo); } }`
@@ -698,7 +694,7 @@ describe("config/args merging", () => {
 				fs.writeFileSync("aliased.js", `export default "aliased";`);
 				mockUploadWorkerRequest();
 				mockSubDomainRequest();
-				await runWrangler("deploy ./index.js");
+				await runWrangler("deploy ./index.js --alias some-module:./aliased.js");
 				expect(std.err).not.toContain("some-module");
 				expect(std.out).toContain("Uploaded test-name");
 			});
@@ -790,47 +786,6 @@ describe("config/args merging", () => {
 				fs.writeFileSync("aliased.js", `export default "aliased";`);
 				mockGetScript();
 				mockUploadVersion();
-				await runWrangler("versions upload --alias some-module:./aliased.js");
-				expect(std.err).not.toContain("some-module");
-				expect(std.out).toContain("Uploaded test-name");
-			});
-		});
-
-		describe("--alias CLI flag divergence between deploy and versions upload", () => {
-			// BUG: deploy ignores CLI --alias and only uses config.alias.
-			// versions upload correctly merges CLI --alias over config.alias.
-			// deploy/deploy.ts passes `alias: config.alias` to bundleWorker,
-			// ignoring the `props.alias` value that was collected from CLI args.
-
-			it("deploy: --alias CLI flag is IGNORED (bug)", async ({ expect }) => {
-				setupDeployMocks();
-				writeWranglerConfig();
-				fs.writeFileSync(
-					"index.js",
-					`import foo from "some-module"; export default { fetch() { return new Response(foo); } }`
-				);
-				fs.writeFileSync("aliased.js", `export default "aliased";`);
-				// deploy ignores --alias, so the unresolvable import causes a build failure
-				await expect(
-					runWrangler("deploy ./index.js --alias some-module:./aliased.js")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`
-					[Error: Build failed with 1 error:
-					index.js:1:16: ERROR: Could not resolve "some-module"]
-				`);
-			});
-
-			it("versions upload: --alias CLI flag works correctly", async ({
-				expect,
-			}) => {
-				writeWranglerConfig({ main: "./index.js" });
-				fs.writeFileSync(
-					"index.js",
-					`import foo from "some-module"; export default { fetch() { return new Response(foo); } }`
-				);
-				fs.writeFileSync("aliased.js", `export default "aliased";`);
-				mockGetScript();
-				mockUploadVersion();
-				// versions upload merges CLI --alias, so the import resolves
 				await runWrangler("versions upload --alias some-module:./aliased.js");
 				expect(std.err).not.toContain("some-module");
 				expect(std.out).toContain("Uploaded test-name");
