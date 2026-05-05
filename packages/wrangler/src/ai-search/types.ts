@@ -44,8 +44,14 @@ export interface AiSearchInstance {
 	token_id?: string;
 }
 
+export type AiSearchCustomMetadataDataType =
+	| "text"
+	| "number"
+	| "boolean"
+	| "datetime";
+
 export interface AiSearchCustomMetadata {
-	data_type: string;
+	data_type: AiSearchCustomMetadataDataType;
 	field_name: string;
 }
 
