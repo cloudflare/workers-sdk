@@ -373,7 +373,9 @@ export function createWorkerUploadForm(
 			namespace ??= INHERIT_SYMBOL;
 		}
 		if (namespace === undefined) {
-			throw new UserError(`${binding} bindings must have a "namespace" field`);
+			throw new UserError(`${binding} bindings must have a "namespace" field`, {
+				telemetryMessage: false,
+			});
 		}
 
 		if (namespace === INHERIT_SYMBOL) {
