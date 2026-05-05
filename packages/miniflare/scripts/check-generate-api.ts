@@ -9,7 +9,7 @@
  * To update the pinned commit, change OPENAPI_COMMIT below and re-run
  * `OPENAPI_INPUT_PATH=<path> pnpm generate:api` locally.
  */
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -52,7 +52,7 @@ async function main(): Promise<void> {
 	console.log("Checking for uncommitted changes in generated files…");
 	const diffPaths = GENERATED_PATHS.map((p) => join("packages/miniflare", p));
 	try {
-		execSync(`git diff --exit-code -- ${diffPaths.join(" ")}`, {
+		execFileSync("git", ["diff", "--exit-code", "--", ...diffPaths], {
 			cwd: join(miniflareRoot, "../.."),
 			stdio: "inherit",
 		});
