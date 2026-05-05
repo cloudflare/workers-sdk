@@ -5,8 +5,8 @@ export interface AiSearchInstance {
 	id: string;
 	created_at: string;
 	modified_at: string;
-	source: string;
-	type: "r2" | "web-crawler";
+	source?: string;
+	type?: "r2" | "web-crawler";
 	namespace?: string;
 	vectorize_name?: string;
 	ai_gateway_id?: string;

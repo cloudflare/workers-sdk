@@ -227,7 +227,7 @@ export const aiSearchCreateCommand = createCommand({
 		},
 		type: {
 			type: "string",
-			choices: ["r2", "web-crawler"],
+			choices: ["builtin", "r2", "web-crawler"],
 			description: "The source type for the instance.",
 		},
 		"embedding-model": {
@@ -412,12 +412,18 @@ export const aiSearchCreateCommand = createCommand({
 			if (isNonInteractiveOrCI()) {
 				throw new UserError(
 					"Missing required flag in non-interactive mode: --type\n" +
-						"  Pass --type r2 or --type web-crawler.",
+						"  Pass --type builtin, --type r2, or --type web-crawler.",
 					{ telemetryMessage: "ai search create missing type" }
 				);
 			}
 			instanceType = await select("Select the source type:", {
 				choices: [
+					{
+						title: "Builtin",
+						description:
+							"Cloudflare-managed storage (no external bucket required)",
+						value: "builtin" as const,
+					},
 					{
 						title: "R2",
 						description: "Index files from an R2 bucket",
@@ -431,6 +437,32 @@ export const aiSearchCreateCommand = createCommand({
 				],
 				defaultOption: 0,
 			});
+		}
+
+		// Builtin storage is fully managed by Cloudflare — it does not accept
+		// a source identifier or any source_params.
+		if (instanceType === "builtin") {
+			const unsupportedFlags: string[] = [];
+			if (args.source !== undefined) {
+				unsupportedFlags.push("--source");
+			}
+			if (args.prefix !== undefined) {
+				unsupportedFlags.push("--prefix");
+			}
+			if (args.includeItems !== undefined) {
+				unsupportedFlags.push("--include-items");
+			}
+			if (args.excludeItems !== undefined) {
+				unsupportedFlags.push("--exclude-items");
+			}
+			if (unsupportedFlags.length > 0) {
+				throw new UserError(
+					`The following flags are not supported with --type builtin: ${unsupportedFlags.join(", ")}`,
+					{
+						telemetryMessage: false,
+					}
+				);
+			}
 		}
 
 		// 2. Source selection — depends on the type
@@ -540,7 +572,6 @@ export const aiSearchCreateCommand = createCommand({
 				instanceSource = `https://${selectedZone}`;
 			}
 		}
-
 		// 3. Custom metadata (optional). Honors --custom-metadata or
 		// --custom-metadata-schema; otherwise prompts interactively when
 		// running attached to a TTY.
@@ -599,11 +630,17 @@ export const aiSearchCreateCommand = createCommand({
 			}
 		}
 
+		// For builtin storage, omit `type` from the request payload — the API
+		// treats an absent `type` as builtin.
 		const body: Record<string, unknown> = {
 			id: instanceName,
-			source: instanceSource,
-			type: instanceType,
 		};
+		if (instanceType !== "builtin") {
+			body.type = instanceType;
+		}
+		if (instanceSource !== undefined) {
+			body.source = instanceSource;
+		}
 
 		if (args.embeddingModel !== undefined) {
 			body.embedding_model = args.embeddingModel;
@@ -677,8 +714,8 @@ export const aiSearchCreateCommand = createCommand({
 				`Successfully created AI Search instance "${instance.id}"\n` +
 				`  Name:       ${instance.id}\n` +
 				`  Namespace:  ${instance.namespace ?? instanceNamespace}\n` +
-				`  Type:       ${instance.type}\n` +
-				`  Source:     ${instance.source}\n` +
+				`  Type:       ${instance.type ?? "builtin"}\n` +
+				`  Source:     ${instance.source ?? "-"}\n` +
 				`  Model:      ${instance.ai_search_model ?? "default"}\n` +
 				`  Embedding:  ${instance.embedding_model ?? "default"}`;
 			if (instance.custom_metadata && instance.custom_metadata.length > 0) {
