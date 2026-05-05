@@ -5160,6 +5160,7 @@ const validatePreviewsConfig =
 				"secrets_store_secrets",
 				"artifacts",
 				"unsafe_hello_world",
+				"flagship",
 				"worker_loaders",
 				"ratelimits",
 				"vpc_services",
@@ -5397,6 +5398,14 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.unsafe_hello_world`,
 				previews.unsafe_hello_world,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateFlagshipBinding)(
+				diagnostics,
+				`${field}.flagship`,
+				previews.flagship,
 				undefined
 			) && isValid;
 

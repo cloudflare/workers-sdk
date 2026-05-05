@@ -196,6 +196,7 @@ describe("wrangler preview", () => {
 				browser: { binding: "MY_BROWSER" },
 				stream: { binding: "MY_STREAM" },
 				version_metadata: { binding: "MY_VERSION_METADATA" },
+				flagship: [{ binding: "MY_FLAGS", app_id: "flagship-app-id" }],
 			});
 			const bindings = extractConfigBindings(config);
 			expect(bindings).toMatchObject({
@@ -206,6 +207,7 @@ describe("wrangler preview", () => {
 				MY_BROWSER: { type: "browser" },
 				MY_STREAM: { type: "stream" },
 				MY_VERSION_METADATA: { type: "version_metadata" },
+				MY_FLAGS: { type: "flagship", app_id: "flagship-app-id" },
 			});
 		});
 	});
@@ -503,6 +505,90 @@ describe("wrangler preview", () => {
 			await runWrangler("preview --name test-preview");
 
 			expect(std.warn).not.toContain("IMPORTANT_BINDING");
+		});
+
+		test("should use flagship bindings from local previews config", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					flagship: [{ binding: "FLAGS", app_id: "production-app-id" }],
+					previews: {
+						flagship: [{ binding: "FLAGS", app_id: "preview-app-id" }],
+					},
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<string, { type: string; app_id?: string }>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-flagship",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-flagship",
+								preview_id: "preview-id-flagship",
+								preview_name: "test-preview",
+								urls: ["https://flags123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentRequestBody?.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.env?.FLAGS).toMatchObject({
+				type: "flagship",
+				app_id: "preview-app-id",
+			});
+			expect(deploymentRequestBody?.env?.FLAGS).not.toMatchObject({
+				app_id: "production-app-id",
+			});
+			expect(std.out).toContain("preview-app-id");
+			expect(std.warn).not.toContain("FLAGS");
 		});
 
 		test("should not warn about inheritable top-level bindings missing from previews", async ({
