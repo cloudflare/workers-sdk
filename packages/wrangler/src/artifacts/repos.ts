@@ -29,6 +29,12 @@ const namespaceArg = {
 	description: "The Artifacts namespace name",
 } as const;
 
+const repoNameArg = {
+	type: "string",
+	demandOption: true,
+	description: "The Artifacts repository name",
+} as const;
+
 const forceArg = {
 	type: "boolean",
 	alias: "y",
@@ -45,42 +51,37 @@ export const artifactsReposNamespace = createNamespace({
 });
 
 function formatRepoDetails(repo: ArtifactsRepo): Record<string, string> {
-	return Object.fromEntries(
-		[
-			["id", repo.id],
-			["name", repo.name],
-			["description", repo.description ?? ""],
-			["default_branch", repo.default_branch],
-			["remote", repo.remote],
-			["read_only", String(repo.read_only)],
-			repo.status ? ["status", repo.status] : undefined,
-			["created_at", repo.created_at],
-			["updated_at", repo.updated_at],
-			["last_push_at", repo.last_push_at ?? ""],
-			["source", repo.source ?? ""],
-		].filter((entry): entry is [string, string] => entry !== undefined)
-	);
+	return formatDefinedValues([
+		["id", repo.id],
+		["name", repo.name],
+		["description", repo.description ?? ""],
+		["default_branch", repo.default_branch],
+		["remote", repo.remote],
+		["read_only", repo.read_only],
+		["status", repo.status],
+		["created_at", repo.created_at],
+		["updated_at", repo.updated_at],
+		["last_push_at", repo.last_push_at ?? ""],
+		["source", repo.source ?? ""],
+	]);
 }
 
 function formatCreateRepoDetails(
 	repo: ArtifactsCreateRepoResult,
 	readOnly: boolean | undefined
 ): Record<string, string> {
+	// The create response may omit read_only, so preserve the submitted flag for human output.
 	const resolvedReadOnly = repo.read_only ?? readOnly;
 
-	return Object.fromEntries(
-		[
-			["id", repo.id],
-			["name", repo.name],
-			["description", repo.description ?? ""],
-			["default_branch", repo.default_branch],
-			typeof resolvedReadOnly === "boolean"
-				? ["read_only", String(resolvedReadOnly)]
-				: undefined,
-			["remote", repo.remote],
-			["token", repo.token],
-		].filter((entry): entry is [string, string] => entry !== undefined)
-	);
+	return formatDefinedValues([
+		["id", repo.id],
+		["name", repo.name],
+		["description", repo.description ?? ""],
+		["default_branch", repo.default_branch],
+		["read_only", resolvedReadOnly],
+		["remote", repo.remote],
+		["token", repo.token],
+	]);
 }
 
 function formatIssuedTokenDetails(
@@ -94,6 +95,18 @@ function formatIssuedTokenDetails(
 	};
 }
 
+function formatDefinedValues(
+	values: [string, string | boolean | undefined][]
+): Record<string, string> {
+	return Object.fromEntries(
+		values
+			.filter(
+				(entry): entry is [string, string | boolean] => entry[1] !== undefined
+			)
+			.map(([key, value]) => [key, String(value)])
+	);
+}
+
 export const artifactsReposCreateCommand = createCommand({
 	metadata: {
 		description: "Create an Artifacts repository",
@@ -105,11 +118,7 @@ export const artifactsReposCreateCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	args: {
-		name: {
-			type: "string",
-			demandOption: true,
-			description: "The Artifacts repository name",
-		},
+		name: repoNameArg,
 		namespace: namespaceArg,
 		description: {
 			type: "string",
@@ -141,6 +150,7 @@ export const artifactsReposCreateCommand = createCommand({
 		logger.log(
 			`Created Artifacts repo "${repo.name}" in namespace "${args.namespace}".`
 		);
+		// Token-bearing output bypasses logger.log so plaintext tokens are not persisted to debug logs.
 		logger.console(
 			"log",
 			formatLabelledValues(formatCreateRepoDetails(repo, args.readOnly))
@@ -197,11 +207,7 @@ export const artifactsReposGetCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	args: {
-		name: {
-			type: "string",
-			demandOption: true,
-			description: "The Artifacts repository name",
-		},
+		name: repoNameArg,
 		namespace: namespaceArg,
 		json: jsonArg,
 	},
@@ -228,11 +234,7 @@ export const artifactsReposDeleteCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	args: {
-		name: {
-			type: "string",
-			demandOption: true,
-			description: "The Artifacts repository name",
-		},
+		name: repoNameArg,
 		namespace: namespaceArg,
 		force: forceArg,
 		json: jsonArg,
@@ -273,11 +275,7 @@ export const artifactsReposIssueTokenCommand = createCommand({
 	},
 	positionalArgs: ["repo"],
 	args: {
-		repo: {
-			type: "string",
-			demandOption: true,
-			description: "The Artifacts repository name",
-		},
+		repo: repoNameArg,
 		namespace: namespaceArg,
 		scope: {
 			type: "string",
@@ -313,6 +311,7 @@ export const artifactsReposIssueTokenCommand = createCommand({
 		logger.log(
 			`Issued a ${issuedToken.scope} token for repo "${repo}" in namespace "${namespace}".`
 		);
+		// Token-bearing output bypasses logger.log so plaintext tokens are not persisted to debug logs.
 		logger.console(
 			"log",
 			formatLabelledValues(formatIssuedTokenDetails(issuedToken))

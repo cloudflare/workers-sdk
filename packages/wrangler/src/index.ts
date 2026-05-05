@@ -979,7 +979,10 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("kv");
 
 	registry.define([
-		{ command: "wrangler artifacts", definition: artifactsNamespace },
+		{
+			command: "wrangler artifacts",
+			definition: artifactsNamespace,
+		},
 		{
 			command: "wrangler artifacts namespaces",
 			definition: artifactsNamespacesNamespace,
