@@ -35,7 +35,7 @@ export async function fetchLatestNpmVersion(
 					distTag: version.startsWith("0.0.0") ? "beta" : "latest",
 				}
 			),
-			setTimeout(UPDATE_CHECK_TIMEOUT_MS, null),
+			setTimeout(UPDATE_CHECK_TIMEOUT_MS, null, { ref: false }),
 		]);
 	} catch {
 		// ignore error
