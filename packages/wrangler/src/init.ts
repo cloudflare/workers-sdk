@@ -135,12 +135,14 @@ export const init = createCommand({
 
 			// if telemetry is disabled in wrangler, prevent c3 from sending metrics too
 			const metricsConfig = readMetricsConfig();
+			let stdout = "";
+			let stderr = "";
 			try {
 				const childProcess = x(packageManager.type, c3Arguments, {
 					nodeOptions: {
-						// Note: we need to pipe stdout and stderr otherwise they won't be included
-						//       in the command's result/error, but we want it to so that we
-						//       can include those in the error Sentry receives
+						// Note: we capture stdout and stderr via data listeners (rather than
+						//       piping) so the output is both displayed live and available to
+						//       include in the error Sentry receives
 						stdio: ["inherit", "pipe", "pipe"],
 						...(metricsConfig.permission?.enabled === false && {
 							env: { CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1" },
@@ -148,12 +150,18 @@ export const init = createCommand({
 					},
 					throwOnError: true,
 				});
-				childProcess.process?.stdout?.pipe(process.stdout);
-				childProcess.process?.stderr?.pipe(process.stderr);
+				childProcess.process?.stdout?.on("data", (chunk: Buffer) => {
+					stdout += chunk.toString();
+					process.stdout.write(chunk);
+				});
+				childProcess.process?.stderr?.on("data", (chunk: Buffer) => {
+					stderr += chunk.toString();
+					process.stderr.write(chunk);
+				});
 				await childProcess;
 			} catch (e: unknown) {
 				const procError = e as NonZeroExitError;
-				throw new Error(procError.message, {
+				throw new Error(`${procError.message}\n\n${stdout}\n${stderr}`, {
 					// We include the process error as the cause, in this way this
 					// will be reflected in Sentry allowing us to better monitor
 					// C3 errors
