@@ -346,21 +346,12 @@ type AccountInfo = { name: string; id: string };
 async function getAccounts(
 	complianceConfig: ComplianceConfig
 ): Promise<AccountInfo[]> {
-	// Use the shared intersection helper so that `whoami` only displays accounts
-	// that the current login auth can actually use (i.e. those present in both
-	// `/accounts` and `/memberships`). For Account API Tokens — where
-	// `/memberships` returns 9109 — this falls back to `/accounts`, which is
-	// already scoped to the single account the token can access.
-	//
-	// `throwOnEmpty: false` — `whoami` is informational and should render an
-	// empty list rather than fail when the intersection is empty.
-	//
-	// `permissive: true` — `whoami` should still display the accounts table
-	// even if `/memberships` is temporarily unavailable. Failure handling for
-	// the per-account membership-roles section happens separately via
-	// `fetchMembershipRoles`.
+	// Use the shared intersection helper so that `whoami` uses the same approach as
+	// the interactive `Select an account` prompt (and the non-interactive 'no account ID' error message)
 	return await fetchAllAccounts(complianceConfig, {
+		// `whoami` is informational and should render an empty list rather than fail when the intersection is empty.
 		throwOnEmpty: false,
+		// `whoami` should be tolerant and still display the accounts table even if the `/memberships` is broken for any reason.
 		permissive: true,
 	});
 }
