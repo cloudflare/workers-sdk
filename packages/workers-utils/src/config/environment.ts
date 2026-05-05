@@ -763,7 +763,7 @@ export interface EnvironmentNonInheritable {
 	vars: Record<string, string | Json>;
 
 	/**
-	 * Secrets configuration (experimental).
+	 * Secrets configuration.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
