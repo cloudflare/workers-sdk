@@ -1,7 +1,7 @@
 {
 	"name": "create-cloudflare",
 	"version": "2.68.0",
-	"description": "A CLI for creating and deploying new applications to Cloudflare.",
+	"description":  "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
 		"cloudflare workers",
