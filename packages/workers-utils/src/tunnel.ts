@@ -18,9 +18,16 @@ const DEFAULT_TUNNEL_REMINDER_INTERVAL_MS = 10 * 60 * 1_000;
  */
 const QUICK_TUNNEL_URL_REGEX = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/;
 
-export interface TunnelResult {
+export interface QuickTunnelResult {
+	mode: "quick";
 	publicUrl: URL;
 }
+
+export interface NamedTunnelResult {
+	mode: "named";
+}
+
+export type TunnelResult = QuickTunnelResult | NamedTunnelResult;
 
 export interface Tunnel {
 	ready: () => Promise<TunnelResult>;
@@ -30,6 +37,7 @@ export interface Tunnel {
 
 export interface TunnelOptions {
 	origin: URL;
+	token?: string;
 	timeoutMs?: number;
 	expiryMs?: number;
 	reminderIntervalMs?: number;
@@ -57,18 +65,17 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 	const reminderIntervalMs =
 		options.reminderIntervalMs ?? DEFAULT_TUNNEL_REMINDER_INTERVAL_MS;
 	const defaultExpiryMs = options.expiryMs ?? DEFAULT_TUNNEL_EXPIRY_MS;
+	const isNamedTunnel = options.token !== undefined;
 	const timeFormatter = new Intl.DateTimeFormat(undefined, {
 		timeStyle: "short",
 	});
-	const cloudflaredArgs = [
-		"tunnel",
-		"--no-autoupdate",
-		"--url",
-		options.origin.href,
-	];
+	const cloudflaredArgs = isNamedTunnel
+		? ["tunnel", "--no-autoupdate", "run"]
+		: ["tunnel", "--no-autoupdate", "--url", options.origin.href];
 
 	const cloudflaredPromise = spawnCloudflared(cloudflaredArgs, {
 		stdio: "pipe",
+		env: options.token ? { TUNNEL_TOKEN: options.token } : undefined,
 		skipVersionCheck: true,
 		logger,
 	}).then((process) => {
@@ -82,17 +89,23 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 	});
 
 	const readyPromise = cloudflaredPromise
-		.then((process) =>
-			waitForQuickTunnelReady(process, timeoutMs, {
+		.then((process) => {
+			if (isNamedTunnel) {
+				return { mode: "named" } as const;
+			}
+
+			return waitForQuickTunnelReady(process, timeoutMs, {
 				logger,
 				origin: options.origin,
-			})
-		)
+			});
+		})
 		.then((result) => {
-			expiresAt = Date.now() + defaultExpiryMs;
+			if (result.mode === "quick") {
+				expiresAt = Date.now() + defaultExpiryMs;
 
-			scheduleExpiryTimeout();
-			scheduleReminder(result.publicUrl.origin);
+				scheduleExpiryTimeout();
+				scheduleReminder(result.publicUrl.origin);
+			}
 
 			return result;
 		});
@@ -262,7 +275,7 @@ function waitForQuickTunnelReady(
 				if (match && !resolved) {
 					resolved = true;
 					clearTimeout(timeoutId);
-					resolve({ publicUrl: new URL(match[0]) });
+					resolve({ mode: "quick", publicUrl: new URL(match[0]) });
 				}
 			});
 		}

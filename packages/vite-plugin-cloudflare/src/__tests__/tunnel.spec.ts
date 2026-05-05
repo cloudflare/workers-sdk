@@ -27,6 +27,7 @@ describe("tunnel plugin", () => {
 	beforeEach(() => {
 		vi.mocked(startTunnel).mockReturnValue({
 			ready: vi.fn().mockResolvedValue({
+				mode: "quick",
 				publicUrl: new URL("https://example.trycloudflare.com"),
 			}),
 			extendExpiry: vi.fn(),
@@ -43,6 +44,7 @@ describe("tunnel plugin", () => {
 	}) => {
 		vi.mocked(startTunnel).mockReturnValue({
 			ready: vi.fn().mockResolvedValue({
+				mode: "quick",
 				publicUrl: new URL("https://example.trycloudflare.com"),
 			}),
 			extendExpiry: vi.fn(),
@@ -96,6 +98,7 @@ describe("tunnel plugin", () => {
 	}) => {
 		vi.mocked(startTunnel).mockReturnValue({
 			ready: vi.fn().mockResolvedValue({
+				mode: "quick",
 				publicUrl: new URL("https://example.trycloudflare.com"),
 			}),
 			extendExpiry: vi.fn(),
@@ -136,6 +139,7 @@ describe("tunnel plugin", () => {
 		vi.mocked(startTunnel)
 			.mockReturnValueOnce({
 				ready: vi.fn().mockResolvedValue({
+					mode: "quick",
 					publicUrl: new URL("https://foo.trycloudflare.com"),
 				}),
 				extendExpiry: vi.fn(),
@@ -143,6 +147,7 @@ describe("tunnel plugin", () => {
 			})
 			.mockReturnValueOnce({
 				ready: vi.fn().mockResolvedValue({
+					mode: "quick",
 					publicUrl: new URL("https://bar.trycloudflare.com"),
 				}),
 				extendExpiry: vi.fn(),
@@ -214,6 +219,7 @@ describe("tunnel plugin", () => {
 		vi.mocked(startTunnel)
 			.mockReturnValueOnce({
 				ready: vi.fn().mockResolvedValue({
+					mode: "quick",
 					publicUrl: new URL("https://foo.trycloudflare.com"),
 				}),
 				extendExpiry: vi.fn(),
@@ -223,6 +229,7 @@ describe("tunnel plugin", () => {
 			})
 			.mockReturnValueOnce({
 				ready: vi.fn().mockResolvedValue({
+					mode: "quick",
 					publicUrl: new URL("https://bar.trycloudflare.com"),
 				}),
 				extendExpiry: vi.fn(),
@@ -324,6 +331,7 @@ describe("tunnel plugin", () => {
 	it("prints tunnel details with server.printUrls", async ({ expect }) => {
 		vi.mocked(startTunnel).mockReturnValue({
 			ready: vi.fn().mockResolvedValue({
+				mode: "quick",
 				publicUrl: new URL("https://example.trycloudflare.com"),
 			}),
 			extendExpiry: vi.fn(),
