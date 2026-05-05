@@ -9472,6 +9472,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 						kv_namespaces: [{ binding: "MY_KV", id: "preview-kv-id" }],
 						r2_buckets: [{ binding: "MY_R2", bucket_name: "preview-bucket" }],
+						flagship: [{ binding: "FLAGS", app_id: "flagship-app-id" }],
 						observability: { enabled: true },
 						limits: { cpu_ms: 50 },
 					},
