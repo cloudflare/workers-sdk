@@ -24,9 +24,8 @@ export interface FetchAllAccountsOptions {
 	 * fails for *any* reason (not just 9109). When `false` (the default), only
 	 * a 9109 (Insufficient permissions) failure on `/memberships` triggers the
 	 * fallback — other errors propagate. Use `true` for informational commands
-	 * like `wrangler whoami` so a transient `/memberships` outage doesn't break
-	 * the command; use `false` (default) for flows where the auth-scoped list
-	 * must be authoritative.
+	 * like `wrangler whoami` that should be tolerant to any `/memberships` outage.
+	 * Use `false` (the default) for flows where the auth-scoped list must be authoritative.
 	 */
 	permissive?: boolean;
 }
