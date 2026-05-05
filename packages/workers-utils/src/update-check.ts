@@ -8,6 +8,15 @@ import type { Result } from "update-check";
 // This caps the total wall-clock time for the entire operation.
 const UPDATE_CHECK_TIMEOUT_MS = 3000;
 
+// Sentinel value used to distinguish a timeout from the library returning null
+// (which means "already up-to-date").
+const TIMED_OUT: unique symbol = Symbol("timed_out");
+
+export type NpmVersionCheckResult =
+	| { status: "up-to-date" }
+	| { status: "update-available"; latest: string }
+	| { status: "failed" };
+
 /**
  * Checks if a newer version of a package is available on npm.
  *
@@ -17,28 +26,36 @@ const UPDATE_CHECK_TIMEOUT_MS = 3000;
  *
  * @param name - The npm package name to check
  * @param version - The current version to compare against
- * @returns The latest available version string if an update is available,
- *   or `undefined` if the package is already up-to-date or the check fails
+ * @returns A discriminated result indicating whether an update is available,
+ *   the package is already up-to-date, or the check failed (network error,
+ *   timeout, etc.)
  */
 export async function fetchLatestNpmVersion(
 	name: string,
 	version: string
-): Promise<string | undefined> {
-	let update: Result | null = null;
+): Promise<NpmVersionCheckResult> {
+	let result: Result | null | typeof TIMED_OUT = null;
 	try {
 		// Race with a timeout as a safety net — the library's own 2s socket
 		// timeout handles most cases, but the auth-retry path can take up to 4s.
-		update = await Promise.race([
+		result = await Promise.race([
 			checkForUpdate(
 				{ name, version },
 				{
 					distTag: version.startsWith("0.0.0") ? "beta" : "latest",
 				}
 			),
-			setTimeout(UPDATE_CHECK_TIMEOUT_MS, null, { ref: false }),
+			setTimeout(UPDATE_CHECK_TIMEOUT_MS, TIMED_OUT, { ref: false }),
 		]);
 	} catch {
-		// ignore error
+		return { status: "failed" };
 	}
-	return update?.latest;
+
+	if (result === TIMED_OUT) {
+		return { status: "failed" };
+	}
+	if (result === null) {
+		return { status: "up-to-date" };
+	}
+	return { status: "update-available", latest: result.latest };
 }
