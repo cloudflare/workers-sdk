@@ -51,11 +51,11 @@ async function logWarningsWithUpgradeHint(
 	}
 	logger.warn(diagnostics.renderWarnings());
 	if (diagnostics.hasUnexpectedFieldsInTree()) {
-		const latestVersion = await updateCheck();
-		if (latestVersion !== undefined) {
+		const result = await updateCheck();
+		if (result.status === "update-available") {
 			logger.log(
 				`There is a newer version of Wrangler available ` +
-					`(current: ${wranglerVersion}, latest: ${latestVersion}). ` +
+					`(current: ${wranglerVersion}, latest: ${result.latest}). ` +
 					`Try upgrading, as it might support this configuration option.`
 			);
 		}

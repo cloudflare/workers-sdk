@@ -124,7 +124,13 @@ vi.mock("../package-manager", async (importOriginal) => {
 	return mocked;
 });
 
-vi.mock("../update-check");
+vi.mock("../update-check", async (importOriginal) => {
+	const mod = await importOriginal<typeof import("../update-check")>();
+	return {
+		...mod,
+		updateCheck: vi.fn().mockResolvedValue({ status: "up-to-date" }),
+	};
+});
 
 beforeAll(() => {
 	msw.listen({

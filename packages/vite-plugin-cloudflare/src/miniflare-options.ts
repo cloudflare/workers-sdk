@@ -716,14 +716,15 @@ class ViteMiniflareLogger extends Log {
 		}
 		this.#warnedCompatibilityDateFallback = true;
 
-		return void checkForNpmUpdate().then((maybeNewVersion) => {
-			if (maybeNewVersion === undefined) {
+		return void checkForNpmUpdate().then((result) => {
+			if (result.status !== "update-available") {
 				return;
 			}
 			this.logger.warn(
 				`${message}\nFeatures enabled by your requested compatibility date may not be available.` +
-					`\nUpgrade to \`@cloudflare/vite-plugin@${maybeNewVersion}\` to remove this warning.`
+					`\nUpgrade to \`@cloudflare/vite-plugin@${result.latest}\` to remove this warning.`
 			);
+			return;
 		});
 	}
 

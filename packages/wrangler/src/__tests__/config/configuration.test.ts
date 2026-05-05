@@ -15,7 +15,7 @@ describe("readConfig() upgrade hint", () => {
 	it("should not show an upgrade hint when unexpected fields are found but no update is available", async ({
 		expect,
 	}) => {
-		vi.mocked(updateCheck).mockResolvedValue(undefined);
+		vi.mocked(updateCheck).mockResolvedValue({ status: "up-to-date" });
 		writeWranglerConfig({
 			// @ts-expect-error intentional unknown field for test
 			unknown_field: "some_value",
@@ -29,7 +29,10 @@ describe("readConfig() upgrade hint", () => {
 	it("should show an upgrade hint when unexpected fields are found and an update is available", async ({
 		expect,
 	}) => {
-		vi.mocked(updateCheck).mockResolvedValue("9.9.9");
+		vi.mocked(updateCheck).mockResolvedValue({
+			status: "update-available",
+			latest: "9.9.9",
+		});
 		writeWranglerConfig({
 			// @ts-expect-error intentional unknown field for test
 			unknown_field: "some_value",
@@ -47,7 +50,10 @@ describe("readConfig() upgrade hint", () => {
 	it("should not show an upgrade hint when warnings are unrelated to unexpected fields", async ({
 		expect,
 	}) => {
-		vi.mocked(updateCheck).mockResolvedValue("9.9.9");
+		vi.mocked(updateCheck).mockResolvedValue({
+			status: "update-available",
+			latest: "9.9.9",
+		});
 		// legacy_env: false produces a "Service environments are deprecated" warning
 		// but does NOT trigger validateAdditionalProperties, so no upgrade hint
 		writeWranglerConfig({ legacy_env: false });
