@@ -26,9 +26,10 @@ export type NpmVersionCheckResult =
  *
  * @param name - The npm package name to check
  * @param version - The current version to compare against
- * @returns A discriminated result indicating whether an update is available,
- *   the package is already up-to-date, or the check failed (network error,
- *   timeout, etc.)
+ * @returns A discriminated result:
+ *   - `{ status: "update-available", latest: string }` if a newer version exists
+ *   - `{ status: "up-to-date" }` if the installed version is already the latest
+ *   - `{ status: "failed" }` if the check could not be completed (network error, timeout, etc.)
  */
 export async function fetchLatestNpmVersion(
 	name: string,
@@ -45,7 +46,9 @@ export async function fetchLatestNpmVersion(
 					distTag: version.startsWith("0.0.0") ? "beta" : "latest",
 				}
 			),
-			timersPromises.setTimeout(UPDATE_CHECK_TIMEOUT_MS, TIMED_OUT, { ref: false }),
+			timersPromises.setTimeout(UPDATE_CHECK_TIMEOUT_MS, TIMED_OUT, {
+				ref: false,
+			}),
 		]);
 	} catch {
 		return { status: "failed" };
