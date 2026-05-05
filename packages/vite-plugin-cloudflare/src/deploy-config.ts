@@ -63,30 +63,30 @@ export function writeDeployConfig(
 		);
 	};
 
+	const auxiliaryWorkerEnvironmentNames =
+		resolvedPluginConfig.type === "workers"
+			? [...resolvedPluginConfig.environmentNameToWorkerMap.keys()].filter(
+					(name) =>
+						name !== resolvedPluginConfig.entryWorkerEnvironmentName &&
+						name !== resolvedPluginConfig.prerenderWorkerEnvironmentName
+				)
+			: [];
+
 	let entryEnvironmentName: string;
-	let auxiliaryEnvironmentNames: string[];
 
 	if (isAssetsOnly) {
 		entryEnvironmentName = "client";
-		auxiliaryEnvironmentNames = [];
 	} else {
 		assert(
 			resolvedPluginConfig.type === "workers",
 			`Unexpected error: expected workers config but got ${resolvedPluginConfig.type}`
 		);
 		entryEnvironmentName = resolvedPluginConfig.entryWorkerEnvironmentName;
-		auxiliaryEnvironmentNames = [
-			...resolvedPluginConfig.environmentNameToWorkerMap.keys(),
-		].filter(
-			(name) =>
-				name !== entryEnvironmentName &&
-				name !== resolvedPluginConfig.prerenderWorkerEnvironmentName
-		);
 	}
 
 	const deployConfig: DeployConfig = {
 		configPath: resolveConfigPath(entryEnvironmentName),
-		auxiliaryWorkers: auxiliaryEnvironmentNames.map((name) => ({
+		auxiliaryWorkers: auxiliaryWorkerEnvironmentNames.map((name) => ({
 			configPath: resolveConfigPath(name),
 		})),
 		prerenderWorkerConfigPath:
