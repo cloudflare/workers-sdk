@@ -1001,6 +1001,28 @@ describe("deploy", () => {
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ENV", "test");
+			writeWorkerSource();
+			writeWranglerConfig({
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				env: "test",
+				useServiceEnvironments: false,
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 	describe("--tag and --message", () => {
 		it("should send tag and message annotations via the new versions API", async ({

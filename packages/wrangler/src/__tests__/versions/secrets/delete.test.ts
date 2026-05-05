@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { afterEach, describe, it, test } from "vitest";
+import { afterEach, describe, it, test, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../../helpers/mock-dialogs";
@@ -181,6 +181,24 @@ describe("versions secret delete", () => {
 			setIsTTY(false);
 
 			writeWranglerConfig();
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect);
+			mockPostVersion(expect);
+
+			await runWrangler("versions secret delete SECRET --name script-name");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ENV", "test");
+			setIsTTY(false);
+
+			writeWranglerConfig({
+				env: { test: {} },
+			});
 			mockSetupApiCalls(expect);
 			mockGetVersion(expect);
 			mockPostVersion(expect);

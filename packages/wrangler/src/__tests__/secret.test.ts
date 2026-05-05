@@ -524,6 +524,21 @@ describe("wrangler secret", () => {
 					await runWrangler("secret put the-key --name script-name");
 					expect(std.warn).toMatchInlineSnapshot(`""`);
 				});
+
+				it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+					expect,
+				}) => {
+					vi.stubEnv("CLOUDFLARE_ENV", "test");
+					writeWranglerConfig({
+						env: {
+							test: {},
+						},
+					});
+					mockStdIn.send("the-secret");
+					mockPutRequest(expect, { name: "the-key", text: "the-secret" });
+					await runWrangler("secret put the-key --name script-name");
+					expect(std.warn).toMatchInlineSnapshot(`""`);
+				});
 			});
 		});
 
@@ -802,6 +817,27 @@ describe("wrangler secret", () => {
 				expect,
 			}) => {
 				writeWranglerConfig();
+				mockDeleteRequest(expect, {
+					scriptName: "script-name",
+					secretName: "the-key",
+				});
+				mockConfirm({
+					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
+					result: true,
+				});
+				await runWrangler("secret delete the-key --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+				expect,
+			}) => {
+				vi.stubEnv("CLOUDFLARE_ENV", "test");
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
 				mockDeleteRequest(expect, {
 					scriptName: "script-name",
 					secretName: "the-key",
@@ -1529,6 +1565,25 @@ describe("wrangler secret", () => {
 				writeWranglerConfig({
 					name: "test-name",
 					main: "./index.js",
+				});
+				writeFileSync("secret.json", JSON.stringify({}));
+
+				mockBulkRequest(expect);
+
+				await runWrangler("secret bulk ./secret.json --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+				expect,
+			}) => {
+				vi.stubEnv("CLOUDFLARE_ENV", "test");
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+					env: {
+						test: {},
+					},
 				});
 				writeFileSync("secret.json", JSON.stringify({}));
 

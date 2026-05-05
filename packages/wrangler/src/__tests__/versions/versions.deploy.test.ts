@@ -1,6 +1,6 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { HttpResponse, http } from "msw";
-import { beforeEach, describe, it, test } from "vitest";
+import { beforeEach, describe, it, test, vi } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
 	assignAndDistributePercentages,
@@ -1137,6 +1137,23 @@ describe("versions deploy", () => {
 				expect,
 			}) => {
 				writeWranglerConfig();
+
+				await runWrangler(
+					"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+				);
+
+				expect(consoleStd.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+				expect,
+			}) => {
+				vi.stubEnv("CLOUDFLARE_ENV", "test");
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
 
 				await runWrangler(
 					"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
