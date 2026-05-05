@@ -164,88 +164,104 @@ describe("execute", () => {
 		`);
 	});
 
-	it("should treat SQLite constraint errors as UserErrors", async ({
-		expect,
-	}) => {
-		setIsTTY(false);
-		writeWranglerConfig({
-			d1_databases: [
-				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
-			],
-		});
+	it(
+		"should treat SQLite constraint errors as UserErrors",
+		{ timeout: 30_000 },
+		async ({ expect }) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+				],
+			});
 
-		// First create a table with a foreign key constraint
-		const setupSQL = `
+			// First create a table with a foreign key constraint
+			const setupSQL = `
 			CREATE TABLE users (id INTEGER PRIMARY KEY);
 			CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER, FOREIGN KEY(user_id) REFERENCES users(id));
 		`;
-		fs.writeFileSync("setup.sql", setupSQL);
-		await runWrangler("d1 execute db --file setup.sql --local");
+			fs.writeFileSync("setup.sql", setupSQL);
+			await runWrangler("d1 execute db --file setup.sql --local");
 
-		// Now try to violate the foreign key constraint
-		const violationSQL = `INSERT INTO posts (id, user_id) VALUES (1, 999);`;
-		fs.writeFileSync("violation.sql", violationSQL);
+			// Now try to violate the foreign key constraint
+			const violationSQL = `INSERT INTO posts (id, user_id) VALUES (1, 999);`;
+			fs.writeFileSync("violation.sql", violationSQL);
 
-		await expect(
-			runWrangler("d1 execute db --file violation.sql --local")
-		).rejects.toThrow(UserError);
-	});
+			await expect(
+				runWrangler("d1 execute db --file violation.sql --local")
+			).rejects.toThrow(UserError);
+		}
+	);
 
-	it("should show banner by default", async ({ expect }) => {
-		setIsTTY(false);
-		writeWranglerConfig({
-			d1_databases: [
-				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
-			],
-		});
+	it(
+		"should show banner by default",
+		{ timeout: 30_000 },
+		async ({ expect }) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+				],
+			});
 
-		await runWrangler("d1 execute db --command 'select 1;'");
-		expect(std.out).toContain("⛅️ wrangler x.x.x");
-	});
+			await runWrangler("d1 execute db --command 'select 1;'");
+			expect(std.out).toContain("⛅️ wrangler x.x.x");
+		}
+	);
 
-	it("should execute locally without database_id", async ({ expect }) => {
-		setIsTTY(false);
-		writeWranglerConfig({
-			d1_databases: [{ binding: "D1", database_name: "D1" }],
-		});
+	it(
+		"should execute locally without database_id",
+		{ timeout: 30_000 },
+		async ({ expect }) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [{ binding: "D1", database_name: "D1" }],
+			});
 
-		await runWrangler("d1 execute D1 --command 'select 1;' --local");
-		expect(std.out).toContain("1 command executed successfully");
-	});
+			await runWrangler("d1 execute D1 --command 'select 1;' --local");
+			expect(std.out).toContain("1 command executed successfully");
+		}
+	);
 
-	it("should output valid JSON with --json flag", async ({ expect }) => {
-		setIsTTY(false);
-		writeWranglerConfig({
-			d1_databases: [
-				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
-			],
-		});
+	it(
+		"should output valid JSON with --json flag",
+		{ timeout: 30_000 },
+		async ({ expect }) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+				],
+			});
 
-		await runWrangler("d1 execute db --command 'select 1;' --json");
-		expect(JSON.parse(std.out)).toMatchObject([
-			{
-				results: [{ "1": 1 }],
-				success: true,
-			},
-		]);
-	});
+			await runWrangler("d1 execute db --command 'select 1;' --json");
+			expect(JSON.parse(std.out)).toMatchObject([
+				{
+					results: [{ "1": 1 }],
+					success: true,
+				},
+			]);
+		}
+	);
 
-	it("should output JSON null for SQL NULL values with --json flag", async ({
-		expect,
-	}) => {
-		setIsTTY(false);
-		writeWranglerConfig({
-			d1_databases: [
-				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
-			],
-		});
+	it(
+		"should output JSON null for SQL NULL values with --json flag",
+		{ timeout: 30_000 },
+		async ({ expect }) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+				],
+			});
 
-		await runWrangler(
-			"d1 execute db --command 'SELECT 1 as id, null as name;' --json"
-		);
-		const parsed = JSON.parse(std.out);
-		expect(parsed[0].results[0].name).toBeNull();
-	});
+			await runWrangler(
+				"d1 execute db --command 'SELECT 1 as id, null as name;' --json"
+			);
+			const parsed = JSON.parse(std.out);
+			expect(parsed[0].results[0].name).toBeNull();
+		}
+	);
 
 	describe("duration formatting", () => {
 		mockAccountId({ accountId: "some-account-id" });

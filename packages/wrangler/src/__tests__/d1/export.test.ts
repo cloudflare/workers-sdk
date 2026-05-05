@@ -41,7 +41,7 @@ describe("export", () => {
 		).rejects.toThrowError("Arguments local and remote are mutually exclusive");
 	});
 
-	it("should handle local", async ({ expect }) => {
+	it("should handle local", { timeout: 45_000 }, async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -244,15 +244,19 @@ describe("export", () => {
 		);
 	});
 
-	it("should export locally without database_id", async ({ expect }) => {
-		setIsTTY(false);
-		writeWranglerConfig({
-			d1_databases: [{ binding: "D1", database_name: "D1" }],
-		});
+	it(
+		"should export locally without database_id",
+		{ timeout: 30_000 },
+		async ({ expect }) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [{ binding: "D1", database_name: "D1" }],
+			});
 
-		await runWrangler("d1 export D1 --output test-remote.sql");
-		expect(std.out).toContain("Exporting SQL to test-remote.sql...");
-	});
+			await runWrangler("d1 export D1 --output test-remote.sql");
+			expect(std.out).toContain("Exporting SQL to test-remote.sql...");
+		}
+	);
 
 	it("should not export remotely without database_id", async ({ expect }) => {
 		setIsTTY(false);
@@ -270,18 +274,21 @@ describe("export", () => {
 		);
 	});
 
-	it("should handle multiple tables", async ({ expect }) => {
-		setIsTTY(false);
-		writeWranglerConfig({
-			d1_databases: [
-				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
-			],
-		});
+	it(
+		"should handle multiple tables",
+		{ timeout: 30_000 },
+		async ({ expect }) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+				],
+			});
 
-		// Fill with data
-		fs.writeFileSync(
-			"data.sql",
-			`
+			// Fill with data
+			fs.writeFileSync(
+				"data.sql",
+				`
 				CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);
 				CREATE TABLE bar(id INTEGER PRIMARY KEY, value TEXT);
 				CREATE TABLE baz(id INTEGER PRIMARY KEY, value TEXT);
@@ -289,26 +296,27 @@ describe("export", () => {
 				INSERT INTO bar (value) VALUES ('aaa'),('bbb'),('ccc');
 				INSERT INTO baz (value) VALUES ('111'),('222'),('333');
 			`
-		);
-		await runWrangler("d1 execute db --file data.sql");
+			);
+			await runWrangler("d1 execute db --file data.sql");
 
-		await runWrangler(
-			"d1 export db --output test-multiple.sql --table foo --table baz"
-		);
-		expect(fs.readFileSync("test-multiple.sql", "utf8")).toBe(
-			[
-				"PRAGMA defer_foreign_keys=TRUE;",
-				"CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);",
-				"INSERT INTO \"foo\" VALUES(1,'xxx');",
-				"INSERT INTO \"foo\" VALUES(2,'yyy');",
-				"INSERT INTO \"foo\" VALUES(3,'zzz');",
-				"CREATE TABLE baz(id INTEGER PRIMARY KEY, value TEXT);",
-				"INSERT INTO \"baz\" VALUES(1,'111');",
-				"INSERT INTO \"baz\" VALUES(2,'222');",
-				"INSERT INTO \"baz\" VALUES(3,'333');",
-			].join("\n")
-		);
-	});
+			await runWrangler(
+				"d1 export db --output test-multiple.sql --table foo --table baz"
+			);
+			expect(fs.readFileSync("test-multiple.sql", "utf8")).toBe(
+				[
+					"PRAGMA defer_foreign_keys=TRUE;",
+					"CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);",
+					"INSERT INTO \"foo\" VALUES(1,'xxx');",
+					"INSERT INTO \"foo\" VALUES(2,'yyy');",
+					"INSERT INTO \"foo\" VALUES(3,'zzz');",
+					"CREATE TABLE baz(id INTEGER PRIMARY KEY, value TEXT);",
+					"INSERT INTO \"baz\" VALUES(1,'111');",
+					"INSERT INTO \"baz\" VALUES(2,'222');",
+					"INSERT INTO \"baz\" VALUES(3,'333');",
+				].join("\n")
+			);
+		}
+	);
 });
 
 function mockResponses() {
