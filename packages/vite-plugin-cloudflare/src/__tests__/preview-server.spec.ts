@@ -45,6 +45,7 @@ describe("preview server", () => {
 	}) => {
 		vi.mocked(startTunnel).mockReturnValue({
 			ready: vi.fn().mockResolvedValue({
+				mode: "quick",
 				publicUrl: new URL("https://example.trycloudflare.com"),
 			}),
 			extendExpiry: vi.fn(),

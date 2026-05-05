@@ -1,8 +1,11 @@
-import { UserError } from "@cloudflare/workers-utils";
+import { FatalError, UserError } from "@cloudflare/workers-utils";
 import { Cloudflare as CloudflareSDK } from "cloudflare";
 import type Cloudflare from "cloudflare";
 import type { CloudflareTunnel } from "cloudflare/resources/shared";
-import type { CloudflaredCreateResponse } from "cloudflare/resources/zero-trust/tunnels/cloudflared";
+import type {
+	CloudflaredCreateResponse,
+	ConfigurationGetResponse,
+} from "cloudflare/resources/zero-trust/tunnels/cloudflared";
 
 /**
  * Error message for tunnel permission issues when using OAuth login.
@@ -160,6 +163,129 @@ export async function getTunnelToken(
 		// The SDK types declare this as string
 		return String(response);
 	});
+}
+
+/**
+	 * Resolve a named tunnel to the hostnames that route to the local dev port,
+	 * plus the run token needed to start `cloudflared tunnel run`.
+	 */
+export async function resolveNamedTunnel(
+	sdk: Cloudflare,
+	accountId: string,
+	name: string,
+	origin: URL
+): Promise<{
+	hostnames: string[];
+	token: string;
+}> {
+	const tunnel = await withTunnelErrorHandling(async () => {
+		for await (const tunnel of sdk.zeroTrust.tunnels.cloudflared.list({
+			account_id: accountId,
+			name,
+			is_deleted: false,
+		})) {
+			if (tunnel.name === name) {
+				return normalizeTunnelResponse(tunnel);
+			}
+		}
+
+		return null;
+	});
+
+	if (!tunnel) {
+		throw new UserError(
+			`No Cloudflare Tunnel named "${name}" was found in this account. Use "wrangler tunnel list" to see available tunnels.`,
+			{ telemetryMessage: "tunnel resolve named missing tunnel" }
+		);
+	}
+
+	const tunnelId = tunnel.id;
+	if (!tunnelId) {
+		throw new FatalError(
+			`Tunnel "${name}" was found but has no ID. This is unexpected.`,
+			{ telemetryMessage: "tunnel resolve named missing tunnel id" }
+		);
+	}
+
+	const configuration = await withTunnelErrorHandling(() =>
+		sdk.zeroTrust.tunnels.cloudflared.configurations.get(tunnelId, {
+			account_id: accountId,
+		})
+	);
+	const hostnames = getMatchingIngressHostnames(configuration.config?.ingress ?? [], origin.port);
+	if (hostnames.length === 0) {
+		throw new UserError(
+			createMissingIngressMessage(name, origin.port, configuration.config?.ingress ?? []),
+			{ telemetryMessage: "tunnel resolve named ingress mismatch" }
+		);
+	}
+
+	const token = await getTunnelToken(sdk, accountId, tunnelId);
+
+	return { hostnames, token };
+}
+
+/**
+	 * Return ingress hostnames whose configured service targets the given local port.
+	 */
+function getMatchingIngressHostnames(
+	ingressConfig: CloudflareSDK.ZeroTrust.Tunnels.Cloudflared.Configurations.ConfigurationGetResponse.Config.Ingress[],
+	port: string
+): string[] {
+	const hostnames = new Set<string>();
+	for (const ingress of ingressConfig) {
+		if (
+			ingress.hostname &&
+			getTunnelServicePort(ingress.service) === port
+		) {
+			hostnames.add(ingress.hostname);
+		}
+	}
+
+	return [...hostnames];
+}
+
+/**
+	 * Extract the destination port from a tunnel ingress service URL.
+	 * Falls back to the default port for HTTP and HTTPS services.
+	 */
+function getTunnelServicePort(service: string): string | undefined {
+	try {
+		const url = new URL(service);
+		if (url.port) {
+			return url.port;
+		}
+
+		switch (url.protocol) {
+			case "http:":
+				return "80";
+			case "https:":
+				return "443";
+			default:
+				return undefined;
+		}
+	} catch {
+		return undefined;
+	}
+}
+
+function createMissingIngressMessage(
+	name: string,
+	port: string,
+	ingress: CloudflareSDK.ZeroTrust.Tunnels.Cloudflared.Configurations.ConfigurationGetResponse.Config.Ingress[]
+): string {
+	const ingressMappings = ingress.length
+		? ingress
+				.map(({ hostname, service }) => `  - ${hostname ?? "(no hostname)"} -> ${service}`)
+				.join("\n")
+		: "  (no ingress rules found)";
+
+	return [
+		`No ingress rules in tunnel "${name}" route to local port ${port}.`,
+		"",
+		"Resolved ingress mappings:",
+		ingressMappings,
+	].join("\n");
 }
 
 /**

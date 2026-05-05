@@ -2990,22 +2990,58 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
-	describe("tunnel", () => {
-		it("should pass --tunnel flag through to dev config", async ({
-			expect,
-		}) => {
+		describe("tunnel", () => {
+			it("should pass --tunnel flag through to dev config", async ({
+				expect,
+			}) => {
 			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: "2024-01-01",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			const config = await runWranglerUntilConfig("dev --tunnel");
-			expect(config.input.dev?.tunnel).toBe(true);
-		});
+				const config = await runWranglerUntilConfig("dev --tunnel");
+				expect(config.input.dev?.tunnel).toBe(true);
+			});
 
-		it("should default tunnel to undefined when not specified", async ({
-			expect,
-		}) => {
+			it("should pass --tunnel=<name> through to dev config", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					compatibility_date: "2024-01-01",
+				});
+				fs.writeFileSync("index.js", `export default {};`);
+				const config = await runWranglerUntilConfig("dev --tunnel=my-tunnel");
+				expect(config.input.dev?.tunnel).toBe("my-tunnel");
+			});
+
+			it("should treat --tunnel=true as a quick tunnel", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					compatibility_date: "2024-01-01",
+				});
+				fs.writeFileSync("index.js", `export default {};`);
+				const config = await runWranglerUntilConfig("dev --tunnel=true");
+				expect(config.input.dev?.tunnel).toBe(true);
+			});
+
+			it("should treat --tunnel=false as disabled", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					compatibility_date: "2024-01-01",
+				});
+				fs.writeFileSync("index.js", `export default {};`);
+				const config = await runWranglerUntilConfig("dev --tunnel=false");
+				expect(config.input.dev?.tunnel).toBe(false);
+			});
+
+			it("should default tunnel to undefined when not specified", async ({
+				expect,
+			}) => {
 			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: "2024-01-01",
@@ -3015,9 +3051,9 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toBeUndefined();
 		});
 
-		it("should error when --tunnel and --remote are both specified", async ({
-			expect,
-		}) => {
+			it("should error when --tunnel and --remote are both specified", async ({
+				expect,
+			}) => {
 			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: "2024-01-01",
@@ -3025,11 +3061,22 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(
 				runWrangler("dev --tunnel --remote")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: --tunnel is only supported in local mode.]`
-			);
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: --tunnel is only supported in local mode.]`
+				);
+			});
+
+			it("should allow --tunnel=false with --remote", async ({ expect }) => {
+				writeWranglerConfig({
+					main: "index.js",
+					compatibility_date: "2024-01-01",
+				});
+				fs.writeFileSync("index.js", `export default {};`);
+				const config = await runWranglerUntilConfig("dev --remote --tunnel=false");
+				expect(config.input.dev?.tunnel).toBe(false);
+				expect(config.input.dev?.remote).toBe(true);
+			});
 		});
-	});
 
 	describe("multi-worker mode", () => {
 		it("should pass --env to auxiliary workers", async ({ expect }) => {

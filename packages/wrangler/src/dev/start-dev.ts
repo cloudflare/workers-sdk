@@ -5,6 +5,7 @@ import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { getRegistryPath, startTunnel } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import dedent from "ts-dedent";
+import { createCloudflareClient } from "../cfetch/internal";
 import { DevEnv } from "../api";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
@@ -14,6 +15,7 @@ import registerDevHotKeys from "../dev/hotkeys";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
+import { resolveNamedTunnel } from "../tunnel/client";
 import { requireApiToken, requireAuth } from "../user";
 import {
 	collectKeyValues,
@@ -167,10 +169,20 @@ export async function startDev(args: StartDevOptions) {
 			const origin = new URL(
 				`${protocol}://${formatHostname(hostname)}:${port}`
 			);
+			const namedTunnel =
+				typeof args.tunnel === "string"
+					? await resolveNamedTunnel(
+						createCloudflareClient({ compliance_region: config?.complianceRegion }),
+						await requireAuth({ account_id: args.accountId }),
+						args.tunnel,
+						origin
+					)
+					: undefined;
 
 			logger.log(dim("⎔ Starting tunnel (usually takes a few seconds)..."));
 			tunnel = startTunnel({
 				origin,
+				token: namedTunnel?.token,
 				extendHint: "Press [t] to extend by 1 hour.",
 				logger,
 			});
@@ -182,12 +194,21 @@ export async function startDev(args: StartDevOptions) {
 
 			// User requested tunnel sharing explicitly. If it fails, let it throw
 			// and prevent dev server from starting without a tunnel.
-			const { publicUrl } = await tunnel.ready();
+			const result = await tunnel.ready();
 
-			logger.log(
-				`⬣ Sharing via Cloudflare Tunnel: ` +
-					`${chalk.green(publicUrl.origin)}\n`
-			);
+			if (result.mode === "quick") {
+				logger.log(
+					`⬣ Sharing via Cloudflare Tunnel: ` +
+						`${chalk.green(result.publicUrl.origin)}\n`
+				);
+			} else if (namedTunnel) {
+				logger.log("⬣ Sharing via Cloudflare Tunnel:");
+				for (const namedTunnelHostname of namedTunnel.hostnames) {
+					logger.log(`   ${chalk.green(`https://${namedTunnelHostname}`)}`);
+				}
+				logger.log();
+			}
+
 			logger.warn(
 				chalk.dim("This URL is ") +
 					"publicly accessible" +
@@ -197,7 +218,9 @@ export async function startDev(args: StartDevOptions) {
 							"- Trigger logic that uses remote bindings\n" +
 							"- Reach internal services if your Worker proxies requests\n" +
 							"\n" +
-							"Consider using a named tunnel with Cloudflare Access to restrict access."
+							(result.mode === "quick"
+								? "Consider using a named tunnel with Cloudflare Access to restrict access."
+								: "Consider using Cloudflare Access to restrict access.")
 					)
 			);
 		}
