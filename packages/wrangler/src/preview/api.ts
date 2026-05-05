@@ -46,6 +46,7 @@ export interface Binding {
 	entrypoint?: string;
 	class_name?: string;
 	script_name?: string;
+	cross_account_grant?: string;
 }
 
 export type EnvBindings = Record<string, Binding>;
@@ -103,6 +104,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	limits?: CfUserLimits;
 	placement?: CfPlacement;
 	env?: EnvBindings;
+	containers?: Array<{ class_name: string }>;
 };
 
 export type CreatePreviewRequestParams = {
