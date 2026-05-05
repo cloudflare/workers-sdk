@@ -27,7 +27,6 @@ import { mockSelect } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {
 	mockExchangeRefreshTokenForAccessToken,
-	mockGetMemberships,
 	mockOAuthFlow,
 } from "./helpers/mock-oauth-flow";
 import {
@@ -36,6 +35,7 @@ import {
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
+import { getMswSuccessMembershipHandlers } from "./helpers/msw/handlers/user";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { UserAuthConfig } from "../user";
@@ -610,18 +610,14 @@ describe("User", () => {
 			setIsTTY(true);
 
 			// Mock the memberships API to return multiple accounts
-			// Note: mockGetMemberships uses { once: true }, so we need to set it up for each expected call
+			// Note: getMswSuccessMembershipHandlers uses { once: true }, so we need to set it up for each expected call
 			// But since we're testing caching, the second call should NOT hit the API
-			mockGetMemberships([
-				{
-					id: "membership-1",
-					account: { id: "account-1", name: "Account One" },
-				},
-				{
-					id: "membership-2",
-					account: { id: "account-2", name: "Account Two" },
-				},
-			]);
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "account-1", name: "Account One" },
+					{ id: "account-2", name: "Account Two" },
+				])
+			);
 
 			// Mock the select dialog - should only be called once
 			mockSelect({
@@ -667,12 +663,11 @@ describe("User", () => {
 			expect,
 		}) => {
 			// Mock single account - no prompt needed
-			mockGetMemberships([
-				{
-					id: "membership-1",
-					account: { id: "single-account", name: "Only Account" },
-				},
-			]);
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "single-account", name: "Only Account" },
+				])
+			);
 
 			const accountId = await getOrSelectAccountId({});
 			expect(accountId).toBe("single-account");
@@ -686,12 +681,11 @@ describe("User", () => {
 
 			// Set up another membership response for verification
 			// (won't be called because cache is used)
-			mockGetMemberships([
-				{
-					id: "membership-2",
-					account: { id: "different-account", name: "Different" },
-				},
-			]);
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "different-account", name: "Different" },
+				])
+			);
 
 			// Second call should use cache
 			const secondAccountId = await getOrSelectAccountId({});
@@ -761,16 +755,12 @@ describe("User", () => {
 		it("should return the intersection of /accounts and /memberships", async ({
 			expect,
 		}) => {
-			mockGetMemberships([
-				{
-					id: "membership-1",
-					account: { id: "account-1", name: "Account One" },
-				},
-				{
-					id: "membership-2",
-					account: { id: "account-2", name: "Account Two" },
-				},
-			]);
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "account-1", name: "Account One" },
+					{ id: "account-2", name: "Account Two" },
+				])
+			);
 
 			const accounts = await fetchAllAccounts({});
 			expect(accounts).toEqual([
@@ -857,7 +847,7 @@ describe("User", () => {
 		});
 
 		it("should throw when no accounts are found", async ({ expect }) => {
-			mockGetMemberships([]);
+			msw.use(...getMswSuccessMembershipHandlers([]));
 
 			await expect(fetchAllAccounts({})).rejects.toThrowError(
 				/Failed to automatically retrieve account IDs for the logged in user/
@@ -1014,7 +1004,7 @@ describe("User", () => {
 		it("should return an empty array instead of throwing when throwOnEmpty is false", async ({
 			expect,
 		}) => {
-			mockGetMemberships([]);
+			msw.use(...getMswSuccessMembershipHandlers([]));
 
 			const accounts = await fetchAllAccounts({}, { throwOnEmpty: false });
 			expect(accounts).toEqual([]);
@@ -1029,7 +1019,7 @@ describe("User", () => {
 		it("should return env var without making API calls", async ({ expect }) => {
 			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-account-id");
 
-			// No mockGetMemberships — if an API call is made, it will fail
+			// No getMswSuccessMembershipHandlers — if an API call is made, it will fail
 			const accountId = await getOrSelectAccountId({});
 			expect(accountId).toBe("env-account-id");
 		});
@@ -1071,12 +1061,11 @@ describe("User", () => {
 		it("should write to cache when account is resolved via API", async ({
 			expect,
 		}) => {
-			mockGetMemberships([
-				{
-					id: "membership-1",
-					account: { id: "api-account", name: "API Account" },
-				},
-			]);
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "api-account", name: "API Account" },
+				])
+			);
 
 			const accountId = await getOrSelectAccountId({});
 			expect(accountId).toBe("api-account");

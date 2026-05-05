@@ -18,6 +18,45 @@ const DEFAULT_ACCOUNTS = [
 	{ name: "Account Three", id: "account-3" },
 ];
 
+export function getMswSuccessMembershipHandlers(
+	accounts: typeof DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS
+) {
+	return [
+		http.get("*/accounts", () => {
+			return HttpResponse.json(createFetchResult(accounts));
+		}),
+		http.get("*/memberships", () => {
+			return HttpResponse.json(
+				createFetchResult(
+					accounts.map((account, index) => ({
+						id: `membership-id-${index + 1}`,
+						account,
+					}))
+				)
+			);
+		}),
+	];
+}
+
+export function getMswFailMembershipHandlers() {
+	return [
+		http.get(
+			"*/memberships",
+			() => {
+				return HttpResponse.json(createFetchResult([], false));
+			},
+			{ once: true }
+		),
+		http.get(
+			"*/accounts",
+			() => {
+				return HttpResponse.json(createFetchResult([], false));
+			},
+			{ once: true }
+		),
+	];
+}
+
 export const mswSuccessUserHandlers = [
 	http.get(
 		"*/user",
@@ -41,17 +80,5 @@ export const mswSuccessUserHandlers = [
 		},
 		{ once: true }
 	),
-	http.get("*/accounts", () => {
-		return HttpResponse.json(createFetchResult(DEFAULT_ACCOUNTS));
-	}),
-	http.get("*/memberships", () => {
-		return HttpResponse.json(
-			createFetchResult(
-				DEFAULT_ACCOUNTS.map((account, index) => ({
-					id: `membership-id-${index + 1}`,
-					account,
-				}))
-			)
-		);
-	}),
+	...getMswSuccessMembershipHandlers(),
 ];

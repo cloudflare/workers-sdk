@@ -8,6 +8,7 @@ import { clearDialogs } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockProcess } from "../helpers/mock-process";
 import { createFetchResult, msw } from "../helpers/msw";
+import { getMswSuccessMembershipHandlers } from "../helpers/msw/handlers/user";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { wranglerKVConfig } from "./constant";
@@ -1187,10 +1188,7 @@ describe("kv", () => {
 				it("should error if there are multiple accounts available but not interactive on stdin", async ({
 					expect,
 				}) => {
-					mockGetMemberships([
-						{ id: "xxx", account: { id: "1", name: "one" } },
-						{ id: "yyy", account: { id: "2", name: "two" } },
-					]);
+					msw.use(...getMswSuccessMembershipHandlers());
 					setIsTTY({ stdin: false, stdout: true });
 					await expect(
 						runWrangler("kv key get --remote key --namespace-id=xxxx")
@@ -1198,18 +1196,16 @@ describe("kv", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`one\`: \`1\`
-						  \`two\`: \`2\`]
+						  \`Account One\`: \`account-1\`
+						  \`Account Two\`: \`account-2\`
+						  \`Account Three\`: \`account-3\`]
 					`);
 				});
 
 				it("should error if there are multiple accounts available but not interactive on stdout", async ({
 					expect,
 				}) => {
-					mockGetMemberships([
-						{ id: "xxx", account: { id: "1", name: "one" } },
-						{ id: "yyy", account: { id: "2", name: "two" } },
-					]);
+					msw.use(...getMswSuccessMembershipHandlers());
 					setIsTTY({ stdin: true, stdout: false });
 					await expect(
 						runWrangler("kv key get --remote key --namespace-id=xxxx")
@@ -1217,8 +1213,9 @@ describe("kv", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`one\`: \`1\`
-						  \`two\`: \`2\`]
+						  \`Account One\`: \`account-1\`
+						  \`Account Two\`: \`account-2\`
+						  \`Account Three\`: \`account-3\`]
 					`);
 				});
 
@@ -1253,10 +1250,7 @@ describe("kv", () => {
 				it("should error if there are multiple accounts available but not interactive at all", async ({
 					expect,
 				}) => {
-					mockGetMemberships([
-						{ id: "xxx", account: { id: "1", name: "one" } },
-						{ id: "yyy", account: { id: "2", name: "two" } },
-					]);
+					msw.use(...getMswSuccessMembershipHandlers());
 					setIsTTY(false);
 					await expect(
 						runWrangler("kv key get --remote key --namespace-id=xxxx")
@@ -1264,8 +1258,9 @@ describe("kv", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`one\`: \`1\`
-						  \`two\`: \`2\`]
+						  \`Account One\`: \`account-1\`
+						  \`Account Two\`: \`account-2\`
+						  \`Account Three\`: \`account-3\`]
 					`);
 				});
 			});
@@ -1414,34 +1409,6 @@ describe("kv", () => {
 		});
 	});
 });
-
-function mockGetMemberships(
-	accounts: { id: string; account: { id: string; name: string } }[]
-) {
-	msw.use(
-		http.get(
-			"*/memberships",
-			() => {
-				return HttpResponse.json(createFetchResult(accounts));
-			},
-			{ once: true }
-		)
-	);
-	// Wrangler intersects `/memberships` with `/accounts` to determine the
-	// accounts available to the current login auth. Mirror the same accounts
-	// on `/accounts` so the intersection yields the same set as `/memberships`.
-	msw.use(
-		http.get(
-			"*/accounts",
-			() => {
-				return HttpResponse.json(
-					createFetchResult(accounts.map(({ account }) => account))
-				);
-			},
-			{ once: true }
-		)
-	);
-}
 
 function mockKeyListRequest(
 	expect: ExpectStatic,

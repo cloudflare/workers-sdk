@@ -21,7 +21,6 @@ import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import {
 	mockExchangeRefreshTokenForAccessToken,
-	mockGetMemberships,
 	mockOAuthFlow,
 } from "../helpers/mock-oauth-flow";
 import { mockUploadWorkerRequest } from "../helpers/mock-upload-worker";
@@ -33,6 +32,7 @@ import {
 } from "../helpers/mock-workers-subdomain";
 import {
 	createFetchResult,
+	getMswSuccessMembershipHandlers,
 	msw,
 	mswSuccessDeploymentScriptAPI,
 	mswSuccessOauthHandlers,
@@ -902,7 +902,7 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
 				mockOAuthServerCallback();
-				mockGetMemberships([]);
+				msw.use(...getMswSuccessMembershipHandlers([]));
 
 				await runWrangler("deploy index.js");
 
@@ -933,13 +933,16 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
 				mockOAuthServerCallback();
-				mockGetMemberships([
-					{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-					{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
-				]);
+				msw.use(
+					...getMswSuccessMembershipHandlers([
+						{ id: "1701", name: "enterprise" },
+						{ id: "nx01", name: "enterprise-nx" },
+					])
+				);
 
-				await expect(runWrangler("deploy index.js")).rejects
-					.toMatchInlineSnapshot(`
+				await expect(
+					runWrangler("deploy index.js")
+				).rejects.toMatchInlineSnapshot(`
 					[Error: More than one account available but unable to select one in non-interactive mode.
 					Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 					Available accounts are (\`<name>\`: \`<account_id>\`):
@@ -962,13 +965,16 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
 				mockOAuthServerCallback();
-				mockGetMemberships([
-					{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-					{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
-				]);
+				msw.use(
+					...getMswSuccessMembershipHandlers([
+						{ id: "1701", name: "enterprise" },
+						{ id: "nx01", name: "enterprise-nx" },
+					])
+				);
 
-				await expect(runWrangler("deploy index.js")).rejects
-					.toMatchInlineSnapshot(`
+				await expect(
+					runWrangler("deploy index.js")
+				).rejects.toMatchInlineSnapshot(`
 					[Error: More than one account available but unable to select one in non-interactive mode.
 					Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 					Available accounts are (\`<name>\`: \`<account_id>\`):
@@ -990,10 +996,12 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
 				mockOAuthServerCallback();
-				mockGetMemberships([
-					{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-					{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
-				]);
+				msw.use(
+					...getMswSuccessMembershipHandlers([
+						{ id: "1701", name: "enterprise" },
+						{ id: "nx01", name: "enterprise-nx" },
+					])
+				);
 
 				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
 
@@ -1016,7 +1024,7 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
 				mockOAuthServerCallback();
-				mockGetMemberships([]);
+				msw.use(...getMswSuccessMembershipHandlers([]));
 
 				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
 
