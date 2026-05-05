@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig, preview } from "vite";
-import { satisfiesMinimumViteVersion } from "../__test-utils__";
+import { satisfiesMinimumViteVersion } from "../__test-utils__/vite-version";
 
 export default defineConfig(
 	// These playground tests don't run in Vite 6 because the feature is not compatible
