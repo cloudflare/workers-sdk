@@ -524,10 +524,7 @@ export function buildMiniflareBindingOptions(
 		bindings
 	);
 	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
-	const agentMemoryBindings = extractBindingsOfType(
-		"agent_memory_namespace",
-		bindings
-	);
+	const agentMemoryBindings = extractBindingsOfType("agent_memory", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
 	const browserBindings = extractBindingsOfType("browser", bindings);
@@ -637,7 +634,7 @@ export function buildMiniflareBindingOptions(
 	}
 
 	for (const memory of agentMemoryBindings) {
-		warnOrError("agent_memory_namespace", memory.remote, "always-remote");
+		warnOrError("agent_memory", memory.remote, "always-remote");
 	}
 
 	for (const media of mediaBindings) {

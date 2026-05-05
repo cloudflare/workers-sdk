@@ -322,7 +322,7 @@ export function convertConfigToBindings(
 			}
 			case "agent_memory": {
 				for (const { binding, ...x } of info) {
-					output[binding] = { type: "agent_memory_namespace", ...x };
+					output[binding] = { type: "agent_memory", ...x };
 				}
 				break;
 			}
@@ -668,13 +668,13 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				};
 				break;
 			}
-			case "agent_memory_namespace": {
+			case "agent_memory": {
 				const b = binding as Extract<
 					WorkerMetadataBinding,
-					{ type: "agent_memory_namespace" }
+					{ type: "agent_memory" }
 				>;
 				output[name] = {
-					type: "agent_memory_namespace",
+					type: "agent_memory",
 					namespace: b.namespace,
 				};
 				break;

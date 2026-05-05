@@ -299,7 +299,7 @@ export function mapWorkerMetadataBindings(
 							},
 						];
 						break;
-					case "agent_memory_namespace": {
+					case "agent_memory": {
 						configObj.agent_memory = [
 							...(configObj.agent_memory ?? []),
 							{
