@@ -1157,7 +1157,7 @@ export function getGlobalServices({
 	];
 
 	if (sharedOptions.unsafeLocalExplorer) {
-		const localExplorerUiPath = materializeLocalExplorerUi(tmpPath);
+		const localExplorerUiPath = resolveLocalExplorerUi(tmpPath);
 		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
 			proxyBindings,
 			durableObjectClassNames,
@@ -1191,7 +1191,7 @@ export function getGlobalServices({
  * Node can still read those paths through Yarn's patched filesystem hooks, but
  * workerd can't mount a directory from inside the zip as a disk service.
  */
-function materializeLocalExplorerUi(tmpPath: string) {
+function resolveLocalExplorerUi(tmpPath: string) {
 	const bundledLocalExplorerUiPath = path.join(
 		__dirname,
 		"../local-explorer-ui"
@@ -1201,6 +1201,9 @@ function materializeLocalExplorerUi(tmpPath: string) {
 			"ERR_MISSING_EXPLORER_UI",
 			`Local Explorer UI assets not found at expected path: ${bundledLocalExplorerUiPath}`
 		);
+	}
+	if (!isPathInsideZip(bundledLocalExplorerUiPath)) {
+		return bundledLocalExplorerUiPath;
 	}
 
 	const localExplorerUiPath = path.join(
@@ -1228,9 +1231,27 @@ function materializeLocalExplorerUi(tmpPath: string) {
 	return localExplorerUiPath;
 }
 
+function isPathInsideZip(filePath: string) {
+	let currentPath = path.dirname(filePath);
+
+	while (currentPath !== path.dirname(currentPath)) {
+		if (path.extname(currentPath) === ".zip") {
+			const zipStats = statSync(currentPath, { throwIfNoEntry: false });
+			if (zipStats?.isFile()) {
+				return true;
+			}
+		}
+
+		currentPath = path.dirname(currentPath);
+	}
+
+	return false;
+}
+
 /**
- * `cpSync()` treats the PnP source path like a normal on-disk directory and
- * hits `ENOTDIR` when that path actually points inside a `.zip` archive.
+ * `cpSync()` treats the zip-backed PnP source path like a normal on-disk
+ * directory and hits `ENOTDIR` when that path actually points inside a `.zip`
+ * archive.
  * `readdirSync()`, `statSync()`, and `readFileSync()` still work through
  * Yarn's patched fs hooks, so copy the tree entry-by-entry instead.
  */
