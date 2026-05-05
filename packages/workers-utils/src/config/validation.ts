@@ -5168,6 +5168,7 @@ const validatePreviewsConfig =
 				"logpush",
 				"observability",
 				"limits",
+				"cache",
 			]) && isValid;
 
 		isValid =
@@ -5473,6 +5474,10 @@ const validatePreviewsConfig =
 					"number"
 				) && isValid;
 		}
+
+		isValid =
+			validateCache(diagnostics, `${field}.cache`, previews.cache, undefined) &&
+			isValid;
 
 		return isValid;
 	};
