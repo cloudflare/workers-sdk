@@ -6,6 +6,7 @@ import {
 import { http, HttpResponse } from "msw";
 // eslint-disable-next-line no-restricted-imports
 import { assert, beforeEach, describe, expect, it, test, vi } from "vitest";
+import { multiEnvWarning } from "../helpers/multi-env-warning";
 import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
@@ -775,16 +776,7 @@ describe("versions upload", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the versions upload command.[0m
-
-				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-				  the target environment using the \`-e|--env\` flag.
-				  If your intention is to use the top-level environment of your configuration simply pass an empty
-				  string to the flag to target such environment. For example \`--env=""\`.
-
-				"
-			`);
+			expect(std.warn).toMatchInlineSnapshot(multiEnvWarning("versions upload"));
 		});
 
 		it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
