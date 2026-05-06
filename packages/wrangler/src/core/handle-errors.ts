@@ -194,20 +194,21 @@ function isCloudflareAPI(text: string): boolean {
 function isCloudflareAPIDNSError(e: unknown): boolean {
 	return (
 		visitErrorOrCause(e, (err) => {
-			if (hasErrorCode(e, new Set(["ENOTFOUND"]))) {
+			if (hasErrorCode(err, new Set(["ENOTFOUND"]))) {
 				const message = err instanceof Error ? err.message : String(err);
 				if (isCloudflareAPI(message)) {
 					return true;
 				}
 				if (
-					e &&
-					typeof e === "object" &&
-					"hostname" in e &&
+					err &&
+					typeof err === "object" &&
+					"hostname" in err &&
 					typeof (err as { hostname?: unknown }).hostname === "string" &&
 					isCloudflareAPI((err as { hostname: string }).hostname)
 				) {
 					return true;
 				}
+			}
 			}
 
 			return undefined;
