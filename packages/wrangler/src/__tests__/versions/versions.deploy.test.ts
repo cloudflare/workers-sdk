@@ -9,7 +9,6 @@ import {
 	validateTrafficSubtotal,
 } from "../../versions/deploy";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
-import { multiEnvWarning } from "../helpers/multi-env-warning";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -1106,7 +1105,16 @@ describe("versions deploy", () => {
 					"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
 				);
 
-				expect(consoleStd.warn).toMatchInlineSnapshot(multiEnvWarning("versions deploy"));
+				expect(consoleStd.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the versions deploy command.[0m
+
+					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+					  the target environment using the \`-e|--env\` flag.
+					  If your intention is to use the top-level environment of your configuration simply pass an empty
+					  string to the flag to target such environment. For example \`--env=""\`.
+
+					"
+				`);
 			});
 
 			it("should not warn if the wrangler config contains environments and one was specified in the command", async ({
