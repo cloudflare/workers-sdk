@@ -14,7 +14,7 @@ export type ErrorEvent =
 	  >
 	| BaseErrorEvent<
 			"ProxyController",
-			{ config?: StartDevWorkerOptions; bundle?: Bundle }
+			{ config?: StartDevWorkerOptions; bundles?: Map<string, Bundle> }
 	  >
 	| BaseErrorEvent<
 			"BundlerController",
