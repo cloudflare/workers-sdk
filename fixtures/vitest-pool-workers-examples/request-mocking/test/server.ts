@@ -1,3 +1,3 @@
-import { setupServer } from "msw/node";
+import { setupNetwork } from "@msw/cloudflare";
 
-export const server = setupServer();
+export const network = setupNetwork();
