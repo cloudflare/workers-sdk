@@ -25,7 +25,6 @@ describe("containers push", () => {
 
 	mockAccountId();
 	mockApiToken();
-	mockAccountId();
 	beforeEach(mockAccount);
 
 	beforeEach(() => {
