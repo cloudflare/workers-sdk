@@ -31,9 +31,9 @@ import {
 import { handleLoopbackRequest } from "./loopback";
 import { handleModuleFallbackRequest } from "./module-fallback";
 import type {
+	ParsedWorkerPoolOptions,
 	SourcelessWorkerOptions,
 	WorkersPoolOptions,
-	WorkersPoolOptionsWithDefines,
 } from "./config";
 import type {
 	MiniflareOptions,
@@ -284,7 +284,7 @@ const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 
 async function buildProjectWorkerOptions(
 	project: TestProject,
-	customOptions: WorkersPoolOptionsWithDefines,
+	customOptions: ParsedWorkerPoolOptions,
 	main: string | undefined
 ): Promise<ProjectWorkers> {
 	const relativeWranglerConfigPath = maybeApply(
@@ -628,7 +628,7 @@ function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
 async function buildProjectMiniflareOptions(
 	ctx: Vitest,
 	project: TestProject,
-	customOptions: WorkersPoolOptions,
+	customOptions: ParsedWorkerPoolOptions,
 	main: string | undefined
 ): Promise<MiniflareOptions> {
 	const moduleFallbackService = getModuleFallbackService(ctx);
@@ -673,7 +673,7 @@ async function buildProjectMiniflareOptions(
 export async function getProjectMiniflare(
 	ctx: Vitest,
 	project: TestProject,
-	poolOptions: WorkersPoolOptionsWithDefines,
+	poolOptions: ParsedWorkerPoolOptions,
 	main: string | undefined
 ): Promise<Miniflare> {
 	const mfOptions = await buildProjectMiniflareOptions(
@@ -695,7 +695,7 @@ export async function getProjectMiniflare(
 
 export function maybeGetResolvedMainPath(
 	project: TestProject,
-	options: WorkersPoolOptionsWithDefines
+	options: ParsedWorkerPoolOptions
 ): string | undefined {
 	const projectPath = getProjectPath(project);
 	const main = options.main;
