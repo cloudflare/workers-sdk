@@ -193,14 +193,15 @@ describe("tryCleanupLogs", () => {
 		vi.stubEnv("WRANGLER_LOG_PATH", "logs");
 	});
 
-	it("should not throw when called", ({ expect }) => {
-		expect(() => tryCleanupLogs()).not.toThrow();
-	});
-
 	it("should skip cleanup when WRANGLER_LOG_PATH points to an exact .log file", ({
 		expect,
 	}) => {
+		// Run this first so hasStartedLogCleanup is false and we exercise the .log branch
 		vi.stubEnv("WRANGLER_LOG_PATH", "custom-debug.log");
+		expect(() => tryCleanupLogs()).not.toThrow();
+	});
+
+	it("should not throw when called", ({ expect }) => {
 		expect(() => tryCleanupLogs()).not.toThrow();
 	});
 });
