@@ -12,7 +12,6 @@ import {
 } from "../utils/worker-not-found-error";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { multiEnvWarning } from "./helpers/multi-env-warning";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { useMockStdin } from "./helpers/mock-stdin";
@@ -485,7 +484,16 @@ describe("wrangler secret", () => {
 					mockStdIn.send("the-secret");
 					mockPutRequest(expect, { name: "the-key", text: "the-secret" });
 					await runWrangler("secret put the-key --name script-name");
-					expect(std.warn).toMatchInlineSnapshot(multiEnvWarning("secret put"));
+					expect(std.warn).toMatchInlineSnapshot(`
+						"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret put command.[0m
+
+						  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+						  the target environment using the \`-e|--env\` flag.
+						  If your intention is to use the top-level environment of your configuration simply pass an empty
+						  string to the flag to target such environment. For example \`--env=""\`.
+
+						"
+					`);
 				});
 
 				it("should not warn if the wrangler config contains environments and one was specified in the command", async ({
@@ -771,7 +779,16 @@ describe("wrangler secret", () => {
 					result: true,
 				});
 				await runWrangler("secret delete the-key --name script-name");
-				expect(std.warn).toMatchInlineSnapshot(multiEnvWarning("secret delete"));
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret delete command.[0m
+
+					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+					  the target environment using the \`-e|--env\` flag.
+					  If your intention is to use the top-level environment of your configuration simply pass an empty
+					  string to the flag to target such environment. For example \`--env=""\`.
+
+					"
+				`);
 			});
 
 			it("should not warn if the wrangler config contains environments and one was specified in the command", async ({
@@ -1510,7 +1527,16 @@ describe("wrangler secret", () => {
 				mockBulkRequest(expect);
 
 				await runWrangler("secret bulk ./secret.json --name script-name");
-				expect(std.warn).toMatchInlineSnapshot(multiEnvWarning("secret bulk"));
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret bulk command.[0m
+
+					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
+					  the target environment using the \`-e|--env\` flag.
+					  If your intention is to use the top-level environment of your configuration simply pass an empty
+					  string to the flag to target such environment. For example \`--env=""\`.
+
+					"
+				`);
 			});
 
 			it("should not warn if the wrangler config contains environments and one was specified in the command", async ({
