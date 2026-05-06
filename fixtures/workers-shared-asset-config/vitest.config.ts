@@ -10,6 +10,7 @@ export default defineConfig({
 		}),
 	],
 	test: {
+		reporters: ["default"],
 		chaiConfig: {
 			truncateThreshold: 80,
 		},

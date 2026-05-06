@@ -23,6 +23,7 @@ describe("containers push", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 
+	mockAccountId();
 	mockApiToken();
 	mockAccountId();
 	beforeEach(mockAccount);

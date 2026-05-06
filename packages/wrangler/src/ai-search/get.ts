@@ -42,9 +42,9 @@ export const aiSearchGetCommand = createCommand({
 			{
 				name: instance.id,
 				namespace: instance.namespace ?? namespace,
-				type: instance.type,
+				type: instance.type ?? "builtin",
 				status: instance.status ?? "",
-				source: instance.source,
+				source: instance.source ?? "-",
 				model: instance.ai_search_model ?? "",
 				embedding: instance.embedding_model ?? "",
 				created: instance.created_at,

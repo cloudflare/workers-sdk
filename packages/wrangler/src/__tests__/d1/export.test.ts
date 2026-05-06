@@ -7,7 +7,7 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships } from "../helpers/mock-oauth-flow";
+import { getMswSuccessMembershipHandlers } from "../helpers/msw";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -121,9 +121,11 @@ describe("export", () => {
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
 		});
-		mockGetMemberships([
-			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-		]);
+		msw.use(
+			...getMswSuccessMembershipHandlers([
+				{ id: "some-account-id", name: "test-account" },
+			])
+		);
 		const mockSqlContent = "PRAGMA defer_foreign_keys=TRUE;";
 
 		mockResponses();
@@ -147,9 +149,11 @@ describe("export", () => {
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
 		});
-		mockGetMemberships([
-			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-		]);
+		msw.use(
+			...getMswSuccessMembershipHandlers([
+				{ id: "some-account-id", name: "test-account" },
+			])
+		);
 		const mockSqlContent = "PRAGMA defer_foreign_keys=TRUE;";
 
 		mockConfirm({
@@ -196,9 +200,11 @@ describe("export", () => {
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
 		});
-		mockGetMemberships([
-			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-		]);
+		msw.use(
+			...getMswSuccessMembershipHandlers([
+				{ id: "some-account-id", name: "test-account" },
+			])
+		);
 		const mockSqlContent = "PRAGMA defer_foreign_keys=TRUE;";
 
 		mockResponses();
@@ -222,9 +228,11 @@ describe("export", () => {
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
 		});
-		mockGetMemberships([
-			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-		]);
+		msw.use(
+			...getMswSuccessMembershipHandlers([
+				{ id: "some-account-id", name: "test-account" },
+			])
+		);
 
 		mockResponses();
 
@@ -259,9 +267,11 @@ describe("export", () => {
 		writeWranglerConfig({
 			d1_databases: [{ binding: "D1", database_name: "D1" }],
 		});
-		mockGetMemberships([
-			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-		]);
+		msw.use(
+			...getMswSuccessMembershipHandlers([
+				{ id: "some-account-id", name: "test-account" },
+			])
+		);
 
 		await expect(
 			runWrangler("d1 export D1 --output test-remote.sql --remote")

@@ -291,16 +291,26 @@ describe("whoami", () => {
 		expect,
 	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		// `whoami` makes two calls to `/memberships`: one inside `fetchAllAccounts`
+		// (to filter accounts by what the current login auth can use) and one
+		// inside `fetchMembershipRoles`. Use a non-once handler so both calls
+		// see the same response.
 		msw.use(
-			http.get(
-				"*/memberships",
-				() =>
-					HttpResponse.json(
-						createFetchResult([
-							{ account: { id: "account-2" }, roles: ["Test role"] },
-						])
-					),
-				{ once: true }
+			http.get("*/memberships", () =>
+				HttpResponse.json(
+					createFetchResult([
+						{
+							account: { id: "account-1", name: "Account One" },
+						},
+						{
+							account: { id: "account-2", name: "Account Two" },
+							roles: ["Test role"],
+						},
+						{
+							account: { id: "account-3", name: "Account Three" },
+						},
+					])
+				)
 			)
 		);
 		await runWrangler(`whoami --account "account-2"`);
@@ -360,15 +370,21 @@ describe("whoami", () => {
 		setIsTTY(false);
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		msw.use(
-			http.get(
-				"*/memberships",
-				() =>
-					HttpResponse.json(
-						createFetchResult([
-							{ account: { id: "account-2" }, roles: ["Test role"] },
-						])
-					),
-				{ once: true }
+			http.get("*/memberships", () =>
+				HttpResponse.json(
+					createFetchResult([
+						{
+							account: { id: "account-1", name: "Account One" },
+						},
+						{
+							account: { id: "account-2", name: "Account Two" },
+							roles: ["Test role"],
+						},
+						{
+							account: { id: "account-3", name: "Account Three" },
+						},
+					])
+				)
 			)
 		);
 		await runWrangler(`whoami --account "account-2"`);
@@ -473,16 +489,18 @@ describe("whoami", () => {
 		expect,
 	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		// `fetchAllAccounts` falls back to `/accounts` when `/memberships`
+		// fails with 9109 (Insufficient permissions) or 10000 (Authentication
+		// error), so the accounts table still renders. The separate
+		// `fetchMembershipRoles` call also fails with 10000 and surfaces the
+		// "Unable to get membership roles" hint to the user.
 		msw.use(
-			http.get(
-				"*/memberships",
-				() =>
-					HttpResponse.json(
-						createFetchResult(undefined, false, [
-							{ code: 10000, message: "Authentication error" },
-						])
-					),
-				{ once: true }
+			http.get("*/memberships", () =>
+				HttpResponse.json(
+					createFetchResult(undefined, false, [
+						{ code: 10000, message: "Authentication error" },
+					])
+				)
 			)
 		);
 		await runWrangler(`whoami --account "account-2"`);
@@ -535,5 +553,33 @@ describe("whoami", () => {
 
 			🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"
 		`);
+	});
+
+	it("should fail when /memberships fails with a non-tolerated error", async ({
+		expect,
+	}) => {
+		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		// `fetchAllAccounts` only tolerates 9109 (Insufficient permissions) and
+		// 10000 (Authentication error) on `/memberships`. Any other failure is
+		// propagated and `whoami` fails. Use non-once handlers because
+		// `handleError` re-invokes `whoami` to display user info on auth
+		// errors, so `/user` and `/memberships` are each called twice.
+		msw.use(
+			http.get("*/user", () =>
+				HttpResponse.json(createFetchResult({ email: "user@example.com" }))
+			),
+			http.get("*/memberships", () =>
+				HttpResponse.json(
+					createFetchResult(undefined, false, [
+						{ code: 1003, message: "Invalid something" },
+					])
+				)
+			)
+		);
+		await expect(
+			runWrangler(`whoami --account "account-2"`)
+		).rejects.toThrowError(
+			/A request to the Cloudflare API \(\/memberships\) failed/
+		);
 	});
 });

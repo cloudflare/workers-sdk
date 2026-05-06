@@ -7,6 +7,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
+		reporters: ["default"],
 		projects: [
 			"*/vitest.*config.*ts",
 			// workerd's Windows SQLite VFS uses kj::Path::toString() (Unix-style

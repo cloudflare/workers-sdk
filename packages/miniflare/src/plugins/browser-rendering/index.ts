@@ -227,6 +227,64 @@ export async function launchBrowser({
 	const wsEndpoint = await browserProcess.waitForLineOutput(
 		CDP_WEBSOCKET_ENDPOINT_REGEX
 	);
+	// On Windows in particular, Chrome may print the DevTools URL slightly
+	// before its listening socket is fully ready to accept connections.
+	// Probe the HTTP /json/version endpoint (served on the same port as the
+	// WS endpoint) with retry/backoff before declaring the browser ready, so
+	// that subsequent fetches from workerd don't race the OS and surface as
+	// `ConnectEx (#1225) connection refused` errors.
+	await waitForBrowserReady(wsEndpoint, log);
 	const startTime = Date.now();
 	return { sessionId, browserProcess, startTime, wsEndpoint };
+}
+
+/**
+ * Probe Chrome's HTTP DevTools endpoint until it accepts connections.
+ *
+ * `waitForLineOutput` resolves as soon as Chrome logs the
+ * `DevTools listening on ws://...` banner, but on Windows the underlying
+ * listening socket is occasionally not yet accepting connections at that
+ * point. Without this probe, the first request from workerd to Chrome can
+ * fail with `ConnectEx (#1225) The remote computer refused the network
+ * connection.` even though Chrome is otherwise healthy.
+ */
+async function waitForBrowserReady(
+	wsEndpoint: string,
+	log: Log
+): Promise<void> {
+	const timeoutMs = 5000;
+	const initialDelayMs = 25;
+	const maxDelayMs = 250;
+	const perRequestTimeoutMs = 500;
+	const probeUrl = `${new URL(wsEndpoint.replace("ws://", "http://")).origin}/json/version`;
+	const deadline = Date.now() + timeoutMs;
+	let attempt = 0;
+	let lastError: unknown;
+	while (Date.now() < deadline) {
+		try {
+			const response = await fetch(probeUrl, {
+				signal: AbortSignal.timeout(perRequestTimeoutMs),
+			});
+			// Drain the body so the connection can be reused/closed cleanly.
+			await response.arrayBuffer();
+			if (response.ok) {
+				if (attempt > 0) {
+					log.debug(`Chrome ready after ${attempt + 1} attempt(s)`);
+				}
+				return;
+			}
+			lastError = new Error(
+				`Chrome readiness probe got status ${response.status}`
+			);
+		} catch (e) {
+			lastError = e;
+		}
+		const delay = Math.min(maxDelayMs, initialDelayMs * 2 ** attempt);
+		await new Promise((resolve) => setTimeout(resolve, delay));
+		attempt++;
+	}
+	throw new Error(
+		`Chrome readiness probe at ${probeUrl} timed out after ${timeoutMs}ms`,
+		{ cause: lastError }
+	);
 }

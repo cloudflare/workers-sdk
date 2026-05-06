@@ -4495,7 +4495,28 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should accept valid bindings", ({ expect }) => {
+			it("should accept valid bindings with stream field", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						pipelines: [
+							{
+								binding: "VALID",
+								stream: "343cd4f1d58c42fbb5bd082592fd7143",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should accept deprecated pipeline field with warning", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						pipelines: [
@@ -4511,6 +4532,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The "pipeline" field in "pipelines[0]" bindings is deprecated. Use "stream" instead."
+				`);
 			});
 
 			it("should error if pipelines.bindings are not valid", ({ expect }) => {
@@ -4520,7 +4546,7 @@ describe("normalizeAndValidateConfig()", () => {
 							{},
 							{
 								binding: "VALID",
-								pipeline: "343cd4f1d58c42fbb5bd082592fd7143",
+								stream: "343cd4f1d58c42fbb5bd082592fd7143",
 							},
 							{ binding: 2000, project: 2111 },
 						],
@@ -4537,9 +4563,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "pipelines[0]" bindings must have a string "binding" field but got {}.
-					  - "pipelines[0]" bindings must have a string "pipeline" field but got {}.
+					  - "pipelines[0]" bindings must have a string "stream" field but got {}.
 					  - "pipelines[2]" bindings must have a string "binding" field but got {"binding":2000,"project":2111}.
-					  - "pipelines[2]" bindings must have a string "pipeline" field but got {"binding":2000,"project":2111}."
+					  - "pipelines[2]" bindings must have a string "stream" field but got {"binding":2000,"project":2111}."
 				`);
 			});
 		});
@@ -7454,11 +7480,7 @@ describe("normalizeAndValidateConfig()", () => {
 					required: ["API_KEY", "DATABASE_PASSWORD"],
 				});
 				expect(diagnostics.hasErrors()).toBe(false);
-				// Expect experimental warning
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toContain(
-					'"secrets" fields are experimental'
-				);
+				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
 			it("should error if secrets is not an object", ({ expect }) => {
@@ -9505,6 +9527,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 						kv_namespaces: [{ binding: "MY_KV", id: "preview-kv-id" }],
 						r2_buckets: [{ binding: "MY_R2", bucket_name: "preview-bucket" }],
+						flagship: [{ binding: "FLAGS", app_id: "flagship-app-id" }],
 						observability: { enabled: true },
 						limits: { cpu_ms: 50 },
 					},
@@ -9581,6 +9604,83 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.cache with enabled: true", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						cache: {
+							enabled: true,
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.cache with enabled: false", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						cache: {
+							enabled: false,
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject previews.cache when missing enabled", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						cache: {},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain("enabled");
+			});
+
+			it("should reject previews.cache when enabled is not a boolean", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						cache: {
+							enabled: "yes",
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
 			});
 
 			it("should reject previews.queues when passed as a flat array", ({

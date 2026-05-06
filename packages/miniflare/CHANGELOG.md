@@ -1,5 +1,91 @@
 # miniflare
 
+## 4.20260504.0
+
+### Patch Changes
+
+- [#13765](https://github.com/cloudflare/workers-sdk/pull/13765) [`3020214`](https://github.com/cloudflare/workers-sdk/commit/3020214014066aafd2369469e92f4b91e979ebb4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260430.1 | 1.20260501.1 |
+
+- [#13800](https://github.com/cloudflare/workers-sdk/pull/13800) [`0099265`](https://github.com/cloudflare/workers-sdk/commit/00992655695093ce644bb2916ffd0d924d5abbab) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260501.1 | 1.20260504.1 |
+
+- [#13737](https://github.com/cloudflare/workers-sdk/pull/13737) [`bb27219`](https://github.com/cloudflare/workers-sdk/commit/bb27219651142036180cb1d01650df48d5282800) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Fix race condition that broke Browser Run on Windows when Chrome had not yet started accepting connections
+
+  When Miniflare launched Chrome for Browser Run bindings, it returned the WebSocket endpoint as soon as Chrome printed its `DevTools listening on ws://...` banner. On Windows the underlying listening socket is occasionally not yet accepting connections at that point, causing the first request from workerd to Chrome to fail with `ConnectEx (#1225) The remote computer refused the network connection.` and the user worker to receive an error response from `/v1/acquire`.
+
+  Miniflare now probes Chrome's `/json/version` HTTP endpoint with retry/backoff after the banner is logged, only declaring the browser ready once the socket actually accepts connections. As an additional safety net, the browser binding worker also retries transient `ConnectEx`/`WSARecv` failures when establishing connections to Chrome.
+
+- [#13767](https://github.com/cloudflare/workers-sdk/pull/13767) [`12fb5db`](https://github.com/cloudflare/workers-sdk/commit/12fb5db89a31cc6ecccf022dfc7de4622973129d) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix local explorer startup in Yarn Plug'n'Play projects by copying the explorer UI assets to a real temporary directory before registering the workerd disk service.
+
+## 4.20260430.0
+
+### Minor Changes
+
+- [#13726](https://github.com/cloudflare/workers-sdk/pull/13726) [`b5ac54b`](https://github.com/cloudflare/workers-sdk/commit/b5ac54baa4a6e40b7352f7d3ed0d3531a37a5e8f) Thanks [@penalosa](https://github.com/penalosa)! - Hard fail on Node.js < 22
+
+  Wrangler no longer supports Node.js 20.x, as it reached end-of-life on 2026-04-30. The minimum supported Node.js version is now 22.0.0. See https://github.com/nodejs/release?tab=readme-ov-file#end-of-life-releases.
+
+- [#13390](https://github.com/cloudflare/workers-sdk/pull/13390) [`0bf64a7`](https://github.com/cloudflare/workers-sdk/commit/0bf64a79678fb08158e341ed1e0cc21341a770a7) Thanks [@Ltadrian](https://github.com/Ltadrian)! - Fix Hyperdrive binding issue where some customers are unable to connect to local databases using `wrangler dev`
+
+  - Skips creating a local TCP proxy server for Hyperdrive bindings when SSL is not enabled, connecting directly to the database instead. This avoids connection refused errors caused by firewall rules or proxy port binding issues on Windows/macOS.
+
+- [#13565](https://github.com/cloudflare/workers-sdk/pull/13565) [`b04eedf`](https://github.com/cloudflare/workers-sdk/commit/b04eedfcdc713d04cbb4f1722ebe056c9dc4cb6e) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Add restart from step support for local Workflows development
+
+  Workflow instances can now be restarted from a specific step in local development. When restarting from a step, all earlier steps preserve their cached results and replay instantly, while the target step and everything after it re-execute.
+
+  The `WorkflowInstance.restart()` method now accepts an optional `{ from: { name, count?, type? } }` parameter to specify which step to restart from.
+
+- [#13618](https://github.com/cloudflare/workers-sdk/pull/13618) [`c07d0cb`](https://github.com/cloudflare/workers-sdk/commit/c07d0cb4fafbcf3a60c46e1aa6a48ed63de598da) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support V2 protocol for module fallback service
+
+  When the `new_module_registry` compatibility flag is set, requests sent to `unsafeModuleFallbackService()` use a different protocol. Miniflare now supports both protocols and exports a `parseModuleFallbackRequest()` utility to ease handling.
+
+### Patch Changes
+
+- [#13732](https://github.com/cloudflare/workers-sdk/pull/13732) [`22e1a61`](https://github.com/cloudflare/workers-sdk/commit/22e1a6176da1ff0e91e3d27b41c3770b323b56a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260426.1 | 1.20260429.1 |
+
+- [#13754](https://github.com/cloudflare/workers-sdk/pull/13754) [`00523c8`](https://github.com/cloudflare/workers-sdk/commit/00523c89b91aa7addd0ccbf3864dbce2a218c6d4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260429.1 | 1.20260430.1 |
+
+- [#13723](https://github.com/cloudflare/workers-sdk/pull/13723) [`e653edf`](https://github.com/cloudflare/workers-sdk/commit/e653edf7446817c2ca36515e9cefd2f5bd16f98f) Thanks [@edmundhung](https://github.com/edmundhung)! - Expose `send_email` bindings from `getPlatformProxy()`
+
+  Projects developing in Node can now access `send_email` bindings from the platform proxy. This supports the plain-object MessageBuilder API locally, so calls like `env.EMAIL.send({ from, to, subject, text })` no longer fail because the binding is missing.
+
+- [#12514](https://github.com/cloudflare/workers-sdk/pull/12514) [`e1eff94`](https://github.com/cloudflare/workers-sdk/commit/e1eff943ec4c073c3d1ba2c1910806d68f98e5a3) Thanks [@ascorbic](https://github.com/ascorbic)! - fix: normalise typed array subclasses in devalue serialization
+
+  Node.js `Buffer` extends `Uint8Array` but isn't available in all runtimes. When a `Buffer` was passed through the proxy serialization bridge (e.g. as a D1 bind parameter via `getPlatformProxy()`), the reviver would fail because `"Buffer"` isn't in the allowed constructor list and may not exist on `globalThis` in workerd.
+
+  The reducer now normalises subclass constructor names to the nearest standard typed array parent before serialization, matching structured clone behaviour.
+
+- [#13116](https://github.com/cloudflare/workers-sdk/pull/13116) [`e539008`](https://github.com/cloudflare/workers-sdk/commit/e5390082ff85f3d39c702895d72c7172776506c0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Gracefully handle a missing assets directory by starting with zero assets
+
+  Previously, configuring Miniflare with an `assets.directory` that did not exist on disk would cause the asset services to fail to start. This is a common situation during `wrangler dev` when the assets directory is a build output that hasn't been generated yet.
+
+  Now, when the configured assets directory does not exist, Miniflare creates an empty temporary directory and starts the asset services with zero assets. Once the real directory is created and `setOptions()` is called (e.g. triggered by the file watcher), Miniflare reloads and begins serving the actual assets.
+
+- [#13363](https://github.com/cloudflare/workers-sdk/pull/13363) [`6457fb3`](https://github.com/cloudflare/workers-sdk/commit/6457fb38c7fbce39c396562bc3324b945114c672) Thanks [@courtney-sims](https://github.com/courtney-sims)! - Prepares router-worker for a more gradual rollout by refactoring and separating out the invocation from the business logic. In the future, this will provide space for us to route requests to new versions of router-worker based on their plan, but should make no functional difference today.
+
 ## 4.20260426.0
 
 ### Minor Changes

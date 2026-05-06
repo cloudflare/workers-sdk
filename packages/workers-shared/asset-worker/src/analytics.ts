@@ -4,6 +4,13 @@ import type { ReadyAnalytics } from "./types";
 // This will allow us to make breaking changes to the analytic schema
 const VERSION = 1;
 
+// Identifies which entrypoint produced the analytics row.
+// Values must stay in sync with the ClickHouse view in cloudflare/ch/ready-analytics.
+export enum EntrypointType {
+	Outer = 0,
+	Inner = 1,
+}
+
 // When adding new columns please update the schema
 type Data = {
 	// -- Indexes --
@@ -23,6 +30,8 @@ type Data = {
 	status?: number;
 	// double6 - Compatibility flags
 	compatibilityFlags?: string[]; // converted into a bitmask
+	// double7 - Entrypoint discriminator (see EntrypointType enum)
+	entrypoint?: EntrypointType;
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -41,6 +50,8 @@ type Data = {
 	coloRegion?: string;
 	// blob8 - The cache status of the request
 	cacheStatus?: string;
+	// blob9 - Account cohort ("ent", "paid", "free", "employee", or "unknown")
+	cohort?: string;
 };
 
 const COMPATIBILITY_FLAG_MASKS: Record<ENABLEMENT_COMPATIBILITY_FLAGS, number> =
@@ -94,6 +105,7 @@ export class Analytics {
 				this.data.coloTier ?? -1, // double4
 				this.data.status ?? -1, // double5
 				compatibilityFlagsBitmask, // double6
+				this.data.entrypoint ?? -1, // double7
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes
@@ -104,6 +116,7 @@ export class Analytics {
 				this.data.version, // blob6
 				this.data.coloRegion, // blob7
 				this.data.cacheStatus, // blob8
+				this.data.cohort, // blob9
 			],
 		});
 	}

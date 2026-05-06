@@ -6,13 +6,14 @@
  * Converts an error to an object that can be be serialized and revived by Miniflare.
  * Copied from `packages/wrangler/templates/middleware/middleware-miniflare3-json-error.ts`
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function reduceError(e: any): any {
+function reduceError(e: unknown): unknown {
+	const errorObj = (e ?? {}) as Record<string, unknown>;
 	return {
-		name: e?.name,
-		message: e?.message ?? String(e),
-		stack: e?.stack,
-		cause: e?.cause === undefined ? undefined : reduceError(e.cause),
+		name: errorObj.name,
+		message: errorObj.message ?? String(e),
+		stack: errorObj.stack,
+		cause:
+			errorObj.cause === undefined ? undefined : reduceError(errorObj.cause),
 	};
 }
 
