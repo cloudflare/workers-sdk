@@ -199,7 +199,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
 					// The targetEnvironment will contain the resolved result of the env flag and the env var, if passed
-					if (!config.targetEnvironment) {
+					if (config.targetEnvironment === undefined) {
 						const availableEnvsCount = config.definedEnvironments?.length ?? 0
 
 						if (availableEnvsCount > 0) {
