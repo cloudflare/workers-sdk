@@ -743,12 +743,6 @@ function formatDeploymentResource(
 	return drawConnectedChildBox(lines, { footerLines, indent: "  " });
 }
 
-function isInheritableBinding(
-	binding: Exclude<StartDevWorkerInput["bindings"], undefined>[string]
-) {
-	return binding.type === "assets";
-}
-
 function logMissingPreviewsBindingsWarning(
 	topLevelBindings: StartDevWorkerInput["bindings"],
 	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
@@ -760,8 +754,7 @@ function logMissingPreviewsBindingsWarning(
 	]);
 	const missingBindings = Object.fromEntries(
 		Object.entries(topLevelBindings ?? {}).filter(
-			([name, binding]) =>
-				!availableBindingNames.has(name) && !isInheritableBinding(binding)
+			([name]) => !availableBindingNames.has(name)
 		)
 	);
 

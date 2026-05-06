@@ -1604,6 +1604,100 @@ describe("wrangler preview", () => {
 			});
 			expect(deploymentRequestBody?.main_module).toBeDefined();
 			expect(Array.isArray(deploymentRequestBody?.modules)).toBe(true);
+			// No assets binding configured, so no env entry should be emitted
+			const env = deploymentRequestBody?.env as
+				| Record<string, { type: string }>
+				| undefined;
+			const assetsEntries = Object.values(env ?? {}).filter(
+				(b) => b.type === "assets"
+			);
+			expect(assetsEntries).toHaveLength(0);
+		});
+
+		test("should include the assets binding in env using the configured binding name", async ({
+			expect,
+		}) => {
+			mkdirSync("public", { recursive: true });
+			writeFileSync("public/index.html", "<h1>Hello</h1>");
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					assets: { directory: "public", binding: "MY_ASSETS" },
+				})
+			);
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-custom-binding",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:workerId/assets-upload-session`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: { buckets: [], jwt: "assets-jwt-from-session" },
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await request.json()) as Record<
+							string,
+							unknown
+						>;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-custom-binding",
+									preview_id: "preview-id-custom-binding",
+									preview_name: "test-preview",
+									urls: ["https://custom-bind.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			await runWrangler("preview --name test-preview");
+			expect(deploymentRequestBody?.env).toMatchObject({
+				MY_ASSETS: { type: "assets" },
+			});
+			expect(deploymentRequestBody?.env).not.toHaveProperty("ASSETS");
 		});
 
 		test("should include source maps in deployment modules when upload_source_maps is enabled", async ({
