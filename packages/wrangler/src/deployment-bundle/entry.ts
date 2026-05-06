@@ -158,7 +158,7 @@ export async function getEntry(
 			const errorMessage =
 				"Durable Object migrations require ES Module format Workers, but yours is being built as service-worker format. Migrations cannot be applied to service-worker format Workers.";
 			const migrateText =
-				"Migrate your worker to ES Module syntax to use Durable Object migrations:";
+				'To use Durable Object migrations, deploy in ES Module format by adding a default export handler (e.g. "export default { fetch() {} }"), or remove "migrations" from your config if you don\'t need them. See:';
 			const migrateUrl =
 				"https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/";
 			throw new UserError(`${errorMessage}\n${migrateText}\n${migrateUrl}`, {
