@@ -85,13 +85,18 @@ export default function (
 		}
 
 		const char = entries.join("+");
-		// When Caps Lock is on (or Shift is held alone), readline emits
-		// `{ name: "a", shift: true }`. Normalize by also matching the plain
-		// key name so registered hotkeys like "b" fire regardless of Caps Lock.
+		// When Caps Lock is on, readline emits `{ name: "a", shift: true }` which
+		// is indistinguishable from Shift+A. Build a fallback plain-key to match
+		// registered bindings like "a". Only apply the fallback when no option is
+		// explicitly bound to the shifted form (e.g. "shift+a"), so an explicit
+		// shift binding remains distinct from the Caps Lock fallback.
 		const shiftOnlyKey =
 			key.shift && !key.ctrl && !key.meta && key.name
 				? key.name.toLowerCase()
 				: undefined;
+		const charIsBound = options.some(
+			({ keys, disabled }) => !unwrapHook(disabled) && keys.includes(char)
+		);
 
 		for (const { keys, handler, disabled } of options) {
 			if (unwrapHook(disabled)) {
@@ -100,7 +105,7 @@ export default function (
 
 			if (
 				keys.includes(char) ||
-				(shiftOnlyKey && keys.includes(shiftOnlyKey))
+				(!charIsBound && shiftOnlyKey && keys.includes(shiftOnlyKey))
 			) {
 				try {
 					await handler();

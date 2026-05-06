@@ -145,6 +145,37 @@ describe("Hot Keys", () => {
 			handlerShiftA.mockClear();
 		});
 
+		it("does not fire plain handler when explicit shift binding is registered (no double-fire)", async ({
+			expect,
+		}) => {
+			const handlerA = vi.fn();
+			const handlerShiftA = vi.fn();
+			const options = [
+				{ keys: ["a"], label: "a option", handler: handlerA },
+				{ keys: ["shift+a"], label: "shift+a option", handler: handlerShiftA },
+			];
+
+			registerHotKeys(options);
+
+			// Shift+A: only shift+a handler should fire (exact match), not plain "a"
+			writeToMockedStdin({
+				name: "a",
+				sequence: "A",
+				ctrl: false,
+				meta: false,
+				shift: true,
+			});
+			expect(handlerShiftA).toHaveBeenCalled();
+			expect(handlerA).not.toHaveBeenCalled();
+			handlerShiftA.mockClear();
+
+			// Plain a: only "a" handler fires
+			writeToMockedStdin("a");
+			expect(handlerA).toHaveBeenCalled();
+			expect(handlerShiftA).not.toHaveBeenCalled();
+			handlerA.mockClear();
+		});
+
 		it("handles meta keys", async ({ expect }) => {
 			const handlerCtrl = vi.fn();
 			const handlerMeta = vi.fn();
