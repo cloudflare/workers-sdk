@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { ServiceType } from "../vpc/index";
+import { validateResolverIps } from "../vpc/network/validation";
 import {
 	extractPortFromHostname,
 	validateHostname,
@@ -18,6 +19,11 @@ import type {
 	ConnectivityService,
 	ConnectivityServiceRequest,
 } from "../vpc/index";
+import type {
+	ConnectivityNetwork,
+	CreateConnectivityNetworkRequest,
+	UpdateConnectivityNetworkRequest,
+} from "../vpc/network/index";
 import type { ServiceArgs } from "../vpc/validation";
 
 describe("vpc help", () => {
@@ -38,6 +44,7 @@ describe("vpc help", () => {
 
 			COMMANDS
 			  wrangler vpc service  🔗 Manage VPC services
+			  wrangler vpc network  🌐 Manage VPC networks [open beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -1202,6 +1209,422 @@ function mockWvpcTcpServiceList() {
 			"*/accounts/:accountId/connectivity/directory/services",
 			() => {
 				return HttpResponse.json(createFetchResult([mockTcpService], true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// vpc network tests
+// ────────────────────────────────────────────────────────────────────────────
+
+const mockNetwork: ConnectivityNetwork = {
+	network_id: "network-uuid",
+	name: "test-network",
+	tunnel_id: "tunnel-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+	resolver_ips: ["8.8.8.8", "8.8.4.4"],
+	created_at: "2024-01-01T00:00:00Z",
+	updated_at: "2024-01-01T00:00:00Z",
+};
+
+describe("vpc network commands", () => {
+	mockAccountId();
+	mockApiToken();
+	runInTempDir();
+	const { setIsTTY } = useMockIsTTY();
+
+	const std = mockConsoleMethods();
+
+	beforeEach(() => {
+		// @ts-expect-error we're using a very simple setTimeout mock here
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+			setImmediate(fn);
+		});
+		setIsTTY(true);
+	});
+
+	afterEach(() => {
+		clearDialogs();
+	});
+
+	it("should show network help text", async ({ expect }) => {
+		await runWrangler("vpc network");
+		await endEventLoop();
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler vpc network
+
+			🌐 Manage VPC networks [open beta]
+
+			COMMANDS
+			  wrangler vpc network create <name>        Create a new VPC network [open beta]
+			  wrangler vpc network delete <network-id>  Delete a VPC network [open beta]
+			  wrangler vpc network get <network-id>     Get a VPC network [open beta]
+			  wrangler vpc network list                 List VPC networks [open beta]
+			  wrangler vpc network update <network-id>  Update a VPC network [open beta]
+
+			GLOBAL FLAGS
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
+		`);
+	});
+
+	it("should handle creating a network without resolver IPs", async ({
+		expect,
+	}) => {
+		const reqProm = mockWvpcNetworkCreate();
+		await runWrangler(
+			"vpc network create test-network --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "name": "test-network",
+			  "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating VPC network 'test-network'
+			✅ Created VPC network: network-uuid
+			   Name: test-network
+			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440000
+			   Resolver IPs: Default"
+		`);
+	});
+
+	it("should handle creating a network with resolver IPs", async ({
+		expect,
+	}) => {
+		const reqProm = mockWvpcNetworkCreate();
+		await runWrangler(
+			"vpc network create test-network --tunnel-id 550e8400-e29b-41d4-a716-446655440000 --resolver-ips 8.8.8.8,8.8.4.4"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "name": "test-network",
+			  "resolver_ips": [
+			    "8.8.8.8",
+			    "8.8.4.4",
+			  ],
+			  "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating VPC network 'test-network'
+			✅ Created VPC network: network-uuid
+			   Name: test-network
+			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440000
+			   Resolver IPs: 8.8.8.8, 8.8.4.4"
+		`);
+	});
+
+	it("should handle listing networks", async ({ expect }) => {
+		mockWvpcNetworkList();
+		await runWrangler("vpc network list");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			📋 Listing VPC networks
+			┌─┬─┬─┬─┬─┬─┐
+			│ id │ name │ tunnel │ resolver_ips │ created │ modified │
+			├─┼─┼─┼─┼─┼─┤
+			│ network-uuid │ test-network │ tunnel-y... │ 8.8.8.8, 8.8.4.4 │ 1/1/2024, 12:00:00 AM │ 1/1/2024, 12:00:00 AM │
+			└─┴─┴─┴─┴─┴─┘"
+		`);
+	});
+
+	it("should show 'No VPC networks found' when list is empty", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/connectivity/directory/networks",
+				() => {
+					return HttpResponse.json(createFetchResult([], true));
+				},
+				{ once: true }
+			)
+		);
+		await runWrangler("vpc network list");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			📋 Listing VPC networks
+			No VPC networks found"
+		`);
+	});
+
+	it("should handle getting a network", async ({ expect }) => {
+		mockWvpcNetworkGetUpdateDelete();
+		await runWrangler("vpc network get network-uuid");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🔍 Getting VPC network 'network-uuid'
+			✅ Retrieved VPC network: network-uuid
+			   Name: test-network
+			   Tunnel ID: tunnel-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+			   Resolver IPs: 8.8.8.8, 8.8.4.4
+			   Created: 1/1/2024, 12:00:00 AM
+			   Modified: 1/1/2024, 12:00:00 AM"
+		`);
+	});
+
+	it("should handle getting a network without resolver IPs", async ({
+		expect,
+	}) => {
+		const networkWithoutResolverIps: ConnectivityNetwork = {
+			...mockNetwork,
+			resolver_ips: undefined,
+		};
+
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/connectivity/directory/networks/:networkId",
+				() => {
+					return HttpResponse.json(
+						createFetchResult(networkWithoutResolverIps, true)
+					);
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler("vpc network get network-uuid");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🔍 Getting VPC network 'network-uuid'
+			✅ Retrieved VPC network: network-uuid
+			   Name: test-network
+			   Tunnel ID: tunnel-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+			   Resolver IPs: Default
+			   Created: 1/1/2024, 12:00:00 AM
+			   Modified: 1/1/2024, 12:00:00 AM"
+		`);
+	});
+
+	it("should handle deleting a network", async ({ expect }) => {
+		mockWvpcNetworkGetUpdateDelete();
+		await runWrangler("vpc network delete network-uuid");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🗑️  Deleting VPC network 'network-uuid'
+			✅ Deleted VPC network: network-uuid"
+		`);
+	});
+
+	it("should surface bound Worker names when deletion is blocked", async ({
+		expect,
+	}) => {
+		// The API returns 400 Bad Request with a NetworkInUse error listing the
+		// bound Worker names when a network cannot be deleted because of active
+		// bindings. The CLI should surface those names to the user.
+		msw.use(
+			http.delete(
+				"*/accounts/:accountId/connectivity/directory/networks/:networkId",
+				() =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								// 1003 is a generic InvalidRequest code; anything non-10000
+								// avoids wrangler's auth-error branch which would call `/user`.
+								code: 1003,
+								message:
+									"Network is bound to 2 Worker(s): my-worker, another-worker. Unbind them before deletion.",
+							},
+						]),
+						{ status: 400 }
+					)
+			)
+		);
+
+		await expect(
+			runWrangler("vpc network delete network-uuid")
+		).rejects.toMatchObject({
+			notes: expect.arrayContaining([
+				{
+					text: expect.stringContaining(
+						"Network is bound to 2 Worker(s): my-worker, another-worker"
+					),
+				},
+			]),
+		});
+	});
+
+	it("should handle updating a network name", async ({ expect }) => {
+		const reqProm = mockWvpcNetworkUpdate();
+		await runWrangler("vpc network update network-uuid --name new-name");
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "name": "new-name",
+			}
+		`);
+	});
+
+	it("should handle updating a network resolver IPs", async ({ expect }) => {
+		const reqProm = mockWvpcNetworkUpdate();
+		await runWrangler(
+			"vpc network update network-uuid --resolver-ips 1.1.1.1,1.0.0.1"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "resolver_ips": [
+			    "1.1.1.1",
+			    "1.0.0.1",
+			  ],
+			}
+		`);
+	});
+});
+
+describe("vpc network resolver IP validation", () => {
+	it("should accept valid IPv4 resolver IPs", ({ expect }) => {
+		expect(() => validateResolverIps("8.8.8.8")).not.toThrow();
+		expect(() => validateResolverIps("8.8.8.8,1.1.1.1")).not.toThrow();
+	});
+
+	it("should accept valid IPv6 resolver IPs", ({ expect }) => {
+		expect(() => validateResolverIps("2001:db8::1")).not.toThrow();
+	});
+
+	it("should reject empty resolver IPs string", ({ expect }) => {
+		expect(() => validateResolverIps("")).toThrow(
+			"--resolver-ips must not be empty"
+		);
+		expect(() => validateResolverIps("   ")).toThrow(
+			"--resolver-ips must not be empty"
+		);
+	});
+
+	it("should reject invalid IP addresses", ({ expect }) => {
+		expect(() => validateResolverIps("not-an-ip")).toThrow(
+			"Invalid resolver IP address(es): 'not-an-ip'"
+		);
+		expect(() => validateResolverIps("8.8.8.8,bad-ip")).toThrow(
+			"Invalid resolver IP address(es): 'bad-ip'"
+		);
+	});
+
+	it("should trim whitespace around IPs", ({ expect }) => {
+		expect(() => validateResolverIps(" 8.8.8.8 , 1.1.1.1 ")).not.toThrow();
+		expect(validateResolverIps(" 8.8.8.8 , 1.1.1.1 ")).toEqual([
+			"8.8.8.8",
+			"1.1.1.1",
+		]);
+	});
+});
+
+// Mock API Handlers for networks
+function mockWvpcNetworkCreate(): Promise<CreateConnectivityNetworkRequest> {
+	return new Promise((resolve) => {
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/connectivity/directory/networks",
+				async ({ request }) => {
+					const reqBody =
+						(await request.json()) as CreateConnectivityNetworkRequest;
+					resolve(reqBody);
+
+					return HttpResponse.json(
+						createFetchResult(
+							{
+								network_id: "network-uuid",
+								name: reqBody.name,
+								tunnel_id: reqBody.tunnel_id,
+								resolver_ips: reqBody.resolver_ips,
+								created_at: "2024-01-01T00:00:00Z",
+								updated_at: "2024-01-01T00:00:00Z",
+							},
+							true
+						)
+					);
+				},
+				{ once: true }
+			)
+		);
+	});
+}
+
+function mockWvpcNetworkUpdate(): Promise<UpdateConnectivityNetworkRequest> {
+	return new Promise((resolve) => {
+		msw.use(
+			http.put(
+				"*/accounts/:accountId/connectivity/directory/networks/:networkId",
+				async ({ request }) => {
+					const reqBody =
+						(await request.json()) as UpdateConnectivityNetworkRequest;
+					resolve(reqBody);
+
+					return HttpResponse.json(
+						createFetchResult(
+							{
+								...mockNetwork,
+								...reqBody,
+							},
+							true
+						)
+					);
+				},
+				{ once: true }
+			)
+		);
+	});
+}
+
+function mockWvpcNetworkGetUpdateDelete() {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/connectivity/directory/networks/:networkId",
+			() => {
+				return HttpResponse.json(createFetchResult(mockNetwork, true));
+			},
+			{ once: true }
+		),
+		http.delete(
+			"*/accounts/:accountId/connectivity/directory/networks/:networkId",
+			() => {
+				return HttpResponse.json(createFetchResult(null, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockWvpcNetworkList() {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/connectivity/directory/networks",
+			() => {
+				return HttpResponse.json(createFetchResult([mockNetwork], true));
 			},
 			{ once: true }
 		)
