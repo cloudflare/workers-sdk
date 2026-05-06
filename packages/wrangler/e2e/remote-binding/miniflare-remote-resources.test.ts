@@ -8,6 +8,7 @@ import {
 	WranglerE2ETestHelper,
 } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
+import { retry } from "../helpers/retry";
 import type { StartDevWorkerInput } from "../../src/api";
 import type { StartRemoteProxySessionOptions } from "../../src/cli";
 import type { RawConfig } from "@cloudflare/workers-utils";
@@ -680,19 +681,27 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 			for (const testCase of activeTestCases) {
 				testConfigs.push(await testCase.setup(helper));
 			}
-			const remoteProxySession = await startRemoteProxySession(
-				Object.assign(
-					{},
-					...testConfigs.map(
-						(config) => config.remoteProxySessionConfig.bindings
-					)
-				),
-				Object.assign(
-					{},
-					...testConfigs.map(
-						(config) => config.remoteProxySessionConfig.options
-					)
-				)
+			// Retry transient Cloudflare API 5xx (e.g. edge-preview 500) during
+			// proxy session setup. See cloudflare/workers-sdk#13831 for the
+			// broader fix.
+			const remoteProxySession = await retry(
+				() => false,
+				() =>
+					startRemoteProxySession(
+						Object.assign(
+							{},
+							...testConfigs.map(
+								(config) => config.remoteProxySessionConfig.bindings
+							)
+						),
+						Object.assign(
+							{},
+							...testConfigs.map(
+								(config) => config.remoteProxySessionConfig.options
+							)
+						)
+					),
+				5
 			);
 
 			const testCaseModules = activeTestCases.map((testCase) => ({
@@ -803,9 +812,17 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed(path.resolve(__dirname, "./workers"));
 			const testConfig = await mtlsTestCase.setup(helper);
-			const remoteProxySession = await startRemoteProxySession(
-				testConfig.remoteProxySessionConfig.bindings,
-				testConfig.remoteProxySessionConfig.options
+			// Retry transient Cloudflare API 5xx (e.g. edge-preview 500) during
+			// proxy session setup. See cloudflare/workers-sdk#13831 for the
+			// broader fix.
+			const remoteProxySession = await retry(
+				() => false,
+				() =>
+					startRemoteProxySession(
+						testConfig.remoteProxySessionConfig.bindings,
+						testConfig.remoteProxySessionConfig.options
+					),
+				5
 			);
 			const miniflareConfig: MiniflareOptions = Object.assign(
 				{
