@@ -1,17 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { createFetchResult } from "../index";
 
-// Keep `/accounts` and `/memberships` aligned by default. Wrangler now
-// intersects these two endpoints to determine which accounts the current
-// login auth can use, so the default fixtures must agree on the same set
-// of accounts.
-//
-// The `/accounts` and `/memberships` handlers are registered without
-// `{ once: true }` so a single test that triggers multiple requests to
-// either endpoint (e.g. `wrangler whoami --account ...` which calls
-// `/memberships` from both `fetchAllAccounts` and `fetchMembershipRoles`)
-// resolves consistently. Tests that need a different response can still
-// register a `once: true` override on top.
 const DEFAULT_ACCOUNTS = [
 	{ name: "Account One", id: "account-1" },
 	{ name: "Account Two", id: "account-2" },
@@ -21,6 +10,12 @@ const DEFAULT_ACCOUNTS = [
 export function getMswSuccessMembershipHandlers(
 	accounts: typeof DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS
 ) {
+	// The `/accounts` and `/memberships` handlers are registered without
+	// `{ once: true }` so a single test that triggers multiple requests to
+	// either endpoint (e.g. `wrangler whoami --account ...` which calls
+	// `/memberships` from both `fetchAllAccounts` and `fetchMembershipRoles`)
+	// resolves consistently. Tests that need a different response can still
+	// register a `once: true` override on top.
 	return [
 		http.get("*/accounts", () => {
 			return HttpResponse.json(createFetchResult(accounts));
