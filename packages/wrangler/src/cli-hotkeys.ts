@@ -85,13 +85,23 @@ export default function (
 		}
 
 		const char = entries.join("+");
+		// When Caps Lock is on (or Shift is held alone), readline emits
+		// `{ name: "a", shift: true }`. Normalize by also matching the plain
+		// key name so registered hotkeys like "b" fire regardless of Caps Lock.
+		const shiftOnlyKey =
+			key.shift && !key.ctrl && !key.meta && key.name
+				? key.name.toLowerCase()
+				: undefined;
 
 		for (const { keys, handler, disabled } of options) {
 			if (unwrapHook(disabled)) {
 				continue;
 			}
 
-			if (keys.includes(char)) {
+			if (
+				keys.includes(char) ||
+				(shiftOnlyKey && keys.includes(shiftOnlyKey))
+			) {
 				try {
 					await handler();
 				} catch {
