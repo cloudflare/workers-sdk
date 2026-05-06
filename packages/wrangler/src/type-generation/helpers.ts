@@ -217,10 +217,13 @@ export const checkTypesUpToDate = async (
 	// passed, avoiding a stale mismatch when .dev.vars or a named environment
 	// happens to differ from what was recorded.
 	const rawEnvFile = rawArgs.envFile;
-	const envFile: string[] | undefined = cliEnvFile ??
-		(typeof rawEnvFile === "string" ? [rawEnvFile]
-		: Array.isArray(rawEnvFile) ? rawEnvFile
-		: undefined);
+	const envFile: string[] | undefined =
+		cliEnvFile ??
+		(typeof rawEnvFile === "string"
+			? [rawEnvFile]
+			: Array.isArray(rawEnvFile)
+				? rawEnvFile
+				: undefined);
 
 	const env: string | undefined = cliEnv ?? (rawArgs.env as string | undefined);
 

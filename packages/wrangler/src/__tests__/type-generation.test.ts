@@ -1713,16 +1713,16 @@ describe("generate types - CLI", () => {
 		fs.writeFileSync(".env.empty", "", "utf8");
 
 		// Generate types with --env-file pointing at an empty file (no .dev.vars loading)
-		await runWrangler(
-			"types --include-runtime=false --env-file=.env.empty"
-		);
+		await runWrangler("types --include-runtime=false --env-file=.env.empty");
 
 		// Run --check with --env-file pointing at empty file - should not report stale
 		await runWrangler(
 			"types --check --include-runtime=false --env-file=.env.empty"
 		);
 
-		expect(std.out).toContain("Types at worker-configuration.d.ts are up to date.");
+		expect(std.out).toContain(
+			"Types at worker-configuration.d.ts are up to date."
+		);
 	});
 
 	it("should include secret keys from .env, if there is no .dev.vars", async ({
