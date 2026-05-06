@@ -393,7 +393,9 @@ export const listTmpAgentMemoryNamespaces = async () => {
 };
 
 export const deleteAgentMemoryNamespace = async (name: string) => {
-	return await apiFetch(`/agent-memory/namespaces/${name}`, "DELETE");
+	const result = await apiFetch(`/agent-memory/namespaces/${name}`, "DELETE");
+	// If successful the result is `null`, if the namespace is not found the result is `false`
+	return result !== false;
 };
 
 // Note: the container images functions below don't directly use the REST API since

@@ -15,22 +15,23 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 
 	it("create namespace", async ({ expect }) => {
 		const output = await helper.run(
-			`wrangler agent-memory namespace create ${namespaceName}`
+			`wrangler agent-memory namespace create ${namespaceName} --json`
 		);
 
-		expect(normalize(output.stdout)).toContain(
-			`✅ Created Agent Memory namespace "tmp-e2e-agent-memory"`
-		);
 		expect(normalize(output.stderr)).toMatchInlineSnapshot(`
 			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace create\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 
 		// Extract the namespace ID for use in subsequent tests
-		const match = output.stdout.match(/ID:\s+(\S+)/);
-		if (!match) {
-			throw new Error("Could not extract namespace ID from create output");
+		try {
+			const result = JSON.parse(output.stdout) as { name: string; id: string };
+			expect(result.name).toEqual(namespaceName);
+			namespaceId = result.id;
+		} catch (cause) {
+			throw new Error("Could not extract namespace ID from create output", {
+				cause,
+			});
 		}
-		namespaceId = match[1];
 	});
 
 	it("list namespaces", async ({ expect }) => {
