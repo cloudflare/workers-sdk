@@ -94,12 +94,6 @@ describe("deploy", () => {
 	describe("bindings", () => {
 		it("should allow bindings with different names", async ({ expect }) => {
 			writeWranglerConfig({
-				migrations: [
-					{
-						tag: "v1",
-						new_classes: ["SomeDurableObject", "AnotherDurableObject"],
-					},
-				],
 				durable_objects: {
 					bindings: [
 						{
@@ -1768,9 +1762,6 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				writeWranglerConfig({
-					durable_objects: {
-						bindings: [],
-					},
 					migrations: [
 						{
 							tag: "v1",
