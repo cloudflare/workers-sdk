@@ -6,6 +6,8 @@ import { cwd } from "node:process";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
+	ParseError,
+	parseJSON,
 } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
 import { fetchResult } from "../../cfetch";
@@ -388,8 +390,9 @@ export async function deploy({
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
 			try {
-				const routesCustomJSON = JSON.parse(_routesCustom);
-				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
+				const routesPath = join(directory, "_routes.json");
+				const routesCustomJSON = parseJSON(_routesCustom, routesPath);
+				validateRoutes(routesCustomJSON, routesPath);
 
 				formData.append(
 					"_routes.json",
@@ -400,12 +403,13 @@ export async function deploy({
 				if (err instanceof FatalError) {
 					throw err;
 				}
-				if (err instanceof SyntaxError) {
+				if (err instanceof ParseError) {
 					throw new FatalError(
-						`Invalid _routes.json file at ${directory}: ${err.message}`,
+						`Invalid _routes.json file at ${join(directory, "_routes.json")}: ${err.text}`,
 						{ telemetryMessage: "pages deploy routes json parse error" }
 					);
 				}
+				throw err;
 			}
 		}
 	}
@@ -418,7 +422,6 @@ export async function deploy({
 		const workerBundleContents = await createUploadWorkerBundleContents(
 			workerBundle as BundleResult,
 			config
-
 		);
 		formData.append(
 			"_worker.bundle",
@@ -429,8 +432,9 @@ export async function deploy({
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
 			try {
-				const routesCustomJSON = JSON.parse(_routesCustom);
-				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
+				const routesPath = join(directory, "_routes.json");
+				const routesCustomJSON = parseJSON(_routesCustom, routesPath);
+				validateRoutes(routesCustomJSON, routesPath);
 
 				formData.append(
 					"_routes.json",
@@ -441,12 +445,13 @@ export async function deploy({
 				if (err instanceof FatalError) {
 					throw err;
 				}
-				if (err instanceof SyntaxError) {
+				if (err instanceof ParseError) {
 					throw new FatalError(
-						`Invalid _routes.json file at ${directory}: ${err.message}`,
+						`Invalid _routes.json file at ${join(directory, "_routes.json")}: ${err.text}`,
 						{ telemetryMessage: "pages deploy routes json parse error" }
 					);
 				}
+				throw err;
 			}
 		} else if (routesOutputPath) {
 			// no custom _routes.json file found, so fallback to the generated one

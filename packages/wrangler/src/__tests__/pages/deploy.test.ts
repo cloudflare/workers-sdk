@@ -2958,7 +2958,7 @@ and that at least one include rule is provided.
 					return HttpResponse.json({ success: true, errors: [], messages: [], result: { deployment_configs: { production: {}, preview: {} } } }, { status: 200 });
 				})
 			);
-			await expect(runWrangler("pages deploy public --project-name=foo")).rejects.toThrow(/^Invalid _routes\\.json file at public: /);
+			await expect(runWrangler("pages deploy public --project-name=foo")).rejects.toThrow(/^Invalid _routes\.json file at .*_routes\.json: /);
 			expect(getProjectRequestCount).toEqual(2);
 		});
 
@@ -4084,7 +4084,7 @@ and that at least one include rule is provided.
 					return HttpResponse.json({ success: true, errors: [], messages: [], result: { deployment_configs: { production: {}, preview: {} } } }, { status: 200 });
 				})
 			);
-			await expect(runWrangler("pages deploy public --project-name=foo")).rejects.toThrow(/^Invalid _routes\\.json file at public: /);
+			await expect(runWrangler("pages deploy public --project-name=foo")).rejects.toThrow(/^Invalid _routes\.json file at .*_routes\.json: /);
 			expect(getProjectRequestCount).toEqual(2);
 		});
 
