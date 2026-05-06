@@ -409,9 +409,12 @@ export async function generateHandler<
 								const transformedResponse = new HTMLRewriter()
 									.on("base[href]", {
 										element(element) {
-											const href =
-												element.getAttribute("href") || undefined;
-											if (href) {
+											// HTML spec: only the first <base href> defines the base URL
+											if (baseHref !== undefined) {
+												return;
+											}
+											const href = element.getAttribute("href");
+											if (href !== null) {
 												baseHref = href;
 											}
 										},
@@ -444,14 +447,21 @@ export async function generateHandler<
 								// Needed to actually execute the HTMLRewriter handlers
 								await transformedResponse.text();
 
-							links.forEach(({ href, rel, as }) => {
-								const resolvedHref =
-									baseHref && !href.startsWith("/") && !href.startsWith("http")
-										? baseHref.endsWith("/")
-											? baseHref + href
-											: baseHref + "/" + href
-										: href;
-								let link = `<${resolvedHref}>; rel="${rel}"`;
+								links.forEach(({ href, rel, as }) => {
+									let resolvedHref = href;
+									if (baseHref !== undefined) {
+										try {
+											// Resolve href against the base, then against the request URL,
+											// following WHATWG URL semantics for relative paths and `..` segments.
+											resolvedHref = new URL(
+												href,
+												new URL(baseHref, request.url)
+											).href;
+										} catch {
+											// Unparseable href — leave it as-is
+										}
+									}
+									let link = `<${resolvedHref}>; rel="${rel}"`;
 									if (as) {
 										link += `; as=${as}`;
 									}
