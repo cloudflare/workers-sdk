@@ -89,8 +89,9 @@ export async function startRemoteProxySession(
 
 	if (maybeError && maybeError.error) {
 		const ErrorClass =
-			maybeError instanceof UserError ||
-			(maybeError instanceof Error && maybeError.cause instanceof UserError)
+			maybeError.error instanceof UserError ||
+			(maybeError.error instanceof Error &&
+				maybeError.error.cause instanceof UserError)
 				? UserError
 				: Error;
 
