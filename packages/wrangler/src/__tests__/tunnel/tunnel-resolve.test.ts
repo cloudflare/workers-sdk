@@ -141,6 +141,10 @@ describe("resolveTunnelId", () => {
 												hostname: "dev.example.com",
 												service: "http://localhost:3000",
 											},
+											{
+												hostname: "admin.example.com",
+												service: "http://localhost:4000",
+											},
 										],
 									},
 								});
@@ -163,8 +167,60 @@ describe("resolveTunnelId", () => {
 				"my-tunnel",
 				new URL("http://localhost:8787")
 			)
-		).rejects.toThrow(
-			'No ingress rules in tunnel "my-tunnel" route to local port 8787.'
-		);
+		).rejects.toThrowErrorMatchingInlineSnapshot(`
+			[Error: No ingress rules in tunnel "my-tunnel" route to http://localhost:8787/.
+
+			Update the tunnel ingress rules in the Cloudflare dashboard:
+			https://dash.cloudflare.com/?to=/:account/tunnels
+
+			Resolved ingress mappings:
+			  - dev.example.com -> http://localhost:3000
+			  - admin.example.com -> http://localhost:4000]
+		`);
+	});
+
+	it("shows compact setup guidance when a named tunnel has no ingress rules", async ({
+		expect,
+	}) => {
+		const sdk = {
+			zeroTrust: {
+				tunnels: {
+					cloudflared: {
+						list() {
+							return asyncIterableFromArray([
+								{
+									id: "11111111-1111-4111-8111-111111111111",
+									name: "my-tunnel",
+								},
+							]);
+						},
+						configurations: {
+							get() {
+								return Promise.resolve({ config: { ingress: [] } });
+							},
+						},
+						token: {
+							get() {
+								throw new Error("should not be called");
+							},
+						},
+					},
+				},
+			},
+		} as unknown as Cloudflare;
+
+		await expect(
+			resolveNamedTunnel(
+				sdk,
+				"account",
+				"my-tunnel",
+				new URL("http://localhost:8787")
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Tunnel "my-tunnel" has no ingress rules configured.
+
+			Add an ingress rule for http://localhost:8787/ in the Cloudflare dashboard:
+			https://dash.cloudflare.com/?to=/:account/tunnels]
+		`);
 	});
 });
