@@ -3,41 +3,94 @@ import { fetchPagedListResult } from "../cfetch";
 import type { Account } from "./shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
+// Cloudflare API error codes returned by `/memberships` that mean "the
+// current auth cannot read memberships".
+//   - 9109 (Insufficient permissions): structural for Account API Tokens,
+//     which cannot read user-level memberships at all.
+//   - 10000 (Authentication error): the token is not accepted by the
+//     `/memberships` endpoint, but `/accounts` may still work for the same
+//     auth (e.g. tokens missing the membership read scope).
+const MEMBERSHIPS_INACCESSIBLE_CODES = [9109, 10000];
+
+function isMembershipsInaccessible(err: unknown): boolean {
+	const code = (err as { code?: number } | undefined)?.code;
+	return code !== undefined && MEMBERSHIPS_INACCESSIBLE_CODES.includes(code);
+}
+
 /**
- * Fetches all accounts accessible to the currently authenticated user.
+ * Fetches the set of accounts that the current login auth can actually use.
  *
- * Makes an API call to the `/memberships` endpoint and returns
- * the list of accounts associated with the current credentials.
+ * The list is the intersection of two endpoints:
+ *  - `/accounts` — accounts to which the authenticated token has access.
+ *  - `/memberships` — accounts of which the authenticated token is a member.
+ *
+ * This avoids displaying accounts that the current credentials cannot meaningfully use.
+ *
+ * If `/memberships` returns a code that indicates it is inaccessible to the
+ * current auth — 9109 (Insufficient permissions) or 10000 (Authentication
+ * error) — we fall back to the `/accounts` response, which is itself scoped
+ * to what the auth can access. Any other failure on either endpoint is
+ * propagated so the underlying API error reaches the user.
  *
  * @param complianceConfig - The compliance configuration for API requests
- * @returns The list of accounts the user has access to
- * @throws {UserError} If no accounts are found for the authenticated user
- * @throws {UserError} If the API returns a 9109 error (insufficient permissions)
+ * @param options - Optional flags controlling empty-result handling
+ * @returns The list of accounts the current login auth has access to
+ * @throws {UserError} If no accounts are found and `throwOnEmpty` is `true`
+ * @throws {UserError} If `/memberships` is inaccessible and `/accounts` is unusable
  */
 export async function fetchAllAccounts(
-	complianceConfig: ComplianceConfig
+	complianceConfig: ComplianceConfig,
+	options: {
+		/**
+		 * Whether to throw an error if no accounts are found for the current login auth.
+		 *
+		 * @default true
+		 */
+		throwOnEmpty?: boolean;
+	} = {}
 ): Promise<Account[]> {
-	try {
-		const response = await fetchPagedListResult<{
-			account: Account;
-		}>(complianceConfig, `/memberships`);
-		const accounts = response.map((r) => r.account);
-		if (accounts.length === 0) {
+	const { throwOnEmpty = true } = options;
+
+	const [accountsRes, membershipsRes] = await Promise.allSettled([
+		fetchPagedListResult<Account>(complianceConfig, `/accounts`),
+		fetchPagedListResult<{ account: Account }>(
+			complianceConfig,
+			`/memberships`
+		),
+	]);
+
+	if (accountsRes.status === "rejected") {
+		throw accountsRes.reason;
+	}
+
+	if (membershipsRes.status === "rejected") {
+		if (isMembershipsInaccessible(membershipsRes.reason)) {
+			if (accountsRes.status === "fulfilled" && accountsRes.value.length > 0) {
+				// Fall back to `/accounts`, which is already scoped to what the auth can use.
+				return accountsRes.value;
+			}
 			throw new UserError(
 				`Failed to automatically retrieve account IDs for the logged in user.
-In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your ${configFileName(undefined)} file.`,
-				{ telemetryMessage: "user account fetch empty" }
-			);
-		}
-		return accounts;
-	} catch (err) {
-		if ((err as { code: number }).code === 9109) {
-			throw new UserError(
-				`Failed to automatically retrieve account IDs for the logged in user.
-You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your ${configFileName(undefined)} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID"`,
+You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your ${configFileName(undefined)} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 				{ telemetryMessage: "user account fetch permission denied" }
 			);
+		} else {
+			throw membershipsRes.reason;
 		}
-		throw err;
 	}
+
+	const membershipIds = new Set(membershipsRes.value.map((m) => m.account.id));
+	const usableAccounts = accountsRes.value.filter((a) =>
+		membershipIds.has(a.id)
+	);
+
+	if (usableAccounts.length === 0 && throwOnEmpty) {
+		throw new UserError(
+			`Failed to automatically retrieve account IDs for the logged in user.
+In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your ${configFileName(undefined)} file.`,
+			{ telemetryMessage: "user account fetch empty" }
+		);
+	}
+
+	return usableAccounts;
 }
