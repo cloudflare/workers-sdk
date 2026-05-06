@@ -148,7 +148,7 @@ export function getInstanceTypeUsage(instanceType: InstanceType): {
 // The API may return the legacy alias (e.g. "standard") for an instance
 // type configured as the canonical name ("standard-1"). Normalizing ensures
 // the deploy diff doesn't show a phantom EDIT for instance_type.
-const LEGACY_TO_CANONICAL: Record<string, string> = {
+const LEGACY_TO_CANONICAL: Record<"dev" | "standard", InstanceType> = {
 	dev: "lite",
 	standard: "standard-1",
 };
@@ -163,7 +163,12 @@ export function inferInstanceType(
 			config.memory_mib === configuration.memory_mib &&
 			config.disk?.size_mb === configuration.disk_mb
 		) {
-			const canonical = LEGACY_TO_CANONICAL[instanceType];
+			const canonical =
+				instanceType in LEGACY_TO_CANONICAL
+					? LEGACY_TO_CANONICAL[
+							instanceType as keyof typeof LEGACY_TO_CANONICAL
+						]
+					: undefined;
 			return (canonical ?? instanceType) as InstanceType;
 		}
 	}
