@@ -194,10 +194,7 @@ export const getNormalizedContainerOptions = async (
 				...instanceTypeOrLimits,
 				image_uri: args.dryRun
 					? image
-					: resolveImageName(
-							await getOrSelectAccountId(config),
-							image
-						), // if it is not a dockerfile, it must be an image uri or have thrown an error
+					: resolveImageName(await getOrSelectAccountId(config), image), // if it is not a dockerfile, it must be an image uri or have thrown an error
 			});
 		} else {
 			// this should be enforced by the config validation
