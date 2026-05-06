@@ -38,24 +38,21 @@ export function getMswSuccessMembershipHandlers(
 	];
 }
 
-export function getMswFailMembershipHandlers() {
-	return [
-		http.get(
-			"*/memberships",
-			() => {
-				return HttpResponse.json(createFetchResult([], false));
-			},
-			{ once: true }
-		),
-		http.get(
-			"*/accounts",
-			() => {
-				return HttpResponse.json(createFetchResult([], false));
-			},
-			{ once: true }
-		),
-	];
-}
+export const mswFailMembershipHandler = http.get(
+	"*/memberships",
+	() => {
+		return HttpResponse.json(createFetchResult([], false));
+	},
+	{ once: true }
+);
+
+export const mswFailAccountsHandler = http.get(
+	"*/accounts",
+	() => {
+		return HttpResponse.json(createFetchResult([], false));
+	},
+	{ once: true }
+);
 
 export const mswSuccessUserHandlers = [
 	http.get(

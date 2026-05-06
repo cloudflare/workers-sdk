@@ -17,7 +17,8 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
 import {
-	getMswFailMembershipHandlers,
+	mswFailMembershipHandler,
+	mswFailAccountsHandler,
 	getMswSuccessMembershipHandlers,
 } from "./helpers/msw/handlers/user";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -398,12 +399,26 @@ describe("wrangler secret", () => {
 			describe("with accountId", () => {
 				mockAccountId({ accountId: null });
 
-				it("should error if request for memberships fails", async ({
+				it("should error if request for available accounts fails", async ({
 					expect,
 				}) => {
-					msw.use(...getMswFailMembershipHandlers());
+					msw.use(mswFailAccountsHandler, ...getMswSuccessMembershipHandlers());
 					await expect(
-						runWrangler("secret put the-key --name script-name")
+						runWrangler("pages secret put the-key --project some-project-name")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[APIError: A request to the Cloudflare API (/accounts) failed.]`
+					);
+				});
+
+				it("should error if request for available memberships fails", async ({
+					expect,
+				}) => {
+					msw.use(
+						mswFailMembershipHandler,
+						...getMswSuccessMembershipHandlers()
+					);
+					await expect(
+						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[APIError: A request to the Cloudflare API (/memberships) failed.]`
 					);

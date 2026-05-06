@@ -1223,6 +1223,9 @@ describe("kv", () => {
 					expect,
 				}) => {
 					msw.use(
+						http.get("*/accounts", () => {
+							return HttpResponse.json(createFetchResult([]));
+						}),
 						http.get(
 							"*/memberships",
 							() => {
