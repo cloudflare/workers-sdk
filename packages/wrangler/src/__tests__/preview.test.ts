@@ -5,7 +5,6 @@ import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
-import { logMissingPreviewsBindingsWarning } from "../preview/preview";
 import { extractConfigBindings, getBranchName } from "../preview/shared";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -17,11 +16,7 @@ import {
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
 import type { OutputEntry } from "../output";
-import type {
-	Binding,
-	Config,
-	PreviewsConfig,
-} from "@cloudflare/workers-utils";
+import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
 vi.mock("node:child_process", async () => {
 	const actual =
@@ -212,58 +207,6 @@ describe("wrangler preview", () => {
 				MY_STREAM: { type: "stream" },
 				MY_VERSION_METADATA: { type: "version_metadata" },
 			});
-		});
-	});
-
-	describe("logMissingPreviewsBindingsWarning", () => {
-		test("warns about a likely Wrangler bug when an inheritable binding is missing from the preview deployment", async ({
-			expect,
-		}) => {
-			const topLevelBindings: Record<string, Binding> = {
-				ASSETS: { type: "assets" },
-			};
-
-			await logMissingPreviewsBindingsWarning(topLevelBindings, undefined, {});
-
-			const normalizedWarningOutput = stripVTControlCharacters(
-				std.warn
-			).replace(/\s+/g, " ");
-
-			expect(normalizedWarningOutput).toContain(
-				"should have been inherited from your top-level Wrangler config but are missing from the Preview deployment"
-			);
-			expect(normalizedWarningOutput).toContain("ASSETS");
-			expect(normalizedWarningOutput).toContain(
-				"This is likely a bug in Wrangler."
-			);
-			expect(normalizedWarningOutput).not.toContain(
-				"Your configuration has diverged."
-			);
-		});
-
-		test("warns about diverged config when a non-inheritable binding is missing from the preview settings", async ({
-			expect,
-		}) => {
-			const topLevelBindings: Record<string, Binding> = {
-				IMPORTANT_BINDING: { type: "kv_namespace", id: "kv-id-123" },
-			};
-
-			await logMissingPreviewsBindingsWarning(topLevelBindings, undefined, {});
-
-			const normalizedWarningOutput = stripVTControlCharacters(
-				std.warn
-			).replace(/\s+/g, " ");
-
-			expect(normalizedWarningOutput).toContain(
-				"Your configuration has diverged."
-			);
-			expect(normalizedWarningOutput).toContain("IMPORTANT_BINDING");
-			expect(normalizedWarningOutput).toContain(
-				'Either include these bindings in the "previews" field'
-			);
-			expect(normalizedWarningOutput).not.toContain(
-				"This is likely a bug in Wrangler."
-			);
 		});
 	});
 

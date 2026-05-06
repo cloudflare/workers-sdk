@@ -32,7 +32,6 @@ import {
 	visibleLength,
 } from "../utils/box";
 import { getRules } from "../utils/getRules";
-import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
 import { parseConfigPlacement } from "../utils/placement";
 import {
 	createPreview,
@@ -722,13 +721,7 @@ function formatDeploymentResource(
 	return drawConnectedChildBox(lines, { footerLines, indent: "  " });
 }
 
-function isInheritableBinding(
-	binding: Exclude<StartDevWorkerInput["bindings"], undefined>[string]
-) {
-	return binding.type === "assets";
-}
-
-export async function logMissingPreviewsBindingsWarning(
+function logMissingPreviewsBindingsWarning(
 	topLevelBindings: StartDevWorkerInput["bindings"],
 	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
 	localPreviewBindings: Record<string, Binding>
@@ -737,44 +730,20 @@ export async function logMissingPreviewsBindingsWarning(
 		...Object.keys(remotePreviewDefaultBindings ?? {}),
 		...Object.keys(localPreviewBindings),
 	]);
-	const missingEntries = Object.entries(topLevelBindings ?? {}).filter(
-		([name]) => !availableBindingNames.has(name)
+	const missingBindings = Object.fromEntries(
+		Object.entries(topLevelBindings ?? {}).filter(
+			([name]) => !availableBindingNames.has(name)
+		)
 	);
 
-	if (missingEntries.length === 0) {
+	if (Object.keys(missingBindings).length === 0) {
 		return;
 	}
 
-	const missingInheritable = missingEntries.filter(([, binding]) =>
-		isInheritableBinding(binding)
-	);
-	const missingUserFixable = missingEntries.filter(
-		([, binding]) => !isInheritableBinding(binding)
-	);
-
-	if (missingInheritable.length > 0) {
-		// Inheritable bindings (e.g. `assets`) are not valid under the
-		// `previews` config block, so we cannot direct the user to fix this
-		// themselves. If one is missing here, it means Wrangler failed to
-		// propagate it to the preview deployment.
-		logger.warn(`The following bindings should have been inherited from your top-level Wrangler config but are missing from the Preview deployment:
-
-${missingInheritable
-	.map(
-		([name, binding]) =>
-			`  ${chalk.cyan(name)}  ${chalk.dim(getBindingTypeFriendlyName(binding.type))}`
-	)
-	.join("\n")}
-
-This is likely a bug in Wrangler.`);
-		await logPossibleBugMessage();
-	}
-
-	if (missingUserFixable.length > 0) {
-		logger.warn(`Your configuration has diverged.
+	logger.warn(`Your configuration has diverged.
 The following bindings are configured at the top level of your Wrangler config file, but are missing from the Previews settings of your Worker.
 
-${missingUserFixable
+${Object.entries(missingBindings)
 	.map(
 		([name, binding]) =>
 			`  ${chalk.cyan(name)}  ${chalk.dim(getBindingTypeFriendlyName(binding.type))}`
@@ -782,7 +751,6 @@ ${missingUserFixable
 	.join("\n")}
 
 Either include these bindings in the ${chalk.cyan(`"previews"`)} field of your Wrangler config or update the Previews settings of your Worker in the Cloudflare dashboard.`);
-	}
 }
 
 export async function handlePreviewCommand(
@@ -911,7 +879,7 @@ export async function handlePreviewCommand(
 			accountId,
 			workerName
 		);
-		await logMissingPreviewsBindingsWarning(
+		logMissingPreviewsBindingsWarning(
 			topLevelBindings,
 			previewDefaults.env,
 			extractConfigBindings(config)
