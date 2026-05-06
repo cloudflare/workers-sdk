@@ -2,10 +2,16 @@ import { FatalError, UserError } from "@cloudflare/workers-utils";
 import { Cloudflare as CloudflareSDK } from "cloudflare";
 import type Cloudflare from "cloudflare";
 import type { CloudflareTunnel } from "cloudflare/resources/shared";
-import type {
-	CloudflaredCreateResponse,
-	ConfigurationGetResponse,
-} from "cloudflare/resources/zero-trust/tunnels/cloudflared";
+import type { CloudflaredCreateResponse, ConfigurationGetResponse } from "cloudflare/resources/zero-trust/tunnels/cloudflared";
+
+const TUNNELS_DASHBOARD_URL = "https://dash.cloudflare.com/?to=/:account/tunnels";
+const LOCAL_TUNNEL_HOSTNAMES = new Set([
+	"localhost",
+	"127.0.0.1",
+	"::1",
+	"0.0.0.0",
+	"::",
+]);
 
 /**
  * Error message for tunnel permission issues when using OAuth login.
@@ -212,10 +218,17 @@ export async function resolveNamedTunnel(
 			account_id: accountId,
 		})
 	);
-	const hostnames = getMatchingIngressHostnames(configuration.config?.ingress ?? [], origin.port);
+	const hostnames = getMatchingIngressHostnames(
+		origin,
+		configuration.config?.ingress ?? [],
+	);
 	if (hostnames.length === 0) {
 		throw new UserError(
-			createMissingIngressMessage(name, origin.port, configuration.config?.ingress ?? []),
+			createMissingIngressMessage(
+				name,
+				origin,
+				configuration.config?.ingress ?? []
+			),
 			{ telemetryMessage: "tunnel resolve named ingress mismatch" }
 		);
 	}
@@ -226,65 +239,76 @@ export async function resolveNamedTunnel(
 }
 
 /**
-	 * Return ingress hostnames whose configured service targets the given local port.
-	 */
+ * Return ingress hostnames whose configured service targets the current local dev origin.
+ */
 function getMatchingIngressHostnames(
-	ingressConfig: CloudflareSDK.ZeroTrust.Tunnels.Cloudflared.Configurations.ConfigurationGetResponse.Config.Ingress[],
-	port: string
+	origin: URL,
+	ingressConfig: ConfigurationGetResponse.Config.Ingress[],
 ): string[] {
 	const hostnames = new Set<string>();
+	const originUrl = normalizeURL(origin);
+
 	for (const ingress of ingressConfig) {
-		if (
-			ingress.hostname &&
-			getTunnelServicePort(ingress.service) === port
-		) {
-			hostnames.add(ingress.hostname);
+		try {
+			const serviceUrl = normalizeURL(ingress.service);
+
+			if (
+				ingress.hostname &&
+				serviceUrl.toString() === originUrl.toString()
+			) {
+				hostnames.add(ingress.hostname);
+			}
+		} catch {
+			// Ignore invalid service URLs in ingress rules
 		}
 	}
 
 	return [...hostnames];
 }
 
-/**
-	 * Extract the destination port from a tunnel ingress service URL.
-	 * Falls back to the default port for HTTP and HTTPS services.
-	 */
-function getTunnelServicePort(service: string): string | undefined {
-	try {
-		const url = new URL(service);
-		if (url.port) {
-			return url.port;
-		}
+function normalizeURL(url: URL | string): URL {
+	const normalizedUrl = new URL(url);
 
-		switch (url.protocol) {
-			case "http:":
-				return "80";
-			case "https:":
-				return "443";
-			default:
-				return undefined;
-		}
-	} catch {
-		return undefined;
+	if (LOCAL_TUNNEL_HOSTNAMES.has(normalizedUrl.hostname)) {
+		normalizedUrl.hostname = "localhost";
 	}
+
+	if (!normalizedUrl.port) {
+		switch (normalizedUrl.protocol) {
+			case "http:":
+				normalizedUrl.port = "80";
+				break;
+			case "https:":
+				normalizedUrl.port = "443";
+				break;
+		}
+	}
+
+	return normalizedUrl;
 }
 
 function createMissingIngressMessage(
 	name: string,
-	port: string,
-	ingress: CloudflareSDK.ZeroTrust.Tunnels.Cloudflared.Configurations.ConfigurationGetResponse.Config.Ingress[]
+	origin: URL,
+	ingress: ConfigurationGetResponse.Config.Ingress[]
 ): string {
-	const ingressMappings = ingress.length
-		? ingress
-				.map(({ hostname, service }) => `  - ${hostname ?? "(no hostname)"} -> ${service}`)
-				.join("\n")
-		: "  (no ingress rules found)";
+	if (ingress.length === 0) {
+		return [
+			`Tunnel "${name}" has no ingress rules configured.`,
+			"",
+			`Add an ingress rule for ${origin} in the Cloudflare dashboard:`,
+			TUNNELS_DASHBOARD_URL,
+		].join("\n");
+	}
 
 	return [
-		`No ingress rules in tunnel "${name}" route to local port ${port}.`,
+		`No ingress rules in tunnel "${name}" route to ${origin}.`,
+		"",
+		"Update the tunnel ingress rules in the Cloudflare dashboard:",
+		TUNNELS_DASHBOARD_URL,
 		"",
 		"Resolved ingress mappings:",
-		ingressMappings,
+		...ingress.map(({ hostname, service }) => `  - ${hostname ?? "(no hostname)"} -> ${service}`),
 	].join("\n");
 }
 
