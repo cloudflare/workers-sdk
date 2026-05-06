@@ -8,29 +8,20 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMembershipsFail } from "../helpers/mock-oauth-flow";
 import { useMockStdin } from "../helpers/mock-stdin";
-import { createFetchResult, msw } from "../helpers/msw";
+import {
+	createFetchResult,
+	mswFailMembershipHandler,
+	mswFailAccountsHandler,
+	getMswSuccessMembershipHandlers,
+	msw,
+} from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { PagesProject } from "../../pages/download-config";
 import type { PagesConfigCache } from "../../pages/types";
 import type { Interface } from "node:readline";
 import type { ExpectStatic } from "vitest";
-
-export function mockGetMemberships(
-	accounts: { id: string; account: { id: string; name: string } }[]
-) {
-	msw.use(
-		http.get(
-			"*/memberships",
-			() => {
-				return HttpResponse.json(createFetchResult(accounts));
-			},
-			{ once: true }
-		)
-	);
-}
 
 describe("wrangler pages secret", () => {
 	const std = mockConsoleMethods();
@@ -256,10 +247,24 @@ describe("wrangler pages secret", () => {
 			describe("with accountId", () => {
 				mockAccountId({ accountId: null });
 
-				it("should error if request for memberships fails", async ({
+				it("should error if request for available accounts fails", async ({
 					expect,
 				}) => {
-					mockGetMembershipsFail();
+					msw.use(mswFailAccountsHandler, ...getMswSuccessMembershipHandlers());
+					await expect(
+						runWrangler("pages secret put the-key --project some-project-name")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[APIError: A request to the Cloudflare API (/accounts) failed.]`
+					);
+				});
+
+				it("should error if request for available memberships fails", async ({
+					expect,
+				}) => {
+					msw.use(
+						mswFailMembershipHandler,
+						...getMswSuccessMembershipHandlers()
+					);
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -268,7 +273,7 @@ describe("wrangler pages secret", () => {
 				});
 
 				it("should error if a user has no account", async ({ expect }) => {
-					mockGetMemberships([]);
+					msw.use(...getMswSuccessMembershipHandlers([]));
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
@@ -280,20 +285,13 @@ describe("wrangler pages secret", () => {
 				it("should error if a user has multiple accounts, and has not specified an account", async ({
 					expect,
 				}) => {
-					mockGetMemberships([
-						{
-							id: "1",
-							account: { id: "account-id-1", name: "account-name-1" },
-						},
-						{
-							id: "2",
-							account: { id: "account-id-2", name: "account-name-2" },
-						},
-						{
-							id: "3",
-							account: { id: "account-id-3", name: "account-name-3" },
-						},
-					]);
+					msw.use(
+						...getMswSuccessMembershipHandlers([
+							{ id: "account-id-1", name: "account-name-1" },
+							{ id: "account-id-2", name: "account-name-2" },
+							{ id: "account-id-3", name: "account-name-3" },
+						])
+					);
 
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")

@@ -196,6 +196,7 @@ describe("wrangler preview", () => {
 				browser: { binding: "MY_BROWSER" },
 				stream: { binding: "MY_STREAM" },
 				version_metadata: { binding: "MY_VERSION_METADATA" },
+				flagship: [{ binding: "MY_FLAGS", app_id: "flagship-app-id" }],
 			});
 			const bindings = extractConfigBindings(config);
 			expect(bindings).toMatchObject({
@@ -206,6 +207,7 @@ describe("wrangler preview", () => {
 				MY_BROWSER: { type: "browser" },
 				MY_STREAM: { type: "stream" },
 				MY_VERSION_METADATA: { type: "version_metadata" },
+				MY_FLAGS: { type: "flagship", app_id: "flagship-app-id" },
 			});
 		});
 	});
@@ -503,6 +505,90 @@ describe("wrangler preview", () => {
 			await runWrangler("preview --name test-preview");
 
 			expect(std.warn).not.toContain("IMPORTANT_BINDING");
+		});
+
+		test("should use flagship bindings from local previews config", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					flagship: [{ binding: "FLAGS", app_id: "production-app-id" }],
+					previews: {
+						flagship: [{ binding: "FLAGS", app_id: "preview-app-id" }],
+					},
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<string, { type: string; app_id?: string }>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-flagship",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-flagship",
+								preview_id: "preview-id-flagship",
+								preview_name: "test-preview",
+								urls: ["https://flags123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentRequestBody?.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.env?.FLAGS).toMatchObject({
+				type: "flagship",
+				app_id: "preview-app-id",
+			});
+			expect(deploymentRequestBody?.env?.FLAGS).not.toMatchObject({
+				app_id: "production-app-id",
+			});
+			expect(std.out).toContain("preview-app-id");
+			expect(std.warn).not.toContain("FLAGS");
 		});
 
 		test("should not warn about inheritable top-level bindings missing from previews", async ({
@@ -1518,6 +1604,100 @@ describe("wrangler preview", () => {
 			});
 			expect(deploymentRequestBody?.main_module).toBeDefined();
 			expect(Array.isArray(deploymentRequestBody?.modules)).toBe(true);
+			// No assets binding configured, so no env entry should be emitted
+			const env = deploymentRequestBody?.env as
+				| Record<string, { type: string }>
+				| undefined;
+			const assetsEntries = Object.values(env ?? {}).filter(
+				(b) => b.type === "assets"
+			);
+			expect(assetsEntries).toHaveLength(0);
+		});
+
+		test("should include the assets binding in env using the configured binding name", async ({
+			expect,
+		}) => {
+			mkdirSync("public", { recursive: true });
+			writeFileSync("public/index.html", "<h1>Hello</h1>");
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					assets: { directory: "public", binding: "MY_ASSETS" },
+				})
+			);
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-custom-binding",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:workerId/assets-upload-session`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: { buckets: [], jwt: "assets-jwt-from-session" },
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await request.json()) as Record<
+							string,
+							unknown
+						>;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-custom-binding",
+									preview_id: "preview-id-custom-binding",
+									preview_name: "test-preview",
+									urls: ["https://custom-bind.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			await runWrangler("preview --name test-preview");
+			expect(deploymentRequestBody?.env).toMatchObject({
+				MY_ASSETS: { type: "assets" },
+			});
+			expect(deploymentRequestBody?.env).not.toHaveProperty("ASSETS");
 		});
 
 		test("should include source maps in deployment modules when upload_source_maps is enabled", async ({
@@ -2504,6 +2684,174 @@ describe("wrangler preview", () => {
 				"TOP_LEVEL_PREVIEW"
 			);
 			expect(deploymentRequestBody?.env).not.toHaveProperty("TOP_KV");
+		});
+
+		test("should include previews.cache in deployment request, falling back to top-level cache", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					cache: { enabled: true },
+					previews: {
+						vars: { ENVIRONMENT: "preview" },
+					},
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						cache?: { enabled?: boolean };
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-cache",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-cache",
+									preview_id: "preview-id-cache",
+									preview_name: "test-preview",
+									urls: ["https://cache.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									cache: deploymentRequestBody?.cache,
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.cache).toEqual({ enabled: true });
+		});
+
+		test("should prefer previews.cache over top-level cache in deployment request", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					cache: { enabled: true },
+					previews: {
+						cache: { enabled: false },
+					},
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						cache?: { enabled?: boolean };
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-cache-override",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-cache-override",
+									preview_id: "preview-id-cache-override",
+									preview_name: "test-preview",
+									urls: ["https://cache-override.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									cache: deploymentRequestBody?.cache,
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.cache).toEqual({ enabled: false });
 		});
 
 		test("should respect env-specific worker name for preview and deployment requests", async ({

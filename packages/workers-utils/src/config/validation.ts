@@ -1434,7 +1434,6 @@ function normalizeAndValidateEnvironment(
 	);
 
 	experimental(diagnostics, rawEnv, "unsafe");
-	experimental(diagnostics, rawEnv, "secrets");
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
@@ -4785,7 +4784,7 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 	let isValid = true;
-	// Pipeline bindings must have a binding and a pipeline.
+	// Pipeline bindings must have a binding and a stream (or deprecated pipeline).
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
@@ -4794,9 +4793,23 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "pipeline", "string")) {
+
+	const hasStream = isOptionalProperty(value, "stream", "string");
+	const hasPipeline = isOptionalProperty(value, "pipeline", "string");
+	const v = value as Record<string, unknown>;
+
+	if (hasStream && v.stream) {
+		// "stream" is the primary field — use it as-is
+	} else if (hasPipeline && v.pipeline) {
+		// Deprecated "pipeline" field — normalize to "stream"
+		diagnostics.warnings.push(
+			`The "pipeline" field in "${field}" bindings is deprecated. Use "stream" instead.`
+		);
+		v.stream = v.pipeline;
+		delete v.pipeline;
+	} else {
 		diagnostics.errors.push(
-			`"${field}" bindings must have a string "pipeline" field but got ${JSON.stringify(
+			`"${field}" bindings must have a string "stream" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -4809,6 +4822,7 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
+		"stream",
 		"pipeline",
 		"remote",
 	]);
@@ -5161,6 +5175,7 @@ const validatePreviewsConfig =
 				"secrets_store_secrets",
 				"artifacts",
 				"unsafe_hello_world",
+				"flagship",
 				"worker_loaders",
 				"ratelimits",
 				"vpc_services",
@@ -5168,6 +5183,7 @@ const validatePreviewsConfig =
 				"logpush",
 				"observability",
 				"limits",
+				"cache",
 			]) && isValid;
 
 		isValid =
@@ -5402,6 +5418,14 @@ const validatePreviewsConfig =
 			) && isValid;
 
 		isValid =
+			validateBindingArray(envName, validateFlagshipBinding)(
+				diagnostics,
+				`${field}.flagship`,
+				previews.flagship,
+				undefined
+			) && isValid;
+
+		isValid =
 			validateBindingArray(envName, validateWorkerLoaderBinding)(
 				diagnostics,
 				`${field}.worker_loaders`,
@@ -5465,6 +5489,10 @@ const validatePreviewsConfig =
 					"number"
 				) && isValid;
 		}
+
+		isValid =
+			validateCache(diagnostics, `${field}.cache`, previews.cache, undefined) &&
+			isValid;
 
 		return isValid;
 	};
