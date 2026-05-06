@@ -24,6 +24,8 @@ describe("containers ssh", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers ssh <ID>
 
+			SSH into a container
+
 			POSITIONALS
 			  ID  ID of the container instance  [string] [required]
 
