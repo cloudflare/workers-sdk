@@ -182,9 +182,7 @@ describe("cleanupOldLogFiles", () => {
 		if (existsSync("nonexistent-dir")) {
 			rmSync("nonexistent-dir", { recursive: true, force: true });
 		}
-		await expect(
-			cleanupOldLogFiles("nonexistent-dir")
-		).resolves.not.toThrow();
+		await expect(cleanupOldLogFiles("nonexistent-dir")).resolves.not.toThrow();
 	});
 });
 
