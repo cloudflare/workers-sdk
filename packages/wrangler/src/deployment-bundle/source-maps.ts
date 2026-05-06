@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import type { BundleResult, SourceMapMetadata } from "./bundle";
 import type { CfModule, CfWorkerSourceMap } from "@cloudflare/workers-utils";
 import type { RawSourceMap } from "source-map";
@@ -116,8 +117,9 @@ function getSourceMappingUrl(module: CfModule): string | undefined {
 	// generated file it appears in.
 	const commentPath = stripPrefix(commentPrefix, lastLine).trim();
 	if (commentPath.startsWith("data:")) {
-		throw new Error(
-			`Unsupported source map path in ${module.filePath}: expected file path but found data URL.`
+		throw new UserError(
+			`Unsupported source map path in ${module.filePath}: expected file path but found data URL.`,
+			{ telemetryMessage: "deploy bundle source map inline data url" }
 		);
 	}
 

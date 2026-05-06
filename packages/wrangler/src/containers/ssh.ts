@@ -112,7 +112,10 @@ async function sshCommand(sshArgs: SshArgs, _config: Config) {
 	} catch (e) {
 		if (e instanceof ApiError) {
 			if (e.status === 404) {
-				throw new Error(`Instance ${sshArgs.ID} not found`);
+				throw new UserError(`Instance ${sshArgs.ID} not found`, {
+					cause: e,
+					telemetryMessage: "containers ssh instance not found",
+				});
 			}
 
 			let msg = `Error verifying SSH access`;
@@ -120,7 +123,14 @@ async function sshCommand(sshArgs: SshArgs, _config: Config) {
 				msg += `: ${e.body.error}`;
 			}
 
-			throw new Error(msg);
+			if (typeof e.status === "number" && e.status >= 400 && e.status < 500) {
+				throw new UserError(msg, {
+					cause: e,
+					telemetryMessage: `containers ssh verify ${e.status}`,
+				});
+			}
+
+			throw new Error(msg, { cause: e });
 		}
 
 		throw e;
@@ -172,11 +182,12 @@ async function sshCommand(sshArgs: SshArgs, _config: Config) {
 				resolve(undefined);
 			} else {
 				reject(
-					new Error(
+					new UserError(
 						[
 							"SSH exited unsuccessfully. Is the container running?",
 							`${bold("NOTE:")} SSH does not automatically wake a container or count as activity to keep a container alive`,
-						].join("\n")
+						].join("\n"),
+						{ telemetryMessage: "containers ssh exited 255" }
 					)
 				);
 			}

@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { UserError } from "@cloudflare/workers-utils";
 import semiver from "semiver";
 import { logger } from "../../logger";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
@@ -42,7 +43,7 @@ export abstract class Framework {
 	 *
 	 * @param projectPath - Path to the project root used to resolve the installed version.
 	 * @param frameworkPackageInfo - Package metadata including name and version bounds.
-	 * @throws {AssertionError} If the installed version cannot be determined.
+	 * @throws {UserError} If the installed version cannot be determined.
 	 * @throws {AutoConfigFrameworkConfigurationError} If the version is below `minimumVersion`.
 	 */
 	validateFrameworkVersion(
@@ -54,10 +55,12 @@ export abstract class Framework {
 			projectPath
 		);
 
-		assert(
-			frameworkVersion,
-			`Unable to detect the version of the \`${frameworkPackageInfo.name}\` package`
-		);
+		if (!frameworkVersion) {
+			throw new UserError(
+				`Unable to detect the version of the \`${frameworkPackageInfo.name}\` package`,
+				{ telemetryMessage: "autoconfig framework version not detected" }
+			);
+		}
 
 		if (semiver(frameworkVersion, frameworkPackageInfo.minimumVersion) < 0) {
 			throw new AutoConfigFrameworkConfigurationError(

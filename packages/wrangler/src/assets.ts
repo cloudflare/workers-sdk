@@ -267,7 +267,27 @@ export const syncAssets = async (
 };
 
 export const buildAssetManifest = async (dir: string) => {
-	const files = await readdir(dir, { recursive: true });
+	let files: string[];
+	try {
+		files = await readdir(dir, { recursive: true });
+	} catch (e: unknown) {
+		if (
+			e &&
+			typeof e === "object" &&
+			"code" in e &&
+			(e as { code: string }).code === "ENOENT"
+		) {
+			throw new NonExistentAssetsDirError(
+				`The directory specified by the Assets configuration does not exist:\n` +
+					`${dir}`,
+				{
+					cause: e,
+					telemetryMessage: "assets directory does not exist",
+				}
+			);
+		}
+		throw e;
+	}
 	logReadFilesFromDirectory(dir, files);
 
 	const manifest: AssetManifest = {};
