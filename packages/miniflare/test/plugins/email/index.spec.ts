@@ -1394,6 +1394,9 @@ test("MessageBuilder with named recipient arrays", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
 		email: {
@@ -1455,6 +1458,9 @@ test("MessageBuilder with mixed recipients", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
 		email: {
@@ -1758,6 +1764,9 @@ test("MessageBuilder with RFC5322 string addresses", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
 		email: {
