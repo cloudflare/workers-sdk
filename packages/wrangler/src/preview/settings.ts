@@ -97,6 +97,12 @@ export function formatPreviewsSettings(
 	if (typeof previewDefaults.placement?.mode === "string") {
 		settingsRows.push(["placement", previewDefaults.placement.mode]);
 	}
+	if (previewDefaults.cache !== undefined) {
+		settingsRows.push([
+			"cache",
+			previewDefaults.cache.enabled ? "enabled" : "disabled",
+		]);
+	}
 
 	if (settingsRows.length > 0) {
 		const labelWidth = Math.max(...settingsRows.map(([label]) => label.length));
