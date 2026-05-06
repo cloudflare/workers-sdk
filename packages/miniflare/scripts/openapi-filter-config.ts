@@ -23,6 +23,10 @@ const config = {
 			path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/bulk/get",
 			methods: ["post"],
 		},
+		{
+			path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/bulk/delete",
+			methods: ["post"],
+		},
 
 		// D1 Storage endpoints
 		{

@@ -8,6 +8,7 @@ import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type { WorkersKvNamespace } from "../generated";
 import type {
+	zWorkersKvNamespaceDeleteMultipleKeyValuePairsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
@@ -438,5 +439,66 @@ export async function bulkGetKVValues(c: AppContext, body: BulkGetBody) {
 		404,
 		KV_ERROR_NAMESPACE_NOT_FOUND,
 		"bulk get keys: 'namespace not found'"
+	);
+}
+
+type BulkDeleteBody = NonNullable<
+	z.output<typeof zWorkersKvNamespaceDeleteMultipleKeyValuePairsData>["body"]
+>;
+
+/**
+ * Delete multiple key-value pairs.
+ *
+ * If the namespace is not found locally, it proxies to peer instances.
+ *
+ * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/methods/bulk_delete/
+ */
+export async function bulkDeleteKVValues(c: AppContext, body: BulkDeleteBody) {
+	const namespace_id = c.req.param("namespace_id");
+	if (!namespace_id) {
+		return errorResponse(400, 10000, "Missing namespace_id parameter");
+	}
+
+	if (body.length === 0) {
+		return errorResponse(400, 10001, "Request body must be a non-empty array");
+	}
+
+	const kv = getKVBinding(c.env, namespace_id);
+	if (kv) {
+		const deleteResults = await Promise.allSettled(
+			body.map((key) => kv.delete(key))
+		);
+		const failedDeleteCount = deleteResults.filter(
+			(result) => result.status === "rejected"
+		).length;
+		if (failedDeleteCount > 0) {
+			return errorResponse(
+				500,
+				10000,
+				`bulk delete failed for ${failedDeleteCount} key${failedDeleteCount === 1 ? "" : "s"}`
+			);
+		}
+
+		return c.json(wrapResponse({}));
+	}
+
+	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
+	if (ownerMiniflare) {
+		const response = await fetchFromPeer(
+			ownerMiniflare,
+			`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/bulk/delete`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			}
+		);
+		if (response) return response;
+	}
+
+	return errorResponse(
+		404,
+		KV_ERROR_NAMESPACE_NOT_FOUND,
+		"bulk delete keys: 'namespace not found'"
 	);
 }

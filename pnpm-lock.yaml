@@ -1889,8 +1889,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@cloudflare/kumo':
-        specifier: ^1.18.0
-        version: 1.18.0(@phosphor-icons/react@2.1.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@types/react@19.2.13)(echarts@6.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.3.6)
+        specifier: ^1.19.0
+        version: 1.19.0(@phosphor-icons/react@2.1.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@types/react@19.2.13)(echarts@6.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.3.6)
       '@cloudflare/workers-editor-shared':
         specifier: ^0.1.1
         version: 0.1.1(@cloudflare/style-const@6.1.3(react@19.2.4))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -5030,8 +5030,8 @@ packages:
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
-  '@cloudflare/kumo@1.18.0':
-    resolution: {integrity: sha512-D1OkzYe6rIPe2CqklE+DDt84YB8Q+gV5PH/Hjco8TO1NEHZkaookdl67YU+HHWCBME6TxSwQRzn72hp/cyOrCw==}
+  '@cloudflare/kumo@1.19.0':
+    resolution: {integrity: sha512-Ob91fqIbVwXMk/DTrod8oqs/uLiHOA1AbddJxfoPAuKRSjvVeImck34aow6ZJhWrfJi3uxLFOAI3569r5QFE0A==}
     hasBin: true
     peerDependencies:
       '@phosphor-icons/react': ^2.1.10
@@ -16373,7 +16373,7 @@ snapshots:
     dependencies:
       react: 19.2.4
 
-  '@cloudflare/kumo@1.18.0(@phosphor-icons/react@2.1.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@types/react@19.2.13)(echarts@6.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.3.6)':
+  '@cloudflare/kumo@1.19.0(@phosphor-icons/react@2.1.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@types/react@19.2.13)(echarts@6.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.3.6)':
     dependencies:
       '@base-ui/react': 1.3.0(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@phosphor-icons/react': 2.1.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -19947,14 +19947,14 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))':
+  '@vitest/mocker@4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))':
     dependencies:
       '@vitest/spy': 4.1.0
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
       msw: 2.12.4(@types/node@22.15.17)(typescript@5.8.3)
-      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)
+      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)
 
   '@vitest/mocker@4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))':
     dependencies:
@@ -19964,6 +19964,15 @@ snapshots:
     optionalDependencies:
       msw: 2.12.4(@types/node@22.15.17)(typescript@5.8.3)
       vite: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
+
+  '@vitest/mocker@4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))':
+    dependencies:
+      '@vitest/spy': 4.1.0
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      msw: 2.12.4(@types/node@22.15.17)(typescript@5.9.3)
+      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
 
   '@vitest/mocker@4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))':
     dependencies:
@@ -26183,7 +26192,7 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.8.1
 
-  vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1):
+  vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.3
@@ -26193,6 +26202,21 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.15.17
       esbuild: 0.23.1
+      fsevents: 2.3.3
+      jiti: 2.6.1
+      tsx: 4.21.0
+      yaml: 2.8.1
+
+  vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1):
+    dependencies:
+      lightningcss: 1.32.0
+      picomatch: 4.0.3
+      postcss: 8.5.8
+      rolldown: 1.0.0-rc.10
+      tinyglobby: 0.2.15
+    optionalDependencies:
+      '@types/node': 22.15.17
+      esbuild: 0.27.3
       fsevents: 2.3.3
       jiti: 2.6.1
       tsx: 3.12.10
@@ -26222,7 +26246,7 @@ snapshots:
   vitest@4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)):
     dependencies:
       '@vitest/expect': 4.1.0
-      '@vitest/mocker': 4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))
+      '@vitest/mocker': 4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))
       '@vitest/pretty-format': 4.1.0
       '@vitest/runner': 4.1.0
       '@vitest/snapshot': 4.1.0
@@ -26239,7 +26263,35 @@ snapshots:
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)
+      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 22.15.17
+      '@vitest/ui': 4.1.0(vitest@4.1.0)
+    transitivePeerDependencies:
+      - msw
+
+  vitest@4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)):
+    dependencies:
+      '@vitest/expect': 4.1.0
+      '@vitest/mocker': 4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+      '@vitest/pretty-format': 4.1.0
+      '@vitest/runner': 4.1.0
+      '@vitest/snapshot': 4.1.0
+      '@vitest/spy': 4.1.0
+      '@vitest/utils': 4.1.0
+      es-module-lexer: 2.0.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.3
+      std-env: 4.0.0
+      tinybench: 2.9.0
+      tinyexec: 1.0.2
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.0.3
+      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.1

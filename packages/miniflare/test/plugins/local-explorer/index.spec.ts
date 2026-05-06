@@ -134,6 +134,34 @@ describe("Local Explorer API validation", () => {
 				],
 			});
 		});
+
+		test("returns 400 for invalid bulk delete body type", async ({
+			expect,
+		}) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/delete`,
+				{
+					body: JSON.stringify({
+						keys: ["key-1"],
+					}),
+					headers: {
+						"Content-Type": "application/json",
+					},
+					method: "POST",
+				}
+			);
+
+			expect(response.status).toBe(400);
+			expect(await response.json()).toMatchObject({
+				success: false,
+				errors: [
+					{
+						code: 10001,
+						message: "Expected array, received object",
+					},
+				],
+			});
+		});
 	});
 
 	describe("error response format", () => {

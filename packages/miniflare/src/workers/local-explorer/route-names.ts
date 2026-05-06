@@ -3,6 +3,7 @@
  * Order matters - more specific patterns must come first.
  */
 const ROUTE_PATTERNS: [RegExp, string][] = [
+	[/^\/storage\/kv\/namespaces\/[^/]+\/bulk\/delete$/, "kv.bulk_delete"],
 	[/^\/storage\/kv\/namespaces\/[^/]+\/bulk\/get$/, "kv.bulk_get"],
 	[/^\/storage\/kv\/namespaces\/[^/]+\/values\/[^/]+$/, "kv.value"],
 	[/^\/storage\/kv\/namespaces\/[^/]+\/keys$/, "kv.keys"],
