@@ -127,12 +127,12 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 
 		try {
 			const shouldPrintBanner = def.behaviour?.printBanner ?? true;
-
-			if (
+			const bannerEnabled =
 				shouldPrintBanner === true ||
 				(typeof shouldPrintBanner === "function" &&
-					shouldPrintBanner(args) === true)
-			) {
+					shouldPrintBanner(args) === true);
+
+			if (bannerEnabled) {
 				await printWranglerBanner();
 			}
 
@@ -141,7 +141,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					logger.warn(def.metadata.deprecatedMessage);
 				}
 
-				if (def.metadata.statusMessage) {
+				if (bannerEnabled && def.metadata.statusMessage) {
 					logger.warn(def.metadata.statusMessage);
 				}
 			}
