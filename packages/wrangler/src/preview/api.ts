@@ -35,6 +35,7 @@ export interface Binding {
 	};
 	certificate_id?: string;
 	pipeline?: string;
+	stream?: string;
 	store_id?: string;
 	secret_name?: string;
 	simple?: {

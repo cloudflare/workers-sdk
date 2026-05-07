@@ -283,21 +283,24 @@ function queueProducerEntry(
 	return [binding, { queueName, deliveryDelay, remoteProxyConnectionString }];
 }
 function pipelineEntry(
-	pipeline: CfPipeline,
+	{ binding, stream, pipeline, remote }: CfPipeline,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
 	{
-		pipeline: string;
+		stream?: string;
+		pipeline?: string;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
-	if (!remoteProxyConnectionString || !pipeline.remote) {
-		return [pipeline.binding, { pipeline: pipeline.pipeline }];
-	}
 	return [
-		pipeline.binding,
-		{ pipeline: pipeline.pipeline, remoteProxyConnectionString },
+		binding,
+		{
+			...(stream && { stream }),
+			...(pipeline && { pipeline }),
+			...(remoteProxyConnectionString &&
+				remote && { remoteProxyConnectionString }),
+		},
 	];
 }
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {

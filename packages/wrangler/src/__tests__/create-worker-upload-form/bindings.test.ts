@@ -376,13 +376,13 @@ describe("createWorkerUploadForm — bindings", () => {
 	describe("pipeline bindings", () => {
 		it("should transform type from pipeline to pipelines", ({ expect }) => {
 			const bindings: StartDevWorkerInput["bindings"] = {
-				MY_PIPELINE: { type: "pipeline", pipeline: "my-pipeline" },
+				MY_PIPELINE: { type: "pipeline", stream: "my-pipeline" },
 			};
 			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_PIPELINE",
 				type: "pipelines",
-				pipeline: "my-pipeline",
+				stream: "my-pipeline",
 			});
 		});
 	});
