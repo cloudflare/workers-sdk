@@ -101,7 +101,8 @@ export const tailCommand = createCommand({
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
-					"For Pages, please run `wrangler pages deployment tail` instead."
+					"For Pages, please run `wrangler pages deployment tail` instead.",
+				{ telemetryMessage: "tail stream pages project" }
 			);
 		}
 		metrics.sendMetricsEvent("begin log stream", {
@@ -133,7 +134,8 @@ export const tailCommand = createCommand({
 
 		if (!scriptName) {
 			throw new UserError(
-				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`wrangler tail <worker-name>\``
+				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`wrangler tail <worker-name>\``,
+				{ telemetryMessage: "tail stream missing worker name" }
 			);
 		}
 
@@ -246,8 +248,7 @@ export const tailCommand = createCommand({
 					throw createFatalError(
 						"Tail disconnected, exiting.",
 						args.format === "json",
-						1,
-						{ telemetryMessage: true }
+						{ code: 1, telemetryMessage: "tail stream disconnected" }
 					);
 				}
 				waitingForPong = true;

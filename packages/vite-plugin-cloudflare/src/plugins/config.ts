@@ -12,6 +12,7 @@ import { hasLocalDevVarsFileChanged } from "../dev-vars";
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
+import { QUICK_TUNNEL_ALLOWED_HOST } from "./tunnel";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
 
@@ -22,7 +23,18 @@ export const configPlugin = createPlugin("config", (ctx) => {
 	return {
 		config(userConfig, env) {
 			if (ctx.resolvedPluginConfig.type === "preview") {
-				return { appType: "custom" };
+				return {
+					appType: "custom",
+					preview: {
+						allowedHosts: getAllowedHosts(
+							ctx.resolvedPluginConfig.tunnel
+								? [QUICK_TUNNEL_ALLOWED_HOST]
+								: [],
+							userConfig.preview?.allowedHosts ??
+								userConfig.server?.allowedHosts
+						),
+					},
+				};
 			}
 
 			if (!ctx.hasShownWorkerConfigWarnings) {
@@ -38,7 +50,10 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			const defaultDeniedFiles = [
 				".env",
 				".env.*",
-				"*.{crt,pem}",
+				".npmrc",
+				".yarnrc",
+				".yarnrc.yml",
+				"*.{crt,pem,key,pfx,p12,p8,jks}",
 				"**/.git/**",
 				".dev.vars",
 				".dev.vars.*",
@@ -48,6 +63,10 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			return {
 				appType: "custom",
 				server: {
+					allowedHosts: getAllowedHosts(
+						ctx.getTunnelHostnames(),
+						userConfig.server?.allowedHosts
+					),
 					fs: {
 						deny: [
 							...defaultDeniedFiles,
@@ -225,4 +244,15 @@ function getEnvironmentsConfig(
 			},
 		},
 	};
+}
+
+function getAllowedHosts(
+	tunnelHostnames: string[],
+	userAllowedHosts: true | string[] | undefined
+): true | string[] | undefined {
+	if (tunnelHostnames.length === 0 || userAllowedHosts === true) {
+		return userAllowedHosts;
+	}
+
+	return Array.from(new Set([...(userAllowedHosts ?? []), ...tunnelHostnames]));
 }

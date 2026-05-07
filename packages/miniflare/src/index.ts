@@ -73,6 +73,7 @@ import {
 	reviveError,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
+import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import { imagesLocalFetcher } from "./plugins/images/fetcher";
 import {
@@ -974,7 +975,7 @@ export class Miniflare {
 
 	// Store `#init()` `Promise`, so we can propagate initialisation errors in
 	// `ready`. We would have no way of catching these otherwise.
-	// eslint-disable-next-line no-unused-private-class-members — oxlint is wrong here, this variable _is_ used
+	// eslint-disable-next-line no-unused-private-class-members -- oxlint is wrong here, this variable _is_ used
 	readonly #initPromise: Promise<void>;
 
 	// Aborted when dispose() is called
@@ -1022,6 +1023,7 @@ export class Miniflare {
 		}
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
+		this.#hyperdriveProxyController.log = this.#log;
 		this.#structuredWorkerdLogs =
 			this.#sharedOpts.core.structuredWorkerdLogs ??
 			// If there is a `handleStructuredLogs` set then `structuredWorkerdLogs` defaults
@@ -1523,15 +1525,6 @@ export class Miniflare {
 					request,
 					customFetchService
 				);
-			} else if (
-				this.#sharedOpts.core.unsafeModuleFallbackService !== undefined &&
-				request.headers.has("X-Resolve-Method") &&
-				originalUrl === null
-			) {
-				response = await this.#sharedOpts.core.unsafeModuleFallbackService(
-					request,
-					this
-				);
 			} else if (url.pathname === "/core/error") {
 				response = await handlePrettyErrorRequest(
 					this.#log,
@@ -1539,9 +1532,9 @@ export class Miniflare {
 					request
 				);
 			} else if (url.pathname === "/core/log") {
-				// Safety of `!`: `parseInt(null)` is `NaN`
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				const level = parseInt(request.headers.get(SharedHeaders.LOG_LEVEL)!);
+				const level = parseInt(
+					request.headers.get(SharedHeaders.LOG_LEVEL) ?? "NaN"
+				);
 				assert(
 					LogLevel.NONE <= level && level <= LogLevel.VERBOSE,
 					`Expected ${SharedHeaders.LOG_LEVEL} header to be log level, got ${level}`
@@ -1626,6 +1619,21 @@ export class Miniflare {
 				// stream binding) to construct externally-reachable URLs.
 				response = Response.json(
 					this.publicUrl ?? this.#runtimeEntryURL?.toString() ?? null
+				);
+			} else if (
+				// Module fallback check MUST come after all known pathname handlers.
+				// The V2 protocol (new_module_registry compat flag) uses POST requests,
+				// which would otherwise match internal loopback requests from embedded
+				// workers (e.g., POST to /core/log, /core/error, /core/store-temp-file).
+				// By checking module fallback last, we ensure internal endpoints are
+				// handled first, and only truly unmatched requests go to the fallback.
+				this.#sharedOpts.core.unsafeModuleFallbackService !== undefined &&
+				isModuleFallbackRequest(request) &&
+				originalUrl === null
+			) {
+				response = await this.#sharedOpts.core.unsafeModuleFallbackService(
+					request,
+					this
 				);
 			}
 		} catch (e: any) {
@@ -2283,6 +2291,7 @@ export class Miniflare {
 					? `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
+			tmpPath: this.#tmpPath,
 			log: this.#log,
 			proxyBindings,
 			durableObjectClassNames,
@@ -2405,6 +2414,7 @@ export class Miniflare {
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
+			runtimeEnv: this.#sharedOpts.core.unsafeRuntimeEnv,
 		};
 		const maybeSocketPorts = await this.#runtime.updateConfig(
 			configBuffer,
@@ -2732,6 +2742,7 @@ export class Miniflare {
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
+		this.#hyperdriveProxyController.log = this.#log;
 		this.#structuredWorkerdLogs =
 			this.#sharedOpts.core.structuredWorkerdLogs ??
 			this.#structuredWorkerdLogs;
@@ -3171,3 +3182,9 @@ export {
 	getDefaultDevRegistryPath,
 	getWorkerRegistry,
 } from "./shared/dev-registry";
+export { parseModuleFallbackRequest } from "./plugins/core/module-fallback";
+export type {
+	V1ModuleFallbackRequest,
+	V2ModuleFallbackRequest,
+	ParsedModuleFallbackRequest,
+} from "./plugins/core/module-fallback";

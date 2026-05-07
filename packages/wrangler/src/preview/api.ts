@@ -2,6 +2,7 @@ import { fetchResult } from "../cfetch";
 import type {
 	CfWorkerInit,
 	Config,
+	CacheOptions,
 	CfPlacement,
 	CfUserLimits,
 	Observability,
@@ -43,6 +44,7 @@ export interface Binding {
 	service_id?: string;
 	staging?: boolean;
 	enable_timer?: boolean;
+	app_id?: string;
 	entrypoint?: string;
 	class_name?: string;
 	script_name?: string;
@@ -74,6 +76,7 @@ export interface DeploymentResource {
 	compatibility_flags?: string[];
 	limits?: CfUserLimits;
 	placement?: CfPlacement;
+	cache?: CacheOptions;
 	env?: EnvBindings;
 	created_on: string;
 }
@@ -102,6 +105,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	migrations?: CfWorkerInit["migrations"];
 	limits?: CfUserLimits;
 	placement?: CfPlacement;
+	cache?: CacheOptions;
 	env?: EnvBindings;
 };
 
@@ -126,6 +130,7 @@ export type PreviewDefaults = {
 	logpush?: boolean;
 	limits?: CfUserLimits;
 	placement?: CfPlacement;
+	cache?: CacheOptions;
 	tail_consumers?: Array<{ name: string }>;
 	env?: EnvBindings;
 };

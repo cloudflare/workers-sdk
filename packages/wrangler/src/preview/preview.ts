@@ -103,6 +103,10 @@ type MergedVersionLevel = {
 		value: { mode: string };
 		fromConfig: boolean;
 	};
+	cache?: {
+		value: Config["cache"];
+		fromConfig: boolean;
+	};
 	assets?: {
 		value: {
 			directory?: string;
@@ -304,10 +308,10 @@ async function assemblePreviewDeploymentSettings(
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
 	const request: CreatePreviewDeploymentRequestParams = {};
-	const assetsOptions = getAssetsOptions(
-		{ assets: undefined, script: scriptPath },
-		config
-	);
+	const assetsOptions = getAssetsOptions({
+		args: { assets: undefined, script: scriptPath },
+		config,
+	});
 	const deploymentModules = await getDeploymentModules(config, scriptPath, {
 		_headers: assetsOptions?._headers,
 		_redirects: assetsOptions?._redirects,
@@ -380,6 +384,11 @@ async function assemblePreviewDeploymentSettings(
 		request.limits = previews.limits;
 	} else if (config.limits !== undefined) {
 		request.limits = config.limits;
+	}
+	if (previews?.cache !== undefined) {
+		request.cache = previews.cache;
+	} else if (config.cache !== undefined) {
+		request.cache = config.cache;
 	}
 	if (config.placement) {
 		request.placement = parseConfigPlacement(config);
@@ -475,6 +484,12 @@ function buildMergedVersionLevel(
 		result.placement = {
 			value: { mode: deployment.placement.mode },
 			fromConfig: !!config.placement?.mode,
+		};
+	}
+	if (deployment.cache !== undefined) {
+		result.cache = {
+			value: deployment.cache,
+			fromConfig: previews?.cache !== undefined || config.cache !== undefined,
 		};
 	}
 	if (config.assets) {
@@ -669,6 +684,13 @@ function formatDeploymentResource(
 			versionLevel.placement.fromConfig,
 		]);
 	}
+	if (versionLevel.cache !== undefined) {
+		settingsRows.push([
+			"cache",
+			versionLevel.cache.value?.enabled ? "enabled" : "disabled",
+			versionLevel.cache.fromConfig,
+		]);
+	}
 	if (settingsRows.length > 0) {
 		lines.push("");
 		lines.push(...formatAlignedRows(settingsRows));
@@ -721,12 +743,6 @@ function formatDeploymentResource(
 	return drawConnectedChildBox(lines, { footerLines, indent: "  " });
 }
 
-function isInheritableBinding(
-	binding: Exclude<StartDevWorkerInput["bindings"], undefined>[string]
-) {
-	return binding.type === "assets";
-}
-
 function logMissingPreviewsBindingsWarning(
 	topLevelBindings: StartDevWorkerInput["bindings"],
 	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
@@ -738,8 +754,7 @@ function logMissingPreviewsBindingsWarning(
 	]);
 	const missingBindings = Object.fromEntries(
 		Object.entries(topLevelBindings ?? {}).filter(
-			([name, binding]) =>
-				!availableBindingNames.has(name) && !isInheritableBinding(binding)
+			([name]) => !availableBindingNames.has(name)
 		)
 	);
 
@@ -781,7 +796,8 @@ export async function handlePreviewCommand(
 		if (!previewName) {
 			throw new UserError(
 				"Could not determine Preview name. No git branch detected. " +
-					"Please provide a Preview name using --name <preview-name>."
+					"Please provide a Preview name using --name <preview-name>.",
+				{ telemetryMessage: "preview command missing preview name" }
 			);
 		}
 	}
@@ -909,7 +925,8 @@ export async function handlePreviewDeleteCommand(
 		if (!previewName) {
 			throw new UserError(
 				"Could not determine Preview name. No git branch detected. " +
-					"Please provide a Preview name using --name <preview-name>."
+					"Please provide a Preview name using --name <preview-name>.",
+				{ telemetryMessage: "preview delete command missing preview name" }
 			);
 		}
 		logger.log(`Using git branch "${previewName}" as Preview name.`);

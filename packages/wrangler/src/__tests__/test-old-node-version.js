@@ -1,4 +1,4 @@
-// this test has to be run with a version of Node.js older than 20.0.0 to pass
+// this test has to be run with a version of Node.js older than 22.0.0 to pass
 
 const { spawn } = require("child_process");
 const path = require("path");
@@ -42,7 +42,7 @@ wranglerProcess.once("exit", (code) => {
 	} catch (err) {
 		console.error("Error:", err);
 		throw new Error(
-			"This test has to be run with a version of Node.js under 20 to pass"
+			"This test has to be run with a version of Node.js under 22 to pass"
 		);
 	}
 });

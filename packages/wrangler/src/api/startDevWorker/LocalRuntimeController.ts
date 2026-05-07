@@ -15,6 +15,7 @@ import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { getBinaryFileContents } from "./utils";
+import type { CfAccount } from "../../dev/create-worker-preview";
 import type { RemoteProxySession } from "../remoteBindings";
 import type {
 	BundleCompleteEvent,
@@ -24,7 +25,7 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { Binding, File, StartDevWorkerOptions } from "./types";
+import type { AsyncHook, Binding, File, StartDevWorkerOptions } from "./types";
 import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 
 async function getTextFileContents(file: File<string | Uint8Array>) {
@@ -42,6 +43,30 @@ async function getTextFileContents(file: File<string | Uint8Array>) {
 
 function getName(config: StartDevWorkerOptions) {
 	return config.name;
+}
+
+export function getUserWorkerInnerUrlOverrides(
+	config: Pick<StartDevWorkerOptions, "dev">
+) {
+	const protocol = config.dev?.origin?.secure ? "https:" : "http:";
+	const host = config.dev?.origin?.hostname;
+	if (!host) {
+		return { protocol };
+	}
+
+	try {
+		const parsedHost = new URL(`http://${host}`);
+		return {
+			protocol,
+			hostname: parsedHost.hostname,
+			port: parsedHost.port,
+		};
+	} catch {
+		return {
+			protocol,
+			hostname: host,
+		};
+	}
 }
 
 export async function convertToConfigBundle(
@@ -179,6 +204,7 @@ export class LocalRuntimeController extends RuntimeController {
 	#remoteProxySessionData: {
 		session: RemoteProxySession;
 		remoteBindings: Record<string, Binding>;
+		auth?: AsyncHook<CfAccount> | undefined;
 	} | null = null;
 
 	// Set of container images that have been seen in the current dev session.
@@ -348,11 +374,9 @@ export class LocalRuntimeController extends RuntimeController {
 								},
 							}
 						: {}),
-					userWorkerInnerUrlOverrides: {
-						protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
-						hostname: data.config?.dev?.origin?.hostname,
-						port: data.config?.dev?.origin?.hostname ? "" : undefined,
-					},
+					userWorkerInnerUrlOverrides: getUserWorkerInnerUrlOverrides(
+						data.config
+					),
 					headers: {
 						// Passing this signature from Proxy Worker allows the User Worker to trust the request.
 						"MF-Proxy-Shared-Secret":
@@ -366,11 +390,15 @@ export class LocalRuntimeController extends RuntimeController {
 			if (
 				this.containerBeingBuilt?.abortRequested &&
 				error instanceof Error &&
-				error.message === "Build exited with code: 1"
+				error.message.startsWith("Docker build exited with code:")
 			) {
 				// The user caused the container image build to be aborted, so it's expected
 				// to get a build error here, this can be safely ignored because after this
-				// the dev process either terminates or reloads the container
+				// the dev process either terminates or reloads the container.
+				// The exit code from `docker build` after a process-group SIGINT/SIGKILL
+				// can be any of 1, 130 (128 + SIGINT), 137 (128 + SIGKILL), or 143 (128 + SIGTERM)
+				// depending on platform/buildkit version, so we match on the message prefix
+				// rather than on a specific exit code.
 				return;
 			}
 			this.emitErrorEvent({

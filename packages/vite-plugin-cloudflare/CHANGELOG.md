@@ -1,5 +1,93 @@
 # @cloudflare/vite-plugin
 
+## 1.36.1
+
+### Patch Changes
+
+- [#13802](https://github.com/cloudflare/workers-sdk/pull/13802) [`a7fd465`](https://github.com/cloudflare/workers-sdk/commit/a7fd46525597cf1ae2193cf19f705937222f70e7) Thanks [@deodad](https://github.com/deodad)! - Fix `.dev.vars` written for `vite preview` to round-trip values containing quotes
+
+  When the plugin emits `dist/<env>/.dev.vars` for `vite preview`, it previously wrote each value as a double-quoted dotenv string with `"` escaped to `\"`. `dotenv` (the parser wrangler uses) does not unescape `\"` inside double-quoted values, so values containing `"` arrived at the worker with literal backslashes still in them.
+
+  The plugin now quotes strings using the first quote character that does not appear in the value (with the priority order: single → backtick → double), all of which dotenv strips correctly. If a value contains every supported quote character it throws instead of silently corrupting the value.
+
+- Updated dependencies [[`2284f20`](https://github.com/cloudflare/workers-sdk/commit/2284f20465c9c94d86e530daed30debcb9207d90), [`332f527`](https://github.com/cloudflare/workers-sdk/commit/332f52763c7996e08fd4995c643124c5a9701e40), [`039bada`](https://github.com/cloudflare/workers-sdk/commit/039badabe54358e31b7b488e6720fd7cdd268c4f), [`18e833d`](https://github.com/cloudflare/workers-sdk/commit/18e833d988a406a37c8c175e0dd7ea982789e956), [`b6cea17`](https://github.com/cloudflare/workers-sdk/commit/b6cea17413e31750d8915b4bef767311afa1a7b4), [`1a54ac5`](https://github.com/cloudflare/workers-sdk/commit/1a54ac5646be16f9f7151e6ecff7dec5fc6110fa), [`53e846a`](https://github.com/cloudflare/workers-sdk/commit/53e846a564371bb3aa13bd0358c23a7486e5c2f4), [`f3fed88`](https://github.com/cloudflare/workers-sdk/commit/f3fed8859b612d424388fe45a1d638cf6b1c42c7), [`beff19c`](https://github.com/cloudflare/workers-sdk/commit/beff19c5c98e7ece4abe5b465dd60e6a47825f6f), [`af42fed`](https://github.com/cloudflare/workers-sdk/commit/af42fedb4153ab7cb3fedd552fb2007dc3e8cd1b), [`1a54ac5`](https://github.com/cloudflare/workers-sdk/commit/1a54ac5646be16f9f7151e6ecff7dec5fc6110fa)]:
+  - miniflare@4.20260507.0
+  - wrangler@4.89.0
+
+## 1.36.0
+
+### Minor Changes
+
+- [#13810](https://github.com/cloudflare/workers-sdk/pull/13810) [`2b8c0cc`](https://github.com/cloudflare/workers-sdk/commit/2b8c0ccb9ede7487bd96cfc51b3262a717bb532c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Stabilize the `secrets` configuration property
+
+  The `secrets` property in the Wrangler config file is no longer experimental and will no longer emit an experimental warning when used. Required secrets are validated during local development and deploy, and used as the source of truth for type generation.
+
+  ```json
+  {
+    "secrets": {
+      "required": ["API_KEY", "DB_PASSWORD"]
+    }
+  }
+  ```
+
+### Patch Changes
+
+- [#13814](https://github.com/cloudflare/workers-sdk/pull/13814) [`a2f9c26`](https://github.com/cloudflare/workers-sdk/commit/a2f9c26b0281cc9d08f19d6f518211442052fec2) Thanks [@edmundhung](https://github.com/edmundhung)! - Deny additional credential files from the Vite dev server
+
+  The Cloudflare Vite plugin now adds `.npmrc`, `.yarnrc`, `.yarnrc.yml`, and more certificate and key file extensions to `server.fs.deny`. This prevents common credential files from being fetched directly during local development.
+
+- Updated dependencies [[`e07825a`](https://github.com/cloudflare/workers-sdk/commit/e07825aa10a4fccae4aa8274032f31d83def0573), [`58899d8`](https://github.com/cloudflare/workers-sdk/commit/58899d8a289d653e5c77398640bd4df64eb2d0ca), [`3020214`](https://github.com/cloudflare/workers-sdk/commit/3020214014066aafd2369469e92f4b91e979ebb4), [`0099265`](https://github.com/cloudflare/workers-sdk/commit/00992655695093ce644bb2916ffd0d924d5abbab), [`25f5ef2`](https://github.com/cloudflare/workers-sdk/commit/25f5ef2a1c93896964fc25ddc40a2e5f8c96d6a4), [`bb27219`](https://github.com/cloudflare/workers-sdk/commit/bb27219651142036180cb1d01650df48d5282800), [`194d75e`](https://github.com/cloudflare/workers-sdk/commit/194d75e3e9af63e60cf4c06b4be5faa92a739c8c), [`12fb5db`](https://github.com/cloudflare/workers-sdk/commit/12fb5db89a31cc6ecccf022dfc7de4622973129d), [`18b9d5b`](https://github.com/cloudflare/workers-sdk/commit/18b9d5b48a6f28f6a0cd4bd9b00919de80463beb), [`9f532f7`](https://github.com/cloudflare/workers-sdk/commit/9f532f7f004329d4ceb0a9ece0527a1eb3d14f2d), [`1127114`](https://github.com/cloudflare/workers-sdk/commit/11271143f0f1ab76497d395712842af8e1ca330d), [`3ceadef`](https://github.com/cloudflare/workers-sdk/commit/3ceadef6abeaf90301e70069a9709b4f5aa400c6), [`2b8c0cc`](https://github.com/cloudflare/workers-sdk/commit/2b8c0ccb9ede7487bd96cfc51b3262a717bb532c), [`1a5cc86`](https://github.com/cloudflare/workers-sdk/commit/1a5cc8680ead7ee02dd45b3e5720ad5dce415e58)]:
+  - wrangler@4.88.0
+  - miniflare@4.20260504.0
+
+## 1.35.0
+
+### Minor Changes
+
+- [#13618](https://github.com/cloudflare/workers-sdk/pull/13618) [`c07d0cb`](https://github.com/cloudflare/workers-sdk/commit/c07d0cb4fafbcf3a60c46e1aa6a48ed63de598da) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support V2 protocol for module fallback service
+
+  When the `new_module_registry` compatibility flag is set, requests sent to `unsafeModuleFallbackService()` use a different protocol. The Vite plugin now supports both protocols in its handling of additional module types.
+
+### Patch Changes
+
+- [#13363](https://github.com/cloudflare/workers-sdk/pull/13363) [`6457fb3`](https://github.com/cloudflare/workers-sdk/commit/6457fb38c7fbce39c396562bc3324b945114c672) Thanks [@courtney-sims](https://github.com/courtney-sims)! - Prepares router-worker for a more gradual rollout by refactoring and separating out the invocation from the business logic. In the future, this will provide space for us to route requests to new versions of router-worker based on their plan, but should make no functional difference today.
+
+- Updated dependencies [[`22e1a61`](https://github.com/cloudflare/workers-sdk/commit/22e1a6176da1ff0e91e3d27b41c3770b323b56a7), [`00523c8`](https://github.com/cloudflare/workers-sdk/commit/00523c89b91aa7addd0ccbf3864dbce2a218c6d4), [`b5ac54b`](https://github.com/cloudflare/workers-sdk/commit/b5ac54baa4a6e40b7352f7d3ed0d3531a37a5e8f), [`e653edf`](https://github.com/cloudflare/workers-sdk/commit/e653edf7446817c2ca36515e9cefd2f5bd16f98f), [`e1eff94`](https://github.com/cloudflare/workers-sdk/commit/e1eff943ec4c073c3d1ba2c1910806d68f98e5a3), [`1c4d850`](https://github.com/cloudflare/workers-sdk/commit/1c4d850b22f03d087112b61e1f6969e81398cd6e), [`6d28037`](https://github.com/cloudflare/workers-sdk/commit/6d28037f6face1ee1d025d57e0d0b2f175ae2eb3), [`9a1f014`](https://github.com/cloudflare/workers-sdk/commit/9a1f014991a5fc044f601a0ab0b7dae5dabf6621), [`e539008`](https://github.com/cloudflare/workers-sdk/commit/e5390082ff85f3d39c702895d72c7172776506c0), [`0bf64a7`](https://github.com/cloudflare/workers-sdk/commit/0bf64a79678fb08158e341ed1e0cc21341a770a7), [`0827815`](https://github.com/cloudflare/workers-sdk/commit/0827815ee4f46f8535192d9832b0adb4028d8c5d), [`b04eedf`](https://github.com/cloudflare/workers-sdk/commit/b04eedfcdc713d04cbb4f1722ebe056c9dc4cb6e), [`6457fb3`](https://github.com/cloudflare/workers-sdk/commit/6457fb38c7fbce39c396562bc3324b945114c672), [`c07d0cb`](https://github.com/cloudflare/workers-sdk/commit/c07d0cb4fafbcf3a60c46e1aa6a48ed63de598da), [`e539008`](https://github.com/cloudflare/workers-sdk/commit/e5390082ff85f3d39c702895d72c7172776506c0)]:
+  - miniflare@4.20260430.0
+  - wrangler@4.87.0
+
+## 1.34.0
+
+### Minor Changes
+
+- [#13666](https://github.com/cloudflare/workers-sdk/pull/13666) [`edcff69`](https://github.com/cloudflare/workers-sdk/commit/edcff698e5f88decbd5bc9111ac96e3c1785f93c) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `tunnel: true` to the `cloudflare()` Vite plugin for sharing your local dev and preview servers via Cloudflare Quick Tunnels
+
+  You can now expose your local dev server publicly by setting `tunnel: true`:
+
+  ```ts
+  cloudflare({
+    tunnel: true,
+  });
+  ```
+
+  You can also enable tunnel sharing dynamically using an environment variable:
+
+  ```ts
+  cloudflare({
+    tunnel: process.env.ENABLE_DEV_TUNNEL === "true",
+  });
+  ```
+
+  This starts a Cloudflare Quick Tunnel that gives you a random `*.trycloudflare.com` URL to share. The tunnel stops automatically when the dev or preview session ends. Quick tunnels don't require a Cloudflare account or any configuration.
+
+  A warning is shown when Server-Sent Events (SSE) responses are detected through the tunnel, since quick tunnels don't support SSE.
+
+### Patch Changes
+
+- Updated dependencies [[`ea943ff`](https://github.com/cloudflare/workers-sdk/commit/ea943ffcc3551b499591d96547228e0fe844b058), [`21b87b2`](https://github.com/cloudflare/workers-sdk/commit/21b87b298574ec5b32d3611eb664414392f850a8), [`62e9f2a`](https://github.com/cloudflare/workers-sdk/commit/62e9f2a465cf7f80817e35b0b8d2196402db3731), [`9eb9e69`](https://github.com/cloudflare/workers-sdk/commit/9eb9e69ade8e8195c79a408f821d4f4899ab91a2), [`2dc6175`](https://github.com/cloudflare/workers-sdk/commit/2dc61751451f142dbf93e618133a5c8942c07c9a), [`0a5db08`](https://github.com/cloudflare/workers-sdk/commit/0a5db08137a90594257953e5ff49a5b11daa1c0f), [`033d6ec`](https://github.com/cloudflare/workers-sdk/commit/033d6ec3f4cd5fe3893127a86ad8d954d43b16a6), [`ae8eae3`](https://github.com/cloudflare/workers-sdk/commit/ae8eae3fd5d374aed8edcc0aa61d0af4a8d08118), [`f2e2241`](https://github.com/cloudflare/workers-sdk/commit/f2e22413eedea892a230e2197a1c0d677e3dab66), [`4f6ed93`](https://github.com/cloudflare/workers-sdk/commit/4f6ed938464687ed854864b551aeb9bbf26d9cd5), [`ed2f4ec`](https://github.com/cloudflare/workers-sdk/commit/ed2f4ec7b7c2ffeec77b244292b5ee91300fe7cd), [`ef24ff2`](https://github.com/cloudflare/workers-sdk/commit/ef24ff28d905ca3706a272653c52a342de3c4339), [`92bb8a5`](https://github.com/cloudflare/workers-sdk/commit/92bb8a529271219c5f4539582bd79bbf9dd83a7b), [`6d27479`](https://github.com/cloudflare/workers-sdk/commit/6d2747962be5ed8707840ce3cf138d1e2c434d10), [`f2e2241`](https://github.com/cloudflare/workers-sdk/commit/f2e22413eedea892a230e2197a1c0d677e3dab66), [`118027d`](https://github.com/cloudflare/workers-sdk/commit/118027d501abfe2a15cdc4f2e3817ee64d7631f0), [`fcc491a`](https://github.com/cloudflare/workers-sdk/commit/fcc491aa375e386a829001e38d405510a974ea5e), [`e6c437a`](https://github.com/cloudflare/workers-sdk/commit/e6c437a3d40d2619a47c886673969969c6a8a87d), [`e867ac2`](https://github.com/cloudflare/workers-sdk/commit/e867ac28dce5923331c9b8ad50a8feccfedf6c5c)]:
+  - wrangler@4.86.0
+  - miniflare@4.20260426.0
+
 ## 1.33.2
 
 ### Patch Changes

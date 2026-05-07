@@ -21,7 +21,7 @@ const workersDomain =
 	"devprod-testing7928.workers.dev";
 
 describe("Create Cloudflare CLI", () => {
-	// eslint-disable-next-line no-empty-pattern
+	// eslint-disable-next-line no-empty-pattern -- Vitest requires the 1st argument to use object destructuring
 	beforeAll(({}, ctx) => {
 		recreateLogFolder(ctx as RunnerTestSuite);
 	});
@@ -509,7 +509,7 @@ describe("Create Cloudflare CLI", () => {
 						throw new Error("Remote worker not found");
 					}
 				} catch {
-					// eslint-disable-next-line no-console
+					// eslint-disable-next-line no-console -- e2e setup logging for worker redeployment
 					console.log(
 						"Redeploying the existing-script-test-do-not-delete worker"
 					);

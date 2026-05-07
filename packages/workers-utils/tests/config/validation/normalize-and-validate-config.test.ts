@@ -1,6 +1,6 @@
 import path from "node:path";
 import TOML from "smol-toml";
-import { describe, it, test, vi } from "vitest";
+import { assert, describe, it, test, vi } from "vitest";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
 import type {
@@ -1066,8 +1066,8 @@ describe("normalizeAndValidateConfig()", () => {
 				{ env: undefined }
 			);
 
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			expect({ ...config, tsconfig: normalizePath(config.tsconfig!) }).toEqual(
+			assert(config.tsconfig);
+			expect({ ...config, tsconfig: normalizePath(config.tsconfig) }).toEqual(
 				expect.objectContaining({
 					...expectedConfig,
 					main: resolvedMain,
@@ -7272,8 +7272,8 @@ describe("normalizeAndValidateConfig()", () => {
 						{ env: "ENV1" }
 					);
 
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					expect(config).toEqual(expect.objectContaining(rawConfig.env!.ENV1));
+					assert(rawConfig.env);
+					expect(config).toEqual(expect.objectContaining(rawConfig.env.ENV1));
 					expect(diagnostics.hasWarnings()).toBe(false);
 					expect(diagnostics.hasErrors()).toBe(false);
 				});
@@ -7300,8 +7300,8 @@ describe("normalizeAndValidateConfig()", () => {
 						{ env: "ENV1" }
 					);
 
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					expect(config).toEqual(expect.objectContaining(rawConfig.env!.ENV1));
+					assert(rawConfig.env);
+					expect(config).toEqual(expect.objectContaining(rawConfig.env.ENV1));
 					expect(diagnostics.hasWarnings()).toBe(false);
 					expect(diagnostics.hasErrors()).toBe(true);
 
@@ -7338,8 +7338,8 @@ describe("normalizeAndValidateConfig()", () => {
 						{ env: "ENV1" }
 					);
 
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					expect(config).toEqual(expect.objectContaining(rawConfig.env!.ENV1));
+					assert(rawConfig.env);
+					expect(config).toEqual(expect.objectContaining(rawConfig.env.ENV1));
 					expect(diagnostics.hasWarnings()).toBe(true);
 					expect(diagnostics.hasErrors()).toBe(false);
 
@@ -7390,8 +7390,8 @@ describe("normalizeAndValidateConfig()", () => {
 						{ env: "ENV1" }
 					);
 
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					expect(config).toEqual(expect.objectContaining(rawConfig.env!.ENV1));
+					assert(rawConfig.env);
+					expect(config).toEqual(expect.objectContaining(rawConfig.env.ENV1));
 					expect(diagnostics.hasWarnings()).toBe(false);
 					expect(diagnostics.hasErrors()).toBe(true);
 
@@ -7425,11 +7425,7 @@ describe("normalizeAndValidateConfig()", () => {
 					required: ["API_KEY", "DATABASE_PASSWORD"],
 				});
 				expect(diagnostics.hasErrors()).toBe(false);
-				// Expect experimental warning
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toContain(
-					'"secrets" fields are experimental'
-				);
+				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
 			it("should error if secrets is not an object", ({ expect }) => {
@@ -9476,6 +9472,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 						kv_namespaces: [{ binding: "MY_KV", id: "preview-kv-id" }],
 						r2_buckets: [{ binding: "MY_R2", bucket_name: "preview-bucket" }],
+						flagship: [{ binding: "FLAGS", app_id: "flagship-app-id" }],
 						observability: { enabled: true },
 						limits: { cpu_ms: 50 },
 					},
@@ -9552,6 +9549,83 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.cache with enabled: true", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						cache: {
+							enabled: true,
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.cache with enabled: false", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						cache: {
+							enabled: false,
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject previews.cache when missing enabled", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						cache: {},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain("enabled");
+			});
+
+			it("should reject previews.cache when enabled is not a boolean", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						cache: {
+							enabled: "yes",
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
 			});
 
 			it("should reject previews.queues when passed as a flat array", ({

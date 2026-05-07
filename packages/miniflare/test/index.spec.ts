@@ -25,8 +25,9 @@ import {
 	Response,
 	viewToBuffer,
 } from "miniflare";
-import { onTestFinished, test } from "vitest";
+import { afterEach, test, vi } from "vitest";
 import { WebSocketServer } from "ws";
+import { assertIsV2ModuleFallbackProtocol } from "../src/plugins/core/module-fallback";
 import {
 	FIXTURES_PATH,
 	TestLog,
@@ -64,7 +65,11 @@ const ADD_WASM_MODULE = Buffer.from(
 	"base64"
 );
 
-test("Miniflare: validates options", async ({ expect }) => {
+afterEach(() => {
+	vi.unstubAllEnvs();
+});
+
+test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	// Check empty workers array rejected
 	expect(() => new Miniflare({ workers: [] })).toThrow(
 		new MiniflareCoreError("ERR_NO_WORKERS", "No workers defined")
@@ -638,7 +643,10 @@ test("Miniflare: custom service using Set-Cookie header", async ({
 	expect(await res.json()).toEqual(testCookies);
 });
 
-test("Miniflare: web socket kitchen sink", async ({ expect }) => {
+test("Miniflare: web socket kitchen sink", async ({
+	expect,
+	onTestFinished,
+}) => {
 	// Create deferred promises for asserting asynchronous event results
 	const clientEventPromise = new DeferredPromise<MessageEvent>();
 	const serverMessageEventPromise = new DeferredPromise<StandardMessageEvent>();
@@ -2035,7 +2043,10 @@ test("Miniflare: dispose() immediately after construction", async ({
 	await readyAssertion;
 });
 
-test("Miniflare: getBindings() returns all bindings", async ({ expect }) => {
+test("Miniflare: getBindings() returns all bindings", async ({
+	expect,
+	onTestFinished,
+}) => {
 	const tmp = await useTmp();
 	const blobPath = path.join(tmp, "blob.txt");
 	await fs.writeFile(blobPath, "blob");
@@ -2642,7 +2653,7 @@ const isWindows = process.platform === "win32";
 const unixSerialTest = isWindows ? test.skip : test.sequential;
 unixSerialTest(
 	"Miniflare: MINIFLARE_WORKERD_PATH overrides workerd path",
-	async ({ expect }) => {
+	async ({ expect, onTestFinished }) => {
 		const workerdPath = path.join(FIXTURES_PATH, "little-workerd.mjs");
 
 		const original = process.env.MINIFLARE_WORKERD_PATH;
@@ -2660,6 +2671,55 @@ unixSerialTest(
 		expect(await res.text()).toBe(
 			"When I grow up, I want to be a big workerd!"
 		);
+	}
+);
+
+const TIMEZONE_WORKER = `
+	export default {
+		fetch() {
+			return Response.json({
+				tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+			});
+		}
+	}
+`;
+
+test.sequential("Miniflare: workerd subprocess defaults to TZ=UTC to match production", async ({
+	expect,
+}) => {
+	// Deliberately set the host TZ to a non-UTC value, otherwise the test
+	// would falsely pass: the test-runner's vitest globalSetup already sets
+	// `process.env.TZ = "UTC"`, which would propagate to workerd via the
+	// inherited `process.env`.
+	vi.stubEnv("TZ", "America/Chicago");
+	const mf = new Miniflare({ modules: true, script: TIMEZONE_WORKER });
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.json()).toEqual({ tz: "UTC" });
+});
+
+// Skipped on Windows because workerd-on-Windows always reports `UTC` from
+// `Intl.DateTimeFormat().resolvedOptions().timeZone` regardless of the `TZ`
+// env var. A diagnostic probe on Windows CI showed that every value tried
+// (`America/Chicago`, `Asia/Tokyo`, `Europe/London`, `Etc/GMT+5`, `Etc/UTC`,
+// `UTC`, `PST8PDT`) all resolved to `UTC`. This is a workerd limitation on
+// Windows; the override mechanism itself (passing the env var through) is
+// platform-independent and exercised on macOS/Linux.
+unixSerialTest(
+	"Miniflare: unsafeRuntimeEnv overrides the default workerd subprocess env",
+	async ({ expect }) => {
+		vi.stubEnv("TZ", "UTC");
+
+		const mf = new Miniflare({
+			modules: true,
+			script: TIMEZONE_WORKER,
+			unsafeRuntimeEnv: { TZ: "America/Chicago" },
+		});
+		useDispose(mf);
+
+		const res = await mf.dispatchFetch("http://localhost");
+		expect(await res.json()).toEqual({ tz: "America/Chicago" });
 	}
 );
 
@@ -3503,6 +3563,88 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 	expect(await res.text()).toBe('Error: No such module "virtual/a.mjs".');
 });
 
+test("Miniflare: can use module fallback service with V2 protocol", async ({
+	expect,
+}) => {
+	// V2 protocol uses file:// URLs instead of paths
+	// Module keys are paths (without the /bundle prefix that workerd adds)
+	const modules: Record<string, Omit<Worker_Module, "name">> = {
+		"/virtual/a.mjs": {
+			esModule: `
+			import { b } from "./dir/b.mjs";
+			export default "a" + b;
+			`,
+		},
+		"/virtual/dir/b.mjs": {
+			esModule: 'export { default as b } from "./c.cjs";',
+		},
+		"/virtual/dir/c.cjs": {
+			commonJsModule: 'module.exports = "c" + require("./sub/d.cjs");',
+		},
+		"/virtual/dir/sub/d.cjs": {
+			commonJsModule: 'module.exports = "d";',
+		},
+	};
+
+	const mf = new Miniflare({
+		async unsafeModuleFallbackService(request) {
+			// V2 protocol uses POST with JSON body instead of GET with query params
+			assert(request.method === "POST", "V2 protocol should use POST method");
+
+			const body = await request.json();
+			assertIsV2ModuleFallbackProtocol(body);
+
+			assert(
+				body.type === "import" || body.type === "require",
+				`Expected type to be "import" or "require", got "${body.type}"`
+			);
+			assert(
+				body.specifier.startsWith("file://"),
+				`V2 specifier should be a file:// URL, got "${body.specifier}"`
+			);
+
+			// V2 specifier is a file:// URL like "file:///bundle/virtual/a.mjs"
+			// Extract the path and strip the "/bundle" prefix to match our modules map
+			const specifierUrl = new URL(body.specifier);
+			const modulePath = specifierUrl.pathname.replace(/^\/bundle/, "");
+			const maybeModule = modules[modulePath];
+			if (maybeModule === undefined) {
+				return new Response(null, { status: 404 });
+			}
+
+			// V2 protocol expects name to match the full URL specifier
+			return Response.json({ name: body.specifier, ...maybeModule });
+		},
+		workers: [
+			{
+				name: "a",
+				routes: ["*/a"],
+				compatibilityFlags: ["export_commonjs_default", "new_module_registry"],
+				modulesRoot: "/",
+				modules: [
+					{
+						type: "ESModule",
+						path: "/virtual/index.mjs",
+						contents: `
+							import a from "./a.mjs";
+							export default {
+								async fetch() {
+									return new Response(a);
+								}
+							}
+						`,
+					},
+				],
+				unsafeUseModuleFallbackService: true,
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost/a");
+	expect(await res.text()).toBe("acd");
+});
+
 test("Miniflare: respects rootPath for path-valued options", async ({
 	expect,
 }) => {
@@ -3717,6 +3859,7 @@ test("Miniflare: setOptions: can restart workerd multiple times in succession", 
 
 test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file creation", async ({
 	expect,
+	onTestFinished,
 }) => {
 	const originalEnv = process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
 	const configFilePath = "workerd-config.json";

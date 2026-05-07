@@ -143,7 +143,12 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			event.cause instanceof MiniflareCoreError &&
 			event.cause.isUserError()
 		) {
-			this.emit("error", new UserError(event.cause.message));
+			this.emit(
+				"error",
+				new UserError(event.cause.message, {
+					telemetryMessage: "api dev miniflare user error",
+				})
+			);
 		} else if (
 			event.source === "ProxyController" &&
 			(event.reason.startsWith("Failed to send message to") ||

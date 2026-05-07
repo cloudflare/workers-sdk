@@ -1,6 +1,6 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
-import { getInstance } from "./client";
+import { DEFAULT_NAMESPACE, getInstance } from "./client";
 
 export const aiSearchGetCommand = createCommand({
 	metadata: {
@@ -17,6 +17,12 @@ export const aiSearchGetCommand = createCommand({
 			demandOption: true,
 			description: "The name of the AI Search instance.",
 		},
+		namespace: {
+			type: "string",
+			alias: "n",
+			default: DEFAULT_NAMESPACE,
+			description: "The namespace the instance belongs to.",
+		},
 		json: {
 			type: "boolean",
 			default: false,
@@ -24,8 +30,8 @@ export const aiSearchGetCommand = createCommand({
 		},
 	},
 	positionalArgs: ["name"],
-	async handler({ name, json }, { config }) {
-		const instance = await getInstance(config, name);
+	async handler({ name, namespace, json }, { config }) {
+		const instance = await getInstance(config, namespace, name);
 
 		if (json) {
 			logger.log(JSON.stringify(instance, null, 2));
@@ -35,9 +41,10 @@ export const aiSearchGetCommand = createCommand({
 		logger.table([
 			{
 				name: instance.id,
-				type: instance.type,
+				namespace: instance.namespace ?? namespace,
+				type: instance.type ?? "builtin",
 				status: instance.status ?? "",
-				source: instance.source,
+				source: instance.source ?? "-",
 				model: instance.ai_search_model ?? "",
 				embedding: instance.embedding_model ?? "",
 				created: instance.created_at,

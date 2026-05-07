@@ -349,7 +349,6 @@ function getProcessEnvReplacements(
 	hasNodeJsCompat: boolean,
 	mode: vite.ConfigEnv["mode"]
 ): Record<string, string> {
-	// eslint-disable-next-line turbo/no-undeclared-env-vars
 	const nodeEnv = process.env.NODE_ENV || mode;
 	const nodeEnvReplacements = {
 		"process.env.NODE_ENV": JSON.stringify(nodeEnv),

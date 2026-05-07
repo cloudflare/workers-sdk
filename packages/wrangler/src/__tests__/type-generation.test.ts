@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
+import { experimental_generateTypes } from "../api";
 import {
 	constructTSModuleGlob,
 	constructTypeKey,
@@ -499,6 +500,11 @@ const bindingsConfigMock: Omit<
 		bindings: [
 			{ name: "testing_unsafe", type: "plain_text" },
 			{ name: "UNSAFE_RATELIMIT", type: "ratelimit" },
+			{
+				name: "UNSAFE_SERVICE_BINDING",
+				type: "service",
+				service: "some-unsafe-service",
+			},
 		],
 		metadata: { some_key: "some_value" },
 	},
@@ -544,7 +550,7 @@ const bindingsConfigMock: Omit<
 	vpc_networks: [],
 };
 
-describe("generate types", () => {
+describe("generate types - CLI", () => {
 	let spy: MockInstance;
 	const std = mockConsoleMethods();
 	const originalColumns = process.stdout.columns;
@@ -808,6 +814,7 @@ describe("generate types", () => {
 					MY_WORKFLOW: Workflow<Parameters<import("./index").MyWorkflow['run']>[0]['payload']>;
 					testing_unsafe: any;
 					UNSAFE_RATELIMIT: RateLimit;
+					UNSAFE_SERVICE_BINDING: Fetcher;
 					SOME_DATA_BLOB1: ArrayBuffer;
 					SOME_DATA_BLOB2: ArrayBuffer;
 					SOME_TEXT_BLOB1: string;
@@ -926,6 +933,7 @@ describe("generate types", () => {
 					MY_WORKFLOW: Workflow<Parameters<import("./index").MyWorkflow['run']>[0]['payload']>;
 					testing_unsafe: any;
 					UNSAFE_RATELIMIT: RateLimit;
+					UNSAFE_SERVICE_BINDING: Fetcher;
 					SOME_DATA_BLOB1: ArrayBuffer;
 					SOME_DATA_BLOB2: ArrayBuffer;
 					SOME_TEXT_BLOB1: string;
@@ -1106,6 +1114,7 @@ describe("generate types", () => {
 					MY_WORKFLOW: Workflow<Parameters<import("./index").MyWorkflow['run']>[0]['payload']>;
 					testing_unsafe: any;
 					UNSAFE_RATELIMIT: RateLimit;
+					UNSAFE_SERVICE_BINDING: Fetcher;
 					SOME_DATA_BLOB1: ArrayBuffer;
 					SOME_DATA_BLOB2: ArrayBuffer;
 					SOME_TEXT_BLOB1: string;
@@ -1473,6 +1482,7 @@ describe("generate types", () => {
 			declare global {
 				const testing_unsafe: any;
 				const UNSAFE_RATELIMIT: RateLimit;
+				const UNSAFE_SERVICE_BINDING: Fetcher;
 			}
 
 			────────────────────────────────────────────────────────────
@@ -1678,6 +1688,41 @@ describe("generate types", () => {
 		const out = std.out;
 		expect(out).not.toContain("SECRET_FROM_DEV_VARS");
 		expect(out).not.toContain("ANOTHER_SECRET");
+	});
+
+	it("should not report stale types when --env-file is used and .dev.vars exists (--check)", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				vars: {
+					myTomlVarA: "A from wrangler jsonc",
+				},
+			}),
+			"utf-8"
+		);
+
+		// Create .dev.vars with secrets that should NOT appear
+		const devVarsContent = dedent`
+			SECRET_FROM_DEV_VARS="should not appear"
+		`;
+		fs.writeFileSync(".dev.vars", devVarsContent, "utf8");
+
+		// Create an empty env file (cross-platform alternative to /dev/null)
+		fs.writeFileSync(".env.empty", "", "utf8");
+
+		// Generate types with --env-file pointing at an empty file (no .dev.vars loading)
+		await runWrangler("types --include-runtime=false --env-file=.env.empty");
+
+		// Run --check with --env-file pointing at empty file - should not report stale
+		await runWrangler(
+			"types --check --include-runtime=false --env-file=.env.empty"
+		);
+
+		expect(std.out).toContain(
+			"Types at worker-configuration.d.ts are up to date."
+		);
 	});
 
 	it("should include secret keys from .env, if there is no .dev.vars", async ({
@@ -3546,6 +3591,289 @@ describe("generate types", () => {
 			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
+	});
+});
+
+describe("generate types - API", () => {
+	runInTempDir();
+
+	beforeEach(() => {
+		for (const configPath of [
+			"./wrangler.jsonc",
+			"./wrangler.json",
+			"./wrangler.toml",
+		]) {
+			if (fs.existsSync(configPath)) {
+				fs.unlinkSync(configPath);
+			}
+		}
+
+		vi.spyOn(generateRuntime, "generateRuntimeTypes").mockImplementation(
+			async () => ({
+				runtimeHeader: "// Runtime types generated with workerd@",
+				runtimeTypes: "<runtime types go here>",
+			})
+		);
+	});
+
+	it("returns combined and split `env` output", async ({ expect }) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				vars: {
+					myVar: "hello",
+				},
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+
+		expect(generated.path).toBe("worker-configuration.d.ts");
+		expect(generated.runtime).toBeNull();
+		expect(generated.env).toContain('myVar: "hello";');
+		expect(generated.content).toContain("/* eslint-disable */");
+		expect(generated.content).toContain(
+			"interface Env extends Cloudflare.Env {}"
+		);
+		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
+	});
+
+	it("returns `runtime` output when `env` types are excluded", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+			}),
+			"utf-8"
+		);
+
+		const result = await experimental_generateTypes({
+			includeEnv: false,
+			includeRuntime: true,
+		});
+
+		expect(result.env).toBeNull();
+		expect(result.runtime).toBe("<runtime types go here>");
+		expect(result.content).toContain("// Begin runtime types");
+		expect(result.content).toContain("<runtime types go here>");
+	});
+
+	it("supports `strictVars=false` and custom env interface/path", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				vars: {
+					myVar: "hello",
+				},
+			}),
+			"utf-8"
+		);
+
+		const result = await experimental_generateTypes({
+			envInterface: "CustomEnv",
+			includeRuntime: false,
+			path: "./types/custom-worker.d.ts",
+			strictVars: false,
+		});
+
+		expect(result.path).toBe("./types/custom-worker.d.ts");
+		expect(result.content).toContain(
+			"interface CustomEnv extends Cloudflare.Env {}"
+		);
+		expect(result.env).toContain("myVar: string;");
+		expect(fs.existsSync("./types/custom-worker.d.ts")).toBe(false);
+	});
+
+	it("builds `env` header command from API options, not process args", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				vars: {
+					myVar: "hello",
+				},
+			}),
+			"utf-8"
+		);
+
+		const previousArgv = process.argv;
+		process.argv = ["node", "vitest", "run"];
+
+		try {
+			const result = await experimental_generateTypes({
+				envInterface: "CustomEnv",
+				includeRuntime: false,
+				path: "./types/custom-worker.d.ts",
+				strictVars: false,
+			});
+
+			expect(result.content).toMatch(
+				/\/\/ Generated by Wrangler by running `wrangler types --include-runtime=false --strict-vars=false --env-interface=CustomEnv \.\/types\/custom-worker\.d\.ts` \(hash: [a-f0-9]{32}\)/
+			);
+		} finally {
+			process.argv = previousArgv;
+		}
+	});
+
+	it("supports multi-config service resolution", async ({ expect }) => {
+		fs.mkdirSync("./primary", { recursive: true });
+		fs.mkdirSync("./secondary", { recursive: true });
+
+		// Primary worker
+		fs.writeFileSync(
+			"./primary/wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				main: "./index.ts",
+				name: "primary",
+				services: [
+					{
+						binding: "SECONDARY",
+						service: "secondary",
+					},
+				],
+			}),
+			"utf-8"
+		);
+		fs.writeFileSync(
+			"./primary/index.ts",
+			"export default { async fetch() { return new Response('ok'); } };",
+			"utf-8"
+		);
+
+		// Secondary worker
+		fs.writeFileSync(
+			"./secondary/wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				main: "./worker.ts",
+				name: "secondary",
+			}),
+			"utf-8"
+		);
+		fs.writeFileSync(
+			"./secondary/worker.ts",
+			"export default { async fetch() { return new Response('ok'); } };",
+			"utf-8"
+		);
+
+		const result = await experimental_generateTypes({
+			config: ["./primary/wrangler.jsonc", "./secondary/wrangler.jsonc"],
+			includeRuntime: false,
+			path: "./primary/worker-configuration.d.ts",
+		});
+
+		expect(result.env).toContain(
+			'SECONDARY: Service<typeof import("../secondary/worker").default>;'
+		);
+	});
+
+	it("validates API options", async ({ expect }) => {
+		await expect(experimental_generateTypes({})).rejects.toThrow(
+			"No config file detected. This command requires a Wrangler configuration file."
+		);
+
+		await expect(
+			experimental_generateTypes({
+				includeEnv: false,
+				includeRuntime: false,
+			})
+		).rejects.toThrow(
+			"You cannot run this command without including either Env or Runtime types"
+		);
+
+		await expect(
+			experimental_generateTypes({
+				path: "worker-configuration.txt",
+			})
+		).rejects.toThrow(
+			"The provided output path 'worker-configuration.txt' does not point to a declaration file - please use the '.d.ts' extension"
+		);
+
+		await expect(
+			experimental_generateTypes({
+				envInterface: "123Bad",
+			})
+		).rejects.toThrow(
+			/The provided env-interface value .* does not satisfy the validation regex/
+		);
+	});
+
+	it("matches CLI output for `env` only generation", async ({ expect }) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				vars: {
+					myVar: "hello",
+				},
+			}),
+			"utf-8"
+		);
+
+		// Manual process arguments controlling required to control codegen header output
+		const previousArgv = process.argv;
+		process.argv = ["node", "wrangler", "types", "--include-runtime=false"];
+
+		try {
+			await runWrangler("types --include-runtime=false");
+
+			const cliOutput = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
+
+			process.argv = ["node", "wrangler", "types", "--include-runtime=false"];
+			const apiOutput = await experimental_generateTypes({
+				includeRuntime: false,
+			});
+
+			expect(apiOutput.content).toBe(cliOutput);
+		} finally {
+			process.argv = previousArgv;
+		}
+	});
+
+	it("matches CLI output for `runtime` + `env` generation", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				vars: {
+					myVar: "hello",
+				},
+			}),
+			"utf-8"
+		);
+
+		// Manual process arguments controlling required to control codegen header output
+		const previousArgv = process.argv;
+		process.argv = ["node", "wrangler", "types", "custom-types.d.ts"];
+
+		try {
+			await runWrangler("types custom-types.d.ts");
+
+			const cliOutput = fs.readFileSync("./custom-types.d.ts", "utf-8");
+
+			process.argv = ["node", "wrangler", "types", "custom-types.d.ts"];
+			const apiOutput = await experimental_generateTypes({
+				path: "custom-types.d.ts",
+			});
+
+			expect(apiOutput.content).toBe(cliOutput);
+		} finally {
+			process.argv = previousArgv;
+		}
 	});
 });
 

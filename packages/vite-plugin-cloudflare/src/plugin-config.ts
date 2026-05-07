@@ -74,6 +74,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 	persistState?: PersistState;
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
+	tunnel?: boolean;
 	experimental?: Experimental;
 }
 
@@ -97,6 +98,7 @@ interface BaseResolvedConfig {
 	inspectorPort: number | false | undefined;
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport">;
 	remoteBindings: boolean;
+	tunnel: boolean;
 }
 
 interface NonPreviewResolvedConfig extends BaseResolvedConfig {
@@ -270,6 +272,7 @@ export function resolvePluginConfig(
 	const shared = {
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
+		tunnel: pluginConfig.tunnel ?? false,
 		experimental: {
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,

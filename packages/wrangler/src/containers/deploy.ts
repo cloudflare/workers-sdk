@@ -38,7 +38,7 @@ import {
 } from "../cloudchamber/common";
 import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
 import { buildContainer } from "../containers/build";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
 	sortObjectRecursive,
@@ -122,7 +122,11 @@ export async function deployContainers(
 			);
 			if (!targetDurableObject) {
 				throw new UserError(
-					"Could not deploy container application as durable object was not found in list of bindings"
+					"Could not deploy container application as durable object was not found in list of bindings",
+					{
+						telemetryMessage:
+							"containers deploy durable object binding missing",
+					}
 				);
 			}
 			assert(
@@ -386,7 +390,7 @@ export async function apply(
 			: args.imageRef.newTag;
 	log(dim("Container application changes\n"));
 
-	const accountId = config.account_id || (await getAccountId(config));
+	const accountId = await getOrSelectAccountId(config);
 
 	// let's always convert normalised container config -> CreateApplicationRequest
 	// since CreateApplicationRequest is a superset of ModifyApplicationRequestBody
@@ -405,7 +409,10 @@ export async function apply(
 	if (prevApp !== undefined && prevApp !== null) {
 		if (!prevApp.durable_objects?.namespace_id) {
 			throw new FatalError(
-				"The previous deploy of this container application was not associated with a durable object"
+				"The previous deploy of this container application was not associated with a durable object",
+				{
+					telemetryMessage: "containers deploy previous durable object missing",
+				}
 			);
 		}
 		if (
@@ -577,17 +584,21 @@ const doAction = async (
 
 			if (!(err instanceof ApiError)) {
 				throw new FatalError(
-					`Unexpected error creating application: ${err.message}`
+					`Unexpected error creating application: ${err.message}`,
+					{ telemetryMessage: "containers deploy create unexpected error" }
 				);
 			}
 
 			if (err.status === 400) {
 				throw new UserError(
-					`Error creating application due to a misconfiguration:\n${formatError(err)}`
+					`Error creating application due to a misconfiguration:\n${formatError(err)}`,
+					{ telemetryMessage: "containers deploy create misconfiguration" }
 				);
 			}
 
-			throw new UserError(`Error creating application:\n${formatError(err)}`);
+			throw new UserError(`Error creating application:\n${formatError(err)}`, {
+				telemetryMessage: "containers deploy create request failed",
+			});
 		}
 
 		success(
@@ -611,18 +622,21 @@ const doAction = async (
 
 			if (!(err instanceof ApiError)) {
 				throw new UserError(
-					`Unexpected error modifying application "${action.name}": ${err.message}`
+					`Unexpected error modifying application "${action.name}": ${err.message}`,
+					{ telemetryMessage: "containers deploy modify unexpected error" }
 				);
 			}
 
 			if (err.status === 400) {
 				throw new UserError(
-					`Error modifying application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`
+					`Error modifying application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`,
+					{ telemetryMessage: "containers deploy modify misconfiguration" }
 				);
 			}
 
 			throw new UserError(
-				`Error modifying application "${action.name}":\n${formatError(err)}`
+				`Error modifying application "${action.name}":\n${formatError(err)}`,
+				{ telemetryMessage: "containers deploy modify request failed" }
 			);
 		}
 
@@ -646,18 +660,21 @@ const doAction = async (
 
 			if (!(err instanceof ApiError)) {
 				throw new UserError(
-					`Unexpected error rolling out application "${action.name}":\n${err.message}`
+					`Unexpected error rolling out application "${action.name}":\n${err.message}`,
+					{ telemetryMessage: "containers deploy rollout unexpected error" }
 				);
 			}
 
 			if (err.status === 400) {
 				throw new UserError(
-					`Error rolling out application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`
+					`Error rolling out application "${action.name}" due to a misconfiguration:\n\n\t${formatError(err)}`,
+					{ telemetryMessage: "containers deploy rollout misconfiguration" }
 				);
 			}
 
 			throw new UserError(
-				`Error rolling out application "${action.name}":\n${formatError(err)}`
+				`Error rolling out application "${action.name}":\n${formatError(err)}`,
+				{ telemetryMessage: "containers deploy rollout request failed" }
 			);
 		}
 

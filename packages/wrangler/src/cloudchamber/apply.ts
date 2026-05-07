@@ -35,7 +35,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { configRolloutStepsToAPI } from "../containers/deploy";
 import { createCommand } from "../core/create-command";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
 	sortObjectRecursive,
@@ -266,8 +266,9 @@ function containerAppToCreateApplication(
 
 	// this should have been set to a default value of worker-name-class-name if unspecified by the user
 	if (containerApp.name === undefined) {
-		throw new FatalError("Container application name failed to be set", 1, {
-			telemetryMessage: true,
+		throw new FatalError("Container application name failed to be set", {
+			code: 1,
+			telemetryMessage: "cloudchamber apply application name missing",
 		});
 	}
 
@@ -380,7 +381,7 @@ export async function apply(
 					`${config.name}-${appConfigNoDefaults.class_name}`
 			];
 
-		const accountId = await getAccountId(config);
+		const accountId = await getOrSelectAccountId(config);
 		const appConfig = containerAppToCreateApplication(
 			accountId,
 			appConfigNoDefaults,
@@ -410,7 +411,11 @@ export async function apply(
 			) {
 				throw new UserError(
 					`Application "${prevApp.name}" is assigned to durable object ${prevApp.durable_objects.namespace_id}, but a new DO namespace is being assigned to the application,
-					you should delete the container application and deploy again`
+					you should delete the container application and deploy again`,
+					{
+						telemetryMessage:
+							"cloudchamber apply durable object namespace changed",
+					}
 				);
 			}
 
@@ -550,18 +555,25 @@ export async function apply(
 
 				if (!(err instanceof ApiError)) {
 					throw new UserError(
-						`Unexpected error creating application: ${err.message}`
+						`Unexpected error creating application: ${err.message}`,
+						{
+							telemetryMessage: "cloudchamber apply create unexpected error",
+						}
 					);
 				}
 
 				if (err.status === 400) {
 					throw new UserError(
-						`Error creating application due to a misconfiguration\n${formatError(err)}`
+						`Error creating application due to a misconfiguration\n${formatError(err)}`,
+						{
+							telemetryMessage: "cloudchamber apply create misconfiguration",
+						}
 					);
 				}
 
 				throw new UserError(
-					`Error creating application due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
+					`Error creating application due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`,
+					{ telemetryMessage: "cloudchamber apply create request failed" }
 				);
 			}
 
@@ -594,18 +606,25 @@ export async function apply(
 
 				if (!(err instanceof ApiError)) {
 					throw new UserError(
-						`Unexpected error modifying application ${action.name}: ${err.message}`
+						`Unexpected error modifying application ${action.name}: ${err.message}`,
+						{
+							telemetryMessage: "cloudchamber apply modify unexpected error",
+						}
 					);
 				}
 
 				if (err.status === 400) {
 					throw new UserError(
-						`Error modifying application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
+						`Error modifying application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`,
+						{
+							telemetryMessage: "cloudchamber apply modify misconfiguration",
+						}
 					);
 				}
 
 				throw new UserError(
-					`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
+					`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`,
+					{ telemetryMessage: "cloudchamber apply modify request failed" }
 				);
 			}
 
@@ -632,18 +651,25 @@ export async function apply(
 
 					if (!(err instanceof ApiError)) {
 						throw new UserError(
-							`Unexpected error rolling out application ${action.name}:\n${err.message}`
+							`Unexpected error rolling out application ${action.name}:\n${err.message}`,
+							{
+								telemetryMessage: "cloudchamber apply rollout unexpected error",
+							}
 						);
 					}
 
 					if (err.status === 400) {
 						throw new UserError(
-							`Error rolling out application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
+							`Error rolling out application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`,
+							{
+								telemetryMessage: "cloudchamber apply rollout misconfiguration",
+							}
 						);
 					}
 
 					throw new UserError(
-						`Error rolling out application ${action.name} due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`
+						`Error rolling out application ${action.name} due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`,
+						{ telemetryMessage: "cloudchamber apply rollout request failed" }
 					);
 				}
 			}

@@ -67,7 +67,8 @@ export abstract class Framework {
 					this.name
 				} version to at least ${JSON.stringify(
 					frameworkPackageInfo.minimumVersion
-				)} and try again.`
+				)} and try again.`,
+				{ telemetryMessage: "autoconfig framework version unsupported" }
 			);
 		}
 

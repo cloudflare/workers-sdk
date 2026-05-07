@@ -190,7 +190,8 @@ export function getBooleanEnvironmentVariableFactory(options: {
 				throw new UserError(
 					`Expected ${options.variableName} to be "true" or "false", but got ${JSON.stringify(
 						process.env[options.variableName]
-					)}`
+					)}`,
+					{ telemetryMessage: false }
 				);
 		}
 	};
@@ -247,8 +248,7 @@ export function getEnvironmentVariableFactory<
 		if (deprecatedName && deprecatedName in process.env) {
 			if (!hasWarned) {
 				hasWarned = true;
-				// Ideally we'd use `logger.warn` here, but that creates a circular dependency that Vitest is unable to resolve
-				// eslint-disable-next-line no-console
+				// eslint-disable-next-line no-console -- ideally we'd use `logger.warn` here, but that creates a circular dependency that Vitest is unable to resolve
 				console.warn(
 					`Using "${deprecatedName}" environment variable. This is deprecated. Please use "${variableName}", instead.`
 				);
@@ -280,7 +280,8 @@ function assertOneOf<Choices extends readonly string[]>(
 ): asserts value is ElementType<Choices> {
 	if (Array.isArray(choices) && !choices.includes(value)) {
 		throw new UserError(
-			`Expected ${JSON.stringify(value)} to be one of ${JSON.stringify(choices)}`
+			`Expected ${JSON.stringify(value)} to be one of ${JSON.stringify(choices)}`,
+			{ telemetryMessage: false }
 		);
 	}
 }

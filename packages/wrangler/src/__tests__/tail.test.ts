@@ -1,5 +1,8 @@
 import { setTimeout } from "node:timers/promises";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	normalizeString,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -854,8 +857,23 @@ describe("tail", () => {
 					{ message: [1234], level: "error", timestamp: 1234563 },
 				],
 				exceptions: [
-					{ name: "Error", message: "some error", timestamp: 1234564 },
-					{ name: "Error", message: { complex: "error" }, timestamp: 1234564 },
+					{
+						name: "Error",
+						message: "some error",
+						timestamp: 1234564,
+						stack: "  at Object.foo (file.js:1:2)",
+					},
+					{
+						name: "Error",
+						message: "some error without stack trace",
+						timestamp: 1234564,
+					},
+					{
+						name: "Error",
+						message: { complex: "error" },
+						timestamp: 1234564,
+						stack: "  at Object.foo (file.js:1:2)",
+					},
 				],
 			});
 			const serializedMessage = serialize(message);
@@ -879,11 +897,18 @@ describe("tail", () => {
 				  (log) { complex: 'object' }
 				  (error) 1234"
 			`);
-			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: some error[0m
+			expect(normalizeString(std.err)).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError: some error[0m
+
+				    at Object.foo (file.js:1:2)
 
 
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: { complex: 'error' }[0m
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError: some error without stack trace[0m
+
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError: { complex: 'error' }[0m
+
+				    at Object.foo (file.js:1:2)
 
 				"
 			`);

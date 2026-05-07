@@ -55,21 +55,30 @@ jobs:
           CI_OS: ${{ runner.os }}
           NODE_OPTIONS: "--max_old_space_size=8192"
 
+      - name: Filter changed paths
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        id: changes
+        with:
+          filters: |
+            miniflare_openapi:
+              - 'packages/miniflare/src/workers/local-explorer/openapi.local.json'
+              - 'packages/miniflare/src/workers/local-explorer/generated/**'
+              - 'packages/miniflare/scripts/openapi-filter-config.ts'
+              - 'packages/miniflare/scripts/filter-openapi.ts'
+              - 'packages/miniflare/scripts/check-generate-api.ts'
+              - 'packages/miniflare/openapi-ts.config.ts'
+
+      - name: Check generated OpenAPI types are up to date
+        if: steps.changes.outputs.miniflare_openapi == 'true'
+        run: pnpm -F miniflare check:generate-api
+
       # Check for old Node.js version warnings and errors
-      - name: Use Node.js v16
+      - name: Use Node.js v20
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 20
 
-      - name: Check for error message on Node.js < v18
-        run: node packages/wrangler/src/__tests__/test-old-node-version.js error
-
-      - name: Use Node.js v18
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Check for error message on Node.js < v20
+      - name: Check for error message on Node.js < v22
         run: node packages/wrangler/src/__tests__/test-old-node-version.js error
 
   test:

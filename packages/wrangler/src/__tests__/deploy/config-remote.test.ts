@@ -585,6 +585,7 @@ describe("deploy", () => {
 						const workerNotFoundAPIError = new APIError({
 							status: 404,
 							text: "A request to the Cloudflare API (/accounts/xxx/workers/scripts/yyy/secrets) failed.",
+							telemetryMessage: false,
 						});
 
 						workerNotFoundAPIError.code = 10007;

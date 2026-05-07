@@ -205,7 +205,8 @@ export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 			`Invalid Routes:\n` +
 				Object.entries(invalidRoutes)
 					.map(([route, errors]) => `${route}:\n` + errors.join("\n"))
-					.join(`\n\n`)
+					.join(`\n\n`),
+			{ telemetryMessage: "deploy invalid routes" }
 		);
 	}
 
@@ -670,14 +671,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	) {
 		throw new UserError(
 			"You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/",
-			{ telemetryMessage: true }
+			{ telemetryMessage: "deploy service worker assets unsupported" }
 		);
 	}
 
 	if (config.wasm_modules && format === "modules") {
 		throw new UserError(
 			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code",
-			{ telemetryMessage: true }
+			{ telemetryMessage: "deploy wasm modules with es module worker" }
 		);
 	}
 
@@ -762,7 +763,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						compatibilityFlags,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
-						alias: config.alias,
+						alias: { ...config.alias, ...props.alias },
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
@@ -1229,7 +1230,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					) {
 						throw new UserError(
 							"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development",
-							{ telemetryMessage: true }
+							{ telemetryMessage: "deploy d1 database binding invalid id" }
 						);
 					}
 
@@ -1288,12 +1289,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 
-	// Early exit for WfP since it doesn't need the below code
-	if (props.dispatchNamespace !== undefined) {
-		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag };
-	}
-
 	if (normalisedContainerConfig.length) {
 		assert(versionId && accountId);
 		await deployContainers(config, normalisedContainerConfig, {
@@ -1301,6 +1296,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			accountId,
 			scriptName,
 		});
+	}
+
+	// Early exit for WfP since it doesn't need the below code
+	if (props.dispatchNamespace !== undefined) {
+		deployWfpUserWorker(props.dispatchNamespace, versionId);
+		return { versionId, workerTag };
 	}
 
 	// deploy triggers
@@ -1397,7 +1398,10 @@ async function publishRoutesFallback(
 		throw new UserError(
 			"Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.\n" +
 				"Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth",
-			{ telemetryMessage: true }
+			{
+				telemetryMessage:
+					"deploy service environments require all zones permission",
+			}
 		);
 	}
 	logger.info(
@@ -1525,7 +1529,7 @@ export async function updateQueueConsumers(
 		if (scriptName === undefined) {
 			// TODO: how can we reliably get the current script name?
 			throw new UserError("Script name is required to update queue consumers", {
-				telemetryMessage: true,
+				telemetryMessage: "deploy queue consumers missing script name",
 			});
 		}
 

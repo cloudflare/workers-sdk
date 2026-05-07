@@ -278,6 +278,22 @@ describe("versions deploy", () => {
 			`);
 		});
 
+		test("1 version @ (implicit) 100% without --yes", async ({ expect }) => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			const output = normalizeOutput(cliStd.out);
+			expect(output).toContain(
+				"SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100%"
+			);
+			expect(output).not.toContain(
+				"Use SPACE to select/unselect version(s) and ENTER to submit."
+			);
+		});
+
 		test("1 version @ (explicit) 100%", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes"
@@ -535,6 +551,40 @@ describe("versions deploy", () => {
 				│
 				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 40% and version 00000000-0000-0000-0000-000000000000 at 60% (TIMINGS)"
 			`);
+		});
+
+		test("2 versions @ (explicit) 40% + (explicit) 60% without --yes", async ({
+			expect,
+		}) => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000@40% 20000000-0000-0000-0000-000000000000@60%"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			const output = normalizeOutput(cliStd.out);
+			expect(output).toContain(
+				"SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 40% and version 00000000-0000-0000-0000-000000000000 at 60%"
+			);
+			expect(output).not.toContain(
+				"Use SPACE to select/unselect version(s) and ENTER to submit."
+			);
+		});
+
+		test("--version-id and --percentage without --yes", async ({ expect }) => {
+			const result = runWrangler(
+				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 100"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			const output = normalizeOutput(cliStd.out);
+			expect(output).toContain(
+				"SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100%"
+			);
+			expect(output).not.toContain(
+				"Use SPACE to select/unselect version(s) and ENTER to submit."
+			);
 		});
 
 		describe("max versions restrictions (temp)", () => {

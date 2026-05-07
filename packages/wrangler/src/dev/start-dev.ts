@@ -177,7 +177,7 @@ export async function startDev(args: StartDevOptions) {
 
 			// Clean up tunnel on teardown
 			primaryDevEnv.on("teardown", () => {
-				void tunnel?.dispose();
+				tunnel?.dispose();
 			});
 
 			// User requested tunnel sharing explicitly. If it fails, let it throw
@@ -215,7 +215,9 @@ export async function startDev(args: StartDevOptions) {
 			(async () => {
 				unregisterHotKeys?.();
 			})(),
-			tunnel?.dispose(),
+			(async () => {
+				tunnel?.dispose();
+			})(),
 		]);
 		throw e;
 	}

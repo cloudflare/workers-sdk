@@ -72,7 +72,7 @@ export const versionsDeployCommand = createCommand({
 		},
 		"version-specs": {
 			describe:
-				"Shorthand notation to deploy Worker Version(s) [<version-id>@<percentage>..]",
+				"Shorthand notation to deploy Worker Version(s) [<version-id>@<percentage>..]. Omitted percentages share the remaining traffic.",
 			type: "string",
 			array: true,
 		},
@@ -111,12 +111,13 @@ export const versionsDeployCommand = createCommand({
 		if (workerName === undefined) {
 			throw new UserError(
 				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-				{ telemetryMessage: true }
+				{ telemetryMessage: "versions deploy missing worker name" }
 			);
 		}
 
 		const versionCache: VersionCache = new Map();
 		const optionalVersionTraffic = parseVersionSpecs(args);
+		const acceptPromptDefaults = args.yes || optionalVersionTraffic.size > 0;
 
 		cli.startSection(
 			"Deploy Worker Versions",
@@ -133,13 +134,13 @@ export const versionsDeployCommand = createCommand({
 			workerName,
 			[...optionalVersionTraffic.keys()],
 			versionCache,
-			args.yes
+			acceptPromptDefaults
 		);
 
 		// validate we have at least 1 version
 		if (confirmedVersionsToDeploy.length === 0) {
 			throw new UserError("You must select at least 1 version to deploy.", {
-				telemetryMessage: true,
+				telemetryMessage: "versions deploy missing selected versions",
 			});
 		}
 
@@ -147,7 +148,7 @@ export const versionsDeployCommand = createCommand({
 		if (confirmedVersionsToDeploy.length > args.maxVersions) {
 			throw new UserError(
 				`You must select at most ${args.maxVersions} versions to deploy.`,
-				{ telemetryMessage: "You must select at most 2 versions to deploy.`" }
+				{ telemetryMessage: "versions deploy too many selected versions" }
 			);
 		}
 
@@ -155,7 +156,7 @@ export const versionsDeployCommand = createCommand({
 		const confirmedVersionTraffic = await promptPercentages(
 			confirmedVersionsToDeploy,
 			optionalVersionTraffic,
-			args.yes
+			acceptPromptDefaults
 		);
 
 		// prompt for deployment message
@@ -163,7 +164,7 @@ export const versionsDeployCommand = createCommand({
 			type: "text",
 			label: "Deployment message",
 			defaultValue: args.message,
-			acceptDefault: args.yes,
+			acceptDefault: acceptPromptDefaults,
 			question: "Add a deployment message",
 			helpText: "(optional)",
 		});
@@ -351,7 +352,7 @@ function formatVersions(
  * @param accountId
  * @param workerName
  * @param defaultSelectedVersionIds
- * @param yesFlag
+ * @param acceptDefault
  * @returns
  */
 async function promptVersionsToDeploy(
@@ -360,13 +361,13 @@ async function promptVersionsToDeploy(
 	workerName: string,
 	defaultSelectedVersionIds: VersionId[],
 	versionCache: VersionCache,
-	yesFlag: boolean
+	acceptDefault: boolean
 ): Promise<VersionId[]> {
 	// If the user has already specified all versions they want to deploy and
-	// has passed --yes (so there's no interactive prompt), skip fetching the
+	// the defaults will be accepted (so there's no interactive prompt), skip fetching the
 	// full deployable-versions list and only fetch the specific versions needed.
 	const skipDeployableVersionsFetch =
-		yesFlag && defaultSelectedVersionIds.length > 0;
+		acceptDefault && defaultSelectedVersionIds.length > 0;
 
 	await spinnerWhile({
 		startMessage: "Fetching versions",
@@ -414,7 +415,7 @@ ${ZERO_WIDTH_SPACE}       Message:  ${
 		label: "",
 		helpText: "Use SPACE to select/unselect version(s) and ENTER to submit.",
 		defaultValue: defaultSelectedVersionIds,
-		acceptDefault: yesFlag,
+		acceptDefault,
 		validate(versionIds) {
 			if (versionIds === undefined) {
 				return `You must select at least 1 version to deploy.`;
@@ -464,14 +465,14 @@ ${grayBar} ${gray(
  *
  * @param versionIds The Version IDs the user has selected to deploy
  * @param optionalVersionTraffic The percentages the user has specified as args (if any)
- * @param yesFlag Whether the user specified the --yes flag
+ * @param acceptDefault Whether prompt defaults should be accepted automatically
  * @param confirmedVersionTraffic The percentages the user has already entered. Used for recursive calls.
  * @returns A Map of Version IDs to their respective percentages confirmed by the user, totaling 100%
  */
 async function promptPercentages(
 	versionIds: VersionId[],
 	optionalVersionTraffic: Map<VersionId, OptionalPercentage>,
-	yesFlag: boolean,
+	acceptDefault: boolean,
 	confirmedVersionTraffic = new Map<VersionId, Percentage>()
 ): Promise<Map<VersionId, Percentage>> {
 	let n = 0;
@@ -497,7 +498,7 @@ async function promptPercentages(
 			label: `Traffic`,
 			defaultValue,
 			initialValue: confirmedVersionTraffic.get(versionId)?.toString(), // if the user already entered a value, override the default
-			acceptDefault: yesFlag,
+			acceptDefault,
 			format: (val) => `${val}%`,
 			validate: (val) => {
 				const input = val !== "" ? val : defaultValue;
@@ -538,9 +539,9 @@ async function promptPercentages(
 		validateTrafficSubtotal(subtotal);
 	} catch (err) {
 		if (err instanceof UserError) {
-			// if the user has indicated they'll accept all defaults (yesFlag)
+			// if the user has indicated they'll accept all defaults
 			// then rethrow to avoid an infinite loop of reprompting
-			if (yesFlag) {
+			if (acceptDefault) {
 				throw err;
 			}
 
@@ -549,7 +550,7 @@ async function promptPercentages(
 			return promptPercentages(
 				versionIds,
 				optionalVersionTraffic,
-				yesFlag,
+				acceptDefault,
 				confirmedVersionTraffic
 			);
 		}
@@ -656,13 +657,18 @@ export function parseVersionSpecs(
 		if (percentage !== null) {
 			if (isNaN(percentage)) {
 				throw new UserError(
-					`Could not parse percentage value from version-spec positional arg "${spec}"`
+					`Could not parse percentage value from version-spec positional arg "${spec}"`,
+					{ telemetryMessage: "versions deploy percentage parse failed" }
 				);
 			}
 
 			if (percentage < 0 || percentage > 100) {
 				throw new UserError(
-					`Percentage value (${percentage}%) parsed from version-spec positional arg "${spec}" must be between 0 and 100.`
+					`Percentage value (${percentage}%) parsed from version-spec positional arg "${spec}" must be between 0 and 100.`,
+					{
+						telemetryMessage:
+							"versions deploy positional percentage out of range",
+					}
 				);
 			}
 		}
@@ -678,7 +684,9 @@ export function parseVersionSpecs(
 		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 	for (const versionId of args.versionId ?? []) {
 		if (!UUID_REGEX.test(versionId)) {
-			throw new UserError(`Version ID must be a valid UUID (${versionId}).`);
+			throw new UserError(`Version ID must be a valid UUID (${versionId}).`, {
+				telemetryMessage: "versions deploy invalid version id",
+			});
 		}
 
 		versionIds.push(versionId);
@@ -687,7 +695,8 @@ export function parseVersionSpecs(
 	for (const percentage of args.percentage ?? []) {
 		if (percentage < 0 || percentage > 100) {
 			throw new UserError(
-				`Percentage value (${percentage}%) must be between 0 and 100.`
+				`Percentage value (${percentage}%) must be between 0 and 100.`,
+				{ telemetryMessage: "versions deploy percentage out of range" }
 			);
 		}
 
@@ -755,17 +764,24 @@ export function validateTrafficSubtotal(
 
 	if (max === min && (isAbove || isBelow)) {
 		throw new UserError(
-			`Sum of specified percentages (${subtotal}%) must be ${max}%`
+			`Sum of specified percentages (${subtotal}%) must be ${max}%`,
+			{ telemetryMessage: "versions deploy traffic subtotal mismatch" }
 		);
 	}
 	if (isAbove) {
 		throw new UserError(
-			`Sum of specified percentages (${subtotal}%) must be at most ${max}%`
+			`Sum of specified percentages (${subtotal}%) must be at most ${max}%`,
+			{
+				telemetryMessage: "versions deploy traffic subtotal above maximum",
+			}
 		);
 	}
 	if (isBelow) {
 		throw new UserError(
-			`Sum of specified percentages (${subtotal}%) must be at least ${min}%`
+			`Sum of specified percentages (${subtotal}%) must be at least ${min}%`,
+			{
+				telemetryMessage: "versions deploy traffic subtotal below minimum",
+			}
 		);
 	}
 }

@@ -1,5 +1,29 @@
 # @cloudflare/workers-shared
 
+## 0.19.5
+
+### Patch Changes
+
+- [#13740](https://github.com/cloudflare/workers-sdk/pull/13740) [`6d2a573`](https://github.com/cloudflare/workers-sdk/commit/6d2a5736c6682882ba48aa3e272d9114bc821c47) Thanks [@courtney-sims](https://github.com/courtney-sims)! - During deployment, routes requests to new versions of asset-worker based on customer account plan.
+
+- [#12276](https://github.com/cloudflare/workers-sdk/pull/12276) [`926bad5`](https://github.com/cloudflare/workers-sdk/commit/926bad5c75882e2dabb700f60f0da6ba3c4298f5) Thanks [@penalosa](https://github.com/penalosa)! - Warn when `_headers` rules contain multiple wildcards or wildcard combined with `:splat`
+
+  Rules containing multiple wildcards (e.g. `https://*.workers.dev/*`) or combining a wildcard with a `:splat` placeholder (e.g. `https://*.pages.dev/:splat`) are now rejected during parsing. Previously this would fail silently during dev.
+
+## 0.19.4
+
+### Patch Changes
+
+- [#13363](https://github.com/cloudflare/workers-sdk/pull/13363) [`6457fb3`](https://github.com/cloudflare/workers-sdk/commit/6457fb38c7fbce39c396562bc3324b945114c672) Thanks [@courtney-sims](https://github.com/courtney-sims)! - Prepares router-worker for a more gradual rollout by refactoring and separating out the invocation from the business logic. In the future, this will provide space for us to route requests to new versions of router-worker based on their plan, but should make no functional difference today.
+
+## 0.19.3
+
+### Patch Changes
+
+- [#13668](https://github.com/cloudflare/workers-sdk/pull/13668) [`ef24ff2`](https://github.com/cloudflare/workers-sdk/commit/ef24ff28d905ca3706a272653c52a342de3c4339) Thanks [@for-the-kidz](https://github.com/for-the-kidz)! - Fix `TypeError: rules is not iterable` in the router-worker when `static_routing` is configured without `user_worker` rules
+
+  The router-worker's static-routing include-rule evaluation passed `config.static_routing.user_worker` directly to the matcher, which iterates with `for...of`. When `static_routing` was set but `user_worker` was omitted, the matcher threw `TypeError: rules is not iterable` and failed the request. The adjacent `asset_worker` branch already falls back to `[]` in this case; the `user_worker` branch now does the same.
+
 ## 0.19.2
 
 ### Patch Changes

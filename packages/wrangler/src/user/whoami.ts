@@ -3,10 +3,11 @@ import {
 	getCloudflareComplianceRegion,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { fetchPagedListResult, fetchResult } from "../cfetch";
+import { fetchResult } from "../cfetch";
 import { isAuthenticationError } from "../core/handle-errors";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
+import { fetchAllAccounts } from "./fetch-accounts";
 import { fetchMembershipRoles } from "./membership";
 import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { ApiCredentials, Scope } from ".";
@@ -44,7 +45,9 @@ export async function whoami(
 	if (json) {
 		const user = await getUserInfo(complianceConfig);
 		if (!user) {
-			throw createFatalError({ loggedIn: false } satisfies WhoamiResult, true);
+			throw createFatalError({ loggedIn: false } satisfies WhoamiResult, true, {
+				telemetryMessage: "user whoami unauthenticated",
+			});
 		}
 		const result: WhoamiResult = {
 			loggedIn: true,
@@ -343,7 +346,12 @@ type AccountInfo = { name: string; id: string };
 async function getAccounts(
 	complianceConfig: ComplianceConfig
 ): Promise<AccountInfo[]> {
-	return await fetchPagedListResult<AccountInfo>(complianceConfig, "/accounts");
+	// Use the shared intersection helper so that `whoami` uses the same approach as
+	// the interactive `Select an account` prompt (and the non-interactive 'no account ID' error message)
+	return await fetchAllAccounts(complianceConfig, {
+		// `whoami` is informational and should render an empty list rather than fail when the intersection is empty.
+		throwOnEmpty: false,
+	});
 }
 
 async function getTokenPermissions(): Promise<string[] | undefined> {

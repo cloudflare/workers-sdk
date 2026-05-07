@@ -23,9 +23,10 @@ export function pickRemoteBindings(
 			if (
 				binding.type === "ai" ||
 				binding.type === "media" ||
-				binding.type === "artifacts"
+				binding.type === "artifacts" ||
+				binding.type === "flagship"
 			) {
-				// AI and 'media' bindings are always remote
+				// AI, media, artifacts, and flagship bindings are always remote
 				return true;
 			}
 
@@ -92,6 +93,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 ): Promise<{
 	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
+	auth?: AsyncHook<CfAccount> | undefined;
 } | null> {
 	let config: Config | undefined;
 	if ("path" in wranglerOrWorkerConfigObject) {
@@ -179,6 +181,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	return {
 		session: remoteProxySession,
 		remoteBindings,
+		auth,
 	};
 }
 

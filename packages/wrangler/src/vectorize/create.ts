@@ -85,7 +85,8 @@ export const vectorizeCreateCommand = createCommand({
 			};
 		} else {
 			throw new UserError(
-				"🚨 You must provide both dimensions and a metric, or a known model preset when creating an index."
+				"🚨 You must provide both dimensions and a metric, or a known model preset when creating an index.",
+				{ telemetryMessage: "vectorize create missing config" }
 			);
 		}
 

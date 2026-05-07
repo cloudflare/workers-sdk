@@ -474,13 +474,15 @@ export function printBindings(
 
 	if (flagship.length > 0) {
 		output.push(
-			...flagship.map(({ binding, app_id, remote }) => {
+			...flagship.map(({ binding, app_id }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("flagship"),
 					value: app_id,
 					mode: getMode({
-						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+						isSimulatedLocally: !context.remoteBindingsDisabled
+							? false
+							: undefined,
 					}),
 				};
 			})
@@ -993,7 +995,7 @@ export function warnOrError(
 		throw new UserError(
 			`${getBindingTypeFriendlyName(type)} bindings do not support accessing remote resources.`,
 			{
-				telemetryMessage: true,
+				telemetryMessage: "utils bindings unsupported remote resources",
 			}
 		);
 	}
@@ -1001,7 +1003,7 @@ export function warnOrError(
 		throw new UserError(
 			`${getBindingTypeFriendlyName(type)} bindings do not support local development. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
 			{
-				telemetryMessage: true,
+				telemetryMessage: "utils bindings unsupported local development",
 			}
 		);
 	}

@@ -17,6 +17,7 @@ import {
 	kUnsafeEphemeralUniqueKey,
 	Log,
 	LogLevel,
+	parseModuleFallbackRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
 import { globSync } from "tinyglobby";
@@ -123,6 +124,7 @@ export async function getDevMiniflareOptions(
 		{
 			name: ROUTER_WORKER_NAME,
 			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
+			compatibilityFlags: ["enable_ctx_exports"],
 			modulesRoot: miniflareModulesRoot,
 			modules: [
 				{
@@ -474,13 +476,19 @@ export async function getDevMiniflareOptions(
 			),
 			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
-				const url = new URL(request.url);
-				const rawSpecifier = url.searchParams.get("rawSpecifier");
+				const parsed = await parseModuleFallbackRequest(request);
+
+				if (!parsed) {
+					return new MiniflareResponse("Invalid module fallback request", {
+						status: 400,
+					});
+				}
+
+				const rawSpecifier = parsed.rawSpecifier;
 				assert(
 					rawSpecifier,
 					`Unexpected error: no specifier in request to module fallback service.`
 				);
-
 				const match = additionalModuleRE.exec(rawSpecifier);
 				assert(
 					match,

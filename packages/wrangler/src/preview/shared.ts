@@ -64,7 +64,8 @@ export function resolveWorkerName(
 		throw new UserError(
 			`Required Worker name missing. Please specify the Worker name in your ${configFileName(
 				config.configPath
-			)} file, or pass it with --worker-name <worker-name>.`
+			)} file, or pass it with --worker-name <worker-name>.`,
+			{ telemetryMessage: "preview command missing worker name" }
 		);
 	}
 
@@ -117,6 +118,8 @@ export function getBindingValue(binding: Binding): string {
 				: String(binding.store_id ?? "");
 		case "artifacts":
 			return String(binding.namespace ?? "");
+		case "flagship":
+			return String(binding.app_id ?? "");
 		case "ratelimit":
 			return String(binding.namespace_id ?? "");
 		case "vpc_service":
@@ -260,6 +263,13 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		};
 	}
 
+	for (const flagship of previews?.flagship ?? []) {
+		env[flagship.binding] = {
+			type: "flagship",
+			app_id: flagship.app_id,
+		};
+	}
+
 	for (const ratelimit of previews?.ratelimits ?? []) {
 		env[ratelimit.name] = {
 			type: "ratelimit",
@@ -298,6 +308,10 @@ export function extractConfigBindings(config: Config): EnvBindings {
 
 	if (previews?.version_metadata) {
 		env[previews.version_metadata.binding] = { type: "version_metadata" };
+	}
+
+	if (config.assets?.binding) {
+		env[config.assets.binding] = { type: "assets" };
 	}
 
 	return env;
@@ -339,6 +353,10 @@ export function assemblePreviewDefaults(config: Config): PreviewDefaults {
 
 	if (previews?.limits || config.limits) {
 		previewDefaults.limits = previews?.limits ?? config.limits;
+	}
+
+	if (previews?.cache !== undefined || config.cache !== undefined) {
+		previewDefaults.cache = previews?.cache ?? config.cache;
 	}
 
 	if (config.placement) {

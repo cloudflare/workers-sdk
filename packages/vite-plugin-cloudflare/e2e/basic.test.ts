@@ -35,16 +35,34 @@ describe("basic e2e tests", () => {
 					const proc = await runLongLived(pm, command, projectPath);
 					const url = await waitForReady(proc);
 
-					// Check that no request has been aborted yet
-					const response = await fetch(url + "/aborted");
-					await expect(response.text()).resolves.toEqual("Request not aborted");
+					// Check that no request has been aborted yet (use waitFor since the
+					// server may still be warming up after waitForReady resolves)
+					await vi.waitFor(
+						async () => {
+							const r = await fetch(url + "/aborted");
+							await expect(r.text()).resolves.toEqual("Request not aborted");
+						},
+						{ timeout: 10000 }
+					);
 
-					// Send a request that we will abort after 1 second
-					await Promise.allSettled([
-						fetch(url + "/wait", {
-							signal: AbortSignal.timeout(1000),
-						}),
-					]);
+					// Send a request to the /wait endpoint and wait for it to start streaming,
+					// which proves the Worker is processing and has registered the abort listener.
+					// Then abort the request — this eliminates the race condition where
+					// AbortSignal.timeout could fire before the Worker even received the request.
+					const controller = new AbortController();
+					const waitResponse = await fetch(url + "/wait", {
+						signal: controller.signal,
+					});
+
+					// Read at least one chunk to confirm the stream is active
+					const reader = waitResponse.body?.getReader();
+					if (!reader) {
+						expect.unreachable("Expected response body to be readable");
+					}
+					await reader.read();
+
+					// Now abort — the Worker has definitely registered its abort listener
+					controller.abort();
 
 					await vi.waitFor(
 						async () => {

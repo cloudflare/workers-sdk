@@ -72,7 +72,9 @@ export const emailSendingSendCommand = createCommand({
 	},
 	validateArgs: (args) => {
 		if (!args.text && !args.html) {
-			throw new UserError("At least one of --text or --html must be provided");
+			throw new UserError("At least one of --text or --html must be provided", {
+				telemetryMessage: "email routing sending send missing content",
+			});
 		}
 	},
 	async handler(args, { config }) {
@@ -115,14 +117,16 @@ function parseHeaders(headerArgs: string[] | undefined): Map<string, string> {
 		const colonIndex = h.indexOf(":");
 		if (colonIndex === -1) {
 			throw new UserError(
-				`Invalid header format: '${h}'. Expected 'Key:Value'.`
+				`Invalid header format: '${h}'. Expected 'Key:Value'.`,
+				{ telemetryMessage: "email routing sending send invalid header" }
 			);
 		}
 		const key = h.slice(0, colonIndex).trim();
 		const value = h.slice(colonIndex + 1).trim();
 		if (!key) {
 			throw new UserError(
-				`Invalid header format: '${h}'. Header name cannot be empty.`
+				`Invalid header format: '${h}'. Header name cannot be empty.`,
+				{ telemetryMessage: "email routing sending send empty header name" }
 			);
 		}
 		headers.set(key, value);
@@ -145,7 +149,10 @@ function parseAttachments(attachmentPaths: string[] | undefined): Array<{
 			content = readFileSync(filePath);
 		} catch (e) {
 			throw new UserError(
-				`Failed to read attachment file '${filePath}': ${e instanceof Error ? e.message : e}`
+				`Failed to read attachment file '${filePath}': ${e instanceof Error ? e.message : e}`,
+				{
+					telemetryMessage: "email routing sending send attachment read failed",
+				}
 			);
 		}
 		const filename = path.basename(filePath);

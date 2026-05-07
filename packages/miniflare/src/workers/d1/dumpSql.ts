@@ -65,7 +65,7 @@ export function* dumpSql(
 		}
 
 		if (noData) continue;
-		// eslint-disable-next-line workers-sdk/no-unsafe-command-execution
+		// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- input is escaped via escapeId() so this PRAGMA call is safe
 		const columns_cursor = db.exec(`PRAGMA table_info=${escapeId(table)}`);
 
 		const columns = Array.from(columns_cursor) as {

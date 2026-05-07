@@ -5,8 +5,9 @@ export interface AiSearchInstance {
 	id: string;
 	created_at: string;
 	modified_at: string;
-	source: string;
-	type: "r2" | "web-crawler";
+	source?: string;
+	type?: "r2" | "web-crawler";
+	namespace?: string;
 	vectorize_name?: string;
 	ai_gateway_id?: string;
 	ai_search_model?: string;
@@ -43,8 +44,14 @@ export interface AiSearchInstance {
 	token_id?: string;
 }
 
+export type AiSearchCustomMetadataDataType =
+	| "text"
+	| "number"
+	| "boolean"
+	| "datetime";
+
 export interface AiSearchCustomMetadata {
-	data_type: string;
+	data_type: AiSearchCustomMetadataDataType;
 	field_name: string;
 }
 
@@ -146,4 +153,13 @@ export interface AiSearchToken {
 export interface AiSearchMessage {
 	role: "system" | "user" | "assistant";
 	content: string;
+}
+
+/**
+ * Represents an AI Search namespace.
+ */
+export interface AiSearchNamespace {
+	name: string;
+	created_at: string;
+	description?: string;
 }

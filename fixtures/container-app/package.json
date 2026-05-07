@@ -16,9 +16,5 @@
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
 		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json",
-		"node": "20.19.2"
 	}
 }
