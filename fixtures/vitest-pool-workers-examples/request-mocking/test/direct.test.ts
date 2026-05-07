@@ -1,12 +1,10 @@
-// These tests exercise the "direct-import" worker invocation pattern:
+// Exercises the "direct-import" worker invocation pattern:
 // `import worker from "../src/index"` followed by `worker.fetch(req, env, ctx)`.
-// The worker's `fetch` handler runs synchronously in the test isolate, in the
-// same I/O context as MSW's `setupNetwork()` was enabled in (`beforeAll`), so
-// MSW's interceptors work correctly.
+// The worker's `fetch` handler runs in the same I/O context as the test
+// runner where `setupNetwork()` was enabled.
 //
-// For the failing counterpart that uses `exports.default.fetch(...)` (which
-// crosses request I/O contexts and triggers an upstream MSW bug), see
-// `exports.test.ts`.
+// For the `exports.default.fetch(...)` counterpart (different request I/O
+// context per call) see `exports.test.ts`.
 import {
 	createExecutionContext,
 	waitOnExecutionContext,
