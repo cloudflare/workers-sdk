@@ -410,7 +410,7 @@ export async function deploy({
 				if (err instanceof ParseError) {
 					throw new FatalError(
 						`Invalid _routes.json file at ${join(directory, "_routes.json")}: ${err.text}`,
-						{ telemetryMessage: "pages deploy routes json parse error" }
+						{ code: 1, telemetryMessage: "pages deploy invalid routes json" }
 					);
 				}
 				throw err;
@@ -455,7 +455,7 @@ export async function deploy({
 				if (err instanceof ParseError) {
 					throw new FatalError(
 						`Invalid _routes.json file at ${join(directory, "_routes.json")}: ${err.text}`,
-						{ telemetryMessage: "pages deploy routes json parse error" }
+						{ code: 1, telemetryMessage: "pages deploy invalid routes json" }
 					);
 				}
 				throw err;
