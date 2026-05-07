@@ -6,9 +6,8 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
-import { msw } from "../helpers/msw";
+import { getMswSuccessMembershipHandlers, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
@@ -132,10 +131,12 @@ describe("migrate", () => {
 					},
 				],
 			});
-			mockGetMemberships([
-				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-				{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
-			]);
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "IG-88", name: "enterprise" },
+					{ id: "R2-D2", name: "enterprise-nx" },
+				])
+			);
 			mockConfirm({
 				text: `No migrations folder found.
 Ok to create /tmp/my-migrations-go-here?`,
@@ -178,9 +179,7 @@ Your database may not be available to serve requests during the migration, conti
 							{ status: 200 }
 						);
 					}
-				)
-			);
-			msw.use(
+				),
 				http.get("*/accounts/:accountId/d1/database/:databaseId", async () => {
 					return HttpResponse.json(
 						{
@@ -197,7 +196,11 @@ Your database may not be available to serve requests during the migration, conti
 						},
 						{ status: 200 }
 					);
-				})
+				}),
+				...getMswSuccessMembershipHandlers([
+					{ id: "IG-88", name: "enterprise" },
+					{ id: "R2-D2", name: "enterprise-nx" },
+				])
 			);
 			writeWranglerConfig({
 				d1_databases: [
@@ -210,10 +213,6 @@ Your database may not be available to serve requests during the migration, conti
 				],
 				account_id: "nx01",
 			});
-			mockGetMemberships([
-				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-				{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
-			]);
 			mockConfirm({
 				text: `No migrations folder found.
 Ok to create /tmp/my-migrations-go-here?`,

@@ -5,8 +5,7 @@ import { getDurationDates } from "../../d1/insights";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships } from "../helpers/mock-oauth-flow";
-import { msw } from "../helpers/msw";
+import { getMswSuccessMembershipHandlers, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
@@ -78,10 +77,8 @@ describe("insights", () => {
 
 	it("should throw if database doesn't exist", async ({ expect }) => {
 		setIsTTY(false);
-		mockGetMemberships([
-			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-		]);
 		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }]),
 			http.get("*/accounts/:accountId/d1/database", async () => {
 				return HttpResponse.json(
 					{
@@ -115,9 +112,6 @@ describe("insights", () => {
 
 	it("should display valid json output", async ({ expect }) => {
 		setIsTTY(false);
-		mockGetMemberships([
-			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-		]);
 		writeWranglerConfig({
 			d1_databases: [
 				{
@@ -128,6 +122,7 @@ describe("insights", () => {
 			],
 		});
 		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }]),
 			http.get("*/accounts/:accountId/d1/database", async () => {
 				return HttpResponse.json(
 					{

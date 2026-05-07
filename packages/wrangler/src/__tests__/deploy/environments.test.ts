@@ -12,14 +12,18 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
+import { mockOAuthFlow } from "../helpers/mock-oauth-flow";
 import { mockUploadWorkerRequest } from "../helpers/mock-upload-worker";
 import { mockGetSettings } from "../helpers/mock-worker-settings";
 import {
 	mockGetWorkerSubdomain,
 	mockSubDomainRequest,
 } from "../helpers/mock-workers-subdomain";
-import { createFetchResult, msw } from "../helpers/msw";
+import {
+	createFetchResult,
+	getMswSuccessMembershipHandlers,
+	msw,
+} from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -148,7 +152,7 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({ keepVars: true, keepSecrets: true });
 			mockOAuthServerCallback();
-			mockGetMemberships([]);
+			msw.use(...getMswSuccessMembershipHandlers());
 
 			await runWrangler("deploy index.js --keep-vars");
 
@@ -175,7 +179,7 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			mockOAuthServerCallback();
-			mockGetMemberships([]);
+			msw.use(...getMswSuccessMembershipHandlers());
 
 			await runWrangler("deploy index.js");
 
@@ -204,7 +208,7 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({ keepVars: true, keepSecrets: true });
 			mockOAuthServerCallback();
-			mockGetMemberships([]);
+			msw.use(...getMswSuccessMembershipHandlers());
 
 			await runWrangler("deploy index.js");
 

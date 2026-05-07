@@ -1457,14 +1457,6 @@ const config = {
 						type: "string",
 						description: "Worker name from the dev registry",
 					},
-					port: {
-						type: "integer",
-						description: "Port the worker is running on",
-					},
-					protocol: {
-						type: "string",
-						description: "Protocol (http or https)",
-					},
 					bindings: {
 						$ref: "#/components/schemas/local-explorer_worker-bindings",
 						description: "Resource bindings for this worker",

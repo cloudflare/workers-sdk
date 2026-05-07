@@ -1,4 +1,5 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
+import { getPublicUrl } from "miniflare:shared";
 import { BadRequestError, InvalidURLError } from "./errors";
 import {
 	rowToStreamCaption,
@@ -16,24 +17,6 @@ interface Env {
 function getStub(env: Env): DurableObjectStub<StreamObject> {
 	const id = env.store.idFromName("stream-data");
 	return env.store.get(id);
-}
-
-async function getEntryUrl(env: Env): Promise<URL> {
-	// Fetches the public URL from the Miniflare loopback. This returns
-	// the publicUrl if one was set (e.g. Vite dev server URL), otherwise
-	// falls back to the runtime entry URL. Using the loopback means the
-	// stream binding always sees the latest value — even if the URL was
-	// updated after workerd started (e.g. when Vite bumps the port).
-	const resp = await env.MINIFLARE_LOOPBACK.fetch(
-		"http://localhost/core/public-url"
-	);
-	const url = (await resp.json()) as string | null;
-	if (!url) {
-		throw new Error(
-			"Runtime entry URL is not available. This may be because the worker is not yet ready to accept requests."
-		);
-	}
-	return new URL(url);
 }
 
 function rowsToDownloadResponse(
@@ -89,7 +72,7 @@ export class StreamBinding extends WorkerEntrypoint<Env> {
 		}
 		const stub = getStub(this.env);
 		const row = await stub.createVideo(body, params ?? {});
-		const entryUrl = await getEntryUrl(this.env);
+		const entryUrl = await getPublicUrl(this.env.MINIFLARE_LOOPBACK);
 		return rowToStreamVideo(row, entryUrl);
 	}
 
@@ -201,14 +184,14 @@ class StreamVideoHandleImpl extends RpcTarget implements StreamVideoHandle {
 	async details(): Promise<StreamVideo> {
 		const stub = getStub(this.#env);
 		const row = await stub.getVideo(this.id);
-		const entryUrl = await getEntryUrl(this.#env);
+		const entryUrl = await getPublicUrl(this.#env.MINIFLARE_LOOPBACK);
 		return rowToStreamVideo(row, entryUrl);
 	}
 
 	async update(params: StreamUpdateVideoParams): Promise<StreamVideo> {
 		const stub = getStub(this.#env);
 		const row = await stub.updateVideo(this.id, params);
-		const entryUrl = await getEntryUrl(this.#env);
+		const entryUrl = await getPublicUrl(this.#env.MINIFLARE_LOOPBACK);
 		return rowToStreamVideo(row, entryUrl);
 	}
 
@@ -242,7 +225,7 @@ class StreamVideosImpl extends RpcTarget implements StreamVideos {
 	async list(params?: StreamVideosListParams): Promise<StreamVideo[]> {
 		const stub = getStub(this.#env);
 		const rows = await stub.listVideos(params);
-		const entryUrl = await getEntryUrl(this.#env);
+		const entryUrl = await getPublicUrl(this.#env.MINIFLARE_LOOPBACK);
 		return rows.map((row) => rowToStreamVideo(row, entryUrl));
 	}
 }

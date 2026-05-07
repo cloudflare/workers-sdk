@@ -202,7 +202,6 @@
 		// TODO: Remove the following overrides.
 		{
 			"files": [
-				"packages/local-explorer-ui/**",
 				"packages/quick-edit-extension/**",
 				"packages/vitest-pool-workers/**",
 				"packages/wrangler/**",

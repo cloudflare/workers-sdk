@@ -14,6 +14,7 @@ import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { clearCachedAccount } from "../../cloudchamber/locations";
 import * as user from "../../user";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
+import { mockServiceScriptData } from "../deploy/helpers";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-cli-output";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -2462,6 +2463,72 @@ describe("wrangler deploy with containers dry run", () => {
 			--dry-run: exiting now."
 		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`""`);
+	});
+});
+
+describe("wrangler deploy with containers and dispatch namespace", () => {
+	runInTempDir();
+	const std = mockConsoleMethods();
+	const cliStd = mockCLIOutput();
+	mockAccountId();
+	mockApiToken();
+	beforeEach(() => {
+		msw.use(...mswSuccessDeploymentScriptMetadata);
+		msw.use(...mswListNewDeploymentsLatestFull);
+		mockSubDomainRequest();
+		mockServiceScriptData({
+			script: { id: "test-name", migration_tag: "v1" },
+			dispatchNamespace: "test-namespace",
+		});
+		mockContainersAccount();
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					class_name: "ExampleDurableObject",
+					name: "EXAMPLE_DO_BINDING",
+					type: "durable_object_namespace",
+				},
+			],
+			useOldUploadApi: true,
+			expectedDispatchNamespace: "test-namespace",
+			expectedContainers: [{ class_name: "ExampleDurableObject" }],
+		});
+		fs.writeFileSync(
+			"index.js",
+			`export class ExampleDurableObject {}; export default{};`
+		);
+		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
+	});
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it("should deploy containers when using --dispatch-namespace", async ({
+		expect,
+	}) => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+		});
+
+		mockGetApplications([]);
+
+		mockCreateApplication(expect, {
+			name: "my-container",
+			max_instances: 10,
+			durable_objects: {
+				namespace_id: "1",
+			},
+		});
+
+		await runWrangler("deploy index.js --dispatch-namespace test-namespace");
+
+		expect(std.out).toContain("Uploaded test-name");
+		expect(std.out).toContain("Dispatch Namespace: test-namespace");
+		expect(std.out).toContain("Current Version ID: Galaxy-Class");
+		expect(cliStd.stdout).toContain("my-container");
+		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 });
 
