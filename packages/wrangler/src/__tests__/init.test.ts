@@ -328,7 +328,7 @@ describe("init", () => {
 				{
 					type: "pipelines",
 					name: "PIPELINE_BINDING",
-					stream: "some-name",
+					pipeline: "some-name",
 				},
 				{
 					type: "mtls_certificate",
@@ -561,7 +561,7 @@ describe("init", () => {
 			pipelines: [
 				{
 					binding: "PIPELINE_BINDING",
-					stream: "some-name",
+					pipeline: "some-name",
 				},
 			],
 			queues: {
@@ -1094,7 +1094,7 @@ describe("init", () => {
 					  "pipelines": [
 					    {
 					      "binding": "PIPELINE_BINDING",
-					      "stream": "some-name"
+					      "pipeline": "some-name"
 					    }
 					  ],
 					  "mtls_certificates": [

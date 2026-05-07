@@ -1384,7 +1384,7 @@ describe("deploy", () => {
 				pipelines: [
 					{
 						binding: "MY_PIPELINE",
-						stream: "my-pipeline",
+						pipeline: "my-pipeline",
 					},
 				],
 			});
@@ -1395,7 +1395,7 @@ describe("deploy", () => {
 					{
 						type: "pipelines",
 						name: "MY_PIPELINE",
-						stream: "my-pipeline",
+						pipeline: "my-pipeline",
 					},
 				],
 			});

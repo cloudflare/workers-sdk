@@ -4466,28 +4466,7 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should accept valid bindings with stream field", ({ expect }) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						pipelines: [
-							{
-								binding: "VALID",
-								stream: "343cd4f1d58c42fbb5bd082592fd7143",
-							},
-						],
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(false);
-			});
-
-			it("should accept deprecated pipeline field with warning", ({
-				expect,
-			}) => {
+			it("should accept valid bindings", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						pipelines: [
@@ -4503,11 +4482,6 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - The "pipeline" field in "pipelines[0]" bindings is deprecated. Use "stream" instead."
-				`);
 			});
 
 			it("should error if pipelines.bindings are not valid", ({ expect }) => {
@@ -4517,7 +4491,7 @@ describe("normalizeAndValidateConfig()", () => {
 							{},
 							{
 								binding: "VALID",
-								stream: "343cd4f1d58c42fbb5bd082592fd7143",
+								pipeline: "343cd4f1d58c42fbb5bd082592fd7143",
 							},
 							{ binding: 2000, project: 2111 },
 						],
@@ -4534,9 +4508,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "pipelines[0]" bindings must have a string "binding" field but got {}.
-					  - "pipelines[0]" bindings must have a string "stream" field but got {}.
+					  - "pipelines[0]" bindings must have a string "pipeline" field but got {}.
 					  - "pipelines[2]" bindings must have a string "binding" field but got {"binding":2000,"project":2111}.
-					  - "pipelines[2]" bindings must have a string "stream" field but got {"binding":2000,"project":2111}."
+					  - "pipelines[2]" bindings must have a string "pipeline" field but got {"binding":2000,"project":2111}."
 				`);
 			});
 		});
