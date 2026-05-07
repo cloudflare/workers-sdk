@@ -632,6 +632,159 @@ describe("asset-server handler", () => {
 		expect(response2.headers.get("link")).toBeNull();
 	});
 
+	test("early hints should resolve relative link hrefs against base href", async ({
+		expect,
+	}) => {
+		const deploymentId = "deployment-" + Math.random();
+		const metadata = createMetadataObject({ deploymentId }) as Metadata;
+
+		const findAssetEntryForPath = async (path: string) => {
+			if (path === "/index.html") {
+				return "asset-key-index-with-base.html";
+			}
+			return null;
+		};
+		const fetchAsset = () =>
+			Promise.resolve(
+				Object.assign(
+					new Response(`
+					<!DOCTYPE html>
+					<html>
+						<head>
+							<base href="/" />
+							<link rel="modulepreload" href="module.js" />
+						</head>
+					</html>`),
+					{ contentType: "text/html" }
+				)
+			);
+
+		const getResponse = async () =>
+			getTestResponse({
+				request: new Request("https://example.com/"),
+				metadata,
+				findAssetEntryForPath,
+				caches,
+				fetchAsset,
+			});
+
+		const { response, spies } = await getResponse();
+		expect(response.status).toBe(200);
+		await Promise.all(spies.waitUntil);
+
+		const earlyHintsCache = await caches.open(`eh:${deploymentId}`);
+		const earlyHintsRes = await earlyHintsCache.match(
+			"https://example.com/asset-key-index-with-base.html"
+		);
+		expect(earlyHintsRes).not.toBeNull();
+
+		const linkHeader = earlyHintsRes!.headers.get("Link");
+		// Relative href "module.js" resolved against base "/" → absolute URL
+		expect(linkHeader).toContain("<https://example.com/module.js>");
+		expect(linkHeader).not.toContain("<module.js");
+	});
+
+	test("early hints should resolve relative hrefs using URL semantics, not string concat", async ({
+		expect,
+	}) => {
+		const deploymentId = "deployment-" + Math.random();
+		const metadata = createMetadataObject({ deploymentId }) as Metadata;
+
+		const findAssetEntryForPath = async (path: string) => {
+			if (path === "/index.html") {
+				return "asset-key-url-semantics.html";
+			}
+			return null;
+		};
+		const fetchAsset = () =>
+			Promise.resolve(
+				Object.assign(
+					new Response(`
+					<!DOCTYPE html>
+					<html>
+						<head>
+							<base href="/subdir/" />
+							<link rel="preload" href="module.js" as="script" />
+							<link rel="preload" href="../other.js" as="script" />
+						</head>
+					</html>`),
+					{ contentType: "text/html" }
+				)
+			);
+
+		const { response, spies } = await getTestResponse({
+			request: new Request("https://example.com/"),
+			metadata,
+			findAssetEntryForPath,
+			caches,
+			fetchAsset,
+		});
+		expect(response.status).toBe(200);
+		await Promise.all(spies.waitUntil);
+
+		const earlyHintsCache = await caches.open(`eh:${deploymentId}`);
+		const earlyHintsRes = await earlyHintsCache.match(
+			"https://example.com/asset-key-url-semantics.html"
+		);
+		expect(earlyHintsRes).not.toBeNull();
+
+		const linkHeader = earlyHintsRes!.headers.get("Link");
+		// "module.js" relative to "/subdir/" → "/subdir/module.js"
+		expect(linkHeader).toContain("<https://example.com/subdir/module.js>");
+		// "../other.js" relative to "/subdir/" → "/other.js"
+		expect(linkHeader).toContain("<https://example.com/other.js>");
+	});
+
+	test("early hints should only use the first <base href> element", async ({
+		expect,
+	}) => {
+		const deploymentId = "deployment-" + Math.random();
+		const metadata = createMetadataObject({ deploymentId }) as Metadata;
+
+		const findAssetEntryForPath = async (path: string) => {
+			if (path === "/index.html") {
+				return "asset-key-multi-base.html";
+			}
+			return null;
+		};
+		const fetchAsset = () =>
+			Promise.resolve(
+				Object.assign(
+					new Response(`
+					<!DOCTYPE html>
+					<html>
+						<head>
+							<base href="/first/" />
+							<base href="/second/" />
+							<link rel="preload" href="module.js" as="script" />
+						</head>
+					</html>`),
+					{ contentType: "text/html" }
+				)
+			);
+
+		const { response, spies } = await getTestResponse({
+			request: new Request("https://example.com/"),
+			metadata,
+			findAssetEntryForPath,
+			caches,
+			fetchAsset,
+		});
+		expect(response.status).toBe(200);
+		await Promise.all(spies.waitUntil);
+
+		const earlyHintsCache = await caches.open(`eh:${deploymentId}`);
+		const earlyHintsRes = await earlyHintsCache.match(
+			"https://example.com/asset-key-multi-base.html"
+		);
+		expect(earlyHintsRes).not.toBeNull();
+
+		const linkHeader = earlyHintsRes!.headers.get("Link");
+		// Should use /first/, not /second/
+		expect(linkHeader).toContain("<https://example.com/first/module.js>");
+		expect(linkHeader).not.toContain("/second/");
+	});
+
 	test.todo("early hints should temporarily cache failures to parse links", async () => {
 		// I couldn't figure out a way to make HTMLRewriter error out
 	});
