@@ -559,8 +559,8 @@ describe("whoami", () => {
 		expect,
 	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
-		// `fetchAllAccounts` only tolerates 9106 (Account API Token), 9109
-		// (Insufficient permissions) and 10000 (Authentication error) on
+		// `fetchAllAccounts` only tolerates 9106 (Account API Token) and
+		// 10000 (Authentication error) on
 		// `/memberships`. Any other failure is propagated and `whoami` fails.
 		// Use non-once handlers because `handleError` re-invokes `whoami` to
 		// display user info on auth errors, so `/user` and `/memberships` are
