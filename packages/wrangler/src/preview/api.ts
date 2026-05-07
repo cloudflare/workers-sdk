@@ -108,6 +108,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	placement?: CfPlacement;
 	cache?: CacheOptions;
 	env?: EnvBindings;
+	containers?: Array<{ class_name: string }>;
 };
 
 export type CreatePreviewRequestParams = {
