@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import { Request } from "undici";
 import openInBrowser from "../../open-in-browser";
 import { mockHttpServer } from "./mock-http-server";
+import { MockWebSocket } from "./mock-websocket";
 import { msw } from "./msw";
 import type { Mock } from "vitest";
 
@@ -128,11 +129,57 @@ export const mockOAuthFlow = () => {
 		);
 	}
 
+	/**
+	 * Mock out the WebSocket relay used by the `--experimental-websocket-callback` login flow.
+	 *
+	 * This replaces the implementation of `openInBrowser()` so that opening
+	 * the auth URL also drives the corresponding `MockWebSocket` instance to
+	 * deliver a message — simulating the OAuth provider redirecting to the
+	 * auth relay worker, which forwards the auth code back over the WebSocket.
+	 *
+	 * Wrangler must have already opened the WebSocket and triggered the open
+	 * event before `openInBrowser()` is called for this to work.
+	 *
+	 * The relay protocol sends `{ code, state }` (or `{ error, state }`).
+	 * Wrangler validates the echoed `state` matches the locally generated
+	 * value (REVIEW-17452 #14), so the mock derives `state` from the URL
+	 * passed to `openInBrowser()`. Tests that want to simulate a state
+	 * mismatch can pass an explicit `state` override.
+	 */
+	const mockOAuthRelayCallback = (
+		respondWith:
+			| "success"
+			| "failure"
+			| { code?: string; error?: string; state?: string }
+	) => {
+		(openInBrowser as Mock).mockImplementation(async (url: string) => {
+			const ws = MockWebSocket.last;
+			if (!ws) {
+				throw new Error(
+					"mockOAuthRelayCallback: no MockWebSocket instance was created — did Wrangler skip the WebSocket flow?"
+				);
+			}
+			const echoedState =
+				new URL(url).searchParams.get("state") ?? "MOCK_STATE_PARAM";
+			let message: { code?: string; error?: string; state: string };
+			if (respondWith === "success") {
+				message = { code: "test-oauth-code", state: echoedState };
+			} else if (respondWith === "failure") {
+				message = { error: "access_denied", state: echoedState };
+			} else {
+				const { state, ...rest } = respondWith;
+				message = { ...rest, state: state ?? echoedState };
+			}
+			ws.triggerMessage(JSON.stringify(message));
+		});
+	};
+
 	return {
 		mockHttpServer,
 		mockDomainUsesAccess,
 		mockGrantAccessToken,
 		mockOAuthServerCallback,
+		mockOAuthRelayCallback,
 		mockExchangeRefreshTokenForAccessToken,
 	};
 };

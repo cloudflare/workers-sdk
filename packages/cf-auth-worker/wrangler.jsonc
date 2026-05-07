@@ -1,0 +1,31 @@
+{
+	"name": "cf-auth-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-04-28",
+	// `nodejs_compat` was previously enabled by template default but the
+	// worker uses zero Node APIs (REVIEW-17452 #25). Removing it shrinks the
+	// API surface so a future contributor can't accidentally introduce
+	// `node:net`/`node:fs` calls without a deliberate config change.
+	"workers_dev": false,
+	"account_id": "e35fd947284363a46fd7061634477114",
+	"routes": [
+		{ "pattern": "auth.devprod.cloudflare.dev", "custom_domain": true },
+	],
+	// No `durable_objects.bindings` — `AuthSession` is accessed via
+	// `ctx.exports.AuthSession` (loopback binding inferred from the top-level
+	// export). The migration is still required to configure SQLite storage.
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["AuthSession"] }],
+	"analytics_engine_datasets": [
+		// Records session-expired events from the DO's alarm() handler so we
+		// can monitor abandonment and possible hijack-attempt timeouts
+		// (REVIEW-17452 #31).
+		{ "binding": "AUTH_SESSIONS_AE", "dataset": "wrangler_auth_sessions" },
+	],
+	// Disabled per REVIEW-17452 #6: Workers Logs auto-captures full request
+	// URLs (including `?code=…&state=…` on /callback), which would expose
+	// OAuth codes and session identifiers to internal log readers. The
+	// worker has no debugging needs that justify keeping URL capture on.
+	"observability": {
+		"enabled": false,
+	},
+}

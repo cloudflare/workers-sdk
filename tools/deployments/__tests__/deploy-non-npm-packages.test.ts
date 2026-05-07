@@ -97,6 +97,7 @@ describe("findDeployablePackageNames()", () => {
 	}) => {
 		expect(findDeployablePackageNames()).toMatchInlineSnapshot(`
 			Set {
+			  "@cloudflare/cf-auth-worker",
 			  "@cloudflare/chrome-devtools-patches",
 			  "@cloudflare/devprod-status-bot",
 			  "@cloudflare/edge-preview-authenticated-proxy",
