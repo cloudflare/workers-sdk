@@ -37,6 +37,13 @@ describe("experimental_getWranglerCommands", () => {
 			    "hidden": true,
 			    "type": "boolean",
 			  },
+			  "experimental-force-skills-install": {
+			    "alias": "x-force-skills-install",
+			    "default": false,
+			    "describe": "Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
+			    "hidden": true,
+			    "type": "boolean",
+			  },
 			  "experimental-provision": {
 			    "alias": [
 			      "x-provision",

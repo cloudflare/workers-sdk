@@ -4105,6 +4105,9 @@ importers:
       get-port:
         specifier: ^7.0.0
         version: 7.0.0
+      giget:
+        specifier: ^3.2.0
+        version: 3.2.0
       glob-to-regexp:
         specifier: ^0.4.1
         version: 0.4.1
@@ -10989,6 +10992,10 @@ packages:
 
   giget@2.0.0:
     resolution: {integrity: sha512-L5bGsVkxJbJgdnwyuheIunkGatUF/zssUoxxjACCseZYAVbaqdh9Tsmmlkl8vYan09H7sbvKt4pS8GqKLBrEzA==}
+    hasBin: true
+
+  giget@3.2.0:
+    resolution: {integrity: sha512-GvHTWcykIR/fP8cj8dMpuMMkvaeJfPvYnhq0oW+chSeIr+ldX21ifU2Ms6KBoyKZQZmVaUAAhQ2EZ68KJF8a7A==}
     hasBin: true
 
   github-from-package@0.0.0:
@@ -22150,6 +22157,8 @@ snapshots:
       node-fetch-native: 1.6.7
       nypm: 0.6.5
       pathe: 2.0.3
+
+  giget@3.2.0: {}
 
   github-from-package@0.0.0:
     optional: true

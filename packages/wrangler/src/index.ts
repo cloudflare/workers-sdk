@@ -524,6 +524,16 @@ export function createCLIParser(argv: string[]) {
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		"experimental-force-skills-install": {
+			describe:
+				"Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
+			type: "boolean",
+			default: false,
+			// This flag is quite long and it wouldn't be great to show in all the wrangler help messages
+			// so we just hide it, we can unhide it in the future if this turns out not to be ok
+			hidden: true,
+			alias: "x-force-skills-install",
+		},
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options

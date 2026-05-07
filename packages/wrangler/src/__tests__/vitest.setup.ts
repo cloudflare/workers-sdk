@@ -221,6 +221,16 @@ vi.mock("../metrics/metrics-config", async (importOriginal) => {
 	return realModule;
 });
 
+vi.mock("../agents-skills-install", async (importOriginal) => {
+	const realModule =
+		await importOriginal<typeof import("../agents-skills-install")>();
+	vi.spyOn(realModule, "installCloudflareSkillsGlobally").mockResolvedValue({
+		skipped: true,
+		reason: "Already prompted",
+	});
+	return realModule;
+});
+
 vi.mock("prompts", () => {
 	return {
 		__esModule: true,
