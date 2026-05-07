@@ -190,8 +190,8 @@ export interface StartDevWorkerInput {
 		/** Re-generate your worker types when your Wrangler configuration file changes */
 		generateTypes?: boolean;
 
-		/** Whether a Cloudflare Quick Tunnel is active for this dev session */
-		tunnel?: boolean;
+		/** Whether a Cloudflare Tunnel is active for this dev session. `true` means quick tunnel and a string means named tunnel. */
+		tunnel?: boolean | string;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;

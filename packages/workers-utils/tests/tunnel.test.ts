@@ -89,8 +89,25 @@ describe("startTunnel", () => {
 		);
 
 		await expect(tunnel.ready()).resolves.toEqual({
+			mode: "quick",
 			publicUrl: new URL("https://foo-bar-baz.trycloudflare.com"),
 		});
+	});
+
+	it("should resolve named tunnels after spawning cloudflared", async ({
+		expect,
+	}) => {
+		const proc = createMockProcess();
+		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
+
+		const tunnel = startTunnel({
+			origin: new URL("http://localhost:8787"),
+			token: "NAMED_TUNNEL_TOKEN",
+			timeoutMs: TEST_TIMEOUT_MS,
+		});
+		onTestFinished(() => tunnel.dispose());
+
+		await expect(tunnel.ready()).resolves.toEqual({ mode: "named" });
 	});
 
 	it("should pass the correct args to spawnCloudflared", async ({ expect }) => {
@@ -111,6 +128,28 @@ describe("startTunnel", () => {
 		expect(spawnCloudflared).toHaveBeenCalledWith(
 			["tunnel", "--no-autoupdate", "--url", "http://localhost:8787/"],
 			{ stdio: "pipe", skipVersionCheck: true }
+		);
+	});
+
+	it("should pass the correct args for named tunnels", async ({ expect }) => {
+		const proc = createMockProcess();
+		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
+
+		const tunnel = startTunnel({
+			origin: new URL("http://localhost:8787"),
+			token: "NAMED_TUNNEL_TOKEN",
+			timeoutMs: TEST_TIMEOUT_MS,
+		});
+
+		await tunnel.ready();
+
+		expect(spawnCloudflared).toHaveBeenCalledWith(
+			["tunnel", "--no-autoupdate", "run"],
+			{
+				env: { TUNNEL_TOKEN: "NAMED_TUNNEL_TOKEN" },
+				stdio: "pipe",
+				skipVersionCheck: true,
+			}
 		);
 	});
 
@@ -273,6 +312,7 @@ describe("startTunnel", () => {
 		await emitStderrNextTick(proc, "url-tunnel.trycloudflare.com\n");
 
 		await expect(tunnel.ready()).resolves.toEqual({
+			mode: "quick",
 			publicUrl: new URL("https://split-url-tunnel.trycloudflare.com"),
 		});
 	});

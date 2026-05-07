@@ -14,7 +14,7 @@ export default function registerDevHotKeys(
 	args: {
 		forceLocal?: boolean;
 		remote: boolean;
-		tunnel?: boolean;
+		tunnel?: boolean | string;
 	},
 	options: {
 		render?: boolean;
@@ -106,7 +106,7 @@ export default function registerDevHotKeys(
 			{
 				keys: ["l"],
 				// Remote mode is not supported when using tunnels
-				disabled: () => args.forceLocal || args.tunnel,
+				disabled: () => args.forceLocal || !!args.tunnel,
 				handler: async () => {
 					await primaryDevEnv.config.patch({
 						dev: {
