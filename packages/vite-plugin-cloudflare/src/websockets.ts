@@ -40,7 +40,7 @@ export function handleWebSocket(
 
 			const headers = createHeaders(request);
 
-			if (entryWorkerName) {
+			if (entryWorkerName && !headers.has(CoreHeaders.ROUTE_OVERRIDE)) {
 				headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 			}
 
