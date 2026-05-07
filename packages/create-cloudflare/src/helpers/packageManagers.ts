@@ -131,7 +131,7 @@ export const rectifyPmMismatch = async (ctx: C3Context) => {
 		silent: true,
 		cwd: ctx.project.path,
 		startText: "Installing dependencies",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+		doneText: `${brandColor("Installed")} dependencies via ${dim(`\`${npm} install\``)}`,
 	});
 };
 

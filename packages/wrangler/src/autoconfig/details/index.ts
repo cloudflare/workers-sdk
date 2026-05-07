@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, relative, resolve } from "node:path";
+import { note } from "@cloudflare/cli-shared-helpers";
 import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	FatalError,
@@ -379,22 +380,38 @@ export function displayAutoConfigDetails(
 	autoConfigDetails: AutoConfigDetails,
 	displayOptions?: { heading?: string }
 ): void {
-	logger.log("");
-
-	logger.log(displayOptions?.heading ?? "Detected Project Settings:");
-
-	logger.log(brandColor(" - Worker Name:"), autoConfigDetails.workerName);
+	// Render inside `clack.note` so the gutter threads with the
+	// surrounding intro/prompts/outro rendered by clack — using
+	// plain `logger.log` here would break the vertical bar continuity
+	// between the heading and the prompts that follow.
+	const lines: string[] = [
+		`${brandColor("Worker Name:")} ${autoConfigDetails.workerName}`,
+	];
 	if (autoConfigDetails.framework) {
-		logger.log(brandColor(" - Framework:"), autoConfigDetails.framework.name);
+		lines.push(
+			`${brandColor("Framework:")} ${autoConfigDetails.framework.name}`
+		);
 	}
 	if (autoConfigDetails.buildCommand) {
-		logger.log(brandColor(" - Build Command:"), autoConfigDetails.buildCommand);
+		lines.push(
+			`${brandColor("Build Command:")} ${autoConfigDetails.buildCommand}`
+		);
 	}
 	if (autoConfigDetails.outputDir) {
-		logger.log(brandColor(" - Output Directory:"), autoConfigDetails.outputDir);
+		lines.push(
+			`${brandColor("Output Directory:")} ${autoConfigDetails.outputDir}`
+		);
 	}
 
-	logger.log("");
+	// `withGuide: false` so the box renders without a leading `│`
+	// spacing line. This is the first clack output in the autoconfig
+	// flow and there's no preceding gutter to thread with — the
+	// orphaned bar would look out of place.
+	note(
+		lines.join("\n"),
+		displayOptions?.heading ?? "Detected Project Settings",
+		{ withGuide: false }
+	);
 }
 
 export async function confirmAutoConfigDetails(

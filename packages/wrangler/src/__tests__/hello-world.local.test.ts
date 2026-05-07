@@ -14,8 +14,8 @@ describe("hello-world", () => {
 			await runWrangler("hello-world get");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				👋 Getting value...
 				Value not found"
 			`);
@@ -23,13 +23,13 @@ describe("hello-world", () => {
 			await runWrangler(`hello-world set "hello world"`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				👋 Getting value...
 				Value not found
 
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				👋 Updating value...
 				Updated"
 			`);
@@ -37,18 +37,18 @@ describe("hello-world", () => {
 			await runWrangler("hello-world get");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				👋 Getting value...
 				Value not found
 
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				👋 Updating value...
 				Updated
 
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				👋 Getting value...
 				hello world"
 			`);

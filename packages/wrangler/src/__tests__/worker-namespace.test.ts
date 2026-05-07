@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 // eslint-disable-next-line no-restricted-imports
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { printWranglerBanner } from "../wrangler-banner";
+import { printWranglerBanner } from "../banner";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import {
@@ -13,7 +13,7 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Mock } from "vitest";
 
-vi.mock("../wrangler-banner");
+vi.mock("../banner");
 
 describe("dispatch-namespace", () => {
 	const std = mockConsoleMethods();

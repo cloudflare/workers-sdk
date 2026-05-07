@@ -551,8 +551,8 @@ describe("pages deployment tail", () => {
 					)
 			).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Connected to deployment mock-deployment-id, waiting for logs...
 				GET https://example.org/ - Ok @ [mock event timestamp]"
 			`);
@@ -582,8 +582,8 @@ describe("pages deployment tail", () => {
 					)
 			).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Connected to deployment mock-deployment-id, waiting for logs...
 				"* * * * *" @ [mock timestamp string] - Ok"
 			`);
@@ -613,8 +613,8 @@ describe("pages deployment tail", () => {
 					)
 			).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Connected to deployment mock-deployment-id, waiting for logs...
 				Alarm @ [mock scheduled time] - Ok"
 			`);
@@ -644,8 +644,8 @@ describe("pages deployment tail", () => {
 					)
 			).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Connected to deployment mock-deployment-id, waiting for logs...
 				Email from:from@example.com to:to@example.com size:45416 @ [mock event timestamp] - Ok"
 			`);
@@ -675,8 +675,8 @@ describe("pages deployment tail", () => {
 					)
 			).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Connected to deployment mock-deployment-id, waiting for logs...
 				Queue my-queue123 (7 messages) - Ok @ [mock timestamp string]"
 			`);
@@ -707,8 +707,8 @@ describe("pages deployment tail", () => {
 					)
 			).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Connected to deployment mock-deployment-id, waiting for logs...
 				Unknown Event - Ok @ [mock timestamp string]"
 			`);
@@ -741,8 +741,8 @@ describe("pages deployment tail", () => {
 					)
 			).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Connected to deployment mock-deployment-id, waiting for logs...
 				GET https://example.org/ - Ok @ [mock event timestamp]"
 			`);
@@ -821,8 +821,8 @@ describe("pages deployment tail", () => {
 				)
 			).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Connected to deployment mock-deployment-id, waiting for logs...
 				GET https://example.org/ - Ok @ [mock event timestamp]
 				  (log) some string

@@ -33,7 +33,14 @@ describe("deploy helpers", async () => {
 		mockSpinner();
 		vi.mocked(inputPrompt).mockImplementation(async (options) => {
 			if (options.acceptDefault) {
-				return options.defaultValue;
+				// `defaultValue` (text) / `initialValue` (confirm/select) /
+				// `initialValues` (multiselect) — the test mock returns
+				// whichever is set.
+				return (
+					(options as { defaultValue?: unknown }).defaultValue ??
+					(options as { initialValue?: unknown }).initialValue ??
+					(options as { initialValues?: unknown }).initialValues
+				);
 			}
 
 			throw new Error(

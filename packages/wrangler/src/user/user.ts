@@ -212,6 +212,7 @@ import http from "node:http";
 import path from "node:path";
 import url from "node:url";
 import { TextEncoder } from "node:util";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import {
 	configFileName,
 	getCloudflareApiEnvironmentFromEnv,
@@ -231,7 +232,6 @@ import {
 	saveToConfigCache,
 } from "../config-cache";
 import { NoDefaultValueProvided, select } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { domainUsesAccess } from "./access";

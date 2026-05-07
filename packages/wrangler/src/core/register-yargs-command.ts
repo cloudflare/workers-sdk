@@ -6,6 +6,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { experimental_readRawConfig } from "../../../workers-utils/src";
+import { printWranglerBanner } from "../banner";
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
@@ -22,7 +23,6 @@ import { writeOutput } from "../output";
 import { addBreadcrumb } from "../sentry";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
-import { printWranglerBanner } from "../wrangler-banner";
 import { CommandHandledError } from "./CommandHandledError";
 import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";

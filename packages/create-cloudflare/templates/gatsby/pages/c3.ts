@@ -11,17 +11,15 @@ const generate = async (ctx: C3Context) => {
 
 	const useTemplate = await inputPrompt({
 		type: "confirm",
-		question: "Would you like to use a template?",
-		label: "template",
-		defaultValue: true,
+		message: "Would you like to use a template?",
+		initialValue: true,
 	});
 
 	let templateUrl = "";
 	if (useTemplate) {
 		templateUrl = await inputPrompt({
 			type: "text",
-			question: `Please specify the url of the template you'd like to use`,
-			label: "template",
+			message: `Please specify the url of the template you'd like to use`,
 			defaultValue: defaultTemplate,
 		});
 	}

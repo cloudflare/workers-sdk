@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import { bold, dim, green } from "@cloudflare/cli-shared-helpers/colors";
+import isInteractive from "@cloudflare/cli-shared-helpers/is-interactive";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { getRegistryPath, startTunnel } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -11,7 +12,6 @@ import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
 import { convertStartDevOptionsToBindings } from "../api/startDevWorker/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
-import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
 import { requireApiToken, requireAuth } from "../user";

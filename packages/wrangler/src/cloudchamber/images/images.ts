@@ -1,10 +1,10 @@
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import {
 	getCloudflareContainerRegistry,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
 import { fetch } from "undici";
 import { createCommand, createNamespace } from "../../core/create-command";
-import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { getOrSelectAccountId } from "../../user";
 import {

@@ -103,8 +103,8 @@ describe("resource provisioning", () => {
 		await runWrangler("deploy --x-auto-create=false");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -192,8 +192,8 @@ describe("resource provisioning", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
@@ -315,8 +315,8 @@ describe("resource provisioning", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
@@ -447,45 +447,45 @@ describe("resource provisioning", () => {
 			await runWrangler("deploy --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			Total Upload: xx KiB / gzip: xx KiB
+				"
+				⛅️ wrangler · vx.x.x
+				────────────────────
+				Total Upload: xx KiB / gzip: xx KiB
 
-			Experimental: The following bindings need to be provisioned:
-			Binding        Resource
-			env.KV         KV Namespace
-			env.D1         D1 Database
-			env.R2         R2 Bucket
+				Experimental: The following bindings need to be provisioned:
+				Binding        Resource
+				env.KV         KV Namespace
+				env.D1         D1 Database
+				env.R2         R2 Bucket
 
 
-			Provisioning KV (KV Namespace)...
-			🌀 Creating new KV Namespace "new-kv"...
-			✨ KV provisioned 🎉
+				Provisioning KV (KV Namespace)...
+				🌀 Creating new KV Namespace "new-kv"...
+				✨ KV provisioned 🎉
 
-			Provisioning D1 (D1 Database)...
-			🌀 Creating new D1 Database "new-d1"...
-			✨ D1 provisioned 🎉
+				Provisioning D1 (D1 Database)...
+				🌀 Creating new D1 Database "new-d1"...
+				✨ D1 provisioned 🎉
 
-			Provisioning R2 (R2 Bucket)...
-			🌀 Creating new R2 Bucket "new-r2"...
-			✨ R2 provisioned 🎉
+				Provisioning R2 (R2 Bucket)...
+				🌀 Creating new R2 Bucket "new-r2"...
+				✨ R2 provisioned 🎉
 
-			Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-			🎉 All resources provisioned, continuing with deployment...
+				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
+				🎉 All resources provisioned, continuing with deployment...
 
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                 Resource
-			env.KV (new-kv-id)      KV Namespace
-			env.D1 (new-d1-id)      D1 Database
-			env.R2 (new-r2)         R2 Bucket
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                 Resource
+				env.KV (new-kv-id)      KV Namespace
+				env.D1 (new-d1-id)      D1 Database
+				env.R2 (new-r2)         R2 Bucket
 
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 
@@ -611,8 +611,8 @@ describe("resource provisioning", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
@@ -761,8 +761,8 @@ describe("resource provisioning", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
@@ -873,8 +873,8 @@ describe("resource provisioning", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
@@ -935,8 +935,8 @@ describe("resource provisioning", () => {
 			await runWrangler("deploy --x-auto-create=false");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1006,8 +1006,8 @@ describe("resource provisioning", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
@@ -1087,8 +1087,8 @@ describe("resource provisioning", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
@@ -1161,8 +1161,8 @@ describe("resource provisioning", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1211,8 +1211,8 @@ describe("resource provisioning", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1287,8 +1287,8 @@ describe("resource provisioning", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:

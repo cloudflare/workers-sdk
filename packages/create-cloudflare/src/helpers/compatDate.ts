@@ -1,23 +1,19 @@
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
-import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import type { C3Context } from "types";
 
 /**
- * Retrieves the current date as a workerd compatibility date
+ * Retrieves the current date as a workerd compatibility date.
+ *
+ * Synchronous and free — just today's date in YYYY-MM-DD form. No
+ * spinner / status line because there's nothing to wait for and the
+ * value is always "today".
  *
  * @returns Today's date in the form "YYYY-MM-DD"
  */
 export function getWorkerdCompatibilityDate(_projectPath: string) {
-	const s = spinner();
-	s.start("Retrieving current workerd compatibility date");
-
-	const date = getTodaysCompatDate();
-
-	s.stop(`${brandColor("compatibility date")} ${dim(date)}`);
-	return date;
+	return getTodaysCompatDate();
 }
 
 /**

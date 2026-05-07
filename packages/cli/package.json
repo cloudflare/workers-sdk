@@ -31,6 +31,14 @@
 			"types": "./dist/args.d.mts",
 			"import": "./dist/args.mjs"
 		},
+		"./banner": {
+			"types": "./dist/banner.d.mts",
+			"import": "./dist/banner.mjs"
+		},
+		"./box": {
+			"types": "./dist/box.d.mts",
+			"import": "./dist/box.mjs"
+		},
 		"./colors": {
 			"types": "./dist/colors.d.mts",
 			"import": "./dist/colors.mjs"
@@ -43,6 +51,10 @@
 			"types": "./dist/error.d.mts",
 			"import": "./dist/error.mjs"
 		},
+		"./format": {
+			"types": "./dist/format.d.mts",
+			"import": "./dist/format.mjs"
+		},
 		"./gitignore": {
 			"types": "./dist/gitignore.d.mts",
 			"import": "./dist/gitignore.mjs"
@@ -51,6 +63,10 @@
 			"types": "./dist/interactive.d.mts",
 			"import": "./dist/interactive.mjs"
 		},
+		"./is-interactive": {
+			"types": "./dist/is-interactive.d.mts",
+			"import": "./dist/is-interactive.mjs"
+		},
 		"./packages": {
 			"types": "./dist/packages.d.mts",
 			"import": "./dist/packages.mjs"
@@ -58,6 +74,10 @@
 		"./streams": {
 			"types": "./dist/streams.d.mts",
 			"import": "./dist/streams.mjs"
+		},
+		"./update-check": {
+			"types": "./dist/update-check.d.mts",
+			"import": "./dist/update-check.mjs"
 		}
 	},
 	"scripts": {
@@ -69,11 +89,16 @@
 	},
 	"dependencies": {
 		"@clack/core": "^1.2.0",
+		"@clack/prompts": "^1.2.0",
 		"@cloudflare/workers-utils": "workspace:*",
+		"boxen": "^8.0.1",
 		"chalk": "^5.2.0",
 		"ci-info": "catalog:default",
 		"cross-spawn": "^7.0.3",
-		"log-update": "^5.0.1"
+		"figures": "^6.1.0",
+		"log-update": "^5.0.1",
+		"semiver": "^1.1.0",
+		"update-check": "^1.5.4"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

@@ -77,8 +77,7 @@ describe("containers delete", () => {
 		`);
 		expect(stdCli.stderr).toMatchInlineSnapshot(`""`);
 		expect(stdCli.stdout).toMatchInlineSnapshot(`
-			"╭ Delete your container
-			│
+			"┌  Delete your container
 			"
 		`);
 	}
@@ -113,8 +112,7 @@ describe("containers delete", () => {
 		`);
 		expect(stdCli.stderr).toMatchInlineSnapshot(`""`);
 		expect(stdCli.stdout).toMatchInlineSnapshot(`
-			"╭ Delete your container
-			│
+			"┌  Delete your container
 			"
 		`);
 	});
@@ -136,9 +134,9 @@ describe("containers delete", () => {
 		await runWrangler(`containers delete ${testContainerID}`);
 		expect(stdCli.stderr).toMatchInlineSnapshot(`""`);
 		expect(stdCli.stdout).toMatchInlineSnapshot(`
-			"╭ Delete your container
+			"┌  Delete your container
 			│
-			╰ Your container has been deleted
+			└  Your container has been deleted
 
 			"
 		`);

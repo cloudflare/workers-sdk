@@ -62,8 +62,8 @@ describe("pages project create", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Successfully created the 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you create your first deployment.
 			To deploy a folder of assets, run 'wrangler pages deploy [directory]'."
 		`);
@@ -107,8 +107,8 @@ describe("pages project create", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Successfully created the 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you create your first deployment.
 			To deploy a folder of assets, run 'wrangler pages deploy [directory]'."
 		`);
@@ -154,8 +154,8 @@ describe("pages project create", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			✨ Successfully created the 'a-new-project' project. It will be available at https://a-new-project.pages.dev/ once you create your first deployment.
 			To deploy a folder of assets, run 'wrangler pages deploy [directory]'."
 		`);

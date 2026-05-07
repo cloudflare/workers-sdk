@@ -1,4 +1,4 @@
-import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue } from "@cloudflare/cli-shared-helpers/colors";
 import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
 import { runFrameworkGenerator } from "frameworks/index";
@@ -13,7 +13,6 @@ const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [ctx.project.name, "--template=latest"]);
-	logRaw("");
 };
 
 const configure = async (ctx: C3Context) => {

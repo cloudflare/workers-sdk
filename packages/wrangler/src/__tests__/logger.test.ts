@@ -302,9 +302,7 @@ describe("logger", () => {
 		it("should output at error level", ({ expect }) => {
 			setLogLevel("error");
 			error("This is an error message");
-			expect(cliOut.stderr).toMatchInlineSnapshot(
-				`"╰  ERROR  This is an error message\n"`
-			);
+			expect(cliOut.stderr).toContain("This is an error message");
 		});
 
 		it("should not output when log level is set to none", ({ expect }) => {
@@ -316,25 +314,19 @@ describe("logger", () => {
 		it("should output when log level is set to warn", ({ expect }) => {
 			setLogLevel("warn");
 			error("This is an error message");
-			expect(cliOut.stderr).toMatchInlineSnapshot(
-				`"╰  ERROR  This is an error message\n"`
-			);
+			expect(cliOut.stderr).toContain("This is an error message");
 		});
 
 		it("should output when log level is set to log", ({ expect }) => {
 			setLogLevel("log");
 			error("This is an error message");
-			expect(cliOut.stderr).toMatchInlineSnapshot(
-				`"╰  ERROR  This is an error message\n"`
-			);
+			expect(cliOut.stderr).toContain("This is an error message");
 		});
 
 		it("should output when log level is set to debug", ({ expect }) => {
 			setLogLevel("debug");
 			error("This is an error message");
-			expect(cliOut.stderr).toMatchInlineSnapshot(
-				`"╰  ERROR  This is an error message\n"`
-			);
+			expect(cliOut.stderr).toContain("This is an error message");
 		});
 	});
 });

@@ -1,4 +1,4 @@
-import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { dim } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	quoteShellArgs,
@@ -49,9 +49,6 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 			`via \`${quoteShellArgs(cmd)}\``
 		)}`
 	);
-
-	// newline
-	logRaw("");
 
 	await runCommand(cmd, { env });
 };

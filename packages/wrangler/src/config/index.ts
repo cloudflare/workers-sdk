@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import { updateCheck } from "@cloudflare/cli-shared-helpers/update-check";
 import {
 	configFileName,
 	experimental_readRawConfig,
@@ -10,10 +11,12 @@ import {
 	validatePagesConfig,
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-import { version as wranglerVersion } from "../../package.json";
+import {
+	name as wranglerName,
+	version as wranglerVersion,
+} from "../../package.json";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
-import { updateCheck } from "../update-check";
 import type {
 	Config,
 	ConfigBindingOptions,
@@ -51,7 +54,7 @@ async function logWarningsWithUpgradeHint(
 	}
 	logger.warn(diagnostics.renderWarnings());
 	if (diagnostics.hasUnexpectedFieldsInTree()) {
-		const latestVersion = await updateCheck();
+		const latestVersion = await updateCheck(wranglerName, wranglerVersion);
 		if (latestVersion !== undefined) {
 			logger.log(
 				`There is a newer version of Wrangler available ` +

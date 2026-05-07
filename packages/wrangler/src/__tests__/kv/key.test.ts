@@ -100,8 +100,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Writing the value "my-value" to key "my-key" on namespace id: "some-namespace-id"."
@@ -126,8 +126,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Writing the value "my-value" to key "/my-key" on namespace id: "DS9"."
@@ -151,8 +151,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Writing the value "my-value" to key "my-key" on namespace binding: "someBinding" (id: "bound-id")."
@@ -178,8 +178,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Writing the value "my-value" to key "my-key" on namespace binding: "someBinding" (id: "preview-bound-id")."
@@ -205,8 +205,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Writing the value "my-value" to key "my-key" on namespace id: "some-namespace-id"."
@@ -229,8 +229,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Writing the value "my-value" to key "my-key" on namespace binding: "someBinding" (id: "env-bound-id")."
@@ -255,8 +255,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Writing the contents of foo.txt to the key "my-key" on namespace id: "some-namespace-id"."
@@ -284,8 +284,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Writing the contents of test.png to the key "my-key" on namespace id: "another-namespace-id"."
@@ -310,8 +310,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Writing the value "dVal" to key "dKey" on namespace id: "some-namespace-id" with metadata "{"mKey":"mValue"}"."
@@ -342,8 +342,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Writing the contents of test.png to the key "another-my-key" on namespace id: "some-namespace-id" with metadata "{"mKey":"mValue"}"."
@@ -407,8 +407,8 @@ describe("kv", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 
 					wrangler kv key put <key> [value]
 
@@ -458,8 +458,8 @@ describe("kv", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 
 					wrangler kv key put <key> [value]
 
@@ -507,8 +507,8 @@ describe("kv", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 
 					wrangler kv key put <key> [value]
 
@@ -604,8 +604,8 @@ describe("kv", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 
 					wrangler kv key put <key> [value]
 
@@ -654,8 +654,8 @@ describe("kv", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					"
@@ -684,8 +684,8 @@ describe("kv", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					"
@@ -1320,8 +1320,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Deleting the key "/NCC-74656" on namespace id: "voyager"."
@@ -1384,8 +1384,8 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					Deleting the key "someKey" on namespace binding: "someBinding" (id: "env-bound-id")."

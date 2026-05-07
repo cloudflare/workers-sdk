@@ -3,8 +3,7 @@ import { Astro } from "../../autoconfig/frameworks/astro";
 import { Static } from "../../autoconfig/frameworks/static";
 import { buildOperationsSummary } from "../../autoconfig/run";
 import { NpmPackageManager } from "../../package-manager";
-import { dedent } from "../../utils/dedent";
-import { mockConsoleMethods } from "../helpers/mock-console";
+import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
@@ -18,7 +17,11 @@ const testRawConfig: RawConfig = {
 };
 
 describe("autoconfig run - buildOperationsSummary()", () => {
-	const std = mockConsoleMethods();
+	// `buildOperationsSummary` writes via `clack.note(...)` and
+	// `clack.log.step(...)`, which emit to `process.stdout` (rerouted
+	// in the vitest setup to the `cli-shared-helpers/streams`
+	// PassThrough). `collectCLIOutput` listens on that PassThrough.
+	const std = collectCLIOutput();
 	const { setIsTTY } = useMockIsTTY();
 	beforeEach(() => {
 		setIsTTY(true);
@@ -46,16 +49,19 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"
-				📄 Create wrangler.jsonc:
-				  {
-				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "name": "worker-name",
-				    "compatibility_date": "2025-01-01",
-				    "observability": {
-				      "enabled": true
-				    }
-				  }
+				"[90m│[39m
+				[32m◇[39m  [0m📄 Create wrangler.jsonc[0m [90m─────────────────────────────────╮[39m
+				[90m│[39m                                                            [90m│[39m
+				[90m│[39m  [2m{[22m                                                         [90m│[39m
+				[90m│[39m  [2m  "$schema": "node_modules/wrangler/config-schema.json",[22m  [90m│[39m
+				[90m│[39m  [2m  "name": "worker-name",[22m                                  [90m│[39m
+				[90m│[39m  [2m  "compatibility_date": "2025-01-01",[22m                     [90m│[39m
+				[90m│[39m  [2m  "observability": {[22m                                      [90m│[39m
+				[90m│[39m  [2m    "enabled": true[22m                                       [90m│[39m
+				[90m│[39m  [2m  }[22m                                                       [90m│[39m
+				[90m│[39m  [2m}[22m                                                         [90m│[39m
+				[90m│[39m                                                            [90m│[39m
+				[90m├────────────────────────────────────────────────────────────╯[39m
 				"
 			`);
 
@@ -104,12 +110,11 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				}
 			);
 
-			expect(std.out).toContain(
-				dedent`
-				📦 Install packages:
-				 - wrangler (devDependency)
-				`
-			);
+			// Output is rendered via `clack.note` so the literal title
+			// is `📦 Install packages` (no trailing colon) followed by
+			// the body wrapped in a gutter-attached box.
+			expect(std.out).toContain("📦 Install packages");
+			expect(std.out).toContain("- wrangler (devDependency)");
 
 			expect(summary).toMatchInlineSnapshot(`
 				{
@@ -161,12 +166,8 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				}
 			);
 
-			expect(std.out).toContain(
-				dedent`
-				📦 Install packages:
-				 - wrangler (devDependency)
-				`
-			);
+			expect(std.out).toContain("📦 Install packages");
+			expect(std.out).toContain("- wrangler (devDependency)");
 
 			expect(summary).toMatchInlineSnapshot(`
 				{

@@ -131,21 +131,21 @@ describe("deploy secrets", () => {
 			await runWrangler(`deploy --secrets-file ${secretsFile}`);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                       Resource
-			env.SECRET1 ("(hidden)")      Environment Variable
-			env.SECRET2 ("(hidden)")      Environment Variable
+				"
+				⛅️ wrangler · vx.x.x
+				────────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                       Resource
+				env.SECRET1 ("(hidden)")      Environment Variable
+				env.SECRET2 ("(hidden)")      Environment Variable
 
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should upload secrets from a .env file alongside the worker", async ({
@@ -191,22 +191,22 @@ SECRET3=value3`
 			await runWrangler(`deploy --secrets-file ${secretsFile}`);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                       Resource
-			env.SECRET1 ("(hidden)")      Environment Variable
-			env.SECRET2 ("(hidden)")      Environment Variable
-			env.SECRET3 ("(hidden)")      Environment Variable
+				"
+				⛅️ wrangler · vx.x.x
+				────────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                       Resource
+				env.SECRET1 ("(hidden)")      Environment Variable
+				env.SECRET2 ("(hidden)")      Environment Variable
+				env.SECRET3 ("(hidden)")      Environment Variable
 
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should set keepSecrets to inherit non-provided secrets when providing secrets file", async ({
@@ -241,20 +241,20 @@ SECRET3=value3`
 			await runWrangler(`deploy --secrets-file ${secretsFile}`);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                         Resource
-			env.MY_SECRET ("(hidden)")      Environment Variable
+				"
+				⛅️ wrangler · vx.x.x
+				────────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                         Resource
+				env.MY_SECRET ("(hidden)")      Environment Variable
 
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should fail when secrets file does not exist", async ({ expect }) => {

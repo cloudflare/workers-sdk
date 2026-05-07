@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import { updateCheck } from "@cloudflare/cli-shared-helpers/update-check";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import {
 	getBrowserRenderingHeadfulFromEnv,
@@ -7,6 +8,10 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
+import {
+	name as wranglerName,
+	version as wranglerVersion,
+} from "../../../package.json";
 import {
 	extractBindingsOfType,
 	isUnsafeBindingType,
@@ -16,7 +21,6 @@ import { withSourceURLs } from "../../deployment-bundle/source-url";
 import { logger } from "../../logger";
 import { getMetricsConfig } from "../../metrics";
 import { getSourceMappedString } from "../../sourcemap";
-import { updateCheck } from "../../update-check";
 import { warnOrError } from "../../utils/print-bindings";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
@@ -126,17 +130,19 @@ export class WranglerLog extends Log {
 				return;
 			}
 			this.#warnedCompatibilityDateFallback = true;
-			return void updateCheck().then((maybeNewVersion) => {
-				if (maybeNewVersion === undefined) {
-					return;
+			return void updateCheck(wranglerName, wranglerVersion).then(
+				(maybeNewVersion: string | undefined) => {
+					if (maybeNewVersion === undefined) {
+						return;
+					}
+					message += [
+						"",
+						"Features enabled by your requested compatibility date may not be available.",
+						`Upgrade to \`wrangler@${maybeNewVersion}\` to remove this warning.`,
+					].join("\n");
+					super.warn(message);
 				}
-				message += [
-					"",
-					"Features enabled by your requested compatibility date may not be available.",
-					`Upgrade to \`wrangler@${maybeNewVersion}\` to remove this warning.`,
-				].join("\n");
-				super.warn(message);
-			});
+			);
 		}
 		super.warn(message);
 	}

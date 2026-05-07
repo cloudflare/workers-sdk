@@ -133,8 +133,8 @@ describe("queues subscription", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Creating event subscription for queue 'testQueue'...
 				✨ Successfully created event subscription 'testQueue workersBuilds.worker' with id 'sub-123'."
 			`);
@@ -181,8 +181,8 @@ describe("queues subscription", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Creating event subscription for queue 'testQueue'...
 				✨ Successfully created event subscription 'Custom Subscription' with id 'sub-123'."
 			`);
@@ -292,8 +292,8 @@ describe("queues subscription", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				No event subscriptions found for queue 'testQueue'."
 			`);
 		});
@@ -325,8 +325,8 @@ describe("queues subscription", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Event subscriptions for queue 'testQueue':
 				┌─┬─┬─┬─┬─┬─┐
 				│ ID │ Name │ Source │ Events │ Resource │ Enabled │
@@ -463,8 +463,8 @@ describe("queues subscription", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				ID:           sub-123
 				Name:         Test Subscription 1
 				Source:       workersBuilds.worker
@@ -593,8 +593,8 @@ describe("queues subscription", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Successfully deleted event subscription 'Test Subscription 1' with id 'sub-123'."
 			`);
 		});
@@ -627,8 +627,8 @@ describe("queues subscription", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				✨ Successfully deleted event subscription 'Test Subscription 1' with id 'sub-123'."
 			`);
 		});
@@ -694,8 +694,8 @@ describe("queues subscription", () => {
 			expect(requests.count).toBe(1);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Updating event subscription...
 				✨ Successfully updated event subscription 'updated-subscription' with id 'subscription-123'."
 			`);

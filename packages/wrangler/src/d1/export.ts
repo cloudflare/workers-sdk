@@ -282,9 +282,9 @@ async function pollExport(
 		if (line.startsWith(`Uploaded part`)) {
 			// Part numbers can be reported as complete out-of-order which looks confusing to a user. But their ID has no
 			// special meaning, so just make them sequential.
-			s.update(`Uploaded part ${++num_parts_uploaded}`);
+			s.message(`Uploaded part ${++num_parts_uploaded}`);
 		} else {
-			s.update(line);
+			s.message(line);
 		}
 	});
 

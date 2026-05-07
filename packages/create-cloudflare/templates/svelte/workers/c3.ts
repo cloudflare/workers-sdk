@@ -1,4 +1,4 @@
-import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { transformFile } from "@cloudflare/codemod";
 import { runFrameworkGenerator } from "frameworks/index";
@@ -13,8 +13,6 @@ const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, ["create", ctx.project.name]);
-
-	logRaw("");
 };
 
 const configure = async (ctx: C3Context) => {
@@ -23,7 +21,7 @@ const configure = async (ctx: C3Context) => {
 	await installPackages([pkg], {
 		dev: true,
 		startText: "Adding the Cloudflare adapter",
-		doneText: `${brandColor(`installed`)} ${dim(pkg)}`,
+		doneText: `${brandColor("Installed")} ${dim(pkg)}`,
 	});
 
 	updateSvelteConfig();

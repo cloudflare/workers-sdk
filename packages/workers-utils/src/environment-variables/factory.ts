@@ -55,8 +55,10 @@ type VariableNames =
 	| "WRANGLER_LOG_SANITIZE"
 	/** Directory for ND-JSON output files. */
 	| "WRANGLER_OUTPUT_FILE_DIRECTORY"
-	/** Hide the Wrangler version banner */
+	/** Hide the Wrangler version banner (deprecated alias for CLOUDFLARE_HIDE_BANNER) */
 	| "WRANGLER_HIDE_BANNER"
+	/** Hide the CLI version banner across Cloudflare CLIs (wrangler, cf, create-cloudflare). */
+	| "CLOUDFLARE_HIDE_BANNER"
 
 	// ## Build & Deployment Configuration
 
@@ -162,38 +164,62 @@ type ElementType<A> = A extends readonly (infer T)[] ? T : never;
  */
 export function getBooleanEnvironmentVariableFactory(options: {
 	variableName: VariableNames;
+	deprecatedName?: VariableNames;
 }): () => boolean | undefined;
 export function getBooleanEnvironmentVariableFactory(options: {
 	variableName: VariableNames;
+	deprecatedName?: VariableNames;
 	defaultValue: boolean | (() => boolean);
 }): () => boolean;
 export function getBooleanEnvironmentVariableFactory(options: {
 	variableName: VariableNames;
+	deprecatedName?: VariableNames;
 	defaultValue?: boolean | (() => boolean);
 }): () => boolean | undefined {
-	return () => {
-		if (
-			!(options.variableName in process.env) ||
-			process.env[options.variableName] === undefined
-		) {
-			return typeof options.defaultValue === "function"
-				? options.defaultValue()
-				: options.defaultValue;
-		}
-
-		switch (process.env[options.variableName]?.toLowerCase()) {
+	const parse = (
+		raw: string | undefined,
+		sourceName: VariableNames
+	): boolean | undefined => {
+		switch (raw?.toLowerCase()) {
 			case "true":
 				return true;
 			case "false":
 				return false;
 			default:
 				throw new UserError(
-					`Expected ${options.variableName} to be "true" or "false", but got ${JSON.stringify(
-						process.env[options.variableName]
-					)}`,
+					`Expected ${sourceName} to be "true" or "false", but got ${JSON.stringify(raw)}`,
 					{ telemetryMessage: false }
 				);
 		}
+	};
+
+	let hasWarnedDeprecated = false;
+	return () => {
+		if (
+			options.variableName in process.env &&
+			process.env[options.variableName] !== undefined
+		) {
+			return parse(process.env[options.variableName], options.variableName);
+		}
+
+		if (
+			options.deprecatedName &&
+			options.deprecatedName in process.env &&
+			process.env[options.deprecatedName] !== undefined
+		) {
+			if (!hasWarnedDeprecated) {
+				hasWarnedDeprecated = true;
+				// eslint-disable-next-line no-console -- intentional one-shot deprecation warning surfaced to end users
+				console.warn(
+					`Using "${options.deprecatedName}" environment variable. This is deprecated. Please use "${options.variableName}", instead.`
+				);
+			}
+			return parse(process.env[options.deprecatedName], options.deprecatedName);
+		}
+
+		return typeof options.defaultValue === "function"
+			? options.defaultValue()
+			: options.defaultValue;
 	};
 }
 

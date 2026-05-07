@@ -7,6 +7,7 @@ import {
 import chalk from "chalk";
 import TOML from "smol-toml";
 import { FormData } from "undici";
+import { printWranglerBanner } from "./banner";
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { confirm, prompt } from "./dialogs";
@@ -14,7 +15,6 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
-import { printWranglerBanner } from "./wrangler-banner";
 import type { CommonYargsOptions } from "./yargs-types";
 import type {
 	ComplianceConfig,

@@ -193,8 +193,8 @@ describe("time-travel", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					🚧 Restoring database db from bookmark undefined
@@ -236,8 +236,8 @@ describe("time-travel", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: remote
 
 					🚧 Time Traveling...

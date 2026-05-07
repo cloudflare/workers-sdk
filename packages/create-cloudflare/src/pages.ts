@@ -61,7 +61,7 @@ export const createProject = async (ctx: C3Context) => {
 					cwd: ctx.project.path,
 					env: { CLOUDFLARE_ACCOUNT_ID },
 					startText: "Creating Pages project",
-					doneText: `${brandColor("created")} ${dim(
+					doneText: `${brandColor("Created")} Pages project ${dim(
 						`via \`${quoteShellArgs(cmd)}\``
 					)}`,
 				})
@@ -88,9 +88,7 @@ export const createProject = async (ctx: C3Context) => {
 				cwd: ctx.project.path,
 				env: { CLOUDFLARE_ACCOUNT_ID },
 				startText: "Verifying Pages project",
-				doneText: `${brandColor("verified")} ${dim(
-					`project is ready for deployment`
-				)}`,
+				doneText: `${brandColor("Verified")} Pages project is ready for deployment`,
 			})
 		);
 	} catch {

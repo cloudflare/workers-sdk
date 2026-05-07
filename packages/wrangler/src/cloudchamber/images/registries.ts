@@ -6,6 +6,7 @@ import {
 } from "@cloudflare/cli-shared-helpers";
 import { processArgument } from "@cloudflare/cli-shared-helpers/args";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import {
 	ApiError,
 	ImageRegistriesService,
@@ -13,8 +14,8 @@ import {
 	ImageRegistryNotAllowedError,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+import chalk from "chalk";
 import { createCommand, createNamespace } from "../../core/create-command";
-import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { pollRegistriesUntilCondition } from "../cli";
 import {
@@ -128,7 +129,7 @@ async function handleListImageRegistriesCommand(
 	_args: unknown,
 	_config: Config
 ) {
-	startSection("Registries", "", false);
+	startSection("Registries");
 	const [registries, err] = await wrap(
 		promiseSpinner(pollRegistriesUntilCondition(() => true))
 	);
@@ -151,8 +152,7 @@ async function handleListImageRegistriesCommand(
 		updateStatus(
 			`${registry.domain}\npublic_key: ${dim(
 				(registry.public_key ?? "").trim()
-			)}`,
-			false
+			)}`
 		);
 	}
 
@@ -168,24 +168,18 @@ async function handleConfigureImageRegistryCommand(
 	startSection("Configure a Docker registry in Cloudflare");
 	const domain = (await processArgument({ domain: args.domain }, "domain", {
 		type: "text",
-		question: "What is the domain of your registry?",
+		message: `What is the domain of your registry? ${chalk.dim("(example.com, example-with-port:8080. Remember to not include https!)")}`,
 		validate: (text) => {
 			const t = text?.toString();
 			if (t?.includes("://")) {
 				return "a proto like https:// shouldn't be included";
 			}
 		},
-		label: "domain",
 		defaultValue: "",
-		helpText:
-			"example.com, example-with-port:8080. Remember to not include https!",
 	})) as string;
 	const isPublic = (await processArgument({ public: args.public }, "public", {
 		type: "confirm",
-		question: "Is the domain public?",
-		label: "is public",
-		helpText:
-			"if the domain is not owned by you or you want it to be public, mark as yes",
+		message: `Is the domain public? ${chalk.dim("(if the domain is not owned by you or you want it to be public, mark as yes)")}`,
 	})) as boolean;
 	const [registry, err] = await wrap(
 		promiseSpinner(

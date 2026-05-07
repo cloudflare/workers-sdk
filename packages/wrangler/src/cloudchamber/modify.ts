@@ -1,12 +1,13 @@
 import { cancel, startSection } from "@cloudflare/cli-shared-helpers";
 import { processArgument } from "@cloudflare/cli-shared-helpers/args";
+import { dim } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	inputPrompt,
 	spinner,
 } from "@cloudflare/cli-shared-helpers/interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";
@@ -164,9 +165,8 @@ async function handleSSH(
 	let keysToAdd = [...(deployment.ssh_public_key_ids ?? [])];
 	const yes = await inputPrompt<boolean>({
 		type: "confirm",
-		question: "Do you want to modify existing ssh keys from the deployment?",
-		label: "",
-		defaultValue: false,
+		message: "Do you want to modify existing ssh keys from the deployment?",
+		initialValue: false,
 	});
 	if (!yes) {
 		return undefined;
@@ -175,12 +175,10 @@ async function handleSSH(
 	if ((deployment.ssh_public_key_ids?.length || 0) > 0) {
 		const keysSelected = await inputPrompt<string[]>({
 			type: "multiselect",
-			question: "Select the keys you want to remove from the deployment",
-			helpText: "You can select pressing 'space'. Submit with 'enter'",
+			message: `Select the keys you want to remove from the deployment ${dim("(space to select, enter to submit)")}`,
 			options: keys
 				.filter((k) => deployment.ssh_public_key_ids?.includes(k.id))
 				.map((key) => ({ label: key.name, value: key.id })),
-			label: "removing",
 		});
 		keysToAdd = keys
 			.filter((key) => deployment.ssh_public_key_ids?.includes(key.id))
@@ -194,10 +192,9 @@ async function handleSSH(
 	if (addKeysOptions.length > 0) {
 		const newKeys = await inputPrompt<string[]>({
 			type: "multiselect",
-			question: "Select the keys you want to add to the deployment",
+			message: "Select the keys you want to add to the deployment",
 			options: addKeysOptions,
-			label: "adding",
-			defaultValue: [],
+			initialValues: [],
 		});
 
 		keysToAdd = [...newKeys, ...keysToAdd];
@@ -217,8 +214,7 @@ async function handleModifyCommand(
 	const keys = await handleSSH(args, config, deployment);
 	const givenImage = args.image ?? config.cloudchamber.image;
 	const image = await processArgument<string>({ image: givenImage }, "image", {
-		question: modifyImageQuestion,
-		label: "",
+		message: `${modifyImageQuestion} ${dim("(press Return to leave unchanged)")}`,
 		validate: (value) => {
 			if (typeof value !== "string") {
 				return "Unknown error";
@@ -229,7 +225,6 @@ async function handleModifyCommand(
 		},
 		defaultValue: givenImage ?? deployment.image,
 		initialValue: givenImage ?? deployment.image,
-		helpText: "press Return to leave unchanged",
 		type: "text",
 	});
 
@@ -275,8 +270,7 @@ async function handleModifyCommand(
 	});
 
 	const yesOrNo = await inputPrompt({
-		question: "Modify the deployment?",
-		label: "",
+		message: "Modify the deployment?",
 		type: "confirm",
 	});
 	if (!yesOrNo) {
@@ -286,8 +280,7 @@ async function handleModifyCommand(
 
 	const { start, stop } = spinner();
 	start(
-		"Modifying your container",
-		"shortly your container will be modified to a new version"
+		`Modifying your container ${dim("shortly your container will be modified to a new version")}`
 	);
 	const modifyRequest: ModifyDeploymentV2RequestBody = {
 		image,

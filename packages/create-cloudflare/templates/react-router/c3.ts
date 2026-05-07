@@ -1,4 +1,3 @@
-import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../src/templates";
@@ -20,8 +19,6 @@ const generate = async (ctx: C3Context) => {
 		"--no-git-init",
 		"--no-install",
 	]);
-
-	logRaw(""); // newline
 };
 
 const config: TemplateConfig = {

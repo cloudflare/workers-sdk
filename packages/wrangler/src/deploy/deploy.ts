@@ -3,6 +3,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli-shared-helpers";
+import isInteractive, {
+	isNonInteractiveOrCI,
+} from "@cloudflare/cli-shared-helpers/is-interactive";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,
@@ -46,7 +49,6 @@ import {
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "../environments";
 import { getFlag } from "../experimental-flags";
-import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";

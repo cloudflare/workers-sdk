@@ -1,5 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { FatalError, UserError } from "@cloudflare/workers-utils";
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
@@ -8,7 +9,6 @@ import chalk from "chalk";
 import dedent from "ts-dedent";
 import { getCacheFolder } from "../../config-cache";
 import { confirm } from "../../dialogs";
-import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import {
 	BunPackageManager,

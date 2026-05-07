@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import {
 	configFileName,
 	getTodaysCompatDate,
@@ -19,7 +20,6 @@ import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { confirm, prompt } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import * as metrics from "../metrics";

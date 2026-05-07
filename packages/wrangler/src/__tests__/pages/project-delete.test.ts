@@ -60,8 +60,8 @@ describe("pages project delete", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Deleting some-project-name
 			Successfully deleted some-project-name"
 		`);
@@ -87,8 +87,8 @@ describe("pages project delete", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────"
+			⛅️ wrangler · vx.x.x
+			────────────────────"
 		`);
 	});
 
@@ -119,8 +119,8 @@ describe("pages project delete", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Deleting some-project-name
 			Successfully deleted some-project-name"
 		`);

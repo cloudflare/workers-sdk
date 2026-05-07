@@ -110,8 +110,8 @@ describe("secrets-store store commands", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🔐 Creating store... (Name: test-store)
 				✅ Created store! (Name: test-store, ID: 8b9199cad1954bc39add51c948767679)"
 			`);
@@ -137,8 +137,8 @@ describe("secrets-store store commands", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🔐 Listing stores...
 				┌─┬─┬─┬─┬─┐
 				│ Name │ ID │ AccountID │ Created │ Modified │
@@ -221,8 +221,8 @@ describe("secrets-store secret commands", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 
 				🔐 Creating secret... (Name: TEST_SECRET, Value: REDACTED, Scopes: workers, Comment: wrangler secret)
 				✅ Created secret! (ID: 36dabbe4d01c49de82847b9a22673cbd)
@@ -334,8 +334,8 @@ describe("secrets-store secret commands", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🔐 Listing secrets... (store-id: 850e0805c1084551bb46d150b5dfe414, page: 1, per-page: 10)
 				┌─┬─┬─┬─┬─┬─┬─┐
 				│ Name │ ID │ Comment │ Scopes │ Status │ Created │ Modified │
@@ -389,8 +389,8 @@ describe("secrets-store secret commands", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🔐 Getting secret... (ID: df3f6eb1159a4f10ac5fe836e2b8169c)
 				┌─┬─┬─┬─┬─┬─┬─┬─┐
 				│ Name │ ID │ StoreID │ Comment │ Scopes │ Status │ Created │ Modified │
@@ -442,8 +442,8 @@ describe("secrets-store secret commands", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🔐 Deleting secret... (ID: df3f6eb1159a4f10ac5fe836e2b8169c)
 				✅ Deleted secret! (ID: df3f6eb1159a4f10ac5fe836e2b8169c)"
 			`);
@@ -518,8 +518,8 @@ describe("secrets-store secret commands", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🔐 Updating secret... (ID: df3f6eb1159a4f10ac5fe836e2b8169c)
 				✅ Updated secret! (ID: 36dabbe4d01c49de82847b9a22673cbd)
 				┌─┬─┬─┬─┬─┬─┬─┬─┐
@@ -629,8 +629,8 @@ describe("secrets-store secret commands", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🔐 Duplicating secret... (ID: df3f6eb1159a4f10ac5fe836e2b8169c)
 				✅ Duplicated secret! (ID: 36dabbe4d01c49de82847b9a22673cbd)
 				┌─┬─┬─┬─┬─┬─┬─┬─┐

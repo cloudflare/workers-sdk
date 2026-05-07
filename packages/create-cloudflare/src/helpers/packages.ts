@@ -51,7 +51,7 @@ export const npmInstall = async (ctx: C3Context) => {
 	await runCommand([npm, "install"], {
 		silent: true,
 		startText: "Installing dependencies",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+		doneText: `${brandColor("Installed")} dependencies via ${dim(`\`${npm} install\``)}`,
 	});
 };
 

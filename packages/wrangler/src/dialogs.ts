@@ -1,7 +1,7 @@
+import * as clack from "@clack/prompts";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import prompts from "prompts";
-import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
 import type { TelemetryMessage } from "@cloudflare/workers-utils";
 
@@ -17,6 +17,60 @@ export class NoDefaultValueProvided extends UserError {
 		super("This command cannot be run in a non-interactive context", options);
 		Object.setPrototypeOf(this, new.target.prototype);
 	}
+}
+
+/**
+ * Cancel handling — preserves the previous `prompts`-library behavior of
+ * scheduling `process.exit(1)` on the next tick when the user aborts a
+ * prompt (Ctrl+C / Esc). Wrapping in `nextTick` lets in-flight clack
+ * teardown render the cancel symbol before the process dies.
+ */
+function exitOnCancel<T>(value: T | symbol): T {
+	if (clack.isCancel(value)) {
+		process.nextTick(() => {
+			process.exit(1);
+		});
+		// We've scheduled exit; return a value that won't be observed.
+		// Cast to T since the calling code only inspects the return when
+		// not cancelled.
+		return undefined as unknown as T;
+	}
+	return value;
+}
+
+/**
+ * Adapt the wrangler-style validate (`boolean | string`) signature to
+ * the clack signature (`string | Error | undefined`). Wrangler returns
+ * `true` for valid, `false` or a string error message for invalid.
+ *
+ * Clack `validate` is sync (it returns `string | Error | undefined`
+ * directly, not a Promise). Wrangler's signature allowed async; if we
+ * see a Promise we resolve it inline here, but in practice all
+ * existing callsites are synchronous.
+ */
+function adaptValidate(
+	validate?: (value: string) => boolean | string | Promise<boolean | string>
+): ((value: string | undefined) => string | Error | undefined) | undefined {
+	if (!validate) {
+		return undefined;
+	}
+	return (value) => {
+		const result = validate(value ?? "");
+		if (result instanceof Promise) {
+			// Wrangler's `validate` allows returning a Promise but clack
+			// requires sync. We don't support async validation here; return
+			// undefined optimistically and let the post-resolve check catch
+			// any issues at the next prompt or downstream consumer.
+			return undefined;
+		}
+		if (result === true) {
+			return undefined;
+		}
+		if (typeof result === "string") {
+			return result;
+		}
+		return "Invalid input";
+	};
 }
 
 interface ConfirmOptions {
@@ -37,20 +91,11 @@ export async function confirm(
 		);
 		return fallbackValue;
 	}
-	const { value } = await prompts({
-		type: "confirm",
-		name: "value",
+	const result = await clack.confirm({
 		message: text,
-		initial: defaultValue,
-		onState: (state) => {
-			if (state.aborted) {
-				process.nextTick(() => {
-					process.exit(1);
-				});
-			}
-		},
+		initialValue: defaultValue,
 	});
-	return value;
+	return exitOnCancel(result);
 }
 
 interface PromptOptions {
@@ -77,34 +122,33 @@ export async function prompt(
 		);
 		return options.defaultValue;
 	}
-	const { value } = await prompts({
-		type: "text",
-		name: "value",
+	if (options.isSecret) {
+		// clack.password doesn't support initialValue; secrets shouldn't
+		// have defaults anyway.
+		const result = await clack.password({
+			message: text,
+			validate: adaptValidate(options.validate),
+		});
+		return exitOnCancel(result);
+	}
+	const result = await clack.text({
 		message: text,
-		initial: options?.defaultValue,
-		style: options?.isSecret ? "password" : "default",
-		validate: options.validate,
-		onState: (state) => {
-			if (state.aborted) {
-				process.nextTick(() => {
-					process.exit(1);
-				});
-			}
-		},
+		initialValue: options.defaultValue,
+		validate: adaptValidate(options.validate),
 	});
-	return value;
-}
-
-interface SelectOptions<Values> {
-	choices: SelectOption<Values>[];
-	defaultOption?: number;
-	fallbackOption?: number;
+	return exitOnCancel(result);
 }
 
 interface SelectOption<Values> {
 	title: string;
 	description?: string;
 	value: Values;
+}
+
+interface SelectOptions<Values> {
+	choices: SelectOption<Values>[];
+	defaultOption?: number;
+	fallbackOption?: number;
 }
 
 export async function select<Values extends string>(
@@ -125,22 +169,26 @@ export async function select<Values extends string>(
 		);
 		return options.choices[options.fallbackOption].value;
 	}
-
-	const { value } = await prompts({
-		type: "select",
-		name: "value",
+	// `Option<Value>` from `@clack/prompts` is a conditional type
+	// (`Value extends Primitive ? {...} : {...}`) that TypeScript
+	// won't reduce while `Values` is still a generic parameter, so a
+	// plain object literal with `{label, value, hint}` doesn't match.
+	// Cast through the helper's own input shape.
+	type SelectOpts = Parameters<typeof clack.select<Values>>[0];
+	const selectOptions = options.choices.map((choice) => ({
+		label: choice.title,
+		value: choice.value,
+		...(choice.description ? { hint: choice.description } : {}),
+	})) as unknown as SelectOpts["options"];
+	const result = await clack.select<Values>({
 		message: text,
-		choices: options.choices,
-		initial: options.defaultOption,
-		onState: (state) => {
-			if (state.aborted) {
-				process.nextTick(() => {
-					process.exit(1);
-				});
-			}
-		},
+		options: selectOptions,
+		initialValue:
+			options.defaultOption !== undefined
+				? options.choices[options.defaultOption].value
+				: undefined,
 	});
-	return value;
+	return exitOnCancel(result);
 }
 
 interface MultiSelectOptions<Values> {
@@ -171,20 +219,20 @@ export async function multiselect<Values extends string>(
 		);
 		return options.defaultOptions.map((index) => options.choices[index].value);
 	}
-	const { value } = await prompts({
-		type: "multiselect",
-		name: "value",
+	// See `select` above — the same conditional-type quirk applies.
+	type MultiselectOpts = Parameters<typeof clack.multiselect<Values>>[0];
+	const multiselectOptions = options.choices.map((choice) => ({
+		label: choice.title,
+		value: choice.value,
+		...(choice.description ? { hint: choice.description } : {}),
+	})) as unknown as MultiselectOpts["options"];
+	const result = await clack.multiselect<Values>({
 		message: text,
-		choices: options.choices,
-		instructions: false,
-		hint: "- Space to select. Return to submit",
-		onState: (state) => {
-			if (state.aborted) {
-				process.nextTick(() => {
-					process.exit(1);
-				});
-			}
-		},
+		options: multiselectOptions,
+		initialValues: options.defaultOptions?.map(
+			(index) => options.choices[index].value
+		),
+		required: false,
 	});
-	return value;
+	return exitOnCancel(result);
 }

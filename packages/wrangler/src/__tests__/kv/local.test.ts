@@ -22,8 +22,8 @@ describe("kv", () => {
 			);
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resource location: local
 
 				Use --remote if you want to access the remote instance.
@@ -67,8 +67,8 @@ describe("kv", () => {
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"[]
 
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resource location: local
 
 				Use --remote if you want to access the remote instance.
@@ -130,8 +130,8 @@ describe("kv", () => {
 			);
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resource location: local
 
 				Use --remote if you want to access the remote instance.
@@ -142,8 +142,8 @@ describe("kv", () => {
 			await runWrangler(`kv key delete val --namespace-id some-namespace-id`);
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resource location: local
 
 				Use --remote if you want to access the remote instance.
@@ -182,8 +182,8 @@ describe("kv", () => {
 			);
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resource location: local
 
 				Use --remote if you want to access the remote instance.
@@ -235,8 +235,8 @@ describe("kv", () => {
 			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resource location: local
 
 				Use --remote if you want to access the remote instance.
@@ -258,8 +258,8 @@ describe("kv", () => {
 			);
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resource location: local
 
 				Use --remote if you want to access the remote instance.
@@ -289,8 +289,8 @@ describe("kv", () => {
 			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resource location: local
 
 				Use --remote if you want to access the remote instance.
@@ -319,8 +319,8 @@ describe("kv", () => {
 			);
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resource location: local
 
 				Use --remote if you want to access the remote instance.
@@ -350,8 +350,8 @@ describe("kv", () => {
 			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resource location: local
 
 				Use --remote if you want to access the remote instance.
@@ -395,16 +395,16 @@ describe("kv", () => {
 			);
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resource location: local
 
 				Use --remote if you want to access the remote instance.
 
 				Writing the value "value" to key "val" on namespace id: "some-namespace-id".
 
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resource location: local
 
 				Use --remote if you want to access the remote instance.

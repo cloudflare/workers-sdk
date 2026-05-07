@@ -318,12 +318,23 @@ export const getDisableConfigWatching = getBooleanEnvironmentVariableFactory({
 });
 
 /**
- * Hide the Wrangler version banner and command status (deprecated/experimental) warnings
+ * Hide the CLI version banner and command status (deprecated/experimental) warnings.
+ *
+ * Honoured by every Cloudflare CLI built on `@cloudflare/cli-shared-helpers`'s
+ * `printBanner`. Reads `CLOUDFLARE_HIDE_BANNER` with `WRANGLER_HIDE_BANNER`
+ * accepted as a deprecated alias.
  */
-export const getWranglerHideBanner = getBooleanEnvironmentVariableFactory({
-	variableName: "WRANGLER_HIDE_BANNER",
+export const getHideBanner = getBooleanEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_HIDE_BANNER",
+	deprecatedName: "WRANGLER_HIDE_BANNER",
 	defaultValue: false,
 });
+
+/**
+ * @deprecated Use `getHideBanner` instead. Kept as an alias for callers
+ *  that haven't migrated yet.
+ */
+export const getWranglerHideBanner = getHideBanner;
 
 /**
  * `CLOUDFLARE_ENV` specifies the currently selected Wrangler/Cloudflare environment.
