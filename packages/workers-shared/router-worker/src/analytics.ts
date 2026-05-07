@@ -14,6 +14,11 @@ export enum DISPATCH_TYPE {
 	WORKER = "worker",
 }
 
+export enum EntrypointType {
+	Outer = 0,
+	Inner = 1,
+}
+
 // When adding new columns please update the schema
 type Data = {
 	// -- Indexes --
@@ -39,6 +44,10 @@ type Data = {
 	userWorkerFreeTierLimiting?: boolean;
 	// double9 - The time it takes for the request to be handed off the Asset Worker or user Worker in milliseconds
 	timeToDispatch?: number;
+	// double10 - Entrypoint type (0 = Outer, 1 = Inner)
+	entrypoint?: EntrypointType;
+	// double11 - Time from outer entrypoint start until handoff to RouterInnerEntrypoint
+	timeToHandoff?: number;
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -57,6 +66,8 @@ type Data = {
 	xssDetectionImageHref?: string;
 	// blob8 - cdn-cgi backslash bypass attempt URL
 	cdnCgiBackslashBypassUrl?: string;
+	// blob9 - Deployment cohort
+	cohort?: string;
 };
 
 export class Analytics {
@@ -103,6 +114,8 @@ export class Analytics {
 				this.data.abuseMitigationBlocked ? 1 : 0, // double7
 				this.data.userWorkerFreeTierLimiting ? 1 : 0, // double8
 				this.data.timeToDispatch ?? -1, // double9
+				this.data.entrypoint ?? -1, // double10
+				this.data.timeToHandoff ?? -1, // double11
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes
@@ -113,6 +126,7 @@ export class Analytics {
 				this.data.abuseMitigationURLHost, // blob6
 				this.data.xssDetectionImageHref, // blob7
 				this.data.cdnCgiBackslashBypassUrl?.substring(0, 256), // blob8 - trim to 256 bytes
+				this.data.cohort, // blob9
 			],
 		});
 	}

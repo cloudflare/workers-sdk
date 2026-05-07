@@ -4,7 +4,12 @@ import {
 	env as runtimeEnv,
 } from "cloudflare:test";
 import { describe, it } from "vitest";
-import { RouterInnerEntrypoint } from "../src/worker";
+import { EntrypointType } from "../src/analytics";
+import routerWorker, {
+	RouterInnerEntrypoint,
+	RouterPlatformError,
+} from "../src/worker";
+import type { ReadyAnalyticsEvent } from "../src/types";
 import type { Env } from "../src/worker";
 
 async function fetchFromInnerEntrypoint(
@@ -1058,5 +1063,257 @@ describe("inner entrypoint unit tests", () => {
 			const response = await fetchFromInnerEntrypoint(request, env, ctx);
 			expect(await response.text()).toEqual("hello from asset worker");
 		});
+	});
+});
+
+// ============================================================
+// Helper types and functions for gateway / analytics tests
+// ============================================================
+
+type InnerEntrypointOptions = {
+	props: { timeToHandoff?: number };
+	version?: { cohort?: string };
+};
+
+function createGatewayCtx(
+	innerFetch: (request: Request) => Promise<Response>,
+	optionsSink?: InnerEntrypointOptions[]
+): ExecutionContext {
+	return {
+		exports: {
+			RouterInnerEntrypoint(options: InnerEntrypointOptions) {
+				optionsSink?.push(options);
+				return { fetch: innerFetch };
+			},
+		},
+		waitUntil() {},
+		passThroughOnException() {},
+	} as unknown as ExecutionContext;
+}
+
+function createGatewayEnv(overrides?: Record<string, unknown>): {
+	env: Env;
+	analyticsEvents: ReadyAnalyticsEvent[];
+} {
+	const analyticsEvents: ReadyAnalyticsEvent[] = [];
+	return {
+		env: {
+			CONFIG: { account_id: 123, script_id: 456 },
+			COLO_METADATA: {
+				coloId: 1,
+				metalId: 2,
+				coloTier: 1,
+				coloRegion: "WEUR",
+			},
+			VERSION_METADATA: { tag: "v1" },
+			ANALYTICS: {
+				logEvent(event: ReadyAnalyticsEvent) {
+					analyticsEvents.push(event);
+				},
+			},
+			...overrides,
+		} as Env,
+		analyticsEvents,
+	};
+}
+
+// ============================================================
+// Gateway (outer entrypoint) tests
+// ============================================================
+
+describe("gateway (outer entrypoint)", () => {
+	it("passes cohort and timeToHandoff to inner and writes outer analytics", async ({
+		expect,
+	}) => {
+		const capturedOptions: InnerEntrypointOptions[] = [];
+		const ctx = createGatewayCtx(
+			async () => new Response("ok"),
+			capturedOptions
+		);
+		const { env, analyticsEvents } = createGatewayEnv({
+			ACCOUNT_COHORT_QUERIER: {
+				lookupAccountCohort: () =>
+					Promise.resolve({
+						ok: true as const,
+						result: "ent",
+						meta: { workersVersion: "test" },
+					}),
+			},
+		});
+
+		await routerWorker.fetch(new Request("https://example.com"), env, ctx);
+
+		// Verify inner entrypoint received cohort and timeToHandoff
+		expect(capturedOptions).toHaveLength(1);
+		expect(capturedOptions[0].version).toEqual({ cohort: "ent" });
+		expect(capturedOptions[0].props.timeToHandoff).toBeGreaterThanOrEqual(0);
+
+		// Verify outer analytics
+		expect(analyticsEvents).toHaveLength(1);
+		expect(analyticsEvents[0].doubles?.[9]).toBe(EntrypointType.Outer);
+		expect(analyticsEvents[0].blobs?.[8]).toBe("ent");
+	});
+
+	it("does not pass version when cohort is null", async ({ expect }) => {
+		const capturedOptions: InnerEntrypointOptions[] = [];
+		const ctx = createGatewayCtx(
+			async () => new Response("ok"),
+			capturedOptions
+		);
+		// No ACCOUNT_COHORT_QUERIER — lookupCohort returns null
+		const { env } = createGatewayEnv();
+
+		await routerWorker.fetch(new Request("https://example.com"), env, ctx);
+
+		expect(capturedOptions).toHaveLength(1);
+		expect(capturedOptions[0].version).toBeUndefined();
+	});
+
+	it("does not set error blob for user worker errors", async ({ expect }) => {
+		const userError = new Error("user code bug");
+		const ctx = createGatewayCtx(async () => {
+			throw userError;
+		});
+		const { env, analyticsEvents } = createGatewayEnv();
+
+		await expect(
+			routerWorker.fetch(new Request("https://example.com"), env, ctx)
+		).rejects.toThrow(userError);
+
+		expect(analyticsEvents).toHaveLength(1);
+		// blob3 (error) should not be set for user worker errors
+		expect(analyticsEvents[0].blobs?.[2]).toBeUndefined();
+	});
+
+	it("sets error blob for platform errors from inner", async ({ expect }) => {
+		const platformError = new RouterPlatformError(new Error("platform boom"));
+		const ctx = createGatewayCtx(async () => {
+			throw platformError;
+		});
+		const { env, analyticsEvents } = createGatewayEnv();
+
+		await expect(
+			routerWorker.fetch(new Request("https://example.com"), env, ctx)
+		).rejects.toThrow(RouterPlatformError);
+
+		expect(analyticsEvents).toHaveLength(1);
+		expect(analyticsEvents[0].blobs?.[2]).toBe("platform boom");
+	});
+
+	it("sets error blob for outer-originated errors", async ({ expect }) => {
+		const ctx = {
+			exports: {
+				RouterInnerEntrypoint() {
+					throw new Error("export setup failed");
+				},
+			},
+			waitUntil() {},
+			passThroughOnException() {},
+		} as unknown as ExecutionContext;
+		const { env, analyticsEvents } = createGatewayEnv();
+
+		await expect(
+			routerWorker.fetch(new Request("https://example.com"), env, ctx)
+		).rejects.toThrow("export setup failed");
+
+		expect(analyticsEvents).toHaveLength(1);
+		expect(analyticsEvents[0].blobs?.[2]).toBe("export setup failed");
+	});
+});
+
+// ============================================================
+// Inner entrypoint analytics tests
+// ============================================================
+
+describe("inner entrypoint analytics", () => {
+	it("writes entrypoint = Inner and cohort from ctx.version", async ({
+		expect,
+	}) => {
+		const analyticsEvents: ReadyAnalyticsEvent[] = [];
+		const request = new Request("https://example.com");
+		const ctx = Object.assign(createExecutionContext(), {
+			version: { cohort: "ent" },
+			props: { timeToHandoff: 3 },
+		});
+
+		const env = {
+			CONFIG: {
+				has_user_worker: false,
+				account_id: 123,
+				script_id: 456,
+			},
+			COLO_METADATA: {
+				coloId: 1,
+				metalId: 2,
+				coloTier: 1,
+				coloRegion: "WEUR",
+			},
+			VERSION_METADATA: { tag: "v1" },
+			ANALYTICS: {
+				logEvent(event: ReadyAnalyticsEvent) {
+					analyticsEvents.push(event);
+				},
+			},
+			ASSET_WORKER: {
+				async fetch() {
+					return new Response("ok");
+				},
+				async unstable_canFetch() {
+					return true;
+				},
+			},
+		} as unknown as Env;
+
+		await fetchFromInnerEntrypoint(request, env, ctx);
+
+		expect(analyticsEvents).toHaveLength(1);
+		expect(analyticsEvents[0].doubles?.[8]).toBeGreaterThanOrEqual(0); // double9 = timeToDispatch
+		expect(analyticsEvents[0].doubles?.[9]).toBe(EntrypointType.Inner); // double10 = entrypoint
+		expect(analyticsEvents[0].doubles?.[10]).toBe(3); // double11 = timeToHandoff
+		expect(analyticsEvents[0].blobs?.[8]).toBe("ent"); // blob9 = cohort
+	});
+
+	it("writes cohort as 'unknown' when ctx.version has no cohort", async ({
+		expect,
+	}) => {
+		const analyticsEvents: ReadyAnalyticsEvent[] = [];
+		const request = new Request("https://example.com");
+		const ctx = createExecutionContext();
+
+		const env = {
+			CONFIG: {
+				has_user_worker: false,
+				account_id: 123,
+				script_id: 456,
+			},
+			COLO_METADATA: {
+				coloId: 1,
+				metalId: 2,
+				coloTier: 1,
+				coloRegion: "WEUR",
+			},
+			VERSION_METADATA: { tag: "v1" },
+			ANALYTICS: {
+				logEvent(event: ReadyAnalyticsEvent) {
+					analyticsEvents.push(event);
+				},
+			},
+			ASSET_WORKER: {
+				async fetch() {
+					return new Response("ok");
+				},
+				async unstable_canFetch() {
+					return true;
+				},
+			},
+		} as unknown as Env;
+
+		await fetchFromInnerEntrypoint(request, env, ctx);
+
+		expect(analyticsEvents).toHaveLength(1);
+		expect(analyticsEvents[0].doubles?.[8]).toBeGreaterThanOrEqual(0); // double9 = timeToDispatch
+		expect(analyticsEvents[0].doubles?.[9]).toBe(EntrypointType.Inner); // double10 = entrypoint
+		expect(analyticsEvents[0].doubles?.[10]).toBe(-1); // double11 = timeToHandoff (not passed)
+		expect(analyticsEvents[0].blobs?.[8]).toBe("unknown"); // blob9 = cohort
 	});
 });
