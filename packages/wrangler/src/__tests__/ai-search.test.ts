@@ -236,6 +236,16 @@ describe("ai-search commands", () => {
 			expect(parsed).toEqual([MOCK_INSTANCE]);
 		});
 
+		it("should not print beta status banner when --json is passed", async ({
+			expect,
+		}) => {
+			mockListInstances([MOCK_INSTANCE]);
+			await runWrangler("ai-search list --json");
+			// The beta/open-beta statusMessage must not appear in stderr when
+			// printBanner returns false (i.e. when --json suppresses the banner).
+			expect(std.warn).not.toContain("open beta");
+		});
+
 		it("should output empty JSON array when no instances exist with --json", async ({
 			expect,
 		}) => {
