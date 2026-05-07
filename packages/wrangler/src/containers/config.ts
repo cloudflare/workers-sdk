@@ -170,15 +170,13 @@ export const getNormalizedContainerOptions = async (
 			};
 		}
 
-		const maybeDockerfile = isDockerfile(container.image, config.configPath);
+		const image = container.image;
+		const maybeDockerfile = isDockerfile(image, config.configPath);
 		if (maybeDockerfile) {
 			// these should have been resolved to absolute paths by the config validation
-			assert(
-				path.isAbsolute(container.image),
-				"Dockerfile path should be absolute"
-			);
-			const imageBuildContext =
-				container.image_build_context ?? dirname(container.image);
+			assert(image !== undefined, "container image should be defined");
+			assert(path.isAbsolute(image), "Dockerfile path should be absolute");
+			const imageBuildContext = container.image_build_context ?? dirname(image);
 			assert(
 				path.isAbsolute(imageBuildContext),
 				"resolved image_build_context should be defined"
@@ -186,20 +184,29 @@ export const getNormalizedContainerOptions = async (
 			normalizedContainers.push({
 				...shared,
 				...instanceTypeOrLimits,
-				dockerfile: container.image,
+				dockerfile: image,
 				image_build_context: imageBuildContext,
 				image_vars: container.image_vars,
 			});
-		} else {
+		} else if (image) {
 			normalizedContainers.push({
 				...shared,
 				...instanceTypeOrLimits,
 				image_uri: args.dryRun
-					? container.image
-					: resolveImageName(
-							await getOrSelectAccountId(config),
-							container.image
-						), // if it is not a dockerfile, it must be an image uri or have thrown an error
+					? image
+					: resolveImageName(await getOrSelectAccountId(config), image), // if it is not a dockerfile, it must be an image uri or have thrown an error
+			});
+		} else {
+			// this should be enforced by the config validation
+			assert(
+				container.rollout_kind === "none",
+				"container image should be defined"
+			);
+
+			normalizedContainers.push({
+				...shared,
+				...instanceTypeOrLimits,
+				image: undefined,
 			});
 		}
 	}

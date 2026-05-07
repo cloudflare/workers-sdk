@@ -112,7 +112,7 @@ export type ContainerApp = {
 	/**
 	 * The path to a Dockerfile, or an image URI for the Cloudflare registry.
 	 */
-	image: string;
+	image?: string;
 
 	/**
 	 * Build context of the application.

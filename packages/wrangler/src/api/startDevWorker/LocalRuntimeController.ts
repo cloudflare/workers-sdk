@@ -7,7 +7,7 @@ import {
 	prepareContainerImagesForDev,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
-import { getDockerPath } from "@cloudflare/workers-utils";
+import { getDockerPath, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { buildPublicUrl, Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
@@ -502,7 +502,7 @@ export async function getContainerDevOptions(
 					containerBuildId
 				),
 			});
-		} else {
+		} else if ("dockerfile" in container) {
 			containers.push({
 				dockerfile: container.dockerfile,
 				image_build_context: container.image_build_context,
@@ -513,6 +513,11 @@ export async function getContainerDevOptions(
 					containerBuildId
 				),
 			});
+		} else {
+			throw new UserError(
+				`The container ${container.name} is missing an image. Set "containers.image" to a Dockerfile path or registry image URI.`,
+				{ telemetryMessage: "containers dev image missing" }
+			);
 		}
 	}
 	return containers;

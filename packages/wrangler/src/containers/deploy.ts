@@ -83,7 +83,7 @@ export async function deployContainers(
 		config.durable_objects.bindings.map((b) => b.class_name)
 	);
 
-	let imageRef: ImageRef;
+	let imageRef: ImageRef | undefined;
 	let maybeVersionInfo: ApiVersion | undefined;
 	let maybeAllDurableObjects: DurableObjectNamespace[] | undefined;
 
@@ -95,8 +95,10 @@ export async function deployContainers(
 				false, // dry runs will have already exited by this point
 				pathToDocker
 			);
-		} else {
+		} else if ("image_uri" in container) {
 			imageRef = { newTag: container.image_uri };
+		} else {
+			imageRef = undefined;
 		}
 
 		// Only bound DOs are returned in version info. For unbound DOs, we need to list all DO namespaces.
@@ -354,9 +356,34 @@ function formatContainerSnippetForDisplay<
 	);
 }
 
+function validateDurableObjectNamespace(
+	prevApp: Application,
+	containerName: string,
+	durableObjectNamespaceId: string
+) {
+	if (!prevApp.durable_objects?.namespace_id) {
+		throw new FatalError(
+			"The previous deploy of this container application was not associated with a durable object",
+			{
+				telemetryMessage: "containers deploy previous durable object missing",
+			}
+		);
+	}
+
+	if (prevApp.durable_objects.namespace_id !== durableObjectNamespaceId) {
+		throw new UserError(
+			`There is already an application with the name ${containerName} deployed that is associated with a different durable object namespace (${prevApp.durable_objects.namespace_id}). Either change the container name or delete the existing application first.`,
+			{
+				telemetryMessage:
+					"trying to redeploy container to different durable object",
+			}
+		);
+	}
+}
+
 export async function apply(
 	args: {
-		imageRef: ImageRef;
+		imageRef?: ImageRef;
 		durable_object_namespace_id: string;
 	},
 	containerConfig: ContainerNormalizedConfig,
@@ -381,6 +408,29 @@ export async function apply(
 		(app) => app.name === containerConfig.name
 	);
 
+	const existingApp = prevApp !== undefined && prevApp !== null;
+
+	log(dim("Container application changes\n"));
+
+	if (existingApp && containerConfig.rollout_kind === "none") {
+		validateDurableObjectNamespace(
+			prevApp,
+			containerConfig.name,
+			args.durable_object_namespace_id
+		);
+		updateStatus(`${brandColor.underline("SKIP")} ${prevApp.name}`, false);
+		newline();
+		endSection("Applied changes");
+		return;
+	}
+
+	if (args.imageRef === undefined) {
+		throw new UserError(
+			`The container ${containerConfig.name} is missing an image. Set "containers.image" to a Dockerfile path or registry image URI.`,
+			{ telemetryMessage: "containers deploy image missing" }
+		);
+	}
+
 	// if there is a remote digest, it indicates that the image already exists in the managed registry
 	// so we should try and use the tag from the previous deployment if possible.
 	// however deployments that fail after push may result in no previous app but the image still existing
@@ -388,7 +438,6 @@ export async function apply(
 		"remoteDigest" in args.imageRef
 			? (prevApp?.configuration.image ?? args.imageRef.remoteDigest)
 			: args.imageRef.newTag;
-	log(dim("Container application changes\n"));
 
 	const accountId = await getOrSelectAccountId(config);
 
@@ -406,26 +455,12 @@ export async function apply(
 		containerConfig.name
 	);
 
-	if (prevApp !== undefined && prevApp !== null) {
-		if (!prevApp.durable_objects?.namespace_id) {
-			throw new FatalError(
-				"The previous deploy of this container application was not associated with a durable object",
-				{
-					telemetryMessage: "containers deploy previous durable object missing",
-				}
-			);
-		}
-		if (
-			prevApp.durable_objects.namespace_id !== args.durable_object_namespace_id
-		) {
-			throw new UserError(
-				`There is already an application with the name ${containerConfig.name} deployed that is associated with a different durable object namespace (${prevApp.durable_objects.namespace_id}). Either change the container name or delete the existing application first.`,
-				{
-					telemetryMessage:
-						"trying to redeploy container to different durable object",
-				}
-			);
-		}
+	if (existingApp) {
+		validateDurableObjectNamespace(
+			prevApp,
+			containerConfig.name,
+			args.durable_object_namespace_id
+		);
 
 		// we need to sort the objects (by key) because the diff algorithm works with lines
 		const normalisedPrevApp = sortObjectRecursive<ModifyApplicationRequestBody>(
@@ -469,22 +504,17 @@ export async function apply(
 		diff.print();
 		newline();
 
-		if (containerConfig.rollout_kind !== "none") {
-			await doAction({
-				action: "modify",
-				application: modifyReq,
-				id: prevApp.id,
-				name: prevApp.name,
-				rollout_step_percentage: containerConfig.rollout_step_percentage,
-				rollout_kind:
-					containerConfig.rollout_kind == "full_manual"
-						? CreateApplicationRolloutRequest.kind.FULL_MANUAL
-						: CreateApplicationRolloutRequest.kind.FULL_AUTO,
-			});
-		} else {
-			log("Skipping application rollout");
-			newline();
-		}
+		await doAction({
+			action: "modify",
+			application: modifyReq,
+			id: prevApp.id,
+			name: prevApp.name,
+			rollout_step_percentage: containerConfig.rollout_step_percentage,
+			rollout_kind:
+				containerConfig.rollout_kind == "full_manual"
+					? CreateApplicationRolloutRequest.kind.FULL_MANUAL
+					: CreateApplicationRolloutRequest.kind.FULL_AUTO,
+		});
 	} else {
 		// **************
 		// *** CREATE ***

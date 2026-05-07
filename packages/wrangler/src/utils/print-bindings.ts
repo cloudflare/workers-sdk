@@ -922,7 +922,7 @@ export function printBindings(
 
 		log(
 			`${containersTitle}\n${containers
-				.map((c) => `- ${c.name} (${c.image})`)
+				.map((c) => `- ${c.name}${c.image ? ` (${c.image})` : ""}`)
 				.join("\n")}`
 		);
 		log("");

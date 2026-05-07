@@ -2809,6 +2809,35 @@ describe("normalizeAndValidateConfig()", () => {
 				}
 			});
 
+			it("should allow rollout_kind none without an image", ({ expect }) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						containers: [
+							{
+								class_name: "test-class",
+								rollout_kind: "none",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "test-class",
+						rollout_kind: "none",
+						name: "test-worker-name-test-class",
+						image: undefined,
+						image_build_context: undefined,
+					},
+				]);
+			});
+
 			it("should error for invalid container app fields", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
