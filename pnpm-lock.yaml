@@ -1191,6 +1191,9 @@ importers:
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+      wasm-module-dep:
+        specifier: file:./module-resolution/vendor/wasm-module-dep
+        version: file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/wasm-module-dep
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -14797,6 +14800,9 @@ packages:
   warning@4.0.3:
     resolution: {integrity: sha512-rpJyN222KWIvHJ/F53XSZv0Zl/accqHR8et1kpaMTD/fLCRxtV8iX8czMzY7sVZupTI3zcUTg8eycS2kNF9l6w==}
 
+  wasm-module-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/wasm-module-dep:
+    resolution: {directory: fixtures/vitest-pool-workers-examples/module-resolution/vendor/wasm-module-dep, type: directory}
+
   web-streams-polyfill@4.0.0-beta.3:
     resolution: {integrity: sha512-QW95TCTaHmsYfHDybGMwO5IJIM93I/6vTRk+daHTWFPhwh+C8Cg7j7XyKrwrj8Ib6vYXe0ocYNrmzY4xAAN6ug==}
     engines: {node: '>= 14'}
@@ -26320,6 +26326,8 @@ snapshots:
   warning@4.0.3:
     dependencies:
       loose-envify: 1.4.0
+
+  wasm-module-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/wasm-module-dep: {}
 
   web-streams-polyfill@4.0.0-beta.3: {}
 

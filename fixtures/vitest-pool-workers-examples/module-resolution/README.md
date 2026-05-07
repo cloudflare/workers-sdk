@@ -3,6 +3,7 @@
 This fixture demonstrates that the Vitest integration correctly resolves modules, including:
 
 - A CommonJS package that requires a directory rather than a specific file.
+- An ESM dependency that imports `*.wasm?module` from the same directory.
 - A package without a main entrypoint or with browser field mapping, handled via [Dependency Pre-Bundling](#dependency-pre-bundling).
 
 ## Dependency Pre-Bundling

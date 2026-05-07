@@ -243,17 +243,33 @@ export class CloudflarePoolWorker implements PoolWorker {
 					const maybeRule = compiledRules.find((rule) =>
 						testRegExps(rule.include, specifier)
 					);
-					// Skip if specifier already has query params (e.g. `?raw`), letting Vite handle it.
-					if (maybeRule !== undefined && !specifier.includes("?")) {
-						const externalize =
-							path.join(this.options.project.config.root, specifier) +
-							`?mf_vitest_force=${maybeRule.type}`;
+					const isWasmModuleSpecifier =
+						maybeRule?.type === "CompiledWasm" &&
+						specifier.endsWith(".wasm?module");
+					// Skip most query params (e.g. `?raw`), letting Vite handle them.
+					// `.wasm?module` is an alias for a compiled WebAssembly module, so
+					// we still need to externalize it through the fallback service.
+					if (
+						maybeRule !== undefined &&
+						(!specifier.includes("?") || isWasmModuleSpecifier)
+					) {
+						// Vite uses `/@fs/` for absolute dependency paths outside the
+						// project root. Convert those back to real filesystem paths.
+						let externalize = specifier.startsWith("/@fs/")
+							? specifier.substring("/@fs".length)
+							: path.join(this.options.project.config.root, specifier);
+
+						if (isWasmModuleSpecifier) {
+							externalize = externalize.slice(0, -"?module".length);
+						}
 
 						return this.socket.send(
 							structuredSerializableStringify({
 								t: "s",
 								i: d.i,
-								r: { externalize },
+								r: {
+									externalize: `${externalize}?mf_vitest_force=${maybeRule.type}`,
+								},
 							})
 						);
 					}
