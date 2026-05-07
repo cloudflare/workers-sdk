@@ -10,6 +10,7 @@ import { getMetricsUsageHeaders } from "../../metrics";
 import type { StartDevWorkerOptions } from "../../api";
 import type {
 	CfModule,
+	CfPlacement,
 	CfTailConsumer,
 	CfUserLimits,
 	CfWorkerInit,
@@ -61,6 +62,7 @@ export interface VersionDetails {
 			etag: string;
 			handlers: string[];
 			placement_mode?: "smart";
+			placement?: CfPlacement;
 			last_deployed_from: string;
 		};
 		script_runtime: {
@@ -180,9 +182,10 @@ export async function copyWorkerVersionWithNewSecrets({
 		keepBindings,
 		logpush: scriptSettings.logpush,
 		placement:
-			versionInfo.resources.script.placement_mode === "smart"
+			versionInfo.resources.script.placement ??
+			(versionInfo.resources.script.placement_mode === "smart"
 				? { mode: "smart" }
-				: undefined,
+				: undefined),
 		tail_consumers: scriptSettings.tail_consumers ?? undefined,
 		limits: versionInfo.resources.script_runtime.limits,
 		annotations: {
