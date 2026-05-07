@@ -387,7 +387,7 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 	 * When a cohort is provided, the runtime routes the inner entrypoint
 	 * to the version assigned to that cohort in the current deployment.
 	 */
-	private getInnerEntrypoint(cohort?: string | null): AssetWorkerMethods {
+	private getInnerEntrypoint(_cohort?: string | null): AssetWorkerMethods {
 		const loopbackCtx = this.ctx as AssetWorkerContext;
 		const entrypoint = loopbackCtx.exports?.AssetWorkerInner;
 		if (entrypoint === undefined) {
