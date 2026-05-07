@@ -372,10 +372,12 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 	 */
 	private async getCohort(): Promise<string | null> {
 		if (this.resolvedCohort === undefined) {
-			this.resolvedCohort = await lookupCohort(
-				this.env,
-				this.env.CONFIG?.account_id
-			);
+			// TODO: Hardcoding temporarily for latency testing.
+			// this.resolvedCohort = await lookupCohort(
+			// 	this.env,
+			// 	this.env.CONFIG?.account_id
+			// );
+			this.resolvedCohort = "ent";
 		}
 		return this.resolvedCohort;
 	}
