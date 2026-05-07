@@ -7081,7 +7081,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				  - "env.staging" environment configuration
 				    - The following vars exist at the top level, but not on "env.staging.vars".
-				      This is not what you probably want, since "vars" configuration is not inherited by environments.
+				      This is probably not what you want, since "vars" configuration is not inherited by environments.
 				      Please add these vars to "env.staging.vars":
 				      - DEV_ACCOUNT_ID
 				      - DEV_ACCOUNT_INTERNAL_ID"
@@ -7414,7 +7414,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 						  - "env.ENV1" environment configuration
 						    - The following define entries exist at the top level, but not on "env.ENV1.define".
-						      This is not what you probably want, since "define" configuration is not inherited by environments.
+						      This is probably not what you want, since "define" configuration is not inherited by environments.
 						      Please add these entries to "env.ENV1.define":
 						      - ghi
 						    - "xyz" exists on "env.ENV1", but not on the top level.

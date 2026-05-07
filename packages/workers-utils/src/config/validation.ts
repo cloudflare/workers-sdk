@@ -2292,7 +2292,7 @@ const validateDefines =
 				if (missingDefines.length > 0) {
 					diagnostics.warnings.push(
 						`The following define entries exist at the top level, but not on "${fieldPath}".\n` +
-							`This is not what you probably want, since "define" configuration is not inherited by environments.\n` +
+							`This is probably not what you want, since "define" configuration is not inherited by environments.\n` +
 							`Please add these entries to "env.${envName}.define":\n` +
 							missingDefines.map((varName) => `- ${varName}`).join("\n")
 					);
@@ -2351,7 +2351,7 @@ const validateVars =
 				if (missingVars.length > 0) {
 					diagnostics.warnings.push(
 						`The following vars exist at the top level, but not on "${fieldPath}".\n` +
-							`This is not what you probably want, since "vars" configuration is not inherited by environments.\n` +
+							`This is probably not what you want, since "vars" configuration is not inherited by environments.\n` +
 							`Please add these vars to "env.${envName}.vars":\n` +
 							missingVars.map((varName) => `- ${varName}`).join("\n")
 					);
