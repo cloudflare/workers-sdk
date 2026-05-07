@@ -14,6 +14,7 @@
 		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@microlabs/otel-cf-workers": "1.0.0-rc.45",
+		"@msw/cloudflare": "https://pkg.pr.new/mswjs/cloudflare/@msw/cloudflare@beta",
 		"@types/mime-types": "^3.0.1",
 		"@types/node": "catalog:default",
 		"@types/nunjucks": "^3.2.6",
