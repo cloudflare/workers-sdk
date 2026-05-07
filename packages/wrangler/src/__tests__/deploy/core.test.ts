@@ -533,23 +533,6 @@ describe("deploy", () => {
 		`);
 	});
 
-	it("should error helpfully if pages_build_output_dir is set in wrangler.toml when --x-autoconfig=false", async ({
-		expect,
-	}) => {
-		writeWranglerConfig({
-			pages_build_output_dir: "public",
-			name: "test-name",
-		});
-		await expect(
-			runWrangler("deploy --x-autoconfig=false")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`
-			[Error: It looks like you've run a Workers-specific command in a Pages project.
-			For Pages, please run \`wrangler pages deploy\` instead.]
-		`
-		);
-	});
-
 	it("should error helpfully if pages_build_output_dir is set in wrangler.toml and --x-autoconfig is provided", async ({
 		expect,
 	}) => {
@@ -1146,6 +1129,16 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
+		describe("legacy", () => {
+			it("uses the script name when no environment is specified", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					useServiceEnvironments: false,
+				});
 		describe("legacy", () => {
 			it("uses the script name when no environment is specified", async ({
 				expect,

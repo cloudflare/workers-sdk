@@ -11,42 +11,36 @@ import {
 	publishRoutes,
 	renderRoute,
 	updateQueueConsumers,
-	validateRoutes,
 } from "../deploy/deploy";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { retryOnAPIFailure } from "../utils/retry";
 import { getZoneForRoute } from "../zones";
-import type { AssetsOptions } from "../assets";
 import type { RouteObject } from "../deploy/deploy";
 import type { Config, Route } from "@cloudflare/workers-utils";
 
 type Props = {
 	config: Config;
-	accountId: string | undefined;
-	name: string | undefined;
+	accountId: string;
+	scriptName: string;
+	/** may include env name */
+	workerName: string;
 	env: string | undefined;
-	triggers: string[] | undefined;
-	routes: Route[] | undefined;
-	useServiceEnvironments: boolean | undefined;
-	dryRun: boolean | undefined;
-	assetsOptions: AssetsOptions | undefined;
+	crons: string[] | undefined;
+	routes: Route[];
+	useServiceEnvironments: boolean;
 	firstDeploy: boolean;
 };
 
 export default async function triggersDeploy(
 	props: Props
 ): Promise<string[] | void> {
-	const { config, accountId, name: scriptName } = props;
+	const { config, accountId, scriptName, workerName, routes, crons } = props;
 
-	const schedules = props.triggers || config.triggers?.crons;
-	const routes =
-		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 	const routesOnly: Array<Route> = [];
 	const customDomainsOnly: Array<RouteObject> = [];
-	validateRoutes(routes, props.assetsOptions);
+
 	for (const route of routes) {
 		if (typeof route !== "string" && route.custom_domain) {
 			customDomainsOnly.push(route);
@@ -55,53 +49,22 @@ export default async function triggersDeploy(
 		}
 	}
 
-	if (!scriptName) {
-		throw new UserError(
-			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-			{ telemetryMessage: "triggers deploy missing worker name" }
-		);
-	}
-
 	const envName = props.env ?? "production";
 
 	const start = Date.now();
-	const useServiceEnvironments = Boolean(
-		props.useServiceEnvironments && props.env
-	);
-	const workerName = useServiceEnvironments
-		? `${scriptName} (${envName})`
-		: scriptName;
-	const workerUrl = useServiceEnvironments
+
+	const workerUrl = props.useServiceEnvironments
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
-
-	if (!props.dryRun) {
-		await ensureQueuesExistByConfig(config);
-	}
-
-	if (props.dryRun) {
-		logger.log(`--dry-run: exiting now.`);
-		return;
-	}
-
-	if (!accountId) {
-		throw new UserError("Missing accountId", {
-			telemetryMessage: "triggers deploy missing account id",
-		});
-	}
 
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<string[]>[] = [];
 
 	const { wantWorkersDev, workersDevInSync } = await subdomainDeploy(
 		props,
-		accountId,
-		scriptName,
 		envName,
 		workerUrl,
-		routes,
-		deployments,
-		props.firstDeploy
+		deployments
 	);
 
 	if (!wantWorkersDev && workersDevInSync && routes.length !== 0) {
@@ -204,7 +167,7 @@ export default async function triggersDeploy(
 			publishRoutes(config, routesOnly, {
 				workerUrl,
 				scriptName,
-				useServiceEnvironments,
+				useServiceEnvironments: props.useServiceEnvironments,
 				accountId,
 			}).then(() => {
 				if (routesOnly.length > 10) {
@@ -228,16 +191,16 @@ export default async function triggersDeploy(
 	// Configure any schedules for the script.
 	// If schedules is not defined then we just leave whatever is previously deployed alone.
 	// If it is an empty array we will remove all schedules.
-	if (schedules) {
+	if (crons) {
 		deployments.push(
 			fetchResult(config, `${workerUrl}/schedules`, {
 				// Note: PUT will override previous schedules on this script.
 				method: "PUT",
-				body: JSON.stringify(schedules.map((cron) => ({ cron }))),
+				body: JSON.stringify(crons.map((cron) => ({ cron }))),
 				headers: {
 					"Content-Type": "application/json",
 				},
-			}).then(() => schedules.map((trigger) => `schedule: ${trigger}`))
+			}).then(() => crons.map((cron) => `schedule: ${cron}`))
 		);
 	}
 
@@ -358,11 +321,8 @@ export function getSubdomainValuesAPIMock(
 
 async function validateSubdomainMixedState(
 	props: Props,
-	accountId: string,
-	scriptName: string,
 	before: { workers_dev: boolean; preview_urls: boolean },
-	after: { workers_dev: boolean; preview_urls: boolean },
-	firstDeploy: boolean
+	after: { workers_dev: boolean; preview_urls: boolean }
 ): Promise<{
 	workers_dev: boolean;
 	preview_urls: boolean;
@@ -389,7 +349,7 @@ async function validateSubdomainMixedState(
 	}
 
 	// Early return if this is the first deploy
-	if (firstDeploy) {
+	if (props.firstDeploy) {
 		return after;
 	}
 
@@ -400,10 +360,10 @@ async function validateSubdomainMixedState(
 
 	const userSubdomain = await getWorkersDevSubdomain(
 		config,
-		accountId,
+		props.accountId,
 		config.configPath
 	);
-	const previewUrl = `https://<VERSION_PREFIX>-${scriptName}.${userSubdomain}`;
+	const previewUrl = `https://<VERSION_PREFIX>-${props.scriptName}.${userSubdomain}`;
 
 	// Scenario 1: User disables workers.dev while having preview URLs enabled
 	if (!after.workers_dev && after.preview_urls) {
@@ -436,20 +396,16 @@ async function validateSubdomainMixedState(
 
 async function subdomainDeploy(
 	props: Props,
-	accountId: string,
-	scriptName: string,
 	envName: string,
 	workerUrl: string,
-	routes: Route[],
-	deployments: Array<Promise<string[]>>,
-	firstDeploy: boolean
+	deployments: Array<Promise<string[]>>
 ) {
 	const { config } = props;
 
 	// Get desired subdomain enablement status.
 
 	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
-		getSubdomainValues(config.workers_dev, config.preview_urls, routes);
+		getSubdomainValues(config.workers_dev, config.preview_urls, props.routes);
 
 	// workers.dev URL is only set if we want to deploy to workers.dev.
 
@@ -457,13 +413,12 @@ async function subdomainDeploy(
 	if (wantWorkersDev) {
 		const userSubdomain = await getWorkersDevSubdomain(
 			config,
-			accountId,
+			props.accountId,
 			config.configPath
 		);
-		workersDevURL =
-			!props.useServiceEnvironments || !props.env
-				? `${scriptName}.${userSubdomain}`
-				: `${envName}.${scriptName}.${userSubdomain}`;
+		workersDevURL = !props.useServiceEnvironments
+			? `${props.scriptName}.${userSubdomain}`
+			: `${envName}.${props.scriptName}.${userSubdomain}`;
 	}
 
 	// Get current subdomain enablement status.
@@ -497,7 +452,7 @@ async function subdomainDeploy(
 	// Warn about mismatching config and current values.
 
 	if (
-		!firstDeploy &&
+		!props.firstDeploy &&
 		config.workers_dev == undefined &&
 		after.enabled !== before.enabled
 	) {
@@ -517,7 +472,7 @@ async function subdomainDeploy(
 	}
 
 	if (
-		!firstDeploy &&
+		!props.firstDeploy &&
 		config.preview_urls == undefined &&
 		after.previews_enabled !== before.previews_enabled
 	) {
@@ -540,11 +495,8 @@ async function subdomainDeploy(
 
 	await validateSubdomainMixedState(
 		props,
-		accountId,
-		scriptName,
 		{ workers_dev: before.enabled, preview_urls: before.previews_enabled },
-		{ workers_dev: after.enabled, preview_urls: after.previews_enabled },
-		firstDeploy
+		{ workers_dev: after.enabled, preview_urls: after.previews_enabled }
 	);
 
 	// Done.
