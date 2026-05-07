@@ -399,7 +399,8 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		}
 		return entrypoint({
 			props: { traceContext: this.env.JAEGER.getSpanContext() },
-			...(cohort ? { version: { cohort } } : {}),
+			// TODO: Hardcoding temporarily for latency testing.
+			// ...(cohort ? { version: { cohort } } : {}),
 		});
 	}
 
