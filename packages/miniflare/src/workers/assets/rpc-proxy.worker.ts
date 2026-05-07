@@ -26,6 +26,13 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 		return this.env.ROUTER_WORKER.fetch(request);
 	}
 
+	async scheduled(controller: ScheduledController) {
+		await this.env.USER_WORKER.scheduled({
+			scheduledTime: new Date(controller.scheduledTime),
+			cron: controller.cron,
+		});
+	}
+
 	tail(events: TraceItem[]) {
 		// Temporary workaround: the tail events is not serializable over capnproto yet
 		// But they are effectively JSON, so we are serializing them to JSON and parsing it back to make it transferable.
