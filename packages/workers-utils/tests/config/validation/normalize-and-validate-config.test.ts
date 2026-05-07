@@ -3781,7 +3781,9 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should warn if delivery_delay is set on a queue producer", () => {
+			it("should warn if delivery_delay is set on a queue producer", ({
+				expect,
+			}) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
 						queues: {
@@ -3808,7 +3810,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - The \\"delivery_delay\\" field in \\"queues.producers[1]\\" is deprecated and has no effect. Queue-level settings should be configured using \\"wrangler queues update\\" instead. This setting will be removed in a future version."
+					  - The "delivery_delay" field in "queues.producers[1]" is deprecated and has no effect. Queue-level settings should be configured using "wrangler queues update" instead. This setting will be removed in a future version."
 				`);
 			});
 		});
