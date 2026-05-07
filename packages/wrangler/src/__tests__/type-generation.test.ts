@@ -1690,6 +1690,41 @@ describe("generate types - CLI", () => {
 		expect(out).not.toContain("ANOTHER_SECRET");
 	});
 
+	it("should not report stale types when --env-file is used and .dev.vars exists (--check)", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				vars: {
+					myTomlVarA: "A from wrangler jsonc",
+				},
+			}),
+			"utf-8"
+		);
+
+		// Create .dev.vars with secrets that should NOT appear
+		const devVarsContent = dedent`
+			SECRET_FROM_DEV_VARS="should not appear"
+		`;
+		fs.writeFileSync(".dev.vars", devVarsContent, "utf8");
+
+		// Create an empty env file (cross-platform alternative to /dev/null)
+		fs.writeFileSync(".env.empty", "", "utf8");
+
+		// Generate types with --env-file pointing at an empty file (no .dev.vars loading)
+		await runWrangler("types --include-runtime=false --env-file=.env.empty");
+
+		// Run --check with --env-file pointing at empty file - should not report stale
+		await runWrangler(
+			"types --check --include-runtime=false --env-file=.env.empty"
+		);
+
+		expect(std.out).toContain(
+			"Types at worker-configuration.d.ts are up to date."
+		);
+	});
+
 	it("should include secret keys from .env, if there is no .dev.vars", async ({
 		expect,
 	}) => {
