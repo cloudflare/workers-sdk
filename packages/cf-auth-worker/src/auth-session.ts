@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { WRANGLER_CLIENT_HEADER } from "./protocol";
+import { WRANGLER_CLIENT_HEADER, WRANGLER_RELAY_SUBPROTOCOL } from "./protocol";
 
 /**
  * Hard upper bound on how long a session may stay open. Reduced from the
@@ -72,12 +72,13 @@ export class AuthSession extends DurableObject<Env> {
 	/**
 	 * Accepts a WebSocket upgrade from Wrangler. The request is already
 	 * pre-validated by the Worker fetch handler (state shape, GET-only,
-	 * no `Origin`, `Sec-Wrangler-Client` present and bounded). We re-read
-	 * the wsToken here because the DO is the security boundary that
-	 * persists state.
+	 * no `Origin`, `Sec-Wrangler-Client` present and bounded, subprotocol
+	 * advertised). We re-read the wsToken here because the DO is the
+	 * security boundary that persists state.
 	 */
 	private async handleWebSocketUpgrade(request: Request): Promise<Response> {
-		if (request.headers.get("Upgrade") !== "websocket") {
+		// Case-insensitive per RFC 6455 §1.3 (REVIEW-17452 #35).
+		if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
 			return new Response(null, { status: 404 });
 		}
 
@@ -104,15 +105,29 @@ export class AuthSession extends DurableObject<Env> {
 		this.ctx.acceptWebSocket(pair[1]);
 
 		// Persist the metadata atomically with the alarm — the alarm is the
-		// safety net if Wrangler never receives a callback. Awaited so the
-		// state is durably written before we return the upgrade response.
-		await this.ctx.storage.put({
-			[STORAGE_KEYS.wsTokenHash]: wsTokenHash,
-			[STORAGE_KEYS.connectedAt]: Date.now(),
-		});
-		await this.ctx.storage.setAlarm(Date.now() + SESSION_TTL_MS);
+		// safety net if Wrangler never receives a callback. Wrapped in
+		// try/catch so a transient storage failure doesn't abort an
+		// otherwise valid upgrade (REVIEW-17452 #34): the WS pair is
+		// already accepted, and the worst case is that the alarm doesn't
+		// fire and the session lingers until DO eviction.
+		try {
+			await this.ctx.storage.put({
+				[STORAGE_KEYS.wsTokenHash]: wsTokenHash,
+				[STORAGE_KEYS.connectedAt]: Date.now(),
+			});
+			await this.ctx.storage.setAlarm(Date.now() + SESSION_TTL_MS);
+		} catch (err) {
+			console.error("auth-session: failed to persist session metadata", err);
+		}
 
-		return new Response(null, { status: 101, webSocket: pair[0] });
+		// Echo the negotiated subprotocol on the 101 response (RFC 6455
+		// §4.2.2). Wrangler asserts on this, so we must always send it
+		// when the upgrade succeeds (REVIEW-17452 #37).
+		return new Response(null, {
+			status: 101,
+			webSocket: pair[0],
+			headers: { "Sec-WebSocket-Protocol": WRANGLER_RELAY_SUBPROTOCOL },
+		});
 	}
 
 	/**
@@ -167,8 +182,16 @@ export class AuthSession extends DurableObject<Env> {
 		ws.close(1000, "Auth complete");
 
 		// Latch and clear the cleanup alarm — the session is finished.
-		await this.ctx.storage.put({ [STORAGE_KEYS.delivered]: true });
-		await this.ctx.storage.deleteAlarm();
+		// Wrapped in try/catch (REVIEW-17452 #34) because the dispatch has
+		// already happened and the alarm cleanup is opportunistic; a
+		// transient storage failure must not turn a successful login into
+		// a 5xx that triggers a localhost fallback on the Wrangler side.
+		try {
+			await this.ctx.storage.put({ [STORAGE_KEYS.delivered]: true });
+			await this.ctx.storage.deleteAlarm();
+		} catch (err) {
+			console.error("auth-session: failed to latch delivered/clear alarm", err);
+		}
 
 		// Tell the Worker whether this was a successful code dispatch so
 		// it can choose the right browser redirect. `error` or no `code`
@@ -206,15 +229,25 @@ export class AuthSession extends DurableObject<Env> {
 	/**
 	 * Alarm handler: clean up stale sessions that were never completed,
 	 * and emit an analytics event so we can monitor relay health and
-	 * abandonment rates (REVIEW-17452 #31).
+	 * abandonment rates (REVIEW-17452 #31). Storage reads/writes are all
+	 * wrapped in try/catch (REVIEW-17452 #34) so a transient backing-store
+	 * failure does not surface as an uncaught exception in the alarm
+	 * handler.
 	 */
 	async alarm(): Promise<void> {
 		const sockets = this.ctx.getWebSockets();
-		const hadCallback =
-			(await this.ctx.storage.get<true>(STORAGE_KEYS.delivered)) === true;
-		const connectedAt = await this.ctx.storage.get<number>(
-			STORAGE_KEYS.connectedAt
-		);
+
+		let hadCallback = false;
+		let connectedAt: number | undefined;
+		try {
+			hadCallback =
+				(await this.ctx.storage.get<true>(STORAGE_KEYS.delivered)) === true;
+			connectedAt = await this.ctx.storage.get<number>(
+				STORAGE_KEYS.connectedAt
+			);
+		} catch (err) {
+			console.error("auth-session: failed to read alarm metadata", err);
+		}
 		const ageMs = connectedAt ? Date.now() - connectedAt : 0;
 
 		for (const ws of sockets) {
@@ -226,17 +259,25 @@ export class AuthSession extends DurableObject<Env> {
 		// `state_hash` is included as a blob so we can dedupe replays
 		// without storing the raw state.
 		if (this.env.AUTH_SESSIONS_AE !== undefined) {
-			const stateName = this.ctx.id.name;
-			const stateHash = stateName ? await sha256Hex(stateName) : "";
-			this.env.AUTH_SESSIONS_AE.writeDataPoint({
-				blobs: ["session_expired", stateHash],
-				doubles: [ageMs, hadCallback ? 1 : 0],
-				indexes: [stateHash.slice(0, 32)],
-			});
+			try {
+				const stateName = this.ctx.id.name;
+				const stateHash = stateName ? await sha256Hex(stateName) : "";
+				this.env.AUTH_SESSIONS_AE.writeDataPoint({
+					blobs: ["session_expired", stateHash],
+					doubles: [ageMs, hadCallback ? 1 : 0],
+					indexes: [stateHash.slice(0, 32)],
+				});
+			} catch (err) {
+				console.error("auth-session: failed to write analytics event", err);
+			}
 		}
 
 		// Drop persistent state — the session is dead. The DO record itself
 		// will be garbage-collected by the runtime.
-		await this.ctx.storage.deleteAll();
+		try {
+			await this.ctx.storage.deleteAll();
+		} catch (err) {
+			console.error("auth-session: failed to clear storage on alarm", err);
+		}
 	}
 }

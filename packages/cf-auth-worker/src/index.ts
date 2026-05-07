@@ -4,6 +4,7 @@ import {
 	STATE_REGEX,
 	WRANGLER_CLIENT_HEADER,
 	WRANGLER_CLIENT_HEADER_MAX_LEN,
+	WRANGLER_RELAY_SUBPROTOCOL,
 } from "./protocol";
 
 export { AuthSession } from "./auth-session";
@@ -17,12 +18,19 @@ const CONSENT_DENIED_URL =
  * Hardened security headers attached to every browser-facing redirect from
  * `/callback`. Mitigates Referer-leakage of the OAuth `code` (REVIEW-17452
  * #5, #18) and prevents the redirect from being cached by intermediaries.
+ *
+ * SECURITY: do not add `Access-Control-Allow-Origin` or any other CORS
+ * header here. The relay never serves cross-origin XHR / fetch traffic, and
+ * a permissive CORS policy would silently undo several of the other
+ * defences (REVIEW-17452 #33). `Vary: Origin` is included so any future
+ * intermediary cache cannot conflate responses across `Origin` values.
  */
 const SECURITY_HEADERS = {
 	"Referrer-Policy": "no-referrer",
 	"Cache-Control": "no-store, private",
 	Pragma: "no-cache",
 	"X-Content-Type-Options": "nosniff",
+	Vary: "Origin",
 };
 
 /** Generic 404. Used for ALL error cases on relay paths so different
@@ -63,6 +71,26 @@ function buildSubrequestHeaders(request: Request): Headers {
 		}
 	}
 	return out;
+}
+
+/**
+ * Parse the `Sec-WebSocket-Protocol` header (a comma-separated list of
+ * client-offered subprotocols) and return `true` iff the wrangler-relay
+ * subprotocol is among them. Required on every legitimate Wrangler
+ * upgrade (REVIEW-17452 #37) — browsers cannot easily forge an arbitrary
+ * subprotocol on the `WebSocket` constructor.
+ */
+function offersWranglerSubprotocol(request: Request): boolean {
+	const raw = request.headers.get("Sec-WebSocket-Protocol");
+	if (raw === null) {
+		return false;
+	}
+	for (const offered of raw.split(",")) {
+		if (offered.trim() === WRANGLER_RELAY_SUBPROTOCOL) {
+			return true;
+		}
+	}
+	return false;
 }
 
 export default {
@@ -106,6 +134,16 @@ export default {
 				wsToken.length === 0 ||
 				wsToken.length > WRANGLER_CLIENT_HEADER_MAX_LEN
 			) {
+				return notFound();
+			}
+
+			// Defence-in-depth against browser-mediated CSWSH (REVIEW-17452
+			// #37): require the wrangler-specific subprotocol. A drive-by
+			// browser-issued upgrade against this URL would not negotiate
+			// this protocol unless the page knows it AND opts in via the
+			// `WebSocket` constructor — combined with the `Origin`/`Sec-
+			// Wrangler-Client` checks, this closes off browser-side races.
+			if (!offersWranglerSubprotocol(request)) {
 				return notFound();
 			}
 

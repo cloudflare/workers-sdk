@@ -941,6 +941,56 @@ describe("User", () => {
 					// constructor. Verify it's the documented 4 KiB cap.
 					expect(MockWebSocket.last?.options?.maxPayload).toBe(4 * 1024);
 				});
+
+				it("advertises the wrangler-relay subprotocol (#37)", async ({
+					expect,
+				}) => {
+					mockOAuthRelayCallback("success");
+					msw.use(
+						http.post(
+							"*/oauth2/token",
+							() =>
+								HttpResponse.json({
+									access_token: "test-access-token",
+									expires_in: 100000,
+									refresh_token: "test-refresh-token",
+									scope: "account:read",
+								}),
+							{ once: true }
+						)
+					);
+
+					await runWrangler("login --experimental-websocket-callback");
+
+					// The second arg of `new WebSocket(url, protocols, options)`
+					// is the offered subprotocol. Wrangler must always offer
+					// `wrangler-auth-relay-v1`; the relay rejects upgrades
+					// that don't.
+					expect(MockWebSocket.last?.protocols).toBe("wrangler-auth-relay-v1");
+				});
+
+				it("aborts when the relay doesn't echo the wrangler subprotocol (#37)", async ({
+					expect,
+				}) => {
+					// Drive the WS open with a mismatched protocol — simulates
+					// a misbehaving (or wrong) relay endpoint that didn't
+					// negotiate our subprotocol. Wrangler must abort BEFORE
+					// any code redemption (i.e. before `openInBrowser` is
+					// called). We disable autoOpen, wait for the WS to be
+					// constructed, then trigger open manually with a bad
+					// `protocol`.
+					MockWebSocket.autoOpen = false;
+					const runPromise = runWrangler(
+						"login --experimental-websocket-callback"
+					);
+					const ws = await waitForMockWebSocket();
+					ws.protocol = "";
+					ws.triggerOpen();
+
+					await expect(runPromise).rejects.toThrowError(
+						/did not negotiate the expected WebSocket subprotocol/
+					);
+				});
 			});
 		});
 	});
@@ -1058,6 +1108,36 @@ describe("User", () => {
 			refresh_token: "test-refresh-token",
 			expiration_time: expect.any(String),
 			scopes: ["account:read"],
+		});
+	});
+
+	describe("getAuthOriginFromEnv (REVIEW-17452 #39)", () => {
+		it("returns the origin of WRANGLER_AUTH_URL (default)", async ({
+			expect,
+		}) => {
+			const { getAuthOriginFromEnv } = await import("../user/auth-variables");
+			expect(getAuthOriginFromEnv()).toBe("https://dash.cloudflare.com");
+		});
+
+		it("returns the origin even when WRANGLER_AUTH_URL has a path", async ({
+			expect,
+		}) => {
+			vi.stubEnv(
+				"WRANGLER_AUTH_URL",
+				"https://staging.example.com/some/custom/path"
+			);
+			const { getAuthOriginFromEnv } = await import("../user/auth-variables");
+			expect(getAuthOriginFromEnv()).toBe("https://staging.example.com");
+		});
+
+		it("throws a UserError when WRANGLER_AUTH_URL is malformed", async ({
+			expect,
+		}) => {
+			vi.stubEnv("WRANGLER_AUTH_URL", ":::garbage:::");
+			const { getAuthOriginFromEnv } = await import("../user/auth-variables");
+			expect(() => getAuthOriginFromEnv()).toThrowError(
+				/WRANGLER_AUTH_URL is not a valid URL/
+			);
 		});
 	});
 

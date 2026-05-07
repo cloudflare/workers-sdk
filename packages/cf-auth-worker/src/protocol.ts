@@ -45,3 +45,15 @@ export const DO_CALLBACK_PATH = "/callback";
  * sending more than `WRANGLER_CLIENT_HEADER_MAX_LEN` characters is treated
  * as malformed.
  */
+
+/**
+ * Required WebSocket subprotocol on every Wrangler upgrade. Browser-issued
+ * WebSockets cannot easily forge a non-default subprotocol (it has to be
+ * passed to the `WebSocket` constructor and is part of the upgrade
+ * handshake), so requiring an exact match adds a defence-in-depth layer
+ * on top of the `Sec-Wrangler-Client` check (REVIEW-17452 #37).
+ *
+ * Must be kept in lockstep with `WRANGLER_RELAY_SUBPROTOCOL` in
+ * `packages/wrangler/src/user/auth-relay-constants.ts`.
+ */
+export const WRANGLER_RELAY_SUBPROTOCOL = "wrangler-auth-relay-v1";
