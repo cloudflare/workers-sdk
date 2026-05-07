@@ -26,6 +26,7 @@ import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
+import { IMAGES_PLUGIN_NAME } from "../images";
 import {
 	getUserBindingServiceName,
 	kUnsafeEphemeralUniqueKey,
@@ -1013,8 +1014,6 @@ export interface GlobalServicesOptions {
 	workflowOptions?: Map<string, WorkflowOption>;
 	/** All worker options for building per-worker resource bindings */
 	allWorkerOpts?: PluginWorkerOptions[];
-	/** Service name for the images delivery endpoint, if images binding is configured */
-	imagesServiceName?: string;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -1027,7 +1026,6 @@ export function getGlobalServices({
 	durableObjectClassNames,
 	workflowOptions,
 	allWorkerOpts,
-	imagesServiceName,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1097,10 +1095,20 @@ export function getGlobalServices({
 			},
 		});
 	}
-	if (imagesServiceName) {
+	const imagesBinding = allWorkerOpts
+		?.map((worker) => worker.images?.images)
+		.find(
+			(images) => images !== undefined && !images.remoteProxyConnectionString
+		);
+	if (imagesBinding) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_IMAGES_DELIVERY,
-			service: { name: imagesServiceName },
+			service: {
+				name: getUserBindingServiceName(
+					IMAGES_PLUGIN_NAME,
+					imagesBinding.binding
+				),
+			},
 		});
 	}
 	if (sharedOptions.upstream !== undefined) {

@@ -93,7 +93,7 @@ function upload(
 }
 
 describe("Images local delivery", () => {
-	test("variant URLs are absolute and use /cdn-cgi/imagedelivery/ path", async ({
+	test("variant URLs are absolute and use /cdn-cgi/mf/imagedelivery/ path", async ({
 		expect,
 	}) => {
 		const mf = createMiniflare();
@@ -103,7 +103,7 @@ describe("Images local delivery", () => {
 		const metadata = await upload(mf, TEST_IMAGE_BYTES, { id: "variant-test" });
 		expect(metadata.variants).toHaveLength(1);
 		expect(metadata.variants[0]).toBe(
-			`${url.origin}/cdn-cgi/imagedelivery/variant-test/public`
+			`${url.origin}/cdn-cgi/mf/imagedelivery/variant-test/public`
 		);
 	});
 
@@ -115,7 +115,7 @@ describe("Images local delivery", () => {
 		await upload(mf, TEST_IMAGE_BYTES, { id: "delivery-test" });
 
 		const response = await mf.dispatchFetch(
-			`${url.origin}/cdn-cgi/imagedelivery/delivery-test/public`
+			`${url.origin}/cdn-cgi/mf/imagedelivery/delivery-test/public`
 		);
 		expect(response.status).toBe(200);
 		const data = new Uint8Array(await response.arrayBuffer());
@@ -130,7 +130,7 @@ describe("Images local delivery", () => {
 
 		const url = await mf.ready;
 		const response = await mf.dispatchFetch(
-			`${url.origin}/cdn-cgi/imagedelivery/does-not-exist/public`
+			`${url.origin}/cdn-cgi/mf/imagedelivery/does-not-exist/public`
 		);
 		expect(response.status).toBe(404);
 		await response.arrayBuffer();

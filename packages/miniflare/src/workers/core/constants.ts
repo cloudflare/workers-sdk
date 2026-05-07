@@ -20,7 +20,7 @@ export const CorePaths = {
 	/** Stream video serving endpoint */
 	STREAM_VIDEO: "/cdn-cgi/mf/stream",
 	/** Local image delivery endpoint for serving hosted images */
-	IMAGE_DELIVERY: "/cdn-cgi/imagedelivery",
+	IMAGE_DELIVERY: "/cdn-cgi/mf/imagedelivery",
 } as const;
 
 export const CoreHeaders = {
