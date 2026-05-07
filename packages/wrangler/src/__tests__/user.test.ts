@@ -886,7 +886,7 @@ describe("User", () => {
 			);
 		});
 
-		it("should fall back to /accounts when /memberships returns 9109 (Account API Token path)", async ({
+		it("should fall back to /accounts when /memberships returns 9106 (Account API Token path)", async ({
 			expect,
 		}) => {
 			msw.use(
@@ -905,7 +905,12 @@ describe("User", () => {
 					() => {
 						return HttpResponse.json({
 							success: false,
-							errors: [{ code: 9109, message: "Insufficient permissions" }],
+							errors: [
+								{
+									code: 9106,
+									message: "Authentication failed (status: 400)",
+								},
+							],
 							result: null,
 						});
 					},
@@ -919,7 +924,7 @@ describe("User", () => {
 			]);
 		});
 
-		it("should throw a helpful error on 9109 when /accounts is also unusable", async ({
+		it("should throw a helpful error on 9106 when /accounts is also unusable", async ({
 			expect,
 		}) => {
 			msw.use(
@@ -931,7 +936,12 @@ describe("User", () => {
 					() => {
 						return HttpResponse.json({
 							success: false,
-							errors: [{ code: 9109, message: "Insufficient permissions" }],
+							errors: [
+								{
+									code: 9106,
+									message: "Authentication failed (status: 400)",
+								},
+							],
 							result: null,
 						});
 					},
@@ -1004,7 +1014,7 @@ describe("User", () => {
 			);
 		});
 
-		it("should propagate /memberships errors that are not 9109 or 10000", async ({
+		it("should propagate /memberships errors that are not 9106 or 10000", async ({
 			expect,
 		}) => {
 			msw.use(
