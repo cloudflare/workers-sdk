@@ -8,6 +8,7 @@ import {
 	getUserBindingServiceName,
 	PersistenceSchema,
 	ProxyNodeBinding,
+	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
 import type { Service } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
@@ -19,6 +20,13 @@ export const WorkflowsOptionsSchema = z.object({
 				name: z.string(),
 				className: z.string(),
 				scriptName: z.string().optional(),
+				// When set, the workflow's `scriptName` refers to a worker that lives
+				// outside this Miniflare instance (registered in the wrangler dev
+				// registry). The engine's USER_WORKFLOW binding is rerouted through
+				// the dev-registry-proxy so calls reach the external worker. Set by
+				// `getExternalServiceEntrypoints` in `src/index.ts`; not part of the
+				// public API.
+				external: z.boolean().optional(),
 				remoteProxyConnectionString: z
 					.custom<RemoteProxyConnectionString>()
 					.optional(),
@@ -145,13 +153,27 @@ export const WORKFLOWS_PLUGIN: Plugin<
 								name: "ENGINE",
 								durableObjectNamespace: { className: "Engine" },
 							},
-							{
-								name: "USER_WORKFLOW",
-								service: {
-									name: getUserServiceName(workflow.scriptName),
-									entrypoint: workflow.className,
-								},
-							},
+							workflow.external && workflow.scriptName
+								? {
+										name: "USER_WORKFLOW",
+										service: {
+											name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
+											entrypoint: "ExternalServiceProxy",
+											props: {
+												json: JSON.stringify({
+													service: workflow.scriptName,
+													entrypoint: workflow.className,
+												}),
+											},
+										},
+									}
+								: {
+										name: "USER_WORKFLOW",
+										service: {
+											name: getUserServiceName(workflow.scriptName),
+											entrypoint: workflow.className,
+										},
+									},
 							{
 								name: "BINDING_NAME",
 								json: JSON.stringify(bindingName),

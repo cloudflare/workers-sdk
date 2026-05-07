@@ -231,16 +231,28 @@ async function getMiniflareOptionsFromConfig(args: {
 	}
 
 	if (config.workflows?.length > 0) {
-		logger.warn(dedent`
-				You have defined bindings to the following Workflows:
-				${config.workflows.map((b) => `- ${JSON.stringify(b)}`).join("\n")}
+		// Workflow bindings without a `script_name` aren't routable in
+		// `getPlatformProxy()` — the engine inside this Miniflare instance has
+		// nowhere to dispatch USER_WORKFLOW. Strip those (and warn).
+		// Cross-worker workflows (with `script_name` referring to another worker
+		// registered in the dev registry) are passed through; Miniflare's
+		// workflows plugin reroutes them via the dev-registry-proxy.
+		const localWorkflows = config.workflows.filter((w) => !w.script_name);
+		if (localWorkflows.length > 0) {
+			logger.warn(dedent`
+				You have defined bindings to the following Workflows without a script_name:
+				${localWorkflows.map((b) => `- ${JSON.stringify(b)}`).join("\n")}
 				These are not available in local development, so you will not be able to bind to them when testing locally, but they should work in production.
 				`);
 
-		// Remove workflows from bindings to prevent Miniflare from complaining
-		const workflowBindings = extractBindingsOfType("workflow", bindings);
-		for (const workflow of workflowBindings) {
-			delete bindings?.[workflow.binding];
+			// Remove only the local workflows from bindings.
+			const allWorkflowBindings = extractBindingsOfType("workflow", bindings);
+			const localBindingNames = new Set(localWorkflows.map((w) => w.binding));
+			for (const wf of allWorkflowBindings) {
+				if (localBindingNames.has(wf.binding)) {
+					delete bindings?.[wf.binding];
+				}
+			}
 		}
 	}
 
