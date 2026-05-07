@@ -1,5 +1,61 @@
 # miniflare
 
+## 4.20260507.0
+
+### Minor Changes
+
+- [#13836](https://github.com/cloudflare/workers-sdk/pull/13836) [`039bada`](https://github.com/cloudflare/workers-sdk/commit/039badabe54358e31b7b488e6720fd7cdd268c4f) Thanks [@Skye-31](https://github.com/Skye-31)! - Support named recipients in the Email Sending API MessageBuilder
+
+  The `send_email` binding's MessageBuilder now accepts `EmailAddress` objects for `to`, `cc`, and `bcc` in addition to plain strings. You can mix named and plain addresses in the same array:
+
+  ```js
+  await env.SEND_EMAIL.send({
+    from: "sender@example.com",
+    to: [
+      "plain@example.com",
+      '"Name" <address@example.com>',
+      { name: "Jane Doe", email: "jane@example.com" },
+    ],
+    cc: [{ name: "CC Person", email: "cc@example.com" }],
+    subject: "Hello",
+    text: "...",
+  });
+  ```
+
+  Additionally, addresses in `"Name" <address>` format are now correctly parsed when checking `allowed_destination_addresses` and `allowed_sender_addresses` restrictions.
+
+- [#13776](https://github.com/cloudflare/workers-sdk/pull/13776) [`1a54ac5`](https://github.com/cloudflare/workers-sdk/commit/1a54ac5646be16f9f7151e6ecff7dec5fc6110fa) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Default the `workerd` runtime subprocess to `TZ=UTC` to match the production Cloudflare runtime
+
+  Previously, Miniflare inherited the host machine's timezone, so `Date` and `Intl` APIs inside a Worker observed the developer's local timezone during local development but UTC in production. This caused dev/prod drift that was hard to debug.
+
+  Miniflare now sets `TZ=UTC` on the spawned `workerd` subprocess by default. A new `unsafeRuntimeEnv` option (a `Record<string, string>`) is available on the `Miniflare` constructor for advanced cases that need to override the default — for example, to test timezone-dependent behaviour:
+
+  ```ts
+  new Miniflare({
+    modules: true,
+    script: "...",
+    unsafeRuntimeEnv: { TZ: "Europe/London" },
+  });
+  ```
+
+### Patch Changes
+
+- [#13829](https://github.com/cloudflare/workers-sdk/pull/13829) [`2284f20`](https://github.com/cloudflare/workers-sdk/commit/2284f20465c9c94d86e530daed30debcb9207d90) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260504.1 | 1.20260506.1 |
+
+- [#13841](https://github.com/cloudflare/workers-sdk/pull/13841) [`332f527`](https://github.com/cloudflare/workers-sdk/commit/332f52763c7996e08fd4995c643124c5a9701e40) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260506.1 | 1.20260507.1 |
+
 ## 4.20260504.0
 
 ### Patch Changes

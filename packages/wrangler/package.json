@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.88.0",
+	"version": "4.89.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",

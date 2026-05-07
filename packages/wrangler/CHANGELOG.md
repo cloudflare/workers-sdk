@@ -1,5 +1,58 @@
 # wrangler
 
+## 4.89.0
+
+### Minor Changes
+
+- [#13055](https://github.com/cloudflare/workers-sdk/pull/13055) [`f3fed88`](https://github.com/cloudflare/workers-sdk/commit/f3fed8859b612d424388fe45a1d638cf6b1c42c7) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Introducing the `cache` configuration option for Workers.
+
+  You can now set `{ cache: { enabled: true } }` in your Wrangler configuration file to enable a HTTP cache in front of your Worker's `fetch` handler. This is also supported in `[previews]` configuration — `previews.cache` overrides the top-level `cache` setting for preview deployments, and falls back to the top-level value when absent. More information can be found in [our documentation](https://developers.cloudflare.com/workers/cache/configuration/).
+
+- [#13776](https://github.com/cloudflare/workers-sdk/pull/13776) [`1a54ac5`](https://github.com/cloudflare/workers-sdk/commit/1a54ac5646be16f9f7151e6ecff7dec5fc6110fa) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - `wrangler dev` and other Miniflare-backed commands now run the local `workerd` runtime with `TZ=UTC` to match production
+
+  Previously, `wrangler dev` (and other commands that spin up Miniflare, such as `wrangler kv`, `wrangler d1`, `wrangler r2`, `wrangler check`) inherited the host machine's timezone, so `Date` and `Intl` APIs inside a Worker observed the developer's local timezone during local development but UTC in production. This caused subtle, hard-to-debug differences between local and deployed behaviour.
+
+  Local development now matches production. Code that previously relied on the host timezone during `wrangler dev` will need to either accept UTC (the production behaviour) or explicitly construct dates/formatters with the desired timezone.
+
+### Patch Changes
+
+- [#13829](https://github.com/cloudflare/workers-sdk/pull/13829) [`2284f20`](https://github.com/cloudflare/workers-sdk/commit/2284f20465c9c94d86e530daed30debcb9207d90) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260504.1 | 1.20260506.1 |
+
+- [#13841](https://github.com/cloudflare/workers-sdk/pull/13841) [`332f527`](https://github.com/cloudflare/workers-sdk/commit/332f52763c7996e08fd4995c643124c5a9701e40) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260506.1 | 1.20260507.1 |
+
+- [#13777](https://github.com/cloudflare/workers-sdk/pull/13777) [`18e833d`](https://github.com/cloudflare/workers-sdk/commit/18e833d988a406a37c8c175e0dd7ea982789e956) Thanks [@matingathani](https://github.com/matingathani)! - fix: throw a clear error when \_routes.json contains invalid JSON instead of silently skipping it
+
+- [#13751](https://github.com/cloudflare/workers-sdk/pull/13751) [`b6cea17`](https://github.com/cloudflare/workers-sdk/commit/b6cea17413e31750d8915b4bef767311afa1a7b4) Thanks [@matingathani](https://github.com/matingathani)! - fix: ensure `wrangler types --check --env-file` does not falsely report stale types when `.dev.vars` exists
+
+- [#13775](https://github.com/cloudflare/workers-sdk/pull/13775) [`53e846a`](https://github.com/cloudflare/workers-sdk/commit/53e846a564371bb3aa13bd0358c23a7486e5c2f4) Thanks [@maxwellpeterson](https://github.com/maxwellpeterson)! - Fix `wrangler preview` not propagating the `assets` binding to preview deployments
+
+  Previously, `wrangler preview` would upload the asset manifest correctly but the resulting preview deployment had no `ASSETS` binding (or whatever name was configured under `assets.binding`). Workers reading from the binding would see `undefined` and fail at runtime.
+
+  The fix emits the assets binding into the deployment's `env` map alongside other bindings, mirroring `wrangler deploy`.
+
+- [#13770](https://github.com/cloudflare/workers-sdk/pull/13770) [`beff19c`](https://github.com/cloudflare/workers-sdk/commit/beff19c5c98e7ece4abe5b465dd60e6a47825f6f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Only show accounts available for the current login auth in `wrangler whoami` and the interactive account picker
+
+  Wrangler now lists the intersection of `/accounts` and `/memberships` instead of either endpoint alone, dropping accounts the active OAuth token or API token has no membership in. The `accounts` field of `wrangler whoami --json` is filtered the same way. When `/memberships` is inaccessible to the current auth (e.g. Account API Tokens) Wrangler falls back to `/accounts` so those tokens continue to work as before.
+
+- [#13832](https://github.com/cloudflare/workers-sdk/pull/13832) [`af42fed`](https://github.com/cloudflare/workers-sdk/commit/af42fedb4153ab7cb3fedd552fb2007dc3e8cd1b) Thanks [@gpanders](https://github.com/gpanders)! - Show `containers ssh` in `wrangler containers --help` and in `wrangler containers ssh --help`
+
+  The `containers ssh` command was previously hidden, so it did not appear in the list of subcommands shown by `wrangler containers --help`, and its description was omitted from `wrangler containers ssh --help`. The command is now listed with its description in both places.
+
+- Updated dependencies [[`2284f20`](https://github.com/cloudflare/workers-sdk/commit/2284f20465c9c94d86e530daed30debcb9207d90), [`332f527`](https://github.com/cloudflare/workers-sdk/commit/332f52763c7996e08fd4995c643124c5a9701e40), [`039bada`](https://github.com/cloudflare/workers-sdk/commit/039badabe54358e31b7b488e6720fd7cdd268c4f), [`1a54ac5`](https://github.com/cloudflare/workers-sdk/commit/1a54ac5646be16f9f7151e6ecff7dec5fc6110fa)]:
+  - miniflare@4.20260507.0
+
 ## 4.88.0
 
 ### Minor Changes
