@@ -226,11 +226,17 @@ export const crash: (msg?: string, extra?: string) => never = (msg, extra) => {
  * Error. Delegates to `clack.log.error` (`■  message`, red). The
  * optional `<extra>` line is appended on its own line within the
  * gutter.
+ *
+ * `msg` is coerced to a string — callers occasionally pass `Error`
+ * instances (e.g. C3's top-level `.catch((e) => error(e))`), and
+ * `clack.log.error` calls `.split("\n")` on its input which would
+ * throw `TypeError: e.split is not a function`.
  */
-export const error = (msg?: string, extra?: string) => {
+export const error = (msg?: unknown, extra?: string) => {
 	const currentLevel = getLogLevel();
-	if (msg && LOGGER_LEVELS[currentLevel] >= LOGGER_LEVELS.error) {
-		clack.log.error(extra ? `${msg}\n${extra}` : msg, { output: stderr });
+	if (msg !== undefined && LOGGER_LEVELS[currentLevel] >= LOGGER_LEVELS.error) {
+		const text = typeof msg === "string" ? msg : String(msg);
+		clack.log.error(extra ? `${text}\n${extra}` : text, { output: stderr });
 	}
 };
 
