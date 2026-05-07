@@ -5,4 +5,4 @@
 "wrangler": patch
 ---
 
-fix: store config in ~/.config/wrangler/ instead of the incorrectly-hidden ~/.config/.wrangler/. Existing data is automatically migrated.
+Fix global Wrangler config directory name to use `wrangler` instead of `.wrangler` (removes the unintended hidden-directory effect on XDG-compliant systems). Existing config data is automatically migrated. Note: users who had the Browser Rendering Chromium binary cached under the old path may need to re-download it.

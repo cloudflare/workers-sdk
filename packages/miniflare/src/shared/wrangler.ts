@@ -42,6 +42,8 @@ export function getGlobalWranglerCachePath() {
 	const brokenCacheDir = xdgAppPaths(".wrangler").cache(); // ~/.cache/.wrangler/ (incorrect — from versions with this bug)
 	const cacheDir = xdgAppPaths("wrangler").cache(); // Correct XDG-compliant cache path
 
+	// Note: the cache dir contains the Browser Rendering Chromium binary. Users who previously
+	// cached it under the old (broken) path may need to re-download the binary after migration.
 	if (isDirectory(brokenCacheDir) && !isDirectory(cacheDir)) {
 		try {
 			fs.renameSync(brokenCacheDir, cacheDir);
