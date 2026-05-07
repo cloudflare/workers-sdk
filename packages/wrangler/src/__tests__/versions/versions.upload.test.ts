@@ -1105,7 +1105,7 @@ describe("versions upload", () => {
 			writeWorkerSource();
 
 			await expect(runWrangler("versions upload --dry-run")).rejects.toThrow(
-				/A compatibility_date is required when uploading a Worker Version/
+				/compatibility_date is required when publishing/
 			);
 		});
 
