@@ -100,11 +100,13 @@ export const inputPrompt = async <T = string>(
 
 /**
  * Render the auto-accepted value as a clack-style submit line and
- * return it.
+ * return it. For select/multiselect, the option's `label` is shown
+ * (matching what the user would see if they navigated the prompt and
+ * pressed Enter), not the underlying `value`.
  */
 function acceptDefault<T>(config: PromptConfig): T {
 	const value = resolveDefault(config);
-	const display = config.format?.(value) ?? String(value ?? "");
+	const display = formatAutoAcceptedValue(config, value);
 	const label = "message" in config ? config.message : "";
 	clack.log.step(`${label} ${chalk.dim(display)}`);
 	return value as T;
@@ -121,6 +123,31 @@ function resolveDefault(config: PromptConfig): unknown {
 		case "select":
 			return config.initialValue ?? "";
 	}
+}
+
+function formatAutoAcceptedValue(
+	config: PromptConfig,
+	value: unknown
+): string {
+	if (config.format) {
+		return config.format(value);
+	}
+	if (config.type === "select") {
+		const opt = config.options.find((o) => o.value === value);
+		return opt?.label ?? String(value ?? "");
+	}
+	if (config.type === "multiselect" && Array.isArray(value)) {
+		return value
+			.map((v) => {
+				const opt = config.options.find((o) => o.value === v);
+				return opt?.label ?? String(v);
+			})
+			.join(", ");
+	}
+	if (config.type === "confirm") {
+		return value ? "yes" : "no";
+	}
+	return String(value ?? "");
 }
 
 function dispatch(config: PromptConfig): Promise<unknown> {

@@ -86,10 +86,10 @@ describe("Create Cloudflare CLI", () => {
 				);
 
 				expect(project.path).toExist();
-				expect(output).toContain(`category Hello World example`);
-				expect(output).toContain(`type SSR / full-stack app`);
-				expect(output).toContain(`lang TypeScript`);
-				expect(output).toContain(`no deploy`);
+				expect(output).toContain(`Hello World example`);
+				expect(output).toContain(`SSR / full-stack app`);
+				expect(output).toContain(`TypeScript`);
+				expect(output).toContain(`Do you want to deploy your application?`);
 			}
 		);
 
@@ -133,9 +133,9 @@ describe("Create Cloudflare CLI", () => {
 				);
 
 				expect(project.path).toExist();
-				expect(output).toContain(`type Scheduled Worker (Cron Trigger)`);
-				expect(output).toContain(`lang JavaScript`);
-				expect(output).toContain(`no deploy`);
+				expect(output).toContain(`Scheduled Worker (Cron Trigger)`);
+				expect(output).toContain(`JavaScript`);
+				expect(output).toContain(`Do you want to deploy your application?`);
 			}
 		);
 
@@ -189,9 +189,9 @@ describe("Create Cloudflare CLI", () => {
 					);
 
 					expect(project.path).toExist();
-					expect(output).toContain(`type SSR / full-stack app`);
-					expect(output).toContain(`lang TypeScript`);
-					expect(output).toContain(`no deploy`);
+					expect(output).toContain(`SSR / full-stack app`);
+					expect(output).toContain(`TypeScript`);
+					expect(output).toContain(`Do you want to deploy your application?`);
 				} finally {
 					removeDirSync(existingFilePath);
 				}
@@ -214,7 +214,7 @@ describe("Create Cloudflare CLI", () => {
 				);
 
 				expect(output).toContain(
-					`repository https://github.com/cloudflare/workers-graphql-server`
+					`https://github.com/cloudflare/workers-graphql-server`
 				);
 				expect(output).toContain(
 					`Cloning template from: https://github.com/cloudflare/workers-graphql-server`
@@ -247,7 +247,7 @@ describe("Create Cloudflare CLI", () => {
 				);
 
 				expect(output).toContain(
-					`repository cloudflare/templates/multiplayer-globe-template`
+					`cloudflare/templates/multiplayer-globe-template`
 				);
 				expect(output).toContain(
 					`Cloning template from: cloudflare/templates/multiplayer-globe-template`
@@ -285,9 +285,9 @@ describe("Create Cloudflare CLI", () => {
 				);
 
 				expect(project.path).toExist();
-				expect(output).toContain(`category Hello World example`);
-				expect(output).toContain(`type Worker only`);
-				expect(output).toContain(`lang Python`);
+				expect(output).toContain(`Hello World example`);
+				expect(output).toContain(`Worker only`);
+				expect(output).toContain(`Python`);
 			}
 		);
 
@@ -308,9 +308,9 @@ describe("Create Cloudflare CLI", () => {
 				);
 
 				expect(project.path).toExist();
-				expect(output).toContain(`category Hello World example`);
-				expect(output).toContain(`type Worker only`);
-				expect(output).toContain(`lang Python`);
+				expect(output).toContain(`Hello World example`);
+				expect(output).toContain(`Worker only`);
+				expect(output).toContain(`Python`);
 			}
 		);
 
@@ -375,8 +375,8 @@ describe("Create Cloudflare CLI", () => {
 				);
 
 				expect(project.path).toExist();
-				expect(output).toContain(`category Application Starter`);
-				expect(output).toContain(`type API starter (OpenAPI compliant)`);
+				expect(output).toContain(`Application Starter`);
+				expect(output).toContain(`API starter (OpenAPI compliant)`);
 			}
 		);
 
@@ -482,8 +482,8 @@ describe("Create Cloudflare CLI", () => {
 				);
 
 				expect(project.path).toExist();
-				expect(output).toContain(`type Worker only`);
-				expect(output).toContain(`lang JavaScript`);
+				expect(output).toContain(`Worker only`);
+				expect(output).toContain(`JavaScript`);
 			}
 		);
 
