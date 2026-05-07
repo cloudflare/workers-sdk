@@ -65,37 +65,74 @@ if (shardIndex !== undefined && shardCount !== undefined) {
 		`E2E_SHARD must be between 1 and E2E_SHARD_COUNT (${shardCount}), got ${shardIndex}`
 	);
 
-	// Estimated durations (seconds) from CI measurements (with remote tests enabled).
-	// Used for load-balancing across shards. Doesn't need to be exact — just roughly
-	// right. Files not listed here get a default of 30s. Update periodically from CI
-	// timing data. Last calibrated: 2026-03-17 from run 23205759327.
+	// Estimated durations (seconds) measured on Windows runners with remote
+	// tests DISABLED — the common PR case. Used by greedy bin-packing across
+	// shards. Files not listed here get DEFAULT_DURATION.
+	//
+	// Why Windows: Windows runners are the slowest OS in the matrix and
+	// dominate the PR-to-green critical path. Balancing for Windows balances
+	// for the actual bottleneck. Linux/macOS are correlated but faster.
+	//
+	// Why local-only (no remote tests): the `check-remote-tests` action gates
+	// remote tests off for regular PRs (only merge_group, changeset-release/main,
+	// or PRs with the `run-remote-tests` label run remote). Calibrating from a
+	// remote-enabled run produces wildly skewed shards on regular PRs — the
+	// previous remote-enabled calibration produced an observed ~4.7× imbalance
+	// (e.g. shard 1 at 501s vs shard 2 at 161s on Windows).
+	//
+	// To recalibrate (when shards drift):
+	//   1. Pick 5+ recent successful Wrangler E2E runs on `pull_request` events
+	//      WITHOUT the `run-remote-tests` label:
+	//        gh run list --workflow=e2e-wrangler.yml --status=success \
+	//          --json databaseId,headSha,event,headBranch
+	//      Verify each PR's labels with `gh pr view <num> --json labels`.
+	//   2. Confirm artifacts are still retained for each chosen run:
+	//        gh api repos/cloudflare/workers-sdk/actions/runs/<id>/artifacts
+	//   3. Download `turbo-runs-windows-latest-shard-{1..4}` for each run; each
+	//      artifact contains turbo run-summary JSONs (one per WRANGLER_E2E_TEST_FILE
+	//      invocation). Each summary has a `wrangler#test:e2e` task with
+	//      execution.startTime/endTime (ms) and cache.status.
+	//   4. Download the matching job logs:
+	//        gh api repos/cloudflare/workers-sdk/actions/jobs/<job_id>/logs
+	//      Each test file is bracketed by `##[group]Testing: <file>` markers
+	//      (the `::group::` directive escaped). Pair the i-th marker with the
+	//      i-th time-sorted summary within each shard to map durations to files.
+	//   5. Filter out cache=HIT (no real execution) and exit!=0 (failed/retried).
+	//      Median across all clean samples per file.
+	//   6. Replace this map. Sort by descending duration so deletions/additions
+	//      are visually consistent. Update the calibration metadata below.
+	//
+	// Last calibrated: 2026-04-30 from runs 25139596823, 25137977743,
+	// 25137501103, 25137420386, 25136291223, 25135755968, 25135558427
+	// (7 runs, Windows shards 1–4, ~190 sample data points).
 	const estimatedDurations: Record<string, number> = {
-		"e2e/dev.test.ts": 181,
-		"e2e/versions.test.ts": 153,
-		"e2e/remote-binding/miniflare-remote-resources.test.ts": 105,
-		"e2e/provision.test.ts": 95,
-		"e2e/unenv-preset/preset.test.ts": 85,
-		"e2e/containers.dev.test.ts": 77,
-		"e2e/deploy.test.ts": 72,
-		"e2e/start-worker-auth-opts.test.ts": 61,
-		"e2e/assets-multiworker.test.ts": 53,
-		"e2e/remote-binding/dev-remote-bindings.test.ts": 53,
-		"e2e/remote-binding/remote-bindings-api.test.ts": 51,
-		"e2e/deployments.test.ts": 48,
-		"e2e/remote-binding/start-worker-remote-bindings.test.ts": 38,
-		"e2e/types.test.ts": 36,
-		"e2e/startWorker.test.ts": 31,
-		"e2e/get-platform-proxy.test.ts": 30,
-		"e2e/pages-dev.test.ts": 27,
-		"e2e/dev-registry.test.ts": 27,
-		"e2e/c3-integration.test.ts": 25,
-		"e2e/pages-deploy.test.ts": 23,
-		"e2e/multiworker-dev.test.ts": 21,
-		"e2e/cert.test.ts": 21,
-		"e2e/secrets-store.test.ts": 18,
-		"e2e/r2.test.ts": 15,
-		"e2e/dev-env.test.ts": 8,
-		"e2e/autoconfig/setup.test.ts": 2,
+		"e2e/dev.test.ts": 152,
+		"e2e/unenv-preset/preset.test.ts": 112,
+		"e2e/types.test.ts": 71,
+		"e2e/pages-dev.test.ts": 66,
+		"e2e/dev-registry.test.ts": 45,
+		"e2e/multiworker-dev.test.ts": 35,
+		"e2e/get-platform-proxy.test.ts": 33,
+		"e2e/assets-multiworker.test.ts": 32,
+		"e2e/remote-binding/miniflare-remote-resources.test.ts": 27,
+		"e2e/startWorker.test.ts": 27,
+		"e2e/remote-binding/start-worker-remote-bindings.test.ts": 17,
+		"e2e/remote-binding/remote-bindings-api.test.ts": 17,
+		"e2e/start-worker-auth-opts.test.ts": 16,
+		"e2e/secrets-store.test.ts": 12,
+		"e2e/autoconfig/setup.test.ts": 9,
+		"e2e/auth-scopes.test.ts": 6,
+		"e2e/containers.dev.test.ts": 3,
+		"e2e/c3-integration.test.ts": 2,
+		"e2e/cert.test.ts": 2,
+		"e2e/deploy.test.ts": 2,
+		"e2e/deployments.test.ts": 2,
+		"e2e/dev-env.test.ts": 2,
+		"e2e/pages-deploy.test.ts": 2,
+		"e2e/provision.test.ts": 2,
+		"e2e/r2.test.ts": 2,
+		"e2e/remote-binding/dev-remote-bindings.test.ts": 2,
+		"e2e/versions.test.ts": 2,
 	};
 	const DEFAULT_DURATION = 30;
 

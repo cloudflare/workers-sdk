@@ -10,21 +10,27 @@ permissions:
 
 jobs:
   e2e-vite-plugin-test:
-    name: ${{ format('Vite Plugin E2E ({0})', matrix.description) }}
+    name: ${{ format('Vite Plugin E2E ({0}, shard {1}/2)', matrix.description, matrix.shard) }}
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.shard }}
       cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
     timeout-minutes: 60
+    # Vite Plugin E2E (Windows) was the PR-to-green critical path at ~797s.
+    # Splitting 9 e2e test files into 2 shards via Vitest --shard=i/n halves
+    # the worst cell to ~400s. Each shard runs its own global setup (mock npm
+    # registry + temp dir) independently.
     strategy:
       fail-fast: false
       matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        shard: [1, 2]
         include:
           - os: macos-latest
             description: macOS
-          - os: windows-latest
-            description: Windows
           - os: ubuntu-latest
             description: Linux
+          - os: windows-latest
+            description: Windows
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -60,7 +66,7 @@ jobs:
 
       - name: Run Vite plugin E2E tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
+        run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream -- --shard=${{ matrix.shard }}/2
         timeout-minutes: 20
         env:
           NODE_DEBUG: "vite-plugin:test"
@@ -74,5 +80,59 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}
+          name: turbo-runs-${{ matrix.os }}-shard-${{ matrix.shard }}
           path: .turbo/runs
+
+  # ---------------------------------------------------------------------
+  # Backwards-compatibility status-check aliases.
+  #
+  # The matrix above added a `shard` axis, renaming jobs from
+  # `Vite Plugin E2E (<OS>)` to `Vite Plugin E2E (<OS>, shard {1,2}/2)`.
+  # Branch protection on `main` may still reference the old names.
+  #
+  # These three alias jobs report under the OLD names and depend on the
+  # entire `e2e-vite-plugin-test` matrix. If any matrix cell fails or is
+  # cancelled, every alias fails; if the whole matrix is skipped
+  # (markdown-only PR), every alias passes.
+  #
+  # Remove these aliases once branch protection is updated to reference
+  # the new sharded check names.
+  # ---------------------------------------------------------------------
+  alias-vite-plugin-e2e-linux:
+    name: "Vite Plugin E2E (Linux)"
+    needs: e2e-vite-plugin-test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate matrix result
+        run: |
+          if [ "${{ needs.e2e-vite-plugin-test.result }}" = "failure" ] || [ "${{ needs.e2e-vite-plugin-test.result }}" = "cancelled" ]; then
+            echo "Vite Plugin E2E matrix did not succeed (result=${{ needs.e2e-vite-plugin-test.result }})"
+            exit 1
+          fi
+
+  alias-vite-plugin-e2e-macos:
+    name: "Vite Plugin E2E (macOS)"
+    needs: e2e-vite-plugin-test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate matrix result
+        run: |
+          if [ "${{ needs.e2e-vite-plugin-test.result }}" = "failure" ] || [ "${{ needs.e2e-vite-plugin-test.result }}" = "cancelled" ]; then
+            echo "Vite Plugin E2E matrix did not succeed (result=${{ needs.e2e-vite-plugin-test.result }})"
+            exit 1
+          fi
+
+  alias-vite-plugin-e2e-windows:
+    name: "Vite Plugin E2E (Windows)"
+    needs: e2e-vite-plugin-test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate matrix result
+        run: |
+          if [ "${{ needs.e2e-vite-plugin-test.result }}" = "failure" ] || [ "${{ needs.e2e-vite-plugin-test.result }}" = "cancelled" ]; then
+            echo "Vite Plugin E2E matrix did not succeed (result=${{ needs.e2e-vite-plugin-test.result }})"
+            exit 1
+          fi
