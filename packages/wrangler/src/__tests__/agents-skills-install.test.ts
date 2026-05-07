@@ -1,0 +1,491 @@
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import ci from "ci-info";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
+import { mockConsoleMethods } from "./helpers/mock-console";
+import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
+import { runInTempDir } from "./helpers/run-in-tmp";
+import type { installCloudflareSkillsGlobally as InstallFnType } from "../agents-skills-install";
+
+// Undo the global no-op mock from vitest.setup.ts so we test the real implementation
+vi.unmock("../agents-skills-install");
+
+// Mock rosie-skills to avoid real network/WASM calls.
+const mockRosieInstall = vi.fn();
+const mockRosieAgents = vi.fn();
+vi.mock("rosie-skills", () => ({
+	install: mockRosieInstall,
+	agents: mockRosieAgents,
+}));
+
+/** Default rosie.agents() return value: Claude Code detected, Cursor not detected. */
+const DEFAULT_AGENTS = [
+	{
+		name: "claude",
+		display: "Claude Code",
+		detected: true,
+		installPath: "/fake/.claude/skills",
+	},
+	{
+		name: "cursor",
+		display: "Cursor",
+		detected: false,
+		installPath: null,
+	},
+];
+
+/** Default rosie.install() return value matching a successful single-agent install. */
+const DEFAULT_INSTALL_RESULT = {
+	skills: [
+		{
+			name: "cloudflare",
+			kind: "skill" as const,
+			installedAgents: ["claude"],
+			failedAgents: [],
+		},
+	],
+	installedAgents: ["claude"],
+	failedAgents: [],
+	installedInstruction: null,
+};
+
+/** Writes the skills-install metadata file to the global wrangler config path. */
+function writeMetadataFile(content: Record<string, unknown>): void {
+	const configDir = getGlobalWranglerConfigPath();
+	mkdirSync(configDir, { recursive: true });
+	writeFileSync(
+		path.join(configDir, "agents-skills-install.jsonc"),
+		JSON.stringify(content)
+	);
+}
+
+/** Reads and parses the skills-install metadata file. */
+function readMetadataFile(): Record<string, unknown> {
+	const filePath = path.join(
+		getGlobalWranglerConfigPath(),
+		"agents-skills-install.jsonc"
+	);
+	return JSON.parse(readFileSync(filePath, "utf8"));
+}
+
+/**
+ * Re-imports the agents-skills-install module with a fresh module graph.
+ * This is necessary because tests need a clean module state after mocks
+ * are reconfigured per test.
+ */
+async function freshImport(): Promise<typeof InstallFnType> {
+	vi.resetModules();
+	const mod = await import("../agents-skills-install");
+	return mod.installCloudflareSkillsGlobally;
+}
+
+describe("installCloudflareSkillsGlobally", () => {
+	runInTempDir();
+	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
+
+	beforeEach(() => {
+		setIsTTY(true);
+		mockRosieAgents.mockResolvedValue(DEFAULT_AGENTS);
+		mockRosieInstall.mockResolvedValue(DEFAULT_INSTALL_RESULT);
+	});
+
+	afterEach(() => {
+		clearDialogs();
+	});
+
+	describe("skip conditions", () => {
+		test("returns 'Already prompted' when metadata file exists", async ({
+			expect,
+		}) => {
+			writeMetadataFile({ accepted: true, date: "2025-01-01T00:00:00Z" });
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(false);
+
+			expect(result).toEqual({
+				skipped: true,
+				reason: "Already prompted",
+			});
+		});
+
+		test("force=true ignores existing metadata file", async ({ expect }) => {
+			writeMetadataFile({ accepted: true, date: "2025-01-01T00:00:00Z" });
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(true);
+
+			expect(result).toMatchObject({
+				targetedAgents: expect.arrayContaining([
+					expect.objectContaining({ name: "Claude Code" }),
+				]),
+			});
+		});
+
+		test("returns 'No supported agents detected' when no agents are detected", async ({
+			expect,
+		}) => {
+			mockRosieAgents.mockResolvedValueOnce([
+				{
+					name: "claude",
+					display: "Claude Code",
+					detected: false,
+					installPath: null,
+				},
+			]);
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(false);
+
+			expect(result).toEqual({
+				skipped: true,
+				reason: "No supported agents detected",
+			});
+		});
+
+		test("returns 'No supported agents detected' when rosie.agents() returns empty", async ({
+			expect,
+		}) => {
+			mockRosieAgents.mockResolvedValueOnce([]);
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(false);
+
+			expect(result).toEqual({
+				skipped: true,
+				reason: "No supported agents detected",
+			});
+		});
+
+		test("returns 'Failed to install skills' when rosie.install() throws", async ({
+			expect,
+		}) => {
+			mockRosieInstall.mockRejectedValueOnce(new Error("network failure"));
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			// force=true so we don't need to mock the confirm dialog
+			const result = await installCloudflareSkillsGlobally(true);
+
+			expect(result).toEqual({
+				skipped: true,
+				reason: "Failed to install skills",
+			});
+			expect(std.warn).toContain(
+				"Failed to install Cloudflare skills: network failure"
+			);
+		});
+
+		test("returns 'Running in CI' when ci.isCI is true", async ({ expect }) => {
+			vi.mocked(ci).isCI = true;
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(false);
+
+			expect(result).toEqual({
+				skipped: true,
+				reason: "Running in CI",
+			});
+			// Verify neither agent detection nor install was attempted
+			expect(mockRosieAgents).not.toHaveBeenCalled();
+			expect(mockRosieInstall).not.toHaveBeenCalled();
+		});
+
+		test("force=true bypasses CI check and installs skills", async ({
+			expect,
+		}) => {
+			vi.mocked(ci).isCI = true;
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(true);
+
+			expect(result).toMatchObject({
+				targetedAgents: expect.arrayContaining([
+					expect.objectContaining({ name: "Claude Code" }),
+				]),
+			});
+			expect(mockRosieInstall).toHaveBeenCalledWith("cloudflare/skills", {
+				global: true,
+				agent: ["claude"],
+				lockfile: false,
+			});
+		});
+
+		test("returns 'Non-interactive terminal' when TTY is false", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(false);
+
+			expect(result).toEqual({
+				skipped: true,
+				reason: "Non-interactive terminal",
+			});
+			expect(std.out).toContain(
+				"Cloudflare agent skills are available for: Claude Code"
+			);
+			// Verify no install call was made
+			expect(mockRosieInstall).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("user prompt interaction", () => {
+		test("returns 'User declined' and writes metadata when user declines", async ({
+			expect,
+		}) => {
+			mockConfirm({
+				text: expect.stringContaining("Claude Code") as unknown as string,
+				result: false,
+			});
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(false);
+
+			expect(result).toEqual({
+				skipped: true,
+				reason: "User declined",
+			});
+
+			// must not log a success message when the user declined
+			expect(std.out).not.toContain(
+				"Successfully installed Cloudflare skills for:"
+			);
+
+			// must not call rosie.install when user declined
+			expect(mockRosieInstall).not.toHaveBeenCalled();
+
+			const metadata = readMetadataFile();
+			expect(metadata.accepted).toBe(false);
+			expect(metadata.date).toBeDefined();
+		});
+
+		test("calls rosie.install and returns success when user accepts", async ({
+			expect,
+		}) => {
+			mockConfirm({
+				text: expect.stringContaining("Claude Code") as unknown as string,
+				result: true,
+			});
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(false);
+
+			expect(result).toMatchObject({
+				targetedAgents: expect.arrayContaining([
+					expect.objectContaining({ name: "Claude Code", rosieId: "claude" }),
+				]),
+			});
+
+			expect(mockRosieInstall).toHaveBeenCalledWith("cloudflare/skills", {
+				global: true,
+				agent: ["claude"],
+				lockfile: false,
+			});
+
+			expect(std.out).toContain(
+				"Successfully installed Cloudflare skills for: Claude Code."
+			);
+		});
+
+		test("force=true installs skills without prompting", async ({ expect }) => {
+			// No mockConfirm — if a prompt fires, the test will fail with "Unexpected call to prompts"
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(true);
+
+			expect(result).toMatchObject({
+				targetedAgents: expect.arrayContaining([
+					expect.objectContaining({ name: "Claude Code" }),
+				]),
+			});
+
+			expect(mockRosieInstall).toHaveBeenCalledWith("cloudflare/skills", {
+				global: true,
+				agent: ["claude"],
+				lockfile: false,
+			});
+
+			expect(std.out).toContain(
+				"Successfully installed Cloudflare skills for: Claude Code."
+			);
+		});
+	});
+
+	describe("multiple agents", () => {
+		test("detects and installs skills for multiple agents", async ({
+			expect,
+		}) => {
+			mockRosieAgents.mockResolvedValueOnce([
+				{
+					name: "claude",
+					display: "Claude Code",
+					detected: true,
+					installPath: "/fake/.claude/skills",
+				},
+				{
+					name: "cursor",
+					display: "Cursor",
+					detected: true,
+					installPath: "/fake/.cursor/skills",
+				},
+			]);
+			mockConfirm({
+				text: expect.stringContaining("Claude Code") as unknown as string,
+				result: true,
+			});
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(false);
+
+			expect("skipped" in result).toBe(false);
+			if (!("skipped" in result)) {
+				const agentNames = result.targetedAgents.map((a) => a.name);
+				expect(agentNames).toContain("Claude Code");
+				expect(agentNames).toContain("Cursor");
+			}
+
+			expect(mockRosieInstall).toHaveBeenCalledWith("cloudflare/skills", {
+				global: true,
+				agent: ["claude", "cursor"],
+				lockfile: false,
+			});
+
+			expect(std.out).toContain(
+				"Successfully installed Cloudflare skills for: Claude Code, Cursor."
+			);
+		});
+	});
+
+	describe("install failure", () => {
+		test("writes metadata with installFailed when rosie.install() throws", async ({
+			expect,
+		}) => {
+			mockRosieInstall.mockRejectedValueOnce(
+				new Error("tarball download failed")
+			);
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(true);
+
+			expect(result).toEqual({
+				skipped: true,
+				reason: "Failed to install skills",
+			});
+
+			expect(std.warn).toContain(
+				"Failed to install Cloudflare skills: tarball download failed"
+			);
+
+			const metadata = readMetadataFile();
+			expect(metadata.accepted).toBe(true);
+			expect(metadata.installFailed).toBe(true);
+		});
+	});
+
+	describe("metadata file", () => {
+		test("writes metadata file with correct content when user accepts", async ({
+			expect,
+		}) => {
+			mockConfirm({
+				text: expect.stringContaining("Claude Code") as unknown as string,
+				result: true,
+			});
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			await installCloudflareSkillsGlobally(false);
+
+			const metadata = readMetadataFile();
+			expect(metadata.accepted).toBe(true);
+			expect(metadata.date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+			expect(metadata.detectedAgents).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						name: "Claude Code",
+						rosieId: "claude",
+					}),
+				])
+			);
+			expect(metadata.installFailed).toBe(false);
+		});
+
+		test("writes metadata file when user declines", async ({ expect }) => {
+			mockConfirm({
+				text: expect.stringContaining("Claude Code") as unknown as string,
+				result: false,
+			});
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			await installCloudflareSkillsGlobally(false);
+
+			const metadata = readMetadataFile();
+			expect(metadata.accepted).toBe(false);
+		});
+
+		test("does not include installFailed in metadata when user declines", async ({
+			expect,
+		}) => {
+			mockConfirm({
+				text: expect.stringContaining("Claude Code") as unknown as string,
+				result: false,
+			});
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			await installCloudflareSkillsGlobally(false);
+
+			const metadata = readMetadataFile();
+			expect(metadata.installFailed).toBeUndefined();
+		});
+
+		test("sets installFailed to true when rosie.install() throws", async ({
+			expect,
+		}) => {
+			mockRosieInstall.mockRejectedValueOnce(new Error("download failed"));
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			await installCloudflareSkillsGlobally(true);
+
+			const metadata = readMetadataFile();
+			expect(metadata.installFailed).toBe(true);
+		});
+
+		test("sets installFailed to agent names on partial failure", async ({
+			expect,
+		}) => {
+			mockRosieInstall.mockResolvedValueOnce({
+				skills: [
+					{
+						name: "cloudflare",
+						kind: "skill",
+						installedAgents: ["claude"],
+						failedAgents: ["cursor"],
+					},
+				],
+				installedAgents: ["claude"],
+				failedAgents: ["cursor"],
+				installedInstruction: null,
+			});
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			await installCloudflareSkillsGlobally(true);
+
+			const metadata = readMetadataFile();
+			expect(metadata.accepted).toBe(true);
+			expect(metadata.installFailed).toEqual(["cursor"]);
+		});
+
+		test("sets installFailed to false when all agents succeed", async ({
+			expect,
+		}) => {
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			await installCloudflareSkillsGlobally(true);
+
+			const metadata = readMetadataFile();
+			expect(metadata.accepted).toBe(true);
+			expect(metadata.installFailed).toBe(false);
+		});
+	});
+});

@@ -7,12 +7,13 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
+import { installCloudflareSkillsGlobally } from "../agents-skills-install";
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
-import { getMetricsDispatcher } from "../metrics";
+import { getMetricsDispatcher, sendMetricsEvent } from "../metrics";
 import {
 	COMMAND_ARG_ALLOW_LIST,
 	getAllowedArgs,
@@ -137,18 +138,42 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				await printWranglerBanner();
 			}
 
-			// Suppress statusMessage when printBanner is a dynamic function that
-			// returned false (e.g. `--json` mode). When printBanner is the static
-			// boolean `false`, we preserve existing behaviour and still show
-			// status warnings — those commands opted out of the Wrangler banner,
-			// not necessarily the status message.
-			const statusMessageEnabled =
-				typeof shouldPrintBanner !== "function" || bannerEnabled;
+			const skillsInstallResult = await installCloudflareSkillsGlobally(
+				args.experimentalForceSkillsInstall
+			);
+			const alreadyPrompted =
+				"skipped" in skillsInstallResult &&
+				skillsInstallResult.reason === "Already prompted";
+			if (!alreadyPrompted) {
+				if ("skipped" in skillsInstallResult) {
+					sendMetricsEvent(
+						"skills_install_skipped",
+						{ reason: skillsInstallResult.reason },
+						{}
+					);
+				} else {
+					sendMetricsEvent(
+						"skills_install_completed",
+						{
+							agents: skillsInstallResult.targetedAgents,
+						},
+						{}
+					);
+				}
+			}
 
 			if (!getWranglerHideBanner()) {
 				if (def.metadata.deprecated) {
 					logger.warn(def.metadata.deprecatedMessage);
 				}
+
+				// Suppress statusMessage when printBanner is a dynamic function that
+				// returned false (e.g. `--json` mode). When printBanner is the static
+				// boolean `false`, we preserve existing behaviour and still show
+				// status warnings — those commands opted out of the Wrangler banner,
+				// not necessarily the status message.
+				const statusMessageEnabled =
+					typeof shouldPrintBanner !== "function" || bannerEnabled;
 
 				if (statusMessageEnabled && def.metadata.statusMessage) {
 					logger.warn(def.metadata.statusMessage);
