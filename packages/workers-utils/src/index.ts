@@ -98,3 +98,6 @@ export type { Counter } from "./prometheus-metrics";
 export type { Tunnel, TunnelOptions } from "./tunnel";
 export { startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
+
+export { fetchLatestNpmVersion } from "./update-check";
+export type { NpmVersionCheckResult } from "./update-check";

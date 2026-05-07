@@ -126,14 +126,14 @@ export class WranglerLog extends Log {
 				return;
 			}
 			this.#warnedCompatibilityDateFallback = true;
-			return void updateCheck().then((maybeNewVersion) => {
-				if (maybeNewVersion === undefined) {
+			return void updateCheck().then((result) => {
+				if (result.status !== "update-available") {
 					return;
 				}
 				message += [
 					"",
 					"Features enabled by your requested compatibility date may not be available.",
-					`Upgrade to \`wrangler@${maybeNewVersion}\` to remove this warning.`,
+					`Upgrade to \`wrangler@${result.latest}\` to remove this warning.`,
 				].join("\n");
 				super.warn(message);
 			});

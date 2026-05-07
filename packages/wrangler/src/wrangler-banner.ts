@@ -6,6 +6,7 @@ import supportsColor from "supports-color";
 import { version as wranglerVersion } from "../package.json";
 import { logger } from "./logger";
 import { updateCheck } from "./update-check";
+import type { NpmVersionCheckResult } from "@cloudflare/workers-utils";
 
 const MIN_NODE_VERSION = "22.0.0";
 
@@ -27,14 +28,14 @@ export async function printWranglerBanner(performUpdateCheck = true) {
 		typeof WRANGLER_PRERELEASE_LABEL === "undefined"
 			? ` ⛅️ wrangler ${wranglerVersion}`
 			: ` ⛅️ wrangler ${wranglerVersion} (${chalk.blue(WRANGLER_PRERELEASE_LABEL)})`;
-	let maybeNewVersion: string | undefined;
+	let updateResult: NpmVersionCheckResult | undefined;
 	if (performUpdateCheck) {
 		// Race the update check against a short grace period. On a cache
 		// hit the library's readFile I/O completes within the first event-
 		// loop tick (<1 ms on SSD), so the result is almost always available.
 		// On a cache miss or slow network the timer wins and the banner
 		// prints immediately — no blocking.
-		maybeNewVersion = await Promise.race([
+		updateResult = await Promise.race([
 			updateCheck(),
 			new Promise<undefined>((resolve) => {
 				const timer = setTimeout(
@@ -44,8 +45,8 @@ export async function printWranglerBanner(performUpdateCheck = true) {
 				timer.unref();
 			}),
 		]);
-		if (maybeNewVersion !== undefined) {
-			text += ` (update available ${chalk.green(maybeNewVersion)})`;
+		if (updateResult?.status === "update-available") {
+			text += ` (update available ${chalk.green(updateResult.latest)})`;
 		}
 	}
 
@@ -67,9 +68,9 @@ export async function printWranglerBanner(performUpdateCheck = true) {
 	}
 
 	// Log a slightly more noticeable message if this is a major bump
-	if (maybeNewVersion !== undefined) {
+	if (updateResult?.status === "update-available") {
 		const currentMajor = parseInt(wranglerVersion.split(".")[0]);
-		const newMajor = parseInt(maybeNewVersion.split(".")[0]);
+		const newMajor = parseInt(updateResult.latest.split(".")[0]);
 		if (newMajor > currentMajor) {
 			logger.warn(
 				`The version of Wrangler you are using is now out-of-date.
