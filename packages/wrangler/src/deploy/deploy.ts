@@ -1289,12 +1289,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 
-	// Early exit for WfP since it doesn't need the below code
-	if (props.dispatchNamespace !== undefined) {
-		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag };
-	}
-
 	if (normalisedContainerConfig.length) {
 		assert(versionId && accountId);
 		await deployContainers(config, normalisedContainerConfig, {
@@ -1302,6 +1296,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			accountId,
 			scriptName,
 		});
+	}
+
+	// Early exit for WfP since it doesn't need the below code
+	if (props.dispatchNamespace !== undefined) {
+		deployWfpUserWorker(props.dispatchNamespace, versionId);
+		return { versionId, workerTag };
 	}
 
 	// deploy triggers
