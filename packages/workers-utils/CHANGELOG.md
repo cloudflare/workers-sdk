@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.21.0
+
+### Minor Changes
+
+- [#12279](https://github.com/cloudflare/workers-sdk/pull/12279) [`248bc08`](https://github.com/cloudflare/workers-sdk/commit/248bc08152cf9f792d98c8c78f8fb1417b1bb3b3) Thanks [@penalosa](https://github.com/penalosa)! - Add deprecation warning for `delivery_delay` in queue producer bindings
+
+  The `delivery_delay` setting in `[[queues.producers]]` was silently having no effect since 2024. This change adds a deprecation warning when the setting is used, informing users that queue-level settings should be configured using `wrangler queues update` instead. The setting will be removed in a future version.
+
 ## 0.20.0
 
 ### Minor Changes
