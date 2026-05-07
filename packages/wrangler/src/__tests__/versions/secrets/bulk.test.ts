@@ -395,5 +395,24 @@ describe("versions secret bulk", () => {
 			await runWrangler(`versions secret bulk --name script-name`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+			expect,
+		}) => {
+			vi.spyOn(readline, "createInterface").mockImplementation(
+				() =>
+					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
+					JSON.stringify({
+						SECRET_1: "secret-1",
+					}) as unknown as Interface
+			);
+
+			writeWranglerConfig({ env: { test: {} } });
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
+
+			await runWrangler(`versions secret bulk --name script-name --env=""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 });

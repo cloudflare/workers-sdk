@@ -207,5 +207,22 @@ describe("versions secret delete", () => {
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+
+			writeWranglerConfig({
+				env: { test: {} },
+			});
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect);
+			mockPostVersion(expect);
+
+			await runWrangler('versions secret delete SECRET --name script-name --env=""');
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 });

@@ -554,5 +554,26 @@ describe("versions secret put", () => {
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				name: "script-name",
+				env: { test: {} },
+			});
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
+
+			mockStdIn.send(
+				`the`,
+				`-`,
+				`secret
+			` // whitespace & newline being removed
+			);
+			await runWrangler('versions secret put NEW_SECRET --env=""');
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 });

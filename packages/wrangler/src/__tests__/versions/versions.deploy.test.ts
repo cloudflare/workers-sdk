@@ -1161,6 +1161,22 @@ describe("versions deploy", () => {
 
 				expect(consoleStd.warn).toMatchInlineSnapshot(`""`);
 			});
+
+			it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
+
+				await runWrangler(
+					'versions deploy 10000000-0000-0000-0000-000000000000 --yes --env=""'
+				);
+
+				expect(consoleStd.warn).toMatchInlineSnapshot(`""`);
+			});
 		});
 	});
 });
