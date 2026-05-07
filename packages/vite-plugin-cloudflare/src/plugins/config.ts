@@ -120,94 +120,92 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		buildApp: {
 			order: "post",
 			async handler(builder) {
-				assertIsNotPreview(ctx);
+				if (ctx.resolvedPluginConfig.type !== "workers") {
+					return;
+				}
 
-				let isAssetsOnly = ctx.resolvedPluginConfig.type === "assets-only";
+				const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
 
-				if (ctx.resolvedPluginConfig.type === "workers") {
-					const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
+				// Build any non-entry Worker environments that haven't already been built
+				const auxiliaryWorkerEnvironments = [
+					...ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys(),
+				]
+					.filter((name) => name !== entryWorkerEnvironmentName)
+					.map((environmentName) => {
+						const environment = builder.environments[environmentName];
+						assert(environment, `"${environmentName}" environment not found`);
 
-					// Build any non-entry Worker environments that haven't already been built
-					const auxiliaryWorkerEnvironments = [
-						...ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys(),
-					]
-						.filter((name) => name !== entryWorkerEnvironmentName)
-						.map((environmentName) => {
-							const environment = builder.environments[environmentName];
-							assert(environment, `"${environmentName}" environment not found`);
+						return environment;
+					});
 
-							return environment;
-						});
+				await Promise.all(
+					auxiliaryWorkerEnvironments
+						.filter((environment) => !environment.isBuilt)
+						.map((environment) => builder.build(environment))
+				);
 
-					await Promise.all(
-						auxiliaryWorkerEnvironments
-							.filter((environment) => !environment.isBuilt)
-							.map((environment) => builder.build(environment))
-					);
+				const entryWorkerEnvironment =
+					builder.environments[entryWorkerEnvironmentName];
+				assert(
+					entryWorkerEnvironment,
+					`No "${entryWorkerEnvironmentName}" environment`
+				);
 
-					const entryWorkerEnvironment =
-						builder.environments[entryWorkerEnvironmentName];
-					assert(
-						entryWorkerEnvironment,
-						`No "${entryWorkerEnvironmentName}" environment`
-					);
-
-					if (entryWorkerEnvironment.isBuilt) {
+				if (entryWorkerEnvironment.isBuilt) {
+					if (!builder.environments.client?.isBuilt) {
 						const entryWorkerBuildDirectory = path.resolve(
 							builder.config.root,
 							entryWorkerEnvironment.config.build.outDir
 						);
 
-						if (!builder.environments.client?.isBuilt) {
-							removeAssetsField(entryWorkerBuildDirectory);
-						}
-					} else {
-						isAssetsOnly = true;
-
-						const clientEnvironment = builder.environments.client;
-						assert(clientEnvironment, 'No "client" environment');
-
-						const entryWorkerConfig = ctx.getWorkerConfig(
-							entryWorkerEnvironmentName
-						);
-						assert(
-							entryWorkerConfig,
-							`No config found for "${entryWorkerEnvironmentName}" environment`
-						);
-
-						const outputConfig: Unstable_RawConfig = {
-							...entryWorkerConfig,
-							main: undefined,
-							assets: {
-								...entryWorkerConfig.assets,
-								directory: ".",
-								binding: undefined,
-							},
-						};
-
-						if (
-							outputConfig.unsafe &&
-							Object.keys(outputConfig.unsafe).length === 0
-						) {
-							outputConfig.unsafe = undefined;
-						}
-
-						fs.writeFileSync(
-							path.resolve(
-								builder.config.root,
-								clientEnvironment.config.build.outDir,
-								"wrangler.json"
-							),
-							JSON.stringify(outputConfig)
-						);
+						removeAssetsField(entryWorkerBuildDirectory);
 					}
-				}
+				} else {
+					// The entry Worker was only used in development so we emit an assets-only config to the client build output
 
-				writeDeployConfig(
-					ctx.resolvedPluginConfig,
-					ctx.resolvedViteConfig,
-					isAssetsOnly
-				);
+					const clientEnvironment = builder.environments.client;
+					assert(clientEnvironment, 'No "client" environment');
+
+					const entryWorkerConfig = ctx.getWorkerConfig(
+						entryWorkerEnvironmentName
+					);
+					assert(
+						entryWorkerConfig,
+						`No config found for "${entryWorkerEnvironmentName}" environment`
+					);
+
+					const outputConfig: Unstable_RawConfig = {
+						...entryWorkerConfig,
+						main: undefined,
+						assets: {
+							...entryWorkerConfig.assets,
+							directory: ".",
+							binding: undefined,
+						},
+					};
+
+					if (
+						outputConfig.unsafe &&
+						Object.keys(outputConfig.unsafe).length === 0
+					) {
+						outputConfig.unsafe = undefined;
+					}
+
+					fs.writeFileSync(
+						path.resolve(
+							builder.config.root,
+							clientEnvironment.config.build.outDir,
+							"wrangler.json"
+						),
+						JSON.stringify(outputConfig)
+					);
+
+					writeDeployConfig(
+						ctx.resolvedPluginConfig,
+						ctx.resolvedViteConfig,
+						true
+					);
+				}
 			},
 		},
 	};
