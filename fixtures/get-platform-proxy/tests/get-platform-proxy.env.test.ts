@@ -293,16 +293,22 @@ describe("getPlatformProxy - env", () => {
 			expect(warn).not.toHaveBeenCalled();
 		});
 
-		it("warns about Workflows and doesn't crash", async ({ expect }) => {
+		it("warns only about internal Workflows, not cross-script ones, and doesn't crash", async ({
+			expect,
+		}) => {
 			await getPlatformProxy<Env>({
 				configPath: path.join(__dirname, "..", "wrangler_workflow.jsonc"),
 			});
+			// Only MY_WORKFLOW_INTERNAL (no script_name) is unsupported in
+			// getPlatformProxy(); MY_WORKFLOW_EXTERNAL (script_name set) is
+			// passed through to miniflare, which routes it via the dev-registry
+			// proxy to the named worker.
+			expect(warn).toHaveBeenCalledTimes(1);
 			expect(warn.mock.calls[0][0].replaceAll(/[\r\n]+/g, "\n"))
 				.toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following Workflows:[0m
-					  				- {"binding":"MY_WORKFLOW_INTERNAL","name":"my-workflow-internal","class_name":"MyWorkflowInternal"}
-					  - {"binding":"MY_WORKFLOW_EXTERNAL","name":"my-workflow-external","class_name":"MyWorkflowExternal","script_name":"OtherWorker"}
-					  				These are not available in local development, so you will not be able to bind to them when testing locally, but they should work in production.
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou have defined bindings to the following Workflows without a script_name:[0m
+					  - {"binding":"MY_WORKFLOW_INTERNAL","name":"my-workflow-internal","class_name":"MyWorkflowInternal"}
+					  These are not available in local development, so you will not be able to bind to them when testing locally, but they should work in production.
 					"
 				`);
 		});
