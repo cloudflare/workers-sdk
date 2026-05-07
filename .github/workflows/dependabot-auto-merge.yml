@@ -1,0 +1,138 @@
+name: "Dependabot - auto-merge workerd updates"
+
+# workerd ships a release every weekday, so the workerd-and-workers-types
+# Dependabot group produces a steady stream of mechanical PRs that bump
+# `workerd`, `@cloudflare/workers-types`, and miniflare's pinned version in
+# lockstep (see .github/dependabot.yml). When CI is green these PRs require
+# no human review, so we enable GitHub auto-merge on them — required status
+# checks remain the gate, and a failing build still parks the PR for a human.
+#
+# Security model: this workflow effectively bypasses the human-review
+# requirement on PRs whose head branch matches the Dependabot naming pattern,
+# so we have to be paranoid about exactly what we're auto-merging. Before
+# enabling auto-merge we verify that the PR contains exactly the two commits
+# we expect (one from Dependabot, one from `miniflare-dependabot-versioning-prs.yml`)
+# and that nothing outside the expected fileset has been touched. If any
+# subsequent push violates those invariants we actively *disable* auto-merge,
+# so a maintainer pushing a follow-up commit cancels rather than rides the
+# auto-merge.
+#
+# DO NOT add `actions/checkout` to this workflow — `pull_request_target`
+# grants write-scoped tokens, and checking out PR-controlled code with
+# those tokens is the standard pwn vector.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable-auto-merge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-slim
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@d7267f607e9d3fb96fc2fbe83e0af444713e90b7 # v2.3.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify PR matches expected workerd-bump shape
+        id: verify
+        if: steps.meta.outputs.dependency-group == 'workerd-and-workers-types'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Pull commits and changed files via the GitHub API.
+          commits_json=$(gh pr view "$PR_NUMBER" --json commits)
+          files_json=$(gh pr view "$PR_NUMBER" --json files)
+
+          fail() {
+            echo "verified=false" >> "$GITHUB_OUTPUT"
+            echo "reason=$1" >> "$GITHUB_OUTPUT"
+            echo "::warning::Refusing to enable auto-merge: $1"
+            exit 0
+          }
+
+          # --- Commit shape ---------------------------------------------------
+          # Expected: exactly two commits.
+          #   1. dependabot[bot] author, with a verified GitHub signature.
+          #   2. The changeset commit pushed by miniflare-dependabot-versioning-prs.yml,
+          #      authored as `Wrangler automated PR updater <wrangler@cloudflare.com>`.
+          #
+          # We can't require a signature on the second commit (it's pushed via
+          # GH_ACCESS_TOKEN, which doesn't sign), so we lean on path/content
+          # checks below to constrain what that commit can do.
+
+          commit_count=$(echo "$commits_json" | jq '.commits | length')
+          if [ "$commit_count" -ne 2 ]; then
+            fail "expected exactly 2 commits, found $commit_count"
+          fi
+
+          first_author=$(echo "$commits_json" | jq -r '.commits[0].authors[0].login')
+          first_oid=$(echo "$commits_json" | jq -r '.commits[0].oid')
+          if [ "$first_author" != "dependabot[bot]" ]; then
+            fail "first commit author is '$first_author', expected 'dependabot[bot]'"
+          fi
+
+          # `gh pr view --json commits` doesn't expose signature info, so look
+          # it up via the REST commit endpoint.
+          first_verified=$(gh api "repos/${{ github.repository }}/commits/$first_oid" --jq '.commit.verification.verified')
+          if [ "$first_verified" != "true" ]; then
+            fail "first commit (Dependabot) does not have a verified signature"
+          fi
+
+          second_email=$(echo "$commits_json" | jq -r '.commits[1].authors[0].email // ""')
+          second_message=$(echo "$commits_json" | jq -r '.commits[1].messageHeadline // ""')
+          if [ "$second_email" != "wrangler@cloudflare.com" ]; then
+            fail "second commit author email is '$second_email', expected 'wrangler@cloudflare.com'"
+          fi
+          if ! echo "$second_message" | grep -qE '^Update dependencies of '; then
+            fail "second commit message '$second_message' does not match expected changeset commit shape"
+          fi
+
+          # --- Changed files allowlist ---------------------------------------
+          # The only paths a workerd bump should touch:
+          #   - .changeset/dependabot-update-*.md  (added by the changeset job)
+          #   - packages/*/package.json            (workerd, workers-types pins)
+          #   - pnpm-lock.yaml
+          #   - pnpm-workspace.yaml                (catalog entries)
+          allowed='^(\.changeset/dependabot-update-.*\.md|packages/[^/]+/package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml)$'
+
+          unexpected=$(echo "$files_json" | jq -r '.files[].path' | grep -vE "$allowed" || true)
+          if [ -n "$unexpected" ]; then
+            fail "PR touches unexpected files:$(echo "$unexpected" | sed 's/^/ /' | tr '\n' ',')"
+          fi
+
+          # Make sure the changeset is actually present — the changeset job
+          # may not have run yet, in which case we bail and wait for the
+          # `synchronize` event from its push.
+          if ! echo "$files_json" | jq -e '.files[] | select(.path | startswith(".changeset/dependabot-update-"))' > /dev/null; then
+            fail "changeset file not yet present; waiting for changeset job to push it"
+          fi
+
+          echo "verified=true" >> "$GITHUB_OUTPUT"
+
+      - name: Enable auto-merge
+        if: steps.meta.outputs.dependency-group == 'workerd-and-workers-types' && steps.verify.outputs.verified == 'true'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Disable auto-merge if verification failed
+        # If a previous run enabled auto-merge but a later push broke the
+        # invariants, actively cancel auto-merge so the bad commit can't ride.
+        # `gh pr merge --disable-auto` is a no-op (and exits 0) if auto-merge
+        # was never enabled, so this is safe to always run on the failure path.
+        if: steps.meta.outputs.dependency-group == 'workerd-and-workers-types' && steps.verify.outputs.verified != 'true'
+        run: gh pr merge --disable-auto "$PR_URL" || true
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
