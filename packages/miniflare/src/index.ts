@@ -586,6 +586,31 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 			}
 		}
 
+		// Cross-worker workflow bindings: when `scriptName` refers to a worker
+		// outside this Miniflare instance (registered in the dev registry), mark
+		// the workflow `external` so the workflows plugin reroutes the engine's
+		// USER_WORKFLOW binding through the dev-registry-proxy. Mirrors the DO
+		// block above. Without this, the engine binds to a non-existent local
+		// service `core:user:<scriptName>` and workerd refuses to start.
+		if (workerOpts.workflows.workflows) {
+			for (const [bindingName, workflow] of Object.entries(
+				workerOpts.workflows.workflows
+			)) {
+				const { scriptName, className, remoteProxyConnectionString } = workflow;
+				if (
+					remoteProxyConnectionString === undefined &&
+					scriptName &&
+					!allWorkerNames.includes(scriptName)
+				) {
+					workerOpts.workflows.workflows[bindingName] = {
+						...workflow,
+						external: true,
+					};
+					getEntrypoints(scriptName).entrypoints.add(className);
+				}
+			}
+		}
+
 		if (workerOpts.core.tails) {
 			for (let i = 0; i < workerOpts.core.tails.length; i++) {
 				const {
