@@ -31,7 +31,15 @@ export async function pullEgressInterceptorImage(
 	dockerPath: string
 ): Promise<void> {
 	const image = getEgressInterceptorImage();
-	await runDockerCmd(dockerPath, ["pull", image, "--platform", "linux/amd64"]);
+	// When Docker pulls name:tag@digest, it resolves by digest and silently
+	// drops the tag (see distribution/reference ParseDockerRef). Pull by
+	// digest, then explicitly tag so both references are available locally.
+	const digestRef = image.replace(/:[^@]+@/, "@");
+	await runDockerCmd(dockerPath, ["pull", digestRef, "--platform", "linux/amd64"]);
+	const tagRef = image.replace(/@sha256:[a-f0-9]+$/, "");
+	if (tagRef !== image) {
+		await runDockerCmd(dockerPath, ["tag", digestRef, tagRef]);
+	}
 }
 
 export async function pullImage(
