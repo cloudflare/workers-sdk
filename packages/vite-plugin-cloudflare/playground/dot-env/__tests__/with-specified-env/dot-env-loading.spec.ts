@@ -21,10 +21,10 @@ describe.runIf(isBuild)("build output files", () => {
 
 		const distDevVarsContent = fs.readFileSync(distDevVarsPath, "utf-8");
 		expect(distDevVarsContent).toMatchInlineSnapshot(`
-			"ENV_NAME = "staging"
-			MY_DEV_VAR_A = "my .env staging variable A"
-			MY_DEV_VAR_B = "my .env staging variable B"
-			MY_DEV_VAR_C = "my .env variable C"
+			"ENV_NAME='staging'
+			MY_DEV_VAR_A='my .env staging variable A'
+			MY_DEV_VAR_B='my .env staging variable B'
+			MY_DEV_VAR_C='my .env variable C'
 			"
 		`);
 	});
