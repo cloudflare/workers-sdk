@@ -2,6 +2,7 @@ import {
 	defaultWranglerConfig,
 	FatalError,
 	getWranglerHideBanner,
+	isRedirectedConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -198,11 +199,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				});
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
-					// For redirected configs the env was chosen at build time; targetEnvironment reflects
-					// the baked target (or undefined = top-level), not whether the user passed --env.
-					const isRedirectedConfig =
-						config.userConfigPath !== config.configPath;
-					if (!isRedirectedConfig && config.targetEnvironment === undefined) {
+					if (!isRedirectedConfig(config) && config.targetEnvironment === undefined) {
 						const availableEnvsCount = config.definedEnvironments?.length ?? 0
 
 						if (availableEnvsCount > 0) {
