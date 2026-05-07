@@ -126,7 +126,7 @@
 		"dotenv-expand": "^12.0.2",
 		"empathic": "^2.0.0",
 		"esprima": "4.0.1",
-		"execa": "^6.1.0",
+		"execa": "^9.5.3",
 		"get-port": "^7.0.0",
 		"glob-to-regexp": "^0.4.1",
 		"https-proxy-agent": "7.0.2",
