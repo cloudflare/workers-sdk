@@ -163,9 +163,14 @@ vi.mock("../user/generate-auth-url", async (importOriginal) => {
 		generateAuthUrl: vi
 			.fn()
 			.mockImplementation(
-				({ authUrl, clientId, scopes, callbackUrl = OAUTH_CALLBACK_URL }) => {
+				({
+					authOrigin,
+					clientId,
+					scopes,
+					callbackUrl = OAUTH_CALLBACK_URL,
+				}) => {
 					return (
-						authUrl +
+						`${authOrigin}/oauth2/auth` +
 						`?response_type=code&` +
 						`client_id=${encodeURIComponent(clientId)}&` +
 						`redirect_uri=${encodeURIComponent(callbackUrl)}&` +

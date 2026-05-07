@@ -1,7 +1,10 @@
 import { SELF } from "cloudflare:test";
 import { exports } from "cloudflare:workers";
 import { describe, it } from "vitest";
-import { WRANGLER_CLIENT_HEADER } from "../src/protocol";
+import {
+	WRANGLER_CLIENT_HEADER,
+	WRANGLER_RELAY_SUBPROTOCOL,
+} from "../src/protocol";
 
 /**
  * 32-char state matching `STATE_REGEX`. Tests append a per-test suffix to
@@ -17,6 +20,7 @@ function makeState(suffix: string): string {
 function wranglerWsHeaders(wsToken = "token-".padEnd(43, "x")): HeadersInit {
 	return {
 		Upgrade: "websocket",
+		"Sec-WebSocket-Protocol": WRANGLER_RELAY_SUBPROTOCOL,
 		[WRANGLER_CLIENT_HEADER]: wsToken,
 	};
 }
@@ -121,7 +125,12 @@ describe("cf-auth-worker", () => {
 		}) => {
 			const resp = await SELF.fetch(
 				`https://auth.devprod.cloudflare.dev/session/${makeState("h1")}`,
-				{ headers: { Upgrade: "websocket" } }
+				{
+					headers: {
+						Upgrade: "websocket",
+						"Sec-WebSocket-Protocol": WRANGLER_RELAY_SUBPROTOCOL,
+					},
+				}
 			);
 			expect(resp.status).toBe(404);
 		});
@@ -144,6 +153,95 @@ describe("cf-auth-worker", () => {
 				{ headers: wranglerWsHeaders("a".repeat(257)) }
 			);
 			expect(resp.status).toBe(404);
+		});
+	});
+
+	describe("WebSocket subprotocol negotiation (REVIEW-17452 #37)", () => {
+		it("should reject upgrades with no Sec-WebSocket-Protocol header", async ({
+			expect,
+		}) => {
+			const state = makeState("sp-none-" + Date.now());
+			const resp = await SELF.fetch(
+				`https://auth.devprod.cloudflare.dev/session/${state}`,
+				{
+					headers: {
+						Upgrade: "websocket",
+						[WRANGLER_CLIENT_HEADER]: "tok-".padEnd(43, "y"),
+					},
+				}
+			);
+			expect(resp.status).toBe(404);
+		});
+
+		it("should reject upgrades that don't offer the wrangler subprotocol", async ({
+			expect,
+		}) => {
+			const state = makeState("sp-bad-" + Date.now());
+			const resp = await SELF.fetch(
+				`https://auth.devprod.cloudflare.dev/session/${state}`,
+				{
+					headers: {
+						Upgrade: "websocket",
+						"Sec-WebSocket-Protocol": "some-other-protocol",
+						[WRANGLER_CLIENT_HEADER]: "tok-".padEnd(43, "y"),
+					},
+				}
+			);
+			expect(resp.status).toBe(404);
+		});
+
+		it("should accept upgrades that offer the wrangler subprotocol among others", async ({
+			expect,
+		}) => {
+			const state = makeState("sp-multi-" + Date.now());
+			const resp = await SELF.fetch(
+				`https://auth.devprod.cloudflare.dev/session/${state}`,
+				{
+					headers: {
+						Upgrade: "websocket",
+						"Sec-WebSocket-Protocol": `chat, ${WRANGLER_RELAY_SUBPROTOCOL}, other`,
+						[WRANGLER_CLIENT_HEADER]: "tok-".padEnd(43, "y"),
+					},
+				}
+			);
+			expect(resp.status).toBe(101);
+			resp.webSocket?.accept();
+			resp.webSocket?.close();
+		});
+
+		it("should echo the subprotocol on the 101 response", async ({
+			expect,
+		}) => {
+			const state = makeState("sp-echo-" + Date.now());
+			const resp = await SELF.fetch(
+				`https://auth.devprod.cloudflare.dev/session/${state}`,
+				{ headers: wranglerWsHeaders() }
+			);
+			expect(resp.status).toBe(101);
+			expect(resp.headers.get("Sec-WebSocket-Protocol")).toBe(
+				WRANGLER_RELAY_SUBPROTOCOL
+			);
+			resp.webSocket?.accept();
+			resp.webSocket?.close();
+		});
+	});
+
+	describe("Case-insensitive Upgrade header (REVIEW-17452 #35)", () => {
+		it("should accept Upgrade: WEBSOCKET (uppercase)", async ({ expect }) => {
+			const state = makeState("up-case-" + Date.now());
+			const resp = await SELF.fetch(
+				`https://auth.devprod.cloudflare.dev/session/${state}`,
+				{
+					headers: {
+						Upgrade: "WEBSOCKET",
+						"Sec-WebSocket-Protocol": WRANGLER_RELAY_SUBPROTOCOL,
+						[WRANGLER_CLIENT_HEADER]: "tok-".padEnd(43, "z"),
+					},
+				}
+			);
+			expect(resp.status).toBe(101);
+			resp.webSocket?.accept();
+			resp.webSocket?.close();
 		});
 	});
 
@@ -406,6 +504,39 @@ describe("cf-auth-worker", () => {
 		it("should return 404 for root path", async ({ expect }) => {
 			const resp = await SELF.fetch("https://auth.devprod.cloudflare.dev/");
 			expect(resp.status).toBe(404);
+		});
+	});
+
+	describe("CORS headers (REVIEW-17452 #33)", () => {
+		it("should NOT set Access-Control-* headers on the /callback redirect", async ({
+			expect,
+		}) => {
+			// `/callback` with bad state still returns a 307 to consent-denied
+			// — perfect for asserting on the Worker's response headers without
+			// having to set up a session.
+			const resp = await SELF.fetch(
+				"https://auth.devprod.cloudflare.dev/callback?state=tooshort",
+				{
+					redirect: "manual",
+					headers: { Origin: "https://attacker.example" },
+				}
+			);
+			expect(resp.status).toBe(307);
+			expect(resp.headers.get("Access-Control-Allow-Origin")).toBeNull();
+			expect(resp.headers.get("Access-Control-Allow-Credentials")).toBeNull();
+			expect(resp.headers.get("Access-Control-Allow-Methods")).toBeNull();
+			expect(resp.headers.get("Access-Control-Allow-Headers")).toBeNull();
+		});
+
+		it("should set Vary: Origin on the /callback redirect (cache-key safety)", async ({
+			expect,
+		}) => {
+			const resp = await SELF.fetch(
+				"https://auth.devprod.cloudflare.dev/callback?state=tooshort",
+				{ redirect: "manual" }
+			);
+			expect(resp.status).toBe(307);
+			expect(resp.headers.get("Vary")).toBe("Origin");
 		});
 	});
 });

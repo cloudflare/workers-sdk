@@ -47,3 +47,14 @@ export const WRANGLER_CLIENT_HEADER = "Sec-Wrangler-Client";
  * (REVIEW-17452 #27).
  */
 export const WS_MESSAGE_MAX_PAYLOAD_BYTES = 4 * 1024;
+
+/**
+ * Required WebSocket subprotocol on every Wrangler upgrade. Browser-issued
+ * WebSockets cannot easily forge a non-default subprotocol, so requiring an
+ * exact match adds a defence-in-depth layer on top of the
+ * `Sec-Wrangler-Client` check (REVIEW-17452 #37).
+ *
+ * Must be kept in lockstep with `WRANGLER_RELAY_SUBPROTOCOL` in
+ * `packages/cf-auth-worker/src/protocol.ts`.
+ */
+export const WRANGLER_RELAY_SUBPROTOCOL = "wrangler-auth-relay-v1";

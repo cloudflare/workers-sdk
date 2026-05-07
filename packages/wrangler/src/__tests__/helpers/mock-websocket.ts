@@ -9,6 +9,13 @@ export interface MockWebSocketOptions {
 }
 
 /**
+ * Subprotocols arg of the `ws` constructor. Either a single string or an
+ * array of offered protocols. Recorded so tests can assert the relay
+ * subprotocol was advertised (REVIEW-17452 #37).
+ */
+export type MockWebSocketProtocols = string | string[] | undefined;
+
+/**
  * A minimal `WebSocket` stub that lets tests drive the auth relay flow without
  * making any network calls. Instances can be obtained via `MockWebSocket.last`
  * and driven with `triggerOpen`, `triggerMessage`, etc.
@@ -37,6 +44,14 @@ export class MockWebSocket {
 	}
 
 	url: string;
+	protocols: MockWebSocketProtocols;
+	/**
+	 * The negotiated subprotocol after `open`. Wrangler asserts on this
+	 * to detect a misbehaving relay; tests can override before triggering
+	 * `triggerOpen` to simulate a server that picked a different protocol
+	 * or none at all.
+	 */
+	protocol = "";
 	options: MockWebSocketOptions | undefined;
 	readyState = 0; // CONNECTING
 
@@ -52,9 +67,34 @@ export class MockWebSocket {
 		error: new Set(),
 	};
 
-	constructor(url: string | URL, options?: MockWebSocketOptions) {
+	constructor(
+		url: string | URL,
+		protocolsOrOptions?: MockWebSocketProtocols | MockWebSocketOptions,
+		options?: MockWebSocketOptions
+	) {
 		this.url = typeof url === "string" ? url : url.toString();
-		this.options = options;
+		// Real `ws` constructor: second arg can be either the protocols (string
+		// | string[]) or the options object. Distinguish by type so tests can
+		// drive both shapes without a special API.
+		if (
+			typeof protocolsOrOptions === "string" ||
+			Array.isArray(protocolsOrOptions)
+		) {
+			this.protocols = protocolsOrOptions;
+			this.options = options;
+		} else {
+			this.protocols = undefined;
+			this.options = protocolsOrOptions;
+		}
+		// Default the negotiated protocol to whatever the client offered first
+		// — mirrors a "well-behaved" server that echoes the requested protocol.
+		// Tests that want to simulate a mismatch can set `mockWs.protocol = ""`
+		// before `triggerOpen()`.
+		if (typeof this.protocols === "string") {
+			this.protocol = this.protocols;
+		} else if (Array.isArray(this.protocols) && this.protocols.length > 0) {
+			this.protocol = this.protocols[0];
+		}
 		MockWebSocket.instances.push(this);
 		// Auto-open in a microtask, simulating a successful connection. Tests
 		// that want to exercise connection failure can set

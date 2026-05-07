@@ -242,11 +242,12 @@ import {
 	AUTH_RELAY_CONNECT_TIMEOUT_MS,
 	AUTH_WORKER_ORIGIN,
 	WRANGLER_CLIENT_HEADER,
+	WRANGLER_RELAY_SUBPROTOCOL,
 	WS_MESSAGE_MAX_PAYLOAD_BYTES,
 } from "./auth-relay-constants";
 import {
 	getAuthDomainFromEnv,
-	getAuthUrlFromEnv,
+	getAuthOriginFromEnv,
 	getClientIdFromEnv,
 	getCloudflareAccessHeaders,
 	getCloudflareAccountIdFromEnv,
@@ -743,7 +744,7 @@ async function getAuthURL(scopes: string[], clientId: string): Promise<string> {
 	});
 
 	return generateAuthUrl({
-		authUrl: getAuthUrlFromEnv(),
+		authOrigin: getAuthOriginFromEnv(),
 		clientId,
 		scopes,
 		stateQueryParam,
@@ -1269,9 +1270,12 @@ async function getOauthTokenViaWebSocket(options: {
 	// `headers` carries the wsToken (a custom header browsers cannot set on
 	// the WebSocket constructor). `maxPayload` caps a single frame so a
 	// compromised relay can't OOM Wrangler with a giant blob (#27). The
-	// default `ws` package already verifies TLS via Node's trust store —
+	// `WRANGLER_RELAY_SUBPROTOCOL` second arg is echoed back by the relay on
+	// the 101; a browser-mediated CSWSH attempt that doesn't know to
+	// negotiate this subprotocol is rejected at the handshake layer (#37).
+	// The default `ws` package already verifies TLS via Node's trust store —
 	// we additionally rejected `NODE_TLS_REJECT_UNAUTHORIZED=0` above.
-	const ws = new WebSocket(wsUrl, {
+	const ws = new WebSocket(wsUrl, WRANGLER_RELAY_SUBPROTOCOL, {
 		headers: { [WRANGLER_CLIENT_HEADER]: wsToken },
 		maxPayload: WS_MESSAGE_MAX_PAYLOAD_BYTES,
 	});
@@ -1344,6 +1348,17 @@ async function getOauthTokenViaWebSocket(options: {
 			);
 		});
 
+		// After open, verify the server echoed the wrangler subprotocol on
+		// the 101 (REVIEW-17452 #37). If the server picked an empty or
+		// mismatched protocol, abort before redeeming the auth code — we
+		// might be talking to the wrong endpoint.
+		if (ws.protocol !== WRANGLER_RELAY_SUBPROTOCOL) {
+			throw new UserError(
+				`Auth relay did not negotiate the expected WebSocket subprotocol (got "${ws.protocol}").`,
+				{ telemetryMessage: "user oauth relay subprotocol mismatch" }
+			);
+		}
+
 		// 3. Set up the message/close listener BEFORE sending the auth URL to
 		//    the browser. The user has to authorise in the browser before the
 		//    DO can deliver a message, but listener attachment is essentially
@@ -1393,7 +1408,7 @@ async function getOauthTokenViaWebSocket(options: {
 			AUTH_WORKER_ORIGIN
 		).toString();
 		const authUrl = generateAuthUrl({
-			authUrl: getAuthUrlFromEnv(),
+			authOrigin: getAuthOriginFromEnv(),
 			clientId: options.clientId,
 			scopes: options.scopes,
 			stateQueryParam,

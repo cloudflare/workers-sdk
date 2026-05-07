@@ -1,6 +1,7 @@
 import {
 	getCloudflareApiEnvironmentFromEnv,
 	getEnvironmentVariableFactory,
+	UserError,
 } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import { getAccessHeaders } from "./access";
@@ -71,6 +72,28 @@ export const getAuthUrlFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_AUTH_URL",
 	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/auth`,
 });
+
+/**
+ * Returns just the *origin* (scheme + host + optional port) of the OAuth
+ * authorization server, derived from `WRANGLER_AUTH_URL`. Used by
+ * `generateAuthUrl()` so that the function can append `/oauth2/auth?...`
+ * itself without risk of colliding with a pre-existing query string in
+ * the env-var override (REVIEW-17452 #39).
+ *
+ * Wraps `new URL()` in a try/catch so a malformed `WRANGLER_AUTH_URL`
+ * surfaces as a graceful `UserError` rather than an unhandled
+ * `TypeError` (REVIEW-17452 #38, applied to this env var).
+ */
+export function getAuthOriginFromEnv(): string {
+	const raw = getAuthUrlFromEnv();
+	try {
+		return new URL(raw).origin;
+	} catch {
+		throw new UserError(`WRANGLER_AUTH_URL is not a valid URL: ${raw}`, {
+			telemetryMessage: "user oauth invalid auth url",
+		});
+	}
+}
 
 /**
  * `WRANGLER_TOKEN_URL` is the path that is used to exchange an OAuth

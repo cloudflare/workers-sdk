@@ -1,7 +1,7 @@
 import { fetch } from "undici";
 import { describe, it } from "vitest";
 import {
-	getAuthUrlFromEnv,
+	getAuthOriginFromEnv,
 	getClientIdFromEnv,
 } from "../src/user/auth-variables";
 import { generateAuthUrl } from "../src/user/generate-auth-url";
@@ -12,7 +12,7 @@ describe("auth scopes", () => {
 		expect,
 	}) => {
 		const url = generateAuthUrl({
-			authUrl: getAuthUrlFromEnv(),
+			authOrigin: getAuthOriginFromEnv(),
 			clientId: getClientIdFromEnv(),
 			scopes: DefaultScopeKeys,
 			stateQueryParam: "test-state",
