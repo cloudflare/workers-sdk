@@ -336,7 +336,8 @@ export async function verifyTypes(
 			// old type gen - some framework templates pin older versions of wrangler
 			line === `interface ${envInterfaceName} {` ||
 			// new after importable env change
-			line === `interface ${envInterfaceName} extends Cloudflare.Env {}`
+			line ===
+				`interface ${envInterfaceName} extends __EnvShape_${envInterfaceName} {}`
 	);
 	expect(hasEnvInterface).toBe(true);
 
