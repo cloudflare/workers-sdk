@@ -35,6 +35,7 @@ import { getPagesTmpDir, truncateUtf8Bytes } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { RoutesJSONSpec } from "../../pages/functions/routes-transformation";
 import type { Deployment, Project } from "@cloudflare/types";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -391,7 +392,10 @@ export async function deploy({
 			// user provided a custom _routes.json file
 			try {
 				const routesPath = join(directory, "_routes.json");
-				const routesCustomJSON = parseJSON(_routesCustom, routesPath);
+				const routesCustomJSON = parseJSON(
+					_routesCustom,
+					routesPath
+				) as RoutesJSONSpec;
 				validateRoutes(routesCustomJSON, routesPath);
 
 				formData.append(
@@ -433,7 +437,10 @@ export async function deploy({
 			// user provided a custom _routes.json file
 			try {
 				const routesPath = join(directory, "_routes.json");
-				const routesCustomJSON = parseJSON(_routesCustom, routesPath);
+				const routesCustomJSON = parseJSON(
+					_routesCustom,
+					routesPath
+				) as RoutesJSONSpec;
 				validateRoutes(routesCustomJSON, routesPath);
 
 				formData.append(
