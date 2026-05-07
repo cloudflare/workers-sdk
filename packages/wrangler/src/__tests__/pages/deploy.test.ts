@@ -2,9 +2,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
-import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import TOML from "smol-toml";
+import { x } from "tinyexec";
 import dedent from "ts-dedent";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -1810,7 +1810,7 @@ describe("pages deploy", () => {
 	}) => {
 		vi.mocked(ci).isCI = false;
 		setIsTTY(true);
-		await execa("git", ["init"]);
+		await x("git", ["init"], { throwOnError: true });
 		writeFileSync("logo.png", "foobar");
 		mockGetUploadTokenRequest(
 			expect,

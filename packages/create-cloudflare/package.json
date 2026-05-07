@@ -65,7 +65,6 @@
 		"dns2": "^2.1.0",
 		"dotenv": "^16.0.0",
 		"esbuild": "catalog:default",
-		"execa": "^7.1.1",
 		"exit-hook": "2.2.1",
 		"get-port": "^7.1.0",
 		"haikunator": "^2.1.2",
