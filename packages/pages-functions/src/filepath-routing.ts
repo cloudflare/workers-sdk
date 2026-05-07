@@ -1,31 +1,62 @@
-// Mirrored at `packages/pages-functions/src/filepath-routing.ts`. This file
-// will be removed once wrangler consumes `@cloudflare/pages-functions`
-// directly. Keep the two in sync until then.
+/**
+ * File-based routing for Pages Functions.
+ *
+ * Scans a functions directory and generates route configuration from the
+ * file structure and exported handlers.
+ *
+ * Mirrors `packages/wrangler/src/pages/functions/filepath-routing.ts`. That
+ * file still powers wrangler's legacy Pages build path and will be removed
+ * once wrangler consumes this package. Keep the two in sync until then.
+ */
 
-import fs from "node:fs/promises";
-import path from "node:path";
-import { FatalError } from "@cloudflare/workers-utils";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { build } from "esbuild";
-import { toUrlPath } from "../../paths";
-import { FunctionsBuildError } from "../errors";
-import type { UrlPath } from "../../paths";
-import type { HTTPMethod, RouteConfig } from "./routes";
+import type {
+	FunctionsConfig,
+	HTTPMethod,
+	RouteConfig,
+	UrlPath,
+} from "./types";
 
+/**
+ * Error thrown when building/parsing a function file fails.
+ */
+export class FunctionsBuildError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "FunctionsBuildError";
+	}
+}
+
+/**
+ * Convert a path to a URL path format (forward slashes).
+ */
+function toUrlPath(p: string): UrlPath {
+	return p.replace(/\\/g, "/") as UrlPath;
+}
+
+/**
+ * Generate route configuration from a functions directory.
+ *
+ * @param baseDir The functions directory path
+ * @param baseURL The base URL prefix for all routes (default: "/")
+ */
 export async function generateConfigFromFileTree({
 	baseDir,
-	baseURL,
+	baseURL = "/" as UrlPath,
 }: {
 	baseDir: string;
-	baseURL: UrlPath;
-}) {
+	baseURL?: UrlPath;
+}): Promise<FunctionsConfig> {
 	let routeEntries: RouteConfig[] = [];
 
-	if (!baseURL.startsWith("/")) {
-		baseURL = `/${baseURL}` as UrlPath;
+	let normalizedBaseURL = baseURL;
+	if (!normalizedBaseURL.startsWith("/")) {
+		normalizedBaseURL = `/${normalizedBaseURL}` as UrlPath;
 	}
-
-	if (baseURL.endsWith("/")) {
-		baseURL = baseURL.slice(0, -1) as UrlPath;
+	if (normalizedBaseURL.endsWith("/")) {
+		normalizedBaseURL = normalizedBaseURL.slice(0, -1) as UrlPath;
 	}
 
 	await forEachFile(baseDir, async (filepath) => {
@@ -37,16 +68,16 @@ export async function generateConfigFromFileTree({
 				bundle: false,
 				entryPoints: [path.resolve(filepath)],
 			}).catch((e) => {
-				throw new FunctionsBuildError(e.message, {
-					telemetryMessage: "pages functions route build failed",
-				});
+				throw new FunctionsBuildError(e.message);
 			});
+
 			const exportNames: string[] = [];
 			if (metafile) {
 				for (const output in metafile?.outputs) {
 					exportNames.push(...metafile.outputs[output].exports);
 				}
 			}
+
 			for (const exportName of exportNames) {
 				const [match, method = ""] = (exportName.match(
 					/^onRequest(Get|Post|Put|Patch|Delete|Options|Head)?$/
@@ -76,8 +107,8 @@ export async function generateConfigFromFileTree({
 						mountPath = "";
 					}
 
-					routePath = `${baseURL}/${routePath}`;
-					mountPath = `${baseURL}/${mountPath}`;
+					routePath = `${normalizedBaseURL}/${routePath}`;
+					mountPath = `${normalizedBaseURL}/${mountPath}`;
 
 					routePath = convertCatchallParams(routePath);
 					routePath = convertSimpleParams(routePath);
@@ -101,6 +132,7 @@ export async function generateConfigFromFileTree({
 			}
 		}
 	});
+
 	// Combine together any routes (index routes) which contain both a module and a middleware
 	routeEntries = routeEntries.reduce(
 		(acc: typeof routeEntries, { routePath, ...rest }) => {
@@ -126,13 +158,17 @@ export async function generateConfigFromFileTree({
 	};
 }
 
-// Ensure routes are produced in order of precedence so that
-// more specific routes aren't occluded from matching due to
-// less specific routes appearing first in the route list.
+/**
+ * Compare routes for sorting by specificity.
+ *
+ * Ensures routes are produced in order of precedence so that
+ * more specific routes aren't occluded from matching due to
+ * less specific routes appearing first in the route list.
+ */
 export function compareRoutes(
 	{ routePath: routePathA, method: methodA }: RouteConfig,
 	{ routePath: routePathB, method: methodB }: RouteConfig
-) {
+): number {
 	function parseRoutePath(routePath: UrlPath): string[] {
 		return routePath.slice(1).split("/").filter(Boolean);
 	}
@@ -168,7 +204,7 @@ export function compareRoutes(
 		}
 	}
 
-	// sort routes that specify an HTTP before those that don't
+	// sort routes that specify an HTTP method before those that don't
 	if (methodA && !methodB) {
 		return -1;
 	}
@@ -180,10 +216,13 @@ export function compareRoutes(
 	return routePathA.localeCompare(routePathB);
 }
 
+/**
+ * Recursively iterate over all files in a directory.
+ */
 async function forEachFile<T>(
 	baseDir: string,
 	fn: (filepath: string) => T | Promise<T>
-) {
+): Promise<T[]> {
 	const searchPaths = [baseDir];
 	const returnValues: T[] = [];
 
@@ -206,6 +245,7 @@ async function forEachFile<T>(
 interface NonEmptyArray<T> extends Array<T> {
 	shift(): T;
 }
+
 function isNotEmpty<T>(array: T[]): array is NonEmptyArray<T> {
 	return array.length > 0;
 }
@@ -223,9 +263,8 @@ function convertCatchallParams(routePath: string): string {
 		if (validParamNameRegExp.test(param)) {
 			return `:${param}*`;
 		} else {
-			throw new FatalError(
-				`Invalid Pages function route parameter - "[[${param}]]". Parameters names must only contain alphanumeric and underscore characters.`,
-				{ telemetryMessage: "pages functions invalid catchall route parameter" }
+			throw new Error(
+				`Invalid Pages function route parameter - "[[${param}]]". Parameter names must only contain alphanumeric and underscore characters.`
 			);
 		}
 	});
@@ -239,9 +278,8 @@ function convertSimpleParams(routePath: string): string {
 		if (validParamNameRegExp.test(param)) {
 			return `:${param}`;
 		} else {
-			throw new FatalError(
-				`Invalid Pages function route parameter - "[${param}]". Parameter names must only contain alphanumeric and underscore characters.`,
-				{ telemetryMessage: "pages functions invalid route parameter" }
+			throw new Error(
+				`Invalid Pages function route parameter - "[${param}]". Parameter names must only contain alphanumeric and underscore characters.`
 			);
 		}
 	});
