@@ -507,7 +507,7 @@ const testCases: TestCase[] = [
 				}),
 			};
 		},
-		getExpectFetchToMatch: (expect) => [expect.stringContaining(`"context"`)],
+		getExpectFetchToMatch: (expect) => [expect.stringContaining("profile")],
 	},
 	{
 		name: "Pipelines",
