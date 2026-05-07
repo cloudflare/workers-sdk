@@ -24,7 +24,7 @@ function isMembershipsInaccessible(err: unknown): boolean {
 	return code !== undefined && MEMBERSHIPS_INACCESSIBLE_CODES.includes(code);
 }
 
-function isBadCredentials(err: unknown): boolean {
+function isMembershipsBadCredentials(err: unknown): boolean {
 	const code = (err as { code?: number } | undefined)?.code;
 	return code !== undefined && MEMBERSHIPS_BAD_CREDENTIALS_CODES.includes(code);
 }
@@ -86,7 +86,7 @@ export async function fetchAllAccounts(
 You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your ${configFileName(undefined)} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 				{ telemetryMessage: "user account fetch permission denied" }
 			);
-		} else if (isBadCredentials(membershipsRes.reason)) {
+		} else if (isMembershipsBadCredentials(membershipsRes.reason)) {
 			throw new UserError(
 				`Authentication failed when calling the Cloudflare API (/memberships).
 An environment variable such as CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_KEY, or CLOUDFLARE_EMAIL may be set to an invalid value.
