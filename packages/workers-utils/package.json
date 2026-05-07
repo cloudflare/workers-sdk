@@ -47,6 +47,7 @@
 		"@types/command-exists": "^1.2.0",
 		"@types/node": "catalog:default",
 		"@vitest/ui": "catalog:default",
+		"ci-info": "^4.4.0",
 		"cloudflare": "^5.2.0",
 		"command-exists": "^1.2.9",
 		"concurrently": "^8.2.2",
