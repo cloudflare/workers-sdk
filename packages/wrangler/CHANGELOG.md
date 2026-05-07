@@ -1,5 +1,16 @@
 # wrangler
 
+## 4.89.1
+
+### Patch Changes
+
+- [#13824](https://github.com/cloudflare/workers-sdk/pull/13824) [`dd3baf3`](https://github.com/cloudflare/workers-sdk/commit/dd3baf3fa718ed82f7b394cb0c12db3ac3e092fa) Thanks [@emily-shen](https://github.com/emily-shen)! - Fix container deployment being skipped for Workers for Platforms user workers
+
+  Previously, deploying a worker with `--dispatch-namespace` would early-exit before calling `deployContainers()`, meaning container-app registration that links the image to the Durable Object namespace was never executed for WfP user workers. Container deployment now runs before the WfP early exit.
+
+- Updated dependencies [[`5cf6f81`](https://github.com/cloudflare/workers-sdk/commit/5cf6f813bb49e40326a87ccee588175545408f5e)]:
+  - miniflare@4.20260507.1
+
 ## 4.89.0
 
 ### Minor Changes
