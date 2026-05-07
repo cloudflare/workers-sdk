@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 declare module "cloudflare:test" {
 	/**
 	 * @deprecated Instead, use `import { env } from "cloudflare:workers"`
@@ -88,7 +87,7 @@ declare module "cloudflare:test" {
 	 * `EventContext`s return by `createPagesEventContext()`.
 	 */
 	export function waitOnExecutionContext(
-		ctx: ExecutionContext | EventContext<Cloudflare.Env, string, any>
+		ctx: ExecutionContext | EventContext<Cloudflare.Env, string, unknown>
 	): Promise<void>;
 	/**
 	 * Creates an instance of `ScheduledController` for use as the 1st argument to
@@ -632,8 +631,8 @@ declare module "cloudflare:test" {
 		: { params: Record<Params, string | string[]> };
 	type EventContextInitData<Data> =
 		Data extends Record<string, never> ? { data?: Data } : { data: Data };
-	type EventContextInit<E extends EventContext<any, any, any>> =
-		E extends EventContext<any, infer Params, infer Data>
+	type EventContextInit<E extends EventContext<unknown, unknown, unknown>> =
+		E extends EventContext<unknown, infer Params, infer Data>
 			? EventContextInitBase &
 					EventContextInitParams<Params> &
 					EventContextInitData<Data>
@@ -644,6 +643,7 @@ declare module "cloudflare:test" {
 	 * Functions.
 	 */
 	export function createPagesEventContext<
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- any is required: PagesFunction wraps Data in a function parameter, which flips subtyping — unknown would reject PagesFunction types with specific Data
 		F extends PagesFunction<Cloudflare.Env, string, any>,
 	>(init: EventContextInit<Parameters<F>[0]>): Parameters<F>[0];
 
