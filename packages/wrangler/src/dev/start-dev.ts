@@ -12,6 +12,7 @@ import { convertStartDevOptionsToBindings } from "../api/startDevWorker/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
 import isInteractive from "../is-interactive";
+import isTurborepo from "../is-turborepo";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
 import { requireApiToken, requireAuth } from "../user";
@@ -61,6 +62,11 @@ export async function startDev(args: StartDevOptions) {
 			};
 		};
 
+		const shouldRenderInteractiveDevSession =
+			isInteractive() &&
+			!isTurborepo() &&
+			args.showInteractiveDevSession !== false;
+
 		if (args.remote) {
 			logger.log(
 				bold(
@@ -105,7 +111,7 @@ export async function startDev(args: StartDevOptions) {
 					})
 				))
 			);
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
+			if (shouldRenderInteractiveDevSession) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args, {
 					getTunnel: () => tunnel,
 				});
@@ -115,7 +121,7 @@ export async function startDev(args: StartDevOptions) {
 
 			await setupDevEnv(devEnv, args.config, authHook, args);
 
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
+			if (shouldRenderInteractiveDevSession) {
 				unregisterHotKeys = registerDevHotKeys([devEnv], args, {
 					getTunnel: () => tunnel,
 				});
