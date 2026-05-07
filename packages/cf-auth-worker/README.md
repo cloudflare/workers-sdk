@@ -124,22 +124,16 @@ flow (`http://localhost:8976/oauth/callback`). This handles transient outages
 and gracefully degrades for users on a regular laptop where the localhost
 flow already works.
 
-The behaviour is governed by a single env var:
+The connect timeout (5s) and the fallback behaviour are compiled into the
+Wrangler build and cannot be configured at runtime — see
+[REVIEW-17452][review] for the security review that drove this. Both
+runtime overrides (`WRANGLER_AUTH_WORKER_ORIGIN` and
+`WRANGLER_AUTH_WORKER_TIMEOUT`) were removed.
 
-| `WRANGLER_AUTH_WORKER_TIMEOUT` | Connect timeout                | Fall back on relay pre-open failure? |
-| ------------------------------ | ------------------------------ | ------------------------------------ |
-| (unset) / `5000` (default)     | 5s                             | ✅                                   |
-| any positive number            | that many ms                   | ✅                                   |
-| `0`                            | none (waits for relay forever) | ❌                                   |
-
-Setting `WRANGLER_AUTH_WORKER_TIMEOUT=0` is useful in container/remote
-environments where the localhost flow can't work anyway and you want
-relay-only behaviour with a clear failure if the relay is unreachable.
-
-Fallback only applies to **pre-open** failures (timeout, connect error,
-premature close). Once the WebSocket has opened and Wrangler has launched
-the user's browser, the user has committed to the relay's `redirect_uri`
-and falling back would require restarting the entire flow with a new
+Fallback only applies to **pre-open** failures (connect timeout, error event,
+or premature close). Once the WebSocket has opened and Wrangler has launched
+the user's browser, the user has committed to the relay's `redirect_uri` and
+falling back would require restarting the entire flow with a new
 authorisation. Failures from that point on (relay disappears mid-flow, the
 120s authorisation timeout, etc.) propagate as normal errors with no
 fallback.
@@ -150,10 +144,7 @@ fallback.
 # from the repo root
 pnpm install
 
-# run the worker locally with `wrangler dev`
-pnpm --filter @cloudflare/cf-auth-worker start
-
-# run the test suite (vitest-pool-workers)
+# run the worker test suite (vitest-pool-workers, in-process)
 pnpm --filter @cloudflare/cf-auth-worker test:ci
 
 # type check
@@ -161,17 +152,13 @@ pnpm --filter @cloudflare/cf-auth-worker check:type
 pnpm --filter @cloudflare/cf-auth-worker type:tests
 ```
 
-To point a local Wrangler build at a custom relay (for example, a `wrangler
-dev` instance of this worker), set:
+End-to-end testing of the relay flow against a Wrangler build is intentionally
+not supported — the relay origin is a build-time constant in Wrangler and
+cannot be repointed at a local `wrangler dev` instance of this worker. The
+in-process tests under `tests/` (driven by `cloudflare:test`'s `SELF.fetch`)
+are the supported workflow for iterating on this worker.
 
-```sh
-export WRANGLER_AUTH_WORKER_ORIGIN="http://127.0.0.1:8787"
-```
-
-Wrangler will use that URL for both the WebSocket connection and the
-`redirect_uri` it sends to the OAuth server. (Note that the OAuth server must
-also have your custom URL registered as an allowed redirect URI for testing
-beyond the existing prod/staging registrations.)
+[review]: https://jira.cfdata.org/browse/REVIEW-17452
 
 ## Files
 
@@ -186,9 +173,10 @@ beyond the existing prod/staging registrations.)
 
 The Wrangler side of this flow lives in
 [`packages/wrangler/src/user/user.ts`](../wrangler/src/user/user.ts), in
-`getOauthTokenViaWebSocket()`. The `--experimental-websocket-callback` flag is registered
-in [`packages/wrangler/src/user/commands.ts`](../wrangler/src/user/commands.ts)
-and the auth worker origin is configured via `getAuthWorkerOriginFromEnv()` in
-[`packages/wrangler/src/user/auth-variables.ts`](../wrangler/src/user/auth-variables.ts).
+`getOauthTokenViaWebSocket()`. The `--experimental-websocket-callback` flag is
+registered in
+[`packages/wrangler/src/user/commands.ts`](../wrangler/src/user/commands.ts).
+The relay origin and connect timeout are build-time constants in
+[`packages/wrangler/src/user/auth-relay-constants.ts`](../wrangler/src/user/auth-relay-constants.ts).
 
 [do]: https://developers.cloudflare.com/durable-objects/

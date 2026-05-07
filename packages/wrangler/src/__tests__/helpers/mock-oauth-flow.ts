@@ -139,24 +139,36 @@ export const mockOAuthFlow = () => {
 	 *
 	 * Wrangler must have already opened the WebSocket and triggered the open
 	 * event before `openInBrowser()` is called for this to work.
+	 *
+	 * The relay protocol sends `{ code, state }` (or `{ error, state }`).
+	 * Wrangler validates the echoed `state` matches the locally generated
+	 * value (REVIEW-17452 #14), so the mock derives `state` from the URL
+	 * passed to `openInBrowser()`. Tests that want to simulate a state
+	 * mismatch can pass an explicit `state` override.
 	 */
 	const mockOAuthRelayCallback = (
-		respondWith: "success" | "failure" | { code?: string; error?: string }
+		respondWith:
+			| "success"
+			| "failure"
+			| { code?: string; error?: string; state?: string }
 	) => {
-		(openInBrowser as Mock).mockImplementation(async (_url: string) => {
+		(openInBrowser as Mock).mockImplementation(async (url: string) => {
 			const ws = MockWebSocket.last;
 			if (!ws) {
 				throw new Error(
 					"mockOAuthRelayCallback: no MockWebSocket instance was created — did Wrangler skip the WebSocket flow?"
 				);
 			}
-			let message: { code?: string; error?: string };
+			const echoedState =
+				new URL(url).searchParams.get("state") ?? "MOCK_STATE_PARAM";
+			let message: { code?: string; error?: string; state: string };
 			if (respondWith === "success") {
-				message = { code: "test-oauth-code" };
+				message = { code: "test-oauth-code", state: echoedState };
 			} else if (respondWith === "failure") {
-				message = { error: "access_denied" };
+				message = { error: "access_denied", state: echoedState };
 			} else {
-				message = respondWith;
+				const { state, ...rest } = respondWith;
+				message = { ...rest, state: state ?? echoedState };
 			}
 			ws.triggerMessage(JSON.stringify(message));
 		});

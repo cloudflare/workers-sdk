@@ -1,4 +1,14 @@
 /**
+ * Constructor options recorded on each MockWebSocket instance. Mirrors the
+ * shape of the real `ws` package's `ClientOptions` for the fields Wrangler
+ * uses (`headers`, `maxPayload`).
+ */
+export interface MockWebSocketOptions {
+	headers?: Record<string, string>;
+	maxPayload?: number;
+}
+
+/**
  * A minimal `WebSocket` stub that lets tests drive the auth relay flow without
  * making any network calls. Instances can be obtained via `MockWebSocket.last`
  * and driven with `triggerOpen`, `triggerMessage`, etc.
@@ -27,6 +37,7 @@ export class MockWebSocket {
 	}
 
 	url: string;
+	options: MockWebSocketOptions | undefined;
 	readyState = 0; // CONNECTING
 
 	private listeners: {
@@ -41,8 +52,9 @@ export class MockWebSocket {
 		error: new Set(),
 	};
 
-	constructor(url: string) {
-		this.url = url;
+	constructor(url: string | URL, options?: MockWebSocketOptions) {
+		this.url = typeof url === "string" ? url : url.toString();
+		this.options = options;
 		MockWebSocket.instances.push(this);
 		// Auto-open in a microtask, simulating a successful connection. Tests
 		// that want to exercise connection failure can set
