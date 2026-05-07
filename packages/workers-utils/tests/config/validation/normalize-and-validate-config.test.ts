@@ -6950,6 +6950,7 @@ describe("normalizeAndValidateConfig()", () => {
 			};
 			const vars: RawConfig["vars"] = {
 				FOO: "foo",
+				BAR: "bar",
 			};
 			const durable_objects: RawConfig["durable_objects"] = {
 				bindings: [],
@@ -7019,6 +7020,45 @@ describe("normalizeAndValidateConfig()", () => {
 				    - "unsafe" exists at the top level, but not on "env.ENV1".
 				      This is not what you probably want, since "unsafe" is not inherited by environments.
 				      Please add "unsafe" to "env.ENV1"."
+			`);
+		});
+
+		it("should condense repeated environment warnings", ({ expect }) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					vars: {
+						DEV_ACCOUNT_ID: "123",
+						DEV_ACCOUNT_INTERNAL_ID: "456",
+						PRESENT: "789",
+					},
+					secrets: {
+						required: ["TOP_LEVEL_SECRET"],
+					},
+					env: {
+						staging: {
+							vars: {
+								PRESENT: "789",
+							},
+							secrets: {
+								required: ["ENV_SECRET"],
+							},
+						},
+					},
+				},
+				undefined,
+				undefined,
+				{ env: "staging" }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+
+				  - "env.staging" environment configuration
+				    - The following vars exist at the top level, but not on "env.staging.vars".
+				      This is probably not what you want, since "vars" configuration is not inherited by environments.
+				      Please add these vars to "env.staging.vars":
+				      - DEV_ACCOUNT_ID
+				      - DEV_ACCOUNT_INTERNAL_ID"
 			`);
 		});
 
@@ -7347,9 +7387,10 @@ describe("normalizeAndValidateConfig()", () => {
 						"Processing wrangler configuration:
 
 						  - "env.ENV1" environment configuration
-						    - "define.ghi" exists at the top level, but not on "env.ENV1.define".
-						      This is not what you probably want, since "define" configuration is not inherited by environments.
-						      Please add "define.ghi" to "env.ENV1".
+						    - The following define entries exist at the top level, but not on "env.ENV1.define".
+						      This is probably not what you want, since "define" configuration is not inherited by environments.
+						      Please add these entries to "env.ENV1.define":
+						      - ghi
 						    - "xyz" exists on "env.ENV1", but not on the top level.
 						      This is not what you probably want, since "define" configuration within environments can only override existing top level "define" configuration
 						      Please remove "env.ENV1.define.xyz", or add "define.xyz"."

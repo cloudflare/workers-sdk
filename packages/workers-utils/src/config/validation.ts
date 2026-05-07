@@ -1433,7 +1433,9 @@ function normalizeAndValidateEnvironment(
 		"error"
 	);
 
-	experimental(diagnostics, rawEnv, "unsafe");
+	if (topLevelEnv === undefined || rawConfig?.unsafe === undefined) {
+		experimental(diagnostics, rawEnv, "unsafe");
+	}
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
@@ -2283,15 +2285,17 @@ const validateDefines =
 		if (configDefines.length > 0) {
 			if (typeof value === "object" && value !== null) {
 				const configEnvDefines = config === undefined ? [] : Object.keys(value);
+				const missingDefines = configDefines.filter(
+					(varName) => !(varName in value)
+				);
 
-				for (const varName of configDefines) {
-					if (!(varName in value)) {
-						diagnostics.warnings.push(
-							`"define.${varName}" exists at the top level, but not on "${fieldPath}".\n` +
-								`This is not what you probably want, since "define" configuration is not inherited by environments.\n` +
-								`Please add "define.${varName}" to "env.${envName}".`
-						);
-					}
+				if (missingDefines.length > 0) {
+					diagnostics.warnings.push(
+						`The following define entries exist at the top level, but not on "${fieldPath}".\n` +
+							`This is probably not what you want, since "define" configuration is not inherited by environments.\n` +
+							`Please add these entries to "env.${envName}.define":\n` +
+							missingDefines.map((varName) => `- ${varName}`).join("\n")
+					);
 				}
 				for (const varName of configEnvDefines) {
 					if (!configDefines.includes(varName)) {
@@ -2342,14 +2346,15 @@ const validateVars =
 		const configVars = Object.keys(config?.vars ?? {});
 		if (configVars.length > 0) {
 			if (typeof value === "object" && value !== null) {
-				for (const varName of configVars) {
-					if (!(varName in value)) {
-						diagnostics.warnings.push(
-							`"vars.${varName}" exists at the top level, but not on "${fieldPath}".\n` +
-								`This is not what you probably want, since "vars" configuration is not inherited by environments.\n` +
-								`Please add "vars.${varName}" to "env.${envName}".`
-						);
-					}
+				const missingVars = configVars.filter((varName) => !(varName in value));
+
+				if (missingVars.length > 0) {
+					diagnostics.warnings.push(
+						`The following vars exist at the top level, but not on "${fieldPath}".\n` +
+							`This is probably not what you want, since "vars" configuration is not inherited by environments.\n` +
+							`Please add these vars to "env.${envName}.vars":\n` +
+							missingVars.map((varName) => `- ${varName}`).join("\n")
+					);
 				}
 			}
 		}
