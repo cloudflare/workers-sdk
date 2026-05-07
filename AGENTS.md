@@ -232,7 +232,7 @@ When making architectural changes to a package (renaming files, adding entry poi
 
 ## Cloudflare Workers Specifics
 
-- When removing or modifying scheduled functions in Cloudflare Workers, remember to update both the code in the Worker file and the corresponding cron trigger in the `wrangler.toml` configuration file.
+- When removing or modifying scheduled functions in Cloudflare Workers, remember to update both the code in the Worker file and the corresponding cron trigger in the `wrangler.jsonc` configuration file.
 
 ## Adding Native Node.js Module Support (unenv-preset)
 
