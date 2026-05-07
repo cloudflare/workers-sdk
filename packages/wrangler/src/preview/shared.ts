@@ -111,7 +111,7 @@ export function getBindingValue(binding: Binding): string {
 		case "mtls_certificate":
 			return String(binding.certificate_id ?? "");
 		case "pipelines":
-			return String(binding.pipeline ?? "");
+			return String(binding.stream ?? binding.pipeline ?? "");
 		case "secrets_store_secret":
 			return binding.secret_name
 				? `${binding.store_id}/${binding.secret_name}`
@@ -244,8 +244,12 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		};
 	}
 
-	for (const pipeline of previews?.pipelines ?? []) {
-		env[pipeline.binding] = { type: "pipelines", pipeline: pipeline.pipeline };
+	for (const { binding, stream, pipeline } of previews?.pipelines ?? []) {
+		env[binding] = {
+			type: "pipelines",
+			...(stream && { stream }),
+			...(pipeline && { pipeline }),
+		};
 	}
 
 	for (const secret of previews?.secrets_store_secrets ?? []) {
