@@ -488,7 +488,7 @@ describe("wrangler secret", () => {
 						"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret put command.[0m
 
 						  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-						  the target environment using the \`-e|--env\` flag.
+						  the target environment using the \`-e|--env\` flag or CLOUDFLARE_ENV env variable.
 						  If your intention is to use the top-level environment of your configuration simply pass an empty
 						  string to the flag to target such environment. For example \`--env=""\`.
 
@@ -522,6 +522,35 @@ describe("wrangler secret", () => {
 					mockStdIn.send("the-secret");
 					mockPutRequest(expect, { name: "the-key", text: "the-secret" });
 					await runWrangler("secret put the-key --name script-name");
+					expect(std.warn).toMatchInlineSnapshot(`""`);
+				});
+
+				it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+					expect,
+				}) => {
+					vi.stubEnv("CLOUDFLARE_ENV", "test");
+					writeWranglerConfig({
+						env: {
+							test: {},
+						},
+					});
+					mockStdIn.send("the-secret");
+					mockPutRequest(expect, { name: "the-key", text: "the-secret" });
+					await runWrangler("secret put the-key --name script-name");
+					expect(std.warn).toMatchInlineSnapshot(`""`);
+				});
+
+				it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+					expect,
+				}) => {
+					writeWranglerConfig({
+						env: {
+							test: {},
+						},
+					});
+					mockStdIn.send("the-secret");
+					mockPutRequest(expect, { name: "the-key", text: "the-secret" });
+					await runWrangler('secret put the-key --name script-name --env=""');
 					expect(std.warn).toMatchInlineSnapshot(`""`);
 				});
 			});
@@ -768,7 +797,7 @@ describe("wrangler secret", () => {
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret delete command.[0m
 
 					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-					  the target environment using the \`-e|--env\` flag.
+					  the target environment using the \`-e|--env\` flag or CLOUDFLARE_ENV env variable.
 					  If your intention is to use the top-level environment of your configuration simply pass an empty
 					  string to the flag to target such environment. For example \`--env=""\`.
 
@@ -811,6 +840,47 @@ describe("wrangler secret", () => {
 					result: true,
 				});
 				await runWrangler("secret delete the-key --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+				expect,
+			}) => {
+				vi.stubEnv("CLOUDFLARE_ENV", "test");
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
+				mockDeleteRequest(expect, {
+					scriptName: "script-name",
+					secretName: "the-key",
+				});
+				mockConfirm({
+					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
+					result: true,
+				});
+				await runWrangler("secret delete the-key --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
+				mockDeleteRequest(expect, {
+					scriptName: "script-name",
+					secretName: "the-key",
+				});
+				mockConfirm({
+					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
+					result: true,
+				});
+				await runWrangler('secret delete the-key --name script-name --env=""');
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
@@ -1495,7 +1565,7 @@ describe("wrangler secret", () => {
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret bulk command.[0m
 
 					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-					  the target environment using the \`-e|--env\` flag.
+					  the target environment using the \`-e|--env\` flag or CLOUDFLARE_ENV env variable.
 					  If your intention is to use the top-level environment of your configuration simply pass an empty
 					  string to the flag to target such environment. For example \`--env=""\`.
 
@@ -1535,6 +1605,43 @@ describe("wrangler secret", () => {
 				mockBulkRequest(expect);
 
 				await runWrangler("secret bulk ./secret.json --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+				expect,
+			}) => {
+				vi.stubEnv("CLOUDFLARE_ENV", "test");
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+					env: {
+						test: {},
+					},
+				});
+				writeFileSync("secret.json", JSON.stringify({}));
+
+				mockBulkRequest(expect);
+
+				await runWrangler("secret bulk ./secret.json --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+					env: {
+						test: {},
+					},
+				});
+				writeFileSync("secret.json", JSON.stringify({}));
+
+				mockBulkRequest(expect);
+
+				await runWrangler('secret bulk ./secret.json --name script-name --env=""');
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});

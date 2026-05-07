@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { FormData } from "undici";
-import { afterEach, describe, it, test } from "vitest";
+import { afterEach, describe, it, test, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs, mockPrompt } from "../../helpers/mock-dialogs";
@@ -484,7 +484,7 @@ describe("versions secret put", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the versions secret put command.[0m
 
 				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-				  the target environment using the \`-e|--env\` flag.
+				  the target environment using the \`-e|--env\` flag or CLOUDFLARE_ENV env variable.
 				  If your intention is to use the top-level environment of your configuration simply pass an empty
 				  string to the flag to target such environment. For example \`--env=""\`.
 
@@ -529,6 +529,49 @@ describe("versions secret put", () => {
 			` // whitespace & newline being removed
 			);
 			await runWrangler("versions secret put NEW_SECRET");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ENV", "test");
+			writeWranglerConfig({
+				name: "script-name",
+				env: { test: {} },
+			});
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
+
+			mockStdIn.send(
+				`the`,
+				`-`,
+				`secret
+			` // whitespace & newline being removed
+			);
+			await runWrangler("versions secret put NEW_SECRET");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				name: "script-name",
+				env: { test: {} },
+			});
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
+
+			mockStdIn.send(
+				`the`,
+				`-`,
+				`secret
+			` // whitespace & newline being removed
+			);
+			await runWrangler('versions secret put NEW_SECRET --env=""');
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
