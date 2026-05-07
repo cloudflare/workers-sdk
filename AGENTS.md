@@ -116,6 +116,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 
 - Packages must bundle deps into distributables; runtime `dependencies` are forbidden except for an explicit allowlist
 - External (non-bundled) deps must be declared in `scripts/deps.ts` with `EXTERNAL_DEPENDENCIES` and a comment explaining why
+- After updating dependencies, always run `pnpm i` to also update the package lock file
 
 **Testing Standards:**
 
@@ -134,6 +135,9 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 - When changing user-facing strings or output messages, update corresponding test snapshots
 - New test fixtures in `vitest-pool-workers-examples/` must include a `tsconfig.json`
 - Test fixtures serve as user-facing recipes — use clean patterns, avoid type casting where possible
+- Use the `runInTmpDir()` utility instead of mocking filesystem operations. Real filesystem operations are preferred over mocking. The utility creates isolated temporary directories, handles cleanup automatically in `afterEach` hooks, and allows tests to write actual files and assert against them
+- Use the `mockConsoleMethods()` helper to capture stdout/stderr. Use the pattern `const std = mockConsoleMethods()` in test setup, then access captured output via `std.out`, `std.err`, `std.warn` properties. Assert against captured output using `expect(std.out).toMatchInlineSnapshot()`
+- Run specific wrangler test files locally using `pnpm -w test:ci -F wrangler -- [test-file-name]` (e.g. `pnpm -w test:ci -F wrangler -- r2.test.ts`)
 
 **Git Workflow:**
 
@@ -225,3 +229,17 @@ Packages with their own AGENTS.md for deeper context:
 - `packages/workers-utils/AGENTS.md` - Shared config validation, test helpers
 
 When making architectural changes to a package (renaming files, adding entry points, changing build output), update the relevant AGENTS.md to reflect the new structure.
+
+## Cloudflare Workers Specifics
+
+- When removing or modifying scheduled functions in Cloudflare Workers, remember to update both the code in the Worker file and the corresponding cron trigger in the `wrangler.toml` configuration file.
+
+## Adding Native Node.js Module Support (unenv-preset)
+
+- The authoritative source for Node.js module compatibility flags and dates is the workerd repository's `compatibility-date.capnp` file at https://github.com/cloudflare/workerd/blob/main/src/workerd/io/compatibility-date.capnp.
+- If the module is marked as `$experimental` in workerd (no `$impliedByAfterDate`), follow the pattern used by other experimental modules in `preset.ts`.
+- The pattern for adding a new module override involves:
+  - Creating a `get<Module>Overrides()` function similar to existing ones (e.g., `getVmOverrides()`)
+  - Adding the override to `getCloudflarePreset()` and spreading into `dynamicNativeModules` and `dynamicHybridModules`
+  - Adding tests to `packages/wrangler/e2e/unenv-preset/preset.test.ts`
+  - Adding test functions to `packages/wrangler/e2e/unenv-preset/worker/index.ts`
