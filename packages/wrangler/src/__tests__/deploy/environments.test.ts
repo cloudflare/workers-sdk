@@ -1002,6 +1002,24 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
+		it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+			expect,
+		}) => {
+			writeWorkerSource();
+			writeWranglerConfig({
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler('deploy --env=""');
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
 		it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
 			expect,
 		}) => {

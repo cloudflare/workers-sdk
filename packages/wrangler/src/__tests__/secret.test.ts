@@ -539,6 +539,20 @@ describe("wrangler secret", () => {
 					await runWrangler("secret put the-key --name script-name");
 					expect(std.warn).toMatchInlineSnapshot(`""`);
 				});
+
+				it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+					expect,
+				}) => {
+					writeWranglerConfig({
+						env: {
+							test: {},
+						},
+					});
+					mockStdIn.send("the-secret");
+					mockPutRequest(expect, { name: "the-key", text: "the-secret" });
+					await runWrangler('secret put the-key --name script-name --env=""');
+					expect(std.warn).toMatchInlineSnapshot(`""`);
+				});
 			});
 		});
 
@@ -847,6 +861,26 @@ describe("wrangler secret", () => {
 					result: true,
 				});
 				await runWrangler("secret delete the-key --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
+				mockDeleteRequest(expect, {
+					scriptName: "script-name",
+					secretName: "the-key",
+				});
+				mockConfirm({
+					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
+					result: true,
+				});
+				await runWrangler('secret delete the-key --name script-name --env=""');
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
@@ -1590,6 +1624,24 @@ describe("wrangler secret", () => {
 				mockBulkRequest(expect);
 
 				await runWrangler("secret bulk ./secret.json --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+					env: {
+						test: {},
+					},
+				});
+				writeFileSync("secret.json", JSON.stringify({}));
+
+				mockBulkRequest(expect);
+
+				await runWrangler('secret bulk ./secret.json --name script-name --env=""');
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});

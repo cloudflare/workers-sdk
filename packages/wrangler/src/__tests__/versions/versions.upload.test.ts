@@ -865,6 +865,34 @@ describe("versions upload", () => {
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it('should not warn if --env="" is passed to explicitly target the top-level environment', async () => {
+			mockGetScript();
+			mockUploadVersion(true);
+			mockPatchScriptSettings();
+			mockGetWorkerSubdomain({
+				enabled: true,
+				previews_enabled: false,
+				useServiceEnvironments: false,
+			});
+
+			// Setup
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			const result = runWrangler('versions upload --env=""');
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 
 	describe("keep_vars", () => {
