@@ -1023,6 +1023,54 @@ describe("deploy", () => {
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should not warn if using a redirected wrangler config with a baked-in target environment", async ({
+			expect,
+		}) => {
+			writeWorkerSource();
+			writeRedirectedWranglerConfig(
+				{
+					name: "test-name-production",
+					main: "../index.js",
+					userConfigPath: "./wrangler.toml",
+					topLevelName: "test-name",
+					targetEnvironment: "production",
+					definedEnvironments: ["production"],
+				},
+				"./dist/wrangler.json"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedScriptName: "test-name-production",
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if using a redirected wrangler config targeting the top-level environment (no targetEnvironment set)", async ({
+			expect,
+		}) => {
+			writeWorkerSource();
+			writeRedirectedWranglerConfig(
+				{
+					name: "test-name",
+					main: "../index.js",
+					userConfigPath: "./wrangler.toml",
+					topLevelName: "test-name",
+					// No targetEnvironment — built for the top-level environment
+					definedEnvironments: ["production"],
+				},
+				"./dist/wrangler.json"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 	describe("--tag and --message", () => {
 		it("should send tag and message annotations via the new versions API", async ({
