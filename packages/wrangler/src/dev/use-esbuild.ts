@@ -12,6 +12,7 @@ import {
 	getWrangler1xLegacyModuleReferences,
 	noopModuleCollector,
 } from "../deployment-bundle/module-collection";
+import { logger } from "../logger";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule, CfModuleType, Config } from "@cloudflare/workers-utils";
@@ -131,13 +132,23 @@ export function runBuild(
 				previousBundle,
 				"Rebuild triggered with no previous build available"
 			);
-			previousBundle.modules = dedupeModulesByName([
-				...(moduleCollector?.modules ?? []),
-				...newAdditionalModules,
-			]);
+			let entrypointSource: string;
+			try {
+				entrypointSource = readFileSync(previousBundle.path, "utf8");
+			} catch (e) {
+				// Entry point was deleted or moved between builds — skip this update.
+				logger.warn(
+					`Could not read entrypoint "${previousBundle.path}": ${(e as NodeJS.ErrnoException).message}`
+				);
+				return previousBundle;
+			}
 			return {
 				...previousBundle,
-				entrypointSource: readFileSync(previousBundle.path, "utf8"),
+				modules: dedupeModulesByName([
+					...(moduleCollector?.modules ?? []),
+					...newAdditionalModules,
+				]),
+				entrypointSource,
 				id: previousBundle.id + 1,
 			};
 		});
