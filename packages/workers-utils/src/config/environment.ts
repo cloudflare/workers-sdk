@@ -1344,13 +1344,8 @@ export interface EnvironmentNonInheritable {
 	pipelines: {
 		/** The binding name used to refer to the bound service. */
 		binding: string;
-		/** Name of the Stream to bind */
-		stream?: string;
-		/**
-		 * Name of the Stream to bind
-		 * @deprecated Use `stream` instead.
-		 */
-		pipeline?: string;
+		/** Name of the Pipeline to bind */
+		pipeline: string;
 		/** Whether the pipeline should be remote or not in local development */
 		remote?: boolean;
 	}[];

@@ -149,7 +149,7 @@ export type WorkerMetadataBinding =
 			};
 	  }
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
-	| { type: "pipelines"; name: string; stream?: string; pipeline?: string }
+	| { type: "pipelines"; name: string; pipeline: string }
 	| {
 			type: "secrets_store_secret";
 			name: string;

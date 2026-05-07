@@ -1485,7 +1485,7 @@ describe("LocalRuntimeController", () => {
 				bindings: {
 					PIPELINE: {
 						type: "pipeline",
-						stream: "preserve-e2e-pipelines",
+						pipeline: "preserve-e2e-pipelines",
 					},
 				},
 			});

@@ -490,14 +490,14 @@ const testCases: TestCase[] = [
 				bindings: {
 					PIPELINE: {
 						type: "pipeline",
-						stream: "preserve-e2e-pipelines",
+						pipeline: "preserve-e2e-pipelines",
 					},
 				},
 			},
 			miniflareConfig: (connection) => ({
 				pipelines: {
 					PIPELINE: {
-						stream: "preserve-e2e-pipelines",
+						pipeline: "preserve-e2e-pipelines",
 						remoteProxyConnectionString: connection,
 					},
 				},

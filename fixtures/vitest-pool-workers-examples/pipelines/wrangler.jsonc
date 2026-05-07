@@ -5,7 +5,7 @@
 	"pipelines": [
 		{
 			"binding": "PIPELINE",
-			"stream": "my-pipeline",
+			"pipeline": "my-pipeline",
 		},
 	],
 }
