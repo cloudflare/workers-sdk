@@ -29,6 +29,8 @@ export type {
 	MiniflareDurableObjectCf,
 } from "./object.worker";
 
+export { getPublicUrl } from "./public-url";
+
 export { parseRanges } from "./range";
 export type { InclusiveRange } from "./range";
 

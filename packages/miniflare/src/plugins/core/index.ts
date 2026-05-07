@@ -26,6 +26,7 @@ import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
+import { IMAGES_PLUGIN_NAME } from "../images";
 import {
 	getUserBindingServiceName,
 	kUnsafeEphemeralUniqueKey,
@@ -1091,6 +1092,22 @@ export function getGlobalServices({
 			service: {
 				name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
 				entrypoint: "StreamBinding",
+			},
+		});
+	}
+	const imagesBinding = allWorkerOpts
+		?.map((worker) => worker.images?.images)
+		.find(
+			(images) => images !== undefined && !images.remoteProxyConnectionString
+		);
+	if (imagesBinding) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_IMAGES_DELIVERY,
+			service: {
+				name: getUserBindingServiceName(
+					IMAGES_PLUGIN_NAME,
+					imagesBinding.binding
+				),
 			},
 		});
 	}
