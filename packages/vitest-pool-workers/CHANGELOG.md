@@ -1,5 +1,15 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.16.2
+
+### Patch Changes
+
+- [#11094](https://github.com/cloudflare/workers-sdk/pull/11094) [`9367435`](https://github.com/cloudflare/workers-sdk/commit/9367435b5dbc9b75bda16becbd12ad9f28f60008) Thanks [@bbridges](https://github.com/bbridges)! - Allow `.wasm` files to be imported as `.wasm?module`.
+
+- Updated dependencies [[`dd3baf3`](https://github.com/cloudflare/workers-sdk/commit/dd3baf3fa718ed82f7b394cb0c12db3ac3e092fa), [`5cf6f81`](https://github.com/cloudflare/workers-sdk/commit/5cf6f813bb49e40326a87ccee588175545408f5e)]:
+  - wrangler@4.89.1
+  - miniflare@4.20260507.1
+
 ## 0.16.1
 
 ### Patch Changes
