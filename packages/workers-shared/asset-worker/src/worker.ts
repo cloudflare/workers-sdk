@@ -372,10 +372,12 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 	 */
 	private async getCohort(): Promise<string | null> {
 		if (this.resolvedCohort === undefined) {
-			this.resolvedCohort = await lookupCohort(
-				this.env,
-				this.env.CONFIG?.account_id
-			);
+			// TODO: Hardcoding temporarily for latency testing.
+			// this.resolvedCohort = await lookupCohort(
+			// 	this.env,
+			// 	this.env.CONFIG?.account_id
+			// );
+			this.resolvedCohort = "ent";
 		}
 		return this.resolvedCohort;
 	}
@@ -385,7 +387,7 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 	 * When a cohort is provided, the runtime routes the inner entrypoint
 	 * to the version assigned to that cohort in the current deployment.
 	 */
-	private getInnerEntrypoint(cohort?: string | null): AssetWorkerMethods {
+	private getInnerEntrypoint(_cohort?: string | null): AssetWorkerMethods {
 		const loopbackCtx = this.ctx as AssetWorkerContext;
 		const entrypoint = loopbackCtx.exports?.AssetWorkerInner;
 		if (entrypoint === undefined) {
@@ -397,7 +399,8 @@ export default class AssetWorkerOuter<TEnv extends Env = Env>
 		}
 		return entrypoint({
 			props: { traceContext: this.env.JAEGER.getSpanContext() },
-			...(cohort ? { version: { cohort } } : {}),
+			// TODO: Hardcoding temporarily for latency testing.
+			// ...(cohort ? { version: { cohort } } : {}),
 		});
 	}
 
