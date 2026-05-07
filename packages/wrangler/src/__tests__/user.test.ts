@@ -117,7 +117,8 @@ describe("User", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				OAuth tokens grant access to your Cloudflare account. In automated environments, prefer setting CLOUDFLARE_API_TOKEN.
+				Opening dash.cloudflare.com in your default browser to authenticate.
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -163,7 +164,8 @@ describe("User", () => {
 				Temporary login server listening on 0.0.0.0:8976
 				Note that the OAuth login page will always redirect to \`localhost:8976\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				OAuth tokens grant access to your Cloudflare account. In automated environments, prefer setting CLOUDFLARE_API_TOKEN.
+				Opening dash.cloudflare.com in your default browser to authenticate.
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -209,7 +211,8 @@ describe("User", () => {
 				Temporary login server listening on mylocalhost.local:8976
 				Note that the OAuth login page will always redirect to \`localhost:8976\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				OAuth tokens grant access to your Cloudflare account. In automated environments, prefer setting CLOUDFLARE_API_TOKEN.
+				Opening dash.cloudflare.com in your default browser to authenticate.
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -255,7 +258,8 @@ describe("User", () => {
 				Temporary login server listening on localhost:8787
 				Note that the OAuth login page will always redirect to \`localhost:8976\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				OAuth tokens grant access to your Cloudflare account. In automated environments, prefer setting CLOUDFLARE_API_TOKEN.
+				Opening dash.cloudflare.com in your default browser to authenticate.
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -297,7 +301,8 @@ describe("User", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=4b2ea6cc-9421-4761-874b-ce550e0e3def&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				OAuth tokens grant access to your Cloudflare account. In automated environments, prefer setting CLOUDFLARE_API_TOKEN.
+				Opening dash.cloudflare.com in your default browser to authenticate.
 				Successfully logged in."
 			`);
 
@@ -406,10 +411,23 @@ describe("User", () => {
 				).rejects.toThrow(/Consent denied/);
 			});
 
-			it("should use the auth worker URL as redirect_uri in the auth URL", async ({
+			it("should use the auth worker URL as redirect_uri sent to OAuth", async ({
 				expect,
 			}) => {
-				mockOAuthRelayCallback("success");
+				// The full auth URL is no longer printed to stdout
+				// (REVIEW-17452 #11), so we assert the redirect_uri was sent
+				// correctly by inspecting the URL passed to `openInBrowser`.
+				let openedUrl = "";
+				(openInBrowser as Mock).mockImplementation(async (u: string) => {
+					openedUrl = u;
+					const ws = MockWebSocket.last;
+					ws?.triggerMessage(
+						JSON.stringify({
+							code: "test-oauth-code",
+							state: new URL(u).searchParams.get("state"),
+						})
+					);
+				});
 				msw.use(
 					http.post(
 						"*/oauth2/token",
@@ -426,14 +444,17 @@ describe("User", () => {
 
 				await runWrangler("login --experimental-websocket-callback");
 
-				// The auth URL printed in the console should contain the auth
-				// worker callback URL as redirect_uri (not localhost).
-				expect(std.out).toContain(
+				// The browser-opened URL should carry the auth worker
+				// callback as redirect_uri (not localhost).
+				expect(openedUrl).toContain(
 					encodeURIComponent("https://auth.devprod.cloudflare.dev/callback")
 				);
-				expect(std.out).not.toContain(
+				expect(openedUrl).not.toContain(
 					encodeURIComponent("http://localhost:8976/oauth/callback")
 				);
+				// And the full URL must NOT have been emitted to stdout.
+				expect(std.out).not.toContain("response_type=code");
+				expect(std.out).not.toContain("MOCK_STATE_PARAM");
 			});
 
 			it("should clean up WebSocket listeners on early failure (no orphan rejection)", async ({
@@ -511,9 +532,11 @@ describe("User", () => {
 						(e) => e.event === "login user (relay attempt)"
 					);
 					expect(attempt).toBeDefined();
-					expect(attempt?.properties.authWorkerOrigin).toBe(
-						"https://auth.devprod.cloudflare.dev"
-					);
+					// `authWorkerOrigin` was previously sent as an event property
+					// when the origin was runtime-overridable. Now that the origin
+					// is a build-time constant, the metrics payload no longer
+					// echoes it back.
+					expect(attempt?.properties).not.toHaveProperty("authWorkerOrigin");
 					expect(
 						events.find((e) => e.event === "login user (relay fallback)")
 					).toBeUndefined();
@@ -541,9 +564,7 @@ describe("User", () => {
 						(e) => e.event === "login user (relay fallback)"
 					);
 					expect(fallback).toBeDefined();
-					expect(fallback?.properties.authWorkerOrigin).toBe(
-						"https://auth.devprod.cloudflare.dev"
-					);
+					expect(fallback?.properties).not.toHaveProperty("authWorkerOrigin");
 					expect(fallback?.properties.reason).toBe("ECONNREFUSED");
 
 					expect(captureException).toHaveBeenCalledTimes(1);
@@ -554,6 +575,11 @@ describe("User", () => {
 						tags: { feature: "wrangler-login-relay" },
 						extra: expect.objectContaining({ detail: "ECONNREFUSED" }),
 					});
+					// `authWorkerOrigin` is no longer included in Sentry context
+					// (the origin is a build-time constant; not user-controlled).
+					expect((ctx as { extra: object }).extra).not.toHaveProperty(
+						"authWorkerOrigin"
+					);
 				});
 
 				it("does not emit relay events for the local-only login flow", async ({
@@ -680,44 +706,6 @@ describe("User", () => {
 					});
 				});
 
-				it("falls back when the relay connect times out", async ({
-					expect,
-				}) => {
-					// Use a very short timeout so the test doesn't sleep noticeably.
-					vi.stubEnv("WRANGLER_AUTH_WORKER_TIMEOUT", "50");
-					mockOAuthServerCallback("success");
-					MockWebSocket.autoOpen = false;
-
-					await runWrangler("login --experimental-websocket-callback");
-
-					expect(std.warn).toContain("Could not reach the auth relay");
-					expect(std.warn).toContain("connect timed out after 50ms");
-					expect(MockWebSocket.last?.readyState).toBe(3);
-					expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
-						api_token: undefined,
-						oauth_token: "test-access-token",
-						refresh_token: "test-refresh-token",
-						expiration_time: expect.any(String),
-						scopes: ["account:read"],
-					});
-				});
-
-				it("does not fall back when WRANGLER_AUTH_WORKER_TIMEOUT=0", async ({
-					expect,
-				}) => {
-					vi.stubEnv("WRANGLER_AUTH_WORKER_TIMEOUT", "0");
-
-					await expect(
-						runAndFailWebSocket(
-							"login --experimental-websocket-callback",
-							(ws) => ws.triggerError("ECONNREFUSED")
-						)
-					).rejects.toThrow(/Auth relay is unavailable: ECONNREFUSED/);
-
-					// No localhost fallback was attempted.
-					expect(std.warn).not.toContain("Falling back");
-				});
-
 				it("does not fall back once the browser has been opened", async ({
 					expect,
 				}) => {
@@ -739,6 +727,219 @@ describe("User", () => {
 
 					// No fallback warning was logged.
 					expect(std.warn).not.toContain("Falling back");
+				});
+			});
+
+			describe("security hardening (REVIEW-17452)", () => {
+				it("refuses login when NODE_TLS_REJECT_UNAUTHORIZED=0 (#8/#30)", async ({
+					expect,
+				}) => {
+					vi.stubEnv("NODE_TLS_REJECT_UNAUTHORIZED", "0");
+					await expect(
+						runWrangler("login --experimental-websocket-callback")
+					).rejects.toThrowError(/NODE_TLS_REJECT_UNAUTHORIZED=0/);
+					// We must abort BEFORE constructing the WebSocket — no
+					// listener can be created on a relay that we don't trust.
+					expect(MockWebSocket.last).toBeUndefined();
+				});
+
+				it("refuses the localhost flow when NODE_TLS_REJECT_UNAUTHORIZED=0 (#8/#30)", async ({
+					expect,
+				}) => {
+					vi.stubEnv("NODE_TLS_REJECT_UNAUTHORIZED", "0");
+					await expect(runWrangler("login")).rejects.toThrowError(
+						/NODE_TLS_REJECT_UNAUTHORIZED=0/
+					);
+				});
+
+				it("rejects the relay message when state echo doesn't match (#14)", async ({
+					expect,
+				}) => {
+					(openInBrowser as Mock).mockImplementation(async () => {
+						MockWebSocket.last?.triggerMessage(
+							JSON.stringify({
+								code: "test-oauth-code",
+								state: "ATTACKER_INJECTED_STATE",
+							})
+						);
+					});
+					await expect(
+						runWrangler("login --experimental-websocket-callback")
+					).rejects.toThrowError(/State mismatch in auth relay response/);
+				});
+
+				it("rejects relay messages with unknown fields (#27)", async ({
+					expect,
+				}) => {
+					(openInBrowser as Mock).mockImplementation(async (u: string) => {
+						const state = new URL(u).searchParams.get("state") ?? "";
+						MockWebSocket.last?.triggerMessage(
+							JSON.stringify({
+								code: "test-oauth-code",
+								state,
+								extra_field: "should not be here",
+							})
+						);
+					});
+					await expect(
+						runWrangler("login --experimental-websocket-callback")
+					).rejects.toThrowError(/unknown field/);
+				});
+
+				it("rejects relay messages with both code and error (#27)", async ({
+					expect,
+				}) => {
+					(openInBrowser as Mock).mockImplementation(async (u: string) => {
+						const state = new URL(u).searchParams.get("state") ?? "";
+						MockWebSocket.last?.triggerMessage(
+							JSON.stringify({
+								code: "x",
+								error: "y",
+								state,
+							})
+						);
+					});
+					await expect(
+						runWrangler("login --experimental-websocket-callback")
+					).rejects.toThrowError(/exactly one of code or error/);
+				});
+
+				it("rejects relay messages without a state field (#14, #27)", async ({
+					expect,
+				}) => {
+					(openInBrowser as Mock).mockImplementation(async () => {
+						MockWebSocket.last?.triggerMessage(
+							JSON.stringify({ code: "test-oauth-code" })
+						);
+					});
+					await expect(
+						runWrangler("login --experimental-websocket-callback")
+					).rejects.toThrowError(/missing or invalid state/);
+				});
+
+				it("rejects relay messages with __proto__ payloads without polluting (#27)", async ({
+					expect,
+				}) => {
+					// Capture the global Object prototype so we can verify
+					// nothing was polluted regardless of pass/fail outcome.
+					const protoBefore = (Object.prototype as Record<string, unknown>)
+						.polluted;
+					(openInBrowser as Mock).mockImplementation(async (u: string) => {
+						const state = new URL(u).searchParams.get("state") ?? "";
+						// Hand-crafted JSON to ensure `__proto__` is parsed as
+						// a literal property (which `JSON.parse` does — it does
+						// NOT walk the prototype chain).
+						MockWebSocket.last?.triggerMessage(
+							`{"code":"x","state":${JSON.stringify(state)},"__proto__":{"polluted":true}}`
+						);
+					});
+					await expect(
+						runWrangler("login --experimental-websocket-callback")
+					).rejects.toThrowError(/unknown field/);
+					expect((Object.prototype as Record<string, unknown>).polluted).toBe(
+						protoBefore
+					);
+				});
+
+				it("does not print the full auth URL to stdout (#11)", async ({
+					expect,
+				}) => {
+					mockOAuthRelayCallback("success");
+					msw.use(
+						http.post(
+							"*/oauth2/token",
+							() =>
+								HttpResponse.json({
+									access_token: "test-access-token",
+									expires_in: 100000,
+									refresh_token: "test-refresh-token",
+									scope: "account:read",
+								}),
+							{ once: true }
+						)
+					);
+
+					await runWrangler("login --experimental-websocket-callback");
+
+					// The full auth URL contains state + code_challenge +
+					// the scope list. None of these may appear in stdout.
+					expect(std.out).not.toContain("response_type=code");
+					expect(std.out).not.toContain("code_challenge=");
+					expect(std.out).not.toContain("MOCK_STATE_PARAM");
+					// The advisory line and the redirect-host line should
+					// both be present.
+					expect(std.out).toContain(
+						"OAuth tokens grant access to your Cloudflare account"
+					);
+					expect(std.out).toContain(
+						"Opening dash.cloudflare.com in your default browser"
+					);
+				});
+
+				it("sends Sec-Wrangler-Client header on the WebSocket upgrade (#1, #20)", async ({
+					expect,
+				}) => {
+					mockOAuthRelayCallback("success");
+					msw.use(
+						http.post(
+							"*/oauth2/token",
+							() =>
+								HttpResponse.json({
+									access_token: "test-access-token",
+									expires_in: 100000,
+									refresh_token: "test-refresh-token",
+									scope: "account:read",
+								}),
+							{ once: true }
+						)
+					);
+
+					await runWrangler("login --experimental-websocket-callback");
+
+					// The MockWebSocket records the constructor options.
+					const ws = MockWebSocket.last;
+					expect(ws).toBeDefined();
+					expect(ws?.options?.headers?.["Sec-Wrangler-Client"]).toMatch(
+						/^[A-Za-z0-9_-]+$/
+					);
+					// 32 random bytes → base64url ≈ 43 chars.
+					expect(
+						(ws?.options?.headers?.["Sec-Wrangler-Client"] ?? "").length
+					).toBeGreaterThanOrEqual(40);
+					// And it must NOT match the value of the URL `state` param
+					// (i.e. wsToken is independent of state).
+					const stateInUrl = new URL(ws?.url ?? "").pathname.replace(
+						/^\/session\//,
+						""
+					);
+					expect(ws?.options?.headers?.["Sec-Wrangler-Client"]).not.toBe(
+						stateInUrl
+					);
+				});
+
+				it("caps the WebSocket payload size to defend against OOM (#27)", async ({
+					expect,
+				}) => {
+					mockOAuthRelayCallback("success");
+					msw.use(
+						http.post(
+							"*/oauth2/token",
+							() =>
+								HttpResponse.json({
+									access_token: "test-access-token",
+									expires_in: 100000,
+									refresh_token: "test-refresh-token",
+									scope: "account:read",
+								}),
+							{ once: true }
+						)
+					);
+
+					await runWrangler("login --experimental-websocket-callback");
+
+					// The maxPayload option was passed to the WebSocket
+					// constructor. Verify it's the documented 4 KiB cap.
+					expect(MockWebSocket.last?.options?.maxPayload).toBe(4 * 1024);
 				});
 			});
 		});
@@ -845,7 +1046,8 @@ describe("User", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Attempting to login via OAuth...
-			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			OAuth tokens grant access to your Cloudflare account. In automated environments, prefer setting CLOUDFLARE_API_TOKEN.
+			Opening dash.cloudflare.com in your default browser to authenticate.
 			Successfully logged in."
 		`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -857,6 +1059,47 @@ describe("User", () => {
 			expiration_time: expect.any(String),
 			scopes: ["account:read"],
 		});
+	});
+
+	describe("writeAuthConfigFile", () => {
+		it.skipIf(process.platform === "win32")(
+			"writes the auth config file with mode 0o600 (REVIEW-17452 #28)",
+			async ({ expect }) => {
+				writeAuthConfigFile({
+					oauth_token: "secret-token",
+					refresh_token: "secret-refresh",
+				});
+
+				const { statSync } = await import("node:fs");
+				const stat = statSync(getAuthConfigFilePath());
+				// `mode & 0o777` extracts the POSIX permission bits.
+				expect(stat.mode & 0o777).toBe(0o600);
+			}
+		);
+
+		it.skipIf(process.platform === "win32")(
+			"re-tightens mode on overwrite when the existing file is world-readable",
+			async ({ expect }) => {
+				const { chmodSync, statSync } = await import("node:fs");
+				// First write — creates the file at 0o600.
+				writeAuthConfigFile({
+					oauth_token: "first",
+					refresh_token: "r1",
+				});
+				// Simulate an out-of-band loosening (e.g. user copied the
+				// file with `cp`, or a previous wrangler version wrote 0644).
+				chmodSync(getAuthConfigFilePath(), 0o644);
+				expect(statSync(getAuthConfigFilePath()).mode & 0o777).toBe(0o644);
+
+				// Second write should re-tighten via `chmodSync` even though
+				// `writeFileSync`'s `mode` arg is ignored on overwrite.
+				writeAuthConfigFile({
+					oauth_token: "second",
+					refresh_token: "r2",
+				});
+				expect(statSync(getAuthConfigFilePath()).mode & 0o777).toBe(0o600);
+			}
+		);
 	});
 
 	describe("auth token", () => {

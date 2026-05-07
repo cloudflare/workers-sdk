@@ -93,6 +93,76 @@ const disabledDefaultIntegrations = [
 	"RequestData", // Request data to Wrangler's HTTP servers may contain PII
 ];
 
+/**
+ * Patterns that match OAuth-flow secrets which must never reach Sentry.
+ * Each pattern targets a string serialisation of the secret as it would
+ * appear in a query string, log line, error message, or stack frame.
+ *
+ * The `code` and `state` are short-lived but still sensitive — `code` is
+ * single-use but PKCE-bound to the original Wrangler process, and `state`
+ * is the session identifier that combined with `wsToken` gates the WS
+ * relay. The `code_verifier` is the PKCE secret; if it leaks alongside a
+ * captured `code`, the attacker can complete the OAuth exchange.
+ *
+ * REVIEW-17452 #23 / #12.
+ */
+const OAUTH_SECRET_REDACTION_PATTERNS: Array<[RegExp, string]> = [
+	// Query-style: `code=xyz`, `state=xyz`, `code_verifier=xyz`,
+	// `code_challenge=xyz`, `wsToken=xyz`. Match until `&` or whitespace
+	// or end-of-string.
+	[
+		/(\b(?:code|state|code_verifier|code_challenge|wsToken)=)[^&\s"']+/gi,
+		"$1<redacted>",
+	],
+	// JWT-shaped tokens (three base64url-ish segments separated by dots).
+	[/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "<redacted-jwt>"],
+];
+
+/**
+ * Scrub OAuth secrets from a single string. Exported for testing — most
+ * callers should use `scrubSentryValue` instead, which is the entry point
+ * the `beforeSend` hook uses.
+ */
+export function redactOAuthSecrets(input: string): string {
+	let out = input;
+	for (const [pattern, replacement] of OAUTH_SECRET_REDACTION_PATTERNS) {
+		out = out.replace(pattern, replacement);
+	}
+	return out;
+}
+
+/**
+ * Recursively scrub strings inside a Sentry event payload. Only walks
+ * own enumerable properties to avoid prototype-pollution shenanigans.
+ * `seen` guards against shared references (rare but possible in error
+ * `cause` chains).
+ */
+function scrubSentryValue(value: unknown, seen: WeakSet<object>): unknown {
+	if (typeof value === "string") {
+		return redactOAuthSecrets(value);
+	}
+	if (value === null || typeof value !== "object") {
+		return value;
+	}
+	if (seen.has(value)) {
+		return value;
+	}
+	seen.add(value);
+	if (Array.isArray(value)) {
+		for (let i = 0; i < value.length; i++) {
+			value[i] = scrubSentryValue(value[i], seen);
+		}
+		return value;
+	}
+	for (const key of Object.keys(value as object)) {
+		(value as Record<string, unknown>)[key] = scrubSentryValue(
+			(value as Record<string, unknown>)[key],
+			seen
+		);
+	}
+	return value;
+}
+
 export function setupSentry() {
 	if (typeof SENTRY_DSN !== "undefined") {
 		Sentry.init({
@@ -129,7 +199,13 @@ export function setupSentry() {
 					}
 				}
 
-				return event;
+				// Scrub OAuth secrets (REVIEW-17452 #23 / #12) from every
+				// string field in the event payload. Belt-and-braces:
+				// callers should already avoid passing tokens to
+				// `Sentry.captureException`, but a single regex pass on
+				// the serialized event is cheap and catches accidents in
+				// `breadcrumbs`, `extra`, exception messages, etc.
+				return scrubSentryValue(event, new WeakSet()) as typeof event;
 			},
 		});
 	}

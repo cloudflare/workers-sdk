@@ -207,7 +207,7 @@
 
 import assert from "node:assert";
 import { webcrypto as crypto } from "node:crypto";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import url from "node:url";
@@ -239,10 +239,14 @@ import { sendMetricsEvent } from "../metrics";
 import openInBrowser from "../open-in-browser";
 import { domainUsesAccess } from "./access";
 import {
+	AUTH_RELAY_CONNECT_TIMEOUT_MS,
+	AUTH_WORKER_ORIGIN,
+	WRANGLER_CLIENT_HEADER,
+	WS_MESSAGE_MAX_PAYLOAD_BYTES,
+} from "./auth-relay-constants";
+import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
-	getAuthWorkerOriginFromEnv,
-	getAuthWorkerTimeoutMs,
 	getClientIdFromEnv,
 	getCloudflareAccessHeaders,
 	getCloudflareAccountIdFromEnv,
@@ -932,6 +936,131 @@ function base64urlEncode(value: string): string {
 }
 
 /**
+ * Generate a 32-byte cryptographically random `wsToken`, base64url-encoded.
+ * The token authenticates Wrangler's WebSocket upgrade against the relay
+ * (REVIEW-17452 #1, #20). Distinct from `state` so that leaking `state`
+ * (via Referer / browser history / proxy logs) does not grant the ability
+ * to open a competing WebSocket.
+ */
+function generateWsToken(): string {
+	const bytes = new Uint8Array(32);
+	crypto.getRandomValues(bytes);
+	let binary = "";
+	for (let i = 0; i < bytes.length; i++) {
+		binary += String.fromCharCode(bytes[i]);
+	}
+	return base64urlEncode(binary);
+}
+
+/**
+ * Strict-schema parsed messages from the auth relay. The DO sends exactly
+ * one of `{code, state}` or `{error, state}` — anything else is a protocol
+ * violation and is rejected by `parseRelayMessage`.
+ */
+type RelayMessage =
+	| { code: string; state: string }
+	| { error: string; state: string };
+
+/**
+ * Parse a WebSocket text frame into a strictly typed `RelayMessage`. Throws
+ * `UserError` on malformed input. Defends against:
+ *   - Oversize payloads (the `ws` package's `maxPayload` setting also caps
+ *     this; we additionally reject any non-string-stringifiable input).
+ *   - Prototype pollution (`__proto__` / `constructor` keys on the parsed
+ *     object) — we copy onto a `null`-prototype object and check own
+ *     properties only.
+ *   - Missing or non-string `state`.
+ *   - Both `code` and `error` set, or neither set, or unknown keys.
+ * (REVIEW-17452 #27.)
+ */
+function parseRelayMessage(data: string): RelayMessage {
+	let raw: unknown;
+	try {
+		raw = JSON.parse(data);
+	} catch {
+		throw new UserError("Invalid message from auth relay (not JSON)", {
+			telemetryMessage: "user oauth relay message not json",
+		});
+	}
+	if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+		throw new UserError("Invalid message from auth relay (not an object)", {
+			telemetryMessage: "user oauth relay message not an object",
+		});
+	}
+
+	// Copy onto a null-prototype object so any inherited / proto-polluted
+	// keys can't confuse the checks below.
+	const safe = Object.create(null) as Record<string, unknown>;
+	for (const key of Object.keys(raw as object)) {
+		if (Object.prototype.hasOwnProperty.call(raw, key)) {
+			safe[key] = (raw as Record<string, unknown>)[key];
+		}
+	}
+
+	const allowedKeys = new Set(["code", "error", "state"]);
+	for (const key of Object.keys(safe)) {
+		if (!allowedKeys.has(key)) {
+			throw new UserError("Invalid message from auth relay (unknown field)", {
+				telemetryMessage: "user oauth relay message unknown field",
+			});
+		}
+	}
+
+	const state = safe.state;
+	if (typeof state !== "string" || state.length === 0) {
+		throw new UserError(
+			"Invalid message from auth relay (missing or invalid state)",
+			{ telemetryMessage: "user oauth relay message missing state" }
+		);
+	}
+
+	const hasCode = typeof safe.code === "string" && safe.code.length > 0;
+	const hasError = typeof safe.error === "string" && safe.error.length > 0;
+	if (hasCode === hasError) {
+		throw new UserError(
+			"Invalid message from auth relay (must have exactly one of code or error)",
+			{ telemetryMessage: "user oauth relay message invalid shape" }
+		);
+	}
+
+	if (hasCode) {
+		return { code: safe.code as string, state };
+	}
+	return { error: safe.error as string, state };
+}
+
+/**
+ * Constant-time equality check for two strings. Used to compare the
+ * relay-echoed `state` against the locally generated value without leaking
+ * positional information through timing.
+ */
+function timingSafeStringEqual(a: string, b: string): boolean {
+	if (a.length !== b.length) {
+		return false;
+	}
+	let mismatch = 0;
+	for (let i = 0; i < a.length; i++) {
+		mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+	}
+	return mismatch === 0;
+}
+
+/**
+ * Single guidance line printed at the start of every interactive OAuth
+ * login. AI coding agents and CI runners frequently auto-run
+ * `wrangler login`; OAuth tokens grant broad account access, and the more
+ * appropriate path for those contexts is `CLOUDFLARE_API_TOKEN`. We emit
+ * this advisory unconditionally so it's visible in tmux scrollback /
+ * agent logs even when the auth URL itself is suppressed (REVIEW-17452 #3, #11).
+ */
+function logHeadlessAuthGuidance(): void {
+	logger.log(
+		"OAuth tokens grant access to your Cloudflare account. In automated " +
+			"environments, prefer setting CLOUDFLARE_API_TOKEN."
+	);
+}
+
+/**
  * Generates a code_verifier and code_challenge, as specified in rfc7636.
  */
 
@@ -967,6 +1096,13 @@ export function getAuthConfigFilePath() {
 /**
  * Writes a a wrangler config file (auth credentials) to disk,
  * and updates the user auth state with the new credentials.
+ *
+ * The file is written with `0o600` permissions so other local users
+ * (multi-user dev boxes, shared CI runners) cannot read the tokens
+ * (REVIEW-17452 #28). The `mode` option on `writeFileSync` only applies
+ * when the file is *created*, not on overwrite — `chmodSync` afterwards
+ * ensures the bits are correct on every save. On Windows the mode is
+ * largely advisory but the call is still safe.
  */
 export function writeAuthConfigFile(config: UserAuthConfig) {
 	const configPath = getAuthConfigFilePath();
@@ -976,7 +1112,15 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 	});
 	writeFileSync(path.join(configPath), TOML.stringify(config), {
 		encoding: "utf-8",
+		mode: 0o600,
 	});
+	try {
+		chmodSync(configPath, 0o600);
+	} catch {
+		// `chmodSync` is best-effort. On platforms that don't support
+		// POSIX modes (notably Windows) Node may throw or silently
+		// ignore — either way, do not fail the login over it.
+	}
 
 	reinitialiseAuthTokens();
 }
@@ -1058,7 +1202,9 @@ export async function getOAuthTokenFromLocalState(): Promise<
  */
 class RelayUnavailableError extends UserError {
 	constructor(public detail: string) {
-		super(`Auth relay is unavailable: ${detail}`);
+		super(`Auth relay is unavailable: ${detail}`, {
+			telemetryMessage: "user oauth relay unavailable",
+		});
 		this.name = "RelayUnavailableError";
 	}
 }
@@ -1069,12 +1215,14 @@ class RelayUnavailableError extends UserError {
  * accessible from the user's browser (containers, remote VMs, Codespaces).
  *
  * Flow:
- * 1. Generate PKCE codes and state
- * 2. Open WebSocket to auth worker (the state is the session ID)
+ * 1. Generate PKCE codes, state, and wsToken
+ * 2. Open WebSocket to auth worker (the state is the session ID, the
+ *    wsToken authenticates the upgrade)
  * 3. Build auth URL with the auth worker's callback URL as redirect_uri
- * 4. Open browser / print URL
+ * 4. Open browser
  * 5. Wait for the auth code to arrive via WebSocket
- * 6. Exchange auth code for tokens (PKCE ensures only we can do this)
+ * 6. Validate the returned `state` (timing-safe), reject mismatch
+ * 7. Exchange auth code for tokens (PKCE ensures only we can do this)
  */
 async function getOauthTokenViaWebSocket(options: {
 	browser: boolean;
@@ -1088,19 +1236,45 @@ async function getOauthTokenViaWebSocket(options: {
 		url: string;
 	};
 }): Promise<AccessContext> {
-	// 1. Generate PKCE codes and state
+	// Refuse to proceed when TLS verification is globally disabled.
+	// `NODE_TLS_REJECT_UNAUTHORIZED=0` accepts any certificate from anywhere,
+	// which together with a network attacker yields full MITM and defeats
+	// the whole relay design. Done at the top so the abort happens before
+	// any state is generated. (REVIEW-17452 #8, #30.)
+	if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
+		throw new UserError(
+			"Cannot start OAuth login: NODE_TLS_REJECT_UNAUTHORIZED=0 disables TLS certificate verification, which would allow a network attacker to intercept the auth flow. Unset this environment variable and retry, or use CLOUDFLARE_API_TOKEN.",
+			{ telemetryMessage: "user oauth tls verification disabled" }
+		);
+	}
+
+	// 1. Generate PKCE codes, state, and wsToken. The wsToken is a separate
+	//    32-byte random value that's passed only over the WebSocket upgrade
+	//    request — never via the browser/OAuth-server URL — so a leaked
+	//    `state` (e.g. via Referer or browser history) cannot be used to
+	//    open a second WebSocket and race the legitimate Wrangler.
+	//    (REVIEW-17452 #1, #4 partial, #20.)
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
 	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
+	const wsToken = generateWsToken();
 
-	// 2. Open WebSocket to auth worker. Build the WebSocket URL by mutating
-	//    a parsed `URL` rather than string-replacing schemes — the parsed form
-	//    is robust to trailing slashes and any path on `authWorkerOrigin`.
-	const authWorkerOrigin = getAuthWorkerOriginFromEnv();
-	const wsUrl = new URL(authWorkerOrigin);
-	wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
+	// 2. Open WebSocket to auth worker. The relay origin is a build-time
+	//    constant (see `auth-relay-constants.ts`); it cannot be overridden at
+	//    runtime, so the scheme is always `https:` and we can convert directly
+	//    to `wss:`.
+	const wsUrl = new URL(AUTH_WORKER_ORIGIN);
+	wsUrl.protocol = "wss:";
 	wsUrl.pathname = `/session/${stateQueryParam}`;
 
-	const ws = new WebSocket(wsUrl);
+	// `headers` carries the wsToken (a custom header browsers cannot set on
+	// the WebSocket constructor). `maxPayload` caps a single frame so a
+	// compromised relay can't OOM Wrangler with a giant blob (#27). The
+	// default `ws` package already verifies TLS via Node's trust store —
+	// we additionally rejected `NODE_TLS_REJECT_UNAUTHORIZED=0` above.
+	const ws = new WebSocket(wsUrl, {
+		headers: { [WRANGLER_CLIENT_HEADER]: wsToken },
+		maxPayload: WS_MESSAGE_MAX_PAYLOAD_BYTES,
+	});
 
 	// Record that a relay login was attempted. Combined with the `(relay
 	// fallback)` and `login user` events this lets us count relay
@@ -1108,7 +1282,7 @@ async function getOauthTokenViaWebSocket(options: {
 	// Sent after the WebSocket constructor so any tests waiting on the
 	// MockWebSocket instance see it before this synchronous metrics work
 	// runs.
-	sendMetricsEvent("login user (relay attempt)", { authWorkerOrigin }, {});
+	sendMetricsEvent("login user (relay attempt)", {}, {});
 
 	// All paths from here must remove our listeners, clear any pending
 	// timeout, and terminate the WebSocket. Hoisting `cleanup` and
@@ -1125,14 +1299,18 @@ async function getOauthTokenViaWebSocket(options: {
 	try {
 		// Wait for connection to open. Pre-open failures (error event,
 		// premature close, or connect timeout) throw `RelayUnavailableError`
-		// so `login()` can decide whether to fall back to the localhost flow.
-		const connectTimeoutMs = getAuthWorkerTimeoutMs();
+		// so `login()` can fall back to the localhost flow. The connect
+		// timeout is a build-time constant — there is no runtime override.
 		await new Promise<void>((resolve, reject) => {
-			let connectTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
+			const connectTimeoutHandle = setTimeout(() => {
+				reject(
+					new RelayUnavailableError(
+						`connect timed out after ${AUTH_RELAY_CONNECT_TIMEOUT_MS}ms`
+					)
+				);
+			}, AUTH_RELAY_CONNECT_TIMEOUT_MS);
 			const connectCleanup = () => {
-				if (connectTimeoutHandle !== undefined) {
-					clearTimeout(connectTimeoutHandle);
-				}
+				clearTimeout(connectTimeoutHandle);
 			};
 
 			ws.addEventListener(
@@ -1164,53 +1342,56 @@ async function getOauthTokenViaWebSocket(options: {
 				},
 				{ once: true }
 			);
-
-			if (connectTimeoutMs > 0) {
-				connectTimeoutHandle = setTimeout(() => {
-					reject(
-						new RelayUnavailableError(
-							`connect timed out after ${connectTimeoutMs}ms`
-						)
-					);
-				}, connectTimeoutMs);
-			}
 		});
 
 		// 3. Set up the message/close listener BEFORE sending the auth URL to
 		//    the browser. The user has to authorise in the browser before the
 		//    DO can deliver a message, but listener attachment is essentially
 		//    free, so we do it as early as possible.
-		const messagePromise = new Promise<{ code?: string; error?: string }>(
-			(resolve, reject) => {
-				const onMessage = (event: WebSocket.MessageEvent) => {
-					cleanup();
-					try {
-						const data =
-							typeof event.data === "string" ? event.data : String(event.data);
-						resolve(JSON.parse(data));
-					} catch {
-						reject(new UserError("Invalid message from auth relay"));
-					}
-				};
-				const onClose = () => {
-					cleanup();
+		const messagePromise = new Promise<RelayMessage>((resolve, reject) => {
+			const onMessage = (event: WebSocket.MessageEvent) => {
+				cleanup();
+				try {
+					const data =
+						typeof event.data === "string" ? event.data : String(event.data);
+					// `parseRelayMessage` enforces a strict schema on the
+					// parsed object (REVIEW-17452 #27): exactly one of
+					// `code` or `error`, plus a `state` echo, with no
+					// unknown keys. `JSON.parse` itself can produce
+					// `__proto__` keys; the validator's own-property check
+					// rejects them.
+					resolve(parseRelayMessage(data));
+				} catch (err) {
 					reject(
-						new UserError("Auth relay connection closed before login completed")
+						err instanceof UserError
+							? err
+							: new UserError("Invalid message from auth relay", {
+									telemetryMessage: "user oauth relay message invalid",
+								})
 					);
-				};
-				cleanup = () => {
-					ws.removeEventListener("message", onMessage);
-					ws.removeEventListener("close", onClose);
-				};
-				ws.addEventListener("message", onMessage);
-				ws.addEventListener("close", onClose);
-			}
-		);
+				}
+			};
+			const onClose = () => {
+				cleanup();
+				reject(
+					new UserError("Auth relay connection closed before login completed", {
+						telemetryMessage: "user oauth relay closed mid login",
+					})
+				);
+			};
+			cleanup = () => {
+				ws.removeEventListener("message", onMessage);
+				ws.removeEventListener("close", onClose);
+			};
+			ws.addEventListener("message", onMessage);
+			ws.addEventListener("close", onClose);
+		});
 
 		// 4. Build auth URL with the auth worker's callback URL as redirect_uri.
-		//    `new URL` resolves the path safely even if `authWorkerOrigin` has a
-		//    trailing slash (which would otherwise produce `//callback`).
-		const remoteCallbackUrl = new URL("/callback", authWorkerOrigin).toString();
+		const remoteCallbackUrl = new URL(
+			"/callback",
+			AUTH_WORKER_ORIGIN
+		).toString();
 		const authUrl = generateAuthUrl({
 			authUrl: getAuthUrlFromEnv(),
 			clientId: options.clientId,
@@ -1220,9 +1401,17 @@ async function getOauthTokenViaWebSocket(options: {
 			callbackUrl: remoteCallbackUrl,
 		});
 
-		// 5. Open browser or print URL
+		// 5. Open browser. The full auth URL (which carries `state` and
+		//    `code_challenge`) is intentionally NOT printed to stdout —
+		//    AI coding agents and CI logs would otherwise capture and
+		//    persist it (REVIEW-17452 #11). For the no-browser path we
+		//    cannot avoid emitting the URL, but we still log a recommendation
+		//    to use API tokens in headless environments.
+		logHeadlessAuthGuidance();
 		if (options.browser) {
-			logger.log(`Opening a link in your default browser: ${authUrl}`);
+			logger.log(
+				`Opening dash.cloudflare.com in your default browser to authenticate.`
+			);
 			await openInBrowser(authUrl);
 		} else {
 			logger.log(`Visit this link to authenticate: ${authUrl}`);
@@ -1233,7 +1422,8 @@ async function getOauthTokenViaWebSocket(options: {
 			loginTimeoutHandle = setTimeout(() => {
 				reject(
 					new UserError(
-						"Timed out waiting for authorization code, please try again."
+						"Timed out waiting for authorization code, please try again.",
+						{ telemetryMessage: "user oauth authorization timeout relay" }
 					)
 				);
 			}, 120_000);
@@ -1241,16 +1431,26 @@ async function getOauthTokenViaWebSocket(options: {
 
 		const result = await Promise.race([messagePromise, timeoutPromise]);
 
-		// 7. Handle error (user denied consent)
-		if (result.error) {
-			throw new UserError(options.denied.error);
+		// 7. Validate the returned `state` echo. The DO sends back the
+		//    `state` it was addressed by; if it doesn't match the value
+		//    Wrangler generated locally, something has gone very wrong
+		//    (TLS compromise, code injection, etc.) and we abort before
+		//    redeeming the code (REVIEW-17452 #14).
+		if (!timingSafeStringEqual(result.state, stateQueryParam)) {
+			throw new UserError(
+				"State mismatch in auth relay response — possible code injection or session corruption. Aborting login.",
+				{ telemetryMessage: "user oauth invalid returned state relay" }
+			);
 		}
 
-		if (!result.code) {
-			throw new UserError("No authorization code received from auth relay");
+		// 8. Handle error (user denied consent)
+		if ("error" in result) {
+			throw new UserError(options.denied.error, {
+				telemetryMessage: "user oauth consent denied relay",
+			});
 		}
 
-		// 8. Exchange code for token. NOTE: this also writes the resulting
+		// 9. Exchange code for token. NOTE: this also writes the resulting
 		//    tokens to the module-level `localState` (same as the localhost
 		//    flow), which is what the rest of the auth code expects.
 		return await exchangeAuthCodeForAccessToken({
@@ -1292,6 +1492,16 @@ export async function getOauthToken(options: {
 	callbackHost: string;
 	callbackPort: number;
 }): Promise<AccessContext> {
+	// Refuse OAuth login when TLS verification is globally disabled — same
+	// rationale as in `getOauthTokenViaWebSocket`, applied here for parity
+	// across both login flows. (REVIEW-17452 #8, #30.)
+	if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
+		throw new UserError(
+			"Cannot start OAuth login: NODE_TLS_REJECT_UNAUTHORIZED=0 disables TLS certificate verification, which would allow a network attacker to intercept the auth flow. Unset this environment variable and retry, or use CLOUDFLARE_API_TOKEN.",
+			{ telemetryMessage: "user oauth tls verification disabled" }
+		);
+	}
+
 	const urlToOpen = await getAuthURL(options.scopes, options.clientId);
 	let server: http.Server;
 	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
@@ -1389,8 +1599,15 @@ export async function getOauthToken(options: {
 		}
 		server.listen(options.callbackPort, options.callbackHost);
 	});
+	logHeadlessAuthGuidance();
 	if (options.browser) {
-		logger.log(`Opening a link in your default browser: ${urlToOpen}`);
+		// The full auth URL contains `state`, `code_challenge`, and the
+		// scope list. Suppress it from stdout so AI agents and CI logs
+		// don't capture and persist it (REVIEW-17452 #11). The browser
+		// still receives the full URL via `openInBrowser`.
+		logger.log(
+			"Opening dash.cloudflare.com in your default browser to authenticate."
+		);
 		await openInBrowser(urlToOpen);
 	} else {
 		logger.log(`Visit this link to authenticate: ${urlToOpen}`);
@@ -1455,36 +1672,35 @@ export async function login(
 		try {
 			oauth = await getOauthTokenViaWebSocket(oauthOptions);
 		} catch (err) {
-			// Fall back to the local callback server only when:
-			//   1. the failure happened *before* the browser was opened
-			//      (signalled via `RelayUnavailableError`), AND
-			//   2. the user hasn't opted out of fallback by setting
-			//      `WRANGLER_AUTH_WORKER_TIMEOUT=0`.
-			// Post-`open` failures keep their existing `UserError` and propagate.
-			if (
-				err instanceof RelayUnavailableError &&
-				getAuthWorkerTimeoutMs() > 0
-			) {
-				const authWorkerOrigin = getAuthWorkerOriginFromEnv();
+			// Fall back to the local callback server only when the failure
+			// happened *before* the browser was opened (signalled via
+			// `RelayUnavailableError`). Post-`open` failures keep their
+			// existing `UserError` and propagate, because by then the user has
+			// already authorised at the relay's `redirect_uri` and falling
+			// back would require restarting the entire flow.
+			if (err instanceof RelayUnavailableError) {
 				logger.warn(
-					`Could not reach the auth relay at ${authWorkerOrigin}: ${err.detail}\n` +
+					`Could not reach the auth relay at ${AUTH_WORKER_ORIGIN}: ${err.detail}\n` +
 						"Falling back to a local callback server. Note: this may not work in " +
-						"container or remote environments where the browser cannot reach localhost. " +
-						"Set WRANGLER_AUTH_WORKER_TIMEOUT=0 to disable this fallback."
+						"container or remote environments where the browser cannot reach localhost."
 				);
 				// Notify our team via Sentry so we can keep an eye on relay
 				// availability while the feature is experimental. Tagged as a
 				// warning because we recover via the local fallback. Sentry
 				// queues this in memory and only sends after the user opts in
 				// to error reporting (same as other Wrangler error capture).
+				// `extra.detail` is the `ws` package's connection-error string
+				// (e.g. "ECONNREFUSED", "connect timed out after 5000ms",
+				// "connection closed before open") — none of which contain
+				// PII or secrets.
 				Sentry.captureException(err, {
 					level: "warning",
 					tags: { feature: "wrangler-login-relay" },
-					extra: { authWorkerOrigin, detail: err.detail },
+					extra: { detail: err.detail },
 				});
 				sendMetricsEvent(
 					"login user (relay fallback)",
-					{ authWorkerOrigin, reason: err.detail },
+					{ reason: err.detail },
 					{}
 				);
 				oauth = await getOauthToken({
