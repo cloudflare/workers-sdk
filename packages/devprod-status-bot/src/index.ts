@@ -21,7 +21,7 @@ async function getBotMessage(ai: Ai, prompt: string) {
 			},
 		] as RoleScopedChatInput[],
 	};
-	const message = await ai.run("@cf/meta/llama-2-7b-chat-int8", chat);
+	const message = await ai.run("@cf/google/gemma-4-26b-a4b-it", chat);
 	if (!("response" in message)) {
 		return "I'm feeling a bit poorly 🥲—try asking me for a message later!";
 	}
