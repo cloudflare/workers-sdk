@@ -1014,6 +1014,36 @@ describe("User", () => {
 			);
 		});
 
+		it("should include env-var hint when /memberships returns 9106 and /accounts is empty", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get("*/accounts", () => HttpResponse.json(createFetchResult([])), {
+					once: true,
+				}),
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [
+								{
+									code: 9106,
+									message: "Authentication failed",
+								},
+							],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/CLOUDFLARE_API_TOKEN/
+			);
+		});
+
 		it("should propagate /memberships errors that are not 9106 or 10000", async ({
 			expect,
 		}) => {

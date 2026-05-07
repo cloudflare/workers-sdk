@@ -22,6 +22,10 @@ function isMembershipsInaccessible(err: unknown): boolean {
 	return code !== undefined && MEMBERSHIPS_INACCESSIBLE_CODES.includes(code);
 }
 
+function getMembershipsErrorCode(err: unknown): number | undefined {
+	return (err as { code?: number } | undefined)?.code;
+}
+
 /**
  * Fetches the set of accounts that the current login auth can actually use.
  *
@@ -73,6 +77,18 @@ export async function fetchAllAccounts(
 			if (accountsRes.status === "fulfilled" && accountsRes.value.length > 0) {
 				// Fall back to `/accounts`, which is already scoped to what the auth can use.
 				return accountsRes.value;
+			}
+			// 9106 specifically can also be returned when an environment variable like
+			// CLOUDFLARE_API_TOKEN is set to an invalid value — surface that hint.
+			const errCode = getMembershipsErrorCode(membershipsRes.reason);
+			if (errCode === 9106) {
+				throw new UserError(
+					`Failed to automatically retrieve account IDs for the logged in user.
+You may have incorrect permissions on your API token, or an environment variable such as CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_KEY, or CLOUDFLARE_EMAIL may be set to an invalid value.
+Check your environment and unset or correct any Cloudflare credential variables, or run \`wrangler logout\` followed by \`wrangler login\` to re-authenticate.
+You can also skip this account check by adding an \`account_id\` in your ${configFileName(undefined)} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
+					{ telemetryMessage: "user account fetch permission denied" }
+				);
 			}
 			throw new UserError(
 				`Failed to automatically retrieve account IDs for the logged in user.
