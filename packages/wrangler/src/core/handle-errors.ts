@@ -209,7 +209,6 @@ function isCloudflareAPIDNSError(e: unknown): boolean {
 					return true;
 				}
 			}
-			}
 
 			return undefined;
 		}) === true
