@@ -132,10 +132,6 @@ export function runBuild(
 				previousBundle,
 				"Rebuild triggered with no previous build available"
 			);
-			previousBundle.modules = dedupeModulesByName([
-				...(moduleCollector?.modules ?? []),
-				...newAdditionalModules,
-			]);
 			let entrypointSource: string;
 			try {
 				entrypointSource = readFileSync(previousBundle.path, "utf8");
@@ -148,6 +144,10 @@ export function runBuild(
 			}
 			return {
 				...previousBundle,
+				modules: dedupeModulesByName([
+					...(moduleCollector?.modules ?? []),
+					...newAdditionalModules,
+				]),
 				entrypointSource,
 				id: previousBundle.id + 1,
 			};
