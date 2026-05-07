@@ -2747,19 +2747,21 @@ function collectAllUnsafeBindings(
  *
  * @param args - All the CLI arguments passed to the `types` command
  *
- * @returns An array of collected pipeline bindings with their names and pipeline IDs.
+ * @returns An array of collected pipeline bindings with their names and stream IDs.
  */
 function collectAllPipelines(
 	args: Partial<(typeof typesCommand)["args"]>
 ): Array<{
 	binding: string;
-	pipeline: string;
+	stream?: string;
+	pipeline?: string;
 }> {
 	const pipelinesMap = new Map<
 		string,
 		{
 			binding: string;
-			pipeline: string;
+			stream?: string;
+			pipeline?: string;
 		}
 	>();
 
@@ -2783,13 +2785,13 @@ function collectAllPipelines(
 				});
 			}
 
-			if (!pipeline.pipeline) {
+			if (!pipeline.stream && !pipeline.pipeline) {
 				throwMissingBindingError({
 					binding: pipeline,
 					bindingType: "pipelines",
 					configPath: args.config,
 					envName,
-					fieldName: "pipeline",
+					fieldName: "stream",
 					index,
 				});
 			}
@@ -2800,6 +2802,7 @@ function collectAllPipelines(
 
 			pipelinesMap.set(pipeline.binding, {
 				binding: pipeline.binding,
+				stream: pipeline.stream,
 				pipeline: pipeline.pipeline,
 			});
 		}
@@ -3892,30 +3895,54 @@ function collectPipelinesPerEnvironment(
 	args: Partial<(typeof typesCommand)["args"]>
 ): Map<
 	string,
-	Array<{
-		binding: string;
-		pipeline: string;
-	}>
+	Array<
+		| {
+				binding: string;
+				stream: string;
+		  }
+		| {
+				binding: string;
+				pipeline: string;
+		  }
+	>
 > {
 	const result = new Map<
 		string,
-		Array<{
-			binding: string;
-			pipeline: string;
-		}>
+		Array<
+			| {
+					binding: string;
+					stream: string;
+			  }
+			| {
+					binding: string;
+					pipeline: string;
+			  }
+		>
 	>();
 
 	function collectEnvironmentPipelines(
 		env: RawEnvironment | undefined,
 		envName: string
-	): Array<{
-		binding: string;
-		pipeline: string;
-	}> {
-		const pipelines = new Array<{
-			binding: string;
-			pipeline: string;
-		}>();
+	): Array<
+		| {
+				binding: string;
+				stream: string;
+		  }
+		| {
+				binding: string;
+				pipeline: string;
+		  }
+	> {
+		const pipelines = new Array<
+			| {
+					binding: string;
+					stream: string;
+			  }
+			| {
+					binding: string;
+					pipeline: string;
+			  }
+		>();
 
 		if (!env?.pipelines) {
 			return pipelines;
@@ -3933,21 +3960,26 @@ function collectPipelinesPerEnvironment(
 				});
 			}
 
-			if (!pipeline.pipeline) {
+			if (pipeline.stream) {
+				pipelines.push({
+					binding: pipeline.binding,
+					stream: pipeline.stream,
+				});
+			} else if (pipeline.pipeline) {
+				pipelines.push({
+					binding: pipeline.binding,
+					pipeline: pipeline.pipeline,
+				});
+			} else {
 				throwMissingBindingError({
 					binding: pipeline,
 					bindingType: "pipelines",
 					configPath: args.config,
 					envName,
-					fieldName: "pipeline",
+					fieldName: "stream",
 					index,
 				});
 			}
-
-			pipelines.push({
-				binding: pipeline.binding,
-				pipeline: pipeline.pipeline,
-			});
 		}
 
 		return pipelines;

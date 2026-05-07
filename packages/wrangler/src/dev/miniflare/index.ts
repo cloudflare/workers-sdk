@@ -283,22 +283,42 @@ function queueProducerEntry(
 	return [binding, { queueName, deliveryDelay, remoteProxyConnectionString }];
 }
 function pipelineEntry(
-	pipeline: CfPipeline,
+	{ binding, stream, pipeline, remote }: CfPipeline,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
-	{
-		pipeline: string;
-		remoteProxyConnectionString?: RemoteProxyConnectionString;
-	},
+	(
+		| {
+				stream: string;
+				remoteProxyConnectionString?: RemoteProxyConnectionString;
+		  }
+		| {
+				pipeline: string;
+				remoteProxyConnectionString?: RemoteProxyConnectionString;
+		  }
+	),
 ] {
-	if (!remoteProxyConnectionString || !pipeline.remote) {
-		return [pipeline.binding, { pipeline: pipeline.pipeline }];
+	if (stream) {
+		return [
+			binding,
+			{
+				stream,
+				...(remoteProxyConnectionString &&
+					remote && { remoteProxyConnectionString }),
+			},
+		];
+	} else if (pipeline) {
+		return [
+			binding,
+			{
+				pipeline,
+				...(remoteProxyConnectionString &&
+					remote && { remoteProxyConnectionString }),
+			},
+		];
+	} else {
+		throw new Error("Pipeline must have either a stream");
 	}
-	return [
-		pipeline.binding,
-		{ pipeline: pipeline.pipeline, remoteProxyConnectionString },
-	];
 }
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
