@@ -1232,8 +1232,8 @@ describe("kv", () => {
 								return HttpResponse.json(
 									createFetchResult(null, false, [
 										{
-											code: 9109,
-											message: "Uauthorized to access requested resource",
+											code: 9106,
+											message: "Authentication failed (status: 400)",
 										},
 									]),
 									{ status: 200 }
