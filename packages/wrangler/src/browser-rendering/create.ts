@@ -1,6 +1,6 @@
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { requireAuth } from "../user";

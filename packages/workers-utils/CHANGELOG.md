@@ -1,5 +1,21 @@
 # @cloudflare/workers-utils
 
+## 0.19.0
+
+### Minor Changes
+
+- [#13810](https://github.com/cloudflare/workers-sdk/pull/13810) [`2b8c0cc`](https://github.com/cloudflare/workers-sdk/commit/2b8c0ccb9ede7487bd96cfc51b3262a717bb532c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Stabilize the `secrets` configuration property
+
+  The `secrets` property in the Wrangler config file is no longer experimental and will no longer emit an experimental warning when used. Required secrets are validated during local development and deploy, and used as the source of truth for type generation.
+
+  ```json
+  {
+    "secrets": {
+      "required": ["API_KEY", "DB_PASSWORD"]
+    }
+  }
+  ```
+
 ## 0.18.0
 
 ### Minor Changes

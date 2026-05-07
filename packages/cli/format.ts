@@ -19,7 +19,7 @@
  */
 
 import chalk from "chalk";
-import figures from "figures";
+import { mainSymbols as figures } from "figures";
 import { brandColor } from "./colors";
 
 /** Format a success message. `◇  <message>` (green hollow diamond,

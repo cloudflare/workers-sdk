@@ -28,11 +28,38 @@ export function getLocalDevVarsForPreview(
 	if (dotDevDotVarsEntries.length > 0) {
 		const dotDevDotVarsContent = dotDevDotVarsEntries
 			.map(([key, { value }]) => {
-				return `${key} = "${value?.toString().replaceAll(`"`, `\\"`)}"\n`;
+				// `value` is typed as optional but `unstable_getVarsForDev`
+				// always populates it; `?? ""` narrows the type for `quoteForDotenv`.
+				return `${key}=${quoteForDotenv(value?.toString() ?? "")}\n`;
 			})
 			.join("");
 		return dotDevDotVarsContent;
 	}
+}
+
+/**
+ * Quote a value so that wrangler reads it back unchanged when it parses
+ * `dist/<env>/.dev.vars` at preview time.
+ *
+ * Strategy: To quote the string pick the first quote character that does not
+ * appear in the value (single → backtick → double). Throw if a value cannot
+ * be losslessly serialized rather than silently corrupting it.
+ *
+ * @internal exported for tests
+ */
+export function quoteForDotenv(value: string): string {
+	if (!value.includes("'")) {
+		return `'${value}'`;
+	}
+	if (!value.includes("`")) {
+		return `\`${value}\``;
+	}
+	if (!value.includes('"') && !/[\\\n\r]/.test(value)) {
+		return `"${value}"`;
+	}
+	throw new Error(
+		"Unable to serialize value to .dev.vars: contains every supported quote character or unsafe escape sequence."
+	);
 }
 
 /**

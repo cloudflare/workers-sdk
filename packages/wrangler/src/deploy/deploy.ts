@@ -3,6 +3,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli-shared-helpers";
+import isInteractive, {
+	isNonInteractiveOrCI,
+} from "@cloudflare/cli-shared-helpers/is-interactive";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,
@@ -46,7 +49,6 @@ import {
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "../environments";
 import { getFlag } from "../experimental-flags";
-import isInteractive, { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -763,7 +765,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						compatibilityFlags,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
-						alias: config.alias,
+						alias: { ...config.alias, ...props.alias },
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",

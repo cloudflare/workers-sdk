@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import * as isInteractiveModule from "@cloudflare/cli-shared-helpers/is-interactive";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as details from "../../../autoconfig/details";
 import * as configCache from "../../../config-cache";
-import * as isInteractiveModule from "@cloudflare/cli-shared-helpers/is-interactive";
 import { clearOutputFilePath } from "../../../output";
 import { getPackageManager, NpmPackageManager } from "../../../package-manager";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../../../pages/constants";

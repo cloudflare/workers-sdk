@@ -111,13 +111,15 @@ export function getBindingValue(binding: Binding): string {
 		case "mtls_certificate":
 			return String(binding.certificate_id ?? "");
 		case "pipelines":
-			return String(binding.pipeline ?? "");
+			return String(binding.stream ?? binding.pipeline ?? "");
 		case "secrets_store_secret":
 			return binding.secret_name
 				? `${binding.store_id}/${binding.secret_name}`
 				: String(binding.store_id ?? "");
 		case "artifacts":
 			return String(binding.namespace ?? "");
+		case "flagship":
+			return String(binding.app_id ?? "");
 		case "ratelimit":
 			return String(binding.namespace_id ?? "");
 		case "vpc_service":
@@ -243,7 +245,10 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	}
 
 	for (const pipeline of previews?.pipelines ?? []) {
-		env[pipeline.binding] = { type: "pipelines", pipeline: pipeline.pipeline };
+		env[pipeline.binding] = {
+			type: "pipelines",
+			stream: pipeline.stream || pipeline.pipeline,
+		};
 	}
 
 	for (const secret of previews?.secrets_store_secrets ?? []) {
@@ -258,6 +263,13 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[artifact.binding] = {
 			type: "artifacts",
 			namespace: artifact.namespace,
+		};
+	}
+
+	for (const flagship of previews?.flagship ?? []) {
+		env[flagship.binding] = {
+			type: "flagship",
+			app_id: flagship.app_id,
 		};
 	}
 
@@ -301,6 +313,10 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[previews.version_metadata.binding] = { type: "version_metadata" };
 	}
 
+	if (config.assets?.binding) {
+		env[config.assets.binding] = { type: "assets" };
+	}
+
 	return env;
 }
 
@@ -340,6 +356,10 @@ export function assemblePreviewDefaults(config: Config): PreviewDefaults {
 
 	if (previews?.limits || config.limits) {
 		previewDefaults.limits = previews?.limits ?? config.limits;
+	}
+
+	if (previews?.cache !== undefined || config.cache !== undefined) {
+		previewDefaults.cache = previews?.cache ?? config.cache;
 	}
 
 	if (config.placement) {

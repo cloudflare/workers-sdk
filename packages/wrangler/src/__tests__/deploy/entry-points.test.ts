@@ -897,7 +897,11 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: true,
 				});
 
@@ -931,7 +935,6 @@ addEventListener('fetch', event => {});`
 
 
 
-					No compatibility date found Defaulting to today: 2024-01-01
 
 					Wrote
 					{
@@ -942,7 +945,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
-					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
 
@@ -978,7 +981,11 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: true,
 				});
 
@@ -1012,7 +1019,6 @@ addEventListener('fetch', event => {});`
 
 
 
-					No compatibility date found Defaulting to today: 2024-01-01
 
 					Wrote
 					{
@@ -1023,7 +1029,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
-					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
 
@@ -1049,7 +1055,11 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: true,
 				});
 
@@ -1082,8 +1092,6 @@ addEventListener('fetch', event => {});`
 					────────────────────
 
 
-					No compatibility date found Defaulting to today: 2024-01-01
-
 					Wrote
 					{
 					  "name": "test-name",
@@ -1093,7 +1101,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
-					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
 
@@ -1126,7 +1134,11 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: true,
 				});
 
@@ -1159,8 +1171,6 @@ addEventListener('fetch', event => {});`
 					────────────────────
 
 
-					No compatibility date found Defaulting to today: 2024-01-01
-
 					Wrote
 					{
 					  "name": "test-name",
@@ -1170,7 +1180,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
-					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
 
@@ -1208,7 +1218,11 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: true,
 				});
 
@@ -1242,7 +1256,6 @@ addEventListener('fetch', event => {});`
 
 
 
-					No compatibility date found Defaulting to today: 2024-01-01
 
 					Wrote
 					{
@@ -1253,7 +1266,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
-					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
 
@@ -1282,7 +1295,11 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: true,
 				});
 
@@ -1339,7 +1356,11 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					result: true,
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
 					result: false,
 				});
 
@@ -1362,8 +1383,6 @@ addEventListener('fetch', event => {});`
 					⛅️ wrangler · vx.x.x
 					────────────────────
 
-
-					No compatibility date found Defaulting to today: 2024-01-01
 
 					You should run wrangler deploy --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.
 

@@ -19,9 +19,9 @@ describe("box / wrapPlain", () => {
 	});
 
 	test("breaks long input on word boundaries", ({ expect }) => {
-		expect(
-			wrapPlain("this is a longer sentence that should wrap", 20)
-		).toEqual(["this is a longer", "sentence that should", "wrap"]);
+		expect(wrapPlain("this is a longer sentence that should wrap", 20)).toEqual(
+			["this is a longer", "sentence that should", "wrap"]
+		);
 	});
 
 	test("preserves explicit newlines", ({ expect }) => {

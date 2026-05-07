@@ -3,7 +3,7 @@
 # See: CODEOWNERS.md for full documentation
 
 # Directories to ignore (no ownership checks, reduces review noise)
-ignore = [".changeset", "fixtures"]
+ignore = []
 
 # Show detailed file-to-owner mapping in PR comments
 detailed_reviewers = true

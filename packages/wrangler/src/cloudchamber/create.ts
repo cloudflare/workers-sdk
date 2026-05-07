@@ -11,6 +11,7 @@ import {
 	inputPrompt,
 	spinner,
 } from "@cloudflare/cli-shared-helpers/interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import {
 	AssignIPv4,
 	AssignIPv6,
@@ -18,7 +19,6 @@ import {
 } from "@cloudflare/containers-shared";
 import { parseByteSize } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
@@ -47,7 +47,6 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Arg } from "@cloudflare/cli-shared-helpers/interactive";
 import type {
 	CreateDeploymentV2RequestBody,
 	EnvironmentVariable,

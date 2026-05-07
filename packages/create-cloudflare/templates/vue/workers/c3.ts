@@ -1,4 +1,4 @@
-import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	inputPrompt,
 	spinner,

@@ -1,5 +1,5 @@
-import { logRaw, space } from "@cloudflare/cli-shared-helpers";
 import * as clack from "@clack/prompts";
+import { logRaw, space } from "@cloudflare/cli-shared-helpers";
 import {
 	bgCyan,
 	bgRed,
@@ -10,13 +10,12 @@ import {
 	white,
 	yellow,
 } from "@cloudflare/cli-shared-helpers/colors";
-import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import {
 	DeploymentsService,
 	PlacementsService,
 } from "@cloudflare/containers-shared";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { capitalize } from "../utils/strings";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
@@ -161,7 +160,8 @@ const listCommandHandle = async (
 			);
 		};
 
-		const loadPlacements = () => PlacementsService.listPlacements(deployment.id);
+		const loadPlacements = () =>
+			PlacementsService.listPlacements(deployment.id);
 
 		// Browse-with-refresh loop. The previous custom
 		// `SelectRefreshablePrompt` allowed pressing R inside the

@@ -16,8 +16,8 @@ describe("dialog helpers", () => {
 	});
 
 	describe("printWelcomeMessage", () => {
-		test("with telemetry disabled", ({ expect }) => {
-			printWelcomeMessage("0.0.0", false, {});
+		test("with telemetry disabled", async ({ expect }) => {
+			await printWelcomeMessage("0.0.0", false, {});
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"
@@ -27,35 +27,41 @@ describe("dialog helpers", () => {
 			`);
 		});
 
-		test("with telemetry enabled", ({ expect }) => {
-			printWelcomeMessage("0.0.0", true, {});
+		test("with telemetry enabled", async ({ expect }) => {
+			await printWelcomeMessage("0.0.0", true, {});
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"
 				👋 create-cloudflare · v0.0.0
 				─────────────────────────────
+				📊 Cloudflare collects telemetry about your usage of Create-Cloudflare.
+				Learn more at: https://github.com/cloudflare/workers-sdk/blob/main/packages/create-cloudflare/telemetry.md
 				"
 			`);
 		});
 
-		test("with telemetry disabled in experimental mode", ({ expect }) => {
-			printWelcomeMessage("0.0.0", false, { experimental: true });
+		test("with telemetry disabled in experimental mode", async ({ expect }) => {
+			await printWelcomeMessage("0.0.0", false, { experimental: true });
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"
 				👋 create-cloudflare · v0.0.0
 				─────────────────────────────
+				🧪 Running in experimental mode
 				"
 			`);
 		});
 
-		test("with telemetry enabled in experimental mode", ({ expect }) => {
-			printWelcomeMessage("0.0.0", true, { experimental: true });
+		test("with telemetry enabled in experimental mode", async ({ expect }) => {
+			await printWelcomeMessage("0.0.0", true, { experimental: true });
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"
 				👋 create-cloudflare · v0.0.0
 				─────────────────────────────
+				🧪 Running in experimental mode
+				📊 Cloudflare collects telemetry about your usage of Create-Cloudflare.
+				Learn more at: https://github.com/cloudflare/workers-sdk/blob/main/packages/create-cloudflare/telemetry.md
 				"
 			`);
 		});

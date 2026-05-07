@@ -249,8 +249,9 @@ describe("autoconfig (deploy)", () => {
 				{ enableWranglerInstallation: true }
 			);
 
-			expect(std.out.replaceAll(getTodaysCompatDate(), "<current-date>"))
-				.toMatchInlineSnapshot(`"[build] Running: echo 'built' > build.txt"`);
+			expect(
+				std.out.replaceAll(getTodaysCompatDate(), "<current-date>")
+			).toMatchInlineSnapshot(`"[build] Running: echo 'built' > build.txt"`);
 
 			expect(
 				readFileSync("wrangler.jsonc").replaceAll(
@@ -404,8 +405,9 @@ describe("autoconfig (deploy)", () => {
 				packageManager: NpmPackageManager,
 			});
 
-			expect(std.out.replaceAll(getTodaysCompatDate(), "<current-date>"))
-				.toMatchInlineSnapshot(`""`);
+			expect(
+				std.out.replaceAll(getTodaysCompatDate(), "<current-date>")
+			).toMatchInlineSnapshot(`""`);
 
 			expect(
 				readFileSync("wrangler.jsonc").replaceAll(

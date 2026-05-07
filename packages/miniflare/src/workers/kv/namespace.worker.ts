@@ -216,9 +216,7 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 		// through a transform stream to count it (trusting `workerd` to send
 		// correct value here).
 		let value = req.body;
-		// Safety of `!`: `parseInt(null)` is `NaN`
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const contentLength = parseInt(req.headers.get("Content-Length")!);
+		const contentLength = parseInt(req.headers.get("Content-Length") ?? "NaN");
 		let valueLengthHint: number | undefined;
 		if (!Number.isNaN(contentLength)) valueLengthHint = contentLength;
 		else if (value === null) valueLengthHint = 0;

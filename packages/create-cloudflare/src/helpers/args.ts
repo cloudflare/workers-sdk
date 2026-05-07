@@ -436,7 +436,9 @@ export const processArgument = async <Key extends keyof C3Args>(
 			// access it via a structural cast so the type-narrowing
 			// requirements of the discriminated union don't get in the way.
 			const validate = (
-				promptConfig as { validate?: (v: unknown) => string | Error | undefined }
+				promptConfig as {
+					validate?: (v: unknown) => string | Error | undefined;
+				}
 			).validate;
 			const validationResult = validate?.(value);
 			const error =

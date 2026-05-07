@@ -1,20 +1,18 @@
-import assert from "node:assert";
 import * as cli from "@cloudflare/cli-shared-helpers";
 import { brandColor, gray, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	inputPrompt,
 	spinnerWhile,
 } from "@cloudflare/cli-shared-helpers/interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 
 // Local box-drawing shapes for the bespoke deploy table rendering — these
 // used to be imported from cli-shared-helpers but were dropped during the
 // clack-prompts migration since no other consumer needs them.
-const grayBar = gray("│");
 const leftT = gray("├");
 import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
@@ -39,7 +37,6 @@ import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
-const ZERO_WIDTH_SPACE = "\u200B"; // Some log lines get trimmed and so, to indent, the line is prefixed with a zero-width space
 
 type OptionalPercentage = number | null; // null means automatically assign (evenly distribute remaining traffic)
 
@@ -76,7 +73,7 @@ export const versionsDeployCommand = createCommand({
 		},
 		"version-specs": {
 			describe:
-				"Shorthand notation to deploy Worker Version(s) [<version-id>@<percentage>..]",
+				"Shorthand notation to deploy Worker Version(s) [<version-id>@<percentage>..]. Omitted percentages share the remaining traffic.",
 			type: "string",
 			array: true,
 		},
@@ -121,6 +118,7 @@ export const versionsDeployCommand = createCommand({
 
 		const versionCache: VersionCache = new Map();
 		const optionalVersionTraffic = parseVersionSpecs(args);
+		const acceptPromptDefaults = args.yes || optionalVersionTraffic.size > 0;
 
 		cli.startSection(
 			"Deploy Worker Versions",
@@ -136,7 +134,7 @@ export const versionsDeployCommand = createCommand({
 			workerName,
 			[...optionalVersionTraffic.keys()],
 			versionCache,
-			args.yes
+			acceptPromptDefaults
 		);
 
 		// validate we have at least 1 version
@@ -158,14 +156,14 @@ export const versionsDeployCommand = createCommand({
 		const confirmedVersionTraffic = await promptPercentages(
 			confirmedVersionsToDeploy,
 			optionalVersionTraffic,
-			args.yes
+			acceptPromptDefaults
 		);
 
 		// prompt for deployment message
 		const message = await inputPrompt<string | undefined>({
 			type: "text",
 			defaultValue: args.message,
-			acceptDefault: args.yes,
+			acceptDefault: acceptPromptDefaults,
 			message: `Add a deployment message ${gray("(optional)")}`,
 		});
 
@@ -350,7 +348,7 @@ function formatVersions(
  * @param accountId
  * @param workerName
  * @param defaultSelectedVersionIds
- * @param yesFlag
+ * @param acceptDefault
  * @returns
  */
 async function promptVersionsToDeploy(
@@ -359,13 +357,13 @@ async function promptVersionsToDeploy(
 	workerName: string,
 	defaultSelectedVersionIds: VersionId[],
 	versionCache: VersionCache,
-	yesFlag: boolean
+	acceptDefault: boolean
 ): Promise<VersionId[]> {
 	// If the user has already specified all versions they want to deploy and
-	// has passed --yes (so there's no interactive prompt), skip fetching the
+	// the defaults will be accepted (so there's no interactive prompt), skip fetching the
 	// full deployable-versions list and only fetch the specific versions needed.
 	const skipDeployableVersionsFetch =
-		yesFlag && defaultSelectedVersionIds.length > 0;
+		acceptDefault && defaultSelectedVersionIds.length > 0;
 
 	await spinnerWhile({
 		startMessage: "Fetching versions",
@@ -403,13 +401,11 @@ async function promptVersionsToDeploy(
 			hint: gray(
 				`Created ${version.metadata.created_on} · Tag ${
 					version.annotations?.["workers/tag"] ?? BLANK_INPUT
-				} · ${
-					version.annotations?.["workers/message"] ?? BLANK_INPUT
-				}`
+				} · ${version.annotations?.["workers/message"] ?? BLANK_INPUT}`
 			),
 		})),
 		initialValues: defaultSelectedVersionIds,
-		acceptDefault: yesFlag,
+		acceptDefault,
 		required: true,
 	});
 
@@ -422,14 +418,14 @@ async function promptVersionsToDeploy(
  *
  * @param versionIds The Version IDs the user has selected to deploy
  * @param optionalVersionTraffic The percentages the user has specified as args (if any)
- * @param yesFlag Whether the user specified the --yes flag
+ * @param acceptDefault Whether prompt defaults should be accepted automatically
  * @param confirmedVersionTraffic The percentages the user has already entered. Used for recursive calls.
  * @returns A Map of Version IDs to their respective percentages confirmed by the user, totaling 100%
  */
 async function promptPercentages(
 	versionIds: VersionId[],
 	optionalVersionTraffic: Map<VersionId, OptionalPercentage>,
-	yesFlag: boolean,
+	acceptDefault: boolean,
 	confirmedVersionTraffic = new Map<VersionId, Percentage>()
 ): Promise<Map<VersionId, Percentage>> {
 	let n = 0;
@@ -453,7 +449,7 @@ async function promptPercentages(
 			message: `${question} ${gray("(0-100)")}`,
 			defaultValue,
 			initialValue: confirmedVersionTraffic.get(versionId)?.toString(), // if the user already entered a value, override the default
-			acceptDefault: yesFlag,
+			acceptDefault,
 			format: (val) => `${val}%`,
 			validate: (val) => {
 				const input = val !== "" ? val : defaultValue;
@@ -480,9 +476,9 @@ async function promptPercentages(
 		validateTrafficSubtotal(subtotal);
 	} catch (err) {
 		if (err instanceof UserError) {
-			// if the user has indicated they'll accept all defaults (yesFlag)
+			// if the user has indicated they'll accept all defaults
 			// then rethrow to avoid an infinite loop of reprompting
-			if (yesFlag) {
+			if (acceptDefault) {
 				throw err;
 			}
 
@@ -491,7 +487,7 @@ async function promptPercentages(
 			return promptPercentages(
 				versionIds,
 				optionalVersionTraffic,
-				yesFlag,
+				acceptDefault,
 				confirmedVersionTraffic
 			);
 		}

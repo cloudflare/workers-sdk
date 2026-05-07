@@ -85,8 +85,7 @@ export const format = (
 ) => {
 	const lines = multiline ? msg.split("\n") : [msg];
 	const formattedLines = lines.map(
-		(line, i) =>
-			(i === 0 ? firstLinePrefix : linePrefix) + formatLine(line)
+		(line, i) => (i === 0 ? firstLinePrefix : linePrefix) + formatLine(line)
 	);
 
 	if (newlineBefore) {
@@ -231,7 +230,7 @@ export const crash: (msg?: string, extra?: string) => never = (msg, extra) => {
 export const error = (msg?: string, extra?: string) => {
 	const currentLevel = getLogLevel();
 	if (msg && LOGGER_LEVELS[currentLevel] >= LOGGER_LEVELS.error) {
-		clack.log.error(extra ? `${msg}\n${extra}` : msg);
+		clack.log.error(extra ? `${msg}\n${extra}` : msg, { output: stderr });
 	}
 };
 

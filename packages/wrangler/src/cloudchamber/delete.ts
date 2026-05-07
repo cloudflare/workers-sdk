@@ -4,10 +4,10 @@ import {
 	startSection,
 } from "@cloudflare/cli-shared-helpers";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { logDeployment, pickDeployment } from "./cli/deployments";
 import { cloudchamberScope, fillOpenAPIConfiguration } from "./common";

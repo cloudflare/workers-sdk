@@ -1,7 +1,7 @@
+import * as isInteractiveModule from "@cloudflare/cli-shared-helpers/is-interactive";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { detectFramework } from "../../../../autoconfig/details/framework-detection";
-import * as isInteractiveModule from "@cloudflare/cli-shared-helpers/is-interactive";
 import { runInTempDir } from "../../../helpers/run-in-tmp";
 import type { MockInstance } from "vitest";
 

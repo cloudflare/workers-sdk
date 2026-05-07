@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import { updateCheck } from "@cloudflare/cli-shared-helpers/update-check";
 import {
 	configFileName,
 	experimental_readRawConfig,
@@ -9,7 +10,6 @@ import {
 	UserError,
 	validatePagesConfig,
 } from "@cloudflare/workers-utils";
-import { updateCheck } from "@cloudflare/cli-shared-helpers/update-check";
 import dedent from "ts-dedent";
 import {
 	name as wranglerName,

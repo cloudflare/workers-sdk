@@ -232,15 +232,9 @@ vi.mock("../metrics/metrics-config", async (importOriginal) => {
 // Non-prompt clack APIs (`isCancel`, `cancel`, `intro`, `outro`,
 // `note`, `log.*`, `spinner`) are passthrough so test code paths that
 // emit informational output (autoconfig sections, etc.) work as
-// expected. Clack's output stream is rerouted to the
-// cli-shared-helpers `stdout` PassThrough (mocked below) so existing
-// helpers like `collectCLIOutput()` and `mockCLIOutput()` capture
-// clack output too.
+// expected.
 vi.mock("@clack/prompts", async (importOriginal) => {
-	const real =
-		await importOriginal<typeof import("@clack/prompts")>();
-	const { stdout } = await import("@cloudflare/cli-shared-helpers/streams");
-	real.updateSettings({ output: stdout });
+	const real = await importOriginal<typeof import("@clack/prompts")>();
 	const reject = (kind: string) =>
 		vi.fn((opts: unknown) => {
 			throw new Error(

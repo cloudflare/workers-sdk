@@ -8,6 +8,7 @@ export default defineConfig({
 		}),
 	],
 	test: {
+		reporters: ["default"],
 		include: ["test/**/*.spec.ts"],
 		server: {
 			deps: {

@@ -5,6 +5,7 @@ import {
 	startSection,
 	updateStatus,
 } from "@cloudflare/cli-shared-helpers";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import {
 	ApiError,
 	ExternalRegistryKind,
@@ -23,7 +24,6 @@ import {
 } from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, prompt } from "../dialogs";
-import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import {
 	createSecret,
@@ -33,7 +33,7 @@ import {
 	listStores,
 } from "../secrets-store/client";
 import { validateSecretName } from "../secrets-store/commands";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { formatError } from "./deploy";
 import { containersScope } from ".";
@@ -173,7 +173,7 @@ async function registryConfigureCommand(
 	let private_credential: ImageRegistryAuth["private_credential"];
 	if (!isFedRAMPHigh) {
 		log("\nSetting up integration with Secrets Store...\n");
-		const accountId = await getAccountId(config);
+		const accountId = await getOrSelectAccountId(config);
 
 		if (!secretStoreId) {
 			const stores = await listStores(config, accountId);
@@ -497,7 +497,7 @@ async function registryDeleteCommand(
 			}
 		}
 
-		const accountId = await getAccountId(config);
+		const accountId = await getOrSelectAccountId(config);
 
 		try {
 			const secretId = await promiseSpinner(

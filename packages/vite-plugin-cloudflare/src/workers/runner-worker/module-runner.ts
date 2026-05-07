@@ -213,8 +213,7 @@ async function createModuleRunner(
 					);
 					const result = await response.json();
 
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					return result as { result: any } | { error: any };
+					return result as { result: unknown } | { error: unknown };
 				},
 			},
 			hmr: true,

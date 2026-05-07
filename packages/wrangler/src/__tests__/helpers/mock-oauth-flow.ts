@@ -2,33 +2,8 @@ import { http, HttpResponse } from "msw";
 import { Request } from "undici";
 import openInBrowser from "../../open-in-browser";
 import { mockHttpServer } from "./mock-http-server";
-import { createFetchResult, msw } from "./msw";
+import { msw } from "./msw";
 import type { Mock } from "vitest";
-
-export function mockGetMemberships(
-	accounts: { id: string; account: { id: string; name: string } }[]
-) {
-	msw.use(
-		http.get(
-			"*/memberships",
-			() => {
-				return HttpResponse.json(createFetchResult(accounts));
-			},
-			{ once: true }
-		)
-	);
-}
-export function mockGetMembershipsFail() {
-	msw.use(
-		http.get(
-			"*/memberships",
-			() => {
-				return HttpResponse.json(createFetchResult([], false));
-			},
-			{ once: true }
-		)
-	);
-}
 
 /**
  * Functions to help with mocking various parts of the OAuth Flow

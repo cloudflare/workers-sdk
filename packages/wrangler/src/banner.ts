@@ -1,5 +1,8 @@
 import { printBanner } from "@cloudflare/cli-shared-helpers/banner";
-import { name as wranglerName, version as wranglerVersion } from "../package.json";
+import {
+	name as wranglerName,
+	version as wranglerVersion,
+} from "../package.json";
 import { logger } from "./logger";
 
 export async function printWranglerBanner(performUpdateCheck = true) {

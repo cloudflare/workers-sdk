@@ -14,9 +14,13 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { mockGetMembershipsFail } from "./helpers/mock-oauth-flow";
 import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
+import {
+	mswFailMembershipHandler,
+	mswFailAccountsHandler,
+	getMswSuccessMembershipHandlers,
+} from "./helpers/msw/handlers/user";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Interface } from "node:readline";
@@ -33,20 +37,6 @@ function createFetchResult(
 		messages: [],
 		result,
 	};
-}
-
-export function mockGetMemberships(
-	accounts: { id: string; account: { id: string; name: string } }[]
-) {
-	msw.use(
-		http.get(
-			"*/memberships",
-			() => {
-				return HttpResponse.json(createFetchResult(accounts));
-			},
-			{ once: true }
-		)
-	);
 }
 
 function mockNoWorkerFound(isBulk = false) {
@@ -409,19 +399,33 @@ describe("wrangler secret", () => {
 			describe("with accountId", () => {
 				mockAccountId({ accountId: null });
 
-				it("should error if request for memberships fails", async ({
+				it("should error if request for available accounts fails", async ({
 					expect,
 				}) => {
-					mockGetMembershipsFail();
+					msw.use(mswFailAccountsHandler, ...getMswSuccessMembershipHandlers());
 					await expect(
-						runWrangler("secret put the-key --name script-name")
+						runWrangler("pages secret put the-key --project some-project-name")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[APIError: A request to the Cloudflare API (/accounts) failed.]`
+					);
+				});
+
+				it("should error if request for available memberships fails", async ({
+					expect,
+				}) => {
+					msw.use(
+						mswFailMembershipHandler,
+						...getMswSuccessMembershipHandlers()
+					);
+					await expect(
+						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[APIError: A request to the Cloudflare API (/memberships) failed.]`
 					);
 				});
 
 				it("should error if a user has no account", async ({ expect }) => {
-					mockGetMemberships([]);
+					msw.use(...getMswSuccessMembershipHandlers([]));
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: Failed to automatically retrieve account IDs for the logged in user.
@@ -454,29 +458,16 @@ describe("wrangler secret", () => {
 				it("should error if a user has multiple accounts, and has not specified an account in wrangler.toml", async ({
 					expect,
 				}) => {
-					mockGetMemberships([
-						{
-							id: "1",
-							account: { id: "account-id-1", name: "account-name-1" },
-						},
-						{
-							id: "2",
-							account: { id: "account-id-2", name: "account-name-2" },
-						},
-						{
-							id: "3",
-							account: { id: "account-id-3", name: "account-name-3" },
-						},
-					]);
+					msw.use(...getMswSuccessMembershipHandlers());
 
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`account-name-1\`: \`account-id-1\`
-						  \`account-name-2\`: \`account-id-2\`
-						  \`account-name-3\`: \`account-id-3\`]
+						  \`Account One\`: \`account-1\`
+						  \`Account Two\`: \`account-2\`
+						  \`Account Three\`: \`account-3\`]
 					`);
 				});
 			});

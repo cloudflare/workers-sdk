@@ -42,7 +42,7 @@ Main CLI for Cloudflare Workers. ~2k-line yargs command tree in `src/index.ts`. 
 - `runWrangler(cmd)` calls `main()` in-process (no subprocess)
 - MSW for API mocking — pre-built handlers per API domain in `src/__tests__/helpers/msw/`
 - Shared helpers: `runInTempDir()`, `mockAccountId()`, `mockApiToken()`, `mockConfirm()`, `mockPrompt()`, `mockSelect()`, `captureRequestsFrom()`
-- Unit timeout: 15s, retry: 0 (overrides shared config)
+- Unit timeout: 50s, retry: 0. Note: wrangler's `vitest.config.mts` does NOT use `mergeConfig` with `vitest.shared.ts`, so shared defaults (timeouts, retry, etc.) are not inherited — they must be set explicitly in the wrangler config.
 - E2E timeout: 90s, bail: 1, singleThread
 - `globals: true` for vitest globals
 - Output normalization via `normalizeString()` pipeline

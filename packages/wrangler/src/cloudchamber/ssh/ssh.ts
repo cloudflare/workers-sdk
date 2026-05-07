@@ -15,10 +15,10 @@ import {
 	inputPrompt,
 	spinner,
 } from "@cloudflare/cli-shared-helpers/interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { SshPublicKeysService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../../core/create-command";
-import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../../logger";
 import { pollSSHKeysUntilCondition } from "../cli";
 import {

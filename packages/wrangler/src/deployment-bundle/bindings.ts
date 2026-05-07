@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import {
 	APIError,
 	experimental_patchConfig,
@@ -14,7 +15,6 @@ import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
 import { getDatabaseInfoFromIdOrName } from "../d1/utils";
 import { prompt, select } from "../dialogs";
-import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import * as metrics from "../metrics";

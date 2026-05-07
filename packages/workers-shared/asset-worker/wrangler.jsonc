@@ -43,6 +43,13 @@
 				"name": "workers-asset-worker",
 				"type": "internal_capability_grants",
 			},
+			{
+				"name": "ACCOUNT_COHORT_QUERIER",
+				"type": "service",
+				"service": "account-services-production",
+				"entrypoint": "AccountCohortQuerier",
+				"cross_account_grant": "workers-asset-worker",
+			},
 		],
 	},
 	"vars": {
@@ -54,6 +61,13 @@
 	"env": {
 		"staging": {
 			"name": "asset-worker-staging",
+			// enable_version_api is set per-environment (not top-level) because
+			// the local workerd in vitest-pool-workers does not support it yet.
+			"compatibility_flags": [
+				"nodejs_compat",
+				"enable_ctx_exports",
+				"enable_version_api",
+			],
 			"unsafe": {
 				"metadata": {
 					"build_options": {
@@ -81,6 +95,13 @@
 						"name": "workers-asset-worker-staging",
 						"type": "internal_capability_grants",
 					},
+					{
+						"name": "ACCOUNT_COHORT_QUERIER",
+						"type": "service",
+						"service": "account-services-staging",
+						"entrypoint": "AccountCohortQuerier",
+						"cross_account_grant": "workers-asset-worker-staging",
+					},
 				],
 			},
 			"vars": {
@@ -93,6 +114,11 @@
 		"fed-prod": {
 			"name": "asset-worker-fed-prod",
 			"account_id": "fca6c231dc1d1780777997c5bce5a5e3", // workers assets
+			"compatibility_flags": [
+				"nodejs_compat",
+				"enable_ctx_exports",
+				"enable_version_api",
+			],
 			"vars": {
 				"ENVIRONMENT": "fed-prod",
 			},
@@ -126,6 +152,13 @@
 					{
 						"name": "workers-asset-worker",
 						"type": "internal_capability_grants",
+					},
+					{
+						"name": "ACCOUNT_COHORT_QUERIER",
+						"type": "service",
+						"service": "account-services-production",
+						"entrypoint": "AccountCohortQuerier",
+						"cross_account_grant": "workers-asset-worker",
 					},
 				],
 			},

@@ -209,15 +209,12 @@ export function getBooleanEnvironmentVariableFactory(options: {
 		) {
 			if (!hasWarnedDeprecated) {
 				hasWarnedDeprecated = true;
-				// eslint-disable-next-line no-console
+				// eslint-disable-next-line no-console -- intentional one-shot deprecation warning surfaced to end users
 				console.warn(
 					`Using "${options.deprecatedName}" environment variable. This is deprecated. Please use "${options.variableName}", instead.`
 				);
 			}
-			return parse(
-				process.env[options.deprecatedName],
-				options.deprecatedName
-			);
+			return parse(process.env[options.deprecatedName], options.deprecatedName);
 		}
 
 		return typeof options.defaultValue === "function"

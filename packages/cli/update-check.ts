@@ -49,10 +49,7 @@ async function doUpdateCheck(
 // `updateCheck()` from multiple sites in the same process without each
 // triggering a network roundtrip. The result is unlikely to change
 // through a process's lifetime.
-const updateCheckPromiseCache = new Map<
-	string,
-	Promise<string | undefined>
->();
+const updateCheckPromiseCache = new Map<string, Promise<string | undefined>>();
 
 export function updateCheck(
 	name: string,

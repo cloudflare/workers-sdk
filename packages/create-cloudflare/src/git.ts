@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
-import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { getFrameworkCli } from "frameworks/index";
@@ -96,7 +96,9 @@ export const gitCommit = async (ctx: C3Context) => {
 
 		s.stop(`${brandColor("Committed")} new files to git`);
 	} catch {
-		s.stop(`${brandColor("git commit failed")} — you can commit manually later`);
+		s.stop(
+			`${brandColor("git commit failed")} — you can commit manually later`
+		);
 		updateStatus(
 			"Failed to create initial commit. You can commit manually later."
 		);

@@ -5,9 +5,9 @@ import {
 	inputPrompt,
 	spinner,
 } from "@cloudflare/cli-shared-helpers/interactive";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";

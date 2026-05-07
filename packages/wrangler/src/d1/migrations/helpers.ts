@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { confirm } from "../../dialogs";
-import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { executeSql } from "../execute";

@@ -1,4 +1,4 @@
-import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { dim } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	quoteShellArgs,

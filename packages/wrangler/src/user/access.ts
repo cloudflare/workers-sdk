@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
-import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import {
 	getAccessClientIdFromEnv,

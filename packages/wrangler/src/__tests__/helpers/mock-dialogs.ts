@@ -110,9 +110,7 @@ function ensurePromptHandlerInstalled() {
 			!expectation.options.isSecret &&
 			"initialValue" in opts
 		) {
-			expect(opts.initialValue).toStrictEqual(
-				expectation.options.defaultValue
-			);
+			expect(opts.initialValue).toStrictEqual(expectation.options.defaultValue);
 		}
 		return Promise.resolve(expectation.result);
 	};
@@ -171,11 +169,13 @@ export function mockSelect<Values>(
 				if (expectation.options) {
 					// `dialogs.ts` adapts {title, description, value} →
 					// {label, value, hint}; assert on the clack shape.
+					// `dialogs.ts` omits `hint` when no description is provided
+					// (conditional spread), so match that here.
 					expect(opts.options).toStrictEqual(
 						expectation.options.choices.map((choice) => ({
 							label: choice.title,
 							value: choice.value,
-							hint: choice.description,
+							...(choice.description ? { hint: choice.description } : {}),
 						}))
 					);
 					const expectedInitial =

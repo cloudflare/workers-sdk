@@ -1,3 +1,4 @@
+import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import {
 	getSubdomainMixedStateCheckDisabled,
 	UserError,
@@ -13,7 +14,6 @@ import {
 	updateQueueConsumers,
 	validateRoutes,
 } from "../deploy/deploy";
-import { isNonInteractiveOrCI } from "@cloudflare/cli-shared-helpers/is-interactive";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";

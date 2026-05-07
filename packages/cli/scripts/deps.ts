@@ -11,6 +11,13 @@ export const EXTERNAL_DEPENDENCIES = [
 	// UI prompt primitives used for interactive CLI flows
 	"@clack/core",
 
+	// High-level prompt helpers (intro, log.*, select, note, etc.) used
+	// throughout the package's `index.ts`.
+	"@clack/prompts",
+
+	// Boxed/bordered terminal output for the `box` module.
+	"boxen",
+
 	// Terminal string styling
 	"chalk",
 
@@ -20,6 +27,15 @@ export const EXTERNAL_DEPENDENCIES = [
 	// Cross-platform child process spawning
 	"cross-spawn",
 
+	// Unicode symbols with Windows fallbacks for the `format` module.
+	"figures",
+
 	// Efficient terminal log updating (spinners, progress)
 	"log-update",
+
+	// Semver comparison used by `update-check` for version diffs.
+	"semiver",
+
+	// Background package update checker.
+	"update-check",
 ];

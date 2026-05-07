@@ -1,5 +1,102 @@
 # wrangler
 
+## 4.88.0
+
+### Minor Changes
+
+- [#13760](https://github.com/cloudflare/workers-sdk/pull/13760) [`e07825a`](https://github.com/cloudflare/workers-sdk/commit/e07825aa10a4fccae4aa8274032f31d83def0573) Thanks [@danielgek](https://github.com/danielgek)! - Add `builtin` storage option to `wrangler ai-search create`.
+
+  `wrangler ai-search create` now supports a third storage type, `builtin`, in addition to `r2` and `web-crawler`. When `--type builtin` is selected (or chosen interactively), Wrangler creates the instance using Cloudflare-managed storage by omitting `type` and `source` from the API request — the API treats an absent `type` as builtin storage. Builtin instances do not accept `--source`, `--prefix`, `--include-items`, or `--exclude-items`.
+
+- [#13721](https://github.com/cloudflare/workers-sdk/pull/13721) [`58899d8`](https://github.com/cloudflare/workers-sdk/commit/58899d8a289d653e5c77398640bd4df64eb2d0ca) Thanks [@danielgek](https://github.com/danielgek)! - Add optional `custom_metadata` step to `wrangler ai-search create`
+
+  The `wrangler ai-search create` interactive wizard now lets you declare custom metadata fields that the new AI Search instance should index. Each field is a `field_name` paired with a `data_type` (`text`, `number`, `boolean`, or `datetime`).
+
+  You can provide fields up-front via the new repeatable `--custom-metadata` flag using `field_name:data_type` syntax:
+
+  ```sh
+  wrangler ai-search create my-instance \
+    --type r2 --source my-bucket \
+    --custom-metadata title:text \
+    --custom-metadata views:number
+  ```
+
+  For larger schemas, use `--custom-metadata-schema` to point at a JSON file containing an array of `{ field_name, data_type }` objects:
+
+  ```sh
+  wrangler ai-search create my-instance \
+    --type r2 --source my-bucket \
+    --custom-metadata-schema schema.json
+  ```
+
+  ```json
+  [
+    { "field_name": "title", "data_type": "text" },
+    { "field_name": "views", "data_type": "number" }
+  ]
+  ```
+
+- [#13701](https://github.com/cloudflare/workers-sdk/pull/13701) [`18b9d5b`](https://github.com/cloudflare/workers-sdk/commit/18b9d5b48a6f28f6a0cd4bd9b00919de80463beb) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Prompt for missing name and compatibility date interactively during `wrangler deploy`
+
+  When deploying without a project name or `compatibility_date` in your configuration or CLI arguments, `wrangler deploy` now interactively prompts for the missing values instead of immediately failing with an error. For compatibility date, the prompt offers to use today's date; if you decline, the existing error is shown. The compatibility date prompt is skipped when `--latest` is passed. In non-interactive or CI environments, behavior is unchanged.
+
+  Additionally, when no config file exists, `wrangler deploy` now offers to save the prompted name and compatibility date to a `wrangler.jsonc` file for future use. This interactive flow is available for all `wrangler deploy` invocations — not just asset-only deployments.
+
+- [#13810](https://github.com/cloudflare/workers-sdk/pull/13810) [`2b8c0cc`](https://github.com/cloudflare/workers-sdk/commit/2b8c0ccb9ede7487bd96cfc51b3262a717bb532c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Stabilize the `secrets` configuration property
+
+  The `secrets` property in the Wrangler config file is no longer experimental and will no longer emit an experimental warning when used. Required secrets are validated during local development and deploy, and used as the source of truth for type generation.
+
+  ```json
+  {
+    "secrets": {
+      "required": ["API_KEY", "DB_PASSWORD"]
+    }
+  }
+  ```
+
+### Patch Changes
+
+- [#13765](https://github.com/cloudflare/workers-sdk/pull/13765) [`3020214`](https://github.com/cloudflare/workers-sdk/commit/3020214014066aafd2369469e92f4b91e979ebb4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260430.1 | 1.20260501.1 |
+
+- [#13800](https://github.com/cloudflare/workers-sdk/pull/13800) [`0099265`](https://github.com/cloudflare/workers-sdk/commit/00992655695093ce644bb2916ffd0d924d5abbab) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260501.1 | 1.20260504.1 |
+
+- [#13812](https://github.com/cloudflare/workers-sdk/pull/13812) [`25f5ef2`](https://github.com/cloudflare/workers-sdk/commit/25f5ef2a1c93896964fc25ddc40a2e5f8c96d6a4) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: `--alias` CLI flag now works in `wrangler deploy`
+
+  The `--alias` flag was accepted but silently ignored during `wrangler deploy` — only `config.alias` took effect. We now collect aliases from both config and CLI flags.
+
+- [#13772](https://github.com/cloudflare/workers-sdk/pull/13772) [`194d75e`](https://github.com/cloudflare/workers-sdk/commit/194d75e3e9af63e60cf4c06b4be5faa92a739c8c) Thanks [@zakcutner](https://github.com/zakcutner)! - Fix `wrangler types` to generate `Fetcher` for `unsafe.bindings` entries with `type: "service"`
+
+  Previously, all entries in `unsafe.bindings` (other than `ratelimit`) generated a fallback `any` type. `wrangler types` now generates `Fetcher` for unsafe bindings declared with `type: "service"`, matching the type used for regular service bindings.
+
+- [#13818](https://github.com/cloudflare/workers-sdk/pull/13818) [`9f532f7`](https://github.com/cloudflare/workers-sdk/commit/9f532f7f004329d4ceb0a9ece0527a1eb3d14f2d) Thanks [@1000hz](https://github.com/1000hz)! - Support Flagship bindings in Worker Previews
+
+  `wrangler preview` now accepts `flagship` entries in the `previews` block and includes them in Preview deployment bindings. This lets Workers that use Flagship bindings deploy Preview versions with preview-specific Flagship app IDs.
+
+- [#12974](https://github.com/cloudflare/workers-sdk/pull/12974) [`1127114`](https://github.com/cloudflare/workers-sdk/commit/11271143f0f1ab76497d395712842af8e1ca330d) Thanks [@ask-bonk](https://github.com/apps/ask-bonk)! - Fix `props` and fetcher-type service bindings being dropped in `unstable_getMiniflareWorkerOptions`
+
+  The post-processing in `unstable_getMiniflareWorkerOptions` was rebuilding `serviceBindings` from scratch, which silently dropped `props` on service bindings and dropped `fetcher`-type bindings entirely. It was also re-deriving `durableObjects` identically to what `buildMiniflareBindingOptions` already produces. Both have been removed; `buildMiniflareBindingOptions` now produces the final bindings unchanged.
+
+- [#13739](https://github.com/cloudflare/workers-sdk/pull/13739) [`3ceadef`](https://github.com/cloudflare/workers-sdk/commit/3ceadef6abeaf90301e70069a9709b4f5aa400c6) Thanks [@edmundhung](https://github.com/edmundhung)! - Skip confirmation prompts in `wrangler versions deploy` when versions are provided as CLI arguments
+
+  Passing version IDs or version specs to `wrangler versions deploy` now applies those values directly instead of opening interactive prompts to confirm the same versions and percentages. This makes the command easier to automate without requiring `--yes`.
+
+- [#13745](https://github.com/cloudflare/workers-sdk/pull/13745) [`1a5cc86`](https://github.com/cloudflare/workers-sdk/commit/1a5cc8680ead7ee02dd45b3e5720ad5dce415e58) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: preserve request ports in `Origin` and `Referer` headers when using `wrangler dev --host`
+
+- Updated dependencies [[`3020214`](https://github.com/cloudflare/workers-sdk/commit/3020214014066aafd2369469e92f4b91e979ebb4), [`0099265`](https://github.com/cloudflare/workers-sdk/commit/00992655695093ce644bb2916ffd0d924d5abbab), [`bb27219`](https://github.com/cloudflare/workers-sdk/commit/bb27219651142036180cb1d01650df48d5282800), [`12fb5db`](https://github.com/cloudflare/workers-sdk/commit/12fb5db89a31cc6ecccf022dfc7de4622973129d)]:
+  - miniflare@4.20260504.0
+
 ## 4.87.0
 
 ### Minor Changes

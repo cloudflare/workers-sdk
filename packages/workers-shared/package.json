@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-shared",
-	"version": "0.19.4",
+	"version": "0.19.5",
 	"private": true,
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
@@ -35,7 +35,7 @@
 		"test:asset-worker": "vitest -c asset-worker/vitest.config.mts --dir asset-worker",
 		"test:ci": "concurrently --group -n router-worker,asset-worker,utils \"pnpm run test:router-worker --run\" \"pnpm run test:asset-worker --run\" \"pnpm run test:utils --run\"",
 		"test:router-worker": "vitest -c router-worker/vitest.config.mts --dir router-worker",
-		"test:utils": "vitest --dir utils",
+		"test:utils": "vitest --dir utils --reporter=default",
 		"upload-sourcemaps": "pnpm run upload-sourcemaps:asset-worker && pnpm run upload-sourcemaps:router-worker",
 		"upload-sourcemaps:asset-worker": "node -r esbuild-register ./scripts/upload-sourcemaps.ts --worker asset-worker --tag aw-$(node -r esbuild-register ./scripts/get-version-tag.ts)",
 		"upload-sourcemaps:router-worker": "node -r esbuild-register ./scripts/upload-sourcemaps.ts --worker router-worker --tag rw-$(node -r esbuild-register ./scripts/get-version-tag.ts)"
