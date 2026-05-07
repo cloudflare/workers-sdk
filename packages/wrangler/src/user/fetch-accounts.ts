@@ -12,9 +12,21 @@ import type { ComplianceConfig } from "@cloudflare/workers-utils";
 //     auth (e.g. tokens missing the membership read scope).
 const MEMBERSHIPS_INACCESSIBLE_CODES = [9109, 10000];
 
+// Cloudflare API error codes that indicate the credentials supplied are
+// missing or structurally invalid (not merely lacking permissions).
+//   - 9106: "Missing X-Auth-Key, X-Auth-Email or Authorization headers" —
+//     occurs when an environment variable like CLOUDFLARE_API_TOKEN is set
+//     to an empty or malformed value that the API rejects outright.
+const MEMBERSHIPS_BAD_CREDENTIALS_CODES = [9106];
+
 function isMembershipsInaccessible(err: unknown): boolean {
 	const code = (err as { code?: number } | undefined)?.code;
 	return code !== undefined && MEMBERSHIPS_INACCESSIBLE_CODES.includes(code);
+}
+
+function isMembershipsBadCredentials(err: unknown): boolean {
+	const code = (err as { code?: number } | undefined)?.code;
+	return code !== undefined && MEMBERSHIPS_BAD_CREDENTIALS_CODES.includes(code);
 }
 
 /**
@@ -73,6 +85,14 @@ export async function fetchAllAccounts(
 				`Failed to automatically retrieve account IDs for the logged in user.
 You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your ${configFileName(undefined)} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 				{ telemetryMessage: "user account fetch permission denied" }
+			);
+		} else if (isMembershipsBadCredentials(membershipsRes.reason)) {
+			throw new UserError(
+				`Authentication failed when calling the Cloudflare API (/memberships).
+An environment variable such as CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_KEY, or CLOUDFLARE_EMAIL may be set to an invalid value.
+Check your environment and unset or correct any Cloudflare credential variables, then try again.
+You can also run \`wrangler logout\` followed by \`wrangler login\` to re-authenticate.`,
+				{ telemetryMessage: "user account fetch bad credentials" }
 			);
 		} else {
 			throw membershipsRes.reason;

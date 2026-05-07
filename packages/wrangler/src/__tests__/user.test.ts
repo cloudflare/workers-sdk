@@ -1004,6 +1004,34 @@ describe("User", () => {
 			);
 		});
 
+		it("should throw a helpful env-var hint when /memberships returns 9106 (bad credentials)", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [
+								{
+									code: 9106,
+									message:
+										"Missing X-Auth-Key, X-Auth-Email or Authorization headers",
+								},
+							],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/CLOUDFLARE_API_TOKEN/
+			);
+		});
+
 		it("should propagate /memberships errors that are not 9109 or 10000", async ({
 			expect,
 		}) => {
