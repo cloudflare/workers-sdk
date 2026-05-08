@@ -14,8 +14,10 @@ import {
 	parseJSONC,
 	removeDir,
 } from "@cloudflare/workers-utils";
+import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
 import { downloadTemplate } from "giget";
+import { fetch } from "undici";
 import { confirm } from "./dialogs";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
@@ -184,6 +186,8 @@ type AgentInfo = {
 	globalPath: string;
 	/** Absolute path to the directory where Cloudflare skill files should be copied for this agent. */
 	globalSkillsPath: string;
+	/** `am-i-vibing` provider IDs that map to this agent, used for telemetry detection. */
+	amIVibingIds?: string[];
 };
 
 /**
@@ -211,6 +215,16 @@ const SKILLS_INSTALL_METADATA_FILENAME = "agents-skills-install.jsonc";
 /** giget source for the skills subdirectory of the cloudflare/skills repo */
 const SKILLS_REPO_SOURCE = "gh:cloudflare/skills/skills";
 
+/** GitHub Contents API URL for listing skill directories in the cloudflare/skills repo. */
+const SKILLS_REPO_CONTENTS_URL =
+	"https://api.github.com/repos/cloudflare/skills/contents/skills";
+
+/** Cache filename for skill directory names fetched from the GitHub API. */
+const SKILLS_REPO_CACHE_FILENAME = "cloudflare-skills-repo-cache.json";
+
+/** Time-to-live for the cached skill names (24 hours in milliseconds). */
+const SKILLS_REPO_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Returns the absolute path to the skills install config file within the global wrangler config directory.
  *
@@ -221,6 +235,196 @@ function getSkillsInstallMetadataFilePath(): string {
 		getGlobalWranglerConfigPath(),
 		SKILLS_INSTALL_METADATA_FILENAME
 	);
+}
+
+/**
+ * Returns the absolute path to the skills repo cache file within the global wrangler config directory.
+ *
+ * @returns Absolute path to the skills repo cache JSON file.
+ */
+function getSkillsRepoCachePath(): string {
+	return path.resolve(
+		getGlobalWranglerConfigPath(),
+		SKILLS_REPO_CACHE_FILENAME
+	);
+}
+
+/** On-disk cache for skill directory names fetched from the GitHub Contents API. */
+interface SkillsRepoCache {
+	/** Unix-epoch millisecond timestamp of when the cache was last written. */
+	lastUpdate: number;
+	/** Skill directory names from the `cloudflare/skills` repository. */
+	skillNames: string[];
+}
+
+/**
+ * Reads the cached skill names from disk, returning them only if the cache has not expired.
+ * Falls back to stale data when {@link allowStale} is true (e.g. after a failed network request).
+ *
+ * @param allowStale When `true`, returns cached data even if the TTL has expired.
+ * @returns Array of cached skill names, or `undefined` on cache miss.
+ */
+function readSkillsRepoCache(allowStale = false): string[] | undefined {
+	try {
+		const raw = readFileSync(getSkillsRepoCachePath(), "utf8");
+		const cache = JSON.parse(raw) as SkillsRepoCache;
+		if (
+			allowStale ||
+			cache.lastUpdate + SKILLS_REPO_CACHE_TTL_MS > Date.now()
+		) {
+			return cache.skillNames;
+		}
+	} catch {
+		// Cache file missing, corrupt, or unreadable — treat as cache miss.
+	}
+	return undefined;
+}
+
+/**
+ * Writes skill names to the disk cache with the current timestamp.
+ *
+ * @param skillNames The skill directory names to persist.
+ */
+function writeSkillsRepoCache(skillNames: string[]): void {
+	try {
+		const cachePath = getSkillsRepoCachePath();
+		mkdirSync(path.dirname(cachePath), { recursive: true });
+		const data: SkillsRepoCache = {
+			lastUpdate: Date.now(),
+			skillNames,
+		};
+		writeFileSync(cachePath, JSON.stringify(data));
+	} catch {
+		// Best-effort — cache write failure is non-fatal.
+	}
+}
+
+/**
+ * Fetches the list of skill directory names from the `cloudflare/skills` GitHub
+ * repository using the GitHub Contents API. Results are cached to disk for 24 hours
+ * to avoid hitting API rate limits.
+ *
+ * @returns Array of skill directory names, or `undefined` if both fetch and cache fail.
+ */
+async function fetchSkillNamesFromGitHub(): Promise<string[] | undefined> {
+	// Return fresh cached data if available.
+	const cached = readSkillsRepoCache();
+	if (cached) {
+		return cached;
+	}
+
+	try {
+		const res = await fetch(SKILLS_REPO_CONTENTS_URL, {
+			headers: {
+				Accept: "application/vnd.github.v3+json",
+				"User-Agent": "cloudflare-wrangler",
+			},
+		});
+		if (!res.ok) {
+			// API error (rate limited, 404, etc.) — fall back to stale cache.
+			return readSkillsRepoCache(true);
+		}
+		const entries = (await res.json()) as Array<{
+			name: string;
+			type: string;
+		}>;
+		const skillNames = entries
+			.filter((e) => e.type === "dir")
+			.map((e) => e.name);
+
+		writeSkillsRepoCache(skillNames);
+		return skillNames;
+	} catch {
+		// Network failure — fall back to stale cache.
+		return readSkillsRepoCache(true);
+	}
+}
+
+/**
+ * Result of checking whether the current AI agent has Cloudflare skills installed.
+ *
+ * - `null` — no agent detected or the agent is not in the supported list.
+ * - `false` — agent is supported but no skills are present on disk.
+ * - `"automatic"` — skills are present and the metadata file confirms Wrangler installed them.
+ * - `"manual"` — skills are present but were not installed by Wrangler (no metadata, agent not
+ *                listed in metadata, or the metadata records a copy failure for this agent).
+ */
+type AgentSkillsInstallStatus = "automatic" | "manual" | false | null;
+
+/**
+ * Determines whether the currently-running AI coding agent has Cloudflare
+ * skills installed. This runs asynchronously and is intended to be started
+ * eagerly on process startup so the result is available by the time
+ * telemetry events are dispatched.
+ *
+ * @returns The {@link AgentSkillsInstallStatus} for the current agent.
+ */
+async function computeTelemetryCurrentAgentSkillsInstalled(): Promise<AgentSkillsInstallStatus> {
+	let agentId: string | null = null;
+	try {
+		const detection = detectAgenticEnvironment(process.env, []);
+		agentId = detection.id;
+	} catch {
+		return null;
+	}
+	if (!agentId) {
+		return null;
+	}
+
+	const matchingAgent = supportedAgents.find((a) =>
+		a.amIVibingIds?.includes(agentId)
+	);
+	if (!matchingAgent) {
+		return null;
+	}
+
+	const skillNames = await fetchSkillNamesFromGitHub();
+	if (!skillNames || skillNames.length === 0) {
+		return false;
+	}
+
+	let localEntries: Set<string>;
+	try {
+		localEntries = new Set(readdirSync(matchingAgent.globalSkillsPath));
+	} catch {
+		return false;
+	}
+	const hasAnySkill = skillNames.some((name) => localEntries.has(name));
+	if (!hasAnySkill) {
+		return false;
+	}
+
+	const metadata = readSkillsInstallMetadataFile();
+	if (!metadata) {
+		return "manual";
+	}
+
+	const isInNeedingInstall = metadata.agentsNeedingInstall?.some(
+		(agent) => agent.globalSkillsPath === matchingAgent.globalSkillsPath
+	);
+	const isInCopyFailed = metadata.copyFailedFor?.some(
+		(agent) => agent.globalSkillsPath === matchingAgent.globalSkillsPath
+	);
+
+	if (metadata.accepted && isInNeedingInstall === true && !isInCopyFailed) {
+		return "automatic";
+	}
+	return "manual";
+}
+
+/** Lazily-initialised singleton promise used to memoise {@link telemetryCurrentAgentSkillsInstalled}. */
+let _telemetryPromise: Promise<AgentSkillsInstallStatus> | undefined;
+
+/**
+ * Returns a memoised promise that resolves to whether the current AI agent
+ * has Cloudflare skills installed. The promise is started lazily on first
+ * call and cached for the lifetime of the process.
+ *
+ * @returns A promise resolving to the {@link AgentSkillsInstallStatus} for the current agent.
+ */
+export function telemetryCurrentAgentSkillsInstalled(): Promise<AgentSkillsInstallStatus> {
+	_telemetryPromise ??= computeTelemetryCurrentAgentSkillsInstalled();
+	return _telemetryPromise;
 }
 
 /**
@@ -242,6 +446,7 @@ const supportedAgents: AgentInfo[] = [
 		name: "Amp, Kimi Code CLI, Replit, Universal",
 		globalPath: path.join(os.homedir(), ".config", "agents"),
 		globalSkillsPath: path.join(os.homedir(), ".config", "agents", "skills"),
+		amIVibingIds: ["replit", "replit-assistant"],
 	},
 	{
 		name: "Antigravity",
@@ -267,6 +472,7 @@ const supportedAgents: AgentInfo[] = [
 		name: "Claude Code",
 		globalPath: path.join(os.homedir(), ".claude"),
 		globalSkillsPath: path.join(os.homedir(), ".claude", "skills"),
+		amIVibingIds: ["claude-code"],
 	},
 	{
 		name: "OpenClaw",
@@ -277,6 +483,7 @@ const supportedAgents: AgentInfo[] = [
 		name: "Cline, Dexto, Warp",
 		globalPath: path.join(os.homedir(), ".agents"),
 		globalSkillsPath: path.join(os.homedir(), ".agents", "skills"),
+		amIVibingIds: ["warp"],
 	},
 	{
 		name: "CodeArts Agent",
@@ -302,6 +509,7 @@ const supportedAgents: AgentInfo[] = [
 		name: "Codex",
 		globalPath: path.join(os.homedir(), ".codex"),
 		globalSkillsPath: path.join(os.homedir(), ".codex", "skills"),
+		amIVibingIds: ["codex"],
 	},
 	{
 		name: "Command Code",
@@ -322,11 +530,13 @@ const supportedAgents: AgentInfo[] = [
 		name: "Crush",
 		globalPath: path.join(os.homedir(), ".config", "crush"),
 		globalSkillsPath: path.join(os.homedir(), ".config", "crush", "skills"),
+		amIVibingIds: ["crush"],
 	},
 	{
 		name: "Cursor",
 		globalPath: path.join(os.homedir(), ".cursor"),
 		globalSkillsPath: path.join(os.homedir(), ".cursor", "skills"),
+		amIVibingIds: ["cursor-agent", "cursor"],
 	},
 	{
 		name: "Deep Agents",
@@ -357,11 +567,13 @@ const supportedAgents: AgentInfo[] = [
 		name: "Gemini CLI",
 		globalPath: path.join(os.homedir(), ".gemini"),
 		globalSkillsPath: path.join(os.homedir(), ".gemini", "skills"),
+		amIVibingIds: ["gemini-agent"],
 	},
 	{
 		name: "GitHub Copilot",
 		globalPath: path.join(os.homedir(), ".copilot"),
 		globalSkillsPath: path.join(os.homedir(), ".copilot", "skills"),
+		amIVibingIds: ["vscode-copilot-agent"],
 	},
 	{
 		name: "Goose",
@@ -417,6 +629,7 @@ const supportedAgents: AgentInfo[] = [
 		name: "OpenCode",
 		globalPath: path.join(os.homedir(), ".config", "opencode"),
 		globalSkillsPath: path.join(os.homedir(), ".config", "opencode", "skills"),
+		amIVibingIds: ["opencode"],
 	},
 	{
 		name: "OpenHands",
@@ -467,6 +680,7 @@ const supportedAgents: AgentInfo[] = [
 		name: "Windsurf",
 		globalPath: path.join(os.homedir(), ".codeium", "windsurf"),
 		globalSkillsPath: path.join(os.homedir(), ".codeium", "windsurf", "skills"),
+		amIVibingIds: ["windsurf"],
 	},
 	{
 		name: "Zencoder",

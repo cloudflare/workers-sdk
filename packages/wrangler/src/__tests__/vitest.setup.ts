@@ -228,6 +228,9 @@ vi.mock("../agents-skills-install", async (importOriginal) => {
 		skipped: true,
 		reason: "Already prompted",
 	});
+	vi.spyOn(realModule, "telemetryCurrentAgentSkillsInstalled").mockReturnValue(
+		Promise.resolve(null)
+	);
 	return realModule;
 });
 

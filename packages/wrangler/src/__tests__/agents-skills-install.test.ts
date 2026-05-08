@@ -2,16 +2,24 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
+import { http, HttpResponse } from "msw";
 import { afterEach, assert, beforeEach, describe, test, vi } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
-import type { installCloudflareSkillsGlobally as InstallFnType } from "../agents-skills-install";
+import type {
+	installCloudflareSkillsGlobally as InstallFnType,
+	telemetryCurrentAgentSkillsInstalled as TelemetryFnType,
+} from "../agents-skills-install";
 
 // Undo the global no-op mock from vitest.setup.ts so we test the real implementation
 vi.unmock("../agents-skills-install");
+
+vi.mock("am-i-vibing");
 
 // Mock giget to avoid real network calls. The default downloadTemplate
 // implementation creates two fake skill directories; individual tests can
@@ -72,6 +80,19 @@ async function freshImport(): Promise<typeof InstallFnType> {
 	vi.resetModules();
 	const mod = await import("../agents-skills-install");
 	return mod.installCloudflareSkillsGlobally;
+}
+
+/**
+ * Like {@link freshImport} but returns the telemetry function instead.
+ * Each call resets the module graph (and hence the memoised promise) so
+ * that tests start with a clean state.
+ *
+ * @returns The `telemetryCurrentAgentSkillsInstalled` function from a fresh module import.
+ */
+async function freshTelemetryImport(): Promise<typeof TelemetryFnType> {
+	vi.resetModules();
+	const mod = await import("../agents-skills-install");
+	return mod.telemetryCurrentAgentSkillsInstalled;
 }
 
 describe("installCloudflareSkillsGlobally", () => {
@@ -530,5 +551,388 @@ describe("installCloudflareSkillsGlobally", () => {
 				])
 			);
 		});
+	});
+});
+
+/**
+ * MSW handler that returns a fake GitHub Contents API response.
+ *
+ * @param skillNames The skill directory names to include in the mocked response.
+ */
+function mockGitHubSkillsApi(skillNames: string[]) {
+	const entries = skillNames.map((name) => ({ name, type: "dir" }));
+	msw.use(
+		http.get(
+			"https://api.github.com/repos/cloudflare/skills/contents/skills",
+			() => {
+				return HttpResponse.json(entries);
+			}
+		)
+	);
+}
+
+/**
+ * MSW handler that makes the GitHub Contents API return an error.
+ *
+ * @param status The HTTP status code to return. Defaults to `403`.
+ */
+function mockGitHubSkillsApiError(status = 403) {
+	msw.use(
+		http.get(
+			"https://api.github.com/repos/cloudflare/skills/contents/skills",
+			() => {
+				return new HttpResponse(null, { status });
+			}
+		)
+	);
+}
+
+/** MSW handler that makes the GitHub Contents API throw a network error. */
+function mockGitHubSkillsApiNetworkError() {
+	msw.use(
+		http.get(
+			"https://api.github.com/repos/cloudflare/skills/contents/skills",
+			() => {
+				return HttpResponse.error();
+			}
+		)
+	);
+}
+
+describe("telemetryCurrentAgentSkillsInstalled", () => {
+	runInTempDir();
+	mockConsoleMethods();
+
+	beforeEach(() => {
+		// Default: no agent detected
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: false,
+			id: null,
+			name: null,
+			type: null,
+		});
+	});
+
+	test("resolves to null when no agent is detected", async ({ expect }) => {
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe(null);
+	});
+
+	test("resolves to null when detectAgenticEnvironment throws", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgenticEnvironment).mockImplementation(() => {
+			throw new Error("Detection failed");
+		});
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe(null);
+	});
+
+	test("resolves to null when agent is detected but not in supportedAgents", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "jules",
+			name: "Jules",
+			type: "agent",
+		});
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe(null);
+	});
+
+	test("resolves to false when GitHub API fetch fails and no cache exists", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "claude-code",
+			name: "Claude Code",
+			type: "agent",
+		});
+		createAgentDir(".claude");
+		mockGitHubSkillsApiNetworkError();
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe(false);
+	});
+
+	test("resolves to false when no skills are present in agent's globalSkillsPath", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "claude-code",
+			name: "Claude Code",
+			type: "agent",
+		});
+		createAgentDir(".claude");
+		mockGitHubSkillsApi(["cloudflare", "wrangler"]);
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe(false);
+	});
+
+	test("resolves to 'manual' when some skills exist but no metadata file", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "claude-code",
+			name: "Claude Code",
+			type: "agent",
+		});
+		createAgentDir(".claude");
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+		mockGitHubSkillsApi(["cloudflare", "wrangler"]);
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe("manual");
+	});
+
+	test("resolves to 'automatic' when skills exist and metadata confirms successful install", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "claude-code",
+			name: "Claude Code",
+			type: "agent",
+		});
+		createAgentDir(".claude");
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+		const claudeGlobalSkillsPath = path.join(os.homedir(), ".claude", "skills");
+		writeMetadataFile({
+			accepted: true,
+			date: new Date().toISOString(),
+			agentsNeedingInstall: [
+				{
+					name: "Claude Code",
+					globalPath: path.join(os.homedir(), ".claude"),
+					globalSkillsPath: claudeGlobalSkillsPath,
+				},
+			],
+		});
+		mockGitHubSkillsApi(["cloudflare", "wrangler"]);
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe("automatic");
+	});
+
+	test("resolves to 'manual' when metadata says copy failed for this agent", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "claude-code",
+			name: "Claude Code",
+			type: "agent",
+		});
+		createAgentDir(".claude");
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+		const claudeGlobalSkillsPath = path.join(os.homedir(), ".claude", "skills");
+		writeMetadataFile({
+			accepted: true,
+			date: new Date().toISOString(),
+			agentsNeedingInstall: [
+				{
+					name: "Claude Code",
+					globalPath: path.join(os.homedir(), ".claude"),
+					globalSkillsPath: claudeGlobalSkillsPath,
+				},
+			],
+			copyFailedFor: [
+				{
+					name: "Claude Code",
+					globalPath: path.join(os.homedir(), ".claude"),
+					globalSkillsPath: claudeGlobalSkillsPath,
+					error: "Permission denied",
+				},
+			],
+		});
+		mockGitHubSkillsApi(["cloudflare", "wrangler"]);
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe("manual");
+	});
+
+	test("resolves to 'manual' when agent is not in agentsNeedingInstall", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "claude-code",
+			name: "Claude Code",
+			type: "agent",
+		});
+		createAgentDir(".claude");
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+		writeMetadataFile({
+			accepted: true,
+			date: new Date().toISOString(),
+			agentsNeedingInstall: [],
+		});
+		mockGitHubSkillsApi(["cloudflare", "wrangler"]);
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe("manual");
+	});
+
+	test("uses cached GitHub API response within TTL", async ({ expect }) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "claude-code",
+			name: "Claude Code",
+			type: "agent",
+		});
+		createAgentDir(".claude");
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+
+		// Write a fresh cache file
+		const configDir = getGlobalWranglerConfigPath();
+		mkdirSync(configDir, { recursive: true });
+		writeFileSync(
+			path.join(configDir, "cloudflare-skills-repo-cache.json"),
+			JSON.stringify({
+				lastUpdate: Date.now(),
+				skillNames: ["cloudflare", "wrangler"],
+			})
+		);
+
+		writeMetadataFile({
+			accepted: true,
+			date: new Date().toISOString(),
+			agentsNeedingInstall: [
+				{
+					name: "Claude Code",
+					globalPath: path.join(os.homedir(), ".claude"),
+					globalSkillsPath: path.join(os.homedir(), ".claude", "skills"),
+				},
+			],
+		});
+
+		// Do NOT set up a GitHub API mock — if fetch is called, it would
+		// go unhandled. The test verifies the cache is used instead.
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe("automatic");
+	});
+
+	test("falls back to stale cache when GitHub API returns an error", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "claude-code",
+			name: "Claude Code",
+			type: "agent",
+		});
+		createAgentDir(".claude");
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+
+		// Write an expired cache file (TTL is 24h, set lastUpdate to 48h ago)
+		const configDir = getGlobalWranglerConfigPath();
+		mkdirSync(configDir, { recursive: true });
+		writeFileSync(
+			path.join(configDir, "cloudflare-skills-repo-cache.json"),
+			JSON.stringify({
+				lastUpdate: Date.now() - 48 * 60 * 60 * 1000,
+				skillNames: ["cloudflare", "wrangler"],
+			})
+		);
+
+		writeMetadataFile({
+			accepted: true,
+			date: new Date().toISOString(),
+			agentsNeedingInstall: [
+				{
+					name: "Claude Code",
+					globalPath: path.join(os.homedir(), ".claude"),
+					globalSkillsPath: path.join(os.homedir(), ".claude", "skills"),
+				},
+			],
+		});
+
+		mockGitHubSkillsApiError(403);
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe("automatic");
+	});
+
+	test("works with cursor-agent amIVibingId mapping", async ({ expect }) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "cursor-agent",
+			name: "Cursor Agent",
+			type: "agent",
+		});
+		createAgentDir(".cursor");
+		const cursorSkills = path.join(os.homedir(), ".cursor", "skills");
+		mkdirSync(path.join(cursorSkills, "cloudflare"), { recursive: true });
+		const cursorGlobalSkillsPath = path.join(os.homedir(), ".cursor", "skills");
+		writeMetadataFile({
+			accepted: true,
+			date: new Date().toISOString(),
+			agentsNeedingInstall: [
+				{
+					name: "Cursor",
+					globalPath: path.join(os.homedir(), ".cursor"),
+					globalSkillsPath: cursorGlobalSkillsPath,
+				},
+			],
+		});
+		mockGitHubSkillsApi(["cloudflare", "wrangler"]);
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const result = await telemetryCurrentAgentSkillsInstalled();
+
+		expect(result).toBe("automatic");
+	});
+
+	test("memoises the result across multiple calls", async ({ expect }) => {
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: false,
+			id: null,
+			name: null,
+			type: null,
+		});
+		const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+		const first = telemetryCurrentAgentSkillsInstalled();
+		const second = telemetryCurrentAgentSkillsInstalled();
+
+		expect(first).toBe(second);
+		expect(await first).toBe(null);
 	});
 });
