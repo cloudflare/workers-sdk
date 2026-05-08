@@ -5,7 +5,6 @@ import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { getRegistryPath, startTunnel } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import dedent from "ts-dedent";
-import { createCloudflareClient } from "../cfetch/internal";
 import { DevEnv } from "../api";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
@@ -169,17 +168,17 @@ export async function startDev(args: StartDevOptions) {
 			const origin = new URL(
 				`${protocol}://${formatHostname(hostname)}:${port}`
 			);
-			const namedTunnel =
-				typeof args.tunnel === "string"
-					? await resolveNamedTunnel(
-						createCloudflareClient({ compliance_region: config?.complianceRegion }),
-						await requireAuth({ account_id: args.accountId }),
-						args.tunnel,
-						origin
-					)
-					: undefined;
 
 			logger.log(dim("⎔ Starting tunnel (usually takes a few seconds)..."));
+
+			const namedTunnel =
+				typeof args.tunnel === "string"
+					? await resolveNamedTunnel(args.tunnel, origin, {
+							accountId: args.accountId,
+							complianceRegion: config?.complianceRegion,
+						})
+					: undefined;
+
 			tunnel = startTunnel({
 				origin,
 				token: namedTunnel?.token,
@@ -195,18 +194,22 @@ export async function startDev(args: StartDevOptions) {
 			// User requested tunnel sharing explicitly. If it fails, let it throw
 			// and prevent dev server from starting without a tunnel.
 			const result = await tunnel.ready();
+			const publicUrls =
+				result.mode === "quick"
+					? [result.publicUrl.toString()]
+					: namedTunnel
+						? namedTunnel.hostnames.map((h) => `https://${h}`)
+						: [];
 
-			if (result.mode === "quick") {
+			if (publicUrls.length === 1) {
 				logger.log(
-					`⬣ Sharing via Cloudflare Tunnel: ` +
-						`${chalk.green(result.publicUrl.origin)}\n`
+					`⬣ Sharing via Cloudflare Tunnel: ${chalk.green(publicUrls[0])}`
 				);
-			} else if (namedTunnel) {
-				logger.log("⬣ Sharing via Cloudflare Tunnel:");
-				for (const namedTunnelHostname of namedTunnel.hostnames) {
-					logger.log(`   ${chalk.green(`https://${namedTunnelHostname}`)}`);
-				}
-				logger.log();
+			} else {
+				logger.log(
+					"⬣ Sharing via Cloudflare Tunnel:\n" +
+						publicUrls.map((u) => `   ${chalk.green(u)}`).join("\n")
+				);
 			}
 
 			logger.warn(

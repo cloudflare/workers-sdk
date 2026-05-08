@@ -1,19 +1,9 @@
-import { describe, it } from "vitest";
-import {
-	resolveNamedTunnel,
-	resolveTunnelId,
-} from "../../tunnel/client";
+import { describe, it, vi } from "vitest";
+import { createCloudflareClient } from "../../cfetch/internal";
+import { resolveNamedTunnel, resolveTunnelId } from "../../tunnel/client";
 import type Cloudflare from "cloudflare";
 
-function asyncIterableFromArray<T>(items: T[]): AsyncIterable<T> {
-	return {
-		async *[Symbol.asyncIterator]() {
-			for (const item of items) {
-				yield item;
-			}
-		},
-	};
-}
+vi.mock("../../cfetch/internal");
 
 describe("resolveTunnelId", () => {
 	it("returns UUID input without calling API", async ({ expect }) => {
@@ -41,12 +31,12 @@ describe("resolveTunnelId", () => {
 					cloudflared: {
 						list({ name }: { name?: string }) {
 							expect(name).toBe("my-tunnel");
-							return asyncIterableFromArray([
+							return [
 								{
 									id: "11111111-1111-4111-8111-111111111111",
 									name: "my-tunnel",
 								},
-							]);
+							];
 						},
 					},
 				},
@@ -61,20 +51,22 @@ describe("resolveTunnelId", () => {
 	it("resolves a named tunnel target from matching ingress rules", async ({
 		expect,
 	}) => {
-		const sdk = {
+		vi.mocked(createCloudflareClient).mockReturnValue({
 			zeroTrust: {
 				tunnels: {
 					cloudflared: {
+						// @ts-expect-error -- partial mock
 						list({ name }: { name?: string }) {
 							expect(name).toBe("my-tunnel");
-							return asyncIterableFromArray([
+							return [
 								{
 									id: "11111111-1111-4111-8111-111111111111",
 									name: "my-tunnel",
 								},
-							]);
+							];
 						},
 						configurations: {
+							// @ts-expect-error -- partial mock
 							get(tunnelId: string) {
 								expect(tunnelId).toBe("11111111-1111-4111-8111-111111111111");
 								return Promise.resolve({
@@ -94,6 +86,7 @@ describe("resolveTunnelId", () => {
 							},
 						},
 						token: {
+							// @ts-expect-error -- partial mock
 							get(tunnelId: string) {
 								expect(tunnelId).toBe("11111111-1111-4111-8111-111111111111");
 								return Promise.resolve("TOKEN");
@@ -102,15 +95,13 @@ describe("resolveTunnelId", () => {
 					},
 				},
 			},
-		} as unknown as Cloudflare;
+		});
 
 		await expect(
-			resolveNamedTunnel(
-				sdk,
-				"account",
-				"my-tunnel",
-				new URL("http://localhost:8787")
-			)
+			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
+				accountId: "account",
+				complianceRegion: undefined,
+			})
 		).resolves.toEqual({
 			hostnames: ["dev.example.com"],
 			token: "TOKEN",
@@ -120,19 +111,21 @@ describe("resolveTunnelId", () => {
 	it("throws when a named tunnel has no ingress for the local port", async ({
 		expect,
 	}) => {
-		const sdk = {
+		vi.mocked(createCloudflareClient).mockReturnValue({
 			zeroTrust: {
 				tunnels: {
 					cloudflared: {
+						// @ts-expect-error -- partial mock
 						list() {
-							return asyncIterableFromArray([
+							return [
 								{
 									id: "11111111-1111-4111-8111-111111111111",
 									name: "my-tunnel",
 								},
-							]);
+							];
 						},
 						configurations: {
+							// @ts-expect-error -- partial mock
 							get() {
 								return Promise.resolve({
 									config: {
@@ -150,6 +143,7 @@ describe("resolveTunnelId", () => {
 								});
 							},
 						},
+						// @ts-expect-error -- partial mock
 						token: {
 							get() {
 								throw new Error("should not be called");
@@ -158,47 +152,49 @@ describe("resolveTunnelId", () => {
 					},
 				},
 			},
-		} as unknown as Cloudflare;
+		});
 
 		await expect(
-			resolveNamedTunnel(
-				sdk,
-				"account",
-				"my-tunnel",
-				new URL("http://localhost:8787")
-			)
+			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
+				accountId: "account",
+				complianceRegion: undefined,
+			})
 		).rejects.toThrowErrorMatchingInlineSnapshot(`
-			[Error: No ingress rules in tunnel "my-tunnel" route to http://localhost:8787/.
+			[Error: No ingress rules in tunnel "my-tunnel" route to http://localhost:8787/
 
 			Update the tunnel ingress rules in the Cloudflare dashboard:
 			https://dash.cloudflare.com/?to=/:account/tunnels
 
 			Resolved ingress mappings:
 			  - dev.example.com -> http://localhost:3000
-			  - admin.example.com -> http://localhost:4000]
+			  - admin.example.com -> http://localhost:4000
+			]
 		`);
 	});
 
 	it("shows compact setup guidance when a named tunnel has no ingress rules", async ({
 		expect,
 	}) => {
-		const sdk = {
+		vi.mocked(createCloudflareClient).mockReturnValue({
 			zeroTrust: {
 				tunnels: {
 					cloudflared: {
+						// @ts-expect-error -- partial mock
 						list() {
-							return asyncIterableFromArray([
+							return [
 								{
 									id: "11111111-1111-4111-8111-111111111111",
 									name: "my-tunnel",
 								},
-							]);
+							];
 						},
 						configurations: {
+							// @ts-expect-error -- partial mock
 							get() {
 								return Promise.resolve({ config: { ingress: [] } });
 							},
 						},
+						// @ts-expect-error -- partial mock
 						token: {
 							get() {
 								throw new Error("should not be called");
@@ -207,20 +203,19 @@ describe("resolveTunnelId", () => {
 					},
 				},
 			},
-		} as unknown as Cloudflare;
+		});
 
 		await expect(
-			resolveNamedTunnel(
-				sdk,
-				"account",
-				"my-tunnel",
-				new URL("http://localhost:8787")
-			)
+			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
+				accountId: "account",
+				complianceRegion: undefined,
+			})
 		).rejects.toThrowErrorMatchingInlineSnapshot(`
 			[Error: Tunnel "my-tunnel" has no ingress rules configured.
 
 			Add an ingress rule for http://localhost:8787/ in the Cloudflare dashboard:
-			https://dash.cloudflare.com/?to=/:account/tunnels]
+			https://dash.cloudflare.com/?to=/:account/tunnels
+			]
 		`);
 	});
 });
