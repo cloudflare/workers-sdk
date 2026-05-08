@@ -27,7 +27,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					appType: "custom",
 					preview: {
 						allowedHosts: getAllowedHosts(
-							ctx.resolvedPluginConfig.tunnel
+							ctx.resolvedPluginConfig.tunnel === true
 								? [QUICK_TUNNEL_ALLOWED_HOST]
 								: [],
 							userConfig.preview?.allowedHosts ??

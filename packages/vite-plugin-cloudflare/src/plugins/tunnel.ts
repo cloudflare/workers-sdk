@@ -2,6 +2,7 @@ import { startTunnel } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
+import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { debuglog, createPlugin } from "../utils";
 import type { PluginContext } from "../context";
@@ -50,7 +51,8 @@ export const QUICK_TUNNEL_ALLOWED_HOST = ".trycloudflare.com";
 export class TunnelManager {
 	#logger: vite.Logger;
 	#origin?: string;
-	#publicUrl?: string;
+	#publicUrls?: string[];
+	#requestedTunnel?: boolean | string;
 	#tunnel?: Tunnel;
 	#hasWarnedAboutSse = false;
 
@@ -58,14 +60,28 @@ export class TunnelManager {
 		this.#logger = logger;
 	}
 
-	isStarted(origin: string): boolean {
-		return this.#origin === origin && this.#tunnel !== undefined;
+	isStarted(origin: string, tunnel: boolean | string): boolean {
+		return (
+			this.#origin === origin &&
+			this.#requestedTunnel === tunnel &&
+			this.#tunnel !== undefined
+		);
 	}
 
-	async startTunnel(origin: string): Promise<string | null> {
+	async startTunnel(options: {
+		origin: string;
+		tunnel: boolean | string;
+		allowedHosts: true | string[] | undefined;
+		accountId: string | undefined;
+		complianceRegion: wrangler.Unstable_Config["compliance_region"];
+	}): Promise<string[] | null> {
 		try {
-			if (this.#origin === origin && this.#tunnel) {
-				return await this.#waitForPublicUrl(this.#tunnel);
+			if (
+				this.#origin === options.origin &&
+				this.#requestedTunnel === options.tunnel &&
+				this.#tunnel
+			) {
+				return await this.#waitForPublicUrls(this.#tunnel);
 			}
 
 			this.#logger.info(
@@ -78,11 +94,48 @@ export class TunnelManager {
 				this.dispose();
 			}
 
-			this.#origin = origin;
-			this.#publicUrl = undefined;
+			const namedTunnel =
+				typeof options.tunnel === "string"
+					? await wrangler.unstable_resolveNamedTunnel(
+							options.tunnel,
+							new URL(options.origin),
+							{
+								accountId: options.accountId,
+								complianceRegion: options.complianceRegion,
+							}
+						)
+					: undefined;
+
+			if (namedTunnel) {
+				this.#publicUrls = getAllowedTunnelUrls(
+					namedTunnel.hostnames.map((hostname) => `https://${hostname}`),
+					options.allowedHosts
+				);
+
+				if (this.#publicUrls.length === 0) {
+					const suggestedAllowedHosts = getSuggestedAllowedHosts(
+						namedTunnel.hostnames
+					);
+
+					throw new Error(
+						"The resolved tunnel hostnames are not allowed by Vite preview host validation.\n" +
+							"\n" +
+							"Add at least one of these hosts to `preview.allowedHosts` in your Vite config.\n" +
+							"You can use exact hostnames or a dot-prefixed suffix pattern:\n" +
+							suggestedAllowedHosts
+								.map((hostname) => `  - ${hostname}`)
+								.join("\n") +
+							"\n"
+					);
+				}
+			}
+
+			this.#origin = options.origin;
+			this.#requestedTunnel = options.tunnel;
 
 			const tunnel = startTunnel({
-				origin: new URL(origin),
+				origin: new URL(options.origin),
+				token: namedTunnel?.token,
 				extendHint: "Press t + enter to extend by 1 hour.",
 				logger: {
 					log: (message) => this.#logger.info(message),
@@ -92,49 +145,47 @@ export class TunnelManager {
 			});
 			this.#tunnel = tunnel;
 
-			return await this.#waitForPublicUrl(tunnel);
+			return await this.#waitForPublicUrls(tunnel);
 		} catch (error) {
 			throw new Error(
-				`Failed to start tunnel: ${error instanceof Error ? error.message : String(error)}`,
+				`Failed to start tunnel. ${error instanceof Error ? error.message : String(error)}`,
 				{ cause: error }
 			);
 		}
 	}
 
-	async #waitForPublicUrl(tunnel: Tunnel): Promise<string | null> {
+	async #waitForPublicUrls(tunnel: Tunnel): Promise<string[] | null> {
 		try {
 			const result = await tunnel.ready();
 			if (this.#tunnel !== tunnel) {
 				debuglog(
 					"Tunnel was restarted before it finished starting. Ignoring this tunnel's public URL:",
-					result.mode === "quick" ? result.publicUrl : "(named tunnel)"
+					result.mode === "quick" ? result.publicUrl : this.#publicUrls
 				);
 				return null;
 			}
 
-			if (result.mode !== "quick") {
-				this.#publicUrl = undefined;
-				return null;
+			if (result.mode === "named") {
+				return this.#publicUrls ?? null;
 			}
 
 			const { publicUrl } = result;
 
 			debuglog("Tunnel is ready with public URL:", publicUrl);
-			this.#publicUrl = publicUrl.toString();
-			return publicUrl.toString();
+			this.#publicUrls = [publicUrl.toString()];
+			return this.#publicUrls;
 		} catch (error) {
 			if (this.#tunnel !== tunnel) {
 				return null;
 			}
 
-			this.#publicUrl = undefined;
 			this.#tunnel = undefined;
 			throw error;
 		}
 	}
 
-	get publicUrl(): string | undefined {
-		return this.#publicUrl;
+	get publicUrls(): string[] | undefined {
+		return this.#publicUrls;
 	}
 
 	extendExpiry() {
@@ -144,6 +195,7 @@ export class TunnelManager {
 	warnIfQuickTunnelSseResponse(contentType: string | null) {
 		if (
 			this.#hasWarnedAboutSse ||
+			this.#requestedTunnel !== true ||
 			!this.#tunnel ||
 			contentType === null ||
 			!contentType.toLowerCase().startsWith("text/event-stream")
@@ -159,7 +211,8 @@ export class TunnelManager {
 		const tunnel = this.#tunnel;
 
 		this.#origin = undefined;
-		this.#publicUrl = undefined;
+		this.#publicUrls = undefined;
+		this.#requestedTunnel = undefined;
 		this.#tunnel = undefined;
 		this.#hasWarnedAboutSse = false;
 
@@ -280,22 +333,30 @@ export async function setupDevTunnel(
 	manager: TunnelManager
 ): Promise<void> {
 	const origin = await resolveDevTunnelOrigin(server);
+	const tunnel = ctx.resolvedPluginConfig.tunnel;
 
-	if (manager.isStarted(origin)) {
+	if (manager.isStarted(origin, tunnel)) {
 		debuglog("Tunnel is already started on", origin);
 		return;
 	}
 
-	const publicUrl = await manager.startTunnel(origin);
+	const publicUrls = await manager.startTunnel({
+		origin,
+		tunnel,
+		accountId: ctx.entryWorkerConfig?.account_id,
+		complianceRegion: ctx.entryWorkerConfig?.compliance_region,
+		// We will restart the server with the tunnel hostnames in allowedHosts if needed,
+		allowedHosts: true,
+	});
 
-	if (!publicUrl) {
+	if (!publicUrls) {
 		// This happens if the tunnel was restarted with a different origin before the first tunnel finished starting.
 		// In this case, we don't want to log anything since the new tunnel will log its own URL once it's ready.
 		return;
 	}
 
 	const allowedHosts = server.config.server.allowedHosts;
-	const tunnelHostnames = [new URL(publicUrl).hostname];
+	const tunnelHostnames = publicUrls.map((url) => new URL(url).hostname);
 
 	ctx.replaceTunnelHostnames(tunnelHostnames);
 
@@ -315,6 +376,7 @@ export async function setupDevTunnel(
  */
 export async function setupPreviewTunnel(
 	server: vite.PreviewServer,
+	ctx: PluginContext,
 	manager: TunnelManager
 ): Promise<void> {
 	const { preview } = server.config;
@@ -334,7 +396,13 @@ export async function setupPreviewTunnel(
 		);
 	}
 
-	await manager.startTunnel(resolvedOrigin.toString());
+	await manager.startTunnel({
+		origin: resolvedOrigin.toString(),
+		tunnel: ctx.resolvedPluginConfig.tunnel,
+		allowedHosts: server.config.preview?.allowedHosts,
+		accountId: ctx.allWorkerConfigs[0]?.account_id,
+		complianceRegion: ctx.allWorkerConfigs[0]?.compliance_region,
+	});
 }
 
 function patchPrintUrls(
@@ -345,16 +413,68 @@ function patchPrintUrls(
 	server.printUrls = () => {
 		serverPrintUrls();
 
-		const publicUrl = tunnelManager?.publicUrl;
-		if (!publicUrl) {
+		const publicUrls = tunnelManager?.publicUrls;
+		if (!publicUrls || publicUrls.length === 0) {
 			return;
 		}
 
-		server.config.logger.info(
-			`${colors.green("  ➜")}  ${colors.bold("Tunnel:")}  ${colors.cyan(publicUrl)}`
-		);
+		for (let i = 0; i < publicUrls.length; i++) {
+			if (i === 0) {
+				server.config.logger.info(
+					`${colors.green("  ➜")}  ${colors.bold("Tunnel:")}  ${colors.cyan(publicUrls[i])}`
+				);
+			} else {
+				server.config.logger.info(
+					`              ${colors.cyan(publicUrls[i])}`
+				);
+			}
+		}
+
 		server.config.logger.warnOnce(warning);
 	};
+}
+
+function getAllowedTunnelUrls(
+	publicUrls: string[],
+	allowedHosts: true | string[] | undefined
+): string[] {
+	if (allowedHosts === undefined) {
+		return [];
+	}
+
+	if (allowedHosts === true) {
+		return publicUrls;
+	}
+
+	return publicUrls.filter((publicUrl) => {
+		const hostname = new URL(publicUrl).hostname.toLowerCase();
+
+		return allowedHosts.some((allowedHost) => {
+			const normalizedAllowedHost = allowedHost.toLowerCase();
+
+			if (normalizedAllowedHost.startsWith(".")) {
+				return (
+					hostname === normalizedAllowedHost.slice(1) ||
+					hostname.endsWith(normalizedAllowedHost)
+				);
+			}
+
+			return hostname === normalizedAllowedHost;
+		});
+	});
+}
+
+function getSuggestedAllowedHosts(hostnames: string[]): string[] {
+	const suggestions = new Set(hostnames);
+
+	for (const hostname of hostnames) {
+		const segments = hostname.split(".");
+		if (segments.length > 2) {
+			suggestions.add(`.${segments.slice(1).join(".")}`);
+		}
+	}
+
+	return Array.from(suggestions);
 }
 
 export const tunnelPlugin = createPlugin("tunnel", (ctx) => {
@@ -413,7 +533,7 @@ export const tunnelPlugin = createPlugin("tunnel", (ctx) => {
 
 			tunnelManager ??= new TunnelManager(server.config.logger);
 			patchPrintUrls(server, PREVIEW_PUBLIC_EXPOSURE_WARNING);
-			await setupPreviewTunnel(server, tunnelManager);
+			await setupPreviewTunnel(server, ctx, tunnelManager);
 
 			const closePreviewServer = server.close.bind(server);
 			server.close = async () => {

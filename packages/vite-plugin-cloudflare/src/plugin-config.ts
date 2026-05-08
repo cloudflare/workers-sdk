@@ -74,7 +74,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 	persistState?: PersistState;
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
-	tunnel?: boolean;
+	tunnel?: boolean | string;
 	experimental?: Experimental;
 }
 
@@ -98,7 +98,7 @@ interface BaseResolvedConfig {
 	inspectorPort: number | false | undefined;
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport">;
 	remoteBindings: boolean;
-	tunnel: boolean;
+	tunnel: boolean | string;
 }
 
 interface NonPreviewResolvedConfig extends BaseResolvedConfig {

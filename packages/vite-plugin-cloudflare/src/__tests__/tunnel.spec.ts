@@ -9,6 +9,7 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
+import * as wrangler from "wrangler";
 import { PluginContext } from "../context";
 import {
 	DEV_PUBLIC_EXPOSURE_WARNING,
@@ -22,6 +23,40 @@ import {
 import type * as vite from "vite";
 
 vi.mock("@cloudflare/workers-utils");
+vi.mock("wrangler");
+
+function createMockPluginContext(options: {
+	type: "workers" | "preview";
+	tunnel?: boolean | string;
+	account_id?: string;
+}) {
+	const ctx = new PluginContext({
+		hasShownWorkerConfigWarnings: false,
+		restartingDevServerCount: 0,
+		tunnelHostnames: new Set(),
+	});
+	Object.defineProperty(ctx, "resolvedPluginConfig", {
+		value: {
+			type: options.type,
+			tunnel: options.tunnel,
+		},
+	});
+	if (options.type === "workers") {
+		Object.defineProperty(ctx, "entryWorkerConfig", {
+			value: {
+				account_id: options.account_id,
+			},
+		});
+	}
+	Object.defineProperty(ctx, "allWorkerConfigs", {
+		value: [
+			{
+				account_id: options.account_id,
+			},
+		],
+	});
+	return ctx;
+}
 
 describe("tunnel plugin", () => {
 	beforeEach(() => {
@@ -52,11 +87,7 @@ describe("tunnel plugin", () => {
 		});
 
 		const server = await createServer();
-		const ctx = new PluginContext({
-			hasShownWorkerConfigWarnings: false,
-			restartingDevServerCount: 0,
-			tunnelHostnames: new Set(),
-		});
+		const ctx = createMockPluginContext({ type: "workers", tunnel: true });
 		const tunnelManager = new TunnelManager(server.config.logger);
 		const restart = vi.spyOn(server, "restart").mockResolvedValue();
 
@@ -76,6 +107,7 @@ describe("tunnel plugin", () => {
 		expect(restart).toHaveBeenCalledTimes(1);
 		expect(startTunnel).toHaveBeenCalledWith({
 			origin: new URL(server.resolvedUrls?.local?.[0] ?? ""),
+			token: undefined,
 			extendHint: "Press t + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
@@ -85,7 +117,9 @@ describe("tunnel plugin", () => {
 		});
 		expect(startTunnel).toHaveBeenCalledTimes(1);
 		expect(error).not.toHaveBeenCalled();
-		expect(tunnelManager.publicUrl).toBe("https://example.trycloudflare.com/");
+		expect(tunnelManager.publicUrls).toEqual([
+			"https://example.trycloudflare.com/",
+		]);
 
 		const infoLog = info.mock.calls
 			.map(([message]) => stripVTControlCharacters(message))
@@ -106,11 +140,7 @@ describe("tunnel plugin", () => {
 		});
 
 		const server = await createServer();
-		const ctx = new PluginContext({
-			hasShownWorkerConfigWarnings: false,
-			restartingDevServerCount: 0,
-			tunnelHostnames: new Set(),
-		});
+		const ctx = createMockPluginContext({ type: "workers", tunnel: true });
 		const tunnelManager = new TunnelManager(server.config.logger);
 		const restart = vi.spyOn(server, "restart").mockResolvedValue();
 
@@ -155,11 +185,7 @@ describe("tunnel plugin", () => {
 			});
 
 		const server1 = await createServer();
-		const ctx = new PluginContext({
-			hasShownWorkerConfigWarnings: false,
-			restartingDevServerCount: 0,
-			tunnelHostnames: new Set(),
-		});
+		const ctx = createMockPluginContext({ type: "workers", tunnel: true });
 		const tunnelManager = new TunnelManager(server1.config.logger);
 		const restart1 = vi.spyOn(server1, "restart").mockResolvedValue();
 		onTestFinished(() => server1.close());
@@ -172,6 +198,7 @@ describe("tunnel plugin", () => {
 		expect(startTunnel).toHaveBeenCalledTimes(1);
 		expect(startTunnel).toHaveBeenNthCalledWith(1, {
 			origin: new URL(server1.resolvedUrls?.local?.[0] ?? ""),
+			token: undefined,
 			extendHint: "Press t + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
@@ -197,6 +224,7 @@ describe("tunnel plugin", () => {
 		expect(startTunnel).toHaveBeenCalledTimes(2);
 		expect(startTunnel).toHaveBeenNthCalledWith(2, {
 			origin: new URL(server2.resolvedUrls?.local?.[0] ?? ""),
+			token: undefined,
 			extendHint: "Press t + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
@@ -241,28 +269,36 @@ describe("tunnel plugin", () => {
 
 		onTestFinished(() => server.close());
 
-		await tunnelManager.startTunnel("http://localhost:3000");
+		await tunnelManager.startTunnel({
+			origin: "http://localhost:3000",
+			tunnel: true,
+			allowedHosts: true,
+			accountId: undefined,
+			complianceRegion: undefined,
+		});
 
 		await expect(
-			tunnelManager.startTunnel("http://localhost:3001")
+			tunnelManager.startTunnel({
+				origin: "http://localhost:3001",
+				tunnel: true,
+				allowedHosts: true,
+				accountId: undefined,
+				complianceRegion: undefined,
+			})
 		).rejects.toMatchObject({
-			message: "Failed to start tunnel: dispose failed",
+			message: "Failed to start tunnel. dispose failed",
 			cause: disposeError,
 		});
 
 		expect(startTunnel).toHaveBeenCalledTimes(1);
-		expect(tunnelManager.publicUrl).toBeUndefined();
+		expect(tunnelManager.publicUrls).toBeUndefined();
 	});
 
 	it("rejects server.listen when tunnel startup fails", async ({ expect }) => {
 		const tunnelError = new Error("quick tunnel rate limited");
 		const disposeError = new Error("failed to dispose tunnel");
 		const server = await createServer();
-		const ctx = new PluginContext({
-			hasShownWorkerConfigWarnings: false,
-			restartingDevServerCount: 0,
-			tunnelHostnames: new Set(),
-		});
+		const ctx = createMockPluginContext({ type: "workers", tunnel: true });
 
 		vi.mocked(startTunnel).mockReturnValue({
 			ready: vi.fn().mockRejectedValue(tunnelError),
@@ -271,13 +307,6 @@ describe("tunnel plugin", () => {
 				throw disposeError;
 			}),
 		});
-		Object.defineProperty(ctx, "resolvedPluginConfig", {
-			value: {
-				type: "workers",
-				tunnel: true,
-			},
-		});
-
 		const plugin = tunnelPlugin(ctx);
 		const close = vi.spyOn(server, "close");
 
@@ -287,7 +316,7 @@ describe("tunnel plugin", () => {
 		await plugin.configureServer(server);
 
 		await expect(() => server.listen(0)).rejects.toMatchObject({
-			message: "Failed to start tunnel: quick tunnel rate limited",
+			message: "Failed to start tunnel. quick tunnel rate limited",
 			cause: tunnelError,
 		});
 		expect(close).toHaveBeenCalledTimes(1);
@@ -303,17 +332,7 @@ describe("tunnel plugin", () => {
 		});
 
 		const previewServer = await preview();
-		const ctx = new PluginContext({
-			hasShownWorkerConfigWarnings: false,
-			restartingDevServerCount: 0,
-			tunnelHostnames: new Set(),
-		});
-		Object.defineProperty(ctx, "resolvedPluginConfig", {
-			value: {
-				type: "preview",
-				tunnel: true,
-			},
-		});
+		const ctx = createMockPluginContext({ type: "preview", tunnel: true });
 
 		onTestFinished(() => previewServer.close());
 
@@ -323,7 +342,7 @@ describe("tunnel plugin", () => {
 			// @ts-expect-error The tunnel plugin accepts a server instance directly without relying on `this`
 			plugin.configurePreviewServer(previewServer)
 		).rejects.toMatchObject({
-			message: "Failed to start tunnel: quick tunnel rate limited",
+			message: "Failed to start tunnel. quick tunnel rate limited",
 			cause: tunnelError,
 		});
 	});
@@ -339,17 +358,7 @@ describe("tunnel plugin", () => {
 		});
 
 		const server = await createServer();
-		const ctx = new PluginContext({
-			hasShownWorkerConfigWarnings: false,
-			restartingDevServerCount: 0,
-			tunnelHostnames: new Set(),
-		});
-		Object.defineProperty(ctx, "resolvedPluginConfig", {
-			value: {
-				type: "workers",
-				tunnel: true,
-			},
-		});
+		const ctx = createMockPluginContext({ type: "workers", tunnel: true });
 
 		const plugin = tunnelPlugin(ctx);
 		vi.spyOn(server, "restart").mockResolvedValue();
@@ -388,18 +397,7 @@ describe("tunnel plugin", () => {
 			.spyOn(previewServer.config.logger, "warnOnce")
 			.mockReturnValue(undefined);
 
-		const ctx = new PluginContext({
-			hasShownWorkerConfigWarnings: false,
-			restartingDevServerCount: 0,
-			tunnelHostnames: new Set(),
-		});
-		Object.defineProperty(ctx, "resolvedPluginConfig", {
-			value: {
-				type: "preview",
-				tunnel: true,
-			},
-		});
-
+		const ctx = createMockPluginContext({ type: "preview", tunnel: true });
 		const plugin = tunnelPlugin(ctx);
 
 		onTestFinished(() => previewServer.close());
@@ -424,10 +422,11 @@ describe("tunnel plugin", () => {
 		const tunnelManager = new TunnelManager(
 			previewServer.config.logger as vite.Logger
 		);
+		const ctx = createMockPluginContext({ type: "preview", tunnel: true });
 
 		onTestFinished(() => previewServer.close());
 
-		await setupPreviewTunnel(previewServer, tunnelManager);
+		await setupPreviewTunnel(previewServer, ctx, tunnelManager);
 
 		const startTunnelCall = vi.mocked(startTunnel).mock.calls[0]?.[0];
 		expect(startTunnelCall).toMatchObject({
@@ -444,5 +443,96 @@ describe("tunnel plugin", () => {
 			String(previewServer.config.preview.port)
 		);
 		expect(previewServer.config.preview.strictPort).toBe(true);
+	});
+
+	it("starts a named preview tunnel and keeps only allowed hosts", async ({
+		expect,
+	}) => {
+		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockResolvedValue({
+			hostnames: [
+				"dev.example.com",
+				"preview.example.com",
+				"something-else.com",
+			],
+			token: "TOKEN",
+		});
+		vi.mocked(startTunnel).mockReturnValue({
+			ready: vi.fn().mockResolvedValue({
+				mode: "named",
+			}),
+			extendExpiry: vi.fn(),
+			dispose: vi.fn(),
+		});
+
+		const previewServer = await preview({
+			preview: {
+				allowedHosts: [".example.com"],
+			},
+		});
+		const tunnelManager = new TunnelManager(
+			previewServer.config.logger as vite.Logger
+		);
+		const ctx = createMockPluginContext({
+			type: "preview",
+			tunnel: "my-tunnel",
+			account_id: "account-id",
+		});
+
+		onTestFinished(() => previewServer.close());
+
+		await setupPreviewTunnel(previewServer, ctx, tunnelManager);
+
+		expect(wrangler.unstable_resolveNamedTunnel).toHaveBeenCalledWith(
+			"my-tunnel",
+			expect.any(URL),
+			{
+				accountId: "account-id",
+				complianceRegion: undefined,
+			}
+		);
+		expect(tunnelManager.publicUrls).toEqual([
+			"https://dev.example.com",
+			"https://preview.example.com",
+		]);
+	});
+
+	it("throws when no named preview tunnel hosts are allowed", async ({
+		expect,
+	}) => {
+		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockResolvedValue({
+			hostnames: ["dev.example.com", "preview.example.com"],
+			token: "TOKEN",
+		});
+		vi.mocked(startTunnel).mockReturnValue({
+			ready: vi.fn().mockResolvedValue({
+				mode: "named",
+			}),
+			extendExpiry: vi.fn(),
+			dispose: vi.fn(),
+		});
+
+		const previewServer = await preview();
+		const tunnelManager = new TunnelManager(
+			previewServer.config.logger as vite.Logger
+		);
+		const ctx = createMockPluginContext({
+			type: "preview",
+			tunnel: "my-tunnel",
+			account_id: "account-id",
+		});
+
+		onTestFinished(() => previewServer.close());
+
+		await expect(setupPreviewTunnel(previewServer, ctx, tunnelManager)).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Failed to start tunnel. The resolved tunnel hostnames are not allowed by Vite preview host validation.
+
+			Add at least one of these hosts to \`preview.allowedHosts\` in your Vite config.
+			You can use exact hostnames or a dot-prefixed suffix pattern:
+			  - dev.example.com
+			  - preview.example.com
+			  - .example.com
+			]
+		`);
 	});
 });
