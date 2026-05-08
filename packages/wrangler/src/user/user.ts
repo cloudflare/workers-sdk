@@ -214,6 +214,7 @@ import url from "node:url";
 import { TextEncoder } from "node:util";
 import {
 	configFileName,
+	getCloudflareApiBaseUrl,
 	getCloudflareApiEnvironmentFromEnv,
 	getCloudflareComplianceRegion,
 	getGlobalWranglerConfigPath,
@@ -232,7 +233,7 @@ import {
 	purgeConfigCaches,
 	saveToConfigCache,
 } from "../config-cache";
-import { NoDefaultValueProvided, select } from "../dialogs";
+import { confirm, NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
@@ -1136,7 +1137,67 @@ type LoginProps = {
 	callbackHost: string;
 	callbackPort: number;
 	experimentalWebsocketCallback?: boolean;
+	/**
+	 * Email address that the resulting OAuth login is asserted to belong to.
+	 * If set, Wrangler verifies via `/user` and refuses to persist the token
+	 * when the actual identity differs. Required when using
+	 * `experimentalWebsocketCallback` in non-interactive contexts.
+	 */
+	expectedUser?: string;
 };
+
+/**
+ * Verify the identity backed by a freshly issued OAuth access token by
+ * calling `GET /user` directly. Bypasses the global auth state used by
+ * `fetchResult`, so we can run this check before `writeAuthConfigFile`
+ * has been called — that way a mismatch never leaves a token on disk.
+ *
+ * Returns `email: undefined` when the token lacks `user:read` (HTTP 403,
+ * Cloudflare error code 9109). Throws `UserError` for any other failure.
+ */
+async function verifyTokenIdentity(
+	complianceConfig: ComplianceConfig,
+	accessToken: string
+): Promise<{ email: string | undefined }> {
+	const apiBase = getCloudflareApiBaseUrl(complianceConfig);
+	let res: Awaited<ReturnType<typeof fetch>>;
+	try {
+		res = await fetch(`${apiBase}/user`, {
+			headers: { Authorization: `Bearer ${accessToken}` },
+			signal: AbortSignal.timeout(5_000),
+		});
+	} catch (err) {
+		throw new UserError(
+			`Failed to verify login identity: ${
+				err instanceof Error ? err.message : String(err)
+			}`,
+			{ telemetryMessage: "user login identity check fetch failure" }
+		);
+	}
+	if (res.status === 403) {
+		// Cloudflare error code 9109 — token lacks `user:read`. Treat as
+		// "unknown email" so callers can decide whether that is fatal.
+		return { email: undefined };
+	}
+	if (!res.ok) {
+		throw new UserError(`Failed to verify login identity: HTTP ${res.status}`, {
+			telemetryMessage: "user login identity check http failure",
+		});
+	}
+	const body = (await res.json()) as { result?: { email?: string } };
+	return { email: body.result?.email };
+}
+
+/**
+ * Case-insensitive, whitespace-trimmed email comparison. Real-world OAuth
+ * providers normalise emails to lowercase even though RFC 5321 does not
+ * require that for the local-part — comparing case-insensitively avoids
+ * spurious mismatches when the user types `Alice@Example.com` against an
+ * issued `alice@example.com`.
+ */
+function emailsEqual(a: string, b: string): boolean {
+	return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
 
 export async function loginOrRefreshIfRequired(
 	complianceConfig: ComplianceConfig,
@@ -1416,16 +1477,22 @@ async function getOauthTokenViaWebSocket(options: {
 			callbackUrl: remoteCallbackUrl,
 		});
 
-		// 5. Open browser. The full auth URL (which carries `state` and
-		//    `code_challenge`) is intentionally NOT printed to stdout —
-		//    AI coding agents and CI logs would otherwise capture and
-		//    persist it (REVIEW-17452 #11). For the no-browser path we
-		//    cannot avoid emitting the URL, but we still log a recommendation
-		//    to use API tokens in headless environments.
+		// 5. Open browser. The full auth URL is printed to stdout in both the
+		//    `--browser` and `--no-browser` paths. This is safe with the
+		//    post-exchange identity check (REVIEW-17452 #11; see `login()`)
+		//    in place: even if the URL leaks (CI logs, AI agents, terminal
+		//    scrollback), an attacker who races their own auth code into the
+		//    legitimate WebSocket session would cause a different account's
+		//    token to be issued, which the identity check refuses to persist.
+		//    Printing the URL also restores the copy-paste workflow needed in
+		//    environments where `openInBrowser` cannot reach a usable browser.
 		logHeadlessAuthGuidance();
 		if (options.browser) {
 			logger.log(
 				`Opening dash.cloudflare.com in your default browser to authenticate.`
+			);
+			logger.log(
+				`If the browser doesn't open, visit this link to authenticate: ${authUrl}`
 			);
 			await openInBrowser(authUrl);
 		} else {
@@ -1616,12 +1683,20 @@ export async function getOauthToken(options: {
 	});
 	logHeadlessAuthGuidance();
 	if (options.browser) {
-		// The full auth URL contains `state`, `code_challenge`, and the
-		// scope list. Suppress it from stdout so AI agents and CI logs
-		// don't capture and persist it (REVIEW-17452 #11). The browser
-		// still receives the full URL via `openInBrowser`.
+		// The full auth URL is printed to stdout. The localhost flow is not
+		// vulnerable to the URL-leak code-injection attack the relay flow
+		// guards against (REVIEW-17452 #11; see `login()`'s identity check)
+		// because the OAuth `redirect_uri` is on the user's own machine —
+		// an attacker authenticating with a captured URL would only deliver
+		// the resulting code to their own localhost, never to the victim's
+		// wrangler. Printing the URL preserves the copy-paste workflow
+		// needed in environments where `openInBrowser` cannot reach a usable
+		// browser.
 		logger.log(
 			"Opening dash.cloudflare.com in your default browser to authenticate."
+		);
+		logger.log(
+			`If the browser doesn't open, visit this link to authenticate: ${urlToOpen}`
 		);
 		await openInBrowser(urlToOpen);
 	} else {
@@ -1683,9 +1758,18 @@ export async function login(
 	};
 
 	let oauth: AccessContext;
+	// Track which flow actually issued the token. The relay flow is the only
+	// one vulnerable to URL-leak code injection (the localhost flow's
+	// `redirect_uri` is on the user's machine, so an attacker authenticating
+	// with a captured URL can't deliver the resulting code back to the
+	// victim's wrangler). When `experimentalWebsocketCallback` falls back to
+	// the localhost flow, `usedRelay` stays `false` because the localhost
+	// rules then apply.
+	let usedRelay = false;
 	if (props.experimentalWebsocketCallback) {
 		try {
 			oauth = await getOauthTokenViaWebSocket(oauthOptions);
+			usedRelay = true;
 		} catch (err) {
 			// Fall back to the local callback server only when the failure
 			// happened *before* the browser was opened (signalled via
@@ -1733,6 +1817,75 @@ export async function login(
 			callbackHost: props.callbackHost,
 			callbackPort: props.callbackPort,
 		});
+	}
+
+	// Identity check (REVIEW-17452 #11). Done **before** writing the auth
+	// config so a mismatch never leaves a token on disk. See `verifyTokenIdentity`
+	// for why we bypass `fetchResult` / global auth state here.
+	const accessToken = oauth.token?.value;
+	assert(accessToken, "OAuth flow returned no access token");
+	if (props.expectedUser !== undefined) {
+		// `--user=<email>` is a mechanical assertion the user opted into; it
+		// applies to every flow (localhost and relay). Defense-in-depth — for
+		// the localhost flow this catches unrelated bugs; for the relay flow
+		// it is the primary defense.
+		const { email: actualEmail } = await verifyTokenIdentity(
+			complianceConfig,
+			accessToken
+		);
+		if (actualEmail === undefined) {
+			throw new UserError(
+				"Cannot verify login identity: the issued token cannot read the user profile. " +
+					"Aborting; no token has been saved.",
+				{ telemetryMessage: "user login identity check no user profile" }
+			);
+		}
+		if (!emailsEqual(actualEmail, props.expectedUser)) {
+			throw new UserError(
+				`Login identity mismatch: expected '${props.expectedUser}', got '${actualEmail}'. ` +
+					"Aborting; no token has been saved.",
+				{ telemetryMessage: "user login expected user mismatch" }
+			);
+		}
+	} else if (usedRelay) {
+		// Relay flow without `--user`: vulnerable to URL-leak code injection,
+		// so we cannot proceed silently. Confirm interactively, or refuse in
+		// non-interactive contexts.
+		const { email: actualEmail } = await verifyTokenIdentity(
+			complianceConfig,
+			accessToken
+		);
+		if (isNonInteractiveOrCI()) {
+			throw new UserError(
+				"Login identity must be asserted when using --experimental-websocket-callback in non-interactive contexts. " +
+					"Re-run with --user=<email> to verify the resulting account. " +
+					"For automated environments, prefer setting CLOUDFLARE_API_TOKEN.",
+				{
+					telemetryMessage:
+						"user login non-interactive relay without expected user",
+				}
+			);
+		}
+		const ok = await confirm(
+			`Logged in as ${actualEmail ?? "(unknown email)"}. Continue?`,
+			{ defaultValue: true, fallbackValue: false }
+		);
+		if (!ok) {
+			throw new UserError("Login aborted; no token has been saved.", {
+				telemetryMessage: "user login not confirmed",
+			});
+		}
+	} else {
+		// Localhost flow without `--user`. Not vulnerable to the URL-leak
+		// attack (the redirect_uri is on the user's local machine), so we
+		// just surface the resolved identity informationally.
+		const { email: actualEmail } = await verifyTokenIdentity(
+			complianceConfig,
+			accessToken
+		);
+		if (actualEmail !== undefined) {
+			logger.log(`Logged in as ${actualEmail}.`);
+		}
 	}
 
 	writeAuthConfigFile({

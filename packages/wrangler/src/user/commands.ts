@@ -67,6 +67,16 @@ export const loginCommand = createCommand({
 			hidden: true,
 			alias: "x-websocket-callback",
 		},
+		user: {
+			describe:
+				"Expected email address of the account being logged into. " +
+				"Wrangler aborts before persisting any token if the resulting " +
+				"login does not match. Required when using " +
+				"--experimental-websocket-callback in non-interactive contexts.",
+			type: "string",
+			requiresArg: true,
+			alias: "u",
+		},
 	},
 	async handler(args, { config }) {
 		if (args.scopesList) {
@@ -91,6 +101,7 @@ export const loginCommand = createCommand({
 				callbackHost: args.callbackHost,
 				callbackPort: args.callbackPort,
 				experimentalWebsocketCallback: args.experimentalWebsocketCallback,
+				expectedUser: args.user,
 			});
 			return;
 		}
@@ -99,6 +110,7 @@ export const loginCommand = createCommand({
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
 			experimentalWebsocketCallback: args.experimentalWebsocketCallback,
+			expectedUser: args.user,
 		});
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
