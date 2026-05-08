@@ -11,7 +11,9 @@ import { useMockStdin } from "../../helpers/mock-stdin";
 import { msw } from "../../helpers/msw";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { mockPostVersion, mockSetupApiCalls } from "./utils";
+import { mockGetVersion, mockPostVersion, mockSetupApiCalls } from "./utils";
+import type { VersionDetails } from "../../../versions/secrets";
+import type { CfPlacement } from "@cloudflare/workers-utils";
 
 describe("versions secret put", () => {
 	const std = mockConsoleMethods();
@@ -531,6 +533,119 @@ describe("versions secret put", () => {
 			await runWrangler("versions secret put NEW_SECRET");
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+	});
+
+	describe("placement", () => {
+		function buildVersionInfo(placement: CfPlacement): VersionDetails {
+			return {
+				id: "ce15c78b-cc43-4f60-b5a9-15ce4f298c2a",
+				metadata: {} as VersionDetails["metadata"],
+				number: 2,
+				resources: {
+					bindings: [],
+					script: {
+						etag: "etag",
+						handlers: ["fetch"],
+						last_deployed_from: "api",
+						placement,
+					},
+					script_runtime: {
+						usage_model: "standard",
+						limits: {},
+					},
+				},
+			};
+		}
+
+		test("preserves smart placement on the new version", async ({ expect }) => {
+			setIsTTY(true);
+
+			mockPrompt({
+				text: "Enter a secret value:",
+				options: { isSecret: true },
+				result: "the-secret",
+			});
+
+			const placement: CfPlacement = { mode: "smart" };
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect, buildVersionInfo(placement));
+			mockPostVersion(expect, (metadata) => {
+				expect(metadata.placement).toStrictEqual(placement);
+			});
+			await runWrangler("versions secret put NEW_SECRET --name script-name");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		test("preserves targeted placement with service targets on the new version", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+
+			mockPrompt({
+				text: "Enter a secret value:",
+				options: { isSecret: true },
+				result: "the-secret",
+			});
+
+			const placement = {
+				mode: "targeted",
+				target: [{ hostname: "example.com", id: 410, type: "http" }],
+			} as unknown as CfPlacement;
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect, buildVersionInfo(placement));
+			mockPostVersion(expect, (metadata) => {
+				expect(metadata.placement).toStrictEqual(placement);
+			});
+			await runWrangler("versions secret put NEW_SECRET --name script-name");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		test("preserves targeted placement with region targets on the new version", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+
+			mockPrompt({
+				text: "Enter a secret value:",
+				options: { isSecret: true },
+				result: "the-secret",
+			});
+
+			const placement = {
+				mode: "targeted",
+				target: [{ id: 12, region: "aws:ap-northeast-1", type: "region" }],
+			} as unknown as CfPlacement;
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect, buildVersionInfo(placement));
+			mockPostVersion(expect, (metadata) => {
+				expect(metadata.placement).toStrictEqual(placement);
+			});
+			await runWrangler("versions secret put NEW_SECRET --name script-name");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		test("omits placement when the existing version has none", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+
+			mockPrompt({
+				text: "Enter a secret value:",
+				options: { isSecret: true },
+				result: "the-secret",
+			});
+
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect, (metadata) => {
+				expect(metadata.placement).toBeUndefined();
+			});
+			await runWrangler("versions secret put NEW_SECRET --name script-name");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
 });
