@@ -87,7 +87,9 @@ export async function getEntry(
 		const updateConfigMessage = (snippet: RawConfig) => dedent`
 			${
 				config.configPath
-					? `add the following to your "${configFileName(config.configPath)}" file:`
+					? `add the following to your "${configFileName(
+							config.configPath
+						)}" file:`
 					: `create a "wrangler.jsonc" file containing:`
 			}
 
@@ -138,11 +140,19 @@ export async function getEntry(
 
 	const { localBindings } = partitionDurableObjectBindings(config);
 
-	if (format === "service-worker" && localBindings.length > 0) {
+	if (
+		format === "service-worker" &&
+		(localBindings.length > 0 || config.migrations?.length)
+	) {
 		const errorMessage =
 			"You seem to be trying to use Durable Objects in a Worker written as a service-worker.";
-		const addScriptName = `You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your ${configFileName(config.configPath)} file, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:`;
-		const addScriptNameExamples = generateAddScriptNameExamples(localBindings);
+		const addScriptName = `You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your ${configFileName(
+			config.configPath
+		)} file, where \`script_name\` is the name of the Worker that implements that Durable Object.`;
+		const addScriptNameExamples =
+			localBindings.length > 0
+				? `For example:\n ${generateAddScriptNameExamples(localBindings)}`
+				: "";
 		const migrateText =
 			"Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:";
 		const migrateUrl =
