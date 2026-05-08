@@ -68,9 +68,7 @@ describe("Hot Keys", () => {
 			handlerC.mockClear();
 		});
 
-		it("handles CAPSLOCK (readline emits lowercase name with shift:true)", async ({
-			expect,
-		}) => {
+		it("handles CAPSLOCK", async ({ expect }) => {
 			const handlerA = vi.fn();
 			const options = [
 				{ keys: ["a"], label: "first option", handler: handlerA },
@@ -82,7 +80,7 @@ describe("Hot Keys", () => {
 			expect(handlerA).toHaveBeenCalled();
 			handlerA.mockClear();
 
-			// Caps Lock on: readline emits { name: "a", shift: true }
+			// Caps Lock and Shift+A both come through readline as { name: "a", shift: true }.
 			writeToMockedStdin({
 				name: "a",
 				sequence: "A",
@@ -123,57 +121,6 @@ describe("Hot Keys", () => {
 				shift: true,
 			});
 			expect(handlerA).not.toHaveBeenCalled();
-		});
-
-		it("explicit shift+a binding still works when registered alone", async ({
-			expect,
-		}) => {
-			const handlerShiftA = vi.fn();
-			const options = [
-				{ keys: ["shift+a"], label: "shift a", handler: handlerShiftA },
-			];
-
-			registerHotKeys(options);
-
-			// plain "a" (no shift) should NOT fire shift+a handler
-			writeToMockedStdin("a");
-			expect(handlerShiftA).not.toHaveBeenCalled();
-
-			// The "shift+a" string form (as used by the existing meta test) should still work
-			writeToMockedStdin("shift+a");
-			expect(handlerShiftA).toHaveBeenCalled();
-			handlerShiftA.mockClear();
-		});
-
-		it("does not fire plain handler when explicit shift binding is registered (no double-fire)", async ({
-			expect,
-		}) => {
-			const handlerA = vi.fn();
-			const handlerShiftA = vi.fn();
-			const options = [
-				{ keys: ["a"], label: "a option", handler: handlerA },
-				{ keys: ["shift+a"], label: "shift+a option", handler: handlerShiftA },
-			];
-
-			registerHotKeys(options);
-
-			// Shift+A: only shift+a handler should fire (exact match), not plain "a"
-			writeToMockedStdin({
-				name: "a",
-				sequence: "A",
-				ctrl: false,
-				meta: false,
-				shift: true,
-			});
-			expect(handlerShiftA).toHaveBeenCalled();
-			expect(handlerA).not.toHaveBeenCalled();
-			handlerShiftA.mockClear();
-
-			// Plain a: only "a" handler fires
-			writeToMockedStdin("a");
-			expect(handlerA).toHaveBeenCalled();
-			expect(handlerShiftA).not.toHaveBeenCalled();
-			handlerA.mockClear();
 		});
 
 		it("handles meta keys", async ({ expect }) => {

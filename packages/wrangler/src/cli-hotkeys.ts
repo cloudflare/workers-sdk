@@ -68,6 +68,16 @@ export default function (
 		);
 	}
 
+	function isKeyMatch(input: string, key: string) {
+		if (input === key) {
+			return true;
+		}
+
+		// When "a" is pressed with Caps Lock on, readline emits `{ name: "a", shift: true }`
+		// This keeps the hotkeys case-insensitive
+		return /^[a-z]$/.test(key) && input === `shift+${key}`;
+	}
+
 	const unregisterKeyPress = onKeyPress(async (key) => {
 		const entries: string[] = [];
 
@@ -85,28 +95,13 @@ export default function (
 		}
 
 		const char = entries.join("+");
-		// When Caps Lock is on, readline emits `{ name: "a", shift: true }` which
-		// is indistinguishable from Shift+A. Build a fallback plain-key to match
-		// registered bindings like "a". Only apply the fallback when no option is
-		// explicitly bound to the shifted form (e.g. "shift+a"), so an explicit
-		// shift binding remains distinct from the Caps Lock fallback.
-		const shiftOnlyKey =
-			key.shift && !key.ctrl && !key.meta && key.name
-				? key.name.toLowerCase()
-				: undefined;
-		const charIsBound = options.some(
-			({ keys, disabled }) => !unwrapHook(disabled) && keys.includes(char)
-		);
 
 		for (const { keys, handler, disabled } of options) {
 			if (unwrapHook(disabled)) {
 				continue;
 			}
 
-			if (
-				keys.includes(char) ||
-				(!charIsBound && shiftOnlyKey && keys.includes(shiftOnlyKey))
-			) {
+			if (keys.some((registeredKey) => isKeyMatch(char, registeredKey))) {
 				try {
 					await handler();
 				} catch {
