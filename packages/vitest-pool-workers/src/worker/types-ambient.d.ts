@@ -1,9 +1,15 @@
 interface UnsafeEval {
 	eval(code: string, name?: string): unknown;
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-	newFunction(script: string, name?: string, ...args: string[]): Function;
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-	newAsyncFunction(script: string, name?: string, ...args: string[]): Function;
+	newFunction(
+		script: string,
+		name?: string,
+		...args: string[]
+	): (...args: unknown[]) => unknown;
+	newAsyncFunction(
+		script: string,
+		name?: string,
+		...args: string[]
+	): (...args: unknown[]) => unknown;
 }
 
 namespace Cloudflare {
@@ -12,7 +18,7 @@ namespace Cloudflare {
 		__VITEST_POOL_WORKERS_UNSAFE_EVAL: UnsafeEval;
 	}
 	interface GlobalProps {
-		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+		// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof import() in ambient declarations requires inline import
 		mainModule: typeof import("./index");
 		durableNamespaces: "__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__";
 	}

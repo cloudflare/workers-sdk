@@ -108,7 +108,7 @@ interface NodePath<T = ASTNode> {
 
 interface Collection {
 	find(type: ASTType, filter?: Record<string, unknown>): Collection;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jscodeshift Collection.forEach accepts callbacks with narrowed NodePath types
 	forEach(callback: (path: NodePath<any>) => void): Collection;
 	at(index: number): Collection;
 	paths(): NodePath[];
