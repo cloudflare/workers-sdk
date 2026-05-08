@@ -314,6 +314,24 @@ export async function requireLoggedIn(
 	}
 }
 
+function setHeaderOrThrowForBadChars(
+	headers: Headers,
+	name: string,
+	value: string
+): void {
+	try {
+		headers.set(name, value);
+	} catch (e) {
+		if (e instanceof TypeError && String(e.message).includes("ByteString")) {
+			throw new UserError(
+				"Your API token contains an invalid character. API tokens must be plain text.",
+				{ telemetryMessage: "credential contains non-ascii characters" }
+			);
+		}
+		throw e;
+	}
+}
+
 export function addAuthorizationHeader(
 	headers: Headers,
 	auth: ApiCredentials,
@@ -321,10 +339,14 @@ export function addAuthorizationHeader(
 ): void {
 	if (!headers.has("Authorization") || overrideExisting) {
 		if ("apiToken" in auth) {
-			headers.set("Authorization", `Bearer ${auth.apiToken}`);
+			setHeaderOrThrowForBadChars(
+				headers,
+				"Authorization",
+				`Bearer ${auth.apiToken}`
+			);
 		} else {
-			headers.set("X-Auth-Key", auth.authKey);
-			headers.set("X-Auth-Email", auth.authEmail);
+			setHeaderOrThrowForBadChars(headers, "X-Auth-Key", auth.authKey);
+			setHeaderOrThrowForBadChars(headers, "X-Auth-Email", auth.authEmail);
 		}
 	}
 }
@@ -367,11 +389,12 @@ export async function fetchKVGetValue(
 	});
 	if (response.ok) {
 		return await response.arrayBuffer();
-	} else {
-		throw new Error(
-			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
-		);
 	}
+	throw new APIError({
+		text: `Failed to fetch ${resource} - ${response.status}: ${response.statusText}`,
+		status: response.status,
+		telemetryMessage: false,
+	});
 }
 
 /**
@@ -435,6 +458,9 @@ export async function fetchR2Objects(
 		if (errorCode !== undefined) {
 			apiError.code = errorCode;
 		}
+		if (response.status >= 400 && response.status < 500) {
+			apiError.preventReport();
+		}
 		throw apiError;
 	}
 }
@@ -463,9 +489,18 @@ export async function fetchWorkerDefinitionFromDash(
 
 	if (!response.ok || !response.body) {
 		logger.error(response.ok, response.body);
-		throw new Error(
-			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
-		);
+		const summary = `Failed to fetch ${resource} - ${response.status}: ${response.statusText});`;
+
+		if (response.status >= 400 && response.status < 500) {
+			throw new UserError(summary, {
+				telemetryMessage: `worker definition api ${response.status}`,
+			});
+		}
+		throw new APIError({
+			text: summary,
+			status: response.status,
+			telemetryMessage: false,
+		});
 	}
 
 	const usesModules = response.headers

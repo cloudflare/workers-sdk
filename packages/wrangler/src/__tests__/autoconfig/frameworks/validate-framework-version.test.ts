@@ -1,3 +1,4 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { describe, it, vi } from "vitest";
 import { AutoConfigFrameworkConfigurationError } from "../../../autoconfig/errors";
 import { Framework } from "../../../autoconfig/frameworks/framework-class";
@@ -27,12 +28,15 @@ const PACKAGE_INFO: AutoConfigFrameworkPackageInfo = {
 describe("Framework.validateFrameworkVersion()", () => {
 	const std = mockConsoleMethods();
 
-	it("throws an AssertionError when the package version cannot be determined", ({
+	it("throws a UserError when the package version cannot be determined", ({
 		expect,
 	}) => {
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 		const framework = new TestFramework({ id: "test", name: "Test" });
 
+		expect(() =>
+			framework.validateFrameworkVersion("/project", PACKAGE_INFO)
+		).toThrow(UserError);
 		expect(() =>
 			framework.validateFrameworkVersion("/project", PACKAGE_INFO)
 		).toThrow("Unable to detect the version of the `some-pkg` package");

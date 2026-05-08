@@ -275,7 +275,9 @@ async function pollExport(
 	);
 
 	if (!response.success) {
-		throw new Error(response.error);
+		throw new UserError(response.error, {
+			telemetryMessage: "d1 export api response not successful",
+		});
 	}
 
 	response.messages.forEach((line) => {

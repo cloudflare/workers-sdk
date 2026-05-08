@@ -10,6 +10,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Cloudflare } from "cloudflare";
+import { MiniflareError } from "miniflare";
 import dedent from "ts-dedent";
 import { createCLIParser } from "..";
 import { renderError } from "../cfetch";
@@ -27,18 +28,66 @@ import type { ReadConfigCommandArgs } from "../config";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
+ * Check if an error has a Node.js error code matching one of the given codes,
+ * looking at both the error and its immediate cause.
+ */
+function hasErrorCode(e: unknown, codes: ReadonlySet<string>): boolean {
+	return (
+		visitErrorOrCause(e, (err) => {
+			if (
+				err !== null &&
+				typeof err === "object" &&
+				"code" in err &&
+				typeof (err as { code: unknown }).code === "string" &&
+				codes.has((err as { code: string }).code)
+			) {
+				return true;
+			}
+			return undefined;
+		}) === true
+	);
+}
+
+/**
+ * Check if a UserError-like object exists anywhere in the error chain.
+ * This duck-types the check so that `UserError` instances thrown from
+ * a different bundle (e.g. miniflare's bundled `@cloudflare/workers-utils`)
+ * are still recognised — `instanceof` fails across bundle boundaries because
+ * each bundle has its own copy of the class.
+ *
+ * We also recognise `MiniflareError.isUserError() === true`
+ */
+function isUserErrorLike(e: unknown): boolean {
+	return (
+		visitErrorOrCause(e, (err) => {
+			if (err instanceof UserError) {
+				return true;
+			}
+			if (
+				err instanceof Error &&
+				err.constructor?.name === "UserError" &&
+				"telemetryMessage" in err
+			) {
+				return true;
+			}
+			if (err instanceof MiniflareError && err.isUserError()) {
+				return true;
+			}
+			return undefined;
+		}) === true
+	);
+}
+
+/**
  * SSL/TLS certificate error messages that indicate a corporate proxy or VPN
  * may be intercepting HTTPS traffic with a custom root certificate.
  */
-const SSL_ERROR_SELF_SIGNED_CERT =
-	"self-signed certificate in certificate chain";
-const SSL_ERROR_UNABLE_TO_VERIFY = "unable to verify the first certificate";
-const SSL_ERROR_UNABLE_TO_GET_ISSUER = "unable to get local issuer certificate";
-
-const SSL_CERT_ERROR_MESSAGES = [
-	SSL_ERROR_SELF_SIGNED_CERT,
-	SSL_ERROR_UNABLE_TO_VERIFY,
-	SSL_ERROR_UNABLE_TO_GET_ISSUER,
+const SSL_CERT_ERROR_PATTERNS = [
+	"self-signed certificate in certificate chain",
+	"unable to verify the first certificate",
+	"unable to get local issuer certificate",
+	"does not match certificate's altnames",
+	"SSL routines:",
 ];
 
 /**
@@ -46,15 +95,18 @@ const SSL_CERT_ERROR_MESSAGES = [
  * which commonly occurs when a corporate proxy or VPN intercepts HTTPS traffic.
  */
 function isCertificateError(e: unknown): boolean {
-	const message = e instanceof Error ? e.message : String(e);
-	const causeMessage =
-		e instanceof Error && e.cause instanceof Error ? e.cause.message : "";
-
-	return SSL_CERT_ERROR_MESSAGES.some(
-		(errorText) =>
-			message.includes(errorText) || causeMessage.includes(errorText)
+	return (
+		visitErrorOrCause(e, (err) => {
+			const message = err instanceof Error ? err.message : String(err);
+			if (SSL_CERT_ERROR_PATTERNS.some((m) => message.includes(m))) {
+				return true;
+			}
+			return undefined;
+		}) === true
 	);
 }
+
+const PERMISSION_ERROR_CODES = new Set(["EPERM", "EACCES"]);
 
 /**
  * Permission errors (EPERM, EACCES) are caused by file system
@@ -65,50 +117,56 @@ function isCertificateError(e: unknown): boolean {
  * @returns `true` if the error is a permission error, `false` otherwise
  */
 function isPermissionError(e: unknown): boolean {
-	// Check for Node.js ErrnoException with EPERM or EACCES code
-	if (
-		e &&
-		typeof e === "object" &&
-		"code" in e &&
-		(e.code === "EPERM" || e.code === "EACCES") &&
-		"message" in e
-	) {
-		return true;
-	}
+	return hasErrorCode(e, PERMISSION_ERROR_CODES);
+}
 
-	// Check in the error cause as well
-	if (e instanceof Error && e.cause) {
-		return isPermissionError(e.cause);
-	}
-
-	return false;
+function isFileNotFoundError(e: unknown): boolean {
+	return hasErrorCode(e, new Set(["ENOENT"]));
 }
 
 /**
- * File not found errors (ENOENT) occur when users reference files or directories
- * that don't exist. We present a helpful message instead of reporting to Sentry.
- *
- * @param e - The error to check
- * @returns `true` if the error is a file not found error, `false` otherwise
+ * Visit an error and its immediate `cause` (one level only).
  */
-function isFileNotFoundError(e: unknown): boolean {
-	// Check for Node.js ErrnoException with ENOENT code
-	if (
-		e &&
-		typeof e === "object" &&
-		"code" in e &&
-		e.code === "ENOENT" &&
-		"message" in e
-	) {
-		return true;
+function visitErrorOrCause<T>(
+	e: unknown,
+	visit: (e: unknown) => T | undefined
+): T | undefined {
+	const direct = visit(e);
+	if (direct) {
+		return direct;
 	}
-
-	// Check in the error cause as well
-	if (e instanceof Error && e.cause) {
-		return isFileNotFoundError(e.cause);
+	if (e instanceof Error && e.cause !== undefined) {
+		return visit(e.cause);
 	}
+	return undefined;
+}
 
-	return false;
+/**
+ * Filesystem environmental errors (disk full, FD limit, system limits, file locks,
+ * read-only mounts, etc.) are not Wrangler bugs — they are properties of the
+ * user's environment that Wrangler can't fix.
+ *
+ * Unlike EPERM/EACCES (which are also handled separately above to log a more
+ * specific message), we only need to suppress these from Sentry.
+ */
+const FILESYSTEM_ENV_ERROR_CODES = new Set([
+	"EBUSY", // resource busy or locked (Windows file lock, AV scan)
+	"EISDIR", // illegal operation on a directory
+	"ENOTDIR", // path component is not a directory
+	"EEXIST", // file already exists
+	"ENOSPC", // no space left on device
+	"EMFILE", // too many open files (process FD limit)
+	"ENFILE", // too many open files in system
+	"ENAMETOOLONG", // name too long (Windows MAX_PATH, ext4 limits)
+	"EROFS", // read-only file system
+	"ELOOP", // too many symbolic links encountered
+	"ENXIO", // no such device or address
+	"EBADF", // bad file descriptor
+	"EINVAL", // invalid argument (often from `stat` on weird Windows reparse points)
+	"EFBIG", // file too large
+]);
+function isFileSystemEnvError(e: unknown): boolean {
+	return hasErrorCode(e, FILESYSTEM_ENV_ERROR_CODES);
 }
 
 /**
@@ -134,56 +192,27 @@ function isCloudflareAPI(text: string): boolean {
  * @returns `true` if the error is a DNS resolution failure to Cloudflare's API, `false` otherwise
  */
 function isCloudflareAPIDNSError(e: unknown): boolean {
-	// Only handle DNS errors to Cloudflare APIs
-
-	const hasDNSErrorCode = (obj: unknown): boolean => {
-		return (
-			obj !== null &&
-			typeof obj === "object" &&
-			"code" in obj &&
-			obj.code === "ENOTFOUND"
-		);
-	};
-
-	if (hasDNSErrorCode(e)) {
-		const message = e instanceof Error ? e.message : String(e);
-		if (isCloudflareAPI(message)) {
-			return true;
-		}
-		// Also check hostname property
-		if (
-			e &&
-			typeof e === "object" &&
-			"hostname" in e &&
-			typeof e.hostname === "string"
-		) {
-			if (isCloudflareAPI(e.hostname)) {
-				return true;
+	return (
+		visitErrorOrCause(e, (err) => {
+			if (hasErrorCode(err, new Set(["ENOTFOUND"]))) {
+				const message = err instanceof Error ? err.message : String(err);
+				if (isCloudflareAPI(message)) {
+					return true;
+				}
+				if (
+					err &&
+					typeof err === "object" &&
+					"hostname" in err &&
+					typeof (err as { hostname?: unknown }).hostname === "string" &&
+					isCloudflareAPI((err as { hostname: string }).hostname)
+				) {
+					return true;
+				}
 			}
-		}
-	}
 
-	// Errors are often wrapped, so check the cause chain as well
-	if (e instanceof Error && e.cause && hasDNSErrorCode(e.cause)) {
-		const causeMessage =
-			e.cause instanceof Error ? e.cause.message : String(e.cause);
-		const parentMessage = e.message;
-		if (isCloudflareAPI(causeMessage) || isCloudflareAPI(parentMessage)) {
-			return true;
-		}
-		// Check hostname in cause
-		if (
-			typeof e.cause === "object" &&
-			"hostname" in e.cause &&
-			typeof e.cause.hostname === "string"
-		) {
-			if (isCloudflareAPI(e.cause.hostname)) {
-				return true;
-			}
-		}
-	}
-
-	return false;
+			return undefined;
+		}) === true
+	);
 }
 
 /**
@@ -195,35 +224,165 @@ function isCloudflareAPIDNSError(e: unknown): boolean {
  * @returns `true` if the error is a connection timeout to Cloudflare's API, `false` otherwise
  */
 function isCloudflareAPIConnectionTimeoutError(e: unknown): boolean {
-	// Only handle timeouts to Cloudflare APIs - timeouts to user endpoints
-	// (e.g., in dev server or user's own APIs) may indicate actual bugs
-	const hasTimeoutCode = (obj: unknown): boolean => {
-		return (
-			obj !== null &&
-			typeof obj === "object" &&
-			"code" in obj &&
-			obj.code === "UND_ERR_CONNECT_TIMEOUT"
-		);
-	};
+	const hasTimeoutNode =
+		visitErrorOrCause(e, (err) => {
+			if (
+				err !== null &&
+				typeof err === "object" &&
+				"code" in err &&
+				(err as { code?: unknown }).code === "UND_ERR_CONNECT_TIMEOUT"
+			) {
+				return true;
+			}
+			if (
+				err instanceof Error &&
+				err.constructor?.name === "ConnectTimeoutError"
+			) {
+				return true;
+			}
+			return undefined;
+		}) === true;
 
-	if (hasTimeoutCode(e)) {
-		const message = e instanceof Error ? e.message : String(e);
-		if (isCloudflareAPI(message)) {
-			return true;
-		}
+	if (!hasTimeoutNode) {
+		return false;
 	}
 
-	// Errors are often wrapped, so check the cause chain as well
-	if (e instanceof Error && e.cause && hasTimeoutCode(e.cause)) {
-		const causeMessage =
-			e.cause instanceof Error ? e.cause.message : String(e.cause);
-		const parentMessage = e.message;
-		if (isCloudflareAPI(causeMessage) || isCloudflareAPI(parentMessage)) {
-			return true;
-		}
-	}
+	// The Cloudflare URL may live on any node in the chain — the leaf error
+	// (`ConnectTimeoutError`) often does not include the URL, while a parent
+	// wrapper (e.g., cfetch) does.
+	return (
+		visitErrorOrCause(e, (err) => {
+			const message = err instanceof Error ? err.message : String(err);
+			if (isCloudflareAPI(message)) {
+				return true;
+			}
+			if (
+				err !== null &&
+				typeof err === "object" &&
+				"hostname" in err &&
+				typeof (err as { hostname?: unknown }).hostname === "string" &&
+				isCloudflareAPI((err as { hostname: string }).hostname)
+			) {
+				return true;
+			}
+			return undefined;
+		}) === true
+	);
+}
 
-	return false;
+/**
+ * Transient network errors that have no actionable Wrangler bug.
+ *
+ * These are environmental issues (network glitches, server-side resets,
+ * proxy/VPN handshake failures, captive portals) that should be filtered
+ * from Sentry but reported to the user with a helpful message.
+ *
+ * Distinct from {@link isBenignWriteError}, which covers writes to peer-
+ * closed sockets/pipes (EPIPE/EOF/ECONNRESET-on-write).
+ */
+const TRANSIENT_NETWORK_ERROR_CODES = new Set([
+	"ECONNRESET",
+	"ECONNREFUSED",
+	"EAI_AGAIN", // DNS temporary failure (different from ENOTFOUND)
+	"ETIMEDOUT", // OS-level connect timeout
+	"EHOSTUNREACH",
+	"ENETUNREACH",
+	"EAI_FAIL",
+	"UND_ERR_SOCKET", // undici "other side closed"
+	"UND_ERR_CLOSED",
+	"UND_ERR_BODY_TIMEOUT",
+	"UND_ERR_HEADERS_TIMEOUT",
+	// Note: UND_ERR_CONNECT_TIMEOUT is intentionally absent — that case is
+	// handled separately by `isCloudflareAPIConnectionTimeoutError` for
+	// Cloudflare-API URLs (the user gets a more specific message), and is
+	// otherwise allowed through (timeouts to the user's own endpoints can
+	// indicate real bugs).
+]);
+const TRANSIENT_NETWORK_ERROR_CLASSES = new Set([
+	"ConnectTimeoutError",
+	"SocketError",
+	"BodyTimeoutError",
+	"HeadersTimeoutError",
+]);
+const TRANSIENT_NETWORK_ERROR_MESSAGE_PATTERNS = [
+	"Client network socket disconnected before secure TLS connection was established",
+	"other side closed",
+];
+function isTransientNetworkError(e: unknown): boolean {
+	return (
+		visitErrorOrCause(e, (err) => {
+			if (err === null || typeof err !== "object") {
+				return undefined;
+			}
+			if (
+				"code" in err &&
+				typeof (err as { code: unknown }).code === "string" &&
+				TRANSIENT_NETWORK_ERROR_CODES.has((err as { code: string }).code)
+			) {
+				return true;
+			}
+			if (
+				err instanceof Error &&
+				err.constructor?.name &&
+				TRANSIENT_NETWORK_ERROR_CLASSES.has(err.constructor.name)
+			) {
+				return true;
+			}
+			if (err instanceof Error) {
+				const message = err.message;
+				if (
+					TRANSIENT_NETWORK_ERROR_MESSAGE_PATTERNS.some((m) =>
+						message.includes(m)
+					)
+				) {
+					return true;
+				}
+			}
+			return undefined;
+		}) === true
+	);
+}
+
+/**
+ * Writes to a closed pipe or socket (EPIPE / EOF / ECONNRESET-on-write)
+ * happen when the peer closes a stream while we still have writes in
+ * flight. Common causes: workerd dying with a separate (real) error and
+ * us trying to flush stderr to it, the user `Ctrl+C`-ing the terminal
+ * while wrangler streams to stdout, the user doing `wrangler tail | head`.
+ *
+ * These are never Wrangler bugs — the pipe/socket close already happened
+ * for some other reason and the underlying error (if any) will surface
+ * separately.
+ */
+const BENIGN_WRITE_ERROR_CODES = new Set([
+	"EPIPE",
+	"EOF",
+	"ERR_STREAM_WRITE_AFTER_END",
+	"ERR_STREAM_DESTROYED",
+]);
+function isBenignWriteError(e: unknown): boolean {
+	return (
+		visitErrorOrCause(e, (err) => {
+			if (err === null || typeof err !== "object") {
+				return undefined;
+			}
+			const code = "code" in err ? (err as { code: unknown }).code : undefined;
+			if (typeof code === "string" && BENIGN_WRITE_ERROR_CODES.has(code)) {
+				return true;
+			}
+			// `read ECONNRESET` is a transient network error; only `write ECONNRESET`
+			// (peer closed during our send) is benign-write.
+			if (
+				typeof code === "string" &&
+				code === "ECONNRESET" &&
+				"syscall" in err &&
+				(err as { syscall: unknown }).syscall === "write"
+			) {
+				return true;
+			}
+			return undefined;
+		}) === true
+	);
 }
 
 /**
@@ -235,42 +394,82 @@ function isCloudflareAPIConnectionTimeoutError(e: unknown): boolean {
  * @returns `true` if the error is a network fetch failure, `false` otherwise
  */
 function isNetworkFetchFailedError(e: unknown): boolean {
-	if (e instanceof TypeError) {
-		const message = e.message;
-		if (message.includes("fetch failed")) {
-			return true;
-		}
-	}
-
-	return false;
+	return (
+		visitErrorOrCause(e, (err) => {
+			if (err instanceof TypeError && err.message.includes("fetch failed")) {
+				return true;
+			}
+			return undefined;
+		}) === true
+	);
 }
 
 /**
  * Is this a Containers/Cloudchamber-based auth error?
  *
- * Containers uses custom OpenAPI-based generated client that throws an error that has a different structure to standard cfetch auth errors.
+ * Containers uses custom OpenAPI-based generated client that throws an error
+ * with a different structure to standard cfetch auth errors. We accept either
+ * a 401 or 403 because both indicate the user's credentials are insufficient.
  */
 function isContainersAuthenticationError(e: unknown): e is UserError {
 	return (
-		e instanceof UserError &&
-		e.cause instanceof ApiError &&
-		e.cause.status === 403
+		visitErrorOrCause(e, (err) => {
+			if (
+				err instanceof ApiError &&
+				(err.status === 401 || err.status === 403)
+			) {
+				return true;
+			}
+			return undefined;
+		}) === true
 	);
 }
 
 /**
- * @returns whether `e` is a standard Cloudflare API authentication error
+ * @returns whether `e` is a standard Cloudflare API authentication error.
+ *
+ * The legacy fingerprint is `ParseError` + `code === 10000`, but the auth
+ * stack returns several different envelope codes (10000, 9109, 10001, ...)
+ * with the same "Authentication error" semantic. Accept any 401/403 from
+ * a `ParseError` or `APIError`, plus the historical code-10000 case for
+ * non-status errors.
  */
 export function isAuthenticationError(e: unknown): e is ParseError {
-	return e instanceof ParseError && (e as { code?: number }).code === 10000;
+	return (
+		visitErrorOrCause(e, (err) => {
+			if (err instanceof ParseError) {
+				if ((err as { code?: number }).code === 10000) {
+					return true;
+				}
+				const status = (err as { status?: number }).status;
+				if (status === 401 || status === 403) {
+					return true;
+				}
+			}
+			if (err instanceof APIError) {
+				const status = (err as { status?: number }).status;
+				if (status === 401 || status === 403) {
+					return true;
+				}
+			}
+			return undefined;
+		}) === true
+	);
 }
 
 /**
  * Determines the error type for telemetry purposes, or `undefined` if it cannot be determined.
+ *
+ * Order matters: more specific predicates run before more generic ones so that
+ * (e.g.) a Cloudflare-API connection timeout is reported as `ConnectionTimeout`
+ * rather than the generic `TransientNetworkError`.
  */
 export function getErrorType(e: unknown): string | undefined {
 	if (isCloudflareAPIDNSError(e)) {
 		return "DNSError";
+	}
+	if (isCloudflareAPIConnectionTimeoutError(e)) {
+		return "ConnectionTimeout";
 	}
 	if (isPermissionError(e)) {
 		return "PermissionError";
@@ -278,8 +477,17 @@ export function getErrorType(e: unknown): string | undefined {
 	if (isFileNotFoundError(e)) {
 		return "FileNotFoundError";
 	}
-	if (isCloudflareAPIConnectionTimeoutError(e)) {
-		return "ConnectionTimeout";
+	if (isFileSystemEnvError(e)) {
+		return "FileSystemEnvError";
+	}
+	if (isBenignWriteError(e)) {
+		return "BenignWriteError";
+	}
+	if (isCertificateError(e)) {
+		return "CertificateError";
+	}
+	if (isTransientNetworkError(e)) {
+		return "TransientNetworkError";
 	}
 	if (isAuthenticationError(e) || isContainersAuthenticationError(e)) {
 		return "AuthenticationError";
@@ -305,13 +513,52 @@ export async function handleError(
 
 	logger.log(""); // Just adds a bit of space
 
+	// Unwrap StartDevEnv error envelopes early so all downstream predicates see
+	// the underlying user-recognisable error.
+	if (
+		e &&
+		typeof e === "object" &&
+		"type" in e &&
+		(e as { type?: unknown }).type === "error" &&
+		"cause" in e &&
+		(e as { cause?: unknown }).cause instanceof Error
+	) {
+		loggableException = (e as { cause: Error }).cause;
+	}
+
 	// Log a helpful warning for SSL certificate errors caused by corporate proxies/VPNs
 	if (isCertificateError(e)) {
+		mayReport = false;
 		logger.warn(
 			"Wrangler detected that a corporate proxy or VPN might be enabled on your machine, " +
 				"resulting in API calls failing due to a certificate mismatch. " +
 				"It is likely that you need to install the missing system roots provided by your corporate proxy vendor."
 		);
+	}
+
+	// Filter benign write-side stream errors (EPIPE/EOF/ECONNRESET-on-write).
+	// These are never Wrangler bugs — the underlying cause has already
+	// produced its own error somewhere else.
+	if (isBenignWriteError(e)) {
+		mayReport = false;
+		logger.debug(`Benign write error: ${e}`);
+	}
+
+	// Filter unactionable filesystem environment errors
+	// (EBUSY, EISDIR, ENOTDIR, EEXIST, ENOSPC, EMFILE, ENAMETOOLONG, EROFS, ELOOP, ...)
+	if (isFileSystemEnvError(e)) {
+		mayReport = false;
+		const message = e instanceof Error ? e.message : String(e);
+		logger.error(dedent`
+			A filesystem error occurred.
+
+			${message}
+
+			This is typically caused by your environment (disk full, file locked
+			by another process, system limits reached, read-only mount, etc.) and
+			is not a Wrangler bug.
+		`);
+		return;
 	}
 
 	// Handle DNS resolution errors to Cloudflare API with a user-friendly message
@@ -443,6 +690,25 @@ export async function handleError(
 		return;
 	}
 
+	// Filter transient network errors (ECONNRESET, ETIMEDOUT, EAI_AGAIN,
+	// SocketError "other side closed", TLS pre-handshake disconnects).
+	// Runs after `isCloudflareAPIConnectionTimeoutError` so that connection
+	// timeouts to Cloudflare's API get the more specific message.
+	if (isTransientNetworkError(e)) {
+		mayReport = false;
+		logger.error(dedent`
+			A network request failed due to a transient connectivity issue.
+
+			Common causes:
+			  - Intermittent internet connection
+			  - Captive portal / corporate proxy interfering with TLS
+			  - Server-side connection reset
+
+			Please check your network connection and try again.
+		`);
+		return;
+	}
+
 	// Handle generic "fetch failed" / "Failed to fetch" network errors
 	if (isNetworkFetchFailedError(e)) {
 		mayReport = false;
@@ -571,25 +837,19 @@ export async function handleError(
 		const error = new APIError({
 			text: `A request to the Cloudflare API failed.`,
 			notes: [...e.errors.map((err) => ({ text: renderError(err) }))],
+			status: e.status,
 			telemetryMessage: false,
 		});
+		// 4xx responses are user errors (bad credentials, missing perms, wrong
+		// resource id, malformed input). Don't report to Sentry.
+		if (typeof e.status === "number" && e.status >= 400 && e.status < 500) {
+			error.preventReport();
+		}
 		error.notes.push({
 			text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 		});
 		logger.error(error);
 	} else {
-		if (
-			// Is this a StartDevEnv error event? If so, unwrap the cause, which is usually the user-recognisable error
-			e &&
-			typeof e === "object" &&
-			"type" in e &&
-			e.type === "error" &&
-			"cause" in e &&
-			e.cause instanceof Error
-		) {
-			loggableException = e.cause;
-		}
-
 		logger.error(
 			loggableException instanceof Error
 				? loggableException.message
@@ -599,7 +859,7 @@ export async function handleError(
 			logger.debug(loggableException.stack);
 		}
 
-		if (!(loggableException instanceof UserError)) {
+		if (!isUserErrorLike(loggableException)) {
 			await logPossibleBugMessage();
 		}
 	}
@@ -607,8 +867,9 @@ export async function handleError(
 	if (
 		// Only report the error if we didn't just handle it
 		mayReport &&
-		// ...and it's not a user error
-		!(loggableException instanceof UserError) &&
+		// ...and it's not a user error (UserError, cross-bundle UserError, or
+		// MiniflareError.isUserError())
+		!isUserErrorLike(loggableException) &&
 		// ...and it's not an un-reportable API error
 		!(loggableException instanceof APIError && !loggableException.reportable)
 	) {

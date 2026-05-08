@@ -150,11 +150,15 @@ export const init = createCommand({
 				await childProcess;
 			} catch (e: unknown) {
 				const execaError = e as ExecaError;
-				throw new Error(execaError.shortMessage, {
-					// We include the execaError as the cause, in this way this
-					// will be reflected in Sentry allowing us to better monitor
-					// C3 errors
+				// C3 (the create-cloudflare CLI) is responsible for handling its
+				// own errors and printing useful diagnostics for the user. By the
+				// time we get here, C3 has already piped its stderr to the user's
+				// terminal. Wrap the failure as a UserError so we don't report
+				// thousands of npm/pnpm/yarn warnings and Windows libuv asserts
+				// to Sentry as fake "Wrangler crashes".
+				throw new UserError(execaError.shortMessage, {
 					cause: execaError,
+					telemetryMessage: "init c3 delegation failed",
 				});
 			}
 		}

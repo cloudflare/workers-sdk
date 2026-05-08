@@ -1,4 +1,5 @@
 import path from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
@@ -59,9 +60,20 @@ export async function startRemoteProxySession(
 				errorMessage = startWorkerError.message;
 			}
 		}
-		throw new Error(
-			`Failed to start the remote proxy session, see the error details below:\n\n${errorMessage}`
-		);
+		const ErrorClass =
+			startWorkerError instanceof UserError ||
+			(startWorkerError instanceof Error &&
+				startWorkerError.cause instanceof UserError)
+				? UserError
+				: Error;
+		const message = `Failed to start the remote proxy session, see the error details below:\n\n${errorMessage}`;
+		if (ErrorClass === UserError) {
+			throw new UserError(message, {
+				cause: startWorkerError,
+				telemetryMessage: "remote proxy session start failed",
+			});
+		}
+		throw new Error(message, { cause: startWorkerError });
 	});
 
 	const maybeErrorPromise = new DeferredPromise<{ error: unknown }>();
@@ -76,12 +88,23 @@ export async function startRemoteProxySession(
 	]);
 
 	if (maybeError && maybeError.error) {
-		throw new Error(
-			"Failed to start the remote proxy session. There is likely additional logging output above.",
-			{
+		const ErrorClass =
+			maybeError.error instanceof UserError ||
+			(maybeError.error instanceof Error &&
+				maybeError.error.cause instanceof UserError)
+				? UserError
+				: Error;
+
+		const message = `Failed to start the remote proxy session. There is likely additional logging output above.`;
+		if (ErrorClass === UserError) {
+			throw new UserError(message, {
 				cause: maybeError.error,
-			}
-		);
+				telemetryMessage: "remote proxy session worker error",
+			});
+		}
+		throw new Error(message, {
+			cause: maybeError.error,
+		});
 	}
 
 	const remoteProxyConnectionString =
