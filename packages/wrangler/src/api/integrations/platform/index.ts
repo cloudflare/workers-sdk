@@ -9,7 +9,7 @@ import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
-import { getBindings } from "../../../dev";
+import { getBindings, getInferredHost } from "../../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../../dev/class-names-sqlite";
 import {
 	buildAssetOptions,
@@ -349,6 +349,17 @@ export interface Unstable_MiniflareWorkerOptions {
 	externalWorkers: WorkerOptions[];
 }
 
+function getMiniflareZone(config: Config): string | undefined {
+	if (config.dev.host) {
+		return config.dev.host;
+	}
+
+	return getInferredHost(
+		(config.route && [config.route]) || config.routes,
+		config.configPath
+	);
+}
+
 export function unstable_getMiniflareWorkerOptions(
 	configPath: string,
 	env?: string,
@@ -461,6 +472,7 @@ export function unstable_getMiniflareWorkerOptions(
 		compatibilityDate: config.compatibility_date,
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
+		zone: getMiniflareZone(config),
 		containerEngine: useContainers
 			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
 			: undefined,
