@@ -1,5 +1,24 @@
 # wrangler
 
+## 4.90.0
+
+### Minor Changes
+
+- [#12279](https://github.com/cloudflare/workers-sdk/pull/12279) [`248bc08`](https://github.com/cloudflare/workers-sdk/commit/248bc08152cf9f792d98c8c78f8fb1417b1bb3b3) Thanks [@penalosa](https://github.com/penalosa)! - Add deprecation warning for `delivery_delay` in queue producer bindings
+
+  The `delivery_delay` setting in `[[queues.producers]]` was silently having no effect since 2024. This change adds a deprecation warning when the setting is used, informing users that queue-level settings should be configured using `wrangler queues update` instead. The setting will be removed in a future version.
+
+### Patch Changes
+
+- [#13853](https://github.com/cloudflare/workers-sdk/pull/13853) [`8852b0c`](https://github.com/cloudflare/workers-sdk/commit/8852b0cdf08af0575330cf181c53cd42edf49b9b) Thanks [@gpanders](https://github.com/gpanders)! - Fix Containers SSH config
+
+- [#13858](https://github.com/cloudflare/workers-sdk/pull/13858) [`e414e56`](https://github.com/cloudflare/workers-sdk/commit/e414e562c85521e8538689ac37b0cb36915d565e) Thanks [@penalosa](https://github.com/penalosa)! - Fix `wrangler whoami` and account selection failing for Account API Tokens
+
+  The `/memberships` fallback for Account API Tokens was checking for code 9109, but `/memberships` actually returns 9106 for that case. Correct the code so the fallback to `/accounts` triggers as intended.
+
+- Updated dependencies []:
+  - miniflare@4.20260507.1
+
 ## 4.89.1
 
 ### Patch Changes
