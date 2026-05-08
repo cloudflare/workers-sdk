@@ -1,6 +1,6 @@
 import { error, logRaw, setLogLevel } from "@cloudflare/cli-shared-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { Logger } from "../logger";
+import { Logger, shouldLogToDisk } from "../logger";
 import { mockCLIOutput } from "./helpers/mock-cli-output";
 import { mockConsoleMethods } from "./helpers/mock-console";
 
@@ -336,5 +336,41 @@ describe("logger", () => {
 				`"╰  ERROR  This is an error message\n"`
 			);
 		});
+	});
+});
+
+describe("shouldLogToDisk", () => {
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it("should return false in test environments by default", ({ expect }) => {
+		expect(shouldLogToDisk()).toBe(false);
+	});
+
+	it("should return true outside test environments when WRANGLER_LOG_DISK is not set", ({
+		expect,
+	}) => {
+		expect(shouldLogToDisk(false)).toBe(true);
+	});
+
+	it("should return false when WRANGLER_LOG_DISK=false", ({ expect }) => {
+		vi.stubEnv("WRANGLER_LOG_DISK", "false");
+		expect(shouldLogToDisk(false)).toBe(false);
+	});
+
+	it("should be case-insensitive (WRANGLER_LOG_DISK=FALSE)", ({ expect }) => {
+		vi.stubEnv("WRANGLER_LOG_DISK", "FALSE");
+		expect(shouldLogToDisk(false)).toBe(false);
+	});
+
+	it("should return false when WRANGLER_LOG_DISK=0", ({ expect }) => {
+		vi.stubEnv("WRANGLER_LOG_DISK", "0");
+		expect(shouldLogToDisk(false)).toBe(false);
+	});
+
+	it("should return true for any other value", ({ expect }) => {
+		vi.stubEnv("WRANGLER_LOG_DISK", "true");
+		expect(shouldLogToDisk(false)).toBe(true);
 	});
 });

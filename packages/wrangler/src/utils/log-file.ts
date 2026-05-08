@@ -1,4 +1,5 @@
-import { appendFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { appendFile, readdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 import {
@@ -38,8 +39,51 @@ function getDebugFilepath() {
 	return path.resolve(filepath);
 }
 
+/**
+ * Deletes wrangler-*.log files older than 30 days from the given log directory.
+ * Runs silently — errors are ignored so startup is never blocked by log cleanup.
+ */
+export async function cleanupOldLogFiles(logsDir: string): Promise<void> {
+	if (!existsSync(logsDir)) {
+		return;
+	}
+
+	const maxAgeDays = 30;
+	const cutoffMs = maxAgeDays * 24 * 60 * 60 * 1000;
+	try {
+		const files = await readdir(logsDir);
+		const now = Date.now();
+		for (const f of files.filter(
+			(f) => f.startsWith("wrangler-") && f.endsWith(".log")
+		)) {
+			const filePath = path.join(logsDir, f);
+			try {
+				const fileStat = await stat(filePath);
+				if (now - fileStat.mtimeMs > cutoffMs) {
+					await unlink(filePath);
+				}
+			} catch {
+				// silently ignore errors for individual files
+			}
+		}
+	} catch {
+		// silently ignore errors
+	}
+}
+
 export const debugLogFilepath = getDebugFilepath();
 const mutex = new Mutex();
+
+let hasStartedLogCleanup = false;
+
+export function tryCleanupLogs(): void {
+	const debugFileDir = getDebugFileDir();
+	if (hasStartedLogCleanup || debugFileDir.endsWith(".log")) {
+		return;
+	}
+	hasStartedLogCleanup = true;
+	void cleanupOldLogFiles(debugFileDir);
+}
 
 let hasLoggedLocation = false;
 let hasLoggedError = false;
@@ -52,6 +96,8 @@ export async function appendToDebugLogFile(
 	messageLevel: LoggerLevel,
 	message: string
 ) {
+	tryCleanupLogs();
+
 	const entry = `
 --- ${new Date().toISOString()} ${messageLevel}
 ${stripVTControlCharacters(message)}
