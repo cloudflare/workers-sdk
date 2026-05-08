@@ -205,7 +205,7 @@ export async function startDev(args: StartDevOptions) {
 		return {
 			devEnv: primaryDevEnv,
 			secondary,
-			unregisterHotKeys,
+			unregisterHotKeys: () => unregisterHotKeys?.(),
 		};
 	} catch (e) {
 		await Promise.allSettled([
