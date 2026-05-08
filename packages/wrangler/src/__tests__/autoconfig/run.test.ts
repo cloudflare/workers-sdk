@@ -335,6 +335,51 @@ describe("autoconfig (deploy)", () => {
 			expect(existsSync(".assetsignore")).toBeFalsy();
 		});
 
+		it("passes the detected build command to framework configure and runs the returned build override", async ({
+			expect,
+		}) => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+
+			const configureSpy = vi.fn(
+				async () =>
+					({
+						wranglerConfig: {
+							assets: { directory: "dist" },
+						},
+						buildCommandOverride: "echo 'override' > build.txt",
+					}) satisfies ReturnType<Framework["configure"]>
+			);
+
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				buildCommand: "echo 'original' > build.txt",
+				configured: false,
+				workerName: "my-worker",
+				framework: {
+					id: "static",
+					name: "Static",
+					configure: configureSpy,
+					isConfigured: () => false,
+				} as unknown as Framework,
+				outputDir: "dist",
+				packageManager: NpmPackageManager,
+			});
+
+			expect(configureSpy).toHaveBeenCalledWith(
+				expect.objectContaining({
+					buildCommand: "echo 'original' > build.txt",
+				})
+			);
+			expect(readFileSync("build.txt")).toContain("override");
+		});
+
 		it("new gitignore should not have leading empty lines", async ({
 			expect,
 		}) => {

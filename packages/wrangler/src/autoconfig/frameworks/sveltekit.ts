@@ -1,4 +1,5 @@
-import { writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
@@ -10,8 +11,10 @@ import type {
 
 export class SvelteKit extends Framework {
 	async configure({
+		buildCommand,
 		dryRun,
 		packageManager,
+		projectPath,
 		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const { dlx } = packageManager;
@@ -51,8 +54,20 @@ export class SvelteKit extends Framework {
 					directory: ".svelte-kit/cloudflare",
 				},
 			},
+			...(buildCommand && hasTypeConfig(projectPath)
+				? {
+						buildCommandOverride: `${packageManager.npx} wrangler types && ${buildCommand}`,
+					}
+				: {}),
 		};
 	}
 
 	configurationDescription = 'Configuring project for SvelteKit with "sv add"';
+}
+
+function hasTypeConfig(projectPath: string): boolean {
+	return (
+		existsSync(join(projectPath, "tsconfig.json")) ||
+		existsSync(join(projectPath, "jsconfig.json"))
+	);
 }

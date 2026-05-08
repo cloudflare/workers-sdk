@@ -91,6 +91,7 @@ export type ConfigurationOptions = {
 	outputDir: string;
 	projectPath: string;
 	workerName: string;
+	buildCommand?: string;
 	dryRun: boolean;
 	packageManager: PackageManager;
 	isWorkspaceRoot: boolean;
