@@ -220,7 +220,9 @@ describe("versions secret delete", () => {
 			mockGetVersion(expect);
 			mockPostVersion(expect);
 
-			await runWrangler('versions secret delete SECRET --name script-name --env=""');
+			await runWrangler(
+				'versions secret delete SECRET --name script-name --env=""'
+			);
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});

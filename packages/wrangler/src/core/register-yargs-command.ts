@@ -199,8 +199,11 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				});
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
-					if (!isRedirectedConfig(config) && config.targetEnvironment === undefined) {
-						const availableEnvsCount = config.definedEnvironments?.length ?? 0
+					if (
+						!isRedirectedConfig(config) &&
+						config.targetEnvironment === undefined
+					) {
+						const availableEnvsCount = config.definedEnvironments?.length ?? 0;
 
 						if (availableEnvsCount > 0) {
 							logger.warn(

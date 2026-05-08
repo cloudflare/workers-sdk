@@ -1641,7 +1641,9 @@ describe("wrangler secret", () => {
 
 				mockBulkRequest(expect);
 
-				await runWrangler('secret bulk ./secret.json --name script-name --env=""');
+				await runWrangler(
+					'secret bulk ./secret.json --name script-name --env=""'
+				);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
