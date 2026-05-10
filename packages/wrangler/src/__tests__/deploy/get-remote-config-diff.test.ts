@@ -356,7 +356,7 @@ describe("getRemoteConfigsDiff", () => {
 				pipelines: [
 					{
 						binding: "MY_PIPELINE",
-						stream: "my-pipeline",
+						pipeline: "my-pipeline",
 					},
 				],
 				vectorize: [
@@ -482,7 +482,7 @@ describe("getRemoteConfigsDiff", () => {
 				pipelines: [
 					{
 						binding: "MY_PIPELINE",
-						stream: "my-pipeline",
+						pipeline: "my-pipeline",
 						remote: true,
 					},
 				],

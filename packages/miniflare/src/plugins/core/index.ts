@@ -26,6 +26,7 @@ import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
+import { IMAGES_PLUGIN_NAME } from "../images";
 import {
 	getUserBindingServiceName,
 	kUnsafeEphemeralUniqueKey,
@@ -308,6 +309,11 @@ export const CoreSharedOptionsSchema = z
 		unsafeStickyBlobs: z.boolean().optional(),
 		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/handler/scheduled`
 		unsafeTriggerHandlers: z.boolean().optional(),
+		// Extra environment variables to set on the spawned `workerd` subprocess.
+		// Merged on top of `process.env` and Miniflare's own defaults
+		// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults
+		// (for example, to test timezone-dependent behaviour).
+		unsafeRuntimeEnv: z.record(z.string()).optional(),
 		// Enable the local explorer at /cdn-cgi/explorer
 		unsafeLocalExplorer: z.boolean().optional(),
 		// Enable logging requests
@@ -1086,6 +1092,22 @@ export function getGlobalServices({
 			service: {
 				name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
 				entrypoint: "StreamBinding",
+			},
+		});
+	}
+	const imagesBinding = allWorkerOpts
+		?.map((worker) => worker.images?.images)
+		.find(
+			(images) => images !== undefined && !images.remoteProxyConnectionString
+		);
+	if (imagesBinding) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_IMAGES_DELIVERY,
+			service: {
+				name: getUserBindingServiceName(
+					IMAGES_PLUGIN_NAME,
+					imagesBinding.binding
+				),
 			},
 		});
 	}

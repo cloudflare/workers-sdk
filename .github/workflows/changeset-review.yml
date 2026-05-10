@@ -56,7 +56,7 @@ jobs:
           DELETED_FILES: ${{ steps.changed-changesets.outputs.deleted_files }}
           ADDED_FILES: ${{ steps.changed-changesets.outputs.added_files }}
         run: |
-          opencode --model "cloudflare-ai-gateway/workers-ai/@cf/moonshotai/kimi-k2.5" run --print-logs \
+          opencode --model "cloudflare-ai-gateway/workers-ai/@cf/moonshotai/kimi-k2.6" run --print-logs \
             "Review the changeset files in this PR.
 
             For \"Version Packages\" PRs, review: ${DELETED_FILES}

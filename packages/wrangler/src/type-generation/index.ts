@@ -220,7 +220,9 @@ export const typesCommand = createCommand({
 				config,
 				envInterface,
 				outputPath,
-				secondaryEntries
+				secondaryEntries,
+				args.envFile,
+				args.env
 			);
 			if (outOfDate) {
 				throw new FatalError(
@@ -2733,21 +2735,19 @@ function collectAllUnsafeBindings(
  *
  * @param args - All the CLI arguments passed to the `types` command
  *
- * @returns An array of collected pipeline bindings with their names and stream IDs.
+ * @returns An array of collected pipeline bindings with their names and pipeline IDs.
  */
 function collectAllPipelines(
 	args: Partial<(typeof typesCommand)["args"]>
 ): Array<{
 	binding: string;
-	stream?: string;
-	pipeline?: string;
+	pipeline: string;
 }> {
 	const pipelinesMap = new Map<
 		string,
 		{
 			binding: string;
-			stream?: string;
-			pipeline?: string;
+			pipeline: string;
 		}
 	>();
 
@@ -2771,13 +2771,13 @@ function collectAllPipelines(
 				});
 			}
 
-			if (!pipeline.stream && !pipeline.pipeline) {
+			if (!pipeline.pipeline) {
 				throwMissingBindingError({
 					binding: pipeline,
 					bindingType: "pipelines",
 					configPath: args.config,
 					envName,
-					fieldName: "stream",
+					fieldName: "pipeline",
 					index,
 				});
 			}
@@ -2788,7 +2788,6 @@ function collectAllPipelines(
 
 			pipelinesMap.set(pipeline.binding, {
 				binding: pipeline.binding,
-				stream: pipeline.stream,
 				pipeline: pipeline.pipeline,
 			});
 		}
@@ -3883,14 +3882,14 @@ function collectPipelinesPerEnvironment(
 	string,
 	Array<{
 		binding: string;
-		stream: string;
+		pipeline: string;
 	}>
 > {
 	const result = new Map<
 		string,
 		Array<{
 			binding: string;
-			stream: string;
+			pipeline: string;
 		}>
 	>();
 
@@ -3899,11 +3898,11 @@ function collectPipelinesPerEnvironment(
 		envName: string
 	): Array<{
 		binding: string;
-		stream: string;
+		pipeline: string;
 	}> {
 		const pipelines = new Array<{
 			binding: string;
-			stream: string;
+			pipeline: string;
 		}>();
 
 		if (!env?.pipelines) {
@@ -3922,22 +3921,20 @@ function collectPipelinesPerEnvironment(
 				});
 			}
 
-			const stream = pipeline.stream || pipeline.pipeline;
-			if (!stream) {
+			if (!pipeline.pipeline) {
 				throwMissingBindingError({
 					binding: pipeline,
 					bindingType: "pipelines",
 					configPath: args.config,
 					envName,
-					fieldName: "stream",
+					fieldName: "pipeline",
 					index,
 				});
 			}
 
 			pipelines.push({
 				binding: pipeline.binding,
-				// eslint-disable-next-line no-non-null-assertion -- we asserted above that stream is not null|undefined
-				stream: stream!,
+				pipeline: pipeline.pipeline,
 			});
 		}
 

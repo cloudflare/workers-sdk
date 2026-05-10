@@ -25,7 +25,7 @@ const MOCK_INSTANCE = {
 	type: "r2",
 	status: "active",
 	namespace: "default",
-	ai_search_model: "@cf/meta/llama-3-8b",
+	ai_search_model: "@cf/google/gemma-4-26b-a4b-it",
 	embedding_model: "@cf/bge-base-en-v1.5",
 };
 
@@ -309,7 +309,7 @@ describe("ai-search commands", () => {
 				)
 			);
 			await runWrangler(
-				"ai-search create my-instance --namespace default --type r2 --source my-bucket --embedding-model @cf/bge-base-en-v1.5 --generation-model @cf/meta/llama-3-8b --chunk-size 512 --chunk-overlap 64 --max-num-results 10 --reranking --hybrid-search --cache --score-threshold 0.5"
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --embedding-model @cf/bge-base-en-v1.5 --generation-model @cf/google/gemma-4-26b-a4b-it --chunk-size 512 --chunk-overlap 64 --max-num-results 10 --reranking --hybrid-search --cache --score-threshold 0.5"
 			);
 			expect(capturedNamespace).toBe("default");
 			expect(capturedBody).toMatchObject({
@@ -317,7 +317,7 @@ describe("ai-search commands", () => {
 				source: "my-bucket",
 				type: "r2",
 				embedding_model: "@cf/bge-base-en-v1.5",
-				ai_search_model: "@cf/meta/llama-3-8b",
+				ai_search_model: "@cf/google/gemma-4-26b-a4b-it",
 				chunk_size: 512,
 				chunk_overlap: 64,
 				max_num_results: 10,

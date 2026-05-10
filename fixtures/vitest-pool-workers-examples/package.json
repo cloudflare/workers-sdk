@@ -31,6 +31,7 @@
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vitest": "catalog:default",
+		"wasm-module-dep": "file:./module-resolution/vendor/wasm-module-dep",
 		"wrangler": "workspace:*"
 	}
 }
