@@ -54,7 +54,8 @@ export async function cleanupOldLogFiles(logsDir: string): Promise<void> {
 		const files = await readdir(logsDir);
 		const now = Date.now();
 		for (const f of files.filter(
-			(f) => f.startsWith("wrangler-") && f.endsWith(".log")
+			(filename) =>
+				filename.startsWith("wrangler-") && filename.endsWith(".log")
 		)) {
 			const filePath = path.join(logsDir, f);
 			try {

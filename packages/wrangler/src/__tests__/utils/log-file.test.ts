@@ -3,11 +3,11 @@ import {
 	mkdirSync,
 	readdirSync,
 	readFileSync,
-	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { utimes } from "node:fs/promises";
 import { join } from "node:path";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { beforeEach, describe, it, vi } from "vitest";
 import {
 	appendToDebugLogFile,
@@ -180,7 +180,7 @@ describe("cleanupOldLogFiles", () => {
 		expect,
 	}) => {
 		if (existsSync("nonexistent-dir")) {
-			rmSync("nonexistent-dir", { recursive: true, force: true });
+			removeDirSync("nonexistent-dir");
 		}
 		await expect(cleanupOldLogFiles("nonexistent-dir")).resolves.not.toThrow();
 	});
