@@ -86,6 +86,10 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 	 * - RuntimeController emits devRegistryUpdate → ConfigController
 	 * - ProxyController emits previewTokenExpired → RuntimeControllers
 	 * - Any controller emits error → DevEnv error handler
+	 *
+	 * `reloadComplete` is also re-emitted as an external EventEmitter event
+	 * (`devEnv.on("reloadComplete", ...)`) so callers like
+	 * `RemoteProxySession.updateBindings` can wait for the reload to finish.
 	 */
 	dispatch(event: ControllerEvent): void {
 		switch (event.type) {
@@ -117,6 +121,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 
 			case "reloadComplete":
 				this.proxy.onReloadComplete(event);
+				this.emit("reloadComplete", event);
 				break;
 
 			case "devRegistryUpdate":
