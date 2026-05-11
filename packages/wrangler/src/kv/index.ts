@@ -430,9 +430,7 @@ const putCommonArgs = {
 			try {
 				return JSON.parse(jsonStr);
 			} catch {
-				throw new Error(
-					`--metadata must be valid JSON. Received: ${jsonStr}`
-				);
+				throw new Error(`--metadata must be valid JSON. Received: ${jsonStr}`);
 			}
 		},
 	},
