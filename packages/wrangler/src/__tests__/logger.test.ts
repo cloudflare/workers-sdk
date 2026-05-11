@@ -348,29 +348,29 @@ describe("shouldLogToDisk", () => {
 		expect(shouldLogToDisk()).toBe(false);
 	});
 
-	it("should return true outside test environments when WRANGLER_LOG_DISK is not set", ({
+	it("should return true outside test environments when WRANGLER_WRITE_LOGS is not set", ({
 		expect,
 	}) => {
 		expect(shouldLogToDisk(false)).toBe(true);
 	});
 
-	it("should return false when WRANGLER_LOG_DISK=false", ({ expect }) => {
-		vi.stubEnv("WRANGLER_LOG_DISK", "false");
+	it("should return false when WRANGLER_WRITE_LOGS=false", ({ expect }) => {
+		vi.stubEnv("WRANGLER_WRITE_LOGS", "false");
 		expect(shouldLogToDisk(false)).toBe(false);
 	});
 
-	it("should be case-insensitive (WRANGLER_LOG_DISK=FALSE)", ({ expect }) => {
-		vi.stubEnv("WRANGLER_LOG_DISK", "FALSE");
+	it("should be case-insensitive (WRANGLER_WRITE_LOGS=FALSE)", ({ expect }) => {
+		vi.stubEnv("WRANGLER_WRITE_LOGS", "FALSE");
 		expect(shouldLogToDisk(false)).toBe(false);
 	});
 
-	it("should return false when WRANGLER_LOG_DISK=0", ({ expect }) => {
-		vi.stubEnv("WRANGLER_LOG_DISK", "0");
+	it("should return false when WRANGLER_WRITE_LOGS=0", ({ expect }) => {
+		vi.stubEnv("WRANGLER_WRITE_LOGS", "0");
 		expect(shouldLogToDisk(false)).toBe(false);
 	});
 
 	it("should return true for any other value", ({ expect }) => {
-		vi.stubEnv("WRANGLER_LOG_DISK", "true");
+		vi.stubEnv("WRANGLER_WRITE_LOGS", "true");
 		expect(shouldLogToDisk(false)).toBe(true);
 	});
 });
