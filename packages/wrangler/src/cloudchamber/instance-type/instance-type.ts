@@ -1,8 +1,8 @@
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { UserError } from "@cloudflare/workers-utils";
+import { InstanceType } from "@cloudflare/containers-shared";
 import type {
 	CreateApplicationRequest,
-	InstanceType,
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
 import type {
@@ -149,8 +149,8 @@ export function getInstanceTypeUsage(instanceType: InstanceType): {
 // type configured as the canonical name ("standard-1"). Normalizing ensures
 // the deploy diff doesn't show a phantom EDIT for instance_type.
 const LEGACY_TO_CANONICAL: Record<"dev" | "standard", InstanceType> = {
-	dev: "lite",
-	standard: "standard-1",
+	dev: InstanceType.LITE,
+	standard: InstanceType.STANDARD_1,
 };
 
 // infers the instance type from a given configuration
