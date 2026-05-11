@@ -141,7 +141,7 @@ export function runBuild(
 				entrypointSource = readFileSync(previousBundle.path, "utf8");
 			} catch (e) {
 				// Entry point was deleted or moved between builds — skip this update.
-				logger.warn(
+				logger.once.warn(
 					`Could not read entrypoint "${previousBundle.path}": ${(e as NodeJS.ErrnoException).message}`
 				);
 				return previousBundle;
