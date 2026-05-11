@@ -1,6 +1,6 @@
 export default {
 	async fetch(_req, env) {
-		const content = await env.AI.run("@cf/meta/llama-2-7b-chat-fp16", {
+		const content = await env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
 			messages: [],
 		});
 

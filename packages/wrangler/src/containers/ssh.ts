@@ -344,7 +344,6 @@ export const containersSshCommand = createCommand({
 		description: "SSH into a container",
 		status: "stable",
 		owner: "Product: Cloudchamber",
-		hidden: true,
 	},
 	args: sshArgDefs,
 	positionalArgs: ["ID"],

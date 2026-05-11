@@ -435,14 +435,14 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 				pipelines: [
 					{
 						binding: "PIPELINE",
-						stream: "preserve-e2e-pipelines",
+						pipeline: "preserve-e2e-pipelines",
 						remote: true,
 					},
 				],
 			},
 			expectedProxyWorkerBindings: {
 				PIPELINE: {
-					stream: "preserve-e2e-pipelines",
+					pipeline: "preserve-e2e-pipelines",
 					remote: true,
 					type: "pipeline",
 				},
@@ -451,7 +451,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 				expect.objectContaining({
 					pipelines: {
 						PIPELINE: {
-							stream: "preserve-e2e-pipelines",
+							pipeline: "preserve-e2e-pipelines",
 							remoteProxyConnectionString,
 						},
 					},
