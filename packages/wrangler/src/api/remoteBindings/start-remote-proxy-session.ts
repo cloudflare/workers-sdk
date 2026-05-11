@@ -1,3 +1,4 @@
+import events from "node:events";
 import path from "node:path";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
@@ -97,7 +98,35 @@ export async function startRemoteProxySession(
 				{ ...binding, raw: true },
 			])
 		);
+
+		// `worker.patchConfig` returns as soon as the config update is dispatched
+		// — long before the remote worker has actually been re-uploaded with the
+		// new bindings and the local proxy worker has unpaused. If we returned
+		// here, callers issuing requests immediately afterwards would race the
+		// reload window, often surfacing as "WebSocket connection failed" for
+		// JSRPC bindings.
+		//
+		// Subscribe BEFORE patchConfig so we don't miss either event.
+		// `events.once()` resolves on `reloadComplete` and rejects if `error`
+		// is emitted first (with the event payload as the rejection value).
+		const reloadComplete = events.once(worker.raw, "reloadComplete");
 		await worker.patchConfig({ bindings: rawNewBindings });
+		try {
+			await reloadComplete;
+		} catch (errOrEvent) {
+			throw errOrEvent instanceof Error
+				? errOrEvent
+				: new Error(
+						`RemoteProxySession.updateBindings failed during reload: ${
+							(errOrEvent as { reason?: string })?.reason ?? "unknown"
+						}`,
+						{ cause: errOrEvent }
+					);
+		}
+		// The "play" message that resumes the local proxy worker is enqueued on
+		// this mutex during onReloadComplete. Wait for it to drain so the proxy
+		// actually unpauses before we return — matches what `worker.fetch` does.
+		await worker.raw.proxy.runtimeMessageMutex.drained();
 	};
 
 	return {
