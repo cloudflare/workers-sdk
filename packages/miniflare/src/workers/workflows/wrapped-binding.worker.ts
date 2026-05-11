@@ -93,8 +93,6 @@ class InstanceImpl implements WorkflowInstance {
 		options?: WorkflowInstanceRestartOptions
 	): Promise<void> {
 		using instance = await this.getInstance();
-		// TODO(vaish): remove @ts-expect-error once @cloudflare/workers-types ships restart options
-		// @ts-expect-error WorkflowInstance type does not include options yet
 		await instance.restart(options);
 	}
 
