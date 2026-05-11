@@ -201,11 +201,7 @@
 		// Gradually rolling out require-description-when-disabling.
 		// TODO: Remove the following overrides.
 		{
-			"files": [
-				"packages/quick-edit-extension/**",
-				"packages/vitest-pool-workers/**",
-				"packages/wrangler/**",
-			],
+			"files": ["packages/quick-edit-extension/**", "packages/wrangler/**"],
 			"rules": {
 				"workers-sdk/require-description-when-disabling": "off",
 			},
