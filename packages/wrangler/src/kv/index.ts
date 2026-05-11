@@ -429,7 +429,11 @@ const putCommonArgs = {
 		coerce: (jsonStr: string): KeyValue["metadata"] => {
 			try {
 				return JSON.parse(jsonStr);
-			} catch {}
+			} catch {
+				throw new Error(
+					`--metadata must be valid JSON. Received: ${jsonStr}`
+				);
+			}
 		},
 	},
 	local: {

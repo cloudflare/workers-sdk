@@ -352,6 +352,16 @@ describe("kv", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
+			it("should error if --metadata is not valid JSON", async ({ expect }) => {
+				await expect(
+					runWrangler(
+						`kv key put --remote dKey dVal --namespace-id some-namespace-id --metadata not-valid-json`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: --metadata must be valid JSON. Received: not-valid-json]`
+				);
+			});
+
 			it("should error if no key is provided", async ({ expect }) => {
 				await expect(
 					runWrangler("kv key put")
