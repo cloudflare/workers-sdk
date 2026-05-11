@@ -836,7 +836,7 @@ describe("getNormalizedContainerOptions", () => {
 					image: `${getCloudflareContainerRegistry()}/test:latest`,
 					name: "test-container",
 					max_instances: 3,
-					wrangler_ssh: {
+					ssh: {
 						enabled: true,
 						port: 22,
 					},
