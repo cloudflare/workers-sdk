@@ -183,8 +183,10 @@ Your database may not be available to serve requests during the migration, conti
 				});
 
 				if (response === null) {
-					// TODO:  return error
-					return;
+					throw new UserError(
+						`Migration "${migration.name}" was not applied — execution was cancelled.`,
+						{ telemetryMessage: "d1 migration apply execution cancelled" }
+					);
 				}
 
 				for (const result of response) {
