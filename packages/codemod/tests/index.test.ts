@@ -1,6 +1,6 @@
 import * as recast from "recast";
 import parser from "recast/parsers/babel";
-import {describe, expect, test} from "vitest";
+import {describe, test} from "vitest";
 import {mergeObjectProperties, parseJs, parseTs} from "../src/index";
 
 describe("mergeObjectProperties", () => {
@@ -92,8 +92,8 @@ describe("mergeObjectProperties", () => {
 		expectedPropertiesObject: Record<string, unknown>;
 	}[];
 
-	tests.forEach(({ testName, ...testObjects }) =>
-		test(`${testName}`, ({ expect }) => {
+	tests.forEach(({testName, ...testObjects}) =>
+		test(`${testName}`, ({expect}) => {
 			const {
 				sourcePropertiesObject,
 				newPropertiesObject,
@@ -106,8 +106,8 @@ describe("mergeObjectProperties", () => {
 
 			mergeObjectProperties(sourceObj, newProperties);
 
-			expect(recast.prettyPrint(sourceObj, { parser }).code).toEqual(
-				recast.prettyPrint(expectedObj, { parser }).code
+			expect(recast.prettyPrint(sourceObj, {parser}).code).toEqual(
+				recast.prettyPrint(expectedObj, {parser}).code
 			);
 		})
 	);
@@ -122,7 +122,7 @@ const createObjectExpression = (
 				`const obj = {${Object.entries(sourceObj)
 					.map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
 					.join(",\n")}}`,
-				{ parser }
+				{parser}
 			).program.body[0] as recast.types.namedTypes.VariableDeclaration
 		).declarations[0] as recast.types.namedTypes.VariableDeclarator
 	).init as recast.types.namedTypes.ObjectExpression;
@@ -162,13 +162,13 @@ export default config;
 `;
 
 describe("spread syntax parsing", () => {
-	test("can parse formerly failing svelte config file as TypeScript", () => {
-		const result = parseTs(svConfigWithSpread)
-		expect(result).toBe(result)
-	})
+	test("can parse formerly failing svelte config file as TypeScript", ({ expect }) => {
+		const result = parseTs(svConfigWithSpread);
+		expect(result).toBeDefined();
+	});
 
-	test("can parse formerly failing svelte config file as JavaScript", () => {
-		const result = parseJs(svConfigWithSpread)
-		expect(result).toBe(result)
-	})
+	test("can parse formerly failing svelte config file as JavaScript", ({ expect }) => {
+		const result = parseJs(svConfigWithSpread);
+		expect(result).toBeDefined();
+	});
 })

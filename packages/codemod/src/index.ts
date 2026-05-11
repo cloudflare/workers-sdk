@@ -49,7 +49,12 @@ export function parseTs(src: string) {
 export function parseFile(filePath: string) {
 	const lang = path.extname(filePath).slice(1);
 	const parser = lang === "js" ? parseJs : parseTs;
-	const fileContents = readFileSync(path.resolve(filePath), "utf-8");
+	let fileContents: string
+	try {
+		fileContents = readFileSync(path.resolve(filePath), "utf-8");
+	} catch {
+		throw new Error(`Error reading file ${filePath} for parsing`);
+	}
 
 	if (fileContents) {
 		return parser(fileContents).program as Program;
