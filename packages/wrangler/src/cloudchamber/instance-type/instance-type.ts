@@ -1,6 +1,6 @@
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
-import { UserError } from "@cloudflare/workers-utils";
 import { InstanceType } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
 import type {
 	CreateApplicationRequest,
 	UserDeploymentConfiguration,
