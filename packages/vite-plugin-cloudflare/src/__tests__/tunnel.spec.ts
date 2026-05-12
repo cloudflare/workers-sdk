@@ -12,14 +12,13 @@ import {
 import * as wrangler from "wrangler";
 import { PluginContext } from "../context";
 import {
-	DEV_PUBLIC_EXPOSURE_WARNING,
-	PREVIEW_PUBLIC_EXPOSURE_WARNING,
 	resolveDevTunnelOrigin,
 	setupPreviewTunnel,
 	TunnelManager,
 	setupDevTunnel,
 	tunnelPlugin,
 } from "../plugins/tunnel";
+import type { TunnelConfig } from "../plugin-config";
 import type * as vite from "vite";
 
 vi.mock("@cloudflare/workers-utils");
@@ -27,7 +26,7 @@ vi.mock("wrangler");
 
 function createMockPluginContext(options: {
 	type: "workers" | "preview";
-	tunnel?: boolean | string;
+	tunnel?: TunnelConfig;
 	account_id?: string;
 }) {
 	const ctx = new PluginContext({
@@ -38,7 +37,10 @@ function createMockPluginContext(options: {
 	Object.defineProperty(ctx, "resolvedPluginConfig", {
 		value: {
 			type: options.type,
-			tunnel: options.tunnel,
+			tunnel: {
+				autoStart: options.tunnel?.autoStart ?? false,
+				name: options.tunnel?.name,
+			},
 		},
 	});
 	if (options.type === "workers") {
@@ -87,7 +89,10 @@ describe("tunnel plugin", () => {
 		});
 
 		const server = await createServer();
-		const ctx = createMockPluginContext({ type: "workers", tunnel: true });
+		const ctx = createMockPluginContext({
+			type: "workers",
+			tunnel: { autoStart: true },
+		});
 		const tunnelManager = new TunnelManager(server.config.logger);
 		const restart = vi.spyOn(server, "restart").mockResolvedValue();
 
@@ -108,7 +113,7 @@ describe("tunnel plugin", () => {
 		expect(startTunnel).toHaveBeenCalledWith({
 			origin: new URL(server.resolvedUrls?.local?.[0] ?? ""),
 			token: undefined,
-			extendHint: "Press t + enter to extend by 1 hour.",
+			extendHint: "Press a + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
 				warn: expect.any(Function),
@@ -140,7 +145,10 @@ describe("tunnel plugin", () => {
 		});
 
 		const server = await createServer();
-		const ctx = createMockPluginContext({ type: "workers", tunnel: true });
+		const ctx = createMockPluginContext({
+			type: "workers",
+			tunnel: { autoStart: true },
+		});
 		const tunnelManager = new TunnelManager(server.config.logger);
 		const restart = vi.spyOn(server, "restart").mockResolvedValue();
 
@@ -185,7 +193,10 @@ describe("tunnel plugin", () => {
 			});
 
 		const server1 = await createServer();
-		const ctx = createMockPluginContext({ type: "workers", tunnel: true });
+		const ctx = createMockPluginContext({
+			type: "workers",
+			tunnel: { autoStart: true },
+		});
 		const tunnelManager = new TunnelManager(server1.config.logger);
 		const restart1 = vi.spyOn(server1, "restart").mockResolvedValue();
 		onTestFinished(() => server1.close());
@@ -199,7 +210,7 @@ describe("tunnel plugin", () => {
 		expect(startTunnel).toHaveBeenNthCalledWith(1, {
 			origin: new URL(server1.resolvedUrls?.local?.[0] ?? ""),
 			token: undefined,
-			extendHint: "Press t + enter to extend by 1 hour.",
+			extendHint: "Press a + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
 				warn: expect.any(Function),
@@ -225,7 +236,7 @@ describe("tunnel plugin", () => {
 		expect(startTunnel).toHaveBeenNthCalledWith(2, {
 			origin: new URL(server2.resolvedUrls?.local?.[0] ?? ""),
 			token: undefined,
-			extendHint: "Press t + enter to extend by 1 hour.",
+			extendHint: "Press a + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
 				warn: expect.any(Function),
@@ -271,7 +282,8 @@ describe("tunnel plugin", () => {
 
 		await tunnelManager.startTunnel({
 			origin: "http://localhost:3000",
-			tunnel: true,
+			name: undefined,
+			mode: "dev",
 			allowedHosts: true,
 			accountId: undefined,
 			complianceRegion: undefined,
@@ -280,7 +292,8 @@ describe("tunnel plugin", () => {
 		await expect(
 			tunnelManager.startTunnel({
 				origin: "http://localhost:3001",
-				tunnel: true,
+				name: undefined,
+				mode: "dev",
 				allowedHosts: true,
 				accountId: undefined,
 				complianceRegion: undefined,
@@ -298,7 +311,10 @@ describe("tunnel plugin", () => {
 		const tunnelError = new Error("quick tunnel rate limited");
 		const disposeError = new Error("failed to dispose tunnel");
 		const server = await createServer();
-		const ctx = createMockPluginContext({ type: "workers", tunnel: true });
+		const ctx = createMockPluginContext({
+			type: "workers",
+			tunnel: { autoStart: true },
+		});
 
 		vi.mocked(startTunnel).mockReturnValue({
 			ready: vi.fn().mockRejectedValue(tunnelError),
@@ -332,7 +348,10 @@ describe("tunnel plugin", () => {
 		});
 
 		const previewServer = await preview();
-		const ctx = createMockPluginContext({ type: "preview", tunnel: true });
+		const ctx = createMockPluginContext({
+			type: "preview",
+			tunnel: { autoStart: true },
+		});
 
 		onTestFinished(() => previewServer.close());
 
@@ -358,7 +377,13 @@ describe("tunnel plugin", () => {
 		});
 
 		const server = await createServer();
-		const ctx = createMockPluginContext({ type: "workers", tunnel: true });
+		const ctx = createMockPluginContext({
+			type: "workers",
+			tunnel: { autoStart: true },
+		});
+		const info = vi
+			.spyOn(server.config.logger, "info")
+			.mockReturnValue(undefined);
 
 		const plugin = tunnelPlugin(ctx);
 		vi.spyOn(server, "restart").mockResolvedValue();
@@ -369,13 +394,6 @@ describe("tunnel plugin", () => {
 		await plugin.configureServer(server);
 		await server.listen(0);
 
-		const info = vi
-			.spyOn(server.config.logger, "info")
-			.mockReturnValue(undefined);
-		const warnOnce = vi
-			.spyOn(server.config.logger, "warnOnce")
-			.mockReturnValue(undefined);
-
 		server.printUrls();
 
 		const infoLog = info.mock.calls
@@ -383,7 +401,6 @@ describe("tunnel plugin", () => {
 			.join("\n");
 
 		expect(infoLog).toContain("Tunnel:  https://example.trycloudflare.com/");
-		expect(warnOnce).toHaveBeenCalledWith(DEV_PUBLIC_EXPOSURE_WARNING);
 	});
 
 	it("prints preview tunnel warning without dev-only caveats", async ({
@@ -393,11 +410,11 @@ describe("tunnel plugin", () => {
 		const infoMock = vi
 			.spyOn(previewServer.config.logger, "info")
 			.mockReturnValue(undefined);
-		const warnOnceMock = vi
-			.spyOn(previewServer.config.logger, "warnOnce")
-			.mockReturnValue(undefined);
 
-		const ctx = createMockPluginContext({ type: "preview", tunnel: true });
+		const ctx = createMockPluginContext({
+			type: "preview",
+			tunnel: { autoStart: true },
+		});
 		const plugin = tunnelPlugin(ctx);
 
 		onTestFinished(() => previewServer.close());
@@ -412,7 +429,6 @@ describe("tunnel plugin", () => {
 			.join("\n");
 
 		expect(infoLog).toContain("Tunnel:  https://example.trycloudflare.com/");
-		expect(warnOnceMock).toHaveBeenCalledWith(PREVIEW_PUBLIC_EXPOSURE_WARNING);
 	});
 
 	it("starts a preview tunnel with the resolved preview port", async ({
@@ -422,7 +438,10 @@ describe("tunnel plugin", () => {
 		const tunnelManager = new TunnelManager(
 			previewServer.config.logger as vite.Logger
 		);
-		const ctx = createMockPluginContext({ type: "preview", tunnel: true });
+		const ctx = createMockPluginContext({
+			type: "preview",
+			tunnel: { autoStart: true },
+		});
 
 		onTestFinished(() => previewServer.close());
 
@@ -430,7 +449,7 @@ describe("tunnel plugin", () => {
 
 		const startTunnelCall = vi.mocked(startTunnel).mock.calls[0]?.[0];
 		expect(startTunnelCall).toMatchObject({
-			extendHint: "Press t + enter to extend by 1 hour.",
+			extendHint: "Press a + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
 				warn: expect.any(Function),
@@ -474,7 +493,7 @@ describe("tunnel plugin", () => {
 		);
 		const ctx = createMockPluginContext({
 			type: "preview",
-			tunnel: "my-tunnel",
+			tunnel: { autoStart: true, name: "my-tunnel" },
 			account_id: "account-id",
 		});
 
@@ -517,7 +536,7 @@ describe("tunnel plugin", () => {
 		);
 		const ctx = createMockPluginContext({
 			type: "preview",
-			tunnel: "my-tunnel",
+			tunnel: { autoStart: true, name: "my-tunnel" },
 			account_id: "account-id",
 		});
 
@@ -534,5 +553,49 @@ describe("tunnel plugin", () => {
 			  - .example.com
 			]
 		`);
+	});
+
+	it("does not auto-start when the tunnel is configured but disabled", async ({
+		expect,
+	}) => {
+		const previewServer = await preview();
+		const ctx = createMockPluginContext({
+			type: "preview",
+			tunnel: { autoStart: false, name: "my-tunnel" },
+		});
+
+		onTestFinished(() => previewServer.close());
+
+		const plugin = tunnelPlugin(ctx);
+		// @ts-expect-error The tunnel plugin accepts a server instance directly without relying on `this`
+		await plugin.configurePreviewServer(previewServer);
+
+		expect(startTunnel).not.toHaveBeenCalled();
+	});
+
+	it("allows starting a quick tunnel from the shortcut without tunnel config", async ({
+		expect,
+	}) => {
+		const previewServer = await preview();
+		const ctx = createMockPluginContext({ type: "preview" });
+		const plugin = tunnelPlugin(ctx);
+
+		onTestFinished(() => previewServer.close());
+
+		// @ts-expect-error The tunnel plugin accepts a server instance directly without relying on `this`
+		await plugin.configurePreviewServer(previewServer);
+
+		expect(startTunnel).not.toHaveBeenCalled();
+
+		await import("../plugins/tunnel").then(({ toggleTunnel }) =>
+			toggleTunnel(previewServer, ctx)
+		);
+
+		expect(startTunnel).toHaveBeenCalledWith(
+			expect.objectContaining({
+				token: undefined,
+				extendHint: "Press a + enter to extend by 1 hour.",
+			})
+		);
 	});
 });

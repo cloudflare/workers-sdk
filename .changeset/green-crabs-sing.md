@@ -2,14 +2,16 @@
 "@cloudflare/vite-plugin": minor
 ---
 
-Add `tunnel: "my-tunnel"` to the `cloudflare()` Vite plugin for sharing your local dev server via a named Cloudflare Tunnel
+Add named tunnel support to the `cloudflare()` Vite plugin
 
-You can now expose your local dev server publicly with a stable hostname by setting `tunnel` to an existing tunnel name:
+You can now expose your local dev server publicly with a stable hostname by configuring `tunnel` with a named Cloudflare Tunnel:
 
 ```ts
 cloudflare({
-	tunnel: "my-tunnel",
+	tunnel: { autoStart: true, name: "my-tunnel" },
 });
 ```
+
+If `autoStart` is omitted or set to `false`, the tunnel will not start automatically, but you can still start it from the interactive dev session.
 
 This uses an existing named Cloudflare Tunnel instead of creating a temporary `*.trycloudflare.com` Quick Tunnel. If you use `vite preview`, make sure the tunnel hostname is allowed by `preview.allowedHosts`.
