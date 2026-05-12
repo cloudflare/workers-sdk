@@ -20,9 +20,13 @@
 		"directory": "packages/vite-plugin-cloudflare"
 	},
 	"files": [
+		"bin",
 		"dist"
 	],
 	"type": "module",
+	"bin": {
+		"cf-vite": "./bin/cf-vite"
+	},
 	"sideEffects": false,
 	"main": "./dist/index.mjs",
 	"types": "./dist/index.d.mts",
