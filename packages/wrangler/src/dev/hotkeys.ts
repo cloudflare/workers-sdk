@@ -14,7 +14,8 @@ export default function registerDevHotKeys(
 	args: {
 		forceLocal?: boolean;
 		remote: boolean;
-		tunnel?: boolean | string;
+		tunnel?: boolean;
+		tunnelName?: string;
 	},
 	options: {
 		render?: boolean;

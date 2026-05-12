@@ -3000,10 +3000,10 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev --tunnel");
-			expect(config.input.dev?.tunnel).toBe(true);
+			expect(config.input.dev?.tunnel).toEqual({ enabled: true, name: undefined });
 		});
 
-		it("should pass --tunnel=<name> through to dev config", async ({
+		it("should pass --tunnel-name with --tunnel through to dev config", async ({
 			expect,
 		}) => {
 			writeWranglerConfig({
@@ -3011,8 +3011,40 @@ describe.sequential("wrangler dev", () => {
 				compatibility_date: "2024-01-01",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			const config = await runWranglerUntilConfig("dev --tunnel=my-tunnel");
-			expect(config.input.dev?.tunnel).toBe("my-tunnel");
+			const config = await runWranglerUntilConfig(
+				"dev --tunnel --tunnel-name=my-tunnel"
+			);
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: true,
+				name: "my-tunnel",
+			});
+		});
+
+		it("should allow --tunnel-name without enabling tunnel", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev --tunnel-name=my-tunnel");
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: false,
+				name: "my-tunnel",
+			});
+		});
+
+		it("should preserve the entrypoint when --tunnel appears before it", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev --tunnel index.js");
+			expect(config.input.dev?.tunnel).toEqual({ enabled: true, name: undefined });
+			expect(config.entrypoint).toMatch(/index\.js$/);
 		});
 
 		it("should treat --tunnel=true as a quick tunnel", async ({ expect }) => {
@@ -3022,7 +3054,7 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev --tunnel=true");
-			expect(config.input.dev?.tunnel).toBe(true);
+			expect(config.input.dev?.tunnel).toEqual({ enabled: true, name: undefined });
 		});
 
 		it("should treat --tunnel=false as disabled", async ({ expect }) => {
@@ -3032,7 +3064,7 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev --tunnel=false");
-			expect(config.input.dev?.tunnel).toBe(false);
+			expect(config.input.dev?.tunnel).toEqual({ enabled: false, name: undefined });
 		});
 
 		it("should default tunnel to undefined when not specified", async ({
@@ -3044,7 +3076,10 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev");
-			expect(config.input.dev?.tunnel).toBeUndefined();
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: false,
+				name: undefined,
+			});
 		});
 
 		it("should error when --tunnel and --remote are both specified", async ({
@@ -3071,7 +3106,25 @@ describe.sequential("wrangler dev", () => {
 			const config = await runWranglerUntilConfig(
 				"dev --remote --tunnel=false"
 			);
-			expect(config.input.dev?.tunnel).toBe(false);
+			expect(config.input.dev?.tunnel).toEqual({ enabled: false, name: undefined });
+			expect(config.input.dev?.remote).toBe(true);
+		});
+
+		it("should allow --tunnel-name without --tunnel in remote mode", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --remote --tunnel-name=my-tunnel"
+			);
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: false,
+				name: "my-tunnel",
+			});
 			expect(config.input.dev?.remote).toBe(true);
 		});
 	});

@@ -172,8 +172,8 @@ export async function startDev(args: StartDevOptions) {
 			logger.log(dim("⎔ Starting tunnel (usually takes a few seconds)..."));
 
 			const namedTunnel =
-				typeof args.tunnel === "string"
-					? await resolveNamedTunnel(args.tunnel, origin, {
+				args.tunnelName !== undefined
+					? await resolveNamedTunnel(args.tunnelName, origin, {
 							accountId: args.accountId,
 							complianceRegion: config?.complianceRegion,
 						})
@@ -334,7 +334,10 @@ async function setupDevEnv(
 				// initialise with a random id
 				containerBuildId: generateContainerBuildId(),
 				generateTypes: args.types,
-				tunnel: args.tunnel,
+				tunnel: {
+					enabled: args.tunnel ?? false,
+					name: args.tunnelName,
+				},
 			},
 			legacy: {
 				site: (configParam) => {

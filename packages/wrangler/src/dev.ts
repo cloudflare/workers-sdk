@@ -261,19 +261,13 @@ export const dev = createCommand({
 		},
 		tunnel: {
 			describe:
-				"Expose your local dev server via a Cloudflare Tunnel. Use `--tunnel` for a Quick Tunnel or `--tunnel=<name>` for a named tunnel.",
+				"Expose your local dev server via a Cloudflare Tunnel. Use `--tunnel` for a Quick Tunnel and `--tunnel-name` with `--tunnel` for a named tunnel.",
+			type: "boolean",
+		},
+		"tunnel-name": {
+			describe:
+				"Use an existing named Cloudflare Tunnel when `--tunnel` is enabled.",
 			type: "string",
-			coerce: (value: string) => {
-				if (!value || value === "true") {
-					return true;
-				}
-
-				if (value === "false") {
-					return false;
-				}
-
-				return value;
-			},
 		},
 	},
 	async validateArgs(args) {
