@@ -127,6 +127,24 @@ describe("ai commands", () => {
 		`);
 	});
 
+	it("should query model list with filters", async ({ expect }) => {
+		const requests = mockAISearchRequest();
+		await runWrangler(
+			'ai models --search resnet --task "Image Classification" --author cloudflare --source 1 --hide-experimental --json'
+		);
+
+		expect(requests).toHaveLength(1);
+		const searchParams = new URL(requests[0].url).searchParams;
+		expect(searchParams.get("per_page")).toBe("50");
+		expect(searchParams.get("page")).toBe("1");
+		expect(searchParams.get("search")).toBe("resnet");
+		expect(searchParams.get("task")).toBe("Image Classification");
+		expect(searchParams.get("author")).toBe("cloudflare");
+		expect(searchParams.get("source")).toBe("1");
+		expect(searchParams.get("hide_experimental")).toBe("true");
+		expect(std.out).toContain("@cloudflare/resnet50");
+	});
+
 	it("should truncate model description", async ({ expect }) => {
 		const original = process.stdout.columns;
 		// Arbitrary fixed value for testing
@@ -321,10 +339,12 @@ function mockAIListFinetuneRequest() {
 }
 
 function mockAISearchRequest() {
+	const requests: Request[] = [];
 	msw.use(
 		http.get(
 			"*/accounts/:accountId/ai/models/search",
-			() => {
+			({ request }) => {
+				requests.push(request);
 				return HttpResponse.json(
 					createFetchResult(
 						[
@@ -356,6 +376,7 @@ function mockAISearchRequest() {
 			{ once: true }
 		)
 	);
+	return requests;
 }
 
 function mockAIOverflowRequest() {

@@ -18,10 +18,40 @@ export const aiModelsCommand = createCommand({
 			description: "Return output as JSON",
 			default: false,
 		},
+		search: {
+			type: "string",
+			description: "Search models by name or description",
+		},
+		task: {
+			type: "string",
+			description: "Filter by task name",
+		},
+		author: {
+			type: "string",
+			description: "Filter by author",
+		},
+		source: {
+			type: "number",
+			description: "Filter by source ID",
+		},
+		"hide-experimental": {
+			type: "boolean",
+			description: "Hide experimental models",
+			default: false,
+		},
 	},
-	async handler({ json }, { config }) {
+	async handler(
+		{ author, hideExperimental, json, search, source, task },
+		{ config }
+	) {
 		const accountId = await requireAuth(config);
-		const entries = await listCatalogEntries(config, accountId);
+		const entries = await listCatalogEntries(config, accountId, {
+			author,
+			hideExperimental,
+			search,
+			source,
+			task,
+		});
 
 		if (json) {
 			logger.log(JSON.stringify(entries, null, 2));
