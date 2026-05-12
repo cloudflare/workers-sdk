@@ -98,7 +98,7 @@ export function createTunnelManager(
 				? chalk.dim("Once connected, this tunnel will be ") +
 					"publicly accessible"
 				: chalk.dim(
-						"Once connected, this hostname may be reachable from the internet, depending on your Cloudflare Access configuration"
+						"Once connected, this tunnel may be reachable from the internet, depending on your Cloudflare Access configuration"
 					)) +
 				chalk.dim(". Anyone who can reach it can:\n") +
 				chalk.dim(
