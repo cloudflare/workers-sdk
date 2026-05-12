@@ -93,7 +93,7 @@ catalog:
   # version of Undici
   undici-types: "7.24.8"
   vitest: "4.1.0"
-  vite: "^8.0.0"
+  vite: "^8.0.12"
   "ws": "8.18.0"
   esbuild: "0.27.3"
   playwright-chromium: "^1.56.1"
