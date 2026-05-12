@@ -100,12 +100,12 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 			});
 		})
 		.then((result) => {
-			if (result.mode === "quick") {
-				expiresAt = Date.now() + defaultExpiryMs;
+			expiresAt = Date.now() + defaultExpiryMs;
 
-				scheduleExpiryTimeout();
-				scheduleReminder(result.publicUrl.origin);
-			}
+			scheduleExpiryTimeout();
+			scheduleReminder(
+				result.mode === "quick" ? result.publicUrl.origin : undefined
+			);
 
 			return result;
 		});
@@ -131,7 +131,7 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 		}
 	}
 
-	function scheduleReminder(publicURL: string) {
+	function scheduleReminder(publicURL: string | undefined) {
 		if (reminderIntervalMs > 0) {
 			reminderInterval = setInterval(() => {
 				if (disposed) {
@@ -144,7 +144,11 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 				}
 
 				logger?.log(
-					`The tunnel is still open at ${publicURL}. It expires in ${formatTunnelDuration(remainingMs)}. ${options.extendHint ?? ""}`
+					`${
+						publicURL
+							? `The tunnel is still open at ${publicURL}.`
+							: "The tunnel is still open."
+					} It expires in ${formatTunnelDuration(remainingMs)}. ${options.extendHint ?? ""}`
 				);
 			}, reminderIntervalMs);
 			reminderInterval.unref?.();
