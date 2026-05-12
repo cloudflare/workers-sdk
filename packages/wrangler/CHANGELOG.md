@@ -1,5 +1,36 @@
 # wrangler
 
+## 4.90.1
+
+### Patch Changes
+
+- [#13866](https://github.com/cloudflare/workers-sdk/pull/13866) [`4e44ce6`](https://github.com/cloudflare/workers-sdk/commit/4e44ce6a27b9c9313a1b9a6b56bb18935039e13e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260507.1 | 1.20260508.1 |
+
+- [#13837](https://github.com/cloudflare/workers-sdk/pull/13837) [`b0cee1d`](https://github.com/cloudflare/workers-sdk/commit/b0cee1dc99823efc675b3b0ff961d4198887a5d7) Thanks [@matingathani](https://github.com/matingathani)! - Fix beta/open-beta status message ignoring `printBanner: false` — when a command sets `printBanner: (args) => !args.json`, the status banner no longer appears in JSON output
+
+- [#13887](https://github.com/cloudflare/workers-sdk/pull/13887) [`d878e13`](https://github.com/cloudflare/workers-sdk/commit/d878e1329989ef2d6db615d479df16c42d7431c3) Thanks [@apeacock1991](https://github.com/apeacock1991)! - Fix `wrangler dev` hanging on shutdown when remote bindings are present
+
+  startDev() registers dev hotkeys before authenticating the user. During interactive dev sessions, the auth callback re-registers hotkeys, which updates the local unregisterHotKeys variable to a new cleanup function. However, the unregisterHotKeys value returned to callers was captured as a direct reference to the initial registration, so it would call the stale cleanup function instead of the current one.
+
+  This has been fixed by returning a wrapper function () => unregisterHotKeys?.() instead of the variable directly. The wrapper evaluates unregisterHotKeys at call time, ensuring it always invokes the latest cleanup function even after re-registration.
+
+- [#13867](https://github.com/cloudflare/workers-sdk/pull/13867) [`971dfe3`](https://github.com/cloudflare/workers-sdk/commit/971dfe346604b7ea51e057c885f8f3ee39efb064) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix race in `RemoteProxySession.updateBindings` so it waits for the remote worker to finish reloading with the new bindings before resolving
+
+  Previously, `updateBindings` resolved as soon as the config update event was dispatched, long before the remote worker had been re-uploaded and the local proxy worker had unpaused. Callers that issued requests immediately afterwards could see flaky failures — typically "WebSocket connection failed" for JSRPC bindings such as service bindings or dispatch namespaces — because the local proxy worker was still in its paused state during the reload window. `updateBindings` now waits for the next `reloadComplete` event and for the local proxy worker's runtime-message queue to drain before returning, so callers can safely issue requests after `await session.updateBindings(...)`. If the reload fails, the rejection from `updateBindings` carries the underlying error.
+
+- [#13867](https://github.com/cloudflare/workers-sdk/pull/13867) [`971dfe3`](https://github.com/cloudflare/workers-sdk/commit/971dfe346604b7ea51e057c885f8f3ee39efb064) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix unhandled `AbortError` from `wrangler dev`'s remote tail WebSocket when the bundle rebuilds or the dev session shuts down
+
+  The remote-runtime tail-logs WebSocket (`#activeTail` in `RemoteRuntimeController`) was constructed with the same `AbortSignal` that `onBundleStart` aborts to cancel in-flight preview-session operations. The abort destroyed the WebSocket's underlying upgrade request with `AbortError`, which had no `error` listener attached and propagated as an unhandled exception. We now attach an `error` listener at WebSocket construction that ignores errors (logging at debug level), matching the safeguards already present on the `terminate` paths in `#previewToken` and `teardown()`.
+
+- Updated dependencies [[`4e44ce6`](https://github.com/cloudflare/workers-sdk/commit/4e44ce6a27b9c9313a1b9a6b56bb18935039e13e), [`5d936c5`](https://github.com/cloudflare/workers-sdk/commit/5d936c594b9f9298320e9c289aaaa876fd26a163)]:
+  - miniflare@4.20260508.0
+
 ## 4.90.0
 
 ### Minor Changes
