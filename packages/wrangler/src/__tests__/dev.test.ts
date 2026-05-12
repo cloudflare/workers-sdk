@@ -3000,7 +3000,10 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev --tunnel");
-			expect(config.input.dev?.tunnel).toEqual({ enabled: true, name: undefined });
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: true,
+				name: undefined,
+			});
 		});
 
 		it("should pass --tunnel-name with --tunnel through to dev config", async ({
@@ -3028,7 +3031,9 @@ describe.sequential("wrangler dev", () => {
 				compatibility_date: "2024-01-01",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			const config = await runWranglerUntilConfig("dev --tunnel-name=my-tunnel");
+			const config = await runWranglerUntilConfig(
+				"dev --tunnel-name=my-tunnel"
+			);
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: false,
 				name: "my-tunnel",
@@ -3043,7 +3048,10 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev --tunnel index.js");
-			expect(config.input.dev?.tunnel).toEqual({ enabled: true, name: undefined });
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: true,
+				name: undefined,
+			});
 			expect(config.entrypoint).toMatch(/index\.js$/);
 		});
 
@@ -3054,7 +3062,10 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev --tunnel=true");
-			expect(config.input.dev?.tunnel).toEqual({ enabled: true, name: undefined });
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: true,
+				name: undefined,
+			});
 		});
 
 		it("should treat --tunnel=false as disabled", async ({ expect }) => {
@@ -3064,7 +3075,10 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev --tunnel=false");
-			expect(config.input.dev?.tunnel).toEqual({ enabled: false, name: undefined });
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: false,
+				name: undefined,
+			});
 		});
 
 		it("should default tunnel to undefined when not specified", async ({
@@ -3106,7 +3120,10 @@ describe.sequential("wrangler dev", () => {
 			const config = await runWranglerUntilConfig(
 				"dev --remote --tunnel=false"
 			);
-			expect(config.input.dev?.tunnel).toEqual({ enabled: false, name: undefined });
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: false,
+				name: undefined,
+			});
 			expect(config.input.dev?.remote).toBe(true);
 		});
 

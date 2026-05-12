@@ -7,7 +7,7 @@ import openInBrowser from "../open-in-browser";
 import { debounce } from "../utils/debounce";
 import { openInspector } from "./inspect";
 import type { DevEnv } from "../api";
-import type { Tunnel } from "@cloudflare/workers-utils";
+import type { TunnelManager } from "../tunnel/dev";
 
 export default function registerDevHotKeys(
 	devEnvs: DevEnv[],
@@ -19,10 +19,10 @@ export default function registerDevHotKeys(
 	},
 	options: {
 		render?: boolean;
-		getTunnel?: () => Tunnel | undefined;
+		tunnelManager?: TunnelManager;
 	} = {}
 ) {
-	const { render = true, getTunnel } = options;
+	const { render = true, tunnelManager } = options;
 	const primaryDevEnv = devEnvs[0];
 	const unregisterHotKeys = registerHotKeys(
 		[
@@ -107,7 +107,7 @@ export default function registerDevHotKeys(
 			{
 				keys: ["l"],
 				// Remote mode is not supported when using tunnels
-				disabled: () => args.forceLocal || !!args.tunnel,
+				disabled: () => args.forceLocal || !!tunnelManager?.isOpen(),
 				handler: async () => {
 					await primaryDevEnv.config.patch({
 						dev: {
@@ -118,18 +118,25 @@ export default function registerDevHotKeys(
 				},
 			},
 			{
-				// We remind users about the tunnel hotkey every 10mins
-				// Hiding this hotkey to reduce noise on startup
 				keys: ["t"],
-				disabled: () => !args.tunnel,
+				label: () =>
+					tunnelManager?.isOpen() ? "close tunnel" : "start tunnel",
+				disabled: () => primaryDevEnv.config.latestConfig?.dev?.remote === true,
 				handler: async () => {
-					const tunnel = getTunnel?.();
-
-					if (!tunnel) {
+					if (!tunnelManager?.isOpen()) {
+						await tunnelManager?.start();
 						return;
 					}
 
-					tunnel.extendExpiry();
+					await tunnelManager.stop();
+				},
+			},
+			{
+				keys: ["a"],
+				label: "extend tunnel by 1 hour",
+				disabled: () => !tunnelManager?.isOpen(),
+				handler: async () => {
+					tunnelManager?.getTunnel()?.extendExpiry();
 				},
 			},
 			{
