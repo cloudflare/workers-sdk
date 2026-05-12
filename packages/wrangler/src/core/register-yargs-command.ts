@@ -136,9 +136,11 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				await printWranglerBanner();
 			}
 
-			// Suppress statusMessage only when printBanner is a dynamic function
-			// that returned false (e.g. `--json` mode). When printBanner is the
-			// static boolean `false` the command still wants status warnings shown.
+			// Suppress statusMessage when printBanner is a dynamic function that
+			// returned false (e.g. `--json` mode). When printBanner is the static
+			// boolean `false`, we preserve existing behaviour and still show
+			// status warnings — those commands opted out of the Wrangler banner,
+			// not necessarily the status message.
 			const statusMessageEnabled =
 				typeof shouldPrintBanner !== "function" || bannerEnabled;
 
