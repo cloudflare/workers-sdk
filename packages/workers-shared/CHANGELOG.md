@@ -1,5 +1,13 @@
 # @cloudflare/workers-shared
 
+## 0.19.6
+
+### Patch Changes
+
+- [#13855](https://github.com/cloudflare/workers-sdk/pull/13855) [`dba84c2`](https://github.com/cloudflare/workers-sdk/commit/dba84c225f418a3046ed736649044fe0b747aec0) Thanks [@courtney-sims](https://github.com/courtney-sims)! - Temporarily hardcode asset worker cohort to "ent" for latency testing
+
+  Disables the `lookupCohort` RPC call and cohort-based version routing in the outer entrypoint while keeping all the glue code (analytics, bindings, types) in place for re-enablement.
+
 ## 0.19.5
 
 ### Patch Changes

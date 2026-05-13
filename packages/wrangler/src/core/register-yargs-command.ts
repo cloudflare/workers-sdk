@@ -127,21 +127,29 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 
 		try {
 			const shouldPrintBanner = def.behaviour?.printBanner ?? true;
-
-			if (
+			const bannerEnabled =
 				shouldPrintBanner === true ||
 				(typeof shouldPrintBanner === "function" &&
-					shouldPrintBanner(args) === true)
-			) {
+					shouldPrintBanner(args) === true);
+
+			if (bannerEnabled) {
 				await printWranglerBanner();
 			}
+
+			// Suppress statusMessage when printBanner is a dynamic function that
+			// returned false (e.g. `--json` mode). When printBanner is the static
+			// boolean `false`, we preserve existing behaviour and still show
+			// status warnings — those commands opted out of the Wrangler banner,
+			// not necessarily the status message.
+			const statusMessageEnabled =
+				typeof shouldPrintBanner !== "function" || bannerEnabled;
 
 			if (!getWranglerHideBanner()) {
 				if (def.metadata.deprecated) {
 					logger.warn(def.metadata.deprecatedMessage);
 				}
 
-				if (def.metadata.statusMessage) {
+				if (statusMessageEnabled && def.metadata.statusMessage) {
 					logger.warn(def.metadata.statusMessage);
 				}
 			}

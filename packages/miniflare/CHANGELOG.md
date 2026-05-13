@@ -1,5 +1,21 @@
 # miniflare
 
+## 4.20260508.0
+
+### Minor Changes
+
+- [#8431](https://github.com/cloudflare/workers-sdk/pull/8431) [`5d936c5`](https://github.com/cloudflare/workers-sdk/commit/5d936c594b9f9298320e9c289aaaa876fd26a163) Thanks [@penalosa](https://github.com/penalosa)! - Support `workerd` autogates via the `MINIFLARE_WORKERD_AUTOGATES` environment variable.
+
+### Patch Changes
+
+- [#13866](https://github.com/cloudflare/workers-sdk/pull/13866) [`4e44ce6`](https://github.com/cloudflare/workers-sdk/commit/4e44ce6a27b9c9313a1b9a6b56bb18935039e13e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260507.1 | 1.20260508.1 |
+
 ## 4.20260507.1
 
 ### Patch Changes

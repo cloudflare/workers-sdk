@@ -1,5 +1,17 @@
 # @cloudflare/vite-plugin
 
+## 1.36.4
+
+### Patch Changes
+
+- [#13888](https://github.com/cloudflare/workers-sdk/pull/13888) [`2af4ce0`](https://github.com/cloudflare/workers-sdk/commit/2af4ce0f4ece7c74e54b337e606df420d2302d61) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Update Vite to v8.0.12
+
+  This updates the bundled Vite module runner to include the bug fix in https://github.com/vitejs/vite/pull/22369.
+
+- Updated dependencies [[`4e44ce6`](https://github.com/cloudflare/workers-sdk/commit/4e44ce6a27b9c9313a1b9a6b56bb18935039e13e), [`b0cee1d`](https://github.com/cloudflare/workers-sdk/commit/b0cee1dc99823efc675b3b0ff961d4198887a5d7), [`d878e13`](https://github.com/cloudflare/workers-sdk/commit/d878e1329989ef2d6db615d479df16c42d7431c3), [`971dfe3`](https://github.com/cloudflare/workers-sdk/commit/971dfe346604b7ea51e057c885f8f3ee39efb064), [`971dfe3`](https://github.com/cloudflare/workers-sdk/commit/971dfe346604b7ea51e057c885f8f3ee39efb064), [`5d936c5`](https://github.com/cloudflare/workers-sdk/commit/5d936c594b9f9298320e9c289aaaa876fd26a163)]:
+  - miniflare@4.20260508.0
+  - wrangler@4.90.1
+
 ## 1.36.3
 
 ### Patch Changes
