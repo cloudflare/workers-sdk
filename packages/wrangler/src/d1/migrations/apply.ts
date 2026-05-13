@@ -168,7 +168,6 @@ Your database may not be available to serve requests during the migration, conti
 
 			let success = true;
 			let errorNotes: Array<string> = [];
-			let cancelled = false;
 			try {
 				const response = await executeSql({
 					local,
@@ -184,24 +183,30 @@ Your database may not be available to serve requests during the migration, conti
 				});
 
 				if (response === null) {
-					cancelled = true;
-				} else {
-					for (const result of response) {
-						// When executing more than 1 statement, response turns into an array of QueryResult
-						if (Array.isArray(result)) {
-							for (const subResult of result) {
-								if (!subResult.success) {
-									success = false;
-								}
-							}
-						} else {
-							if (!result.success) {
+					throw new UserError(
+						`Migration "${migration.name}" was not applied — execution was cancelled.`,
+						{ telemetryMessage: "d1 migrations apply execution cancelled" }
+					);
+				}
+
+				for (const result of response) {
+					// When executing more than 1 statement, response turns into an array of QueryResult
+					if (Array.isArray(result)) {
+						for (const subResult of result) {
+							if (!subResult.success) {
 								success = false;
 							}
+						}
+					} else {
+						if (!result.success) {
+							success = false;
 						}
 					}
 				}
 			} catch (e) {
+				if (e instanceof UserError) {
+					throw e;
+				}
 				const err = e as ParseError;
 				const maybeCause = (err.cause ?? err) as Error;
 
@@ -209,13 +214,6 @@ Your database may not be available to serve requests during the migration, conti
 				errorNotes = err.notes?.map((msg) => msg.text) ?? [
 					maybeCause?.message ?? maybeCause.toString(),
 				];
-			}
-
-			if (cancelled) {
-				throw new UserError(
-					`Migration "${migration.name}" was not applied — execution was cancelled.`,
-					{ telemetryMessage: "d1 migrations apply execution cancelled" }
-				);
 			}
 
 			migration.status = success ? "✅" : "❌";
