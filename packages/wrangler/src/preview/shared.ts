@@ -80,6 +80,8 @@ export function getBindingValue(binding: Binding): string {
 	switch (binding.type) {
 		case "plain_text":
 			return `"${binding.text}"`;
+		case "json":
+			return JSON.stringify(binding.json);
 		case "secret_text":
 			return "********";
 		case "kv_namespace":
