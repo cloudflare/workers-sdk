@@ -198,10 +198,9 @@
 				"workers-sdk/no-wrangler-named-imports": "error",
 			},
 		},
-		// Gradually rolling out require-description-when-disabling.
-		// TODO: Remove the following overrides.
+		// TODO: Remove the following wrangler override.
 		{
-			"files": ["packages/quick-edit-extension/**", "packages/wrangler/**"],
+			"files": ["packages/wrangler/**"],
 			"rules": {
 				"workers-sdk/require-description-when-disabling": "off",
 			},
