@@ -1226,7 +1226,13 @@ function isAccessTokenExpired(): boolean {
 }
 
 async function refreshToken(): Promise<boolean> {
-	// refresh
+	// Re-read the auth config from disk before refreshing. OAuth refresh tokens are
+	// single-use: when a sibling wrangler process refreshes, it rotates the token
+	// server-side and writes the new value to the shared config file. A long-lived
+	// process (e.g. `wrangler dev`) that loaded its refresh_token at startup would
+	// otherwise send the stale value here and get a 401 from the token endpoint.
+	reinitialiseAuthTokens();
+
 	try {
 		const {
 			token: { value: oauth_token, expiry: expiration_time } = {
@@ -1243,7 +1249,10 @@ async function refreshToken(): Promise<boolean> {
 			scopes,
 		});
 		return true;
-	} catch {
+	} catch (e) {
+		logger.debug(
+			`Token refresh failed: ${e instanceof Error ? e.message : String(e)}`
+		);
 		return false;
 	}
 }

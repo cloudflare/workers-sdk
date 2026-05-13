@@ -445,6 +445,72 @@ describe("User", () => {
 			expect(std.out).toContain("access_token_success_mock");
 		});
 
+		it("should re-read refresh_token from disk before refreshing in case a sibling process rotated it", async ({
+			expect,
+		}) => {
+			// Bug repro: when a long-lived wrangler process (e.g. `wrangler dev`) holds a
+			// refresh_token in module-level localState, and a sibling wrangler invocation
+			// rotates the token on disk, the long-lived process's next refresh sends the
+			// stale RT and gets 401 Unauthorized — falling through to interactive login.
+			// See real-world logs: same RT sent by two processes 60min apart, second 401'd.
+			setIsTTY(false);
+
+			// Process startup state: both localState and disk have RT_A; access expired.
+			const pastDate = new Date(Date.now() - 100_000_000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-access",
+				refresh_token: "RT_A",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+
+			// Sibling process refresh: rotates RT_A → RT_B on disk. Bypass
+			// writeAuthConfigFile (which would call reinitialiseAuthTokens and update
+			// OUR localState) by writing the file directly — this simulates what
+			// another wrangler process running concurrently actually does.
+			const fs = await import("node:fs");
+			const TOML = (await import("smol-toml")).default;
+			fs.writeFileSync(
+				getAuthConfigFilePath(),
+				TOML.stringify({
+					oauth_token: "sibling-fresh-access",
+					refresh_token: "RT_B",
+					expiration_time: new Date(Date.now() + 3600_000).toISOString(),
+					scopes: ["account:read"],
+				})
+			);
+
+			// CF token endpoint: rotated RT_A returns 401, current RT_B succeeds.
+			// Matches the exact failure mode observed in production logs.
+			msw.use(
+				http.post("*/oauth2/token", async ({ request }) => {
+					const body = new URLSearchParams(await request.text());
+					const rt = body.get("refresh_token");
+					if (rt === "RT_A") {
+						return new HttpResponse(null, {
+							status: 401,
+							statusText: "Unauthorized",
+						});
+					}
+					return HttpResponse.json({
+						access_token: "fresh-access-token",
+						expires_in: 3600,
+						refresh_token: "RT_B_NEXT",
+						scope: "account:read",
+						token_type: "bearer",
+					});
+				})
+			);
+
+			// With the fix, refreshToken() re-reads the file before exchanging,
+			// finds RT_B, and the command prints the fresh access token.
+			// Without the fix, the stale RT_A is sent, 401 is returned, the empty
+			// catch in refreshToken() swallows it, and the command falls through to
+			// interactive login — which in non-TTY mode throws.
+			await runWrangler("auth token");
+			expect(std.out).toContain("fresh-access-token");
+		});
+
 		it("should error when not logged in", async ({ expect }) => {
 			await expect(runWrangler("auth token")).rejects.toThrowError(
 				"Not logged in. Please run `wrangler login` to authenticate."
