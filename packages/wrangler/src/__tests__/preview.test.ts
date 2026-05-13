@@ -210,6 +210,58 @@ describe("wrangler preview", () => {
 				MY_FLAGS: { type: "flagship", app_id: "flagship-app-id" },
 			});
 		});
+
+		test("should pass cross_account_grant on service bindings", ({
+			expect,
+		}) => {
+			const config = configWithPreviews({
+				services: [
+					{
+						binding: "API",
+						service: "api-worker",
+						// cross_account_grant is internal/non-public-facing on
+						// the typed schema; mirror how callers set it at
+						// runtime (deploy path supports the same field).
+						cross_account_grant: "grant-target",
+					} as {
+						binding: string;
+						service: string;
+						cross_account_grant: string;
+					},
+				],
+			});
+			const bindings = extractConfigBindings(config);
+			expect(bindings).toMatchObject({
+				API: {
+					type: "service",
+					service: "api-worker",
+					cross_account_grant: "grant-target",
+				},
+			});
+		});
+
+		test("should fold unsafe.bindings into the previews env", ({ expect }) => {
+			const config = configWithPreviews({
+				unsafe: {
+					bindings: [
+						{
+							type: "service",
+							name: "VPC_BRIDGE",
+							service: "vpc-bridge-worker",
+							cross_account_grant: "grant-target",
+						},
+					],
+				},
+			});
+			const bindings = extractConfigBindings(config);
+			expect(bindings).toMatchObject({
+				VPC_BRIDGE: {
+					type: "service",
+					service: "vpc-bridge-worker",
+					cross_account_grant: "grant-target",
+				},
+			});
+		});
 	});
 
 	describe("preview command", () => {
