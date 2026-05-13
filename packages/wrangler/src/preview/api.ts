@@ -11,6 +11,7 @@ import type {
 export interface Binding {
 	type: string;
 	text?: string;
+	json?: unknown;
 	namespace_id?: string;
 	workflow_name?: string;
 	destination_address?: string;

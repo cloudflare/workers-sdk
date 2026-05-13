@@ -93,6 +93,26 @@ describe("wrangler preview", () => {
 			});
 		});
 
+		test("should extract non-string vars as json bindings so the runtime preserves the native shape", ({
+			expect,
+		}) => {
+			const config = configWithPreviews({
+				vars: {
+					ALLOWLIST: ["a@example.com", "b@example.com"],
+					CONFIG: { feature: true, retries: 3 },
+					COUNT: 42,
+					ENABLED: true,
+				},
+			});
+			const bindings = extractConfigBindings(config);
+			expect(bindings).toMatchObject({
+				ALLOWLIST: { type: "json", json: ["a@example.com", "b@example.com"] },
+				CONFIG: { type: "json", json: { feature: true, retries: 3 } },
+				COUNT: { type: "json", json: 42 },
+				ENABLED: { type: "json", json: true },
+			});
+		});
+
 		test("should extract kv_namespaces", ({ expect }) => {
 			const config = configWithPreviews({
 				kv_namespaces: [{ binding: "MY_KV", id: "kv-id-123" }],
