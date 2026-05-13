@@ -37,9 +37,13 @@ export async function listNamespaces(
 	config: Config
 ): Promise<ArtifactsNamespace[]> {
 	const accountId = await requireAuth(config);
-	return await fetchPagedListResult(config, getArtifactsNamespacesPath(accountId), {
-		method: "GET",
-	});
+	return await fetchPagedListResult(
+		config,
+		getArtifactsNamespacesPath(accountId),
+		{
+			method: "GET",
+		}
+	);
 }
 
 export async function getNamespace(
