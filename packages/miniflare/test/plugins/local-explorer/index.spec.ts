@@ -395,6 +395,48 @@ describe("Local Explorer works with custom routes", () => {
 		expect(res.status).toBe(403);
 		await res.arrayBuffer();
 	});
+
+	// An exact configured route must not authorize subdomains of that route.
+	// Subdomain matching should only apply to wildcard routes.
+	test("blocks Origin that is a subdomain of an exact configured route", async ({
+		expect,
+	}) => {
+		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "https://sub.my-custom-site.com" },
+		});
+		expect(res.status).toBe(403);
+		await res.arrayBuffer();
+	});
+
+	test("blocks Host that is a subdomain of an exact configured route", async ({
+		expect,
+	}) => {
+		const url = await mf.ready;
+		const status = await new Promise<number>((resolve, reject) => {
+			const req = http.get(
+				`${url.origin}${CorePaths.EXPLORER}/api/storage/kv/namespaces`,
+				{ setHost: false, headers: { Host: "sub.my-custom-site.com" } },
+				(res) => {
+					res.resume();
+					resolve(res.statusCode ?? 0);
+				}
+			);
+			req.on("error", reject);
+		});
+		expect(status).toBe(403);
+	});
+
+	test("blocks look-alike hostname that ends with the exact route", async ({
+		expect,
+	}) => {
+		// Guards against a naive endsWith() bypass: `evilmy-custom-site.com`
+		// should NOT be accepted just because the suffix matches.
+		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "https://evilmy-custom-site.com" },
+		});
+		expect(res.status).toBe(403);
+		await res.arrayBuffer();
+	});
 });
 
 describe("Local Explorer works with wildcard routes", () => {
@@ -431,6 +473,107 @@ describe("Local Explorer works with wildcard routes", () => {
 			headers: { Origin: "https://sub.example.com" },
 		});
 		expect(res.status).toBe(200);
+		await res.arrayBuffer();
+	});
+
+	test("allows Origin that is a deep subdomain of a wildcard route", async ({
+		expect,
+	}) => {
+		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "https://a.b.example.com" },
+		});
+		expect(res.status).toBe(200);
+		await res.arrayBuffer();
+	});
+
+	test("blocks look-alike sibling hostname not under the wildcard route", async ({
+		expect,
+	}) => {
+		// `notexample.com` ends with `example.com` but is not a subdomain of it.
+		// Guards against a naive endsWith() match without a dot boundary.
+		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "https://notexample.com" },
+		});
+		expect(res.status).toBe(403);
+		await res.arrayBuffer();
+	});
+});
+
+// The configured `upstream` hostname is a single host, not a wildcard.
+// Subdomains of the upstream hostname must not be authorized for /cdn-cgi/*
+// requests.
+describe("Local Explorer works with upstream", () => {
+	let mf: Miniflare;
+
+	beforeAll(async () => {
+		mf = new Miniflare({
+			inspectorPort: 0,
+			compatibilityDate: "2025-01-01",
+			modules: true,
+			script: `export default { fetch() { return new Response("user worker"); } }`,
+			unsafeLocalExplorer: true,
+			kvNamespaces: {
+				TEST_KV: "test-kv-id",
+			},
+			upstream: "https://upstream-host.example/",
+		});
+	});
+
+	afterAll(async () => {
+		await disposeWithRetry(mf);
+	});
+
+	test("allows configured upstream host exactly", async ({ expect }) => {
+		const url = await mf.ready;
+		const status = await new Promise<number>((resolve, reject) => {
+			const req = http.get(
+				`${url.origin}${CorePaths.EXPLORER}/api/storage/kv/namespaces`,
+				{ setHost: false, headers: { Host: "upstream-host.example" } },
+				(res) => {
+					res.resume();
+					resolve(res.statusCode ?? 0);
+				}
+			);
+			req.on("error", reject);
+		});
+		expect(status).toBe(200);
+	});
+
+	test("blocks subdomain of configured upstream host (Host header)", async ({
+		expect,
+	}) => {
+		const url = await mf.ready;
+		const status = await new Promise<number>((resolve, reject) => {
+			const req = http.get(
+				`${url.origin}${CorePaths.EXPLORER}/api/storage/kv/namespaces`,
+				{ setHost: false, headers: { Host: "sub.upstream-host.example" } },
+				(res) => {
+					res.resume();
+					resolve(res.statusCode ?? 0);
+				}
+			);
+			req.on("error", reject);
+		});
+		expect(status).toBe(403);
+	});
+
+	test("blocks subdomain of configured upstream host (Origin header)", async ({
+		expect,
+	}) => {
+		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "https://sub.upstream-host.example" },
+		});
+		expect(res.status).toBe(403);
+		await res.arrayBuffer();
+	});
+
+	test("blocks unrelated external host even with upstream configured", async ({
+		expect,
+	}) => {
+		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "https://evil.com" },
+		});
+		expect(res.status).toBe(403);
 		await res.arrayBuffer();
 	});
 });
