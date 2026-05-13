@@ -6,6 +6,7 @@ import { newWebSocketRpcSession } from "capnweb";
 export type RemoteBindingEnv = {
 	remoteProxyConnectionString?: string;
 	binding: string;
+	cfTraceId?: string;
 };
 
 /** Headers sent alongside proxy requests to provide additional context. */
@@ -23,7 +24,8 @@ export function throwRemoteRequired(bindingName: string): never {
 export function makeFetch(
 	remoteProxyConnectionString: string | undefined,
 	bindingName: string,
-	extraHeaders?: Headers
+	extraHeaders?: Headers,
+	cfTraceId?: string
 ) {
 	return (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
 		if (!remoteProxyConnectionString) {
@@ -43,6 +45,12 @@ export function makeFetch(
 		}
 		proxiedHeaders.set("MF-URL", request.url);
 		proxiedHeaders.set("MF-Binding", bindingName);
+		if (cfTraceId) {
+			// Set directly on the outgoing request so Cloudflare's edge tracing picks it up
+			proxiedHeaders.set("cf-trace-id", cfTraceId);
+			// Also forward through to the binding call via the MF-Header proxy mechanism
+			proxiedHeaders.set("MF-Header-cf-trace-id", cfTraceId);
+		}
 		const req = new Request(request, {
 			headers: proxiedHeaders,
 		});
@@ -59,7 +67,8 @@ export function makeFetch(
 export function makeRemoteProxyStub(
 	remoteProxyConnectionString: string,
 	bindingName: string,
-	metadata?: ProxyMetadata
+	metadata?: ProxyMetadata,
+	cfTraceId?: string
 ): Fetcher {
 	const url = new URL(remoteProxyConnectionString);
 	url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
@@ -89,7 +98,12 @@ export function makeRemoteProxyStub(
 	return new Proxy<ProxiedService>(stub, {
 		get(_, p) {
 			if (p === "fetch") {
-				return makeFetch(remoteProxyConnectionString, bindingName, headers);
+				return makeFetch(
+					remoteProxyConnectionString,
+					bindingName,
+					headers,
+					cfTraceId
+				);
 			}
 			return Reflect.get(stub, p);
 		},

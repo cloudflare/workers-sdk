@@ -992,6 +992,7 @@ export const pagesDevCommand = createCommand({
 					tsconfig: undefined,
 					minify: undefined,
 					legacyEnv: undefined,
+					tunnelName: undefined,
 					env: undefined,
 					envFile: undefined,
 					ip,
