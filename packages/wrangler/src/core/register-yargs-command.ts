@@ -1,8 +1,9 @@
 import {
 	defaultWranglerConfig,
 	FatalError,
+	getCloudflareEnv,
 	getWranglerHideBanner,
-	isRedirectedConfig,
+	experimental_readRawConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -200,12 +201,18 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
 					if (
-						!isRedirectedConfig(config) &&
-						config.targetEnvironment === undefined
+						!("env" in args) &&
+						getCloudflareEnv() === undefined &&
+						config.configPath
 					) {
-						const availableEnvsCount = config.definedEnvironments?.length ?? 0;
-
-						if (availableEnvsCount > 0) {
+						const { rawConfig } = experimental_readRawConfig(
+							{
+								config: config.configPath,
+							},
+							{ hideWarnings: true }
+						);
+						const availableEnvs = Object.keys(rawConfig.env ?? {});
+						if (availableEnvs.length > 0) {
 							logger.warn(
 								dedent`
 										Multiple environments are defined in the Wrangler configuration file, but no target environment was specified for the ${sanitizedCommand} command.
