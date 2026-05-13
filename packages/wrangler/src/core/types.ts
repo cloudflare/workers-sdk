@@ -79,7 +79,7 @@ export type Metadata = {
 };
 
 export type ArgDefinition = Omit<PositionalOptions, "type"> &
-	Pick<Options, "hidden" | "requiresArg" | "deprecated" | "type">;
+	Pick<Options, "hidden" | "requiresArg" | "deprecated" | "type" | "global">;
 export type NamedArgDefinitions = { [key: string]: ArgDefinition };
 
 export type OnlyCamelCase<T = Record<string, never>> = {
