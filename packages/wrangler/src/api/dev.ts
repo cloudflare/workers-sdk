@@ -224,6 +224,7 @@ export async function unstable_dev(
 		containerEngine: options?.experimental?.containerEngine,
 		types: false,
 		tunnel: undefined,
+		tunnelName: undefined,
 	};
 
 	//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time

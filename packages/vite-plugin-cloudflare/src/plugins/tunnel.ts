@@ -103,14 +103,21 @@ export class TunnelManager {
 
 	async #waitForPublicUrl(tunnel: Tunnel): Promise<string | null> {
 		try {
-			const { publicUrl } = await tunnel.ready();
+			const result = await tunnel.ready();
 			if (this.#tunnel !== tunnel) {
 				debuglog(
 					"Tunnel was restarted before it finished starting. Ignoring this tunnel's public URL:",
-					publicUrl
+					result.mode === "quick" ? result.publicUrl : "(named tunnel)"
 				);
 				return null;
 			}
+
+			if (result.mode !== "quick") {
+				this.#publicUrl = undefined;
+				return null;
+			}
+
+			const { publicUrl } = result;
 
 			debuglog("Tunnel is ready with public URL:", publicUrl);
 			this.#publicUrl = publicUrl.toString();
