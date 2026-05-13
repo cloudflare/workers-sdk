@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getGlobalWranglerConfigPath,
@@ -8,6 +9,7 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
+import TOML from "smol-toml";
 import { beforeEach, describe, it, vi } from "vitest";
 import { saveToConfigCache } from "../config-cache";
 import {
@@ -468,9 +470,7 @@ describe("User", () => {
 			// writeAuthConfigFile (which would call reinitialiseAuthTokens and update
 			// OUR localState) by writing the file directly — this simulates what
 			// another wrangler process running concurrently actually does.
-			const fs = await import("node:fs");
-			const TOML = (await import("smol-toml")).default;
-			fs.writeFileSync(
+			writeFileSync(
 				getAuthConfigFilePath(),
 				TOML.stringify({
 					oauth_token: "sibling-fresh-access",
