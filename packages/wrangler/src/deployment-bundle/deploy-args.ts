@@ -1,5 +1,3 @@
-import { UserError } from "@cloudflare/workers-utils";
-import { logger } from "../logger";
 import type { NamedArgDefinitions } from "../core/types";
 
 export const sharedDeployVersionsArgs = {
@@ -60,7 +58,7 @@ export const sharedDeployVersionsArgs = {
 		array: true,
 	},
 	latest: {
-		describe: "Use the latest version of the Workers runtime",
+		describe: "Use the latest version of the Worker runtime",
 		type: "boolean",
 		default: false,
 	},
@@ -155,35 +153,8 @@ export const sharedDeployVersionsArgs = {
 	},
 	"secrets-file": {
 		describe:
-			"Path to a file containing secrets to upload with the version (JSON or .env format). Applies additively with secrets from previous deployments - omitted secrets will not be deleted.",
+			"Path to a file containing secrets to upload with the version (JSON or .env format). Secrets from previous deployments will not be deleted - see `--keep-secrets`",
 		type: "string",
 		requiresArg: true,
 	},
-	"keep-vars": {
-		describe:
-			"When not used (or set to false), Wrangler will delete all vars before setting those found in the Wrangler configuration.\n" +
-			"When used (and set to true), the environment variables are not deleted before the deployment.\n" +
-			"If you set variables via the dashboard you probably want to use this flag.\n" +
-			"Note that secrets are never deleted by deployments.",
-		default: false,
-		type: "boolean",
-	},
 } as const satisfies NamedArgDefinitions;
-
-export function validateDeployVersionsArgs(args: {
-	nodeCompat: boolean | undefined;
-	latest: boolean | undefined;
-}): void {
-	if (args.nodeCompat) {
-		throw new UserError(
-			"The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.",
-			{ telemetryMessage: "deploy node compat unsupported" }
-		);
-	}
-
-	if (args.latest) {
-		logger.warn(
-			`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your configuration file.`
-		);
-	}
-}

@@ -23,8 +23,10 @@ import {
 	getR2Bucket,
 	listR2Buckets,
 } from "../r2/helpers/bucket";
+import { parseBulkInputToObject } from "../secret";
 import { printBindings } from "../utils/print-bindings";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import { addRequiredSecretsInheritBindings } from "./secrets-validation";
 import type { Binding, StartDevWorkerInput } from "../api/startDevWorker/types";
 import type {
 	CfAISearchNamespace,
@@ -37,19 +39,61 @@ import type {
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 
-export function getBindings(
+export type GetBindingsOptions = {
+	pages?: boolean;
+	var?: Record<string, string>;
+	secretsFile?: string;
+	command?: "deploy" | "versions upload";
+	workerExists?: boolean;
+};
+
+export async function getBindings(
 	config: Config | undefined,
-	options?: {
-		pages?: boolean;
-	}
-): NonNullable<StartDevWorkerInput["bindings"]> {
+	options?: GetBindingsOptions
+): Promise<NonNullable<StartDevWorkerInput["bindings"]>> {
 	if (!config) {
 		return {};
 	}
-	return convertConfigToBindings(config, {
+
+	const bindings = convertConfigToBindings(config, {
 		usePreviewIds: false,
 		pages: options?.pages,
 	});
+
+	// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
+	for (const [bindingName, value] of Object.entries(options?.var ?? {})) {
+		bindings[bindingName] = {
+			type: "plain_text",
+			value,
+			hidden: true,
+		};
+	}
+
+	if (options?.secretsFile) {
+		const secretsResult = await parseBulkInputToObject(options.secretsFile);
+		if (secretsResult) {
+			for (const [secretName, secretValue] of Object.entries(
+				secretsResult.content
+			)) {
+				bindings[secretName] = {
+					type: "secret_text",
+					value: secretValue,
+				};
+			}
+		}
+	}
+
+	if (options?.command) {
+		addRequiredSecretsInheritBindings(
+			config,
+			bindings,
+			options.command === "deploy"
+				? { type: "deploy", workerExists: options.workerExists ?? true }
+				: { type: "upload" }
+		);
+	}
+
+	return bindings;
 }
 
 export type Settings = {

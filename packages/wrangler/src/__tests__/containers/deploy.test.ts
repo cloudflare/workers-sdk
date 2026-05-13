@@ -2422,7 +2422,6 @@ describe("wrangler deploy with containers dry run", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Total Upload: xx KiB / gzip: xx KiB
-			Building image my-container:worker
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
@@ -2430,6 +2429,7 @@ describe("wrangler deploy with containers dry run", () => {
 			The following containers are available:
 			- my-container (<cwd>/Dockerfile)
 
+			Building image my-container:worker
 			--dry-run: exiting now."
 		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`""`);

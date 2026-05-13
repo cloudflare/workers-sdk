@@ -136,6 +136,27 @@ export async function getEntry(
 		config.tsconfig
 	);
 
+	if (config.wasm_modules && format === "modules") {
+		throw new UserError(
+			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code",
+			{ telemetryMessage: "deploy wasm modules with es module worker" }
+		);
+	}
+
+	if (config.text_blobs && format === "modules") {
+		throw new UserError(
+			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			{ telemetryMessage: "[text_blobs] with an ES module worker" }
+		);
+	}
+
+	if (config.data_blobs && format === "modules") {
+		throw new UserError(
+			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			{ telemetryMessage: "[data_blobs] with an ES module worker" }
+		);
+	}
+
 	const { localBindings } = partitionDurableObjectBindings(config);
 
 	if (format === "service-worker" && localBindings.length > 0) {

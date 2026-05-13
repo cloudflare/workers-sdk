@@ -564,8 +564,8 @@ addEventListener('fetch', event => {});`
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -627,8 +627,8 @@ addEventListener('fetch', event => {});`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)

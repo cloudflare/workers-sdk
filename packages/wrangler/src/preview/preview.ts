@@ -894,7 +894,7 @@ export async function handlePreviewCommand(
 	);
 	logger.log(formatDeploymentResource(deployment, versionLevel, configName));
 
-	const topLevelBindings = getBindings(config);
+	const topLevelBindings = await getBindings(config);
 	if (Object.keys(topLevelBindings).length > 0) {
 		const previewDefaults = await getWorkerPreviewDefaults(
 			config,

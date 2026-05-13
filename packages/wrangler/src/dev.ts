@@ -9,7 +9,7 @@ import { isWebContainer } from "@webcontainer/env";
 import { convertConfigToBindings } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { createCommand } from "./core/create-command";
-import { validateRoutes } from "./deploy/deploy";
+import { validateRoutes } from "./deployment-bundle/resolve-input";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { logger } from "./logger";

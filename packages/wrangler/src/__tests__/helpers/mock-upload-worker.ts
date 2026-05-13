@@ -5,7 +5,7 @@ import { expect } from "vitest";
 import {
 	getSubdomainValues,
 	getSubdomainValuesAPIMock,
-} from "../../triggers/deploy";
+} from "../../triggers/helpers";
 import {
 	mockGetWorkerSubdomain,
 	mockUpdateWorkerSubdomain,

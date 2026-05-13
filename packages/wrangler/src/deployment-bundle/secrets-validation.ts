@@ -1,9 +1,14 @@
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { INVALID_INHERIT_BINDING_CODE } from "../utils/error-codes";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
+import type { DeployProps, VersionsUploadProps } from "./resolve-input";
 import type { Config } from "@cloudflare/workers-utils";
 
-type SecretsValidationOptions =
+/** Context type for handleMissingSecretsError - uses full props with discriminant */
+export type SecretsValidationContext = DeployProps | VersionsUploadProps;
+
+/** Simple options type for addRequiredSecretsInheritBindings (called before full props exist) */
+type AddSecretsOptions =
 	| { type: "deploy"; workerExists: boolean }
 	| { type: "upload" };
 
@@ -18,7 +23,7 @@ type SecretsValidationOptions =
 export function addRequiredSecretsInheritBindings(
 	config: Config,
 	bindings: NonNullable<StartDevWorkerInput["bindings"]>,
-	options: SecretsValidationOptions
+	options: AddSecretsOptions
 ): void {
 	if (!config.secrets?.required?.length) {
 		return;
@@ -55,7 +60,7 @@ export function addRequiredSecretsInheritBindings(
 export function handleMissingSecretsError(
 	err: unknown,
 	config: Config,
-	options: SecretsValidationOptions
+	context: SecretsValidationContext
 ): void {
 	if (!(err instanceof APIError) || err.code !== INVALID_INHERIT_BINDING_CODE) {
 		return;
@@ -69,9 +74,10 @@ export function handleMissingSecretsError(
 
 	if (missingSecretNames.length > 0) {
 		err.preventReport();
+		const isDeploy = context.command === "deploy";
 		throw new UserError(
 			`The following required secrets have not been set: ${missingSecretNames.join(", ")}\n` +
-				`Use \`wrangler ${options.type === "deploy" ? "secret put" : "versions secret put"} <NAME>\` to set secrets before ${options.type === "deploy" ? "deploying" : "uploading"}.\n` +
+				`Use \`wrangler ${isDeploy ? "secret put" : "versions secret put"} <NAME>\` to set secrets before ${isDeploy ? "deploying" : "uploading"}.\n` +
 				`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`,
 			{ telemetryMessage: "required secrets missing during upload or deploy" }
 		);
