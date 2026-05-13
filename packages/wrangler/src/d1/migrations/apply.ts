@@ -128,8 +128,8 @@ export const d1MigrationsApplyCommand = createCommand({
 				};
 			})
 			.sort((a, b) => {
-				const migrationNumberA = parseInt(a.name.split("_")[0]);
-				const migrationNumberB = parseInt(b.name.split("_")[0]);
+				const migrationNumberA = parseInt(a.name.split("/")[0].split("_")[0]);
+				const migrationNumberB = parseInt(b.name.split("/")[0].split("_")[0]);
 				if (migrationNumberA < migrationNumberB) {
 					return -1;
 				}
@@ -137,7 +137,7 @@ export const d1MigrationsApplyCommand = createCommand({
 					return 1;
 				}
 
-				// numbers must be equal
+				// Preserve the discovery order for equal or nonnumeric prefixes.
 				return 0;
 			});
 
@@ -158,12 +158,13 @@ Your database may not be available to serve requests during the migration, conti
 
 		for (const migration of unappliedMigrations) {
 			let query = fs.readFileSync(
-				`${migrationsPath}/${migration.name}`,
+				path.join(migrationsPath, migration.name),
 				"utf8"
 			);
+			const migrationName = migration.name.replaceAll("'", "''");
 			query += `
 								INSERT INTO ${migrationsTableName} (name)
-								values ('${migration.name}');
+								values ('${migrationName}');
 						`;
 
 			let success = true;

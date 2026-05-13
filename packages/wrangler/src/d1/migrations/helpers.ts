@@ -131,18 +131,32 @@ const listAppliedMigrations = async ({
 };
 
 export function getMigrationNames(migrationsPath: string): Array<string> {
-	const migrations = [];
+	const migrations: string[] = [];
 
-	const dir = fs.opendirSync(migrationsPath);
+	function walkMigrationDirectory(
+		directoryPath: string,
+		relativeSegments: string[]
+	): void {
+		const dir = fs.opendirSync(directoryPath);
 
-	let dirent;
-	while ((dirent = dir.readSync()) !== null) {
-		if (dirent.name.endsWith(".sql")) {
-			migrations.push(dirent.name);
+		try {
+			let dirent;
+			while ((dirent = dir.readSync()) !== null) {
+				const relativePathSegments = [...relativeSegments, dirent.name];
+				const absolutePath = path.join(directoryPath, dirent.name);
+
+				if (dirent.isDirectory()) {
+					walkMigrationDirectory(absolutePath, relativePathSegments);
+				} else if (dirent.isFile() && dirent.name.endsWith(".sql")) {
+					migrations.push(relativePathSegments.join("/"));
+				}
+			}
+		} finally {
+			dir.closeSync();
 		}
 	}
 
-	dir.closeSync();
+	walkMigrationDirectory(migrationsPath, []);
 
 	return migrations.toSorted();
 }
@@ -151,8 +165,15 @@ export function getMigrationNames(migrationsPath: string): Array<string> {
  * Returns the highest current migration number plus one, ignoring any missing numbers.
  */
 export function getNextMigrationNumber(migrationsPath: string): number {
-	const migrationNumbers = getMigrationNames(migrationsPath).map((migration) =>
-		parseInt(migration.split("_")[0])
+	const migrationNumbers = getMigrationNames(migrationsPath).flatMap(
+		(migration) => {
+			const migrationNumber = parseInt(migration.split("/")[0].split("_")[0]);
+			if (!Number.isFinite(migrationNumber)) {
+				return [];
+			}
+
+			return [migrationNumber];
+		}
 	);
 	const highestMigrationNumber = Math.max(...migrationNumbers, 0);
 
