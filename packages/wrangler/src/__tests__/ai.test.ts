@@ -145,6 +145,34 @@ describe("ai commands", () => {
 		expect(std.out).toContain("@cloudflare/resnet50");
 	});
 
+	it("should handle model schema", async ({ expect }) => {
+		const requests = mockAISchemaRequest();
+		await runWrangler('ai models schema "@cloudflare/resnet50"');
+
+		expect(requests).toHaveLength(1);
+		const searchParams = new URL(requests[0].url).searchParams;
+		expect(searchParams.get("model")).toBe("@cloudflare/resnet50");
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			  "input": {
+			    "type": "object",
+			    "properties": {
+			      "image": {
+			        "type": "string",
+			        "format": "binary"
+			      }
+			    }
+			  },
+			  "output": {
+			    "type": "array",
+			    "items": {
+			      "type": "object"
+			    }
+			  }
+			}"
+		`);
+	});
+
 	it("should truncate model description", async ({ expect }) => {
 		const original = process.stdout.columns;
 		// Arbitrary fixed value for testing
@@ -369,6 +397,42 @@ function mockAISearchRequest() {
 								description: null,
 							},
 						],
+						true
+					)
+				);
+			},
+			{ once: true }
+		)
+	);
+	return requests;
+}
+
+function mockAISchemaRequest() {
+	const requests: Request[] = [];
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/ai/models/schema",
+			({ request }) => {
+				requests.push(request);
+				return HttpResponse.json(
+					createFetchResult(
+						{
+							input: {
+								type: "object",
+								properties: {
+									image: {
+										type: "string",
+										format: "binary",
+									},
+								},
+							},
+							output: {
+								type: "array",
+								items: {
+									type: "object",
+								},
+							},
+						},
 						true
 					)
 				);
