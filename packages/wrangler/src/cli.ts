@@ -91,7 +91,6 @@ export type {
 	Experimental_GenerateTypesResult,
 };
 
-// Export internal APIs for use in the Vite plugin
 export { printBindings as unstable_printBindings } from "./utils/print-bindings";
 export { resolveNamedTunnel as unstable_resolveNamedTunnel } from "./tunnel/client";
 

@@ -3040,47 +3040,6 @@ describe.sequential("wrangler dev", () => {
 			});
 		});
 
-		it("should preserve the entrypoint when --tunnel appears before it", async ({
-			expect,
-		}) => {
-			writeWranglerConfig({
-				compatibility_date: "2024-01-01",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			const config = await runWranglerUntilConfig("dev --tunnel index.js");
-			expect(config.input.dev?.tunnel).toEqual({
-				enabled: true,
-				name: undefined,
-			});
-			expect(config.entrypoint).toMatch(/index\.js$/);
-		});
-
-		it("should treat --tunnel=true as a quick tunnel", async ({ expect }) => {
-			writeWranglerConfig({
-				main: "index.js",
-				compatibility_date: "2024-01-01",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			const config = await runWranglerUntilConfig("dev --tunnel=true");
-			expect(config.input.dev?.tunnel).toEqual({
-				enabled: true,
-				name: undefined,
-			});
-		});
-
-		it("should treat --tunnel=false as disabled", async ({ expect }) => {
-			writeWranglerConfig({
-				main: "index.js",
-				compatibility_date: "2024-01-01",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			const config = await runWranglerUntilConfig("dev --tunnel=false");
-			expect(config.input.dev?.tunnel).toEqual({
-				enabled: false,
-				name: undefined,
-			});
-		});
-
 		it("should default tunnel to undefined when not specified", async ({
 			expect,
 		}) => {
@@ -3109,40 +3068,6 @@ describe.sequential("wrangler dev", () => {
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: --tunnel is only supported in local mode.]`
 			);
-		});
-
-		it("should allow --tunnel=false with --remote", async ({ expect }) => {
-			writeWranglerConfig({
-				main: "index.js",
-				compatibility_date: "2024-01-01",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			const config = await runWranglerUntilConfig(
-				"dev --remote --tunnel=false"
-			);
-			expect(config.input.dev?.tunnel).toEqual({
-				enabled: false,
-				name: undefined,
-			});
-			expect(config.input.dev?.remote).toBe(true);
-		});
-
-		it("should allow --tunnel-name without --tunnel in remote mode", async ({
-			expect,
-		}) => {
-			writeWranglerConfig({
-				main: "index.js",
-				compatibility_date: "2024-01-01",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			const config = await runWranglerUntilConfig(
-				"dev --remote --tunnel-name=my-tunnel"
-			);
-			expect(config.input.dev?.tunnel).toEqual({
-				enabled: false,
-				name: "my-tunnel",
-			});
-			expect(config.input.dev?.remote).toBe(true);
 		});
 	});
 

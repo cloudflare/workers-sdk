@@ -13,11 +13,7 @@ import registerDevHotKeys from "../dev/hotkeys";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
-import {
-	createTunnelManager,
-	type TunnelManager,
-	formatHostname,
-} from "../tunnel/dev";
+import { TunnelManager } from "../tunnel/dev";
 import { requireApiToken, requireAuth } from "../user";
 import {
 	collectKeyValues,
@@ -121,7 +117,7 @@ export async function startDev(args: StartDevOptions) {
 		const devEnvs = Array.isArray(devEnv) ? devEnv : [devEnv];
 		const [primaryDevEnv, ...secondary] = devEnvs;
 
-		tunnelManager = createTunnelManager(primaryDevEnv, args);
+		tunnelManager = new TunnelManager(primaryDevEnv, args);
 
 		primaryDevEnv.on("teardown", () => {
 			tunnelManager?.getTunnel()?.dispose();
@@ -363,4 +359,12 @@ function maybePrintScheduledWorkerWarning(
 			`  curl "http://${host}:${port}/cdn-cgi/handler/scheduled"\n` +
 			`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
 	);
+}
+
+export function formatHostname(hostname: string): string {
+	if (hostname === "0.0.0.0" || hostname === "::" || hostname === "*") {
+		return "localhost";
+	}
+
+	return hostname.includes(":") ? `[${hostname}]` : hostname;
 }
