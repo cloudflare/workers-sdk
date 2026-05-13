@@ -1,13 +1,7 @@
 import { createCommand, createNamespace } from "../core/create-command";
-import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import formatLabelledValues from "../utils/render-labelled-values";
-import {
-	createNamespace as createArtifactsNamespace,
-	deleteNamespace,
-	getNamespace,
-	listNamespaces,
-} from "./client";
+import { getNamespace, listNamespaces } from "./client";
 import type { ArtifactsNamespace } from "./types";
 
 const namespaceNameArg = {
@@ -22,13 +16,6 @@ const jsonArg = {
 	description: "Return output as JSON",
 } as const;
 
-const forceArg = {
-	type: "boolean",
-	alias: "y",
-	default: false,
-	description: "Skip confirmation",
-} as const;
-
 export const artifactsNamespacesNamespace = createNamespace({
 	metadata: {
 		description: "Manage Artifacts namespaces",
@@ -41,47 +28,24 @@ function formatNamespaceDetails(
 	namespace: ArtifactsNamespace
 ): Record<string, string> {
 	return formatDefinedValues([
-		["name", namespace.name],
-		["id", namespace.id],
+		["namespace", namespace.namespace],
+		["repo_count", namespace.repo_count],
 		["created_at", namespace.created_at],
 		["updated_at", namespace.updated_at],
 	]);
 }
 
 function formatDefinedValues(
-	values: [string, string | undefined][]
+	values: [string, string | number | undefined][]
 ): Record<string, string> {
 	return Object.fromEntries(
-		values.filter((entry): entry is [string, string] => entry[1] !== undefined)
+		values
+			.filter(
+				(entry): entry is [string, string | number] => entry[1] !== undefined
+			)
+			.map(([key, value]) => [key, String(value)])
 	);
 }
-
-export const artifactsNamespacesCreateCommand = createCommand({
-	metadata: {
-		description: "Create an Artifacts namespace",
-		status: "private beta",
-		owner: "Product: Artifacts",
-	},
-	behaviour: {
-		printBanner: (args) => !args.json,
-	},
-	positionalArgs: ["name"],
-	args: {
-		name: namespaceNameArg,
-		json: jsonArg,
-	},
-	async handler({ name, json }, { config }) {
-		const namespace = await createArtifactsNamespace(config, name);
-
-		if (json) {
-			logger.json(namespace);
-			return;
-		}
-
-		logger.log(`Created Artifacts namespace "${namespace.name}".`);
-		logger.log(formatLabelledValues(formatNamespaceDetails(namespace)));
-	},
-});
 
 export const artifactsNamespacesListCommand = createCommand({
 	metadata: {
@@ -110,9 +74,10 @@ export const artifactsNamespacesListCommand = createCommand({
 
 		logger.table(
 			namespaces.map((namespace) => ({
-				name: namespace.name,
-				created_at: namespace.created_at ?? "",
-				updated_at: namespace.updated_at ?? "",
+				namespace: namespace.namespace,
+				repo_count: String(namespace.repo_count),
+				created_at: namespace.created_at,
+				updated_at: namespace.updated_at,
 			}))
 		);
 	},
@@ -141,43 +106,5 @@ export const artifactsNamespacesGetCommand = createCommand({
 		}
 
 		logger.log(formatLabelledValues(formatNamespaceDetails(namespace)));
-	},
-});
-
-export const artifactsNamespacesDeleteCommand = createCommand({
-	metadata: {
-		description: "Delete an Artifacts namespace",
-		status: "private beta",
-		owner: "Product: Artifacts",
-	},
-	behaviour: {
-		printBanner: (args) => !args.json,
-	},
-	positionalArgs: ["name"],
-	args: {
-		name: namespaceNameArg,
-		force: forceArg,
-		json: jsonArg,
-	},
-	async handler({ name, force, json }, { config }) {
-		if (!force) {
-			const confirmedDeletion = await confirm(
-				`Are you sure you want to delete Artifacts namespace "${name}"? This action cannot be undone.`,
-				{ fallbackValue: false }
-			);
-			if (!confirmedDeletion) {
-				logger.log("Deletion cancelled.");
-				return;
-			}
-		}
-
-		await deleteNamespace(config, name);
-
-		if (json) {
-			logger.json({ deleted: true, name });
-			return;
-		}
-
-		logger.log(`Deleted Artifacts namespace "${name}".`);
 	},
 });

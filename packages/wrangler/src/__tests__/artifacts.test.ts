@@ -41,43 +41,8 @@ describe("artifacts", () => {
 
 			expect(std.err).toBe("");
 			expect(std.out).toContain("wrangler artifacts namespaces");
-			expect(std.out).toContain("create");
 			expect(std.out).toContain("list");
 			expect(std.out).toContain("get");
-			expect(std.out).toContain("delete");
-		});
-
-		it("should create a namespace with JSON output", async ({ expect }) => {
-			let requestBody: unknown;
-
-			msw.use(
-				http.post(
-					"*/accounts/:accountId/artifacts/namespaces",
-					async ({ params, request }) => {
-						requestBody = await request.json();
-						expect(params.accountId).toBe("some-account-id");
-						return HttpResponse.json(
-							createFetchResult({
-								id: "ns_123",
-								name: "sandbox",
-								created_at: "2026-04-23T12:00:00.000Z",
-								updated_at: "2026-04-23T12:00:00.000Z",
-							})
-						);
-					}
-				)
-			);
-
-			await runWrangler("artifacts namespaces create sandbox --json");
-
-			expect(requestBody).toEqual({ name: "sandbox" });
-			expect(std.err).toBe("");
-			expect(JSON.parse(std.out)).toEqual({
-				id: "ns_123",
-				name: "sandbox",
-				created_at: "2026-04-23T12:00:00.000Z",
-				updated_at: "2026-04-23T12:00:00.000Z",
-			});
 		});
 
 		it("should list namespaces in human mode", async ({ expect }) => {
@@ -87,12 +52,14 @@ describe("artifacts", () => {
 					return HttpResponse.json(
 						createFetchResult([
 							{
-								name: "default",
+								namespace: "default",
+								repo_count: 3,
 								created_at: "2026-04-20T10:00:00.000Z",
 								updated_at: "2026-04-20T10:00:00.000Z",
 							},
 							{
-								name: "sandbox",
+								namespace: "sandbox",
+								repo_count: 1,
 								created_at: "2026-04-21T10:00:00.000Z",
 								updated_at: "2026-04-22T10:00:00.000Z",
 							},
@@ -108,13 +75,13 @@ describe("artifacts", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				┌─┬─┬─┐
-				│ name │ created_at │ updated_at │
-				├─┼─┼─┤
-				│ default │ 2026-04-20T10:00:00.000Z │ 2026-04-20T10:00:00.000Z │
-				├─┼─┼─┤
-				│ sandbox │ 2026-04-21T10:00:00.000Z │ 2026-04-22T10:00:00.000Z │
-				└─┴─┴─┘"
+				┌─┬─┬─┬─┐
+				│ namespace │ repo_count │ created_at │ updated_at │
+				├─┼─┼─┼─┤
+				│ default │ 3 │ 2026-04-20T10:00:00.000Z │ 2026-04-20T10:00:00.000Z │
+				├─┼─┼─┼─┤
+				│ sandbox │ 1 │ 2026-04-21T10:00:00.000Z │ 2026-04-22T10:00:00.000Z │
+				└─┴─┴─┴─┘"
 			`);
 		});
 
@@ -127,8 +94,8 @@ describe("artifacts", () => {
 						expect(params.namespace).toBe("default");
 						return HttpResponse.json(
 							createFetchResult({
-								id: "ns_default",
-								name: "default",
+								namespace: "default",
+								repo_count: 3,
 								created_at: "2026-04-20T10:00:00.000Z",
 								updated_at: "2026-04-22T10:00:00.000Z",
 							})
@@ -140,61 +107,15 @@ describe("artifacts", () => {
 			await runWrangler("artifacts namespaces get default");
 
 			expect(std.err).toBe("");
-			expect(std.out).toContain("ns_default");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				name:        default
-				id:          ns_default
+				namespace:   default
+				repo_count:  3
 				created_at:  2026-04-20T10:00:00.000Z
 				updated_at:  2026-04-22T10:00:00.000Z"
 			`);
-		});
-
-		it("should delete a namespace with JSON output", async ({ expect }) => {
-			msw.use(
-				http.delete(
-					"*/accounts/:accountId/artifacts/namespaces/:namespace",
-					({ params }) => {
-						expect(params.accountId).toBe("some-account-id");
-						expect(params.namespace).toBe("default");
-						return HttpResponse.json(createFetchResult({ id: "ns_default" }));
-					}
-				)
-			);
-
-			await runWrangler("artifacts namespaces delete default --force --json");
-
-			expect(std.err).toBe("");
-			expect(JSON.parse(std.out)).toEqual({ deleted: true, name: "default" });
-		});
-
-		it("should cancel namespace deletion when not confirmed", async ({
-			expect,
-		}) => {
-			let requestReceived = false;
-
-			mockConfirm({
-				text: 'Are you sure you want to delete Artifacts namespace "default"? This action cannot be undone.',
-				options: { defaultValue: true },
-				result: false,
-			});
-
-			msw.use(
-				http.delete(
-					"*/accounts/:accountId/artifacts/namespaces/:namespace",
-					() => {
-						requestReceived = true;
-						return HttpResponse.json(createFetchResult({ id: "ns_default" }));
-					}
-				)
-			);
-
-			await runWrangler("artifacts namespaces delete default");
-
-			expect(std.out).toContain("Deletion cancelled.");
-			expect(requestReceived).toBe(false);
 		});
 	});
 

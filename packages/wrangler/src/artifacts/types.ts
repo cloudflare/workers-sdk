@@ -3,10 +3,10 @@ export type ArtifactsTokenScope = "read" | "write";
 export type ArtifactsRepoStatus = "ready" | "importing" | "forking";
 
 export interface ArtifactsNamespace {
-	id?: string;
-	name: string;
-	created_at?: string;
-	updated_at?: string;
+	namespace: string;
+	repo_count: number;
+	created_at: string;
+	updated_at: string;
 }
 
 export interface ArtifactsRepo {

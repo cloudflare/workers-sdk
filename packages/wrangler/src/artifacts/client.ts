@@ -1,4 +1,4 @@
-import { fetchListResult, fetchResult } from "../cfetch";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import type {
 	ArtifactsCreateRepoRequest,
@@ -33,23 +33,11 @@ function getArtifactsRepoPath(
 	return `${getArtifactsReposPath(accountId, namespace)}/${encodeURIComponent(name)}`;
 }
 
-export async function createNamespace(
-	config: Config,
-	name: string
-): Promise<ArtifactsNamespace> {
-	const accountId = await requireAuth(config);
-	return await fetchResult(config, getArtifactsNamespacesPath(accountId), {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ name }),
-	});
-}
-
 export async function listNamespaces(
 	config: Config
 ): Promise<ArtifactsNamespace[]> {
 	const accountId = await requireAuth(config);
-	return await fetchListResult(config, getArtifactsNamespacesPath(accountId), {
+	return await fetchPagedListResult(config, getArtifactsNamespacesPath(accountId), {
 		method: "GET",
 	});
 }
@@ -61,16 +49,6 @@ export async function getNamespace(
 	const accountId = await requireAuth(config);
 	return await fetchResult(config, getArtifactsNamespacePath(accountId, name), {
 		method: "GET",
-	});
-}
-
-export async function deleteNamespace(
-	config: Config,
-	name: string
-): Promise<void> {
-	const accountId = await requireAuth(config);
-	await fetchResult(config, getArtifactsNamespacePath(accountId, name), {
-		method: "DELETE",
 	});
 }
 
@@ -96,7 +74,7 @@ export async function listRepos(
 	namespace: string
 ): Promise<ArtifactsRepo[]> {
 	const accountId = await requireAuth(config);
-	return await fetchListResult(
+	return await fetchPagedListResult(
 		config,
 		getArtifactsReposPath(accountId, namespace),
 		{

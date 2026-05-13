@@ -29,8 +29,6 @@ import { aiModelsCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
 import {
 	artifactsNamespace,
-	artifactsNamespacesCreateCommand,
-	artifactsNamespacesDeleteCommand,
 	artifactsNamespacesGetCommand,
 	artifactsNamespacesListCommand,
 	artifactsNamespacesNamespace,
@@ -988,20 +986,12 @@ export function createCLIParser(argv: string[]) {
 			definition: artifactsNamespacesNamespace,
 		},
 		{
-			command: "wrangler artifacts namespaces create",
-			definition: artifactsNamespacesCreateCommand,
-		},
-		{
 			command: "wrangler artifacts namespaces list",
 			definition: artifactsNamespacesListCommand,
 		},
 		{
 			command: "wrangler artifacts namespaces get",
 			definition: artifactsNamespacesGetCommand,
-		},
-		{
-			command: "wrangler artifacts namespaces delete",
-			definition: artifactsNamespacesDeleteCommand,
 		},
 		{
 			command: "wrangler artifacts repos",

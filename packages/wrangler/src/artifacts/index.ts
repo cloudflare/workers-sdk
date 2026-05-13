@@ -10,8 +10,6 @@ export const artifactsNamespace = createNamespace({
 });
 
 export {
-	artifactsNamespacesCreateCommand,
-	artifactsNamespacesDeleteCommand,
 	artifactsNamespacesGetCommand,
 	artifactsNamespacesListCommand,
 	artifactsNamespacesNamespace,
