@@ -87,8 +87,9 @@ export class TunnelManager {
 			if (this.tunnel === nextTunnel) {
 				this.tunnel = undefined;
 				await this.syncTunnelState(false);
-				throw error;
 			}
+
+			throw error;
 		}
 	}
 

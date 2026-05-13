@@ -123,12 +123,16 @@ export default function registerDevHotKeys(
 					tunnelManager?.isOpen() ? "close tunnel" : "start tunnel",
 				disabled: () => primaryDevEnv.config.latestConfig?.dev?.remote === true,
 				handler: async () => {
-					if (!tunnelManager?.isOpen()) {
-						await tunnelManager?.start(true);
-						return;
-					}
+					try {
+						if (!tunnelManager?.isOpen()) {
+							await tunnelManager?.start(true);
+							return;
+						}
 
-					await tunnelManager.stop();
+						await tunnelManager.stop();
+					} catch (error) {
+						logger.error(error);
+					}
 				},
 			},
 			{
