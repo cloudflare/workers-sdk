@@ -12,14 +12,35 @@ import {
 import * as wrangler from "wrangler";
 import { PluginContext } from "../context";
 import {
+	QUICK_TUNNEL_ALLOWED_HOST,
 	resolveDevTunnelOrigin,
 	setupPreviewTunnel,
 	TunnelManager,
+	toggleTunnel,
 	setupDevTunnel,
 	tunnelPlugin,
 } from "../plugins/tunnel";
 import type { TunnelConfig } from "../plugin-config";
 import type * as vite from "vite";
+
+function createDeferred<T>() {
+	let resolve: ((value: T) => void) | undefined;
+	let reject: ((reason?: unknown) => void) | undefined;
+	const promise = new Promise<T>((_resolve, _reject) => {
+		resolve = _resolve;
+		reject = _reject;
+	});
+
+	if (!resolve || !reject) {
+		throw new Error("Failed to create deferred promise");
+	}
+
+	return {
+		promise,
+		resolve,
+		reject,
+	};
+}
 
 vi.mock("@cloudflare/workers-utils");
 vi.mock("wrangler");
@@ -67,6 +88,7 @@ describe("tunnel plugin", () => {
 				mode: "quick",
 				publicUrl: new URL("https://example.trycloudflare.com"),
 			}),
+			isOpen: vi.fn(() => true),
 			extendExpiry: vi.fn(),
 			dispose: vi.fn(),
 		});
@@ -84,6 +106,7 @@ describe("tunnel plugin", () => {
 				mode: "quick",
 				publicUrl: new URL("https://example.trycloudflare.com"),
 			}),
+			isOpen: vi.fn(() => true),
 			extendExpiry: vi.fn(),
 			dispose: vi.fn(),
 		});
@@ -140,6 +163,7 @@ describe("tunnel plugin", () => {
 				mode: "quick",
 				publicUrl: new URL("https://example.trycloudflare.com"),
 			}),
+			isOpen: vi.fn(() => true),
 			extendExpiry: vi.fn(),
 			dispose: vi.fn(),
 		});
@@ -180,6 +204,7 @@ describe("tunnel plugin", () => {
 					mode: "quick",
 					publicUrl: new URL("https://foo.trycloudflare.com"),
 				}),
+				isOpen: vi.fn(() => true),
 				extendExpiry: vi.fn(),
 				dispose: vi.fn(),
 			})
@@ -188,6 +213,7 @@ describe("tunnel plugin", () => {
 					mode: "quick",
 					publicUrl: new URL("https://bar.trycloudflare.com"),
 				}),
+				isOpen: vi.fn(() => true),
 				extendExpiry: vi.fn(),
 				dispose: vi.fn(),
 			});
@@ -261,6 +287,7 @@ describe("tunnel plugin", () => {
 					mode: "quick",
 					publicUrl: new URL("https://foo.trycloudflare.com"),
 				}),
+				isOpen: vi.fn(() => true),
 				extendExpiry: vi.fn(),
 				dispose: vi.fn(() => {
 					throw disposeError;
@@ -271,6 +298,7 @@ describe("tunnel plugin", () => {
 					mode: "quick",
 					publicUrl: new URL("https://bar.trycloudflare.com"),
 				}),
+				isOpen: vi.fn(() => true),
 				extendExpiry: vi.fn(),
 				dispose: vi.fn().mockResolvedValue(undefined),
 			});
@@ -298,10 +326,7 @@ describe("tunnel plugin", () => {
 				accountId: undefined,
 				complianceRegion: undefined,
 			})
-		).rejects.toMatchObject({
-			message: "Failed to start tunnel. dispose failed",
-			cause: disposeError,
-		});
+		).rejects.toBe(disposeError);
 
 		expect(startTunnel).toHaveBeenCalledTimes(1);
 		expect(tunnelManager.publicUrls).toBeUndefined();
@@ -318,6 +343,7 @@ describe("tunnel plugin", () => {
 
 		vi.mocked(startTunnel).mockReturnValue({
 			ready: vi.fn().mockRejectedValue(tunnelError),
+			isOpen: vi.fn(() => true),
 			extendExpiry: vi.fn(),
 			dispose: vi.fn(() => {
 				throw disposeError;
@@ -331,10 +357,7 @@ describe("tunnel plugin", () => {
 		// @ts-expect-error The tunnel plugin accepts a server instance directly without relying on `this`
 		await plugin.configureServer(server);
 
-		await expect(() => server.listen(0)).rejects.toMatchObject({
-			message: "Failed to start tunnel. quick tunnel rate limited",
-			cause: tunnelError,
-		});
+		await expect(() => server.listen(0)).rejects.toBe(tunnelError);
 		expect(close).toHaveBeenCalledTimes(1);
 		expect(server.httpServer?.listening).toBe(false);
 	});
@@ -343,10 +366,34 @@ describe("tunnel plugin", () => {
 		const tunnelError = new Error("quick tunnel rate limited");
 		vi.mocked(startTunnel).mockReturnValue({
 			ready: vi.fn().mockRejectedValue(tunnelError),
+			isOpen: vi.fn(() => true),
 			extendExpiry: vi.fn(),
 			dispose: vi.fn(),
 		});
 
+		const previewServer = await preview({
+			preview: {
+				allowedHosts: [QUICK_TUNNEL_ALLOWED_HOST],
+			},
+		});
+		const ctx = createMockPluginContext({
+			type: "preview",
+			tunnel: { autoStart: true },
+		});
+
+		onTestFinished(() => previewServer.close());
+
+		const plugin = tunnelPlugin(ctx);
+
+		await expect(
+			// @ts-expect-error The tunnel plugin accepts a server instance directly without relying on `this`
+			plugin.configurePreviewServer(previewServer)
+		).rejects.toBe(tunnelError);
+	});
+
+	it("fails preview startup for a quick tunnel when preview.allowedHosts is missing", async ({
+		expect,
+	}) => {
 		const previewServer = await preview();
 		const ctx = createMockPluginContext({
 			type: "preview",
@@ -360,10 +407,11 @@ describe("tunnel plugin", () => {
 		await expect(
 			// @ts-expect-error The tunnel plugin accepts a server instance directly without relying on `this`
 			plugin.configurePreviewServer(previewServer)
-		).rejects.toMatchObject({
-			message: "Failed to start tunnel. quick tunnel rate limited",
-			cause: tunnelError,
-		});
+		).rejects.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Quick tunnel hostnames are not allowed by Vite preview host validation.
+			Add \`.trycloudflare.com\` to \`preview.allowedHosts\` in your Vite config.
+			]
+		`);
 	});
 
 	it("prints tunnel details with server.printUrls", async ({ expect }) => {
@@ -372,6 +420,7 @@ describe("tunnel plugin", () => {
 				mode: "quick",
 				publicUrl: new URL("https://example.trycloudflare.com"),
 			}),
+			isOpen: vi.fn(() => true),
 			extendExpiry: vi.fn(),
 			dispose: vi.fn().mockResolvedValue(undefined),
 		});
@@ -406,7 +455,11 @@ describe("tunnel plugin", () => {
 	it("prints preview tunnel warning without dev-only caveats", async ({
 		expect,
 	}) => {
-		const previewServer = await preview();
+		const previewServer = await preview({
+			preview: {
+				allowedHosts: [QUICK_TUNNEL_ALLOWED_HOST],
+			},
+		});
 		const infoMock = vi
 			.spyOn(previewServer.config.logger, "info")
 			.mockReturnValue(undefined);
@@ -434,7 +487,11 @@ describe("tunnel plugin", () => {
 	it("starts a preview tunnel with the resolved preview port", async ({
 		expect,
 	}) => {
-		const previewServer = await preview();
+		const previewServer = await preview({
+			preview: {
+				allowedHosts: [QUICK_TUNNEL_ALLOWED_HOST],
+			},
+		});
 		const tunnelManager = new TunnelManager(
 			previewServer.config.logger as vite.Logger
 		);
@@ -479,6 +536,7 @@ describe("tunnel plugin", () => {
 			ready: vi.fn().mockResolvedValue({
 				mode: "named",
 			}),
+			isOpen: vi.fn(() => true),
 			extendExpiry: vi.fn(),
 			dispose: vi.fn(),
 		});
@@ -526,6 +584,7 @@ describe("tunnel plugin", () => {
 			ready: vi.fn().mockResolvedValue({
 				mode: "named",
 			}),
+			isOpen: vi.fn(() => true),
 			extendExpiry: vi.fn(),
 			dispose: vi.fn(),
 		});
@@ -544,7 +603,7 @@ describe("tunnel plugin", () => {
 
 		await expect(setupPreviewTunnel(previewServer, ctx, tunnelManager)).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
-			[Error: Failed to start tunnel. The resolved tunnel hostnames are not allowed by Vite preview host validation.
+			[Error: The resolved tunnel hostnames are not allowed by Vite preview host validation.
 
 			Add at least one of these hosts to \`preview.allowedHosts\` in your Vite config.
 			You can use exact hostnames or a dot-prefixed suffix pattern:
@@ -553,6 +612,44 @@ describe("tunnel plugin", () => {
 			  - .example.com
 			]
 		`);
+	});
+
+	it("cancels a named tunnel that is closed while still starting", async ({
+		expect,
+	}) => {
+		const namedTunnelDeferred = createDeferred<{
+			hostnames: string[];
+			token: string;
+		}>();
+		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockReturnValue(
+			namedTunnelDeferred.promise
+		);
+
+		const server = await createServer();
+		const tunnelManager = new TunnelManager(server.config.logger);
+
+		onTestFinished(() => server.close());
+
+		const startPromise = tunnelManager.startTunnel({
+			origin: "http://localhost:3000",
+			name: "my-tunnel",
+			mode: "dev",
+			allowedHosts: true,
+			accountId: "account-id",
+			complianceRegion: undefined,
+		});
+
+		expect(tunnelManager.isOpen()).toBe(true);
+		tunnelManager.dispose();
+
+		namedTunnelDeferred.resolve({
+			hostnames: ["dev.example.com"],
+			token: "TOKEN",
+		});
+
+		await expect(startPromise).resolves.toBeNull();
+		expect(startTunnel).not.toHaveBeenCalled();
+		expect(tunnelManager.isOpen()).toBe(false);
 	});
 
 	it("does not auto-start when the tunnel is configured but disabled", async ({
@@ -573,10 +670,14 @@ describe("tunnel plugin", () => {
 		expect(startTunnel).not.toHaveBeenCalled();
 	});
 
-	it("allows starting a quick tunnel from the shortcut without tunnel config", async ({
+	it("allows starting a quick tunnel from the shortcut without tunnel config when preview allows the host", async ({
 		expect,
 	}) => {
-		const previewServer = await preview();
+		const previewServer = await preview({
+			preview: {
+				allowedHosts: [QUICK_TUNNEL_ALLOWED_HOST],
+			},
+		});
 		const ctx = createMockPluginContext({ type: "preview" });
 		const plugin = tunnelPlugin(ctx);
 
@@ -587,15 +688,8 @@ describe("tunnel plugin", () => {
 
 		expect(startTunnel).not.toHaveBeenCalled();
 
-		await import("../plugins/tunnel").then(({ toggleTunnel }) =>
-			toggleTunnel(previewServer, ctx)
-		);
+		await toggleTunnel(previewServer, ctx);
 
-		expect(startTunnel).toHaveBeenCalledWith(
-			expect.objectContaining({
-				token: undefined,
-				extendHint: "Press a + enter to extend by 1 hour.",
-			})
-		);
+		expect(startTunnel).toHaveBeenCalled();
 	});
 });

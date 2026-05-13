@@ -319,7 +319,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		const extendShortcut = customShortcuts?.find((s) => s.key === "a");
 
 		await toggleShortcut?.action?.(mockServer);
-		extendShortcut?.action?.(mockServer);
+		void extendShortcut?.action?.(mockServer);
 
 		expect(toggleTunnelSpy).toHaveBeenCalledTimes(1);
 		expect(extendExpirySpy).toHaveBeenCalledTimes(1);

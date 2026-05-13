@@ -8,10 +8,8 @@ You can now expose your local dev server publicly with a stable hostname by conf
 
 ```ts
 cloudflare({
-	tunnel: { autoStart: true, name: "my-tunnel" },
+	tunnel: { name: "my-tunnel", autoStart: true },
 });
 ```
 
-If `autoStart` is omitted or set to `false`, the tunnel will not start automatically, but you can still start it from the interactive dev session.
-
-This uses an existing named Cloudflare Tunnel instead of creating a temporary `*.trycloudflare.com` Quick Tunnel. If you use `vite preview`, make sure the tunnel hostname is allowed by `preview.allowedHosts`.
+If `autoStart` is omitted or set to `false`, you can still start or close the tunnel by pressing `t + enter`.

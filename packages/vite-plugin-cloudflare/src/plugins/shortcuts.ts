@@ -177,7 +177,7 @@ export function addExplorerShortcut(
 
 export function addTunnelShortcut(
 	server: vite.ViteDevServer | vite.PreviewServer,
-	ctx: PluginContext,
+	ctx: PluginContext
 ) {
 	if (!process.stdin.isTTY) {
 		return;
@@ -186,8 +186,11 @@ export function addTunnelShortcut(
 	const toggleTunnelShortcut = {
 		key: "t",
 		description: "start or close tunnel",
-		action: async () => {
-			await toggleTunnel(server, ctx);
+		action: () => {
+			void toggleTunnel(server, ctx).catch((error) => {
+				const message = error instanceof Error ? error.message : String(error);
+				server.config.logger.error(colors.red(`Error: ${message}`));
+			});
 		},
 	} satisfies vite.CLIShortcut<vite.ViteDevServer | vite.PreviewServer>;
 	const extendTunnelExpiryShortcut = {

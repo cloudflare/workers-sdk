@@ -9,33 +9,56 @@ import type { PluginContext } from "../context";
 import type { Tunnel } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
-function createPublicExposureWarning(mode: 'dev' | 'preview', name: string | undefined) {
-	const intro = name === undefined
-		? colors.dim("Once connected, this tunnel will be ") + "publicly accessible" + colors.dim(". Anyone who can reach it can:")
-		: colors.dim("Once connected, this tunnel may be reachable from the internet, depending on your Cloudflare Access configuration. " + "Anyone who can reach it can:");
+function createPublicExposureWarning(
+	mode: "dev" | "preview",
+	name: string | undefined,
+	shortcutPressed: boolean
+) {
+	const spacing = "     ";
+	const intro =
+		name === undefined
+			? colors.dim("Once connected, this tunnel will be ") +
+				"publicly accessible" +
+				colors.dim(". Anyone who can reach it can:")
+			: colors.dim(
+					"Once connected, this tunnel may be reachable from the Internet. " +
+						"Anyone who can reach it can:"
+				);
 	const concerns = [
-	"Call ungated endpoints",
-	"Trigger logic that uses remote bindings",
-	"Reach internal services if your Worker proxies requests",
-];
-	let guidance = "Consider using a named tunnel with Cloudflare Access to restrict access.";
+		"Call ungated endpoints",
+		"Trigger logic that uses remote bindings",
+		"Reach internal services if your Worker proxies requests",
+	];
+	const hints = [
+		name === undefined
+			? "Consider using a named tunnel with Cloudflare Access to restrict access."
+			: "Consider using Cloudflare Access to restrict access.",
+	];
 
 	if (mode === "dev") {
 		concerns.push(
 			"Request module source and other dev-server assets",
 			"Access HMR messages, including absolute file system paths",
-			"Observe file-change cadence and parts of the live module graph",
+			"Observe file-change cadence and parts of the live module graph"
 		);
-		guidance = `If you only need to share a running build, use vite preview to avoid HMR and other dev-server exposure. ${guidance}`;
+		hints.unshift(
+			"If you only need to share a running build, use vite preview to avoid HMR and other dev-server exposure."
+		);
 	}
 
-	return [
-		`     ${intro}`,
-		...concerns.map((concern) => colors.dim(`     • ${concern}`)),
+	const lines = [
+		intro,
+		...concerns.map((concern) => colors.dim(`• ${concern}`)),
 		"",
-		colors.dim(`     ${guidance}`),
+		...hints.map((guidance) => colors.dim(guidance)),
 		"",
-	].join("\n");
+	];
+
+	if (shortcutPressed) {
+		lines.push("Press t + enter again to close the tunnel.", "");
+	}
+
+	return lines.map((line) => spacing + line).join("\n");
 }
 
 export const QUICK_TUNNEL_SSE_WARNING =
@@ -49,6 +72,7 @@ export class TunnelManager {
 	#publicUrls?: string[];
 	#requestedTunnel?: string | undefined;
 	#tunnel?: Tunnel;
+	#abortController?: AbortController;
 	#hasWarnedAboutSse = false;
 
 	constructor(logger: vite.Logger) {
@@ -56,49 +80,56 @@ export class TunnelManager {
 	}
 
 	isStarted(origin: string, name: string | undefined): boolean {
-		return (
-			this.#origin === origin &&
-			this.#requestedTunnel === name &&
-			this.#tunnel !== undefined
-		);
+		return this.#origin === origin && this.#requestedTunnel === name;
 	}
 
 	isOpen(): boolean {
-		return this.#tunnel !== undefined;
+		if (!this.#tunnel) {
+			return this.#origin !== undefined;
+		}
+
+		const isOpen = this.#tunnel.isOpen();
+
+		// If the tunnel is expried, dispose it to clean up resources and reset state.
+		if (!isOpen) {
+			// Set tunnel to undefined before disposing to prevent interact with the already-closed tunnel
+			this.#tunnel = undefined;
+			this.dispose();
+		}
+
+		return isOpen;
 	}
 
 	async startTunnel(options: {
 		origin: string;
 		name: string | undefined;
 		mode: "dev" | "preview";
+		shortcutPressed?: boolean;
 		allowedHosts: true | string[] | undefined;
 		accountId: string | undefined;
 		complianceRegion: wrangler.Unstable_Config["compliance_region"];
 	}): Promise<string[] | null> {
 		try {
-			if (
-				this.#origin === options.origin &&
-				this.#requestedTunnel === options.name &&
-				this.#tunnel
-			) {
-				return await this.#waitForPublicUrls(this.#tunnel);
-			}
-
-			this.#logger.info(
-				colors.dim("\n  ➜  Starting tunnel (usually takes a few seconds)...\n")
-			);
-			this.#logger.warnOnce(
-				createPublicExposureWarning(
-					options.mode,
-					options.name
-				)
-			);
-
 			const previousTunnel = this.#tunnel;
 
 			if (previousTunnel) {
 				this.dispose();
 			}
+
+			const abortController = new AbortController();
+			this.#abortController = abortController;
+			this.#origin = options.origin;
+			this.#requestedTunnel = options.name;
+			this.#logger.info(
+				colors.dim("\n  ➜  Starting tunnel (usually takes a few seconds)...\n")
+			);
+			this.#logger.warn(
+				createPublicExposureWarning(
+					options.mode,
+					options.name,
+					options.shortcutPressed ?? false
+				)
+			);
 
 			const namedTunnel =
 				options.name !== undefined
@@ -112,32 +143,48 @@ export class TunnelManager {
 						)
 					: undefined;
 
-			if (namedTunnel) {
-				this.#publicUrls = getAllowedTunnelUrls(
-					namedTunnel.hostnames.map((hostname) => `https://${hostname}`),
-					options.allowedHosts
-				);
+			if (abortController.signal.aborted) {
+				return null;
+			}
 
-				if (this.#publicUrls.length === 0) {
-					const suggestedAllowedHosts = getSuggestedAllowedHosts(
-						namedTunnel.hostnames
+			if (namedTunnel) {
+				this.#publicUrls = namedTunnel.hostnames.map(
+					(hostname) => `https://${hostname}`
+				);
+			}
+
+			if (options.mode === "preview") {
+				if (namedTunnel) {
+					const allowedUrls = getAllowedTunnelUrls(
+						this.#publicUrls ?? [],
+						options.allowedHosts
 					);
 
+					if (allowedUrls.length === 0) {
+						const suggestedAllowedHosts = getSuggestedAllowedHosts(
+							namedTunnel.hostnames
+						);
+
+						throw new Error(
+							"The resolved tunnel hostnames are not allowed by Vite preview host validation.\n" +
+								"\n" +
+								"Add at least one of these hosts to `preview.allowedHosts` in your Vite config.\n" +
+								"You can use exact hostnames or a dot-prefixed suffix pattern:\n" +
+								suggestedAllowedHosts
+									.map((hostname) => `  - ${hostname}`)
+									.join("\n") +
+								"\n"
+						);
+					}
+
+					this.#publicUrls = allowedUrls;
+				} else if (!isQuickTunnelAllowed(options.allowedHosts)) {
 					throw new Error(
-						"The resolved tunnel hostnames are not allowed by Vite preview host validation.\n" +
-							"\n" +
-							"Add at least one of these hosts to `preview.allowedHosts` in your Vite config.\n" +
-							"You can use exact hostnames or a dot-prefixed suffix pattern:\n" +
-							suggestedAllowedHosts
-								.map((hostname) => `  - ${hostname}`)
-								.join("\n") +
-							"\n"
+						"Quick tunnel hostnames are not allowed by Vite preview host validation.\n" +
+							`Add \`${QUICK_TUNNEL_ALLOWED_HOST}\` to \`preview.allowedHosts\` in your Vite config.\n`
 					);
 				}
 			}
-
-			this.#origin = options.origin;
-			this.#requestedTunnel = options.name;
 
 			const tunnel = startTunnel({
 				origin: new URL(options.origin),
@@ -153,10 +200,11 @@ export class TunnelManager {
 
 			return await this.#waitForPublicUrls(tunnel);
 		} catch (error) {
-			throw new Error(
-				`Failed to start tunnel. ${error instanceof Error ? error.message : String(error)}`,
-				{ cause: error }
-			);
+			this.#origin = undefined;
+			this.#publicUrls = undefined;
+			this.#requestedTunnel = undefined;
+
+			throw error;
 		}
 	}
 
@@ -216,6 +264,7 @@ export class TunnelManager {
 	dispose() {
 		const tunnel = this.#tunnel;
 
+		this.#abortController?.abort();
 		this.#origin = undefined;
 		this.#publicUrls = undefined;
 		this.#requestedTunnel = undefined;
@@ -259,7 +308,7 @@ export function extendTunnelExpiry() {
 
 export async function toggleTunnel(
 	server: vite.ViteDevServer | vite.PreviewServer,
-	ctx: PluginContext,
+	ctx: PluginContext
 ) {
 	if (!tunnelManager) {
 		return;
@@ -271,13 +320,11 @@ export async function toggleTunnel(
 		return;
 	}
 
-	if ('restart' in server) {
-		await setupDevTunnel(server, ctx, tunnelManager);
+	if ("restart" in server) {
+		await setupDevTunnel(server, ctx, tunnelManager, true);
 	} else {
-		await setupPreviewTunnel(server, ctx, tunnelManager);
+		await setupPreviewTunnel(server, ctx, tunnelManager, true);
 	}
-
-	server.printUrls();
 }
 
 /**
@@ -364,7 +411,8 @@ export async function resolvePreviewTunnelOrigin(server: vite.PreviewServer) {
 export async function setupDevTunnel(
 	server: vite.ViteDevServer,
 	ctx: PluginContext,
-	manager: TunnelManager
+	manager: TunnelManager,
+	shortcutPressed?: boolean
 ): Promise<void> {
 	const origin = await resolveDevTunnelOrigin(server);
 	const tunnel = ctx.resolvedPluginConfig.tunnel;
@@ -377,6 +425,7 @@ export async function setupDevTunnel(
 	const publicUrls = await manager.startTunnel({
 		mode: "dev",
 		origin,
+		shortcutPressed,
 		name: tunnel.name,
 		accountId: ctx.entryWorkerConfig?.account_id,
 		complianceRegion: ctx.entryWorkerConfig?.compliance_region,
@@ -401,6 +450,10 @@ export async function setupDevTunnel(
 	) {
 		await server.restart();
 	}
+
+	if (shortcutPressed) {
+		server.printUrls();
+	}
 }
 
 /**
@@ -412,7 +465,8 @@ export async function setupDevTunnel(
 export async function setupPreviewTunnel(
 	server: vite.PreviewServer,
 	ctx: PluginContext,
-	manager: TunnelManager
+	manager: TunnelManager,
+	shortcutPressed?: boolean
 ): Promise<void> {
 	const { preview } = server.config;
 	const originalPort = preview.port;
@@ -431,14 +485,31 @@ export async function setupPreviewTunnel(
 		);
 	}
 
-	await manager.startTunnel({
+	const tunnel = ctx.resolvedPluginConfig.tunnel;
+	const origin = resolvedOrigin.toString();
+
+	if (manager.isStarted(origin, tunnel.name)) {
+		debuglog("Tunnel is already started on", origin);
+		return;
+	}
+
+	const publicUrls = await manager.startTunnel({
 		mode: "preview",
-		origin: resolvedOrigin.toString(),
-		name: ctx.resolvedPluginConfig.tunnel.name,
-		allowedHosts: server.config.preview?.allowedHosts,
+		origin,
+		shortcutPressed,
+		name: tunnel.name,
+		allowedHosts: preview?.allowedHosts,
 		accountId: ctx.allWorkerConfigs[0]?.account_id,
 		complianceRegion: ctx.allWorkerConfigs[0]?.compliance_region,
 	});
+
+	if (!publicUrls) {
+		return;
+	}
+
+	if (shortcutPressed) {
+		server.printUrls();
+	}
 }
 
 function patchPrintUrls(server: vite.ViteDevServer | vite.PreviewServer) {
@@ -466,6 +537,22 @@ function patchPrintUrls(server: vite.ViteDevServer | vite.PreviewServer) {
 		// Add an extra newline after the URLs to improve readability
 		server.config.logger.info("");
 	};
+}
+
+function isQuickTunnelAllowed(
+	allowedHosts: true | string[] | undefined
+): boolean {
+	if (allowedHosts === undefined) {
+		return false;
+	}
+
+	if (allowedHosts === true) {
+		return true;
+	}
+
+	return allowedHosts.some(
+		(allowedHost) => allowedHost.toLowerCase() === QUICK_TUNNEL_ALLOWED_HOST
+	);
 }
 
 function getAllowedTunnelUrls(
