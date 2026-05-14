@@ -1608,7 +1608,7 @@ async function generatePerEnvironmentTypes(
  * Formats name of internal env interface when generating type strings
  */
 function prefixEnvInterface(envInterface: string) {
-	return `__EnvShape_${envInterface}`;
+	return `__BaseEnv_${envInterface}`;
 }
 
 /**

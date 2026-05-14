@@ -338,7 +338,7 @@ export async function verifyTypes(
 			line === `interface ${envInterfaceName} extends Cloudflare.Env {}` ||
 			// new after importable env change
 			line ===
-				`interface ${envInterfaceName} extends __EnvShape_${envInterfaceName} {}`
+				`interface ${envInterfaceName} extends __BaseEnv_${envInterfaceName} {}`
 	);
 	expect(hasEnvInterface).toBe(true);
 
