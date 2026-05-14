@@ -53,18 +53,21 @@ export function unstable_getDevCompatibilityDate() {
 }
 
 /**
- * Derive the zone value used for the outbound `CF-Worker` header in local
- * development from a normalized Wrangler config.
+ * Derive the zone value used for the outbound `CF-Worker` header from a
+ * normalized Wrangler config, for callers outside of `wrangler dev`
+ * (`getPlatformProxy`, `unstable_getMiniflareWorkerOptions`).
  *
- * Mirrors the behaviour of `wrangler dev`: prefer the explicit `dev.host`
- * setting, then fall back to the hostname of the first configured route.
- * Returns `undefined` if neither is set, in which case Miniflare keeps its
- * default of `${workerName}.example.com`.
+ * Falls back to the hostname of the first configured route, or `undefined`
+ * if no routes are set — in which case Miniflare keeps its default of
+ * `${workerName}.example.com`.
+ *
+ * `dev.host` is intentionally NOT consulted here: the `dev` config block is
+ * specific to `wrangler dev` and should not influence behaviour under
+ * `@cloudflare/vite-plugin`, `@cloudflare/vitest-pool-workers`, or
+ * `getPlatformProxy`. Users who need a custom `CF-Worker` host in those
+ * environments should configure a `route` instead.
  */
 function getZoneFromConfig(config: Config): string | undefined {
-	if (config.dev?.host) {
-		return config.dev.host;
-	}
 	const firstRoute = config.route ?? config.routes?.[0];
 	if (firstRoute) {
 		return getHostFromRoute(firstRoute);

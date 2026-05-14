@@ -7,26 +7,7 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 	runInTempDir();
 
 	describe("zone derivation (used for the outbound CF-Worker header)", () => {
-		it("uses dev.host when it is set", ({ expect }) => {
-			writeWranglerConfig(
-				{
-					name: "test-worker",
-					main: "./index.js",
-					compatibility_date: "2024-10-04",
-					dev: {
-						host: "repro.example.workers.dev",
-					},
-				},
-				"./wrangler.json"
-			);
-			const { workerOptions } =
-				unstable_getMiniflareWorkerOptions("./wrangler.json");
-			expect(workerOptions.zone).toBe("repro.example.workers.dev");
-		});
-
-		it("derives the zone from a single `route` string when dev.host is not set", ({
-			expect,
-		}) => {
+		it("derives the zone from a single `route` string", ({ expect }) => {
 			writeWranglerConfig(
 				{
 					name: "test-worker",
@@ -41,9 +22,7 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			expect(workerOptions.zone).toBe("example.com");
 		});
 
-		it("derives the zone from the first entry in `routes` when dev.host is not set", ({
-			expect,
-		}) => {
+		it("derives the zone from the first entry in `routes`", ({ expect }) => {
 			writeWranglerConfig(
 				{
 					name: "test-worker",
@@ -78,14 +57,35 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			expect(workerOptions.zone).toBe("example.com");
 		});
 
-		it("prefers dev.host over routes when both are set", ({ expect }) => {
+		it("ignores `dev.host` (the `dev` config block is `wrangler dev`-only)", ({
+			expect,
+		}) => {
 			writeWranglerConfig(
 				{
 					name: "test-worker",
 					main: "./index.js",
 					compatibility_date: "2024-10-04",
 					dev: {
-						host: "preferred.example.com",
+						host: "ignored.example.com",
+					},
+				},
+				"./wrangler.json"
+			);
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+			expect(workerOptions.zone).toBeUndefined();
+		});
+
+		it("derives the zone from `routes` even when `dev.host` is also set", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					dev: {
+						host: "ignored.example.com",
 					},
 					routes: ["https://other.example.com/*"],
 				},
@@ -93,12 +93,10 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			);
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
-			expect(workerOptions.zone).toBe("preferred.example.com");
+			expect(workerOptions.zone).toBe("other.example.com");
 		});
 
-		it("returns undefined when neither dev.host nor routes are configured", ({
-			expect,
-		}) => {
+		it("returns undefined when no routes are configured", ({ expect }) => {
 			writeWranglerConfig(
 				{
 					name: "test-worker",
