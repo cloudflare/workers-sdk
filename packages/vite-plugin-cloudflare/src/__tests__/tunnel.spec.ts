@@ -1,5 +1,6 @@
 import { stripVTControlCharacters } from "node:util";
 import { startTunnel } from "@cloudflare/workers-utils";
+import { createDeferred } from "@cloudflare/workers-utils/test-helpers";
 import { createServer, preview } from "vite";
 import {
 	afterEach,
@@ -22,25 +23,6 @@ import {
 } from "../plugins/tunnel";
 import type { TunnelConfig } from "../plugin-config";
 import type * as vite from "vite";
-
-function createDeferred<T>() {
-	let resolve: ((value: T) => void) | undefined;
-	let reject: ((reason?: unknown) => void) | undefined;
-	const promise = new Promise<T>((_resolve, _reject) => {
-		resolve = _resolve;
-		reject = _reject;
-	});
-
-	if (!resolve || !reject) {
-		throw new Error("Failed to create deferred promise");
-	}
-
-	return {
-		promise,
-		resolve,
-		reject,
-	};
-}
 
 vi.mock("@cloudflare/workers-utils");
 vi.mock("wrangler");
