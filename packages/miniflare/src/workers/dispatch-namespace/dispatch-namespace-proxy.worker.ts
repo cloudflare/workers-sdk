@@ -24,7 +24,8 @@ export default class DispatchNamespaceProxy extends WorkerEntrypoint<RemoteBindi
 					args,
 					options,
 				}),
-			}
+			},
+			this.env.cfTraceId
 		);
 	}
 }

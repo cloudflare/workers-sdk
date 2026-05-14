@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/devprod-status-bot",
-	"version": "1.4.2",
+	"version": "1.5.0",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",

@@ -1,5 +1,21 @@
 # miniflare
 
+## 4.20260511.0
+
+### Patch Changes
+
+- [#13894](https://github.com/cloudflare/workers-sdk/pull/13894) [`58b4403`](https://github.com/cloudflare/workers-sdk/commit/58b44035e2c2e1b9339bd2b798c5de5dc8bff7b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260508.1 | 1.20260511.1 |
+
+- [#13646](https://github.com/cloudflare/workers-sdk/pull/13646) [`f781a2b`](https://github.com/cloudflare/workers-sdk/commit/f781a2b874decbedc9dae09feff39ac861014016) Thanks [@emily-shen](https://github.com/emily-shen)! - Propagate `cf-trace-id` header on remote binding proxy requests
+
+  When the `CF_TRACE_ID` environment variable is set, its value is now forwarded as a `cf-trace-id` header on outgoing remote binding proxy requests. This makes it easier to correlate traces when debugging remote bindings in local development.
+
 ## 4.20260508.0
 
 ### Minor Changes

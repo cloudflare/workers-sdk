@@ -1,25 +1,17 @@
 import assert from "node:assert";
-import { statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
-	configFileName,
 	getTodaysCompatDate,
 	getCIOverrideName,
 	UserError,
 } from "@cloudflare/workers-utils";
-import chalk from "chalk";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
-import { getDetailsForAutoConfig } from "../autoconfig/details";
-import { runAutoConfig } from "../autoconfig/run";
-import {
-	sendAutoConfigProcessEndedMetricsEvent,
-	sendAutoConfigProcessStartedMetricsEvent,
-} from "../autoconfig/telemetry-utils";
-import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
+import {
+	sharedDeployVersionsArgs,
+	validateDeployVersionsArgs,
+} from "../deployment-bundle/deploy-args";
 import { getEntry } from "../deployment-bundle/entry";
-import { confirm, prompt } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import * as metrics from "../metrics";
@@ -30,6 +22,7 @@ import { collectKeyValues } from "../utils/collectKeyValues";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import { maybeRunAutoConfig, promptForMissingConfig } from "./autoconfig";
 import deploy from "./deploy";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 
@@ -42,105 +35,7 @@ export const deployCommand = createCommand({
 	},
 	positionalArgs: ["script"],
 	args: {
-		script: {
-			describe: "The path to an entry point for your Worker",
-			type: "string",
-			requiresArg: true,
-		},
-		name: {
-			describe: "Name of the Worker",
-			type: "string",
-			requiresArg: true,
-		},
-		// We want to have a --no-bundle flag, but yargs requires that
-		// we also have a --bundle flag (that it adds the --no to by itself)
-		// So we make a --bundle flag, but hide it, and then add a --no-bundle flag
-		// that's visible to the user but doesn't "do" anything.
-		bundle: {
-			describe: "Run Wrangler's compilation step before publishing",
-			type: "boolean",
-			hidden: true,
-		},
-		"no-bundle": {
-			describe: "Skip internal build steps and directly deploy Worker",
-			type: "boolean",
-			default: false,
-		},
-		outdir: {
-			describe: "Output directory for the bundled Worker",
-			type: "string",
-			requiresArg: true,
-		},
-		outfile: {
-			describe: "Output file for the bundled worker",
-			type: "string",
-			requiresArg: true,
-		},
-		"compatibility-date": {
-			describe: "Date to use for compatibility checks",
-			type: "string",
-			requiresArg: true,
-		},
-		"compatibility-flags": {
-			describe: "Flags to use for compatibility checks",
-			alias: "compatibility-flag",
-			type: "string",
-			requiresArg: true,
-			array: true,
-		},
-		latest: {
-			describe: "Use the latest version of the Workers runtime",
-			type: "boolean",
-			default: false,
-		},
-		assets: {
-			describe: "Static assets to be served. Replaces Workers Sites.",
-			type: "string",
-			requiresArg: true,
-		},
-		site: {
-			describe: "Root folder of static assets for Workers Sites",
-			type: "string",
-			requiresArg: true,
-			hidden: true,
-			deprecated: true,
-		},
-		"site-include": {
-			describe:
-				"Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.",
-			type: "string",
-			requiresArg: true,
-			array: true,
-			hidden: true,
-			deprecated: true,
-		},
-		"site-exclude": {
-			describe:
-				"Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.",
-			type: "string",
-			requiresArg: true,
-			array: true,
-			hidden: true,
-			deprecated: true,
-		},
-		var: {
-			describe: "A key-value pair to be injected into the script as a variable",
-			type: "string",
-			requiresArg: true,
-			array: true,
-		},
-		define: {
-			describe: "A key-value pair to be substituted in the script",
-			type: "string",
-			requiresArg: true,
-			array: true,
-		},
-		alias: {
-			describe: "A module pair to be substituted in the script",
-			type: "string",
-			requiresArg: true,
-			array: true,
-		},
+		...sharedDeployVersionsArgs,
 		triggers: {
 			describe: "cron schedules to attach",
 			alias: ["schedule", "schedules"],
@@ -162,49 +57,11 @@ export const deployCommand = createCommand({
 			requiresArg: true,
 			array: true,
 		},
-		"jsx-factory": {
-			describe: "The function that is called for each JSX element",
-			type: "string",
-			requiresArg: true,
-		},
-		"jsx-fragment": {
-			describe: "The function that is called for each JSX fragment",
-			type: "string",
-			requiresArg: true,
-		},
-		tsconfig: {
-			describe: "Path to a custom tsconfig.json file",
-			type: "string",
-			requiresArg: true,
-		},
-		minify: {
-			describe: "Minify the Worker",
-			type: "boolean",
-		},
-		"node-compat": {
-			describe: "Enable Node.js compatibility",
-			type: "boolean",
-			hidden: true,
-			deprecated: true,
-		},
-		"dry-run": {
-			describe: "Don't actually deploy",
-			type: "boolean",
-		},
 		metafile: {
 			describe:
 				"Path to output build metadata from esbuild. If flag is used without a path, defaults to 'bundle-meta.json' inside the directory specified by --outdir.",
 			type: "string",
 			coerce: (v: string) => (!v ? true : v),
-		},
-		"keep-vars": {
-			describe:
-				"When not used (or set to false), Wrangler will delete all vars before setting those found in the Wrangler configuration.\n" +
-				"When used (and set to true), the environment variables are not deleted before the deployment.\n" +
-				"If you set variables via the dashboard you probably want to use this flag.\n" +
-				"Note that secrets are never deleted by deployments.",
-			default: false,
-			type: "boolean",
 		},
 		"legacy-env": {
 			type: "boolean",
@@ -215,10 +72,6 @@ export const deployCommand = createCommand({
 			type: "boolean",
 			describe:
 				"Send Trace Events from this Worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
-		},
-		"upload-source-maps": {
-			type: "boolean",
-			describe: "Include source maps when uploading this Worker.",
 		},
 		"old-asset-ttl": {
 			describe:
@@ -235,16 +88,6 @@ export const deployCommand = createCommand({
 				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. ",
 			choices: ["immediate", "gradual"] as const,
 		},
-		tag: {
-			describe: "A tag for this Worker Version",
-			type: "string",
-			requiresArg: true,
-		},
-		message: {
-			describe: "A descriptive message for this Worker Version and Deployment",
-			type: "string",
-			requiresArg: true,
-		},
 		strict: {
 			describe:
 				"Enables strict mode for the deploy command, this prevents deployments to occur when there are even small potential risks.",
@@ -258,12 +101,6 @@ export const deployCommand = createCommand({
 			type: "boolean",
 			default: true,
 		},
-		"secrets-file": {
-			describe:
-				"Path to a file containing secrets to upload with the deployment (JSON or .env format). Secrets from previous deployments will not be deleted - see `--keep-secrets`",
-			type: "string",
-			requiresArg: true,
-		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -276,146 +113,29 @@ export const deployCommand = createCommand({
 		printMetricsBanner: true,
 	},
 	validateArgs(args) {
-		if (args.nodeCompat) {
-			throw new UserError(
-				"The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.",
-				{ telemetryMessage: "deploy command node compat unsupported" }
-			);
-		}
+		validateDeployVersionsArgs(args);
 	},
 	async handler(args, { config }) {
-		const shouldRunAutoConfig =
-			args.experimentalAutoconfig &&
-			// If there is a positional parameter, an assets directory specified via --assets, or an
-			// explicit --config path then we don't want to run autoconfig since we assume that the
-			// user knows what they are doing and that they are specifying what needs to be deployed
-			!args.script &&
-			!args.assets &&
-			!args.config;
-
-		if (
-			config.pages_build_output_dir &&
-			// Note: autoconfig handle Pages projects on its own, so we don't want to hard fail here if autoconfig run
-			!shouldRunAutoConfig
-		) {
-			throw new UserError(
-				"It looks like you've run a Workers-specific command in a Pages project.\n" +
-					"For Pages, please run `wrangler pages deploy` instead.",
-				{ telemetryMessage: "deploy command pages project mismatch" }
-			);
-		}
-
-		if (shouldRunAutoConfig) {
-			sendAutoConfigProcessStartedMetricsEvent({
-				command: "wrangler deploy",
-				dryRun: !!args.dryRun,
-			});
-
-			try {
-				const details = await getDetailsForAutoConfig({
-					wranglerConfig: config,
-				});
-
-				if (details.framework?.id === "cloudflare-pages") {
-					// If the project is a Pages project then warn the user but allow them to proceed if they wish so
-					logger.warn(
-						"It seems that you have run `wrangler deploy` on a Pages project, `wrangler pages deploy` should be used instead. Proceeding will likely produce unwanted results."
-					);
-					const proceedWithPagesProject = await confirm(
-						"Are you sure that you want to proceed?",
-						{
-							defaultValue: false,
-							fallbackValue: true,
-						}
-					);
-
-					if (!proceedWithPagesProject) {
-						sendAutoConfigProcessEndedMetricsEvent({
-							success: false,
-							command: "wrangler deploy",
-							dryRun: !!args.dryRun,
-						});
-						return;
-					}
-				} else if (!details.configured) {
-					// Only run auto config if the project is not already configured
-					const autoConfigSummary = await runAutoConfig(details);
-
-					writeOutput({
-						type: "autoconfig",
-						version: 1,
-						command: "deploy",
-						summary: autoConfigSummary,
-					});
-
-					// If autoconfig worked, there should now be a new config file, and so we need to read config again
-					config = readConfig(args, {
-						hideWarnings: false,
-						useRedirectIfAvailable: true,
-					});
-				}
-			} catch (error) {
-				sendAutoConfigProcessEndedMetricsEvent({
-					command: "wrangler deploy",
-					dryRun: !!args.dryRun,
-					success: false,
-					error,
-				});
-				throw error;
-			}
-
-			sendAutoConfigProcessEndedMetricsEvent({
-				success: true,
-				command: "wrangler deploy",
-				dryRun: !!args.dryRun,
-			});
-		}
-
-		// Note: the open-next delegation should happen after we run the auto-config logic so that we
-		//       make sure that the deployment of brand newly auto-configured Next.js apps is correctly
-		//       delegated here
-		const deploymentDelegatedToOpenNext =
-			// Currently the delegation to open-next is gated behind the autoconfig experimental flag, this is because
-			// this behavior is currently only necessary in the autoconfig flow and having it un-gated/stable in wrangler
-			// releases caused different issues. All the issues should have been fixed (by
-			// https://github.com/cloudflare/workers-sdk/pull/11694 and https://github.com/cloudflare/workers-sdk/pull/11710)
-			// but as a precaution we're gating the feature under the autoconfig flag for the time being
-			args.experimentalAutoconfig &&
-			// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate to open-next
-			!args.config &&
-			!args.dryRun &&
-			(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
-
-		if (deploymentDelegatedToOpenNext) {
-			// We've delegated the deployment to open-next so we must not run any actual deployment logic now
+		// --- Step 0. Auto-config --- //
+		const autoConfigResult = await maybeRunAutoConfig(args, config);
+		if (autoConfigResult.aborted) {
 			return;
 		}
+		config = autoConfigResult.config;
 
-		let scriptIsDirectory = false;
-		if (!config.configPath) {
-			// Attempt to interactively handle `wrangler deploy <directory>`
-			if (args.script) {
-				try {
-					const stats = statSync(args.script);
-					if (stats.isDirectory()) {
-						scriptIsDirectory = true;
-						args = await promptForMissingAssetFlag(args.script, args);
-					}
-				} catch (error) {
-					// If this is our UserError, re-throw it
-					if (error instanceof UserError) {
-						throw error;
-					}
-					// If stat fails, let the original flow handle the error
-				}
-			}
-		}
+		// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
+		args = await promptForMissingConfig(args, config);
 
-		// Interactively prompt for missing deployment config (compat date, and name + config file when no config exists).
-		// Skip when the user was offered an assets deployment and declined (script is still a directory) —
-		// getEntry will produce the appropriate error about the directory entry point.
-		if (!(scriptIsDirectory && !args.assets)) {
-			args = await promptForMissingDeployConfig(args, config);
+		// Needs to happen after auto-config logic to capture newly auto-configured open-next apps.
+		// As a precaution we're gating the feature under the autoconfig flag for the time being.
+		// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate
+		if (
+			args.experimentalAutoconfig &&
+			!args.config &&
+			!args.dryRun &&
+			(await maybeDelegateToOpenNextDeployCommand(process.cwd()))
+		) {
+			return;
 		}
 
 		const entry = await getEntry(args, config, "deploy");
@@ -425,14 +145,6 @@ export const deployCommand = createCommand({
 			args,
 			config,
 		});
-
-		if (args.latest) {
-			logger.warn(
-				`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(
-					config.configPath
-				)} file.`
-			);
-		}
 
 		const cliVars = collectKeyValues(args.var);
 		const cliDefines = collectKeyValues(args.define);
@@ -552,154 +264,3 @@ export const deployCommand = createCommand({
 });
 
 export type DeployArgs = (typeof deployCommand)["args"];
-
-/**
- * Handles the case where a user provides a directory as a positional argument,
- * probably intending to deploy static assets. e.g. `wrangler deploy ./public`.
- * If the user confirms, sets `args.assets` and clears `args.script`.
- *
- * @param assetDirectory - The directory path the user provided as the positional argument
- * @param args - The current deploy command arguments (mutated in place)
- * @returns The updated deploy args with `assets` set and `script` cleared if the user confirmed
- */
-export async function promptForMissingAssetFlag(
-	assetDirectory: string,
-	args: DeployArgs
-): Promise<DeployArgs> {
-	if (isNonInteractiveOrCI()) {
-		return args;
-	}
-
-	// Ask if user intended to deploy assets only
-	logger.log("");
-	if (!args.assets) {
-		const deployAssets = await confirm(
-			"It looks like you are trying to deploy a directory of static assets only. Is this correct?",
-			{ defaultValue: true }
-		);
-		logger.log("");
-		if (deployAssets) {
-			args.assets = assetDirectory;
-			args.script = undefined;
-		} else {
-			// let the usual error handling path kick in
-			return args;
-		}
-	}
-
-	return args;
-}
-
-/**
- * Interactively prompts for missing deployment configuration (name, compatibility date,
- * and optionally config file writing when no config file exists).
- * No-op in non-interactive/CI environments or when all required config is already present.
- *
- * @param args - The current deploy command arguments (mutated in place)
- * @param config - The resolved wrangler config, used to check for existing configPath, name, and compatibility_date
- * @returns The updated deploy args with any prompted values filled in
- */
-export async function promptForMissingDeployConfig(
-	args: DeployArgs,
-	config: { configPath?: string; compatibility_date?: string; name?: string }
-): Promise<DeployArgs> {
-	if (isNonInteractiveOrCI()) {
-		return args;
-	}
-
-	let promptedForMissing = false;
-
-	// Prompt for name when missing from both CLI args and config
-	if (!args.name && !config.name) {
-		const defaultName = process
-			.cwd()
-			.split(path.sep)
-			.pop()
-			?.replaceAll("_", "-")
-			.trim();
-		const isValidName = defaultName && /^[a-zA-Z0-9-]+$/.test(defaultName);
-		const projectName = await prompt("What do you want to name your project?", {
-			defaultValue: isValidName ? defaultName : "my-project",
-		});
-		args.name = projectName;
-		logger.log("");
-		promptedForMissing = true;
-	}
-
-	// Prompt for compatibility date when missing
-	if (!args.latest && !args.compatibilityDate && !config.compatibility_date) {
-		const compatibilityDateStr = getTodaysCompatDate();
-
-		if (
-			await confirm(
-				`No compatibility date is set. Would you like to use today's date (${compatibilityDateStr})?`
-			)
-		) {
-			args.compatibilityDate = compatibilityDateStr;
-			promptedForMissing = true;
-			logger.log("");
-		} else {
-			throw new UserError(
-				`A compatibility_date is required when publishing. Add it to your ${configFileName(config.configPath)} file or pass \`--compatibility-date\` via CLI.\nSee https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`,
-				{ telemetryMessage: "missing compatibility date when deploying" }
-			);
-		}
-	}
-
-	const hasConfigFile = !!config.configPath;
-
-	// When no config file exists and we prompted for missing config, offer to write one
-	if (!hasConfigFile && promptedForMissing) {
-		// When --latest was used, the compat date prompt was skipped but we still
-		// need a concrete date in the config file for future deploys without --latest
-		const effectiveCompatDate =
-			args.compatibilityDate ??
-			(args.latest ? getTodaysCompatDate() : undefined);
-
-		const configContent: Record<string, unknown> = {
-			name: args.name,
-			compatibility_date: effectiveCompatDate,
-		};
-		if (args.script) {
-			configContent.main = args.script;
-		}
-		if (args.assets) {
-			configContent.assets = { directory: args.assets };
-		}
-
-		const writeConfigFile = await confirm(
-			`Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\n${chalk.dim(
-				"This will allow you to simply run `wrangler deploy` on future deployments."
-			)}`
-		);
-
-		if (writeConfigFile) {
-			const configPath = path.join(process.cwd(), "wrangler.jsonc");
-			const jsonString = JSON.stringify(configContent, null, 2);
-			writeFileSync(configPath, jsonString);
-			logger.log(`Wrote \n${jsonString}\n to ${chalk.bold(configPath)}.`);
-			logger.log(
-				`Simply run ${chalk.bold("`wrangler deploy`")} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
-			);
-		} else {
-			const scriptPart = args.script ? `${args.script} ` : "";
-			const flagParts = [
-				args.name ? `--name ${args.name}` : "",
-				effectiveCompatDate
-					? `--compatibility-date ${effectiveCompatDate}`
-					: "",
-				args.assets ? `--assets ${args.assets}` : "",
-			]
-				.filter(Boolean)
-				.join(" ");
-			logger.log(
-				`You should run ${chalk.bold(
-					`wrangler deploy ${scriptPart}${flagParts}`
-				)} next time to deploy this Worker without going through this flow again.`
-			);
-		}
-		logger.log("\nProceeding with deployment...\n");
-	}
-
-	return args;
-}

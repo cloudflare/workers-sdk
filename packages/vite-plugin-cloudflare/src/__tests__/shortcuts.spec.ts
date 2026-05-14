@@ -285,16 +285,29 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 
 	test("registers tunnel shortcut and extends expiry", async ({ expect }) => {
 		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
+		const mockContext = new PluginContext({
+			hasShownWorkerConfigWarnings: false,
+			restartingDevServerCount: 0,
+			tunnelHostnames: new Set(),
+		});
+		const toggleTunnelSpy = vi
+			.spyOn(tunnelPlugin, "toggleTunnel")
+			.mockResolvedValue(undefined);
 		const extendExpirySpy = vi
 			.spyOn(tunnelPlugin, "extendTunnelExpiry")
 			.mockImplementation(() => {});
 
-		addTunnelShortcut(mockServer);
+		addTunnelShortcut(mockServer, mockContext);
 
 		expect(mockBindCLIShortcuts).toHaveBeenCalledWith({
 			customShortcuts: [
 				{
 					key: "t",
+					description: "start or close tunnel",
+					action: expect.any(Function),
+				},
+				{
+					key: "a",
 					description: "extend tunnel by 1 hour",
 					action: expect.any(Function),
 				},
@@ -302,10 +315,40 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		});
 
 		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
-		const tunnelShortcut = customShortcuts?.find((s) => s.key === "t");
+		const toggleShortcut = customShortcuts?.find((s) => s.key === "t");
+		const extendShortcut = customShortcuts?.find((s) => s.key === "a");
 
-		await tunnelShortcut?.action?.(mockServer);
+		await toggleShortcut?.action?.(mockServer);
+		void extendShortcut?.action?.(mockServer);
 
+		expect(toggleTunnelSpy).toHaveBeenCalledTimes(1);
 		expect(extendExpirySpy).toHaveBeenCalledTimes(1);
+	});
+
+	test("registers tunnel shortcuts even without tunnel config", ({
+		expect,
+	}) => {
+		const mockContext = new PluginContext({
+			hasShownWorkerConfigWarnings: false,
+			restartingDevServerCount: 0,
+			tunnelHostnames: new Set(),
+		});
+
+		addTunnelShortcut(mockServer, mockContext);
+
+		expect(mockServer.bindCLIShortcuts).toHaveBeenCalledWith({
+			customShortcuts: [
+				{
+					key: "t",
+					description: "start or close tunnel",
+					action: expect.any(Function),
+				},
+				{
+					key: "a",
+					description: "extend tunnel by 1 hour",
+					action: expect.any(Function),
+				},
+			],
+		});
 	});
 });
