@@ -344,8 +344,7 @@ export interface CfAssetsBinding {
 
 export interface CfPipeline {
 	binding: string;
-	stream?: string;
-	pipeline?: string;
+	pipeline: string;
 	remote?: boolean;
 }
 

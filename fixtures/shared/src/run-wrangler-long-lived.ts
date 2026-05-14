@@ -1,6 +1,8 @@
 import assert from "node:assert";
 import { fork } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
 import { createConnection } from "node:net";
+import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import treeKill from "tree-kill";
@@ -9,6 +11,37 @@ export const wranglerEntryPath = path.resolve(
 	__dirname,
 	"../../../packages/wrangler/bin/wrangler.js"
 );
+
+/**
+ * Returns a per-process temporary directory for the dev registry.
+ *
+ * When multiple fixture tests run in parallel (turbo `--concurrency=2`), each
+ * fixture's vitest process gets its own isolated registry directory. This
+ * prevents cross-fixture leakage — e.g. the local-explorer in one fixture
+ * picking up workers registered by a completely unrelated fixture.
+ *
+ * Within a single fixture process, all `runWranglerDev` / `runWranglerPagesDev`
+ * calls share the same registry so multi-worker setups (service bindings,
+ * durable objects across workers) continue to work.
+ *
+ * See `packages/miniflare/src/shared/DEV_REGISTRY.md` for registry architecture.
+ */
+let isolatedRegistryPath: string | undefined;
+function getIsolatedRegistryPath(): string {
+	if (isolatedRegistryPath === undefined) {
+		isolatedRegistryPath = mkdtempSync(
+			path.join(os.tmpdir(), "wrangler-fixture-registry-")
+		);
+		process.on("exit", () => {
+			try {
+				rmSync(isolatedRegistryPath!, { recursive: true, force: true });
+			} catch {
+				// Best-effort cleanup; the OS will reap tmp dirs eventually.
+			}
+		});
+	}
+	return isolatedRegistryPath;
+}
 
 /**
  * Runs the command `wrangler pages dev` in a child process.
@@ -71,10 +104,20 @@ async function runLongLivedWrangler(
 		rejectReadyPromise = reject;
 	});
 
+	// Ensure each fixture process uses an isolated dev registry unless the
+	// caller (or the environment) has already specified one explicitly.
+	const registryEnv: NodeJS.ProcessEnv = {};
+	if (!env?.WRANGLER_REGISTRY_PATH && !process.env.WRANGLER_REGISTRY_PATH) {
+		registryEnv.WRANGLER_REGISTRY_PATH = getIsolatedRegistryPath();
+	}
+	if (!env?.MINIFLARE_REGISTRY_PATH && !process.env.MINIFLARE_REGISTRY_PATH) {
+		registryEnv.MINIFLARE_REGISTRY_PATH = getIsolatedRegistryPath();
+	}
+
 	const wranglerProcess = fork(wranglerEntryPath, command, {
 		stdio: [/*stdin*/ "ignore", /*stdout*/ "pipe", /*stderr*/ "pipe", "ipc"],
 		cwd,
-		env: { ...process.env, ...env, PWD: cwd },
+		env: { ...process.env, ...registryEnv, ...env, PWD: cwd },
 	}).on("message", (message) => {
 		if (settledReadyPromise) {
 			return;

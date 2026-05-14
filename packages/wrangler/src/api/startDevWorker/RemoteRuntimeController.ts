@@ -196,6 +196,18 @@ export class RemoteRuntimeController extends RuntimeController {
 				);
 
 				this.#activeTail.on("message", realishPrintLogs);
+				// Best-effort log streaming: ignore errors instead of letting them
+				// propagate as unhandled exceptions. The signal we pass to the `ws`
+				// constructor is shared with `onBundleStart`'s abort, which destroys
+				// the underlying upgrade request with `AbortError` every time a new
+				// bundle starts. The existing `terminate` paths in `#previewToken`
+				// and `teardown()` re-install no-op listeners before shutting the
+				// tail down — this listener covers the window between WebSocket
+				// construction and the next terminate, plus any transient network
+				// errors during normal operation.
+				this.#activeTail.on("error", (err) => {
+					logger.debug("Active tail WebSocket error (ignored):", err);
+				});
 			}
 			return workerPreviewToken;
 		} catch (err: unknown) {

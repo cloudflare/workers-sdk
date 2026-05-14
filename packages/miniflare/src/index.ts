@@ -2333,6 +2333,9 @@ export class Miniflare {
 			sockets,
 			extensions,
 			structuredLogging: this.#structuredWorkerdLogs,
+			autogates: process.env.MINIFLARE_WORKERD_AUTOGATES
+				? process.env.MINIFLARE_WORKERD_AUTOGATES.split(" ")
+				: [],
 		};
 	}
 
@@ -2414,6 +2417,7 @@ export class Miniflare {
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
+			runtimeEnv: this.#sharedOpts.core.unsafeRuntimeEnv,
 		};
 		const maybeSocketPorts = await this.#runtime.updateConfig(
 			configBuffer,

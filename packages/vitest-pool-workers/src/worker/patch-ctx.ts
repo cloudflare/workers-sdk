@@ -64,8 +64,7 @@ export function isCtxExportsEnabled(
 	exports: Cloudflare.Exports | undefined
 ): exports is Cloudflare.Exports {
 	return (
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(globalThis as any).Cloudflare?.compatibilityFlags.enable_ctx_exports &&
-		exports !== undefined
+		(globalThis as unknown as { Cloudflare: Cloudflare }).Cloudflare
+			?.compatibilityFlags.enable_ctx_exports && exports !== undefined
 	);
 }

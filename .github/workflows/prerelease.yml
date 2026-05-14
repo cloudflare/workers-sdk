@@ -28,12 +28,13 @@ jobs:
           fetch-depth: 1
 
       - name: Install Dependencies
+        # Defense in depth: do not pass Turbo remote cache credentials and
+        # disable the pnpm store cache so release builds always resolve
+        # packages from the registry and rebuild every task from source,
+        # rather than restoring from a (potentially poisoned) cache.
         uses: ./.github/actions/install-dependencies
         with:
-          turbo-api: ${{ secrets.TURBO_API }}
-          turbo-team: ${{ secrets.TURBO_TEAM }}
-          turbo-token: ${{ secrets.TURBO_TOKEN }}
-          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+          disable-cache: "true"
 
       - run: echo ${{ github.head_ref }}
 

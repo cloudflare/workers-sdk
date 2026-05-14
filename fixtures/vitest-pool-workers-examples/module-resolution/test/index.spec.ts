@@ -5,6 +5,7 @@ import { value as esmDepValue } from "esm-dep";
 import dep from "ext-dep";
 import mime from "mime-types";
 import { assert, describe, expect, test } from "vitest";
+import addFromWasmModuleDep from "wasm-module-dep";
 import worker from "../src/index";
 import sqlPlain from "../src/test.sql";
 import sqlRaw from "../src/test.sql?raw";
@@ -16,6 +17,10 @@ describe("test", () => {
 
 	test("resolves dependency without a default entrypoint", async () => {
 		assert.isFunction(Utils.isDMInteraction);
+	});
+
+	test("resolves a dependency importing .wasm?module", async () => {
+		assert.equal(await addFromWasmModuleDep(2, 3), 5);
 	});
 
 	test("resolves dependency with mapping on the browser field", async () => {
