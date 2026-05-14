@@ -1,5 +1,65 @@
 # wrangler
 
+## 4.91.0
+
+### Minor Changes
+
+- [#13822](https://github.com/cloudflare/workers-sdk/pull/13822) [`c8be316`](https://github.com/cloudflare/workers-sdk/commit/c8be316ef95b8251ee7d64f9550482bdbfdfec9b) Thanks [@edmundhung](https://github.com/edmundhung)! - Add named tunnel support and tunnel shortcuts to `wrangler dev`
+
+  You can now use `wrangler dev --tunnel --tunnel-name <name>` to start a dev session with an existing named Cloudflare Tunnel, or set `--tunnel-name` ahead of time and start it later by pressing `t` to start or close the tunnel. This gives you a stable public hostname for local development instead of the temporary `trycloudflare.com` URL used by Quick Tunnels.
+
+### Patch Changes
+
+- [#13848](https://github.com/cloudflare/workers-sdk/pull/13848) [`d4794a8`](https://github.com/cloudflare/workers-sdk/commit/d4794a8fdba596e7f970a2623ddf24627d923e31) Thanks [@MattieTK](https://github.com/MattieTK)! - Condense repeated environment configuration warnings
+
+  Wrangler now summarises repeated missing `vars` and `define` entries in environment configuration warnings. Experimental `unsafe` warnings are also only emitted once when the field appears at both the top level and in the active environment.
+
+- [#13894](https://github.com/cloudflare/workers-sdk/pull/13894) [`58b4403`](https://github.com/cloudflare/workers-sdk/commit/58b44035e2c2e1b9339bd2b798c5de5dc8bff7b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260508.1 | 1.20260511.1 |
+
+- [#13780](https://github.com/cloudflare/workers-sdk/pull/13780) [`4352f87`](https://github.com/cloudflare/workers-sdk/commit/4352f87afe0c14174c14a49e6c4f6102354faed7) Thanks [@matingathani](https://github.com/matingathani)! - Normalize legacy instance type aliases (`standard` → `standard-1`, `dev` → `lite`) to prevent phantom EDIT diffs on every deploy
+
+- [#13834](https://github.com/cloudflare/workers-sdk/pull/13834) [`a9e6741`](https://github.com/cloudflare/workers-sdk/commit/a9e674194f267b5f2ebe6b8554fa991edf2097b9) Thanks [@matingathani](https://github.com/matingathani)! - fix: hotkeys now work with Caps Lock enabled
+
+  Wrangler's dev server hotkeys (e.g. `b` to open browser and `x` to exit) did not respond when Caps Lock was enabled. These hotkeys now work consistently whether or not Caps Lock is on.
+
+- [#13750](https://github.com/cloudflare/workers-sdk/pull/13750) [`da664d5`](https://github.com/cloudflare/workers-sdk/commit/da664d59131a4abe4abb370cefc244d7d1c5f491) Thanks [@matingathani](https://github.com/matingathani)! - fix: automatically delete log files older than 30 days and add WRANGLER_WRITE_LOGS=false to disable disk logging
+
+  Wrangler previously accumulated log files in `~/.wrangler/logs/` indefinitely, causing some users to accumulate gigabytes of logs over time.
+
+  Log files older than 30 days are now automatically cleaned up on the first log write. Disk logging can be disabled entirely by setting `WRANGLER_WRITE_LOGS=false`.
+
+- [#13914](https://github.com/cloudflare/workers-sdk/pull/13914) [`bdc398c`](https://github.com/cloudflare/workers-sdk/commit/bdc398c977da9738ef6e7fc2beadc0df270f17fc) Thanks [@Maximo-Guk](https://github.com/Maximo-Guk)! - preserve native shape of non-string `vars` in worker previews
+
+  `wrangler preview` previously coerced every non-string entry in `previews.vars` (arrays, objects, numbers, booleans) into a `plain_text` binding via `JSON.stringify`, so at runtime the worker saw a literal string instead of the value declared in `wrangler.jsonc`. `wrangler deploy` already serializes non-string vars as `json` bindings so the Workers runtime parses them back into native JS values; previews now match.
+
+  Before:
+
+  ```ts
+  // wrangler.jsonc — previews.vars
+  { "ALLOWLIST": ["a@example.com", "b@example.com"] }
+  // runtime
+  typeof env.ALLOWLIST === "string" // true (was '["a@example.com","b@example.com"]')
+  ```
+
+  After:
+
+  ```ts
+  typeof env.ALLOWLIST === "object"; // Array.isArray(env.ALLOWLIST) === true
+  ```
+
+- [#13778](https://github.com/cloudflare/workers-sdk/pull/13778) [`1420f10`](https://github.com/cloudflare/workers-sdk/commit/1420f10c1011ac5a63bf27a10103f26b81bb4df3) Thanks [@maxwellpeterson](https://github.com/maxwellpeterson)! - Propagate `unsafe.bindings` and service binding `cross_account_grant` to worker previews
+
+  Worker previews now propagate `unsafe.bindings` declared on the `previews` config block to the deployment metadata, mirroring the deploy-time behavior. Without this, internal binding shapes that wrangler doesn't yet model (notably service bindings carrying `cross_account_grant`) were silently dropped on previews while working fine on regular deploys. The same change wires through `cross_account_grant` on typed `services` bindings.
+
+- Updated dependencies [[`58b4403`](https://github.com/cloudflare/workers-sdk/commit/58b44035e2c2e1b9339bd2b798c5de5dc8bff7b9), [`f781a2b`](https://github.com/cloudflare/workers-sdk/commit/f781a2b874decbedc9dae09feff39ac861014016)]:
+  - miniflare@4.20260511.0
+
 ## 4.90.1
 
 ### Patch Changes

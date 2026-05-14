@@ -1,5 +1,13 @@
 # devprod-status-bot
 
+## 1.5.0
+
+### Minor Changes
+
+- [#13911](https://github.com/cloudflare/workers-sdk/pull/13911) [`2115e8a`](https://github.com/cloudflare/workers-sdk/commit/2115e8af048cd11bfb80008b2bf9ed49e9e52cc8) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Post a Chat alert when an issue is opened with the `api` label, or when the `api` label is added to an existing issue
+
+  Routes alerts to a new `API_ISSUES_WEBHOOK` so the team room watching the Workers SDK community channel gets realtime visibility into incoming api-tagged issues.
+
 ## 1.4.2
 
 ### Patch Changes
