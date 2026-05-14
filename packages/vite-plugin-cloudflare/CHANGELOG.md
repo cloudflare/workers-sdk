@@ -1,5 +1,27 @@
 # @cloudflare/vite-plugin
 
+## 1.37.0
+
+### Minor Changes
+
+- [#13903](https://github.com/cloudflare/workers-sdk/pull/13903) [`7ce6f6f`](https://github.com/cloudflare/workers-sdk/commit/7ce6f6f52af709ec5f700d24ef666ef2be18b093) Thanks [@edmundhung](https://github.com/edmundhung)! - Add named tunnel support to the `cloudflare()` Vite plugin
+
+  You can now expose your local dev server publicly with a stable hostname by configuring `tunnel` with a named Cloudflare Tunnel:
+
+  ```ts
+  cloudflare({
+    tunnel: { name: "my-tunnel", autoStart: true },
+  });
+  ```
+
+  If `autoStart` is omitted or set to `false`, you can still start or close the tunnel by pressing `t + enter`.
+
+### Patch Changes
+
+- Updated dependencies [[`d4794a8`](https://github.com/cloudflare/workers-sdk/commit/d4794a8fdba596e7f970a2623ddf24627d923e31), [`58b4403`](https://github.com/cloudflare/workers-sdk/commit/58b44035e2c2e1b9339bd2b798c5de5dc8bff7b9), [`4352f87`](https://github.com/cloudflare/workers-sdk/commit/4352f87afe0c14174c14a49e6c4f6102354faed7), [`a9e6741`](https://github.com/cloudflare/workers-sdk/commit/a9e674194f267b5f2ebe6b8554fa991edf2097b9), [`da664d5`](https://github.com/cloudflare/workers-sdk/commit/da664d59131a4abe4abb370cefc244d7d1c5f491), [`bdc398c`](https://github.com/cloudflare/workers-sdk/commit/bdc398c977da9738ef6e7fc2beadc0df270f17fc), [`f781a2b`](https://github.com/cloudflare/workers-sdk/commit/f781a2b874decbedc9dae09feff39ac861014016), [`1420f10`](https://github.com/cloudflare/workers-sdk/commit/1420f10c1011ac5a63bf27a10103f26b81bb4df3), [`c8be316`](https://github.com/cloudflare/workers-sdk/commit/c8be316ef95b8251ee7d64f9550482bdbfdfec9b)]:
+  - wrangler@4.91.0
+  - miniflare@4.20260511.0
+
 ## 1.36.4
 
 ### Patch Changes
