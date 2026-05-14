@@ -1,7 +1,15 @@
 import http from "node:http";
 import net from "node:net";
 import { DeferredPromise, Miniflare, Response } from "miniflare";
-import { afterEach, assert, beforeEach, describe, test, vi } from "vitest";
+import {
+	afterEach,
+	assert,
+	beforeEach,
+	describe,
+	type ExpectStatic,
+	test,
+	vi,
+} from "vitest";
 import { handleWebSocket } from "../websockets";
 import type { AddressInfo } from "node:net";
 
@@ -22,10 +30,13 @@ describe("handleWebSocket", () => {
 				}
 			}`,
 		});
-		handleWebSocket(httpServer, miniflare);
+	});
+
+	async function listen(entryWorkerName?: string) {
+		handleWebSocket(httpServer, miniflare, entryWorkerName);
 		await new Promise<void>((r) => httpServer.listen(0, "127.0.0.1", r));
 		port = (httpServer.address() as AddressInfo).port;
-	});
+	}
 
 	afterEach(async () => {
 		await miniflare?.dispose();
@@ -36,6 +47,8 @@ describe("handleWebSocket", () => {
 
 	// https://github.com/cloudflare/workers-sdk/issues/12047
 	test("survives client disconnect during upgrade", async ({ expect }) => {
+		await listen();
+
 		// Mock dispatchFetch to simulate a slow response - the bug occurs when
 		// the client disconnects while dispatchFetch is pending
 		const deferred = new DeferredPromise<Response>();
@@ -64,6 +77,8 @@ describe("handleWebSocket", () => {
 	});
 
 	test("forwards sandbox requests", async ({ expect }) => {
+		await listen();
+
 		const deferred = new DeferredPromise<Response>();
 		const mockedDispatchFetch = vi
 			.spyOn(miniflare, "dispatchFetch")
@@ -109,5 +124,85 @@ describe("handleWebSocket", () => {
 		);
 		expect(init.headers.get("sec-websocket-protocol")).toBe("vite-hmr");
 		expect(init.headers.get("sec-websocket-version")).toBe("13");
+	});
+
+	/**
+	 * Performs a websocket upgrade with the given headers and returns the URL
+	 * that was dispatched to miniflare.
+	 */
+	async function dispatchUpgrade(
+		expect: ExpectStatic,
+		headers: Record<string, string>
+	) {
+		const deferred = new DeferredPromise<Response>();
+		const mockedDispatchFetch = vi
+			.spyOn(miniflare, "dispatchFetch")
+			.mockReturnValue(deferred);
+
+		const socket = net.connect(port, "127.0.0.1");
+		await new Promise<void>((r) => socket.on("connect", r));
+
+		const headerLines = Object.entries(headers)
+			.map(([k, v]) => `${k}: ${v}`)
+			.join("\r\n");
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`${headerLines}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await vi.waitFor(() => expect(miniflare.dispatchFetch).toHaveBeenCalled());
+
+		// Resolve the mock so miniflare.dispose() doesn't hang in afterEach
+		deferred.resolve(new Response(null));
+
+		socket.destroy();
+
+		assert(mockedDispatchFetch.mock.lastCall);
+		return mockedDispatchFetch.mock.lastCall[0];
+	}
+
+	test("falls back to `http://` when no `X-Forwarded-Proto` header is set", async ({
+		expect,
+	}) => {
+		await listen();
+		const url = await dispatchUpgrade(expect, { Host: `127.0.0.1:${port}` });
+		expect(`${url}`).toBe(`http://127.0.0.1:${port}/`);
+	});
+
+	test("honors the `X-Forwarded-Proto` header set to `https`", async ({
+		expect,
+	}) => {
+		await listen();
+		const url = await dispatchUpgrade(expect, {
+			Host: `127.0.0.1:${port}`,
+			"X-Forwarded-Proto": "https",
+		});
+		expect(`${url}`).toBe(`https://127.0.0.1:${port}/`);
+	});
+
+	test("uses the left-most value when `X-Forwarded-Proto` is a proxy chain", async ({
+		expect,
+	}) => {
+		await listen();
+		const url = await dispatchUpgrade(expect, {
+			Host: `127.0.0.1:${port}`,
+			"X-Forwarded-Proto": "https, http",
+		});
+		expect(`${url}`).toBe(`https://127.0.0.1:${port}/`);
+	});
+
+	test("ignores `X-Forwarded-Proto` when it holds an unsupported value", async ({
+		expect,
+	}) => {
+		await listen();
+		const url = await dispatchUpgrade(expect, {
+			Host: `127.0.0.1:${port}`,
+			"X-Forwarded-Proto": "ws",
+		});
+		expect(`${url}`).toBe(`http://127.0.0.1:${port}/`);
 	});
 });
