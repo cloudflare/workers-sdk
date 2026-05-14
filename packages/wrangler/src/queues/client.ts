@@ -98,6 +98,32 @@ export interface PurgeQueueResponse {
 	complete: boolean;
 }
 
+export interface SetScriptConsumersBody {
+	consumers: SetScriptConsumerEntry[];
+}
+
+export interface SetScriptConsumerEntry {
+	queue_id: string;
+	type: "worker";
+	script_name: string;
+	settings?: ConsumerSettings;
+	dead_letter_queue?: string;
+	environment?: string;
+}
+
+export interface SetScriptConsumersResultEntry {
+	queue_id: string;
+	queue_name: string;
+	error?: string;
+}
+
+export interface SetScriptConsumersResult {
+	created: SetScriptConsumersResultEntry[];
+	updated: SetScriptConsumersResultEntry[];
+	deleted: SetScriptConsumersResultEntry[];
+	failed: SetScriptConsumersResultEntry[];
+}
+
 const queuesUrl = (accountId: string, queueId?: string): string => {
 	let url = `/accounts/${accountId}/queues`;
 	if (queueId) {
@@ -117,6 +143,25 @@ const queueConsumersUrl = (
 	}
 	return url;
 };
+
+const scriptQueueConsumersUrl = (
+	accountId: string,
+	scriptName: string
+): string => {
+	return `/accounts/${accountId}/workers/scripts/${scriptName}/queue-consumers`;
+};
+
+export async function setScriptConsumers(
+	config: Config,
+	scriptName: string,
+	body: SetScriptConsumersBody
+): Promise<SetScriptConsumersResult> {
+	const accountId = await requireAuth(config);
+	return fetchResult(config, scriptQueueConsumersUrl(accountId, scriptName), {
+		method: "PUT",
+		body: JSON.stringify(body),
+	});
+}
 
 export async function createQueue(
 	config: Config,
@@ -201,7 +246,9 @@ export async function getQueue(
 	return queues[0];
 }
 
-export async function ensureQueuesExistByConfig(config: Config) {
+export async function ensureQueuesExistByConfig(
+	config: Config
+): Promise<Map<string, string>> {
 	const producers = (config.queues.producers || []).map(
 		(producer) => producer.queue
 	);
@@ -210,20 +257,25 @@ export async function ensureQueuesExistByConfig(config: Config) {
 	);
 
 	const queueNames = producers.concat(consumers);
-	await ensureQueuesExist(config, queueNames);
+	return ensureQueuesExist(config, queueNames);
 }
 
-async function ensureQueuesExist(config: Config, queueNames: string[]) {
+async function ensureQueuesExist(
+	config: Config,
+	queueNames: string[]
+): Promise<Map<string, string>> {
+	const queueNameToId = new Map<string, string>();
+
 	if (queueNames.length > 0) {
-		const existingQueues = (await listAllQueues(config, queueNames)).map(
-			(q) => q.queue_name
-		);
+		const existingQueues = await listAllQueues(config, queueNames);
+
+		for (const q of existingQueues) {
+			queueNameToId.set(q.queue_name, q.queue_id);
+		}
 
 		if (queueNames.length !== existingQueues.length) {
-			const queueSet = new Set(existingQueues);
-
 			for (const queue of queueNames) {
-				if (!queueSet.has(queue)) {
+				if (!queueNameToId.has(queue)) {
 					throw new UserError(
 						`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`,
 						{ telemetryMessage: "queues config missing queue" }
@@ -232,6 +284,8 @@ async function ensureQueuesExist(config: Config, queueNames: string[]) {
 			}
 		}
 	}
+
+	return queueNameToId;
 }
 
 export async function getQueueById(
@@ -282,45 +336,6 @@ async function postConsumerById(
 		method: "POST",
 		body: JSON.stringify(body),
 	});
-}
-
-export async function putConsumerById(
-	config: Config,
-	queueId: string,
-	consumerId: string,
-	body: PostTypedConsumerBody
-): Promise<TypedConsumerResponse> {
-	const accountId = await requireAuth(config);
-	return fetchResult(
-		config,
-		queueConsumersUrl(accountId, queueId, consumerId),
-		{
-			method: "PUT",
-			body: JSON.stringify(body),
-		}
-	);
-}
-
-export async function putConsumer(
-	config: Config,
-	queueName: string,
-	scriptName: string,
-	envName: string | undefined,
-	body: PostTypedConsumerBody
-): Promise<TypedConsumerResponse> {
-	const queue = await getQueue(config, queueName);
-	const targetConsumer = await resolveWorkerConsumerByName(
-		config,
-		scriptName,
-		envName,
-		queue
-	);
-	return putConsumerById(
-		config,
-		queue.queue_id,
-		targetConsumer.consumer_id,
-		body
-	);
 }
 
 async function resolveWorkerConsumerByName(

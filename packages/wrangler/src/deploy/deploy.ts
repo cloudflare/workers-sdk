@@ -53,9 +53,7 @@ import { isNavigatorDefined } from "../navigator-user-agent";
 import { getWranglerTmpDir } from "../paths";
 import {
 	ensureQueuesExistByConfig,
-	getQueue,
-	postConsumer,
-	putConsumer,
+	setScriptConsumers,
 } from "../queues/client";
 import { parseBulkInputToObject } from "../secret";
 import { syncWorkersSite } from "../sites";
@@ -82,7 +80,7 @@ import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 import type { AssetsOptions } from "../assets";
 import type { Entry } from "../deployment-bundle/entry";
-import type { PostTypedConsumerBody } from "../queues/client";
+import type { SetScriptConsumerEntry } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
@@ -1517,26 +1515,32 @@ async function publishRoutesFallback(
 	return deployedRoutes;
 }
 
-export async function updateQueueConsumers(
+export function updateQueueConsumers(
 	scriptName: string | undefined,
-	config: Config
-): Promise<Promise<string[]>[]> {
-	const consumers = config.queues.consumers || [];
-	const updateConsumers: Promise<string[]>[] = [];
-	for (const consumer of consumers) {
-		const queue = await getQueue(config, consumer.queue);
+	config: Config,
+	queueNameToId: Map<string, string>
+): Promise<string[]> {
+	if (scriptName === undefined) {
+		throw new UserError("Script name is required to update queue consumers", {
+			telemetryMessage: "deploy queue consumers missing script name",
+		});
+	}
 
-		if (scriptName === undefined) {
-			// TODO: how can we reliably get the current script name?
-			throw new UserError("Script name is required to update queue consumers", {
-				telemetryMessage: "deploy queue consumers missing script name",
-			});
+	const consumers = config.queues.consumers || [];
+	const entries: SetScriptConsumerEntry[] = consumers.map((consumer) => {
+		const queueId = queueNameToId.get(consumer.queue);
+		if (queueId === undefined) {
+			throw new UserError(
+				`Queue "${consumer.queue}" does not exist. To create it, run: wrangler queues create ${consumer.queue}`,
+				{ telemetryMessage: "queues config missing queue" }
+			);
 		}
 
-		const body: PostTypedConsumerBody = {
-			type: "worker",
-			dead_letter_queue: consumer.dead_letter_queue,
+		return {
+			queue_id: queueId,
+			type: "worker" as const,
 			script_name: scriptName,
+			dead_letter_queue: consumer.dead_letter_queue,
 			settings: {
 				batch_size: consumer.max_batch_size,
 				max_retries: consumer.max_retries,
@@ -1548,29 +1552,45 @@ export async function updateQueueConsumers(
 				retry_delay: consumer.retry_delay,
 			},
 		};
+	});
 
-		// Current script already assigned to queue?
-		const existingConsumer =
-			queue.consumers.filter(
-				(c) => c.script === scriptName || c.service === scriptName
-			).length > 0;
-		const envName = undefined; // TODO: script environment for wrangler deploy?
-		if (existingConsumer) {
-			updateConsumers.push(
-				putConsumer(config, consumer.queue, scriptName, envName, body).then(
-					() => [`Consumer for ${consumer.queue}`]
-				)
-			);
-			continue;
-		}
-		updateConsumers.push(
-			postConsumer(config, consumer.queue, body).then(() => [
-				`Consumer for ${consumer.queue}`,
-			])
-		);
-	}
+	return setScriptConsumers(config, scriptName, { consumers: entries })
+		.then((result) => {
+			const displayLines: string[] = [];
 
-	return updateConsumers;
+			for (const entry of result.created) {
+				displayLines.push(`Consumer for ${entry.queue_name}`);
+			}
+			for (const entry of result.updated) {
+				displayLines.push(`Consumer for ${entry.queue_name}`);
+			}
+			for (const entry of result.deleted) {
+				displayLines.push(`Removed consumer for ${entry.queue_name}`);
+			}
+			for (const entry of result.failed) {
+				displayLines.push(
+					`✘ Failed to configure consumer for ${entry.queue_name}: ${entry.error}`
+				);
+				logger.error(
+					`Failed to configure consumer for ${entry.queue_name}: ${entry.error}`
+				);
+			}
+
+			if (result.failed.length > 0) {
+				process.exitCode = 1;
+			}
+
+			return displayLines;
+		})
+		.catch((err) => {
+			// Don't fail the whole deploy if the consumer sync request fails;
+			// other triggers (routes, schedules, workflows) should still complete
+			// and be reported. Surface the failure with a non-zero exit code.
+			const message = err instanceof Error ? err.message : String(err);
+			logger.error(`Failed to configure queue consumers: ${message}`);
+			process.exitCode = 1;
+			return [`✘ Failed to configure queue consumers: ${message}`];
+		});
 }
 
 function getDeployConfirmFunction(
