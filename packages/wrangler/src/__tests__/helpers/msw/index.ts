@@ -1,3 +1,4 @@
+import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { default as mswAccessHandlers } from "./handlers/access";
 import {
@@ -25,7 +26,29 @@ import {
 } from "./handlers/versions";
 import { default as mswZoneHandlers } from "./handlers/zones";
 
-export const msw = setupServer();
+// Default handler for the queue consumers sync endpoint. Wrangler calls this
+// on every deploy (even for workers that don't use queues) so stale consumer
+// registrations from previous deploys get cleaned up. Default handlers passed
+// to `setupServer` survive `resetHandlers()` between tests, so individual
+// tests don't need to mock this unless they want to assert specific behavior.
+const mswDefaultSetScriptConsumers = http.put(
+	"*/accounts/:accountId/workers/scripts/:scriptName/queue-consumers",
+	() => {
+		return HttpResponse.json({
+			success: true,
+			errors: [],
+			messages: [],
+			result: {
+				created: [],
+				updated: [],
+				deleted: [],
+				failed: [],
+			},
+		});
+	}
+);
+
+export const msw = setupServer(mswDefaultSetScriptConsumers);
 
 function createFetchResult(
 	result: unknown,

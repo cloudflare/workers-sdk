@@ -14,7 +14,12 @@ import {
 } from "../helpers/msw";
 import type { AssetManifest } from "../../assets";
 import type { CustomDomain, CustomDomainChangeset } from "../../deploy/deploy";
-import type { PostTypedConsumerBody, QueueResponse } from "../../queues/client";
+import type {
+	PostTypedConsumerBody,
+	QueueResponse,
+	SetScriptConsumersBody,
+	SetScriptConsumersResult,
+} from "../../queues/client";
 import type {
 	Config,
 	ServiceMetadataRes,
@@ -655,6 +660,38 @@ export function mockPostConsumerById(
 					errors: [],
 					messages: [],
 					result: {},
+				});
+			},
+			{ once: true }
+		)
+	);
+	return requests;
+}
+
+export function mockSetScriptConsumers(
+	expectedScriptName: string,
+	expectedBody: SetScriptConsumersBody,
+	result: SetScriptConsumersResult = {
+		created: [],
+		updated: [],
+		deleted: [],
+		failed: [],
+	}
+) {
+	const requests = { count: 0 };
+	msw.use(
+		http.put(
+			"*/accounts/:accountId/workers/scripts/:scriptName/queue-consumers",
+			async ({ request, params }) => {
+				requests.count += 1;
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(expectedScriptName);
+				expect(await request.json()).toEqual(expectedBody);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result,
 				});
 			},
 			{ once: true }
