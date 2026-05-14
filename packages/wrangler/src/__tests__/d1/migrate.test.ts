@@ -147,13 +147,20 @@ describe("migrate", () => {
 		}) => {
 			setIsTTY(false);
 
+			// `migrations_dir` below is absolute and escapes `runInTempDir`, so
+			// previous runs of this same test (or sibling tests) can leave files
+			// behind. Wipe before each run so we apply exactly one migration.
+			fs.rmSync("/tmp/my-migrations-go-here-1", {
+				recursive: true,
+				force: true,
+			});
 			writeWranglerConfig({
 				d1_databases: [
 					{
 						binding: "DATABASE",
 						database_name: "db",
 						database_id: "xxxx",
-						migrations_dir: "/tmp/my-migrations-go-here",
+						migrations_dir: "/tmp/my-migrations-go-here-1",
 					},
 				],
 			});
@@ -165,7 +172,7 @@ describe("migrate", () => {
 			);
 			mockConfirm({
 				text: `No migrations folder found.
-Ok to create /tmp/my-migrations-go-here?`,
+Ok to create /tmp/my-migrations-go-here-1?`,
 				result: true,
 			});
 			await runWrangler("d1 migrations create db test");
@@ -184,7 +191,6 @@ Your database may not be available to serve requests during the migration, conti
 			expect,
 		}) => {
 			setIsTTY(false);
-			const std = mockConsoleMethods();
 			msw.use(
 				http.post(
 					"*/accounts/:accountId/d1/database/:databaseId/query",
@@ -228,20 +234,27 @@ Your database may not be available to serve requests during the migration, conti
 					{ id: "R2-D2", name: "enterprise-nx" },
 				])
 			);
+			// `migrations_dir` below is absolute and escapes `runInTempDir`, so
+			// previous runs of this same test (or sibling tests) can leave files
+			// behind. Wipe before each run so we apply exactly one migration.
+			fs.rmSync("/tmp/my-migrations-go-here-2", {
+				recursive: true,
+				force: true,
+			});
 			writeWranglerConfig({
 				d1_databases: [
 					{
 						binding: "DATABASE",
 						database_name: "db",
 						database_id: "xxxx",
-						migrations_dir: "/tmp/my-migrations-go-here",
+						migrations_dir: "/tmp/my-migrations-go-here-2",
 					},
 				],
 				account_id: "nx01",
 			});
 			mockConfirm({
 				text: `No migrations folder found.
-Ok to create /tmp/my-migrations-go-here?`,
+Ok to create /tmp/my-migrations-go-here-2?`,
 				result: true,
 			});
 			await runWrangler("d1 migrations create db test");
@@ -251,7 +264,8 @@ Your database may not be available to serve requests during the migration, conti
 				result: true,
 			});
 			await runWrangler("d1 migrations apply db --remote");
-			expect(std.out).toBe("");
+			expect(mockStd.out).toContain("0001_test.sql");
+			expect(mockStd.out).toContain("✅");
 		});
 
 		it("should apply nested migrations with relative path names", async ({
