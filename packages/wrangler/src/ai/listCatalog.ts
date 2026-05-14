@@ -1,9 +1,17 @@
-import { createCommand } from "../core/create-command";
+import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { listCatalogEntries, truncateDescription } from "./utils";
 
-export const aiModelsCommand = createCommand({
+export const aiModelsNamespace = createNamespace({
+	metadata: {
+		description: "Manage AI models",
+		status: "stable",
+		owner: "Product: AI",
+	},
+});
+
+export const aiModelsListCommand = createCommand({
 	metadata: {
 		description: "List catalog models",
 		status: "stable",
@@ -12,40 +20,32 @@ export const aiModelsCommand = createCommand({
 	behaviour: {
 		printBanner: (args) => !args.json,
 	},
-	// yargs otherwise exposes these command options on nested subcommands, such
-	// as `wrangler ai models schema`.
 	args: {
 		json: {
 			type: "boolean",
 			description: "Return output as JSON",
 			default: false,
-			global: false,
 		},
 		search: {
 			type: "string",
 			description: "Search models by name or description",
-			global: false,
 		},
 		task: {
 			type: "string",
 			description: "Filter by task name",
-			global: false,
 		},
 		author: {
 			type: "string",
 			description: "Filter by author",
-			global: false,
 		},
 		source: {
 			type: "number",
 			description: "Filter by source ID",
-			global: false,
 		},
 		"hide-experimental": {
 			type: "boolean",
 			description: "Hide experimental models",
 			default: false,
-			global: false,
 		},
 	},
 	async handler(

@@ -78,10 +78,8 @@ export type Metadata = {
 	category?: MetadataCategory;
 };
 
-// These definitions are passed directly to yargs `.options()`, including
-// yargs-only properties such as `global`.
 export type ArgDefinition = Omit<PositionalOptions, "type"> &
-	Pick<Options, "hidden" | "requiresArg" | "deprecated" | "type" | "global">;
+	Pick<Options, "hidden" | "requiresArg" | "deprecated" | "type">;
 export type NamedArgDefinitions = { [key: string]: ArgDefinition };
 
 export type OnlyCamelCase<T = Record<string, never>> = {

@@ -23,7 +23,7 @@ describe("ai help", () => {
 			🤖 Manage AI models
 
 			COMMANDS
-			  wrangler ai models    List catalog models
+			  wrangler ai models    Manage AI models
 			  wrangler ai finetune  Interact with finetune files
 
 			GLOBAL FLAGS
@@ -55,8 +55,33 @@ describe("ai help", () => {
 			🤖 Manage AI models
 
 			COMMANDS
-			  wrangler ai models    List catalog models
+			  wrangler ai models    Manage AI models
 			  wrangler ai finetune  Interact with finetune files
+
+			GLOBAL FLAGS
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
+		`);
+	});
+
+	it("should show models help when no subcommand is passed", async ({
+		expect,
+	}) => {
+		await runWrangler("ai models");
+		await endEventLoop();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler ai models
+
+			Manage AI models
+
+			COMMANDS
+			  wrangler ai models list            List catalog models
+			  wrangler ai models schema <model>  Get model schema
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -134,7 +159,7 @@ describe("ai commands", () => {
 
 	it("should handle model list", async ({ expect }) => {
 		mockAISearchRequest();
-		await runWrangler("ai models");
+		await runWrangler("ai models list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
@@ -152,7 +177,7 @@ describe("ai commands", () => {
 	it("should query model list with filters", async ({ expect }) => {
 		const requests = mockAISearchRequest();
 		await runWrangler(
-			'ai models --search resnet --task "Image Classification" --author cloudflare --source 1 --hide-experimental --json'
+			'ai models list --search resnet --task "Image Classification" --author cloudflare --source 1 --hide-experimental --json'
 		);
 
 		expect(requests).toHaveLength(1);
@@ -201,7 +226,7 @@ describe("ai commands", () => {
 		process.stdout.columns = 186;
 
 		mockAIOverflowRequest();
-		await runWrangler("ai models");
+		await runWrangler("ai models list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
@@ -222,7 +247,7 @@ describe("ai commands", () => {
 		// Arbitrary fixed value for testing
 		process.stdout.columns = 186;
 		mockAIPaginatedRequest();
-		await runWrangler("ai models");
+		await runWrangler("ai models list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
