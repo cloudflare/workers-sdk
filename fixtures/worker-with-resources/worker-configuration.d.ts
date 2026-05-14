@@ -11,7 +11,9 @@ interface __EnvShape_Env {
 	DB_B: D1Database;
 	DO: DurableObjectNamespace<import("./src/index").MyDurableObject>;
 	DO_B: DurableObjectNamespace /* WorkerBDurableObject from worker-b */;
-	MY_WORKFLOW: Workflow<Parameters<import("./src/index").MyWorkflow['run']>[0]['payload']>;
+	MY_WORKFLOW: Workflow<
+		Parameters<import("./src/index").MyWorkflow["run"]>[0]["payload"]
+	>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
