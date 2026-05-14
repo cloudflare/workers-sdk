@@ -155,7 +155,7 @@ export const sharedDeployVersionsArgs = {
 	},
 	"secrets-file": {
 		describe:
-			"Path to a file containing secrets to upload with the version (JSON or .env format). Secrets from previous deployments will not be deleted - see `--keep-secrets`",
+			"Path to a file containing secrets to upload with the version (JSON or .env format). Applies additively with secrets from previous deployments - omitted secrets will not be deleted.",
 		type: "string",
 		requiresArg: true,
 	},

@@ -138,8 +138,12 @@ export const deployCommand = createCommand({
 		// Needs to happen after auto-config logic to capture newly auto-configured open-next apps.
 		// As a precaution we're gating the feature under the autoconfig flag for the time being.
 		// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate
-		if (args.experimentalAutoconfig && !args.config && !args.dryRun) {
-			await maybeDelegateToOpenNextDeployCommand(process.cwd());
+		if (
+			args.experimentalAutoconfig &&
+			!args.config &&
+			!args.dryRun &&
+			(await maybeDelegateToOpenNextDeployCommand(process.cwd()))
+		) {
 			return;
 		}
 
