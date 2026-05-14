@@ -119,7 +119,7 @@ describe("resolveTunnelId", () => {
 						list() {
 							return [
 								{
-									id: "11111111-1111-4111-8111-111111111111",
+									id: "test-tunnel-id",
 									name: "my-tunnel",
 								},
 							];
@@ -156,18 +156,18 @@ describe("resolveTunnelId", () => {
 
 		await expect(
 			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
-				accountId: "account",
+				accountId: "test-account-id",
 				complianceRegion: undefined,
 			})
 		).rejects.toThrowErrorMatchingInlineSnapshot(`
-			[Error: No ingress rules in tunnel "my-tunnel" route to http://localhost:8787/
+			[Error: Tunnel "my-tunnel" has no route for http://localhost:8787/
 
-			Update the tunnel ingress rules in the Cloudflare dashboard:
-			https://dash.cloudflare.com/?to=/:account/tunnels
-
-			Resolved ingress mappings:
+			Resolved routes:
 			  - dev.example.com -> http://localhost:3000
 			  - admin.example.com -> http://localhost:4000
+
+			Update your local server settings or the tunnel routes in the Cloudflare dashboard:
+			https://dash.cloudflare.com/test-account-id/tunnels/test-tunnel-id
 			]
 		`);
 	});
@@ -183,7 +183,7 @@ describe("resolveTunnelId", () => {
 						list() {
 							return [
 								{
-									id: "11111111-1111-4111-8111-111111111111",
+									id: "test-tunnel-id",
 									name: "my-tunnel",
 								},
 							];
@@ -207,14 +207,14 @@ describe("resolveTunnelId", () => {
 
 		await expect(
 			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
-				accountId: "account",
+				accountId: "test-account-id",
 				complianceRegion: undefined,
 			})
 		).rejects.toThrowErrorMatchingInlineSnapshot(`
-			[Error: Tunnel "my-tunnel" has no ingress rules configured.
+			[Error: Tunnel "my-tunnel" has no routes configured.
 
-			Add an ingress rule for http://localhost:8787/ in the Cloudflare dashboard:
-			https://dash.cloudflare.com/?to=/:account/tunnels
+			Add a route for http://localhost:8787/ in the Cloudflare dashboard:
+			https://dash.cloudflare.com/test-account-id/tunnels/test-tunnel-id
 			]
 		`);
 	});
