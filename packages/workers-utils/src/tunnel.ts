@@ -31,6 +31,7 @@ export type TunnelResult = QuickTunnelResult | NamedTunnelResult;
 
 export interface Tunnel {
 	ready: () => Promise<TunnelResult>;
+	isOpen: () => boolean;
 	dispose: () => void;
 	extendExpiry: (ms?: number) => void;
 }
@@ -207,6 +208,7 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 
 	return {
 		ready: () => readyPromise,
+		isOpen: () => !disposed,
 		dispose: disposeTunnel,
 		extendExpiry,
 	};

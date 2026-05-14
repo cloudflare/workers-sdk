@@ -42,7 +42,7 @@ export class TunnelManager {
 				? chalk.dim("Once connected, this tunnel will be ") +
 					"publicly accessible"
 				: chalk.dim(
-						"Once connected, this tunnel may be reachable from the internet"
+						"Once connected, this tunnel may be reachable from the Internet"
 					)) +
 				chalk.dim(". Anyone who can reach it can:\n") +
 				chalk.dim(

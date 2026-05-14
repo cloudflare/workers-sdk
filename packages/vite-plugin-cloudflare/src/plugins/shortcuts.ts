@@ -8,7 +8,7 @@ import colors from "picocolors";
 import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
-import { extendTunnelExpiry } from "./tunnel";
+import { extendTunnelExpiry, toggleTunnel } from "./tunnel";
 import type { PluginContext } from "../context";
 import type * as vite from "vite";
 
@@ -26,9 +26,7 @@ export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
 			assertIsNotPreview(ctx);
 			addBindingsShortcut(viteDevServer, ctx);
 			addExplorerShortcut(viteDevServer);
-			if (ctx.resolvedPluginConfig.tunnel) {
-				addTunnelShortcut(viteDevServer);
-			}
+			addTunnelShortcut(viteDevServer, ctx);
 		},
 		async configurePreviewServer(vitePreviewServer) {
 			if (!isCustomShortcutsSupported) {
@@ -38,9 +36,7 @@ export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
 			assertIsPreview(ctx);
 			addBindingsShortcut(vitePreviewServer, ctx);
 			addExplorerShortcut(vitePreviewServer);
-			if (ctx.resolvedPluginConfig.tunnel) {
-				addTunnelShortcut(vitePreviewServer);
-			}
+			addTunnelShortcut(vitePreviewServer, ctx);
 		},
 	};
 });
@@ -180,14 +176,25 @@ export function addExplorerShortcut(
 }
 
 export function addTunnelShortcut(
-	server: vite.ViteDevServer | vite.PreviewServer
+	server: vite.ViteDevServer | vite.PreviewServer,
+	ctx: PluginContext
 ) {
 	if (!process.stdin.isTTY) {
 		return;
 	}
 
-	const extendTunnelExpiryShortcut = {
+	const toggleTunnelShortcut = {
 		key: "t",
+		description: "start or close tunnel",
+		action: () => {
+			void toggleTunnel(server, ctx).catch((error) => {
+				const message = error instanceof Error ? error.message : String(error);
+				server.config.logger.error(colors.red(`Error: ${message}`));
+			});
+		},
+	} satisfies vite.CLIShortcut<vite.ViteDevServer | vite.PreviewServer>;
+	const extendTunnelExpiryShortcut = {
+		key: "a",
 		description: "extend tunnel by 1 hour",
 		action: () => {
 			extendTunnelExpiry();
@@ -195,6 +202,6 @@ export function addTunnelShortcut(
 	} satisfies vite.CLIShortcut<vite.ViteDevServer | vite.PreviewServer>;
 
 	server.bindCLIShortcuts({
-		customShortcuts: [extendTunnelExpiryShortcut],
+		customShortcuts: [toggleTunnelShortcut, extendTunnelExpiryShortcut],
 	});
 }
