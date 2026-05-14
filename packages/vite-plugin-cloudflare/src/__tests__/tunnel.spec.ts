@@ -606,7 +606,7 @@ describe("tunnel plugin", () => {
 			[Error: The resolved tunnel hostnames are not allowed by Vite preview host validation.
 
 			Add at least one of these hosts to \`preview.allowedHosts\` in your Vite config.
-			You can use exact hostnames or a dot-prefixed suffix pattern:
+			You can use exact hostnames or a domain suffix:
 			  - dev.example.com
 			  - preview.example.com
 			  - .example.com

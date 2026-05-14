@@ -10,8 +10,6 @@ import type {
 	ConfigurationGetResponse,
 } from "cloudflare/resources/zero-trust/tunnels/cloudflared";
 
-const TUNNELS_DASHBOARD_URL =
-	"https://dash.cloudflare.com/?to=/:account/tunnels";
 const LOCAL_TUNNEL_HOSTNAMES = new Set([
 	"localhost",
 	"127.0.0.1",
@@ -250,6 +248,7 @@ export async function resolveNamedTunnel(
 			createMissingIngressMessage(
 				name,
 				origin,
+				`https://dash.cloudflare.com/${accountId}/tunnels/${tunnelId}`,
 				configuration.config?.ingress ?? []
 			),
 			{ telemetryMessage: "tunnel resolve named ingress mismatch" }
@@ -310,29 +309,30 @@ function normalizeURL(url: URL | string): URL {
 function createMissingIngressMessage(
 	name: string,
 	origin: URL,
+	dashboardUrl: string,
 	ingress: ConfigurationGetResponse.Config.Ingress[]
 ): string {
 	if (ingress.length === 0) {
 		return [
-			`Tunnel "${name}" has no ingress rules configured.`,
+			`Tunnel "${name}" has no routes configured.`,
 			"",
-			`Add an ingress rule for ${origin} in the Cloudflare dashboard:`,
-			TUNNELS_DASHBOARD_URL,
+			`Add a route for ${origin} in the Cloudflare dashboard:`,
+			dashboardUrl,
 			"",
 		].join("\n");
 	}
 
 	return [
-		`No ingress rules in tunnel "${name}" route to ${origin}`,
+		`Tunnel "${name}" has no route for ${origin}`,
 		"",
-		"Update the tunnel ingress rules in the Cloudflare dashboard:",
-		TUNNELS_DASHBOARD_URL,
-		"",
-		"Resolved ingress mappings:",
+		"Resolved routes:",
 		...ingress.map(
 			({ hostname, service }) =>
 				`  - ${hostname ?? "(no hostname)"} -> ${service}`
 		),
+		"",
+		"Update your local server settings or the tunnel routes in the Cloudflare dashboard:",
+		dashboardUrl,
 		"",
 	].join("\n");
 }

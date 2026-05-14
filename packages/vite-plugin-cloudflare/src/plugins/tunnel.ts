@@ -14,7 +14,6 @@ function createPublicExposureWarning(
 	name: string | undefined,
 	shortcutPressed: boolean
 ) {
-	const spacing = "     ";
 	const intro =
 		name === undefined
 			? colors.dim("Once connected, this tunnel will be ") +
@@ -58,6 +57,8 @@ function createPublicExposureWarning(
 		lines.push("Press t + enter again to close the tunnel.", "");
 	}
 
+	const spacing = "     ";
+
 	return lines.map((line) => spacing + line).join("\n");
 }
 
@@ -90,7 +91,7 @@ export class TunnelManager {
 
 		const isOpen = this.#tunnel.isOpen();
 
-		// If the tunnel is expried, dispose it to clean up resources and reset state.
+		// If the tunnel is expired, dispose it to clean up resources and reset state.
 		if (!isOpen) {
 			// Set tunnel to undefined before disposing to prevent interact with the already-closed tunnel
 			this.#tunnel = undefined;
@@ -169,7 +170,7 @@ export class TunnelManager {
 							"The resolved tunnel hostnames are not allowed by Vite preview host validation.\n" +
 								"\n" +
 								"Add at least one of these hosts to `preview.allowedHosts` in your Vite config.\n" +
-								"You can use exact hostnames or a dot-prefixed suffix pattern:\n" +
+								"You can use exact hostnames or a domain suffix:\n" +
 								suggestedAllowedHosts
 									.map((hostname) => `  - ${hostname}`)
 									.join("\n") +
@@ -274,7 +275,6 @@ export class TunnelManager {
 		debuglog("Disposing tunnel...");
 
 		if (tunnel) {
-			this.#logger.info(colors.dim("  ➜  Closing tunnel..."));
 			tunnel.dispose();
 			this.#logger.info("  ➜  Tunnel closed");
 		}
@@ -429,7 +429,7 @@ export async function setupDevTunnel(
 		name: tunnel.name,
 		accountId: ctx.entryWorkerConfig?.account_id,
 		complianceRegion: ctx.entryWorkerConfig?.compliance_region,
-		// We will restart the server with the tunnel hostnames in allowedHosts if needed,
+		// We will restart the server with the tunnel hostnames in allowedHosts if needed
 		allowedHosts: true,
 	});
 
