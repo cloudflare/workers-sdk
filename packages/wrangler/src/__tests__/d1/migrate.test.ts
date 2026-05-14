@@ -365,6 +365,113 @@ Your database may not be available to serve requests during the migration, conti
 			expect(mockStd.out).toContain("20240501120000_initial/migration.sql");
 			expect(mockStd.out).toContain("20240501130000_quo'ted/migration.sql");
 		});
+
+		it("should apply each .sql file in a multi-file migration directory and ignore non-.sql files", async ({
+			expect,
+		}) => {
+			// This is the case the D1 team explicitly flagged on PR #10570: a
+			// single migration directory containing multiple `.sql` files. The
+			// agreed-upon behaviour is that each `.sql` file becomes its own
+			// migration (its own transaction-equivalent), and any non-`.sql`
+			// siblings are ignored. We also drop a Drizzle-style journal file
+			// next to the migration dir to confirm `meta/_journal.json` is
+			// likewise ignored.
+			setIsTTY(false);
+			const appliedMigrationNames: string[] = [];
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/d1/database/:databaseId/query",
+					async ({ request }) => {
+						const body = (await request.json()) as { sql?: string };
+						const match = body.sql?.match(
+							/INSERT INTO d1_migrations \(name\)\s+values \('([^']+(?:''[^']*)*)'\);/
+						);
+						if (match) {
+							appliedMigrationNames.push(match[1].replaceAll("''", "'"));
+						}
+						return HttpResponse.json(
+							{
+								result: [{ results: [], success: true, meta: {} }],
+								success: true,
+								errors: [],
+								messages: [],
+							},
+							{ status: 200 }
+						);
+					}
+				),
+				http.get("*/accounts/:accountId/d1/database/:databaseId", async () => {
+					return HttpResponse.json(
+						{
+							result: {
+								file_size: 0,
+								name: "db",
+								num_tables: 0,
+								uuid: "xxxx",
+								version: "production",
+							},
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				})
+			);
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+					},
+				],
+				account_id: "account-id",
+			});
+			fs.mkdirSync(path.join("migrations", "0001_initial"), {
+				recursive: true,
+			});
+			fs.mkdirSync(path.join("migrations", "meta"), { recursive: true });
+			// Three `.sql` files in the same directory — `readdir` order is not
+			// guaranteed, but the discovery walker sorts the final list, so we
+			// expect them to be applied in lexical order.
+			fs.writeFileSync(
+				path.join("migrations", "0001_initial", "20_seed.sql"),
+				"INSERT INTO users VALUES (1);"
+			);
+			fs.writeFileSync(
+				path.join("migrations", "0001_initial", "10_schema.sql"),
+				"CREATE TABLE users (id INTEGER PRIMARY KEY);"
+			);
+			fs.writeFileSync(
+				path.join("migrations", "0001_initial", "00_extensions.sql"),
+				"-- noop"
+			);
+			fs.writeFileSync(
+				path.join("migrations", "0001_initial", "README.md"),
+				"# initial"
+			);
+			fs.writeFileSync(
+				path.join("migrations", "meta", "_journal.json"),
+				'{"entries":[]}'
+			);
+			mockConfirm({
+				text: `About to apply 3 migration(s)
+Your database may not be available to serve requests during the migration, continue?`,
+				result: true,
+			});
+
+			await runWrangler("d1 migrations apply db --remote");
+
+			expect(appliedMigrationNames).toEqual([
+				"0001_initial/00_extensions.sql",
+				"0001_initial/10_schema.sql",
+				"0001_initial/20_seed.sql",
+			]);
+			// Confirm non-`.sql` siblings never appear as migration names.
+			expect(mockStd.out).not.toContain("README.md");
+			expect(mockStd.out).not.toContain("_journal.json");
+		});
 	});
 
 	describe("list", () => {

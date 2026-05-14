@@ -110,6 +110,75 @@ describe("getMigrationNames", () => {
 			"20240501130000_add_users/migration.sql",
 		]);
 	});
+
+	it("should sort multiple SQL files within a single nested directory", ({
+		expect,
+	}) => {
+		// Drizzle generates one `migration.sql` per dir, but users can author
+		// directories with multiple `.sql` files (e.g. `up.sql`, `seed.sql`).
+		// Confirm those files are discovered and sorted lexically within the
+		// containing directory so the apply order is deterministic.
+		const migrationsDir = "./migrations";
+		fs.mkdirSync(path.join(migrationsDir, "0001_initial"), {
+			recursive: true,
+		});
+
+		fs.writeFileSync(
+			path.join(migrationsDir, "0001_initial", "20_seed.sql"),
+			"-- seed"
+		);
+		fs.writeFileSync(
+			path.join(migrationsDir, "0001_initial", "10_schema.sql"),
+			"-- schema"
+		);
+		fs.writeFileSync(
+			path.join(migrationsDir, "0001_initial", "00_extensions.sql"),
+			"-- ext"
+		);
+		// Mix in a non-`.sql` file to confirm it's still filtered out at this
+		// nesting level.
+		fs.writeFileSync(
+			path.join(migrationsDir, "0001_initial", "notes.md"),
+			"# notes"
+		);
+
+		const result = getMigrationNames(migrationsDir);
+
+		expect(result).toEqual([
+			"0001_initial/00_extensions.sql",
+			"0001_initial/10_schema.sql",
+			"0001_initial/20_seed.sql",
+		]);
+	});
+
+	it("should discover SQL files in arbitrarily deep nested directories", ({
+		expect,
+	}) => {
+		// Sanity check that the walker recurses deeper than one level — there's
+		// no documented requirement to support this, but the implementation
+		// recurses unconditionally so this guards against accidental regressions
+		// (e.g. someone capping the depth).
+		const migrationsDir = "./migrations";
+		fs.mkdirSync(path.join(migrationsDir, "0001_a", "nested"), {
+			recursive: true,
+		});
+
+		fs.writeFileSync(
+			path.join(migrationsDir, "0001_a", "nested", "migration.sql"),
+			"-- deep"
+		);
+		fs.writeFileSync(
+			path.join(migrationsDir, "0001_a", "migration.sql"),
+			"-- shallow"
+		);
+
+		const result = getMigrationNames(migrationsDir);
+
+		expect(result).toEqual([
+			"0001_a/migration.sql",
+			"0001_a/nested/migration.sql",
+		]);
+	});
 });
 
 describe("getNextMigrationNumber", () => {
