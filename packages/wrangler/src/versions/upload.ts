@@ -242,7 +242,7 @@ export const versionsUploadCommand = createCommand({
 				outDir: args.outdir,
 				dryRun: args.dryRun,
 				noBundle: !(args.bundle ?? !config.no_bundle),
-				keepVars: config.keep_vars,
+				keepVars: args.keepVars || config.keep_vars,
 				projectRoot: entry.projectRoot,
 				tag: args.tag,
 				message: args.message,
