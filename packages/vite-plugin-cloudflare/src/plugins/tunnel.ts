@@ -276,8 +276,9 @@ export class TunnelManager {
 
 		if (tunnel) {
 			tunnel.dispose();
-			this.#logger.info("  ➜  Tunnel closed");
 		}
+
+		this.#logger.info("  ➜  Tunnel closed");
 	}
 
 	disposeOnExit() {
