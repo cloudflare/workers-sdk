@@ -18,7 +18,6 @@ import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
-import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 import type { ReadConfigCommandArgs } from "../config";
 
 type AutoConfigArgs = ReadConfigCommandArgs & {
@@ -38,7 +37,7 @@ type AutoConfigArgs = ReadConfigCommandArgs & {
 export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	args: Args,
 	config: Config
-): Promise<{ args: Args; config: Config; aborted: boolean }> {
+): Promise<{ config: Config; aborted: boolean }> {
 	const shouldRunAutoConfig =
 		args.experimentalAutoconfig &&
 		// If there is a positional parameter, an assets directory specified via --assets, or an
@@ -88,7 +87,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 						command: "wrangler deploy",
 						dryRun: !!args.dryRun,
 					});
-					return { args, config, aborted: true };
+					return { config, aborted: true };
 				}
 			} else if (!details.configured) {
 				// Only run auto config if the project is not already configured
@@ -124,29 +123,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 		});
 	}
 
-	// Note: the open-next delegation should happen after we run the auto-config logic so that we
-	//       make sure that the deployment of brand newly auto-configured Next.js apps is correctly
-	//       delegated here
-	const deploymentDelegatedToOpenNext =
-		// Currently the delegation to open-next is gated behind the autoconfig experimental flag, this is because
-		// this behavior is currently only necessary in the autoconfig flow and having it un-gated/stable in wrangler
-		// releases caused different issues. All the issues should have been fixed (by
-		// https://github.com/cloudflare/workers-sdk/pull/11694 and https://github.com/cloudflare/workers-sdk/pull/11710)
-		// but as a precaution we're gating the feature under the autoconfig flag for the time being
-		args.experimentalAutoconfig &&
-		// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate to open-next
-		!args.config &&
-		!args.dryRun &&
-		(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
-
-	if (deploymentDelegatedToOpenNext) {
-		return { args, config, aborted: true };
-	}
-
-	// Prompt for missing config (directory-as-assets, name, compat date, config file writing)
-	args = await promptForMissingConfig(args, config);
-
-	return { args, config, aborted: false };
+	return { config, aborted: false };
 }
 
 /**
@@ -159,7 +136,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
  *
  * No-op in non-interactive / CI environments.
  */
-async function promptForMissingConfig<Args extends AutoConfigArgs>(
+export async function promptForMissingConfig<Args extends AutoConfigArgs>(
 	args: Args,
 	config: { configPath?: string; compatibility_date?: string; name?: string }
 ): Promise<Args> {

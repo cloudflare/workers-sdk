@@ -22,8 +22,9 @@ import { collectKeyValues } from "../utils/collectKeyValues";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import { maybeRunAutoConfig } from "./autoconfig";
+import { maybeRunAutoConfig, promptForMissingConfig } from "./autoconfig";
 import deploy from "./deploy";
+import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -124,12 +125,23 @@ export const deployCommand = createCommand({
 		validateDeployVersionsArgs(args);
 	},
 	async handler(args, { config }) {
+		// --- Step 0. Auto-config --- //
 		const autoConfigResult = await maybeRunAutoConfig(args, config);
 		if (autoConfigResult.aborted) {
 			return;
 		}
-		args = autoConfigResult.args;
 		config = autoConfigResult.config;
+
+		// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
+		args = await promptForMissingConfig(args, config);
+
+		// Needs to happen after auto-config logic to capture newly auto-configured open-next apps.
+		// As a precaution we're gating the feature under the autoconfig flag for the time being.
+		// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate
+		if (args.experimentalAutoconfig && !args.config && !args.dryRun) {
+			await maybeDelegateToOpenNextDeployCommand(process.cwd());
+			return;
+		}
 
 		const entry = await getEntry(args, config, "deploy");
 		validateAssetsArgsAndConfig(args, config);
