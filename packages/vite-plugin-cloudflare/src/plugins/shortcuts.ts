@@ -8,7 +8,7 @@ import colors from "picocolors";
 import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
-import { extendTunnelExpiry, toggleTunnel } from "./tunnel";
+import { extendTunnelExpiry, isTunnelOpen, toggleTunnel } from "./tunnel";
 import type { PluginContext } from "../context";
 import type * as vite from "vite";
 
@@ -200,6 +200,33 @@ export function addTunnelShortcut(
 			extendTunnelExpiry();
 		},
 	} satisfies vite.CLIShortcut<vite.ViteDevServer | vite.PreviewServer>;
+
+	const bindCLIShortcuts = server.bindCLIShortcuts.bind(server);
+	server.bindCLIShortcuts = (
+		options?: vite.BindCLIShortcutsOptions<
+			vite.ViteDevServer | vite.PreviewServer
+		>
+	) => {
+		if (
+			server.httpServer &&
+			process.stdin.isTTY &&
+			!process.env.CI &&
+			options?.print
+		) {
+			const tunnelHintDescription = isTunnelOpen()
+				? "close tunnel"
+				: "start tunnel";
+
+			server.config.logger.info(
+				colors.dim(colors.green("  ➜")) +
+					colors.dim("  press ") +
+					colors.bold(`${toggleTunnelShortcut.key} + enter`) +
+					colors.dim(` to ${tunnelHintDescription}`)
+			);
+		}
+
+		bindCLIShortcuts(options);
+	};
 
 	server.bindCLIShortcuts({
 		customShortcuts: [toggleTunnelShortcut, extendTunnelExpiryShortcut],

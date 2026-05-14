@@ -325,9 +325,43 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		expect(extendExpirySpy).toHaveBeenCalledTimes(1);
 	});
 
+	test("display tunnel shortcut hint", ({ expect }) => {
+		const mockContext = new PluginContext({
+			hasShownWorkerConfigWarnings: false,
+			restartingDevServerCount: 0,
+			tunnelHostnames: new Set(),
+		});
+		vi.spyOn(tunnelPlugin, "isTunnelOpen")
+			.mockReturnValueOnce(false)
+			.mockReturnValueOnce(true);
+
+		addTunnelShortcut(mockServer, mockContext);
+
+		serverLogs.info = [];
+		mockServer.bindCLIShortcuts();
+
+		expect(normalize(serverLogs.info)).not.toMatch(
+			"press t + enter to start tunnel"
+		);
+
+		mockServer.bindCLIShortcuts({ print: true });
+
+		expect(normalize(serverLogs.info)).toMatch(
+			"press t + enter to start tunnel"
+		);
+
+		serverLogs.info = [];
+		mockServer.bindCLIShortcuts({ print: true });
+
+		expect(normalize(serverLogs.info)).toMatch(
+			"press t + enter to close tunnel"
+		);
+	});
+
 	test("registers tunnel shortcuts even without tunnel config", ({
 		expect,
 	}) => {
+		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
 			restartingDevServerCount: 0,
@@ -336,7 +370,8 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 
 		addTunnelShortcut(mockServer, mockContext);
 
-		expect(mockServer.bindCLIShortcuts).toHaveBeenCalledWith({
+		expect(mockServer.bindCLIShortcuts).not.toBe(mockBindCLIShortcuts);
+		expect(mockBindCLIShortcuts).toHaveBeenCalledWith({
 			customShortcuts: [
 				{
 					key: "t",
