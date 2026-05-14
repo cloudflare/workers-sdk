@@ -7088,6 +7088,33 @@ describe("normalizeAndValidateConfig()", () => {
 			`);
 		});
 
+		it("should only emit one unsafe experimental warning when unsafe exists at the top level and in the environment", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					unsafe: {
+						bindings: [],
+					},
+					env: {
+						staging: {
+							unsafe: {
+								bindings: [],
+							},
+						},
+					},
+				},
+				undefined,
+				undefined,
+				{ env: "staging" }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - "unsafe" fields are experimental and may change or break at any time."
+			`);
+		});
+
 		it("should error on Date values in vars (parsed by TOML)", ({ expect }) => {
 			const rawConfig = TOML.parse(`
 				[vars]
