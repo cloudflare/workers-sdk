@@ -1,4 +1,4 @@
-interface QueueJob {
+export interface QueueJob {
 	key: string;
 	value: string;
 }
