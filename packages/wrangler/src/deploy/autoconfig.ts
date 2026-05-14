@@ -1,13 +1,18 @@
+import assert from "node:assert";
 import { statSync, writeFileSync } from "node:fs";
+import { readdir } from "node:fs/promises";
 import path from "node:path";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import {
 	configFileName,
+	getOpenNextDeployFromEnv,
 	getTodaysCompatDate,
 	UserError,
 	type Config,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { getDetailsForAutoConfig } from "../autoconfig/details";
+import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
 import { runAutoConfig } from "../autoconfig/run";
 import {
 	sendAutoConfigProcessEndedMetricsEvent,
@@ -18,24 +23,17 @@ import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
-import type { ReadConfigCommandArgs } from "../config";
-
-type AutoConfigArgs = ReadConfigCommandArgs & {
-	experimentalAutoconfig: boolean | undefined;
-	assets: string | undefined;
-	dryRun: boolean | undefined;
-	latest: boolean | undefined;
-	compatibilityDate: string | undefined;
-};
+import { getPackageManager } from "../package-manager";
+import { type DeployArgs } from ".";
 
 /**
- * Runs autoconfig if applicable, including open-next delegation and interactive
- * prompts for missing config. Returns `{ aborted: true }` if deploy should not
- * proceed (user declined or delegated to open-next), otherwise returns the
- * potentially-updated config and args.
+ * Runs autoconfig if applicable, including the pages_build_output_dir guard and
+ * open-next delegation. Returns `{ aborted: true }` if deploy should not proceed
+ * (user declined or delegated to open-next), otherwise returns the
+ * potentially-updated config.
  */
-export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
-	args: Args,
+export async function maybeRunAutoConfig(
+	args: DeployArgs,
 	config: Config
 ): Promise<{ config: Config; aborted: boolean }> {
 	const shouldRunAutoConfig =
@@ -46,17 +44,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 		!args.script &&
 		!args.assets &&
 		!args.config;
-	if (
-		config.pages_build_output_dir &&
-		// Note: autoconfig handle Pages projects on its own, so we don't want to hard fail here if autoconfig run
-		!shouldRunAutoConfig
-	) {
-		throw new UserError(
-			"It looks like you've run a Workers-specific command in a Pages project.\n" +
-				"For Pages, please run `wrangler pages deploy` instead.",
-			{ telemetryMessage: "deploy command pages project mismatch" }
-		);
-	}
+
 	if (shouldRunAutoConfig) {
 		sendAutoConfigProcessStartedMetricsEvent({
 			command: "wrangler deploy",
@@ -123,10 +111,27 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 		});
 	}
 
-	return { config, aborted: false };
-}
+	// Note: the open-next delegation should happen after we run the auto-config logic so that we
+	//       make sure that the deployment of brand newly auto-configured Next.js apps is correctly
+	//       delegated here
+	const deploymentDelegatedToOpenNext =
+		// Currently the delegation to open-next is gated behind the autoconfig experimental flag, this is because
+		// this behavior is currently only necessary in the autoconfig flow and having it un-gated/stable in wrangler
+		// releases caused different issues. All the issues should have been fixed (by
+		// https://github.com/cloudflare/workers-sdk/pull/11694 and https://github.com/cloudflare/workers-sdk/pull/11710)
+		// but as a precaution we're gating the feature under the autoconfig flag for the time being
+		args.experimentalAutoconfig &&
+		// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate to open-next
+		!args.config &&
+		!args.dryRun &&
+		(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
 
-/**
+	if (deploymentDelegatedToOpenNext) {
+		return { config, aborted: true };
+	}
+
+	return { config, aborted: false };
+} /**
  * Interactively prompts for missing deploy configuration. Handles two phases:
  *
  * 1. If the positional `script` arg is a directory and no config file exists,
@@ -136,10 +141,11 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
  *
  * No-op in non-interactive / CI environments.
  */
-export async function promptForMissingConfig<Args extends AutoConfigArgs>(
-	args: Args,
+
+export async function promptForMissingConfig(
+	args: DeployArgs,
 	config: { configPath?: string; compatibility_date?: string; name?: string }
-): Promise<Args> {
+): Promise<DeployArgs> {
 	// Phase 1: detect `wrangler deploy <directory>` and offer to treat it as assets
 	let scriptIsDirectory = false;
 	if (!config.configPath && args.script) {
@@ -166,17 +172,16 @@ export async function promptForMissingConfig<Args extends AutoConfigArgs>(
 	}
 
 	return promptForMissingDeployConfig(args, config);
-}
-
-/**
+} /**
  * Handles the case where a user provides a directory as a positional argument,
  * probably intending to deploy static assets. e.g. `wrangler deploy ./public`.
  * If the user confirms, sets `args.assets` and clears `args.script`.
  */
-export async function promptForMissingAssetFlag<Args extends AutoConfigArgs>(
+
+export async function promptForMissingAssetFlag(
 	assetDirectory: string,
-	args: Args
-): Promise<Args> {
+	args: DeployArgs
+): Promise<DeployArgs> {
 	if (isNonInteractiveOrCI()) {
 		return args;
 	}
@@ -206,10 +211,10 @@ export async function promptForMissingAssetFlag<Args extends AutoConfigArgs>(
  * and optionally config file writing when no config file exists).
  * No-op in non-interactive/CI environments or when all required config is already present.
  */
-export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
-	args: Args,
+export async function promptForMissingDeployConfig(
+	args: DeployArgs,
 	config: { configPath?: string; compatibility_date?: string; name?: string }
-): Promise<Args> {
+): Promise<DeployArgs> {
 	if (isNonInteractiveOrCI()) {
 		return args;
 	}
@@ -309,4 +314,86 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 	}
 
 	return args;
+} /**
+ * Discerns if the project is an open-next one. This check is performed in an assertive way to ensure that
+ * no false positives happen.
+ *
+ * @param projectRoot The path to the project's root
+ * @returns true if the project is an open-next one, false otherwise
+ */
+export async function isOpenNextProject(projectRoot: string) {
+	try {
+		const dirFiles = await readdir(projectRoot);
+
+		const nextConfigFile = dirFiles.find((file) =>
+			/^next\.config\.(m|c)?(ts|js)$/.test(file)
+		);
+
+		if (!nextConfigFile) {
+			// If there is no next config file then the project is not a Next.js one
+			return false;
+		}
+
+		const opeNextConfigFile = dirFiles.find((file) =>
+			/^open-next\.config\.(ts|js)$/.test(file)
+		);
+
+		if (!opeNextConfigFile) {
+			// If there is no open-next config file then the project is not an OpenNext one
+			return false;
+		}
+
+		const openNextVersion = getInstalledPackageVersion(
+			"@opennextjs/cloudflare",
+			projectRoot,
+			{
+				// We stop at the projectPath/root just to make extra sure we don't hit false positives
+				stopAtProjectPath: true,
+			}
+		);
+
+		return openNextVersion !== undefined;
+	} catch {
+		// If any error is thrown then we simply assume that we're not running in an OpenNext project
+		return false;
+	}
+}
+
+/**
+ * If appropriate (when `wrangler deploy` is run in an OpenNext project without setting the `OPEN_NEXT_DEPLOY` environment variable)
+ * this function delegates the deployment operation to `@opennextjs/cloudflare`, otherwise it does nothing.
+ *
+ * @param projectRoot The path to the project's root
+ * @returns true is the deployment has been delegated to open-next, false otherwise
+ */
+async function maybeDelegateToOpenNextDeployCommand(
+	projectRoot: string
+): Promise<boolean> {
+	if (await isOpenNextProject(projectRoot)) {
+		const openNextDeploy = getOpenNextDeployFromEnv();
+		if (!openNextDeploy) {
+			logger.log(
+				"OpenNext project detected, calling `opennextjs-cloudflare deploy`"
+			);
+
+			const deployArgIdx = process.argv.findIndex((arg) => arg === "deploy");
+			assert(deployArgIdx !== -1, "Could not find `deploy` argument");
+			const deployArguments = process.argv.slice(deployArgIdx + 1);
+
+			const { npx } = await getPackageManager();
+
+			await runCommand(
+				[npx, "opennextjs-cloudflare", "deploy", ...deployArguments],
+				{
+					env: {
+						// We set `OPEN_NEXT_DEPLOY` here so that it's passed through to the `wrangler deploy` command that OpenNext delegates to in order to prevent an infinite loop
+						OPEN_NEXT_DEPLOY: "true",
+					},
+				}
+			);
+
+			return true;
+		}
+	}
+	return false;
 }

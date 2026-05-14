@@ -132,8 +132,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -194,8 +194,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -263,8 +263,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -382,8 +382,8 @@ describe("deploy", () => {
 				├─┼─┼─┤
 				│ Total (4 modules) │ │ xx KiB │
 				└─┴─┴─┘
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -443,8 +443,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (some-env) (TIMINGS)
 				Deployed test-name (some-env) triggers (TIMINGS)
@@ -504,8 +504,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name-some-env (TIMINGS)
 				Deployed test-name-some-env triggers (TIMINGS)
@@ -552,8 +552,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -604,8 +604,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -656,8 +656,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -709,8 +709,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -762,8 +762,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -815,8 +815,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -868,8 +868,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -921,8 +921,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -980,8 +980,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -1036,6 +1036,7 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -1098,8 +1099,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -1180,6 +1181,7 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -1249,8 +1251,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -1314,8 +1316,8 @@ describe("deploy", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -1364,8 +1366,8 @@ describe("deploy", () => {
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
+				↗️  Done syncing assets
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -1587,8 +1589,8 @@ describe("deploy", () => {
 					  "out": "
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					↗️  Done syncing assets
 					Total Upload: xx KiB / gzip: xx KiB
+					↗️  Done syncing assets
 					Worker Startup Time: 100 ms
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)

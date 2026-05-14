@@ -18,7 +18,10 @@ export async function createUploadWorkerBundleContents(
 	workerBundle: BundleResult,
 	config: Config | undefined
 ): Promise<Blob> {
-	const workerBundleFormData = createWorkerBundleFormData(workerBundle, config);
+	const workerBundleFormData = await createWorkerBundleFormData(
+		workerBundle,
+		config
+	);
 	const metadata = JSON.parse(workerBundleFormData.get("metadata") as string);
 	// Remove the empty bindings array if no Pages config has been found
 	if (config === undefined) {
@@ -32,10 +35,10 @@ export async function createUploadWorkerBundleContents(
 /**
  * Creates a `FormData` upload from a `BundleResult`
  */
-function createWorkerBundleFormData(
+async function createWorkerBundleFormData(
 	workerBundle: BundleResult,
 	config: Config | undefined
-): FormData {
+): Promise<FormData> {
 	const mainModule = {
 		name: path.basename(workerBundle.resolvedEntryPointPath),
 		filePath: workerBundle.resolvedEntryPointPath,
@@ -76,6 +79,6 @@ function createWorkerBundleFormData(
 			observability: undefined,
 			cache: undefined, // cache is not supported in Pages
 		},
-		getBindings(config, { pages: true })
+		await getBindings(config, { pages: true })
 	);
 }

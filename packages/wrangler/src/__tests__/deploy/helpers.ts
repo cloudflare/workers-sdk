@@ -13,8 +13,11 @@ import {
 	mswSuccessDeploymentScriptMetadata,
 } from "../helpers/msw";
 import type { AssetManifest } from "../../assets";
-import type { CustomDomain, CustomDomainChangeset } from "../../deploy/deploy";
 import type { PostTypedConsumerBody, QueueResponse } from "../../queues/client";
+import type {
+	CustomDomain,
+	CustomDomainChangeset,
+} from "../../triggers/helpers";
 import type {
 	Config,
 	ServiceMetadataRes,

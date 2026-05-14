@@ -49,7 +49,7 @@ vi.mock("../../package-manager", () => ({
 
 vi.mock("../../autoconfig/frameworks/utils/packages");
 
-vi.mock("../deploy/deploy", async (importOriginal) => ({
+vi.mock("../../deployment-bundle/deploy-helpers", async (importOriginal) => ({
 	...(await importOriginal()),
 	default: () => {
 		// In unit tests of autoconfig we only care about the configuration aspect, so bail before any actual deployment happens
