@@ -19,6 +19,7 @@ import {
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
+import { getHostFromRoute } from "../../../zones";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { extractBindingsOfType } from "../../startDevWorker/utils";
 import { CacheStorage } from "./caches";
@@ -49,6 +50,26 @@ export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectCla
  */
 export function unstable_getDevCompatibilityDate() {
 	return getTodaysCompatDate();
+}
+
+/**
+ * Derive the zone value used for the outbound `CF-Worker` header in local
+ * development from a normalized Wrangler config.
+ *
+ * Mirrors the behaviour of `wrangler dev`: prefer the explicit `dev.host`
+ * setting, then fall back to the hostname of the first configured route.
+ * Returns `undefined` if neither is set, in which case Miniflare keeps its
+ * default of `${workerName}.example.com`.
+ */
+function getZoneFromConfig(config: Config): string | undefined {
+	if (config.dev?.host) {
+		return config.dev.host;
+	}
+	const firstRoute = config.route ?? config.routes?.[0];
+	if (firstRoute) {
+		return getHostFromRoute(firstRoute);
+	}
+	return undefined;
 }
 
 export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
@@ -289,6 +310,7 @@ async function getMiniflareOptionsFromConfig(args: {
 				script: "",
 				modules: true,
 				name: config.name,
+				zone: getZoneFromConfig(config),
 				...bindingOptions,
 				...assetOptions,
 			},
@@ -464,6 +486,7 @@ export function unstable_getMiniflareWorkerOptions(
 		containerEngine: useContainers
 			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
 			: undefined,
+		zone: getZoneFromConfig(config),
 
 		...bindingOptions,
 		...sitesOptions,

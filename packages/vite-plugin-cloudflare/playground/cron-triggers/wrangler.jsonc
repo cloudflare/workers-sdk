@@ -5,4 +5,12 @@
 	"triggers": {
 		"crons": ["* * * * *"], // every minute
 	},
+	// Used by the `cf-worker-header.spec.ts` regression test for
+	// https://github.com/cloudflare/workers-sdk/issues/13791. The plugin must
+	// propagate this through to Miniflare so outbound subrequests carry it as
+	// the `CF-Worker` header instead of falling back to
+	// `<worker-name>.example.com`.
+	"dev": {
+		"host": "cf-worker-header-test.example.com",
+	},
 }
