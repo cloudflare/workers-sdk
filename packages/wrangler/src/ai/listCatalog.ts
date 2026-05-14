@@ -12,6 +12,8 @@ export const aiModelsCommand = createCommand({
 	behaviour: {
 		printBanner: (args) => !args.json,
 	},
+	// yargs otherwise exposes these command options on nested subcommands, such
+	// as `wrangler ai models schema`.
 	args: {
 		json: {
 			type: "boolean",
