@@ -817,11 +817,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}>(config, `${workerUrl}/subdomain`);
 
 		if (previews_available_on_subdomain) {
-			const userSubdomain = await getWorkersDevSubdomain(
-				config,
-				accountId,
-				config.configPath
-			);
+			const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
+				configPath: config.configPath,
+			});
 			const shortVersion = versionId.slice(0, 8);
 			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}`;
 			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
