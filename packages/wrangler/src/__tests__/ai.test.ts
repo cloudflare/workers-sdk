@@ -68,10 +68,8 @@ describe("ai help", () => {
 		`);
 	});
 
-	it("should show models help when no subcommand is passed", async ({
-		expect,
-	}) => {
-		await runWrangler("ai models");
+	it("should show models help", async ({ expect }) => {
+		await runWrangler("ai models --help");
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
@@ -174,6 +172,23 @@ describe("ai commands", () => {
 		`);
 	});
 
+	it("should handle legacy model list", async ({ expect }) => {
+		mockAISearchRequest();
+		await runWrangler("ai models");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			┌─┬─┬─┬─┐
+			│ model │ name │ description │ task │
+			├─┼─┼─┼─┤
+			│ 429b9e8b-d99e-44de-91ad-706cf8183658 │ @cloudflare/embeddings_bge_large_en │ │ │
+			├─┼─┼─┼─┤
+			│ 7f9a76e1-d120-48dd-a565-101d328bbb02 │ @cloudflare/resnet50 │ │ Image Classification │
+			└─┴─┴─┴─┘"
+		`);
+	});
+
 	it("should query model list with filters", async ({ expect }) => {
 		const requests = mockAISearchRequest();
 		await runWrangler(
@@ -201,21 +216,21 @@ describe("ai commands", () => {
 		expect(searchParams.get("model")).toBe("@cloudflare/resnet50");
 		expect(std.out).toMatchInlineSnapshot(`
 			"{
-			  "input": {
-			    "type": "object",
-			    "properties": {
-			      "image": {
-			        "type": "string",
-			        "format": "binary"
-			      }
+			    "input": {
+			        "type": "object",
+			        "properties": {
+			            "image": {
+			                "type": "string",
+			                "format": "binary"
+			            }
+			        }
+			    },
+			    "output": {
+			        "type": "array",
+			        "items": {
+			            "type": "object"
+			        }
 			    }
-			  },
-			  "output": {
-			    "type": "array",
-			    "items": {
-			      "type": "object"
-			    }
-			  }
 			}"
 		`);
 	});

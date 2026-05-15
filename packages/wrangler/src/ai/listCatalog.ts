@@ -1,13 +1,29 @@
-import { createCommand, createNamespace } from "../core/create-command";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { listCatalogEntries, truncateDescription } from "./utils";
+import type { Config } from "@cloudflare/workers-utils";
 
-export const aiModelsNamespace = createNamespace({
+type ListModelsArgs = {
+	author?: string;
+	hideExperimental?: boolean;
+	json?: boolean;
+	search?: string;
+	source?: number;
+	task?: string;
+};
+
+export const aiModelsCommand = createCommand({
 	metadata: {
 		description: "Manage AI models",
 		status: "stable",
 		owner: "Product: AI",
+	},
+	behaviour: {
+		printBanner: true,
+	},
+	async handler(_args, { config }) {
+		await listModels({}, config);
 	},
 });
 
@@ -52,36 +68,51 @@ export const aiModelsListCommand = createCommand({
 		{ author, hideExperimental, json, search, source, task },
 		{ config }
 	) {
-		const accountId = await requireAuth(config);
-		const entries = await listCatalogEntries(config, accountId, {
-			author,
-			hideExperimental,
-			search,
-			source,
-			task,
-		});
-
-		if (json) {
-			logger.log(JSON.stringify(entries, null, 2));
-		} else {
-			if (entries.length === 0) {
-				logger.log(`No models found.`);
-			} else {
-				logger.table(
-					entries.map((entry) => ({
-						model: entry.id,
-						name: entry.name,
-						description: truncateDescription(
-							entry.description,
-							entry.id.length +
-								entry.name.length +
-								(entry.task ? entry.task.name.length : 0) +
-								10
-						),
-						task: entry.task ? entry.task.name : "",
-					}))
-				);
-			}
-		}
+		await listModels(
+			{ author, hideExperimental, json, search, source, task },
+			config
+		);
 	},
 });
+
+async function listModels(
+	{
+		author,
+		hideExperimental,
+		json = false,
+		search,
+		source,
+		task,
+	}: ListModelsArgs,
+	config: Config
+) {
+	const accountId = await requireAuth(config);
+	const entries = await listCatalogEntries(config, accountId, {
+		author,
+		hideExperimental,
+		search,
+		source,
+		task,
+	});
+
+	if (json) {
+		logger.json(entries);
+	} else if (entries.length === 0) {
+		logger.log(`No models found.`);
+	} else {
+		logger.table(
+			entries.map((entry) => ({
+				model: entry.id,
+				name: entry.name,
+				description: truncateDescription(
+					entry.description,
+					entry.id.length +
+						entry.name.length +
+						(entry.task ? entry.task.name.length : 0) +
+						10
+				),
+				task: entry.task ? entry.task.name : "",
+			}))
+		);
+	}
+}

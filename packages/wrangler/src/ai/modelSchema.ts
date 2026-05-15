@@ -26,6 +26,6 @@ export const aiModelsSchemaCommand = createCommand({
 			model,
 		});
 
-		logger.log(JSON.stringify(schema, null, 2));
+		logger.json(schema);
 	},
 });
