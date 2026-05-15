@@ -120,16 +120,16 @@ export const d1ExecuteCommand = createCommand({
 			logger.loggerLevel = "error";
 		}
 
-		if (file && command) {
-			throw createFatalError(
-				`Error: can't provide both --command and --file.`,
-				json,
-				{ telemetryMessage: "d1 execute conflicting command and file" }
-			);
-		}
-
-		const isInteractive = process.stdout.isTTY;
 		try {
+			if (file && command) {
+				throw createFatalError(
+					`Error: can't provide both --command and --file.`,
+					json,
+					{ telemetryMessage: "d1 execute conflicting command and file" }
+				);
+			}
+
+			const isInteractive = process.stdout.isTTY;
 			const response: QueryResult[] | null = await executeSql({
 				local,
 				remote,
@@ -185,6 +185,10 @@ export const d1ExecuteCommand = createCommand({
 			} else {
 				throw error;
 			}
+		} finally {
+			if (json) {
+				logger.loggerLevel = existingLogLevel;
+			}
 		}
 	},
 });
@@ -222,40 +226,40 @@ export async function executeSql({
 		logger.loggerLevel = "error";
 	}
 
-	const input = file
-		? ({ file } as ExecuteInput)
-		: command
-			? ({ command } as ExecuteInput)
-			: null;
-	if (!input) {
-		throw new UserError(`Error: must provide --command or --file.`, {
-			telemetryMessage: "d1 execute missing command or file",
-		});
-	}
-	if (local && remote) {
-		throw new UserError(
-			`Error: can't use --local and --remote at the same time`,
-			{
-				telemetryMessage: "d1 execute conflicting local and remote flags",
-			}
-		);
-	}
-	if (preview && !remote) {
-		throw new UserError(`Error: can't use --preview without --remote`, {
-			telemetryMessage: "d1 execute preview requires remote",
-		});
-	}
-	if (persistTo && !local) {
-		throw new UserError(`Error: can't use --persist-to without --local`, {
-			telemetryMessage: "d1 execute persist-to requires local",
-		});
-	}
-	if (input.file) {
-		await checkForSQLiteBinary(input.file);
-	}
+	try {
+		const input = file
+			? ({ file } as ExecuteInput)
+			: command
+				? ({ command } as ExecuteInput)
+				: null;
+		if (!input) {
+			throw new UserError(`Error: must provide --command or --file.`, {
+				telemetryMessage: "d1 execute missing command or file",
+			});
+		}
+		if (local && remote) {
+			throw new UserError(
+				`Error: can't use --local and --remote at the same time`,
+				{
+					telemetryMessage: "d1 execute conflicting local and remote flags",
+				}
+			);
+		}
+		if (preview && !remote) {
+			throw new UserError(`Error: can't use --preview without --remote`, {
+				telemetryMessage: "d1 execute preview requires remote",
+			});
+		}
+		if (persistTo && !local) {
+			throw new UserError(`Error: can't use --persist-to without --local`, {
+				telemetryMessage: "d1 execute persist-to requires local",
+			});
+		}
+		if (input.file) {
+			await checkForSQLiteBinary(input.file);
+		}
 
-	const result =
-		remote || preview
+		return remote || preview
 			? await executeRemotely({
 					config,
 					name,
@@ -269,11 +273,11 @@ export async function executeSql({
 					input,
 					persistTo,
 				});
-
-	if (json) {
-		logger.loggerLevel = existingLogLevel;
+	} finally {
+		if (json) {
+			logger.loggerLevel = existingLogLevel;
+		}
 	}
-	return result;
 }
 
 async function executeLocally({

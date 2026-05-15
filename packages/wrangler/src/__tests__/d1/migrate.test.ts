@@ -184,7 +184,6 @@ Your database may not be available to serve requests during the migration, conti
 			expect,
 		}) => {
 			setIsTTY(false);
-			const std = mockConsoleMethods();
 			msw.use(
 				http.post(
 					"*/accounts/:accountId/d1/database/:databaseId/query",
@@ -234,24 +233,17 @@ Your database may not be available to serve requests during the migration, conti
 						binding: "DATABASE",
 						database_name: "db",
 						database_id: "xxxx",
-						migrations_dir: "/tmp/my-migrations-go-here",
+						migrations_dir: "my-migrations-go-here",
 					},
 				],
 				account_id: "nx01",
 			});
-			mockConfirm({
-				text: `No migrations folder found.
-Ok to create /tmp/my-migrations-go-here?`,
-				result: true,
-			});
 			await runWrangler("d1 migrations create db test");
-			mockConfirm({
-				text: `About to apply 1 migration(s)
-Your database may not be available to serve requests during the migration, continue?`,
-				result: true,
-			});
+			mockStd.getAndClearOut();
+
 			await runWrangler("d1 migrations apply db --remote");
-			expect(std.out).toBe("");
+			expect(mockStd.out).toContain("Migrations to be applied:");
+			expect(mockStd.out).toContain("0001_test.sql");
 		});
 
 		it("should apply nested migrations with relative path names", async ({
