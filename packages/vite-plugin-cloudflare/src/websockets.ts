@@ -2,6 +2,7 @@ import { createHeaders } from "@remix-run/node-fetch-server";
 import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
+import { getForwardedProto } from "./utils";
 import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
@@ -24,9 +25,13 @@ export function handleWebSocket(
 			socket.on("error", () => socket.destroy());
 
 			const rawHost = request.headers.host ?? UNKNOWN_HOST;
+			// Honor `X-Forwarded-Proto` so that the upgrade URL reflects the
+			// protocol the original client used (e.g. behind a TLS-terminating
+			// reverse proxy or tunnel). Matches `createRequestHandler` in utils.ts.
+			const protocol = getForwardedProto(request) ?? "http:";
 			const base = /^https?:\/\//i.test(rawHost)
 				? rawHost
-				: `http://${rawHost}`;
+				: `${protocol}//${rawHost}`;
 			const url = new URL(request.url ?? "", base);
 
 			const isViteRequest =
