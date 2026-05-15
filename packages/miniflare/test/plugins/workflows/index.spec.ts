@@ -29,17 +29,17 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 	const mf = new Miniflare({
 		name: "workflow-compatibility-flags-worker",
 		compatibilityDate: "2024-11-20",
-		compatibilityFlags: [
-			"nodejs_compat",
-			"experimental",
-			"enhanced_error_serialization",
-		],
 		modules: true,
 		script: WORKFLOW_SCRIPT(),
 		workflows: {
 			MY_WORKFLOW: {
 				className: "MyWorkflow",
 				name: "MY_WORKFLOW",
+				compatibilityFlags: [
+					"nodejs_compat",
+					"experimental",
+					"enhanced_error_serialization",
+				],
 			},
 		},
 		workflowsPersist: tmp,
