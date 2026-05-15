@@ -3826,6 +3826,10 @@ importers:
   packages/workers-tsconfig: {}
 
   packages/workers-utils:
+    dependencies:
+      undici:
+        specifier: catalog:default
+        version: 7.24.8
     devDependencies:
       '@cloudflare/workers-shared':
         specifier: workspace:*
@@ -3875,9 +3879,6 @@ importers:
       typescript:
         specifier: catalog:default
         version: 5.8.3
-      undici:
-        specifier: catalog:default
-        version: 7.24.8
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.13(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))

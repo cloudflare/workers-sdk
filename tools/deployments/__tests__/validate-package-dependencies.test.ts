@@ -1,8 +1,13 @@
 import { describe, it } from "vitest";
 import {
+	extractBareImports,
 	getAllDependencies,
+	getEntryPointPaths,
 	getNonWorkspaceDependencies,
+	getPackageNameFromSpecifier,
 	getPublicPackages,
+	isBareSpecifier,
+	validateDistImports,
 	validatePackageDependencies,
 } from "../validate-package-dependencies";
 
@@ -307,6 +312,372 @@ describe("validatePackageDependencies()", () => {
 		expect(errors).toHaveLength(1);
 		expect(errors[0]).toContain('"esbuild"');
 		expect(errors[0]).toContain("not in dependencies or peerDependencies");
+	});
+});
+
+describe("getPackageNameFromSpecifier()", () => {
+	it("should return the package name from a bare specifier", ({ expect }) => {
+		expect(getPackageNameFromSpecifier("lodash")).toBe("lodash");
+	});
+
+	it("should strip subpath imports", ({ expect }) => {
+		expect(getPackageNameFromSpecifier("lodash/fp")).toBe("lodash");
+		expect(getPackageNameFromSpecifier("semver/functions/satisfies.js")).toBe(
+			"semver"
+		);
+	});
+
+	it("should preserve scoped package names", ({ expect }) => {
+		expect(getPackageNameFromSpecifier("@cloudflare/workers-utils")).toBe(
+			"@cloudflare/workers-utils"
+		);
+		expect(
+			getPackageNameFromSpecifier("@cloudflare/workers-utils/test-helpers")
+		).toBe("@cloudflare/workers-utils");
+	});
+});
+
+describe("isBareSpecifier()", () => {
+	it("should accept bare package names", ({ expect }) => {
+		expect(isBareSpecifier("lodash")).toBe(true);
+		expect(isBareSpecifier("@cloudflare/workers-utils")).toBe(true);
+		expect(isBareSpecifier("vitest/runtime")).toBe(true);
+	});
+
+	it("should reject relative paths", ({ expect }) => {
+		expect(isBareSpecifier("./foo")).toBe(false);
+		expect(isBareSpecifier("../bar")).toBe(false);
+		expect(isBareSpecifier("/abs/path")).toBe(false);
+	});
+
+	it("should reject empty specifiers", ({ expect }) => {
+		expect(isBareSpecifier("")).toBe(false);
+	});
+
+	it("should reject Node.js built-ins (with and without prefix)", ({
+		expect,
+	}) => {
+		expect(isBareSpecifier("node:fs")).toBe(false);
+		expect(isBareSpecifier("fs")).toBe(false);
+		expect(isBareSpecifier("node:child_process")).toBe(false);
+		expect(isBareSpecifier("child_process")).toBe(false);
+		expect(isBareSpecifier("assert")).toBe(false);
+	});
+
+	it("should reject Cloudflare/workerd built-ins", ({ expect }) => {
+		expect(isBareSpecifier("cloudflare:workers")).toBe(false);
+		expect(isBareSpecifier("workerd:unsafe")).toBe(false);
+	});
+
+	it("should reject bundler virtual modules", ({ expect }) => {
+		expect(isBareSpecifier("virtual:react-router")).toBe(false);
+		expect(isBareSpecifier("wrangler:modules-watch")).toBe(false);
+	});
+
+	it("should reject ALL_CAPS virtual modules", ({ expect }) => {
+		expect(isBareSpecifier("__VITEST_POOL_WORKERS_DEFINES")).toBe(false);
+		expect(isBareSpecifier("__BUILD_CONFIG")).toBe(false);
+	});
+
+	it("should reject template-literal expressions in specifiers", ({
+		expect,
+	}) => {
+		expect(isBareSpecifier("${moduleName}")).toBe(false);
+		expect(isBareSpecifier("foo/${bar}")).toBe(false);
+	});
+
+	it("should reject specifiers with wildcards", ({ expect }) => {
+		expect(isBareSpecifier("*")).toBe(false);
+		expect(isBareSpecifier("foo/*")).toBe(false);
+	});
+
+	it("should reject specifiers that are not package-name shaped", ({
+		expect,
+	}) => {
+		expect(isBareSpecifier(",")).toBe(false);
+		expect(isBareSpecifier("some random text")).toBe(false);
+		expect(isBareSpecifier("ASSERT.IN.MIXED-CASE")).toBe(false);
+	});
+});
+
+describe("extractBareImports()", () => {
+	it("should extract named imports", ({ expect }) => {
+		const imports = extractBareImports(`import { x } from "lodash";`);
+		expect([...imports]).toEqual(["lodash"]);
+	});
+
+	it("should extract default imports", ({ expect }) => {
+		const imports = extractBareImports(`import x from "lodash";`);
+		expect([...imports]).toEqual(["lodash"]);
+	});
+
+	it("should extract namespace imports", ({ expect }) => {
+		const imports = extractBareImports(`import * as x from "lodash";`);
+		expect([...imports]).toEqual(["lodash"]);
+	});
+
+	it("should extract side-effect imports", ({ expect }) => {
+		const imports = extractBareImports(`import "lodash";`);
+		expect([...imports]).toEqual(["lodash"]);
+	});
+
+	it("should extract re-exports", ({ expect }) => {
+		const imports = extractBareImports(`export { x } from "lodash";`);
+		expect([...imports]).toEqual(["lodash"]);
+	});
+
+	it("should extract require() calls", ({ expect }) => {
+		const imports = extractBareImports(
+			`const x = require("lodash"); require("foo");`
+		);
+		expect([...imports].sort()).toEqual(["foo", "lodash"]);
+	});
+
+	it("should extract dynamic import() calls with string literals", ({
+		expect,
+	}) => {
+		const imports = extractBareImports(`const x = await import("lodash");`);
+		expect([...imports]).toEqual(["lodash"]);
+	});
+
+	it("should strip subpath imports down to package name", ({ expect }) => {
+		const imports = extractBareImports(
+			`import x from "semver/functions/satisfies.js";`
+		);
+		expect([...imports]).toEqual(["semver"]);
+	});
+
+	it("should skip relative imports", ({ expect }) => {
+		const imports = extractBareImports(
+			`import x from "./foo"; import y from "../bar";`
+		);
+		expect([...imports]).toEqual([]);
+	});
+
+	it("should skip Node built-in imports", ({ expect }) => {
+		const imports = extractBareImports(
+			`import fs from "node:fs"; const path = require("node:path");`
+		);
+		expect([...imports]).toEqual([]);
+	});
+
+	it("should skip Cloudflare/workerd built-in imports", ({ expect }) => {
+		const imports = extractBareImports(
+			`import { env } from "cloudflare:workers"; import x from "workerd:unsafe";`
+		);
+		expect([...imports]).toEqual([]);
+	});
+
+	it("should skip imports inside line comments", ({ expect }) => {
+		const imports = extractBareImports(
+			`// import x from "lodash";\nimport y from "react";`
+		);
+		expect([...imports]).toEqual(["react"]);
+	});
+
+	it("should skip imports inside block comments", ({ expect }) => {
+		const imports = extractBareImports(
+			`/* import x from "lodash"; */\nimport y from "react";`
+		);
+		expect([...imports]).toEqual(["react"]);
+	});
+
+	it("should not match `from` keywords that aren't part of import/export", ({
+		expect,
+	}) => {
+		const imports = extractBareImports(
+			`function foo() { return "hello"; } const z = "from";`
+		);
+		expect([...imports]).toEqual([]);
+	});
+
+	it("should deduplicate imports", ({ expect }) => {
+		const imports = extractBareImports(
+			`import { x } from "lodash";\nimport { y } from "lodash";`
+		);
+		expect([...imports]).toEqual(["lodash"]);
+	});
+
+	it("should handle multiple imports in one file", ({ expect }) => {
+		const imports = extractBareImports(`
+			import { x } from "lodash";
+			import y from "react";
+			import "polyfill";
+			const z = require("commander");
+		`);
+		expect([...imports].sort()).toEqual([
+			"commander",
+			"lodash",
+			"polyfill",
+			"react",
+		]);
+	});
+});
+
+describe("validateDistImports()", () => {
+	it("should pass when all imports are declared dependencies", ({ expect }) => {
+		const errors = validateDistImports(
+			"test-package",
+			{
+				name: "test-package",
+				dependencies: { lodash: "^4.0.0", react: "^18.0.0" },
+			},
+			new Set(["lodash", "react"])
+		);
+		expect(errors).toEqual([]);
+	});
+
+	it("should pass when imports are peerDependencies", ({ expect }) => {
+		const errors = validateDistImports(
+			"test-package",
+			{
+				name: "test-package",
+				peerDependencies: { vitest: "^4.0.0" },
+			},
+			new Set(["vitest"])
+		);
+		expect(errors).toEqual([]);
+	});
+
+	it("should allow self-imports without error", ({ expect }) => {
+		const errors = validateDistImports(
+			"my-package",
+			{ name: "my-package" },
+			new Set(["my-package"])
+		);
+		expect(errors).toEqual([]);
+	});
+
+	it("should flag devDependency-only imports with a tailored message", ({
+		expect,
+	}) => {
+		const errors = validateDistImports(
+			"test-package",
+			{
+				name: "test-package",
+				devDependencies: { undici: "^7.0.0" },
+			},
+			new Set(["undici"])
+		);
+		expect(errors).toHaveLength(1);
+		expect(errors[0]).toContain('"undici"');
+		expect(errors[0]).toContain("only a devDependency");
+		expect(errors[0]).toContain("IGNORED_DIST_IMPORTS");
+	});
+
+	it("should flag undeclared imports", ({ expect }) => {
+		const errors = validateDistImports(
+			"test-package",
+			{ name: "test-package" },
+			new Set(["mystery-package"])
+		);
+		expect(errors).toHaveLength(1);
+		expect(errors[0]).toContain('"mystery-package"');
+		expect(errors[0]).toContain(
+			"not declared in dependencies or peerDependencies"
+		);
+	});
+
+	it("should skip imports in the ignored list", ({ expect }) => {
+		const errors = validateDistImports(
+			"test-package",
+			{
+				name: "test-package",
+				devDependencies: { "@netlify/build-info": "^1.0.0" },
+			},
+			new Set(["react-router", "@angular/ssr"]),
+			["react-router", "@angular/ssr"]
+		);
+		expect(errors).toEqual([]);
+	});
+
+	it("should still flag non-ignored imports when ignored list is non-empty", ({
+		expect,
+	}) => {
+		const errors = validateDistImports(
+			"test-package",
+			{
+				name: "test-package",
+				devDependencies: { undici: "^7.0.0" },
+			},
+			new Set(["undici", "react-router"]),
+			["react-router"]
+		);
+		expect(errors).toHaveLength(1);
+		expect(errors[0]).toContain('"undici"');
+	});
+});
+
+describe("getEntryPointPaths()", () => {
+	it("should collect main field", ({ expect }) => {
+		const paths = getEntryPointPaths({
+			name: "p",
+			main: "dist/index.js",
+		});
+		expect(paths).toEqual(["dist/index.js"]);
+	});
+
+	it("should collect module field", ({ expect }) => {
+		const paths = getEntryPointPaths({
+			name: "p",
+			module: "dist/index.mjs",
+		});
+		expect(paths).toEqual(["dist/index.mjs"]);
+	});
+
+	it("should walk nested exports object", ({ expect }) => {
+		const paths = getEntryPointPaths({
+			name: "p",
+			exports: {
+				".": {
+					import: "./dist/index.mjs",
+					require: "./dist/index.cjs",
+					types: "./dist/index.d.ts",
+				},
+				"./test-helpers": {
+					import: "./dist/test-helpers/index.mjs",
+				},
+			},
+		});
+		expect(paths.sort()).toEqual([
+			"./dist/index.cjs",
+			"./dist/index.d.ts",
+			"./dist/index.mjs",
+			"./dist/test-helpers/index.mjs",
+		]);
+	});
+
+	it("should collect string bin entries", ({ expect }) => {
+		const paths = getEntryPointPaths({
+			name: "p",
+			bin: "./bin/cli.js",
+		});
+		expect(paths).toEqual(["./bin/cli.js"]);
+	});
+
+	it("should collect object bin entries", ({ expect }) => {
+		const paths = getEntryPointPaths({
+			name: "p",
+			bin: { foo: "./bin/foo.js", bar: "./bin/bar.js" },
+		});
+		expect(paths.sort()).toEqual(["./bin/bar.js", "./bin/foo.js"]);
+	});
+
+	it("should deduplicate paths across fields", ({ expect }) => {
+		const paths = getEntryPointPaths({
+			name: "p",
+			main: "./dist/index.js",
+			module: "./dist/index.js",
+			exports: { ".": "./dist/index.js" },
+		});
+		expect(paths).toEqual(["./dist/index.js"]);
+	});
+
+	it("should return empty array when no entry points are declared", ({
+		expect,
+	}) => {
+		const paths = getEntryPointPaths({ name: "p" });
+		expect(paths).toEqual([]);
 	});
 });
 
