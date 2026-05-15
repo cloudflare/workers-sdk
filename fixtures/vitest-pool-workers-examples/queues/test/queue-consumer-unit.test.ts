@@ -7,6 +7,7 @@ import {
 import { env } from "cloudflare:workers";
 import { it } from "vitest";
 import worker from "../src/index";
+import type { QueueJob } from "../src/index";
 
 it("consumes queue messages", async ({ expect }) => {
 	// Call `queue()` handler directly

@@ -5,7 +5,7 @@ import dedent from "ts-dedent";
 import { PATH_TO_DEPLOY_CONFIG } from "../constants";
 import { UserError } from "../errors";
 import { parseJSONC, readFileSync } from "../parse";
-import type { RawConfig, RedirectedRawConfig } from "./config";
+import type { ComputedFields, RawConfig, RedirectedRawConfig } from "./config";
 
 export type ResolveConfigPathOptions = {
 	useRedirectIfAvailable?: boolean;
@@ -165,10 +165,19 @@ function findRedirectedWranglerConfig(
 	};
 }
 
+export function isRedirectedConfig(
+	config: Pick<ComputedFields, "configPath" | "userConfigPath">
+): boolean {
+	return (
+		config.configPath !== undefined &&
+		config.configPath !== config.userConfigPath
+	);
+}
+
 export function isRedirectedRawConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
 	userConfigPath: string | undefined
 ): rawConfig is RedirectedRawConfig {
-	return configPath !== undefined && configPath !== userConfigPath;
+	return isRedirectedConfig({ configPath, userConfigPath });
 }

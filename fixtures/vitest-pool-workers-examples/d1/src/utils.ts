@@ -30,25 +30,38 @@ function queryResultToPost(result: QueryResult): Post {
 }
 
 export async function listPosts(env: Env): Promise<Post[]> {
-	const results = await env.DATABASE.prepare(
-		`
+	const database = env.DATABASE;
+	if (!database) {
+		throw new Error("DATABASE binding is required");
+	}
+
+	const results = await database
+		.prepare(
+			`
 		SELECT slug, body, username, name, email
 		FROM posts
 		INNER JOIN users ON posts.author = users.username
 		`
-	).all<QueryResult>();
+		)
+		.all<QueryResult>();
 	return results.results.map(queryResultToPost);
 }
 
 export async function readPost(env: Env, slug: string): Promise<Post | null> {
-	const result = await env.DATABASE.prepare(
-		`
+	const database = env.DATABASE;
+	if (!database) {
+		throw new Error("DATABASE binding is required");
+	}
+
+	const result = await database
+		.prepare(
+			`
 		SELECT slug, body, username, name, email
 		FROM posts
 		INNER JOIN users ON posts.author = users.username
 		WHERE slug = ?1
 		`
-	)
+		)
 		.bind(slug)
 		.first<QueryResult>();
 	return result === null ? null : queryResultToPost(result);
@@ -59,15 +72,21 @@ export async function upsertPost(
 	slug: string,
 	body: string
 ): Promise<void> {
-	await env.DATABASE.prepare(
-		`
+	const database = env.DATABASE;
+	if (!database) {
+		throw new Error("DATABASE binding is required");
+	}
+
+	await database
+		.prepare(
+			`
 		INSERT INTO posts (slug, author, body)
 		VALUES (?1, ?2, ?3)
 		ON CONFLICT (slug) DO UPDATE SET
 			author = ?2,
 			body = ?3
 		`
-	)
+		)
 		.bind(slug, "admin", body)
 		.run();
 }

@@ -6,11 +6,7 @@ import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterAll, beforeAll, beforeEach, describe, test, vi } from "vitest";
 import { PluginContext } from "../context";
 import { resolvePluginConfig } from "../plugin-config";
-import {
-	addBindingsShortcut,
-	addExplorerShortcut,
-	addTunnelShortcut,
-} from "../plugins/shortcuts";
+import { addShortcuts } from "../plugins/shortcuts";
 import * as tunnelPlugin from "../plugins/tunnel";
 import { satisfiesMinimumViteVersion } from "../utils";
 import type * as vite from "vite";
@@ -124,62 +120,84 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		return () => removeDirSync(tempDir);
 	});
 
-	test("display binding shortcut hint", ({ expect }) => {
+	function createMockContext(options?: {
+		auxiliaryWorkers?: Array<{ configPath: string }>;
+	}) {
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
 			restartingDevServerCount: 0,
 			tunnelHostnames: new Set(),
 		});
+
 		mockContext.setResolvedPluginConfig(
 			resolvePluginConfig(
-				{ configPath: primaryConfigPath },
+				{
+					configPath: primaryConfigPath,
+					auxiliaryWorkers: options?.auxiliaryWorkers,
+				},
 				{},
 				{ command: "serve", mode: "development" }
 			)
 		);
-		addBindingsShortcut(mockServer, mockContext);
+
+		return mockContext;
+	}
+
+	test("prints shortcut hints in registration order", ({ expect }) => {
+		vi.spyOn(tunnelPlugin, "isTunnelOpen").mockReturnValue(false);
+		addShortcuts(mockServer, createMockContext());
 
 		serverLogs.info = [];
 		mockServer.bindCLIShortcuts();
 
-		expect(normalize(serverLogs.info)).not.toMatch(
-			"press b + enter to list configured Cloudflare bindings"
-		);
+		expect(normalize(serverLogs.info)).toBe("");
 
 		mockServer.bindCLIShortcuts({ print: true });
 
-		expect(normalize(serverLogs.info)).toMatch(
-			"press b + enter to list configured Cloudflare bindings"
+		expect(normalize(serverLogs.info)).toBe(
+			[
+				"➜  press b + enter to list configured Cloudflare bindings",
+				"➜  press e + enter to open local explorer",
+				"➜  press t + enter to start tunnel",
+			].join("\n")
 		);
 	});
 
-	test("prints bindings with a single Worker", ({ expect }) => {
+	test("registers custom shortcuts in order", ({ expect }) => {
 		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
-		const mockContext = new PluginContext({
-			hasShownWorkerConfigWarnings: false,
-			restartingDevServerCount: 0,
-			tunnelHostnames: new Set(),
-		});
 
-		mockContext.setResolvedPluginConfig(
-			resolvePluginConfig(
-				{ configPath: primaryConfigPath },
-				{},
-				{ command: "serve", mode: "development" }
-			)
-		);
+		addShortcuts(mockServer, createMockContext());
 
-		addBindingsShortcut(mockServer, mockContext);
 		expect(mockServer.bindCLIShortcuts).not.toBe(mockBindCLIShortcuts);
-		expect(mockBindCLIShortcuts).toHaveBeenCalledExactlyOnceWith({
+		expect(mockBindCLIShortcuts).toHaveBeenCalledWith({
 			customShortcuts: [
 				{
 					key: "b",
 					description: "list configured Cloudflare bindings",
 					action: expect.any(Function),
 				},
+				{
+					key: "e",
+					description: "open local explorer",
+					action: expect.any(Function),
+				},
+				{
+					key: "t",
+					description: "start or close tunnel",
+					action: expect.any(Function),
+				},
+				{
+					key: "a",
+					description: "extend tunnel by 1 hour",
+					action: expect.any(Function),
+				},
 			],
 		});
+	});
+
+	test("prints bindings with a single Worker", ({ expect }) => {
+		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
+		addShortcuts(mockServer, createMockContext());
 
 		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
 		const printBindingShortcut = customShortcuts?.find((s) => s.key === "b");
@@ -204,34 +222,12 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 
 	test("prints bindings with multi Workers", ({ expect }) => {
 		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
-		const mockContext = new PluginContext({
-			hasShownWorkerConfigWarnings: false,
-			restartingDevServerCount: 0,
-			tunnelHostnames: new Set(),
-		});
-
-		mockContext.setResolvedPluginConfig(
-			resolvePluginConfig(
-				{
-					configPath: primaryConfigPath,
-					auxiliaryWorkers: [{ configPath: auxiliaryConfigPath }],
-				},
-				{},
-				{ command: "serve", mode: "development" }
-			)
+		addShortcuts(
+			mockServer,
+			createMockContext({
+				auxiliaryWorkers: [{ configPath: auxiliaryConfigPath }],
+			})
 		);
-
-		addBindingsShortcut(mockServer, mockContext);
-		expect(mockServer.bindCLIShortcuts).not.toBe(mockBindCLIShortcuts);
-		expect(mockBindCLIShortcuts).toHaveBeenCalledExactlyOnceWith({
-			customShortcuts: [
-				{
-					key: "b",
-					description: "list configured Cloudflare bindings",
-					action: expect.any(Function),
-				},
-			],
-		});
 
 		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
 		const printBindingShortcut = customShortcuts?.find((s) => s.key === "b");
@@ -260,18 +256,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 
 	test("registers explorer shortcut with correct URL", async ({ expect }) => {
 		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
-
-		addExplorerShortcut(mockServer);
-
-		expect(mockBindCLIShortcuts).toHaveBeenCalledWith({
-			customShortcuts: [
-				{
-					key: "e",
-					description: "open local explorer",
-					action: expect.any(Function),
-				},
-			],
-		});
+		addShortcuts(mockServer, createMockContext());
 
 		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
 		const explorerShortcut = customShortcuts?.find((s) => s.key === "e");
@@ -284,35 +269,14 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 	});
 
 	test("registers tunnel shortcut and extends expiry", async ({ expect }) => {
-		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
-		const mockContext = new PluginContext({
-			hasShownWorkerConfigWarnings: false,
-			restartingDevServerCount: 0,
-			tunnelHostnames: new Set(),
-		});
 		const toggleTunnelSpy = vi
 			.spyOn(tunnelPlugin, "toggleTunnel")
 			.mockResolvedValue(undefined);
 		const extendExpirySpy = vi
 			.spyOn(tunnelPlugin, "extendTunnelExpiry")
 			.mockImplementation(() => {});
-
-		addTunnelShortcut(mockServer, mockContext);
-
-		expect(mockBindCLIShortcuts).toHaveBeenCalledWith({
-			customShortcuts: [
-				{
-					key: "t",
-					description: "start or close tunnel",
-					action: expect.any(Function),
-				},
-				{
-					key: "a",
-					description: "extend tunnel by 1 hour",
-					action: expect.any(Function),
-				},
-			],
-		});
+		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
+		addShortcuts(mockServer, createMockContext());
 
 		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
 		const toggleShortcut = customShortcuts?.find((s) => s.key === "t");
@@ -325,30 +289,31 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		expect(extendExpirySpy).toHaveBeenCalledTimes(1);
 	});
 
-	test("registers tunnel shortcuts even without tunnel config", ({
-		expect,
-	}) => {
-		const mockContext = new PluginContext({
-			hasShownWorkerConfigWarnings: false,
-			restartingDevServerCount: 0,
-			tunnelHostnames: new Set(),
-		});
+	test("display tunnel shortcut hint", ({ expect }) => {
+		vi.spyOn(tunnelPlugin, "isTunnelOpen")
+			.mockReturnValueOnce(false)
+			.mockReturnValueOnce(true);
 
-		addTunnelShortcut(mockServer, mockContext);
+		addShortcuts(mockServer, createMockContext());
 
-		expect(mockServer.bindCLIShortcuts).toHaveBeenCalledWith({
-			customShortcuts: [
-				{
-					key: "t",
-					description: "start or close tunnel",
-					action: expect.any(Function),
-				},
-				{
-					key: "a",
-					description: "extend tunnel by 1 hour",
-					action: expect.any(Function),
-				},
-			],
-		});
+		serverLogs.info = [];
+		mockServer.bindCLIShortcuts();
+
+		expect(normalize(serverLogs.info)).not.toMatch(
+			"press t + enter to start tunnel"
+		);
+
+		mockServer.bindCLIShortcuts({ print: true });
+
+		expect(normalize(serverLogs.info)).toMatch(
+			"press t + enter to start tunnel"
+		);
+
+		serverLogs.info = [];
+		mockServer.bindCLIShortcuts({ print: true });
+
+		expect(normalize(serverLogs.info)).toMatch(
+			"press t + enter to close tunnel"
+		);
 	});
 });
