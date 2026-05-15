@@ -6,6 +6,7 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "../helpers/e2e-wrangler-test";
+import { normalizeOutput } from "../helpers/normalize";
 import type {
 	MiniflareOptions,
 	Miniflare as MiniflareType,
@@ -82,8 +83,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			});
 
 			test("user provided incorrect auth data", async ({ expect }) => {
-				await expect(
-					startRemoteProxySession(
+				let error: unknown;
+				try {
+					await startRemoteProxySession(
 						{
 							MY_SERVICE: {
 								type: "service",
@@ -98,9 +100,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 								},
 							},
 						}
-					)
-				).rejects.toMatchInlineSnapshot(
-					`[Error: Failed to start the remote proxy session. There is likely additional logging output above.]`
+					);
+				} catch (e) {
+					error = e;
+				}
+				expect(normalizeOutput(`${error}`)).toMatchInlineSnapshot(
+					`"Error: Failed to start the remote proxy session. Error reloading remote server: A request to the Cloudflare API (/accounts/00000000000000000000000000000000/workers/subdomain/edge-preview) failed."`
 				);
 			});
 		});
@@ -137,8 +142,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			});
 
 			test("user provided incorrect auth data", async ({ expect }) => {
-				await expect(
-					maybeStartOrUpdateRemoteProxySession(
+				let error: unknown;
+				try {
+					await maybeStartOrUpdateRemoteProxySession(
 						{
 							bindings: {
 								MY_SERVICE: {
@@ -155,9 +161,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 								apiToken: "This is an incorrect API TOKEN!",
 							},
 						}
-					)
-				).rejects.toMatchInlineSnapshot(
-					`[Error: Failed to start the remote proxy session. There is likely additional logging output above.]`
+					);
+				} catch (e) {
+					error = e;
+				}
+				expect(normalizeOutput(`${error}`)).toMatchInlineSnapshot(
+					`"Error: Failed to start the remote proxy session. Error reloading remote server: A request to the Cloudflare API (/accounts/00000000000000000000000000000000/workers/subdomain/edge-preview) failed."`
 				);
 			});
 		});
