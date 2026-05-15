@@ -99,8 +99,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							},
 						}
 					)
-				).rejects.toMatchInlineSnapshot(
-					`[Error: Failed to start the remote proxy session. There is likely additional logging output above.]`
+				).rejects.toThrowError(
+					/Failed to start the remote proxy session\. Failed to create a preview token/
 				);
 			});
 		});
@@ -156,8 +156,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							},
 						}
 					)
-				).rejects.toMatchInlineSnapshot(
-					`[Error: Failed to start the remote proxy session. There is likely additional logging output above.]`
+				).rejects.toThrowError(
+					/Failed to start the remote proxy session\. Failed to create a preview token/
 				);
 			});
 		});
