@@ -246,8 +246,8 @@ if (auth) {
 					}>({
 						configPath: "./.tmp/config-with-invalid-account-id/wrangler.json",
 					})
-				).rejects.toThrowError(
-					/Failed to start the remote proxy session\. Failed to create a preview token/
+				).rejects.toMatchInlineSnapshot(
+					`[Error: Failed to start the remote proxy session. Error reloading remote server: A request to the Cloudflare API (/accounts/NOT a valid account id/workers/subdomain/edge-preview) failed.]`
 				);
 
 				expect(errorSpy).toHaveBeenCalledOnce();
