@@ -25,8 +25,9 @@ import { aiSearchSearchCommand } from "./ai-search/search";
 import { aiSearchStatsCommand } from "./ai-search/stats";
 import { aiSearchUpdateCommand } from "./ai-search/update";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
-import { aiModelsCommand } from "./ai/listCatalog";
+import { aiModelsCommand, aiModelsListCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
+import { aiModelsSchemaCommand } from "./ai/modelSchema";
 import {
 	artifactsNamespace,
 	artifactsNamespacesGetCommand,
@@ -1838,6 +1839,8 @@ export function createCLIParser(argv: string[]) {
 	registry.define([
 		{ command: "wrangler ai", definition: aiNamespace },
 		{ command: "wrangler ai models", definition: aiModelsCommand },
+		{ command: "wrangler ai models list", definition: aiModelsListCommand },
+		{ command: "wrangler ai models schema", definition: aiModelsSchemaCommand },
 		{ command: "wrangler ai finetune", definition: aiFineTuneNamespace },
 		{ command: "wrangler ai finetune list", definition: aiFineTuneListCommand },
 		{

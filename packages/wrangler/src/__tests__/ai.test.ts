@@ -23,7 +23,7 @@ describe("ai help", () => {
 			🤖 Manage AI models
 
 			COMMANDS
-			  wrangler ai models    List catalog models
+			  wrangler ai models    Manage AI models
 			  wrangler ai finetune  Interact with finetune files
 
 			GLOBAL FLAGS
@@ -55,8 +55,53 @@ describe("ai help", () => {
 			🤖 Manage AI models
 
 			COMMANDS
-			  wrangler ai models    List catalog models
+			  wrangler ai models    Manage AI models
 			  wrangler ai finetune  Interact with finetune files
+
+			GLOBAL FLAGS
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
+		`);
+	});
+
+	it("should show models help", async ({ expect }) => {
+		await runWrangler("ai models --help");
+		await endEventLoop();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler ai models
+
+			Manage AI models
+
+			COMMANDS
+			  wrangler ai models list            List catalog models
+			  wrangler ai models schema <model>  Get model schema
+
+			GLOBAL FLAGS
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
+		`);
+	});
+
+	it("should show schema help without model list flags", async ({ expect }) => {
+		await runWrangler("ai models schema --help");
+		await endEventLoop();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler ai models schema <model>
+
+			Get model schema
+
+			POSITIONALS
+			  model  The model to fetch a schema for  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -112,6 +157,23 @@ describe("ai commands", () => {
 
 	it("should handle model list", async ({ expect }) => {
 		mockAISearchRequest();
+		await runWrangler("ai models list");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			┌─┬─┬─┬─┐
+			│ model │ name │ description │ task │
+			├─┼─┼─┼─┤
+			│ 429b9e8b-d99e-44de-91ad-706cf8183658 │ @cloudflare/embeddings_bge_large_en │ │ │
+			├─┼─┼─┼─┤
+			│ 7f9a76e1-d120-48dd-a565-101d328bbb02 │ @cloudflare/resnet50 │ │ Image Classification │
+			└─┴─┴─┴─┘"
+		`);
+	});
+
+	it("should handle legacy model list", async ({ expect }) => {
+		mockAISearchRequest();
 		await runWrangler("ai models");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -127,13 +189,59 @@ describe("ai commands", () => {
 		`);
 	});
 
+	it("should query model list with filters", async ({ expect }) => {
+		const requests = mockAISearchRequest();
+		await runWrangler(
+			'ai models list --search resnet --task "Image Classification" --author cloudflare --source 1 --hide-experimental --json'
+		);
+
+		expect(requests).toHaveLength(1);
+		const searchParams = new URL(requests[0].url).searchParams;
+		expect(searchParams.get("per_page")).toBe("50");
+		expect(searchParams.get("page")).toBe("1");
+		expect(searchParams.get("search")).toBe("resnet");
+		expect(searchParams.get("task")).toBe("Image Classification");
+		expect(searchParams.get("author")).toBe("cloudflare");
+		expect(searchParams.get("source")).toBe("1");
+		expect(searchParams.get("hide_experimental")).toBe("true");
+		expect(std.out).toContain("@cloudflare/resnet50");
+	});
+
+	it("should handle model schema", async ({ expect }) => {
+		const requests = mockAISchemaRequest();
+		await runWrangler('ai models schema "@cloudflare/resnet50"');
+
+		expect(requests).toHaveLength(1);
+		const searchParams = new URL(requests[0].url).searchParams;
+		expect(searchParams.get("model")).toBe("@cloudflare/resnet50");
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    "input": {
+			        "type": "object",
+			        "properties": {
+			            "image": {
+			                "type": "string",
+			                "format": "binary"
+			            }
+			        }
+			    },
+			    "output": {
+			        "type": "array",
+			        "items": {
+			            "type": "object"
+			        }
+			    }
+			}"
+		`);
+	});
+
 	it("should truncate model description", async ({ expect }) => {
 		const original = process.stdout.columns;
 		// Arbitrary fixed value for testing
 		process.stdout.columns = 186;
 
 		mockAIOverflowRequest();
-		await runWrangler("ai models");
+		await runWrangler("ai models list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
@@ -154,7 +262,7 @@ describe("ai commands", () => {
 		// Arbitrary fixed value for testing
 		process.stdout.columns = 186;
 		mockAIPaginatedRequest();
-		await runWrangler("ai models");
+		await runWrangler("ai models list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
@@ -321,10 +429,12 @@ function mockAIListFinetuneRequest() {
 }
 
 function mockAISearchRequest() {
+	const requests: Request[] = [];
 	msw.use(
 		http.get(
 			"*/accounts/:accountId/ai/models/search",
-			() => {
+			({ request }) => {
+				requests.push(request);
 				return HttpResponse.json(
 					createFetchResult(
 						[
@@ -356,6 +466,43 @@ function mockAISearchRequest() {
 			{ once: true }
 		)
 	);
+	return requests;
+}
+
+function mockAISchemaRequest() {
+	const requests: Request[] = [];
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/ai/models/schema",
+			({ request }) => {
+				requests.push(request);
+				return HttpResponse.json(
+					createFetchResult(
+						{
+							input: {
+								type: "object",
+								properties: {
+									image: {
+										type: "string",
+										format: "binary",
+									},
+								},
+							},
+							output: {
+								type: "array",
+								items: {
+									type: "object",
+								},
+							},
+						},
+						true
+					)
+				);
+			},
+			{ once: true }
+		)
+	);
+	return requests;
 }
 
 function mockAIOverflowRequest() {
