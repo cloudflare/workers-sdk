@@ -30,6 +30,11 @@ import {
 	wipeRestartState,
 } from "./lib/restart";
 import {
+	clearRollbackRegistry,
+	executeRollbacks,
+	registerRollbackFn,
+} from "./lib/rollback";
+import {
 	createReplayReadableStream,
 	getInvalidStoredStreamOutputError,
 	getStoredStreamOutputPreview,
@@ -40,11 +45,13 @@ import { MODIFIER_KEYS, WorkflowInstanceModifier } from "./modifier";
 import type { RestartFromStep } from "./binding";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
+import type { RollbackFn, RollbackRegistryEntry } from "./lib/rollback";
 import type { StreamOutputMeta } from "./lib/streams";
 import type {
 	WorkflowEntrypoint,
 	WorkflowEvent,
 	WorkflowStep,
+	WorkflowStepConfig,
 } from "cloudflare:workers";
 
 interface Env {
@@ -127,6 +134,9 @@ export class Engine extends DurableObject<Env> {
 	> = new Map();
 	eventMap: Map<string, Array<Event>> = new Map();
 
+	// Not persisted: rollback fns are RPC stubs, dead across DO restarts.
+	rollbackRegistry: Map<string, RollbackRegistryEntry> = new Map();
+
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
 
@@ -195,6 +205,36 @@ export class Engine extends DurableObject<Env> {
 		if (group) {
 			this.handleStepResultWaiter(group, event, metadata);
 		}
+	}
+
+	registerRollbackFn(
+		cacheKey: string,
+		fn: RollbackFn,
+		stepName: string,
+		output: unknown,
+		config?: WorkflowStepConfig
+	): void {
+		registerRollbackFn(
+			this.rollbackRegistry,
+			cacheKey,
+			fn,
+			stepName,
+			output,
+			config
+		);
+	}
+
+	clearRollbackRegistry(): void {
+		clearRollbackRegistry(this.rollbackRegistry);
+	}
+
+	// Lives here for access to the protected DurableObject `ctx`.
+	createRollbackContext(rollbackStep?: { cacheKey: string }): Context {
+		return new Context(this, this.ctx, rollbackStep);
+	}
+
+	async executeRollbacks(triggerError: Error) {
+		return executeRollbacks(this, triggerError);
 	}
 
 	readLogsFromStep(_cacheKey: string): RawInstanceLog[] {
@@ -1099,11 +1139,22 @@ export class Engine extends DurableObject<Env> {
 			await this.ctx.storage.transaction(async () => {
 				await this.setStatus(accountId, instance.id, InstanceStatus.Complete);
 			});
+			// Dispose dup'd stubs; otherwise they leak across DO lifetimes.
+			this.clearRollbackRegistry();
 			this.isRunning = false;
 		} catch (err) {
 			if (isAbortError(err)) {
 				this.isRunning = false;
 				return;
+			}
+
+			// Run before the terminal status so events land before WORKFLOW_FAILURE.
+			try {
+				await this.executeRollbacks(
+					err instanceof Error ? err : new Error(String(err))
+				);
+			} catch (rollbackErr) {
+				console.error("Rollback execution failed:", rollbackErr);
 			}
 
 			let error;
