@@ -36,7 +36,7 @@ import { getScriptName } from "../../utils/getScriptName";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
 import { printBindings } from "../../utils/print-bindings";
 import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
-import { getZoneIdForPreview } from "../../zones";
+import { getZoneFromRoute, getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { extractBindingsOfType, unwrapHook } from "./utils";
@@ -131,6 +131,17 @@ async function resolveDevConfig(
 	const useContainers =
 		config.dev.enable_containers && config.containers?.length;
 
+	// The CF-Worker outbound header zone. Production sets this to the zone name
+	// that owns the Worker (see
+	// https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker).
+	// Locally we approximate it: prefer an explicit `dev.host` / --host override,
+	// otherwise derive from the first route — preferring its `zone_name` field
+	// when present (via `getZoneFromRoute`) and falling back to the pattern's
+	// hostname when not. Distinct from `origin.hostname` (the URL the Worker
+	// sees in `request.url`), which always uses the pattern hostname so the
+	// Worker behaves the same locally as on its actual route.
+	const zone = host ?? (routes?.[0] && getZoneFromRoute(routes[0]));
+
 	return {
 		auth,
 		remote: input.dev?.remote,
@@ -151,6 +162,7 @@ async function resolveDevConfig(
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
 			hostname: host ?? getInferredHost(routes, config.configPath),
 		},
+		zone,
 		liveReload: input.dev?.liveReload || false,
 		testScheduled: input.dev?.testScheduled,
 		// absolute resolved path

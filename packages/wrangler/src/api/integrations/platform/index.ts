@@ -19,7 +19,7 @@ import {
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
-import { getHostFromRoute } from "../../../zones";
+import { getZoneFromRoute } from "../../../zones";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { extractBindingsOfType } from "../../startDevWorker/utils";
 import { CacheStorage } from "./caches";
@@ -57,9 +57,11 @@ export function unstable_getDevCompatibilityDate() {
  * normalized Wrangler config, for callers outside of `wrangler dev`
  * (`getPlatformProxy`, `unstable_getMiniflareWorkerOptions`).
  *
- * Falls back to the hostname of the first configured route, or `undefined`
- * if no routes are set — in which case Miniflare keeps its default of
- * `${workerName}.example.com`.
+ * Falls back to the zone of the first configured route (via
+ * {@link getZoneFromRoute}, which prefers the route's `zone_name` field
+ * when present and otherwise falls back to the pattern's hostname), or
+ * `undefined` if no routes are set — in which case Miniflare keeps its
+ * default of `${workerName}.example.com`.
  *
  * `dev.host` is intentionally NOT consulted here: the `dev` config block is
  * specific to `wrangler dev` and should not influence behaviour under
@@ -70,7 +72,7 @@ export function unstable_getDevCompatibilityDate() {
 function getZoneFromConfig(config: Config): string | undefined {
 	const firstRoute = config.route ?? config.routes?.[0];
 	if (firstRoute) {
-		return getHostFromRoute(firstRoute);
+		return getZoneFromRoute(firstRoute);
 	}
 	return undefined;
 }

@@ -22,7 +22,9 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			expect(workerOptions.zone).toBe("example.com");
 		});
 
-		it("derives the zone from the first entry in `routes`", ({ expect }) => {
+		it("uses the first entry in `routes`, preferring its `zone_name`", ({
+			expect,
+		}) => {
 			writeWranglerConfig(
 				{
 					name: "test-worker",
@@ -37,12 +39,33 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			);
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
+			// Per https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker
+			// the `CF-Worker` header is the zone name that owns the Worker, not
+			// the route pattern's hostname.
+			expect(workerOptions.zone).toBe("example.com");
+		});
+
+		it("falls back to the pattern hostname when `zone_name` is absent", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					routes: [{ pattern: "foo.example.com/*", zone_id: "abc123" }],
+				},
+				"./wrangler.json"
+			);
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+			// Without `zone_name` or an account-scoped API lookup we can't
+			// determine the parent zone locally, so the pattern hostname is
+			// the closest approximation.
 			expect(workerOptions.zone).toBe("foo.example.com");
 		});
 
-		it("falls back to `zone_name` for unparseable patterns like `*/*`", ({
-			expect,
-		}) => {
+		it("uses `zone_name` for unparseable patterns like `*/*`", ({ expect }) => {
 			writeWranglerConfig(
 				{
 					name: "test-worker",
@@ -87,13 +110,13 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 					dev: {
 						host: "ignored.example.com",
 					},
-					routes: ["https://other.example.com/*"],
+					routes: [{ pattern: "foo.example.com/*", zone_name: "example.com" }],
 				},
 				"./wrangler.json"
 			);
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
-			expect(workerOptions.zone).toBe("other.example.com");
+			expect(workerOptions.zone).toBe("example.com");
 		});
 
 		it("returns undefined when no routes are configured", ({ expect }) => {

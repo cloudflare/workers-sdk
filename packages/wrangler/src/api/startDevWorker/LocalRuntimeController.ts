@@ -169,8 +169,12 @@ export async function convertToConfigBundle(
 		containerBuildId: event.config.dev?.containerBuildId,
 		containerEngine: event.config.dev.containerEngine,
 		enableContainers: event.config.dev.enableContainers ?? true,
-		// Zone for CF-Worker header - extracted from routes/host configuration
-		zone: event.config.dev?.origin?.hostname,
+		// Zone for the outbound CF-Worker header. Distinct from
+		// `localUpstream` / `origin.hostname` (the host the Worker sees in
+		// `request.url`): production sets `CF-Worker` to the zone name that
+		// owns the Worker, not the specific route's hostname. See
+		// `resolveDev` in `ConfigController.ts` for how this is derived.
+		zone: event.config.dev?.zone,
 		sendMetrics: event.config.sendMetrics,
 		publicUrl: event.config.dev?.server?.port
 			? buildPublicUrl({
