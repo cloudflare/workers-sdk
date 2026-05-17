@@ -225,6 +225,18 @@ describe("Zones", () => {
 				).toBe("example.com");
 			});
 
+			it("returns `undefined` when the pattern is unparseable and no `zone_name` is available", ({
+				expect,
+			}) => {
+				// With neither a parseable hostname nor a `zone_name` to fall
+				// back on we can't approximate the zone at all — let Miniflare
+				// apply its default of `<worker-name>.example.com`.
+				expect(getZoneFromRoute("*/*")).toBeUndefined();
+				expect(
+					getZoneFromRoute({ pattern: "*/*", zone_id: "abc123" })
+				).toBeUndefined();
+			});
+
 			it("falls back to the pattern hostname for a ZoneIdRoute", ({
 				expect,
 			}) => {

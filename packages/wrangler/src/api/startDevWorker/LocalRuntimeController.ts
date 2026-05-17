@@ -75,6 +75,21 @@ export function getUserWorkerInnerUrlOverrides(
 	}
 }
 
+/**
+ * Compute the zone for the outbound `CF-Worker` header. Production sets this
+ * to the zone name that owns the Worker (see
+ * https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker).
+ *
+ * Prefer an explicit `zone_name` on the first route — that's the user's
+ * unambiguous declaration of the parent zone. Otherwise fall back to
+ * `origin.hostname` (= `dev.host` if set, else the route pattern's hostname),
+ * which is the closest local approximation when we'd otherwise need an API
+ * lookup to resolve the zone.
+ *
+ * Distinct from `localUpstream` (the URL host the Worker sees in
+ * `request.url`), which always uses the pattern hostname so behaviour matches
+ * the actual route locally.
+ */
 function getZoneForCfWorkerHeader(
 	config: StartDevWorkerOptions
 ): string | undefined {
@@ -191,17 +206,6 @@ export async function convertToConfigBundle(
 		containerBuildId: event.config.dev?.containerBuildId,
 		containerEngine: event.config.dev.containerEngine,
 		enableContainers: event.config.dev.enableContainers ?? true,
-		// Zone for the outbound `CF-Worker` header. Production sets this to
-		// the zone name that owns the Worker (see
-		// https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker).
-		// Prefer an explicit `zone_name` on the first route — that's the user's
-		// unambiguous declaration of the parent zone. Otherwise fall back to
-		// `origin.hostname` (= `dev.host` if set, else the route pattern's
-		// hostname), which is the closest local approximation when we'd
-		// otherwise need an API lookup to resolve the zone. Distinct from
-		// `localUpstream` (the URL host the Worker sees in `request.url`),
-		// which always uses the pattern hostname so behaviour matches the
-		// actual route locally.
 		zone: getZoneForCfWorkerHeader(event.config),
 		sendMetrics: event.config.sendMetrics,
 		publicUrl: event.config.dev?.server?.port
