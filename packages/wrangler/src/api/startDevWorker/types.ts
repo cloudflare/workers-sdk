@@ -229,17 +229,6 @@ export type StartDevWorkerOptions = Omit<
 	dev: StartDevWorkerInput["dev"] & {
 		persist: string | false;
 		auth?: AsyncHook<CfAccount>; // redefine without config.account_id hook param (can only be provided by ConfigController with access to the Wrangler configuration file, not by other controllers eg RemoteRuntimeContoller)
-		/**
-		 * The Cloudflare zone name used for the `CF-Worker` header on outbound
-		 * subrequests in local development. Mirrors the production behaviour
-		 * documented at https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker.
-		 *
-		 * Derived from `dev.host` if set; otherwise from the first configured
-		 * route's `zone_name` field if present, falling back to the pattern's
-		 * hostname. `undefined` when neither is available, in which case
-		 * Miniflare keeps its default of `${workerName}.example.com`.
-		 */
-		zone?: string;
 	};
 	entrypoint: string;
 	assets?: AssetsOptions;
