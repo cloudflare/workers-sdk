@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { stripVTControlCharacters } from "node:util";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
@@ -427,11 +428,17 @@ for (const source of imageSource) {
 			vi.stubEnv("WRANGLER_DOCKER_BIN", "not-a-real-docker-binary");
 			const worker = helper.runLongLived("wrangler dev");
 			expect(await worker.exitCode).toBe(1);
-			expect(await worker.output).toContain(
-				`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.`
+			// Strip ANSI codes because esbuild's error formatter auto-underlines URLs,
+			// which inserts escape sequences that break plain-text substring matching.
+			const output = stripVTControlCharacters(await worker.output);
+			expect(output).toContain(
+				`The Docker CLI is needed to build the configured image before running dev but could not be launched.`
 			);
-			expect(await worker.output).toContain(
-				`To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false.`
+			expect(output).toContain(
+				`If Docker is not installed, download it from https://docs.docker.com/get-started/get-docker/`
+			);
+			expect(output).toContain(
+				`To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or pass --enable-containers=false.`
 			);
 			vi.unstubAllEnvs();
 		});
