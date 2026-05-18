@@ -58,6 +58,16 @@ describe("named entrypoints", () => {
 });
 
 describe("Durable Object", () => {
+	const orderingAttempts = 5;
+	const orderingCalls = 100;
+
+	function expectedOrderingLog() {
+		return Array.from({ length: orderingCalls }, (_, i) => `call-${i}`);
+	}
+	function orderingTargetName(prefix: string, attempt: number) {
+		return `${prefix}-${crypto.randomUUID()}-${attempt}`;
+	}
+
 	it("dispatches fetch request", async ({ expect }) => {
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
@@ -151,6 +161,76 @@ describe("Durable Object", () => {
 		const stub = env.TEST_OBJECT.get(id);
 		using result = await stub.getObject();
 		expect(result).toMatchObject({ hello: "world" });
+	});
+
+	// Regression repro for https://github.com/cloudflare/workers-sdk/issues/13433.
+	it("preserves same-type RPC call order", async ({ expect }) => {
+		for (let attempt = 0; attempt < orderingAttempts; attempt++) {
+			const id = env.TEST_OBJECT.idFromName(
+				orderingTargetName("ordering", attempt)
+			);
+			const stub = env.TEST_OBJECT.get(id);
+			const promises: Promise<void>[] = [];
+
+			for (let i = 0; i < orderingCalls; i++) {
+				promises.push(stub.record(`call-${i}`));
+			}
+
+			await Promise.all(promises);
+
+			expect(await stub.getLog()).toEqual(expectedOrderingLog());
+		}
+	});
+
+	it("preserves same-type RPC call order after prewarming instance", async ({
+		expect,
+	}) => {
+		for (let attempt = 0; attempt < orderingAttempts; attempt++) {
+			const id = env.TEST_OBJECT.idFromName(
+				orderingTargetName("prewarmed-ordering", attempt)
+			);
+			const stub = env.TEST_OBJECT.get(id);
+			await stub.getLog();
+			const promises: Promise<void>[] = [];
+
+			for (let i = 0; i < orderingCalls; i++) {
+				promises.push(stub.record(`call-${i}`));
+			}
+
+			await Promise.all(promises);
+
+			expect(await stub.getLog()).toEqual(expectedOrderingLog());
+		}
+	});
+
+	it("preserves same-type RPC call order from a WorkerEntrypoint caller", async ({
+		expect,
+	}) => {
+		for (let attempt = 0; attempt < orderingAttempts; attempt++) {
+			expect(
+				await env.TEST_NAMED_ENTRYPOINT.recordFromWorkerEntrypoint(
+					orderingTargetName("worker-entrypoint-ordering", attempt),
+					orderingCalls
+				)
+			).toEqual(expectedOrderingLog());
+		}
+	});
+
+	it("preserves same-type RPC call order from a Durable Object caller", async ({
+		expect,
+	}) => {
+		for (let attempt = 0; attempt < orderingAttempts; attempt++) {
+			const id = env.TEST_OBJECT.idFromName(
+				orderingTargetName("do-caller", attempt)
+			);
+			const stub = env.TEST_OBJECT.get(id);
+			expect(
+				await stub.recordFromDurableObject(
+					orderingTargetName("do-caller-ordering", attempt),
+					orderingCalls
+				)
+			).toEqual(expectedOrderingLog());
+		}
 	});
 });
 

@@ -6,10 +6,20 @@ interface Env {
 }
 
 export class Counter extends DurableObject {
+	#log: string[] = [];
+
 	async getCounterValue() {
 		const value = ((await this.ctx.storage.get("value")) as number) || 0;
 
 		return value;
+	}
+
+	record(value: string) {
+		this.#log.push(value);
+	}
+
+	getLog() {
+		return this.#log;
 	}
 
 	async increment(amount = 1) {
@@ -45,6 +55,28 @@ export default {
 			const stub = env.LEGACY.get(id);
 
 			return stub.fetch(request);
+		}
+
+		if (url.pathname === "/rpc-ordering") {
+			const name = url.searchParams.get("name") ?? crypto.randomUUID();
+			const calls = 100;
+			const id = env.COUNTERS.idFromName(name);
+			const stub = env.COUNTERS.get(id);
+			const promises: Promise<void>[] = [];
+
+			for (let i = 0; i < calls; i++) {
+				promises.push(stub.record(`call-${i}`));
+			}
+
+			await Promise.all(promises);
+
+			const actual = await stub.getLog();
+			const expected = Array.from({ length: calls }, (_, i) => `call-${i}`);
+			return Response.json({
+				actual,
+				expected,
+				inOrder: JSON.stringify(actual) === JSON.stringify(expected),
+			});
 		}
 
 		const name = url.searchParams.get("name");
