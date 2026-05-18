@@ -341,6 +341,113 @@ for (const source of imageSource) {
 			}).toThrow();
 		});
 
+		it.runIf(source === "build")(
+			"preserves sibling image tags when containers share a Dockerfile",
+			async ({ expect }) => {
+				const dockerPath = getDockerPath();
+				const classNames = [
+					"E2ESharedDockerfileContainerA",
+					"E2ESharedDockerfileContainerB",
+				] as const;
+				const sharedBuildIdsBefore = getSharedContainerBuildIds(
+					dockerPath,
+					classNames
+				);
+
+				await helper.seed({
+					"wrangler.json": JSON.stringify({
+						...wranglerConfig,
+						containers: [
+							{
+								image: "./Dockerfile",
+								class_name: classNames[0],
+								name: `${workerName}-shared-container-a`,
+							},
+							{
+								image: "./Dockerfile",
+								class_name: classNames[1],
+								name: `${workerName}-shared-container-b`,
+							},
+						],
+						durable_objects: {
+							bindings: [
+								{
+									class_name: "E2EContainer",
+									name: "CONTAINER",
+								},
+								{
+									class_name: classNames[0],
+									name: "CONTAINER_A",
+								},
+								{
+									class_name: classNames[1],
+									name: "CONTAINER_B",
+								},
+							],
+						},
+						migrations: [
+							{
+								tag: "v1",
+								new_classes: ["E2EContainer", ...classNames],
+							},
+						],
+					}),
+					"src/index.ts": dedent`
+						import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+
+						export class TestService extends WorkerEntrypoint {
+							async fetch(req: Request) {
+								return new Response("hello from worker");
+							}
+						}
+
+						export class E2EContainer extends DurableObject<Env> {
+							container: globalThis.Container;
+
+							constructor(ctx: DurableObjectState, env: Env) {
+								super(ctx, env);
+								this.container = ctx.container!;
+							}
+
+							async fetch(req: Request) {
+								const path = new URL(req.url).pathname;
+								switch (path) {
+									case "/status":
+										return new Response(JSON.stringify(this.container.running));
+
+									default:
+										return new Response("Hi from Container DO");
+								}
+							}
+						}
+
+						export class E2ESharedDockerfileContainerA extends E2EContainer {}
+						export class E2ESharedDockerfileContainerB extends E2EContainer {}
+
+						export default {
+							async fetch(request, env): Promise<Response> {
+								const id = env.CONTAINER.idFromName("container");
+								const stub = env.CONTAINER.get(id);
+								return stub.fetch(request);
+							},
+						} satisfies ExportedHandler<Env>;`,
+				});
+
+				const worker = helper.runLongLived("wrangler dev");
+				await worker.readUntil(/Container image\(s\) ready/, 30_000);
+
+				const sharedBuildIdsAfter = getSharedContainerBuildIds(
+					dockerPath,
+					classNames
+				);
+				const newSharedBuildIds = Array.from(sharedBuildIdsAfter).filter(
+					(buildId) => !sharedBuildIdsBefore.has(buildId)
+				);
+
+				expect(newSharedBuildIds).toHaveLength(1);
+			}
+		);
+
 		it("won't start the container service if no containers are present", async ({
 			expect,
 		}) => {
@@ -464,4 +571,33 @@ const getContainerIds = (class_name: string) => {
 		}
 	});
 	return ids.filter(Boolean);
+};
+
+const getSharedContainerBuildIds = (
+	dockerPath: string,
+	classNames: readonly string[]
+) => {
+	const [firstClassName, ...otherClassNames] = classNames;
+	if (firstClassName === undefined) {
+		return new Set<string>();
+	}
+
+	const sharedBuildIds = getContainerBuildIds(dockerPath, firstClassName);
+	for (const className of otherClassNames) {
+		const buildIds = getContainerBuildIds(dockerPath, className);
+		for (const buildId of sharedBuildIds) {
+			if (!buildIds.has(buildId)) {
+				sharedBuildIds.delete(buildId);
+			}
+		}
+	}
+	return sharedBuildIds;
+};
+
+const getContainerBuildIds = (dockerPath: string, className: string) => {
+	const output = execSync(
+		`${dockerPath} image ls cloudflare-dev/${className.toLowerCase()} --format "{{.Tag}}"`,
+		{ encoding: "utf8" }
+	);
+	return new Set(output.split("\n").filter((line) => line.trim()));
 };
