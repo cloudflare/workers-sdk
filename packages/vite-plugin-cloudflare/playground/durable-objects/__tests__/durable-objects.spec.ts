@@ -1,5 +1,9 @@
 import { describe, test } from "vitest";
-import { getJsonResponse, getTextResponse, isBuild } from "../../__test-utils__";
+import {
+	getJsonResponse,
+	getTextResponse,
+	isBuild,
+} from "../../__test-utils__";
 
 describe("in-worker defined durable objects", async () => {
 	test("can bind to a Durable Object that does not extend the `DurableObject` class", async ({

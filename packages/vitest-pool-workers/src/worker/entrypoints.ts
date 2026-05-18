@@ -159,7 +159,10 @@ function getRPCPropertyCallableThenable(
 	return fn;
 }
 
-const rpcInvocationQueues = new WeakMap<RPCInvocationQueueOwner, Promise<void>>();
+const rpcInvocationQueues = new WeakMap<
+	RPCInvocationQueueOwner,
+	Promise<void>
+>();
 
 /**
  * Preserve the order in which dynamically-wrapped RPC methods begin executing.
