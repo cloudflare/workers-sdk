@@ -1,4 +1,3 @@
-import { UserError } from "@cloudflare/workers-utils";
 import type { ParquetFormat, Sink } from "./types";
 
 export const SINK_DEFAULTS = {
@@ -59,22 +58,6 @@ export function applyDefaultsToSink(sink: Sink): Sink {
 			withDefaults.config.rolling_policy.interval_seconds =
 				SINK_DEFAULTS.rolling_policy.interval_seconds;
 		}
-	}
-
-	// Enforce minimum interval for R2 Data Catalog to prevent compaction issues
-	if (
-		withDefaults.type === "r2_data_catalog" &&
-		withDefaults.config.rolling_policy &&
-		withDefaults.config.rolling_policy.interval_seconds <
-			SINK_DEFAULTS.rolling_policy.min_interval_seconds
-	) {
-		throw new UserError(
-			`Pipeline frequency must be at least ${SINK_DEFAULTS.rolling_policy.min_interval_seconds} seconds for R2 Data Catalog sinks to prevent compaction issues. Current value: ${withDefaults.config.rolling_policy.interval_seconds} seconds.`,
-			{
-				telemetryMessage:
-					"pipelines r2 data catalog interval below minimum threshold",
-			}
-		);
 	}
 
 	if (withDefaults.type === "r2") {
