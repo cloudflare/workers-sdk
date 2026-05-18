@@ -637,10 +637,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			"vite.exported-handler.config.ts",
 			devRegistryPath
 		);
-		await runViteDev(
-			"vite.worker-entrypoint.config.ts",
-			devRegistryPath
-		);
+		await runViteDev("vite.worker-entrypoint.config.ts", devRegistryPath);
 
 		// Test exported-handler -> worker-entrypoint WebSocket proxy
 		await vi.waitFor(async () => {
