@@ -10,16 +10,30 @@ import { logger } from "./logger";
 import type { ApiCredentials } from "./user/user";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
+type WorkersDevSubdomainRegistrationContext = "workers_dev" | "workflows";
+
+type GetWorkersDevSubdomainOptions = {
+	configPath?: string | undefined;
+	apiToken?: ApiCredentials | undefined;
+	abortSignal?: AbortSignal | undefined;
+	registrationContext?: WorkersDevSubdomainRegistrationContext | undefined;
+};
+
 /**
  * Gets the <user-subdomain>.(fed.)workers.dev URL for the given account.
  */
 export async function getWorkersDevSubdomain(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	configPath: string | undefined,
-	apiToken?: ApiCredentials,
-	abortSignal?: AbortSignal
+	options: GetWorkersDevSubdomainOptions = {}
 ): Promise<string> {
+	const {
+		configPath,
+		apiToken,
+		abortSignal,
+		registrationContext = "workers_dev",
+	} = options;
+
 	try {
 		// note: API docs say that this field is "name", but they're lying.
 		const { subdomain } = await fetchResult<{ subdomain: string }>(
@@ -33,30 +47,73 @@ export async function getWorkersDevSubdomain(
 		return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
 	} catch (e) {
 		const error = e as { code?: number };
-		if (typeof error === "object" && !!error && error.code === 10007) {
-			// 10007 error code: not found
-			// https://api.cloudflare.com/#worker-subdomain-get-subdomain
-
-			logger.warn(
-				"You need to register a workers.dev subdomain before publishing to workers.dev"
-			);
-
-			const wantsToRegister = await confirm(
-				"Would you like to register a workers.dev subdomain now?",
-				{ fallbackValue: false }
-			);
-			if (!wantsToRegister) {
-				const solutionMessage = `You can either deploy your worker to one or more routes by specifying them in your ${configFileName(configPath)} file, or register a workers.dev subdomain here:`;
-				const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
-
-				throw new UserError(`${solutionMessage}\n${onboardingLink}`, {
-					telemetryMessage: "routes workers dev registration declined",
-				});
-			}
-
-			return await registerSubdomain(complianceConfig, accountId, configPath);
-		} else {
+		if (typeof error !== "object" || !error || error.code !== 10007) {
 			throw e;
+		}
+
+		// 10007 error code: not found
+		// https://api.cloudflare.com/#worker-subdomain-get-subdomain
+		logger.warn(getRegistrationWarning(registrationContext));
+
+		const wantsToRegister = await confirm(
+			"Would you like to register a workers.dev subdomain now?",
+			{ fallbackValue: false }
+		);
+		if (!wantsToRegister) {
+			throw getRegistrationDeclinedError(
+				registrationContext,
+				accountId,
+				configPath
+			);
+		}
+
+		return await registerSubdomain(
+			complianceConfig,
+			accountId,
+			configPath,
+			registrationContext
+		);
+	}
+}
+
+function getRegistrationWarning(
+	registrationContext: WorkersDevSubdomainRegistrationContext
+): string {
+	switch (registrationContext) {
+		case "workflows":
+			return "You need to register a workers.dev subdomain before deploying Workflows";
+		case "workers_dev":
+			return "You need to register a workers.dev subdomain before publishing to workers.dev";
+		default: {
+			const _exhaustive: never = registrationContext;
+			return _exhaustive;
+		}
+	}
+}
+
+function getRegistrationDeclinedError(
+	registrationContext: WorkersDevSubdomainRegistrationContext,
+	accountId: string,
+	configPath: string | undefined
+): UserError {
+	const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
+	switch (registrationContext) {
+		case "workflows":
+			return new UserError(
+				`Workflows require your account to have a workers.dev subdomain. Register a workers.dev subdomain here:\n${onboardingLink}`,
+				{
+					telemetryMessage: "workflows workers dev registration declined",
+				}
+			);
+		case "workers_dev": {
+			const solutionMessage = `You can either deploy your worker to one or more routes by specifying them in your ${configFileName(configPath)} file, or register a workers.dev subdomain here:`;
+			return new UserError(`${solutionMessage}\n${onboardingLink}`, {
+				telemetryMessage: "routes workers dev registration declined",
+			});
+		}
+		default: {
+			const _exhaustive: never = registrationContext;
+			return _exhaustive;
 		}
 	}
 }
@@ -64,7 +121,8 @@ export async function getWorkersDevSubdomain(
 async function registerSubdomain(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	configPath: string | undefined
+	configPath: string | undefined,
+	registrationContext: WorkersDevSubdomainRegistrationContext
 ): Promise<string> {
 	let subdomain: string | undefined;
 
@@ -117,12 +175,11 @@ async function registerSubdomain(
 			)}. Ok to proceed?`
 		);
 		if (!ok) {
-			const solutionMessage = `You can either deploy your worker to one or more routes by specifying them in your ${configFileName(configPath)} file, or register a workers.dev subdomain here:`;
-			const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
-
-			throw new UserError(`${solutionMessage}\n${onboardingLink}`, {
-				telemetryMessage: "routes workers dev registration declined",
-			});
+			throw getRegistrationDeclinedError(
+				registrationContext,
+				accountId,
+				configPath
+			);
 		}
 
 		try {

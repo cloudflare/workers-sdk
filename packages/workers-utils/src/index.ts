@@ -66,6 +66,7 @@ export {
 export {
 	resolveWranglerConfigPath,
 	findWranglerConfig,
+	isRedirectedConfig,
 } from "./config/config-helpers";
 export type { ResolveConfigPathOptions } from "./config/config-helpers";
 export * from "./errors";

@@ -1,9 +1,8 @@
 import assert from "node:assert";
 import path from "node:path";
-import { bold, dim, green } from "@cloudflare/cli-shared-helpers/colors";
+import { bold, green } from "@cloudflare/cli-shared-helpers/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { getRegistryPath, startTunnel } from "@cloudflare/workers-utils";
-import chalk from "chalk";
+import { getRegistryPath } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { DevEnv } from "../api";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
@@ -14,6 +13,7 @@ import registerDevHotKeys from "../dev/hotkeys";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
+import { TunnelManager } from "../tunnel/dev";
 import { requireApiToken, requireAuth } from "../user";
 import {
 	collectKeyValues,
@@ -24,14 +24,14 @@ import type { StartDevOptionsBindings } from "../api/startDevWorker/utils";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
-import type { Config, Tunnel } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils";
 
 /**
  * Starts one (primary) or more (secondary) DevEnv environments given the `args`.
  */
 export async function startDev(args: StartDevOptions) {
 	let devEnv: DevEnv | DevEnv[] | undefined;
-	let tunnel: Tunnel | undefined;
+	let tunnelManager: TunnelManager | undefined;
 	let unregisterHotKeys: (() => void) | undefined;
 	try {
 		if (args.logLevel) {
@@ -51,7 +51,10 @@ export async function startDev(args: StartDevOptions) {
 					unregisterHotKeys = registerDevHotKeys(
 						Array.isArray(devEnv) ? devEnv : [devEnv],
 						args,
-						{ getTunnel: () => tunnel, render: false }
+						{
+							tunnelManager,
+							render: false,
+						}
 					);
 				}
 			}
@@ -105,26 +108,24 @@ export async function startDev(args: StartDevOptions) {
 					})
 				))
 			);
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(devEnv, args, {
-					getTunnel: () => tunnel,
-				});
-			}
 		} else {
 			devEnv = new DevEnv();
 
 			await setupDevEnv(devEnv, args.config, authHook, args);
-
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys([devEnv], args, {
-					getTunnel: () => tunnel,
-				});
-			}
 		}
 
-		const [primaryDevEnv, ...secondary] = Array.isArray(devEnv)
-			? devEnv
-			: [devEnv];
+		const devEnvs = Array.isArray(devEnv) ? devEnv : [devEnv];
+		const [primaryDevEnv, ...secondary] = devEnvs;
+
+		tunnelManager = new TunnelManager(primaryDevEnv, args);
+
+		primaryDevEnv.on("teardown", () => {
+			tunnelManager?.getTunnel()?.dispose();
+		});
+
+		if (isInteractive() && args.showInteractiveDevSession !== false) {
+			unregisterHotKeys = registerDevHotKeys(devEnvs, args, { tunnelManager });
+		}
 
 		// The ProxyWorker will have a stable host and port, so only listen for the first update
 		void primaryDevEnv.proxy.ready.promise.then(({ url }) => {
@@ -160,46 +161,7 @@ export async function startDev(args: StartDevOptions) {
 		// The port is already resolved by ConfigController, so we can build the
 		// origin URL now and let cloudflared connect as soon as the server binds.
 		if (args.tunnel) {
-			const config = primaryDevEnv.config.latestConfig;
-			const protocol = config?.dev?.server?.secure ? "https" : "http";
-			const hostname = config?.dev?.server?.hostname ?? "localhost";
-			const port = config?.dev?.server?.port ?? 8787;
-			const origin = new URL(
-				`${protocol}://${formatHostname(hostname)}:${port}`
-			);
-
-			logger.log(dim("⎔ Starting tunnel (usually takes a few seconds)..."));
-			tunnel = startTunnel({
-				origin,
-				extendHint: "Press [t] to extend by 1 hour.",
-				logger,
-			});
-
-			// Clean up tunnel on teardown
-			primaryDevEnv.on("teardown", () => {
-				tunnel?.dispose();
-			});
-
-			// User requested tunnel sharing explicitly. If it fails, let it throw
-			// and prevent dev server from starting without a tunnel.
-			const { publicUrl } = await tunnel.ready();
-
-			logger.log(
-				`⬣ Sharing via Cloudflare Tunnel: ` +
-					`${chalk.green(publicUrl.origin)}\n`
-			);
-			logger.warn(
-				chalk.dim("This URL is ") +
-					"publicly accessible" +
-					chalk.dim(". Anyone with it can:\n") +
-					chalk.dim(
-						"- Call ungated endpoints\n" +
-							"- Trigger logic that uses remote bindings\n" +
-							"- Reach internal services if your Worker proxies requests\n" +
-							"\n" +
-							"Consider using a named tunnel with Cloudflare Access to restrict access."
-					)
-			);
+			await tunnelManager.start();
 		}
 
 		return {
@@ -216,7 +178,7 @@ export async function startDev(args: StartDevOptions) {
 				unregisterHotKeys?.();
 			})(),
 			(async () => {
-				tunnel?.dispose();
+				tunnelManager?.getTunnel()?.dispose();
 			})(),
 		]);
 		throw e;
@@ -308,7 +270,10 @@ async function setupDevEnv(
 				// initialise with a random id
 				containerBuildId: generateContainerBuildId(),
 				generateTypes: args.types,
-				tunnel: args.tunnel,
+				tunnel: {
+					enabled: args.tunnel ?? false,
+					name: args.tunnelName,
+				},
 			},
 			legacy: {
 				site: (configParam) => {

@@ -23,6 +23,10 @@ import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { Unstable_Config } from "wrangler";
 
 export type PersistState = boolean | { path: string };
+export type TunnelConfig = {
+	autoStart?: boolean;
+	name?: string;
+};
 
 interface BaseWorkerConfig {
 	viteEnvironment?: { name?: string; childEnvironments?: string[] };
@@ -74,7 +78,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 	persistState?: PersistState;
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
-	tunnel?: boolean;
+	tunnel?: boolean | TunnelConfig;
 	experimental?: Experimental;
 }
 
@@ -98,7 +102,7 @@ interface BaseResolvedConfig {
 	inspectorPort: number | false | undefined;
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport">;
 	remoteBindings: boolean;
-	tunnel: boolean;
+	tunnel: TunnelConfig;
 }
 
 interface NonPreviewResolvedConfig extends BaseResolvedConfig {
@@ -272,7 +276,13 @@ export function resolvePluginConfig(
 	const shared = {
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
-		tunnel: pluginConfig.tunnel ?? false,
+		tunnel:
+			typeof pluginConfig.tunnel === "boolean"
+				? { autoStart: pluginConfig.tunnel }
+				: {
+						autoStart: pluginConfig.tunnel?.autoStart ?? false,
+						name: pluginConfig.tunnel?.name,
+					},
 		experimental: {
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,

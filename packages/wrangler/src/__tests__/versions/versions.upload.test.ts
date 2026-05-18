@@ -779,7 +779,7 @@ describe("versions upload", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the versions upload command.[0m
 
 				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-				  the target environment using the \`-e|--env\` flag.
+				  the target environment using the \`-e|--env\` flag or CLOUDFLARE_ENV env variable.
 				  If your intention is to use the top-level environment of your configuration simply pass an empty
 				  string to the flag to target such environment. For example \`--env=""\`.
 
@@ -830,6 +830,64 @@ describe("versions upload", () => {
 			setIsTTY(false);
 
 			const result = runWrangler("versions upload");
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async () => {
+			vi.stubEnv("CLOUDFLARE_ENV", "test");
+			mockGetScript();
+			mockUploadVersion(true);
+			mockPatchScriptSettings();
+			mockGetWorkerSubdomain({
+				enabled: true,
+				previews_enabled: false,
+				useServiceEnvironments: false,
+				env: "test",
+			});
+
+			// Setup
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			const result = runWrangler("versions upload");
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it('should not warn if --env="" is passed to explicitly target the top-level environment', async () => {
+			mockGetScript();
+			mockUploadVersion(true);
+			mockPatchScriptSettings();
+			mockGetWorkerSubdomain({
+				enabled: true,
+				previews_enabled: false,
+				useServiceEnvironments: false,
+			});
+
+			// Setup
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			const result = runWrangler('versions upload --env=""');
 
 			await expect(result).resolves.toBeUndefined();
 

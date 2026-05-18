@@ -18,18 +18,27 @@ const DEFAULT_TUNNEL_REMINDER_INTERVAL_MS = 10 * 60 * 1_000;
  */
 const QUICK_TUNNEL_URL_REGEX = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/;
 
-export interface TunnelResult {
+export interface QuickTunnelResult {
+	mode: "quick";
 	publicUrl: URL;
 }
 
+export interface NamedTunnelResult {
+	mode: "named";
+}
+
+export type TunnelResult = QuickTunnelResult | NamedTunnelResult;
+
 export interface Tunnel {
 	ready: () => Promise<TunnelResult>;
+	isOpen: () => boolean;
 	dispose: () => void;
 	extendExpiry: (ms?: number) => void;
 }
 
 export interface TunnelOptions {
 	origin: URL;
+	token?: string;
 	timeoutMs?: number;
 	expiryMs?: number;
 	reminderIntervalMs?: number;
@@ -57,18 +66,17 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 	const reminderIntervalMs =
 		options.reminderIntervalMs ?? DEFAULT_TUNNEL_REMINDER_INTERVAL_MS;
 	const defaultExpiryMs = options.expiryMs ?? DEFAULT_TUNNEL_EXPIRY_MS;
+	const isNamedTunnel = options.token !== undefined;
 	const timeFormatter = new Intl.DateTimeFormat(undefined, {
 		timeStyle: "short",
 	});
-	const cloudflaredArgs = [
-		"tunnel",
-		"--no-autoupdate",
-		"--url",
-		options.origin.href,
-	];
+	const cloudflaredArgs = isNamedTunnel
+		? ["tunnel", "--no-autoupdate", "run"]
+		: ["tunnel", "--no-autoupdate", "--url", options.origin.href];
 
 	const cloudflaredPromise = spawnCloudflared(cloudflaredArgs, {
 		stdio: "pipe",
+		env: options.token ? { TUNNEL_TOKEN: options.token } : undefined,
 		skipVersionCheck: true,
 		logger,
 	}).then((process) => {
@@ -82,17 +90,23 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 	});
 
 	const readyPromise = cloudflaredPromise
-		.then((process) =>
-			waitForQuickTunnelReady(process, timeoutMs, {
+		.then((process) => {
+			if (isNamedTunnel) {
+				return { mode: "named" } as const;
+			}
+
+			return waitForQuickTunnelReady(process, timeoutMs, {
 				logger,
 				origin: options.origin,
-			})
-		)
+			});
+		})
 		.then((result) => {
 			expiresAt = Date.now() + defaultExpiryMs;
 
 			scheduleExpiryTimeout();
-			scheduleReminder(result.publicUrl.origin);
+			scheduleReminder(
+				result.mode === "quick" ? result.publicUrl.origin : undefined
+			);
 
 			return result;
 		});
@@ -118,7 +132,7 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 		}
 	}
 
-	function scheduleReminder(publicURL: string) {
+	function scheduleReminder(publicURL: string | undefined) {
 		if (reminderIntervalMs > 0) {
 			reminderInterval = setInterval(() => {
 				if (disposed) {
@@ -131,7 +145,11 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 				}
 
 				logger?.log(
-					`The tunnel is still open at ${publicURL}. It expires in ${formatTunnelDuration(remainingMs)}. ${options.extendHint ?? ""}`
+					`${
+						publicURL
+							? `The tunnel is still open at ${publicURL}.`
+							: "The tunnel is still open."
+					} It expires in ${formatTunnelDuration(remainingMs)}. ${options.extendHint ?? ""}`
 				);
 			}, reminderIntervalMs);
 			reminderInterval.unref?.();
@@ -190,6 +208,7 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 
 	return {
 		ready: () => readyPromise,
+		isOpen: () => !disposed,
 		dispose: disposeTunnel,
 		extendExpiry,
 	};
@@ -262,7 +281,7 @@ function waitForQuickTunnelReady(
 				if (match && !resolved) {
 					resolved = true;
 					clearTimeout(timeoutId);
-					resolve({ publicUrl: new URL(match[0]) });
+					resolve({ mode: "quick", publicUrl: new URL(match[0]) });
 				}
 			});
 		}

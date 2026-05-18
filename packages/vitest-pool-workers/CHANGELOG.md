@@ -1,5 +1,25 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.16.6
+
+### Patch Changes
+
+- [#13833](https://github.com/cloudflare/workers-sdk/pull/13833) [`0e4a830`](https://github.com/cloudflare/workers-sdk/commit/0e4a830fa13d15614cad7655f14c3455009951c2) Thanks [@thegeekasteroid](https://github.com/thegeekasteroid)! - Filter benign `disconnected: WebSocket peer disconnected` workerd stderr noise during test runs.
+
+  The `ignoreMessages` array in the pool already filters several benign workerd disconnect messages (e.g. `disconnected: WebSocket was aborted`). On recent workerd versions, tests that exercise the WebSocket API also surface `disconnected: WebSocket peer disconnected` warnings during normal teardown. These are not user-actionable and obscure real test failures. Add the message to the existing filter alongside the other `disconnected:` entries.
+
+- Updated dependencies [[`19ed49a`](https://github.com/cloudflare/workers-sdk/commit/19ed49a008be273df0ce60a817f4f367f4cea8fd), [`3ff0a50`](https://github.com/cloudflare/workers-sdk/commit/3ff0a50349a78c17d64c45c0411771cc2d2dba0a), [`bf688f7`](https://github.com/cloudflare/workers-sdk/commit/bf688f7735d602e963a7907a4a703aa7de2038fe), [`2e72c83`](https://github.com/cloudflare/workers-sdk/commit/2e72c83aa95d25de343c396df67c0a35b83b70cd), [`802eaf4`](https://github.com/cloudflare/workers-sdk/commit/802eaf47fa28f5bfa3a07b0782acdaac6f12781d), [`506aa02`](https://github.com/cloudflare/workers-sdk/commit/506aa0243dbec68718170a9cf30f03c0ad0dd2b5), [`8f5cdb1`](https://github.com/cloudflare/workers-sdk/commit/8f5cdb14dda20f6036c2305195041105d4d109e3), [`be8a98c`](https://github.com/cloudflare/workers-sdk/commit/be8a98c2be0c83a270415ff4591e1b9971aab747)]:
+  - miniflare@4.20260515.0
+  - wrangler@4.92.0
+
+## 0.16.5
+
+### Patch Changes
+
+- Updated dependencies [[`d4794a8`](https://github.com/cloudflare/workers-sdk/commit/d4794a8fdba596e7f970a2623ddf24627d923e31), [`58b4403`](https://github.com/cloudflare/workers-sdk/commit/58b44035e2c2e1b9339bd2b798c5de5dc8bff7b9), [`4352f87`](https://github.com/cloudflare/workers-sdk/commit/4352f87afe0c14174c14a49e6c4f6102354faed7), [`a9e6741`](https://github.com/cloudflare/workers-sdk/commit/a9e674194f267b5f2ebe6b8554fa991edf2097b9), [`da664d5`](https://github.com/cloudflare/workers-sdk/commit/da664d59131a4abe4abb370cefc244d7d1c5f491), [`bdc398c`](https://github.com/cloudflare/workers-sdk/commit/bdc398c977da9738ef6e7fc2beadc0df270f17fc), [`f781a2b`](https://github.com/cloudflare/workers-sdk/commit/f781a2b874decbedc9dae09feff39ac861014016), [`1420f10`](https://github.com/cloudflare/workers-sdk/commit/1420f10c1011ac5a63bf27a10103f26b81bb4df3), [`c8be316`](https://github.com/cloudflare/workers-sdk/commit/c8be316ef95b8251ee7d64f9550482bdbfdfec9b)]:
+  - wrangler@4.91.0
+  - miniflare@4.20260511.0
+
 ## 0.16.4
 
 ### Patch Changes

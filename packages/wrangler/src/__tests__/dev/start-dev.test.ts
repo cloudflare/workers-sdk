@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => {
 	const configSet = vi.fn();
 	const fakeDevEnv = {
 		config: { set: configSet },
+		on: vi.fn(),
 		proxy: { ready: { promise: new Promise(() => {}) } },
 		teardown: vi.fn(),
 	};

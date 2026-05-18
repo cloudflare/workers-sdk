@@ -1,5 +1,47 @@
 # @cloudflare/vite-plugin
 
+## 1.37.1
+
+### Patch Changes
+
+- [#13922](https://github.com/cloudflare/workers-sdk/pull/13922) [`23800f8`](https://github.com/cloudflare/workers-sdk/commit/23800f8dfd6c3c3cb45c5584fe5be83f1f115237) Thanks [@edmundhung](https://github.com/edmundhung)! - Add a tunnel shortcut hint when CLI shortcuts are printed
+
+  The Cloudflare Vite plugin now includes a `t + enter` tunnel hint alongside the other CLI shortcuts it prints.
+
+- [#13920](https://github.com/cloudflare/workers-sdk/pull/13920) [`f579e57`](https://github.com/cloudflare/workers-sdk/commit/f579e575aed085447fe405377c4cee3cb93351ac) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Honor `X-Forwarded-Proto` when constructing the Worker's `request.url`
+
+  When running the Vite dev server behind a TLS-terminating reverse proxy or tunnel, the Worker's `request.url` was always `http://...` even though the client reached the server over `https://...`. This caused frameworks that perform Origin/Host checks (e.g. CSRF protection) to reject requests with `403`.
+
+  The Vite plugin now reads the `X-Forwarded-Proto` header from the incoming request and uses it to set the protocol of `request.url`. If the header is absent or invalid, the connection protocol is used as before. The same handling is applied to WebSocket upgrade URLs.
+
+  Fixes [#13801](https://github.com/cloudflare/workers-sdk/issues/13801).
+
+- Updated dependencies [[`19ed49a`](https://github.com/cloudflare/workers-sdk/commit/19ed49a008be273df0ce60a817f4f367f4cea8fd), [`3ff0a50`](https://github.com/cloudflare/workers-sdk/commit/3ff0a50349a78c17d64c45c0411771cc2d2dba0a), [`bf688f7`](https://github.com/cloudflare/workers-sdk/commit/bf688f7735d602e963a7907a4a703aa7de2038fe), [`2e72c83`](https://github.com/cloudflare/workers-sdk/commit/2e72c83aa95d25de343c396df67c0a35b83b70cd), [`802eaf4`](https://github.com/cloudflare/workers-sdk/commit/802eaf47fa28f5bfa3a07b0782acdaac6f12781d), [`506aa02`](https://github.com/cloudflare/workers-sdk/commit/506aa0243dbec68718170a9cf30f03c0ad0dd2b5), [`8f5cdb1`](https://github.com/cloudflare/workers-sdk/commit/8f5cdb14dda20f6036c2305195041105d4d109e3), [`be8a98c`](https://github.com/cloudflare/workers-sdk/commit/be8a98c2be0c83a270415ff4591e1b9971aab747)]:
+  - miniflare@4.20260515.0
+  - wrangler@4.92.0
+
+## 1.37.0
+
+### Minor Changes
+
+- [#13903](https://github.com/cloudflare/workers-sdk/pull/13903) [`7ce6f6f`](https://github.com/cloudflare/workers-sdk/commit/7ce6f6f52af709ec5f700d24ef666ef2be18b093) Thanks [@edmundhung](https://github.com/edmundhung)! - Add named tunnel support to the `cloudflare()` Vite plugin
+
+  You can now expose your local dev server publicly with a stable hostname by configuring `tunnel` with a named Cloudflare Tunnel:
+
+  ```ts
+  cloudflare({
+    tunnel: { name: "my-tunnel", autoStart: true },
+  });
+  ```
+
+  If `autoStart` is omitted or set to `false`, you can still start or close the tunnel by pressing `t + enter`.
+
+### Patch Changes
+
+- Updated dependencies [[`d4794a8`](https://github.com/cloudflare/workers-sdk/commit/d4794a8fdba596e7f970a2623ddf24627d923e31), [`58b4403`](https://github.com/cloudflare/workers-sdk/commit/58b44035e2c2e1b9339bd2b798c5de5dc8bff7b9), [`4352f87`](https://github.com/cloudflare/workers-sdk/commit/4352f87afe0c14174c14a49e6c4f6102354faed7), [`a9e6741`](https://github.com/cloudflare/workers-sdk/commit/a9e674194f267b5f2ebe6b8554fa991edf2097b9), [`da664d5`](https://github.com/cloudflare/workers-sdk/commit/da664d59131a4abe4abb370cefc244d7d1c5f491), [`bdc398c`](https://github.com/cloudflare/workers-sdk/commit/bdc398c977da9738ef6e7fc2beadc0df270f17fc), [`f781a2b`](https://github.com/cloudflare/workers-sdk/commit/f781a2b874decbedc9dae09feff39ac861014016), [`1420f10`](https://github.com/cloudflare/workers-sdk/commit/1420f10c1011ac5a63bf27a10103f26b81bb4df3), [`c8be316`](https://github.com/cloudflare/workers-sdk/commit/c8be316ef95b8251ee7d64f9550482bdbfdfec9b)]:
+  - wrangler@4.91.0
+  - miniflare@4.20260511.0
+
 ## 1.36.4
 
 ### Patch Changes
