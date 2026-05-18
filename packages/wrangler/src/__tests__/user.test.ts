@@ -4,6 +4,7 @@ import {
 } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
@@ -37,7 +38,6 @@ import {
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
 import { getMswSuccessMembershipHandlers } from "./helpers/msw/handlers/user";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { UserAuthConfig } from "../user";
 import type { Config } from "@cloudflare/workers-utils";

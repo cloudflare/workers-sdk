@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
 	getCacheFolder,
@@ -6,8 +7,6 @@ import {
 	saveToConfigCache,
 } from "../config-cache";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
-
 interface PagesConfigCache {
 	account_id: string;
 	pages_project_name: string;

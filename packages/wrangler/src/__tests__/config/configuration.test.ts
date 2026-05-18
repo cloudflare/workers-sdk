@@ -1,13 +1,14 @@
 import * as fs from "node:fs";
 import { experimental_readRawConfig } from "@cloudflare/workers-utils";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
 import { readConfig } from "../../config";
 import { updateCheck } from "../../update-check";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { runInTempDir } from "../helpers/run-in-tmp";
-
 describe("readConfig() upgrade hint", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();

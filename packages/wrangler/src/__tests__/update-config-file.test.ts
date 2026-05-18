@@ -1,13 +1,14 @@
 import { readFile } from "node:fs/promises";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import { createdResourceConfig } from "../utils/add-created-resource-config";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { runInTempDir } from "./helpers/run-in-tmp";
-
 describe("createdResourceConfig()", () => {
 	mockAccountId();
 	mockApiToken();

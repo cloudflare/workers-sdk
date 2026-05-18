@@ -1,5 +1,8 @@
 import { setTimeout } from "node:timers/promises";
-import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import {
+	normalizeString,
+	runInTempDir,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
 import { afterEach, describe, it, vi } from "vitest";
@@ -9,7 +12,6 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { MockWebSocket } from "../helpers/mock-web-socket";
 import { msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type {
 	AlarmEvent,

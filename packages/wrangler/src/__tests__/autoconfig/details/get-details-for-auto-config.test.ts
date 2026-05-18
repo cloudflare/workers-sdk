@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { seed } from "@cloudflare/workers-utils/test-helpers";
+import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as details from "../../../autoconfig/details";
 import * as configCache from "../../../config-cache";
@@ -12,7 +12,6 @@ import { PAGES_CONFIG_CACHE_FILENAME } from "../../../pages/constants";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { mockConfirm } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
-import { runInTempDir } from "../../helpers/run-in-tmp";
 import type { Config } from "@cloudflare/workers-utils";
 import type { Mock, MockInstance } from "vitest";
 

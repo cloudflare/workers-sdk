@@ -1,3 +1,4 @@
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 // eslint-disable-next-line no-restricted-imports
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +10,6 @@ import {
 	msw,
 	mswSuccessNamespacesHandlers,
 } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Mock } from "vitest";
 

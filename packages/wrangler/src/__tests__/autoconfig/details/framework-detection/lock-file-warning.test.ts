@@ -1,9 +1,7 @@
-import { seed } from "@cloudflare/workers-utils/test-helpers";
+import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { detectFramework } from "../../../../autoconfig/details/framework-detection";
 import { mockConsoleMethods } from "../../../helpers/mock-console";
-import { runInTempDir } from "../../../helpers/run-in-tmp";
-
 const noLockFileWarning =
 	"No lock file has been detected in the current working directory. This might indicate that the project is part of a workspace.";
 
