@@ -970,7 +970,7 @@ export async function loginOrRefreshIfRequired(
 		// Not logged in.
 		// If we are not interactive, we cannot ask the user to login
 		return !isNonInteractiveOrCI() && (await login(complianceConfig, props));
-	} else if (isAccessTokenExpired()) {
+	} else if (isRefreshNeeded()) {
 		// We're logged in, but the refresh token seems to have expired,
 		// so let's try to refresh it
 		const didRefresh = await refreshToken();
@@ -1003,7 +1003,7 @@ export async function getOAuthTokenFromLocalState(): Promise<
 	}
 
 	// If the token is expired, try to refresh it
-	if (isAccessTokenExpired()) {
+	if (isRefreshNeeded()) {
 		const didRefresh = await refreshToken();
 		if (!didRefresh) {
 			return undefined;
@@ -1204,16 +1204,17 @@ export async function login(
 }
 
 /**
- * Checks to see if the locally stored OAuth access token has expired.
+ * Checks to see if we need to refresh the OAuth token.
  *
  * Returns `false` when env-based credentials are present: in that case the
  * env token is what will be used for API calls, and the stored OAuth state
- * is not consulted, so its expiry is irrelevant. Without this short-circuit,
- * the presence of a stale OAuth token on disk could spuriously trigger an
- * OAuth refresh that fails and aborts the command, even though a perfectly
- * valid env-based credential is in scope.
+ * is not consulted, so its expiry is irrelevant.
+ *
+ * Without this short-circuit, the presence of a stale OAuth token on disk
+ * could spuriously trigger an OAuth refresh that fails and aborts the command,
+ * even though a perfectly valid env-based credential is in scope.
  */
-function isAccessTokenExpired(): boolean {
+function isRefreshNeeded(): boolean {
 	if (getAuthFromEnv()) {
 		return false;
 	}
