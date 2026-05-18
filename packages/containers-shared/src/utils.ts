@@ -109,9 +109,15 @@ type VerifyDockerInstalledOptions = {
 	dockerPath: string;
 	/** The number of container images that need to be built. Used to pluralize the error message. */
 	numberOfContainers: number;
-	/** Flag indicating whether the check is being run as part of `wrangler dev`. Defaults to `true`. */
+	/**
+	 * Flag indicating whether the check is being run as part of `wrangler dev`.
+	 * @default true
+	 */
 	isDev?: boolean;
-	/** Flag indicating whether the check is being run as part of a dry-run execution. Defaults to `false`. */
+	/**
+	 * Flag indicating whether the check is being run as part of a dry-run execution.
+	 * @default false
+	 */
 	isDryRun?: boolean;
 };
 
