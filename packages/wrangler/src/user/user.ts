@@ -410,12 +410,14 @@ export function validateScopeKeys(
 	return scopes.every((scope) => scope in DefaultScopes);
 }
 
-// Module-level state intentionally limited to the transient state shared
-// across the steps of one OAuth login flow. The on-disk OAuth tokens are NOT
-// cached here — they are read on demand by readStoredAuthState() so that env
-// vars loaded after module import (for example from `.env`) take priority
-// correctly. The selected-account cache is file-backed (wrangler-account.json)
-// and therefore naturally scoped to the current working directory.
+/**
+ * Module-level state intentionally limited to the transient state shared
+ * across the steps of one OAuth login flow. The on-disk OAuth tokens are NOT
+ * cached here — they are read on demand by readStoredAuthState() so that env
+ * vars loaded after module import (for example from `.env`) take priority
+ * correctly. The selected-account cache is file-backed (wrangler-account.json)
+ * and therefore naturally scoped to the current working directory.
+ */
 const oauthFlowState: OAuthFlowState = {};
 
 let hasWarnedAboutDeprecatedV1ApiToken = false;
