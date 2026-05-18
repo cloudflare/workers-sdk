@@ -118,7 +118,7 @@ type VerifyDockerInstalledOptions = {
 /**
  * Verifies that Docker is installed and the daemon is running.
  *
- * Throws a {@link UserError} if the Docker CLI cannot be reached.
+ * @throws {UserError} If the Docker CLI cannot be reached.
  *
  * @param options - Docker verification options.
  */
