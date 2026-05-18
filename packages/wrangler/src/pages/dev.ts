@@ -1026,7 +1026,6 @@ export const pagesDevCommand = createCommand({
 					logLevel: args.logLevel ?? "log",
 					experimentalProvision: undefined,
 					experimentalAutoCreate: false,
-					profile: undefined,
 					enableIpc: true,
 					config: Array.isArray(args.config) ? args.config : undefined,
 					site: undefined,

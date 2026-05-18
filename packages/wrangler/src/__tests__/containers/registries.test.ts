@@ -601,7 +601,8 @@ describe("containers registries list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
-			──────────────────"
+			──────────────────
+			Using profile: testing"
 		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ List configured container registries
@@ -697,6 +698,7 @@ describe("containers registries delete", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
+			Using profile: testing
 			? Are you sure you want to delete the registry credentials for 123456789012.dkr.ecr.us-west-2.amazonaws.com? This action cannot be undone.
 			🤖 Using fallback value in non-interactive context: yes"
 		`);
