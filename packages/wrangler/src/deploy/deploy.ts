@@ -977,7 +977,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				(container) => "dockerfile" in container
 			);
 			if (hasDockerfiles) {
-				await verifyDockerInstalled(dockerPath, false);
+				await verifyDockerInstalled({ dockerPath, isDev: false });
 			}
 		}
 

@@ -103,11 +103,22 @@ export const isDockerRunning = async (dockerPath: string) => {
 	return true;
 };
 
-/** throws when docker is not installed */
-export const verifyDockerInstalled = async (
-	dockerPath: string,
-	isDev = true
-) => {
+/**
+ * Verifies that Docker is installed and the daemon is running.
+ *
+ * Throws a {@link UserError} if the Docker CLI cannot be reached.
+ *
+ * @param options - Docker verification options.
+ */
+export const verifyDockerInstalled = async ({
+	dockerPath,
+	isDev = true,
+}: {
+	/** Path to the Docker CLI executable. */
+	dockerPath: string;
+	/** Flag indicating whether the check is being run as part of `wrangler dev`. Defaults to `true`. */
+	isDev?: boolean;
+}) => {
 	const dockerIsRunning = await isDockerRunning(dockerPath);
 	if (!dockerIsRunning) {
 		let message =
