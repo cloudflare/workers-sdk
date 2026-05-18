@@ -41,11 +41,11 @@ function createFetchResult(
 	};
 }
 
-function mockNoWorkerFound(isBulk = false) {
+function mockNoWorkerFound({ isBulk = false } = {}) {
 	if (isBulk) {
 		msw.use(
-			http.get(
-				"*/accounts/:accountId/workers/scripts/:scriptName/settings",
+			http.patch(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk",
 				async () => {
 					return HttpResponse.json(
 						createFetchResult(null, false, [
@@ -1079,16 +1079,8 @@ describe("wrangler secret", () => {
 			returnNetworkError = false
 		) => {
 			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				),
 				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk`,
 					({ params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						if (returnNetworkError) {
@@ -1335,16 +1327,8 @@ describe("wrangler secret", () => {
 			);
 
 			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				),
 				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk`,
 					({ params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						return HttpResponse.json(
@@ -1362,13 +1346,13 @@ describe("wrangler secret", () => {
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/secrets-bulk) failed.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
 				{
 				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.[0m
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/secrets-bulk) failed.[0m
 
 				  This is a helpful error [code: 1]
 
@@ -1389,7 +1373,7 @@ describe("wrangler secret", () => {
 			`);
 		});
 
-		it("should merge existing bindings and secrets when patching", async ({
+		it("should only send provided secrets via secrets-bulk endpoint", async ({
 			expect,
 		}) => {
 			writeFileSync(
@@ -1402,63 +1386,37 @@ describe("wrangler secret", () => {
 			);
 
 			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(
-							createFetchResult({
-								bindings: [
-									{
-										type: "plain_text",
-										name: "env_var",
-										text: "the content",
-									},
-									{
-										type: "json",
-										name: "another_var",
-										json: { some: "stuff" },
-									},
-									{ type: "secret_text", name: "secret-name-1" },
-									{ type: "secret_text", name: "secret-name-2" },
-									{ type: "secret_text", name: "secret-name-4" },
-								],
-							})
-						);
-					}
-				)
-			);
-			msw.use(
 				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk`,
 					async ({ request, params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 
-						const formBody = await request.formData();
-						const settings = formBody.get("settings");
-						expect(settings).not.toBeNull();
-						const parsedSettings = JSON.parse(settings as string);
-						expect(parsedSettings).toMatchObject({
-							bindings: [
-								{ type: "plain_text", name: "env_var" },
-								{ type: "json", name: "another_var" },
-								{ type: "secret_text", name: "secret-name-1" },
-								{
-									type: "secret_text",
+						// The new endpoint uses JSON Merge Patch, not FormData
+						const patchBody = (await request.json()) as {
+							secrets: Record<string, unknown>;
+						};
+
+						// Only the provided secrets should be in the body under "secrets" —
+						// the API handles preserving existing secrets and non-secret bindings
+						expect(patchBody).toEqual({
+							secrets: {
+								"secret-name-2": {
 									name: "secret-name-2",
 									text: "secret_text",
-								},
-								{
 									type: "secret_text",
+								},
+								"secret-name-3": {
 									name: "secret-name-3",
 									text: "secret_text",
+									type: "secret_text",
 								},
-								{ type: "secret_text", name: "secret-name-4", text: "" },
-							],
+								"secret-name-4": {
+									name: "secret-name-4",
+									text: "",
+									type: "secret_text",
+								},
+							},
 						});
-						expect(parsedSettings).not.toHaveProperty(["bindings", 0, "text"]);
-						expect(parsedSettings).not.toHaveProperty(["bindings", 1, "json"]);
 
 						return HttpResponse.json(createFetchResult(null));
 					}
@@ -1494,7 +1452,7 @@ describe("wrangler secret", () => {
 					"secret-name-2": "secret_text",
 				})
 			);
-			mockNoWorkerFound(true);
+			mockNoWorkerFound({ isBulk: true });
 			mockConfirm({
 				text: `There doesn't seem to be a Worker called "non-existent-worker". Do you want to create a new Worker with that name and add secrets to it?`,
 				result: false,
@@ -1521,7 +1479,8 @@ describe("wrangler secret", () => {
 					"secret-name-2": "secret_text",
 				})
 			);
-			mockNoWorkerFound();
+			mockBulkRequest(expect); // Success case (base).
+			mockNoWorkerFound({ isBulk: true }); // Not found case (override, once).
 			msw.use(
 				http.put(
 					"*/accounts/:accountId/workers/scripts/:name",
@@ -1531,14 +1490,16 @@ describe("wrangler secret", () => {
 					}
 				)
 			);
-			mockBulkRequest(expect);
 
-			await runWrangler("secret bulk ./secret.json --name script-name");
+			await runWrangler("secret bulk ./secret.json --name non-existent-worker");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "script-name"
+				🌀 Creating the secrets for the Worker "non-existent-worker"
+				? There doesn't seem to be a Worker called "non-existent-worker". Do you want to create a new Worker with that name and add secrets to it?
+				🤖 Using fallback value in non-interactive context: yes
+				🌀 Creating new Worker "non-existent-worker"...
 				✨ Successfully created secret for key: secret-name-1
 				✨ Successfully created secret for key: secret-name-2
 
