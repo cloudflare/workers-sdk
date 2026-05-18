@@ -1,5 +1,9 @@
 import { describe, test } from "vitest";
-import { getTextResponse } from "../../__test-utils__";
+import {
+	getJsonResponse,
+	getTextResponse,
+	isBuild,
+} from "../../__test-utils__";
 
 describe("in-worker defined durable objects", async () => {
 	test("can bind to a Durable Object that does not extend the `DurableObject` class", async ({
@@ -23,4 +27,14 @@ describe("in-worker defined durable objects", async () => {
 			"Durable Object 'my-do' count: 1"
 		);
 	});
+	test.skipIf(isBuild)(
+		"preserves same-type RPC call order in the dev runner",
+		async ({ expect }) => {
+			const result = await getJsonResponse(
+				`/rpc-ordering?name=${crypto.randomUUID()}`
+			);
+
+			expect(result).toMatchObject({ inOrder: true });
+		}
+	);
 });
