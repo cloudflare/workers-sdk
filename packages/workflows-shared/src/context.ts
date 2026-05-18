@@ -178,6 +178,24 @@ export class Context extends RpcTarget {
 		return val;
 	}
 
+	#registerRollback(
+		cacheKey: string,
+		rollbackFn: RollbackFn | undefined,
+		stepName: string,
+		output: unknown,
+		rollbackConfig: WorkflowStepConfig | undefined
+	): void {
+		if (rollbackFn && this.#rollbackStep === undefined) {
+			this.#engine.registerRollbackFn(
+				cacheKey,
+				rollbackFn,
+				stepName,
+				output,
+				rollbackConfig
+			);
+		}
+	}
+
 	do(
 		name: string,
 		callback: (ctx: WorkflowStepContext) => Promise<unknown>,
@@ -800,6 +818,13 @@ export class Context extends RpcTarget {
 						stepNameWithCounter,
 						{}
 					);
+					this.#registerRollback(
+						cacheKey,
+						rollbackFn,
+						stepNameWithCounter,
+						undefined,
+						rollbackConfig
+					);
 
 					throw error;
 				}
@@ -896,6 +921,13 @@ export class Context extends RpcTarget {
 						stepNameWithCounter,
 						{}
 					);
+					this.#registerRollback(
+						cacheKey,
+						rollbackFn,
+						stepNameWithCounter,
+						undefined,
+						rollbackConfig
+					);
 
 					await this.#state.storage.put(errorKey, error);
 					throw error;
@@ -909,15 +941,13 @@ export class Context extends RpcTarget {
 					streamOutput: { cacheKey, meta: lastStreamMeta },
 				}),
 			});
-			if (rollbackFn && !isRollback) {
-				this.#engine.registerRollbackFn(
-					cacheKey,
-					rollbackFn,
-					stepNameWithCounter,
-					result,
-					rollbackConfig
-				);
-			}
+			this.#registerRollback(
+				cacheKey,
+				rollbackFn,
+				stepNameWithCounter,
+				result,
+				rollbackConfig
+			);
 			await this.#engine.timeoutHandler.release(this.#engine);
 			return result;
 		};

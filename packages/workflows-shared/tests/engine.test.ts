@@ -1396,6 +1396,38 @@ describe("Rollback", () => {
 		]);
 	});
 
+	it("runs rollback for failed step", async ({ expect }) => {
+		const stub = await runWorkflow("RB-FAILED-STEP", async (_e, step) => {
+			await withRollbackOptions(step).do(
+				"failed-step",
+				{ retries: { limit: 0, delay: 0, backoff: "constant" } },
+				async () => {
+					throw new Error("step-boom");
+				},
+				rollbackOptions(async (ctx) => {
+					if (
+						ctx.error.message !== "step-boom" ||
+						ctx.output !== undefined ||
+						ctx.stepName !== "failed-step-1"
+					) {
+						throw new Error("unexpected failed-step rollback context");
+					}
+				})
+			);
+		});
+		const logs = await readLogsAfter(stub, (l) =>
+			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
+		);
+		const rollbackStepTargets = targetsOf(
+			logs,
+			InstanceEvent.ROLLBACK_STEP_SUCCESS
+		);
+		const stepFailureTargets = targetsOf(logs, InstanceEvent.STEP_FAILURE);
+
+		expect(rollbackStepTargets).toEqual(["failed-step-1"]);
+		expect(stepFailureTargets).toContain("failed-step-1");
+	});
+
 	it("only runs rollbacks for steps with a registered fn", async ({
 		expect,
 	}) => {
