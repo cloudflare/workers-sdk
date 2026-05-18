@@ -1,5 +1,11 @@
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
+import {
+	experimental_generateAiModelTypes,
+	experimental_getAiModelSchema,
+	experimental_listAiModels,
+} from "../api";
+import { captureRequestsFrom } from "./helpers/capture-requests-from";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -271,6 +277,109 @@ describe("ai commands", () => {
 	});
 });
 
+describe("ai model type API", () => {
+	mockAccountId();
+	mockApiToken();
+	runInTempDir();
+
+	it("lists models with catalog filters", async ({ expect }) => {
+		const requests = mockAISearchRequest();
+
+		const models = await experimental_listAiModels({
+			author: "cloudflare",
+			hideExperimental: true,
+			search: "resnet",
+			source: 1,
+			task: "Image Classification",
+		});
+
+		expect(models.map((model) => model.name)).toEqual([
+			"@cloudflare/embeddings_bge_large_en",
+			"@cloudflare/resnet50",
+		]);
+		expect(requests.requests).toHaveLength(1);
+
+		const url = new URL(requests.requests[0].url);
+		expect(url.pathname).toBe(
+			"/client/v4/accounts/some-account-id/ai/models/search"
+		);
+		expect(url.searchParams.get("author")).toBe("cloudflare");
+		expect(url.searchParams.get("hide_experimental")).toBe("true");
+		expect(url.searchParams.get("page")).toBe("1");
+		expect(url.searchParams.get("per_page")).toBe("50");
+		expect(url.searchParams.get("search")).toBe("resnet");
+		expect(url.searchParams.get("source")).toBe("1");
+		expect(url.searchParams.get("task")).toBe("Image Classification");
+	});
+
+	it("fetches a model schema", async ({ expect }) => {
+		const requests = mockAISchemaRequest();
+
+		const schema = await experimental_getAiModelSchema({
+			model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+		});
+
+		expect(schema).toEqual(getMockAISchema());
+		expect(requests.requests).toHaveLength(1);
+
+		const url = new URL(requests.requests[0].url);
+		expect(url.pathname).toBe(
+			"/client/v4/accounts/some-account-id/ai/models/schema"
+		);
+		expect(url.searchParams.get("model")).toBe(
+			"@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+		);
+	});
+
+	it("generates model type declarations from schemas", async ({ expect }) => {
+		const requests = mockAISchemaRequest();
+
+		const result = await experimental_generateAiModelTypes({
+			models: [
+				"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+				"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+			],
+		});
+
+		expect(requests.requests).toHaveLength(1);
+		expect(result.bindingTypeName).toBe("CloudflareAi");
+		expect(result.modelMapTypeName).toBe("CloudflareAiModels");
+		expect(result.models).toHaveLength(1);
+		expect(result.models[0]).toMatchObject({
+			model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+			modelTypeName: "CloudflareAi_Cf_Meta_Llama_3_3_70b_Instruct_Fp8_Fast",
+			inputTypeName:
+				"CloudflareAi_Cf_Meta_Llama_3_3_70b_Instruct_Fp8_Fast_Input",
+			outputTypeName:
+				"CloudflareAi_Cf_Meta_Llama_3_3_70b_Instruct_Fp8_Fast_Output",
+		});
+		expect(result.declarations).toContain("interface CloudflareAiModels");
+		expect(result.declarations).toContain(
+			'"@cf/meta/llama-3.3-70b-instruct-fp8-fast": CloudflareAi_Cf_Meta_Llama_3_3_70b_Instruct_Fp8_Fast;'
+		);
+		expect(result.declarations).toContain(
+			"type CloudflareAi = Ai<CloudflareAiModels>;"
+		);
+		expect(result.declarations).toContain("image: string;");
+		expect(result.declarations).toContain("labels: Array<string>;");
+		expect(result.declarations).toContain('mode?: "fast" | "accurate";');
+		expect(result.declarations).toContain("threshold?: number | null;");
+		expect(result.declarations).toContain(
+			"type CloudflareAi_Cf_Meta_Llama_3_3_70b_Instruct_Fp8_Fast_Output = Array<Record<string, unknown>>;"
+		);
+	});
+
+	it("requires at least one model when generating declarations", async ({
+		expect,
+	}) => {
+		await expect(
+			experimental_generateAiModelTypes({ models: [] })
+		).rejects.toThrow(
+			"At least one Workers AI model name is required to generate model types."
+		);
+	});
+});
+
 /** Create a mock handler for AI API */
 function mockAIListFinetuneRequest() {
 	msw.use(
@@ -321,7 +430,7 @@ function mockAIListFinetuneRequest() {
 }
 
 function mockAISearchRequest() {
-	msw.use(
+	const mockRequests = captureRequestsFrom(
 		http.get(
 			"*/accounts/:accountId/ai/models/search",
 			() => {
@@ -349,13 +458,68 @@ function mockAISearchRequest() {
 								description: null,
 							},
 						],
-						true
+						true,
+						[],
+						[],
+						{
+							page: 1,
+							per_page: 50,
+						}
 					)
 				);
 			},
 			{ once: true }
 		)
 	);
+
+	return mockRequests();
+}
+
+function mockAISchemaRequest() {
+	const mockRequests = captureRequestsFrom(
+		http.get(
+			"*/accounts/:accountId/ai/models/schema",
+			() => {
+				return HttpResponse.json(createFetchResult(getMockAISchema(), true));
+			},
+			{ once: true }
+		)
+	);
+
+	return mockRequests();
+}
+
+function getMockAISchema() {
+	return {
+		input: {
+			type: "object",
+			required: ["image", "labels"],
+			properties: {
+				image: {
+					type: "string",
+					format: "binary",
+				},
+				labels: {
+					type: "array",
+					items: {
+						type: "string",
+					},
+				},
+				mode: {
+					enum: ["fast", "accurate"],
+				},
+				threshold: {
+					type: ["number", "null"],
+				},
+			},
+		},
+		output: {
+			type: "array",
+			items: {
+				type: "object",
+			},
+		},
+	};
 }
 
 function mockAIOverflowRequest() {

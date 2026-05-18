@@ -7,6 +7,20 @@ export type {
 	Experimental_GenerateTypesResult,
 } from "./generate-types";
 export {
+	generateAiModelTypes as experimental_generateAiModelTypes,
+	getAiModelSchema as experimental_getAiModelSchema,
+	listAiModels as experimental_listAiModels,
+} from "./ai-model-types";
+export type {
+	Experimental_AiModelSchema,
+	Experimental_AiModelTypeEntry,
+	Experimental_GenerateAiModelTypesOptions,
+	Experimental_GenerateAiModelTypesResult,
+	Experimental_GetAiModelSchemaOptions,
+	Experimental_JsonSchema,
+	Experimental_ListAiModelsOptions,
+} from "./ai-model-types";
+export {
 	uploadMTlsCertificate,
 	uploadMTlsCertificateFromFs,
 	listMTlsCertificates,
