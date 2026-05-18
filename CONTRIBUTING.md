@@ -24,6 +24,14 @@ We really appreciate your interest in making a contribution, and we want to make
 
 Thanks so much for helping us improve the [workers-sdk](https://github.com/cloudflare/workers-sdk), and we look forward to your contribution!
 
+## Naming experimental and unstable flags
+
+When adding Wrangler flags for behavior that is not yet stable, prefer an `experimental-` prefix for the long CLI flag name, such as `--experimental-autoconfig` or `--experimental-provision`. If the flag also needs a short opt-in alias, use the existing `x-` form, such as `--x-autoconfig` or `--x-provision`.
+
+Keep CLI flag names in kebab-case. Reserve `unstable_` and `experimental_` prefixes for exported JavaScript APIs rather than CLI flags, matching exports such as `unstable_dev` and `experimental_generateTypes`.
+
+If an experimental flag graduates or is no longer needed, keep the old flag hidden and deprecated while pointing users to the stable replacement, as with `--experimental-local` and `--experimental-include-runtime`.
+
 ## Getting started
 
 ### Set up your environment
