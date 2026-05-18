@@ -1,11 +1,8 @@
 import { runInTempDir as runInTempDirCommon } from "@cloudflare/workers-utils/test-helpers";
-import { beforeEach } from "vitest";
-import { reinitialiseAuthTokens } from "../../user";
 
 export function runInTempDir(options?: { homedir: string }) {
 	runInTempDirCommon(options);
-	beforeEach(() => {
-		// Now that we have changed the home directory location, we must reinitialize the user auth state
-		reinitialiseAuthTokens();
-	});
+	// Auth state is read on demand from the auth config file in the current
+	// home directory, so no module-level cache to invalidate after the temp
+	// directory has been swapped in.
 }

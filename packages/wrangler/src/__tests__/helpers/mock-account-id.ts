@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, vi } from "vitest";
-import { reinitialiseAuthTokens } from "../../user";
 
 /**
  * Mock the API token so that we don't need to read it from user configuration files.
@@ -19,8 +18,6 @@ export function mockApiToken({
 		} else {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", apiToken);
 		}
-		// Now we have updated the environment, we must reinitialize the user auth state.
-		reinitialiseAuthTokens();
 	});
 }
 
@@ -40,8 +37,6 @@ export function mockAccountId({
 		} else {
 			process.env.CLOUDFLARE_ACCOUNT_ID = accountId;
 		}
-		// Now we have updated the environment, we must reinitialize the user auth state.
-		reinitialiseAuthTokens();
 	});
 	afterEach(() => {
 		if (ORIGINAL_CLOUDFLARE_ACCOUNT_ID === undefined) {

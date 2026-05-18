@@ -2,7 +2,6 @@ import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { describe, it, vi } from "vitest";
 import * as d1Execute from "../../d1/execute";
-import { reinitialiseAuthTokens } from "../../user";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
@@ -316,7 +315,6 @@ Your database may not be available to serve requests during the migration, conti
 			expect,
 		}) => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "api-token");
-			reinitialiseAuthTokens();
 			setIsTTY(false);
 			writeWranglerConfig();
 			await expect(
