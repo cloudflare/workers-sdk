@@ -428,10 +428,10 @@ let hasWarnedAboutDeprecatedV1ApiToken = false;
  * being cached at module scope, so that environment-based credentials loaded
  * after module import are honoured.
  *
- * Returns an empty object when no auth config file exists or the file cannot
+ * @return an empty object when no auth config file exists or the file cannot
  * be parsed — the caller treats this as "not logged in via local OAuth".
  *
- * The optional `config` argument lets callers seed the state from an
+ * @param config The optional `config` argument lets callers seed the state from an
  * in-memory config (used by the OAuth login flow before it writes to disk).
  */
 function readStoredAuthState(config?: UserAuthConfig): StoredAuthState {
