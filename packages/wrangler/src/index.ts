@@ -529,12 +529,6 @@ export function createCLIParser(argv: string[]) {
 			hidden: true,
 			alias: "x-auto-create",
 		},
-		profile: {
-			describe:
-				"Authentication profile to use for this command (allows multiple Cloudflare accounts)",
-			type: "string",
-			requiresArg: true,
-		},
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
@@ -565,9 +559,6 @@ export function createCLIParser(argv: string[]) {
 		.middleware((_argv) => {
 			if (_argv.cwd) {
 				process.chdir(_argv.cwd);
-			}
-			if (_argv.profile) {
-				setProfileOverride(_argv.profile);
 			}
 		})
 		.check(
@@ -614,7 +605,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "env-file", "help", "profile", "version"],
+		["config", "cwd", "env", "env-file", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 

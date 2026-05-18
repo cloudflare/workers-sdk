@@ -217,7 +217,6 @@ export async function unstable_dev(
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
 		experimentalAutoCreate: false,
-		profile: undefined,
 		enableIpc: options?.experimental?.enableIpc,
 		nodeCompat: undefined,
 		enableContainers: options?.experimental?.enableContainers ?? false,

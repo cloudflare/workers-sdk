@@ -12,7 +12,6 @@ export interface CommonYargsOptions {
 	"env-file": string[] | undefined;
 	"experimental-provision": boolean | undefined;
 	"experimental-auto-create": boolean;
-	profile: string | undefined;
 }
 
 export type CommonYargsArgvSanitized<P = CommonYargsOptions> = OnlyCamelCase<

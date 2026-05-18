@@ -1,33 +1,28 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
-	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getGlobalWranglerConfigPath,
-	parseTOML,
 	readFileSync,
 } from "@cloudflare/workers-utils";
-import { http, HttpResponse } from "msw";
-import TOML from "smol-toml";
 import { beforeEach, describe, it, vi } from "vitest";
 import {
-	clearProfileOverride,
 	deleteProfile,
-	fetchAllAccounts,
 	getActiveProfile,
 	getAuthConfigFilePath,
+	getProfileForDirectory,
 	listProfiles,
 	profileExists,
 	readAuthConfigFile,
+	readDirectoryBindings,
 	setActiveProfile,
-	setProfileOverride,
 	validateProfileName,
 	writeAuthConfigFile,
+	writeDirectoryBindings,
 } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import {
-	createFetchResult,
 	msw,
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
@@ -88,14 +83,18 @@ describe("Profile", () => {
 			expect(filePath).not.toContain("profiles");
 		});
 
-		it("should return profiles/<name>.toml for named profiles", ({ expect }) => {
+		it("should return profiles/<name>.toml for named profiles", ({
+			expect,
+		}) => {
 			const filePath = getAuthConfigFilePath("work");
 			expect(filePath).toContain(path.join("profiles", "work.toml"));
 		});
 	});
 
 	describe("writeAuthConfigFile / readAuthConfigFile", () => {
-		it("should write and read auth config for the default profile", ({ expect }) => {
+		it("should write and read auth config for the default profile", ({
+			expect,
+		}) => {
 			const config: UserAuthConfig = {
 				oauth_token: "test-token",
 				refresh_token: "test-refresh",
@@ -108,7 +107,9 @@ describe("Profile", () => {
 			expect(read.refresh_token).toBe("test-refresh");
 		});
 
-		it("should write and read auth config for a named profile", ({ expect }) => {
+		it("should write and read auth config for a named profile", ({
+			expect,
+		}) => {
 			const config: UserAuthConfig = {
 				oauth_token: "work-token",
 				refresh_token: "work-refresh",
@@ -207,15 +208,8 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("should respect setProfileOverride", ({ expect }) => {
-			setProfileOverride("custom");
-			expect(getActiveProfile()).toBe("custom");
-		});
-
-		it("should respect profiles.toml active_profile", ({ expect }) => {
+		it("should respect active.json active_profile", ({ expect }) => {
 			setActiveProfile("work");
-			// Reset any override so profiles.toml is checked
-			clearProfileOverride();
 			expect(getActiveProfile()).toBe("work");
 		});
 
@@ -227,31 +221,96 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("should reject invalid active_profile in profiles.toml", ({ expect }) => {
-			const configDir = path.join(
-				getGlobalWranglerConfigPath(),
-				"config"
-			);
+		it("should reject invalid active_profile in active.json", ({ expect }) => {
+			const configDir = path.join(getGlobalWranglerConfigPath(), "config");
 			mkdirSync(configDir, { recursive: true });
 			writeFileSync(
-				path.join(configDir, "profiles.toml"),
-				TOML.stringify({ active_profile: "foo/bar" })
+				path.join(configDir, "active.json"),
+				JSON.stringify({ active_profile: "foo/bar" })
 			);
 			expect(() => getActiveProfile()).toThrow(
 				"Only letters, numbers, hyphens, and underscores"
 			);
 		});
+
+		it("should resolve profile from directory binding", ({ expect }) => {
+			const dir = process.cwd();
+			writeDirectoryBindings({ [dir]: "work" });
+			expect(getActiveProfile()).toBe("work");
+		});
+
+		it("should walk up directories to find a binding", ({ expect }) => {
+			const parentDir = path.dirname(process.cwd());
+			writeDirectoryBindings({ [parentDir]: "work" });
+			expect(getActiveProfile()).toBe("work");
+		});
+
+		it("should prioritize WRANGLER_PROFILE over directory binding", ({
+			expect,
+		}) => {
+			const dir = process.cwd();
+			writeDirectoryBindings({ [dir]: "dir-profile" });
+			vi.stubEnv("WRANGLER_PROFILE", "env-profile");
+			expect(getActiveProfile()).toBe("env-profile");
+			vi.unstubAllEnvs();
+		});
+
+		it("should prioritize directory binding over active.json", ({ expect }) => {
+			setActiveProfile("active-profile");
+			const dir = process.cwd();
+			writeDirectoryBindings({ [dir]: "dir-profile" });
+			expect(getActiveProfile()).toBe("dir-profile");
+		});
+	});
+
+	describe("directory bindings", () => {
+		it("should return undefined when no bindings exist", ({ expect }) => {
+			expect(getProfileForDirectory()).toBeUndefined();
+		});
+
+		it("should match exact directory", ({ expect }) => {
+			const dir = process.cwd();
+			writeDirectoryBindings({ [dir]: "work" });
+			expect(getProfileForDirectory(dir)).toBe("work");
+		});
+
+		it("should walk up to parent directories", ({ expect }) => {
+			const parentDir = path.dirname(process.cwd());
+			writeDirectoryBindings({ [parentDir]: "parent-profile" });
+			expect(getProfileForDirectory(process.cwd())).toBe("parent-profile");
+		});
+
+		it("should return undefined when no ancestor matches", ({ expect }) => {
+			writeDirectoryBindings({ "/some/other/path": "work" });
+			expect(getProfileForDirectory(process.cwd())).toBeUndefined();
+		});
+
+		it("should prefer the nearest ancestor binding", ({ expect }) => {
+			const dir = process.cwd();
+			const parentDir = path.dirname(dir);
+			writeDirectoryBindings({
+				[parentDir]: "parent-profile",
+				[dir]: "child-profile",
+			});
+			expect(getProfileForDirectory(dir)).toBe("child-profile");
+		});
+
+		it("should read and write bindings correctly", ({ expect }) => {
+			expect(readDirectoryBindings()).toEqual({});
+			writeDirectoryBindings({ "/foo": "bar", "/baz": "qux" });
+			expect(readDirectoryBindings()).toEqual({ "/foo": "bar", "/baz": "qux" });
+		});
 	});
 
 	describe("setActiveProfile", () => {
-		it("should write profiles.toml", ({ expect }) => {
+		it("should write active.json", ({ expect }) => {
 			setActiveProfile("work");
-			const profilesConfigPath = path.join(
+			const filePath = path.join(
 				getGlobalWranglerConfigPath(),
 				"config",
-				"profiles.toml"
+				"active.json"
 			);
-			const content = parseTOML(readFileSync(profilesConfigPath)) as {
+			const content = JSON.parse(readFileSync(filePath)) as {
 				active_profile?: string;
 			};
 			expect(content.active_profile).toBe("work");
@@ -266,9 +325,7 @@ describe("Profile", () => {
 		});
 
 		it("should throw when profile doesn't exist", ({ expect }) => {
-			expect(() => deleteProfile("nonexistent")).toThrow(
-				'does not exist'
-			);
+			expect(() => deleteProfile("nonexistent")).toThrow("does not exist");
 		});
 
 		it("should delete an existing profile", ({ expect }) => {
@@ -285,7 +342,9 @@ describe("Profile", () => {
 			expect(profileExists("work")).toBe(false);
 		});
 
-		it("should reset profiles.toml when deleting active profile while a different override is set", ({ expect }) => {
+		it("should reset active.json when deleting active profile", ({
+			expect,
+		}) => {
 			writeAuthConfigFile(
 				{
 					oauth_token: "token",
@@ -294,33 +353,42 @@ describe("Profile", () => {
 				},
 				"work"
 			);
-			// Mark "work" as the active profile in profiles.toml
 			setActiveProfile("work");
 			expect(getActiveProfile()).toBe("work");
 
-			// Set a CLI override to a different profile so getActiveProfile()
-			// would return "personal" instead of "work"
+			deleteProfile("work");
+			expect(getActiveProfile()).toBe("default");
+		});
+
+		it("should remove directory bindings for the deleted profile", ({
+			expect,
+		}) => {
 			writeAuthConfigFile(
 				{
-					oauth_token: "token2",
-					refresh_token: "refresh2",
+					oauth_token: "token",
+					refresh_token: "refresh",
 					expiration_time: "2030-01-01T00:00:00Z",
 				},
-				"personal"
+				"work"
 			);
-			setProfileOverride("personal");
-			expect(getActiveProfile()).toBe("personal");
+			writeDirectoryBindings({
+				"/project-a": "work",
+				"/project-b": "personal",
+				"/project-c": "work",
+			});
 
-			// Delete "work" — profiles.toml should be reset to "default"
-			// even though the override points elsewhere
 			deleteProfile("work");
-			clearProfileOverride();
-			expect(getActiveProfile()).toBe("default");
+
+			expect(readDirectoryBindings()).toEqual({
+				"/project-b": "personal",
+			});
 		});
 	});
 
 	describe("staging environment", () => {
-		it("profileExists should find staging profile in staging env", ({ expect }) => {
+		it("profileExists should find staging profile in staging env", ({
+			expect,
+		}) => {
 			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 			writeAuthConfigFile(
 				{
@@ -334,7 +402,9 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("profileExists should not find production profile in staging env", ({ expect }) => {
+		it("profileExists should not find production profile in staging env", ({
+			expect,
+		}) => {
 			writeAuthConfigFile(
 				{
 					oauth_token: "token",
@@ -348,7 +418,9 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("listProfiles should list staging profiles by correct name", ({ expect }) => {
+		it("listProfiles should list staging profiles by correct name", ({
+			expect,
+		}) => {
 			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 			writeAuthConfigFile(
 				{
@@ -364,7 +436,9 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("listProfiles should not list production profiles in staging env", ({ expect }) => {
+		it("listProfiles should not list production profiles in staging env", ({
+			expect,
+		}) => {
 			writeAuthConfigFile(
 				{
 					oauth_token: "token",
@@ -379,7 +453,9 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("deleteProfile should delete staging profile in staging env", ({ expect }) => {
+		it("deleteProfile should delete staging profile in staging env", ({
+			expect,
+		}) => {
 			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 			writeAuthConfigFile(
 				{
@@ -395,7 +471,9 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("deleteProfile should not find production profile in staging env", ({ expect }) => {
+		it("deleteProfile should not find production profile in staging env", ({
+			expect,
+		}) => {
 			writeAuthConfigFile(
 				{
 					oauth_token: "token",
@@ -412,7 +490,9 @@ describe("Profile", () => {
 
 	describe("CLI commands", () => {
 		describe("wrangler profile list", () => {
-			it("should list default profile when no others exist", async ({ expect }) => {
+			it("should list default profile when no others exist", async ({
+				expect,
+			}) => {
 				await runWrangler("profile list");
 				expect(std.out).toContain("default");
 			});
@@ -423,11 +503,11 @@ describe("Profile", () => {
 			});
 		});
 
-		describe("wrangler profile use", () => {
+		describe("wrangler profile set", () => {
 			it("should fail when profile doesn't exist", async ({ expect }) => {
-				await expect(
-					runWrangler("profile use nonexistent")
-				).rejects.toThrow(/does not exist/);
+				await expect(runWrangler("profile set nonexistent")).rejects.toThrow(
+					/does not exist/
+				);
 			});
 
 			it("should switch to an existing profile", async ({ expect }) => {
@@ -439,16 +519,34 @@ describe("Profile", () => {
 					},
 					"work"
 				);
-				await runWrangler("profile use work");
+				await runWrangler("profile set work");
 				expect(std.out).toContain('Switched to profile "work"');
+			});
+
+			it("should bind a directory when --dir is provided", async ({
+				expect,
+			}) => {
+				writeAuthConfigFile(
+					{
+						oauth_token: "token",
+						refresh_token: "refresh",
+						expiration_time: "2030-01-01T00:00:00Z",
+					},
+					"work"
+				);
+				const dir = process.cwd();
+				await runWrangler(`profile set work --dir ${dir}`);
+				expect(std.out).toContain("Bound directory");
+				expect(std.out).toContain('"work"');
+				expect(readDirectoryBindings()[dir]).toBe("work");
 			});
 		});
 
 		describe("wrangler profile delete", () => {
 			it("should fail when trying to delete default", async ({ expect }) => {
-				await expect(
-					runWrangler("profile delete default")
-				).rejects.toThrow(/Cannot delete the default profile/);
+				await expect(runWrangler("profile delete default")).rejects.toThrow(
+					/Cannot delete the default profile/
+				);
 			});
 
 			it("should delete an existing profile", async ({ expect }) => {
@@ -465,159 +563,76 @@ describe("Profile", () => {
 				expect(profileExists("work")).toBe(false);
 			});
 		});
+
+		describe("wrangler profile unset", () => {
+			it("should remove a directory binding", async ({ expect }) => {
+				const dir = process.cwd();
+				writeDirectoryBindings({ [dir]: "work" });
+				await runWrangler(`profile unset --dir ${dir}`);
+				expect(std.out).toContain("Removed profile binding");
+				expect(readDirectoryBindings()[dir]).toBeUndefined();
+			});
+
+			it("should default to cwd when --dir is not provided", async ({
+				expect,
+			}) => {
+				const dir = process.cwd();
+				writeDirectoryBindings({ [dir]: "work" });
+				await runWrangler("profile unset");
+				expect(std.out).toContain("Removed profile binding");
+				expect(readDirectoryBindings()[dir]).toBeUndefined();
+			});
+
+			it("should fail when no binding exists", async ({ expect }) => {
+				await expect(runWrangler("profile unset")).rejects.toThrow(
+					/No profile binding exists/
+				);
+			});
+		});
 	});
 
-	describe("memberships persistence", () => {
+	describe("login with --profile", () => {
 		const { mockOAuthServerCallback } = mockOAuthFlow();
 
 		beforeEach(() => {
 			msw.use(...mswSuccessUserHandlers);
 		});
 
-		it("should persist accounts to the auth config when logging in", async ({
-			expect,
-		}) => {
-			mockOAuthServerCallback("success");
-			await runWrangler("login");
-			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
-				api_token: undefined,
-				oauth_token: "test-access-token",
-				refresh_token: "test-refresh-token",
-				expiration_time: expect.any(String),
-				scopes: ["account:read"],
-				accounts: [
-					{
-						id: "account-1",
-						name: "Account One",
-						roles: ["Super Administrator - All Privileges"],
-					},
-					{
-						id: "account-2",
-						name: "Account Two",
-						roles: ["Super Administrator - All Privileges"],
-					},
-					{
-						id: "account-3",
-						name: "Account Three",
-						roles: ["Super Administrator - All Privileges"],
-					},
-				],
-			});
-		});
-
-		it("should still log in successfully when /memberships fails", async ({
-			expect,
-		}) => {
-			mockOAuthServerCallback("success");
-			msw.use(
-				http.get("*/memberships", () =>
-					HttpResponse.json(createFetchResult(null, false, [
-						{ code: 9106, message: "Authentication failed" },
-					]))
-				)
-			);
-			await runWrangler("login");
-			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
-				api_token: undefined,
-				oauth_token: "test-access-token",
-				refresh_token: "test-refresh-token",
-				expiration_time: expect.any(String),
-				scopes: ["account:read"],
-			});
-		});
-
-		it("should write accounts to the per-profile auth config when logging in with --profile", async ({
-			expect,
-		}) => {
+		it("should write auth config to the named profile", async ({ expect }) => {
 			mockOAuthServerCallback("success");
 			await runWrangler("login --profile work");
 
 			const workConfig = readAuthConfigFile("work");
 			expect(workConfig.oauth_token).toBe("test-access-token");
-			expect(workConfig.accounts).toEqual([
-				{
-					id: "account-1",
-					name: "Account One",
-					roles: ["Super Administrator - All Privileges"],
-				},
-				{
-					id: "account-2",
-					name: "Account Two",
-					roles: ["Super Administrator - All Privileges"],
-				},
-				{
-					id: "account-3",
-					name: "Account Three",
-					roles: ["Super Administrator - All Privileges"],
-				},
-			]);
+			expect(workConfig.refresh_token).toBe("test-refresh-token");
 
 			// Default profile should not have been touched.
 			expect(() => readAuthConfigFile("default")).toThrow();
 		});
 
-		it("should backfill the accounts field on fetchAllAccounts when missing", async ({
+		it("should write auth config via profile create alias", async ({
 			expect,
 		}) => {
-			// Simulate a pre-existing profile that does not yet have `accounts`.
-			writeAuthConfigFile({
-				oauth_token: "existing-token",
-				refresh_token: "existing-refresh",
-				expiration_time: "2030-01-01T00:00:00Z",
-				scopes: ["account:read"],
-			});
+			mockOAuthServerCallback("success");
+			await runWrangler("profile create work");
 
-			expect(readAuthConfigFile().accounts).toBeUndefined();
+			const workConfig = readAuthConfigFile("work");
+			expect(workConfig.oauth_token).toBe("test-access-token");
+			expect(workConfig.refresh_token).toBe("test-refresh-token");
 
-			await fetchAllAccounts(COMPLIANCE_REGION_CONFIG_UNKNOWN);
-
-			expect(readAuthConfigFile().accounts).toEqual([
-				{
-					id: "account-1",
-					name: "Account One",
-					roles: ["Super Administrator - All Privileges"],
-				},
-				{
-					id: "account-2",
-					name: "Account Two",
-					roles: ["Super Administrator - All Privileges"],
-				},
-				{
-					id: "account-3",
-					name: "Account Three",
-					roles: ["Super Administrator - All Privileges"],
-				},
-			]);
+			// Default profile should not have been touched.
+			expect(() => readAuthConfigFile("default")).toThrow();
 		});
 
-		it("should not overwrite an existing accounts field on fetchAllAccounts", async ({
+		it("should write auth config to default profile when no --profile is given", async ({
 			expect,
 		}) => {
-			const preExisting = [
-				{ id: "old-account", name: "Old", roles: ["Old role"] },
-			];
-			writeAuthConfigFile({
-				oauth_token: "existing-token",
-				refresh_token: "existing-refresh",
-				expiration_time: "2030-01-01T00:00:00Z",
-				scopes: ["account:read"],
-				accounts: preExisting,
-			});
+			mockOAuthServerCallback("success");
+			await runWrangler("login");
 
-			await fetchAllAccounts(COMPLIANCE_REGION_CONFIG_UNKNOWN);
-
-			expect(readAuthConfigFile().accounts).toEqual(preExisting);
-		});
-
-		it("should not backfill when the auth config has no oauth_token", async ({
-			expect,
-		}) => {
-			// API-token style config — no oauth_token. Backfill should skip.
-			writeAuthConfigFile({ api_token: "legacy-token" });
-
-			await fetchAllAccounts(COMPLIANCE_REGION_CONFIG_UNKNOWN);
-
-			expect(readAuthConfigFile().accounts).toBeUndefined();
+			const config = readAuthConfigFile();
+			expect(config.oauth_token).toBe("test-access-token");
+			expect(config.refresh_token).toBe("test-refresh-token");
 		});
 	});
 });
