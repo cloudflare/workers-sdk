@@ -9,13 +9,8 @@ import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchAllAccounts } from "./fetch-accounts";
 import { fetchMembershipRoles } from "./membership";
-import {
-	DefaultScopeKeys,
-	getActiveProfile,
-	getAPIToken,
-	getAuthFromEnv,
-	getScopes,
-} from ".";
+import { getActiveProfileName } from "./profiles";
+import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { ApiCredentials, Scope } from ".";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
@@ -49,7 +44,7 @@ export async function whoami(
 	configAccountId?: string,
 	json?: boolean
 ) {
-	const activeProfile = getActiveProfile();
+	const activeProfile = getActiveProfileName();
 	if (json) {
 		const user = await getUserInfo(complianceConfig);
 		if (!user) {
@@ -69,11 +64,6 @@ export async function whoami(
 		return;
 	}
 
-	if (activeProfile !== "default") {
-		logger.log(
-			`Using profile: ${chalk.blue(activeProfile)}`
-		);
-	}
 	logger.log("Getting User settings...");
 	const user = await getUserInfo(complianceConfig);
 	if (!user) {

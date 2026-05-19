@@ -45,7 +45,7 @@ describe("wrangler", () => {
 				  wrangler auth                   🔐 Manage authentication
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
-				  wrangler profile                🔀 Manage authentication profiles for multiple accounts [open beta]
+				  wrangler profiles               🔀 Manage authentication profiles for multiple accounts [open beta]
 				  wrangler whoami                 🕵️ Retrieve your user information
 
 				COMPUTE & AI
@@ -123,7 +123,7 @@ describe("wrangler", () => {
 				  wrangler auth                   🔐 Manage authentication
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
-				  wrangler profile                🔀 Manage authentication profiles for multiple accounts [open beta]
+				  wrangler profiles               🔀 Manage authentication profiles for multiple accounts [open beta]
 				  wrangler whoami                 🕵️ Retrieve your user information
 
 				COMPUTE & AI

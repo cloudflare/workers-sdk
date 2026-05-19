@@ -22,6 +22,7 @@ import {
 	requireAuth,
 	writeAuthConfigFile,
 } from "../user";
+import { setActiveProfile } from "../user/profiles";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockSelect } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -289,6 +290,44 @@ describe("User", () => {
 			[Error: OAuth login is not supported in the \`fedramp_high\` compliance region.
 			Please use a Cloudflare API token (\`CLOUDFLARE_API_TOKEN\` environment variable) or remove the \`CLOUDFLARE_API_ENVIRONMENT\` environment variable.]
 		`);
+		});
+
+		it("should show guidance instead of logging in when a non-default profile is active", async ({
+			expect,
+		}) => {
+			setActiveProfile("work");
+
+			await runWrangler("login");
+
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou are currently using the auth profile "work[0m
+
+				  ". If you want to create a new auth profile, run \`wrangler profiles create <profile name>\`.
+				   If you want to switch to an existing auth profile, run \`wrangler profiles set <profile name>\`.
+
+
+				"
+			`);
+		});
+
+		it("should show guidance about directory binding when login is run from a bound directory", async ({
+			expect,
+		}) => {
+			const { writeDirectoryBindings } = await import("../user/profiles");
+			const dir = process.cwd();
+			writeDirectoryBindings({ [dir]: "work" });
+
+			await runWrangler("login");
+
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThis directory is bound to the auth profile "work[0m
+
+				  " If you want to create a new auth profile, run \`wrangler profiles create <profile name>\`.
+				   If you want to switch to an existing auth profile, run \`wrangler profiles set <profile name>\`.
+
+
+				"
+			`);
 		});
 	});
 
