@@ -30,12 +30,11 @@ describe("logout", () => {
 		expect,
 	}) => {
 		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: "DUMMY_TOKEN" });
-		expect(std.out).toMatchInlineSnapshot(
+		expect(std.err).toMatchInlineSnapshot(
 			`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the environment to log out.[0m
+
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the environment to log out."
 		`
 		);
 	});

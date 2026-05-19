@@ -423,13 +423,16 @@ import {
 	authTokenCommand,
 	loginCommand,
 	logoutCommand,
+	whoamiCommand,
+} from "./user/commands";
+import {
+	profileCreateCommand,
 	profileDeleteCommand,
 	profileListCommand,
 	profileNamespace,
-	profileUseCommand,
-	whoamiCommand,
-} from "./user/commands";
-import { setProfileOverride } from "./user/user";
+	profileSetCommand,
+	profileUnsetCommand,
+} from "./user/profiles";
 import { noProxy, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
@@ -2238,23 +2241,31 @@ export function createCLIParser(argv: string[]) {
 
 	registry.define([
 		{
-			command: "wrangler profile",
+			command: "wrangler profiles",
 			definition: profileNamespace,
 		},
 		{
-			command: "wrangler profile list",
+			command: "wrangler profiles list",
 			definition: profileListCommand,
 		},
 		{
-			command: "wrangler profile use",
-			definition: profileUseCommand,
+			command: "wrangler profiles create",
+			definition: profileCreateCommand,
 		},
 		{
-			command: "wrangler profile delete",
+			command: "wrangler profiles set",
+			definition: profileSetCommand,
+		},
+		{
+			command: "wrangler profiles delete",
 			definition: profileDeleteCommand,
 		},
+		{
+			command: "wrangler profiles unset",
+			definition: profileUnsetCommand,
+		},
 	]);
-	registry.registerNamespace("profile");
+	registry.registerNamespace("profiles");
 
 	registry.define([
 		{

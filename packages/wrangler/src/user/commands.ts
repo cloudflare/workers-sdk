@@ -3,20 +3,15 @@ import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { getActiveProfileName, getProfileForDirectory } from "./profiles";
 import {
-	deleteProfile,
-	getActiveProfile,
 	getAuthFromEnv,
 	getOAuthTokenFromLocalState,
-	listProfiles,
 	listScopes,
 	login,
 	logout,
-	profileExists,
-	setActiveProfile,
-	setProfileOverride,
-	validateProfileName,
 	validateScopeKeys,
+	type Scope,
 } from "./user";
 import { whoami } from "./whoami";
 
@@ -28,6 +23,63 @@ export type AuthTokenInfo =
 	| { type: "api_token"; token: string }
 	| { type: "api_key"; key: string; email: string };
 
+export const loginArgs = {
+	browser: {
+		default: true,
+		type: "boolean",
+		describe: "Automatically open the OAuth link in a browser",
+	},
+	scopes: {
+		describe: "Pick the set of applicable OAuth scopes when logging in",
+		array: true,
+		type: "string",
+		requiresArg: true,
+	},
+	"scopes-list": {
+		describe: "List all the available OAuth scopes with descriptions",
+	},
+	"callback-host": {
+		describe:
+			"Use the ip or host address for the temporary login callback server.",
+		type: "string",
+		requiresArg: false,
+		default: "localhost",
+	},
+	"callback-port": {
+		describe: "Use the port for the temporary login callback server.",
+		type: "number",
+		requiresArg: false,
+		default: 8976,
+	},
+} as const;
+
+/**
+ * Handle `--scopes-list` and `--scopes` validation.
+ * Returns `true` when the caller should return early (scopes were listed or empty).
+ */
+export function handleScopesArgs(args: {
+	scopesList?: unknown;
+	scopes?: string[];
+}): boolean {
+	if (args.scopesList) {
+		listScopes();
+		return true;
+	}
+	if (args.scopes) {
+		if (args.scopes.length === 0) {
+			listScopes();
+			return true;
+		}
+		if (!validateScopeKeys(args.scopes)) {
+			throw new CommandLineArgsError(
+				`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`,
+				{ telemetryMessage: "user login invalid scope" }
+			);
+		}
+	}
+	return false;
+}
+
 export const loginCommand = createCommand({
 	metadata: {
 		description: "🔓 Login to Cloudflare",
@@ -37,74 +89,35 @@ export const loginCommand = createCommand({
 	},
 	behaviour: {
 		printConfigWarnings: false,
+		printActiveProfile: false,
 	},
 	args: {
-		"scopes-list": {
-			describe: "List all the available OAuth scopes with descriptions",
-		},
-		browser: {
-			default: true,
-			type: "boolean",
-			describe: "Automatically open the OAuth link in a browser",
-		},
-		scopes: {
-			describe: "Pick the set of applicable OAuth scopes when logging in",
-			array: true,
-			type: "string",
-			requiresArg: true,
-		},
-		"callback-host": {
-			describe:
-				"Use the ip or host address for the temporary login callback server.",
-			type: "string",
-			requiresArg: false,
-			default: "localhost",
-		},
-		"callback-port": {
-			describe: "Use the port for the temporary login callback server.",
-			type: "number",
-			requiresArg: false,
-			default: 8976,
-		},
+		...loginArgs,
 	},
 	async handler(args, { config }) {
-		if (args.scopesList) {
-			listScopes();
+		if (handleScopesArgs(args)) {
 			return;
 		}
 
-		// If --profile was passed as a command-specific arg (in addition to global),
-		// apply the override here too so the login stores to the correct profile.
-		const profile = args.profile;
-		if (profile) {
-			setProfileOverride(profile);
-			logger.log(`Logging in to profile "${profile}"...`);
-		}
-
-		if (args.scopes) {
-			if (args.scopes.length === 0) {
-				// don't allow no scopes to be passed, that would be weird
-				listScopes();
-				return;
-			}
-			if (!validateScopeKeys(args.scopes)) {
-				throw new CommandLineArgsError(
-					`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`,
-					{ telemetryMessage: "user login invalid scope" }
-				);
-			}
+		const currentProfile = getActiveProfileName();
+		if (currentProfile !== "default") {
+			const message = getProfileForDirectory()
+				? `This directory is bound to the auth profile "${currentProfile}\n"`
+				: `You are currently using the auth profile "${currentProfile}\n".`;
+			logger.error(
+				message,
+				"If you want to create a new auth profile, run `wrangler profiles create <profile name>`.\n",
+				"If you want to switch to an existing auth profile, run `wrangler profiles set <profile name>`.\n"
+			);
+			return;
 		}
 
 		await login(config, {
-			scopes: args.scopes,
+			scopes: args.scopes as Scope[] | undefined,
 			browser: args.browser,
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
 		});
-
-		if (profile) {
-			logger.log(`Successfully logged in to profile "${profile}".`);
-		}
 
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
@@ -121,20 +134,11 @@ export const logoutCommand = createCommand({
 	},
 	behaviour: {
 		printConfigWarnings: false,
+		printActiveProfile: false,
 		provideConfig: false,
 	},
-	async handler(args) {
-		const profile = args.profile;
-		if (profile) {
-			setProfileOverride(profile);
-			logger.log(`Logging out of profile "${profile}"...`);
-		}
-
+	async handler() {
 		await logout();
-
-		if (profile) {
-			logger.log(`Successfully logged out of profile "${profile}".`);
-		}
 
 		try {
 			// If the config file is invalid then we default to not sending metrics.
@@ -256,88 +260,5 @@ export const authTokenCommand = createCommand({
 		metrics.sendMetricsEvent("retrieve auth token", {
 			sendMetrics: config.send_metrics,
 		});
-	},
-});
-
-export const profileNamespace = createNamespace({
-	metadata: {
-		description: "🔀 Manage authentication profiles for multiple accounts",
-		owner: "Workers: Authoring and Testing",
-		status: "open beta",
-		category: "Account",
-	},
-});
-
-export const profileListCommand = createCommand({
-	metadata: {
-		description: "List all authentication profiles",
-		owner: "Workers: Authoring and Testing",
-		status: "open beta",
-	},
-	behaviour: {
-		printConfigWarnings: false,
-		provideConfig: false,
-	},
-	async handler() {
-		const profiles = listProfiles();
-		const active = getActiveProfile();
-		for (const profile of profiles) {
-			const marker = profile === active ? " (active)" : "";
-			logger.log(`${profile}${marker}`);
-		}
-	},
-});
-
-export const profileUseCommand = createCommand({
-	metadata: {
-		description: "Switch the active authentication profile",
-		owner: "Workers: Authoring and Testing",
-		status: "open beta",
-	},
-	behaviour: {
-		printConfigWarnings: false,
-		provideConfig: false,
-	},
-	args: {
-		name: {
-			describe: "Name of the profile to switch to",
-			type: "string",
-			demandOption: true,
-		},
-	},
-	positionalArgs: ["name"],
-	async handler(args) {
-		validateProfileName(args.name);
-		if (!profileExists(args.name)) {
-			throw new UserError(
-				`Profile "${args.name}" does not exist. Run \`wrangler login --profile ${args.name}\` to create it.`
-			);
-		}
-		setActiveProfile(args.name);
-		logger.log(`Switched to profile "${args.name}".`);
-	},
-});
-
-export const profileDeleteCommand = createCommand({
-	metadata: {
-		description: "Delete an authentication profile",
-		owner: "Workers: Authoring and Testing",
-		status: "open beta",
-	},
-	behaviour: {
-		printConfigWarnings: false,
-		provideConfig: false,
-	},
-	args: {
-		name: {
-			describe: "Name of the profile to delete",
-			type: "string",
-			demandOption: true,
-		},
-	},
-	positionalArgs: ["name"],
-	async handler(args) {
-		deleteProfile(args.name);
-		logger.log(`Deleted profile "${args.name}".`);
 	},
 });
