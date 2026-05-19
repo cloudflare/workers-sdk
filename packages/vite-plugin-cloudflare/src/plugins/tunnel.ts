@@ -307,6 +307,10 @@ export function extendTunnelExpiry() {
 	tunnelManager?.extendExpiry();
 }
 
+export function isTunnelOpen() {
+	return tunnelManager?.isOpen() ?? false;
+}
+
 export async function toggleTunnel(
 	server: vite.ViteDevServer | vite.PreviewServer,
 	ctx: PluginContext

@@ -103,21 +103,94 @@ export const isDockerRunning = async (dockerPath: string) => {
 	return true;
 };
 
-/** throws when docker is not installed */
-export const verifyDockerInstalled = async (
-	dockerPath: string,
-	isDev = true
-) => {
+/** Options for verifying that Docker is installed and the daemon is running. */
+type VerifyDockerInstalledOptions = {
+	/** Path to the Docker CLI executable. */
+	dockerPath: string;
+	/** The number of container images that need to be built. Used to pluralize the error message. */
+	numberOfContainers: number;
+	/**
+	 * Flag indicating whether the check is being run as part of `wrangler dev`.
+	 * @default true
+	 */
+	isDev?: boolean;
+	/**
+	 * Flag indicating whether the check is being run as part of a dry-run execution.
+	 * @default false
+	 */
+	isDryRun?: boolean;
+};
+
+/**
+ * Verifies that Docker is installed and the daemon is running.
+ *
+ * @throws {UserError} If the Docker CLI cannot be reached.
+ *
+ * @param options - Docker verification options.
+ */
+export const verifyDockerInstalled = async ({
+	dockerPath,
+	numberOfContainers,
+	isDev = true,
+	isDryRun = false,
+}: VerifyDockerInstalledOptions) => {
 	const dockerIsRunning = await isDockerRunning(dockerPath);
 	if (!dockerIsRunning) {
 		throw new UserError(
-			`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.\n` +
-				`Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with DOCKER_HOST.` +
-				`${isDev ? "\nTo suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false." : ""}`,
-			{ telemetryMessage: false }
+			getFailedToRunDockerErrorMessage({
+				numberOfContainers,
+				isDev,
+				isDryRun,
+			}),
+			{
+				telemetryMessage: false,
+			}
 		);
 	}
 };
+
+/**
+ * Builds the user-facing error message shown when Docker cannot be reached.
+ *
+ * @param options - Docker verification options.
+ *
+ * @returns The formatted error message string.
+ */
+function getFailedToRunDockerErrorMessage({
+	numberOfContainers,
+	isDev,
+	isDryRun,
+}: Omit<VerifyDockerInstalledOptions, "dockerPath">): string {
+	const operation = isDev
+		? "running dev"
+		: `deploying${isDryRun ? " (even in dry-run mode)" : ""}`;
+
+	const headline = `The Docker CLI is needed to build the configured ${numberOfContainers !== 1 ? "images" : "image"} before ${operation} but could not be launched.`;
+
+	let daemonHint: string;
+	if (process.platform === "darwin") {
+		daemonHint = "open the Docker Desktop app or run `open -a Docker`";
+	} else if (process.platform === "win32") {
+		daemonHint = "open the Docker Desktop app";
+	} else {
+		daemonHint = "run `sudo systemctl start docker`";
+	}
+
+	const steps =
+		"To fix this, try the following:\n" +
+		"  - If Docker is not installed, download it from https://docs.docker.com/get-started/get-docker/\n" +
+		`  - If Docker is installed but the daemon is not running,\n    ${daemonHint}.\n` +
+		"  - If you use an alternative Docker-compatible CLI (e.g. Podman),\n    set the WRANGLER_DOCKER_BIN environment variable to its path and DOCKER_HOST to its socket.";
+
+	const alternatives =
+		"Note: Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so.";
+
+	const hint = isDev
+		? "To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or pass --enable-containers=false."
+		: "If you cannot run Docker locally, you can still deploy your Worker by passing --containers-rollout=none. This will not deploy or update your Container.";
+
+	return `${headline}\n${steps}\n\n${alternatives}\n\n${hint}`;
+}
 
 /**
  * Kills and removes any containers which come from the given image tag

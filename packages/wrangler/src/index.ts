@@ -25,8 +25,21 @@ import { aiSearchSearchCommand } from "./ai-search/search";
 import { aiSearchStatsCommand } from "./ai-search/stats";
 import { aiSearchUpdateCommand } from "./ai-search/update";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
-import { aiModelsCommand } from "./ai/listCatalog";
+import { aiModelsCommand, aiModelsListCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
+import { aiModelsSchemaCommand } from "./ai/modelSchema";
+import {
+	artifactsNamespace,
+	artifactsNamespacesGetCommand,
+	artifactsNamespacesListCommand,
+	artifactsNamespacesNamespace,
+	artifactsReposCreateCommand,
+	artifactsReposDeleteCommand,
+	artifactsReposGetCommand,
+	artifactsReposIssueTokenCommand,
+	artifactsReposListCommand,
+	artifactsReposNamespace,
+} from "./artifacts";
 import {
 	browserCloseCommand,
 	browserCreateCommand,
@@ -965,6 +978,50 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("kv");
 
 	registry.define([
+		{
+			command: "wrangler artifacts",
+			definition: artifactsNamespace,
+		},
+		{
+			command: "wrangler artifacts namespaces",
+			definition: artifactsNamespacesNamespace,
+		},
+		{
+			command: "wrangler artifacts namespaces list",
+			definition: artifactsNamespacesListCommand,
+		},
+		{
+			command: "wrangler artifacts namespaces get",
+			definition: artifactsNamespacesGetCommand,
+		},
+		{
+			command: "wrangler artifacts repos",
+			definition: artifactsReposNamespace,
+		},
+		{
+			command: "wrangler artifacts repos create",
+			definition: artifactsReposCreateCommand,
+		},
+		{
+			command: "wrangler artifacts repos list",
+			definition: artifactsReposListCommand,
+		},
+		{
+			command: "wrangler artifacts repos get",
+			definition: artifactsReposGetCommand,
+		},
+		{
+			command: "wrangler artifacts repos delete",
+			definition: artifactsReposDeleteCommand,
+		},
+		{
+			command: "wrangler artifacts repos issue-token",
+			definition: artifactsReposIssueTokenCommand,
+		},
+	]);
+	registry.registerNamespace("artifacts");
+
+	registry.define([
 		{ command: "wrangler queues", definition: queuesNamespace },
 		{ command: "wrangler queues list", definition: queuesListCommand },
 		{ command: "wrangler queues create", definition: queuesCreateCommand },
@@ -1782,6 +1839,8 @@ export function createCLIParser(argv: string[]) {
 	registry.define([
 		{ command: "wrangler ai", definition: aiNamespace },
 		{ command: "wrangler ai models", definition: aiModelsCommand },
+		{ command: "wrangler ai models list", definition: aiModelsListCommand },
+		{ command: "wrangler ai models schema", definition: aiModelsSchemaCommand },
 		{ command: "wrangler ai finetune", definition: aiFineTuneNamespace },
 		{ command: "wrangler ai finetune list", definition: aiFineTuneListCommand },
 		{

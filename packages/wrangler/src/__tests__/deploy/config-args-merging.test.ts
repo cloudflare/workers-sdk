@@ -1187,7 +1187,38 @@ describe("config/args merging", () => {
 		});
 
 		describe("versions upload", () => {
-			// versions upload has no --keep-vars CLI flag; only config.keep_vars applies
+			it("without --keep-vars, keepVars is not set", async ({ expect }) => {
+				writeWranglerConfig({ main: "./index.js" });
+				writeWorkerSource();
+				mockGetScript();
+				const requests = mockUploadVersion();
+				await runWrangler("versions upload");
+				const metadata = await getMetadata(requests[requests.length - 1]);
+				expect(metadata.keep_bindings).toEqual(
+					expect.arrayContaining(["secret_text", "secret_key"])
+				);
+				expect(metadata.keep_bindings).not.toEqual(
+					expect.arrayContaining(["plain_text"])
+				);
+			});
+
+			it("--keep-vars alone enables keep_bindings", async ({ expect }) => {
+				writeWranglerConfig({ main: "./index.js", keep_vars: false });
+				writeWorkerSource();
+				mockGetScript();
+				const requests = mockUploadVersion();
+				await runWrangler("versions upload --keep-vars");
+				const metadata = await getMetadata(requests[requests.length - 1]);
+				expect(metadata.keep_bindings).toEqual(
+					expect.arrayContaining([
+						"plain_text",
+						"json",
+						"secret_text",
+						"secret_key",
+					])
+				);
+			});
+
 			it("config.keep_vars=true adds plain_text and json to keep_bindings", async ({
 				expect,
 			}) => {
