@@ -21,6 +21,7 @@ import {
 } from "../metrics/sanitization";
 import { writeOutput } from "../output";
 import { addBreadcrumb } from "../sentry";
+import { getActiveProfileName } from "../user/profiles";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
@@ -146,6 +147,13 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				typeof shouldPrintBanner !== "function" || bannerEnabled;
 
 			if (!getWranglerHideBanner()) {
+				if ((def.behaviour?.printActiveProfile ?? true) && shouldPrintBanner) {
+					const activeProfile = getActiveProfileName();
+					if (activeProfile !== "default") {
+						logger.log(`Using profile: ${chalk.blue(activeProfile)}`);
+					}
+				}
+
 				if (def.metadata.deprecated) {
 					logger.warn(def.metadata.deprecatedMessage);
 				}
