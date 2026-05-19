@@ -103,6 +103,15 @@ export const getWranglerR2SqlAuthToken = getEnvironmentVariableFactory({
 });
 
 /**
+ * `WRANGLER_PROFILE` specifies the authentication profile to use.
+ * This allows switching between multiple Cloudflare accounts
+ * without re-authenticating each time.
+ */
+export const getWranglerProfileFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_PROFILE",
+});
+
+/**
  * `CLOUDFLARE_ACCESS_CLIENT_ID` is the Client ID of a Cloudflare Access Service Token.
  * Used together with `CLOUDFLARE_ACCESS_CLIENT_SECRET` to authenticate with
  * Access-protected domains in non-interactive environments (e.g. CI).
