@@ -70,6 +70,46 @@ function isRetryableFetchError(error: unknown): boolean {
 	);
 }
 
+const MAX_BODY_PREVIEW = 2000;
+
+function truncateBody(text: string): string {
+	if (text.length <= MAX_BODY_PREVIEW) {
+		return text;
+	}
+	return `${text.slice(0, MAX_BODY_PREVIEW)}... (truncated, ${text.length} bytes total)`;
+}
+
+/**
+ * Read a JSON response with diagnostic error reporting.
+ *
+ * Standard `await resp.json()` produces opaque "Unexpected token X, ..."
+ * errors when an upstream returns non-JSON (e.g. a 500 with a stack-trace
+ * text body from the loopback `/browser/launch` handler when Chrome fails
+ * to start). This helper reads the body as text first, includes the status
+ * and (truncated) text in any thrown error, and chains the original
+ * `SyntaxError` via `cause` so the underlying parse failure is still
+ * inspectable.
+ */
+async function parseJsonResponse<T = unknown>(
+	resp: Response,
+	context: string
+): Promise<T> {
+	const text = await resp.text();
+	if (!resp.ok) {
+		throw new Error(
+			`${context}: upstream returned ${resp.status} ${resp.statusText}\n${truncateBody(text)}`
+		);
+	}
+	try {
+		return JSON.parse(text) as T;
+	} catch (cause) {
+		throw new Error(
+			`${context}: expected JSON, got non-JSON response (${resp.status} ${resp.statusText})\n${truncateBody(text)}`,
+			{ cause }
+		);
+	}
+}
+
 /**
  * Wrapper around `fetch` that retries on transient connection failures.
  *
@@ -445,11 +485,13 @@ class BrowserRenderingRouter extends Router {
 	}
 
 	async #acquireSession(): Promise<SessionInfo> {
-		const sessionInfo: SessionInfo = await this.env[
-			SharedBindings.MAYBE_SERVICE_LOOPBACK
-		]
-			.fetch("http://localhost/browser/launch")
-			.then((r) => r.json());
+		const resp = await this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK].fetch(
+			"http://localhost/browser/launch"
+		);
+		const sessionInfo = await parseJsonResponse<SessionInfo>(
+			resp,
+			"Failed to launch local browser via miniflare loopback (/browser/launch)"
+		);
 		await this.#fetchSession(sessionInfo.sessionId, "/session-info", {
 			method: "POST",
 			body: JSON.stringify(sessionInfo),
@@ -458,9 +500,13 @@ class BrowserRenderingRouter extends Router {
 	}
 
 	async #getActiveSessions() {
-		const sessionIds = (await this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
-			.fetch("http://localhost/browser/sessionIds")
-			.then((r) => r.json())) as string[];
+		const sessionIdsResp = await this.env[
+			SharedBindings.MAYBE_SERVICE_LOOPBACK
+		].fetch("http://localhost/browser/sessionIds");
+		const sessionIds = await parseJsonResponse<string[]>(
+			sessionIdsResp,
+			"Failed to list active browser sessions via miniflare loopback (/browser/sessionIds)"
+		);
 
 		const sessions = await Promise.all(
 			sessionIds.map(async (sessionId) => {
@@ -468,7 +514,10 @@ class BrowserRenderingRouter extends Router {
 				if (resp.status === 204) {
 					return null;
 				}
-				const sessionInfo: SessionInfo = await resp.json();
+				const sessionInfo = await parseJsonResponse<SessionInfo>(
+					resp,
+					`Failed to read session-info for browser session ${sessionId}`
+				);
 				return {
 					sessionId: sessionInfo.sessionId,
 					startTime: sessionInfo.startTime,
