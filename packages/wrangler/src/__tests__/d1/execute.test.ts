@@ -247,6 +247,54 @@ describe("execute", () => {
 		expect(parsed[0].results[0].name).toBeNull();
 	});
 
+
+	it('should strip BEGIN TRANSACTION / COMMIT from a SQL file when executing locally', async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [{ binding: 'DATABASE', database_name: 'db', database_id: 'xxxx' }],
+		});
+
+		// SQL file that mimics a SQLite .dump output: wraps statements in a transaction
+		const sqlWithTransaction = [
+			'BEGIN TRANSACTION;',
+			'CREATE TABLE Customers (CustomerID INT PRIMARY KEY, Name TEXT);',
+			"INSERT INTO Customers VALUES(1,'Alice');",
+			'COMMIT;',
+		].join('\n');
+		fs.writeFileSync('seed.sql', sqlWithTransaction);
+
+		// Should not throw – the trimmer strips BEGIN TRANSACTION / COMMIT before execution
+		await runWrangler('d1 execute db --file seed.sql --local');
+		expect(std.out).toContain('command');
+	});
+
+	it('should throw when a local SQL file contains multiple transactions', async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [{ binding: 'DATABASE', database_name: 'db', database_id: 'xxxx' }],
+		});
+
+		const sqlWithMultipleTransactions = [
+			'BEGIN TRANSACTION;',
+			'CREATE TABLE A (id INT);',
+			'COMMIT;',
+			'BEGIN TRANSACTION;',
+			'CREATE TABLE B (id INT);',
+			'COMMIT;',
+		].join('\n');
+		fs.writeFileSync('multi.sql', sqlWithMultipleTransactions);
+
+		await expect(
+			runWrangler('d1 execute db --file multi.sql --local')
+		).rejects.toThrow(
+			'Wrangler could not process the provided SQL file, as it contains several transactions.'
+		);
+	});
+
 	describe("duration formatting", () => {
 		mockAccountId({ accountId: "some-account-id" });
 		mockApiToken();

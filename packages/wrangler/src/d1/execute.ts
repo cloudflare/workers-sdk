@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { createReadStream, promises as fs } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { spinnerWhile } from "@cloudflare/cli-shared-helpers/interactive";
 import {
@@ -22,6 +23,7 @@ import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { splitSqlQuery } from "./splitter";
+import { mayContainTransaction, trimSqlQuery } from "./trimmer";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type {
 	Database,
@@ -406,83 +408,98 @@ async function executeRemotely({
 	);
 
 	if (input.file) {
-		// TODO: do we need to update hashing code if we upload in parts?
-		const etag = await md5File(input.file);
+		// Strip BEGIN TRANSACTION / COMMIT wrappers that the D1 API rejects.
+		// These can appear in SQL dumps produced by SQLite's .dump command or
+		// other tools (e.g. drizzle-generated migrations). The D1 API already
+		// wraps every import in its own transaction, so these wrappers are
+		// redundant and would cause an error.
+		const tmpFile = await stripTransactionFromFile(input.file);
+		const fileForUpload = tmpFile ?? input.file;
 
-		logger.log(
-			chalk.gray(
-				`Note: if the execution fails to complete, your DB will return to its original state and you can safely retry.`
-			)
-		);
+		try {
+			// TODO: do we need to update hashing code if we upload in parts?
+			const etag = await md5File(fileForUpload);
 
-		const initResponse = await spinnerWhile({
-			promise: d1ApiPost<
-				ImportInitResponse | ImportPollingResponse | PollingFailure
-			>(config, accountId, db, "import", { action: "init", etag }),
-			startMessage: "Checking if file needs uploading",
-		});
-
-		// An init response usually returns a {filename, upload_url} pair, except if we've detected that file
-		// already exists and is valid, to save people reuploading. In which case `initResponse` has already
-		// kicked the import process off.
-		const uploadRequired = "upload_url" in initResponse;
-		if (!uploadRequired) {
-			logger.log(`🌀 File already uploaded. Processing.`);
-		}
-		const firstPollResponse = uploadRequired
-			? // Upload the file to R2, then inform D1 to start processing it. The server delays before responding
-				// in case the file is quite small and can be processed without a second round-trip.
-				await uploadAndBeginIngestion(
-					config,
-					accountId,
-					db,
-					input.file,
-					etag,
-					initResponse
+			logger.log(
+				chalk.gray(
+					`Note: if the execution fails to complete, your DB will return to its original state and you can safely retry.`
 				)
-			: initResponse;
+			);
 
-		// If the file takes longer than the specified delay (~1s) to import, we'll need to continue polling
-		// until it's complete. If it's already finished, this call will early-exit.
-		const finalResponse = await pollUntilComplete(
-			firstPollResponse,
-			config,
-			accountId,
-			db
-		);
-
-		if (finalResponse.status !== "complete") {
-			throw new APIError({
-				text: `D1 reset before execute completed!`,
-				telemetryMessage: false,
+			const initResponse = await spinnerWhile({
+				promise: d1ApiPost<
+					ImportInitResponse | ImportPollingResponse | PollingFailure
+				>(config, accountId, db, "import", { action: "init", etag }),
+				startMessage: "Checking if file needs uploading",
 			});
+
+			// An init response usually returns a {filename, upload_url} pair, except if we've detected that file
+			// already exists and is valid, to save people reuploading. In which case `initResponse` has already
+			// kicked the import process off.
+			const uploadRequired = "upload_url" in initResponse;
+			if (!uploadRequired) {
+				logger.log(`🌀 File already uploaded. Processing.`);
+			}
+			const firstPollResponse = uploadRequired
+				? // Upload the file to R2, then inform D1 to start processing it. The server delays before responding
+					// in case the file is quite small and can be processed without a second round-trip.
+					await uploadAndBeginIngestion(
+						config,
+						accountId,
+						db,
+						fileForUpload,
+						etag,
+						initResponse
+					)
+				: initResponse;
+
+			// If the file takes longer than the specified delay (~1s) to import, we'll need to continue polling
+			// until it's complete. If it's already finished, this call will early-exit.
+			const finalResponse = await pollUntilComplete(
+				firstPollResponse,
+				config,
+				accountId,
+				db
+			);
+
+			if (finalResponse.status !== "complete") {
+				throw new APIError({
+					text: `D1 reset before execute completed!`,
+					telemetryMessage: false,
+				});
+			}
+
+			const {
+				result: { num_queries, final_bookmark, meta },
+			} = finalResponse;
+			logger.log(
+				`🚣 Executed ${num_queries} queries in ${meta.duration.toFixed(
+					2
+				)}ms (${meta.rows_read} rows read, ${meta.rows_written} rows written)\n` +
+					chalk.gray(`   Database is currently at bookmark ${final_bookmark}.`)
+			);
+
+			return [
+				{
+					results: [
+						{
+							"Total queries executed": num_queries,
+							"Rows read": meta.rows_read,
+							"Rows written": meta.rows_written,
+							"Database size (MB)": (meta.size_after / 1_000_000).toFixed(2),
+						},
+					],
+					success: true,
+					finalBookmark: final_bookmark,
+					meta,
+				},
+			];
+		} finally {
+			// Clean up the temp file if we created one
+			if (tmpFile !== null) {
+				await fs.unlink(tmpFile).catch(() => {});
+			}
 		}
-
-		const {
-			result: { num_queries, final_bookmark, meta },
-		} = finalResponse;
-		logger.log(
-			`🚣 Executed ${num_queries} queries in ${meta.duration.toFixed(
-				2
-			)}ms (${meta.rows_read} rows read, ${meta.rows_written} rows written)\n` +
-				chalk.gray(`   Database is currently at bookmark ${final_bookmark}.`)
-		);
-
-		return [
-			{
-				results: [
-					{
-						"Total queries executed": num_queries,
-						"Rows read": meta.rows_read,
-						"Rows written": meta.rows_written,
-						"Database size (MB)": (meta.size_after / 1_000_000).toFixed(2),
-					},
-				],
-				success: true,
-				finalBookmark: final_bookmark,
-				meta,
-			},
-		];
 	} else {
 		const result = await d1ApiPost<QueryResult[]>(
 			config,
@@ -496,6 +513,40 @@ async function executeRemotely({
 		logResult(result);
 		return result;
 	}
+}
+
+/**
+ * If the SQL file contains a `BEGIN TRANSACTION` / `COMMIT` wrapper (produced
+ * by SQLite's `.dump` command or similar tools), strip those lines and write
+ * the result to a temporary file so the D1 API can accept it.
+ *
+ * Returns the path of the temp file when stripping was needed, or `null` when
+ * the original file can be used as-is. The caller is responsible for deleting
+ * the temp file when it is no longer needed.
+ */
+async function stripTransactionFromFile(
+	file: string
+): Promise<string | null> {
+	const sql = await fs.readFile(file, "utf-8");
+	if (!mayContainTransaction(sql)) {
+		return null;
+	}
+
+	// trimSqlQuery will throw a UserError if there are multiple transactions,
+	// which propagates the right error to the user.
+	const stripped = trimSqlQuery(sql);
+
+	const tmpFile = path.join(
+		os.tmpdir(),
+		`d1-execute-${Date.now()}-${path.basename(file)}`
+	);
+	await fs.writeFile(tmpFile, stripped, "utf-8");
+	logger.log(
+		chalk.gray(
+			`Note: BEGIN TRANSACTION / COMMIT statements were stripped from the SQL file before upload. D1 manages transactions automatically.`
+		)
+	);
+	return tmpFile;
 }
 
 async function uploadAndBeginIngestion(
