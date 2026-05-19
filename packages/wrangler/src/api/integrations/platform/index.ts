@@ -19,6 +19,7 @@ import {
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
+import { getZoneFromRoute } from "../../../zones";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { extractBindingsOfType } from "../../startDevWorker/utils";
 import { CacheStorage } from "./caches";
@@ -49,6 +50,31 @@ export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectCla
  */
 export function unstable_getDevCompatibilityDate() {
 	return getTodaysCompatDate();
+}
+
+/**
+ * Derive the zone value used for the outbound `CF-Worker` header from a
+ * normalized Wrangler config, for callers outside of `wrangler dev`
+ * (`getPlatformProxy`, `unstable_getMiniflareWorkerOptions`).
+ *
+ * Falls back to the zone of the first configured route (via
+ * {@link getZoneFromRoute}, which prefers the route's `zone_name` field
+ * when present and otherwise falls back to the pattern's hostname), or
+ * `undefined` if no routes are set — in which case Miniflare keeps its
+ * default of `${workerName}.example.com`.
+ *
+ * `dev.host` is intentionally NOT consulted here: the `dev` config block is
+ * specific to `wrangler dev` and should not influence behaviour under
+ * `@cloudflare/vite-plugin`, `@cloudflare/vitest-pool-workers`, or
+ * `getPlatformProxy`. Users who need a custom `CF-Worker` host in those
+ * environments should configure a `route` instead.
+ */
+function getZoneFromConfig(config: Config): string | undefined {
+	const firstRoute = config.route ?? config.routes?.[0];
+	if (firstRoute) {
+		return getZoneFromRoute(firstRoute);
+	}
+	return undefined;
 }
 
 export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
@@ -289,6 +315,7 @@ async function getMiniflareOptionsFromConfig(args: {
 				script: "",
 				modules: true,
 				name: config.name,
+				zone: getZoneFromConfig(config),
 				...bindingOptions,
 				...assetOptions,
 			},
@@ -464,6 +491,7 @@ export function unstable_getMiniflareWorkerOptions(
 		containerEngine: useContainers
 			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
 			: undefined,
+		zone: getZoneFromConfig(config),
 
 		...bindingOptions,
 		...sitesOptions,
