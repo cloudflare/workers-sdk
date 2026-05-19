@@ -48,7 +48,15 @@ export async function installCloudflareSkillsGlobally(
 		return { skipped: true, reason: "Running in CI" };
 	}
 
-	const detectedAgents = await getDetectedAgents();
+	let detectedAgents: AgentInfo[];
+	try {
+		detectedAgents = await getDetectedAgents();
+	} catch (err) {
+		logger.warn(
+			`Failed to detect AI coding agents: ${err instanceof Error ? err.message : String(err)}`
+		);
+		return { skipped: true, reason: "Failed to install skills" };
+	}
 
 	if (detectedAgents.length === 0) {
 		return { skipped: true, reason: "No supported agents detected" };
@@ -88,10 +96,16 @@ export async function installCloudflareSkillsGlobally(
 		});
 
 		const { failedAgents } = result;
-
-		logger.log(
-			`Successfully installed Cloudflare skills for: ${detectedAgents.map(({ name }) => name).join(", ")}.`
+		const failedSet = new Set(failedAgents);
+		const succeededAgents = detectedAgents.filter(
+			(a) => !failedSet.has(a.rosieId)
 		);
+
+		if (succeededAgents.length > 0) {
+			logger.log(
+				`Successfully installed Cloudflare skills for: ${succeededAgents.map(({ name }) => name).join(", ")}.`
+			);
+		}
 
 		if (failedAgents.length > 0) {
 			logger.warn(
@@ -107,7 +121,7 @@ export async function installCloudflareSkillsGlobally(
 		});
 
 		return {
-			targetedAgents: detectedAgents,
+			targetedAgents: succeededAgents,
 		};
 	} catch (err) {
 		logger.warn(

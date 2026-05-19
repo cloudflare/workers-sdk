@@ -177,6 +177,24 @@ describe("installCloudflareSkillsGlobally", () => {
 			);
 		});
 
+		test("returns 'Failed to install skills' when rosie.agents() throws", async ({
+			expect,
+		}) => {
+			mockRosieAgents.mockRejectedValueOnce(new Error("WASM load failed"));
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(false);
+
+			expect(result).toEqual({
+				skipped: true,
+				reason: "Failed to install skills",
+			});
+			expect(std.warn).toContain(
+				"Failed to detect AI coding agents: WASM load failed"
+			);
+			expect(mockRosieInstall).not.toHaveBeenCalled();
+		});
+
 		test("returns 'Running in CI' when ci.isCI is true", async ({ expect }) => {
 			vi.mocked(ci).isCI = true;
 			const installCloudflareSkillsGlobally = await freshImport();
@@ -382,6 +400,60 @@ describe("installCloudflareSkillsGlobally", () => {
 			const metadata = readMetadataFile();
 			expect(metadata.accepted).toBe(true);
 			expect(metadata.installFailed).toBe(true);
+		});
+
+		test("success message and return value exclude agents that failed", async ({
+			expect,
+		}) => {
+			mockRosieAgents.mockResolvedValueOnce([
+				{
+					name: "claude",
+					display: "Claude Code",
+					detected: true,
+					installPath: "/fake/.claude/skills",
+				},
+				{
+					name: "cursor",
+					display: "Cursor",
+					detected: true,
+					installPath: "/fake/.cursor/skills",
+				},
+			]);
+			mockRosieInstall.mockResolvedValueOnce({
+				skills: [
+					{
+						name: "cloudflare",
+						kind: "skill",
+						installedAgents: ["claude"],
+						failedAgents: ["cursor"],
+					},
+				],
+				installedAgents: ["claude"],
+				failedAgents: ["cursor"],
+				installedInstruction: null,
+			});
+			const installCloudflareSkillsGlobally = await freshImport();
+
+			const result = await installCloudflareSkillsGlobally(true);
+
+			// Return value should only include succeeded agents
+			expect("skipped" in result).toBe(false);
+			if (!("skipped" in result)) {
+				const agentNames = result.targetedAgents.map((a) => a.name);
+				expect(agentNames).toContain("Claude Code");
+				expect(agentNames).not.toContain("Cursor");
+			}
+
+			// Success message should only mention succeeded agents
+			expect(std.out).toContain(
+				"Successfully installed Cloudflare skills for: Claude Code."
+			);
+			expect(std.out).not.toContain("Cursor");
+
+			// Warning should mention the failed agent
+			expect(std.warn).toContain(
+				"Skills installation failed for agents: cursor."
+			);
 		});
 	});
 
