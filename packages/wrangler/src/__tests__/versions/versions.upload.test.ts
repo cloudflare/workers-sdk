@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import {
+	runInTempDir,
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
@@ -19,7 +20,6 @@ import {
 	mockSubDomainRequest,
 } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
 import { writeWorkerSource } from "../helpers/write-worker-source";

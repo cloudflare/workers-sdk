@@ -1,9 +1,8 @@
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getPackageManager, getPackageManagerName } from "../package-manager";
 import { mockBinary } from "./helpers/mock-bin";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
-
 vi.unmock("../package-manager");
 function mockUserAgent(userAgent = "npm") {
 	beforeEach(() => {

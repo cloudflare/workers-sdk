@@ -2,6 +2,7 @@ import * as childProcess from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { stripVTControlCharacters } from "node:util";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
@@ -9,7 +10,6 @@ import { extractConfigBindings, getBranchName } from "../preview/shared";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import {
 	writeRedirectedWranglerConfig,

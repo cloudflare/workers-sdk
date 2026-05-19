@@ -1,5 +1,6 @@
 // /* eslint-disable no-shadow */
 import { mkdirSync, writeFileSync } from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -11,7 +12,6 @@ import { mockGetUploadTokenRequest } from "../helpers/mock-get-pages-upload-toke
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
 import { msw } from "../helpers/msw";
 import { normalizeProgressSteps } from "../helpers/normalize-progress";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { UploadPayloadFile } from "../../pages/types";
 import type { StrictRequest } from "msw";

@@ -1,5 +1,8 @@
 import { writeFileSync } from "node:fs";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -9,7 +12,6 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockProcess } from "../helpers/mock-process";
 import { createFetchResult, msw } from "../helpers/msw";
 import { getMswSuccessMembershipHandlers } from "../helpers/msw/handlers/user";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { wranglerKVConfig } from "./constant";
 import type { KeyValue, NamespaceKeyInfo } from "../../kv/helpers";

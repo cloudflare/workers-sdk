@@ -1,12 +1,11 @@
 import { join } from "node:path";
-import { seed } from "@cloudflare/workers-utils/test-helpers";
+import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { detectFramework } from "../../../../autoconfig/details/framework-detection";
 import * as configCache from "../../../../config-cache";
 import * as isInteractiveModule from "../../../../is-interactive";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../../../../pages/constants";
 import { mockConfirm } from "../../../helpers/mock-dialogs";
-import { runInTempDir } from "../../../helpers/run-in-tmp";
 import type { Config } from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";
 

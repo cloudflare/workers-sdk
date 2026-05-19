@@ -1,9 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { getMigrationNames } from "../../../d1/migrations/helpers";
-import { runInTempDir } from "../../helpers/run-in-tmp";
-
 describe("getMigrationNames", () => {
 	runInTempDir();
 

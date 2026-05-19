@@ -1,8 +1,6 @@
-import { seed } from "@cloudflare/workers-utils/test-helpers";
+import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { detectFramework } from "../../../../autoconfig/details/framework-detection";
-import { runInTempDir } from "../../../helpers/run-in-tmp";
-
 describe("detectFramework() / workspace root handling", () => {
 	runInTempDir();
 

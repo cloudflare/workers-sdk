@@ -4,6 +4,7 @@ import net from "node:net";
 import path from "node:path";
 import util from "node:util";
 import { removeDirSync } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { DeferredPromise, Response } from "miniflare";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
@@ -19,7 +20,6 @@ import { RuleTypeToModuleType } from "../../../deployment-bundle/module-collecti
 import { usingLocalSecretsStoreSecretAPI } from "../../../secrets-store/commands";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
-import { runInTempDir } from "../../helpers/run-in-tmp";
 import { useTeardown } from "../../helpers/teardown";
 import { unusable } from "../../helpers/unusable";
 import type { Bundle, File, StartDevWorkerOptions } from "../../../api";

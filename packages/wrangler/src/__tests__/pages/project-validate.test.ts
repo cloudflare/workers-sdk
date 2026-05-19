@@ -1,10 +1,10 @@
 // /* eslint-disable no-shadow */
 import { writeFileSync } from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";
 import { validate } from "../../pages/validate";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
 vi.mock("../../pages/constants", async (importActual) => ({

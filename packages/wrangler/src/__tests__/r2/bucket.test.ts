@@ -1,5 +1,8 @@
 import * as fs from "node:fs";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 // eslint-disable-next-line no-restricted-imports
 import { beforeEach, describe, expect, it } from "vitest";
@@ -10,7 +13,6 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { createFetchResult, msw, mswR2handlers } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { BucketLockRule } from "../../r2/helpers/bucket";
 import type {

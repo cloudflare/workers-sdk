@@ -4,7 +4,10 @@ import {
 	FatalError,
 	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
 import getPort from "get-port";
 import { http, HttpResponse } from "msw";
@@ -26,7 +29,6 @@ import {
 	mswSuccessUserHandlers,
 	mswZoneHandlers,
 } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
 	Binding,

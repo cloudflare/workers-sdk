@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import * as path from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
 	getBasePath,
@@ -7,8 +8,6 @@ import {
 	readableRelative,
 	sweepStaleWranglerTmpDirs,
 } from "../paths";
-import { runInTempDir } from "./helpers/run-in-tmp";
-
 describe("paths", () => {
 	describe("getBasePath()", () => {
 		it("should return the path to the wrangler package", ({ expect }) => {
