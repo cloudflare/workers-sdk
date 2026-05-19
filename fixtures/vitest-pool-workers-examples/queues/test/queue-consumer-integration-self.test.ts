@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { env, exports } from "cloudflare:workers";
 import { it } from "vitest";
+import type { QueueJob } from "../src/index";
 
 it("consumes queue messages", async ({ expect }) => {
 	// `exports.default` here points to the worker running in the current isolate.

@@ -1,6 +1,6 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { HttpResponse, http } from "msw";
-import { beforeEach, describe, it, test } from "vitest";
+import { beforeEach, describe, it, test, vi } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
 	assignAndDistributePercentages,
@@ -278,6 +278,22 @@ describe("versions deploy", () => {
 			`);
 		});
 
+		test("1 version @ (implicit) 100% without --yes", async ({ expect }) => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			const output = normalizeOutput(cliStd.out);
+			expect(output).toContain(
+				"SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100%"
+			);
+			expect(output).not.toContain(
+				"Use SPACE to select/unselect version(s) and ENTER to submit."
+			);
+		});
+
 		test("1 version @ (explicit) 100%", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes"
@@ -535,6 +551,40 @@ describe("versions deploy", () => {
 				│
 				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 40% and version 00000000-0000-0000-0000-000000000000 at 60% (TIMINGS)"
 			`);
+		});
+
+		test("2 versions @ (explicit) 40% + (explicit) 60% without --yes", async ({
+			expect,
+		}) => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000@40% 20000000-0000-0000-0000-000000000000@60%"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			const output = normalizeOutput(cliStd.out);
+			expect(output).toContain(
+				"SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 40% and version 00000000-0000-0000-0000-000000000000 at 60%"
+			);
+			expect(output).not.toContain(
+				"Use SPACE to select/unselect version(s) and ENTER to submit."
+			);
+		});
+
+		test("--version-id and --percentage without --yes", async ({ expect }) => {
+			const result = runWrangler(
+				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 100"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			const output = normalizeOutput(cliStd.out);
+			expect(output).toContain(
+				"SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100%"
+			);
+			expect(output).not.toContain(
+				"Use SPACE to select/unselect version(s) and ENTER to submit."
+			);
 		});
 
 		describe("max versions restrictions (temp)", () => {
@@ -1059,7 +1109,7 @@ describe("versions deploy", () => {
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the versions deploy command.[0m
 
 					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-					  the target environment using the \`-e|--env\` flag.
+					  the target environment using the \`-e|--env\` flag or CLOUDFLARE_ENV env variable.
 					  If your intention is to use the top-level environment of your configuration simply pass an empty
 					  string to the flag to target such environment. For example \`--env=""\`.
 
@@ -1090,6 +1140,39 @@ describe("versions deploy", () => {
 
 				await runWrangler(
 					"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+				);
+
+				expect(consoleStd.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+				expect,
+			}) => {
+				vi.stubEnv("CLOUDFLARE_ENV", "test");
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
+
+				await runWrangler(
+					"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+				);
+
+				expect(consoleStd.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
+
+				await runWrangler(
+					'versions deploy 10000000-0000-0000-0000-000000000000 --yes --env=""'
 				);
 
 				expect(consoleStd.warn).toMatchInlineSnapshot(`""`);

@@ -14,6 +14,7 @@ import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { clearCachedAccount } from "../../cloudchamber/locations";
 import * as user from "../../user";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
+import { mockServiceScriptData } from "../deploy/helpers";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-cli-output";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -67,13 +68,24 @@ describe("wrangler deploy with containers", () => {
 
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
 
-		await expect(
-			runWrangler("deploy index.js")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`
-			[Error: The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.
-			Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with DOCKER_HOST.]
-		`
+		let errorMessage = "";
+		try {
+			await runWrangler("deploy index.js");
+		} catch (e) {
+			errorMessage = (e as Error).message;
+		}
+		expect(errorMessage).not.toBe("");
+		expect(errorMessage).toContain(
+			"The Docker CLI is needed to build the configured image before deploying but could not be launched."
+		);
+		expect(errorMessage).toContain(
+			"If Docker is not installed, download it from https://docs.docker.com/get-started/get-docker/"
+		);
+		expect(errorMessage).toContain(
+			"Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so."
+		);
+		expect(errorMessage).toContain(
+			"you can still deploy your Worker by passing --containers-rollout=none"
 		);
 	});
 	it("should fail early if the account id doesn't match the account id in the image uri", async ({
@@ -1129,6 +1141,36 @@ describe("wrangler deploy with containers", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
+	});
+
+	it("should skip Docker check and container deploy when --containers-rollout=none", async ({
+		expect,
+	}) => {
+		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/bad-docker-path");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [DEFAULT_CONTAINER_FROM_DOCKERFILE],
+		});
+
+		fs.writeFileSync("./Dockerfile", "FROM scratch");
+
+		mockGetVersion("Galaxy-Class");
+		mockGetApplications([]);
+		mockCreateApplication(expect);
+
+		fs.writeFileSync(
+			"index.js",
+			`export class ExampleDurableObject {}; export default{};`
+		);
+
+		// Without --containers-rollout=none, this would fail with a Docker error.
+		// With the flag, it should skip Docker verification entirely and proceed
+		// to deploy the Worker (the deploy itself may fail for unrelated mock reasons,
+		// but the key assertion is that no Docker error is thrown).
+
+		await expect(
+			runWrangler("deploy index.js --containers-rollout=none")
+		).resolves.not.toThrow();
 	});
 
 	describe("observability config resolution", () => {
@@ -2391,7 +2433,9 @@ describe("wrangler deploy with containers dry run", () => {
 		vi.unstubAllEnvs();
 	});
 
-	it("builds the image without pushing", async ({ expect }) => {
+	it("builds the image without pushing when given a dockerfile", async ({
+		expect,
+	}) => {
 		// Reduced mock chain for dry run (no delete, push)
 		vi.mocked(spawn)
 			.mockImplementationOnce(mockDockerInfo(expect))
@@ -2434,7 +2478,49 @@ describe("wrangler deploy with containers dry run", () => {
 		expect(cliStd.stdout).toMatchInlineSnapshot(`""`);
 	});
 
-	it("builds the image without pushing", async ({ expect }) => {
+	it("does not build when --containers-rollout=none", async ({ expect }) => {
+		// Reduced mock chain for dry run (no delete, push)
+		vi.mocked(spawn)
+			.mockImplementationOnce(mockDockerInfo(expect))
+			.mockImplementationOnce(
+				mockDockerBuild(
+					expect,
+					"my-container",
+					"worker",
+					"FROM scratch",
+					process.cwd()
+				)
+			);
+		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
+		fs.writeFileSync("./Dockerfile", "FROM scratch");
+		fs.writeFileSync(
+			"index.js",
+			`export class ExampleDurableObject {}; export default{};`
+		);
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [DEFAULT_CONTAINER_FROM_DOCKERFILE],
+		});
+
+		await runWrangler("deploy --dry-run --containers-rollout=none index.js");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
+			Your Worker has access to the following bindings:
+			Binding                                            Resource
+			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+			The following containers are available:
+			- my-container (<cwd>/Dockerfile)
+
+			--dry-run: exiting now."
+		`);
+		expect(cliStd.stdout).toMatchInlineSnapshot(`""`);
+	});
+
+	it("does not push when given a registry link", async ({ expect }) => {
 		// No docker mocks at all
 
 		fs.writeFileSync(
@@ -2462,6 +2548,72 @@ describe("wrangler deploy with containers dry run", () => {
 			--dry-run: exiting now."
 		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`""`);
+	});
+});
+
+describe("wrangler deploy with containers and dispatch namespace", () => {
+	runInTempDir();
+	const std = mockConsoleMethods();
+	const cliStd = mockCLIOutput();
+	mockAccountId();
+	mockApiToken();
+	beforeEach(() => {
+		msw.use(...mswSuccessDeploymentScriptMetadata);
+		msw.use(...mswListNewDeploymentsLatestFull);
+		mockSubDomainRequest();
+		mockServiceScriptData({
+			script: { id: "test-name", migration_tag: "v1" },
+			dispatchNamespace: "test-namespace",
+		});
+		mockContainersAccount();
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					class_name: "ExampleDurableObject",
+					name: "EXAMPLE_DO_BINDING",
+					type: "durable_object_namespace",
+				},
+			],
+			useOldUploadApi: true,
+			expectedDispatchNamespace: "test-namespace",
+			expectedContainers: [{ class_name: "ExampleDurableObject" }],
+		});
+		fs.writeFileSync(
+			"index.js",
+			`export class ExampleDurableObject {}; export default{};`
+		);
+		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
+	});
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it("should deploy containers when using --dispatch-namespace", async ({
+		expect,
+	}) => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+		});
+
+		mockGetApplications([]);
+
+		mockCreateApplication(expect, {
+			name: "my-container",
+			max_instances: 10,
+			durable_objects: {
+				namespace_id: "1",
+			},
+		});
+
+		await runWrangler("deploy index.js --dispatch-namespace test-namespace");
+
+		expect(std.out).toContain("Uploaded test-name");
+		expect(std.out).toContain("Dispatch Namespace: test-namespace");
+		expect(std.out).toContain("Current Version ID: Galaxy-Class");
+		expect(cliStd.stdout).toContain("my-container");
+		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 });
 

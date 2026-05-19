@@ -1,4 +1,3 @@
-/* eslint-disable no-empty-pattern */
 import childProcess from "node:child_process";
 import events from "node:events";
 import fs from "node:fs/promises";
@@ -97,7 +96,7 @@ function wrap(proc: childProcess.ChildProcess): Process {
 	};
 }
 
-// eslint-disable-next-line jest/expect-expect, jest/no-disabled-tests
+// eslint-disable-next-line jest/expect-expect, jest/no-disabled-tests -- base test fixture definition, not an actual test
 export const test = baseTest.extend<{
 	tmpPath: string;
 	seed: (files: Record<string, string>) => Promise<void>;
@@ -108,6 +107,7 @@ export const test = baseTest.extend<{
 	vitestDev: (options?: { flags?: string[]; maxBuffer?: number }) => Process;
 }>({
 	// Fixture for creating a temporary directory
+	// eslint-disable-next-line no-empty-pattern -- Vitest requires the 1st argument to use object destructuring
 	async tmpPath({}, use) {
 		const tmpPoolInstallationPath = inject("tmpPoolInstallationPath");
 		const tmpPathBase = path.join(tmpPoolInstallationPath, "test-");

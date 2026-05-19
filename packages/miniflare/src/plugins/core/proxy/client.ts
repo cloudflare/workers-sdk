@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-function-type */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type -- Proxy client uses Function type for dynamic RPC method proxying */
 import assert from "node:assert";
 import crypto from "node:crypto";
 import { ReadableStream, TransformStream } from "node:stream/web";

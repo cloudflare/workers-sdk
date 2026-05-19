@@ -68,6 +68,16 @@ export default function (
 		);
 	}
 
+	function isKeyMatch(input: string, key: string) {
+		if (input === key) {
+			return true;
+		}
+
+		// When "a" is pressed with Caps Lock on, readline emits `{ name: "a", shift: true }`
+		// This keeps the hotkeys case-insensitive
+		return /^[a-z]$/.test(key) && input === `shift+${key}`;
+	}
+
 	const unregisterKeyPress = onKeyPress(async (key) => {
 		const entries: string[] = [];
 
@@ -91,7 +101,7 @@ export default function (
 				continue;
 			}
 
-			if (keys.includes(char)) {
+			if (keys.some((registeredKey) => isKeyMatch(char, registeredKey))) {
 				try {
 					await handler();
 				} catch {

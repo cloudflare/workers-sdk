@@ -284,8 +284,9 @@ function isReplacedByVite(
 function isNotRelevant(
 	configName: string
 ): configName is NonApplicableConfigNotRelevant {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	return nonApplicableWorkerConfigs.notRelevant.includes(configName as any);
+	return nonApplicableWorkerConfigs.notRelevant.includes(
+		configName as NonApplicableConfigNotRelevant
+	);
 }
 
 function missingFieldErrorMessage(

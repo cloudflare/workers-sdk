@@ -14,9 +14,13 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { mockGetMembershipsFail } from "./helpers/mock-oauth-flow";
 import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
+import {
+	mswFailMembershipHandler,
+	mswFailAccountsHandler,
+	getMswSuccessMembershipHandlers,
+} from "./helpers/msw/handlers/user";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Interface } from "node:readline";
@@ -33,20 +37,6 @@ function createFetchResult(
 		messages: [],
 		result,
 	};
-}
-
-export function mockGetMemberships(
-	accounts: { id: string; account: { id: string; name: string } }[]
-) {
-	msw.use(
-		http.get(
-			"*/memberships",
-			() => {
-				return HttpResponse.json(createFetchResult(accounts));
-			},
-			{ once: true }
-		)
-	);
 }
 
 function mockNoWorkerFound(isBulk = false) {
@@ -409,19 +399,33 @@ describe("wrangler secret", () => {
 			describe("with accountId", () => {
 				mockAccountId({ accountId: null });
 
-				it("should error if request for memberships fails", async ({
+				it("should error if request for available accounts fails", async ({
 					expect,
 				}) => {
-					mockGetMembershipsFail();
+					msw.use(mswFailAccountsHandler, ...getMswSuccessMembershipHandlers());
 					await expect(
-						runWrangler("secret put the-key --name script-name")
+						runWrangler("pages secret put the-key --project some-project-name")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[APIError: A request to the Cloudflare API (/accounts) failed.]`
+					);
+				});
+
+				it("should error if request for available memberships fails", async ({
+					expect,
+				}) => {
+					msw.use(
+						mswFailMembershipHandler,
+						...getMswSuccessMembershipHandlers()
+					);
+					await expect(
+						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[APIError: A request to the Cloudflare API (/memberships) failed.]`
 					);
 				});
 
 				it("should error if a user has no account", async ({ expect }) => {
-					mockGetMemberships([]);
+					msw.use(...getMswSuccessMembershipHandlers([]));
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: Failed to automatically retrieve account IDs for the logged in user.
@@ -454,29 +458,16 @@ describe("wrangler secret", () => {
 				it("should error if a user has multiple accounts, and has not specified an account in wrangler.toml", async ({
 					expect,
 				}) => {
-					mockGetMemberships([
-						{
-							id: "1",
-							account: { id: "account-id-1", name: "account-name-1" },
-						},
-						{
-							id: "2",
-							account: { id: "account-id-2", name: "account-name-2" },
-						},
-						{
-							id: "3",
-							account: { id: "account-id-3", name: "account-name-3" },
-						},
-					]);
+					msw.use(...getMswSuccessMembershipHandlers());
 
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`account-name-1\`: \`account-id-1\`
-						  \`account-name-2\`: \`account-id-2\`
-						  \`account-name-3\`: \`account-id-3\`]
+						  \`Account One\`: \`account-1\`
+						  \`Account Two\`: \`account-2\`
+						  \`Account Three\`: \`account-3\`]
 					`);
 				});
 			});
@@ -497,7 +488,7 @@ describe("wrangler secret", () => {
 						"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret put command.[0m
 
 						  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-						  the target environment using the \`-e|--env\` flag.
+						  the target environment using the \`-e|--env\` flag or CLOUDFLARE_ENV env variable.
 						  If your intention is to use the top-level environment of your configuration simply pass an empty
 						  string to the flag to target such environment. For example \`--env=""\`.
 
@@ -531,6 +522,35 @@ describe("wrangler secret", () => {
 					mockStdIn.send("the-secret");
 					mockPutRequest(expect, { name: "the-key", text: "the-secret" });
 					await runWrangler("secret put the-key --name script-name");
+					expect(std.warn).toMatchInlineSnapshot(`""`);
+				});
+
+				it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+					expect,
+				}) => {
+					vi.stubEnv("CLOUDFLARE_ENV", "test");
+					writeWranglerConfig({
+						env: {
+							test: {},
+						},
+					});
+					mockStdIn.send("the-secret");
+					mockPutRequest(expect, { name: "the-key", text: "the-secret" });
+					await runWrangler("secret put the-key --name script-name");
+					expect(std.warn).toMatchInlineSnapshot(`""`);
+				});
+
+				it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+					expect,
+				}) => {
+					writeWranglerConfig({
+						env: {
+							test: {},
+						},
+					});
+					mockStdIn.send("the-secret");
+					mockPutRequest(expect, { name: "the-key", text: "the-secret" });
+					await runWrangler('secret put the-key --name script-name --env=""');
 					expect(std.warn).toMatchInlineSnapshot(`""`);
 				});
 			});
@@ -777,7 +797,7 @@ describe("wrangler secret", () => {
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret delete command.[0m
 
 					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-					  the target environment using the \`-e|--env\` flag.
+					  the target environment using the \`-e|--env\` flag or CLOUDFLARE_ENV env variable.
 					  If your intention is to use the top-level environment of your configuration simply pass an empty
 					  string to the flag to target such environment. For example \`--env=""\`.
 
@@ -820,6 +840,47 @@ describe("wrangler secret", () => {
 					result: true,
 				});
 				await runWrangler("secret delete the-key --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+				expect,
+			}) => {
+				vi.stubEnv("CLOUDFLARE_ENV", "test");
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
+				mockDeleteRequest(expect, {
+					scriptName: "script-name",
+					secretName: "the-key",
+				});
+				mockConfirm({
+					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
+					result: true,
+				});
+				await runWrangler("secret delete the-key --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					env: {
+						test: {},
+					},
+				});
+				mockDeleteRequest(expect, {
+					scriptName: "script-name",
+					secretName: "the-key",
+				});
+				mockConfirm({
+					text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
+					result: true,
+				});
+				await runWrangler('secret delete the-key --name script-name --env=""');
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
@@ -1504,7 +1565,7 @@ describe("wrangler secret", () => {
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the secret bulk command.[0m
 
 					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-					  the target environment using the \`-e|--env\` flag.
+					  the target environment using the \`-e|--env\` flag or CLOUDFLARE_ENV env variable.
 					  If your intention is to use the top-level environment of your configuration simply pass an empty
 					  string to the flag to target such environment. For example \`--env=""\`.
 
@@ -1544,6 +1605,45 @@ describe("wrangler secret", () => {
 				mockBulkRequest(expect);
 
 				await runWrangler("secret bulk ./secret.json --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+				expect,
+			}) => {
+				vi.stubEnv("CLOUDFLARE_ENV", "test");
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+					env: {
+						test: {},
+					},
+				});
+				writeFileSync("secret.json", JSON.stringify({}));
+
+				mockBulkRequest(expect);
+
+				await runWrangler("secret bulk ./secret.json --name script-name");
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+					env: {
+						test: {},
+					},
+				});
+				writeFileSync("secret.json", JSON.stringify({}));
+
+				mockBulkRequest(expect);
+
+				await runWrangler(
+					'secret bulk ./secret.json --name script-name --env=""'
+				);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});

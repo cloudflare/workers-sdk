@@ -660,7 +660,6 @@ interface EnvironmentInheritable {
 	 * Specify the cache behavior of the Worker.
 	 *
 	 * @inheritable
-	 * @hidden
 	 */
 	cache: CacheOptions | undefined;
 
@@ -763,10 +762,12 @@ export interface EnvironmentNonInheritable {
 	vars: Record<string, string | Json>;
 
 	/**
-	 * Secrets configuration (experimental).
+	 * Secrets configuration.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#secrets-configuration-property
 	 *
 	 * @nonInheritable
 	 */
@@ -1659,7 +1660,7 @@ export type ContainerEngine =
  *
  * The `previews` block contains any intentionally divergent configuration intended solely for Previews, including:
  * - All non-inheritable properties (environment variables and bindings like KV, D1, R2, etc.)
- * - Select inheritable properties: `logpush`, `observability`, `limits`
+ * - Select inheritable properties: `logpush`, `observability`, `limits`, `cache`
  *
  * @inheritable
  */
@@ -1667,5 +1668,8 @@ export interface PreviewsConfig
 	extends
 		Partial<EnvironmentNonInheritable>,
 		Partial<
-			Pick<EnvironmentInheritable, "logpush" | "observability" | "limits">
+			Pick<
+				EnvironmentInheritable,
+				"logpush" | "observability" | "limits" | "cache"
+			>
 		> {}

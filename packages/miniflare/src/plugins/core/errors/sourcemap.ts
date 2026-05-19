@@ -12,7 +12,7 @@ import type { Options } from "@cspotcode/source-map-support";
 //
 // ...load a fresh copy, by resetting then restoring the `require` cache, and
 // overriding `Symbol.for()` to return a unique symbol.
-// eslint-disable-next-line typescript/consistent-type-imports
+// eslint-disable-next-line typescript/consistent-type-imports -- dynamic import type used for return type annotation
 export function getFreshSourceMapSupport(): typeof import("@cspotcode/source-map-support") {
 	const resolvedSupportPath = require.resolve("@cspotcode/source-map-support");
 
@@ -30,7 +30,7 @@ export function getFreshSourceMapSupport(): typeof import("@cspotcode/source-map
 			return Symbol(key);
 		};
 		delete require.cache[resolvedSupportPath];
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		// eslint-disable-next-line @typescript-eslint/no-require-imports -- require needed to bypass module cache for fresh copy
 		return require(resolvedSupportPath);
 	} finally {
 		Symbol.for = originalSymbolFor;

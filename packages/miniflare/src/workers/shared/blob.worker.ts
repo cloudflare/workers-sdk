@@ -49,9 +49,7 @@ async function fetchSingleRange(
 	if (range !== undefined && res.status !== 206) {
 		// If we specified a range, but received full content, make sure the range
 		// covered the full content
-		// Safety of `!`: `parseInt(null)` is `NaN`
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const contentLength = parseInt(res.headers.get("Content-Length")!);
+		const contentLength = parseInt(res.headers.get("Content-Length") ?? "NaN");
 		assert(!Number.isNaN(contentLength));
 		assertFullRangeRequest(range, contentLength);
 	}
@@ -120,9 +118,7 @@ async function fetchMultipleRanges(
 	if (res.status === 404) return null;
 	assert(res.ok);
 
-	// Safety of `!`: `parseInt(null)` is `NaN`
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	const contentLength = parseInt(res.headers.get("Content-Length")!);
+	const contentLength = parseInt(res.headers.get("Content-Length") ?? "NaN");
 	assert(!Number.isNaN(contentLength));
 
 	// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests#multipart_ranges

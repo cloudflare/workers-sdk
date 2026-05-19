@@ -13,17 +13,28 @@ inputs:
     description: the api token for connecting to the turbo remote cache
   turbo-signature:
     description: the cache signature key for connecting to the turbo remote cache
+  disable-cache:
+    description: when "true", skip the pnpm store cache on setup-node (defense in depth for release builds)
+    default: "false"
 runs:
   using: "composite"
   steps:
     - name: Install pnpm
       uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
 
-    - name: Install Node.js ${{ inputs.node-version }}
+    - name: Install Node.js ${{ inputs.node-version }} (with pnpm cache)
+      if: inputs.disable-cache != 'true'
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
         cache: "pnpm"
+        registry-url: "https://registry.npmjs.org"
+
+    - name: Install Node.js ${{ inputs.node-version }} (without pnpm cache)
+      if: inputs.disable-cache == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
         registry-url: "https://registry.npmjs.org"
 
     # Enable node compile cache (effective for Node 22+)

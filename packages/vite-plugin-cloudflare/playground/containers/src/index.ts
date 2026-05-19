@@ -10,7 +10,7 @@ export class Container extends DurableObject<Env> {
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- we know that the container is defined on ctx
 		this.container = ctx.container!;
 	}
 

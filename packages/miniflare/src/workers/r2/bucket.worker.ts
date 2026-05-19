@@ -145,9 +145,9 @@ function rangeOverlaps(a: InclusiveRange, b: InclusiveRange): boolean {
 }
 
 async function decodeMetadata(req: Request<unknown, unknown>) {
-	// Safety of `!`: `parseInt(null)` is `NaN`
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	const metadataSize = parseInt(req.headers.get(R2Headers.METADATA_SIZE)!);
+	const metadataSize = parseInt(
+		req.headers.get(R2Headers.METADATA_SIZE) ?? "NaN"
+	);
 	if (Number.isNaN(metadataSize)) throw new InvalidMetadata();
 
 	assert(req.body !== null);
@@ -1039,9 +1039,9 @@ export class R2BucketObject extends MiniflareDurableObject {
 			);
 			return new Response();
 		} else if (metadata.method === "put") {
-			// Safety of `!`: `parseInt(null)` is `NaN`
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const contentLength = parseInt(req.headers.get("Content-Length")!);
+			const contentLength = parseInt(
+				req.headers.get("Content-Length") ?? "NaN"
+			);
 			// `workerd` requires a known value size for R2 put requests:
 			// - https://github.com/cloudflare/workerd/blob/e3479895a2ace28e4fd5f1399cea4c92291966ab/src/workerd/api/r2-rpc.c%2B%2B#L154-L156
 			// - https://github.com/cloudflare/workerd/blob/e3479895a2ace28e4fd5f1399cea4c92291966ab/src/workerd/api/r2-rpc.c%2B%2B#L188-L189
@@ -1061,9 +1061,9 @@ export class R2BucketObject extends MiniflareDurableObject {
 			);
 			return encodeJSONResult(result);
 		} else if (metadata.method === "uploadPart") {
-			// Safety of `!`: `parseInt(null)` is `NaN`
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const contentLength = parseInt(req.headers.get("Content-Length")!);
+			const contentLength = parseInt(
+				req.headers.get("Content-Length") ?? "NaN"
+			);
 			// `workerd` requires a known value size for R2 put requests as above
 			assert(!isNaN(contentLength));
 			const valueSize = contentLength - metadataSize;

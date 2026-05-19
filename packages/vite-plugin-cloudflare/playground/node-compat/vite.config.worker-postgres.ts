@@ -10,7 +10,7 @@ export default defineConfig({
 			configPath: "./worker-postgres/wrangler.jsonc",
 			// Inject the mock Postgres server port set by serve.ts preServe()
 			config: () => {
-				// eslint-disable-next-line turbo/no-undeclared-env-vars
+				// eslint-disable-next-line turbo/no-undeclared-env-vars -- internal to the test process: set by serve.ts preServe(), not an external input
 				const mockPgPort = process.env.MOCK_PG_PORT;
 				if (mockPgPort) {
 					return {

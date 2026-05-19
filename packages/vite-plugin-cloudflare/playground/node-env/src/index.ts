@@ -9,7 +9,7 @@ export default {
 				React.createElement(
 					"p",
 					null,
-					// eslint-disable-next-line turbo/no-undeclared-env-vars
+					// eslint-disable-next-line turbo/no-undeclared-env-vars -- Worker runtime code: build-time replaced by Vite, not a Node.js process env var
 					`The value of process.env.NODE_ENV is "${process.env.NODE_ENV}"`
 				),
 			])

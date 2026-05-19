@@ -88,6 +88,7 @@ const ignoreMessages = [
 	"disconnected: operation canceled",
 	"disconnected: worker_do_not_log; Request failed due to internal error",
 	"disconnected: WebSocket was aborted",
+	"disconnected: WebSocket peer disconnected",
 	"CODE_MOVED for unknown code block",
 	"broken.outputGateBroken; jsg.Error: Instance dispose",
 ];
@@ -292,6 +293,26 @@ async function buildProjectWorkerOptions(
 		customOptions.wrangler?.configPath
 	);
 	const runnerWorker = customOptions.miniflare ?? {};
+
+	// `unstable_getMiniflareWorkerOptions` returns service bindings whose `name`
+	// is the literal `config.name` for self-references (e.g. `{ name: "my-worker" }`
+	// when the wrangler config has `name: "my-worker"`). We rename the runner
+	// worker below, so rewrite those self-references to `kCurrentWorker` first.
+	// That symbol resolves at request time relative to the referer worker, so it
+	// survives the rename.
+	const wranglerWorkerName = getWranglerWorkerName(relativeWranglerConfigPath);
+	if (wranglerWorkerName && runnerWorker.serviceBindings) {
+		for (const [key, sb] of Object.entries(runnerWorker.serviceBindings)) {
+			if (
+				typeof sb === "object" &&
+				sb !== null &&
+				"name" in sb &&
+				sb.name === wranglerWorkerName
+			) {
+				runnerWorker.serviceBindings[key] = { ...sb, name: kCurrentWorker };
+			}
+		}
+	}
 
 	runnerWorker.name = getRunnerName(project);
 

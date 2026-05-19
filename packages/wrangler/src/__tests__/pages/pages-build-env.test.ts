@@ -203,7 +203,7 @@ describe("pages build env", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should throw an error if an invalid pages confg file is found", async ({
+	it("should throw an error if an invalid pages config file is found", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
@@ -229,7 +229,7 @@ describe("pages build env", () => {
 		`);
 	});
 
-	it("should exit if an unparseable pages confg file is found", async ({
+	it("should exit if an unparseable pages config file is found", async ({
 		expect,
 	}) => {
 		writeFileSync(

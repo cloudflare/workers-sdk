@@ -1,5 +1,23 @@
 # @cloudflare/containers-shared
 
+## 0.15.0
+
+### Minor Changes
+
+- [#12656](https://github.com/cloudflare/workers-sdk/pull/12656) [`ae047ee`](https://github.com/cloudflare/workers-sdk/commit/ae047eedd5c59452e05a122f14ac4ff6c5ff8ad2) Thanks [@mikenomitch](https://github.com/mikenomitch)! - Add `--containers-rollout=none`
+
+  This allows you to skip deploying a container. This is useful if you know that your container is not going to be updated or you don't have Docker locally, but still want to make changes to your Worker.
+
+### Patch Changes
+
+- [#13950](https://github.com/cloudflare/workers-sdk/pull/13950) [`f78d435`](https://github.com/cloudflare/workers-sdk/commit/f78d435454a6f7f0623bf878f1279ca6c3caed50) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve the Docker CLI error message to be more actionable.
+
+  Include a link to Docker installation docs, platform-specific instructions for starting the daemon, and guidance for alternative Docker-compatible CLIs.
+
+- [#13950](https://github.com/cloudflare/workers-sdk/pull/13950) [`f78d435`](https://github.com/cloudflare/workers-sdk/commit/f78d435454a6f7f0623bf878f1279ca6c3caed50) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Refactor `verifyDockerInstalled` to accept an options object instead of positional parameters
+
+  The function signature changed from `(dockerPath: string, isDev?: boolean)` to `({ dockerPath, isDev }: { dockerPath: string; isDev?: boolean })` for improved readability and extensibility.
+
 ## 0.14.1
 
 ### Patch Changes

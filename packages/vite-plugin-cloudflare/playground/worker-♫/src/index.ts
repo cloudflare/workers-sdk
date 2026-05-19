@@ -7,7 +7,7 @@ export default {
 		if (
 			url.pathname ===
 			// doing base path normalization, in real world you would built in framework features from libs like Hono
-			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			// eslint-disable-next-line turbo/no-undeclared-env-vars -- Worker runtime code: build-time replaced by Vite, not a Node.js process env var
 			`${import.meta.env.BASE_URL}/x-forwarded-host`.replace(/\/+/g, "/")
 		) {
 			return new Response(request.headers.get("X-Forwarded-Host"));
@@ -15,6 +15,10 @@ export default {
 
 		if (url.pathname.endsWith("/host-header")) {
 			return new Response(request.headers.get("Host"));
+		}
+
+		if (url.pathname.endsWith("/request-url")) {
+			return new Response(request.url);
 		}
 
 		// return the pathname if the path parameter is present to test the base path

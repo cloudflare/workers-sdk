@@ -91,6 +91,27 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("╭");
 		});
 
+		test("should display cache setting in pretty format", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							preview_defaults: {
+								cache: { enabled: true },
+								env: {},
+							},
+						},
+					})
+				)
+			);
+			await runWrangler("preview settings --worker-name override-worker");
+			expect(std.out).toContain("cache");
+			expect(std.out).toContain("enabled");
+		});
+
 		test("should show empty bindings in pretty format", async ({ expect }) => {
 			msw.use(
 				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
@@ -393,6 +414,94 @@ describe("wrangler preview", () => {
 			);
 			expect(patchRequestBody?.preview_defaults?.limits).toEqual({
 				subrequests: 50,
+			});
+		});
+
+		test("should prefer previews cache over top-level cache", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					cache: { enabled: true },
+					previews: { cache: { enabled: false } },
+				})
+			);
+			let patchRequestBody:
+				| {
+						preview_defaults?: {
+							cache?: { enabled?: boolean };
+						};
+				  }
+				| undefined;
+			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: { preview_defaults: {} },
+					})
+				),
+				http.patch(
+					`*/accounts/:accountId/workers/workers/:workerId`,
+					async ({ request }) => {
+						patchRequestBody =
+							(await request.json()) as typeof patchRequestBody;
+						return HttpResponse.json({ success: true, result: {} });
+					}
+				)
+			);
+			await runWrangler(
+				"preview settings update --worker-name override-worker --skip-confirmation"
+			);
+			expect(patchRequestBody?.preview_defaults?.cache).toEqual({
+				enabled: false,
+			});
+		});
+
+		test("should fall back to top-level cache when previews.cache is absent", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					cache: { enabled: true },
+					previews: {},
+				})
+			);
+			let patchRequestBody:
+				| {
+						preview_defaults?: {
+							cache?: { enabled?: boolean };
+						};
+				  }
+				| undefined;
+			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: { preview_defaults: {} },
+					})
+				),
+				http.patch(
+					`*/accounts/:accountId/workers/workers/:workerId`,
+					async ({ request }) => {
+						patchRequestBody =
+							(await request.json()) as typeof patchRequestBody;
+						return HttpResponse.json({ success: true, result: {} });
+					}
+				)
+			);
+			await runWrangler(
+				"preview settings update --worker-name override-worker --skip-confirmation"
+			);
+			expect(patchRequestBody?.preview_defaults?.cache).toEqual({
+				enabled: true,
 			});
 		});
 

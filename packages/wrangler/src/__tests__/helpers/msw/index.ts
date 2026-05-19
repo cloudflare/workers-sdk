@@ -10,7 +10,12 @@ import { mswSuccessNamespacesHandlers } from "./handlers/namespaces";
 import { mswSuccessOauthHandlers } from "./handlers/oauth";
 import { mswR2handlers } from "./handlers/r2";
 import { default as mswSucessScriptHandlers } from "./handlers/script";
-import { mswSuccessUserHandlers } from "./handlers/user";
+import {
+	mswSuccessUserHandlers,
+	mswFailAccountsHandler,
+	mswFailMembershipHandler,
+	getMswSuccessMembershipHandlers,
+} from "./handlers/user";
 import {
 	mswGetVersion,
 	mswListNewDeployments,
@@ -47,6 +52,9 @@ function createFetchResult(
 
 export {
 	createFetchResult,
+	getMswSuccessMembershipHandlers,
+	mswFailMembershipHandler,
+	mswFailAccountsHandler,
 	mswSuccessUserHandlers,
 	mswR2handlers,
 	mswSuccessOauthHandlers,

@@ -14,6 +14,7 @@ type Env = {
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
 	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
 	[CoreBindings.SERVICE_STREAM]?: Fetcher;
+	[CoreBindings.SERVICE_IMAGES_DELIVERY]?: Fetcher;
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
@@ -282,9 +283,7 @@ function maybeInjectLiveReload(
 	}
 
 	const headers = new Headers(response.headers);
-	// Safety of `!`: `parseInt(null)` is `NaN`
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	const contentLength = parseInt(headers.get("content-length")!);
+	const contentLength = parseInt(headers.get("content-length") ?? "NaN");
 	if (!isNaN(contentLength)) {
 		headers.set(
 			"content-length",
@@ -538,6 +537,14 @@ export default <ExportedHandler<Env>>{
 				) {
 					return await env[CoreBindings.SERVICE_LOCAL_EXPLORER].fetch(request);
 				}
+			}
+			const imagesDelivery = env[CoreBindings.SERVICE_IMAGES_DELIVERY];
+			if (
+				(url.pathname === CorePaths.IMAGE_DELIVERY ||
+					url.pathname.startsWith(`${CorePaths.IMAGE_DELIVERY}/`)) &&
+				imagesDelivery
+			) {
+				return await imagesDelivery.fetch(request);
 			}
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
 				if (

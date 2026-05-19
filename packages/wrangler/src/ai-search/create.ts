@@ -1,4 +1,5 @@
-import { UserError } from "@cloudflare/workers-utils";
+import path from "node:path";
+import { parseJSON, readFileSync, UserError } from "@cloudflare/workers-utils";
 import { fetchPagedListResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { confirm, prompt, select } from "../dialogs";
@@ -13,9 +14,191 @@ import {
 	listNamespaces,
 	listTokens,
 } from "./client";
+import type {
+	AiSearchCustomMetadata,
+	AiSearchCustomMetadataDataType,
+} from "./types";
 
 const CREATE_NEW_BUCKET = "__create_new__";
 const CREATE_NEW_NAMESPACE = "__create_new__";
+
+const CUSTOM_METADATA_DATA_TYPES = [
+	"text",
+	"number",
+	"boolean",
+	"datetime",
+] as const satisfies readonly AiSearchCustomMetadataDataType[];
+
+// Reserved field names rejected by the AI Search backend; validated client-side
+// for fast feedback. Keep in sync with apps/config-api validation rules.
+const CUSTOM_METADATA_RESERVED_FIELD_NAMES = new Set([
+	"timestamp",
+	"folder",
+	"filename",
+]);
+
+const CUSTOM_METADATA_MAX_ENTRIES = 20;
+
+function isCustomMetadataDataType(
+	value: string
+): value is AiSearchCustomMetadataDataType {
+	return (CUSTOM_METADATA_DATA_TYPES as readonly string[]).includes(value);
+}
+
+function validateCustomMetadataFieldName(
+	fieldName: string,
+	existing: AiSearchCustomMetadata[]
+): true | string {
+	if (fieldName.length === 0) {
+		return "Field name is required.";
+	}
+	if (CUSTOM_METADATA_RESERVED_FIELD_NAMES.has(fieldName.toLowerCase())) {
+		return `"${fieldName}" is a reserved field name. Reserved: ${[...CUSTOM_METADATA_RESERVED_FIELD_NAMES].join(", ")}.`;
+	}
+	const lower = fieldName.toLowerCase();
+	if (existing.some((m) => m.field_name.toLowerCase() === lower)) {
+		return `Field name "${fieldName}" is already defined.`;
+	}
+	return true;
+}
+
+function parseCustomMetadataFlag(
+	values: ReadonlyArray<string | number>
+): AiSearchCustomMetadata[] {
+	const result: AiSearchCustomMetadata[] = [];
+	const errors: string[] = [];
+	for (const value of values) {
+		const raw = String(value);
+		const idx = raw.indexOf(":");
+		if (idx === -1) {
+			errors.push(
+				`Invalid --custom-metadata value "${raw}". ` +
+					`Expected format: field_name:data_type ` +
+					`(data_type one of ${CUSTOM_METADATA_DATA_TYPES.join(", ")}).`
+			);
+			continue;
+		}
+		const fieldName = raw.slice(0, idx).trim();
+		const dataType = raw.slice(idx + 1).trim();
+		const fieldValidation = validateCustomMetadataFieldName(fieldName, result);
+		if (fieldValidation !== true) {
+			errors.push(
+				`Invalid --custom-metadata value "${raw}": ${fieldValidation}`
+			);
+			continue;
+		}
+		if (!isCustomMetadataDataType(dataType)) {
+			errors.push(
+				`Invalid --custom-metadata value "${raw}": data_type must be one of ${CUSTOM_METADATA_DATA_TYPES.join(", ")}.`
+			);
+			continue;
+		}
+		result.push({ field_name: fieldName, data_type: dataType });
+	}
+	if (result.length > CUSTOM_METADATA_MAX_ENTRIES) {
+		errors.push(
+			`At most ${CUSTOM_METADATA_MAX_ENTRIES} custom metadata fields are allowed (got ${result.length}).`
+		);
+	}
+	if (errors.length > 0) {
+		throw new UserError(
+			errors.length === 1
+				? errors[0]
+				: `Found ${errors.length} errors in --custom-metadata values:\n` +
+						errors.map((e) => `  - ${e}`).join("\n"),
+			{
+				telemetryMessage: false,
+			}
+		);
+	}
+	return result;
+}
+
+/**
+ * Reads a JSON file describing custom metadata fields and returns the parsed
+ * list. Only accepts a bare array of `{ field_name, data_type }` objects, e.g.
+ * `[{ "field_name": "title", "data_type": "text" }]`.
+ */
+function parseCustomMetadataSchemaFile(
+	filePath: string
+): AiSearchCustomMetadata[] {
+	const resolvedPath = path.resolve(filePath);
+	const parsed = parseJSON(readFileSync(resolvedPath), resolvedPath) as unknown;
+
+	if (!Array.isArray(parsed)) {
+		throw new UserError(
+			`Invalid custom metadata schema in "${resolvedPath}". ` +
+				`Expected an array of { field_name, data_type } objects.`,
+			{
+				telemetryMessage: false,
+			}
+		);
+	}
+
+	const result: AiSearchCustomMetadata[] = [];
+	const errors: string[] = [];
+	parsed.forEach((entry, index) => {
+		if (entry === null || typeof entry !== "object") {
+			errors.push(
+				`Invalid custom metadata entry at index ${index} in "${resolvedPath}": ` +
+					`expected an object with "field_name" and "data_type".`
+			);
+			return;
+		}
+		const { field_name: fieldNameRaw, data_type: dataTypeRaw } = entry as {
+			field_name?: unknown;
+			data_type?: unknown;
+		};
+		if (typeof fieldNameRaw !== "string") {
+			errors.push(
+				`Invalid custom metadata entry at index ${index} in "${resolvedPath}": ` +
+					`"field_name" must be a string.`
+			);
+			return;
+		}
+		if (typeof dataTypeRaw !== "string") {
+			errors.push(
+				`Invalid custom metadata entry at index ${index} in "${resolvedPath}": ` +
+					`"data_type" must be a string.`
+			);
+			return;
+		}
+		const fieldName = fieldNameRaw.trim();
+		const fieldValidation = validateCustomMetadataFieldName(fieldName, result);
+		if (fieldValidation !== true) {
+			errors.push(
+				`Invalid custom metadata entry at index ${index} in "${resolvedPath}": ${fieldValidation}`
+			);
+			return;
+		}
+		if (!isCustomMetadataDataType(dataTypeRaw)) {
+			errors.push(
+				`Invalid custom metadata entry at index ${index} in "${resolvedPath}": ` +
+					`"data_type" must be one of ${CUSTOM_METADATA_DATA_TYPES.join(", ")}.`
+			);
+			return;
+		}
+		result.push({ field_name: fieldName, data_type: dataTypeRaw });
+	});
+
+	if (result.length > CUSTOM_METADATA_MAX_ENTRIES) {
+		errors.push(
+			`At most ${CUSTOM_METADATA_MAX_ENTRIES} custom metadata fields are allowed (got ${result.length}) in "${resolvedPath}".`
+		);
+	}
+	if (errors.length > 0) {
+		throw new UserError(
+			errors.length === 1
+				? errors[0]
+				: `Found ${errors.length} errors in custom metadata schema "${resolvedPath}":\n` +
+						errors.map((e) => `  - ${e}`).join("\n"),
+			{
+				telemetryMessage: false,
+			}
+		);
+	}
+	return result;
+}
 
 export const aiSearchCreateCommand = createCommand({
 	metadata: {
@@ -44,7 +227,7 @@ export const aiSearchCreateCommand = createCommand({
 		},
 		type: {
 			type: "string",
-			choices: ["r2", "web-crawler"],
+			choices: ["builtin", "r2", "web-crawler"],
 			description: "The source type for the instance.",
 		},
 		"embedding-model": {
@@ -100,6 +283,24 @@ export const aiSearchCreateCommand = createCommand({
 			type: "array",
 			string: true,
 			description: "Glob patterns for items to exclude.",
+		},
+		"custom-metadata": {
+			type: "array",
+			string: true,
+			description:
+				"Custom metadata fields, formatted as 'field_name:data_type'. " +
+				`data_type must be one of: ${CUSTOM_METADATA_DATA_TYPES.join(", ")}. ` +
+				"Repeat the flag for multiple fields (e.g. --custom-metadata title:text --custom-metadata views:number).",
+			conflicts: ["custom-metadata-schema"],
+		},
+		"custom-metadata-schema": {
+			type: "string",
+			requiresArg: true,
+			description:
+				"Path to a JSON file describing custom metadata fields. " +
+				'The file must contain an array of { "field_name", "data_type" } objects. ' +
+				"Mutually exclusive with --custom-metadata.",
+			conflicts: ["custom-metadata"],
 		},
 		json: {
 			type: "boolean",
@@ -211,12 +412,18 @@ export const aiSearchCreateCommand = createCommand({
 			if (isNonInteractiveOrCI()) {
 				throw new UserError(
 					"Missing required flag in non-interactive mode: --type\n" +
-						"  Pass --type r2 or --type web-crawler.",
+						"  Pass --type builtin, --type r2, or --type web-crawler.",
 					{ telemetryMessage: "ai search create missing type" }
 				);
 			}
 			instanceType = await select("Select the source type:", {
 				choices: [
+					{
+						title: "Builtin",
+						description:
+							"Cloudflare-managed storage (no external bucket required)",
+						value: "builtin" as const,
+					},
 					{
 						title: "R2",
 						description: "Index files from an R2 bucket",
@@ -230,6 +437,32 @@ export const aiSearchCreateCommand = createCommand({
 				],
 				defaultOption: 0,
 			});
+		}
+
+		// Builtin storage is fully managed by Cloudflare — it does not accept
+		// a source identifier or any source_params.
+		if (instanceType === "builtin") {
+			const unsupportedFlags: string[] = [];
+			if (args.source !== undefined) {
+				unsupportedFlags.push("--source");
+			}
+			if (args.prefix !== undefined) {
+				unsupportedFlags.push("--prefix");
+			}
+			if (args.includeItems !== undefined) {
+				unsupportedFlags.push("--include-items");
+			}
+			if (args.excludeItems !== undefined) {
+				unsupportedFlags.push("--exclude-items");
+			}
+			if (unsupportedFlags.length > 0) {
+				throw new UserError(
+					`The following flags are not supported with --type builtin: ${unsupportedFlags.join(", ")}`,
+					{
+						telemetryMessage: false,
+					}
+				);
+			}
 		}
 
 		// 2. Source selection — depends on the type
@@ -339,12 +572,75 @@ export const aiSearchCreateCommand = createCommand({
 				instanceSource = `https://${selectedZone}`;
 			}
 		}
+		// 3. Custom metadata (optional). Honors --custom-metadata or
+		// --custom-metadata-schema; otherwise prompts interactively when
+		// running attached to a TTY.
+		if (
+			args.customMetadata &&
+			args.customMetadata.length > 0 &&
+			args.customMetadataSchema
+		) {
+			throw new UserError(
+				"--custom-metadata and --custom-metadata-schema are mutually exclusive. " +
+					"Pick one.",
+				{
+					telemetryMessage: false,
+				}
+			);
+		}
+		let customMetadata: AiSearchCustomMetadata[] = [];
+		if (args.customMetadata && args.customMetadata.length > 0) {
+			customMetadata = parseCustomMetadataFlag(args.customMetadata);
+		} else if (args.customMetadataSchema) {
+			customMetadata = parseCustomMetadataSchemaFile(args.customMetadataSchema);
+		} else if (!isNonInteractiveOrCI() && !args.json) {
+			const configure = await confirm(
+				"Configure custom metadata fields? (optional)",
+				{ defaultValue: false }
+			);
+			if (configure) {
+				let addAnother = true;
+				while (addAnother) {
+					const fieldName = await prompt("Field name:", {
+						validate: (value: string) =>
+							validateCustomMetadataFieldName(value.trim(), customMetadata),
+					});
+					const dataType = await select("Data type:", {
+						choices: CUSTOM_METADATA_DATA_TYPES.map((t) => ({
+							title: t,
+							value: t,
+						})),
+						defaultOption: 0,
+					});
+					customMetadata.push({
+						field_name: fieldName.trim(),
+						data_type: dataType,
+					});
+					if (customMetadata.length >= CUSTOM_METADATA_MAX_ENTRIES) {
+						logger.log(
+							`Reached the maximum of ${CUSTOM_METADATA_MAX_ENTRIES} custom metadata fields.`
+						);
+						addAnother = false;
+					} else {
+						addAnother = await confirm("Add another field?", {
+							defaultValue: false,
+						});
+					}
+				}
+			}
+		}
 
+		// For builtin storage, omit `type` from the request payload — the API
+		// treats an absent `type` as builtin.
 		const body: Record<string, unknown> = {
 			id: instanceName,
-			source: instanceSource,
-			type: instanceType,
 		};
+		if (instanceType !== "builtin") {
+			body.type = instanceType;
+		}
+		if (instanceSource !== undefined) {
+			body.source = instanceSource;
+		}
 
 		if (args.embeddingModel !== undefined) {
 			body.embedding_model = args.embeddingModel;
@@ -375,6 +671,9 @@ export const aiSearchCreateCommand = createCommand({
 		}
 		if (args.scoreThreshold !== undefined) {
 			body.score_threshold = args.scoreThreshold;
+		}
+		if (customMetadata.length > 0) {
+			body.custom_metadata = customMetadata;
 		}
 
 		const sourceParams: Record<string, unknown> = {};
@@ -411,15 +710,21 @@ export const aiSearchCreateCommand = createCommand({
 		if (args.json) {
 			logger.log(JSON.stringify(instance, null, 2));
 		} else {
-			logger.log(
+			let summary =
 				`Successfully created AI Search instance "${instance.id}"\n` +
-					`  Name:       ${instance.id}\n` +
-					`  Namespace:  ${instance.namespace ?? instanceNamespace}\n` +
-					`  Type:       ${instance.type}\n` +
-					`  Source:     ${instance.source}\n` +
-					`  Model:      ${instance.ai_search_model ?? "default"}\n` +
-					`  Embedding:  ${instance.embedding_model ?? "default"}`
-			);
+				`  Name:       ${instance.id}\n` +
+				`  Namespace:  ${instance.namespace ?? instanceNamespace}\n` +
+				`  Type:       ${instance.type ?? "builtin"}\n` +
+				`  Source:     ${instance.source ?? "-"}\n` +
+				`  Model:      ${instance.ai_search_model ?? "default"}\n` +
+				`  Embedding:  ${instance.embedding_model ?? "default"}`;
+			if (instance.custom_metadata && instance.custom_metadata.length > 0) {
+				const fields = instance.custom_metadata
+					.map((m) => `${m.field_name}:${m.data_type}`)
+					.join(", ");
+				summary += `\n  Metadata:   ${fields}`;
+			}
+			logger.log(summary);
 		}
 	},
 });

@@ -83,6 +83,7 @@ export function remoteProxyClientWorker(
 	binding: string,
 	script?: () => string
 ) {
+	const cfTraceId = process.env.CF_TRACE_ID;
 	return {
 		compatibilityDate: "2025-01-01",
 		modules: [
@@ -104,6 +105,14 @@ export function remoteProxyClientWorker(
 				name: "binding",
 				text: binding,
 			},
+			...(cfTraceId
+				? [
+						{
+							name: "cfTraceId",
+							text: cfTraceId,
+						},
+					]
+				: []),
 		],
 	};
 }
