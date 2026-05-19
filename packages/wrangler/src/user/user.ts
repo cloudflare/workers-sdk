@@ -813,10 +813,17 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 
 			// The caller (refreshToken) persists this via writeAuthConfigFile.
 			// No need to mirror the values into any module-level cache.
+			//
+			// The OAuth server is allowed to omit `refresh_token` from a successful
+			// refresh response, in which case the previously issued refresh token
+			// remains valid (RFC 6749 §6). Preserve the stored value so we don't
+			// wipe a still-valid refresh token from disk.
 			const accessContext: AccessContext = {
 				token: accessToken,
 				scopes,
-				refreshToken: refresh_token ? { value: refresh_token } : undefined,
+				refreshToken: refresh_token
+					? { value: refresh_token }
+					: storedRefreshToken,
 			};
 			return accessContext;
 		} catch (error) {

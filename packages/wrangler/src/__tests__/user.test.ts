@@ -586,6 +586,48 @@ describe("User", () => {
 			expect(std.out).toContain("fresh-access-token");
 		});
 
+		it("should preserve the stored refresh_token when the OAuth server omits one on refresh", async ({
+			expect,
+		}) => {
+			// RFC 6749 §6 allows the authorization server to return a successful
+			// refresh response without a new refresh_token; the previously issued
+			// refresh token then remains valid. Wrangler must keep that stored
+			// refresh token on disk rather than wiping it — otherwise the next
+			// refresh attempt fails with "No refresh token is present" and the
+			// user is effectively logged out.
+			setIsTTY(false);
+			const pastDate = new Date(Date.now() - 100_000_000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-access",
+				refresh_token: "RT_A",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+
+			msw.use(
+				http.post("*/oauth2/token", () =>
+					HttpResponse.json({
+						access_token: "fresh-access-token",
+						expires_in: 3600,
+						// no refresh_token in the response
+						scope: "account:read",
+						token_type: "bearer",
+					})
+				)
+			);
+
+			await runWrangler("auth token");
+
+			expect(std.out).toContain("fresh-access-token");
+			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+				api_token: undefined,
+				oauth_token: "fresh-access-token",
+				refresh_token: "RT_A",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+		});
+
 		it("should error when not logged in", async ({ expect }) => {
 			await expect(runWrangler("auth token")).rejects.toThrowError(
 				"Not logged in. Please run `wrangler login` to authenticate."
