@@ -1566,11 +1566,16 @@ test("Miniflare: python modules", async ({ expect }) => {
 test("Miniflare: HTTPS fetches using browser CA certificates", async ({
 	expect,
 }) => {
+	// example.com is intentionally maintained as a stable test endpoint by IANA.
+	// We previously fetched https://workers.cloudflare.com/cf.json but that URL
+	// now 301s to https://www.cloudflare.com/cf.json which 404s, so the test
+	// was effectively asserting on an unintended 404 path rather than HTTPS CA
+	// trust.
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
 			fetch() {
-				return fetch("https://workers.cloudflare.com/cf.json");
+				return fetch("https://example.com/");
 			}
 		}`,
 	});
