@@ -159,6 +159,14 @@ export type CommandDefinition<
 		printMetricsBanner?: boolean;
 
 		/**
+		 * Whether to print the active authentication profile after the banner.
+		 * Only shown when a non-default profile is active.
+		 *
+		 * @default true
+		 */
+		printActiveProfile?: boolean;
+
+		/**
 		 * By default, wrangler will print warnings about the Wrangler configuration file.
 		 * Set this value to `false` to skip printing these warnings.
 		 */
