@@ -69,6 +69,7 @@ export async function maybeInstallCloudflareSkillsGlobally(
 		logger.warn(
 			`Failed to detect AI coding agents: ${err instanceof Error ? err.message : String(err)}`
 		);
+		logger.warn(SKILLS_INSTALL_RETRY_HINT);
 		sendResultMetricsEvent({
 			skippedBecause: "Failed to install skills",
 		});
@@ -134,6 +135,7 @@ export async function maybeInstallCloudflareSkillsGlobally(
 			logger.warn(
 				`Skills installation failed for agents: ${failedAgents.join(", ")}.`
 			);
+			logger.warn(SKILLS_INSTALL_RETRY_HINT);
 		}
 
 		writeSkillsInstallMetadataFile({
@@ -151,6 +153,7 @@ export async function maybeInstallCloudflareSkillsGlobally(
 		logger.warn(
 			`Failed to install Cloudflare skills: ${err instanceof Error ? err.message : String(err)}`
 		);
+		logger.warn(SKILLS_INSTALL_RETRY_HINT);
 
 		writeSkillsInstallMetadataFile({
 			accepted: true,
@@ -167,6 +170,10 @@ export async function maybeInstallCloudflareSkillsGlobally(
 
 /** The GitHub repo spec for Cloudflare skills, used with rosie.install(). */
 const SKILLS_REPO = "cloudflare/skills";
+
+/** Actionable hint appended to skills-install failure warnings, directing users to retry or install manually. */
+const SKILLS_INSTALL_RETRY_HINT =
+	"You can retry by running `wrangler --experimental-force-skills-install`, or install skills manually as described here: https://github.com/cloudflare/skills#installing";
 
 /**
  * Describes a detected AI coding agent.

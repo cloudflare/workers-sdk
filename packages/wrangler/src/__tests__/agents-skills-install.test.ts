@@ -188,6 +188,9 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			expect(std.warn).toContain(
 				"Failed to install Cloudflare skills: network failure"
 			);
+			expect(std.warn).toContain(
+				"You can retry by running `wrangler --experimental-force-skills-install`, or install skills manually as described here: https://github.com/cloudflare/skills#installing"
+			);
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
 				"skills_install_skipped",
 				{ reason: "Failed to install skills" },
@@ -205,6 +208,9 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 
 			expect(std.warn).toContain(
 				"Failed to detect AI coding agents: WASM load failed"
+			);
+			expect(std.warn).toContain(
+				"You can retry by running `wrangler --experimental-force-skills-install`, or install skills manually as described here: https://github.com/cloudflare/skills#installing"
 			);
 			expect(mockRosieInstall).not.toHaveBeenCalled();
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
@@ -405,6 +411,9 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			expect(std.warn).toContain(
 				"Failed to install Cloudflare skills: tarball download failed"
 			);
+			expect(std.warn).toContain(
+				"You can retry by running `wrangler --experimental-force-skills-install`, or install skills manually as described here: https://github.com/cloudflare/skills#installing"
+			);
 
 			const metadata = readMetadataFile();
 			expect(metadata.accepted).toBe(true);
@@ -449,9 +458,12 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			);
 			expect(std.out).not.toContain("Cursor");
 
-			// Warning should mention the failed agent
+			// Warning should mention the failed agent and retry hint
 			expect(std.warn).toContain(
 				"Skills installation failed for agents: cursor."
+			);
+			expect(std.warn).toContain(
+				"You can retry by running `wrangler --experimental-force-skills-install`, or install skills manually as described here: https://github.com/cloudflare/skills#installing"
 			);
 		});
 	});
