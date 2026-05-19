@@ -1,7 +1,9 @@
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { unstable_getMiniflareWorkerOptions } from "../api";
-import { runInTempDir } from "./helpers/run-in-tmp";
 
 describe("unstable_getMiniflareWorkerOptions", () => {
 	runInTempDir();
