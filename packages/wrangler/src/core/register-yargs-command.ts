@@ -7,13 +7,13 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { installCloudflareSkillsGlobally } from "../agents-skills-install";
+import { maybeInstallCloudflareSkillsGlobally } from "../agents-skills-install";
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
-import { getMetricsDispatcher, sendMetricsEvent } from "../metrics";
+import { getMetricsDispatcher } from "../metrics";
 import {
 	COMMAND_ARG_ALLOW_LIST,
 	getAllowedArgs,
@@ -138,29 +138,9 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				await printWranglerBanner();
 			}
 
-			const skillsInstallResult = await installCloudflareSkillsGlobally(
+			await maybeInstallCloudflareSkillsGlobally(
 				args.experimentalForceSkillsInstall
 			);
-			const alreadyPrompted =
-				"skipped" in skillsInstallResult &&
-				skillsInstallResult.reason === "Already prompted";
-			if (!alreadyPrompted) {
-				if ("skipped" in skillsInstallResult) {
-					sendMetricsEvent(
-						"skills_install_skipped",
-						{ reason: skillsInstallResult.reason },
-						{}
-					);
-				} else {
-					sendMetricsEvent(
-						"skills_install_completed",
-						{
-							agents: skillsInstallResult.targetedAgents,
-						},
-						{}
-					);
-				}
-			}
 
 			if (!getWranglerHideBanner()) {
 				if (def.metadata.deprecated) {

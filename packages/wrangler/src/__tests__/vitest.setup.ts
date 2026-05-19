@@ -222,10 +222,7 @@ vi.mock("../metrics/metrics-config", async (importOriginal) => {
 });
 
 vi.mock("../agents-skills-install", () => ({
-	installCloudflareSkillsGlobally: vi.fn().mockResolvedValue({
-		skipped: true,
-		reason: "Already prompted",
-	}),
+	maybeInstallCloudflareSkillsGlobally: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("prompts", () => {

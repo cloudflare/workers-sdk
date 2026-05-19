@@ -8,24 +8,12 @@ import ci from "ci-info";
 import { confirm } from "./dialogs";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
-
-export type SkillsInstallSkipReason =
-	| "Already prompted"
-	| "No supported agents detected"
-	| "Failed to install skills"
-	| "Running in CI"
-	| "Non-interactive terminal"
-	| "User declined";
-
-export type SkillsInstallResult =
-	| { skipped: true; reason: SkillsInstallSkipReason }
-	| {
-			targetedAgents: AgentInfo[];
-	  };
+import { sendMetricsEvent } from "./metrics";
 
 /**
- * Detects AI coding agents installed on the user's machine and offers to
- * install Cloudflare skill files into their global skills directories.
+ * Detects AI coding agents installed on the user's machine and, if
+ * appropriate, offers to install Cloudflare skill files into their global
+ * skills directories.
  *
  * Skills are installed via the rosie-skills JS API, which handles
  * downloading from the `cloudflare/skills` GitHub repository, agent
@@ -34,18 +22,44 @@ export type SkillsInstallResult =
  * @param force - When `true` the interactive prompt is skipped and skills are
  *   installed unconditionally (used by `--experimental-force-skills-install`).
  */
-export async function installCloudflareSkillsGlobally(
+export async function maybeInstallCloudflareSkillsGlobally(
 	force: boolean
-): Promise<SkillsInstallResult> {
+): Promise<void> {
+	const sendResultMetricsEvent = (
+		result:
+			| { skippedBecause: string }
+			| {
+					targetedAgents: AgentInfo[];
+			  }
+	) => {
+		if ("skippedBecause" in result) {
+			sendMetricsEvent(
+				"skills_install_skipped",
+				{ reason: result.skippedBecause },
+				{}
+			);
+		} else {
+			sendMetricsEvent(
+				"skills_install_completed",
+				{
+					agents: result.targetedAgents,
+				},
+				{}
+			);
+		}
+	};
+
 	// If the user has already been prompted, don't ask again
 	const existingConfig = readSkillsInstallMetadataFile();
 	if (existingConfig !== undefined && !force) {
-		return { skipped: true, reason: "Already prompted" };
+		// Note: no metrics even is sent in this case
+		return;
 	}
 
 	if (ci.isCI && !force) {
 		// In CI environments, skip silently
-		return { skipped: true, reason: "Running in CI" };
+		sendResultMetricsEvent({ skippedBecause: "Running in CI" });
+		return;
 	}
 
 	let detectedAgents: AgentInfo[];
@@ -55,11 +69,17 @@ export async function installCloudflareSkillsGlobally(
 		logger.warn(
 			`Failed to detect AI coding agents: ${err instanceof Error ? err.message : String(err)}`
 		);
-		return { skipped: true, reason: "Failed to install skills" };
+		sendResultMetricsEvent({
+			skippedBecause: "Failed to install skills",
+		});
+		return;
 	}
 
 	if (detectedAgents.length === 0) {
-		return { skipped: true, reason: "No supported agents detected" };
+		sendResultMetricsEvent({
+			skippedBecause: "No supported agents detected",
+		});
+		return;
 	}
 
 	// In non-interactive terminals (but not CI), log a message
@@ -67,7 +87,10 @@ export async function installCloudflareSkillsGlobally(
 		logger.log(
 			`Cloudflare agent skills are available for: ${detectedAgents.map(({ name }) => name).join(", ")}. Run wrangler in an interactive terminal to install them, or use \`--experimental-force-skills-install\` to install without prompting.`
 		);
-		return { skipped: true, reason: "Non-interactive terminal" };
+		sendResultMetricsEvent({
+			skippedBecause: "Non-interactive terminal",
+		});
+		return;
 	}
 
 	const accepted =
@@ -83,19 +106,19 @@ export async function installCloudflareSkillsGlobally(
 			date: new Date().toISOString(),
 			detectedAgents,
 		});
-		return { skipped: true, reason: "User declined" };
+		sendResultMetricsEvent({ skippedBecause: "User declined" });
+		return;
 	}
 
 	try {
 		const rosie = await import("rosie-skills");
 		const agentNames = detectedAgents.map((a) => a.rosieId);
-		const result = await rosie.install(SKILLS_REPO, {
+		const { failedAgents } = await rosie.install(SKILLS_REPO, {
 			global: true,
 			agent: agentNames,
 			lockfile: false,
 		});
 
-		const { failedAgents } = result;
 		const failedSet = new Set(failedAgents);
 		const succeededAgents = detectedAgents.filter(
 			(a) => !failedSet.has(a.rosieId)
@@ -120,9 +143,10 @@ export async function installCloudflareSkillsGlobally(
 			installFailed: failedAgents.length > 0 ? failedAgents : false,
 		});
 
-		return {
+		sendResultMetricsEvent({
 			targetedAgents: succeededAgents,
-		};
+		});
+		return;
 	} catch (err) {
 		logger.warn(
 			`Failed to install Cloudflare skills: ${err instanceof Error ? err.message : String(err)}`
@@ -135,7 +159,9 @@ export async function installCloudflareSkillsGlobally(
 			installFailed: true,
 		});
 
-		return { skipped: true, reason: "Failed to install skills" };
+		sendResultMetricsEvent({
+			skippedBecause: "Failed to install skills",
+		});
 	}
 }
 
