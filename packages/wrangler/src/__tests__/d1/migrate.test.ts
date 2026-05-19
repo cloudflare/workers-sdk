@@ -1,3 +1,5 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { describe, it, vi } from "vitest";
@@ -50,6 +52,30 @@ describe("migrate", () => {
 
 			await runWrangler("d1 migrations create D1 test-migration");
 			expect(mockStd.out).toContain("Successfully created Migration");
+		});
+
+		it("should create migrations after nested migrations", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [{ binding: "D1", database_name: "D1" }],
+			});
+			fs.mkdirSync(path.join("migrations", "20240501120000_initial"), {
+				recursive: true,
+			});
+			fs.writeFileSync(
+				path.join("migrations", "20240501120000_initial", "migration.sql"),
+				""
+			);
+
+			await runWrangler("d1 migrations create D1 test-migration");
+
+			expect(
+				fs.existsSync(
+					path.join("migrations", "20240501120001_test-migration.sql")
+				)
+			).toBe(true);
 		});
 	});
 
@@ -159,7 +185,6 @@ Your database may not be available to serve requests during the migration, conti
 			expect,
 		}) => {
 			setIsTTY(false);
-			const std = mockConsoleMethods();
 			msw.use(
 				http.post(
 					"*/accounts/:accountId/d1/database/:databaseId/query",
@@ -209,24 +234,115 @@ Your database may not be available to serve requests during the migration, conti
 						binding: "DATABASE",
 						database_name: "db",
 						database_id: "xxxx",
-						migrations_dir: "/tmp/my-migrations-go-here",
+						migrations_dir: "my-migrations-go-here",
 					},
 				],
 				account_id: "nx01",
 			});
-			mockConfirm({
-				text: `No migrations folder found.
-Ok to create /tmp/my-migrations-go-here?`,
-				result: true,
-			});
 			await runWrangler("d1 migrations create db test");
+			mockStd.getAndClearOut();
+
+			await runWrangler("d1 migrations apply db --remote");
+			expect(mockStd.out).toContain("Migrations to be applied:");
+			expect(mockStd.out).toContain("0001_test.sql");
+		});
+
+		it("should apply nested migrations with relative path names", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			const sqlBodies: string[] = [];
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/d1/database/:databaseId/query",
+					async ({ request }) => {
+						const body = (await request.json()) as { sql?: string };
+						if (body.sql) {
+							sqlBodies.push(body.sql);
+						}
+
+						return HttpResponse.json(
+							{
+								result: [
+									{
+										results: [],
+										success: true,
+										meta: {},
+									},
+								],
+								success: true,
+								errors: [],
+								messages: [],
+							},
+							{ status: 200 }
+						);
+					}
+				),
+				http.get("*/accounts/:accountId/d1/database/:databaseId", async () => {
+					return HttpResponse.json(
+						{
+							result: {
+								file_size: 7421952,
+								name: "db",
+								num_tables: 2,
+								uuid: "xxxx",
+								version: "production",
+							},
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				})
+			);
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+					},
+				],
+				account_id: "account-id",
+			});
+			fs.mkdirSync(path.join("migrations", "20240501120000_initial"), {
+				recursive: true,
+			});
+			fs.mkdirSync(path.join("migrations", "20240501130000_quo'ted"), {
+				recursive: true,
+			});
+			fs.writeFileSync(
+				path.join("migrations", "20240501120000_initial", "migration.sql"),
+				"CREATE TABLE users (id INTEGER PRIMARY KEY);"
+			);
+			fs.writeFileSync(
+				path.join("migrations", "20240501130000_quo'ted", "migration.sql"),
+				"CREATE INDEX quoted_test ON users (id);"
+			);
 			mockConfirm({
-				text: `About to apply 1 migration(s)
+				text: `About to apply 2 migration(s)
 Your database may not be available to serve requests during the migration, continue?`,
 				result: true,
 			});
+
 			await runWrangler("d1 migrations apply db --remote");
-			expect(std.out).toBe("");
+
+			const initialMigrationSql = sqlBodies.find((sql) => {
+				return sql.includes("CREATE TABLE users");
+			});
+			const quotedMigrationSql = sqlBodies.find((sql) => {
+				return sql.includes("CREATE INDEX quoted_test");
+			});
+			expect(initialMigrationSql).toContain(
+				"values ('20240501120000_initial/migration.sql');"
+			);
+			expect(initialMigrationSql).not.toContain("values ('migration.sql');");
+			expect(quotedMigrationSql).toContain(
+				"values ('20240501130000_quo''ted/migration.sql');"
+			);
+			expect(mockStd.out).toContain("20240501120000_initial/migration.sql");
+			expect(mockStd.out).toContain("20240501130000_quo'ted/migration.sql");
 		});
 
 		it("should throw a clear error when executeSql returns null (execution cancelled)", async ({
