@@ -116,7 +116,10 @@ export async function prepareContainerImagesForDev(args: {
 			{ telemetryMessage: false }
 		);
 	}
-	await verifyDockerInstalled(dockerPath);
+	await verifyDockerInstalled({
+		dockerPath,
+		numberOfContainers: containerOptions.length,
+	});
 	for (const options of containerOptions) {
 		if ("dockerfile" in options) {
 			const build = await buildImage(dockerPath, options);

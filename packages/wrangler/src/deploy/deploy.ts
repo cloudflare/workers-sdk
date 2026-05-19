@@ -696,6 +696,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	const isDryRun = props.dryRun;
+
 	let sourceMapSize;
 	const normalisedContainerConfig = await getNormalizedContainerOptions(
 		config,
@@ -805,7 +807,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		});
 
 		// durable object migrations
-		const migrations = !props.dryRun
+		const migrations = !isDryRun
 			? await getMigrationsToUpload(scriptName, {
 					accountId,
 					config,
@@ -817,7 +819,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		// Upload assets if assets is being used
 		const assetsJwt =
-			props.assetsOptions && !props.dryRun
+			props.assetsOptions && !isDryRun
 				? await syncAssets(
 						config,
 						accountId,
@@ -828,7 +830,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				: undefined;
 
 		// validate asset directory
-		if (props.assetsOptions && props.dryRun) {
+		if (props.assetsOptions && isDryRun) {
 			await buildAssetManifest(props.assetsOptions.directory);
 		}
 
@@ -842,7 +844,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			scriptName + (useServiceEnvironments ? `-${props.env}` : ""),
 			props.legacyAssetPaths,
 			false,
-			props.dryRun,
+			isDryRun,
 			props.oldAssetTtl
 		);
 
@@ -973,22 +975,27 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			props.containersRollout !== "none"
 		) {
 			// if you have a registry url specified, you don't need docker
-			const hasDockerfiles = normalisedContainerConfig.some(
+			const containersWithDockerfile = normalisedContainerConfig.filter(
 				(container) => "dockerfile" in container
 			);
-			if (hasDockerfiles) {
-				await verifyDockerInstalled(dockerPath, false);
+			if (containersWithDockerfile.length > 0) {
+				await verifyDockerInstalled({
+					dockerPath,
+					isDev: false,
+					isDryRun,
+					numberOfContainers: containersWithDockerfile.length,
+				});
 			}
 		}
 
-		if (props.dryRun) {
+		if (isDryRun) {
 			if (normalisedContainerConfig.length) {
 				for (const container of normalisedContainerConfig) {
 					if ("dockerfile" in container && props.containersRollout !== "none") {
 						await buildContainer(
 							container,
 							workerTag ?? "worker-tag",
-							props.dryRun,
+							isDryRun,
 							dockerPath
 						);
 					}
@@ -1283,7 +1290,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 	}
 
-	if (props.dryRun) {
+	if (isDryRun) {
 		logger.log(`--dry-run: exiting now.`);
 		return { versionId, workerTag };
 	}
