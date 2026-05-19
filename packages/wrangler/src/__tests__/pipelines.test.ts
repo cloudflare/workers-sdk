@@ -1720,6 +1720,34 @@ describe("wrangler pipelines", () => {
 				`[Error: --namespace is required for r2-data-catalog sinks]`
 			);
 		});
+
+		it("should error when r2-data-catalog has interval below minimum", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"pipelines sinks create my_sink --type r2-data-catalog --bucket catalog-bucket --namespace default --table my-table --catalog-token token123 --roll-interval 30"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Pipeline frequency must be at least 60 seconds for R2 Data Catalog sinks to prevent compaction issues. Current value: 30 seconds.]`
+			);
+		});
+
+		it("should allow r2 sinks with interval below 60 seconds", async ({
+			expect,
+		}) => {
+			const createRequest = mockCreateSinkRequest(expect, {
+				name: "my_sink",
+				type: "r2",
+			});
+
+			await runWrangler(
+				"pipelines sinks create my_sink --type r2 --bucket my-bucket --access-key-id mykey --secret-access-key mysecret --roll-interval 30"
+			);
+
+			expect(createRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
 	});
 
 	describe("pipelines sinks list", () => {

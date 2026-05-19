@@ -9,6 +9,7 @@ export const SINK_DEFAULTS = {
 	rolling_policy: {
 		file_size_bytes: undefined,
 		interval_seconds: 300,
+		min_interval_seconds: 60,
 	},
 	r2: {
 		path: "",
