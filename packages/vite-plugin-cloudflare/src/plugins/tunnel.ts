@@ -2,6 +2,7 @@ import { startTunnel } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
+import encodeQR from "qr";
 import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { debuglog, createPlugin } from "../utils";
@@ -537,6 +538,14 @@ function patchPrintUrls(server: vite.ViteDevServer | vite.PreviewServer) {
 					`              ${colors.cyan(publicUrls[i])}`
 				);
 			}
+		}
+
+		// Print a QR code for the first tunnel URL so it can be scanned from a mobile device
+		try {
+			const qrCode = encodeQR(publicUrls[0], "ascii", { border: 1 });
+			server.config.logger.info(`\n${qrCode}`);
+		} catch {
+			// QR generation is best-effort; don't disrupt the dev session if it fails
 		}
 
 		// Add an extra newline after the URLs to improve readability

@@ -2414,6 +2414,9 @@ importers:
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1
+      qr:
+        specifier: ^0.6.0
+        version: 0.6.0
       semver:
         specifier: ^7.7.1
         version: 7.7.3
@@ -4159,6 +4162,9 @@ importers:
       prompts:
         specifier: ^2.4.2
         version: 2.4.2
+      qr:
+        specifier: ^0.6.0
+        version: 0.6.0
       recast:
         specifier: 0.23.11
         version: 0.23.11
@@ -13172,6 +13178,10 @@ packages:
 
   pure-rand@6.1.0:
     resolution: {integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==}
+
+  qr@0.6.0:
+    resolution: {integrity: sha512-P23VoX7SipHALdiIYG+D+LT/6n22dNKwV92FAb3d+Nlki/5WisSsfLt0UDFz2XEBtuwrECTznvu+chKKFCSYhA==}
+    engines: {node: '>= 20.19.0'}
 
   qs@6.10.3:
     resolution: {integrity: sha512-wr7M2E0OFRfIfJZjKGieI8lBKb7fRCH4Fv5KNPEs7gJ8jadvotdsS08PzOKR7opXhZ/Xkjtt3WF9g38drmyRqQ==}
@@ -24297,6 +24307,8 @@ snapshots:
   punycode@2.3.1: {}
 
   pure-rand@6.1.0: {}
+
+  qr@0.6.0: {}
 
   qs@6.10.3:
     dependencies:
