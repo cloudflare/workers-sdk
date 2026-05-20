@@ -1,5 +1,7 @@
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import dedent from "ts-dedent";
 import { beforeEach, describe, it, onTestFinished, vi } from "vitest";
 import {
@@ -170,6 +172,207 @@ describe("createServer", { sequential: true }, () => {
 		await expect(response.text()).resolves.toBe(
 			"Mocked response from example.com"
 		);
+	});
+
+	it("uses the current Node process fetch for outbound requests by default", async ({
+		expect,
+	}) => {
+		const mockServer = setupServer(
+			http.get("http://example.com/", () => {
+				return HttpResponse.text("Mocked by MSW");
+			})
+		);
+		mockServer.listen({ onUnhandledRequest: "error" });
+		onTestFinished(() => mockServer.close());
+
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "default-outbound-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20"
+				}
+			`,
+			"src/index.ts": dedent`
+				export default {
+					fetch() {
+						return fetch("http://example.com");
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.text()).resolves.toBe("Mocked by MSW");
+	});
+
+	it("starts workers from inline config", async ({ expect }) => {
+		await helper.seed({
+			"src/index.ts": dedent`
+				export default {
+					fetch() {
+						return new Response("Hello from inline config");
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			workers: [
+				{
+					root: helper.tmpPath,
+					config: {
+						main: "src/index.ts",
+						compatibility_date: "2026-05-20",
+					},
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.text()).resolves.toBe("Hello from inline config");
+	});
+
+	it("uses ephemeral storage by default", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "ephemeral-storage-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"kv_namespaces": [
+						{ "binding": "STORE", "id": "test-store" }
+					]
+				}
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						if (url.pathname === "/set") {
+							await env.STORE.put("key", "value");
+							return new Response("stored");
+						}
+						return new Response((await env.STORE.get("key")) ?? "missing");
+					}
+				};
+			`,
+		});
+
+		const firstServer = createServer({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(firstServer.close);
+
+		await firstServer.listen();
+
+		const setResponse = await firstServer.fetch("/set");
+		await expect(setResponse.text()).resolves.toBe("stored");
+
+		const storedResponse = await firstServer.fetch("/");
+		await expect(storedResponse.text()).resolves.toBe("value");
+
+		await firstServer.close();
+
+		const secondServer = createServer({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(secondServer.close);
+
+		await secondServer.listen();
+
+		const resetResponse = await secondServer.fetch("/");
+		await expect(resetResponse.text()).resolves.toBe("missing");
+	});
+
+	it("exposes the inspector URL when enabled", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "inspector-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20"
+				}
+			`,
+			"src/index.ts": dedent`
+				export default {
+					fetch() {
+						return new Response("Hello World");
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+			inspector: { port: 0 },
+		});
+		onTestFinished(server.close);
+
+		const { inspectorUrl } = await server.listen();
+
+		expect(inspectorUrl).toBeDefined();
+		const inspectorResponse = await fetch(`http://${inspectorUrl?.host}/json`);
+		expect(inspectorResponse.ok).toBe(true);
+	});
+
+	it("triggers scheduled handlers", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "scheduled-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20"
+				}
+			`,
+			"src/index.ts": dedent`
+				let lastCron = "missing";
+
+				export default {
+					fetch() {
+						return new Response(lastCron);
+					},
+					scheduled(event) {
+						lastCron = event.cron;
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const beforeScheduled = await server.fetch("/");
+		await expect(beforeScheduled.text()).resolves.toBe("missing");
+
+		await expect(
+			server.getWorker().scheduled({
+				cron: "* * * * *",
+				scheduledTime: new Date(1_700_000_100_000),
+			})
+		).resolves.toEqual({ outcome: "ok", noRetry: false });
+
+		const afterScheduled = await server.fetch("/");
+		await expect(afterScheduled.text()).resolves.toBe("* * * * *");
 	});
 
 	it("does not reload on source changes by default", async ({ expect }) => {

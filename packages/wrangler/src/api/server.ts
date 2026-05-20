@@ -18,7 +18,7 @@ import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
-import type { Config } from "@cloudflare/workers-utils";
+import type { RawEnvironment } from "@cloudflare/workers-utils";
 import type { DispatchFetch, RequestInfo } from "miniflare";
 
 export type WorkerInput =
@@ -29,7 +29,7 @@ export type WorkerInput =
 	  }
 	| {
 			root?: string;
-			config: Config;
+			config: RawEnvironment;
 	  };
 
 type DevServerOptions = Exclude<
@@ -158,13 +158,12 @@ function resolveWorkerInputs(
 				bindings: convertConfigToBindings(config, { usePreviewIds: true }),
 				migrations: config.migrations,
 				containers: config.containers,
-				triggers: config.triggers.crons?.map((cron) => ({
+				triggers: config.triggers?.crons?.map((cron) => ({
 					type: "cron",
 					cron,
 				})),
 				tailConsumers: config.tail_consumers,
 				streamingTailConsumers: config.streaming_tail_consumers,
-				sendMetrics: config.send_metrics,
 				assets: config.assets?.directory,
 				dev,
 			};
