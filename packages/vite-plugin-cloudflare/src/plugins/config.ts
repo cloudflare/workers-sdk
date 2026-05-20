@@ -153,6 +153,8 @@ export const configPlugin = createPlugin("config", (ctx) => {
 
 				if (entryWorkerEnvironment.isBuilt) {
 					if (!builder.environments.client?.isBuilt) {
+						// The client environment was not built so we remove the assets config
+
 						const entryWorkerBuildDirectory = path.resolve(
 							builder.config.root,
 							entryWorkerEnvironment.config.build.outDir
