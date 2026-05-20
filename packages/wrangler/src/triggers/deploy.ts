@@ -283,7 +283,11 @@ export default async function triggersDeploy(
 				if (workflow.schedule) {
 					throw new UserError(
 						`Workflow "${workflow.name}" has "schedule" configured but references external script "${workflow.script_name}". ` +
-							`Configure schedule on the worker that defines the workflow.`
+							`Configure schedule on the worker that defines the workflow.`,
+						{
+							telemetryMessage:
+								"triggers deploy workflow schedule external script",
+						}
 					);
 				}
 				continue;

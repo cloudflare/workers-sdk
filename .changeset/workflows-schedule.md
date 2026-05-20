@@ -4,6 +4,8 @@
 
 Add `schedule` property to Workflow bindings for cron-based triggering
 
+> **Note:** This is a configuration-only change. Scheduled triggering of Workflow instances is not yet available — adding `schedule` to a Workflow binding will not result in scheduled invocations at this time. This change lays the groundwork for an upcoming feature.
+
 Workflow bindings in `wrangler.json` now accept an optional `schedule` field that configures one or more cron expressions to automatically trigger new workflow instances on a schedule.
 
 ```jsonc
