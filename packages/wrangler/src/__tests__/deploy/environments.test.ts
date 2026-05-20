@@ -277,12 +277,15 @@ describe("deploy", () => {
 			await runWrangler(
 				"deploy --dispatch-namespace test-dispatch-namespace index.js"
 			);
-			expect(std.warn).toMatchInlineSnapshot(
-				`"[WARNING] Cron triggers are not supported with --dispatch-namespace and will be ignored."`
-			);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mCron triggers are not supported with --dispatch-namespace and will be ignored.[0m
+
+				"
+			`);
 		});
 
 		it("should warn when --triggers flag is used alongside --dispatch-namespace", async ({ expect }) => {
+			writeWranglerConfig();
 			const scriptContent = `
       export default {
 				fetch() {
@@ -299,9 +302,11 @@ describe("deploy", () => {
 			await runWrangler(
 				"deploy --dispatch-namespace test-dispatch-namespace --triggers '0 0 * * *' index.js"
 			);
-			expect(std.warn).toMatchInlineSnapshot(
-				`"[WARNING] Cron triggers are not supported with --dispatch-namespace and will be ignored."`
-			);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mCron triggers are not supported with --dispatch-namespace and will be ignored.[0m
+
+				"
+			`);
 		});
 	});
 	describe("[observability]", () => {
