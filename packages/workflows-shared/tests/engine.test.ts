@@ -13,27 +13,12 @@ import type {
 	DatabaseWorkflow,
 	EngineLogs,
 } from "../src/engine";
-import type { RollbackContext, RollbackFn } from "../src/lib/rollback";
+import type {
+	RollbackContext,
+	RollbackFn,
+	WorkflowStepRollbackOptions,
+} from "../src/lib/rollback";
 import type { WorkflowStep, WorkflowStepConfig } from "cloudflare:workers";
-
-type WorkflowStepRollbackOptions = {
-	rollback?: RollbackFn;
-	rollbackConfig?: WorkflowStepConfig;
-};
-
-type WorkflowStepWithRollbackOptions = WorkflowStep & {
-	do<T>(
-		name: string,
-		callback: (ctx: unknown) => Promise<T>,
-		options?: WorkflowStepRollbackOptions
-	): Promise<unknown>;
-	do<T>(
-		name: string,
-		config: WorkflowStepConfig,
-		callback: (ctx: unknown) => Promise<T>,
-		options?: WorkflowStepRollbackOptions
-	): Promise<unknown>;
-};
 
 afterEach(async () => {
 	await workerdUnsafe.abortAllDurableObjects();
@@ -1295,10 +1280,34 @@ describe("Rollback", () => {
 		return logs.logs.filter((l) => l.event === event).length;
 	}
 
-	function withRollbackOptions(
-		step: WorkflowStep
-	): WorkflowStepWithRollbackOptions {
-		return step as WorkflowStepWithRollbackOptions;
+	function doWithRollback<T>(
+		step: WorkflowStep,
+		name: string,
+		callback: (ctx: unknown) => Promise<T>,
+		options: WorkflowStepRollbackOptions
+	): Promise<unknown>;
+	function doWithRollback<T>(
+		step: WorkflowStep,
+		name: string,
+		config: WorkflowStepConfig,
+		callback: (ctx: unknown) => Promise<T>,
+		options: WorkflowStepRollbackOptions
+	): Promise<unknown>;
+	function doWithRollback<T>(
+		step: WorkflowStep,
+		name: string,
+		configOrCallback: WorkflowStepConfig | ((ctx: unknown) => Promise<T>),
+		callbackOrOptions:
+			| ((ctx: unknown) => Promise<T>)
+			| WorkflowStepRollbackOptions,
+		options?: WorkflowStepRollbackOptions
+	): Promise<unknown> {
+		if (typeof configOrCallback === "function") {
+			// @ts-expect-error -- rollback options are not in workers-types yet
+			return step.do(name, configOrCallback, callbackOrOptions);
+		}
+		// @ts-expect-error -- rollback options are not in workers-types yet
+		return step.do(name, configOrCallback, callbackOrOptions, options);
 	}
 
 	async function noopRollback(_ctx: RollbackContext): Promise<void> {}
@@ -1320,17 +1329,20 @@ describe("Rollback", () => {
 		expect,
 	}) => {
 		const stub = await runWorkflow("RB-LIFO", async (_e, step) => {
-			await withRollbackOptions(step).do(
+			await doWithRollback(
+				step,
 				"step-1",
 				async () => "out-1",
 				rollbackOptions()
 			);
-			await withRollbackOptions(step).do(
+			await doWithRollback(
+				step,
 				"step-2",
 				async () => "out-2",
 				rollbackOptions()
 			);
-			await withRollbackOptions(step).do(
+			await doWithRollback(
+				step,
 				"step-3",
 				async () => "out-3",
 				rollbackOptions()
@@ -1348,13 +1360,62 @@ describe("Rollback", () => {
 		expect(countOf(logs, InstanceEvent.ROLLBACK_FAILED)).toBe(0);
 	});
 
+	it("runs parallel rollbacks in reverse step start order", async ({
+		expect,
+	}) => {
+		let firstStarted: () => void = () => {};
+		let firstMayFinish: () => void = () => {};
+		const firstStartedPromise = new Promise<void>((resolve) => {
+			firstStarted = resolve;
+		});
+		const firstMayFinishPromise = new Promise<void>((resolve) => {
+			firstMayFinish = resolve;
+		});
+
+		const stub = await runWorkflow("RB-PARALLEL", async (_e, step) => {
+			const first = doWithRollback(
+				step,
+				"first",
+				async () => {
+					firstStarted();
+					await firstMayFinishPromise;
+					await scheduler.wait(50);
+					return "out-1";
+				},
+				rollbackOptions()
+			);
+			await firstStartedPromise;
+
+			const second = doWithRollback(
+				step,
+				"second",
+				async () => {
+					firstMayFinish();
+					return "out-2";
+				},
+				rollbackOptions()
+			);
+
+			await Promise.all([first, second]);
+			throw NRE("boom");
+		});
+		const logs = await readLogsAfter(stub, (l) =>
+			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
+		);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_SUCCESS)).toEqual([
+			"second-1",
+			"first-1",
+		]);
+	});
+
 	it("uses rollbackConfig when executing rollback", async ({ expect }) => {
 		const rollbackConfig = {
 			retries: { limit: 0, delay: 0, backoff: "constant" },
 			timeout: "30 seconds",
 		};
 		const stub = await runWorkflow("RB-CONFIG", async (_e, step) => {
-			await withRollbackOptions(step).do(
+			await doWithRollback(
+				step,
 				"configured-step",
 				async () => "out",
 				rollbackOptionsWithConfig(rollbackConfig)
@@ -1372,7 +1433,8 @@ describe("Rollback", () => {
 
 	it("passes rollback context to rollback fn", async ({ expect }) => {
 		const stub = await runWorkflow("RB-CONTEXT", async (_e, step) => {
-			await withRollbackOptions(step).do(
+			await doWithRollback(
+				step,
 				"ctx-step",
 				async () => "out",
 				rollbackOptions(async (ctx) => {
@@ -1398,7 +1460,8 @@ describe("Rollback", () => {
 
 	it("runs rollback for failed step", async ({ expect }) => {
 		const stub = await runWorkflow("RB-FAILED-STEP", async (_e, step) => {
-			await withRollbackOptions(step).do(
+			await doWithRollback(
+				step,
 				"failed-step",
 				{ retries: { limit: 0, delay: 0, backoff: "constant" } },
 				async () => {
@@ -1433,7 +1496,8 @@ describe("Rollback", () => {
 	}) => {
 		const stub = await runWorkflow("RB-PARTIAL", async (_e, step) => {
 			await step.do("plain-step", async () => "v1");
-			await withRollbackOptions(step).do(
+			await doWithRollback(
+				step,
 				"step-with-rollback",
 				async () => "v2",
 				rollbackOptions()
@@ -1456,23 +1520,19 @@ describe("Rollback", () => {
 		expect,
 	}) => {
 		const stub = await runWorkflow("RB-FAILS", async (_e, step) => {
-			await withRollbackOptions(step).do(
-				"step-1",
-				async () => "v1",
-				rollbackOptions()
-			);
-			await withRollbackOptions(step).do(
+			await doWithRollback(step, "step-1", async () => "v1", rollbackOptions());
+			await doWithRollback(
+				step,
 				"step-2",
 				async () => "v2",
-				rollbackOptions(async () => {
-					throw new Error("rollback-boom");
-				})
+				rollbackOptionsWithConfig(
+					{ retries: { limit: 0, delay: 0, backoff: "constant" } },
+					async () => {
+						throw new Error("rollback-boom");
+					}
+				)
 			);
-			await withRollbackOptions(step).do(
-				"step-3",
-				async () => "v3",
-				rollbackOptions()
-			);
+			await doWithRollback(step, "step-3", async () => "v3", rollbackOptions());
 			throw NRE("boom");
 		});
 		const logs = await readLogsAfter(stub, (l) =>
@@ -1489,11 +1549,7 @@ describe("Rollback", () => {
 
 	it("does not run rollback when workflow succeeds", async ({ expect }) => {
 		const stub = await runWorkflow("RB-NOOP", async (_e, step) => {
-			await withRollbackOptions(step).do(
-				"a",
-				async () => "ok",
-				rollbackOptions()
-			);
+			await doWithRollback(step, "a", async () => "ok", rollbackOptions());
 			return "done";
 		});
 		const logs = await readLogsAfter(stub, (l) =>

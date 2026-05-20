@@ -18,17 +18,16 @@ export type RollbackFn = ((ctx: RollbackContext) => Promise<void>) & {
 	[Symbol.dispose]?: () => void;
 };
 
+export type WorkflowStepRollbackOptions = {
+	rollback: RollbackFn;
+	rollbackConfig?: WorkflowStepConfig;
+};
+
 export type RollbackRegistryEntry = {
 	fn: RollbackFn;
 	stepName: string;
 	output: unknown;
 	config?: WorkflowStepConfig;
-};
-
-// Fail-fast: don't block the terminal transition on flaky rollbacks.
-// Users can override via the rollbackConfig step option.
-const DEFAULT_ROLLBACK_CFG: WorkflowStepConfig = {
-	retries: { limit: 0, delay: 0, backoff: "constant" },
 };
 
 export function dupRollbackStub(fn: RollbackFn): RollbackFn {
@@ -63,6 +62,32 @@ export function clearRollbackRegistry(
 	registry.clear();
 }
 
+function getRollbackRegistryEntriesInExecutionOrder(
+	engine: Engine
+): Array<[string, RollbackRegistryEntry]> {
+	const entries: Array<[string, RollbackRegistryEntry]> = [];
+	const seen = new Set<string>();
+
+	for (const cacheKey of engine.readStepStartGroupKeysDesc()) {
+		const entry = engine.rollbackRegistry.get(cacheKey);
+		if (entry === undefined || seen.has(cacheKey)) {
+			continue;
+		}
+		entries.push([cacheKey, entry]);
+		seen.add(cacheKey);
+	}
+
+	for (const [cacheKey, entry] of [
+		...engine.rollbackRegistry.entries(),
+	].reverse()) {
+		if (!seen.has(cacheKey)) {
+			entries.push([cacheKey, entry]);
+		}
+	}
+
+	return entries;
+}
+
 // LIFO; halts on first failure. Goes through Context.do so each rollback
 // inherits retries/timeouts/attempt-logging.
 export async function executeRollbacks(
@@ -72,7 +97,7 @@ export async function executeRollbacks(
 	if (engine.rollbackRegistry.size === 0)
 		return { ranAny: false, allSucceeded: true };
 
-	const entries = [...engine.rollbackRegistry.entries()].reverse();
+	const entries = getRollbackRegistryEntriesInExecutionOrder(engine);
 	engine.rollbackRegistry.clear();
 
 	engine.writeLog(InstanceEvent.ROLLBACK_START, null, null, {
@@ -88,17 +113,13 @@ export async function executeRollbacks(
 		const [cacheKey, entry] = entries[i]!;
 		const ctx = engine.createRollbackContext({ cacheKey });
 		try {
-			await ctx.do(
-				entry.stepName,
-				entry.config ?? DEFAULT_ROLLBACK_CFG,
-				async () => {
-					await entry.fn({
-						error: triggerError,
-						output: entry.output,
-						stepName: entry.stepName,
-					});
-				}
-			);
+			await ctx.do(entry.stepName, entry.config ?? {}, async () => {
+				await entry.fn({
+					error: triggerError,
+					output: entry.output,
+					stepName: entry.stepName,
+				});
+			});
 			completed++;
 		} catch {
 			// Context.do already wrote ROLLBACK_STEP_FAILURE; halt the chain.

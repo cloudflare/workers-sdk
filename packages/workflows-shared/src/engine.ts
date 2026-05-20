@@ -228,6 +228,16 @@ export class Engine extends DurableObject<Env> {
 		clearRollbackRegistry(this.rollbackRegistry);
 	}
 
+	readStepStartGroupKeysDesc(): string[] {
+		const rows = [
+			...this.ctx.storage.sql.exec<{ groupKey: string }>(
+				"SELECT groupKey FROM states WHERE event = ? AND groupKey IS NOT NULL ORDER BY id DESC",
+				InstanceEvent.STEP_START
+			),
+		];
+		return rows.map(({ groupKey }) => groupKey);
+	}
+
 	// Lives here for access to the protected DurableObject `ctx`.
 	createRollbackContext(rollbackStep?: { cacheKey: string }): Context {
 		return new Context(this, this.ctx, rollbackStep);

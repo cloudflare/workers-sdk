@@ -34,7 +34,7 @@ import {
 import { MODIFIER_KEYS } from "./modifier";
 import type { Engine } from "./engine";
 import type { InstanceMetadata } from "./instance";
-import type { RollbackFn } from "./lib/rollback";
+import type { RollbackFn, WorkflowStepRollbackOptions } from "./lib/rollback";
 import type { StreamOutputMeta } from "./lib/streams";
 import type {
 	WorkflowSleepDuration,
@@ -76,17 +76,12 @@ export type WorkflowStepContext = {
 	config: ResolvedStepConfig;
 };
 
-type WorkflowStepRollbackOptions = {
-	rollback?: RollbackFn;
-	rollbackConfig?: WorkflowStepConfig;
-};
-
 function parseRollbackOptions(
 	stepName: string,
 	options: unknown
-): WorkflowStepRollbackOptions {
+): WorkflowStepRollbackOptions | undefined {
 	if (options === undefined) {
-		return {};
+		return undefined;
 	}
 
 	if (
@@ -99,11 +94,8 @@ function parseRollbackOptions(
 		);
 	}
 
-	const rollbackOptions = options as WorkflowStepRollbackOptions;
-	if (
-		rollbackOptions.rollback !== undefined &&
-		typeof rollbackOptions.rollback !== "function"
-	) {
+	const rollbackOptions = options as Partial<WorkflowStepRollbackOptions>;
+	if (typeof rollbackOptions.rollback !== "function") {
 		throw new WorkflowFatalError(
 			`Rollback for "${stepName}" must be a function`
 		);
@@ -118,7 +110,7 @@ function parseRollbackOptions(
 		);
 	}
 
-	return rollbackOptions;
+	return rollbackOptions as WorkflowStepRollbackOptions;
 }
 
 const PAUSE_DATETIME = "PAUSE_DATETIME";
@@ -214,7 +206,7 @@ export class Context extends RpcTarget {
 	): Promise<unknown | void | undefined> {
 		let closure: (ctx: WorkflowStepContext) => Promise<T>;
 		let stepConfig: WorkflowStepConfig;
-		let rollbackOptions: WorkflowStepRollbackOptions;
+		let rollbackOptions: WorkflowStepRollbackOptions | undefined;
 
 		const first = rest[0];
 		if (typeof first === "function") {
@@ -226,7 +218,7 @@ export class Context extends RpcTarget {
 			closure = rest[1] as (ctx: WorkflowStepContext) => Promise<T>;
 			rollbackOptions = parseRollbackOptions(name, rest[2]);
 		}
-		const { rollback: rollbackFn, rollbackConfig } = rollbackOptions;
+		const { rollback: rollbackFn, rollbackConfig } = rollbackOptions ?? {};
 
 		const isRollback = this.#rollbackStep !== undefined;
 		const events = isRollback
@@ -326,11 +318,19 @@ export class Context extends RpcTarget {
 				);
 			}
 
-			return createReplayReadableStream({
+			const result = createReplayReadableStream({
 				storage: this.#state.storage,
 				cacheKey,
 				meta: maybeStreamMeta,
 			}) as T;
+			this.#registerRollback(
+				cacheKey,
+				rollbackFn,
+				stepNameWithCounter,
+				result,
+				rollbackConfig
+			);
+			return result;
 		} else if (maybeStreamMeta !== undefined && maybeStreamMeta !== null) {
 			// We're not in a complete state - means we crashed while persisting a stream on a previous invocation - need to cleanup
 			await cleanupPendingStreamOutput(this.#state.storage, cacheKey).catch(
@@ -341,7 +341,15 @@ export class Context extends RpcTarget {
 		const maybeResult = maybeMap.get(valueKey);
 
 		if (maybeResult) {
-			return (maybeResult as { value: T }).value;
+			const result = (maybeResult as { value: T }).value;
+			this.#registerRollback(
+				cacheKey,
+				rollbackFn,
+				stepNameWithCounter,
+				result,
+				rollbackConfig
+			);
+			return result;
 		}
 
 		const maybeError: (Error & UserErrorField) | undefined = maybeMap.get(
