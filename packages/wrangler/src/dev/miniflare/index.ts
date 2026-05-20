@@ -37,6 +37,7 @@ import type {
 	Config,
 	ContainerEngine,
 	LegacyAssetPaths,
+	ServiceFetch,
 } from "@cloudflare/workers-utils";
 import type {
 	DOContainerOptions,
@@ -92,6 +93,7 @@ export interface ConfigBundle {
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
+	outboundService: ServiceFetch | undefined;
 	tails: Config["tail_consumers"] | undefined;
 	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	testScheduled: boolean;
@@ -1123,6 +1125,7 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
+				outboundService: config.outboundService,
 				containerEngine: config.containerEngine,
 				zone: config.zone,
 			},
