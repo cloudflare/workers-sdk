@@ -20,7 +20,7 @@ import { sendMetricsEvent } from "./metrics";
  * detection, and file placement.
  *
  * @param force - When `true` the interactive prompt is skipped and skills are
- *   installed unconditionally (used by `--experimental-force-skills-install`).
+ *   installed unconditionally (used by `--install-skills`).
  */
 export async function maybeInstallCloudflareSkillsGlobally(
 	force: boolean
@@ -86,7 +86,7 @@ export async function maybeInstallCloudflareSkillsGlobally(
 	// In non-interactive terminals (but not CI), log a message
 	if (!force && !isInteractive()) {
 		logger.log(
-			`Cloudflare agent skills are available for: ${detectedAgents.map(({ name }) => name).join(", ")}. Run wrangler in an interactive terminal to install them, or use \`--experimental-force-skills-install\` to install without prompting.`
+			`Cloudflare agent skills are available for: ${detectedAgents.map(({ name }) => name).join(", ")}. Run wrangler in an interactive terminal to install them, or use \`--install-skills\` to install without prompting.`
 		);
 		sendResultMetricsEvent({
 			skippedBecause: "Non-interactive terminal",
@@ -173,7 +173,7 @@ const SKILLS_REPO = "cloudflare/skills";
 
 /** Actionable hint appended to skills-install failure warnings, directing users to retry or install manually. */
 const SKILLS_INSTALL_RETRY_HINT =
-	"You can retry by running `wrangler --experimental-force-skills-install`, or install skills manually as described here: https://github.com/cloudflare/skills#installing";
+	"You can retry by running `wrangler --install-skills`, or install skills manually as described here: https://github.com/cloudflare/skills#installing";
 
 /**
  * Describes a detected AI coding agent.

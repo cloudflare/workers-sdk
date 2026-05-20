@@ -37,10 +37,10 @@ describe("register-yargs-command skills integration", () => {
 		expect(maybeInstallCloudflareSkillsGlobally).toHaveBeenCalledWith(false);
 	});
 
-	test("calls maybeInstallCloudflareSkillsGlobally with true when --x-force-skills-install is passed", async ({
+	test("calls maybeInstallCloudflareSkillsGlobally with true when --install-skills is passed", async ({
 		expect,
 	}) => {
-		await runWrangler("setup --x-force-skills-install");
+		await runWrangler("setup --install-skills");
 
 		expect(maybeInstallCloudflareSkillsGlobally).toHaveBeenCalledWith(true);
 	});

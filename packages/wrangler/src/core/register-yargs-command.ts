@@ -138,9 +138,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				await printWranglerBanner();
 			}
 
-			await maybeInstallCloudflareSkillsGlobally(
-				args.experimentalForceSkillsInstall
-			);
+			await maybeInstallCloudflareSkillsGlobally(args.installSkills);
 
 			if (!getWranglerHideBanner()) {
 				if (def.metadata.deprecated) {

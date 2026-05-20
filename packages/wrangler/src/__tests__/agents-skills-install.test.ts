@@ -189,7 +189,7 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 				"Failed to install Cloudflare skills: network failure"
 			);
 			expect(std.warn).toContain(
-				"You can retry by running `wrangler --experimental-force-skills-install`, or install skills manually as described here: https://github.com/cloudflare/skills#installing"
+				"You can retry by running `wrangler --install-skills`, or install skills manually as described here: https://github.com/cloudflare/skills#installing"
 			);
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
 				"skills_install_skipped",
@@ -409,7 +409,7 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 				"Failed to install Cloudflare skills: tarball download failed"
 			);
 			expect(std.warn).toContain(
-				"You can retry by running `wrangler --experimental-force-skills-install`, or install skills manually as described here: https://github.com/cloudflare/skills#installing"
+				"You can retry by running `wrangler --install-skills`, or install skills manually as described here: https://github.com/cloudflare/skills#installing"
 			);
 
 			const metadata = readMetadataFile();
@@ -460,7 +460,7 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 				"Skills installation failed for agents: cursor."
 			);
 			expect(std.warn).toContain(
-				"You can retry by running `wrangler --experimental-force-skills-install`, or install skills manually as described here: https://github.com/cloudflare/skills#installing"
+				"You can retry by running `wrangler --install-skills`, or install skills manually as described here: https://github.com/cloudflare/skills#installing"
 			);
 		});
 	});
