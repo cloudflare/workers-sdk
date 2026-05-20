@@ -209,7 +209,10 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			expect(mockRosieInstall).not.toHaveBeenCalled();
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
 				"skills_install_skipped",
-				{ reason: "Failed to install skills", errorMessage: "WASM load failed" },
+				{
+					reason: "Failed to install skills",
+					errorMessage: "WASM load failed",
+				},
 				{}
 			);
 		});
