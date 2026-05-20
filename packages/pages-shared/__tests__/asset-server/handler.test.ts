@@ -676,9 +676,13 @@ describe("asset-server handler", () => {
 		const earlyHintsRes = await earlyHintsCache.match(
 			"https://example.com/asset-key-index-with-base.html"
 		);
-		expect(earlyHintsRes).not.toBeNull();
+		if (!earlyHintsRes) {
+			throw new Error(
+				"Did not match early hints cache on https://example.com/asset-key-index-with-base.html"
+			);
+		}
 
-		const linkHeader = earlyHintsRes!.headers.get("Link");
+		const linkHeader = earlyHintsRes.headers.get("Link");
 		// Relative href "module.js" resolved against base "/" → absolute URL
 		expect(linkHeader).toContain("<https://example.com/module.js>");
 		expect(linkHeader).not.toContain("<module.js");
@@ -726,9 +730,13 @@ describe("asset-server handler", () => {
 		const earlyHintsRes = await earlyHintsCache.match(
 			"https://example.com/asset-key-url-semantics.html"
 		);
-		expect(earlyHintsRes).not.toBeNull();
+		if (!earlyHintsRes) {
+			throw new Error(
+				"Did not match early hints cache on https://example.com/asset-key-url-semantics.html"
+			);
+		}
 
-		const linkHeader = earlyHintsRes!.headers.get("Link");
+		const linkHeader = earlyHintsRes.headers.get("Link");
 		// "module.js" relative to "/subdir/" → "/subdir/module.js"
 		expect(linkHeader).toContain("<https://example.com/subdir/module.js>");
 		// "../other.js" relative to "/subdir/" → "/other.js"
@@ -777,9 +785,13 @@ describe("asset-server handler", () => {
 		const earlyHintsRes = await earlyHintsCache.match(
 			"https://example.com/asset-key-multi-base.html"
 		);
-		expect(earlyHintsRes).not.toBeNull();
+		if (!earlyHintsRes) {
+			throw new Error(
+				"Did not match early hints cache on https://example.com/asset-key-multi-base.html"
+			);
+		}
 
-		const linkHeader = earlyHintsRes!.headers.get("Link");
+		const linkHeader = earlyHintsRes.headers.get("Link");
 		// Should use /first/, not /second/
 		expect(linkHeader).toContain("<https://example.com/first/module.js>");
 		expect(linkHeader).not.toContain("/second/");
