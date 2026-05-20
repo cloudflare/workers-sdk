@@ -19,7 +19,7 @@ import type {
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
 import type { Config } from "@cloudflare/workers-utils";
-import type { DispatchFetch } from "miniflare";
+import type { DispatchFetch, RequestInfo } from "miniflare";
 
 export type WorkerInput =
 	| {
@@ -89,6 +89,29 @@ function resolvePath(basePath: string, maybePath: string | URL): string {
 	return path.isAbsolute(maybePath)
 		? maybePath
 		: path.resolve(basePath, maybePath);
+}
+
+async function resolveFetchInput(
+	input: RequestInfo,
+	session: ServerSession
+): Promise<RequestInfo> {
+	if (typeof input !== "string") {
+		return input;
+	}
+
+	const { url } = await session.primaryDevEnv.proxy.ready.promise;
+	const baseUrl = new URL(url);
+
+	if (
+		baseUrl.hostname === "0.0.0.0" ||
+		baseUrl.hostname === "::" ||
+		baseUrl.hostname === "[::]" ||
+		baseUrl.hostname === "*"
+	) {
+		baseUrl.hostname = "localhost";
+	}
+
+	return new URL(input, baseUrl);
 }
 
 function resolveWorkerInputs(
@@ -302,6 +325,26 @@ export function createServer(options: ServerOptions): WorkerServer {
 		});
 	};
 
+	const waitForReloadComplete = (session: ServerSession) => {
+		return new Promise<void>((resolve, reject) => {
+			const cleanup = () => {
+				session.primaryDevEnv.off("error", onError);
+				session.primaryDevEnv.off("reloadComplete", onReloadComplete);
+			};
+			const onError = (error: unknown) => {
+				cleanup();
+				reject(error);
+			};
+			const onReloadComplete = () => {
+				cleanup();
+				resolve();
+			};
+
+			session.primaryDevEnv.once("error", onError);
+			session.primaryDevEnv.once("reloadComplete", onReloadComplete);
+		});
+	};
+
 	const startServerSession = async () => {
 		const session = await createSession(currentOptions, serverAuthHook);
 
@@ -335,7 +378,7 @@ export function createServer(options: ServerOptions): WorkerServer {
 				inspectorUrl: ready.inspectorUrl,
 			};
 		},
-		async fetch(info, init) {
+		async fetch(input, init) {
 			const session = resolveSession();
 			const miniflare = session.primaryDevEnv.proxy.proxyWorker;
 			assert(
@@ -343,11 +386,13 @@ export function createServer(options: ServerOptions): WorkerServer {
 				"The proxy worker is not available yet. Did you call server.listen()?"
 			);
 
-			return miniflare.dispatchFetch(info, init);
+			return miniflare.dispatchFetch(
+				await resolveFetchInput(input, session),
+				init
+			);
 		},
 		getWorker(name?: string) {
-			const getRuntimeMiniflare = async () => {
-				const session = resolveSession();
+			const getRuntimeMiniflare = async (session: ServerSession) => {
 				await session.primaryDevEnv.proxy.runtimeMessageMutex.drained();
 				const miniflare = session.primaryDevEnv.runtimes[0].mf;
 				assert(miniflare, "Worker runtime is not available.");
@@ -355,9 +400,13 @@ export function createServer(options: ServerOptions): WorkerServer {
 			};
 
 			return {
-				async fetch(requestInput, requestInit) {
-					const miniflare = await getRuntimeMiniflare();
-					const request = new Request(requestInput, requestInit);
+				async fetch(input, init) {
+					const session = resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const request = new Request(
+						await resolveFetchInput(input, session),
+						init
+					);
 					const headers = new Headers(request.headers);
 
 					headers.set("MF-Original-URL", request.url);
@@ -372,7 +421,8 @@ export function createServer(options: ServerOptions): WorkerServer {
 					});
 				},
 				async scheduled(scheduledOptions) {
-					const miniflare = await getRuntimeMiniflare();
+					const session = resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
 					const url = new URL("http://localhost/cdn-cgi/handler/scheduled");
 					if (scheduledOptions?.cron !== undefined) {
 						url.searchParams.set("cron", scheduledOptions.cron);
@@ -423,7 +473,10 @@ export function createServer(options: ServerOptions): WorkerServer {
 					);
 				}
 
-				await updateConfig(serverSession, nextInputs);
+				await Promise.all([
+					waitForReloadComplete(serverSession),
+					updateConfig(serverSession, nextInputs),
+				]);
 			}
 		},
 		async close() {
