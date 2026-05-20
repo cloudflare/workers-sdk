@@ -1251,12 +1251,6 @@ describe("Engine", () => {
 // RPC-stubbed rollback fns can't reliably mutate test-scope closures —
 // assert via engine log events instead.
 describe("Rollback", () => {
-	function NRE(msg: string): Error {
-		const e = new Error(msg);
-		e.name = "NonRetryableError";
-		return e;
-	}
-
 	async function readLogsAfter(
 		stub: { readLogs(): Promise<EngineLogs> | EngineLogs },
 		predicate: (logs: EngineLogs) => boolean,
@@ -1347,7 +1341,7 @@ describe("Rollback", () => {
 				async () => "out-3",
 				rollbackOptions()
 			);
-			throw NRE("boom");
+			throw new Error("boom");
 		});
 		const logs = await readLogsAfter(stub, (l) =>
 			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
@@ -1402,7 +1396,7 @@ describe("Rollback", () => {
 			);
 
 			await Promise.all([first, second]);
-			throw NRE("boom");
+			throw new Error("boom");
 		});
 		const logs = await readLogsAfter(stub, (l) =>
 			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
@@ -1425,7 +1419,7 @@ describe("Rollback", () => {
 				async () => "out",
 				rollbackOptionsWithConfig(rollbackConfig)
 			);
-			throw NRE("boom");
+			throw new Error("boom");
 		});
 		const logs = await readLogsAfter(stub, (l) =>
 			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
@@ -1511,7 +1505,7 @@ describe("Rollback", () => {
 				rollbackOptions()
 			);
 			await step.do("plain-step-after", async () => "v3");
-			throw NRE("boom");
+			throw new Error("boom");
 		});
 		const logs = await readLogsAfter(stub, (l) =>
 			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
@@ -1541,7 +1535,7 @@ describe("Rollback", () => {
 				)
 			);
 			await doWithRollback(step, "step-3", async () => "v3", rollbackOptions());
-			throw NRE("boom");
+			throw new Error("boom");
 		});
 		const logs = await readLogsAfter(stub, (l) =>
 			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_FAILED)
