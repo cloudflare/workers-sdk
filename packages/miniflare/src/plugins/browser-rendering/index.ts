@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
+import { brandColor, dim, red } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { removeDir } from "@cloudflare/workers-utils";
 import {
@@ -11,7 +11,6 @@ import {
 	launch,
 	resolveBuildId,
 } from "@puppeteer/browsers";
-import { dim } from "kleur/colors";
 import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
@@ -154,10 +153,18 @@ export async function launchBrowser({
 		},
 	};
 
-	const { executablePath } = await installWithCorruptedCacheRecovery(
-		installOptions,
-		log
-	);
+	let executablePath: string;
+	try {
+		({ executablePath } = await installWithCorruptedCacheRecovery(
+			installOptions,
+			log
+		));
+	} catch (e) {
+		if (startedDownloading) {
+			s.stop(`${red("failed")} ${dim(`browser download`)}`);
+		}
+		throw e;
+	}
 
 	if (startedDownloading) {
 		s.stop(`${brandColor("downloaded")} ${dim(`browser`)}`);
@@ -291,7 +298,14 @@ async function installWithCorruptedCacheRecovery(
 				{ cause: cleanupError }
 			);
 		}
-		return await install(installOptions);
+		try {
+			return await install(installOptions);
+		} catch (retryError) {
+			throw new Error(
+				`Chrome install failed after clearing corrupted cache at ${corruptedPath}: ${(retryError as Error).message}`,
+				{ cause: retryError }
+			);
+		}
 	}
 }
 
