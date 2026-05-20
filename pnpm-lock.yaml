@@ -70,8 +70,8 @@ catalogs:
       specifier: 4.1.0
       version: 4.1.0
     ws:
-      specifier: 8.18.0
-      version: 8.18.0
+      specifier: 8.20.1
+      version: 8.20.1
 
 overrides:
   '@types/react-dom@18>@types/react': ^18
@@ -2017,7 +2017,7 @@ importers:
         version: 1.20260519.1
       ws:
         specifier: catalog:default
-        version: 8.18.0
+        version: 8.20.1
       youch:
         specifier: 4.1.0-beta.10
         version: 4.1.0-beta.10(patch_hash=3e73fc48581841f22ea1d2cf5a3560bde280fdba04940253073fb121a70a9269)
@@ -2364,7 +2364,7 @@ importers:
         version: link:../wrangler
       ws:
         specifier: catalog:default
-        version: 8.18.0
+        version: 8.20.1
     devDependencies:
       '@cloudflare/containers-shared':
         specifier: workspace:*
@@ -4215,7 +4215,7 @@ importers:
         version: 0.4.0(vitest@4.1.0)
       ws:
         specifier: catalog:default
-        version: 8.18.0
+        version: 8.20.1
       xxhash-wasm:
         specifier: ^1.0.1
         version: 1.0.1
@@ -14946,6 +14946,18 @@ packages:
 
   ws@8.18.0:
     resolution: {integrity: sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
+  ws@8.20.1:
+    resolution: {integrity: sha512-It4dO0K5v//JtTXuPkfEOaI3uUN87iYPnqo/ZzqCoG3g8uhA66QUMs/SrM0YK7/NAu+r4LMh/9dq2A7k+rHs+w==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -26567,6 +26579,8 @@ snapshots:
       signal-exit: 4.1.0
 
   ws@8.18.0: {}
+
+  ws@8.20.1: {}
 
   wsl-utils@0.3.1:
     dependencies:

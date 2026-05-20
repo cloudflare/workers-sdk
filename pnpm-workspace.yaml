@@ -94,7 +94,7 @@ catalog:
   undici-types: "7.24.8"
   vitest: "4.1.0"
   vite: "^8.0.12"
-  "ws": "8.18.0"
+  "ws": "8.20.1"
   esbuild: "0.27.3"
   playwright-chromium: "^1.56.1"
   "@cloudflare/workers-types": "^4.20260519.1"
