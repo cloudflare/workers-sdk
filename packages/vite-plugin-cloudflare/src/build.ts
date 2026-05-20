@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import colors from "picocolors";
+import { resolveDevOnly } from "./plugin-config";
 import { VIRTUAL_CLIENT_FALLBACK_ENTRY } from "./plugins/virtual-modules";
 import { satisfiesMinimumViteVersion } from "./utils";
 import type {
@@ -25,13 +26,15 @@ export function createBuildApp(
 			fs.existsSync(defaultHtmlPath);
 
 		const workerEnvironments = [
-			...resolvedPluginConfig.environmentNameToWorkerMap.keys(),
-		].map((environmentName) => {
-			const environment = builder.environments[environmentName];
-			assert(environment, `"${environmentName}" environment not found`);
+			...resolvedPluginConfig.environmentNameToWorkerMap.entries(),
+		]
+			.filter(([_, worker]) => !resolveDevOnly(worker.devOnly))
+			.map(([environmentName]) => {
+				const environment = builder.environments[environmentName];
+				assert(environment, `"${environmentName}" environment not found`);
 
-			return environment;
-		});
+				return environment;
+			});
 
 		await Promise.all(
 			workerEnvironments.map((environment) => builder.build(environment))

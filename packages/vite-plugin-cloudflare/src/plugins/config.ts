@@ -9,6 +9,7 @@ import {
 	createCloudflareEnvironmentOptions,
 } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
+import { resolveDevOnly } from "../plugin-config";
 import { writeDeployConfig } from "../deploy-config";
 import { hasLocalDevVarsFileChanged } from "../dev-vars";
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
@@ -126,12 +127,13 @@ export const configPlugin = createPlugin("config", (ctx) => {
 
 				const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
 
-				// Build any non-entry Worker environments that haven't already been built
+				// Build any non-entry Worker environments that haven't already been built and are not dev-only
 				const auxiliaryWorkerEnvironments = [
-					...ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys(),
+					...ctx.resolvedPluginConfig.environmentNameToWorkerMap.entries(),
 				]
-					.filter((name) => name !== entryWorkerEnvironmentName)
-					.map((environmentName) => {
+					.filter(([name]) => name !== entryWorkerEnvironmentName)
+					.filter(([_, worker]) => !resolveDevOnly(worker.devOnly))
+					.map(([environmentName]) => {
 						const environment = builder.environments[environmentName];
 						assert(environment, `"${environmentName}" environment not found`);
 
