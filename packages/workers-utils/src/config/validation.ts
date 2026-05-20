@@ -42,6 +42,7 @@ import type {
 	Assets,
 	CacheOptions,
 	ContainerApp,
+	CustomDomainRoute,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -1152,7 +1153,7 @@ function validateRoutes(
 	) {
 		const customDomains = (topLevelEnv.routes ?? [])
 			.filter(
-				(r): r is { pattern: string; custom_domain?: boolean } =>
+				(r): r is CustomDomainRoute =>
 					typeof r === "object" && r !== null && r.custom_domain === true
 			)
 			.map((r) => r.pattern)
