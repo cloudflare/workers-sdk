@@ -293,9 +293,7 @@ describe("readConfig() custom_domain inheritance warning", () => {
 		expect(std.warn).not.toContain("inherits the top-level `routes`");
 	});
 
-	it("should not warn for the top-level env itself", async ({
-		expect,
-	}) => {
+	it("should not warn for the top-level env itself", async ({ expect }) => {
 		writeWranglerConfig({
 			routes: [{ pattern: "api.example.com", custom_domain: true }],
 		});
