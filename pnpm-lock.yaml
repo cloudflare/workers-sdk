@@ -4184,7 +4184,7 @@ importers:
         specifier: ^9.2.2
         version: 9.2.2
       timeago.js:
-        specifier: ^4.0.2
+        specifier: 4.0.2
         version: 4.0.2
       tree-kill:
         specifier: catalog:default
