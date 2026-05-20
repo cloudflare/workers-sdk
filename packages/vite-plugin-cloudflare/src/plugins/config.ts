@@ -9,9 +9,9 @@ import {
 	createCloudflareEnvironmentOptions,
 } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
-import { resolveDevOnly } from "../plugin-config";
 import { writeDeployConfig } from "../deploy-config";
 import { hasLocalDevVarsFileChanged } from "../dev-vars";
+import { resolveDevOnly } from "../plugin-config";
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
@@ -125,13 +125,9 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					return;
 				}
 
-				const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
-
-				// Build any non-entry Worker environments that haven't already been built and are not dev-only
-				const auxiliaryWorkerEnvironments = [
+				const workerEnvironments = [
 					...ctx.resolvedPluginConfig.environmentNameToWorkerMap.entries(),
 				]
-					.filter(([name]) => name !== entryWorkerEnvironmentName)
 					.filter(([_, worker]) => !resolveDevOnly(worker.devOnly))
 					.map(([environmentName]) => {
 						const environment = builder.environments[environmentName];
@@ -140,12 +136,14 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						return environment;
 					});
 
+				// Build Worker environments that have not yet been built and are not dev-only
 				await Promise.all(
-					auxiliaryWorkerEnvironments
+					workerEnvironments
 						.filter((environment) => !environment.isBuilt)
 						.map((environment) => builder.build(environment))
 				);
 
+				const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
 				const entryWorkerEnvironment =
 					builder.environments[entryWorkerEnvironmentName];
 				assert(
@@ -167,7 +165,6 @@ export const configPlugin = createPlugin("config", (ctx) => {
 
 					const clientEnvironment = builder.environments.client;
 					assert(clientEnvironment, 'No "client" environment');
-
 					const entryWorkerConfig = ctx.getWorkerConfig(
 						entryWorkerEnvironmentName
 					);
