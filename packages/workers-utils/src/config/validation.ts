@@ -1131,9 +1131,10 @@ function normalizeAndValidateRoute(
 function validateRoutes(
 	diagnostics: Diagnostics,
 	topLevelEnv: Environment | undefined,
-	rawEnv: RawEnvironment
+	rawEnv: RawEnvironment,
+	envName = "top level"
 ): Config["routes"] {
-	return inheritable(
+	const result = inheritable(
 		diagnostics,
 		topLevelEnv,
 		rawEnv,
@@ -1141,6 +1142,24 @@ function validateRoutes(
 		all(isRouteArray, isMutuallyExclusiveWith(rawEnv, "route")),
 		undefined
 	);
+
+	if (
+		envName !== "top level" &&
+		rawEnv.routes === undefined &&
+		topLevelEnv?.routes?.some(
+			(r) => typeof r === "object" && r !== null && r.custom_domain === true
+		)
+	) {
+		const customDomains = (topLevelEnv.routes ?? [])
+			.filter((r) => typeof r === "object" && r !== null && r.custom_domain)
+			.map((r) => (typeof r === "object" && r !== null && "pattern" in r ? r.pattern : String(r)))
+			.join(", ");
+		diagnostics.warnings.push(
+			`The "env.${envName}" environment inherits the top-level \`routes\` configuration, which includes the custom domain(s): ${customDomains}. Deploying this environment will reassign these custom domains away from the top-level Worker. Add \`"routes": []\` to "env.${envName}" to prevent inheritance.`
+		);
+	}
+
+	return result;
 }
 
 function normalizeAndValidatePlacement(
@@ -1453,7 +1472,7 @@ function normalizeAndValidateEnvironment(
 		undefined
 	);
 
-	const routes = validateRoutes(diagnostics, topLevelEnv, rawEnv);
+	const routes = validateRoutes(diagnostics, topLevelEnv, rawEnv, envName);
 
 	const workers_dev = inheritable(
 		diagnostics,
