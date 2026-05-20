@@ -322,8 +322,7 @@ export function mapWorkerMetadataBindings(
 							...(configObj.pipelines ?? []),
 							{
 								binding: binding.name,
-								// NOTE: stream is the primary field, but we also support pipeline for backward compatibility
-								stream: binding.stream ?? binding.pipeline,
+								pipeline: binding.pipeline,
 							},
 						];
 						break;

@@ -4,6 +4,7 @@ import {
 } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
@@ -14,6 +15,7 @@ import {
 	fetchAllAccounts,
 	getAccountFromCache,
 	getActiveAccountId,
+	getAPIToken,
 	getAuthConfigFilePath,
 	getOAuthTokenFromLocalState,
 	getOrSelectAccountId,
@@ -36,7 +38,6 @@ import {
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
 import { getMswSuccessMembershipHandlers } from "./helpers/msw/handlers/user";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { UserAuthConfig } from "../user";
 import type { Config } from "@cloudflare/workers-utils";
@@ -345,6 +346,95 @@ describe("User", () => {
 		).resolves.toEqual(false);
 	});
 
+	describe("CLOUDFLARE_API_TOKEN priority over stored OAuth state", () => {
+		// Regression coverage for https://github.com/cloudflare/workers-sdk/issues/13744
+		//
+		// A user may legitimately have both:
+		//   - A `CLOUDFLARE_API_TOKEN` set in the environment (typically via `.env`)
+		//   - A stale OAuth token left over from a previous `wrangler login`
+		//
+		// The env-based API token should win unconditionally — the stored OAuth
+		// state should not even be consulted, let alone refreshed.
+
+		it("getAPIToken returns the env token even when a stored OAuth token also exists", ({
+			expect,
+		}) => {
+			writeAuthConfigFile({
+				oauth_token: "stale-oauth",
+				refresh_token: "stale-refresh",
+				expiration_time: new Date(Date.now() + 100_000 * 1000).toISOString(),
+				scopes: ["account:read"],
+			});
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-token");
+
+			expect(getAPIToken()).toEqual({ apiToken: "env-token" });
+		});
+
+		it("loginOrRefreshIfRequired does not attempt to refresh an expired OAuth token when env auth is set", async ({
+			expect,
+		}) => {
+			// Stored OAuth token is expired. Without the fix, wrangler would try to
+			// refresh it (and fail), aborting the command even though env auth is
+			// valid and available.
+			const pastDate = new Date(Date.now() - 100_000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-oauth",
+				refresh_token: "stale-refresh",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-token");
+
+			let oauthRefreshCalled = false;
+			msw.use(
+				http.post("*/oauth2/token", () => {
+					oauthRefreshCalled = true;
+					return new HttpResponse(null, { status: 400 });
+				})
+			);
+
+			await expect(
+				loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
+			).resolves.toEqual(true);
+			expect(oauthRefreshCalled).toBe(false);
+		});
+
+		it("wrangler whoami succeeds via env token when a stale OAuth token also exists on disk", async ({
+			expect,
+		}) => {
+			// End-to-end reproduction of issue #13744. With the bug, this command
+			// would fail with "Failed to fetch auth token: 400 Bad Request" /
+			// "Not logged in." Now it should succeed using the env token.
+			const pastDate = new Date(Date.now() - 100_000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-oauth",
+				refresh_token: "stale-refresh",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-token");
+
+			let oauthRefreshCalled = false;
+			msw.use(
+				http.post("*/oauth2/token", () => {
+					oauthRefreshCalled = true;
+					return new HttpResponse(null, { status: 400 });
+				}),
+				http.get("*/user/tokens/verify", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+
+			await runWrangler("whoami");
+
+			expect(std.err).toBe("");
+			expect(std.out).toContain(
+				"The API Token is read from the CLOUDFLARE_API_TOKEN environment variable."
+			);
+			expect(oauthRefreshCalled).toBe(false);
+		});
+	});
+
 	it("should have auth per environment", async ({ expect }) => {
 		setIsTTY(false);
 		vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
@@ -443,6 +533,99 @@ describe("User", () => {
 
 			// The token should have been refreshed (mock returns "access_token_success_mock")
 			expect(std.out).toContain("access_token_success_mock");
+		});
+
+		it("should re-read refresh_token from disk before refreshing in case a sibling process rotated it", async ({
+			expect,
+		}) => {
+			// Bug repro: when a long-lived wrangler process (e.g. `wrangler dev`) holds a
+			// refresh_token from a snapshot of disk, and a sibling wrangler invocation
+			// rotates the token on disk, the long-lived process's next refresh must
+			// pick up the rotated token rather than send the stale RT and get a 401.
+			// See real-world logs: same RT sent by two processes 60min apart, second 401'd.
+			setIsTTY(false);
+
+			// Sibling process has already rotated RT_A → RT_B on disk, but the access
+			// token written alongside is also expired (so a refresh is still needed).
+			// This simulates: our process started up with RT_A, time passes, the
+			// sibling rotates, then our process tries to refresh.
+			const pastDate = new Date(Date.now() - 100_000_000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-access",
+				refresh_token: "RT_B",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+
+			// CF token endpoint: stale RT_A returns 401, current RT_B succeeds.
+			// Matches the exact failure mode observed in production logs.
+			msw.use(
+				http.post("*/oauth2/token", async ({ request }) => {
+					const body = new URLSearchParams(await request.text());
+					const rt = body.get("refresh_token");
+					if (rt === "RT_A") {
+						return new HttpResponse(null, {
+							status: 401,
+							statusText: "Unauthorized",
+						});
+					}
+					return HttpResponse.json({
+						access_token: "fresh-access-token",
+						expires_in: 3600,
+						refresh_token: "RT_B_NEXT",
+						scope: "account:read",
+						token_type: "bearer",
+					});
+				})
+			);
+
+			// readStoredAuthState() reads the auth config file on every call, so
+			// exchangeRefreshTokenForAccessToken picks up RT_B written by the
+			// "sibling" process and the command prints the fresh access token.
+			await runWrangler("auth token");
+			expect(std.out).toContain("fresh-access-token");
+		});
+
+		it("should preserve the stored refresh_token when the OAuth server omits one on refresh", async ({
+			expect,
+		}) => {
+			// RFC 6749 §6 allows the authorization server to return a successful
+			// refresh response without a new refresh_token; the previously issued
+			// refresh token then remains valid. Wrangler must keep that stored
+			// refresh token on disk rather than wiping it — otherwise the next
+			// refresh attempt fails with "No refresh token is present" and the
+			// user is effectively logged out.
+			setIsTTY(false);
+			const pastDate = new Date(Date.now() - 100_000_000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-access",
+				refresh_token: "RT_A",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+
+			msw.use(
+				http.post("*/oauth2/token", () =>
+					HttpResponse.json({
+						access_token: "fresh-access-token",
+						expires_in: 3600,
+						// no refresh_token in the response
+						scope: "account:read",
+						token_type: "bearer",
+					})
+				)
+			);
+
+			await runWrangler("auth token");
+
+			expect(std.out).toContain("fresh-access-token");
+			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+				api_token: undefined,
+				oauth_token: "fresh-access-token",
+				refresh_token: "RT_A",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
 		});
 
 		it("should error when not logged in", async ({ expect }) => {
@@ -886,7 +1069,7 @@ describe("User", () => {
 			);
 		});
 
-		it("should fall back to /accounts when /memberships returns 9109 (Account API Token path)", async ({
+		it("should fall back to /accounts when /memberships returns 9106 (Account API Token path)", async ({
 			expect,
 		}) => {
 			msw.use(
@@ -905,7 +1088,12 @@ describe("User", () => {
 					() => {
 						return HttpResponse.json({
 							success: false,
-							errors: [{ code: 9109, message: "Insufficient permissions" }],
+							errors: [
+								{
+									code: 9106,
+									message: "Authentication failed (status: 400)",
+								},
+							],
 							result: null,
 						});
 					},
@@ -919,7 +1107,7 @@ describe("User", () => {
 			]);
 		});
 
-		it("should throw a helpful error on 9109 when /accounts is also unusable", async ({
+		it("should throw a helpful error on 9106 when /accounts is also unusable", async ({
 			expect,
 		}) => {
 			msw.use(
@@ -931,7 +1119,12 @@ describe("User", () => {
 					() => {
 						return HttpResponse.json({
 							success: false,
-							errors: [{ code: 9109, message: "Insufficient permissions" }],
+							errors: [
+								{
+									code: 9106,
+									message: "Authentication failed (status: 400)",
+								},
+							],
 							result: null,
 						});
 					},
@@ -1004,7 +1197,37 @@ describe("User", () => {
 			);
 		});
 
-		it("should propagate /memberships errors that are not 9109 or 10000", async ({
+		it("should include env-var hint when /memberships returns 9106 and /accounts is empty", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get("*/accounts", () => HttpResponse.json(createFetchResult([])), {
+					once: true,
+				}),
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [
+								{
+									code: 9106,
+									message: "Authentication failed",
+								},
+							],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/CLOUDFLARE_API_TOKEN/
+			);
+		});
+
+		it("should propagate /memberships errors that are not 9106 or 10000", async ({
 			expect,
 		}) => {
 			msw.use(

@@ -434,7 +434,7 @@ export class InspectorProxyWorker implements DurableObject {
 		// by default, sendRuntimeMessage waits for the runtime websocket to connect
 		// but we only want to send this message now or never
 		// if we schedule it to send later (like waiting for the websocket, by default)
-		// then we risk clearing logs that have occured since we scheduled it too
+		// then we risk clearing logs that have occurred since we scheduled it too
 		// which is worse than leaving logs from the previous version on screen
 		if (this.websockets.runtime) {
 			this.sendRuntimeMessage(

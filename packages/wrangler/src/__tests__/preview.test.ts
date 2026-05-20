@@ -2,6 +2,7 @@ import * as childProcess from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { stripVTControlCharacters } from "node:util";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
@@ -9,7 +10,6 @@ import { extractConfigBindings, getBranchName } from "../preview/shared";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import {
 	writeRedirectedWranglerConfig,
@@ -90,6 +90,26 @@ describe("wrangler preview", () => {
 			expect(bindings).toMatchObject({
 				VAR1: { type: "plain_text", text: "value1" },
 				VAR2: { type: "plain_text", text: "value2" },
+			});
+		});
+
+		test("should extract non-string vars as json bindings so the runtime preserves the native shape", ({
+			expect,
+		}) => {
+			const config = configWithPreviews({
+				vars: {
+					ALLOWLIST: ["a@example.com", "b@example.com"],
+					CONFIG: { feature: true, retries: 3 },
+					COUNT: 42,
+					ENABLED: true,
+				},
+			});
+			const bindings = extractConfigBindings(config);
+			expect(bindings).toMatchObject({
+				ALLOWLIST: { type: "json", json: ["a@example.com", "b@example.com"] },
+				CONFIG: { type: "json", json: { feature: true, retries: 3 } },
+				COUNT: { type: "json", json: 42 },
+				ENABLED: { type: "json", json: true },
 			});
 		});
 
@@ -208,6 +228,58 @@ describe("wrangler preview", () => {
 				MY_STREAM: { type: "stream" },
 				MY_VERSION_METADATA: { type: "version_metadata" },
 				MY_FLAGS: { type: "flagship", app_id: "flagship-app-id" },
+			});
+		});
+
+		test("should pass cross_account_grant on service bindings", ({
+			expect,
+		}) => {
+			const config = configWithPreviews({
+				services: [
+					{
+						binding: "API",
+						service: "api-worker",
+						// cross_account_grant is internal/non-public-facing on
+						// the typed schema; mirror how callers set it at
+						// runtime (deploy path supports the same field).
+						cross_account_grant: "grant-target",
+					} as {
+						binding: string;
+						service: string;
+						cross_account_grant: string;
+					},
+				],
+			});
+			const bindings = extractConfigBindings(config);
+			expect(bindings).toMatchObject({
+				API: {
+					type: "service",
+					service: "api-worker",
+					cross_account_grant: "grant-target",
+				},
+			});
+		});
+
+		test("should fold unsafe.bindings into the previews env", ({ expect }) => {
+			const config = configWithPreviews({
+				unsafe: {
+					bindings: [
+						{
+							type: "service",
+							name: "VPC_BRIDGE",
+							service: "vpc-bridge-worker",
+							cross_account_grant: "grant-target",
+						},
+					],
+				},
+			});
+			const bindings = extractConfigBindings(config);
+			expect(bindings).toMatchObject({
+				VPC_BRIDGE: {
+					type: "service",
+					service: "vpc-bridge-worker",
+					cross_account_grant: "grant-target",
+				},
 			});
 		});
 	});

@@ -1,7 +1,7 @@
 import { MF_DEV_CONTAINER_PREFIX } from "./registry";
 
-// Will return the default cloudflare managed registry for either a staging or production envrionment
-// based on the env var WRANGLER_API_ENVIRONMENT. The default registry can be overriden with the env
+// Will return the default cloudflare managed registry for either a staging or production environment
+// based on the env var WRANGLER_API_ENVIRONMENT. The default registry can be overridden with the env
 // var CLOUDFLARE_CONTAINER_REGISTRY.
 export const getCloudflareContainerRegistry = () => {
 	// previously defaulted to registry.cloudchamber.cfdata.org

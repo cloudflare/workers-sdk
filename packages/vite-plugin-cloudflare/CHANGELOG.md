@@ -1,5 +1,99 @@
 # @cloudflare/vite-plugin
 
+## 1.37.2
+
+### Patch Changes
+
+- [#13098](https://github.com/cloudflare/workers-sdk/pull/13098) [`67a881a`](https://github.com/cloudflare/workers-sdk/commit/67a881ac527da838f525e6ee67bbe1628deca54f) Thanks [@raashish1601](https://github.com/raashish1601)! - fix: route WebSocket upgrade requests directly to the user worker in dev mode
+
+- Updated dependencies [[`aac7ca0`](https://github.com/cloudflare/workers-sdk/commit/aac7ca02803567adad2d5372124ace1f4ed9c315), [`b25dc0d`](https://github.com/cloudflare/workers-sdk/commit/b25dc0d9f19ff51ec246c9c8175be7e445c12c0b), [`ae047ee`](https://github.com/cloudflare/workers-sdk/commit/ae047eedd5c59452e05a122f14ac4ff6c5ff8ad2), [`a4f22bc`](https://github.com/cloudflare/workers-sdk/commit/a4f22bcbe8deb033ff11783a5f5f63caa3ffc3ff), [`f78d435`](https://github.com/cloudflare/workers-sdk/commit/f78d435454a6f7f0623bf878f1279ca6c3caed50), [`aac7ca0`](https://github.com/cloudflare/workers-sdk/commit/aac7ca02803567adad2d5372124ace1f4ed9c315), [`c5c9e20`](https://github.com/cloudflare/workers-sdk/commit/c5c9e20bf6c806289e33fd599b05c2fb22473999), [`ebf4b24`](https://github.com/cloudflare/workers-sdk/commit/ebf4b24226060d0ea714e9221a1f2744033729cb), [`b27eb18`](https://github.com/cloudflare/workers-sdk/commit/b27eb18de664e416316d50116e568513d08123eb), [`895baf5`](https://github.com/cloudflare/workers-sdk/commit/895baf5ec2ed4a0dfed45e5ede536ad1c913be96), [`7bcdf45`](https://github.com/cloudflare/workers-sdk/commit/7bcdf45580f29ec9a3f0a77f70d8a26d301d19c3)]:
+  - wrangler@4.93.0
+  - miniflare@4.20260518.0
+
+## 1.37.1
+
+### Patch Changes
+
+- [#13922](https://github.com/cloudflare/workers-sdk/pull/13922) [`23800f8`](https://github.com/cloudflare/workers-sdk/commit/23800f8dfd6c3c3cb45c5584fe5be83f1f115237) Thanks [@edmundhung](https://github.com/edmundhung)! - Add a tunnel shortcut hint when CLI shortcuts are printed
+
+  The Cloudflare Vite plugin now includes a `t + enter` tunnel hint alongside the other CLI shortcuts it prints.
+
+- [#13920](https://github.com/cloudflare/workers-sdk/pull/13920) [`f579e57`](https://github.com/cloudflare/workers-sdk/commit/f579e575aed085447fe405377c4cee3cb93351ac) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Honor `X-Forwarded-Proto` when constructing the Worker's `request.url`
+
+  When running the Vite dev server behind a TLS-terminating reverse proxy or tunnel, the Worker's `request.url` was always `http://...` even though the client reached the server over `https://...`. This caused frameworks that perform Origin/Host checks (e.g. CSRF protection) to reject requests with `403`.
+
+  The Vite plugin now reads the `X-Forwarded-Proto` header from the incoming request and uses it to set the protocol of `request.url`. If the header is absent or invalid, the connection protocol is used as before. The same handling is applied to WebSocket upgrade URLs.
+
+  Fixes [#13801](https://github.com/cloudflare/workers-sdk/issues/13801).
+
+- Updated dependencies [[`19ed49a`](https://github.com/cloudflare/workers-sdk/commit/19ed49a008be273df0ce60a817f4f367f4cea8fd), [`3ff0a50`](https://github.com/cloudflare/workers-sdk/commit/3ff0a50349a78c17d64c45c0411771cc2d2dba0a), [`bf688f7`](https://github.com/cloudflare/workers-sdk/commit/bf688f7735d602e963a7907a4a703aa7de2038fe), [`2e72c83`](https://github.com/cloudflare/workers-sdk/commit/2e72c83aa95d25de343c396df67c0a35b83b70cd), [`802eaf4`](https://github.com/cloudflare/workers-sdk/commit/802eaf47fa28f5bfa3a07b0782acdaac6f12781d), [`506aa02`](https://github.com/cloudflare/workers-sdk/commit/506aa0243dbec68718170a9cf30f03c0ad0dd2b5), [`8f5cdb1`](https://github.com/cloudflare/workers-sdk/commit/8f5cdb14dda20f6036c2305195041105d4d109e3), [`be8a98c`](https://github.com/cloudflare/workers-sdk/commit/be8a98c2be0c83a270415ff4591e1b9971aab747)]:
+  - miniflare@4.20260515.0
+  - wrangler@4.92.0
+
+## 1.37.0
+
+### Minor Changes
+
+- [#13903](https://github.com/cloudflare/workers-sdk/pull/13903) [`7ce6f6f`](https://github.com/cloudflare/workers-sdk/commit/7ce6f6f52af709ec5f700d24ef666ef2be18b093) Thanks [@edmundhung](https://github.com/edmundhung)! - Add named tunnel support to the `cloudflare()` Vite plugin
+
+  You can now expose your local dev server publicly with a stable hostname by configuring `tunnel` with a named Cloudflare Tunnel:
+
+  ```ts
+  cloudflare({
+    tunnel: { name: "my-tunnel", autoStart: true },
+  });
+  ```
+
+  If `autoStart` is omitted or set to `false`, you can still start or close the tunnel by pressing `t + enter`.
+
+### Patch Changes
+
+- Updated dependencies [[`d4794a8`](https://github.com/cloudflare/workers-sdk/commit/d4794a8fdba596e7f970a2623ddf24627d923e31), [`58b4403`](https://github.com/cloudflare/workers-sdk/commit/58b44035e2c2e1b9339bd2b798c5de5dc8bff7b9), [`4352f87`](https://github.com/cloudflare/workers-sdk/commit/4352f87afe0c14174c14a49e6c4f6102354faed7), [`a9e6741`](https://github.com/cloudflare/workers-sdk/commit/a9e674194f267b5f2ebe6b8554fa991edf2097b9), [`da664d5`](https://github.com/cloudflare/workers-sdk/commit/da664d59131a4abe4abb370cefc244d7d1c5f491), [`bdc398c`](https://github.com/cloudflare/workers-sdk/commit/bdc398c977da9738ef6e7fc2beadc0df270f17fc), [`f781a2b`](https://github.com/cloudflare/workers-sdk/commit/f781a2b874decbedc9dae09feff39ac861014016), [`1420f10`](https://github.com/cloudflare/workers-sdk/commit/1420f10c1011ac5a63bf27a10103f26b81bb4df3), [`c8be316`](https://github.com/cloudflare/workers-sdk/commit/c8be316ef95b8251ee7d64f9550482bdbfdfec9b)]:
+  - wrangler@4.91.0
+  - miniflare@4.20260511.0
+
+## 1.36.4
+
+### Patch Changes
+
+- [#13888](https://github.com/cloudflare/workers-sdk/pull/13888) [`2af4ce0`](https://github.com/cloudflare/workers-sdk/commit/2af4ce0f4ece7c74e54b337e606df420d2302d61) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Update Vite to v8.0.12
+
+  This updates the bundled Vite module runner to include the bug fix in https://github.com/vitejs/vite/pull/22369.
+
+- Updated dependencies [[`4e44ce6`](https://github.com/cloudflare/workers-sdk/commit/4e44ce6a27b9c9313a1b9a6b56bb18935039e13e), [`b0cee1d`](https://github.com/cloudflare/workers-sdk/commit/b0cee1dc99823efc675b3b0ff961d4198887a5d7), [`d878e13`](https://github.com/cloudflare/workers-sdk/commit/d878e1329989ef2d6db615d479df16c42d7431c3), [`971dfe3`](https://github.com/cloudflare/workers-sdk/commit/971dfe346604b7ea51e057c885f8f3ee39efb064), [`971dfe3`](https://github.com/cloudflare/workers-sdk/commit/971dfe346604b7ea51e057c885f8f3ee39efb064), [`5d936c5`](https://github.com/cloudflare/workers-sdk/commit/5d936c594b9f9298320e9c289aaaa876fd26a163)]:
+  - miniflare@4.20260508.0
+  - wrangler@4.90.1
+
+## 1.36.3
+
+### Patch Changes
+
+- Updated dependencies [[`8852b0c`](https://github.com/cloudflare/workers-sdk/commit/8852b0cdf08af0575330cf181c53cd42edf49b9b), [`248bc08`](https://github.com/cloudflare/workers-sdk/commit/248bc08152cf9f792d98c8c78f8fb1417b1bb3b3), [`e414e56`](https://github.com/cloudflare/workers-sdk/commit/e414e562c85521e8538689ac37b0cb36915d565e)]:
+  - wrangler@4.90.0
+  - miniflare@4.20260507.1
+
+## 1.36.2
+
+### Patch Changes
+
+- Updated dependencies [[`dd3baf3`](https://github.com/cloudflare/workers-sdk/commit/dd3baf3fa718ed82f7b394cb0c12db3ac3e092fa), [`5cf6f81`](https://github.com/cloudflare/workers-sdk/commit/5cf6f813bb49e40326a87ccee588175545408f5e)]:
+  - wrangler@4.89.1
+  - miniflare@4.20260507.1
+
+## 1.36.1
+
+### Patch Changes
+
+- [#13802](https://github.com/cloudflare/workers-sdk/pull/13802) [`a7fd465`](https://github.com/cloudflare/workers-sdk/commit/a7fd46525597cf1ae2193cf19f705937222f70e7) Thanks [@deodad](https://github.com/deodad)! - Fix `.dev.vars` written for `vite preview` to round-trip values containing quotes
+
+  When the plugin emits `dist/<env>/.dev.vars` for `vite preview`, it previously wrote each value as a double-quoted dotenv string with `"` escaped to `\"`. `dotenv` (the parser wrangler uses) does not unescape `\"` inside double-quoted values, so values containing `"` arrived at the worker with literal backslashes still in them.
+
+  The plugin now quotes strings using the first quote character that does not appear in the value (with the priority order: single → backtick → double), all of which dotenv strips correctly. If a value contains every supported quote character it throws instead of silently corrupting the value.
+
+- Updated dependencies [[`2284f20`](https://github.com/cloudflare/workers-sdk/commit/2284f20465c9c94d86e530daed30debcb9207d90), [`332f527`](https://github.com/cloudflare/workers-sdk/commit/332f52763c7996e08fd4995c643124c5a9701e40), [`039bada`](https://github.com/cloudflare/workers-sdk/commit/039badabe54358e31b7b488e6720fd7cdd268c4f), [`18e833d`](https://github.com/cloudflare/workers-sdk/commit/18e833d988a406a37c8c175e0dd7ea982789e956), [`b6cea17`](https://github.com/cloudflare/workers-sdk/commit/b6cea17413e31750d8915b4bef767311afa1a7b4), [`1a54ac5`](https://github.com/cloudflare/workers-sdk/commit/1a54ac5646be16f9f7151e6ecff7dec5fc6110fa), [`53e846a`](https://github.com/cloudflare/workers-sdk/commit/53e846a564371bb3aa13bd0358c23a7486e5c2f4), [`f3fed88`](https://github.com/cloudflare/workers-sdk/commit/f3fed8859b612d424388fe45a1d638cf6b1c42c7), [`beff19c`](https://github.com/cloudflare/workers-sdk/commit/beff19c5c98e7ece4abe5b465dd60e6a47825f6f), [`af42fed`](https://github.com/cloudflare/workers-sdk/commit/af42fedb4153ab7cb3fedd552fb2007dc3e8cd1b), [`1a54ac5`](https://github.com/cloudflare/workers-sdk/commit/1a54ac5646be16f9f7151e6ecff7dec5fc6110fa)]:
+  - miniflare@4.20260507.0
+  - wrangler@4.89.0
+
 ## 1.36.0
 
 ### Minor Changes

@@ -220,7 +220,9 @@ export const typesCommand = createCommand({
 				config,
 				envInterface,
 				outputPath,
-				secondaryEntries
+				secondaryEntries,
+				args.envFile,
+				args.env
 			);
 			if (outOfDate) {
 				throw new FatalError(
@@ -1603,6 +1605,13 @@ async function generatePerEnvironmentTypes(
 }
 
 /**
+ * Formats name of internal env interface when generating type strings
+ */
+function prefixEnvInterface(envInterface: string) {
+	return `__BaseEnv_${envInterface}`;
+}
+
+/**
  * Generates type strings for per-environment interfaces plus aggregated Env.
  *
  * @param formatType - The worker format type ("modules" or "service-worker")
@@ -1655,14 +1664,16 @@ function generatePerEnvTypeStrings(
 		const perEnvContent = perEnvInterfaces.join("\n");
 
 		const envBindingLines = aggregatedEnvBindings
-			.map((b) => `\t\t${b.key}${b.required ? "" : "?"}: ${b.type};`)
+			.map((b) => `\t${b.key}${b.required ? "" : "?"}: ${b.type};`)
 			.join("\n");
 
 		const globalPropsContent = entrypointModule
 			? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}`
 			: "";
 
-		baseContent = `declare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env {\n${envBindingLines}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+		const internalEnvInterface = prefixEnvInterface(envInterface);
+
+		baseContent = `interface ${internalEnvInterface} {\n${envBindingLines}\n}\ndeclare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
 	} else {
 		// Service worker syntax - type definitions go at the top level since there's no namespace
 		const globalTypeDefsContent =
@@ -1764,7 +1775,10 @@ function generateTypeStrings(
 			// StringifyValues ensures that json vars are correctly types as strings, not objects on process.env
 			processEnv = `\ntype StringifyValues<EnvType extends Record<string, unknown>> = {\n\t[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;\n};\ndeclare namespace NodeJS {\n\tinterface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, ${stringKeys.map((k) => `"${k}"`).join(" | ")}>> {}\n}`;
 		}
-		baseContent = `declare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+
+		const internalEnvInterface = prefixEnvInterface(envInterface);
+
+		baseContent = `interface ${internalEnvInterface} {${envTypeStructure.map((value) => `\n\t${value}`).join("")}\n}\ndeclare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
 	} else {
 		// For service worker format, type definitions still go at the top level since there's no namespace
 		const globalTypeDefsContent =
@@ -2733,21 +2747,19 @@ function collectAllUnsafeBindings(
  *
  * @param args - All the CLI arguments passed to the `types` command
  *
- * @returns An array of collected pipeline bindings with their names and stream IDs.
+ * @returns An array of collected pipeline bindings with their names and pipeline IDs.
  */
 function collectAllPipelines(
 	args: Partial<(typeof typesCommand)["args"]>
 ): Array<{
 	binding: string;
-	stream?: string;
-	pipeline?: string;
+	pipeline: string;
 }> {
 	const pipelinesMap = new Map<
 		string,
 		{
 			binding: string;
-			stream?: string;
-			pipeline?: string;
+			pipeline: string;
 		}
 	>();
 
@@ -2771,13 +2783,13 @@ function collectAllPipelines(
 				});
 			}
 
-			if (!pipeline.stream && !pipeline.pipeline) {
+			if (!pipeline.pipeline) {
 				throwMissingBindingError({
 					binding: pipeline,
 					bindingType: "pipelines",
 					configPath: args.config,
 					envName,
-					fieldName: "stream",
+					fieldName: "pipeline",
 					index,
 				});
 			}
@@ -2788,7 +2800,6 @@ function collectAllPipelines(
 
 			pipelinesMap.set(pipeline.binding, {
 				binding: pipeline.binding,
-				stream: pipeline.stream,
 				pipeline: pipeline.pipeline,
 			});
 		}
@@ -3883,14 +3894,14 @@ function collectPipelinesPerEnvironment(
 	string,
 	Array<{
 		binding: string;
-		stream: string;
+		pipeline: string;
 	}>
 > {
 	const result = new Map<
 		string,
 		Array<{
 			binding: string;
-			stream: string;
+			pipeline: string;
 		}>
 	>();
 
@@ -3899,11 +3910,11 @@ function collectPipelinesPerEnvironment(
 		envName: string
 	): Array<{
 		binding: string;
-		stream: string;
+		pipeline: string;
 	}> {
 		const pipelines = new Array<{
 			binding: string;
-			stream: string;
+			pipeline: string;
 		}>();
 
 		if (!env?.pipelines) {
@@ -3922,22 +3933,20 @@ function collectPipelinesPerEnvironment(
 				});
 			}
 
-			const stream = pipeline.stream || pipeline.pipeline;
-			if (!stream) {
+			if (!pipeline.pipeline) {
 				throwMissingBindingError({
 					binding: pipeline,
 					bindingType: "pipelines",
 					configPath: args.config,
 					envName,
-					fieldName: "stream",
+					fieldName: "pipeline",
 					index,
 				});
 			}
 
 			pipelines.push({
 				binding: pipeline.binding,
-				// eslint-disable-next-line no-non-null-assertion -- we asserted above that stream is not null|undefined
-				stream: stream!,
+				pipeline: pipeline.pipeline,
 			});
 		}
 

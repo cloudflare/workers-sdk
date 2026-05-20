@@ -1,4 +1,4 @@
-export { mockConsoleMethods } from "./mock-console";
+export { mockConsoleMethods, createDeferred } from "./mock";
 export {
 	normalizeString,
 	mockCreateDate,

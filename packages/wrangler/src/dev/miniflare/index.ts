@@ -288,18 +288,17 @@ function pipelineEntry(
 ): [
 	string,
 	{
-		stream: string;
+		pipeline: string;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
-	const stream = pipeline.stream || pipeline.pipeline;
-	if (!stream) {
-		throw new Error("pipeline binding is missing stream ID");
-	}
 	if (!remoteProxyConnectionString || !pipeline.remote) {
-		return [pipeline.binding, { stream }];
+		return [pipeline.binding, { pipeline: pipeline.pipeline }];
 	}
-	return [pipeline.binding, { stream, remoteProxyConnectionString }];
+	return [
+		pipeline.binding,
+		{ pipeline: pipeline.pipeline, remoteProxyConnectionString },
+	];
 }
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];

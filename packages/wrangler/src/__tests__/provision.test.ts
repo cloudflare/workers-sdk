@@ -1,6 +1,7 @@
 import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import {
+	runInTempDir,
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
@@ -23,7 +24,6 @@ import {
 	mswSuccessDeploymentScriptMetadata,
 } from "./helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { DatabaseInfo } from "../d1/types";

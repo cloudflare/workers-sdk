@@ -1,5 +1,8 @@
 import * as fs from "node:fs";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
@@ -15,7 +18,6 @@ import { mockGetSettings } from "../helpers/mock-worker-settings";
 import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import {
 	mockDeploymentsListRequest,
@@ -173,6 +175,63 @@ describe("deploy", () => {
 				  workflow: my-workflow
 				Current Version ID: Galaxy-Class"
 			`);
+		});
+
+		it("should prompt to create a workers.dev subdomain before deploying owned Workflows", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workers_dev: false,
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+			mockSubDomainRequest("does-not-exist", false);
+			mockConfirm({
+				text: "Would you like to register a workers.dev subdomain now?",
+				result: false,
+			});
+			msw.use(
+				http.put("*/accounts/:accountId/workflows/:workflowName", () => {
+					throw new Error(
+						"Workflows API should not be called until the account has a workers.dev subdomain."
+					);
+				})
+			);
+
+			await expect(runWrangler("deploy")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Workflows require your account to have a workers.dev subdomain. Register a workers.dev subdomain here:
+				https://dash.cloudflare.com/some-account-id/workers/onboarding]
+			`);
+
+			expect(std.warn).toContain(
+				"You need to register a workers.dev subdomain before deploying Workflows"
+			);
 		});
 
 		it("should deploy a workflow with limits", async ({ expect }) => {

@@ -1,4 +1,5 @@
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
 import { writeAuthConfigFile } from "../user";
@@ -11,7 +12,6 @@ import {
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
@@ -490,7 +490,7 @@ describe("whoami", () => {
 	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		// `fetchAllAccounts` falls back to `/accounts` when `/memberships`
-		// fails with 9109 (Insufficient permissions) or 10000 (Authentication
+		// fails with 9106 (Account API Token) or 10000 (Authentication
 		// error), so the accounts table still renders. The separate
 		// `fetchMembershipRoles` call also fails with 10000 and surfaces the
 		// "Unable to get membership roles" hint to the user.
@@ -559,11 +559,12 @@ describe("whoami", () => {
 		expect,
 	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
-		// `fetchAllAccounts` only tolerates 9109 (Insufficient permissions) and
-		// 10000 (Authentication error) on `/memberships`. Any other failure is
-		// propagated and `whoami` fails. Use non-once handlers because
-		// `handleError` re-invokes `whoami` to display user info on auth
-		// errors, so `/user` and `/memberships` are each called twice.
+		// `fetchAllAccounts` only tolerates 9106 (Account API Token) and
+		// 10000 (Authentication error) on
+		// `/memberships`. Any other failure is propagated and `whoami` fails.
+		// Use non-once handlers because `handleError` re-invokes `whoami` to
+		// display user info on auth errors, so `/user` and `/memberships` are
+		// each called twice.
 		msw.use(
 			http.get("*/user", () =>
 				HttpResponse.json(createFetchResult({ email: "user@example.com" }))

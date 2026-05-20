@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 import assert from "node:assert";
-import { seed } from "@cloudflare/workers-utils/test-helpers";
+import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
 /* eslint-disable no-restricted-imports */
 import {
@@ -23,7 +23,6 @@ import {
 	mswSuccessUserHandlers,
 	mswZoneHandlers,
 } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { StartDevOptions } from "../../dev";
 import type { RawConfig } from "@cloudflare/workers-utils";
@@ -435,14 +434,14 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 				pipelines: [
 					{
 						binding: "PIPELINE",
-						stream: "preserve-e2e-pipelines",
+						pipeline: "preserve-e2e-pipelines",
 						remote: true,
 					},
 				],
 			},
 			expectedProxyWorkerBindings: {
 				PIPELINE: {
-					stream: "preserve-e2e-pipelines",
+					pipeline: "preserve-e2e-pipelines",
 					remote: true,
 					type: "pipeline",
 				},
@@ -451,7 +450,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 				expect.objectContaining({
 					pipelines: {
 						PIPELINE: {
-							stream: "preserve-e2e-pipelines",
+							pipeline: "preserve-e2e-pipelines",
 							remoteProxyConnectionString,
 						},
 					},

@@ -22,6 +22,36 @@ export class MyWorkflow extends WorkflowEntrypoint {
 	},
   };`;
 
+test("starts Workflows with user-provided experimental compatibility flag", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const mf = new Miniflare({
+		name: "workflow-compatibility-flags-worker",
+		compatibilityDate: "2024-11-20",
+		modules: true,
+		script: WORKFLOW_SCRIPT(),
+		workflows: {
+			MY_WORKFLOW: {
+				className: "MyWorkflow",
+				name: "MY_WORKFLOW",
+				compatibilityFlags: [
+					"nodejs_compat",
+					"experimental",
+					"enhanced_error_serialization",
+				],
+			},
+		},
+		workflowsPersist: tmp,
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe(
+		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
+	);
+});
+
 test("persists Workflow data on file-system between runs", async ({
 	expect,
 }) => {

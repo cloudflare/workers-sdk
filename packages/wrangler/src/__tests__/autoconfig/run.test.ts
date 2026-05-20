@@ -6,7 +6,10 @@ import {
 	readFileSync,
 	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as details from "../../autoconfig/details";
 import { Astro } from "../../autoconfig/frameworks/astro";
@@ -25,7 +28,6 @@ import {
 	mockSelect,
 } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import type { Framework } from "../../autoconfig/frameworks";

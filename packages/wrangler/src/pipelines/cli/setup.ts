@@ -191,10 +191,14 @@ async function promptCompression(): Promise<string> {
 	});
 }
 
-async function promptRollingPolicy(): Promise<{
+async function promptRollingPolicy(options?: {
+	minIntervalSeconds?: number;
+}): Promise<{
 	fileSizeBytes: number;
 	intervalSeconds: number;
 }> {
+	const minInterval = options?.minIntervalSeconds ?? 10;
+
 	const fileSizeMB = await promptWithRetry(
 		() => "File size",
 		() =>
@@ -214,13 +218,13 @@ async function promptRollingPolicy(): Promise<{
 	const intervalSeconds = await promptWithRetry(
 		() => "Interval",
 		() =>
-			prompt("Roll file when time reaches (seconds, minimum 10):", {
+			prompt(`Roll file when time reaches (seconds, minimum ${minInterval}):`, {
 				defaultValue: String(SINK_DEFAULTS.rolling_policy.interval_seconds),
 			}),
 		(value) => {
 			const num = parseInt(value, 10);
-			if (isNaN(num) || num < 10) {
-				throw new UserError("Interval must be a number >= 10", {
+			if (isNaN(num) || num < minInterval) {
+				throw new UserError(`Interval must be a number >= ${minInterval}`, {
 					telemetryMessage: "pipelines setup invalid interval",
 				});
 			}
@@ -960,7 +964,10 @@ async function setupDataCatalogSink(
 	const token = await promptCatalogToken(config, accountId, bucket);
 
 	const compression = await promptCompression();
-	const rollingPolicy = await promptRollingPolicy();
+	// R2 Data Catalog sinks require minimum 60 second intervals to prevent compaction issues
+	const rollingPolicy = await promptRollingPolicy({
+		minIntervalSeconds: SINK_DEFAULTS.rolling_policy.min_interval_seconds,
+	});
 
 	setupConfig.sinkConfig = {
 		name: setupConfig.sinkName,

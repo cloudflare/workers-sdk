@@ -788,6 +788,15 @@ Options shared between all Workers/"nanoservices".
   Receives a copy of the updated registry object. Useful for reacting to external
   service changes during development.
 
+- `unsafeRuntimeEnv?: Record<string, string>`
+
+  Extra environment variables to set on the spawned `workerd` subprocess.
+  Merged on top of `process.env` and Miniflare's own defaults — most notably
+  `TZ=UTC`, which Miniflare sets to match the production Cloudflare runtime so
+  that `Date` and `Intl` APIs inside the Worker observe UTC during local
+  development. Use this option to override those defaults, for example to test
+  timezone-dependent code with `unsafeRuntimeEnv: { TZ: "Europe/London" }`.
+
 #### Cache, Durable Objects, KV, R2 and D1
 
 - `cachePersist?: Persistence`

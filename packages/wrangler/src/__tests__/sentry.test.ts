@@ -1,4 +1,5 @@
 import path from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import * as Sentry from "@sentry/node";
 import { http, HttpResponse } from "msw";
 import { afterEach, assert, beforeEach, describe, it } from "vitest";
@@ -7,7 +8,6 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 declare const global: { SENTRY_DSN: string | undefined };

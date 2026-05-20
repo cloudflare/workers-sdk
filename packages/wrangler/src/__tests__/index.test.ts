@@ -1,11 +1,13 @@
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { getPackageManager } from "../package-manager";
 import { updateCheck } from "../update-check";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { PackageManager } from "../package-manager";
@@ -72,6 +74,7 @@ describe("wrangler", () => {
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
+				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [private beta]
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
@@ -149,6 +152,7 @@ describe("wrangler", () => {
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
+				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [private beta]
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces

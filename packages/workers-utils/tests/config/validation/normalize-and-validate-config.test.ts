@@ -3780,6 +3780,39 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "queues.consumers[3]" should, optionally, have a number "max_concurrency" field but got {"queue":"myQueue","max_batch_size":"3","max_batch_timeout":null,"max_retries":"hello","dead_letter_queue":5,"max_concurrency":"hello"}."
 				`);
 			});
+
+			it("should warn if delivery_delay is set on a queue producer", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						queues: {
+							producers: [
+								{ binding: "QUEUE_BINDING_1", queue: "queue1" },
+								{
+									binding: "QUEUE_BINDING_2",
+									queue: "queue2",
+									delivery_delay: 60,
+								},
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.queues.producers).toHaveLength(2);
+				expect(config.queues.producers?.[1]).toMatchObject({
+					delivery_delay: 60,
+				});
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The "delivery_delay" field in "queues.producers[1]" is deprecated and has no effect. Queue-level settings should be configured using "wrangler queues update" instead. This setting will be removed in a future version."
+				`);
+			});
 		});
 
 		describe("[r2_buckets]", () => {
@@ -4466,28 +4499,7 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should accept valid bindings with stream field", ({ expect }) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						pipelines: [
-							{
-								binding: "VALID",
-								stream: "343cd4f1d58c42fbb5bd082592fd7143",
-							},
-						],
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(false);
-			});
-
-			it("should accept deprecated pipeline field with warning", ({
-				expect,
-			}) => {
+			it("should accept valid bindings", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						pipelines: [
@@ -4503,11 +4515,6 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - The "pipeline" field in "pipelines[0]" bindings is deprecated. Use "stream" instead."
-				`);
 			});
 
 			it("should error if pipelines.bindings are not valid", ({ expect }) => {
@@ -4517,7 +4524,7 @@ describe("normalizeAndValidateConfig()", () => {
 							{},
 							{
 								binding: "VALID",
-								stream: "343cd4f1d58c42fbb5bd082592fd7143",
+								pipeline: "343cd4f1d58c42fbb5bd082592fd7143",
 							},
 							{ binding: 2000, project: 2111 },
 						],
@@ -4534,9 +4541,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "pipelines[0]" bindings must have a string "binding" field but got {}.
-					  - "pipelines[0]" bindings must have a string "stream" field but got {}.
+					  - "pipelines[0]" bindings must have a string "pipeline" field but got {}.
 					  - "pipelines[2]" bindings must have a string "binding" field but got {"binding":2000,"project":2111}.
-					  - "pipelines[2]" bindings must have a string "stream" field but got {"binding":2000,"project":2111}."
+					  - "pipelines[2]" bindings must have a string "pipeline" field but got {"binding":2000,"project":2111}."
 				`);
 			});
 		});
@@ -6976,6 +6983,7 @@ describe("normalizeAndValidateConfig()", () => {
 			};
 			const vars: RawConfig["vars"] = {
 				FOO: "foo",
+				BAR: "bar",
 			};
 			const durable_objects: RawConfig["durable_objects"] = {
 				bindings: [],
@@ -7045,6 +7053,72 @@ describe("normalizeAndValidateConfig()", () => {
 				    - "unsafe" exists at the top level, but not on "env.ENV1".
 				      This is not what you probably want, since "unsafe" is not inherited by environments.
 				      Please add "unsafe" to "env.ENV1"."
+			`);
+		});
+
+		it("should condense repeated environment warnings", ({ expect }) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					vars: {
+						DEV_ACCOUNT_ID: "123",
+						DEV_ACCOUNT_INTERNAL_ID: "456",
+						PRESENT: "789",
+					},
+					secrets: {
+						required: ["TOP_LEVEL_SECRET"],
+					},
+					env: {
+						staging: {
+							vars: {
+								PRESENT: "789",
+							},
+							secrets: {
+								required: ["ENV_SECRET"],
+							},
+						},
+					},
+				},
+				undefined,
+				undefined,
+				{ env: "staging" }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+
+				  - "env.staging" environment configuration
+				    - The following vars exist at the top level, but not on "env.staging.vars".
+				      This is probably not what you want, since "vars" configuration is not inherited by environments.
+				      Please add these vars to "env.staging.vars":
+				      - DEV_ACCOUNT_ID
+				      - DEV_ACCOUNT_INTERNAL_ID"
+			`);
+		});
+
+		it("should only emit one unsafe experimental warning when unsafe exists at the top level and in the environment", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					unsafe: {
+						bindings: [],
+					},
+					env: {
+						staging: {
+							unsafe: {
+								bindings: [],
+							},
+						},
+					},
+				},
+				undefined,
+				undefined,
+				{ env: "staging" }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - "unsafe" fields are experimental and may change or break at any time."
 			`);
 		});
 
@@ -7373,9 +7447,10 @@ describe("normalizeAndValidateConfig()", () => {
 						"Processing wrangler configuration:
 
 						  - "env.ENV1" environment configuration
-						    - "define.ghi" exists at the top level, but not on "env.ENV1.define".
-						      This is not what you probably want, since "define" configuration is not inherited by environments.
-						      Please add "define.ghi" to "env.ENV1".
+						    - The following define entries exist at the top level, but not on "env.ENV1.define".
+						      This is probably not what you want, since "define" configuration is not inherited by environments.
+						      Please add these entries to "env.ENV1.define":
+						      - ghi
 						    - "xyz" exists on "env.ENV1", but not on the top level.
 						      This is not what you probably want, since "define" configuration within environments can only override existing top level "define" configuration
 						      Please remove "env.ENV1.define.xyz", or add "define.xyz"."

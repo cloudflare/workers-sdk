@@ -1,5 +1,135 @@
 # miniflare
 
+## 4.20260518.0
+
+### Minor Changes
+
+- [#13864](https://github.com/cloudflare/workers-sdk/pull/13864) [`b27eb18`](https://github.com/cloudflare/workers-sdk/commit/b27eb18de664e416316d50116e568513d08123eb) Thanks [@benjamincburns](https://github.com/benjamincburns)! - Bumped miniflare deps `acorn` to `8.16.0` and `acorn-walk` to `8.3.5` to add support for the `using` and `await using` keywords when miniflare parses scripts.
+
+### Patch Changes
+
+- [#13948](https://github.com/cloudflare/workers-sdk/pull/13948) [`b25dc0d`](https://github.com/cloudflare/workers-sdk/commit/b25dc0d9f19ff51ec246c9c8175be7e445c12c0b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260515.1 | 1.20260518.1 |
+
+- [#13932](https://github.com/cloudflare/workers-sdk/pull/13932) [`ebf4b24`](https://github.com/cloudflare/workers-sdk/commit/ebf4b24226060d0ea714e9221a1f2744033729cb) Thanks [@zebp](https://github.com/zebp)! - Fix local Workflow startup when compatibility flags include `experimental`
+
+  Miniflare now deduplicates compatibility flags for the internal Workflow engine service. This prevents `wrangler dev` from failing with `Compatibility flag specified multiple times: experimental` when the user's Worker already enables that flag.
+
+## 4.20260515.0
+
+### Patch Changes
+
+- [#13926](https://github.com/cloudflare/workers-sdk/pull/13926) [`19ed49a`](https://github.com/cloudflare/workers-sdk/commit/19ed49a008be273df0ce60a817f4f367f4cea8fd) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260511.1 | 1.20260515.1 |
+
+## 4.20260511.0
+
+### Patch Changes
+
+- [#13894](https://github.com/cloudflare/workers-sdk/pull/13894) [`58b4403`](https://github.com/cloudflare/workers-sdk/commit/58b44035e2c2e1b9339bd2b798c5de5dc8bff7b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260508.1 | 1.20260511.1 |
+
+- [#13646](https://github.com/cloudflare/workers-sdk/pull/13646) [`f781a2b`](https://github.com/cloudflare/workers-sdk/commit/f781a2b874decbedc9dae09feff39ac861014016) Thanks [@emily-shen](https://github.com/emily-shen)! - Propagate `cf-trace-id` header on remote binding proxy requests
+
+  When the `CF_TRACE_ID` environment variable is set, its value is now forwarded as a `cf-trace-id` header on outgoing remote binding proxy requests. This makes it easier to correlate traces when debugging remote bindings in local development.
+
+## 4.20260508.0
+
+### Minor Changes
+
+- [#8431](https://github.com/cloudflare/workers-sdk/pull/8431) [`5d936c5`](https://github.com/cloudflare/workers-sdk/commit/5d936c594b9f9298320e9c289aaaa876fd26a163) Thanks [@penalosa](https://github.com/penalosa)! - Support `workerd` autogates via the `MINIFLARE_WORKERD_AUTOGATES` environment variable.
+
+### Patch Changes
+
+- [#13866](https://github.com/cloudflare/workers-sdk/pull/13866) [`4e44ce6`](https://github.com/cloudflare/workers-sdk/commit/4e44ce6a27b9c9313a1b9a6b56bb18935039e13e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260507.1 | 1.20260508.1 |
+
+## 4.20260507.1
+
+### Patch Changes
+
+- [#13348](https://github.com/cloudflare/workers-sdk/pull/13348) [`5cf6f81`](https://github.com/cloudflare/workers-sdk/commit/5cf6f813bb49e40326a87ccee588175545408f5e) Thanks [@mglewis](https://github.com/mglewis)! - Improve variant URLs returned by the hosted images mock for local development
+
+  The miniflare hosted images mock previously returned bare variant names (e.g. `"public"`) in the `variants` field of `ImageMetadata`. In production, this field contains full delivery URLs. The bare names were not usable as image sources, causing applications that render images from variant URLs to fail during local development.
+
+  Variant URLs now point to a new local delivery endpoint at `/cdn-cgi/imagedelivery/<image_id>/<variant>` which serves image bytes directly from the local KV store with content-type detection via Sharp.
+
+## 4.20260507.0
+
+### Minor Changes
+
+- [#13836](https://github.com/cloudflare/workers-sdk/pull/13836) [`039bada`](https://github.com/cloudflare/workers-sdk/commit/039badabe54358e31b7b488e6720fd7cdd268c4f) Thanks [@Skye-31](https://github.com/Skye-31)! - Support named recipients in the Email Sending API MessageBuilder
+
+  The `send_email` binding's MessageBuilder now accepts `EmailAddress` objects for `to`, `cc`, and `bcc` in addition to plain strings. You can mix named and plain addresses in the same array:
+
+  ```js
+  await env.SEND_EMAIL.send({
+    from: "sender@example.com",
+    to: [
+      "plain@example.com",
+      '"Name" <address@example.com>',
+      { name: "Jane Doe", email: "jane@example.com" },
+    ],
+    cc: [{ name: "CC Person", email: "cc@example.com" }],
+    subject: "Hello",
+    text: "...",
+  });
+  ```
+
+  Additionally, addresses in `"Name" <address>` format are now correctly parsed when checking `allowed_destination_addresses` and `allowed_sender_addresses` restrictions.
+
+- [#13776](https://github.com/cloudflare/workers-sdk/pull/13776) [`1a54ac5`](https://github.com/cloudflare/workers-sdk/commit/1a54ac5646be16f9f7151e6ecff7dec5fc6110fa) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Default the `workerd` runtime subprocess to `TZ=UTC` to match the production Cloudflare runtime
+
+  Previously, Miniflare inherited the host machine's timezone, so `Date` and `Intl` APIs inside a Worker observed the developer's local timezone during local development but UTC in production. This caused dev/prod drift that was hard to debug.
+
+  Miniflare now sets `TZ=UTC` on the spawned `workerd` subprocess by default. A new `unsafeRuntimeEnv` option (a `Record<string, string>`) is available on the `Miniflare` constructor for advanced cases that need to override the default — for example, to test timezone-dependent behaviour:
+
+  ```ts
+  new Miniflare({
+    modules: true,
+    script: "...",
+    unsafeRuntimeEnv: { TZ: "Europe/London" },
+  });
+  ```
+
+### Patch Changes
+
+- [#13829](https://github.com/cloudflare/workers-sdk/pull/13829) [`2284f20`](https://github.com/cloudflare/workers-sdk/commit/2284f20465c9c94d86e530daed30debcb9207d90) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260504.1 | 1.20260506.1 |
+
+- [#13841](https://github.com/cloudflare/workers-sdk/pull/13841) [`332f527`](https://github.com/cloudflare/workers-sdk/commit/332f52763c7996e08fd4995c643124c5a9701e40) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260506.1 | 1.20260507.1 |
+
 ## 4.20260504.0
 
 ### Patch Changes

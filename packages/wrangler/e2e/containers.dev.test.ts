@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { stripVTControlCharacters } from "node:util";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
@@ -340,6 +341,113 @@ for (const source of imageSource) {
 			}).toThrow();
 		});
 
+		it.runIf(source === "build")(
+			"preserves sibling image tags when containers share a Dockerfile",
+			async ({ expect }) => {
+				const dockerPath = getDockerPath();
+				const classNames = [
+					"E2ESharedDockerfileContainerA",
+					"E2ESharedDockerfileContainerB",
+				] as const;
+				const sharedBuildIdsBefore = getSharedContainerBuildIds(
+					dockerPath,
+					classNames
+				);
+
+				await helper.seed({
+					"wrangler.json": JSON.stringify({
+						...wranglerConfig,
+						containers: [
+							{
+								image: "./Dockerfile",
+								class_name: classNames[0],
+								name: `${workerName}-shared-container-a`,
+							},
+							{
+								image: "./Dockerfile",
+								class_name: classNames[1],
+								name: `${workerName}-shared-container-b`,
+							},
+						],
+						durable_objects: {
+							bindings: [
+								{
+									class_name: "E2EContainer",
+									name: "CONTAINER",
+								},
+								{
+									class_name: classNames[0],
+									name: "CONTAINER_A",
+								},
+								{
+									class_name: classNames[1],
+									name: "CONTAINER_B",
+								},
+							],
+						},
+						migrations: [
+							{
+								tag: "v1",
+								new_classes: ["E2EContainer", ...classNames],
+							},
+						],
+					}),
+					"src/index.ts": dedent`
+						import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+
+						export class TestService extends WorkerEntrypoint {
+							async fetch(req: Request) {
+								return new Response("hello from worker");
+							}
+						}
+
+						export class E2EContainer extends DurableObject<Env> {
+							container: globalThis.Container;
+
+							constructor(ctx: DurableObjectState, env: Env) {
+								super(ctx, env);
+								this.container = ctx.container!;
+							}
+
+							async fetch(req: Request) {
+								const path = new URL(req.url).pathname;
+								switch (path) {
+									case "/status":
+										return new Response(JSON.stringify(this.container.running));
+
+									default:
+										return new Response("Hi from Container DO");
+								}
+							}
+						}
+
+						export class E2ESharedDockerfileContainerA extends E2EContainer {}
+						export class E2ESharedDockerfileContainerB extends E2EContainer {}
+
+						export default {
+							async fetch(request, env): Promise<Response> {
+								const id = env.CONTAINER.idFromName("container");
+								const stub = env.CONTAINER.get(id);
+								return stub.fetch(request);
+							},
+						} satisfies ExportedHandler<Env>;`,
+				});
+
+				const worker = helper.runLongLived("wrangler dev");
+				await worker.readUntil(/Container image\(s\) ready/, 30_000);
+
+				const sharedBuildIdsAfter = getSharedContainerBuildIds(
+					dockerPath,
+					classNames
+				);
+				const newSharedBuildIds = Array.from(sharedBuildIdsAfter).filter(
+					(buildId) => !sharedBuildIdsBefore.has(buildId)
+				);
+
+				expect(newSharedBuildIds).toHaveLength(1);
+			}
+		);
+
 		it("won't start the container service if no containers are present", async ({
 			expect,
 		}) => {
@@ -427,11 +535,17 @@ for (const source of imageSource) {
 			vi.stubEnv("WRANGLER_DOCKER_BIN", "not-a-real-docker-binary");
 			const worker = helper.runLongLived("wrangler dev");
 			expect(await worker.exitCode).toBe(1);
-			expect(await worker.output).toContain(
-				`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.`
+			// Strip ANSI codes because esbuild's error formatter auto-underlines URLs,
+			// which inserts escape sequences that break plain-text substring matching.
+			const output = stripVTControlCharacters(await worker.output);
+			expect(output).toContain(
+				`The Docker CLI is needed to build the configured image before running dev but could not be launched.`
 			);
-			expect(await worker.output).toContain(
-				`To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false.`
+			expect(output).toContain(
+				`If Docker is not installed, download it from https://docs.docker.com/get-started/get-docker/`
+			);
+			expect(output).toContain(
+				`To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or pass --enable-containers=false.`
 			);
 			vi.unstubAllEnvs();
 		});
@@ -457,4 +571,33 @@ const getContainerIds = (class_name: string) => {
 		}
 	});
 	return ids.filter(Boolean);
+};
+
+const getSharedContainerBuildIds = (
+	dockerPath: string,
+	classNames: readonly string[]
+) => {
+	const [firstClassName, ...otherClassNames] = classNames;
+	if (firstClassName === undefined) {
+		return new Set<string>();
+	}
+
+	const sharedBuildIds = getContainerBuildIds(dockerPath, firstClassName);
+	for (const className of otherClassNames) {
+		const buildIds = getContainerBuildIds(dockerPath, className);
+		for (const buildId of sharedBuildIds) {
+			if (!buildIds.has(buildId)) {
+				sharedBuildIds.delete(buildId);
+			}
+		}
+	}
+	return sharedBuildIds;
+};
+
+const getContainerBuildIds = (dockerPath: string, className: string) => {
+	const output = execSync(
+		`${dockerPath} image ls cloudflare-dev/${className.toLowerCase()} --format "{{.Tag}}"`,
+		{ encoding: "utf8" }
+	);
+	return new Set(output.split("\n").filter((line) => line.trim()));
 };

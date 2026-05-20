@@ -5,15 +5,24 @@ import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 // Cloudflare API error codes returned by `/memberships` that mean "the
 // current auth cannot read memberships".
-//   - 9109 (Insufficient permissions): structural for Account API Tokens,
-//     which cannot read user-level memberships at all.
+//   - 9106 ("Authentication failed"): what `/memberships` returns for
+//     Account API Tokens. `/memberships` is a user-level endpoint and
+//     account-scoped tokens have no user identity, so the API rejects
+//     them at this endpoint even though a valid Bearer token was sent.
+//     (Note: `/user` returns 9109 "Insufficient permissions" for the
+//     same auth, but `/memberships` does not — see `getEmail` in
+//     `whoami.ts` for the 9109 case.)
 //   - 10000 (Authentication error): the token is not accepted by the
 //     `/memberships` endpoint, but `/accounts` may still work for the same
 //     auth (e.g. tokens missing the membership read scope).
-const MEMBERSHIPS_INACCESSIBLE_CODES = [9109, 10000];
+const MEMBERSHIPS_INACCESSIBLE_CODES = [9106, 10000];
+
+function getErrorCode(err: unknown): number | undefined {
+	return (err as { code?: number } | undefined)?.code;
+}
 
 function isMembershipsInaccessible(err: unknown): boolean {
-	const code = (err as { code?: number } | undefined)?.code;
+	const code = getErrorCode(err);
 	return code !== undefined && MEMBERSHIPS_INACCESSIBLE_CODES.includes(code);
 }
 
@@ -27,9 +36,9 @@ function isMembershipsInaccessible(err: unknown): boolean {
  * This avoids displaying accounts that the current credentials cannot meaningfully use.
  *
  * If `/memberships` returns a code that indicates it is inaccessible to the
- * current auth — 9109 (Insufficient permissions) or 10000 (Authentication
- * error) — we fall back to the `/accounts` response, which is itself scoped
- * to what the auth can access. Any other failure on either endpoint is
+ * current auth — 9106 (Account API Tokens) or 10000 (Authentication error)
+ * — we fall back to the `/accounts` response, which is itself scoped to
+ * what the auth can access. Any other failure on either endpoint is
  * propagated so the underlying API error reaches the user.
  *
  * @param complianceConfig - The compliance configuration for API requests
@@ -68,6 +77,18 @@ export async function fetchAllAccounts(
 			if (accountsRes.status === "fulfilled" && accountsRes.value.length > 0) {
 				// Fall back to `/accounts`, which is already scoped to what the auth can use.
 				return accountsRes.value;
+			}
+			// 9106 specifically can be returned when an environment variable like
+			// CLOUDFLARE_API_TOKEN is set to an invalid value — surface that hint.
+			const errCode = getErrorCode(membershipsRes.reason);
+			if (errCode === 9106) {
+				throw new UserError(
+					`Failed to automatically retrieve account IDs for the logged in user.
+You may have incorrect permissions on your API token, or an environment variable such as CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_KEY, or CLOUDFLARE_EMAIL may be set to an invalid value.
+Check your environment and unset or correct any Cloudflare credential variables, or run \`wrangler logout\` followed by \`wrangler login\` to re-authenticate.
+You can also skip this account check by adding an \`account_id\` in your ${configFileName(undefined)} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
+					{ telemetryMessage: "user account fetch permission denied" }
+				);
 			}
 			throw new UserError(
 				`Failed to automatically retrieve account IDs for the logged in user.

@@ -11,6 +11,7 @@ import type {
 export interface Binding {
 	type: string;
 	text?: string;
+	json?: unknown;
 	namespace_id?: string;
 	workflow_name?: string;
 	destination_address?: string;
@@ -35,7 +36,6 @@ export interface Binding {
 	};
 	certificate_id?: string;
 	pipeline?: string;
-	stream?: string;
 	store_id?: string;
 	secret_name?: string;
 	simple?: {

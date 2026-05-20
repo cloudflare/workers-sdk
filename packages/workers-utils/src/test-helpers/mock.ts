@@ -87,3 +87,22 @@ export function mockConsoleMethods() {
 	});
 	return std;
 }
+
+export function createDeferred<T>() {
+	let resolve: ((value: T) => void) | undefined;
+	let reject: ((reason?: unknown) => void) | undefined;
+	const promise = new Promise<T>((_resolve, _reject) => {
+		resolve = _resolve;
+		reject = _reject;
+	});
+
+	if (!resolve || !reject) {
+		throw new Error("Failed to create deferred promise");
+	}
+
+	return {
+		promise,
+		resolve,
+		reject,
+	};
+}
