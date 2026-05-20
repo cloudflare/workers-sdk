@@ -1,11 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { Vike } from "../../../autoconfig/frameworks/vike";
 import { NpmPackageManager } from "../../../package-manager";
-import { runInTempDir } from "../../helpers/run-in-tmp";
-
 vi.mock("../../../autoconfig/frameworks/utils/packages", () => ({
 	isPackageInstalled: () => false,
 }));

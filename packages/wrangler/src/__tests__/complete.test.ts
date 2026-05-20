@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, test } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 function shellAvailable(shell: string): boolean {

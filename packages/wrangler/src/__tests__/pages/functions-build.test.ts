@@ -5,11 +5,11 @@ import {
 	readFileSync,
 	writeFileSync,
 } from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { replaceRandomWithConstantData } from "../helpers/string-dynamic-values-matcher";
 

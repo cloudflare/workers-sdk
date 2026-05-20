@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import {
 	normalizeString,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import * as esbuild from "esbuild";
@@ -20,7 +21,6 @@ import { mockGetSettings } from "../helpers/mock-worker-settings";
 import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {

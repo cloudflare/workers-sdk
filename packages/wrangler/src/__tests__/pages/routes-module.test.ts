@@ -1,9 +1,8 @@
 import { UserError } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { writeRoutesModule } from "../../pages/functions/routes";
 import { toUrlPath } from "../../paths";
-import { runInTempDir } from "../helpers/run-in-tmp";
-
 describe("routes module", () => {
 	runInTempDir();
 

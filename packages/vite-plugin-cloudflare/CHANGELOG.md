@@ -1,5 +1,15 @@
 # @cloudflare/vite-plugin
 
+## 1.37.2
+
+### Patch Changes
+
+- [#13098](https://github.com/cloudflare/workers-sdk/pull/13098) [`67a881a`](https://github.com/cloudflare/workers-sdk/commit/67a881ac527da838f525e6ee67bbe1628deca54f) Thanks [@raashish1601](https://github.com/raashish1601)! - fix: route WebSocket upgrade requests directly to the user worker in dev mode
+
+- Updated dependencies [[`aac7ca0`](https://github.com/cloudflare/workers-sdk/commit/aac7ca02803567adad2d5372124ace1f4ed9c315), [`b25dc0d`](https://github.com/cloudflare/workers-sdk/commit/b25dc0d9f19ff51ec246c9c8175be7e445c12c0b), [`ae047ee`](https://github.com/cloudflare/workers-sdk/commit/ae047eedd5c59452e05a122f14ac4ff6c5ff8ad2), [`a4f22bc`](https://github.com/cloudflare/workers-sdk/commit/a4f22bcbe8deb033ff11783a5f5f63caa3ffc3ff), [`f78d435`](https://github.com/cloudflare/workers-sdk/commit/f78d435454a6f7f0623bf878f1279ca6c3caed50), [`aac7ca0`](https://github.com/cloudflare/workers-sdk/commit/aac7ca02803567adad2d5372124ace1f4ed9c315), [`c5c9e20`](https://github.com/cloudflare/workers-sdk/commit/c5c9e20bf6c806289e33fd599b05c2fb22473999), [`ebf4b24`](https://github.com/cloudflare/workers-sdk/commit/ebf4b24226060d0ea714e9221a1f2744033729cb), [`b27eb18`](https://github.com/cloudflare/workers-sdk/commit/b27eb18de664e416316d50116e568513d08123eb), [`895baf5`](https://github.com/cloudflare/workers-sdk/commit/895baf5ec2ed4a0dfed45e5ede536ad1c913be96), [`7bcdf45`](https://github.com/cloudflare/workers-sdk/commit/7bcdf45580f29ec9a3f0a77f70d8a26d301d19c3)]:
+  - wrangler@4.93.0
+  - miniflare@4.20260518.0
+
 ## 1.37.1
 
 ### Patch Changes

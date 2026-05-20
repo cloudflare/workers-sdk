@@ -1,8 +1,8 @@
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 // eslint-disable-next-line no-restricted-imports
-import { describe, expect, test } from "vitest";
-import { getHostFromUrl, getZoneForRoute } from "../zones";
+import { describe, expect, it, test } from "vitest";
+import { getHostFromUrl, getZoneForRoute, getZoneFromRoute } from "../zones";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { msw } from "./helpers/msw";
 
@@ -177,6 +177,91 @@ describe("Zones", () => {
 				id: "example-id",
 			});
 		});
+		// Tests for the new `getZoneFromRoute` helper used to derive the
+		// `CF-Worker` outbound header value in local development. Per the docs
+		// (https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker)
+		// the production header is the *zone name* that owns the Worker — not
+		// the route pattern's hostname. We honour that when the user has told
+		// us the zone name in their config; otherwise we approximate it with
+		// the pattern hostname, since we can't perform an API lookup here.
+		describe("getZoneFromRoute", () => {
+			it("returns the URL host for a SimpleRoute (string)", ({ expect }) => {
+				expect(getZoneFromRoute("https://example.com/api/*")).toBe(
+					"example.com"
+				);
+				expect(getZoneFromRoute("foo.example.com/*")).toBe("foo.example.com");
+			});
+
+			it("returns `zone_name` for a ZoneNameRoute (subdomain pattern)", ({
+				expect,
+			}) => {
+				expect(
+					getZoneFromRoute({
+						pattern: "foo.example.com/*",
+						zone_name: "example.com",
+					})
+				).toBe("example.com");
+			});
+
+			it("returns `zone_name` for a ZoneNameRoute (apex pattern)", ({
+				expect,
+			}) => {
+				expect(
+					getZoneFromRoute({
+						pattern: "example.com/*",
+						zone_name: "example.com",
+					})
+				).toBe("example.com");
+			});
+
+			it("returns `zone_name` for a ZoneNameRoute with the unparseable `*/*` pattern", ({
+				expect,
+			}) => {
+				expect(
+					getZoneFromRoute({
+						pattern: "*/*",
+						zone_name: "example.com",
+					})
+				).toBe("example.com");
+			});
+
+			it("returns `undefined` when the pattern is unparseable and no `zone_name` is available", ({
+				expect,
+			}) => {
+				// With neither a parseable hostname nor a `zone_name` to fall
+				// back on we can't approximate the zone at all — let Miniflare
+				// apply its default of `<worker-name>.example.com`.
+				expect(getZoneFromRoute("*/*")).toBeUndefined();
+				expect(
+					getZoneFromRoute({ pattern: "*/*", zone_id: "abc123" })
+				).toBeUndefined();
+			});
+
+			it("falls back to the pattern hostname for a ZoneIdRoute", ({
+				expect,
+			}) => {
+				// Without an API lookup we can't resolve a zone_id to its name;
+				// the pattern hostname is the best local approximation.
+				expect(
+					getZoneFromRoute({
+						pattern: "foo.example.com/*",
+						zone_id: "abc123",
+					})
+				).toBe("foo.example.com");
+			});
+
+			it("falls back to the pattern hostname for a CustomDomainRoute", ({
+				expect,
+			}) => {
+				expect(
+					getZoneFromRoute({
+						pattern: "custom.example.com",
+						custom_domain: true,
+					})
+				).toBe("custom.example.com");
+			});
+		});
+
 		test("zone_name route (subdomain, subsequent fetches are cached)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			const zoneIdCache = new Map();

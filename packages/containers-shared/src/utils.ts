@@ -396,12 +396,21 @@ export async function cleanupDuplicateImageTags(
 ): Promise<void> {
 	try {
 		const repoTags = await getImageRepoTags(dockerPath, imageTag);
-		// Remove all cloudflare-dev tags from previous sessions except the current one
+		const currentBuildId = getImageTag(imageTag);
+		// Remove all cloudflare-dev tags from previous sessions except the current dev session.
 		const tagsToRemove = repoTags.filter(
-			(tag) => tag !== imageTag && tag.startsWith("cloudflare-dev")
+			(tag) =>
+				tag.startsWith("cloudflare-dev") && getImageTag(tag) !== currentBuildId
 		);
 		if (tagsToRemove.length > 0) {
 			runDockerCmdWithOutput(dockerPath, ["rmi", ...tagsToRemove]);
 		}
 	} catch {}
+}
+
+function getImageTag(imageTag: string): string | undefined {
+	const tagSeparatorIndex = imageTag.lastIndexOf(":");
+	return tagSeparatorIndex === -1
+		? undefined
+		: imageTag.slice(tagSeparatorIndex + 1);
 }

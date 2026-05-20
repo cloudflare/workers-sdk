@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import {
+	runInTempDir,
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
@@ -25,7 +26,6 @@ import {
 	msw,
 } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {

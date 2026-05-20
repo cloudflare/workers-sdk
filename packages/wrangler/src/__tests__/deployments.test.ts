@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import { thrownIsDoesNotExistError } from "@cloudflare/workers-shared";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { afterAll, afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -14,7 +17,6 @@ import {
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 // This is testing the old deployments behaviour, which is now deprecated

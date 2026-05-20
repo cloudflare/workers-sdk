@@ -1,8 +1,7 @@
 import * as fs from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { startWorker } from "../api/startDevWorker";
-import { runInTempDir } from "./helpers/run-in-tmp";
-
 vi.unmock("child_process");
 vi.unmock("undici");
 

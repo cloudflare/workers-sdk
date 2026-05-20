@@ -157,7 +157,7 @@ export default function (pluginArgs: unknown) {
 						if (typeof value !== "object" || value === null) {
 							throw new Error("context.data must be an object");
 						}
-						// user has overriden context.data, so we need to merge it with the existing data
+						// user has overridden context.data, so we need to merge it with the existing data
 						data = value;
 					},
 					pluginArgs,

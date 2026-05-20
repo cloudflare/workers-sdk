@@ -5,4 +5,16 @@
 	"triggers": {
 		"crons": ["* * * * *"], // every minute
 	},
+	// Used by the `cf-worker-header.spec.ts` regression test for
+	// https://github.com/cloudflare/workers-sdk/issues/13791. The plugin must
+	// derive the outbound `CF-Worker` header from the first configured route
+	// — preferring the explicit `zone_name` (per
+	// https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker)
+	// — instead of falling back to `<worker-name>.example.com`.
+	"routes": [
+		{
+			"pattern": "cf-worker-header-test.example.com/*",
+			"zone_name": "example.com",
+		},
+	],
 }

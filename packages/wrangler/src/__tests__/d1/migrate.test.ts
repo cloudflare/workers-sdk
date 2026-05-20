@@ -1,14 +1,16 @@
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { describe, it, vi } from "vitest";
-import { reinitialiseAuthTokens } from "../../user";
+import * as d1Execute from "../../d1/execute";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
 import { getMswSuccessMembershipHandlers, msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
 describe("migrate", () => {
@@ -227,6 +229,41 @@ Your database may not be available to serve requests during the migration, conti
 			await runWrangler("d1 migrations apply db --remote");
 			expect(std.out).toBe("");
 		});
+
+		it("should throw a clear error when executeSql returns null (execution cancelled)", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+				],
+			});
+
+			await runWrangler("d1 migrations create db test");
+
+			// Simulate executeSql returning null (e.g. user cancels the file-upload prompt).
+			// Call order: initMigrationsTable → listAppliedMigrations → actual migration.
+			vi.spyOn(d1Execute, "executeSql")
+				.mockResolvedValueOnce([
+					{ results: [], success: true, meta: {} as never },
+				])
+				.mockResolvedValueOnce([
+					{ results: [], success: true, meta: {} as never },
+				])
+				.mockResolvedValueOnce(null);
+
+			mockConfirm({
+				text: `About to apply 1 migration(s)\nYour database may not be available to serve requests during the migration, continue?`,
+				result: true,
+			});
+
+			await expect(
+				runWrangler("d1 migrations apply db --local")
+			).rejects.toThrowError(
+				`Migration "0001_test.sql" was not applied — execution was cancelled.`
+			);
+		});
 	});
 
 	describe("list", () => {
@@ -280,7 +317,6 @@ Your database may not be available to serve requests during the migration, conti
 			expect,
 		}) => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "api-token");
-			reinitialiseAuthTokens();
 			setIsTTY(false);
 			writeWranglerConfig();
 			await expect(
