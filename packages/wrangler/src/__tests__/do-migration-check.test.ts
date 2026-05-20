@@ -1,8 +1,8 @@
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockLegacyScriptData } from "./helpers/mock-legacy-script";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 
