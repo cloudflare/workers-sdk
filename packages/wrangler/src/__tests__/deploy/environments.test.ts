@@ -278,7 +278,29 @@ describe("deploy", () => {
 				"deploy --dispatch-namespace test-dispatch-namespace index.js"
 			);
 			expect(std.warn).toMatchInlineSnapshot(
-				`"[WARNING] Cron triggers are not supported with dispatch namespaces and will not be deployed."`
+				`"[WARNING] Cron triggers are not supported with --dispatch-namespace and will be ignored."`
+			);
+		});
+
+		it("should warn when --triggers flag is used alongside --dispatch-namespace", async ({ expect }) => {
+			const scriptContent = `
+      export default {
+				fetch() {
+					return new Response("Hello, World!");
+				}
+			}
+    `;
+			fs.writeFileSync("index.js", scriptContent);
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedDispatchNamespace: "test-dispatch-namespace",
+			});
+
+			await runWrangler(
+				"deploy --dispatch-namespace test-dispatch-namespace --triggers '0 0 * * *' index.js"
+			);
+			expect(std.warn).toMatchInlineSnapshot(
+				`"[WARNING] Cron triggers are not supported with --dispatch-namespace and will be ignored."`
 			);
 		});
 	});

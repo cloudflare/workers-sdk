@@ -1310,9 +1310,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
-		if (props.triggers?.crons?.length) {
+		if (config.triggers?.crons?.length || props.triggers?.length) {
 			logger.warn(
-				"Cron triggers are not supported with dispatch namespaces and will not be deployed."
+				"Cron triggers are not supported with --dispatch-namespace and will be ignored."
 			);
 		}
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
