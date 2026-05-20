@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import crypto from "node:crypto";
 import { createReadStream, promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -538,7 +539,7 @@ async function stripTransactionFromFile(
 
 	const tmpFile = path.join(
 		os.tmpdir(),
-		`d1-execute-${Date.now()}-${path.basename(file)}`
+		`d1-execute-${crypto.randomUUID()}-${path.basename(file)}`
 	);
 	await fs.writeFile(tmpFile, stripped, "utf-8");
 	logger.log(
