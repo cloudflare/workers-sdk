@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as wrangler from "wrangler";
+import { resolveDevOnly } from "./plugin-config";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
@@ -65,11 +66,14 @@ export function writeDeployConfig(
 
 	const auxiliaryWorkerEnvironmentNames =
 		resolvedPluginConfig.type === "workers"
-			? [...resolvedPluginConfig.environmentNameToWorkerMap.keys()].filter(
-					(name) =>
-						name !== resolvedPluginConfig.entryWorkerEnvironmentName &&
-						name !== resolvedPluginConfig.prerenderWorkerEnvironmentName
-				)
+			? [...resolvedPluginConfig.environmentNameToWorkerMap.entries()]
+					.filter(
+						([name, worker]) =>
+							name !== resolvedPluginConfig.entryWorkerEnvironmentName &&
+							name !== resolvedPluginConfig.prerenderWorkerEnvironmentName &&
+							!resolveDevOnly(worker.devOnly)
+					)
+					.map(([name]) => name)
 			: [];
 
 	let entryEnvironmentName: string;
