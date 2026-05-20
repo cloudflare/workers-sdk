@@ -151,6 +151,7 @@ async function resolveDevConfig(
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
 			hostname: host ?? getInferredHost(routes, config.configPath),
 		},
+		watch: input.dev?.watch,
 		liveReload: input.dev?.liveReload || false,
 		testScheduled: input.dev?.testScheduled,
 		outboundService: input.dev?.outboundService,
@@ -591,8 +592,11 @@ export class ConfigController extends Controller {
 				{ useRedirectIfAvailable: true }
 			);
 
-			if (!getDisableConfigWatching()) {
+			if (!getDisableConfigWatching() && input.dev?.watch !== false) {
 				await this.#ensureWatchingConfig(fileConfig.configPath);
+			} else {
+				await this.#configWatcher?.close();
+				this.#configWatcher = undefined;
 			}
 
 			const { config: resolvedConfig, printCurrentBindings } =
