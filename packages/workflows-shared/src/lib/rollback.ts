@@ -122,8 +122,7 @@ export async function executeRollbacks(
 	let completed = 0;
 	let stoppedAt = entries.length;
 
-	for (let i = 0; i < entries.length; i++) {
-		const [cacheKey, entry] = entries[i]!;
+	for (const [i, [cacheKey, entry]] of entries.entries()) {
 		const ctx = engine.createRollbackContext({ cacheKey });
 		try {
 			await ctx.do(entry.stepName, entry.config ?? {}, async () => {
@@ -143,8 +142,10 @@ export async function executeRollbacks(
 			disposeRollbackStub(entry.fn);
 		}
 	}
-	for (let i = stoppedAt; i < entries.length; i++) {
-		disposeRollbackStub(entries[i]![1].fn);
+
+	const remainingEntries = entries.slice(stoppedAt);
+	for (const [, entry] of remainingEntries) {
+		disposeRollbackStub(entry.fn);
 	}
 
 	engine.writeLog(
