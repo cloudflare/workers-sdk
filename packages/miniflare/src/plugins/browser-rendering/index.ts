@@ -24,6 +24,7 @@ import {
 } from "../shared";
 import type { Log } from "../../shared";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
+import type { InstalledBrowser, InstallOptions } from "@puppeteer/browsers";
 
 const BrowserRenderingSchema = z.object({
 	binding: z.string(),
@@ -138,12 +139,12 @@ export async function launchBrowser({
 	const s = spinner();
 	let startedDownloading = false;
 
-	const { executablePath } = await install({
+	const installOptions = {
 		browser,
 		platform,
 		cacheDir: getGlobalWranglerCachePath(),
 		buildId: await resolveBuildId(browser, platform, browserVersion),
-		downloadProgressCallback: (downloadedBytes, totalBytes) => {
+		downloadProgressCallback: (downloadedBytes: number, totalBytes: number) => {
 			if (!startedDownloading) {
 				s.start(`Downloading browser...`);
 				startedDownloading = true;
@@ -151,7 +152,12 @@ export async function launchBrowser({
 			const progress = Math.round((downloadedBytes / totalBytes) * 100);
 			s.update(`Downloading browser... ${progress}%`);
 		},
-	});
+	};
+
+	const { executablePath } = await installWithCorruptedCacheRecovery(
+		installOptions,
+		log
+	);
 
 	if (startedDownloading) {
 		s.stop(`${brandColor("downloaded")} ${dim(`browser`)}`);
@@ -236,6 +242,57 @@ export async function launchBrowser({
 	await waitForBrowserReady(wsEndpoint, log);
 	const startTime = Date.now();
 	return { sessionId, browserProcess, startTime, wsEndpoint };
+}
+
+/**
+ * Regex matching the `@puppeteer/browsers` error thrown when its cache
+ * directory exists but the executable inside it is missing — typically
+ * because a previous `install()` was interrupted mid-extraction (test
+ * timeout, process kill) or because an external agent (Windows Defender,
+ * antivirus, disk cleanup) removed the executable from a previously-good
+ * install.
+ *
+ * @puppeteer/browsers source:
+ * https://github.com/puppeteer/puppeteer/blob/main/packages/browsers/src/install.ts
+ */
+const CORRUPTED_CACHE_ERROR_PATTERN =
+	/The browser folder \((.+?)\) exists but the executable .+? is missing/;
+
+/**
+ * Run `@puppeteer/browsers` `install()`, but if it fails with the
+ * "folder exists but executable is missing" error, clear the corrupted
+ * cache directory and retry once.
+ *
+ * Recovers from a known intermittent failure on CI runners (especially
+ * Windows) where the cache state can become partially populated and stay
+ * that way for the rest of the run, breaking every subsequent test until
+ * the runner is recycled.
+ */
+async function installWithCorruptedCacheRecovery(
+	installOptions: InstallOptions & { unpack?: true },
+	log: Log
+): Promise<InstalledBrowser> {
+	try {
+		return await install(installOptions);
+	} catch (e) {
+		const match = (e as Error)?.message?.match(CORRUPTED_CACHE_ERROR_PATTERN);
+		if (!match) {
+			throw e;
+		}
+		const corruptedPath = match[1];
+		log.warn(
+			`Detected corrupted Chrome cache at ${corruptedPath}; clearing and retrying install.`
+		);
+		try {
+			await removeDir(corruptedPath);
+		} catch (cleanupError) {
+			throw new Error(
+				`Failed to clear corrupted Chrome cache at ${corruptedPath} after detecting "${(e as Error).message}". Manual cleanup may be required.`,
+				{ cause: cleanupError }
+			);
+		}
+		return await install(installOptions);
+	}
 }
 
 /**
