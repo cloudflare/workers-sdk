@@ -1357,6 +1357,11 @@ describe("Rollback", () => {
 			"step-2-1",
 			"step-1-1",
 		]);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_ATTEMPT_SUCCESS)).toEqual([
+			"step-3-1",
+			"step-2-1",
+			"step-1-1",
+		]);
 		expect(countOf(logs, InstanceEvent.ROLLBACK_FAILED)).toBe(0);
 	});
 
@@ -1542,6 +1547,9 @@ describe("Rollback", () => {
 			"step-3-1",
 		]);
 		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_FAILURE)).toEqual([
+			"step-2-1",
+		]);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_ATTEMPT_FAILURE)).toEqual([
 			"step-2-1",
 		]);
 		expect(countOf(logs, InstanceEvent.ROLLBACK_COMPLETE)).toBe(0);

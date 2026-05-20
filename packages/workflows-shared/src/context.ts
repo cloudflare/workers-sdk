@@ -89,25 +89,31 @@ function parseRollbackOptions(
 		options === null ||
 		Array.isArray(options)
 	) {
-		throw new WorkflowFatalError(
+		const error = new WorkflowFatalError(
 			`Rollback options for "${stepName}" must be an object`
-		);
+		) as Error & UserErrorField;
+		error.isUserError = true;
+		throw error;
 	}
 
 	const rollbackOptions = options as Partial<WorkflowStepRollbackOptions>;
 	if (typeof rollbackOptions.rollback !== "function") {
-		throw new WorkflowFatalError(
+		const error = new WorkflowFatalError(
 			`Rollback for "${stepName}" must be a function`
-		);
+		) as Error & UserErrorField;
+		error.isUserError = true;
+		throw error;
 	}
 
 	if (
 		rollbackOptions.rollbackConfig !== undefined &&
 		!isValidStepConfig(rollbackOptions.rollbackConfig)
 	) {
-		throw new WorkflowFatalError(
+		const error = new WorkflowFatalError(
 			`Rollback config for "${stepName}" is in a invalid format. See https://developers.cloudflare.com/workflows/build/sleeping-and-retrying/`
-		);
+		) as Error & UserErrorField;
+		error.isUserError = true;
+		throw error;
 	}
 
 	return rollbackOptions as WorkflowStepRollbackOptions;
@@ -225,11 +231,17 @@ export class Context extends RpcTarget {
 		const events = isRollback
 			? {
 					start: InstanceEvent.ROLLBACK_STEP_START,
+					attemptStart: InstanceEvent.ROLLBACK_ATTEMPT_START,
+					attemptSuccess: InstanceEvent.ROLLBACK_ATTEMPT_SUCCESS,
+					attemptFailure: InstanceEvent.ROLLBACK_ATTEMPT_FAILURE,
 					success: InstanceEvent.ROLLBACK_STEP_SUCCESS,
 					failure: InstanceEvent.ROLLBACK_STEP_FAILURE,
 				}
 			: {
 					start: InstanceEvent.STEP_START,
+					attemptStart: InstanceEvent.ATTEMPT_START,
+					attemptSuccess: InstanceEvent.ATTEMPT_SUCCESS,
+					attemptFailure: InstanceEvent.ATTEMPT_FAILURE,
 					success: InstanceEvent.STEP_SUCCESS,
 					failure: InstanceEvent.STEP_FAILURE,
 				};
@@ -373,16 +385,16 @@ export class Context extends RpcTarget {
 			.readLogsFromStep(cacheKey)
 			.filter((val) =>
 				[
-					InstanceEvent.ATTEMPT_SUCCESS,
-					InstanceEvent.ATTEMPT_FAILURE,
-					InstanceEvent.ATTEMPT_START,
+					events.attemptSuccess,
+					events.attemptFailure,
+					events.attemptStart,
 				].includes(val.event)
 			);
 
 		// this means that the the engine died while executing this step - we can mark the latest attempt as failed
 		if (
 			attemptLogs.length > 0 &&
-			attemptLogs.at(-1)?.event === InstanceEvent.ATTEMPT_START
+			attemptLogs.at(-1)?.event === events.attemptStart
 		) {
 			// TODO: We should get this from SQL
 			const stepState = ((await this.#state.storage.get(
@@ -403,7 +415,7 @@ export class Context extends RpcTarget {
 				this.#engine.priorityQueue.remove(timeoutEntryPQ);
 			}
 			this.#engine.writeLog(
-				InstanceEvent.ATTEMPT_FAILURE,
+				events.attemptFailure,
 				cacheKey,
 				stepNameWithCounter,
 				{
@@ -514,7 +526,7 @@ export class Context extends RpcTarget {
 				};
 
 				this.#engine.writeLog(
-					InstanceEvent.ATTEMPT_START,
+					events.attemptStart,
 					cacheKey,
 					stepNameWithCounter,
 					{
@@ -654,7 +666,7 @@ export class Context extends RpcTarget {
 						e instanceof UnsupportedStreamChunkError
 					) {
 						this.#engine.writeLog(
-							InstanceEvent.ATTEMPT_FAILURE,
+							events.attemptFailure,
 							cacheKey,
 							stepNameWithCounter,
 							{
@@ -686,7 +698,7 @@ export class Context extends RpcTarget {
 
 					if (e instanceof StreamOutputStorageLimitError) {
 						this.#engine.writeLog(
-							InstanceEvent.ATTEMPT_FAILURE,
+							events.attemptFailure,
 							cacheKey,
 							stepNameWithCounter,
 							{
@@ -719,7 +731,7 @@ export class Context extends RpcTarget {
 					// something that cannot be written to storage
 					if (e instanceof Error && e.name === "DataCloneError") {
 						this.#engine.writeLog(
-							InstanceEvent.ATTEMPT_FAILURE,
+							events.attemptFailure,
 							cacheKey,
 							stepNameWithCounter,
 							{
@@ -772,7 +784,7 @@ export class Context extends RpcTarget {
 				});
 
 				this.#engine.writeLog(
-					InstanceEvent.ATTEMPT_SUCCESS,
+					events.attemptSuccess,
 					cacheKey,
 					stepNameWithCounter,
 					{
@@ -813,7 +825,7 @@ export class Context extends RpcTarget {
 							);
 
 					this.#engine.writeLog(
-						InstanceEvent.ATTEMPT_FAILURE,
+						events.attemptFailure,
 						cacheKey,
 						stepNameWithCounter,
 						{
@@ -838,7 +850,7 @@ export class Context extends RpcTarget {
 				}
 
 				this.#engine.writeLog(
-					InstanceEvent.ATTEMPT_FAILURE,
+					events.attemptFailure,
 					cacheKey,
 					stepNameWithCounter,
 					{

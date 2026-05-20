@@ -41,8 +41,8 @@ export function dupRollbackStub(fn: RollbackFn): RollbackFn {
 export function disposeRollbackStub(fn: RollbackFn): void {
 	try {
 		fn[Symbol.dispose]?.();
-	} catch {
-		// already disposed
+	} catch (err) {
+		console.warn("Failed to dispose rollback stub", err);
 	}
 }
 
@@ -52,7 +52,9 @@ export function registerRollbackFn(
 ): void {
 	const { cacheKey, fn, stepName, output, config } = registration;
 	const existing = registry.get(cacheKey);
-	if (existing) disposeRollbackStub(existing.fn);
+	if (existing) {
+		disposeRollbackStub(existing.fn);
+	}
 	registry.set(cacheKey, {
 		fn: dupRollbackStub(fn),
 		stepName,
@@ -64,7 +66,9 @@ export function registerRollbackFn(
 export function clearRollbackRegistry(
 	registry: Map<string, RollbackRegistryEntry>
 ): void {
-	for (const e of registry.values()) disposeRollbackStub(e.fn);
+	for (const entry of registry.values()) {
+		disposeRollbackStub(entry.fn);
+	}
 	registry.clear();
 }
 
@@ -73,8 +77,12 @@ function getRollbackRegistryEntriesInExecutionOrder(
 ): Array<[string, RollbackRegistryEntry]> {
 	const entries: Array<[string, RollbackRegistryEntry]> = [];
 	const seen = new Set<string>();
+	const stepStartGroupKeysDesc = engine.readStepStartGroupKeysDesc();
+	const rollbackRegistryEntriesDesc = [
+		...engine.rollbackRegistry.entries(),
+	].reverse();
 
-	for (const cacheKey of engine.readStepStartGroupKeysDesc()) {
+	for (const cacheKey of stepStartGroupKeysDesc) {
 		const entry = engine.rollbackRegistry.get(cacheKey);
 		if (entry === undefined || seen.has(cacheKey)) {
 			continue;
@@ -83,9 +91,7 @@ function getRollbackRegistryEntriesInExecutionOrder(
 		seen.add(cacheKey);
 	}
 
-	for (const [cacheKey, entry] of [
-		...engine.rollbackRegistry.entries(),
-	].reverse()) {
+	for (const [cacheKey, entry] of rollbackRegistryEntriesDesc) {
 		if (!seen.has(cacheKey)) {
 			entries.push([cacheKey, entry]);
 		}
@@ -100,8 +106,9 @@ export async function executeRollbacks(
 	engine: Engine,
 	triggerError: Error
 ): Promise<{ ranAny: boolean; allSucceeded: boolean }> {
-	if (engine.rollbackRegistry.size === 0)
+	if (engine.rollbackRegistry.size === 0) {
 		return { ranAny: false, allSucceeded: true };
+	}
 
 	const entries = getRollbackRegistryEntriesInExecutionOrder(engine);
 	engine.rollbackRegistry.clear();
