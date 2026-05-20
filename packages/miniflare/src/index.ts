@@ -63,6 +63,7 @@ import {
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
+import { BROWSER_VERSION } from "./plugins/browser-rendering/browser-version";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -1550,13 +1551,7 @@ export class Miniflare {
 				);
 				const { sessionId, browserProcess, startTime, wsEndpoint } =
 					await launchBrowser({
-						// Puppeteer v22.13.1 supported chrome version:
-						// https://pptr.dev/supported-browsers#supported-browser-version-list
-						//
-						// It should match the supported chrome version for the upstream puppeteer
-						// version from which @cloudflare/puppeteer branched off, which is specified in:
-						// https://github.com/cloudflare/puppeteer/?tab=readme-ov-file#workers-version-of-puppeteer-core
-						browserVersion: "126.0.6478.182",
+						browserVersion: BROWSER_VERSION,
 						log: this.#log,
 						tmpPath: this.#tmpPath,
 						headful,

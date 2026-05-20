@@ -152,11 +152,12 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true' && (matrix.suite == 'packages-and-tools' || (matrix.suite == 'fixtures' && matrix.os != 'ubuntu-latest'))
         uses: actions/cache@v4
         with:
-          # The Chrome version is hardcoded in `packages/miniflare/src/index.ts`
-          # (search for `browserVersion:`). Bump this key when that version
-          # changes — a cache miss only triggers a fresh download, no
+          # The Chrome version lives in
+          # `packages/miniflare/src/plugins/browser-rendering/browser-version.ts`.
+          # Bumping that constant invalidates this cache automatically via
+          # `hashFiles()` — a cache miss only triggers a fresh download, no
           # functional impact.
-          key: chrome-${{ runner.os }}-126.0.6478.182
+          key: chrome-${{ runner.os }}-${{ hashFiles('packages/miniflare/src/plugins/browser-rendering/browser-version.ts') }}
           path: |
             ~/.cache/.wrangler/chrome
             ~/Library/Caches/.wrangler/chrome
