@@ -55,7 +55,7 @@ export async function maybeInstallCloudflareSkillsGlobally(
 	// If the user has already been prompted, don't ask again
 	const existingConfig = readSkillsInstallMetadataFile();
 	if (existingConfig !== undefined && !force) {
-		// Note: no metrics even is sent in this case
+		// Note: no metrics event is sent in this case
 		return;
 	}
 
