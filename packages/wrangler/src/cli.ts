@@ -41,6 +41,7 @@ import type {
 	Unstable_MiniflareWorkerOptions,
 	Unstable_RawConfig,
 	Unstable_RawEnvironment,
+	WorkerServer,
 } from "./api";
 import type { Logger } from "./logger";
 import type { Request, Response } from "miniflare";
@@ -91,6 +92,7 @@ export type {
 	Unstable_MiniflareWorkerOptions,
 	Experimental_GenerateTypesOptions,
 	Experimental_GenerateTypesResult,
+	WorkerServer,
 };
 
 export { printBindings as unstable_printBindings } from "./utils/print-bindings";

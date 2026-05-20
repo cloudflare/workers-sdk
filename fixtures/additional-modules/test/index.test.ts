@@ -1,31 +1,31 @@
 import childProcess from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { removeDir } from "@fixture/shared/src/fs-helpers";
 import { afterAll, assert, beforeAll, describe, test, vi } from "vitest";
-import { unstable_startWorker } from "wrangler";
+import { createServer, type WorkerServer } from "wrangler";
 import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 
-async function getTmpDir() {
-	return fs.mkdtemp(path.join(os.tmpdir(), "wrangler-modules-"));
-}
-
-type WranglerDev = Awaited<ReturnType<typeof unstable_startWorker>>;
-function get(worker: WranglerDev, pathname: string) {
-	const url = `http://example.com${pathname}`;
-	// Disable Miniflare's pretty error page, so we can parse errors as JSON
-	return worker.fetch(url, { headers: { "MF-Disable-Pretty-Error": "true" } });
-}
-
 describe("find_additional_modules dev", () => {
-	let tmpDir: string;
-	let worker: WranglerDev;
+	const tmpDir = mkdtempSync(path.join(os.tmpdir(), "wrangler-modules-"));
+	const server = createServer({
+		root: tmpDir,
+		workers: [{ configPath: "wrangler.jsonc" }],
+		watch: true,
+	});
+
+	function get(server: WorkerServer, pathname: string) {
+		const url = `http://example.com${pathname}`;
+		// Disable Miniflare's pretty error page, so we can parse errors as JSON
+		return server.fetch(url, {
+			headers: { "MF-Disable-Pretty-Error": "true" },
+		});
+	}
 
 	beforeAll(async () => {
 		// Copy over files to a temporary directory as we'll be modifying them
-		tmpDir = await getTmpDir();
 		await fs.cp(
 			path.resolve(__dirname, "..", "src"),
 			path.join(tmpDir, "src"),
@@ -36,37 +36,35 @@ describe("find_additional_modules dev", () => {
 			path.join(tmpDir, "wrangler.jsonc")
 		);
 
-		worker = await unstable_startWorker({
-			config: path.join(tmpDir, "wrangler.jsonc"),
-		});
+		await server.listen();
 	});
 	afterAll(async () => {
-		await worker.dispose();
+		await server.close();
 		removeDir(tmpDir, { fireAndForget: true });
 	});
 
 	test("supports bundled modules", async ({ expect }) => {
-		const res = await get(worker, "/dep");
+		const res = await get(server, "/dep");
 		expect(await res.text()).toBe("bundled");
 	});
 	test("supports text modules", async ({ expect }) => {
-		const res = await get(worker, "/text");
+		const res = await get(server, "/text");
 		expect(await res.text()).toBe("test\n");
 	});
 	test("supports SQL modules", async ({ expect }) => {
-		const res = await get(worker, "/sql");
+		const res = await get(server, "/sql");
 		expect(await res.text()).toBe("SELECT * FROM users;\n");
 	});
 	test("supports dynamic imports", async ({ expect }) => {
-		const res = await get(worker, "/dynamic");
+		const res = await get(server, "/dynamic");
 		expect(await res.text()).toBe("dynamic");
 	});
 	test("supports commonjs lazy imports", async ({ expect }) => {
-		const res = await get(worker, "/common");
+		const res = await get(server, "/common");
 		expect(await res.text()).toBe("common");
 	});
 	test("supports variable dynamic imports", async ({ expect }) => {
-		const res = await get(worker, "/lang/en");
+		const res = await get(server, "/lang/en");
 		expect(await res.text()).toBe("hello");
 	});
 
@@ -79,7 +77,7 @@ describe("find_additional_modules dev", () => {
 			'export default "new dynamic";'
 		);
 		await vi.waitFor(async () => {
-			const res = await get(worker, "/dynamic");
+			const res = await get(server, "/dynamic");
 			assert.strictEqual(await res.text(), "new dynamic");
 		});
 
@@ -87,7 +85,7 @@ describe("find_additional_modules dev", () => {
 		await fs.rm(path.join(srcDir, "lang", "en.js"));
 
 		await vi.waitFor(async () => {
-			await expect(get(worker, "/lang/en")).rejects.toThrowError(
+			await expect(get(server, "/lang/en")).rejects.toThrowError(
 				'No such module "lang/en.js".'
 			);
 		});
@@ -99,7 +97,7 @@ describe("find_additional_modules dev", () => {
 			'export default { hello: "hey" };'
 		);
 		await vi.waitFor(async () => {
-			const res = await get(worker, "/lang/en/us");
+			const res = await get(server, "/lang/en/us");
 			assert.strictEqual(await res.text(), "hey");
 		});
 
@@ -109,7 +107,7 @@ describe("find_additional_modules dev", () => {
 			'export default { hello: "bye" };'
 		);
 		await vi.waitFor(async () => {
-			const res = await get(worker, "/lang/en/us");
+			const res = await get(server, "/lang/en/us");
 			assert.strictEqual(await res.text(), "bye");
 		});
 	});
@@ -126,7 +124,7 @@ function build(cwd: string, outDir: string) {
 describe("find_additional_modules deploy", () => {
 	let tmpDir: string;
 	beforeAll(async () => {
-		tmpDir = await getTmpDir();
+		tmpDir = mkdtempSync(path.join(os.tmpdir(), "wrangler-modules-"));
 	});
 	afterAll(async () => await removeDir(tmpDir, { fireAndForget: true }));
 
