@@ -40,7 +40,14 @@ export function createBuildApp(
 			workerEnvironments.map((environment) => builder.build(environment))
 		);
 
-		if (resolvedPluginConfig.type === "assets-only") {
+		const isAssetsOnly =
+			resolvedPluginConfig.type === "assets-only" ||
+			!workerEnvironments.some(
+				(environment) =>
+					environment.name === resolvedPluginConfig.entryWorkerEnvironmentName
+			);
+
+		if (isAssetsOnly) {
 			if (hasClientEntry) {
 				await builder.build(clientEnvironment);
 			} else if (
