@@ -143,8 +143,9 @@ export async function executeRollbacks(
 			disposeRollbackStub(entry.fn);
 		}
 	}
-	for (let i = stoppedAt; i < entries.length; i++)
+	for (let i = stoppedAt; i < entries.length; i++) {
 		disposeRollbackStub(entries[i]![1].fn);
+	}
 
 	engine.writeLog(
 		allSucceeded

@@ -296,8 +296,9 @@ export class Context extends RpcTarget {
 		let cacheKey: string;
 		let count: number;
 		let stepNameWithCounter: string;
-		if (isRollback) {
-			cacheKey = `${ROLLBACK_CACHE_KEY_PREFIX}${this.#rollbackStep!.cacheKey}`;
+		const rollbackStep = this.#rollbackStep;
+		if (rollbackStep !== undefined) {
+			cacheKey = `${ROLLBACK_CACHE_KEY_PREFIX}${rollbackStep.cacheKey}`;
 			count = 1;
 			stepNameWithCounter = name;
 		} else {
@@ -666,6 +667,9 @@ export class Context extends RpcTarget {
 						throw e;
 					}
 
+					// Fatal serialization/storage errors abort the DO immediately, so
+					// previously registered rollbacks do not run for these paths.
+					// This matches the existing terminal behavior for unrecoverable output.
 					// Stream-specific fatal errors
 					if (
 						e instanceof InvalidStepReadableStreamError ||
