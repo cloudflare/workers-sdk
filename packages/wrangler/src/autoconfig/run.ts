@@ -240,6 +240,10 @@ export async function runAutoConfig(
 					...configurationResults.wranglerConfig,
 				})
 			);
+		} else if (getDirWranglerJsonConfigPath(autoConfigDetails.projectPath)) {
+			await saveWranglerJsonc(autoConfigDetails.projectPath, {
+				name: autoConfigDetails.workerName,
+			});
 		}
 
 		maybeAppendWranglerToGitIgnore(autoConfigDetails.projectPath);

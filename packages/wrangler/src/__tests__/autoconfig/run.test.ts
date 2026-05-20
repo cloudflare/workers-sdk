@@ -498,6 +498,53 @@ describe("autoconfig (deploy)", () => {
 			`);
 		});
 
+		it("updates framework-generated wrangler.jsonc with the Worker name", async ({
+			expect,
+		}) => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				configured: false,
+				framework: {
+					id: "static",
+					name: "Static",
+					configure: async ({ dryRun }) => {
+						if (!dryRun) {
+							await writeFile(
+								"wrangler.jsonc",
+								JSON.stringify({
+									name: "example.org",
+									compatibility_date: "2026-05-20",
+								})
+							);
+						}
+
+						return { wranglerConfig: null };
+					},
+					isConfigured: () => false,
+				} as unknown as Framework,
+				workerName: "example-org",
+				outputDir: "dist",
+				packageManager: NpmPackageManager,
+			});
+
+			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
+				"{
+				  \"name\": \"example-org\",
+				  \"compatibility_date\": \"2026-05-20\"
+				}
+				"
+			`);
+		});
+
 		it(".assetsignore should contain Wrangler files if outputDir === projectPath", async ({
 			expect,
 		}) => {
