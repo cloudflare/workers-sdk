@@ -108,6 +108,13 @@ export const DEFAULT_STEP_LIMIT = 10_000;
 
 const PAUSE_DATETIME = "PAUSE_DATETIME";
 
+function isStepSuccessEvent(event: InstanceEvent): boolean {
+	return (
+		event === InstanceEvent.STEP_SUCCESS ||
+		event === InstanceEvent.ROLLBACK_STEP_SUCCESS
+	);
+}
+
 export class Engine extends DurableObject<Env> {
 	logs: Array<unknown> = [];
 
@@ -235,10 +242,7 @@ export class Engine extends DurableObject<Env> {
 			logs: logs.map((log) => {
 				const metadata = JSON.parse(log.metadata);
 
-				if (
-					log.event !== InstanceEvent.STEP_SUCCESS ||
-					!metadata.streamOutput
-				) {
+				if (!isStepSuccessEvent(log.event) || !metadata.streamOutput) {
 					return { ...log, metadata, group: log.groupKey };
 				}
 
@@ -295,7 +299,7 @@ export class Engine extends DurableObject<Env> {
 		return rows.map((row) => {
 			const metadata = JSON.parse(row.metadata) as Record<string, unknown>;
 
-			if (row.event !== InstanceEvent.STEP_SUCCESS || !metadata.streamOutput) {
+			if (!isStepSuccessEvent(row.event) || !metadata.streamOutput) {
 				return {
 					id: row.id,
 					timestamp: String(row.timestamp).replace(" ", "T") + "Z",

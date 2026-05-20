@@ -223,6 +223,13 @@ export class Context extends RpcTarget {
 		} else {
 			stepConfig = (first ?? {}) as WorkflowStepConfig;
 			closure = rest[1] as (ctx: WorkflowStepContext) => Promise<T>;
+			if (typeof closure !== "function") {
+				const error = new WorkflowFatalError(
+					`Step "${name}" requires a callback function`
+				) as Error & UserErrorField;
+				error.isUserError = true;
+				throw error;
+			}
 			rollbackOptions = parseRollbackOptions(name, rest[2]);
 		}
 		const { rollback: rollbackFn, rollbackConfig } = rollbackOptions ?? {};
