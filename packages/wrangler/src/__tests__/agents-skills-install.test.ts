@@ -198,7 +198,7 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			);
 		});
 
-		test("warns and sends skills_install_skipped when rosie.agents() throws", async ({
+		test("sends skills_install_skipped with errorMessage when rosie.agents() throws", async ({
 			expect,
 		}) => {
 			mockRosieAgents.mockRejectedValueOnce(new Error("WASM load failed"));
@@ -206,16 +206,10 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 
 			await maybeInstallCloudflareSkillsGlobally(false);
 
-			expect(std.warn).toContain(
-				"Failed to detect AI coding agents: WASM load failed"
-			);
-			expect(std.warn).toContain(
-				"You can retry by running `wrangler --experimental-force-skills-install`, or install skills manually as described here: https://github.com/cloudflare/skills#installing"
-			);
 			expect(mockRosieInstall).not.toHaveBeenCalled();
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
 				"skills_install_skipped",
-				{ reason: "Failed to install skills" },
+				{ reason: "Failed to install skills", errorMessage: "WASM load failed" },
 				{}
 			);
 		});

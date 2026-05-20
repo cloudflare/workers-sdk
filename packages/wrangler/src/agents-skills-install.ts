@@ -27,7 +27,7 @@ export async function maybeInstallCloudflareSkillsGlobally(
 ): Promise<void> {
 	const sendResultMetricsEvent = (
 		result:
-			| { skippedBecause: string }
+			| { skippedBecause: string; errorMessage?: string }
 			| {
 					targetedAgents: AgentInfo[];
 			  }
@@ -35,7 +35,10 @@ export async function maybeInstallCloudflareSkillsGlobally(
 		if ("skippedBecause" in result) {
 			sendMetricsEvent(
 				"skills_install_skipped",
-				{ reason: result.skippedBecause },
+				{
+					reason: result.skippedBecause,
+					...(result.errorMessage ? { errorMessage: result.errorMessage } : {}),
+				},
 				{}
 			);
 		} else {
@@ -66,12 +69,9 @@ export async function maybeInstallCloudflareSkillsGlobally(
 	try {
 		detectedAgents = await getDetectedAgents();
 	} catch (err) {
-		logger.warn(
-			`Failed to detect AI coding agents: ${err instanceof Error ? err.message : String(err)}`
-		);
-		logger.warn(SKILLS_INSTALL_RETRY_HINT);
 		sendResultMetricsEvent({
 			skippedBecause: "Failed to install skills",
+			errorMessage: err instanceof Error ? err.message : String(err),
 		});
 		return;
 	}
