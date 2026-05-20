@@ -18,9 +18,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 			`wrangler agent-memory namespace create ${namespaceName} --json`
 		);
 
-		expect(normalize(output.stderr)).toMatchInlineSnapshot(`
-			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace create\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
-		`);
+		// The open-beta status warning is suppressed when --json is used
+		// (printBanner returns false), so stderr should be empty.
+		expect(output.stderr).toBe("");
 
 		// Extract the namespace ID for use in subsequent tests
 		try {
@@ -55,9 +55,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 		const found = parsed.find((ns) => ns.name === namespaceName);
 		expect(found).toBeDefined();
 		expect(found?.id).toBe(namespaceId);
-		expect(normalize(output.stderr)).toMatchInlineSnapshot(`
-			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace list\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
-		`);
+		// The open-beta status warning is suppressed when --json is used
+		// (printBanner returns false), so stderr should be empty.
+		expect(output.stderr).toBe("");
 	});
 
 	it("get namespace", async ({ expect }) => {
