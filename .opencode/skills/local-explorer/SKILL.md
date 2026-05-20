@@ -11,7 +11,6 @@ Use this skill when adding a new product or resource type to the local API and/o
 
 Read these files before editing:
 
-- `packages/miniflare/src/workers/local-explorer/README.md`
 - `packages/miniflare/src/workers/local-explorer/explorer.worker.ts`
 - `packages/miniflare/src/plugins/core/explorer.ts`
 - `packages/miniflare/src/plugins/core/types.ts`
