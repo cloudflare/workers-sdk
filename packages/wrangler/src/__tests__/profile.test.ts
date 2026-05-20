@@ -1,4 +1,5 @@
 import path from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
 import {
@@ -20,7 +21,6 @@ import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 describe("Profile", () => {
