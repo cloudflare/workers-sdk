@@ -298,6 +298,72 @@ describe("createServer", { sequential: true }, () => {
 		await expect(resetResponse.text()).resolves.toBe("missing");
 	});
 
+	it("uses local bindings when remote bindings are not allowed", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "config-local-bindings-worker",
+					"main": "src/config.ts",
+					"compatibility_date": "2026-05-20",
+					"kv_namespaces": [
+						{ "binding": "STORE", "id": "config-test-store", "remote": true }
+					]
+				}
+			`,
+			"src/config.ts": dedent`
+				export default {
+					async fetch(request, env) {
+						await env.STORE.put("key", "config-value");
+						return new Response((await env.STORE.get("key")) ?? "missing");
+					}
+				};
+			`,
+			"src/inline.ts": dedent`
+				export default {
+					async fetch(request, env) {
+						await env.STORE.put("key", "inline-value");
+						return new Response((await env.STORE.get("key")) ?? "missing");
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [
+				{ configPath: "./wrangler.jsonc" },
+				{
+					config: {
+						name: "inline-local-bindings-worker",
+						main: "src/inline.ts",
+						compatibility_date: "2026-05-20",
+						kv_namespaces: [
+							{
+								binding: "STORE",
+								id: "inline-test-store",
+								remote: true,
+							},
+						],
+					},
+				},
+			],
+			allowRemoteBindings: false,
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const configResponse = await server.fetch("/");
+		await expect(configResponse.text()).resolves.toBe("config-value");
+
+		const inlineResponse = await server
+			.getWorker("inline-local-bindings-worker")
+			.fetch("/");
+		await expect(inlineResponse.text()).resolves.toBe("inline-value");
+	});
+
 	it("exposes the inspector URL when enabled", async ({ expect }) => {
 		await helper.seed({
 			"wrangler.jsonc": dedent`

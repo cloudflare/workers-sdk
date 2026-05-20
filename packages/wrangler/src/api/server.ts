@@ -51,6 +51,7 @@ export type ServerOptions = {
 	watch?: boolean | undefined;
 	logLevel?: LogLevel | undefined;
 	accountId?: string | undefined;
+	allowRemoteBindings?: boolean | undefined;
 	outboundService?: ServiceFetch | undefined;
 };
 
@@ -129,6 +130,7 @@ function resolveWorkerInputs(
 		const isMultiworker = list.length > 1;
 		const dev: StartDevWorkerInput["dev"] = {
 			auth,
+			remote: options.allowRemoteBindings ? undefined : false,
 			server: options.server ?? { hostname: "127.0.0.1", port: 0 },
 			logLevel: options.logLevel ?? "error",
 			watch: options.watch ?? false,
