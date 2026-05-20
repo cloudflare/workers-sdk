@@ -219,9 +219,11 @@ describe("r2", () => {
 				`);
 			});
 
-			it("should proceed with a warning when wrangler.json has validation errors", async () => {
+			it("should proceed without error when wrangler.json has validation errors", async () => {
 				// Write a config with an invalid r2 bucket name (angle brackets are not allowed)
-				// This simulates the common case of a placeholder value being left in wrangler.json
+				// This simulates the common case of a placeholder value being left in wrangler.json.
+				// r2 bucket list uses provideConfig:false so the config is never parsed — no warning
+				// is emitted and the command succeeds silently.
 				writeWranglerConfig({
 					r2_buckets: [{ binding: "R2", bucket_name: "<my-bucket-name>" }],
 				});
@@ -244,10 +246,6 @@ describe("r2", () => {
 
 				// The command output should include the bucket listing
 				expect(std.out).toContain("real-bucket");
-				// A warning about the invalid config should be emitted, not a fatal error
-				expect(std.warn).toContain(
-					"This command does not require a valid Wrangler configuration"
-				);
 				expect(std.err).toBe("");
 			});
 		});
