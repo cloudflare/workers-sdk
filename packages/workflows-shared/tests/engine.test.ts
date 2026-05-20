@@ -1328,7 +1328,7 @@ describe("Rollback", () => {
 	it("runs rollback fns in LIFO order on workflow failure", async ({
 		expect,
 	}) => {
-		const stub = await runWorkflow("RB-LIFO", async (_e, step) => {
+		const stub = await runWorkflowAndAwait("RB-LIFO", async (_e, step) => {
 			await doWithRollback(
 				step,
 				"step-1",
@@ -1377,7 +1377,7 @@ describe("Rollback", () => {
 			firstMayFinish = resolve;
 		});
 
-		const stub = await runWorkflow("RB-PARALLEL", async (_e, step) => {
+		const stub = await runWorkflowAndAwait("RB-PARALLEL", async (_e, step) => {
 			const first = doWithRollback(
 				step,
 				"first",
@@ -1418,7 +1418,7 @@ describe("Rollback", () => {
 			retries: { limit: 0, delay: 0, backoff: "constant" },
 			timeout: "30 seconds",
 		};
-		const stub = await runWorkflow("RB-CONFIG", async (_e, step) => {
+		const stub = await runWorkflowAndAwait("RB-CONFIG", async (_e, step) => {
 			await doWithRollback(
 				step,
 				"configured-step",
@@ -1437,7 +1437,7 @@ describe("Rollback", () => {
 	});
 
 	it("passes rollback context to rollback fn", async ({ expect }) => {
-		const stub = await runWorkflow("RB-CONTEXT", async (_e, step) => {
+		const stub = await runWorkflowAndAwait("RB-CONTEXT", async (_e, step) => {
 			await doWithRollback(
 				step,
 				"ctx-step",
@@ -1464,25 +1464,28 @@ describe("Rollback", () => {
 	});
 
 	it("runs rollback for failed step", async ({ expect }) => {
-		const stub = await runWorkflow("RB-FAILED-STEP", async (_e, step) => {
-			await doWithRollback(
-				step,
-				"failed-step",
-				{ retries: { limit: 0, delay: 0, backoff: "constant" } },
-				async () => {
-					throw new Error("step-boom");
-				},
-				rollbackOptions(async (ctx) => {
-					if (
-						ctx.error.message !== "step-boom" ||
-						ctx.output !== undefined ||
-						ctx.stepName !== "failed-step-1"
-					) {
-						throw new Error("unexpected failed-step rollback context");
-					}
-				})
-			);
-		});
+		const stub = await runWorkflowAndAwait(
+			"RB-FAILED-STEP",
+			async (_e, step) => {
+				await doWithRollback(
+					step,
+					"failed-step",
+					{ retries: { limit: 0, delay: 0, backoff: "constant" } },
+					async () => {
+						throw new Error("step-boom");
+					},
+					rollbackOptions(async (ctx) => {
+						if (
+							ctx.error.message !== "step-boom" ||
+							ctx.output !== undefined ||
+							ctx.stepName !== "failed-step-1"
+						) {
+							throw new Error("unexpected failed-step rollback context");
+						}
+					})
+				);
+			}
+		);
 		const logs = await readLogsAfter(stub, (l) =>
 			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
 		);
@@ -1499,7 +1502,7 @@ describe("Rollback", () => {
 	it("only runs rollbacks for steps with a registered fn", async ({
 		expect,
 	}) => {
-		const stub = await runWorkflow("RB-PARTIAL", async (_e, step) => {
+		const stub = await runWorkflowAndAwait("RB-PARTIAL", async (_e, step) => {
 			await step.do("plain-step", async () => "v1");
 			await doWithRollback(
 				step,
@@ -1524,7 +1527,7 @@ describe("Rollback", () => {
 	it("stops at the first failing rollback and logs ROLLBACK_FAILED", async ({
 		expect,
 	}) => {
-		const stub = await runWorkflow("RB-FAILS", async (_e, step) => {
+		const stub = await runWorkflowAndAwait("RB-FAILS", async (_e, step) => {
 			await doWithRollback(step, "step-1", async () => "v1", rollbackOptions());
 			await doWithRollback(
 				step,
@@ -1556,7 +1559,7 @@ describe("Rollback", () => {
 	});
 
 	it("does not run rollback when workflow succeeds", async ({ expect }) => {
-		const stub = await runWorkflow("RB-NOOP", async (_e, step) => {
+		const stub = await runWorkflowAndAwait("RB-NOOP", async (_e, step) => {
 			await doWithRollback(step, "a", async () => "ok", rollbackOptions());
 			return "done";
 		});
