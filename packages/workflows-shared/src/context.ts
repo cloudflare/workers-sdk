@@ -15,7 +15,7 @@ import {
 	WorkflowTimeoutError,
 } from "./lib/errors";
 import { calcRetryDuration } from "./lib/retries";
-import { ROLLBACK_CACHE_KEY_PREFIX } from "./lib/rollback";
+import { registerRollbackFn, ROLLBACK_CACHE_KEY_PREFIX } from "./lib/rollback";
 import {
 	cleanupPendingStreamOutput,
 	createReplayReadableStream,
@@ -170,21 +170,22 @@ export class Context extends RpcTarget {
 		return val;
 	}
 
-	#registerRollback(
-		cacheKey: string,
-		rollbackFn: RollbackFn | undefined,
-		stepName: string,
-		output: unknown,
-		rollbackConfig: WorkflowStepConfig | undefined
-	): void {
+	#registerRollback(options: {
+		cacheKey: string;
+		rollbackFn: RollbackFn | undefined;
+		stepName: string;
+		output?: unknown;
+		rollbackConfig?: WorkflowStepConfig;
+	}): void {
+		const { cacheKey, rollbackFn, stepName, output, rollbackConfig } = options;
 		if (rollbackFn && this.#rollbackStep === undefined) {
-			this.#engine.registerRollbackFn(
+			registerRollbackFn(this.#engine.rollbackRegistry, {
 				cacheKey,
-				rollbackFn,
+				fn: rollbackFn,
 				stepName,
-				output,
-				rollbackConfig
-			);
+				...("output" in options && { output }),
+				...(rollbackConfig !== undefined && { config: rollbackConfig }),
+			});
 		}
 	}
 
@@ -323,13 +324,13 @@ export class Context extends RpcTarget {
 				cacheKey,
 				meta: maybeStreamMeta,
 			}) as T;
-			this.#registerRollback(
+			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepNameWithCounter,
-				result,
-				rollbackConfig
-			);
+				stepName: stepNameWithCounter,
+				output: result,
+				rollbackConfig,
+			});
 			return result;
 		} else if (maybeStreamMeta !== undefined && maybeStreamMeta !== null) {
 			// We're not in a complete state - means we crashed while persisting a stream on a previous invocation - need to cleanup
@@ -342,13 +343,13 @@ export class Context extends RpcTarget {
 
 		if (maybeResult) {
 			const result = (maybeResult as { value: T }).value;
-			this.#registerRollback(
+			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepNameWithCounter,
-				result,
-				rollbackConfig
-			);
+				stepName: stepNameWithCounter,
+				output: result,
+				rollbackConfig,
+			});
 			return result;
 		}
 
@@ -826,13 +827,12 @@ export class Context extends RpcTarget {
 						stepNameWithCounter,
 						{}
 					);
-					this.#registerRollback(
+					this.#registerRollback({
 						cacheKey,
 						rollbackFn,
-						stepNameWithCounter,
-						undefined,
-						rollbackConfig
-					);
+						stepName: stepNameWithCounter,
+						rollbackConfig,
+					});
 
 					throw error;
 				}
@@ -929,13 +929,12 @@ export class Context extends RpcTarget {
 						stepNameWithCounter,
 						{}
 					);
-					this.#registerRollback(
+					this.#registerRollback({
 						cacheKey,
 						rollbackFn,
-						stepNameWithCounter,
-						undefined,
-						rollbackConfig
-					);
+						stepName: stepNameWithCounter,
+						rollbackConfig,
+					});
 
 					await this.#state.storage.put(errorKey, error);
 					throw error;
@@ -949,13 +948,13 @@ export class Context extends RpcTarget {
 					streamOutput: { cacheKey, meta: lastStreamMeta },
 				}),
 			});
-			this.#registerRollback(
+			this.#registerRollback({
 				cacheKey,
 				rollbackFn,
-				stepNameWithCounter,
-				result,
-				rollbackConfig
-			);
+				stepName: stepNameWithCounter,
+				output: result,
+				rollbackConfig,
+			});
 			await this.#engine.timeoutHandler.release(this.#engine);
 			return result;
 		};

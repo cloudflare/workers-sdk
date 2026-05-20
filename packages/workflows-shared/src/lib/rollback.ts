@@ -26,8 +26,12 @@ export type WorkflowStepRollbackOptions = {
 export type RollbackRegistryEntry = {
 	fn: RollbackFn;
 	stepName: string;
-	output: unknown;
+	output?: unknown;
 	config?: WorkflowStepConfig;
+};
+
+export type RollbackRegistration = RollbackRegistryEntry & {
+	cacheKey: string;
 };
 
 export function dupRollbackStub(fn: RollbackFn): RollbackFn {
@@ -44,15 +48,17 @@ export function disposeRollbackStub(fn: RollbackFn): void {
 
 export function registerRollbackFn(
 	registry: Map<string, RollbackRegistryEntry>,
-	cacheKey: string,
-	fn: RollbackFn,
-	stepName: string,
-	output: unknown,
-	config?: WorkflowStepConfig
+	registration: RollbackRegistration
 ): void {
+	const { cacheKey, fn, stepName, output, config } = registration;
 	const existing = registry.get(cacheKey);
 	if (existing) disposeRollbackStub(existing.fn);
-	registry.set(cacheKey, { fn: dupRollbackStub(fn), stepName, output, config });
+	registry.set(cacheKey, {
+		fn: dupRollbackStub(fn),
+		stepName,
+		...("output" in registration && { output }),
+		...(config !== undefined && { config }),
+	});
 }
 
 export function clearRollbackRegistry(
