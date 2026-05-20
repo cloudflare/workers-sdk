@@ -1,13 +1,13 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { sendMetricsEvent } from "../metrics/send-event";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import type { maybeInstallCloudflareSkillsGlobally as InstallFnType } from "../agents-skills-install";
 import type * as SendEventModule from "../metrics/send-event";
 

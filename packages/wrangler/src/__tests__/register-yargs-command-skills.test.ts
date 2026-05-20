@@ -1,8 +1,7 @@
-import { seed } from "@cloudflare/workers-utils/test-helpers";
+import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, test, vi } from "vitest";
 import { maybeInstallCloudflareSkillsGlobally } from "../agents-skills-install";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 vi.mock("../package-manager", async (importOriginal) => {
