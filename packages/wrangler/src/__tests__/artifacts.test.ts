@@ -1,3 +1,4 @@
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -34,7 +35,7 @@ describe("artifacts", () => {
 		clearDialogs();
 		msw.resetHandlers();
 	});
-
+	runInTempDir();
 	describe("namespaces", () => {
 		it("should show help for namespace commands", async ({ expect }) => {
 			await runWrangler("artifacts namespaces --help");

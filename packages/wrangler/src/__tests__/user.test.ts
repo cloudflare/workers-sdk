@@ -301,9 +301,9 @@ describe("User", () => {
 			await runWrangler("login");
 
 			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou are currently using the auth profile "work[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou are currently using the auth profile "work".[0m
 
-				  ". If you want to create a new auth profile, run \`wrangler profiles create <profile name>\`.
+				   If you want to create a new auth profile, run \`wrangler profiles create <profile name>\`.
 				   If you want to switch to an existing auth profile, run \`wrangler profiles set <profile name>\`.
 
 
@@ -321,9 +321,9 @@ describe("User", () => {
 			await runWrangler("login");
 
 			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThis directory is bound to the auth profile "work[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThis directory is bound to the auth profile "work"[0m
 
-				  " If you want to create a new auth profile, run \`wrangler profiles create <profile name>\`.
+				   If you want to create a new auth profile, run \`wrangler profiles create <profile name>\`.
 				   If you want to switch to an existing auth profile, run \`wrangler profiles set <profile name>\`.
 
 

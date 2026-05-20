@@ -21,7 +21,7 @@ export type WhoamiResult =
 	| { loggedIn: false }
 	| {
 			loggedIn: true;
-			profile: string;
+			profile?: string;
 			authType: AuthType;
 			email: string | undefined;
 			accounts: AccountInfo[];
@@ -65,12 +65,14 @@ export async function whoami(
 	}
 
 	logger.log("Getting User settings...");
+
 	const user = await getUserInfo(complianceConfig);
 	if (!user) {
 		logger.log("You are not authenticated. Please run `wrangler login`.");
 		return;
 	}
 	printUserEmail(user);
+	printAuthProfile();
 	if (
 		user.authType === "User API Token" ||
 		user.authType === "Account API Token"
@@ -95,6 +97,13 @@ function printComplianceRegion(complianceConfig: ComplianceConfig) {
 		logger.log(
 			`🌍 The compliance region is set to "${chalk.blue(complianceRegion)}" via the ${complianceRegionSource}.`
 		);
+	}
+}
+
+function printAuthProfile() {
+	const profile = getActiveProfileName();
+	if (profile !== undefined) {
+		logger.log("🔐 Using profile: " + chalk.blue(profile));
 	}
 }
 
@@ -154,10 +163,11 @@ function printAccountIdMismatchWarning(
 		(account) => account.id === accountFilter
 	);
 
+	const profile = getActiveProfileName();
 	if (!accountInUserAccounts) {
 		logger.log(
 			formatMessage({
-				text: `The \`account_id\` in your Wrangler configuration (${chalk.blue(configAccountId)}) does not match any of your authenticated accounts.`,
+				text: `The \`account_id\` in your Wrangler configuration (${chalk.blue(configAccountId)}) does not match any of your authenticated accounts${profile ? ` for the active profile "${chalk.blue(profile)}"` : ""}.`,
 				kind: "warning",
 				notes: [
 					{

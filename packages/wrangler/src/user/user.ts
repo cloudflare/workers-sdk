@@ -942,7 +942,7 @@ export function getAuthConfigFilePath(profile?: string) {
 
 	let subpath: string;
 	// no user-defined profile is active...
-	if (targetProfile === "default") {
+	if (!targetProfile || targetProfile === "default") {
 		subpath =
 			environment === "production" ? "default.toml" : `${environment}.toml`;
 	} else {
@@ -1303,7 +1303,7 @@ export async function logout(): Promise<void> {
 		return;
 	}
 	const profileName = getActiveProfileName();
-	if (profileName !== "default") {
+	if (profileName) {
 		logger.error(
 			`You are currently using the profile "${profileName}".\nTo delete the profile and revoke its tokens, run \`wrangler profiles delete ${profileName}\`.\nIf you want to unset the profile temporarily, run \`wrangler profiles unset\`.`
 		);
@@ -1315,16 +1315,16 @@ export async function logout(): Promise<void> {
 		logger.log("Not logged in, exiting...");
 		return;
 	}
-	await revokeToken();
+	await revokeToken(storedRefreshToken.value);
 	rmSync(getAuthConfigFilePath(), { force: true });
 	logger.log(`Successfully logged out.`);
 }
 
-export async function revokeToken(token?: string): Promise<void> {
+export async function revokeToken(token: string): Promise<void> {
 	const body =
 		`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 		`token_type_hint=refresh_token&` +
-		`token=${encodeURIComponent(token || readStoredAuthState().refreshToken?.value || "")}`;
+		`token=${encodeURIComponent(token)}`;
 
 	const response = await fetch(getRevokeUrlFromEnv(), {
 		method: "POST",
@@ -1494,9 +1494,7 @@ export function requireApiToken(): ApiCredentials {
  */
 function getAccountCacheFileName(): string {
 	const profile = getActiveProfileName();
-	return profile === "default"
-		? "wrangler-account.json"
-		: `wrangler-account-${profile}.json`;
+	return profile ? `wrangler-account-${profile}.json` : "wrangler-account.json";
 }
 
 /**

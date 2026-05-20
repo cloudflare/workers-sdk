@@ -1,3 +1,4 @@
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccount } from "../cloudchamber/utils";
@@ -19,6 +20,7 @@ import { runWrangler } from "../helpers/run-wrangler";
 import type { ExpectStatic } from "vitest";
 
 describe("containers registries --help", () => {
+	runInTempDir();
 	const std = mockConsoleMethods();
 
 	it("should help", async ({ expect }) => {
@@ -46,6 +48,7 @@ describe("containers registries --help", () => {
 });
 
 describe("containers registries configure", () => {
+	runInTempDir();
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 	const cliStd = mockCLIOutput();
@@ -569,6 +572,7 @@ describe("containers registries configure", () => {
 });
 
 describe("containers registries list", () => {
+	runInTempDir();
 	const std = mockConsoleMethods();
 	const cliStd = mockCLIOutput();
 	mockAccountId();
@@ -601,8 +605,7 @@ describe("containers registries list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
-			──────────────────
-			Using profile: testing"
+			──────────────────"
 		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ List configured container registries
@@ -636,6 +639,7 @@ describe("containers registries list", () => {
 });
 
 describe("containers registries delete", () => {
+	runInTempDir();
 	const cliStd = mockCLIOutput();
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -698,7 +702,6 @@ describe("containers registries delete", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			Using profile: testing
 			? Are you sure you want to delete the registry credentials for 123456789012.dkr.ecr.us-west-2.amazonaws.com? This action cannot be undone.
 			🤖 Using fallback value in non-interactive context: yes"
 		`);
@@ -837,6 +840,7 @@ describe("containers registries delete", () => {
 });
 
 describe("containers registries credentials", () => {
+	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 	mockAccountId();

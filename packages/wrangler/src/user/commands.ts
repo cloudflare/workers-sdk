@@ -1,16 +1,15 @@
-import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
 import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { handleScopesArgs, loginArgs } from "./login-shared";
 import { getActiveProfileName, getProfileForDirectory } from "./profiles";
 import {
 	getAuthFromEnv,
 	getOAuthTokenFromLocalState,
-	listScopes,
 	login,
 	logout,
-	validateScopeKeys,
 	type Scope,
 } from "./user";
 import { whoami } from "./whoami";
@@ -22,63 +21,6 @@ export type AuthTokenInfo =
 	| { type: "oauth"; token: string }
 	| { type: "api_token"; token: string }
 	| { type: "api_key"; key: string; email: string };
-
-export const loginArgs = {
-	browser: {
-		default: true,
-		type: "boolean",
-		describe: "Automatically open the OAuth link in a browser",
-	},
-	scopes: {
-		describe: "Pick the set of applicable OAuth scopes when logging in",
-		array: true,
-		type: "string",
-		requiresArg: true,
-	},
-	"scopes-list": {
-		describe: "List all the available OAuth scopes with descriptions",
-	},
-	"callback-host": {
-		describe:
-			"Use the ip or host address for the temporary login callback server.",
-		type: "string",
-		requiresArg: false,
-		default: "localhost",
-	},
-	"callback-port": {
-		describe: "Use the port for the temporary login callback server.",
-		type: "number",
-		requiresArg: false,
-		default: 8976,
-	},
-} as const;
-
-/**
- * Handle `--scopes-list` and `--scopes` validation.
- * Returns `true` when the caller should return early (scopes were listed or empty).
- */
-export function handleScopesArgs(args: {
-	scopesList?: unknown;
-	scopes?: string[];
-}): boolean {
-	if (args.scopesList) {
-		listScopes();
-		return true;
-	}
-	if (args.scopes) {
-		if (args.scopes.length === 0) {
-			listScopes();
-			return true;
-		}
-		if (!validateScopeKeys(args.scopes)) {
-			throw new CommandLineArgsError(
-				`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`,
-				{ telemetryMessage: "user login invalid scope" }
-			);
-		}
-	}
-	return false;
-}
 
 export const loginCommand = createCommand({
 	metadata: {
@@ -100,10 +42,10 @@ export const loginCommand = createCommand({
 		}
 
 		const currentProfile = getActiveProfileName();
-		if (currentProfile !== "default") {
+		if (currentProfile) {
 			const message = getProfileForDirectory()
-				? `This directory is bound to the auth profile "${currentProfile}\n"`
-				: `You are currently using the auth profile "${currentProfile}\n".`;
+				? `This directory is bound to the auth profile "${currentProfile}"\n`
+				: `You are currently using the auth profile "${currentProfile}".\n`;
 			logger.error(
 				message,
 				"If you want to create a new auth profile, run `wrangler profiles create <profile name>`.\n",
@@ -164,6 +106,8 @@ export const whoamiCommand = createCommand({
 	behaviour: {
 		printBanner: (args) => !args.json,
 		printConfigWarnings: false,
+		// handle this separately so we include the profile when calling the whoami() function
+		printActiveProfile: false,
 	},
 	args: {
 		account: {

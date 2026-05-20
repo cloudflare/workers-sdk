@@ -865,6 +865,7 @@ describe("extractPortFromHostname", () => {
 });
 
 describe("hostname validation", () => {
+	runInTempDir();
 	it("should accept valid hostnames", ({ expect }) => {
 		expect(() => validateHostname("api.example.com")).not.toThrow();
 		expect(() => validateHostname("localhost")).not.toThrow();

@@ -147,9 +147,9 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				typeof shouldPrintBanner !== "function" || bannerEnabled;
 
 			if (!getWranglerHideBanner()) {
-				if ((def.behaviour?.printActiveProfile ?? true) && shouldPrintBanner) {
+				if ((def.behaviour?.printActiveProfile ?? true) && bannerEnabled) {
 					const activeProfile = getActiveProfileName();
-					if (activeProfile !== "default") {
+					if (activeProfile) {
 						logger.log(`Using profile: ${chalk.blue(activeProfile)}`);
 					}
 				}

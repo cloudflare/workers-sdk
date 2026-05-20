@@ -20,7 +20,11 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
-import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
+import {
+	msw,
+	mswSuccessOauthHandlers,
+	mswSuccessUserHandlers,
+} from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 
 describe("Profile", () => {
@@ -51,6 +55,12 @@ describe("Profile", () => {
 	});
 
 	describe("getAuthConfigFilePath", () => {
+		it("should return default.toml when no profile is active", ({ expect }) => {
+			const filePath = getAuthConfigFilePath();
+			expect(filePath).toContain("default.toml");
+			expect(filePath).not.toContain("profiles");
+		});
+
 		it("should return default.toml for the default profile", ({ expect }) => {
 			const filePath = getAuthConfigFilePath("default");
 			expect(filePath).toContain("default.toml");
@@ -66,10 +76,6 @@ describe("Profile", () => {
 	});
 
 	describe("profileExists", () => {
-		it("should always return true for default", ({ expect }) => {
-			expect(profileExists("default")).toBe(true);
-		});
-
 		it("should return false for non-existent profiles", ({ expect }) => {
 			expect(profileExists("nonexistent")).toBe(false);
 		});
@@ -88,8 +94,8 @@ describe("Profile", () => {
 	});
 
 	describe("getActiveProfileName", () => {
-		it("should return default when nothing is configured", ({ expect }) => {
-			expect(getActiveProfileName()).toBe("default");
+		it("should return undefined when nothing is configured", ({ expect }) => {
+			expect(getActiveProfileName()).toBeUndefined();
 		});
 
 		it("should respect WRANGLER_PROFILE env var", ({ expect }) => {
@@ -152,7 +158,6 @@ describe("Profile", () => {
 			});
 			expect(getProfileForDirectory(dir)).toBe("child-profile");
 		});
-
 	});
 
 	describe("CLI commands", () => {
@@ -418,6 +423,65 @@ describe("Profile", () => {
 			});
 		});
 
+		describe("active profile in banner", () => {
+			beforeEach(() => {
+				msw.use(...mswSuccessUserHandlers);
+			});
+
+			it("should print the active profile under the banner", async ({
+				expect,
+			}) => {
+				writeAuthConfigFile(
+					{
+						oauth_token: "token",
+						refresh_token: "refresh",
+						expiration_time: "2030-01-01T00:00:00Z",
+					},
+					"work"
+				);
+				setActiveProfile("work");
+
+				await runWrangler("whoami");
+
+				expect(std.out).toContain("Using profile: work");
+			});
+
+			it("should not print the active profile with --json", async ({
+				expect,
+			}) => {
+				writeAuthConfigFile(
+					{
+						oauth_token: "token",
+						refresh_token: "refresh",
+						expiration_time: "2030-01-01T00:00:00Z",
+					},
+					"work"
+				);
+				setActiveProfile("work");
+
+				await runWrangler("whoami --json");
+
+				expect(std.out).not.toContain("Using profile");
+				const output = JSON.parse(std.out);
+				expect(output.loggedIn).toBe(true);
+				expect(output.profile).toBe("work");
+			});
+
+			it("should not print profile line when using default profile", async ({
+				expect,
+			}) => {
+				writeAuthConfigFile({
+					oauth_token: "token",
+					refresh_token: "refresh",
+					expiration_time: "2030-01-01T00:00:00Z",
+				});
+
+				await runWrangler("whoami");
+
+				expect(std.out).not.toContain("Using profile");
+			});
+		});
+
 		describe("wrangler profiles unset", () => {
 			it("should reset the active profile to default", async ({ expect }) => {
 				writeAuthConfigFile(
@@ -433,7 +497,7 @@ describe("Profile", () => {
 
 				await runWrangler("profiles unset");
 
-				expect(getActiveProfileName()).toBe("default");
+				expect(getActiveProfileName()).toBeUndefined();
 				expect(std.out).toContain(
 					'Switched from profile "work" back to the default profile.'
 				);
@@ -444,6 +508,60 @@ describe("Profile", () => {
 			}) => {
 				await runWrangler("profiles unset");
 				expect(std.out).toContain("Already using the default profile.");
+			});
+
+			it("should throw when the active profile comes from WRANGLER_PROFILE env var", async ({
+				expect,
+			}) => {
+				vi.stubEnv("WRANGLER_PROFILE", "work");
+				await expect(
+					runWrangler("profiles unset")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`
+					[Error: The active profile "work" is set via the WRANGLER_PROFILE environment variable.
+					]
+				`
+				);
+				vi.unstubAllEnvs();
+			});
+
+			it("should not destroy active.json when WRANGLER_PROFILE is set", async ({
+				expect,
+			}) => {
+				setActiveProfile("personal");
+				vi.stubEnv("WRANGLER_PROFILE", "work");
+
+				await expect(runWrangler("profiles unset")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The active profile "work" is set via the WRANGLER_PROFILE environment variable.
+					]
+				`);
+			});
+
+			it("should warn about directory binding but still unset active.json", async ({
+				expect,
+			}) => {
+				writeAuthConfigFile(
+					{
+						oauth_token: "token",
+						refresh_token: "refresh",
+						expiration_time: "2030-01-01T00:00:00Z",
+					},
+					"work"
+				);
+				setActiveProfile("work");
+
+				const dir = process.cwd();
+				writeDirectoryBindings({ [dir]: "work" });
+
+				await runWrangler("profiles unset");
+
+				expect(std.warn).toContain(
+					'This directory is bound to the profile "work"'
+				);
+				expect(std.out).toContain(
+					'Switched from profile "work" back to the default profile.'
+				);
 			});
 
 			it("should remove a directory binding when --dir is provided", async ({
