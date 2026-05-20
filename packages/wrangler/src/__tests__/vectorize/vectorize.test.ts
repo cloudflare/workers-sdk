@@ -41,12 +41,13 @@ describe("vectorize help", () => {
 			  wrangler vectorize delete-metadata-index <name>  Delete metadata indexes
 
 			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]"
 		`);
 	});
 
@@ -85,12 +86,13 @@ describe("vectorize help", () => {
 			  wrangler vectorize delete-metadata-index <name>  Delete metadata indexes
 
 			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]"
 		`);
 	});
 
@@ -116,12 +118,13 @@ describe("vectorize help", () => {
 			  name  The name of the Vectorize index.  [string] [required]
 
 			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
 			      --json           Return output as JSON  [boolean] [default: false]
@@ -151,12 +154,13 @@ describe("vectorize help", () => {
 			  name  The name of the Vectorize index  [string] [required]
 
 			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
 			      --vector           Vector to query the Vectorize Index  [number]
@@ -1081,12 +1085,13 @@ describe("vectorize commands", () => {
 			  name  The name of the Vectorize index  [string] [required]
 
 			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
 			      --count   Maximum number of vectors to return (1-1000)  [number]

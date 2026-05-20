@@ -37,12 +37,6 @@ describe("experimental_getWranglerCommands", () => {
 			    "hidden": true,
 			    "type": "boolean",
 			  },
-			  "install-skills": {
-			    "default": false,
-			    "describe": "Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
-			    "hidden": true,
-			    "type": "boolean",
-			  },
 			  "experimental-provision": {
 			    "alias": [
 			      "x-provision",
@@ -50,6 +44,11 @@ describe("experimental_getWranglerCommands", () => {
 			    "default": true,
 			    "describe": "Experimental: Enable automatic resource provisioning",
 			    "hidden": true,
+			    "type": "boolean",
+			  },
+			  "install-skills": {
+			    "default": false,
+			    "describe": "Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
 			    "type": "boolean",
 			  },
 			  "v": {
