@@ -169,7 +169,8 @@ describe("pages", () => {
 			      --commit-dirty        Whether or not the workspace should be considered dirty for this deployment  [boolean]
 			      --skip-caching        Skip asset caching which speeds up builds  [boolean]
 			      --no-bundle           Whether to run bundling on \`_worker.js\` before deploying  [boolean]
-			      --upload-source-maps  Whether to upload any server-side sourcemaps with this deployment  [boolean] [default: false]"
+			      --upload-source-maps  Whether to upload any server-side sourcemaps with this deployment  [boolean] [default: false]
+			      --force               Deploy a dynamic Pages project from an agentic environment anyway  [boolean] [default: false]"
 		`);
 	});
 

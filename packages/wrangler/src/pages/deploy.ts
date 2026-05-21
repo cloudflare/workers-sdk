@@ -1,4 +1,5 @@
 import { execFileSync, execSync } from "node:child_process";
+import { lstatSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -9,6 +10,7 @@ import {
 	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { detectAgenticEnvironment } from "am-i-vibing";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
 import { readPagesConfig } from "../config";
@@ -112,6 +114,12 @@ export const pagesDeployCommand = createCommand({
 			description:
 				"Whether to upload any server-side sourcemaps with this deployment",
 		},
+		force: {
+			type: "boolean",
+			default: false,
+			description:
+				"Deploy a dynamic Pages project from an agentic environment anyway",
+		},
 	},
 	positionalArgs: ["directory"],
 	async handler(args) {
@@ -183,6 +191,7 @@ export const pagesDeployCommand = createCommand({
 				{ code: 1, telemetryMessage: "pages deploy missing directory" }
 			);
 		}
+		const isDynamicPagesProject = detectDynamicPagesProject(directory);
 
 		const configCache = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
@@ -209,6 +218,12 @@ export const pagesDeployCommand = createCommand({
 				}
 			}
 		}
+
+		maybeThrowAgentDynamicPagesDeployError({
+			isNewProject: projectName !== undefined && !isExistingProject,
+			isDynamicPagesProject,
+			force: args.force,
+		});
 
 		const isInteractive = process.stdin.isTTY;
 		if ((!projectName || !isExistingProject) && isInteractive) {
@@ -272,6 +287,12 @@ export const pagesDeployCommand = createCommand({
 					break;
 				}
 				case "new": {
+					maybeThrowAgentDynamicPagesDeployError({
+						isNewProject: true,
+						isDynamicPagesProject,
+						force: args.force,
+					});
+
 					if (!projectName) {
 						projectName = await prompt("Enter the name of your new project:");
 
@@ -600,4 +621,42 @@ function promptSelectExistingOrNewProject(
 	return select(message, {
 		choices: items.map((i) => ({ title: i.label, value: i.value })),
 	});
+}
+
+function detectDynamicPagesProject(directory: string): boolean {
+	const workerPath = path.resolve(directory, "_worker.js");
+	const functionsPath = path.resolve(process.cwd(), "functions");
+	const workerStats = lstatSync(workerPath, { throwIfNoEntry: false });
+	const functionsStats = lstatSync(functionsPath, { throwIfNoEntry: false });
+
+	return workerStats !== undefined || functionsStats?.isDirectory() === true;
+}
+
+function maybeThrowAgentDynamicPagesDeployError({
+	isNewProject,
+	isDynamicPagesProject,
+	force,
+}: {
+	isNewProject: boolean;
+	isDynamicPagesProject: boolean;
+	force: boolean;
+}) {
+	if (!isNewProject || !isDynamicPagesProject || force) {
+		return;
+	}
+
+	let isAgentic = false;
+	try {
+		isAgentic = detectAgenticEnvironment(process.env, []).isAgentic;
+	} catch {}
+
+	if (isAgentic) {
+		throw new FatalError(
+			"Deploy with `wrangler deploy` instead. Or, run with `--force` if you absolutely have to use pages.",
+			{
+				code: 1,
+				telemetryMessage: "pages deploy agent dynamic new project blocked",
+			}
+		);
+	}
 }
