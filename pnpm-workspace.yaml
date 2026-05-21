@@ -30,6 +30,18 @@ gitChecks: false
 # URLs. Only direct dependencies may use exotic sources.
 blockExoticSubdeps: true
 
+# Require packages to be at least 24 hours old before they can be installed.
+# This mitigates supply-chain attacks where a malicious version is published and
+# yanked quickly, by ensuring there is a window for detection before adoption.
+# Value is in minutes (1440 = 24 hours).
+minimumReleaseAge: 1440
+
+# First-party Cloudflare packages are exempt from the cooldown so they can be
+# adopted same-day.
+minimumReleaseAgeExclude:
+  - "workerd"
+  - "@cloudflare/workers-types"
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Build scripts
 # pnpm 10 blocks lifecycle scripts by default. Only the packages listed here
