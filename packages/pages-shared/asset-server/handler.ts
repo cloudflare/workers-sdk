@@ -404,8 +404,21 @@ export async function generateHandler<
 						(async () => {
 							try {
 								const links: { href: string; rel: string; as?: string }[] = [];
+								let baseHref: string | undefined;
 
 								const transformedResponse = new HTMLRewriter()
+									.on("base[href]", {
+										element(element) {
+											// HTML spec: only the first <base href> defines the base URL
+											if (baseHref !== undefined) {
+												return;
+											}
+											const href = element.getAttribute("href");
+											if (href !== null) {
+												baseHref = href;
+											}
+										},
+									})
 									.on(
 										"link[rel~=preconnect],link[rel~=preload],link[rel~=modulepreload]",
 										{
@@ -435,7 +448,20 @@ export async function generateHandler<
 								await transformedResponse.text();
 
 								links.forEach(({ href, rel, as }) => {
-									let link = `<${href}>; rel="${rel}"`;
+									let resolvedHref = href;
+									if (baseHref !== undefined) {
+										try {
+											// Resolve href against the base, then against the request URL,
+											// following WHATWG URL semantics for relative paths and `..` segments.
+											resolvedHref = new URL(
+												href,
+												new URL(baseHref, request.url)
+											).href;
+										} catch {
+											// Unparseable href — leave it as-is
+										}
+									}
+									let link = `<${resolvedHref}>; rel="${rel}"`;
 									if (as) {
 										link += `; as=${as}`;
 									}
