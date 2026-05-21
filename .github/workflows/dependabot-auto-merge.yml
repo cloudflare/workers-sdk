@@ -131,7 +131,7 @@ jobs:
         # invariants, actively cancel auto-merge so the bad commit can't ride.
         # `gh pr merge --disable-auto` is a no-op (and exits 0) if auto-merge
         # was never enabled, so this is safe to always run on the failure path.
-        if: steps.meta.outputs.dependency-group == 'workerd-and-workers-types' && steps.verify.outputs.verified != 'true'
+        if: always() && steps.meta.outputs.dependency-group == 'workerd-and-workers-types' && steps.verify.outputs.verified != 'true'
         run: gh pr merge --disable-auto "$PR_URL" || true
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
