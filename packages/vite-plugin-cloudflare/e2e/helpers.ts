@@ -240,18 +240,12 @@ export function runCommand(
 			return output;
 		} catch (e) {
 			attempts--;
-			const err = e as { stdout?: Buffer | string; stderr?: Buffer | string };
-			const stdout = err.stdout?.toString() ?? "";
-			const stderr = err.stderr?.toString() ?? "";
-			const details = `\nstdout:\n${stdout}\nstderr:\n${stderr}`;
 			if (attempts > 0) {
-				debuglog(`Retrying failed command (${e})${details}`);
+				debuglog(`Retrying failed command (${e})`);
 			} else if (canFail) {
-				debuglog(
-					`Command failed but canFail is true, not throwing: ${e}${details}`
-				);
+				debuglog(`Command failed but canFail is true, not throwing: ${e}`);
 			} else {
-				throw new Error(`${e}${details}`);
+				throw e;
 			}
 		}
 	}
