@@ -244,6 +244,129 @@ describe("createServer", { sequential: true }, () => {
 		await expect(response.text()).resolves.toBe("Hello from inline config");
 	});
 
+	it("loads default .env files for config path workers", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "env-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"vars": { "CONFIG_VAR": "from-config" }
+				}
+			`,
+			".env": dedent`
+				ENV_SECRET=from-env
+			`,
+			"src/index.ts": dedent`
+				export default {
+					fetch(request, env) {
+						return Response.json({
+							CONFIG_VAR: env.CONFIG_VAR,
+							ENV_SECRET: env.ENV_SECRET,
+						});
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.json()).resolves.toEqual({
+			CONFIG_VAR: "from-config",
+			ENV_SECRET: "from-env",
+		});
+	});
+
+	it("loads default .dev.vars files for config path workers", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "dev-vars-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"vars": { "CONFIG_VAR": "from-config" }
+				}
+			`,
+			".env": dedent`
+				SECRET=from-env
+			`,
+			".dev.vars": dedent`
+				SECRET=from-dev-vars
+			`,
+			"src/index.ts": dedent`
+				export default {
+					fetch(request, env) {
+						return Response.json({
+							CONFIG_VAR: env.CONFIG_VAR,
+							SECRET: env.SECRET,
+						});
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.json()).resolves.toEqual({
+			CONFIG_VAR: "from-config",
+			SECRET: "from-dev-vars",
+		});
+	});
+
+	it("supports Workers Sites", async ({ expect }) => {
+		await helper.seed({
+			"public/hello.txt": "Hello from Workers Sites",
+			"src/index.ts": dedent`
+				import manifestJSON from "__STATIC_CONTENT_MANIFEST";
+
+				const manifest = JSON.parse(manifestJSON);
+
+				export default {
+					async fetch(request, env) {
+						const key = manifest[new URL(request.url).pathname.slice(1)];
+						const value = key ? await env.__STATIC_CONTENT.get(key) : null;
+						return new Response(value ?? "missing");
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [
+				{
+					config: {
+						main: "src/index.ts",
+						compatibility_date: "2026-05-20",
+						site: { bucket: "public" },
+					},
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/hello.txt");
+		await expect(response.text()).resolves.toBe("Hello from Workers Sites");
+	});
+
 	it("uses ephemeral storage by default", async ({ expect }) => {
 		await helper.seed({
 			"wrangler.jsonc": dedent`

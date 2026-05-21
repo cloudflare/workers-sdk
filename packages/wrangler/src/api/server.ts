@@ -1,8 +1,14 @@
 import assert from "node:assert";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+	normalizeAndValidateConfig,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { Headers, Request } from "miniflare";
+import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { logger } from "../logger";
+import { getSiteAssetPaths } from "../sites";
 import { requireApiToken, requireAuth } from "../user";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
@@ -18,8 +24,10 @@ import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
-import type { RawEnvironment } from "@cloudflare/workers-utils";
+import type { Config, RawConfig } from "@cloudflare/workers-utils";
 import type { DispatchFetch, RequestInfo } from "miniflare";
+
+export type InlineConfig = Omit<RawConfig, "env">;
 
 export type WorkerInput =
 	| {
@@ -29,7 +37,7 @@ export type WorkerInput =
 	  }
 	| {
 			root?: string;
-			config: RawEnvironment;
+			config: InlineConfig;
 	  };
 
 type DevServerOptions = Exclude<
@@ -92,6 +100,31 @@ function resolvePath(basePath: string, maybePath: string | URL): string {
 		: path.resolve(basePath, maybePath);
 }
 
+function normalizeInlineWorkerConfig(
+	config: InlineConfig,
+	root: string
+): Config {
+	const configPath = path.join(root, "wrangler.jsonc");
+	const { config: normalizedConfig, diagnostics } = normalizeAndValidateConfig(
+		config,
+		configPath,
+		configPath,
+		{}
+	);
+
+	if (diagnostics.hasWarnings()) {
+		logger.warn(diagnostics.renderWarnings());
+	}
+
+	if (diagnostics.hasErrors()) {
+		throw new UserError(diagnostics.renderErrors(), {
+			telemetryMessage: "create server inline config validation failed",
+		});
+	}
+
+	return normalizedConfig;
+}
+
 async function resolveFetchInput(
 	input: RequestInfo,
 	session: ServerSession
@@ -128,60 +161,79 @@ function resolveWorkerInputs(
 	return options.workers.map((input, index, list) => {
 		const isPrimaryWorker = index === 0;
 		const isMultiworker = list.length > 1;
-		const dev: StartDevWorkerInput["dev"] = {
-			auth,
-			remote: options.allowRemoteBindings ? undefined : false,
-			server: options.server ?? { hostname: "127.0.0.1", port: 0 },
-			logLevel: options.logLevel ?? "error",
-			watch: options.watch ?? false,
-			persist:
-				options.persist === true ? undefined : (options.persist ?? false),
-			inspector: options.inspector ?? false,
-			outboundService:
-				options.outboundService ??
-				((request) => {
-					return globalThis.fetch(request.url, request);
-				}),
-			multiworkerPrimary: isPrimaryWorker && isMultiworker ? true : undefined,
-		};
 		const root = input.root ?? options.root ?? cwd;
+		const inlineConfig =
+			"config" in input
+				? normalizeInlineWorkerConfig(input.config, root)
+				: undefined;
 
-		if ("config" in input) {
-			const config = input.config;
+		return {
+			// Uses an empty string to avoid dev env from auto discovering a config file and merging it with the inline config
+			config: "configPath" in input ? resolvePath(root, input.configPath) : "",
+			env: "configPath" in input ? input.env : undefined,
+			name: inlineConfig?.name,
+			entrypoint: inlineConfig?.main,
+			compatibilityDate: inlineConfig?.compatibility_date,
+			compatibilityFlags: inlineConfig?.compatibility_flags,
+			complianceRegion: inlineConfig?.compliance_region,
+			pythonModules: inlineConfig?.python_modules,
+			bindings: inlineConfig
+				? convertConfigToBindings(inlineConfig, { usePreviewIds: true })
+				: undefined,
+			migrations: inlineConfig?.migrations,
+			containers: inlineConfig?.containers,
+			triggers: inlineConfig?.triggers?.crons?.map((cron) => ({
+				type: "cron" as const,
+				cron,
+			})),
+			tailConsumers: inlineConfig?.tail_consumers,
+			streamingTailConsumers: inlineConfig?.streaming_tail_consumers,
+			assets: inlineConfig?.assets?.directory,
+			dev: {
+				auth,
+				remote: options.allowRemoteBindings ? undefined : false,
+				server: options.server ?? { hostname: "127.0.0.1", port: 0 },
+				logLevel: options.logLevel ?? "error",
+				watch: options.watch ?? false,
+				persist:
+					options.persist === true ? undefined : (options.persist ?? false),
+				inspector: options.inspector ?? false,
+				outboundService:
+					options.outboundService ??
+					((request) => {
+						return globalThis.fetch(request.url, request);
+					}),
+				multiworkerPrimary: isPrimaryWorker && isMultiworker ? true : undefined,
+			},
+			build: {
+				nodejsCompatMode: (config) => {
+					const hookConfig = inlineConfig ?? config;
+					return validateNodeCompatMode(
+						hookConfig.compatibility_date,
+						hookConfig.compatibility_flags ?? [],
+						{ noBundle: hookConfig.no_bundle }
+					);
+				},
+			},
+			legacy: {
+				site: (config) => {
+					const legacyAssetPaths = getSiteAssetPaths(inlineConfig ?? config);
 
-			return {
-				// FIXME: to avoid dev env from auto discovering a config file and merging it with the inline config
-				config: "",
-				name: config.name,
-				entrypoint: config.main ? resolvePath(root, config.main) : undefined,
-				compatibilityDate: config.compatibility_date,
-				compatibilityFlags: config.compatibility_flags,
-				complianceRegion: config.compliance_region,
-				bindings: convertConfigToBindings(config, { usePreviewIds: true }),
-				migrations: config.migrations,
-				containers: config.containers,
-				triggers: config.triggers?.crons?.map((cron) => ({
-					type: "cron",
-					cron,
-				})),
-				tailConsumers: config.tail_consumers,
-				streamingTailConsumers: config.streaming_tail_consumers,
-				assets: config.assets?.directory,
-				dev,
-			};
-		}
+					if (!legacyAssetPaths) {
+						return undefined;
+					}
 
-		if ("configPath" in input) {
-			return {
-				config: resolvePath(root, input.configPath),
-				env: input.env,
-				dev,
-			};
-		}
-
-		throw new Error(
-			`Invalid worker input at index ${index}. Expected an object with either a "config" property or a "configPath" property.`
-		);
+					return {
+						bucket: path.join(
+							legacyAssetPaths.baseDirectory,
+							legacyAssetPaths.assetDirectory
+						),
+						include: legacyAssetPaths.includePatterns,
+						exclude: legacyAssetPaths.excludePatterns,
+					};
+				},
+			},
+		};
 	});
 }
 
