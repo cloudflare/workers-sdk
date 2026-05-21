@@ -75,7 +75,8 @@ const BindingSchema = z.union([
 	z.object({
 		type: z.literal("kv"),
 		id: z.string().optional(),
-		name: z.string().optional(),
+		// TODO: name support not yet implemented
+		// name: z.string().optional(),
 		remote: z.boolean().optional(),
 	}),
 	z.object({ type: z.literal("logfwdr"), destination: z.string() }),
@@ -180,6 +181,64 @@ const BindingSchema = z.union([
 const CacheSchema = z.object({
 	enabled: z.boolean(),
 });
+
+/**
+ * Binding types that can only be defined once per worker.
+ */
+const SINGLETON_BINDING_TYPES = new Set([
+	"ai",
+	"assets",
+	"browser",
+	"images",
+	"media",
+	"stream",
+	"version-metadata",
+]);
+
+/**
+ * Formats a list of items as natural language.
+ * - 1 item: "ai"
+ * - 2 items: "ai and assets"
+ * - 3+ items: "ai, assets, and browser"
+ */
+function formatList(items: string[]): string {
+	if (items.length === 1) {
+		return `${items[0]}`;
+	}
+
+	if (items.length === 2) {
+		return `${items[0]} and ${items[1]}`;
+	}
+
+	return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
+
+const EnvSchema = z
+	.record(z.string(), BindingSchema)
+	.superRefine((env, ctx) => {
+		const seen = new Set<string>();
+		const duplicates = new Set<string>();
+
+		for (const binding of Object.values(env)) {
+			const type = binding.type;
+
+			if (SINGLETON_BINDING_TYPES.has(type)) {
+				if (seen.has(type)) {
+					duplicates.add(type);
+				}
+
+				seen.add(type);
+			}
+		}
+
+		if (duplicates.size > 0) {
+			ctx.addIssue({
+				code: "custom",
+				message: `${formatList([...duplicates].sort())} bindings can only be defined once`,
+			});
+		}
+	})
+	.optional();
 
 const ExportSchema = z.discriminatedUnion("type", [
 	z.object({
@@ -306,7 +365,7 @@ export const ConfigSchema = z.object({
 	firstPartyWorker: z.boolean().optional(),
 	unsafe: UnsafeSchema.optional(),
 	// previews: TODO
-	env: z.record(z.string(), BindingSchema).optional(),
+	env: EnvSchema,
 	exports: z.record(z.string(), ExportSchema).optional(),
 });
 
