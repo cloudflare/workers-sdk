@@ -109,7 +109,8 @@ interface ImagesBindingOptions {
 
 interface KvBindingOptions {
 	id?: string;
-	name?: string;
+	// TODO: name support not yet implemented
+	// name?: string;
 	remote?: boolean;
 }
 
