@@ -26,13 +26,16 @@
 	"scripts": {
 		"build": "tsdown",
 		"check:type": "tsc",
-		"dev": "tsdown --watch"
+		"dev": "tsdown --watch",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
+		"vitest": "catalog:default",
 		"zod": "^4.4.3"
 	}
 }

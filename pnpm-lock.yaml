@@ -1620,13 +1620,16 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20260518.1
+        version: 4.20260520.1
       tsdown:
         specifier: 0.16.3
         version: 0.16.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
       typescript:
         specifier: catalog:default
         version: 5.8.3
+      vitest:
+        specifier: catalog:default
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.13(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -1638,7 +1641,7 @@ importers:
         version: link:../..
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20260518.1
+        version: 4.20260520.1
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1650,7 +1653,7 @@ importers:
         version: link:../..
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20260518.1
+        version: 4.20260520.1
       '@config-examples/worker-a':
         specifier: workspace:*
         version: link:../worker-a
