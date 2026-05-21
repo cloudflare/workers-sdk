@@ -1016,6 +1016,7 @@ export class Engine extends DurableObject<Env> {
 		this.pauseController = new AbortController();
 		this.waiters = new Map();
 		this.eventMap = new Map();
+		clearRollbackRegistry(this.rollbackRegistry);
 
 		void this.init(accountId, workflow, version, instance, event);
 	}

@@ -8,4 +8,4 @@ Workflow steps can now register a compensation callback with trailing rollback o
 
 Each rollback executes through an internal rollback-scoped `Context.do`, so it inherits the existing retry / timeout / attempt-tracking machinery. `rollbackConfig` lets users override the per-rollback config.
 
-Note: the public rollback option type lands with workerd's `workflows_step_rollback` compat flag (PR cloudflare/workerd#6330). Until that ships, the trailing rollback options only flow through when called through the StepPromise wrapper from a worker that has the flag enabled.
+Note: the public rollback option type lands with workerd's `workflows_step_rollback` compat flag. Until that ships, the trailing rollback options only flow through when called through the StepPromise wrapper from a worker that has the flag enabled.

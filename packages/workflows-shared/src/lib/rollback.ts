@@ -1,6 +1,12 @@
 import { InstanceEvent } from "../instance";
+import { WorkflowFatalError } from "./errors";
+import { isValidStepConfig } from "./validators";
 import type { Engine } from "../engine";
 import type { WorkflowStepConfig } from "cloudflare:workers";
+
+type UserErrorField = {
+	isUserError?: boolean;
+};
 
 // `:` can't appear in user-step cacheKeys (sha1-hex + `-` only).
 export const ROLLBACK_CACHE_KEY_PREFIX = "rollback:";
@@ -33,6 +39,49 @@ export type RollbackRegistryEntry = {
 export type RollbackRegistration = RollbackRegistryEntry & {
 	cacheKey: string;
 };
+
+export function parseRollbackOptions(
+	stepName: string,
+	options: unknown
+): WorkflowStepRollbackOptions | undefined {
+	if (options === undefined) {
+		return undefined;
+	}
+
+	if (
+		typeof options !== "object" ||
+		options === null ||
+		Array.isArray(options)
+	) {
+		const error = new WorkflowFatalError(
+			`Rollback options for "${stepName}" must be an object`
+		) as Error & UserErrorField;
+		error.isUserError = true;
+		throw error;
+	}
+
+	const rollbackOptions = options as Partial<WorkflowStepRollbackOptions>;
+	if (typeof rollbackOptions.rollback !== "function") {
+		const error = new WorkflowFatalError(
+			`Rollback for "${stepName}" must be a function`
+		) as Error & UserErrorField;
+		error.isUserError = true;
+		throw error;
+	}
+
+	if (
+		rollbackOptions.rollbackConfig !== undefined &&
+		!isValidStepConfig(rollbackOptions.rollbackConfig)
+	) {
+		const error = new WorkflowFatalError(
+			`Rollback config for "${stepName}" is in a invalid format. See https://developers.cloudflare.com/workflows/build/sleeping-and-retrying/`
+		) as Error & UserErrorField;
+		error.isUserError = true;
+		throw error;
+	}
+
+	return rollbackOptions as WorkflowStepRollbackOptions;
+}
 
 export function dupRollbackStub(fn: RollbackFn): RollbackFn {
 	return fn.dup ? fn.dup() : fn;

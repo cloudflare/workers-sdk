@@ -10,12 +10,15 @@ import {
 	shouldPreserveNonRetryableError,
 	StreamOutputStorageLimitError,
 	UnsupportedStreamChunkError,
-	WorkflowFatalError,
 	WorkflowInternalError,
 	WorkflowTimeoutError,
 } from "./lib/errors";
 import { calcRetryDuration } from "./lib/retries";
-import { registerRollbackFn, ROLLBACK_CACHE_KEY_PREFIX } from "./lib/rollback";
+import {
+	parseRollbackOptions,
+	registerRollbackFn,
+	ROLLBACK_CACHE_KEY_PREFIX,
+} from "./lib/rollback";
 import {
 	cleanupPendingStreamOutput,
 	createReplayReadableStream,
@@ -75,49 +78,6 @@ export type WorkflowStepContext = {
 	attempt: number;
 	config: ResolvedStepConfig;
 };
-
-function parseRollbackOptions(
-	stepName: string,
-	options: unknown
-): WorkflowStepRollbackOptions | undefined {
-	if (options === undefined) {
-		return undefined;
-	}
-
-	if (
-		typeof options !== "object" ||
-		options === null ||
-		Array.isArray(options)
-	) {
-		const error = new WorkflowFatalError(
-			`Rollback options for "${stepName}" must be an object`
-		) as Error & UserErrorField;
-		error.isUserError = true;
-		throw error;
-	}
-
-	const rollbackOptions = options as Partial<WorkflowStepRollbackOptions>;
-	if (typeof rollbackOptions.rollback !== "function") {
-		const error = new WorkflowFatalError(
-			`Rollback for "${stepName}" must be a function`
-		) as Error & UserErrorField;
-		error.isUserError = true;
-		throw error;
-	}
-
-	if (
-		rollbackOptions.rollbackConfig !== undefined &&
-		!isValidStepConfig(rollbackOptions.rollbackConfig)
-	) {
-		const error = new WorkflowFatalError(
-			`Rollback config for "${stepName}" is in a invalid format. See https://developers.cloudflare.com/workflows/build/sleeping-and-retrying/`
-		) as Error & UserErrorField;
-		error.isUserError = true;
-		throw error;
-	}
-
-	return rollbackOptions as WorkflowStepRollbackOptions;
-}
 
 const PAUSE_DATETIME = "PAUSE_DATETIME";
 
