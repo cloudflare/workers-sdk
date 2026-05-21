@@ -10,6 +10,7 @@ import {
 	shouldPreserveNonRetryableError,
 	StreamOutputStorageLimitError,
 	UnsupportedStreamChunkError,
+	WorkflowFatalError,
 	WorkflowInternalError,
 	WorkflowTimeoutError,
 } from "./lib/errors";
