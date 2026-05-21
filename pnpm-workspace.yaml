@@ -40,6 +40,8 @@ minimumReleaseAge: 1440
 # adopted same-day.
 minimumReleaseAgeExclude:
   - "workerd"
+  # Platform-specific workerd binaries published in lock-step with workerd.
+  - "@cloudflare/workerd-*"
   - "@cloudflare/workers-types"
 
 # ──────────────────────────────────────────────────────────────────────────────
