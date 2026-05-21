@@ -541,11 +541,14 @@ function patchPrintUrls(server: vite.ViteDevServer | vite.PreviewServer) {
 		}
 
 		// Print a QR code for the first tunnel URL so it can be scanned from a mobile device
-		try {
-			const qrCode = encodeQR(publicUrls[0], "ascii", { border: 1 });
-			server.config.logger.info(`\n${qrCode}`);
-		} catch {
-			// QR generation is best-effort; don't disrupt the dev session if it fails
+		const primaryUrl = publicUrls[0];
+		if (primaryUrl) {
+			try {
+				const qrCode = encodeQR(primaryUrl, "ascii", { border: 1 });
+				server.config.logger.info(`\n${qrCode}`);
+			} catch {
+				// QR generation is best-effort; don't disrupt the dev session if it fails
+			}
 		}
 
 		// Add an extra newline after the URLs to improve readability
