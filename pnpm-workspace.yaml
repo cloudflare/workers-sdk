@@ -37,12 +37,14 @@ blockExoticSubdeps: true
 minimumReleaseAge: 1440
 
 # First-party Cloudflare packages are exempt from the cooldown so they can be
-# adopted same-day.
+# adopted same-day. This also covers E2E fixture installs against the local
+# mock npm registry, which publishes our own packages seconds before installing
+# them in a temp project that inherits this workspace's settings.
 minimumReleaseAgeExclude:
+  - "@cloudflare/*"
+  - "miniflare"
+  - "wrangler"
   - "workerd"
-  # Platform-specific workerd binaries published in lock-step with workerd.
-  - "@cloudflare/workerd-*"
-  - "@cloudflare/workers-types"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Build scripts

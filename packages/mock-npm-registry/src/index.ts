@@ -56,10 +56,6 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		dedent`
 			registry=http://localhost:${registryPort}
 			//localhost:${registryPort}/:_authToken=xxxx-xxxx-xxxx-xxxx
-			# Disable the workspace-level minimumReleaseAge for tests: fixtures install
-			# first-party packages (workerd, wrangler, the plugin under test...) seconds
-			# after publishing to the mock registry, so the 24h cooldown would block them.
-			minimum-release-age=0
 	`
 	);
 
