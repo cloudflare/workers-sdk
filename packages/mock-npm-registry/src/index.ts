@@ -76,6 +76,15 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		"npm_config_registry",
 		`http://localhost:${registryPort}`
 	);
+	// `pnpm run` exports `npm_config_minimum_release_age` from the workspace
+	// pnpm-workspace.yaml to subprocess env vars, but does NOT export the
+	// matching `minimumReleaseAgeExclude` array. Tests using this mock registry
+	// install freshly-published first-party packages, so the 24h cooldown would
+	// reject them. Disable the constraint for the lifetime of the mock registry.
+	const revert_npm_config_minimum_release_age = overrideProcessEnv(
+		"npm_config_minimum_release_age",
+		"0"
+	);
 
 	if (debugLog.enabled) {
 		debugLog("Updated");
@@ -105,6 +114,7 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		revert_NPM_CONFIG_USERCONFIG();
 		revert_npm_config_registry();
 		revert_npm_config_userconfig();
+		revert_npm_config_minimum_release_age();
 		if (debugLog.enabled) {
 			debugLog("After");
 			debugLog(execSync("pnpm config list", { encoding: "utf8" }));
