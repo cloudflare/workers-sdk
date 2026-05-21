@@ -455,6 +455,7 @@ function maybeGetCustomServiceService(
 			worker: {
 				serviceWorkerScript: SCRIPT_CUSTOM_FETCH_SERVICE,
 				compatibilityDate: "2022-09-01",
+				compatibilityFlags: ["connect_pass_through", "experimental"],
 				bindings: [
 					{
 						name: CoreBindings.TEXT_CUSTOM_SERVICE,
