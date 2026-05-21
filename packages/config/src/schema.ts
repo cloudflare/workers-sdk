@@ -115,7 +115,7 @@ const BindingSchema = z.union([
 	z.object({
 		type: z.literal("secrets-store-secret"),
 		storeId: z.string(),
-		name: z.string(),
+		secretName: z.string(),
 	}),
 	z.object({
 		type: z.literal("send-email"),
@@ -170,12 +170,15 @@ const BindingSchema = z.union([
 		remote: z.boolean().optional(),
 	}),
 	z.object({ type: z.literal("worker-loader") }),
-	z.object({
-		type: z.literal("workflow"),
-		workerName: z.string(),
-		exportName: z.string(),
-		remote: z.boolean().optional(),
-	}),
+	// TODO: workflow bindings are temporarily disabled. Workflows are defined
+	// via the top-level `exports` field, which produces a same-Worker
+	// `workflows` entry in the Wrangler config.
+	// z.object({
+	// 	type: z.literal("workflow"),
+	// 	workerName: z.string(),
+	// 	exportName: z.string(),
+	// 	remote: z.boolean().optional(),
+	// }),
 ]);
 
 const CacheSchema = z.object({
@@ -304,7 +307,8 @@ const TailConsumerSchema = z.object({
 });
 
 const TriggerSchema = z.discriminatedUnion("type", [
-	z.object({ type: z.literal("email") }), // doesn't yet exist
+	// TODO: email triggers not yet implemented
+	// z.object({ type: z.literal("email") }),
 	z.object({
 		type: z.literal("fetch"),
 		pattern: z.string(),
@@ -312,6 +316,7 @@ const TriggerSchema = z.discriminatedUnion("type", [
 	}),
 	z.object({
 		type: z.literal("queue"),
+		name: z.string(),
 		deadLetterQueue: z.string().optional(),
 		maxBatchSize: z.number().optional(),
 		maxBatchTimeout: z.number().optional(),
