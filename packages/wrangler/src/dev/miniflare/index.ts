@@ -789,14 +789,22 @@ export function buildMiniflareBindingOptions(
 			workflows.map((workflow) => {
 				if (
 					workflow.script_name !== undefined &&
-					workflow.script_name !== config.name &&
-					workflow.limits
+					workflow.script_name !== config.name
 				) {
-					throw new UserError(
-						`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
-							`Configure limits on the worker that defines the workflow.`,
-						{ telemetryMessage: "workflow limits on external script" }
-					);
+					if (workflow.limits) {
+						throw new UserError(
+							`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
+								`Configure limits on the worker that defines the workflow.`,
+							{ telemetryMessage: "workflow limits on external script" }
+						);
+					}
+					if (workflow.schedule) {
+						throw new UserError(
+							`Workflow "${workflow.name}" has "schedule" configured but references external script "${workflow.script_name}". ` +
+								`Configure schedule on the worker that defines the workflow.`,
+							{ telemetryMessage: "workflow schedule on external script" }
+						);
+					}
 				}
 				return workflowEntry(
 					workflow,
