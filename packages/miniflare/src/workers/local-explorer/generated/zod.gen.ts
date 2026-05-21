@@ -1083,6 +1083,13 @@ export const zWorkflowsGetInstanceDetailsResponse =
 export const zWorkflowsChangeInstanceStatusData = z.object({
 	body: z.object({
 		action: z.enum(["pause", "resume", "restart", "terminate"]),
+		from: z
+			.object({
+				name: z.string(),
+				count: z.number().int().gte(1).optional(),
+				type: z.enum(["do", "sleep", "waitForEvent"]).optional(),
+			})
+			.optional(),
 	}),
 	path: z.object({
 		workflow_name: zWorkflowsWorkflowName,
