@@ -86,10 +86,12 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		"npm_config_minimum_release_age_exclude",
 		[
 			...pkgs.keys(),
-			// workerd is pulled in transitively (e.g. via miniflare) and may have
-			// been bumped same-day, so exempt it and its platform binaries too.
+			// workerd and @cloudflare/workers-types are pulled in transitively
+			// (e.g. via miniflare) and may have been bumped same-day. Keep this
+			// list in sync with `minimumReleaseAgeExclude` in pnpm-workspace.yaml.
 			"workerd",
 			"@cloudflare/workerd-*",
+			"@cloudflare/workers-types",
 		].join(",")
 	);
 
