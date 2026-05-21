@@ -2,7 +2,7 @@
 "@cloudflare/workflows-shared": minor
 ---
 
-Add saga rollback support for local Workflows development
+Add rollback support for local Workflows development
 
 Workflow steps can now register a compensation callback with trailing rollback options: `step.do(name, fn, { rollback })` and `step.do(name, config, fn, { rollback, rollbackConfig })`. When the workflow fails, the local engine runs every registered rollback in reverse step-start order (LIFO), giving steps the opportunity to undo their side effects.
 
