@@ -104,7 +104,7 @@ describe("pages deploy", () => {
 			      --skip-caching        Skip asset caching which speeds up builds  [boolean]
 			      --no-bundle           Whether to run bundling on \`_worker.js\` before deploying  [boolean]
 			      --upload-source-maps  Whether to upload any server-side sourcemaps with this deployment  [boolean] [default: false]
-			      --force               Deploy a dynamic Pages project from an agentic environment anyway  [boolean] [default: false]"
+			      --force               Deploy a static Pages project from an agentic environment anyway  [boolean] [default: false]"
 		`);
 	});
 
@@ -148,11 +148,11 @@ describe("pages deploy", () => {
 		);
 	});
 
-	it("should error when an agent deploys a dynamic site to a new Pages project", async ({
+	it("should error when an agent deploys a static site to a new Pages project", async ({
 		expect,
 	}) => {
 		mkdirSync("public");
-		writeFileSync("public/_worker.js", "export default { fetch() {} };");
+		writeFileSync("public/index.html", "Hello, world!");
 		vi.mocked(detectAgenticEnvironment).mockReturnValue({
 			isAgentic: true,
 			id: "test-agent",
@@ -181,11 +181,44 @@ describe("pages deploy", () => {
 		);
 	});
 
-	it("should allow an agent to force a dynamic deploy to a new Pages project", async ({
+	it("should not error when an agent deploys a dynamic site to a new Pages project", async ({
 		expect,
 	}) => {
 		mkdirSync("public");
 		writeFileSync("public/_worker.js", "export default { fetch() {} };");
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "test-agent",
+			name: "Test Agent",
+			type: "cli",
+		});
+
+		msw.use(
+			http.get("*/accounts/:accountId/pages/projects/foo", async () =>
+				HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code: 8000007, message: "project not found" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 404 }
+				)
+			)
+		);
+
+		await expect(
+			runWrangler("pages deploy public --project-name=foo")
+		).rejects.not.toThrow(
+			"Deploy with `wrangler deploy` instead. Or, run with `--force` if you absolutely have to use pages."
+		);
+	});
+
+	it("should allow an agent to force a static deploy to a new Pages project", async ({
+		expect,
+	}) => {
+		mkdirSync("public");
+		writeFileSync("public/index.html", "Hello, world!");
 		vi.mocked(detectAgenticEnvironment).mockReturnValue({
 			isAgentic: true,
 			id: "test-agent",

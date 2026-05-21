@@ -118,7 +118,7 @@ export const pagesDeployCommand = createCommand({
 			type: "boolean",
 			default: false,
 			description:
-				"Deploy a dynamic Pages project from an agentic environment anyway",
+				"Deploy a static Pages project from an agentic environment anyway",
 		},
 	},
 	positionalArgs: ["directory"],
@@ -191,7 +191,7 @@ export const pagesDeployCommand = createCommand({
 				{ code: 1, telemetryMessage: "pages deploy missing directory" }
 			);
 		}
-		const isDynamicPagesProject = detectDynamicPagesProject(directory);
+		const isStaticPagesProject = detectStaticPagesProject(directory);
 
 		const configCache = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
@@ -219,9 +219,9 @@ export const pagesDeployCommand = createCommand({
 			}
 		}
 
-		maybeThrowAgentDynamicPagesDeployError({
+		maybeThrowAgentStaticPagesDeployError({
 			isNewProject: projectName !== undefined && !isExistingProject,
-			isDynamicPagesProject,
+			isStaticPagesProject,
 			force: args.force,
 		});
 
@@ -287,9 +287,9 @@ export const pagesDeployCommand = createCommand({
 					break;
 				}
 				case "new": {
-					maybeThrowAgentDynamicPagesDeployError({
+					maybeThrowAgentStaticPagesDeployError({
 						isNewProject: true,
-						isDynamicPagesProject,
+						isStaticPagesProject,
 						force: args.force,
 					});
 
@@ -623,25 +623,25 @@ function promptSelectExistingOrNewProject(
 	});
 }
 
-function detectDynamicPagesProject(directory: string): boolean {
+function detectStaticPagesProject(directory: string): boolean {
 	const workerPath = path.resolve(directory, "_worker.js");
 	const functionsPath = path.resolve(process.cwd(), "functions");
 	const workerStats = lstatSync(workerPath, { throwIfNoEntry: false });
 	const functionsStats = lstatSync(functionsPath, { throwIfNoEntry: false });
 
-	return workerStats !== undefined || functionsStats?.isDirectory() === true;
+	return workerStats === undefined && functionsStats?.isDirectory() !== true;
 }
 
-function maybeThrowAgentDynamicPagesDeployError({
+function maybeThrowAgentStaticPagesDeployError({
 	isNewProject,
-	isDynamicPagesProject,
+	isStaticPagesProject,
 	force,
 }: {
 	isNewProject: boolean;
-	isDynamicPagesProject: boolean;
+	isStaticPagesProject: boolean;
 	force: boolean;
 }) {
-	if (!isNewProject || !isDynamicPagesProject || force) {
+	if (!isNewProject || !isStaticPagesProject || force) {
 		return;
 	}
 
@@ -655,7 +655,7 @@ function maybeThrowAgentDynamicPagesDeployError({
 			"Deploy with `wrangler deploy` instead. Or, run with `--force` if you absolutely have to use pages.",
 			{
 				code: 1,
-				telemetryMessage: "pages deploy agent dynamic new project blocked",
+				telemetryMessage: "pages deploy agent static new project blocked",
 			}
 		);
 	}
