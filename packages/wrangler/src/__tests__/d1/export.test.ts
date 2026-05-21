@@ -311,13 +311,13 @@ describe("export", () => {
 			[
 				"PRAGMA defer_foreign_keys=TRUE;",
 				"CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);",
-				"INSERT INTO \"foo\" VALUES(1,'xxx');",
-				"INSERT INTO \"foo\" VALUES(2,'yyy');",
-				"INSERT INTO \"foo\" VALUES(3,'zzz');",
+				'INSERT INTO "foo" ("id","value") VALUES(1,\'xxx\');',
+				'INSERT INTO "foo" ("id","value") VALUES(2,\'yyy\');',
+				'INSERT INTO "foo" ("id","value") VALUES(3,\'zzz\');',
 				"CREATE TABLE baz(id INTEGER PRIMARY KEY, value TEXT);",
-				"INSERT INTO \"baz\" VALUES(1,'111');",
-				"INSERT INTO \"baz\" VALUES(2,'222');",
-				"INSERT INTO \"baz\" VALUES(3,'333');",
+				'INSERT INTO "baz" ("id","value") VALUES(1,\'111\');',
+				'INSERT INTO "baz" ("id","value") VALUES(2,\'222\');',
+				'INSERT INTO "baz" ("id","value") VALUES(3,\'333\');',
 			].join("\n")
 		);
 	});
