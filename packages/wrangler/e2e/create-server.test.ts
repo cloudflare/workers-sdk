@@ -329,6 +329,103 @@ describe("createServer", { sequential: true }, () => {
 		});
 	});
 
+	it("overrides vars and secrets for config path workers", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "var-overrides-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"vars": { "CONFIG_VAR": "from-config" },
+					"secrets": { "required": ["API_TOKEN", "SECRET_FROM_FILE"] }
+				}
+			`,
+			".dev.vars": dedent`
+				API_TOKEN=from-dev-vars
+				SECRET_FROM_FILE=from-dev-vars
+			`,
+			"src/index.ts": dedent`
+				export default {
+					fetch(request, env) {
+						return Response.json({
+							CONFIG_VAR: env.CONFIG_VAR,
+							API_TOKEN: env.API_TOKEN,
+							SECRET_FROM_FILE: env.SECRET_FROM_FILE,
+							ADDED_VAR: env.ADDED_VAR,
+							NULL_VAR: env.NULL_VAR,
+						});
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [
+				{
+					configPath: "./wrangler.jsonc",
+					overrides: {
+						vars: {
+							CONFIG_VAR: "from-override",
+							ADDED_VAR: "from-override",
+							NULL_VAR: null,
+						},
+						secrets: {
+							API_TOKEN: "from-override",
+						},
+					},
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.json()).resolves.toEqual({
+			CONFIG_VAR: "from-override",
+			API_TOKEN: "from-override",
+			SECRET_FROM_FILE: "from-dev-vars",
+			ADDED_VAR: "from-override",
+			NULL_VAR: null,
+		});
+	});
+
+	it(`supports "nodejs_compat" flag`, async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "nodejs-compat-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"compatibility_flags": ["nodejs_compat"]
+				}
+			`,
+			"src/index.ts": dedent`
+				import { Stream } from "node:stream";
+
+				export default {
+					fetch() {
+						return new Response(String(typeof Stream));
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.text()).resolves.toBe("function");
+	});
+
 	it("supports Workers Sites", async ({ expect }) => {
 		await helper.seed({
 			"public/hello.txt": "Hello from Workers Sites",

@@ -25,15 +25,21 @@ import type {
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
-import type { DispatchFetch, RequestInfo } from "miniflare";
+import type { DispatchFetch, Json, RequestInfo } from "miniflare";
 
 export type InlineConfig = Omit<RawConfig, "env">;
+
+export type ConfigOverrides = {
+	vars?: Record<string, Json>;
+	secrets?: Record<string, string>;
+};
 
 export type WorkerInput =
 	| {
 			root?: string;
 			configPath: string | URL;
 			env?: string;
+			overrides?: ConfigOverrides;
 	  }
 	| {
 			root?: string;
@@ -166,6 +172,15 @@ function resolveWorkerInputs(
 			"config" in input
 				? normalizeInlineWorkerConfig(input.config, root)
 				: undefined;
+		const overrides = "configPath" in input ? input.overrides : undefined;
+		const bindings = convertConfigToBindings(
+			inlineConfig ?? { vars: overrides?.vars },
+			{ usePreviewIds: true }
+		);
+
+		for (const [key, value] of Object.entries(overrides?.secrets ?? {})) {
+			bindings[key] = { type: "secret_text", value };
+		}
 
 		return {
 			// Uses an empty string to avoid dev env from auto discovering a config file and merging it with the inline config
@@ -177,9 +192,7 @@ function resolveWorkerInputs(
 			compatibilityFlags: inlineConfig?.compatibility_flags,
 			complianceRegion: inlineConfig?.compliance_region,
 			pythonModules: inlineConfig?.python_modules,
-			bindings: inlineConfig
-				? convertConfigToBindings(inlineConfig, { usePreviewIds: true })
-				: undefined,
+			bindings,
 			migrations: inlineConfig?.migrations,
 			containers: inlineConfig?.containers,
 			triggers: inlineConfig?.triggers?.crons?.map((cron) => ({
