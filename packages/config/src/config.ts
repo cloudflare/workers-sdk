@@ -1,15 +1,11 @@
 // oxlint-disable typescript/no-explicit-any -- needed in type utilities
 
+import type { Json } from "./utils";
 import type { Pipeline, PipelineRecord } from "cloudflare:pipelines";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GENERIC UTILITIES
 // ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Represents any valid JSON value.
- */
-type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 
 /**
  * The Worker's entry module, imported with the `{ type: "cf-worker" }` import attribute
@@ -154,7 +150,7 @@ interface R2BindingOptions {
 
 interface SecretsStoreSecretBindingOptions {
 	storeId: string;
-	name: string;
+	secretName: string;
 }
 
 interface SendEmailBindingOptions {
@@ -618,23 +614,24 @@ type DurableObjectExportName<
 		: never
 	: string;
 
-/**
- * Returns valid exports for a Workflow binding.
- * For known Workers, returns the constrained union of Workflow exports.
- * For unknown workers in typed configs, returns `never`.
- * For untyped configs, returns `string` to allow any export name.
- */
-type WorkflowExportName<
-	TUnwrappedConfig,
-	TName extends string,
-> = TUnwrappedConfig extends { name: string }
-	? TName extends InferWorkerName<TUnwrappedConfig>
-		? InferExportsByType<
-				ExtractConfigByName<TUnwrappedConfig, TName>,
-				"workflow"
-			>
-		: never
-	: string;
+// TODO: re-enable when workflow bindings return.
+// /**
+//  * Returns valid exports for a Workflow binding.
+//  * For known Workers, returns the constrained union of Workflow exports.
+//  * For unknown workers in typed configs, returns `never`.
+//  * For untyped configs, returns `string` to allow any export name.
+//  */
+// type WorkflowExportName<
+// 	TUnwrappedConfig,
+// 	TName extends string,
+// > = TUnwrappedConfig extends { name: string }
+// 	? TName extends InferWorkerName<TUnwrappedConfig>
+// 		? InferExportsByType<
+// 				ExtractConfigByName<TUnwrappedConfig, TName>,
+// 				"workflow"
+// 			>
+// 		: never
+// 	: string;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIG INFERENCE (PUBLIC)
@@ -865,23 +862,24 @@ export interface Bindings<
 		TExportName
 	>;
 
-	/**
-	 * Create a Workflow binding.
-	 * `workerName` must match a known config's name (or any `string` for untyped bindings).
-	 * `exportName` must be a valid `WorkflowEntrypoint` export for the given Worker.
-	 */
-	workflow<
-		TWorkerName extends WorkerName<TUnwrappedConfig>,
-		TExportName extends WorkflowExportName<TUnwrappedConfig, TWorkerName>,
-	>(options: {
-		workerName: TWorkerName;
-		exportName: TExportName;
-		remote?: boolean;
-	}): WorkflowBinding<
-		ConfigOrUndefined<TUnwrappedConfig, TWorkerName>,
-		TWorkerName,
-		TExportName
-	>;
+	// TODO: re-enable when workflow bindings return.
+	// /**
+	//  * Create a Workflow binding.
+	//  * `workerName` must match a known config's name (or any `string` for untyped bindings).
+	//  * `exportName` must be a valid `WorkflowEntrypoint` export for the given Worker.
+	//  */
+	// workflow<
+	// 	TWorkerName extends WorkerName<TUnwrappedConfig>,
+	// 	TExportName extends WorkflowExportName<TUnwrappedConfig, TWorkerName>,
+	// >(options: {
+	// 	workerName: TWorkerName;
+	// 	exportName: TExportName;
+	// 	remote?: boolean;
+	// }): WorkflowBinding<
+	// 	ConfigOrUndefined<TUnwrappedConfig, TWorkerName>,
+	// 	TWorkerName,
+	// 	TExportName
+	// >;
 }
 
 /**
@@ -947,7 +945,8 @@ export function createBindings<TConfig>(): Bindings<TConfig> {
 		vpcNetwork: (options) => ({ type: "vpc-network", ...options }),
 		worker: (options) => ({ type: "worker", ...options }),
 		workerLoader: () => ({ type: "worker-loader" }),
-		workflow: (options) => ({ type: "workflow", ...options }),
+		// TODO: re-enable when workflow bindings return.
+		// workflow: (options) => ({ type: "workflow", ...options }),
 	} as Bindings<TConfig>;
 }
 
