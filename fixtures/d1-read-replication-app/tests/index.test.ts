@@ -1,26 +1,26 @@
 import { resolve } from "node:path";
 import { afterAll, beforeAll, describe, it } from "vitest";
-import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
+import { createServer } from "wrangler";
+
+const server = createServer({
+	root: resolve(__dirname, ".."),
+	workers: [{ configPath: "wrangler.jsonc" }],
+});
 
 describe("d1-sessions-api - getBookmark", () => {
-	describe("with wrangler dev", () => {
-		let ip: string, port: number, stop: (() => Promise<unknown>) | undefined;
-
+	describe("with createServer", () => {
 		beforeAll(async () => {
-			({ ip, port, stop } = await runWranglerDev(resolve(__dirname, ".."), [
-				"--port=0",
-				"--inspector-port=0",
-			]));
+			await server.listen();
 		});
 
 		afterAll(async () => {
-			await stop?.();
+			await server.close();
 		});
 
 		it("should respond with bookmarks before and after a session query", async ({
 			expect,
 		}) => {
-			let response = await fetch(`http://${ip}:${port}`);
+			let response = await server.fetch("/");
 			let parsed = await response.json();
 			expect(response.status).toBe(200);
 			expect(parsed).toMatchObject({
@@ -30,8 +30,8 @@ describe("d1-sessions-api - getBookmark", () => {
 		});
 
 		it("should progress the bookmark after a write", async ({ expect }) => {
-			let response = await fetch(
-				`http://${ip}:${port}?q=${encodeURIComponent("create table if not exists users1(id text);")}`
+			let response = await server.fetch(
+				`/?q=${encodeURIComponent("create table if not exists users1(id text);")}`
 			);
 			let parsed = (await response.json()) as {
 				bookmarkAfter: string;
@@ -54,8 +54,8 @@ describe("d1-sessions-api - getBookmark", () => {
 			let responses = [];
 
 			for (let i = 0; i < 10; i++) {
-				const resp = await fetch(
-					`http://${ip}:${port}?q=${encodeURIComponent(`create table if not exists users${i}(id text);`)}`
+				const resp = await server.fetch(
+					`/?q=${encodeURIComponent(`create table if not exists users${i}(id text);`)}`
 				);
 				let parsed = (await resp.json()) as {
 					bookmarkAfter: string;

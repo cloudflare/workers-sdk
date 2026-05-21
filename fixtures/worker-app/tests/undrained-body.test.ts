@@ -1,20 +1,19 @@
 import { resolve } from "path";
-import { fetch } from "undici";
 import { afterAll, beforeAll, describe, it } from "vitest";
-import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
+import { createServer } from "wrangler";
+
+const server = createServer({
+	root: resolve(__dirname, ".."),
+	workers: [{ configPath: "wrangler.jsonc" }],
+});
 
 describe("wrangler dev", () => {
-	let ip: string, port: number, stop: (() => Promise<unknown>) | undefined;
-
 	beforeAll(async () => {
-		({ ip, port, stop } = await runWranglerDev(resolve(__dirname, ".."), [
-			"--port=0",
-			"--inspector-port=0",
-		]));
+		await server.listen();
 	});
 
 	afterAll(async () => {
-		await stop?.();
+		await server.close();
 	});
 
 	// https://github.com/cloudflare/workers-sdk/issues/5095
@@ -27,7 +26,7 @@ describe("wrangler dev", () => {
 
 		const body = new Uint8Array(2_000);
 		for (let i = 0; i < COUNT; i++) {
-			const response = await fetch(`http://${ip}:${port}/random`, {
+			const response = await server.fetch("/random", {
 				method: "POST",
 				body,
 			});

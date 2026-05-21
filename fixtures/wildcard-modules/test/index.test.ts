@@ -1,26 +1,24 @@
 import childProcess from "node:child_process";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
-import os from "node:os";
+import os, { tmpdir } from "node:os";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { removeDir } from "@fixture/shared/src/fs-helpers";
 import { fetch } from "undici";
 import { afterAll, assert, beforeAll, describe, test } from "vitest";
-import {
-	runWranglerDev,
-	wranglerEntryPath,
-} from "../../shared/src/run-wrangler-long-lived";
+import { createServer, type WorkerServer } from "wrangler";
+import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 
 async function getTmpDir() {
 	return fs.mkdtemp(path.join(os.tmpdir(), "wrangler-modules-"));
 }
 
-type WranglerDev = Awaited<ReturnType<typeof runWranglerDev>>;
-function get(worker: WranglerDev, pathname: string) {
-	const url = `http://${worker.ip}:${worker.port}${pathname}`;
+function get(server: WorkerServer, pathname: string) {
 	// Disable Miniflare's pretty error page, so we can parse errors as JSON
-	return fetch(url, { headers: { "MF-Disable-Pretty-Error": "true" } });
+	return server.fetch(pathname, {
+		headers: { "MF-Disable-Pretty-Error": "true" },
+	});
 }
 
 async function retry<T>(closure: () => Promise<T>, max = 30): Promise<T> {
@@ -37,7 +35,8 @@ async function retry<T>(closure: () => Promise<T>, max = 30): Promise<T> {
 
 describe("wildcard imports: dev", () => {
 	let tmpDir: string;
-	let worker: WranglerDev;
+	let server: WorkerServer;
+	let url: URL;
 
 	beforeAll(async () => {
 		// Copy over files to a temporary directory as we'll be modifying them
@@ -52,31 +51,36 @@ describe("wildcard imports: dev", () => {
 			path.join(tmpDir, "wrangler.jsonc")
 		);
 
-		worker = await runWranglerDev(tmpDir, ["--port=0", "--inspector-port=0"]);
+		server = createServer({
+			root: tmpDir,
+			workers: [{ configPath: "wrangler.jsonc" }],
+			watch: true,
+		});
+		({ url } = await server.listen());
 	});
 	afterAll(async () => {
-		await worker.stop();
+		await server.close();
 		removeDir(tmpDir, { fireAndForget: true });
 	});
 
 	test("supports bundled modules", async ({ expect }) => {
-		const res = await get(worker, "/dep");
+		const res = await get(server, "/dep");
 		expect(await res.text()).toBe("bundled");
 	});
 	test("supports text modules", async ({ expect }) => {
-		const res = await get(worker, "/text");
+		const res = await get(server, "/text");
 		expect(await res.text()).toBe("test\n");
 	});
 	test("supports dynamic imports", async ({ expect }) => {
-		const res = await get(worker, "/dynamic");
+		const res = await get(server, "/dynamic");
 		expect(await res.text()).toBe("dynamic");
 	});
 	test("supports commonjs lazy imports", async ({ expect }) => {
-		const res = await get(worker, "/common");
+		const res = await get(server, "/common");
 		expect(await res.text()).toBe("common");
 	});
 	test("supports variable dynamic imports", async ({ expect }) => {
-		const res = await get(worker, "/lang/en");
+		const res = await get(server, "/lang/en");
 		expect(await res.text()).toBe("hello");
 	});
 
@@ -89,14 +93,16 @@ describe("wildcard imports: dev", () => {
 			'export default "new dynamic";'
 		);
 		await retry(async () => {
-			const res = await get(worker, "/dynamic");
+			const res = await get(server, "/dynamic");
 			assert.strictEqual(await res.text(), "new dynamic");
 		});
 
 		// Delete dynamically imported file
 		await fs.rm(path.join(srcDir, "lang", "en.js"));
 		const res = await retry(async () => {
-			const res = await get(worker, "/lang/en");
+			const res = await fetch(new URL("/lang/en", url), {
+				headers: { "MF-Disable-Pretty-Error": "true" },
+			});
 			assert.strictEqual(res.status, 500);
 			return res;
 		});
@@ -110,7 +116,7 @@ describe("wildcard imports: dev", () => {
 			'export default { hello: "hey" };'
 		);
 		await retry(async () => {
-			const res = await get(worker, "/lang/en/us");
+			const res = await get(server, "/lang/en/us");
 			assert.strictEqual(await res.text(), "hey");
 		});
 
@@ -120,7 +126,7 @@ describe("wildcard imports: dev", () => {
 			'export default { hello: "bye" };'
 		);
 		await retry(async () => {
-			const res = await get(worker, "/lang/en/us");
+			const res = await get(server, "/lang/en/us");
 			assert.strictEqual(await res.text(), "bye");
 		});
 	});
