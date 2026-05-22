@@ -129,7 +129,9 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		)) as WorkersResolvedConfig;
 
 		expect(result.type).toBe("workers");
-		expect(result.experimental.newConfig).toBe(true);
+		expect(result.experimental.newConfig).toEqual({
+			types: { generate: true },
+		});
 		const worker = result.environmentNameToWorkerMap.get(
 			"experimental_config_worker"
 		);
@@ -199,5 +201,92 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(configPaths).toContain(path.join(tempDir, "worker.config.ts"));
 		// Transitive `dependencies` from @cloudflare/config's loadConfig
 		// (covered by its own unit tests) are also merged into configPaths.
+	});
+
+	test("writes worker-configuration.d.ts pointing at the vite-plugin subpath", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineConfig } from '@cloudflare/config';",
+				"export default defineConfig({",
+				"  name: 'experimental-config-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"});",
+			].join("\n")
+		);
+
+		await resolvePluginConfig(
+			{ experimental: { newConfig: true } },
+			{ root: tempDir },
+			viteEnv
+		);
+
+		const dtsPath = path.join(tempDir, "worker-configuration.d.ts");
+		expect(fs.existsSync(dtsPath)).toBe(true);
+		const content = fs.readFileSync(dtsPath, "utf8");
+		expect(content).toContain(
+			`from "@cloudflare/vite-plugin/experimental-config"`
+		);
+		expect(content).toContain(`import type Config from "./worker.config"`);
+		expect(content).not.toContain(`} from "@cloudflare/config"`);
+	});
+
+	test("does not write the .d.ts when types.generate is false", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineConfig } from '@cloudflare/config';",
+				"export default defineConfig({",
+				"  name: 'experimental-config-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"});",
+			].join("\n")
+		);
+
+		await resolvePluginConfig(
+			{ experimental: { newConfig: { types: { generate: false } } } },
+			{ root: tempDir },
+			viteEnv
+		);
+
+		const dtsPath = path.join(tempDir, "worker-configuration.d.ts");
+		expect(fs.existsSync(dtsPath)).toBe(false);
+	});
+
+	test("does not rewrite worker-configuration.d.ts when content is unchanged", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineConfig } from '@cloudflare/config';",
+				"export default defineConfig({",
+				"  name: 'experimental-config-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"});",
+			].join("\n")
+		);
+		const pluginConfig: PluginConfig = {
+			experimental: { newConfig: true },
+		};
+
+		await resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv);
+		const dtsPath = path.join(tempDir, "worker-configuration.d.ts");
+		const firstMtime = fs.statSync(dtsPath).mtimeMs;
+
+		// Ensure mtime resolution boundary is crossed before the second run.
+		await new Promise((r) => setTimeout(r, 25));
+
+		await resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv);
+		const secondMtime = fs.statSync(dtsPath).mtimeMs;
+
+		expect(secondMtime).toBe(firstMtime);
 	});
 });
