@@ -1,4 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { SharedBindings } from "./constants";
 import {
 	makeFetch,
 	makeRemoteProxyStub,
@@ -13,7 +14,8 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 			this.env.remoteProxyConnectionString,
 			this.env.binding,
 			undefined,
-			this.env.cfTraceId
+			this.env.cfTraceId,
+			this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
 		)(request);
 	}
 
@@ -25,7 +27,8 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 					env.remoteProxyConnectionString,
 					env.binding,
 					undefined,
-					env.cfTraceId
+					env.cfTraceId,
+					env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
 				)
 			: undefined;
 
