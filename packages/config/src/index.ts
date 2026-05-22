@@ -53,7 +53,7 @@ export { loadConfig, registerConfigHooks } from "./load";
 export type { LoadConfigResult } from "./load";
 
 // oxlint-disable-next-line typescript/no-empty-object-type -- base type to be merged with consumer's
-interface ConfigContext {}
+export interface ConfigContext {}
 
 /**
  * Use `bindings` or `createBindings<TConfig>()` to create binding definitions for `env`.
