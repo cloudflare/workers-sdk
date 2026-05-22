@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { ConfigSchema } from "../schema";
@@ -13,7 +14,12 @@ function runLoadConfigInSubprocess(args: { cwd: string; configPath: string }): {
 	config: unknown;
 	dependencies: string[];
 } {
-	const distEntry = path.resolve(__dirname, "../../dist/index.mjs");
+	// Use a file:// URL rather than a raw filesystem path so the embedded
+	// `import` specifier is valid on Windows (where absolute paths like
+	// `C:\...` are not accepted as ESM specifiers).
+	const distEntry = pathToFileURL(
+		path.resolve(__dirname, "../../dist/index.mjs")
+	).href;
 	const script = `
 		import { loadConfig } from ${JSON.stringify(distEntry)};
 		const result = await loadConfig(${JSON.stringify(args.configPath)});
@@ -115,7 +121,9 @@ describe("loadConfig", () => {
 			"worker.config.mjs": `export default { name: "first" };`,
 		});
 
-		const distEntry = path.resolve(__dirname, "../../dist/index.mjs");
+		const distEntry = pathToFileURL(
+			path.resolve(__dirname, "../../dist/index.mjs")
+		).href;
 		const script = `
 			import { writeFileSync } from "node:fs";
 			import { loadConfig } from ${JSON.stringify(distEntry)};
