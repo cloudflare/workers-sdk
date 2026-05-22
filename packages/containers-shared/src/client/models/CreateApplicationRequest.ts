@@ -5,6 +5,7 @@
 import type { ApplicationAffinities } from "./ApplicationAffinities";
 import type { ApplicationConstraints } from "./ApplicationConstraints";
 import type { ApplicationJobsConfig } from "./ApplicationJobsConfig";
+import type { ApplicationObservability } from "./ApplicationObservability";
 import type { ApplicationPriorities } from "./ApplicationPriorities";
 import type { ApplicationRolloutActiveGracePeriod } from "./ApplicationRolloutActiveGracePeriod";
 import type { DurableObjectsConfiguration } from "./DurableObjectsConfiguration";
@@ -34,6 +35,7 @@ export type CreateApplicationRequest = {
 	 *
 	 */
 	configuration: UserDeploymentConfiguration;
+	observability?: ApplicationObservability;
 	jobs?: ApplicationJobsConfig;
 	/**
 	 * If set, it will make the container application back a durable object namespace.

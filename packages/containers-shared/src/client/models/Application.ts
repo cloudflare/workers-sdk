@@ -9,6 +9,7 @@ import type { ApplicationHealth } from "./ApplicationHealth";
 import type { ApplicationID } from "./ApplicationID";
 import type { ApplicationJobsConfig } from "./ApplicationJobsConfig";
 import type { ApplicationName } from "./ApplicationName";
+import type { ApplicationObservability } from "./ApplicationObservability";
 import type { ApplicationPriorities } from "./ApplicationPriorities";
 import type { ApplicationRolloutActiveGracePeriod } from "./ApplicationRolloutActiveGracePeriod";
 import type { ApplicationSchedulingHint } from "./ApplicationSchedulingHint";
@@ -37,6 +38,7 @@ export type Application = {
 	 */
 	max_instances?: number;
 	configuration: UserDeploymentConfiguration;
+	observability?: ApplicationObservability;
 	constraints?: ApplicationConstraints;
 	jobs?: ApplicationJobsConfig;
 	affinities?: ApplicationAffinities;
