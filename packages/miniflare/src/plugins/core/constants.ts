@@ -7,6 +7,8 @@ export const CORE_PLUGIN_NAME = "core";
 
 // Service for HTTP socket entrypoint (for checking runtime ready, routing, etc)
 export const SERVICE_ENTRY = `${CORE_PLUGIN_NAME}:entry`;
+// Service for each Worker's default ingress path
+const SERVICE_INGRESS_PREFIX = `${CORE_PLUGIN_NAME}:ingress`;
 // Service for local explorer (API + UI)
 export const SERVICE_LOCAL_EXPLORER = `${CORE_PLUGIN_NAME}:local-explorer`;
 // Disk service for local explorer UI assets
@@ -22,6 +24,10 @@ const SERVICE_CUSTOM_NODE_PREFIX = `${CORE_PLUGIN_NAME}:custom-node`;
 
 export function getUserServiceName(workerName = "") {
 	return `${SERVICE_USER_PREFIX}:${workerName}`;
+}
+
+export function getIngressServiceName(workerName = "") {
+	return `${SERVICE_INGRESS_PREFIX}:${workerName}`;
 }
 
 // Namespace custom services to avoid conflicts between user-specified names
