@@ -87,6 +87,19 @@ type PrerenderWorkerConfig =
 	| PrerenderWorkerFileConfig
 	| PrerenderWorkerInlineConfig;
 
+interface ExperimentalNewConfig {
+	/** Options for type generation. */
+	types?: {
+		/**
+		 * Whether to auto-generate `worker-configuration.d.ts` at the project
+		 * root. Defaults to `true`.
+		 */
+		generate?: boolean;
+	};
+}
+
+type ResolvedExperimentalNewConfig = { types: { generate: boolean } };
+
 interface Experimental {
 	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 	headersAndRedirectsDevModeSupport?: boolean;
@@ -96,8 +109,22 @@ interface Experimental {
 	 * Experimental support for loading the entry Worker's configuration from
 	 * `worker.config.ts` via `@cloudflare/config` instead of `wrangler.json` /
 	 * `wrangler.jsonc` / `wrangler.toml`.
+	 *
+	 * Pass `true` for defaults, or an object to customize behaviour.
 	 */
-	newConfig?: boolean;
+	newConfig?: boolean | ExperimentalNewConfig;
+}
+
+function normalizeNewConfig(
+	option: boolean | ExperimentalNewConfig | undefined
+): ResolvedExperimentalNewConfig | undefined {
+	if (option === undefined || option === false) {
+		return undefined;
+	}
+	if (option === true) {
+		return { types: { generate: true } };
+	}
+	return { types: { generate: option.types?.generate ?? true } };
 }
 
 type FilteredEntryWorkerConfig = Omit<
@@ -144,10 +171,9 @@ export interface Worker {
 interface BaseResolvedConfig {
 	persistState: PersistState;
 	inspectorPort: number | false | undefined;
-	experimental: Pick<
-		Experimental,
-		"headersAndRedirectsDevModeSupport" | "newConfig"
-	>;
+	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport"> & {
+		newConfig?: ResolvedExperimentalNewConfig;
+	};
 	remoteBindings: boolean;
 	tunnel: TunnelConfig;
 }
@@ -332,7 +358,9 @@ export async function resolvePluginConfig(
 	userConfig: vite.UserConfig,
 	viteEnv: vite.ConfigEnv
 ): Promise<ResolvedPluginConfig> {
-	const newConfigEnabled = pluginConfig.experimental?.newConfig === true;
+	const resolvedNewConfig = normalizeNewConfig(
+		pluginConfig.experimental?.newConfig
+	);
 	const shared = {
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
@@ -346,7 +374,7 @@ export async function resolvePluginConfig(
 		experimental: {
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
-			newConfig: pluginConfig.experimental?.newConfig,
+			newConfig: resolvedNewConfig,
 		},
 	};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
@@ -376,7 +404,7 @@ export async function resolvePluginConfig(
 	let configPath: string | undefined;
 	let rawConfigOverride: RawConfig | undefined;
 
-	if (newConfigEnabled) {
+	if (resolvedNewConfig) {
 		if (pluginConfig.configPath) {
 			throw new Error(
 				"`configPath` cannot be used together with `experimental.newConfig`. Configure the entry Worker via `worker.config.ts` instead."
@@ -387,7 +415,11 @@ export async function resolvePluginConfig(
 				"`auxiliaryWorkers` are not yet supported when `experimental.newConfig` is enabled."
 			);
 		}
-		const result = await loadNewConfig({ root, mode: viteEnv.mode });
+		const result = await loadNewConfig({
+			root,
+			mode: viteEnv.mode,
+			generateTypes: resolvedNewConfig.types.generate,
+		});
 		configPath = result.configPath;
 		rawConfigOverride = result.rawConfig;
 		configPaths.add(result.configPath);
@@ -407,7 +439,7 @@ export async function resolvePluginConfig(
 	// Build entry worker config: defaults → file config → config()
 	const entryWorkerResolvedConfig = resolveWorkerConfig({
 		root,
-		configPath: newConfigEnabled ? undefined : configPath,
+		configPath: resolvedNewConfig ? undefined : configPath,
 		env: cloudflareEnv,
 		configCustomizer: pluginConfig.config,
 		visitedConfigPaths: configPaths,
@@ -640,13 +672,22 @@ function resolveWorker(
 }
 
 const NEW_CONFIG_FILENAME = "worker.config.ts";
+const TYPES_OUTPUT_FILENAME = "worker-configuration.d.ts";
+const EXPERIMENTAL_CONFIG_PKG = "@cloudflare/vite-plugin/experimental-config";
 
 /**
  * Load and convert a `worker.config.ts` file via `@cloudflare/config`. Returns
  * the resulting Wrangler `RawConfig`, the absolute path of the loaded file,
  * and the set of files imported while resolving the config (for watch-mode).
+ *
+ * If `generateTypes` is true, also writes `worker-configuration.d.ts` next to
+ * the config when the generated content differs from what's already on disk.
  */
-async function loadNewConfig(options: { root: string; mode: string }): Promise<{
+async function loadNewConfig(options: {
+	root: string;
+	mode: string;
+	generateTypes: boolean;
+}): Promise<{
 	rawConfig: RawConfig;
 	configPath: string;
 	dependencies: Set<string>;
@@ -661,8 +702,12 @@ async function loadNewConfig(options: { root: string; mode: string }): Promise<{
 
 	// Dynamic import so users who don't enable `experimental.newConfig` never
 	// pay the cost of loading `@cloudflare/config` (and its Node module hooks).
-	const { loadConfig, ConfigSchema, convertToWranglerConfig } =
-		await import("@cloudflare/config");
+	const {
+		loadConfig,
+		ConfigSchema,
+		convertToWranglerConfig,
+		generateTypes: generateTypesFn,
+	} = await import("@cloudflare/config");
 
 	const { config: rawExport, dependencies } = await loadConfig(configPath);
 
@@ -683,5 +728,47 @@ async function loadNewConfig(options: { root: string; mode: string }): Promise<{
 	}
 
 	const rawConfig = convertToWranglerConfig(parsed.data) as RawConfig;
+
+	if (options.generateTypes) {
+		writeWorkerConfigurationDts({
+			root: options.root,
+			configPath,
+			generateTypes: generateTypesFn,
+		});
+	}
+
 	return { rawConfig, configPath, dependencies };
+}
+
+/**
+ * Write `worker-configuration.d.ts` to the project root using
+ * `@cloudflare/config`'s `generateTypes`, targeting the vite-plugin's
+ * `experimental-config` subpath (so users don't need a direct dependency on
+ * `@cloudflare/config`).
+ *
+ * Reads the existing file first and only writes if the content differs, to
+ * avoid touching mtimes unnecessarily.
+ */
+function writeWorkerConfigurationDts(options: {
+	root: string;
+	configPath: string;
+	generateTypes: (opts: { configPath: string; packageName?: string }) => string;
+}): void {
+	const outputPath = path.resolve(options.root, TYPES_OUTPUT_FILENAME);
+	const relativeConfigPath =
+		"./" + path.relative(options.root, options.configPath);
+	const content = options.generateTypes({
+		configPath: relativeConfigPath,
+		packageName: EXPERIMENTAL_CONFIG_PKG,
+	});
+
+	let existing: string | undefined;
+	try {
+		existing = fs.readFileSync(outputPath, "utf8");
+	} catch {
+		// File doesn't exist yet — we'll create it below.
+	}
+	if (existing !== content) {
+		fs.writeFileSync(outputPath, content);
+	}
 }
