@@ -505,6 +505,124 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
+	it("should let container observability override root observability", async ({
+		expect,
+	}) => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			observability: {
+				enabled: true,
+			},
+			containers: [
+				{
+					name: "custom-name",
+					class_name: "TestContainer",
+					image: "registry.cloudflare.com/test:latest",
+					observability: {
+						enabled: false,
+					},
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+
+		expect(result[0].observability).toEqual({
+			logs_enabled: false,
+		});
+	});
+
+	it("should normalize container observability targeting fields", async ({
+		expect,
+	}) => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					name: "custom-name",
+					class_name: "TestContainer",
+					image: "registry.cloudflare.com/test:latest",
+					observability: {
+						logs: {
+							enabled: true,
+						},
+						target_instance_percentage: 25,
+					},
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+
+		expect(result[0].observability).toEqual({
+			logs_enabled: true,
+			target_instance_percentage: 25,
+		});
+	});
+
+	it("should reject conflicting root observability fallback values", async ({
+		expect,
+	}) => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			observability: {
+				enabled: true,
+				logs: {
+					enabled: false,
+				},
+			},
+			containers: [
+				{
+					name: "custom-name",
+					class_name: "TestContainer",
+					image: "registry.cloudflare.com/test:latest",
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+		} as Partial<Config> as Config;
+
+		await expect(
+			getNormalizedContainerOptions(config, {})
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: "observability.enabled" and "observability.logs.enabled" cannot be set to different values for container "custom-name".]`
+		);
+	});
+
 	it("should handle dockerfile with default build context", async ({
 		expect,
 	}) => {
