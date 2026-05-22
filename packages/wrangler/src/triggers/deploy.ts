@@ -241,7 +241,12 @@ export default async function triggersDeploy(
 	// Update custom domains for the script
 	if (customDomainsOnly.length > 0) {
 		deployments.push(
-			publishCustomDomains(config, workerUrl, accountId, customDomainsOnly)
+			publishCustomDomains(
+				config,
+				workerUrl,
+				accountId,
+				customDomainsOnly
+			).catch((error) => ({ targets: [], error }))
 		);
 	}
 
