@@ -30,6 +30,7 @@ export type { ApplicationJobsConfig } from "./models/ApplicationJobsConfig";
 export { ApplicationMutationError } from "./models/ApplicationMutationError";
 export type { ApplicationName } from "./models/ApplicationName";
 export type { ApplicationNotFoundError } from "./models/ApplicationNotFoundError";
+export type { ApplicationObservability } from "./models/ApplicationObservability";
 export type { ApplicationPriorities } from "./models/ApplicationPriorities";
 export type { ApplicationPriority } from "./models/ApplicationPriority";
 export { ApplicationRollout } from "./models/ApplicationRollout";
