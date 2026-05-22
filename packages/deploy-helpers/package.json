@@ -1,0 +1,52 @@
+{
+	"name": "@cloudflare/deploy-helpers",
+	"version": "0.0.1",
+	"description": "Internal deploy helpers for workers-sdk. Not intended for external use — APIs may change without notice.",
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/deploy-helpers#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "workers-devprod@cloudflare.com",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/deploy-helpers"
+	},
+	"files": [
+		"dist"
+	],
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"import": "./dist/index.mjs",
+			"types": "./dist/index.d.mts"
+		}
+	},
+	"scripts": {
+		"build": "tsup",
+		"check:type": "tsc -p ./tsconfig.json",
+		"deploy": "echo 'no deploy'",
+		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
+		"test": "vitest",
+		"test:ci": "vitest run",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/containers-shared": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
+		"@types/node": "catalog:default",
+		"concurrently": "^8.2.2",
+		"miniflare": "workspace:*",
+		"tsup": "8.3.0",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true
+	}
+}
