@@ -75,8 +75,9 @@ export default async function triggersDeploy(
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
+	let queueNameToId = new Map<string, string>();
 	if (!props.dryRun) {
-		await ensureQueuesExistByConfig(config);
+		queueNameToId = await ensureQueuesExistByConfig(config);
 	}
 
 	if (props.dryRun) {
@@ -259,11 +260,9 @@ export default async function triggersDeploy(
 		);
 	}
 
-	if (config.queues.consumers && config.queues.consumers.length) {
-		const updateConsumers = await updateQueueConsumers(scriptName, config);
-
-		deployments.push(...updateConsumers);
-	}
+	// Always call so stale consumers from previous deploys are cleaned up,
+	// even when the user has removed all consumers from their config.
+	deployments.push(updateQueueConsumers(scriptName, config, queueNameToId));
 
 	if (config.workflows?.length) {
 		for (const workflow of config.workflows) {
@@ -317,13 +316,13 @@ export default async function triggersDeploy(
 	const targets = await Promise.all(deployments);
 	const deployMs = Date.now() - start - uploadMs;
 
-	if (deployments.length > 0) {
-		logger.log(`Deployed ${workerName} triggers`, formatTime(deployMs));
+	const flatTargets = targets.flat().map(
+		// Append protocol only on workers.dev domains
+		(target) => (target.endsWith("workers.dev") ? "https://" : "") + target
+	);
 
-		const flatTargets = targets.flat().map(
-			// Append protocol only on workers.dev domains
-			(target) => (target.endsWith("workers.dev") ? "https://" : "") + target
-		);
+	if (flatTargets.length > 0) {
+		logger.log(`Deployed ${workerName} triggers`, formatTime(deployMs));
 
 		for (const target of flatTargets) {
 			logger.log(" ", target);

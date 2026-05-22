@@ -21,11 +21,9 @@ import { runWrangler } from "../helpers/run-wrangler";
 import {
 	mockDeploymentsListRequest,
 	mockGetQueueByName,
-	mockGetServiceByName,
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
-	mockPostConsumerById,
-	mockPutQueueConsumerById,
+	mockSetScriptConsumers,
 } from "./helpers";
 import type { QueueResponse } from "../../queues/client";
 
@@ -188,7 +186,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should post worker queue consumers on deploy", async ({ expect }) => {
+		it("should set worker queue consumers on deploy", async ({ expect }) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -217,17 +215,31 @@ describe("deploy", () => {
 				modified_on: "",
 			};
 			mockGetQueueByName(queueName, existingQueue);
-			mockPostConsumerById(queueId, {
-				dead_letter_queue: "myDLQ",
-				type: "worker",
-				script_name: "test-name",
-				settings: {
-					batch_size: 5,
-					max_retries: 10,
-					max_wait_time_ms: 3000,
-					retry_delay: 5,
+			mockSetScriptConsumers(
+				"test-name",
+				{
+					consumers: [
+						{
+							queue_id: queueId,
+							type: "worker",
+							script_name: "test-name",
+							dead_letter_queue: "myDLQ",
+							settings: {
+								batch_size: 5,
+								max_retries: 10,
+								max_wait_time_ms: 3000,
+								retry_delay: 5,
+							},
+						},
+					],
 				},
-			});
+				{
+					created: [{ queue_id: queueId, queue_name: queueName }],
+					updated: [],
+					deleted: [],
+					failed: [],
+				}
+			);
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -243,7 +255,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should post worker queue consumers on deploy, using command line script name arg", async ({
+		it("should set worker queue consumers on deploy, using command line script name arg", async ({
 			expect,
 		}) => {
 			const expectedScriptName = "command-line-arg-script-name";
@@ -275,17 +287,31 @@ describe("deploy", () => {
 				modified_on: "",
 			};
 			mockGetQueueByName(queueName, existingQueue);
-			mockPostConsumerById(queueId, {
-				dead_letter_queue: "myDLQ",
-				type: "worker",
-				script_name: expectedScriptName,
-				settings: {
-					batch_size: 5,
-					max_retries: 10,
-					max_wait_time_ms: 3000,
-					retry_delay: 5,
+			mockSetScriptConsumers(
+				expectedScriptName,
+				{
+					consumers: [
+						{
+							queue_id: queueId,
+							type: "worker",
+							script_name: expectedScriptName,
+							dead_letter_queue: "myDLQ",
+							settings: {
+								batch_size: 5,
+								max_retries: 10,
+								max_wait_time_ms: 3000,
+								retry_delay: 5,
+							},
+						},
+					],
 				},
-			});
+				{
+					created: [{ queue_id: queueId, queue_name: queueName }],
+					updated: [],
+					deleted: [],
+					failed: [],
+				}
+			);
 			await runWrangler(`deploy index.js --name ${expectedScriptName}`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -301,82 +327,22 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should update worker queue consumers on deploy", async ({ expect }) => {
-			writeWranglerConfig({
-				queues: {
-					consumers: [
-						{
-							queue: queueName,
-							dead_letter_queue: "myDLQ",
-							max_batch_size: 5,
-							max_batch_timeout: 3,
-							max_retries: 10,
-							retry_delay: 5,
-						},
-					],
-				},
-			});
-			await fs.promises.writeFile("index.js", `export default {};`);
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-			const expectedConsumerId = "consumerId";
-			const existingQueue: QueueResponse = {
-				queue_id: queueId,
-				queue_name: queueName,
-				created_on: "",
-				producers: [],
-				consumers: [
-					{
-						script: "test-name",
-						consumer_id: expectedConsumerId,
-						type: "worker",
-						settings: {},
-					},
-				],
-				producers_total_count: 1,
-				consumers_total_count: 1,
-				modified_on: "",
-			};
-			mockGetQueueByName(queueName, existingQueue);
-			mockPutQueueConsumerById(queueId, queueName, expectedConsumerId, {
-				dead_letter_queue: "myDLQ",
-				type: "worker",
-				script_name: "test-name",
-				settings: {
-					batch_size: 5,
-					max_retries: 10,
-					max_wait_time_ms: 3000,
-					retry_delay: 5,
-				},
-			});
-			await runWrangler("deploy index.js");
-			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				  Consumer for queue1
-				Current Version ID: Galaxy-Class"
-			`);
-		});
-
-		it("should update worker (service) queue consumers with default environment on deploy", async ({
+		it("should send all configured consumers in a single request", async ({
 			expect,
 		}) => {
+			const secondQueueName = "queue2";
+			const secondQueueId = "queue2-id";
 			writeWranglerConfig({
 				queues: {
 					consumers: [
 						{
 							queue: queueName,
-							dead_letter_queue: "myDLQ",
 							max_batch_size: 5,
-							max_batch_timeout: 3,
-							max_retries: 10,
-							retry_delay: 5,
+						},
+						{
+							queue: secondQueueName,
+							max_batch_size: 10,
+							max_retries: 2,
 						},
 					],
 				},
@@ -384,41 +350,70 @@ describe("deploy", () => {
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			const expectedConsumerId = "consumerId";
-			const expectedConsumerName = "test-name";
-			const expectedEnvironment = "production";
-			const existingQueue: QueueResponse = {
-				queue_id: queueId,
-				queue_name: queueName,
-				created_on: "",
-				producers: [],
-				consumers: [
-					{
-						service: expectedConsumerName,
-						environment: "production",
-						consumer_id: expectedConsumerId,
-						type: "worker",
-						settings: {},
-					},
-				],
-				producers_total_count: 1,
-				consumers_total_count: 1,
-				modified_on: "",
-			};
-			mockGetQueueByName(queueName, existingQueue);
-			mockGetServiceByName(expectedConsumerName, expectedEnvironment);
-			mockPutQueueConsumerById(queueId, queueName, expectedConsumerId, {
-				dead_letter_queue: "myDLQ",
-				type: "worker",
-				script_name: "test-name",
-				settings: {
-					batch_size: 5,
-					max_retries: 10,
-					max_wait_time_ms: 3000,
-					retry_delay: 5,
+			// `ensureQueuesExistByConfig` batches the lookup, so the mock returns
+			// both queues from one call.
+			msw.use(
+				http.get("*/accounts/:accountId/queues?*", async ({ request }) => {
+					const url = new URL(request.url);
+					const names = url.searchParams.getAll("name");
+					expect(names).toEqual([queueName, secondQueueName]);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: [
+							{
+								queue_id: queueId,
+								queue_name: queueName,
+								created_on: "",
+								producers: [],
+								consumers: [],
+								producers_total_count: 0,
+								consumers_total_count: 0,
+								modified_on: "",
+							},
+							{
+								queue_id: secondQueueId,
+								queue_name: secondQueueName,
+								created_on: "",
+								producers: [],
+								consumers: [],
+								producers_total_count: 0,
+								consumers_total_count: 0,
+								modified_on: "",
+							},
+						],
+					});
+				})
+			);
+			mockSetScriptConsumers(
+				"test-name",
+				{
+					consumers: [
+						{
+							queue_id: queueId,
+							type: "worker",
+							script_name: "test-name",
+							settings: { batch_size: 5 },
+						},
+						{
+							queue_id: secondQueueId,
+							type: "worker",
+							script_name: "test-name",
+							settings: { batch_size: 10, max_retries: 2 },
+						},
+					],
 				},
-			});
-
+				{
+					created: [
+						{ queue_id: queueId, queue_name: queueName },
+						{ queue_id: secondQueueId, queue_name: secondQueueName },
+					],
+					updated: [],
+					deleted: [],
+					failed: [],
+				}
+			);
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -430,6 +425,7 @@ describe("deploy", () => {
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				  Consumer for queue1
+				  Consumer for queue2
 				Current Version ID: Galaxy-Class"
 			`);
 		});
@@ -474,36 +470,42 @@ describe("deploy", () => {
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			const consumerId = "consumer-id";
 			const existingQueue: QueueResponse = {
 				queue_id: queueId,
 				queue_name: queueName,
 				created_on: "",
 				producers: [],
-				consumers: [
-					{
-						type: "worker",
-						script: "test-name",
-						consumer_id: consumerId,
-						settings: {},
-					},
-				],
+				consumers: [],
 				producers_total_count: 0,
 				consumers_total_count: 0,
 				modified_on: "",
 			};
 			mockGetQueueByName(queueName, existingQueue);
-			mockPutQueueConsumerById(queueId, queueName, consumerId, {
-				dead_letter_queue: "myDLQ",
-				type: "worker",
-				script_name: "test-name",
-				settings: {
-					batch_size: 5,
-					max_retries: 10,
-					max_wait_time_ms: 3000,
-					max_concurrency: 5,
+			mockSetScriptConsumers(
+				"test-name",
+				{
+					consumers: [
+						{
+							queue_id: queueId,
+							type: "worker",
+							script_name: "test-name",
+							dead_letter_queue: "myDLQ",
+							settings: {
+								batch_size: 5,
+								max_retries: 10,
+								max_wait_time_ms: 3000,
+								max_concurrency: 5,
+							},
+						},
+					],
 				},
-			});
+				{
+					created: [{ queue_id: queueId, queue_name: queueName }],
+					updated: [],
+					deleted: [],
+					failed: [],
+				}
+			);
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -540,35 +542,41 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 
-			const consumerId = "consumer-id";
 			const existingQueue: QueueResponse = {
 				queue_id: queueId,
 				queue_name: queueName,
 				created_on: "",
 				producers: [],
-				consumers: [
-					{
-						type: "worker",
-						script: "test-name",
-						consumer_id: consumerId,
-						settings: {},
-					},
-				],
+				consumers: [],
 				producers_total_count: 0,
 				consumers_total_count: 0,
 				modified_on: "",
 			};
 			mockGetQueueByName(queueName, existingQueue);
-			mockPutQueueConsumerById(queueId, queueName, consumerId, {
-				dead_letter_queue: "myDLQ",
-				type: "worker",
-				script_name: "test-name",
-				settings: {
-					batch_size: 5,
-					max_retries: 10,
-					max_wait_time_ms: 3000,
+			mockSetScriptConsumers(
+				"test-name",
+				{
+					consumers: [
+						{
+							queue_id: queueId,
+							type: "worker",
+							script_name: "test-name",
+							dead_letter_queue: "myDLQ",
+							settings: {
+								batch_size: 5,
+								max_retries: 10,
+								max_wait_time_ms: 3000,
+							},
+						},
+					],
 				},
-			});
+				{
+					created: [{ queue_id: queueId, queue_name: queueName }],
+					updated: [],
+					deleted: [],
+					failed: [],
+				}
+			);
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -606,35 +614,41 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 
-			const consumerId = "consumer-id";
 			const existingQueue: QueueResponse = {
 				queue_id: queueId,
 				queue_name: queueName,
 				created_on: "",
 				producers: [],
-				consumers: [
-					{
-						type: "worker",
-						script: "test-name",
-						consumer_id: consumerId,
-						settings: {},
-					},
-				],
+				consumers: [],
 				producers_total_count: 0,
 				consumers_total_count: 0,
 				modified_on: "",
 			};
 			mockGetQueueByName(queueName, existingQueue);
-			mockPutQueueConsumerById(queueId, queueName, consumerId, {
-				dead_letter_queue: "myDLQ",
-				type: "worker",
-				script_name: "test-name",
-				settings: {
-					batch_size: 5,
-					max_retries: 10,
-					max_wait_time_ms: 0,
+			mockSetScriptConsumers(
+				"test-name",
+				{
+					consumers: [
+						{
+							queue_id: queueId,
+							type: "worker",
+							script_name: "test-name",
+							dead_letter_queue: "myDLQ",
+							settings: {
+								batch_size: 5,
+								max_retries: 10,
+								max_wait_time_ms: 0,
+							},
+						},
+					],
 				},
-			});
+				{
+					created: [{ queue_id: queueId, queue_name: queueName }],
+					updated: [],
+					deleted: [],
+					failed: [],
+				}
+			);
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -699,6 +713,200 @@ describe("deploy", () => {
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);
+		});
+
+		// Wrangler always calls the consumers endpoint so stale registrations
+		// from previous deploys get cleaned up — including the case where the
+		// user removes all consumers from their config.
+		it("should call the consumers endpoint with an empty list when no consumers are configured", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				queues: {
+					producers: [],
+					consumers: [],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			const requests = mockSetScriptConsumers("test-name", {
+				consumers: [],
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(requests.count).toBe(1);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
+		it("should report cleanup of stale consumers when no consumers are configured", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				queues: {
+					producers: [],
+					consumers: [],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockSetScriptConsumers(
+				"test-name",
+				{ consumers: [] },
+				{
+					created: [],
+					updated: [],
+					deleted: [{ queue_id: "stale-id", queue_name: "stale-queue" }],
+					failed: [],
+				}
+			);
+
+			await runWrangler("deploy index.js");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  Removed consumer for stale-queue
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
+		it("should not block the deploy when the consumer sync request fails", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				queues: {
+					producers: [],
+					consumers: [],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName/queue-consumers",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 10000, message: "server unavailable" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 500 }
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler("deploy index.js");
+
+			expect(process.exitCode).toBe(1);
+			expect(std.err).toContain("Failed to configure queue consumers");
+
+			// Reset so it doesn't affect other tests
+			process.exitCode = 0;
+		});
+
+		it("should report a mix of created, updated, deleted, and failed consumers", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				queues: {
+					consumers: [
+						{
+							queue: queueName,
+							max_batch_size: 5,
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			const existingQueue: QueueResponse = {
+				queue_id: queueId,
+				queue_name: queueName,
+				created_on: "",
+				producers: [],
+				consumers: [],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+				modified_on: "",
+			};
+			mockGetQueueByName(queueName, existingQueue);
+			mockSetScriptConsumers(
+				"test-name",
+				{
+					consumers: [
+						{
+							queue_id: queueId,
+							type: "worker",
+							script_name: "test-name",
+							settings: {
+								batch_size: 5,
+							},
+						},
+					],
+				},
+				{
+					created: [{ queue_id: "id-a", queue_name: "order-queue" }],
+					updated: [{ queue_id: "id-b", queue_name: "notification-queue" }],
+					deleted: [{ queue_id: "id-c", queue_name: "old-queue" }],
+					failed: [
+						{
+							queue_id: "id-d",
+							queue_name: "broken-queue",
+							error: "broker unavailable",
+						},
+					],
+				}
+			);
+
+			await runWrangler("deploy index.js");
+
+			expect(process.exitCode).toBe(1);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  Consumer for order-queue
+				  Consumer for notification-queue
+				  Removed consumer for old-queue
+				  X Failed to configure consumer for broken-queue: broker unavailable
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toContain(
+				"Failed to configure consumer for broken-queue: broker unavailable"
+			);
+
+			// Reset so it doesn't affect other tests
+			process.exitCode = 0;
 		});
 	});
 });
