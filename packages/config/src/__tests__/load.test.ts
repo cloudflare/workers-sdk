@@ -17,11 +17,11 @@ function runLoadConfigInSubprocess(args: { cwd: string; configPath: string }): {
 	// Use a file:// URL rather than a raw filesystem path so the embedded
 	// `import` specifier is valid on Windows (where absolute paths like
 	// `C:\...` are not accepted as ESM specifiers).
-	const distEntry = pathToFileURL(
-		path.resolve(__dirname, "../../dist/index.mjs")
+	const sourceEntry = pathToFileURL(
+		path.resolve(__dirname, "../load.ts")
 	).href;
 	const script = `
-		import { loadConfig } from ${JSON.stringify(distEntry)};
+		import { loadConfig } from ${JSON.stringify(sourceEntry)};
 		const result = await loadConfig(${JSON.stringify(args.configPath)});
 		const serialisable = {
 			config: result.config,
@@ -121,12 +121,12 @@ describe("loadConfig", () => {
 			"worker.config.mjs": `export default { name: "first" };`,
 		});
 
-		const distEntry = pathToFileURL(
-			path.resolve(__dirname, "../../dist/index.mjs")
+		const sourceEntry = pathToFileURL(
+			path.resolve(__dirname, "../load.ts")
 		).href;
 		const script = `
 			import { writeFileSync } from "node:fs";
-			import { loadConfig } from ${JSON.stringify(distEntry)};
+			import { loadConfig } from ${JSON.stringify(sourceEntry)};
 			const first = await loadConfig("./worker.config.mjs");
 			writeFileSync("./worker.config.mjs", 'export default { name: "second" };');
 			const second = await loadConfig("./worker.config.mjs");
