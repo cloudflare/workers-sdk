@@ -11,7 +11,7 @@ import util from "node:util";
 import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli-shared-helpers";
 import { removeDir, removeDirSync } from "@cloudflare/workers-utils";
-import { $ as colors$, green } from "kleur/colors";
+import { $ as colors$, bold, dim, green, yellow } from "kleur/colors";
 import stoppable from "stoppable";
 import { getGlobalDispatcher, Pool } from "undici";
 import SCRIPT_DEV_REGISTRY_PROXY from "worker:core/dev-registry-proxy";
@@ -1559,14 +1559,24 @@ export class Miniflare {
 					this.#warnedRemoteBindingsAccessBlock = true;
 					const bindingName = request.headers.get("MF-Binding") ?? "<unknown>";
 					const proxyUrl = request.headers.get("MF-Proxy-URL") ?? "<unknown>";
+					// Visually striking format so the warning isn't lost in the
+					// noise of binding error stack traces that follow it.
+					const separator = dim("━".repeat(76));
 					this.#log.warn(
-						`Remote binding "${bindingName}": request to ${proxyUrl} was blocked by Cloudflare Access.\n` +
+						`\n${separator}\n` +
+							`${bold(yellow("Cloudflare Access blocked a remote bindings request"))}\n` +
+							`${separator}\n` +
+							`\n` +
+							`Remote binding "${bold(bindingName)}": request to ${proxyUrl} was blocked.\n` +
+							`\n` +
 							`If your Cloudflare account protects workers.dev with Access, set the\n` +
-							`  CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET\n` +
+							`${bold("CLOUDFLARE_ACCESS_CLIENT_ID")} and ${bold("CLOUDFLARE_ACCESS_CLIENT_SECRET")}\n` +
 							`environment variables (Service Token credentials), or run\n` +
-							`  cloudflared access login <your-workers.dev-host>\n` +
+							`  ${bold("cloudflared access login <your-workers.dev-host>")}\n` +
 							`for interactive authentication.\n` +
-							`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/`
+							`\n` +
+							`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/\n` +
+							separator
 					);
 				}
 				response = new Response(null, { status: 204 });

@@ -27,37 +27,73 @@ export function throwRemoteRequired(bindingName: string): never {
 }
 
 /**
+ * Build a plain-text body for the Cloudflare Access block substitution
+ * response. We replace the original Access HTML so that:
+ *  - Bindings that propagate the response body into an error message (e.g.
+ *    `env.AI.run()` → `InferenceUpstreamError: …`) get something readable
+ *    instead of a wall of HTML.
+ *  - Service-binding `.fetch()` callers that pipe the response back to a
+ *    browser see the same actionable guidance as the terminal warning.
+ *
+ * The first line is the "headline" so error-message parsers that only show
+ * the first line of the body still surface the key information.
+ */
+function buildAccessBlockResponseBody(
+	bindingName: string,
+	proxyUrl: string
+): string {
+	return [
+		`Cloudflare Access blocked this remote bindings request (binding "${bindingName}").`,
+		``,
+		`The local remote-bindings proxy client tried to reach ${proxyUrl}, but the`,
+		`remote workers.dev proxy server returned a Cloudflare Access block page.`,
+		``,
+		`If your Cloudflare account protects workers.dev with Access, set the`,
+		`CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET environment`,
+		`variables (Service Token credentials), or run`,
+		`  cloudflared access login <your-workers.dev-host>`,
+		`for interactive authentication.`,
+		``,
+		`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/`,
+	].join("\n");
+}
+
+/**
  * If the response from the remote-bindings proxy server is a Cloudflare Access
  * block page, report it to the Miniflare host via the loopback service so that
- * a single, actionable warning can be surfaced to the user.
+ * a single, actionable warning can be surfaced to the user. Also substitutes
+ * the original HTML body for a readable plain-text body so that the warning
+ * surfaces in error messages (for bindings that propagate the body) and in
+ * browsers (for bindings whose response is piped back to the client).
  *
  * The remote-bindings proxy CLIENT worker only ever calls the
  * `remoteProxyConnectionString`, so a 403 with a Cloudflare Access body here
  * is unambiguously an Access block — never a user-worker 403.
  *
- * Dedup is performed on the Miniflare/Node side; the worker fires-and-forgets.
+ * Dedup of the warning is performed on the Miniflare/Node side; the worker
+ * just fires the loopback notification for every blocked request.
  */
 async function maybeReportCloudflareAccessBlock(
 	response: Response,
 	bindingName: string,
 	proxyUrl: string,
 	loopback: Fetcher | undefined
-): Promise<void> {
+): Promise<Response> {
 	if (!loopback || response.status !== 403) {
-		return;
+		return response;
 	}
 	let text: string;
 	try {
 		text = await response.clone().text();
 	} catch {
-		return;
+		return response;
 	}
 	// Cloudflare Access block pages reliably contain the literal string
 	// "Cloudflare Access" in the HTML body (title: "Error ・ Cloudflare Access").
 	// Combined with the 403 status and the fact that this worker only ever
 	// calls the remote-bindings proxy URL, this is a low-false-positive signal.
 	if (!text.includes("Cloudflare Access")) {
-		return;
+		return response;
 	}
 	await loopback.fetch("http://localhost/core/remote-bindings-access-warning", {
 		method: "POST",
@@ -65,6 +101,15 @@ async function maybeReportCloudflareAccessBlock(
 			"MF-Binding": bindingName,
 			"MF-Proxy-URL": proxyUrl,
 		},
+	});
+	// Replace the original Access HTML body with our own readable plain-text
+	// guidance. Headers are not copied from the original response — they may
+	// include Access-specific cookies and other artefacts that aren't relevant
+	// to the synthesised body.
+	return new Response(buildAccessBlockResponseBody(bindingName, proxyUrl), {
+		status: response.status,
+		statusText: response.statusText,
+		headers: { "Content-Type": "text/plain; charset=utf-8" },
 	});
 }
 
@@ -111,13 +156,12 @@ export function makeFetch(
 		// cancelled when the proxy client returns. The happy path
 		// (non-403) short-circuits before any body read or loopback call,
 		// so this adds no latency to successful requests.
-		await maybeReportCloudflareAccessBlock(
+		return await maybeReportCloudflareAccessBlock(
 			response,
 			bindingName,
 			remoteProxyConnectionString,
 			loopback
 		);
-		return response;
 	};
 }
 

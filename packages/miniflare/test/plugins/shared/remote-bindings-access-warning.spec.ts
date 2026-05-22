@@ -12,13 +12,22 @@ const CF_ACCESS_BLOCK_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-const ACCESS_WARNING_FRAGMENT = "was blocked by Cloudflare Access";
+// Header line of the formatted warning. Distinct enough to filter on without
+// matching the user-worker's stack-trace lines that follow it.
+const ACCESS_WARNING_FRAGMENT =
+	"Cloudflare Access blocked a remote bindings request";
 
+// Script that returns the upstream response body verbatim so the test can
+// assert what the user worker (and ultimately the browser / error message)
+// will see for an Access-blocked binding call.
 const SCRIPT = /* javascript */ `
 	export default {
 		async fetch(request, env) {
 			const res = await env.SERVICE.fetch("http://example.com/");
-			return new Response("status=" + res.status);
+			return new Response(await res.text(), {
+				status: res.status,
+				headers: { "Content-Type": res.headers.get("Content-Type") ?? "" },
+			});
 		},
 	};
 `;
@@ -77,6 +86,52 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 		expect(warning).toContain("cloudflared access login");
 	});
 
+	test("substitutes the Access HTML body with readable guidance", async ({
+		expect,
+	}) => {
+		// Local server that returns the Access block HTML.
+		const { http: proxyUrl } = await useServer((req, res) => {
+			res.statusCode = 403;
+			res.setHeader("Content-Type", "text/html");
+			res.end(CF_ACCESS_BLOCK_HTML);
+		});
+
+		const mf = new Miniflare({
+			modules: true,
+			compatibilityDate: "2025-01-01",
+			log: new TestLog(),
+			script: SCRIPT,
+			serviceBindings: {
+				SERVICE: {
+					name: "some-remote-service",
+					remoteProxyConnectionString:
+						proxyUrl as unknown as RemoteProxyConnectionString,
+				},
+			},
+		});
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch("http://localhost/");
+		const body = await response.text();
+
+		// The original Access HTML must NOT be in the body the user sees.
+		expect(body).not.toContain("<!DOCTYPE html>");
+		expect(body).not.toContain("<title>");
+
+		// And our substituted, browser-friendly guidance must be there.
+		expect(response.status).toBe(403);
+		expect(response.headers.get("Content-Type")).toContain("text/plain");
+		expect(body).toContain("Cloudflare Access blocked this remote bindings");
+		expect(body).toContain('binding "SERVICE"');
+		expect(body).toContain(proxyUrl.toString());
+		expect(body).toContain("CLOUDFLARE_ACCESS_CLIENT_ID");
+		expect(body).toContain("CLOUDFLARE_ACCESS_CLIENT_SECRET");
+		expect(body).toContain("cloudflared access login");
+		expect(body).toContain(
+			"https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/"
+		);
+	});
+
 	test("does not log a warning for non-Access 403 responses", async ({
 		expect,
 	}) => {
@@ -105,7 +160,9 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 		useDispose(mf);
 
 		const response = await mf.dispatchFetch("http://localhost/");
-		await response.text();
+		// Non-Access 403 bodies should pass through unmodified.
+		const body = await response.text();
+		expect(body).toBe(JSON.stringify({ error: "forbidden" }));
 
 		await new Promise((resolve) => setTimeout(resolve, 200));
 
