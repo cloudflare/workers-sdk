@@ -27,7 +27,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public -- yarn dev")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Specify either a directory OR a proxy command, not both.]`
+			`[Error: Cannot specify both a directory and a proxy command. Provide either a directory of static assets or a proxy command, not both.]`
 		);
 	});
 
@@ -37,7 +37,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public --config=/path/to/wrangler.toml")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Pages does not support custom paths for the Wrangler configuration file]`
+			`[Error: Pages does not support custom paths for the Wrangler configuration file. Remove the --config flag, or use a standard wrangler.jsonc in your project root.]`
 		);
 	});
 
@@ -47,7 +47,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public --env=production")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Pages does not support targeting an environment with the --env flag during local development.]`
+			`[Error: Pages does not support the --env flag during local development. Use the --branch flag to target your production or preview environment instead.]`
 		);
 	});
 });

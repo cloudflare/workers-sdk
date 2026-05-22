@@ -2,6 +2,7 @@ import { setTimeout } from "node:timers/promises";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
+	UserError,
 } from "@cloudflare/workers-utils";
 import onExit from "signal-exit";
 import { fetchResult } from "../cfetch";
@@ -149,20 +150,18 @@ export const pagesDeploymentTailCommand = createCommand({
 
 		if (!isInteractive()) {
 			if (!deploymentId) {
-				throw new FatalError(
-					"Must specify a deployment in non-interactive mode.",
+				throw new UserError(
+					"Missing deployment. In non-interactive mode, provide the deployment ID or URL as a positional argument.",
 					{
-						code: 1,
 						telemetryMessage: "pages deployment tail missing deployment",
 					}
 				);
 			}
 
 			if (!projectName) {
-				throw new FatalError(
-					"Must specify a project name in non-interactive mode.",
+				throw new UserError(
+					"Missing Pages project name. In non-interactive mode, use --project-name <name> to specify which project to tail.",
 					{
-						code: 1,
 						telemetryMessage: "pages deployment tail missing project name",
 					}
 				);
@@ -174,10 +173,10 @@ export const pagesDeploymentTailCommand = createCommand({
 		}
 
 		if (!deployment && !projectName) {
-			throw new FatalError("Must specify a project name or deployment.", {
-				code: 1,
-				telemetryMessage: "pages deployment tail missing target",
-			});
+			throw new UserError(
+				"Missing target. Provide a deployment ID or URL as a positional argument, or use --project-name <name> to specify which project to tail.",
+				{ telemetryMessage: "pages deployment tail missing target" }
+			);
 		}
 
 		const deployments: Array<Deployment> = await fetchResult(
