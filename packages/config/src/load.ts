@@ -13,6 +13,8 @@ import { registerHooks } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const CF_WORKER_SCHEME = "cf-worker:";
+const CF_WORKER_TYPE = "cf-worker";
+const CF_WORKER_CONFIG_TYPE = "cf-worker-config";
 const NO_CACHE_QUERY_KEY = "cf-worker-config";
 const RE_NODE_MODULES = /[/\\]node_modules[/\\]/;
 
@@ -40,10 +42,11 @@ export interface LoadConfigResult {
  *    module — a filesystem path for `file://` URLs, or the URL string itself
  *    for other schemes (e.g. virtual modules from Vite). The referenced
  *    module is NOT executed and is NOT added to the dependencies set.
- *  - Handles `with { cache: "no" }` import attributes by tagging the resolved
- *    URL with a unique UUID query string so Node treats each import as a
- *    fresh module. The UUID is propagated to all transitive imports via the
- *    parent URL, ensuring the entire subgraph is re-evaluated. Imports inside
+ *  - Handles `with { type: "cf-worker-config" }` import attributes (set
+ *    internally by `loadConfig`) by tagging the resolved URL with a unique
+ *    UUID query string so Node treats each import as a fresh module. The
+ *    UUID is propagated to all transitive imports via the parent URL,
+ *    ensuring the entire subgraph is re-evaluated. Imports inside
  *    `node_modules` are skipped (treated as immutable for config purposes).
  */
 export function registerConfigHooks(): () => void {
@@ -62,16 +65,19 @@ export function registerConfigHooks(): () => void {
 
 	const hooks = registerHooks({
 		resolve(specifier, context, nextResolve) {
-			const isCfWorker = context.importAttributes.type === "cf-worker";
+			const importType = context.importAttributes.type;
+			const isCfWorker = importType === CF_WORKER_TYPE;
+			const isConfigLoad = importType === CF_WORKER_CONFIG_TYPE;
 
-			// Strip the `type: "cf-worker"` attribute before delegating —
+			// Strip our private `type` attribute values before delegating —
 			// Node's default resolver rejects unknown `type` attribute values.
-			const cleaned = isCfWorker
-				? {
-						...context,
-						importAttributes: stripAttr(context.importAttributes, "type"),
-					}
-				: context;
+			const cleaned =
+				isCfWorker || isConfigLoad
+					? {
+							...context,
+							importAttributes: stripAttr(context.importAttributes, "type"),
+						}
+					: context;
 
 			// `registerHooks` runs the chain synchronously, so the result is
 			// not a Promise even though the Node type allows for it.
@@ -105,8 +111,7 @@ export function registerConfigHooks(): () => void {
 				return resolved;
 			}
 			const parentUUID = getParentUUID(context.parentURL);
-			const noCache = context.importAttributes.cache === "no";
-			if (!parentUUID && !noCache) {
+			if (!parentUUID && !isConfigLoad) {
 				return resolved;
 			}
 			depsStore.getStore()?.add(fileURLToPath(resolved.url));
@@ -125,12 +130,14 @@ export function registerConfigHooks(): () => void {
 					shortCircuit: true,
 				};
 			}
-			// Strip the `cache` attribute before delegating so downstream
-			// loaders don't see an attribute they don't recognise.
-			if (context.importAttributes.cache !== undefined) {
+			// For `cf-worker-config` top-level imports, strip our private
+			// `type` attribute before delegating so the default loader doesn't
+			// see an attribute value it doesn't recognise. (`cf-worker`
+			// imports are short-circuited above and never reach this branch.)
+			if (context.importAttributes.type === CF_WORKER_CONFIG_TYPE) {
 				const cleaned = {
 					...context,
-					importAttributes: stripAttr(context.importAttributes, "cache"),
+					importAttributes: stripAttr(context.importAttributes, "type"),
 				};
 				return nextLoad(url, cleaned);
 			}
@@ -164,7 +171,7 @@ export async function loadConfig(
 	const dependencies = new Set<string>();
 	const mod = await depsStore.run(
 		dependencies,
-		() => import(url, { with: { cache: "no" } })
+		() => import(url, { with: { type: CF_WORKER_CONFIG_TYPE } })
 	);
 	return { config: mod.default, dependencies };
 }
