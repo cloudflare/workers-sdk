@@ -220,7 +220,12 @@ export const pagesDeployCommand = createCommand({
 		}
 
 		maybeThrowAgentStaticPagesDeployError({
-			isNewProject: projectName !== undefined && !isExistingProject,
+			projectState:
+				projectName === undefined
+					? "unknown"
+					: isExistingProject
+						? "existing"
+						: "new",
 			isStaticPagesProject,
 			force: args.force,
 		});
@@ -284,11 +289,16 @@ export const pagesDeployCommand = createCommand({
 			switch (existingOrNew) {
 				case "existing": {
 					projectName = await promptSelectProject({ accountId });
+					maybeThrowAgentStaticPagesDeployError({
+						projectState: "existing",
+						isStaticPagesProject,
+						force: args.force,
+					});
 					break;
 				}
 				case "new": {
 					maybeThrowAgentStaticPagesDeployError({
-						isNewProject: true,
+						projectState: "new",
 						isStaticPagesProject,
 						force: args.force,
 					});
@@ -633,15 +643,15 @@ function detectStaticPagesProject(directory: string): boolean {
 }
 
 function maybeThrowAgentStaticPagesDeployError({
-	isNewProject,
+	projectState,
 	isStaticPagesProject,
 	force,
 }: {
-	isNewProject: boolean;
+	projectState: "new" | "existing" | "unknown";
 	isStaticPagesProject: boolean;
 	force: boolean;
 }) {
-	if (!isNewProject || !isStaticPagesProject || force) {
+	if (projectState === "unknown" || !isStaticPagesProject || force) {
 		return;
 	}
 
@@ -651,11 +661,19 @@ function maybeThrowAgentStaticPagesDeployError({
 	} catch {}
 
 	if (isAgentic) {
+		const message =
+			projectState === "existing"
+				? "Before deploying an existing Pages project, ask the user whether they want to migrate it to Workers. Use this prompt for guidance: https://developers.cloudflare.com/workers/prompts/pages-to-workers.txt\n\nIf the user explicitly wants Pages, rerun with `--force`."
+				: "Deploy with `wrangler deploy` instead. Or, run with `--force` if you absolutely have to use pages.";
+
 		throw new FatalError(
-			"Deploy with `wrangler deploy` instead. Or, run with `--force` if you absolutely have to use pages.",
+			message,
 			{
 				code: 1,
-				telemetryMessage: "pages deploy agent static new project blocked",
+				telemetryMessage:
+					projectState === "existing"
+						? "pages deploy agent static existing project blocked"
+						: "pages deploy agent static new project blocked",
 			}
 		);
 	}

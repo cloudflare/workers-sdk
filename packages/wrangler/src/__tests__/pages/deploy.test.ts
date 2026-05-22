@@ -157,7 +157,7 @@ describe("pages deploy", () => {
 			isAgentic: true,
 			id: "test-agent",
 			name: "Test Agent",
-			type: "cli",
+			type: "agent",
 		});
 
 		msw.use(
@@ -181,6 +181,43 @@ describe("pages deploy", () => {
 		);
 	});
 
+	it("should ask agents to consider Workers before deploying an existing static Pages project", async ({
+		expect,
+	}) => {
+		mkdirSync("public");
+		writeFileSync("public/index.html", "Hello, world!");
+		vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			isAgentic: true,
+			id: "test-agent",
+			name: "Test Agent",
+			type: "agent",
+		});
+
+		msw.use(
+			http.get("*/accounts/:accountId/pages/projects/foo", async () =>
+				HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					},
+					{ status: 200 }
+				)
+			)
+		);
+
+		await expect(
+			runWrangler("pages deploy public --project-name=foo")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Before deploying an existing Pages project, ask the user whether they want to migrate it to Workers. Use this prompt for guidance: https://developers.cloudflare.com/workers/prompts/pages-to-workers.txt
+
+If the user explicitly wants Pages, rerun with \`--force\`.]`
+		);
+	});
+
 	it("should not error when an agent deploys a dynamic site to a new Pages project", async ({
 		expect,
 	}) => {
@@ -190,7 +227,7 @@ describe("pages deploy", () => {
 			isAgentic: true,
 			id: "test-agent",
 			name: "Test Agent",
-			type: "cli",
+			type: "agent",
 		});
 
 		msw.use(
@@ -223,7 +260,7 @@ describe("pages deploy", () => {
 			isAgentic: true,
 			id: "test-agent",
 			name: "Test Agent",
-			type: "cli",
+			type: "agent",
 		});
 
 		msw.use(

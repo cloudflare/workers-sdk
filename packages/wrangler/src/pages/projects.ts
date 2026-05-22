@@ -3,6 +3,7 @@ import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
 } from "@cloudflare/workers-utils";
+import { detectAgenticEnvironment } from "am-i-vibing";
 import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
@@ -124,6 +125,12 @@ export const pagesProjectCreateCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		force: {
+			type: "boolean",
+			default: false,
+			description:
+				"Create a Pages project from an agentic environment anyway",
+		},
 	},
 	positionalArgs: ["project-name"],
 	async handler({
@@ -131,6 +138,7 @@ export const pagesProjectCreateCommand = createCommand({
 		compatibilityFlags,
 		compatibilityDate,
 		projectName,
+		force,
 	}) {
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
@@ -193,6 +201,8 @@ export const pagesProjectCreateCommand = createCommand({
 			});
 		}
 
+		maybeThrowAgentPagesProjectCreateError(force);
+
 		const deploymentConfig = {
 			...(compatibilityFlags && {
 				compatibility_flags: [...compatibilityFlags],
@@ -234,6 +244,27 @@ export const pagesProjectCreateCommand = createCommand({
 		metrics.sendMetricsEvent("create pages project");
 	},
 });
+
+function maybeThrowAgentPagesProjectCreateError(force: boolean) {
+	if (force) {
+		return;
+	}
+
+	let isAgentic = false;
+	try {
+		isAgentic = detectAgenticEnvironment(process.env, []).isAgentic;
+	} catch {}
+
+	if (isAgentic) {
+		throw new FatalError(
+			"Before creating a Pages project, ask the user whether they're sure they want to use Pages instead of Workers. Cloudflare recommends Workers for new static sites. See the compatibility matrix: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/#compatibility-matrix\n\nIf the user explicitly wants Pages, rerun with `--force`.",
+			{
+				code: 1,
+				telemetryMessage: "pages project create agent blocked",
+			}
+		);
+	}
+}
 
 export const pagesProjectDeleteCommand = createCommand({
 	metadata: {
