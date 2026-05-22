@@ -994,6 +994,11 @@ export class Miniflare {
 	#hyperdriveProxyController: HyperdriveProxyController =
 		new HyperdriveProxyController();
 
+	// Set the first time the remote-bindings proxy CLIENT worker reports a
+	// Cloudflare Access 403 block on a request to the remote-bindings proxy
+	// server. Used to dedupe the user-facing warning to once per session.
+	#warnedRemoteBindingsAccessBlock = false;
+
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
@@ -1544,6 +1549,26 @@ export class Miniflare {
 				let message = await request.text();
 				if (!colors$.enabled) message = stripAnsi(message);
 				this.#log.logWithLevel(logLevel, message);
+				response = new Response(null, { status: 204 });
+			} else if (url.pathname === "/core/remote-bindings-access-warning") {
+				// Reported by the remote-bindings proxy CLIENT worker when it sees
+				// a 403 + "Cloudflare Access" body from the remote-bindings proxy
+				// server. Surfaced once per Miniflare instance so users with many
+				// remote bindings don't get a wall of repeated warnings.
+				if (!this.#warnedRemoteBindingsAccessBlock) {
+					this.#warnedRemoteBindingsAccessBlock = true;
+					const bindingName = request.headers.get("MF-Binding") ?? "<unknown>";
+					const proxyUrl = request.headers.get("MF-Proxy-URL") ?? "<unknown>";
+					this.#log.warn(
+						`Remote binding "${bindingName}": request to ${proxyUrl} was blocked by Cloudflare Access.\n` +
+							`If your Cloudflare account protects workers.dev with Access, set the\n` +
+							`  CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET\n` +
+							`environment variables (Service Token credentials), or run\n` +
+							`  cloudflared access login <your-workers.dev-host>\n` +
+							`for interactive authentication.\n` +
+							`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/`
+					);
+				}
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/browser/launch") {
 				const headful = this.#workerOpts.some(
