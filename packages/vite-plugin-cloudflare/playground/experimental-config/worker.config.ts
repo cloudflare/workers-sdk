@@ -5,7 +5,7 @@ import {
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
 export default defineConfig((ctx) => ({
-	name: "experimental-config-worker",
+	name: "worker",
 	entrypoint,
 	compatibilityDate: "2026-05-18",
 	env: {
