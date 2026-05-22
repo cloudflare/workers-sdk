@@ -1620,7 +1620,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20260520.1
+        version: 4.20260521.1
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
@@ -1636,33 +1636,6 @@ importers:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
-
-  packages/config/examples/worker-a:
-    devDependencies:
-      '@cloudflare/config':
-        specifier: workspace:*
-        version: link:../..
-      '@cloudflare/workers-types':
-        specifier: catalog:default
-        version: 4.20260520.1
-      typescript:
-        specifier: catalog:default
-        version: 5.8.3
-
-  packages/config/examples/worker-b:
-    devDependencies:
-      '@cloudflare/config':
-        specifier: workspace:*
-        version: link:../..
-      '@cloudflare/workers-types':
-        specifier: catalog:default
-        version: 4.20260520.1
-      '@config-examples/worker-a':
-        specifier: workspace:*
-        version: link:../worker-a
-      typescript:
-        specifier: catalog:default
-        version: 5.8.3
 
   packages/containers-shared:
     devDependencies:
@@ -2960,7 +2933,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20260520.1
+        version: 4.20260521.1
       typescript:
         specifier: catalog:default
         version: 5.8.3
