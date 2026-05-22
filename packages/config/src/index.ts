@@ -48,6 +48,8 @@ export { createBindings, bindings } from "./config";
 export type { Config } from "./schema";
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";
+export { loadConfig, registerConfigHooks } from "./load";
+export type { LoadConfigResult } from "./load";
 
 // oxlint-disable-next-line typescript/no-empty-object-type -- base type to be merged with consumer's
 interface ConfigContext {}

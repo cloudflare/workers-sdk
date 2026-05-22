@@ -354,7 +354,10 @@ export const ConfigSchema = z.object({
 	accountId: z.string().optional(),
 	compatibilityDate: z.string().optional(),
 	compatibilityFlags: z.array(z.string()).optional(),
-	entrypoint: z.string().optional(),
+	entrypoint: z
+		.union([z.string(), z.looseObject({ default: z.string() })])
+		.transform((value) => (typeof value === "string" ? value : value.default))
+		.optional(),
 	assets: AssetsSchema.optional(),
 	domains: z.array(z.string()).optional(),
 	triggers: z.array(TriggerSchema).optional(),
