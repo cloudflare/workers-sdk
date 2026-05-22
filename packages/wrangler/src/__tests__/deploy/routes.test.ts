@@ -627,7 +627,8 @@ describe("deploy", () => {
 			});
 			await expect(runWrangler("deploy ./index --env=staging")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.
+				[Error: Some triggers failed to deploy for test-name (staging):
+				  - Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.
 				Either turn off service environments by setting \`legacy_env = true\`, creating an API token with 'All Zones' permissions, or logging in via OAuth]
 			`);
 		});
@@ -951,10 +952,11 @@ Update them to point to this script instead?`,
 Update them to point to this script instead?`,
 					result: false,
 				});
-				await runWrangler("deploy ./index");
-				expect(std.out).toContain(
-					'Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again'
-				);
+				await expect(runWrangler("deploy ./index")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Some triggers failed to deploy for test-name:
+					  - Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again]
+				`);
 			});
 			it("should deploy domains passed via --domain flag as custom domains", async ({
 				expect,
@@ -1595,5 +1597,84 @@ Update them to point to this script instead?`,
 				await runWrangler("deploy ./index");
 			}
 		);
+
+		it("should aggregate errors from multiple failing triggers and still log successful targets", async ({
+			expect,
+		}) => {
+			// Configure three triggers in one deploy:
+			//   1. A custom domain that we decline to override → fails
+			//   2. A schedule whose API call returns an error  → fails
+			//   3. A workers.dev subdomain                     → succeeds
+			// The aggregated error should list both failures, and the successful
+			// target should still be logged before the throw.
+			writeWranglerConfig({
+				routes: [{ pattern: "api.example.com", custom_domain: true }],
+				triggers: { crons: ["*/5 * * * *"] },
+				workers_dev: true,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockUpdateWorkerSubdomain({ enabled: true });
+			// Custom domain conflict — user declines confirmation.
+			mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
+			mockCustomDomainsChangesetRequest({
+				originConflicts: [
+					{
+						id: "101",
+						zone_id: "",
+						zone_name: "",
+						hostname: "api.example.com",
+						service: "test-name",
+						environment: "",
+						enabled: true,
+						previews_enabled: false,
+					},
+				],
+			});
+			mockCustomDomainLookup({
+				id: "101",
+				zone_id: "",
+				zone_name: "",
+				hostname: "api.example.com",
+				service: "other-script",
+				environment: "",
+				enabled: true,
+				previews_enabled: false,
+			});
+			mockConfirm({
+				text: `Custom Domains already exist for these domains:
+\t• api.example.com (used as a domain for "other-script")
+Update them to point to this script instead?`,
+				result: false,
+			});
+			// Schedule API returns an error.
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName/schedules",
+					() =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: 10005,
+									message: "Schedules API failed",
+								},
+							])
+						),
+					{ once: true }
+				)
+			);
+
+			await expect(runWrangler("deploy ./index")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Some triggers failed to deploy for test-name:
+				  - Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again
+				  - A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/schedules) failed.]
+			`);
+			// The successful workers.dev subdomain target should still have been
+			// logged before the aggregated error was thrown.
+			expect(std.out).toContain("test-name.test-sub-domain.workers.dev");
+		});
 	});
 });
