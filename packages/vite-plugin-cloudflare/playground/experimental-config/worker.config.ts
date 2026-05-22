@@ -4,11 +4,11 @@ import {
 } from "@cloudflare/vite-plugin/experimental-config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
-export default defineConfig({
+export default defineConfig((ctx) => ({
 	name: "experimental-config-worker",
 	entrypoint,
-	compatibilityDate: "2024-12-30",
+	compatibilityDate: "2026-05-18",
 	env: {
-		MY_TEXT: bindings.text("Hello world"),
+		MY_TEXT: bindings.text(`The mode is ${ctx.mode}`),
 	},
-});
+}));

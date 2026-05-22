@@ -21,6 +21,7 @@ import type {
 	WorkerResolvedConfig,
 	WorkerWithServerLogicResolvedConfig,
 } from "./workers-configs";
+import type { ConfigContext } from "@cloudflare/config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { Unstable_Config } from "wrangler";
@@ -675,7 +676,7 @@ async function loadNewConfig(options: { root: string; mode: string }): Promise<{
 
 	let resolved = rawExport;
 	if (typeof resolved === "function") {
-		resolved = await (resolved as (ctx: { mode: string }) => unknown)({
+		resolved = await (resolved as (ctx: ConfigContext) => unknown)({
 			mode: options.mode,
 		});
 	} else {
