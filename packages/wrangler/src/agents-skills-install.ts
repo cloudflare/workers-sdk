@@ -252,14 +252,79 @@ function getSkillsRepoCachePath(): string {
 }
 
 /**
+ * Legacy shape of `AgentInfo` written by Wrangler versions before the
+ * `version: 1` schema was introduced. The agent's rosie ID and global
+ * skills path were stored as flat properties instead of being nested
+ * under a `rosie` object.
+ */
+interface LegacyAgentInfo {
+	name: string;
+	rosieId: string;
+	globalSkillsPath: string;
+}
+
+/**
+ * Legacy shape of the skills-install metadata file written by Wrangler
+ * versions before the `version: 1` schema was introduced. It lacks the
+ * `version` field and uses {@link LegacyAgentInfo} instead of {@link AgentInfo}.
+ */
+interface LegacySkillsInstallMetadata {
+	accepted: boolean;
+	date: string;
+	detectedAgents?: LegacyAgentInfo[];
+	installFailed?: boolean | string[];
+}
+
+// TODO(dario): Remove `migrateMetadataToV1` and the legacy types above after
+// 2026-06-05 — by then most active users' metadata files will have been
+// converted to the version-1 schema.
+/**
+ * Converts a legacy (pre-version-1) metadata object to the current schema.
+ * The old format stored `rosieId` / `globalSkillsPath` as flat properties on
+ * each agent entry; the new format nests them under `rosie: { id, globalPath }`.
+ */
+function migrateMetadataToV1(
+	old: LegacySkillsInstallMetadata
+): SkillsInstallMetadata {
+	return {
+		version: 1,
+		accepted: old.accepted,
+		date: old.date,
+		detectedAgents: old.detectedAgents?.map((agent) => ({
+			name: agent.name,
+			rosie: {
+				id: agent.rosieId,
+				globalPath: agent.globalSkillsPath,
+			},
+		})),
+		installFailed: old.installFailed,
+	};
+}
+
+/**
  * Reads and parses the skills install metadata file.
+ *
+ * If the file uses the legacy schema (no `version` field), it is automatically
+ * migrated to the current version-1 format and overwritten on disk.
  *
  * @returns The parsed metadata file, or `undefined` if the file doesn't exist or can't be parsed.
  */
 function readSkillsInstallMetadataFile(): SkillsInstallMetadata | undefined {
 	try {
 		const content = readFileSync(getSkillsInstallMetadataFilePath(), "utf8");
-		return parseJSONC(content) as SkillsInstallMetadata;
+		const parsed = parseJSONC(content) as Record<string, unknown>;
+
+		// TODO(dario): Remove this migration branch after 2026-06-05 — by then
+		// most active users' metadata files will have been converted to version 1.
+		if ((parsed as { version?: unknown }).version === undefined) {
+			const migrated = migrateMetadataToV1(
+				parsed as unknown as LegacySkillsInstallMetadata
+			);
+			writeSkillsInstallMetadataFile(migrated);
+			return migrated;
+		}
+
+		return parsed as unknown as SkillsInstallMetadata;
 	} catch {
 		return undefined;
 	}

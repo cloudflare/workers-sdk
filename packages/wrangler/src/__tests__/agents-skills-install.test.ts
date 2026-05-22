@@ -154,6 +154,41 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			expect(sendMetricsEvent).not.toHaveBeenCalled();
 		});
 
+		// TODO(dario): Remove this migration branch after 2026-06-05 — by then
+		// most active users' metadata files will have been converted to version 1.
+		test("skips silently when metadata file uses the legacy format (no version field) and migrates it on disk", async ({
+			expect,
+		}) => {
+			writeMetadataFile({
+				accepted: true,
+				date: "2025-07-01T00:00:00Z",
+				detectedAgents: [
+					{
+						name: "Claude Code",
+						rosieId: "claude",
+						globalSkillsPath: "/fake/.claude/skills",
+					},
+				],
+				installFailed: false,
+			});
+			const maybeInstallCloudflareSkillsGlobally = await freshImport();
+
+			await maybeInstallCloudflareSkillsGlobally(false);
+
+			expect(mockRosieAgents).not.toHaveBeenCalled();
+			expect(mockRosieInstall).not.toHaveBeenCalled();
+			expect(sendMetricsEvent).not.toHaveBeenCalled();
+			// Verify the file was migrated to the new format on disk
+			const migratedMetadata = readMetadataFile();
+			expect(migratedMetadata.version).toBe(1);
+			expect(migratedMetadata.detectedAgents).toEqual([
+				{
+					name: "Claude Code",
+					rosie: { id: "claude", globalPath: "/fake/.claude/skills" },
+				},
+			]);
+		});
+
 		test("force=true ignores existing metadata file", async ({ expect }) => {
 			writeMetadataFile({ accepted: true, date: "2025-01-01T00:00:00Z" });
 			const maybeInstallCloudflareSkillsGlobally = await freshImport();
@@ -1115,6 +1150,123 @@ describe("telemetryCurrentAgentSkillsInstalled", () => {
 		const result = await telemetryCurrentAgentSkillsInstalled();
 
 		expect(result).toBe(false);
+	});
+
+	// TODO(dario): Remove this migration branch after 2026-06-05 — by then
+	// most active users' metadata files will have been converted to version 1.
+	describe("legacy metadata migration", () => {
+		test("resolves to 'automatic' when metadata uses the legacy flat AgentInfo schema", async ({
+			expect,
+		}) => {
+			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+				isAgentic: true,
+				id: "claude-code",
+				name: "Claude Code",
+				type: "agent",
+			});
+			createAgentDir(".claude");
+			const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+			mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+			// Write old-format metadata (no version field, flat rosieId/globalSkillsPath)
+			writeMetadataFile({
+				accepted: true,
+				date: "2025-07-01T00:00:00Z",
+				detectedAgents: [
+					{
+						name: "Claude Code",
+						rosieId: "claude",
+						globalSkillsPath: claudeSkills,
+					},
+				],
+				installFailed: false,
+			});
+			mockGitHubSkillsApi(["cloudflare", "wrangler"]);
+			const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+			const result = await telemetryCurrentAgentSkillsInstalled();
+
+			expect(result).toBe("automatic");
+		});
+
+		test("migrates legacy metadata to version 1 on disk when read", async ({
+			expect,
+		}) => {
+			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+				isAgentic: true,
+				id: "claude-code",
+				name: "Claude Code",
+				type: "agent",
+			});
+			createAgentDir(".claude");
+			const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+			mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+			// Write old-format metadata
+			writeMetadataFile({
+				accepted: true,
+				date: "2025-07-01T00:00:00Z",
+				detectedAgents: [
+					{
+						name: "Claude Code",
+						rosieId: "claude",
+						globalSkillsPath: claudeSkills,
+					},
+				],
+				installFailed: false,
+			});
+			mockGitHubSkillsApi(["cloudflare", "wrangler"]);
+			const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+			// Trigger the read (and migration)
+			await telemetryCurrentAgentSkillsInstalled();
+
+			// The file on disk should now be in the new format
+			const migratedMetadata = readMetadataFile();
+			expect(migratedMetadata).toEqual({
+				version: 1,
+				accepted: true,
+				date: "2025-07-01T00:00:00Z",
+				detectedAgents: [
+					{
+						name: "Claude Code",
+						rosie: { id: "claude", globalPath: claudeSkills },
+					},
+				],
+				installFailed: false,
+			});
+		});
+
+		test("resolves to 'manual' when legacy metadata says install failed", async ({
+			expect,
+		}) => {
+			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+				isAgentic: true,
+				id: "claude-code",
+				name: "Claude Code",
+				type: "agent",
+			});
+			createAgentDir(".claude");
+			const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+			mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+			// Write old-format metadata with installFailed: true
+			writeMetadataFile({
+				accepted: true,
+				date: "2025-07-01T00:00:00Z",
+				detectedAgents: [
+					{
+						name: "Claude Code",
+						rosieId: "claude",
+						globalSkillsPath: claudeSkills,
+					},
+				],
+				installFailed: true,
+			});
+			mockGitHubSkillsApi(["cloudflare", "wrangler"]);
+			const telemetryCurrentAgentSkillsInstalled = await freshTelemetryImport();
+
+			const result = await telemetryCurrentAgentSkillsInstalled();
+
+			expect(result).toBe("manual");
+		});
 	});
 
 	test("memoises the result across multiple calls", async ({ expect }) => {
