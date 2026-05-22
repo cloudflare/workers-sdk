@@ -5,7 +5,10 @@ const ignoreWatch = ["dist", "playground", "e2e"];
 
 export default defineConfig([
 	{
-		entry: "src/index.ts",
+		entry: {
+			index: "src/index.ts",
+			"experimental-config": "src/experimental-config.ts",
+		},
 		platform: "node",
 		outDir: "dist",
 		tsconfig: "tsconfig.plugin.json",

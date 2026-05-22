@@ -65,7 +65,11 @@ export function registerConfigHooks(): () => void {
 
 	const hooks = registerHooks({
 		resolve(specifier, context, nextResolve) {
-			const importType = context.importAttributes.type;
+			// `importAttributes` may be absent for some resolution paths (e.g.
+			// CJS `require()` going through the hook chain after the hook has
+			// been registered for ESM use).
+			const importAttributes = context.importAttributes ?? {};
+			const importType = importAttributes.type;
 			const isCfWorker = importType === CF_WORKER_TYPE;
 			const isConfigLoad = importType === CF_WORKER_CONFIG_TYPE;
 
@@ -75,7 +79,7 @@ export function registerConfigHooks(): () => void {
 				isCfWorker || isConfigLoad
 					? {
 							...context,
-							importAttributes: stripAttr(context.importAttributes, "type"),
+							importAttributes: stripAttr(importAttributes, "type"),
 						}
 					: context;
 
@@ -134,10 +138,11 @@ export function registerConfigHooks(): () => void {
 			// `type` attribute before delegating so the default loader doesn't
 			// see an attribute value it doesn't recognise. (`cf-worker`
 			// imports are short-circuited above and never reach this branch.)
-			if (context.importAttributes.type === CF_WORKER_CONFIG_TYPE) {
+			const importAttributes = context.importAttributes ?? {};
+			if (importAttributes.type === CF_WORKER_CONFIG_TYPE) {
 				const cleaned = {
 					...context,
-					importAttributes: stripAttr(context.importAttributes, "type"),
+					importAttributes: stripAttr(importAttributes, "type"),
 				};
 				return nextLoad(url, cleaned);
 			}
@@ -180,7 +185,11 @@ function getParentUUID(parentURL: string | undefined): string | undefined {
 	if (!parentURL) {
 		return undefined;
 	}
-	return new URL(parentURL).searchParams.get(NO_CACHE_QUERY_KEY) ?? undefined;
+	try {
+		return new URL(parentURL).searchParams.get(NO_CACHE_QUERY_KEY) ?? undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 function appendUUID(url: string, uuid: string): string {

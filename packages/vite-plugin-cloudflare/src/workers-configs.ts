@@ -1,11 +1,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
 import * as wrangler from "wrangler";
 import type {
 	ResolvedAssetsOnlyConfig,
 	ResolvedWorkerConfig,
 } from "./plugin-config";
 import type { Optional } from "./utils";
+import type { RawConfig } from "@cloudflare/workers-utils";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
 
 export type WorkerResolvedConfig =
@@ -117,10 +119,11 @@ const nullableNonApplicable = [
 	"tsconfig",
 ] as const;
 
-function readWorkerConfig(
-	configPath: string,
-	env: string | undefined
-): {
+/**
+ * Apply the Vite-specific sanitization to a normalized Worker config, tracking
+ * any fields that are non-applicable when running under Vite.
+ */
+function processNormalizedWorkerConfig(normalized: RawWorkerConfig): {
 	raw: RawWorkerConfig;
 	config: WorkerConfig;
 	nonApplicable: NonApplicableConfigMap;
@@ -130,12 +133,7 @@ function readWorkerConfig(
 		notRelevant: new Set(),
 		notSupportedOnAuxiliary: new Set(),
 	};
-	const config: Optional<RawWorkerConfig, "build" | "define"> =
-		wrangler.unstable_readConfig(
-			{ config: configPath, env },
-			// Preserve the original `main` value so that Vite can resolve it
-			{ preserveOriginalMain: true }
-		);
+	const config: Optional<RawWorkerConfig, "build" | "define"> = normalized;
 	const raw = structuredClone(config) as RawWorkerConfig;
 
 	nullableNonApplicable.forEach((prop) => {
@@ -173,6 +171,53 @@ function readWorkerConfig(
 		nonApplicable,
 		config: config as WorkerConfig,
 	};
+}
+
+function readWorkerConfig(
+	configPath: string,
+	env: string | undefined
+): {
+	raw: RawWorkerConfig;
+	config: WorkerConfig;
+	nonApplicable: NonApplicableConfigMap;
+} {
+	const normalized = wrangler.unstable_readConfig(
+		{ config: configPath, env },
+		// Preserve the original `main` value so that Vite can resolve it
+		{ preserveOriginalMain: true }
+	);
+	return processNormalizedWorkerConfig(normalized);
+}
+
+/**
+ * Normalise a `RawConfig` produced in-memory (for example by
+ * `convertToWranglerConfig` from `@cloudflare/config`) using the same
+ * validation pipeline as on-disk Wrangler config files, then apply the
+ * Vite-specific sanitization.
+ */
+export function readWorkerConfigFromRaw(rawConfig: RawConfig): {
+	raw: RawWorkerConfig;
+	config: WorkerConfig;
+	nonApplicable: NonApplicableConfigMap;
+} {
+	const { config, diagnostics } = normalizeAndValidateConfig(
+		rawConfig,
+		undefined,
+		undefined,
+		{},
+		// Preserve the original `main` value so that Vite can resolve it
+		true
+	);
+
+	if (diagnostics.hasWarnings()) {
+		console.warn(diagnostics.renderWarnings());
+	}
+
+	if (diagnostics.hasErrors()) {
+		throw new Error(diagnostics.renderErrors());
+	}
+
+	return processNormalizedWorkerConfig(config as RawWorkerConfig);
 }
 
 // TODO: separate prerender Worker warnings from auxiliary Worker warnings
