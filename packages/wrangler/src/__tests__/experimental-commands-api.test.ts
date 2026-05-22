@@ -46,6 +46,11 @@ describe("experimental_getWranglerCommands", () => {
 			    "hidden": true,
 			    "type": "boolean",
 			  },
+			  "install-skills": {
+			    "default": false,
+			    "describe": "Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
+			    "type": "boolean",
+			  },
 			  "v": {
 			    "alias": "version",
 			    "describe": "Show version number",
