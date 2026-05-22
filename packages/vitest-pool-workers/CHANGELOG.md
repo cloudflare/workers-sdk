@@ -1,5 +1,21 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.16.9
+
+### Patch Changes
+
+- [#13933](https://github.com/cloudflare/workers-sdk/pull/13933) [`90092c0`](https://github.com/cloudflare/workers-sdk/commit/90092c0bca526e2e08a25fe7969534426eb6fd9f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Derive bundler externals from `package.json` and shrink the published bundle
+
+  The bundler's `external` list was previously hand-maintained and out of sync with `package.json` — `undici` and `semver` were both listed as external despite being only `devDependencies`. The published `dist/pool/index.mjs` consequently contained a top-level `import { fetch } from "undici"` that was only resolvable because pnpm happened to hoist `undici` from other packages' devDependencies during local development.
+
+  The bundler now derives its `external` list from `dependencies` + `peerDependencies` in `package.json`, making it impossible for a `devDependency` to silently end up externalized.
+
+  Combined with the new `"sideEffects": false` declaration in `@cloudflare/workers-utils`, the unused `cloudflared` / `tunnel` exports (and their transitive `undici` import) are now tree-shaken out of the pool entirely. `dist/pool/index.mjs` no longer references `undici` at all, and shrinks from ~489 KB to ~125 KB.
+
+- Updated dependencies [[`52e9082`](https://github.com/cloudflare/workers-sdk/commit/52e9082e32d7bffaeca92f27ab472b56964ba2bb), [`0733688`](https://github.com/cloudflare/workers-sdk/commit/07336888e0bc82925e4023f5b72a0062f10d77b8), [`fc1f7b9`](https://github.com/cloudflare/workers-sdk/commit/fc1f7b977908b78a4379d1d7b261ca7c69022ba3), [`30657e1`](https://github.com/cloudflare/workers-sdk/commit/30657e1db097135d97209c3ae0cc623fc66827b9), [`8c569c6`](https://github.com/cloudflare/workers-sdk/commit/8c569c6232588594e7a48219bbd020955f5fd5a4), [`f598eac`](https://github.com/cloudflare/workers-sdk/commit/f598eac72bcdf838ba890bcbd100e99ee8fac17f), [`3a1fbed`](https://github.com/cloudflare/workers-sdk/commit/3a1fbed5988efe03ae50cc502eff6a4785728396)]:
+  - wrangler@4.94.0
+  - miniflare@4.20260521.0
+
 ## 0.16.8
 
 ### Patch Changes

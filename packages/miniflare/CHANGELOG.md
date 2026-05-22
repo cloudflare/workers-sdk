@@ -1,5 +1,21 @@
 # miniflare
 
+## 4.20260521.0
+
+### Patch Changes
+
+- [#13993](https://github.com/cloudflare/workers-sdk/pull/13993) [`0733688`](https://github.com/cloudflare/workers-sdk/commit/07336888e0bc82925e4023f5b72a0062f10d77b8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260520.1 | 1.20260521.1 |
+
+- [#13999](https://github.com/cloudflare/workers-sdk/pull/13999) [`30657e1`](https://github.com/cloudflare/workers-sdk/commit/30657e1db097135d97209c3ae0cc623fc66827b9) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix TCP requests failing when `outboundService` is configured
+
+  Workers using `outboundService` can now open TCP connections with `cloudflare:sockets`. Previously, TCP requests could throw an error when a custom outbound service was configured.
+
 ## 4.20260520.0
 
 ### Patch Changes

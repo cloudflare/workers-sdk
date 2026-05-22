@@ -1,5 +1,21 @@
 # @cloudflare/vite-plugin
 
+## 1.38.0
+
+### Minor Changes
+
+- [#13989](https://github.com/cloudflare/workers-sdk/pull/13989) [`f598eac`](https://github.com/cloudflare/workers-sdk/commit/f598eac72bcdf838ba890bcbd100e99ee8fac17f) Thanks [@MattieTK](https://github.com/MattieTK)! - Print a QR code alongside the tunnel URL when sharing via Cloudflare Tunnel
+
+  When a tunnel is started (via `wrangler dev --tunnel` or the Vite plugin with `tunnel: true`), a scannable QR code is now printed to the terminal beneath the tunnel URL. This makes it easy to open the tunnel on a mobile device without manually copying the URL.
+
+  The QR code uses Unicode block characters for a compact representation and is generated best-effort -- if generation fails for any reason, the tunnel URL is still displayed as before.
+
+### Patch Changes
+
+- Updated dependencies [[`52e9082`](https://github.com/cloudflare/workers-sdk/commit/52e9082e32d7bffaeca92f27ab472b56964ba2bb), [`0733688`](https://github.com/cloudflare/workers-sdk/commit/07336888e0bc82925e4023f5b72a0062f10d77b8), [`fc1f7b9`](https://github.com/cloudflare/workers-sdk/commit/fc1f7b977908b78a4379d1d7b261ca7c69022ba3), [`30657e1`](https://github.com/cloudflare/workers-sdk/commit/30657e1db097135d97209c3ae0cc623fc66827b9), [`8c569c6`](https://github.com/cloudflare/workers-sdk/commit/8c569c6232588594e7a48219bbd020955f5fd5a4), [`f598eac`](https://github.com/cloudflare/workers-sdk/commit/f598eac72bcdf838ba890bcbd100e99ee8fac17f), [`3a1fbed`](https://github.com/cloudflare/workers-sdk/commit/3a1fbed5988efe03ae50cc502eff6a4785728396)]:
+  - wrangler@4.94.0
+  - miniflare@4.20260521.0
+
 ## 1.37.3
 
 ### Patch Changes
