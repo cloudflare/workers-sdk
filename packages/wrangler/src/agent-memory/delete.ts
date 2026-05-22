@@ -7,7 +7,7 @@ import { deleteNamespace } from "./client";
 export const agentMemoryNamespaceDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a given Agent Memory namespace",
-		status: "open beta",
+		status: "private beta",
 		owner: "Product: Agent Memory",
 	},
 	args: {

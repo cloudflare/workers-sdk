@@ -6,7 +6,7 @@ export const agentMemoryNamespaceListCommand = createCommand({
 	metadata: {
 		description:
 			"List all Agent Memory namespaces associated with your account",
-		status: "open beta",
+		status: "private beta",
 		owner: "Product: Agent Memory",
 	},
 	behaviour: {

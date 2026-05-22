@@ -39,7 +39,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 
 		expect(normalize(output.stdout)).toContain("tmp-e2e-agent-memory");
 		expect(normalize(output.stderr)).toMatchInlineSnapshot(`
-			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace list\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace list\` is a private beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 	});
 
@@ -68,7 +68,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 		expect(normalize(output.stdout)).toContain("tmp-e2e-agent-memory");
 		expect(output.stdout).toContain(namespaceId);
 		expect(normalize(output.stderr)).toMatchInlineSnapshot(`
-			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace get\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace get\` is a private beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 	});
 
@@ -81,7 +81,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 			`✅ Deleted Agent Memory namespace tmp-e2e-agent-memory`
 		);
 		expect(normalize(output.stderr)).toMatchInlineSnapshot(`
-			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace delete\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+			"▲ [WARNING] 🚧 \`wrangler agent-memory namespace delete\` is a private beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 	});
 });

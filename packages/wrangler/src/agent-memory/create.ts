@@ -6,7 +6,7 @@ import { createNamespace } from "./client";
 export const agentMemoryNamespaceCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new Agent Memory namespace",
-		status: "open beta",
+		status: "private beta",
 		owner: "Product: Agent Memory",
 	},
 	behaviour: {
