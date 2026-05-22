@@ -31,7 +31,11 @@ import type { StartDevWorkerOptions } from "./api";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type {
+	AssetsOptions,
+	ComplianceConfig,
+	Config,
+} from "@cloudflare/workers-utils";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 
@@ -388,16 +392,6 @@ function getAssetsBasePath(
 		? process.cwd()
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 }
-
-export type AssetsOptions = {
-	directory: string;
-	binding?: string;
-	routerConfig: RouterConfig;
-	assetConfig: AssetConfig;
-	_redirects?: string;
-	_headers?: string;
-	run_worker_first?: boolean | string[];
-};
 
 export class NonExistentAssetsDirError extends UserError {}
 
