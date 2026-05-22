@@ -153,3 +153,72 @@ describe("env singleton bindings", () => {
 		}
 	});
 });
+
+describe("entrypoint", () => {
+	it("accepts a string entrypoint and passes it through unchanged", ({
+		expect,
+	}) => {
+		const result = ConfigSchema.safeParse({ entrypoint: "./src/index.ts" });
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.entrypoint).toBe("./src/index.ts");
+		}
+	});
+
+	it("accepts a namespace-like object and collapses it to the default export string", ({
+		expect,
+	}) => {
+		const result = ConfigSchema.safeParse({
+			entrypoint: { default: "/abs/path/to/src.ts" },
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.entrypoint).toBe("/abs/path/to/src.ts");
+		}
+	});
+
+	it("accepts a namespace object with additional properties (looseObject)", ({
+		expect,
+	}) => {
+		const result = ConfigSchema.safeParse({
+			entrypoint: {
+				default: "/abs/path/to/src.ts",
+				namedExport: "anything",
+			},
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.entrypoint).toBe("/abs/path/to/src.ts");
+		}
+	});
+
+	it("rejects a namespace object whose default is not a string", ({
+		expect,
+	}) => {
+		const result = ConfigSchema.safeParse({
+			entrypoint: { default: 123 },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects a namespace object missing a default export", ({ expect }) => {
+		const result = ConfigSchema.safeParse({
+			entrypoint: { other: "value" },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("accepts an undefined entrypoint", ({ expect }) => {
+		const result = ConfigSchema.safeParse({});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.entrypoint).toBeUndefined();
+		}
+	});
+});
