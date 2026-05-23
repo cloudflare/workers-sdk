@@ -8,3 +8,13 @@ test("Supports testing Cron Triggers at '/cdn-cgi/handler/scheduled' route", asy
 	expect(cronResponse).toBe("ok");
 	expect(serverLogs.info.join()).toContain("Cron processed");
 });
+
+test("Supports testing Cron Triggers at the '/__scheduled' alias", async ({
+	expect,
+}) => {
+	const cronResponse = await getTextResponse(
+		"/__scheduled?time=0&cron=*+*+*+*+*"
+	);
+	expect(cronResponse).toBe("ok");
+	expect(serverLogs.info.join()).toContain("Cron processed");
+});
