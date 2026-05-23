@@ -257,7 +257,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should warn when crons are configured alongside --dispatch-namespace", async ({ expect }) => {
+		it("should warn when crons are configured alongside --dispatch-namespace", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				triggers: { crons: ["0 0 * * *"] },
 			});
@@ -284,7 +286,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should warn when --triggers flag is used alongside --dispatch-namespace", async ({ expect }) => {
+		it("should warn when --triggers flag is used alongside --dispatch-namespace", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			const scriptContent = `
       export default {
