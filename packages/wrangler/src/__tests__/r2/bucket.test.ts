@@ -228,7 +228,9 @@ describe("r2", () => {
 					r2_buckets: [{ binding: "R2", bucket_name: "<my-bucket-name>" }],
 				});
 
-				const mockBuckets = [{ name: "real-bucket", creation_date: "01-01-2001" }];
+				const mockBuckets = [
+					{ name: "real-bucket", creation_date: "01-01-2001" },
+				];
 				msw.use(
 					http.get(
 						"*/accounts/:accountId/r2/buckets",
