@@ -25,13 +25,14 @@ export default async function openInBrowser(url: string): Promise<void> {
 }
 
 function handleBrowserOpenError(url: string, err: unknown): void {
+	const isEnoent = (err as NodeJS.ErrnoException).code === "ENOENT";
 	const hint =
-		process.platform === "linux"
+		process.platform === "linux" && isEnoent
 			? " You may need to install `xdg-utils` (e.g. `apt install xdg-utils`) or set a default browser."
 			: "";
 	logger.warn(
 		`Failed to open a browser automatically.${hint}\n` +
 			`Please visit the following URL in your browser:\n${url}`
 	);
-	logger.debug(String(err));
+	logger.debug(err instanceof Error ? (err.stack ?? String(err)) : String(err));
 }
