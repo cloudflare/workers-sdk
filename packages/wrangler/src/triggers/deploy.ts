@@ -226,9 +226,9 @@ export default async function triggersDeploy(
 					if (routesOnly.length > 10) {
 						return {
 							targets: routesOnly
-							.slice(0, 9)
-							.map((route) => renderRoute(route))
-							.concat([`...and ${routesOnly.length - 9} more routes`]),
+								.slice(0, 9)
+								.map((route) => renderRoute(route))
+								.concat([`...and ${routesOnly.length - 9} more routes`]),
 						};
 					}
 					return { targets: routesOnly.map((route) => renderRoute(route)) };
