@@ -304,7 +304,7 @@ describe("deploy", () => {
 			});
 
 			await runWrangler(
-				"deploy --dispatch-namespace test-dispatch-namespace --triggers '0 0 * * *' index.js"
+				"deploy index.js --dispatch-namespace test-dispatch-namespace --triggers '0 0 * * *'"
 			);
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mCron triggers are not supported with --dispatch-namespace and will be ignored.[0m
