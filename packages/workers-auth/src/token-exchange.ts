@@ -64,10 +64,14 @@ export function isReturningFromAuthServer(
 	logger: OAuthFlowContext["logger"]
 ): boolean {
 	if (query.error) {
-		if (Array.isArray(query.error)) {
-			throw toErrorClass(query.error[0]);
-		}
-		throw toErrorClass(query.error);
+		const error = Array.isArray(query.error) ? query.error[0] : query.error;
+		const description = Array.isArray(query.error_description)
+			? query.error_description[0]
+			: query.error_description;
+		const uri = Array.isArray(query.error_uri)
+			? query.error_uri[0]
+			: query.error_uri;
+		throw toErrorClass(error, description, uri);
 	}
 
 	const code = query.code;
