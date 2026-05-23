@@ -12,7 +12,6 @@ import { hasLocalDevVarsFileChanged } from "../dev-vars";
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
-import { QUICK_TUNNEL_ALLOWED_HOST } from "./tunnel";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
 
@@ -25,15 +24,6 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			if (ctx.resolvedPluginConfig.type === "preview") {
 				return {
 					appType: "custom",
-					preview: {
-						allowedHosts: getAllowedHosts(
-							ctx.resolvedPluginConfig.tunnel
-								? [QUICK_TUNNEL_ALLOWED_HOST]
-								: [],
-							userConfig.preview?.allowedHosts ??
-								userConfig.server?.allowedHosts
-						),
-					},
 				};
 			}
 

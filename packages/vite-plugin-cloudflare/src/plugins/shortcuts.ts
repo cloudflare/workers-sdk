@@ -8,7 +8,7 @@ import colors from "picocolors";
 import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
-import { extendTunnelExpiry } from "./tunnel";
+import { extendTunnelExpiry, isTunnelOpen, toggleTunnel } from "./tunnel";
 import type { PluginContext } from "../context";
 import type * as vite from "vite";
 
@@ -24,11 +24,7 @@ export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
 			}
 
 			assertIsNotPreview(ctx);
-			addBindingsShortcut(viteDevServer, ctx);
-			addExplorerShortcut(viteDevServer);
-			if (ctx.resolvedPluginConfig.tunnel) {
-				addTunnelShortcut(viteDevServer);
-			}
+			addShortcuts(viteDevServer, ctx);
 		},
 		async configurePreviewServer(vitePreviewServer) {
 			if (!isCustomShortcutsSupported) {
@@ -36,26 +32,15 @@ export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
 			}
 
 			assertIsPreview(ctx);
-			addBindingsShortcut(vitePreviewServer, ctx);
-			addExplorerShortcut(vitePreviewServer);
-			if (ctx.resolvedPluginConfig.tunnel) {
-				addTunnelShortcut(vitePreviewServer);
-			}
+			addShortcuts(vitePreviewServer, ctx);
 		},
 	};
 });
 
-export function addBindingsShortcut(
+export function addShortcuts(
 	server: vite.ViteDevServer | vite.PreviewServer,
 	ctx: PluginContext
 ) {
-	const workerConfigs = ctx.allWorkerConfigs;
-
-	if (workerConfigs.length === 0) {
-		return;
-	}
-
-	// Interactive shortcuts should only be registered in a TTY environment
 	if (!process.stdin.isTTY) {
 		return;
 	}
@@ -66,6 +51,8 @@ export function addBindingsShortcut(
 		description: "list configured Cloudflare bindings",
 		action: (viteServer) => {
 			viteServer.config.logger.info("");
+
+			const workerConfigs = ctx.allWorkerConfigs;
 
 			for (const workerConfig of workerConfigs) {
 				const bindings =
@@ -88,46 +75,7 @@ export function addBindingsShortcut(
 				);
 			}
 		},
-	} satisfies vite.CLIShortcut<vite.ViteDevServer | vite.PreviewServer>;
-
-	// Update the bindCLIShortcuts method to print our shortcut hint first
-	const bindCLIShortcuts = server.bindCLIShortcuts.bind(server);
-	server.bindCLIShortcuts = (
-		options?: vite.BindCLIShortcutsOptions<
-			vite.ViteDevServer | vite.PreviewServer
-		>
-	) => {
-		if (
-			// Vite will not print shortcuts if not in a TTY or in CI
-			// @see https://github.com/vitejs/vite/blob/fa3753a0f3a6c12659d8a68eefbd055c5ab90552/packages/vite/src/node/shortcuts.ts#L28-L35
-			server.httpServer &&
-			process.stdin.isTTY &&
-			!process.env.CI &&
-			options?.print
-		) {
-			server.config.logger.info(
-				colors.dim(colors.green("  ➜")) +
-					colors.dim("  press ") +
-					colors.bold(`${printBindingsShortcut.key} + enter`) +
-					colors.dim(` to ${printBindingsShortcut.description}`)
-			);
-		}
-
-		bindCLIShortcuts(options);
-	};
-
-	// Add the custom binding shortcut
-	server.bindCLIShortcuts({
-		customShortcuts: [printBindingsShortcut],
-	});
-}
-
-export function addExplorerShortcut(
-	server: vite.ViteDevServer | vite.PreviewServer
-) {
-	if (!process.stdin.isTTY) {
-		return;
-	}
+	} satisfies vite.CLIShortcut;
 
 	const openExplorerShortcut = {
 		key: "e",
@@ -148,26 +96,55 @@ export function addExplorerShortcut(
 				);
 			});
 		},
-	} satisfies vite.CLIShortcut<vite.ViteDevServer | vite.PreviewServer>;
+	} satisfies vite.CLIShortcut;
 
-	// Wrap bindCLIShortcuts to print our shortcut hint
+	const toggleTunnelShortcut = {
+		key: "t",
+		description: "start or close tunnel",
+		action: () => {
+			void toggleTunnel(server, ctx).catch((error) => {
+				const message = error instanceof Error ? error.message : String(error);
+				server.config.logger.error(colors.red(`Error: ${message}`));
+			});
+		},
+	} satisfies vite.CLIShortcut;
+	const extendTunnelExpiryShortcut = {
+		key: "a",
+		description: "extend tunnel by 1 hour",
+		action: () => {
+			extendTunnelExpiry();
+		},
+	} satisfies vite.CLIShortcut;
+
 	const bindCLIShortcuts = server.bindCLIShortcuts.bind(server);
-	server.bindCLIShortcuts = (
-		options?: vite.BindCLIShortcutsOptions<
-			vite.ViteDevServer | vite.PreviewServer
-		>
-	) => {
+	server.bindCLIShortcuts = (options?: vite.BindCLIShortcutsOptions) => {
 		if (
 			server.httpServer &&
 			process.stdin.isTTY &&
 			!process.env.CI &&
 			options?.print
 		) {
+			if (ctx.allWorkerConfigs.length > 0) {
+				server.config.logger.info(
+					colors.dim(colors.green("  ➜")) +
+						colors.dim("  press ") +
+						colors.bold(`${printBindingsShortcut.key} + enter`) +
+						colors.dim(` to ${printBindingsShortcut.description}`)
+				);
+			}
+
 			server.config.logger.info(
 				colors.dim(colors.green("  ➜")) +
 					colors.dim("  press ") +
 					colors.bold(`${openExplorerShortcut.key} + enter`) +
 					colors.dim(` to ${openExplorerShortcut.description}`)
+			);
+
+			server.config.logger.info(
+				colors.dim(colors.green("  ➜")) +
+					colors.dim("  press ") +
+					colors.bold(`${toggleTunnelShortcut.key} + enter`) +
+					colors.dim(` to ${isTunnelOpen() ? "close tunnel" : "start tunnel"}`)
 			);
 		}
 
@@ -175,26 +152,11 @@ export function addExplorerShortcut(
 	};
 
 	server.bindCLIShortcuts({
-		customShortcuts: [openExplorerShortcut],
-	});
-}
-
-export function addTunnelShortcut(
-	server: vite.ViteDevServer | vite.PreviewServer
-) {
-	if (!process.stdin.isTTY) {
-		return;
-	}
-
-	const extendTunnelExpiryShortcut = {
-		key: "t",
-		description: "extend tunnel by 1 hour",
-		action: () => {
-			extendTunnelExpiry();
-		},
-	} satisfies vite.CLIShortcut<vite.ViteDevServer | vite.PreviewServer>;
-
-	server.bindCLIShortcuts({
-		customShortcuts: [extendTunnelExpiryShortcut],
+		customShortcuts: [
+			printBindingsShortcut,
+			openExplorerShortcut,
+			toggleTunnelShortcut,
+			extendTunnelExpiryShortcut,
+		],
 	});
 }

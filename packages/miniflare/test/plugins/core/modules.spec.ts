@@ -339,6 +339,44 @@ If you're trying to import an npm package, you'll need to bundle your Worker fir
 		/^Unable to resolve "index\.mjs" dependency "node:assert": no matching module rules\.\nIf you're trying to import a Node\.js built-in module, or an npm package that uses Node\.js built-ins, you'll either need to:/
 	);
 });
+test("Miniflare: parses scripts containing `using` declarations", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		compatibilityDate: "2023-08-01",
+		script: `export default {
+  async fetch() {
+    using handle = { [Symbol.dispose]() {} };
+    void handle;
+    return new Response("using parsed successfully");
+  }
+};`,
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("using parsed successfully");
+});
+test("Miniflare: parses scripts containing `await using` declarations", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		compatibilityDate: "2023-08-01",
+		script: `export default {
+  async fetch() {
+    await using handle = { async [Symbol.asyncDispose]() {} };
+    void handle;
+    return new Response("await using parsed successfully");
+  }
+};`,
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("await using parsed successfully");
+});
 test("Miniflare: parses source phase imports without error", async ({
 	expect,
 }) => {

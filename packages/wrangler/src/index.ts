@@ -25,8 +25,21 @@ import { aiSearchSearchCommand } from "./ai-search/search";
 import { aiSearchStatsCommand } from "./ai-search/stats";
 import { aiSearchUpdateCommand } from "./ai-search/update";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
-import { aiModelsCommand } from "./ai/listCatalog";
+import { aiModelsCommand, aiModelsListCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
+import { aiModelsSchemaCommand } from "./ai/modelSchema";
+import {
+	artifactsNamespace,
+	artifactsNamespacesGetCommand,
+	artifactsNamespacesListCommand,
+	artifactsNamespacesNamespace,
+	artifactsReposCreateCommand,
+	artifactsReposDeleteCommand,
+	artifactsReposGetCommand,
+	artifactsReposIssueTokenCommand,
+	artifactsReposListCommand,
+	artifactsReposNamespace,
+} from "./artifacts";
 import {
 	browserCloseCommand,
 	browserCreateCommand,
@@ -524,6 +537,12 @@ export function createCLIParser(argv: string[]) {
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		"install-skills": {
+			describe:
+				"Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
+			type: "boolean",
+			default: false,
+		},
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
@@ -600,7 +619,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "env-file", "help", "version"],
+		["config", "cwd", "env", "env-file", "help", "install-skills", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 
@@ -963,6 +982,50 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler kv bulk delete", definition: kvBulkDeleteCommand },
 	]);
 	registry.registerNamespace("kv");
+
+	registry.define([
+		{
+			command: "wrangler artifacts",
+			definition: artifactsNamespace,
+		},
+		{
+			command: "wrangler artifacts namespaces",
+			definition: artifactsNamespacesNamespace,
+		},
+		{
+			command: "wrangler artifacts namespaces list",
+			definition: artifactsNamespacesListCommand,
+		},
+		{
+			command: "wrangler artifacts namespaces get",
+			definition: artifactsNamespacesGetCommand,
+		},
+		{
+			command: "wrangler artifacts repos",
+			definition: artifactsReposNamespace,
+		},
+		{
+			command: "wrangler artifacts repos create",
+			definition: artifactsReposCreateCommand,
+		},
+		{
+			command: "wrangler artifacts repos list",
+			definition: artifactsReposListCommand,
+		},
+		{
+			command: "wrangler artifacts repos get",
+			definition: artifactsReposGetCommand,
+		},
+		{
+			command: "wrangler artifacts repos delete",
+			definition: artifactsReposDeleteCommand,
+		},
+		{
+			command: "wrangler artifacts repos issue-token",
+			definition: artifactsReposIssueTokenCommand,
+		},
+	]);
+	registry.registerNamespace("artifacts");
 
 	registry.define([
 		{ command: "wrangler queues", definition: queuesNamespace },
@@ -1782,6 +1845,8 @@ export function createCLIParser(argv: string[]) {
 	registry.define([
 		{ command: "wrangler ai", definition: aiNamespace },
 		{ command: "wrangler ai models", definition: aiModelsCommand },
+		{ command: "wrangler ai models list", definition: aiModelsListCommand },
+		{ command: "wrangler ai models schema", definition: aiModelsSchemaCommand },
 		{ command: "wrangler ai finetune", definition: aiFineTuneNamespace },
 		{ command: "wrangler ai finetune list", definition: aiFineTuneListCommand },
 		{

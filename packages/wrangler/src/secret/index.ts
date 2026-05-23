@@ -9,7 +9,6 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { parse as dotenvParse } from "dotenv";
-import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { createCommand, createNamespace } from "../core/create-command";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
@@ -22,7 +21,7 @@ import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
-import type { Config, WorkerMetadataBinding } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
 
@@ -31,13 +30,6 @@ type SecretBindingUpload = {
 	name: string;
 	text: string;
 };
-
-type InheritBindingUpload = {
-	type: (WorkerMetadataBinding | SecretBindingRedacted)["type"];
-	name: string;
-};
-
-type SecretBindingRedacted = Omit<SecretBindingUpload, "text">;
 
 async function createDraftWorker({
 	config,
@@ -392,6 +384,39 @@ export const secretListCommand = createCommand({
 	},
 });
 
+async function putBulkSecrets(
+	config: Config,
+	accountId: string,
+	scriptName: string,
+	environment: string | undefined,
+	content: Record<string, string>,
+	options: {
+		isServiceEnv?: boolean;
+	} = {}
+): Promise<[unknown, Array<string>]> {
+	const isServiceEnv = options?.isServiceEnv;
+	const url = isServiceEnv
+		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${environment}/secrets-bulk`
+		: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets-bulk`;
+	// Build the merge-patch body using JSON Merge Patch (RFC 7396) semantics:
+	// - Included secrets are created or updated
+	// - Omitted secrets are left unchanged
+	// - Secrets set to null are deleted (not supported yet, to preserve previous behavior)
+	const secretEntries = Object.entries(content);
+	const secrets: Record<string, SecretBindingUpload> = {};
+	const toCreate: Array<string> = [];
+	for (const [key, value] of secretEntries) {
+		toCreate.push(key);
+		secrets[key] = { name: key, text: value, type: "secret_text" };
+	}
+	const resp = await fetchResult(config, url, {
+		method: "PATCH",
+		headers: { "Content-Type": "application/merge-patch+json" },
+		body: JSON.stringify({ secrets }),
+	});
+	return [resp, toCreate];
+}
+
 export const secretBulkCommand = createCommand({
 	metadata: {
 		description: "Upload multiple secrets for a Worker at once",
@@ -429,7 +454,7 @@ export const secretBulkCommand = createCommand({
 			);
 		}
 
-		const isServiceEnv = useServiceEnvironments(config) && args.env;
+		const isServiceEnv = useServiceEnvironments(config) && !!args.env;
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			const error = new UserError(
@@ -456,102 +481,64 @@ export const secretBulkCommand = createCommand({
 
 		const { content, secretSource, secretFormat } = result;
 
-		function getSettings() {
-			const url = isServiceEnv
-				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/settings`
-				: `/accounts/${accountId}/workers/scripts/${scriptName}/settings`;
-
-			return fetchResult<{
-				bindings: Array<WorkerMetadataBinding | SecretBindingRedacted>;
-			}>(config, url);
-		}
-
-		function putBindingsSettings(
-			bindings: Array<SecretBindingUpload | InheritBindingUpload>
-		) {
-			const url = isServiceEnv
-				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/settings`
-				: `/accounts/${accountId}/workers/scripts/${scriptName}/settings`;
-
-			const data = new FormData();
-			data.set("settings", JSON.stringify({ bindings }));
-			return fetchResult(config, url, {
-				method: "PATCH",
-				body: data,
-			});
-		}
-
-		let existingBindings: Array<WorkerMetadataBinding | SecretBindingRedacted>;
+		let created: Array<string> = [];
 		try {
-			const settings = await getSettings();
-			existingBindings = settings.bindings;
-		} catch (e) {
-			if (isWorkerNotFoundError(e)) {
-				// create a draft worker before patching
+			try {
+				[, created] = await putBulkSecrets(
+					config,
+					accountId,
+					scriptName,
+					args.env,
+					content,
+					{ isServiceEnv }
+				);
+			} catch (e) {
+				if (!isWorkerNotFoundError(e)) {
+					throw e;
+				}
+				// Worker doesn't exist yet — create a draft worker, then retry
 				const draftWorkerResult = await createDraftWorker({
 					config,
-					args: args,
+					args,
 					accountId,
 					scriptName,
 				});
 				if (draftWorkerResult === null) {
 					return;
 				}
-				existingBindings = [];
-			} else {
-				throw e;
-			}
-		}
-		// any existing bindings can be "inherited" from the previous deploy via the PATCH settings api
-		// by just providing the "name" and "type" fields for the binding.
-		// so after fetching the bindings in the script settings, we can map over and just pick out those fields
-		const inheritBindings = existingBindings
-			.filter((binding) => {
-				// secrets that currently exist for the worker but are not provided for bulk update
-				// are inherited over with other binding types
-				return (
-					binding.type !== "secret_text" || content[binding.name] === undefined
-				);
-			})
-			.map((binding) => ({ type: binding.type, name: binding.name }));
-		// secrets to upload are provided as bindings in their full form
-		// so when we PATCH, we patch in [...current bindings, ...updated / new secrets]
-		const upsertBindings: Array<SecretBindingUpload> = Object.entries(
-			content
-		).map(([key, value]) => {
-			return {
-				type: "secret_text",
-				name: key,
-				text: value,
-			};
-		});
-		try {
-			await putBindingsSettings(inheritBindings.concat(upsertBindings));
-			for (const upsertedBinding of upsertBindings) {
-				logger.log(
-					`✨ Successfully created secret for key: ${upsertedBinding.name}`
+				[, created] = await putBulkSecrets(
+					config,
+					accountId,
+					scriptName,
+					args.env,
+					content,
+					{ isServiceEnv }
 				);
 			}
-			logger.log("");
-			logger.log("Finished processing secrets file:");
-			logger.log(`✨ ${upsertBindings.length} secrets successfully uploaded`);
-			metrics.sendMetricsEvent(
-				"create encrypted variable",
-				{
-					secretOperation: "bulk",
-					secretSource,
-					secretFormat,
-					hasEnvironment: Boolean(args.env),
-				},
-				{
-					sendMetrics: config.send_metrics,
-				}
-			);
-		} catch (err) {
+		} catch (e) {
 			logger.log("");
 			logger.log(`🚨 Secrets failed to upload`);
-			throw err;
+			throw e;
 		}
+
+		for (const key of created) {
+			logger.log(`✨ Successfully created secret for key: ${key}`);
+		}
+		logger.log("");
+		logger.log("Finished processing secrets file:");
+		logger.log(`✨ ${created.length} secrets successfully uploaded`);
+		metrics.sendMetricsEvent(
+			"create encrypted variable",
+			{
+				secretOperation: "bulk",
+				secretSource,
+				secretFormat,
+				hasEnvironment: Boolean(args.env),
+			},
+			{
+				sendMetrics: config.send_metrics,
+			}
+		);
 	},
 });
 

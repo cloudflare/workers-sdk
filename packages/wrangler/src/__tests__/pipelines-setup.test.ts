@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeAll, describe, it, vi } from "vitest";
 import {
@@ -15,7 +16,6 @@ import {
 } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Sink, Stream } from "../pipelines/types";
 import type { ExpectStatic } from "vitest";

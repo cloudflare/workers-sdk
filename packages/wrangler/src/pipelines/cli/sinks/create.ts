@@ -144,6 +144,19 @@ export const pipelinesSinksCreateCommand = createCommand({
 					{ telemetryMessage: "pipelines sinks create invalid format" }
 				);
 			}
+			// Enforce minimum interval for R2 Data Catalog to prevent compaction issues
+			if (
+				args.rollInterval !== undefined &&
+				args.rollInterval < SINK_DEFAULTS.rolling_policy.min_interval_seconds
+			) {
+				throw new CommandLineArgsError(
+					`Pipeline frequency must be at least ${SINK_DEFAULTS.rolling_policy.min_interval_seconds} seconds for R2 Data Catalog sinks to prevent compaction issues. Current value: ${args.rollInterval} seconds.`,
+					{
+						telemetryMessage:
+							"pipelines r2 data catalog interval below minimum threshold",
+					}
+				);
+			}
 		}
 	},
 	async handler(args, { config }) {

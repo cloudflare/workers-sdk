@@ -1,8 +1,7 @@
 import { fileURLToPath } from "node:url";
-import { startTunnel } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { createBuilder, preview } from "vite";
-import { afterEach, describe, onTestFinished, test, vi } from "vitest";
+import { afterEach, describe, test, vi } from "vitest";
 import { cloudflare } from "../index";
 
 vi.mock("@cloudflare/workers-utils");
@@ -38,44 +37,5 @@ describe("preview server", () => {
 		expect(disposeSpy).not.toHaveBeenCalled();
 		await previewServer.close();
 		expect(disposeSpy).toHaveBeenCalled();
-	});
-
-	test("allows quick tunnel hosts in preview without widening other hosts", async ({
-		expect,
-	}) => {
-		vi.mocked(startTunnel).mockReturnValue({
-			ready: vi.fn().mockResolvedValue({
-				publicUrl: new URL("https://example.trycloudflare.com"),
-			}),
-			extendExpiry: vi.fn(),
-			dispose: vi.fn(),
-		});
-
-		const plugin = cloudflare({
-			inspectorPort: false,
-			persistState: false,
-			tunnel: true,
-		});
-		const builder = await createBuilder({
-			root: fixturesPath,
-			logLevel: "silent",
-			plugins: [plugin],
-		});
-
-		// Build the worker
-		await builder.buildApp();
-
-		const previewServer = await preview({
-			root: fixturesPath,
-			logLevel: "silent",
-			preview: { port: 0 },
-			plugins: [plugin],
-		});
-
-		onTestFinished(() => previewServer.close());
-
-		expect(previewServer.config.preview?.allowedHosts).toEqual([
-			".trycloudflare.com",
-		]);
 	});
 });

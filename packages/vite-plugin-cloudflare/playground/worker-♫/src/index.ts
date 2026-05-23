@@ -17,6 +17,10 @@ export default {
 			return new Response(request.headers.get("Host"));
 		}
 
+		if (url.pathname.endsWith("/request-url")) {
+			return new Response(request.url);
+		}
+
 		// return the pathname if the path parameter is present to test the base path
 		if (url.searchParams.has("path")) {
 			return new Response(url.pathname);

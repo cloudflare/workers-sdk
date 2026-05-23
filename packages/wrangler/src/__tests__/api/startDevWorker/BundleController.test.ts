@@ -1,12 +1,15 @@
 import path from "node:path";
-import { normalizeString, seed } from "@cloudflare/workers-utils/test-helpers";
+import {
+	normalizeString,
+	runInTempDir,
+	seed,
+} from "@cloudflare/workers-utils/test-helpers";
 import * as esbuild from "esbuild";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
-import { runInTempDir } from "../../helpers/run-in-tmp";
 import type { StartDevWorkerOptions } from "../../../api";
 
 // Find the bundled result of a particular source file

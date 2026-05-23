@@ -92,6 +92,7 @@ export type {
 };
 
 export { printBindings as unstable_printBindings } from "./utils/print-bindings";
+export { resolveNamedTunnel as unstable_resolveNamedTunnel } from "./tunnel/client";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
 export { splitSqlQuery as unstable_splitSqlQuery } from "./d1/splitter";

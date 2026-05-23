@@ -25,7 +25,13 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { AsyncHook, Binding, File, StartDevWorkerOptions } from "./types";
+import type {
+	AsyncHook,
+	Binding,
+	File,
+	StartDevWorkerOptions,
+	Trigger,
+} from "./types";
 import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 
 async function getTextFileContents(file: File<string | Uint8Array>) {
@@ -67,6 +73,37 @@ export function getUserWorkerInnerUrlOverrides(
 			hostname: host,
 		};
 	}
+}
+
+/**
+ * Compute the zone for the outbound `CF-Worker` header. Production sets this
+ * to the zone name that owns the Worker (see
+ * https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker).
+ *
+ * Prefer an explicit `zone_name` on the first route — that's the user's
+ * unambiguous declaration of the parent zone. Otherwise fall back to
+ * `origin.hostname` (= `dev.host` if set, else the route pattern's hostname),
+ * which is the closest local approximation when we'd otherwise need an API
+ * lookup to resolve the zone.
+ *
+ * Distinct from `localUpstream` (the URL host the Worker sees in
+ * `request.url`), which always uses the pattern hostname so behaviour matches
+ * the actual route locally.
+ */
+function getZoneForCfWorkerHeader(
+	config: StartDevWorkerOptions
+): string | undefined {
+	const firstRouteTrigger = config.triggers?.find(
+		(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
+	);
+	if (
+		firstRouteTrigger &&
+		"zone_name" in firstRouteTrigger &&
+		firstRouteTrigger.zone_name
+	) {
+		return firstRouteTrigger.zone_name;
+	}
+	return config.dev?.origin?.hostname;
 }
 
 export async function convertToConfigBundle(
@@ -169,8 +206,7 @@ export async function convertToConfigBundle(
 		containerBuildId: event.config.dev?.containerBuildId,
 		containerEngine: event.config.dev.containerEngine,
 		enableContainers: event.config.dev.enableContainers ?? true,
-		// Zone for CF-Worker header - extracted from routes/host configuration
-		zone: event.config.dev?.origin?.hostname,
+		zone: getZoneForCfWorkerHeader(event.config),
 		sendMetrics: event.config.sendMetrics,
 		publicUrl: event.config.dev?.server?.port
 			? buildPublicUrl({

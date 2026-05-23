@@ -5204,6 +5204,52 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
+			it("should accept valid workflow bindings with schedule as a string", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: "*/5 * * * *",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should accept valid workflow bindings with schedule as an array of strings", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: ["*/5 * * * *", "0 9 * * 1"],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
 			it("should error if workflow bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -5281,6 +5327,130 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - "workflows[0]" bindings should, optionally, have a string "script_name" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","script_name":123,"remote":"yes"}.
 					  - "workflows[0]" bindings should, optionally, have a boolean "remote" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","script_name":123,"remote":"yes"}."
+				`);
+			});
+
+			it("should error if schedule has wrong type", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: 123,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings should, optionally, have a string or array of strings "schedule" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","schedule":123}."
+				`);
+			});
+
+			it("should error if schedule is an empty string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: "",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "schedule" field must not be an empty string."
+				`);
+			});
+
+			it("should error if schedule is an empty array", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: [],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "schedule" field must not be an empty array."
+				`);
+			});
+
+			it("should error if schedule is an array containing non-strings", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: ["*/5 * * * *", 123],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings should, optionally, have a string or array of strings "schedule" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","schedule":["*/5 * * * *",123]}."
+				`);
+			});
+
+			it("should error if schedule is an array containing empty strings", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								schedule: ["*/5 * * * *", ""],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "schedule" field must not contain empty strings."
 				`);
 			});
 
@@ -6983,6 +7153,7 @@ describe("normalizeAndValidateConfig()", () => {
 			};
 			const vars: RawConfig["vars"] = {
 				FOO: "foo",
+				BAR: "bar",
 			};
 			const durable_objects: RawConfig["durable_objects"] = {
 				bindings: [],
@@ -7052,6 +7223,72 @@ describe("normalizeAndValidateConfig()", () => {
 				    - "unsafe" exists at the top level, but not on "env.ENV1".
 				      This is not what you probably want, since "unsafe" is not inherited by environments.
 				      Please add "unsafe" to "env.ENV1"."
+			`);
+		});
+
+		it("should condense repeated environment warnings", ({ expect }) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					vars: {
+						DEV_ACCOUNT_ID: "123",
+						DEV_ACCOUNT_INTERNAL_ID: "456",
+						PRESENT: "789",
+					},
+					secrets: {
+						required: ["TOP_LEVEL_SECRET"],
+					},
+					env: {
+						staging: {
+							vars: {
+								PRESENT: "789",
+							},
+							secrets: {
+								required: ["ENV_SECRET"],
+							},
+						},
+					},
+				},
+				undefined,
+				undefined,
+				{ env: "staging" }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+
+				  - "env.staging" environment configuration
+				    - The following vars exist at the top level, but not on "env.staging.vars".
+				      This is probably not what you want, since "vars" configuration is not inherited by environments.
+				      Please add these vars to "env.staging.vars":
+				      - DEV_ACCOUNT_ID
+				      - DEV_ACCOUNT_INTERNAL_ID"
+			`);
+		});
+
+		it("should only emit one unsafe experimental warning when unsafe exists at the top level and in the environment", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					unsafe: {
+						bindings: [],
+					},
+					env: {
+						staging: {
+							unsafe: {
+								bindings: [],
+							},
+						},
+					},
+				},
+				undefined,
+				undefined,
+				{ env: "staging" }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - "unsafe" fields are experimental and may change or break at any time."
 			`);
 		});
 
@@ -7380,9 +7617,10 @@ describe("normalizeAndValidateConfig()", () => {
 						"Processing wrangler configuration:
 
 						  - "env.ENV1" environment configuration
-						    - "define.ghi" exists at the top level, but not on "env.ENV1.define".
-						      This is not what you probably want, since "define" configuration is not inherited by environments.
-						      Please add "define.ghi" to "env.ENV1".
+						    - The following define entries exist at the top level, but not on "env.ENV1.define".
+						      This is probably not what you want, since "define" configuration is not inherited by environments.
+						      Please add these entries to "env.ENV1.define":
+						      - ghi
 						    - "xyz" exists on "env.ENV1", but not on the top level.
 						      This is not what you probably want, since "define" configuration within environments can only override existing top level "define" configuration
 						      Please remove "env.ENV1.define.xyz", or add "define.xyz"."

@@ -1,12 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
 	NonDirectoryAssetsDirError,
 	NonExistentAssetsDirError,
 	getAssetsOptions,
 } from "../assets";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import type { Config } from "@cloudflare/workers-utils";
 
 /**
