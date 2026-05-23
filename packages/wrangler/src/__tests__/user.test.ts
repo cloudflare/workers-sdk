@@ -360,6 +360,29 @@ describe("User", () => {
 					`[Error: OAuth error: invalid_grant]`
 				);
 			});
+
+			it("rejects with the provider error when /oauth2/token returns 2xx with an error body", async ({
+				expect,
+			}) => {
+				// Defensive handling of the (non-standard) case where the token
+				// endpoint returns a success status but the body still carries an
+				// OAuth `error` field. The error should still be surfaced via
+				// `toErrorClass` rather than as a plain `Error`.
+				mockOAuthServerCallback("success");
+				msw.use(
+					http.post(
+						"*/oauth2/token",
+						() => HttpResponse.json({ error: "invalid_token" }),
+						{ once: true }
+					)
+				);
+
+				await expect(
+					runWrangler("login")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: OAuth error: invalid_token]`
+				);
+			});
 		});
 	});
 

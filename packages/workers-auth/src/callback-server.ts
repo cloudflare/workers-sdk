@@ -216,11 +216,17 @@ export async function getOauthToken(
 							finish(exchange);
 						});
 					} catch (err: unknown) {
-						const exchangeErr = err as ErrorOAuth2;
+						// `exchangeAuthCodeForAccessToken` can throw an `ErrorOAuth2`
+						// (for provider-side errors), or a plain `Error` (for JSON
+						// parse failures in `getJSONFromResponse`, network errors
+						// from `fetchAuthToken`, etc.). Only read the structured
+						// OAuth fields when we know we have them.
+						const exchangeErr = err as Error;
+						const isOAuthError = exchangeErr instanceof ErrorOAuth2;
 						renderErrorPage({
-							code: exchangeErr.code,
+							code: isOAuthError ? exchangeErr.code : undefined,
 							description:
-								exchangeErr.description ??
+								(isOAuthError ? exchangeErr.description : undefined) ??
 								exchangeErr.message ??
 								"Failed to exchange the authorisation code for an access token.",
 						});

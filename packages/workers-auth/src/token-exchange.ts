@@ -257,7 +257,10 @@ export async function exchangeAuthCodeForAccessToken(
 	}
 	const json = (await getJSONFromResponse(response, logger)) as TokenResponse;
 	if ("error" in json) {
-		throw new Error(json.error);
+		// The token endpoint normally returns OAuth errors via a 4xx status
+		// (handled above), but be defensive: surface a 2xx-with-error-body as
+		// a structured OAuth error too so the catch site can render the code.
+		throw toErrorClass(json.error);
 	}
 	const { access_token, expires_in, refresh_token, scope } = json;
 	state.hasAuthCodeBeenExchangedForAccessToken = true;
