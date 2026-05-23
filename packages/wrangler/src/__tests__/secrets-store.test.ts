@@ -325,6 +325,29 @@ describe("secrets-store secret commands", () => {
 				"Missing required argument: scopes"
 			`);
 		});
+
+		it("errors in creating a secret when value is longer than 1024 characters", async ({
+			expect,
+		}) => {
+			const longValue = "a".repeat(1025);
+			let err: undefined | Error;
+			try {
+				await runWrangler(
+					"secrets-store secret create " +
+						"850e0805c1084551bb46d150b5dfe414 " +
+						"--name TEST_SECRET " +
+						`--value '${longValue}' ` +
+						"--scopes 'workers' " +
+						"--comment 'wrangler secret' " +
+						"--remote"
+				);
+			} catch (e) {
+				err = e as Error;
+			}
+			expect(err?.message).toMatchInlineSnapshot(
+				`"Secret value cannot exceed 1024 characters (got 1025). The Cloudflare API rejects longer values, and a binding to such a secret will fail at deploy time."`
+			);
+		});
 	});
 
 	describe("secrets-store secret list", () => {
