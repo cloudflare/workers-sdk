@@ -7,7 +7,31 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import Cloudflare from "cloudflare";
-import { fetch, FormData, Headers, Request, Response } from "undici";
+import {
+	fetch as undiciFetch,
+	FormData as undiciFormData,
+	Headers as undiciHeaders,
+	Request as undiciRequest,
+	Response as undiciResponse,
+} from "undici";
+
+const isBun =
+	typeof (globalThis as unknown as { Bun: unknown }).Bun !== "undefined";
+
+const fetch = isBun ? globalThis.fetch : undiciFetch;
+const FormData = isBun
+	? (globalThis.FormData as typeof undiciFormData)
+	: undiciFormData;
+const Headers = isBun
+	? (globalThis.Headers as typeof undiciHeaders)
+	: undiciHeaders;
+const Request = isBun
+	? (globalThis.Request as typeof undiciRequest)
+	: undiciRequest;
+const Response = isBun
+	? (globalThis.Response as typeof undiciResponse)
+	: undiciResponse;
+
 import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
@@ -114,10 +138,26 @@ export async function performApiFetch(
 	logHeaders(headers);
 
 	logger.debugWithSanitization("INIT:", JSON.stringify({ ...init }, null, 2));
-	if (init.body instanceof FormData) {
+
+	let body = init.body;
+	if (
+		isBun &&
+		body &&
+		typeof body === "object" &&
+		body.constructor.name === "FormData" &&
+		!(body instanceof globalThis.FormData)
+	) {
+		const nativeFormData = new globalThis.FormData();
+		for (const [key, value] of (body as any).entries()) {
+			nativeFormData.append(key, value);
+		}
+		body = nativeFormData;
+	}
+
+	if (body instanceof FormData) {
 		logger.debugWithSanitization(
 			"BODY:",
-			await new Response(init.body).text(),
+			await new Response(body).text(),
 			null,
 			2
 		);
@@ -128,6 +168,7 @@ export async function performApiFetch(
 		{
 			method,
 			...init,
+			body,
 			headers,
 			signal: abortSignal,
 		}
