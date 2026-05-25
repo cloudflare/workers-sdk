@@ -1,5 +1,5 @@
-import path from "node:path";
 import { EventEmitter } from "node:events";
+import path from "node:path";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
