@@ -10,6 +10,7 @@ export interface CommonYargsOptions {
 	config: string | undefined;
 	env: string | undefined;
 	"env-file": string[] | undefined;
+	"allow-anonymous"?: boolean;
 	"experimental-provision": boolean | undefined;
 	"experimental-auto-create": boolean;
 	"install-skills": boolean;

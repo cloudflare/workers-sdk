@@ -206,6 +206,7 @@
   */
 
 import assert from "node:assert";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { webcrypto as crypto } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
@@ -222,6 +223,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import ci from "ci-info";
+import { formatDistanceToNowStrict } from "date-fns";
 import TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
@@ -230,6 +232,10 @@ import {
 	purgeConfigCaches,
 	saveToConfigCache,
 } from "../config-cache";
+import {
+	clearCachedAnonymousPreviewAccount,
+	getOrCreateAnonymousPreviewAccount,
+} from "../deploy/anonymous-account";
 import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
@@ -250,6 +256,7 @@ import {
 import { fetchAllAccounts } from "./fetch-accounts";
 import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
+import type { AnonymousPreviewAccount } from "../deploy/anonymous-account";
 import type { Account } from "./shared";
 import type {
 	ApiCredentials,
@@ -257,6 +264,58 @@ import type {
 } from "@cloudflare/workers-utils";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
+
+type AuthOverride = {
+	accountId?: string;
+	apiToken: ApiCredentials;
+};
+
+type AuthContext = {
+	allowAnonymous: boolean;
+	override?: AuthOverride;
+};
+
+const authContextStorage = new AsyncLocalStorage<AuthContext>();
+
+export function runWithAuthContext<T>(cb: () => T): T {
+	return authContextStorage.run({ allowAnonymous: false }, cb);
+}
+
+export function setAllowAnonymous(allowAnonymous: boolean): void {
+	const authContext = authContextStorage.getStore();
+	if (authContext) {
+		authContext.allowAnonymous = allowAnonymous;
+	}
+}
+
+function getAuthOverride(): AuthOverride | undefined {
+	return authContextStorage.getStore()?.override;
+}
+
+function setAuthOverride(override: AuthOverride): void {
+	const authContext = authContextStorage.getStore();
+	if (authContext) {
+		authContext.override = override;
+	}
+}
+
+function shouldAllowAnonymous(): boolean {
+	return authContextStorage.getStore()?.allowAnonymous ?? false;
+}
+
+function logAnonymousPreviewAccount(
+	anonymousPreviewAccount: AnonymousPreviewAccount,
+	cached: boolean
+): void {
+	const claimExpiresAt = new Date(anonymousPreviewAccount.claim.expiresAt);
+	logger.log("");
+	logger.log("Temporary account ready:");
+	logger.log(
+		`  Account: ${anonymousPreviewAccount.account.name} (${cached ? "reused" : "created"})`
+	);
+	logger.log(`  Claim within: ${formatDistanceToNowStrict(claimExpiresAt)}`);
+	logger.log(`  Claim URL: ${anonymousPreviewAccount.claim.url}`);
+}
 
 /**
  * Try to read API credentials from environment variables.
@@ -471,6 +530,11 @@ function readStoredAuthState(config?: UserAuthConfig): StoredAuthState {
 }
 
 export function getAPIToken(): ApiCredentials | undefined {
+	const authOverride = getAuthOverride();
+	if (authOverride) {
+		return authOverride.apiToken;
+	}
+
 	const envAuth = getAuthFromEnv();
 	if (envAuth) {
 		return envAuth;
@@ -1201,6 +1265,7 @@ export async function login(
 		refresh_token: oauth.refreshToken?.value,
 		scopes: oauth.scopes,
 	});
+	clearCachedAnonymousPreviewAccount();
 
 	logger.log(`Successfully logged in.`);
 
@@ -1212,16 +1277,16 @@ export async function login(
 /**
  * Checks to see if we need to refresh the OAuth token.
  *
- * Returns `false` when env-based credentials are present: in that case the
- * env token is what will be used for API calls, and the stored OAuth state
- * is not consulted, so its expiry is irrelevant.
+ * Returns `false` when an auth override or env-based credentials are present:
+ * in those cases that credential is what will be used for API calls, and the
+ * stored OAuth state is not consulted, so its expiry is irrelevant.
  *
  * Without this short-circuit, the presence of a stale OAuth token on disk
  * could spuriously trigger an OAuth refresh that fails and aborts the command,
- * even though a perfectly valid env-based credential is in scope.
+ * even though a perfectly valid credential is in scope.
  */
 function isRefreshNeeded(): boolean {
-	if (getAuthFromEnv()) {
+	if (getAuthOverride() || getAuthFromEnv()) {
 		return false;
 	}
 	const { accessToken } = readStoredAuthState();
@@ -1260,6 +1325,9 @@ async function refreshToken(): Promise<boolean> {
 }
 
 export async function logout(): Promise<void> {
+	// Independent of OAuth state, so clear it on every logout path.
+	const clearedAnonymous = clearCachedAnonymousPreviewAccount();
+
 	const authFromEnv = getAuthFromEnv();
 	if (authFromEnv) {
 		// Auth from env overrides any login details, so we cannot log out.
@@ -1272,7 +1340,11 @@ export async function logout(): Promise<void> {
 
 	const storedRefreshToken = readStoredAuthState().refreshToken;
 	if (!storedRefreshToken) {
-		logger.log("Not logged in, exiting...");
+		logger.log(
+			clearedAnonymous
+				? "Cleared temporary preview account."
+				: "Not logged in, exiting..."
+		);
 		return;
 	}
 
@@ -1314,6 +1386,11 @@ export function listScopes(message = "💁 Available scopes:"): void {
 export function getActiveAccountId(config: {
 	account_id?: string;
 }): string | undefined {
+	const authOverride = getAuthOverride();
+	if (authOverride?.accountId) {
+		return authOverride.accountId;
+	}
+
 	if (config.account_id) {
 		return config.account_id;
 	}
@@ -1412,8 +1489,21 @@ export async function requireAuth(
 	const loggedIn = await loginOrRefreshIfRequired(config);
 	if (!loggedIn) {
 		if (isNonInteractiveOrCI()) {
+			if (shouldAllowAnonymous()) {
+				const { account: anonymousPreviewAccount, cached } =
+					await getOrCreateAnonymousPreviewAccount();
+				setAuthOverride({
+					accountId: anonymousPreviewAccount.account.id,
+					apiToken: {
+						apiToken: anonymousPreviewAccount.account.apiToken,
+					},
+				});
+				logAnonymousPreviewAccount(anonymousPreviewAccount, cached);
+				return anonymousPreviewAccount.account.id;
+			}
+
 			throw new UserError(
-				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.",
+				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.\n\nTo continue without logging in, rerun this command with `--allow-anonymous`. Wrangler will use a temporary account and print a claim URL.",
 				{ telemetryMessage: "user auth missing api token non interactive" }
 			);
 		} else {

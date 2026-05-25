@@ -7,6 +7,12 @@ describe("experimental_getWranglerCommands", () => {
 
 		expect(commandTree).toMatchInlineSnapshot(`
 			{
+			  "allow-anonymous": {
+			    "default": false,
+			    "describe": "Create a temporary preview account when a command needs authentication in non-interactive mode",
+			    "hidden": true,
+			    "type": "boolean",
+			  },
 			  "config": {
 			    "alias": "c",
 			    "describe": "Path to Wrangler configuration file",

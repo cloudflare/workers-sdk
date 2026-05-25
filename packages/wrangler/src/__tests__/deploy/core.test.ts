@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
+import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -92,6 +93,8 @@ describe("deploy", () => {
 		mockGrantAccessToken,
 		mockDomainUsesAccess,
 	} = mockOAuthFlow();
+	const anonymousPreviewAccountUrl =
+		"https://api.cloudflare.com/client/v4/provisioning/previews";
 
 	beforeEach(() => {
 		vi.stubGlobal("setTimeout", (fn: () => void) => {
@@ -774,6 +777,52 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("still starts OAuth in interactive mode when --allow-anonymous is passed", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockDomainUsesAccess({ usesAccess: false });
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshSuccess" });
+			mockOAuthServerCallback("success");
+
+			let previewAccountRequests = 0;
+			let contentTypeHeader: string | null = null;
+			msw.use(
+				http.post(anonymousPreviewAccountUrl, async ({ request }) => {
+					previewAccountRequests += 1;
+					contentTypeHeader = request.headers.get("Content-Type");
+					return HttpResponse.json({
+						account: {
+							id: "preview-account-id",
+							name: "Preview Account Alpha",
+							type: "standard",
+							apiToken: "preview-account-token",
+							tokenId: "preview-token-id",
+							expiresAt: "2027-01-01T00:00:00.000Z",
+						},
+						claim: {
+							token: "claim-token",
+							url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+							expiresAt: "2027-01-02T00:00:00.000Z",
+						},
+					});
+				})
+			);
+
+			await expect(
+				runWrangler("deploy index.js --allow-anonymous")
+			).resolves.toBeUndefined();
+
+			expect(previewAccountRequests).toBe(0);
+			expect(contentTypeHeader).toBeNull();
+			expect(std.out).toContain("Attempting to login via OAuth...");
+			expect(std.out).not.toContain("Temporary account ready:");
+		});
+
 		describe("with an alternative auth domain", () => {
 			mockAuthDomain({ domain: "dash.staging.cloudflare.com" });
 
@@ -863,7 +912,421 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("does not create an anonymous preview account when the user is already authenticated", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeAuthConfigFile({ api_token: "cached-api-token" });
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			let previewAccountRequests = 0;
+			msw.use(
+				http.post(anonymousPreviewAccountUrl, async () => {
+					previewAccountRequests += 1;
+					return HttpResponse.json({});
+				})
+			);
+
+			await expect(
+				runWrangler("deploy index.js --allow-anonymous")
+			).resolves.toBeUndefined();
+
+			expect(previewAccountRequests).toBe(0);
+			expect(std.out).not.toContain("Temporary account ready:");
+		});
+
 		describe("non-TTY", () => {
+			it("creates an anonymous preview account in non-TTY when --allow-anonymous is passed", async ({
+				expect,
+			}) => {
+				setIsTTY(false);
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({
+					expectedAccountId: "preview-account-id",
+				});
+
+				let previewRequestBody: unknown;
+				let previewContentType: string | null = null;
+				msw.use(
+					http.get(
+						"*/accounts/preview-account-id/workers/services/:scriptName",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({
+									default_environment: {
+										script: { last_deployed_from: "wrangler" },
+									},
+								})
+							);
+						}
+					),
+					http.post(anonymousPreviewAccountUrl, async ({ request }) => {
+						previewContentType = request.headers.get("Content-Type");
+						previewRequestBody = await request.json();
+						return HttpResponse.json({
+							success: true,
+							result: {
+								account: {
+									id: "preview-account-id",
+									name: "Preview Account Alpha",
+									type: "standard",
+									apiToken: "preview-account-token",
+									tokenId: "preview-token-id",
+									expiresAt: "2027-01-01T00:00:00.000Z",
+								},
+								claim: {
+									token: "claim-token",
+									url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+									expiresAt: "2027-01-02T00:00:00.000Z",
+								},
+							},
+							errors: [],
+							messages: [],
+						});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --allow-anonymous")
+				).resolves.toBeUndefined();
+
+				const globalAnonymousAccountPath = path.join(
+					getGlobalWranglerConfigPath(),
+					"wrangler-anonymous-account.json"
+				);
+				const localAnonymousAccountPath = path.join(
+					process.cwd(),
+					".wrangler",
+					"cache",
+					"wrangler-anonymous-account.json"
+				);
+
+				expect(previewContentType).toBe("application/json");
+				expect(previewRequestBody).toEqual({
+					termsOfService: "https://www.cloudflare.com/terms/",
+					acceptTermsOfService: "yes",
+				});
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).not.toContain("Attempting to login via OAuth...");
+				expect(std.out).toContain("Temporary account ready:");
+				expect(std.out).toContain("Account: Preview Account Alpha (created)");
+				expect(std.out).toContain("Claim within:");
+				expect(fs.existsSync(globalAnonymousAccountPath)).toBe(true);
+				expect(fs.existsSync(localAnonymousAccountPath)).toBe(false);
+				expect(
+					JSON.parse(fs.readFileSync(globalAnonymousAccountPath, "utf-8"))
+				).toMatchObject({
+					anonymousPreviewAccount: {
+						account: {
+							id: "preview-account-id",
+							apiToken: "preview-account-token",
+						},
+						claim: {
+							url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+						},
+					},
+				});
+			});
+
+			it("deploys anonymously even when an expired OAuth token that cannot refresh is on disk", async ({
+				expect,
+			}) => {
+				setIsTTY(false);
+				// A stale stored OAuth token whose refresh fails must not hijack the
+				// anonymous override and abort the deploy with "Not logged in".
+				writeAuthConfigFile({
+					oauth_token: "expired-token",
+					refresh_token: "expired-refresh-token",
+					expiration_time: new Date(Date.now() - 1000).toISOString(),
+				});
+				mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshError" });
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({
+					expectedAccountId: "preview-account-id",
+				});
+
+				msw.use(
+					http.get(
+						"*/accounts/preview-account-id/workers/services/:scriptName",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({
+									default_environment: {
+										script: { last_deployed_from: "wrangler" },
+									},
+								})
+							);
+						}
+					),
+					http.post(anonymousPreviewAccountUrl, async () => {
+						return HttpResponse.json({
+							success: true,
+							result: {
+								account: {
+									id: "preview-account-id",
+									name: "Preview Account Alpha",
+									type: "standard",
+									apiToken: "preview-account-token",
+									tokenId: "preview-token-id",
+									expiresAt: "2027-01-01T00:00:00.000Z",
+								},
+								claim: {
+									token: "claim-token",
+									url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+									expiresAt: "2027-01-02T00:00:00.000Z",
+								},
+							},
+							errors: [],
+							messages: [],
+						});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --allow-anonymous")
+				).resolves.toBeUndefined();
+
+				expect(std.out).toContain("Temporary account ready:");
+				expect(std.err).not.toContain("Not logged in");
+			});
+
+			it("provisions the preview account against the staging API and caches it per-environment", async ({
+				expect,
+			}) => {
+				vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
+				setIsTTY(false);
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({
+					expectedAccountId: "preview-account-id",
+					expectedBaseUrl: "api.staging.cloudflare.com",
+				});
+
+				let stagingPreviewRequests = 0;
+				msw.use(
+					http.get(
+						"*/accounts/preview-account-id/workers/services/:scriptName",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({
+									default_environment: {
+										script: { last_deployed_from: "wrangler" },
+									},
+								})
+							);
+						}
+					),
+					http.post(
+						"https://api.staging.cloudflare.com/client/v4/provisioning/previews",
+						async () => {
+							stagingPreviewRequests++;
+							return HttpResponse.json({
+								success: true,
+								result: {
+									account: {
+										id: "preview-account-id",
+										name: "Preview Account Alpha",
+										type: "standard",
+										apiToken: "preview-account-token",
+										tokenId: "preview-token-id",
+										expiresAt: "2027-01-01T00:00:00.000Z",
+									},
+									claim: {
+										token: "claim-token",
+										url: "https://dash.staging.cloudflare.com/claim-preview?claimToken=claim-token",
+										expiresAt: "2027-01-02T00:00:00.000Z",
+									},
+								},
+								errors: [],
+								messages: [],
+							});
+						}
+					)
+				);
+
+				await expect(
+					runWrangler("deploy index.js --allow-anonymous")
+				).resolves.toBeUndefined();
+
+				const stagingAnonymousAccountPath = path.join(
+					getGlobalWranglerConfigPath(),
+					"wrangler-anonymous-account.staging.json"
+				);
+				const productionAnonymousAccountPath = path.join(
+					getGlobalWranglerConfigPath(),
+					"wrangler-anonymous-account.json"
+				);
+
+				expect(stagingPreviewRequests).toBe(1);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toContain("Temporary account ready:");
+				expect(std.out).toContain("Account: Preview Account Alpha (created)");
+				expect(fs.existsSync(stagingAnonymousAccountPath)).toBe(true);
+				expect(fs.existsSync(productionAnonymousAccountPath)).toBe(false);
+			});
+
+			it("reuses a cached anonymous preview account for later anonymous deploys", async ({
+				expect,
+			}) => {
+				setIsTTY(false);
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({
+					expectedAccountId: "preview-account-id",
+				});
+
+				let previewAccountRequests = 0;
+				msw.use(
+					http.get(
+						"*/accounts/preview-account-id/workers/services/:scriptName",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({
+									default_environment: {
+										script: { last_deployed_from: "wrangler" },
+									},
+								})
+							);
+						}
+					),
+					http.get(
+						"*/accounts/preview-account-id/workers/scripts/:scriptName/subdomain",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({ enabled: true, previews_enabled: true })
+							);
+						}
+					),
+					http.post(
+						"*/accounts/preview-account-id/workers/scripts/:scriptName/subdomain",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({ enabled: true, previews_enabled: true })
+							);
+						}
+					),
+					http.get(
+						"*/accounts/preview-account-id/workers/scripts/:scriptName/deployments",
+						() => {
+							return HttpResponse.json(createFetchResult({ deployments: [] }));
+						}
+					),
+					http.post(anonymousPreviewAccountUrl, async () => {
+						previewAccountRequests += 1;
+						return HttpResponse.json({
+							account: {
+								id: "preview-account-id",
+								name: "Preview Account Alpha",
+								type: "standard",
+								apiToken: "preview-account-token",
+								tokenId: "preview-token-id",
+								expiresAt: "2027-01-01T00:00:00.000Z",
+							},
+							claim: {
+								token: "claim-token",
+								url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+								expiresAt: "2027-01-02T00:00:00.000Z",
+							},
+						});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --allow-anonymous")
+				).resolves.toBeUndefined();
+				await expect(
+					runWrangler("deploy index.js --allow-anonymous")
+				).resolves.toBeUndefined();
+
+				expect(previewAccountRequests).toBe(1);
+				expect(std.out).toContain("Temporary account ready:");
+				expect(std.out).toContain("Account: Preview Account Alpha (reused)");
+			});
+
+			it("treats a malformed anonymous preview account cache as a miss and refetches", async ({
+				expect,
+			}) => {
+				setIsTTY(false);
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({
+					expectedAccountId: "preview-account-id",
+				});
+
+				// Plant a cache file that satisfies the top-level shape check but
+				// is missing the nested `account` and `claim` objects. Prior to
+				// the optional-chaining fix this crashed with a TypeError when
+				// reading `.account.expiresAt`.
+				const cachePath = path.join(
+					getGlobalWranglerConfigPath(),
+					"wrangler-anonymous-account.json"
+				);
+				fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+				fs.writeFileSync(
+					cachePath,
+					JSON.stringify({ anonymousPreviewAccount: {} })
+				);
+
+				let previewAccountRequests = 0;
+				msw.use(
+					http.get(
+						"*/accounts/preview-account-id/workers/services/:scriptName",
+						() => {
+							return HttpResponse.json(
+								createFetchResult({
+									default_environment: {
+										script: { last_deployed_from: "wrangler" },
+									},
+								})
+							);
+						}
+					),
+					http.post(anonymousPreviewAccountUrl, async () => {
+						previewAccountRequests += 1;
+						return HttpResponse.json({
+							account: {
+								id: "preview-account-id",
+								name: "Preview Account Alpha",
+								type: "standard",
+								apiToken: "preview-account-token",
+								tokenId: "preview-token-id",
+								expiresAt: "2027-01-01T00:00:00.000Z",
+							},
+							claim: {
+								token: "claim-token",
+								url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+								expiresAt: "2027-01-02T00:00:00.000Z",
+							},
+						});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --allow-anonymous")
+				).resolves.toBeUndefined();
+
+				expect(previewAccountRequests).toBe(1);
+				expect(std.out).toContain("Account: Preview Account Alpha (created)");
+				expect(JSON.parse(fs.readFileSync(cachePath, "utf-8"))).toMatchObject({
+					anonymousPreviewAccount: {
+						account: { id: "preview-account-id" },
+						claim: {
+							url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+						},
+					},
+				});
+			});
+
 			it("should not throw an error in non-TTY if 'CLOUDFLARE_API_TOKEN' & 'account_id' are in scope", async ({
 				expect,
 			}) => {
@@ -1005,12 +1468,38 @@ describe("deploy", () => {
 
 				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
 
-				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mIn a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.[0m
-
-			          "
-		        `);
+				expect(std.err).toContain(
+					"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable"
+				);
+				expect(std.err).toContain(
+					"To continue without logging in, rerun this command with"
+				);
+				expect(std.err).toContain("--allow-anonymous");
 			});
+
+			it("should fail clearly if the anonymous preview account request fails", async ({
+				expect,
+			}) => {
+				setIsTTY(false);
+				writeWranglerConfig();
+				writeWorkerSource();
+
+				msw.use(
+					http.post(anonymousPreviewAccountUrl, async () => {
+						return new HttpResponse(null, {
+							status: 500,
+							statusText: "Internal Server Error",
+						});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --allow-anonymous")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Failed to create an anonymous preview account (500 Internal Server Error).]`
+				);
+			});
+
 			it("should throw error with no account ID provided and no members retrieved", async ({
 				expect,
 			}) => {

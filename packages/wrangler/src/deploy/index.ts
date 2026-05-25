@@ -150,8 +150,6 @@ export const deployCommand = createCommand({
 		const cliDefines = collectKeyValues(args.define);
 		const cliAlias = collectKeyValues(args.alias);
 
-		const accountId = args.dryRun ? undefined : await requireAuth(config);
-
 		const siteAssetPaths = getSiteAssetPaths(
 			config,
 			args.site,
@@ -178,6 +176,8 @@ export const deployCommand = createCommand({
 				{ telemetryMessage: "deploy command missing worker name" }
 			);
 		}
+
+		const accountId = args.dryRun ? undefined : await requireAuth(config);
 
 		if (!args.dryRun) {
 			assert(accountId, "Missing account ID");
