@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import { vi, describe, it, beforeEach } from "vitest";
-import type openInBrowserDefault from "../open-in-browser";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import type openInBrowserDefault from "../open-in-browser";
 
 // Mock the `open` package so we don't actually launch a browser during tests.
 // We control what it returns or throws per-test.
