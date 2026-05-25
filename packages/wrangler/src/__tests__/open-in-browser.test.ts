@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 import { vi, describe, it, beforeEach } from "vitest";
+import type openInBrowserDefault from "../open-in-browser";
 import { mockConsoleMethods } from "./helpers/mock-console";
 
 // Mock the `open` package so we don't actually launch a browser during tests.
@@ -11,7 +12,7 @@ describe("openInBrowser", () => {
 
 	// Import after the mock is set up so we get the real openInBrowser
 	// (the global setup mocks the default export but here we test the real impl).
-	let openInBrowser: typeof import("../open-in-browser").default;
+	let openInBrowser: typeof openInBrowserDefault;
 	let mockOpen: ReturnType<typeof vi.fn>;
 
 	beforeEach(async () => {
@@ -21,10 +22,9 @@ describe("openInBrowser", () => {
 
 		// Use vi.importActual to bypass the global vi.mock("../open-in-browser")
 		// that the vitest.setup.ts installs — we want the real implementation here.
-		const mod =
-			await vi.importActual<typeof import("../open-in-browser")>(
-				"../open-in-browser"
-			);
+		const mod = (await vi.importActual("../open-in-browser")) as {
+			default: typeof openInBrowserDefault;
+		};
 		openInBrowser = mod.default;
 	});
 
