@@ -1145,22 +1145,20 @@ function validateRoutes(
 	);
 
 	if (
+		topLevelEnv !== undefined &&
 		envName !== undefined &&
-		rawEnv.routes === undefined &&
-		topLevelEnv?.routes?.some(
-			(r) => typeof r === "object" && r !== null && r.custom_domain === true
-		)
+		rawEnv.routes === undefined
 	) {
-		const customDomains = (topLevelEnv.routes ?? [])
-			.filter(
-				(r): r is CustomDomainRoute =>
-					typeof r === "object" && r !== null && r.custom_domain === true
-			)
-			.map((r) => r.pattern)
-			.join(", ");
-		diagnostics.warnings.push(
-			`The "env.${envName}" environment inherits the top-level \`routes\` configuration, which includes the custom domain(s): ${customDomains}. Deploying this environment will reassign these custom domains away from the top-level Worker. Add \`"routes": []\` to "env.${envName}" to prevent inheritance.`
+		const customDomainRoutes = topLevelEnv.routes?.filter(
+			(r): r is CustomDomainRoute =>
+				typeof r === "object" && r !== null && r.custom_domain === true
 		);
+		if (customDomainRoutes && customDomainRoutes.length > 0) {
+			const customDomains = customDomainRoutes.map((r) => r.pattern).join(", ");
+			diagnostics.warnings.push(
+				`The "env.${envName}" environment inherits the top-level \`routes\` configuration, which includes the custom domain(s): ${customDomains}. Deploying this environment will reassign these custom domains away from the top-level Worker. Add \`"routes": []\` to "env.${envName}" to prevent inheritance.`
+			);
+		}
 	}
 
 	return result;
