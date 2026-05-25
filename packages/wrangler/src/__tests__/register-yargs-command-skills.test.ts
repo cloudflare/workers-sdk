@@ -44,4 +44,14 @@ describe("register-yargs-command skills integration", () => {
 
 		expect(maybeInstallCloudflareSkillsGlobally).toHaveBeenCalledWith(true);
 	});
+
+	test("does not call maybeInstallCloudflareSkillsGlobally for `wrangler complete`", async ({
+		expect,
+	}) => {
+		// `wrangler complete zsh` output is captured by `eval "$(wrangler complete zsh)"`.
+		// The interactive skills prompt must not appear in that output.
+		await runWrangler("complete zsh").catch(() => {});
+
+		expect(maybeInstallCloudflareSkillsGlobally).not.toHaveBeenCalled();
+	});
 });

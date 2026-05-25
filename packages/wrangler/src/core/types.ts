@@ -202,6 +202,14 @@ export type CommandDefinition<
 		 * @default true
 		 */
 		sendMetrics?: boolean;
+
+		/**
+		 * Skip the AI coding agent skills installation prompt for this command.
+		 * Set to `true` for commands whose stdout is captured by the shell (e.g. `complete`),
+		 * where interactive prompts would corrupt the output.
+		 * @default false
+		 */
+		skipSkillsPrompt?: boolean;
 	};
 
 	/**
