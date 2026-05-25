@@ -798,11 +798,11 @@ export function buildMiniflareBindingOptions(
 							{ telemetryMessage: "workflow limits on external script" }
 						);
 					}
-					if (workflow.schedule) {
+					if (workflow.schedules) {
 						throw new UserError(
-							`Workflow "${workflow.name}" has "schedule" configured but references external script "${workflow.script_name}". ` +
-								`Configure schedule on the worker that defines the workflow.`,
-							{ telemetryMessage: "workflow schedule on external script" }
+							`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
+								`Configure schedules on the worker that defines the workflow.`,
+							{ telemetryMessage: "workflow schedules on external script" }
 						);
 					}
 				}
