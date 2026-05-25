@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getGlobalWranglerConfigPath,
@@ -95,6 +97,48 @@ describe("User", () => {
 				expiration_time: expect.any(String),
 				scopes: ["account:read"],
 			});
+		});
+
+		it("should clear the cached anonymous preview account when logging in", async ({
+			expect,
+		}) => {
+			// Resolve the path inside the test so it picks up the HOME/XDG_CONFIG_HOME
+			// stubs set by runInTempDir's beforeEach, rather than the real homedir.
+			const anonymousAccountConfigPath = path.join(
+				getGlobalWranglerConfigPath(),
+				"wrangler-anonymous-account.json"
+			);
+
+			mockOAuthServerCallback("success");
+
+			fs.mkdirSync(path.dirname(anonymousAccountConfigPath), {
+				recursive: true,
+			});
+			fs.writeFileSync(
+				anonymousAccountConfigPath,
+				JSON.stringify({ anonymousPreviewAccount: { account: {}, claim: {} } })
+			);
+
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () => {
+						return HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			expect(fs.existsSync(anonymousAccountConfigPath)).toBe(true);
+
+			await runWrangler("login");
+
+			expect(fs.existsSync(anonymousAccountConfigPath)).toBe(false);
 		});
 
 		it("should login a user when `wrangler login` is run with an ip address for custom callback-host", async ({
@@ -307,7 +351,9 @@ describe("User", () => {
 		await expect(
 			requireAuth({} as Config)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.]`
+			`[Error: In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.
+
+To continue without logging in, rerun this command with \`--allow-anonymous\`. Wrangler will use a temporary account and print a claim URL.]`
 		);
 	});
 

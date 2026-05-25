@@ -418,6 +418,7 @@ import { tunnelListCommand } from "./tunnel/list";
 import { tunnelQuickStartCommand } from "./tunnel/quick-start";
 import { tunnelRunCommand } from "./tunnel/run";
 import { typesCommand } from "./type-generation";
+import { runWithAuthContext, setAllowAnonymous } from "./user";
 import {
 	authNamespace,
 	authTokenCommand,
@@ -522,6 +523,13 @@ export function createCLIParser(argv: string[]) {
 			type: "string",
 			array: true,
 			requiresArg: true,
+		},
+		"allow-anonymous": {
+			describe:
+				"Create a temporary preview account when a command needs authentication in non-interactive mode",
+			type: "boolean",
+			default: false,
+			hidden: true,
 		},
 		"experimental-provision": {
 			describe: `Experimental: Enable automatic resource provisioning`,
@@ -2335,6 +2343,7 @@ export async function main(argv: string[]): Promise<void> {
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
 		}
+		setAllowAnonymous(args.allowAnonymous ?? false);
 		// Also set the CLI package log level to match
 		setLogLevel(logger.loggerLevel);
 
@@ -2357,7 +2366,9 @@ export async function main(argv: string[]): Promise<void> {
 
 	let cliHandlerThrew = false;
 	try {
-		await wrangler.parse();
+		await runWithAuthContext(async () => {
+			await wrangler.parse();
+		});
 	} catch (e) {
 		cliHandlerThrew = true;
 

@@ -33,7 +33,9 @@ describe("execute", () => {
 		await expect(
 			runWrangler("d1 execute db --command 'select 1;' --remote")
 		).rejects.toThrowError(
-			`In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.`
+			`In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.
+
+To continue without logging in, rerun this command with \`--allow-anonymous\`. Wrangler will use a temporary account and print a claim URL.`
 		);
 	});
 

@@ -319,8 +319,11 @@ export const pagesDownloadConfigCommand = createCommand({
 		const projectConfig = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId =
-			getCloudflareAccountIdFromEnv() ?? (await requireAuth(projectConfig));
+		const envAccountId = getCloudflareAccountIdFromEnv();
+		const accountId = await requireAuth({
+			...projectConfig,
+			...(envAccountId ? { account_id: envAccountId } : {}),
+		});
 
 		projectName ??= projectConfig.project_name;
 

@@ -32,6 +32,8 @@ describe("versions upload", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 	const assertApiRequest = makeApiRequestAsserter(std);
+	const anonymousPreviewAccountUrl =
+		"https://api.cloudflare.com/client/v4/provisioning/previews";
 
 	function mockGetScript(result?: unknown) {
 		msw.use(
@@ -128,6 +130,55 @@ describe("versions upload", () => {
 			await toString(formBody.get("metadata"))
 		) as WorkerMetadata;
 	}
+
+	describe("with --allow-anonymous", () => {
+		mockAccountId({ accountId: null });
+		mockApiToken({ apiToken: null });
+
+		test("should create a temporary account for non-interactive uploads", async ({
+			expect,
+		}) => {
+			let previewAccountRequests = 0;
+			msw.use(
+				http.post(anonymousPreviewAccountUrl, async () => {
+					previewAccountRequests += 1;
+					return HttpResponse.json({
+						account: {
+							id: "preview-account-id",
+							name: "Preview Account Alpha",
+							type: "standard",
+							apiToken: "preview-account-token",
+							tokenId: "preview-token-id",
+							expiresAt: "2027-01-01T00:00:00.000Z",
+						},
+						claim: {
+							token: "claim-token",
+							url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+							expiresAt: "2027-01-02T00:00:00.000Z",
+						},
+					});
+				})
+			);
+
+			mockGetScript();
+			mockUploadVersion(false, 0);
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			writeWorkerSource();
+			setIsTTY(false);
+
+			await expect(
+				runWrangler("versions upload --allow-anonymous")
+			).resolves.toBeUndefined();
+
+			expect(previewAccountRequests).toBe(1);
+			expect(std.out).toContain("Temporary account ready:");
+			expect(std.out).toContain("Account: Preview Account Alpha (created)");
+			expect(std.out).toContain("Uploaded test-name");
+		});
+	});
 
 	test("should print bindings & startup time on versions upload", async () => {
 		mockGetScript();
