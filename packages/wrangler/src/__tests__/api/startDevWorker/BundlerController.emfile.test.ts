@@ -6,6 +6,7 @@ import { BundlerController } from "../../../api/startDevWorker/BundlerController
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { StartDevWorkerOptions } from "../../../api";
+import type { FSWatcher } from "chokidar";
 
 // Mock chokidar so we can simulate watcher errors without a real filesystem.
 vi.mock("chokidar");
@@ -66,7 +67,9 @@ describe("BundlerController — assets watcher EMFILE handling", () => {
 				close: ReturnType<typeof vi.fn>;
 			};
 			fakeWatcher.close = vi.fn().mockResolvedValue(undefined);
-			vi.mocked(chokidar.watch).mockReturnValue(fakeWatcher as any);
+			vi.mocked(chokidar.watch).mockReturnValue(
+				fakeWatcher as unknown as FSWatcher
+			);
 
 			const config = configDefaults({
 				assets: {
@@ -106,7 +109,9 @@ describe("BundlerController — assets watcher EMFILE handling", () => {
 				close: ReturnType<typeof vi.fn>;
 			};
 			fakeWatcher.close = vi.fn().mockResolvedValue(undefined);
-			vi.mocked(chokidar.watch).mockReturnValue(fakeWatcher as any);
+			vi.mocked(chokidar.watch).mockReturnValue(
+				fakeWatcher as unknown as FSWatcher
+			);
 
 			const config = configDefaults({
 				assets: {
