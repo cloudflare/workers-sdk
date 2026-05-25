@@ -185,7 +185,7 @@ describe("vpc service commands", () => {
 			──────────────────
 			📋 Listing VPC services
 			┌─┬─┬─┬─┬─┬─┬─┬─┐
-			│ id │ name │ type │ ports │ host │ tunnel │ created │ modified │
+			│ id │ name │ type │ ports │ host │ network │ created │ modified │
 			├─┼─┼─┼─┼─┼─┼─┼─┤
 			│ service-uuid │ test-web-service │ http │ HTTP:80, HTTPS:443 │ web.example.com │ tunnel-y... │ 1/1/2024, 12:00:00 AM │ 1/1/2024, 12:00:00 AM │
 			└─┴─┴─┴─┴─┴─┴─┴─┘"
@@ -466,7 +466,7 @@ describe("vpc service commands", () => {
 			──────────────────
 			📋 Listing VPC services
 			┌─┬─┬─┬─┬─┬─┬─┬─┐
-			│ id │ name │ type │ ports │ host │ tunnel │ created │ modified │
+			│ id │ name │ type │ ports │ host │ network │ created │ modified │
 			├─┼─┼─┼─┼─┼─┼─┼─┤
 			│ tcp-service-uuid │ test-tcp-service │ tcp │ TCP:5432 (postgresql) │ 10.0.0.5 │ 550e8400... │ 1/1/2024, 12:00:00 AM │ 1/1/2024, 12:00:00 AM │
 			└─┴─┴─┴─┴─┴─┴─┴─┘"
@@ -811,6 +811,184 @@ describe("vpc service commands", () => {
 		).rejects.toThrow(
 			"Conflicting TCP port: --hostname includes port 3306 but --tcp-port is 5432"
 		);
+	});
+
+	it("should handle creating a TCP service with --network-id", async ({
+		expect,
+	}) => {
+		const reqProm = mockWvpcServiceCreate();
+		await runWrangler(
+			"vpc service create test-pg-vnet --type tcp --tcp-port 5432 --ipv4 10.0.0.5 --network-id cf1:network"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "host": {
+			    "ipv4": "10.0.0.5",
+			    "network": {
+			      "network_id": "cf1:network",
+			    },
+			  },
+			  "name": "test-pg-vnet",
+			  "tcp_port": 5432,
+			  "type": "tcp",
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating VPC service 'test-pg-vnet'
+			✅ Created VPC service: service-uuid
+			   Name: test-pg-vnet
+			   Type: tcp
+			   TCP Port: 5432
+			   IPv4: 10.0.0.5
+			   Network ID: cf1:network"
+		`);
+	});
+
+	it("should handle updating a service with --network-id", async ({
+		expect,
+	}) => {
+		const reqProm = mockWvpcServiceUpdate();
+		await runWrangler(
+			"vpc service update service-uuid --name test-vnet-updated --type tcp --tcp-port 5432 --ipv4 10.0.0.5 --network-id cf1:network"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "host": {
+			    "ipv4": "10.0.0.5",
+			    "network": {
+			      "network_id": "cf1:network",
+			    },
+			  },
+			  "name": "test-vnet-updated",
+			  "tcp_port": 5432,
+			  "type": "tcp",
+			}
+		`);
+	});
+
+	it("should display Network ID when service has a named network", async ({
+		expect,
+	}) => {
+		const networkService: ConnectivityService = {
+			service_id: "network-service-uuid",
+			type: ServiceType.Tcp,
+			name: "test-network-service",
+			tcp_port: 5432,
+			host: {
+				ipv4: "10.0.0.5",
+				network: { network_id: "cf1:network" },
+			},
+			created_at: "2024-01-01T00:00:00Z",
+			updated_at: "2024-01-01T00:00:00Z",
+		};
+
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/connectivity/directory/services/:serviceId",
+				() => {
+					return HttpResponse.json(createFetchResult(networkService, true));
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler("vpc service get network-service-uuid");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🔍 Getting VPC service 'network-service-uuid'
+			✅ Retrieved VPC service: network-service-uuid
+			   Name: test-network-service
+			   Type: tcp
+			   TCP Port: 5432
+			   IPv4: 10.0.0.5
+			   Network ID: cf1:network
+			   Created: 1/1/2024, 12:00:00 AM
+			   Modified: 1/1/2024, 12:00:00 AM"
+		`);
+	});
+
+	it("should list services with a named network in table", async ({
+		expect,
+	}) => {
+		const networkService: ConnectivityService = {
+			service_id: "network-service-uuid",
+			type: ServiceType.Tcp,
+			name: "test-network-service",
+			tcp_port: 5432,
+			host: {
+				ipv4: "10.0.0.5",
+				network: { network_id: "cf1:network" },
+			},
+			created_at: "2024-01-01T00:00:00Z",
+			updated_at: "2024-01-01T00:00:00Z",
+		};
+
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/connectivity/directory/services",
+				() => {
+					return HttpResponse.json(createFetchResult([networkService], true));
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler("vpc service list");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			📋 Listing VPC services
+			┌─┬─┬─┬─┬─┬─┬─┬─┐
+			│ id │ name │ type │ ports │ host │ network │ created │ modified │
+			├─┼─┼─┼─┼─┼─┼─┼─┤
+			│ network-service-uuid │ test-network-service │ tcp │ TCP:5432 │ 10.0.0.5 │ cf1:netw... │ 1/1/2024, 12:00:00 AM │ 1/1/2024, 12:00:00 AM │
+			└─┴─┴─┴─┴─┴─┴─┴─┘"
+		`);
+	});
+
+	it("should reject --network-id with --hostname", async ({ expect }) => {
+		await expect(() =>
+			runWrangler(
+				"vpc service create test-invalid --type tcp --tcp-port 5432 --hostname db.internal --network-id cf1:network"
+			)
+		).rejects.toThrow("--network-id cannot be used with --hostname");
+	});
+
+	it("should reject creation without --tunnel-id or --network-id", async ({
+		expect,
+	}) => {
+		await expect(() =>
+			runWrangler(
+				"vpc service create test-missing --type tcp --tcp-port 5432 --ipv4 10.0.0.5"
+			)
+		).rejects.toThrow("Must specify either --tunnel-id or --network-id");
+	});
+});
+
+describe("vpc routing validation", () => {
+	it("should reject tunnel and named-network routing together", ({
+		expect,
+	}) => {
+		expect(() =>
+			validateRequest({
+				name: "test-invalid",
+				type: ServiceType.Http,
+				ipv4: "10.0.0.5",
+				tunnelId: "550e8400-e29b-41d4-a716-446655440000",
+				networkId: "cf1:network",
+			})
+		).toThrow("Specify only one of --tunnel-id or --network-id");
 	});
 });
 
