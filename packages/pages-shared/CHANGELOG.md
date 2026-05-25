@@ -1,5 +1,21 @@
 # @cloudflare/pages-shared
 
+## 0.13.139
+
+### Patch Changes
+
+- Updated dependencies [[`0733688`](https://github.com/cloudflare/workers-sdk/commit/07336888e0bc82925e4023f5b72a0062f10d77b8), [`30657e1`](https://github.com/cloudflare/workers-sdk/commit/30657e1db097135d97209c3ae0cc623fc66827b9)]:
+  - miniflare@4.20260521.0
+
+## 0.13.138
+
+### Patch Changes
+
+- [#13779](https://github.com/cloudflare/workers-sdk/pull/13779) [`416857c`](https://github.com/cloudflare/workers-sdk/commit/416857cb5e7b132b995305ada0838b8aae19cc41) Thanks [@matingathani](https://github.com/matingathani)! - fix: resolve relative link hrefs against the document's `<base href>` when generating early hint Link headers
+
+- Updated dependencies [[`fa1f61f`](https://github.com/cloudflare/workers-sdk/commit/fa1f61f5c6f4b8e363eaabdc68baafa29635bacd), [`2679e05`](https://github.com/cloudflare/workers-sdk/commit/2679e057d4e3bcc9b460b7fa03a900f62e43fc94), [`7e40d98`](https://github.com/cloudflare/workers-sdk/commit/7e40d98aacd79014fb88b08cc8487909a7c4d749), [`d803737`](https://github.com/cloudflare/workers-sdk/commit/d803737b74f7cb08c6a91c64a649a96307fe9dc6), [`59cd880`](https://github.com/cloudflare/workers-sdk/commit/59cd880c559023962cb2537734a7ed511b18b269), [`e8c2031`](https://github.com/cloudflare/workers-sdk/commit/e8c2031b9ad7cec110e4310f95cf6cef72992029)]:
+  - miniflare@4.20260520.0
+
 ## 0.13.137
 
 ### Patch Changes

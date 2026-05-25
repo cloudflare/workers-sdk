@@ -193,7 +193,12 @@ export const syncAssets = async (
 				return res;
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
-					logger.info(chalk.dim(`Asset upload failed. Retrying...\n`, e));
+					logger.info(
+						chalk.dim(
+							`Asset upload failed. Retrying... ${attempts + 1} of ${MAX_UPLOAD_ATTEMPTS} attempts.\n`
+						)
+					);
+					logger.debug(e);
 					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 					await new Promise((resolvePromise) =>
 						setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)

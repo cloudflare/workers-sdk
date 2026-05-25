@@ -1,5 +1,65 @@
 # miniflare
 
+## 4.20260521.0
+
+### Patch Changes
+
+- [#13993](https://github.com/cloudflare/workers-sdk/pull/13993) [`0733688`](https://github.com/cloudflare/workers-sdk/commit/07336888e0bc82925e4023f5b72a0062f10d77b8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260520.1 | 1.20260521.1 |
+
+- [#13999](https://github.com/cloudflare/workers-sdk/pull/13999) [`30657e1`](https://github.com/cloudflare/workers-sdk/commit/30657e1db097135d97209c3ae0cc623fc66827b9) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix TCP requests failing when `outboundService` is configured
+
+  Workers using `outboundService` can now open TCP connections with `cloudflare:sockets`. Previously, TCP requests could throw an error when a custom outbound service was configured.
+
+## 4.20260520.0
+
+### Patch Changes
+
+- [#13978](https://github.com/cloudflare/workers-sdk/pull/13978) [`fa1f61f`](https://github.com/cloudflare/workers-sdk/commit/fa1f61f5c6f4b8e363eaabdc68baafa29635bacd) Thanks [@sassyconsultingllc](https://github.com/sassyconsultingllc)! - Bump `ws` from 8.18.0 to 8.20.1 to address GHSA-58qx-3vcg-4xpx
+
+  [GHSA-58qx-3vcg-4xpx](https://github.com/advisories/GHSA-58qx-3vcg-4xpx) / [CVE-2026-45736](https://www.cve.org/CVERecord?id=CVE-2026-45736) reports an uninitialized-memory disclosure in `ws@<8.20.1` when a `TypedArray` is passed as the reason argument to `WebSocket.close()`. The fix shipped in [ws@8.20.1](https://github.com/websockets/ws/commit/c0327ec15a54d701eb6ccefaa8bef328cfc03086) on 2026-05-12. This change bumps the workspace catalog entry so that `miniflare`, `wrangler`, and `@cloudflare/vite-plugin` all pick up the patched release.
+
+- [#13977](https://github.com/cloudflare/workers-sdk/pull/13977) [`2679e05`](https://github.com/cloudflare/workers-sdk/commit/2679e057d4e3bcc9b460b7fa03a900f62e43fc94) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260518.1 | 1.20260519.1 |
+
+- [#13984](https://github.com/cloudflare/workers-sdk/pull/13984) [`7e40d98`](https://github.com/cloudflare/workers-sdk/commit/7e40d98aacd79014fb88b08cc8487909a7c4d749) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260519.1 | 1.20260520.1 |
+
+- [#13912](https://github.com/cloudflare/workers-sdk/pull/13912) [`d803737`](https://github.com/cloudflare/workers-sdk/commit/d803737b74f7cb08c6a91c64a649a96307fe9dc6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix `/cdn-cgi/*` host validation incorrectly accepting subdomains of exact configured routes
+
+  Miniflare's `/cdn-cgi/*` host/origin validator was treating exact configured routes the same as wildcard configured routes, so a request whose `Host` or `Origin` hostname was a subdomain of an exact route (e.g. `sub.my-custom-site.com` for a `my-custom-site.com/*` route) was incorrectly accepted. Exact configured routes and the configured `upstream` hostname are now required to match the request hostname exactly. Subdomain matching is only applied to wildcard routes such as `*.example.com/*`. Localhost hostnames continue to be allowed as before.
+
+  This affects `wrangler dev` and local development through `@cloudflare/vite-plugin`, both of which use Miniflare under the hood.
+
+- [#13971](https://github.com/cloudflare/workers-sdk/pull/13971) [`59cd880`](https://github.com/cloudflare/workers-sdk/commit/59cd880c559023962cb2537734a7ed511b18b269) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Improve error diagnostics in the Browser Run binding worker
+
+  When the local Browser Run binding failed to reach an upstream — for example when Chrome failed to launch and miniflare's loopback `/browser/launch` endpoint returned a 500 with a stack-trace text body — the binding worker would call `response.json()` on the non-JSON body and throw an opaque `SyntaxError: Unexpected token X, "..." is not valid JSON`. The actual upstream error message (e.g. `Chrome readiness probe at ... timed out after 5000ms`) was discarded.
+
+  The binding worker now reads the response body as text first, surfaces the HTTP status and body content in the thrown error, and chains the original `SyntaxError` via `cause` when the body was a 2xx response that didn't parse as JSON. This makes both local-dev failures and CI test flakes self-diagnosing.
+
+- [#13980](https://github.com/cloudflare/workers-sdk/pull/13980) [`e8c2031`](https://github.com/cloudflare/workers-sdk/commit/e8c2031b9ad7cec110e4310f95cf6cef72992029) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Recover from corrupted `@puppeteer/browsers` cache when launching a Browser Run session
+
+  When Miniflare's local Browser Run binding launches Chrome, it calls `@puppeteer/browsers`' `install()` to ensure the binary is present. If a previous `install()` was interrupted mid-extraction (test timeout, process kill, antivirus quarantine), the cache directory can be left partially populated — the folder exists but the executable inside it is missing. `install()` then throws `The browser folder (...) exists but the executable (...) is missing` on every subsequent call within the same process and the entire test session, breaking every later Browser Run operation until the cache is manually cleared.
+
+  `launchBrowser` now catches that specific error, removes the corrupted cache directory, and retries `install()` once. If the corruption persists after cleanup, the original error is rethrown with a clearer message.
+
+  This complements [#13971](https://github.com/cloudflare/workers-sdk/pull/13971), which surfaced the original error from inside the binding worker. With that diagnostic in place and this self-healing layer, the previously-intermittent "browser folder exists but executable missing" failure mode should no longer fail an entire CI run.
+
 ## 4.20260518.0
 
 ### Minor Changes

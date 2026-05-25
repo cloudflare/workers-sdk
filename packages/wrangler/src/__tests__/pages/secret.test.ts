@@ -773,16 +773,8 @@ describe("wrangler pages secret", () => {
 			);
 
 			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				),
 				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk`,
 					({ params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						return HttpResponse.json(
@@ -800,13 +792,13 @@ describe("wrangler pages secret", () => {
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/secrets-bulk) failed.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
 				{
 				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.[0m
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/secrets-bulk) failed.[0m
 
 				  This is a helpful error [code: 1]
 

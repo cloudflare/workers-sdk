@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.21.0",
+	"version": "0.21.1",
 	"description": "Internal utility package for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-utils#readme",
 	"bugs": {
@@ -16,6 +16,7 @@
 	"files": [
 		"dist"
 	],
+	"sideEffects": false,
 	"exports": {
 		".": {
 			"browser": "./dist/browser.mjs",
@@ -40,6 +41,9 @@
 		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
+	"dependencies": {
+		"undici": "catalog:default"
+	},
 	"devDependencies": {
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
@@ -57,9 +61,16 @@
 		"tsdown": "^0.15.9",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
-		"undici": "catalog:default",
 		"vitest": "catalog:default",
 		"xdg-app-paths": "^8.3.0"
+	},
+	"peerDependencies": {
+		"vitest": "^4.1.0"
+	},
+	"peerDependenciesMeta": {
+		"vitest": {
+			"optional": true
+		}
 	},
 	"volta": {
 		"extends": "../../package.json"

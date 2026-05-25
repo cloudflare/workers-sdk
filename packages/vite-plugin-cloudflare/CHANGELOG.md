@@ -1,5 +1,50 @@
 # @cloudflare/vite-plugin
 
+## 1.38.0
+
+### Minor Changes
+
+- [#13989](https://github.com/cloudflare/workers-sdk/pull/13989) [`f598eac`](https://github.com/cloudflare/workers-sdk/commit/f598eac72bcdf838ba890bcbd100e99ee8fac17f) Thanks [@MattieTK](https://github.com/MattieTK)! - Print a QR code alongside the tunnel URL when sharing via Cloudflare Tunnel
+
+  When a tunnel is started (via `wrangler dev --tunnel` or the Vite plugin with `tunnel: true`), a scannable QR code is now printed to the terminal beneath the tunnel URL. This makes it easy to open the tunnel on a mobile device without manually copying the URL.
+
+  The QR code uses Unicode block characters for a compact representation and is generated best-effort -- if generation fails for any reason, the tunnel URL is still displayed as before.
+
+### Patch Changes
+
+- Updated dependencies [[`52e9082`](https://github.com/cloudflare/workers-sdk/commit/52e9082e32d7bffaeca92f27ab472b56964ba2bb), [`0733688`](https://github.com/cloudflare/workers-sdk/commit/07336888e0bc82925e4023f5b72a0062f10d77b8), [`fc1f7b9`](https://github.com/cloudflare/workers-sdk/commit/fc1f7b977908b78a4379d1d7b261ca7c69022ba3), [`30657e1`](https://github.com/cloudflare/workers-sdk/commit/30657e1db097135d97209c3ae0cc623fc66827b9), [`8c569c6`](https://github.com/cloudflare/workers-sdk/commit/8c569c6232588594e7a48219bbd020955f5fd5a4), [`f598eac`](https://github.com/cloudflare/workers-sdk/commit/f598eac72bcdf838ba890bcbd100e99ee8fac17f), [`3a1fbed`](https://github.com/cloudflare/workers-sdk/commit/3a1fbed5988efe03ae50cc502eff6a4785728396)]:
+  - wrangler@4.94.0
+  - miniflare@4.20260521.0
+
+## 1.37.3
+
+### Patch Changes
+
+- [#13978](https://github.com/cloudflare/workers-sdk/pull/13978) [`fa1f61f`](https://github.com/cloudflare/workers-sdk/commit/fa1f61f5c6f4b8e363eaabdc68baafa29635bacd) Thanks [@sassyconsultingllc](https://github.com/sassyconsultingllc)! - Bump `ws` from 8.18.0 to 8.20.1 to address GHSA-58qx-3vcg-4xpx
+
+  [GHSA-58qx-3vcg-4xpx](https://github.com/advisories/GHSA-58qx-3vcg-4xpx) / [CVE-2026-45736](https://www.cve.org/CVERecord?id=CVE-2026-45736) reports an uninitialized-memory disclosure in `ws@<8.20.1` when a `TypedArray` is passed as the reason argument to `WebSocket.close()`. The fix shipped in [ws@8.20.1](https://github.com/websockets/ws/commit/c0327ec15a54d701eb6ccefaa8bef328cfc03086) on 2026-05-12. This change bumps the workspace catalog entry so that `miniflare`, `wrangler`, and `@cloudflare/vite-plugin` all pick up the patched release.
+
+- [#13912](https://github.com/cloudflare/workers-sdk/pull/13912) [`d803737`](https://github.com/cloudflare/workers-sdk/commit/d803737b74f7cb08c6a91c64a649a96307fe9dc6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix `/cdn-cgi/*` host validation incorrectly accepting subdomains of exact configured routes
+
+  Miniflare's `/cdn-cgi/*` host/origin validator was treating exact configured routes the same as wildcard configured routes, so a request whose `Host` or `Origin` hostname was a subdomain of an exact route (e.g. `sub.my-custom-site.com` for a `my-custom-site.com/*` route) was incorrectly accepted. Exact configured routes and the configured `upstream` hostname are now required to match the request hostname exactly. Subdomain matching is only applied to wildcard routes such as `*.example.com/*`. Localhost hostnames continue to be allowed as before.
+
+  This affects `wrangler dev` and local development through `@cloudflare/vite-plugin`, both of which use Miniflare under the hood.
+
+- [#13919](https://github.com/cloudflare/workers-sdk/pull/13919) [`c7eab7f`](https://github.com/cloudflare/workers-sdk/commit/c7eab7f435771de716f2c59597506f6f2fcf69be) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix the outbound `CF-Worker` header reflecting the route pattern hostname instead of the parent zone, and falling back to `<worker-name>.example.com` under `vite dev`, `vitest-pool-workers`, and `getPlatformProxy`
+
+  Two related issues affected the `CF-Worker` header on outbound subrequests in local development:
+
+  1. Under `@cloudflare/vite-plugin`, `@cloudflare/vitest-pool-workers`, and `getPlatformProxy`, the header fell back to `<worker-name>.example.com` even when `routes` were configured, because `unstable_getMiniflareWorkerOptions` and the equivalent `getPlatformProxy` worker-options path did not propagate a `zone` value to Miniflare. This broke local development against services that reject unknown `CF-Worker` hosts (for example, Apple WeatherKit returns `403 Forbidden`).
+  2. Across the above paths and `wrangler dev --local`, when a route used the `zone_name` field (for example `{ pattern: "foo.example.com/*", zone_name: "example.com" }`), the header was set to the pattern's hostname (`foo.example.com`) rather than the zone name (`example.com`). Production [sets `CF-Worker` to the zone name that owns the Worker](https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker), so this was inconsistent with deployed behaviour.
+
+  Both bugs are fixed: the new `unstable_getMiniflareWorkerOptions` / `getPlatformProxy` path now propagates a `zone` derived from the first configured route, and all four local-dev paths now prefer a route's explicit `zone_name` over the pattern hostname when computing that zone. When `zone_name` isn't set, the existing best-effort behaviour is preserved — for `wrangler dev` this means `dev.host` is still honoured as a local override and the pattern hostname is used as a final fallback. Resolving the parent zone for `zone_id`-only, `custom_domain`, or plain-string routes would require an API lookup, so locally we still approximate it with the pattern hostname.
+
+  Note: `dev.host` is intentionally not consulted by the `unstable_getMiniflareWorkerOptions` / `getPlatformProxy` paths — the `dev` config block is specific to `wrangler dev`.
+
+- Updated dependencies [[`fa1f61f`](https://github.com/cloudflare/workers-sdk/commit/fa1f61f5c6f4b8e363eaabdc68baafa29635bacd), [`2679e05`](https://github.com/cloudflare/workers-sdk/commit/2679e057d4e3bcc9b460b7fa03a900f62e43fc94), [`7e40d98`](https://github.com/cloudflare/workers-sdk/commit/7e40d98aacd79014fb88b08cc8487909a7c4d749), [`adc9221`](https://github.com/cloudflare/workers-sdk/commit/adc922174cb03133d632632d6ebcd1f05b176358), [`735852d`](https://github.com/cloudflare/workers-sdk/commit/735852dc7f8641a740dff01daf5943a5d477fbe1), [`d803737`](https://github.com/cloudflare/workers-sdk/commit/d803737b74f7cb08c6a91c64a649a96307fe9dc6), [`c7eab7f`](https://github.com/cloudflare/workers-sdk/commit/c7eab7f435771de716f2c59597506f6f2fcf69be), [`e04e180`](https://github.com/cloudflare/workers-sdk/commit/e04e180d4adfe7d50db835508940e7ef7e9d9706), [`59cd880`](https://github.com/cloudflare/workers-sdk/commit/59cd880c559023962cb2537734a7ed511b18b269), [`62abf97`](https://github.com/cloudflare/workers-sdk/commit/62abf970cc9da954853856156ba6fce9bef95678), [`e8c2031`](https://github.com/cloudflare/workers-sdk/commit/e8c2031b9ad7cec110e4310f95cf6cef72992029), [`e349fe0`](https://github.com/cloudflare/workers-sdk/commit/e349fe04851f421f3bd5d6cc288a12aeef0fd521), [`da0fa8c`](https://github.com/cloudflare/workers-sdk/commit/da0fa8c977727f90b6340d72cb7169f0064b7eae), [`a5c9365`](https://github.com/cloudflare/workers-sdk/commit/a5c936553d1b9d09582222ab8426febe7862b994)]:
+  - miniflare@4.20260520.0
+  - wrangler@4.93.1
+
 ## 1.37.2
 
 ### Patch Changes

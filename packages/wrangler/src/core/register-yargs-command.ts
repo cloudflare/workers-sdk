@@ -7,6 +7,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
+import { maybeInstallCloudflareSkillsGlobally } from "../agents-skills-install";
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
@@ -137,18 +138,20 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				await printWranglerBanner();
 			}
 
-			// Suppress statusMessage when printBanner is a dynamic function that
-			// returned false (e.g. `--json` mode). When printBanner is the static
-			// boolean `false`, we preserve existing behaviour and still show
-			// status warnings — those commands opted out of the Wrangler banner,
-			// not necessarily the status message.
-			const statusMessageEnabled =
-				typeof shouldPrintBanner !== "function" || bannerEnabled;
+			await maybeInstallCloudflareSkillsGlobally(args.installSkills);
 
 			if (!getWranglerHideBanner()) {
 				if (def.metadata.deprecated) {
 					logger.warn(def.metadata.deprecatedMessage);
 				}
+
+				// Suppress statusMessage when printBanner is a dynamic function that
+				// returned false (e.g. `--json` mode). When printBanner is the static
+				// boolean `false`, we preserve existing behaviour and still show
+				// status warnings — those commands opted out of the Wrangler banner,
+				// not necessarily the status message.
+				const statusMessageEnabled =
+					typeof shouldPrintBanner !== "function" || bannerEnabled;
 
 				if (statusMessageEnabled && def.metadata.statusMessage) {
 					logger.warn(def.metadata.statusMessage);

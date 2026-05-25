@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.15.1
+
+### Patch Changes
+
+- [#13963](https://github.com/cloudflare/workers-sdk/pull/13963) [`adc9221`](https://github.com/cloudflare/workers-sdk/commit/adc922174cb03133d632632d6ebcd1f05b176358) Thanks [@gabivlj](https://github.com/gabivlj)! - Preserve sibling container image tags during local dev cleanup
+
+  Wrangler now keeps other `cloudflare-dev` image tags from the same dev session when multiple containers share a Dockerfile. Previously, duplicate-image cleanup could remove earlier container tags if Docker BuildKit produced the same image ID for each build.
+
 ## 0.15.0
 
 ### Minor Changes

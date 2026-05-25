@@ -136,6 +136,33 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      # Browser Run tests in `packages/miniflare/test/plugins/browser/index.spec.ts`
+      # and the `fixtures/browser-run` fixture use `@puppeteer/browsers` to
+      # download Chrome into the global Wrangler cache. Caching that binary
+      # across CI runs avoids ~150 MB of repeat downloads per run and reduces
+      # the surface area for the intermittent partial-extraction race that
+      # surfaces as `The browser folder (...) exists but the executable (...)
+      # is missing` (see #13971, #13980).
+      #
+      # The Browser Run fixture is skipped on Ubuntu (AppArmor), but the
+      # miniflare browser spec runs everywhere, so the cache is needed on all
+      # three OSes for `packages-and-tools` and on Windows + macOS for
+      # `fixtures`.
+      - name: Restore Chrome browser cache (Browser Run)
+        if: steps.changes.outputs.everything_but_markdown == 'true' && (matrix.suite == 'packages-and-tools' || (matrix.suite == 'fixtures' && matrix.os != 'ubuntu-latest'))
+        uses: actions/cache@v4
+        with:
+          # The Chrome version lives in
+          # `packages/miniflare/src/plugins/browser-rendering/browser-version.ts`.
+          # Bumping that constant invalidates this cache automatically via
+          # `hashFiles()` — a cache miss only triggers a fresh download, no
+          # functional impact.
+          key: chrome-${{ runner.os }}-${{ hashFiles('packages/miniflare/src/plugins/browser-rendering/browser-version.ts') }}
+          path: |
+            ~/.cache/.wrangler/chrome
+            ~/Library/Caches/.wrangler/chrome
+            ~/AppData/Local/xdg.cache/.wrangler/chrome
+
       - name: Run tests (tools only)
         # tools _only_ needs to be tested on Linux because they're only intended to run in CI
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'

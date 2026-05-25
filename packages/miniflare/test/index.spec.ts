@@ -6,6 +6,7 @@ import { once } from "node:events";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import http from "node:http";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { json, text } from "node:stream/consumers";
@@ -1112,6 +1113,72 @@ test("Miniflare: custom outbound service", async ({ expect }) => {
 		res1: "one",
 		res2: "fallback:https://example.com/2",
 	});
+});
+
+test("Miniflare: custom outbound service passes through TCP sockets", async ({
+	expect,
+}) => {
+	const tcpServer = net.createServer((socket) => {
+		socket.on("data", () => {
+			socket.write("pong");
+		});
+	});
+	const listeningPromise = once(tcpServer, "listening");
+	tcpServer.listen(0, "127.0.0.1");
+
+	await listeningPromise;
+
+	const address = tcpServer.address();
+	assert(typeof address === "object" && address !== null);
+
+	const mf = new Miniflare({
+		modules: true,
+		compatibilityDate: "2026-05-20",
+		compatibilityFlags: ["nodejs_compat"],
+		script: `
+			import { connect } from "cloudflare:sockets";
+
+			export default {
+				async fetch() {
+				    const response = await fetch("https://example.com/path?query=1");
+					const fetchBody = await response.text();
+					const socket = connect({ hostname: "127.0.0.1", port: ${address.port} });
+					const writer = socket.writable.getWriter();
+					await writer.write(new TextEncoder().encode("ping"));
+					const reader = socket.readable.getReader();
+					const { value } = await reader.read();
+					writer.releaseLock();
+					reader.releaseLock();
+					socket.close();
+
+					return Response.json({
+						fetchBody,
+						socketBody: new TextDecoder().decode(value),
+					});
+				}
+			};
+		`,
+		outboundService(request) {
+			return new Response(`intercepted:${request.url}`);
+		},
+	});
+	useDispose(mf);
+
+	try {
+		const response = await mf.dispatchFetch("http://localhost");
+		const body = await response.json();
+		expect({ status: response.status, body }).toEqual({
+			status: 200,
+			body: {
+				fetchBody: "intercepted:https://example.com/path?query=1",
+				socketBody: "pong",
+			},
+		});
+	} finally {
+		await new Promise<void>((resolve, reject) => {
+			tcpServer.close((error) => (error ? reject(error) : resolve()));
+		});
+	}
 });
 
 test("Miniflare: can send GET request with body", async ({ expect }) => {
