@@ -2,7 +2,7 @@
 "wrangler": patch
 ---
 
-fix: gracefully handle EMFILE error when assets directory exceeds OS watcher limit
+Gracefully handle EMFILE error when assets directory exceeds OS watcher limit
 
 Previously, when `wrangler dev` was pointed at an assets directory with more than ~4,096 subdirectories, the chokidar file watcher threw an `EMFILE: too many open files` error that was not caught, causing an infinite error loop that made the dev server unresponsive.
 
