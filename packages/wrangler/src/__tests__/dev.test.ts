@@ -1931,7 +1931,7 @@ describe.sequential("wrangler dev", () => {
 			expect,
 		}) => {
 			fs.writeFileSync("index.js", `export default {};`);
-			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			// eslint-disable-next-line turbo/no-undeclared-env-vars -- Test sets env var to simulate secret loaded from process.env
 			process.env.API_KEY = "from-process-env";
 			writeWranglerConfig({
 				main: "index.js",

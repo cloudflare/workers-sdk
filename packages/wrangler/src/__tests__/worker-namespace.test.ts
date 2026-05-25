@@ -1,6 +1,9 @@
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Uses expect in MSW handlers outside test callbacks
+ * TODO: remove this `expect` import
+ */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { printWranglerBanner } from "../wrangler-banner";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";

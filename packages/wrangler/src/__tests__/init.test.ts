@@ -7,7 +7,10 @@ import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Uses expect in MSW handlers outside test callbacks
+ * TODO: remove this `expect` import
+ */
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { downloadWorker } from "../init";
 import { writeMetricsConfig } from "../metrics/metrics-config";
