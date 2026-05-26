@@ -26,15 +26,16 @@ jobs:
           STATUS=$(gh api \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            /orgs/cloudflare/members/${{ github.event.comment.user.login }} \
+            "/orgs/cloudflare/members/${COMMENT_AUTHOR}" \
             --silent -i 2>/dev/null | head -1 | awk '{print $2}') || true
           if [ "$STATUS" != "204" ]; then
-            echo "User ${{ github.event.comment.user.login }} is not a member of the Cloudflare organization"
+            echo "User ${COMMENT_AUTHOR} is not a member of the Cloudflare organization"
             exit 1
           fi
-          echo "User ${{ github.event.comment.user.login }} is a Cloudflare org member"
+          echo "User ${COMMENT_AUTHOR} is a Cloudflare org member"
         env:
           GH_TOKEN: ${{ secrets.READ_ONLY_ORG_GITHUB_TOKEN }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
 
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -48,7 +49,7 @@ jobs:
           {
             DELIMITER=$(openssl rand -hex 16)
             echo "value<<$DELIMITER"
-            echo "You were invoked by @${{ github.event.comment.user.login }} on ${{ github.event.comment.html_url }}"
+            echo "You were invoked by @${COMMENT_AUTHOR} on ${COMMENT_URL}"
             echo ""
             echo "Their comment:"
             echo '```'
@@ -59,7 +60,9 @@ jobs:
             echo "$DELIMITER"
           } >> "$GITHUB_OUTPUT"
         env:
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
           COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
 
       - name: Run Bonk
         uses: ask-bonk/ask-bonk/github@c39e982defd0114385df54e72012a3fc4333c4d4

@@ -46,9 +46,10 @@ jobs:
           exit 1
 
       - name: "Checkout PR"
-        run: gh pr checkout ${{ inputs.pr-number }}
+        run: gh pr checkout "$PR_NUMBER"
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr-number }}
 
       - name: Install Dependencies
         # Defense in depth: do not pass Turbo remote cache credentials and
@@ -65,6 +66,7 @@ jobs:
           CI_OS: ${{ runner.os }}
 
       - name: Publish packages
-        run: pnpm publish -r --tag ${{ inputs.label }} --filter wrangler --filter miniflare --filter create-cloudflare
+        run: pnpm publish -r --tag "$NPM_TAG" --filter wrangler --filter miniflare --filter create-cloudflare
         env:
+          NPM_TAG: ${{ inputs.label }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}

@@ -60,6 +60,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           git push origin HEAD --force
+        env:
+          GH_PUSH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
       - name: "Create or Update Draft PR"
         run: |
@@ -97,4 +99,5 @@ jobs:
           git commit --allow-empty -m "Trigger CI for #$PR_NUM"
           git push origin HEAD
         env:
+          GH_PUSH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           PR_NUM: ${{ inputs.pr-number }}
