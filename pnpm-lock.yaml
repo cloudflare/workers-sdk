@@ -48,6 +48,9 @@ catalogs:
     playwright-chromium:
       specifier: ^1.56.1
       version: 1.56.1
+    signal-exit:
+      specifier: ^3.0.7
+      version: 3.0.7
     smol-toml:
       specifier: ^1.5.2
       version: 1.5.2
@@ -1783,6 +1786,36 @@ importers:
       yargs:
         specifier: ^17.7.2
         version: 17.7.2
+
+  packages/deploy-helpers:
+    devDependencies:
+      '@cloudflare/containers-shared':
+        specifier: workspace:*
+        version: link:../containers-shared
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
+      '@types/node':
+        specifier: ^22.10.1
+        version: 22.15.17
+      concurrently:
+        specifier: ^8.2.2
+        version: 8.2.2
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
+      tsup:
+        specifier: 8.3.0
+        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.14)(supports-color@9.2.2)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.8.1)
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vitest:
+        specifier: catalog:default
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.13(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/devprod-status-bot:
     devDependencies:
@@ -3849,6 +3882,9 @@ importers:
       '@types/node':
         specifier: ^22.10.1
         version: 22.15.17
+      '@types/signal-exit':
+        specifier: ^3.0.1
+        version: 3.0.1
       '@vitest/ui':
         specifier: catalog:default
         version: 4.1.0(vitest@4.1.0)
@@ -3867,6 +3903,9 @@ importers:
       jsonc-parser:
         specifier: catalog:default
         version: 3.2.0
+      signal-exit:
+        specifier: catalog:default
+        version: 3.0.7
       smol-toml:
         specifier: catalog:default
         version: 1.5.2
@@ -3971,6 +4010,9 @@ importers:
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared
+      '@cloudflare/deploy-helpers':
+        specifier: workspace:*
+        version: link:../deploy-helpers
       '@cloudflare/pages-shared':
         specifier: workspace:^
         version: link:../pages-shared
@@ -4182,7 +4224,7 @@ importers:
         specifier: ^1.8.1
         version: 1.8.1
       signal-exit:
-        specifier: ^3.0.7
+        specifier: catalog:default
         version: 3.0.7
       smol-toml:
         specifier: catalog:default

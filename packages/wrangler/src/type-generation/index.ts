@@ -31,9 +31,9 @@ import {
 import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
-import type { Entry } from "../deployment-bundle/entry";
 import type {
 	Config,
+	Entry,
 	RawConfig,
 	RawEnvironment,
 } from "@cloudflare/workers-utils";
