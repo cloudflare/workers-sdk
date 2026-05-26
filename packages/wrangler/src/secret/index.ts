@@ -529,7 +529,7 @@ export const secretBulkCommand = createCommand({
 		}
 
 		for (const key of deleted) {
-			logger.log(`✨ Successfully deleted secret for key: ${key}`);
+			logger.log(`💥 Successfully deleted secret for key: ${key}`);
 		}
 		for (const key of created) {
 			logger.log(`✨ Successfully created secret for key: ${key}`);
