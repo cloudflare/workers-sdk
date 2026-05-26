@@ -537,8 +537,18 @@ export const secretBulkCommand = createCommand({
 
 		logger.log("");
 		logger.log("Finished processing secrets file:");
-		logger.log(`✨ ${deleted.length} secrets successfully deleted`);
-		logger.log(`✨ ${created.length} secrets successfully created`);
+		const hasChanges = deleted.length + created.length > 0;
+		if (hasChanges) {
+			if (deleted.length > 0) {
+				logger.log(`💥 ${deleted.length} secrets successfully deleted`);
+			}
+			if (created.length > 0) {
+				logger.log(`✨ ${created.length} secrets successfully created`);
+			}
+		} else {
+			logger.log(`No secrets were created or deleted`);
+		}
+
 		metrics.sendMetricsEvent(
 			"create encrypted variable",
 			{

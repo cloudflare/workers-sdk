@@ -1156,7 +1156,6 @@ describe("wrangler secret", () => {
 				✨ Successfully created secret for key: password
 
 				Finished processing secrets file:
-				✨ 0 secrets successfully deleted
 				✨ 2 secrets successfully created"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1185,7 +1184,6 @@ describe("wrangler secret", () => {
 				✨ Successfully created secret for key: secret-name-2
 
 				Finished processing secrets file:
-				✨ 0 secrets successfully deleted
 				✨ 2 secrets successfully created"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1211,7 +1209,6 @@ describe("wrangler secret", () => {
 				✨ Successfully created secret for key: SECRET_NAME_2
 
 				Finished processing secrets file:
-				✨ 0 secrets successfully deleted
 				✨ 2 secrets successfully created"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1438,7 +1435,6 @@ describe("wrangler secret", () => {
 				✨ Successfully created secret for key: secret-name-4
 
 				Finished processing secrets file:
-				✨ 0 secrets successfully deleted
 				✨ 3 secrets successfully created"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1497,13 +1493,35 @@ describe("wrangler secret", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				🌀 Processing the secrets for the Worker "script-name"
-				✨ Successfully deleted secret for key: secret-to-delete
+				💥 Successfully deleted secret for key: secret-to-delete
 				✨ Successfully created secret for key: secret-to-create
 				✨ Successfully created secret for key: secret-to-update
 
 				Finished processing secrets file:
-				✨ 1 secrets successfully deleted
+				💥 1 secrets successfully deleted
 				✨ 2 secrets successfully created"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should show no-op message when bulk input has no secrets", async ({
+			expect,
+		}) => {
+			writeFileSync("secret.json", JSON.stringify({}));
+
+			mockBulkRequest(expect);
+
+			await runWrangler("secret bulk ./secret.json --name script-name");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Processing the secrets for the Worker "script-name"
+
+				Finished processing secrets file:
+				No secrets were created or deleted"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1572,7 +1590,6 @@ describe("wrangler secret", () => {
 				✨ Successfully created secret for key: secret-name-2
 
 				Finished processing secrets file:
-				✨ 0 secrets successfully deleted
 				✨ 2 secrets successfully created"
 			`);
 		});
