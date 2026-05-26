@@ -1,9 +1,17 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports -- Setup file uses dynamic imports where typeof requires value imports */
 import { PassThrough } from "node:stream";
 import chalk from "chalk";
 import { passthrough } from "msw";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { msw } from "./helpers/msw";
+import type * as agentsSkillsInstallMod from "../agents-skills-install";
+import type * as metricsConfigMod from "../metrics/metrics-config";
+import type * as packageManagerMod from "../package-manager";
+import type * as generateAuthUrlMod from "../user/generate-auth-url";
+import type * as execaMod from "execa";
+import type * as getPortMod from "get-port";
+import type * as childProcessMod from "node:child_process";
+import type * as osMod from "node:os";
+import type * as undiciMod from "undici";
 
 //turn off chalk for tests due to inconsistencies between operating systems
 chalk.level = 0;
@@ -35,7 +43,7 @@ vi.mock("ansi-escapes", () => {
 
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
 vi.mock("get-port", async (importOriginal) => {
-	const getPort = await importOriginal<typeof import("get-port")>();
+	const getPort = await importOriginal<typeof getPortMod>();
 	return {
 		__esModule: true,
 		default: vi.fn(getPort.default),
@@ -44,7 +52,7 @@ vi.mock("get-port", async (importOriginal) => {
 });
 
 vi.mock("child_process", async (importOriginal) => {
-	const cp = await importOriginal<typeof import("child_process")>();
+	const cp = await importOriginal<typeof childProcessMod>();
 	return {
 		...cp,
 		default: cp,
@@ -58,7 +66,7 @@ vi.mock("child_process", async (importOriginal) => {
 });
 
 vi.mock("os", async (importOriginal) => {
-	const os = await importOriginal<typeof import("os")>();
+	const os = await importOriginal<typeof osMod>();
 	function homedir() {
 		// Let's just grab the HOME env var and then we can override that in tests
 		return (process.env as Record<string, string>).HOME;
@@ -80,7 +88,7 @@ vi.mock("log-update", () => {
 
 vi.mock("undici", async (importOriginal) => {
 	return {
-		...(await importOriginal<typeof import("undici")>()),
+		...(await importOriginal<typeof undiciMod>()),
 		/**
 		 * Why do we have this hacky mock?
 		 *
@@ -110,7 +118,7 @@ vi.mock("undici", async (importOriginal) => {
 });
 
 vi.mock("../package-manager", async (importOriginal) => {
-	const original = await importOriginal<typeof import("../package-manager")>();
+	const original = await importOriginal<typeof packageManagerMod>();
 	const mocked = Object.fromEntries(
 		Object.entries(original).map(([key, value]) => {
 			if (typeof value === "function") {
@@ -154,9 +162,8 @@ vi.mock("../open-in-browser");
 
 // Mock the functions involved in getAuthURL so we don't take snapshots of the constantly changing URL.
 vi.mock("../user/generate-auth-url", async (importOriginal) => {
-	const OAUTH_CALLBACK_URL = (
-		await importOriginal<typeof import("../user/generate-auth-url")>()
-	).OAUTH_CALLBACK_URL;
+	const OAUTH_CALLBACK_URL = (await importOriginal<typeof generateAuthUrlMod>())
+		.OAUTH_CALLBACK_URL;
 	return {
 		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
 		OAUTH_CALLBACK_URL,
@@ -209,8 +216,7 @@ vi.mock("../user/generate-random-state", () => {
 });
 
 vi.mock("../metrics/metrics-config", async (importOriginal) => {
-	const realModule =
-		await importOriginal<typeof import("../metrics/metrics-config")>();
+	const realModule = await importOriginal<typeof metricsConfigMod>();
 	vi.spyOn(realModule, "getMetricsConfig").mockImplementation(() => {
 		return {
 			enabled: false,
@@ -222,8 +228,7 @@ vi.mock("../metrics/metrics-config", async (importOriginal) => {
 });
 
 vi.mock("../agents-skills-install", async (importOriginal) => {
-	const realModule =
-		await importOriginal<typeof import("../agents-skills-install")>();
+	const realModule = await importOriginal<typeof agentsSkillsInstallMod>();
 	vi.spyOn(
 		realModule,
 		"maybeInstallCloudflareSkillsGlobally"
@@ -248,7 +253,7 @@ vi.mock("prompts", () => {
 });
 
 vi.mock("execa", async (importOriginal) => {
-	const realModule = await importOriginal<typeof import("execa")>();
+	const realModule = await importOriginal<typeof execaMod>();
 	return {
 		...realModule,
 		execa: vi.fn((...args: Parameters<typeof realModule.execa>) => {

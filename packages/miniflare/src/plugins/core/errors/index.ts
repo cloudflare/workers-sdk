@@ -11,6 +11,7 @@ import type { Request } from "../../../http";
 import type { Log } from "../../../shared";
 import type { SourceOptions } from "../modules";
 import type { RawSourceMap, UrlAndMap } from "@cspotcode/source-map-support";
+import type * as youchMod from "youch";
 
 // Subset of core worker options that define Worker source code.
 // These are the possible cases, and corresponding reported source files in
@@ -319,8 +320,8 @@ export async function handlePrettyErrorRequest(
 	}
 
 	// Lazily import `youch` when required
-	// eslint-disable-next-line typescript/consistent-type-imports, @typescript-eslint/no-require-imports -- lazy require to avoid loading youch until an error page is needed
-	const { Youch }: typeof import("youch") = require("youch");
+	// eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy require to avoid loading youch until an error page is needed
+	const { Youch }: typeof youchMod = require("youch");
 	const youch = new Youch();
 
 	youch.defineSourceLoader(async (stackFrame) => {

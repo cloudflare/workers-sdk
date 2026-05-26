@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports -- Test file uses dynamic imports where typeof requires value imports */
 import assert from "node:assert";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
@@ -12,8 +11,6 @@ import {
 	onTestFailed,
 	vi,
 } from "vitest";
-/* eslint-enable no-restricted-imports */
-import { Binding, StartRemoteProxySessionOptions } from "../../api";
 import { unwrapHook } from "../../api/startDevWorker/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -24,7 +21,11 @@ import {
 	mswZoneHandlers,
 } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { Binding, StartRemoteProxySessionOptions } from "../../api";
+import type * as startRemoteProxySessionMod from "../../api/remoteBindings/start-remote-proxy-session";
 import type { StartDevOptions } from "../../dev";
+import type * as miniflareIndexMod from "../../dev/miniflare/index.ts";
+import type * as startDevMod from "../../dev/start-dev";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 
@@ -34,7 +35,7 @@ let stopWrangler: () => Promise<void> = async () => {
 	throw new Error("Stop worker not set");
 };
 vi.mock("../../dev/start-dev", async () => {
-	const actual = await vi.importActual<typeof import("../../dev/start-dev")>(
+	const actual = await vi.importActual<typeof startDevMod>(
 		"../../dev/start-dev"
 	);
 	return {
@@ -56,9 +57,9 @@ let proxyWorkerBindings: Record<string, Binding> | undefined;
 let sessionOptions: StartRemoteProxySessionOptions | undefined;
 let startRemoteProxySessionCallCount = 0;
 vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
-	const actual = await vi.importActual<
-		typeof import("../../api/remoteBindings/start-remote-proxy-session")
-	>("../../api/remoteBindings/start-remote-proxy-session");
+	const actual = await vi.importActual<typeof startRemoteProxySessionMod>(
+		"../../api/remoteBindings/start-remote-proxy-session"
+	);
 	return {
 		...actual,
 		async startRemoteProxySession(
@@ -82,9 +83,9 @@ vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 // The `workerOptions` variable will be assigned in the mock implementation.
 let workerOptions: Omit<WorkerOptions, "modules">[] = [];
 vi.mock("../../dev/miniflare/index.ts", async () => {
-	const actual = await vi.importActual<
-		typeof import("../../dev/miniflare/index.ts")
-	>("../../dev/miniflare/index.ts");
+	const actual = await vi.importActual<typeof miniflareIndexMod>(
+		"../../dev/miniflare/index.ts"
+	);
 	return {
 		...actual,
 		buildMiniflareOptions: vi

@@ -2,6 +2,7 @@ import assert from "node:assert";
 import url from "node:url";
 import { maybeGetFile } from "@cloudflare/workers-shared";
 import { getFreshSourceMapSupport } from "miniflare";
+import type * as sourceMapSupportMod from "@cspotcode/source-map-support";
 import type { Options } from "@cspotcode/source-map-support";
 import type Protocol from "devtools-protocol";
 
@@ -67,9 +68,7 @@ function getSourceMappingPrepareStackTrace(
 		return sourceMappingPrepareStackTrace;
 	}
 
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof requires a value import, not a type import
-	const support: typeof import("@cspotcode/source-map-support") =
-		getFreshSourceMapSupport();
+	const support: typeof sourceMapSupportMod = getFreshSourceMapSupport();
 	const originalPrepareStackTrace = Error.prepareStackTrace;
 	support.install({
 		environment: "node",

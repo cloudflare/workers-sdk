@@ -6,10 +6,10 @@ import { validate } from "../../pages/validate";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runWrangler } from "../helpers/run-wrangler";
+import type * as constantsMod from "../../pages/constants";
 
 vi.mock("../../pages/constants", async (importActual) => ({
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof requires a value import in vi.mock importActual callback
-	...(await importActual<typeof import("../../pages/constants")>()),
+	...(await importActual<typeof constantsMod>()),
 	MAX_ASSET_SIZE: 1 * 1024 * 1024,
 	MAX_ASSET_COUNT_DEFAULT: 10,
 }));

@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { parseStack } from "./callsite";
+import type * as sourceMapSupportMod from "@cspotcode/source-map-support";
 import type { Options } from "@cspotcode/source-map-support";
 
 // `source-map-support` will only modify `Error.prepareStackTrace` if this is
@@ -12,8 +13,7 @@ import type { Options } from "@cspotcode/source-map-support";
 //
 // ...load a fresh copy, by resetting then restoring the `require` cache, and
 // overriding `Symbol.for()` to return a unique symbol.
-// eslint-disable-next-line typescript/consistent-type-imports -- dynamic import type used for return type annotation
-export function getFreshSourceMapSupport(): typeof import("@cspotcode/source-map-support") {
+export function getFreshSourceMapSupport(): typeof sourceMapSupportMod {
 	const resolvedSupportPath = require.resolve("@cspotcode/source-map-support");
 
 	const originalSymbolFor = Symbol.for;

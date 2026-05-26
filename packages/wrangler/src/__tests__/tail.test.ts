@@ -30,10 +30,10 @@ import type {
 import type { RequestInit } from "undici";
 import type { ExpectStatic } from "vitest";
 import type WebSocket from "ws";
+import type * as wsMod from "ws";
 
 vi.mock("ws", async (importOriginal) => {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof requires a value import in vi.mock importOriginal callback
-	const realModule = await importOriginal<typeof import("ws")>();
+	const realModule = await importOriginal<typeof wsMod>();
 	const module = {
 		__esModule: true,
 	};

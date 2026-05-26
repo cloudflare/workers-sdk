@@ -19,16 +19,16 @@ import {
 	WRANGLER_IMPORT,
 	WranglerLongLivedCommand,
 } from "./wrangler";
+import type * as cliMod from "../../src/cli";
 import type { WranglerCommandOptions } from "./wrangler";
 import type { Awaitable } from "miniflare";
+import type * as miniflareMod from "miniflare";
 
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof requires a value import, not a type import
-export function importWrangler(): Promise<typeof import("../../src/cli")> {
+export function importWrangler(): Promise<typeof cliMod> {
 	return import(WRANGLER_IMPORT.href);
 }
 
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof requires a value import, not a type import
-export function importMiniflare(): Promise<typeof import("miniflare")> {
+export function importMiniflare(): Promise<typeof miniflareMod> {
 	return import(MINIFLARE_IMPORT.href);
 }
 
