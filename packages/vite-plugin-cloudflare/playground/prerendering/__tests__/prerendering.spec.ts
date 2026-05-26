@@ -1,21 +1,17 @@
-import { test } from "vitest";
+import { test, describe } from "vitest";
+import "./base-tests";
 import {
-	getTextResponse,
+	satisfiesMinimumViteVersion,
 	isBuild,
-	page,
-	satisfiesViteVersion,
 	viteTestUrl,
 } from "../../__test-utils__";
 
-test("returns the server rendered route at /", async ({ expect }) => {
-	expect(await getTextResponse()).toEqual("Hello world");
+describe.runIf(satisfiesMinimumViteVersion("7.0.0"))("with-ssr", () => {
+	test.runIf(isBuild)(
+		"returns a server rendered response at /hello after the build",
+		async ({ expect }) => {
+			const response = await fetch(`${viteTestUrl}/hello`);
+			expect(response.status).toBe(200);
+		}
+	);
 });
-
-test.runIf(isBuild && satisfiesViteVersion("7.0.0"))(
-	"returns the prerendered route at /prerendered after the build",
-	async ({ expect }) => {
-		await page.goto(`${viteTestUrl}/prerendered`);
-		const content = await page.textContent("h1");
-		expect(content).toBe("Pre-rendered HTML");
-	}
-);
