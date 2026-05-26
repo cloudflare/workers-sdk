@@ -14,12 +14,6 @@ import type { UserConfig } from "./types";
 
 export type {
 	Bindings,
-	Exports,
-	Triggers,
-	InferEnv,
-	InferDurableNamespaces,
-	InferMainModule,
-	UnwrapConfig,
 	// Binding types (exported for declaration file generation)
 	AiBinding,
 	AiSearchBinding,
@@ -56,15 +50,23 @@ export type {
 	WorkerBinding,
 	WorkerLoaderBinding,
 	WorkflowBinding,
-	// Trigger types (exported for declaration file generation)
+} from "./bindings";
+export { createBindings, bindings } from "./bindings";
+export type {
+	Triggers,
 	FetchTrigger,
 	QueueConsumerTrigger,
 	ScheduledTrigger,
-	// Export types (exported for declaration file generation)
-	DurableObjectExport,
-	WorkflowExport,
-} from "./config";
-export { createBindings, bindings, triggers, exports } from "./config";
+} from "./triggers";
+export { triggers } from "./triggers";
+export type { Exports, DurableObjectExport, WorkflowExport } from "./exports";
+export { exports } from "./exports";
+export type {
+	InferEnv,
+	InferDurableNamespaces,
+	InferMainModule,
+	UnwrapConfig,
+} from "./inference";
 export type { UserConfig } from "./types";
 
 // TODO: Use declaration merging in the consuming package once this package is published

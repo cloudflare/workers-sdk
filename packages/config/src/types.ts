@@ -17,8 +17,6 @@ import type {
 	D1Binding,
 	DispatchNamespaceBinding,
 	DurableObjectBinding,
-	DurableObjectExport,
-	FetchTrigger,
 	FlagshipBinding,
 	HyperdriveBinding,
 	ImagesBinding,
@@ -29,10 +27,8 @@ import type {
 	MtlsCertificateBinding,
 	PipelineBinding,
 	QueueBinding,
-	QueueConsumerTrigger,
 	R2Binding,
 	RateLimitBinding,
-	ScheduledTrigger,
 	SecretBinding,
 	SecretsStoreSecretBinding,
 	SendEmailBinding,
@@ -45,11 +41,16 @@ import type {
 	VpcServiceBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
-	WorkerModule,
-	WorkflowExport,
 	// TODO: re-enable when workflow bindings return.
 	// WorkflowBinding,
-} from "./config";
+} from "./bindings";
+import type { DurableObjectExport, WorkflowExport } from "./exports";
+import type { WorkerModule } from "./inference";
+import type {
+	FetchTrigger,
+	QueueConsumerTrigger,
+	ScheduledTrigger,
+} from "./triggers";
 import type { Json } from "./utils";
 
 /**
