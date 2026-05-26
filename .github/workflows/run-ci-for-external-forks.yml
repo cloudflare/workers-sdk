@@ -28,7 +28,6 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
-          persist-credentials: false
           token: ${{ secrets.GH_ACCESS_TOKEN }}
 
       - name: Check user for team affiliation
@@ -59,19 +58,7 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          cat > "$RUNNER_TEMP/git-askpass" <<'EOF'
-          #!/bin/sh
-          case "$1" in
-            *Username*) echo "x-access-token" ;;
-            *Password*) echo "$GH_PUSH_TOKEN" ;;
-          esac
-          EOF
-          chmod +x "$RUNNER_TEMP/git-askpass"
-          export GIT_ASKPASS="$RUNNER_TEMP/git-askpass"
-          export GIT_TERMINAL_PROMPT=0
           git push origin HEAD --force
-        env:
-          GH_PUSH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
       - name: "Create or Update Draft PR"
         run: |
@@ -107,17 +94,6 @@ jobs:
           # Push an empty commit to trigger CI workflows
           # This ensures CI runs because the PR already exists when this push happens
           git commit --allow-empty -m "Trigger CI for #$PR_NUM"
-          cat > "$RUNNER_TEMP/git-askpass" <<'EOF'
-          #!/bin/sh
-          case "$1" in
-            *Username*) echo "x-access-token" ;;
-            *Password*) echo "$GH_PUSH_TOKEN" ;;
-          esac
-          EOF
-          chmod +x "$RUNNER_TEMP/git-askpass"
-          export GIT_ASKPASS="$RUNNER_TEMP/git-askpass"
-          export GIT_TERMINAL_PROMPT=0
           git push origin HEAD
         env:
-          GH_PUSH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           PR_NUM: ${{ inputs.pr-number }}

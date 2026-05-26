@@ -15,7 +15,7 @@ zizmor .github/workflows/*.yml
 Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
 
 - Pin external actions to immutable commit SHAs, not tags.
-- Set `persist-credentials: false` on `actions/checkout` unless the job intentionally needs persisted Git credentials.
+- Use `actions/checkout` v6 or newer so persisted credentials are stored under `$RUNNER_TEMP`; set `persist-credentials: false` when a job does not need follow-up authenticated Git operations.
 - Pass GitHub expression values into shell steps through `env` instead of expanding `${{ ... }}` directly inside `run` blocks.
 - Treat privileged triggers such as `pull_request_target` and `workflow_run` as security-sensitive. If a privileged trigger is required, document the safety model and add a targeted `zizmor` ignore with a reason.
 

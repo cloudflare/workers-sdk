@@ -21,7 +21,6 @@ jobs:
         with:
           # See https://github.com/changesets/action/issues/187
           token: ${{ secrets.GH_ACCESS_TOKEN }}
-          persist-credentials: false
           # Pull in more history to cover the changeset commits
           fetch-depth: 500
 

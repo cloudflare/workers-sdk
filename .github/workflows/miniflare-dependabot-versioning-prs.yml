@@ -1,7 +1,7 @@
 name: "Miniflare - Generate changesets for dependabot PRs"
 
 on:
-  pull_request_target: # zizmor: ignore[dangerous-triggers] dependabot-only job requires write access to push generated changesets; credentials are not persisted by checkout
+  pull_request_target: # zizmor: ignore[dangerous-triggers] dependabot-only job requires write access to push generated changesets; checkout v6 persists credentials under RUNNER_TEMP
     paths:
       - "packages/miniflare/package.json"
 
@@ -21,7 +21,6 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 2
-          persist-credentials: false
           ref: ${{ github.head_ref }}
           token: ${{ secrets.GH_ACCESS_TOKEN }}
 
@@ -39,22 +38,11 @@ jobs:
         # - Packages: Coma-separated names of the workers-sdk packages whose dependencies are being updated
         # - PackageJSON: The path to the package JSON being updated by Dependabot
         # - Changeset prefix: The prefix to go on the front of the filename of the generated changeset
-        run: |
-          cat > "$RUNNER_TEMP/git-askpass" <<'EOF'
-          #!/bin/sh
-          case "$1" in
-            *Username*) echo "x-access-token" ;;
-            *Password*) echo "$GH_PUSH_TOKEN" ;;
-          esac
-          EOF
-          chmod +x "$RUNNER_TEMP/git-askpass"
-          export GIT_ASKPASS="$RUNNER_TEMP/git-askpass"
-          export GIT_TERMINAL_PROMPT=0
-          node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts \
-            "$PR_NUMBER" \
-            miniflare,wrangler \
-            packages/miniflare/package.json \
-            dependabot-update
+        run: >-
+          node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts
+          "$PR_NUMBER"
+          miniflare,wrangler
+          packages/miniflare/package.json
+          dependabot-update
         env:
-          GH_PUSH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           PR_NUMBER: ${{ github.event.number }}
