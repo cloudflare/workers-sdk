@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   hotfix-release:
@@ -71,8 +72,7 @@ jobs:
           CI_OS: ${{ runner.os }}
 
       - name: Publish packages
-        run:
-          | # zizmor: ignore[use-trusted-publishing] hotfix publishing uses the existing npm automation token until npm trusted publishing is configured for these packages
+        run: |
           if ! [[ "$NPM_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
             echo "::error::npm dist-tag contains unsupported characters"
             exit 1
@@ -80,4 +80,3 @@ jobs:
           pnpm publish -r --tag "$NPM_TAG" --filter wrangler --filter miniflare --filter create-cloudflare
         env:
           NPM_TAG: ${{ inputs.label }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
