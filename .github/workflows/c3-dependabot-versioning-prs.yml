@@ -45,6 +45,7 @@ jobs:
           chmod +x "$RUNNER_TEMP/git-askpass"
           export GIT_ASKPASS="$RUNNER_TEMP/git-askpass"
           export GIT_TERMINAL_PROMPT=0
-          node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }} create-cloudflare packages/create-cloudflare/src/frameworks/package.json c3-frameworks-update
+          node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts "$PR_NUMBER" create-cloudflare packages/create-cloudflare/src/frameworks/package.json c3-frameworks-update
         env:
           GH_PUSH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          PR_NUMBER: ${{ github.event.number }}

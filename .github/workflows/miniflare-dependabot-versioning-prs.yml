@@ -51,9 +51,10 @@ jobs:
           export GIT_ASKPASS="$RUNNER_TEMP/git-askpass"
           export GIT_TERMINAL_PROMPT=0
           node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts \
-            ${{ github.event.number }} \
+            "$PR_NUMBER" \
             miniflare,wrangler \
             packages/miniflare/package.json \
             dependabot-update
         env:
           GH_PUSH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          PR_NUMBER: ${{ github.event.number }}
