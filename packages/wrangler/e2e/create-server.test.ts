@@ -194,6 +194,113 @@ describe("createServer", { sequential: true }, () => {
 			name: "auxiliary",
 			url: "http://auxiliary.example.com/path?value=2",
 		});
+
+		await server.update({
+			root: helper.tmpPath,
+			workers: [
+				{ configPath: "./wrangler.primary.jsonc" },
+				{
+					config: {
+						name: "auxiliary-worker",
+						main: "src/auxiliary.ts",
+						compatibility_date: "2026-05-20",
+						routes: ["updated-auxiliary.example.com/*"],
+					},
+				},
+			],
+		});
+
+		const updatedAuxiliaryResponse = await server.fetch(
+			"http://updated-auxiliary.example.com/path?value=3"
+		);
+		await expect(updatedAuxiliaryResponse.json()).resolves.toEqual({
+			name: "auxiliary",
+			url: "http://updated-auxiliary.example.com/path?value=3",
+		});
+	});
+
+	it("rejects updates that change the number of workers", async ({ expect }) => {
+		await helper.seed({
+			"src/primary.ts": dedent`
+				export default {
+					fetch() {
+						return new Response("primary");
+					}
+				};
+			`,
+			"src/auxiliary.ts": dedent`
+				export default {
+					fetch() {
+						return new Response("auxiliary");
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [
+				{
+					config: {
+						name: "primary-worker",
+						main: "src/primary.ts",
+						compatibility_date: "2026-05-20",
+					},
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		await expect(
+			server.update((options) => ({
+				...options,
+				workers: [
+					...options.workers,
+					{
+						config: {
+							name: "auxiliary-worker",
+							main: "src/auxiliary.ts",
+							compatibility_date: "2026-05-20",
+						},
+					},
+				],
+			}))
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Updating the number of workers running in the server is not supported.]`
+		);
+	});
+
+	it("returns a 404 response for missing workers", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "primary-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20"
+				}
+			`,
+			"src/index.ts": dedent`
+				export default {
+					fetch() {
+						return new Response("primary");
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.getWorker("missing-worker").fetch("/");
+		expect(response.status).toBe(404);
+		await expect(response.text()).resolves.toBe("No entrypoint worker found");
 	});
 
 	it("supports overriding fetch for outbound requests", async ({ expect }) => {
@@ -450,6 +557,34 @@ describe("createServer", { sequential: true }, () => {
 			API_TOKEN: "from-override",
 			SECRET_FROM_FILE: "from-dev-vars",
 			ADDED_VAR: "from-override",
+			NULL_VAR: null,
+		});
+
+		await server.update({
+			root: helper.tmpPath,
+			workers: [
+				{
+					configPath: "./wrangler.jsonc",
+					overrides: {
+						vars: {
+							CONFIG_VAR: "from-updated-override",
+							ADDED_VAR: "from-updated-override",
+							NULL_VAR: null,
+						},
+						secrets: {
+							API_TOKEN: "from-updated-override",
+						},
+					},
+				},
+			],
+		});
+
+		const updatedResponse = await server.fetch("/");
+		await expect(updatedResponse.json()).resolves.toEqual({
+			CONFIG_VAR: "from-updated-override",
+			API_TOKEN: "from-updated-override",
+			SECRET_FROM_FILE: "from-dev-vars",
+			ADDED_VAR: "from-updated-override",
 			NULL_VAR: null,
 		});
 	});
