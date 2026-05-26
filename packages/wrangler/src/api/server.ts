@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
 	normalizeAndValidateConfig,
+	removeDir,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Headers, Request } from "miniflare";
@@ -83,6 +84,7 @@ export type WorkerServer = {
 	update(
 		options: ServerOptions | ((currentOptions: ServerOptions) => ServerOptions)
 	): Promise<void>;
+	clearStorage(): Promise<void>;
 	close(): Promise<void>;
 };
 
@@ -130,6 +132,19 @@ function normalizeInlineWorkerConfig(
 	return normalizedConfig;
 }
 
+function resolvePersistOption(
+	root: string,
+	persist: ServerOptions["persist"]
+): string | false | undefined {
+	if (persist === true) {
+		return undefined;
+	}
+	if (typeof persist === "string") {
+		return resolvePath(root, persist);
+	}
+	return persist ?? false;
+}
+
 async function resolveFetchInput(
 	input: RequestInfo,
 	session: ServerSession
@@ -162,6 +177,7 @@ function resolveWorkerInputs(
 	}
 
 	const cwd = process.cwd();
+	const serverRoot = options.root ?? cwd;
 
 	return options.workers.map((input, index, list) => {
 		const isPrimaryWorker = index === 0;
@@ -193,8 +209,7 @@ function resolveWorkerInputs(
 				server: options.server ?? { hostname: "127.0.0.1", port: 0 },
 				logLevel: options.logLevel ?? "error",
 				watch: options.watch ?? false,
-				persist:
-					options.persist === true ? undefined : (options.persist ?? false),
+				persist: resolvePersistOption(serverRoot, options.persist),
 				inspector: options.inspector ?? false,
 				registry: undefined,
 				outboundService:
@@ -316,6 +331,13 @@ export function createServer(options: ServerOptions): WorkerServer {
 		await Promise.all(session.devEnvs.map((devEnv) => devEnv.teardown()));
 	};
 
+	const restartServerSession = async () => {
+		startPromise = startServerSession().finally(() => {
+			startPromise = undefined;
+		});
+		await startPromise;
+	};
+
 	const waitForPrimaryReady = async (session: ServerSession) => {
 		return new Promise<
 			Awaited<typeof session.primaryDevEnv.proxy.ready.promise>
@@ -375,9 +397,7 @@ export function createServer(options: ServerOptions): WorkerServer {
 		async listen() {
 			if (!serverSession) {
 				if (!startPromise) {
-					startPromise = startServerSession().finally(() => {
-						startPromise = undefined;
-					});
+					void restartServerSession();
 				}
 
 				await startPromise;
@@ -491,6 +511,32 @@ export function createServer(options: ServerOptions): WorkerServer {
 					updateConfig(serverSession, nextInputs),
 				]);
 			}
+		},
+		async clearStorage() {
+			if (startPromise) {
+				await startPromise;
+			}
+			const session = resolveSession();
+
+			if (currentOptions.persist === true) {
+				throw new Error(
+					"clearStorage() cannot clear storage when persist is true. Omit persist or set it to false for ephemeral storage, or set persist to a path to clear that directory."
+				);
+			}
+
+			await teardownSession(session);
+			serverSession = undefined;
+
+			if (typeof currentOptions.persist === "string") {
+				const persistPath = resolvePath(
+					currentOptions.root ?? process.cwd(),
+					currentOptions.persist
+				);
+
+				await removeDir(persistPath);
+			}
+
+			await restartServerSession();
 		},
 		async close() {
 			if (startPromise) {

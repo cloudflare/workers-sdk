@@ -219,7 +219,9 @@ describe("createServer", { sequential: true }, () => {
 		});
 	});
 
-	it("rejects updates that change the number of workers", async ({ expect }) => {
+	it("rejects updates that change the number of workers", async ({
+		expect,
+	}) => {
 		await helper.seed({
 			"src/primary.ts": dedent`
 				export default {
@@ -712,6 +714,92 @@ describe("createServer", { sequential: true }, () => {
 
 		const resetResponse = await secondServer.fetch("/");
 		await expect(resetResponse.text()).resolves.toBe("missing");
+	});
+
+	it("clears local storage", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "storage-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"kv_namespaces": [
+						{ "binding": "STORE", "id": "test-store" }
+					]
+				}
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						if (url.pathname === "/set") {
+							await env.STORE.put("key", "value");
+							return new Response("stored");
+						}
+						return new Response((await env.STORE.get("key")) ?? "missing");
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await expect(server.clearStorage()).rejects.toThrow(
+			"Worker server has not been started. Call server.listen()."
+		);
+
+		await server.listen();
+
+		const setResponse = await server.fetch("/set");
+		await expect(setResponse.text()).resolves.toBe("stored");
+		const storedResponse = await server.fetch("/");
+		await expect(storedResponse.text()).resolves.toBe("value");
+		await server.close();
+
+		const persistentServer = createServer({
+			root: helper.tmpPath,
+			persist: "state",
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(persistentServer.close);
+
+		await persistentServer.listen();
+		const persistentSetResponse = await persistentServer.fetch("/set");
+		await expect(persistentSetResponse.text()).resolves.toBe("stored");
+		await persistentServer.close();
+
+		const nextPersistentServer = createServer({
+			root: helper.tmpPath,
+			persist: "state",
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(nextPersistentServer.close);
+
+		await nextPersistentServer.listen();
+		const persistentStoredResponse = await nextPersistentServer.fetch("/");
+		await expect(persistentStoredResponse.text()).resolves.toBe("value");
+
+		await nextPersistentServer.clearStorage();
+
+		const persistentClearedResponse = await nextPersistentServer.fetch("/");
+		await expect(persistentClearedResponse.text()).resolves.toBe("missing");
+		await nextPersistentServer.close();
+
+		const defaultPersistentServer = createServer({
+			root: helper.tmpPath,
+			persist: true,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(defaultPersistentServer.close);
+		await defaultPersistentServer.listen();
+
+		await expect(defaultPersistentServer.clearStorage()).rejects.toThrow(
+			"clearStorage() cannot clear storage when persist is true."
+		);
 	});
 
 	it("uses local bindings when remote bindings are not allowed", async ({
