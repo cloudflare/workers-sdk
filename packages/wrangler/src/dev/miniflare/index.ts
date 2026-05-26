@@ -620,27 +620,27 @@ export function buildMiniflareBindingOptions(
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 
 	for (const ai of aiBindings) {
-		warnOrError("ai", ai.remote, "always-remote");
+		warnOrError("ai", ai.remote);
 	}
 
 	for (const ns of aiSearchNamespaceBindings) {
-		warnOrError("ai_search_namespace", ns.remote, "always-remote");
+		warnOrError("ai_search_namespace", ns.remote);
 	}
 
 	for (const inst of aiSearchInstanceBindings) {
-		warnOrError("ai_search", inst.remote, "always-remote");
+		warnOrError("ai_search", inst.remote);
 	}
 
 	for (const media of mediaBindings) {
-		warnOrError("media", media.remote, "always-remote");
+		warnOrError("media", media.remote);
 	}
 
 	for (const artifact of artifactsBindings) {
-		warnOrError("artifacts", artifact.remote, "always-remote");
+		warnOrError("artifacts", artifact.remote);
 	}
 
 	for (const flagship of flagshipBindings) {
-		warnOrError("flagship", flagship.remote, "always-remote");
+		warnOrError("flagship", flagship.remote);
 	}
 
 	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
@@ -891,7 +891,7 @@ export function buildMiniflareBindingOptions(
 
 		vectorize: Object.fromEntries(
 			vectorizeBindings.map((vectorize) => {
-				warnOrError("vectorize", vectorize.remote, "remote");
+				warnOrError("vectorize", vectorize.remote);
 				return [
 					vectorize.binding,
 					{
@@ -906,7 +906,7 @@ export function buildMiniflareBindingOptions(
 		),
 		vpcServices: Object.fromEntries(
 			vpcServices.map((vpc) => {
-				warnOrError("vpc_service", vpc.remote, "always-remote");
+				warnOrError("vpc_service", vpc.remote);
 				return [
 					vpc.binding,
 					{
@@ -918,7 +918,7 @@ export function buildMiniflareBindingOptions(
 		),
 		vpcNetworks: Object.fromEntries(
 			vpcNetworks.map((vpc) => {
-				warnOrError("vpc_network", vpc.remote, "always-remote");
+				warnOrError("vpc_network", vpc.remote);
 				const id =
 					vpc.tunnel_id !== undefined
 						? { tunnel_id: vpc.tunnel_id }
@@ -929,7 +929,7 @@ export function buildMiniflareBindingOptions(
 
 		dispatchNamespaces: Object.fromEntries(
 			dispatchNamespaces.map((dispatchNamespace) => {
-				warnOrError("dispatch_namespace", dispatchNamespace.remote, "remote");
+				warnOrError("dispatch_namespace", dispatchNamespace.remote);
 				return dispatchNamespaceEntry(
 					dispatchNamespace,
 					dispatchNamespace.remote && remoteProxyConnectionString
@@ -966,7 +966,7 @@ export function buildMiniflareBindingOptions(
 
 		mtlsCertificates: Object.fromEntries(
 			mtlsCertificates.map((mtlsCertificate) => {
-				warnOrError("mtls_certificate", mtlsCertificate.remote, "remote");
+				warnOrError("mtls_certificate", mtlsCertificate.remote);
 				return [
 					mtlsCertificate.binding,
 					{

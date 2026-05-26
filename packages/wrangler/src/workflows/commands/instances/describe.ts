@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { red, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
@@ -211,9 +212,11 @@ function logStep(
 			const latestAttempt = step.attempts.at(-1);
 			let delay = step.config.retries.delay;
 			if (latestAttempt !== undefined && latestAttempt.success === false) {
-				// SAFETY: It's okay because end date must always exist in the API, otherwise it's okay to fail
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				const endDate = new Date(latestAttempt.end!);
+				assert(
+					latestAttempt.end,
+					"end date always exists in the API for completed attempts"
+				);
+				const endDate = new Date(latestAttempt.end);
 				if (typeof delay === "string") {
 					delay = ms(delay);
 				}

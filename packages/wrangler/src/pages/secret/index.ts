@@ -3,6 +3,7 @@ import {
 	configFileName,
 	FatalError,
 	findWranglerConfig,
+	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchResult } from "../../cfetch";
@@ -38,9 +39,9 @@ async function pagesProject(
 }> {
 	env ??= "production";
 	if (!isPagesEnv(env)) {
-		throw new FatalError(
-			`Pages does not support the "${env}" named environment. Please specify "production" (default) or "preview"`,
-			{ code: 1, telemetryMessage: "pages secret env unsupported" }
+		throw new UserError(
+			`Pages does not support the "${env}" environment. Only "production" and "preview" are valid. Use --env production or --env preview.`,
+			{ telemetryMessage: "pages secret env unsupported" }
 		);
 	}
 	let config: Config | undefined;
@@ -105,10 +106,10 @@ async function pagesProject(
 			throw err;
 		}
 	} else {
-		throw new FatalError("Must specify a project name.", {
-			code: 1,
-			telemetryMessage: "pages secret missing project name",
-		});
+		throw new UserError(
+			"Missing Pages project name. Use --project-name <name> to specify which project to manage secrets for.",
+			{ telemetryMessage: "pages secret missing project name" }
+		);
 	}
 	return { env, project, accountId, config };
 }

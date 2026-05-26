@@ -1,9 +1,12 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
+/* eslint-disable @typescript-eslint/no-empty-object-type -- Type augmentation interfaces intentionally left empty */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { FatalError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Uses expect in MSW handlers outside test callbacks
+ * TODO: remove this `expect` import
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearOutputFilePath, writeOutput } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";

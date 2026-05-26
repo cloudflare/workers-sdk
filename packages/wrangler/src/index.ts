@@ -2402,7 +2402,7 @@ export async function main(argv: string[]): Promise<void> {
 			// Only re-throw if we haven't already re-thrown an exception from a
 			// command handler.
 			if (!cliHandlerThrew) {
-				// eslint-disable-next-line no-unsafe-finally
+				// eslint-disable-next-line no-unsafe-finally -- Intentionally re-throw in finally when the CLI handler did not throw
 				throw e;
 			}
 		}

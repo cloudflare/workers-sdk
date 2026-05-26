@@ -66,6 +66,6 @@ declare const __RELATIVE_PACKAGE_PATH__: string;
  * no matter whether the code has been bundled or not.
  */
 export function getBasePath(): string {
-	// eslint-disable-next-line no-restricted-globals
+	// eslint-disable-next-line no-restricted-globals -- __dirname is the correct baseline for resolving the package root at runtime
 	return path.resolve(__dirname, __RELATIVE_PACKAGE_PATH__);
 }

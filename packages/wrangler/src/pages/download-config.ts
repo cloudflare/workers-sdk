@@ -4,6 +4,7 @@ import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
 	getTodaysCompatDate,
+	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import TOML from "smol-toml";
@@ -325,10 +326,12 @@ export const pagesDownloadConfigCommand = createCommand({
 		projectName ??= projectConfig.project_name;
 
 		if (!projectName) {
-			throw new FatalError("Must specify a project name.", {
-				code: 1,
-				telemetryMessage: "pages download config missing project name",
-			});
+			throw new UserError(
+				"Missing Pages project name. Provide the project name as a positional argument: wrangler pages download config <name>.",
+				{
+					telemetryMessage: "pages download config missing project name",
+				}
+			);
 		}
 		const config = await downloadProject(accountId, projectName);
 		if (!force && existsSync("wrangler.toml")) {

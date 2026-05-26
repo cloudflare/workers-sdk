@@ -2121,7 +2121,7 @@ function mockHyperdriveUpdate(
 							password: _,
 							access_client_secret: _2,
 							...reqOrigin
-							// eslint-disable-next-line @typescript-eslint/no-explicit-any
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Destructuring untyped origin fields from API mock
 						} = reqBody.origin as any;
 						origin = { ...origin, ...reqOrigin };
 						if (reqOrigin.service_id) {
@@ -2178,7 +2178,7 @@ function mockHyperdriveCreate(): Promise<CreateUpdateHyperdriveBody> {
 
 					resolve(reqBody);
 
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Accessing untyped origin fields from API mock
 					const reqOrigin = reqBody.origin as any;
 					return HttpResponse.json(
 						createFetchResult(

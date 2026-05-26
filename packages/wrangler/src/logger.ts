@@ -122,7 +122,7 @@ export class Logger {
 	columns = process.stdout.columns;
 
 	json = (data: unknown) => {
-		// eslint-disable-next-line no-console
+		// eslint-disable-next-line no-console -- The logger implementation has to use console directly
 		console.log(JSON.stringify(data, null, 4));
 	};
 
@@ -175,7 +175,7 @@ export class Logger {
 		method: M,
 		...args: Parameters<Console[M]>
 	) {
-		// eslint-disable-next-line no-console
+		// eslint-disable-next-line no-console -- Logger implementation must use console directly
 		if (typeof console[method] !== "function") {
 			throw new Error(`console.${method}() is not a function`);
 		}
@@ -185,7 +185,7 @@ export class Logger {
 			LOGGER_LEVELS[consoleMethodToLoggerLevel(method)]
 		) {
 			Logger.#beforeLogHook?.();
-			// eslint-disable-next-line no-console
+			// eslint-disable-next-line no-console -- Logger implementation must use console directly
 			(console[method] as (...args: unknown[]) => unknown).apply(console, args);
 			Logger.#afterLogHook?.();
 		}
@@ -230,7 +230,7 @@ export class Logger {
 		// only send logs to the terminal if their level is at least the configured log-level
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
 			Logger.#beforeLogHook?.();
-			// eslint-disable-next-line no-console
+			// eslint-disable-next-line no-console -- Logger implementation must use console directly
 			console[messageLevel](message);
 			Logger.#afterLogHook?.();
 		}

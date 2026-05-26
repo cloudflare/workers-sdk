@@ -213,8 +213,7 @@ describe("deploy", () => {
 			);
 
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toContain(
-				// eslint-disable-next-line no-useless-escape
-				`console.log(\"https://www.abc.net.au/news/\");`
+				`console.log("https://www.abc.net.au/news/");`
 			);
 		});
 	});

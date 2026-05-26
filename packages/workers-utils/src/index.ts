@@ -52,6 +52,10 @@ export {
 	isValidR2BucketName,
 	bucketFormatMessage,
 } from "./config/validation";
+export {
+	type BindingLocalSupport,
+	getBindingLocalSupport,
+} from "./config/binding-local-support";
 
 export { validatePagesConfig } from "./config/validation-pages";
 

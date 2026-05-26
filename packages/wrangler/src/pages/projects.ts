@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
-	FatalError,
+	UserError,
 } from "@cloudflare/workers-utils";
 import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
@@ -143,10 +143,10 @@ export const pagesProjectCreateCommand = createCommand({
 		}
 
 		if (!projectName) {
-			throw new FatalError("Must specify a project name.", {
-				code: 1,
-				telemetryMessage: "pages projects create missing project name",
-			});
+			throw new UserError(
+				"Missing Pages project name. Provide the project name as a positional argument: wrangler pages project create <name>.",
+				{ telemetryMessage: "pages projects create missing project name" }
+			);
 		}
 
 		if (!productionBranch && isInteractive) {
@@ -187,10 +187,12 @@ export const pagesProjectCreateCommand = createCommand({
 		}
 
 		if (!productionBranch) {
-			throw new FatalError("Must specify a production branch.", {
-				code: 1,
-				telemetryMessage: "pages projects create missing production branch",
-			});
+			throw new UserError(
+				"Missing production branch. Use --production-branch <branch> to specify the production branch for your Pages project.",
+				{
+					telemetryMessage: "pages projects create missing production branch",
+				}
+			);
 		}
 
 		const deploymentConfig = {

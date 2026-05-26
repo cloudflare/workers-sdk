@@ -5,7 +5,10 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Uses expect in MSW handlers outside test callbacks
+ * TODO: remove this `expect` import
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
