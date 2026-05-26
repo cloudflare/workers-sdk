@@ -18,13 +18,12 @@ import type {
 	LogLevel,
 	ServiceFetch,
 	StartDevWorkerInput,
-	StartDevWorkerOptions,
 } from "./startDevWorker/types";
 import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
-import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import type { Config, RawConfig, Trigger } from "@cloudflare/workers-utils";
 import type { DispatchFetch, Json, RequestInfo } from "miniflare";
 
 export type InlineConfig = Omit<RawConfig, "env">;
@@ -131,6 +130,28 @@ function normalizeInlineWorkerConfig(
 	return normalizedConfig;
 }
 
+type ConfigRoute = NonNullable<Config["route"]> | NonNullable<Config["routes"]>[number];
+
+function routeToTrigger(route: ConfigRoute): Extract<Trigger, { type: "route" }> {
+	return typeof route === "string"
+		? { type: "route", pattern: route }
+		: { type: "route", ...route };
+}
+
+function getInlineConfigTriggers(config: Config): Trigger[] {
+	const routes = [
+		...(config.route ? [config.route] : []),
+		...(config.routes ?? []),
+	].map(routeToTrigger);
+	const crons =
+		config.triggers.crons?.map<Extract<Trigger, { type: "cron" }>>((cron) => ({
+			type: "cron",
+			cron,
+		})) ?? [];
+
+	return [...routes, ...crons];
+}
+
 async function resolveFetchInput(
 	input: RequestInfo,
 	session: ServerSession
@@ -195,10 +216,7 @@ function resolveWorkerInputs(
 			bindings,
 			migrations: inlineConfig?.migrations,
 			containers: inlineConfig?.containers,
-			triggers: inlineConfig?.triggers?.crons?.map((cron) => ({
-				type: "cron" as const,
-				cron,
-			})),
+			triggers: inlineConfig ? getInlineConfigTriggers(inlineConfig) : undefined,
 			tailConsumers: inlineConfig?.tail_consumers,
 			streamingTailConsumers: inlineConfig?.streaming_tail_consumers,
 			assets: inlineConfig?.assets?.directory,
@@ -216,7 +234,8 @@ function resolveWorkerInputs(
 					((request) => {
 						return globalThis.fetch(request.url, request);
 					}),
-				multiworkerPrimary: isPrimaryWorker && isMultiworker ? true : undefined,
+				multiworkerPrimary: isMultiworker ? isPrimaryWorker : undefined,
+				inferOriginFromRoutes: false,
 			},
 			build: {
 				nodejsCompatMode: (config) => {
@@ -298,44 +317,6 @@ async function updateConfig(
 	}
 }
 
-// TODO: Do we want this?
-function maybePrintScheduledWorkerWarning(
-	serverSession: ServerSession,
-	url: URL
-): void {
-	const workersWithCronTriggers = serverSession.devEnvs
-		.map((devEnv) => devEnv.config.latestConfig)
-		.filter((config): config is StartDevWorkerOptions => config !== undefined)
-		.filter((config) =>
-			config.triggers?.some((trigger) => trigger.type === "cron")
-		);
-
-	if (workersWithCronTriggers.length === 0) {
-		return;
-	}
-
-	const testScheduled = workersWithCronTriggers.every(
-		(config) => config.dev.testScheduled
-	);
-	if (testScheduled) {
-		return;
-	}
-
-	const host =
-		url.hostname === "0.0.0.0" || url.hostname === "::"
-			? "localhost"
-			: url.hostname.includes(":")
-				? `[${url.hostname}]`
-				: url.hostname;
-
-	logger.once.warn(
-		`Scheduled Workers are not automatically triggered during local development.\n` +
-			`To manually trigger a scheduled event, run:\n` +
-			`  curl "http://${host}:${url.port}/cdn-cgi/handler/scheduled"\n` +
-			`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
-	);
-}
-
 /**
  * Creates a worker server with a small, migration-focused API surface.
  *
@@ -415,9 +396,8 @@ export function createServer(options: ServerOptions): WorkerServer {
 		const session = await createSession(currentOptions, serverAuthHook);
 
 		try {
-			const ready = await waitForPrimaryReady(session);
+			await waitForPrimaryReady(session);
 			serverSession = session;
-			maybePrintScheduledWorkerWarning(session, ready.url);
 		} catch (error) {
 			await teardownSession(session);
 			throw error;

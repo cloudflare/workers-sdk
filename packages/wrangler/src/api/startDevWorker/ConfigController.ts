@@ -149,7 +149,11 @@ async function resolveDevConfig(
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
-			hostname: host ?? getInferredHost(routes, config.configPath),
+			hostname:
+				host ??
+				(input.dev?.inferOriginFromRoutes
+					? getInferredHost(routes, config.configPath)
+					: undefined),
 		},
 		watch: input.dev?.watch,
 		liveReload: input.dev?.liveReload || false,
@@ -159,6 +163,7 @@ async function resolveDevConfig(
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
+		inferOriginFromRoutes: input.dev?.inferOriginFromRoutes,
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),

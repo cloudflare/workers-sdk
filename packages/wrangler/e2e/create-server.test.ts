@@ -135,6 +135,67 @@ describe("createServer", { sequential: true }, () => {
 		);
 	});
 
+	it("routes fetches based on worker routes", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.primary.jsonc": dedent`
+				{
+					"name": "primary-worker",
+					"main": "src/primary.ts",
+					"compatibility_date": "2026-05-20",
+					"routes": ["primary.example.com/*"]
+				}
+			`,
+			"src/primary.ts": dedent`
+				export default {
+					fetch(request) {
+						return Response.json({ name: "primary", url: request.url });
+					}
+				};
+			`,
+			"src/auxiliary.ts": dedent`
+				export default {
+					fetch(request) {
+						return Response.json({ name: "auxiliary", url: request.url });
+					}
+				};
+			`,
+		});
+
+		const server = createServer({
+			root: helper.tmpPath,
+			workers: [
+				{ configPath: "./wrangler.primary.jsonc" },
+				{
+					config: {
+						name: "auxiliary-worker",
+						main: "src/auxiliary.ts",
+						compatibility_date: "2026-05-20",
+						routes: ["auxiliary.example.com/*"],
+					},
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const primaryResponse = await server.fetch(
+			"http://primary.example.com/path?value=1"
+		);
+		await expect(primaryResponse.json()).resolves.toEqual({
+			name: "primary",
+			url: "http://primary.example.com/path?value=1",
+		});
+
+		const auxiliaryResponse = await server.fetch(
+			"http://auxiliary.example.com/path?value=2"
+		);
+		await expect(auxiliaryResponse.json()).resolves.toEqual({
+			name: "auxiliary",
+			url: "http://auxiliary.example.com/path?value=2",
+		});
+	});
+
 	it("supports overriding fetch for outbound requests", async ({ expect }) => {
 		await helper.seed({
 			"wrangler.jsonc": dedent`

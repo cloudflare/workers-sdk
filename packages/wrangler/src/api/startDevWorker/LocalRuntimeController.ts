@@ -112,10 +112,13 @@ export async function convertToConfigBundle(
 	const bindings: Record<string, Binding> = { ...event.config.bindings };
 
 	const crons = [];
+	const routes = [];
 	const queueConsumers = [];
 	for (const trigger of event.config.triggers ?? []) {
 		if (trigger.type === "cron") {
 			crons.push(trigger.cron);
+		} else if (trigger.type === "route") {
+			routes.push(trigger.pattern);
 		} else if (trigger.type === "queue-consumer") {
 			const { type: _, ...consumer } = trigger;
 			queueConsumers.push(consumer);
@@ -191,6 +194,7 @@ export async function convertToConfigBundle(
 		localPersistencePath: event.config.dev.persist,
 		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
+		routes,
 		queueConsumers,
 		outboundService: event.config.dev.outboundService,
 		localProtocol: event.config.dev?.server?.secure ? "https" : "http",

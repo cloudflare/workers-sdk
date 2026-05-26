@@ -86,6 +86,7 @@ export interface ConfigBundle {
 	localPersistencePath: string | false;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
+	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
 	httpsKeyPath: string | undefined;
@@ -1125,6 +1126,7 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
+				routes: config.routes,
 				outboundService: config.outboundService,
 				containerEngine: config.containerEngine,
 				zone: config.zone,
