@@ -1286,8 +1286,7 @@ export function createBindings<TConfig>(): Bindings<TConfig> {
 }
 
 /**
- * Pre-created untyped bindings for convenience.
- * Use this when you don't need typed cross-worker bindings.
+ * Bindings builder for configuring bindings.
  *
  * @example
  * ```typescript
@@ -1302,3 +1301,229 @@ export function createBindings<TConfig>(): Bindings<TConfig> {
  * ```
  */
 export const bindings = createBindings();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TRIGGERS API
+// Named types and helper factories for declaring event triggers.
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface FetchTriggerOptions {
+	/**
+	 * A route that your Worker should be published to.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#types-of-routes
+	 */
+	pattern: string;
+	/**
+	 * The DNS zone the pattern is attached to. Required when the
+	 * pattern is ambiguous.
+	 */
+	zone?: string;
+}
+
+interface QueueConsumerTriggerOptions {
+	/** The name of the queue from which this consumer should consume. */
+	name: string;
+	/** The queue to send messages that failed to be consumed. */
+	deadLetterQueue?: string;
+	/** The maximum number of messages per batch. */
+	maxBatchSize?: number;
+	/** The maximum number of seconds to wait to fill a batch with messages. */
+	maxBatchTimeout?: number;
+	/**
+	 * The maximum number of concurrent consumer Worker invocations.
+	 * Leaving this unset will allow your consumer to scale to the
+	 * maximum concurrency needed to keep up with the message backlog.
+	 */
+	maxConcurrency?: number | null;
+	/** The maximum number of retries for each message. */
+	maxRetries?: number;
+	/** The number of seconds to wait before retrying a message. */
+	retryDelay?: number;
+	/** The number of milliseconds to wait for pulled messages to become visible again. */
+	visibilityTimeoutMs?: number;
+}
+
+interface ScheduledTriggerOptions {
+	/**
+	 * "Cron" definitions to trigger a Worker's "scheduled" function.
+	 *
+	 * Lets you call Workers periodically, much like a cron job.
+	 *
+	 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
+	 */
+	schedules: string[];
+}
+
+/**
+ * Fetch trigger — a route that your Worker should be published to.
+ *
+ * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#types-of-routes
+ */
+export interface FetchTrigger extends FetchTriggerOptions {
+	type: "fetch";
+}
+
+/**
+ * Queue consumer trigger — invokes this Worker when messages arrive on the
+ * named queue.
+ *
+ * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#queues
+ */
+export interface QueueConsumerTrigger extends QueueConsumerTriggerOptions {
+	type: "queue";
+}
+
+/**
+ * Scheduled (cron) trigger — invokes this Worker on the given schedules.
+ *
+ * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
+ */
+export interface ScheduledTrigger extends ScheduledTriggerOptions {
+	type: "scheduled";
+}
+
+/**
+ * Event triggers — fetch routes, queue consumers, and cron schedules
+ * — that invoke this Worker. Construct entries with `triggers.fetch(...)`,
+ * `triggers.queue(...)`, or `triggers.scheduled(...)`.
+ *
+ * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
+ */
+export interface Triggers {
+	/**
+	 * Fetch trigger — a route that your Worker should be published to.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#types-of-routes
+	 */
+	fetch(options: FetchTriggerOptions): FetchTrigger;
+	/**
+	 * Queue consumer trigger — invokes this Worker when messages arrive on the
+	 * named queue.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#queues
+	 */
+	queue(options: QueueConsumerTriggerOptions): QueueConsumerTrigger;
+	/**
+	 * Scheduled (cron) trigger — invokes this Worker on the given schedules.
+	 *
+	 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
+	 */
+	scheduled(options: ScheduledTriggerOptions): ScheduledTrigger;
+}
+
+/**
+ * Triggers builder for configuring event triggers.
+ *
+ * @example
+ * ```typescript
+ * import { defineConfig, triggers } from "@cloudflare/config";
+ *
+ * export default defineConfig({
+ *   triggers: [
+ *     triggers.fetch({ pattern: "example.com/*", zone: "example.com" }),
+ *     triggers.queue({ name: "my-queue" }),
+ *     triggers.scheduled({ schedules: ["0 * * * *"] }),
+ *   ],
+ * });
+ * ```
+ */
+export const triggers: Triggers = {
+	fetch: (options) => ({ type: "fetch", ...options }),
+	queue: (options) => ({ type: "queue", ...options }),
+	scheduled: (options) => ({ type: "scheduled", ...options }),
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPORTS API
+// Named types and helper factories for declaring class exports.
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface DurableObjectExportOptions {
+	/**
+	 * Storage backend for the Durable Object.
+	 *
+	 * - `"sqlite"`: selects the SQLite-backed storage engine
+	 *   (recommended for new classes).
+	 * - `"legacy-kv"`: selects the legacy key-value storage engine.
+	 */
+	storage: "sqlite" | "legacy-kv";
+}
+
+interface WorkflowExportOptions {
+	/** The name of the Workflow. */
+	name: string;
+	/** Optional limits for the Workflow. */
+	limits?: {
+		/** Maximum number of steps a Workflow instance can execute. */
+		steps?: number;
+	};
+}
+
+/**
+ * Declares a Durable Object class defined by this Worker.
+ *
+ * For more information about Durable Objects, see the documentation at
+ * https://developers.cloudflare.com/workers/learning/using-durable-objects
+ *
+ * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
+ */
+export interface DurableObjectExport extends DurableObjectExportOptions {
+	type: "durable-object";
+}
+
+/** Declares a Workflow defined by this Worker. */
+export interface WorkflowExport extends WorkflowExportOptions {
+	type: "workflow";
+}
+
+/**
+ * Configuration for named exports declared by the Worker. Each entry's
+ * key is the exported class name; the value configures the export.
+ * Construct entries with `exports.durableObject(...)` or
+ * `exports.workflow(...)`.
+ *
+ * Two export kinds are supported:
+ *
+ * - `durable-object`: declares a Durable Object class defined by this
+ *   Worker. For more information about Durable Objects, see the
+ *   documentation at
+ *   https://developers.cloudflare.com/workers/learning/using-durable-objects
+ *
+ *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
+ *
+ * - `workflow`: declares a Workflow defined by this Worker.
+ */
+export interface Exports {
+	/**
+	 * Declares a Durable Object class defined by this Worker.
+	 *
+	 * For more information about Durable Objects, see the documentation at
+	 * https://developers.cloudflare.com/workers/learning/using-durable-objects
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
+	 */
+	durableObject(options: DurableObjectExportOptions): DurableObjectExport;
+	/** Declares a Workflow defined by this Worker. */
+	workflow(options: WorkflowExportOptions): WorkflowExport;
+}
+
+/**
+ * Exports builder for configuring Worker exports.
+ *
+ * @example
+ * ```typescript
+ * import { defineConfig, exports } from "@cloudflare/config";
+ *
+ * export default defineConfig({
+ *   exports: {
+ *     MyDurableObject: exports.durableObject({ storage: "sqlite" }),
+ *     MyWorkflow: exports.workflow({ name: "my-workflow" }),
+ *   },
+ * });
+ * ```
+ */
+export const exports: Exports = {
+	durableObject: (options) => ({ type: "durable-object", ...options }),
+	workflow: (options) => ({ type: "workflow", ...options }),
+};
