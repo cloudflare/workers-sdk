@@ -17,9 +17,7 @@ function runLoadConfigInSubprocess(args: { cwd: string; configPath: string }): {
 	// Use a file:// URL rather than a raw filesystem path so the embedded
 	// `import` specifier is valid on Windows (where absolute paths like
 	// `C:\...` are not accepted as ESM specifiers).
-	const sourceEntry = pathToFileURL(
-		path.resolve(__dirname, "../load.ts")
-	).href;
+	const sourceEntry = pathToFileURL(path.resolve(__dirname, "../load.ts")).href;
 	const script = `
 		import { loadConfig } from ${JSON.stringify(sourceEntry)};
 		const result = await loadConfig(${JSON.stringify(args.configPath)});
@@ -67,7 +65,7 @@ describe("loadConfig", () => {
 		expect(result.config).toEqual({ name: "my-worker" });
 	});
 
-	it("resolves cf-worker entrypoints to a file path without executing them or tracking them as dependencies", async ({
+	it("passes cf-worker specifiers through verbatim without resolving or executing them", async ({
 		expect,
 	}) => {
 		await seed({
@@ -83,15 +81,41 @@ describe("loadConfig", () => {
 			configPath: "./worker.config.mjs",
 		});
 
-		const expectedPath = path.resolve("src/index.mjs");
 		expect(
 			(result.config as { entrypoint: { default: string } }).entrypoint
-		).toEqual({ default: expectedPath });
-		// The entrypoint is referenced for its path only; changes to its
-		// source must not trigger a config reload, so it is not tracked.
-		expect(result.dependencies).not.toContain(expectedPath);
+		).toEqual({ default: "./src/index.mjs" });
+		// The entrypoint is referenced for its specifier only; changes to
+		// its source must not trigger a config reload, so it is not tracked.
+		expect(result.dependencies).not.toContain(path.resolve("src/index.mjs"));
 		// The config file itself is still tracked.
 		expect(result.dependencies).toContain(path.resolve("worker.config.mjs"));
+	});
+
+	it("passes bare and virtual cf-worker specifiers through verbatim", async ({
+		expect,
+	}) => {
+		await seed({
+			"worker.config.mjs": `
+				import * as bare from "@example-package/some-module" with { type: "cf-worker" };
+				import * as virtual from "virtual:some-module" with { type: "cf-worker" };
+				export default { name: "w", bare, virtual };
+			`,
+		});
+
+		const result = runLoadConfigInSubprocess({
+			cwd: process.cwd(),
+			configPath: "./worker.config.mjs",
+		});
+
+		expect(
+			result.config as {
+				bare: { default: string };
+				virtual: { default: string };
+			}
+		).toMatchObject({
+			bare: { default: "@example-package/some-module" },
+			virtual: { default: "virtual:some-module" },
+		});
 	});
 
 	it("produces an entrypoint namespace that ConfigSchema.parse collapses to a string", async ({
@@ -111,7 +135,7 @@ describe("loadConfig", () => {
 		});
 		const parsed = ConfigSchema.parse(result.config);
 
-		expect(parsed.entrypoint).toBe(path.resolve("src/index.mjs"));
+		expect(parsed.entrypoint).toBe("./src/index.mjs");
 	});
 
 	it("reloads the config when the file changes between calls in the same process", async ({
