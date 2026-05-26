@@ -942,53 +942,171 @@ export type InferMainModule<TUnwrappedConfig> = TUnwrappedConfig extends {
  */
 interface BaseBindings {
 	// Value-first bindings
+	/**
+	 * Inline JSON value made available to the Worker on `env` under the
+	 * binding name.
+	 */
 	json<T extends Json>(value: T): JsonBinding<T>;
+	/**
+	 * Inline string value made available to the Worker on `env` under the
+	 * binding name.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 */
 	text<T extends string>(value: T): TextBinding<T>;
 
 	// Other bindings
+	/**
+	 * Binding to the Workers AI project.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#workers-ai
+	 */
 	ai<TAiModelList extends AiModelListType = AiModels>(
 		options?: AiBindingOptions
 	): AiBinding<TAiModelList>;
+	/**
+	 * AI Search instance binding. Each binding is bound directly to a single
+	 * pre-existing instance within the "default" namespace.
+	 */
 	aiSearch(options: AiSearchBindingOptions): AiSearchBinding;
+	/**
+	 * AI Search namespace binding. Each binding is scoped to a namespace and
+	 * allows dynamic instance CRUD within it.
+	 */
 	aiSearchNamespace(
 		options: AiSearchNamespaceBindingOptions
 	): AiSearchNamespaceBinding;
+	/**
+	 * Binding to an Analytics Engine dataset.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#analytics-engine-datasets
+	 */
 	analyticsEngineDataset(
 		options?: AnalyticsEngineDatasetBindingOptions
 	): AnalyticsEngineDatasetBinding;
+	/**
+	 * Binding to an Artifacts instance. Artifacts provides git-compatible file
+	 * storage on Cloudflare Workers.
+	 */
 	artifacts(options: ArtifactsBindingOptions): ArtifactsBinding;
+	/**
+	 * Binding to the Worker's static assets.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#assets
+	 */
 	assets(): AssetsBinding;
+	/**
+	 * Binding to a headless browser usable from the Worker.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#browser-rendering
+	 */
 	browser(options?: BrowserBindingOptions): BrowserBinding;
+	/**
+	 * Binding to a D1 database.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#d1-databases
+	 */
 	d1(options?: D1BindingOptions): D1Binding;
+	/**
+	 * Binding to a Workers for Platforms dispatch namespace.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#dispatch-namespace-bindings-workers-for-platforms
+	 */
 	dispatchNamespace(
 		options: DispatchNamespaceBindingOptions
 	): DispatchNamespaceBinding;
+	/** Binding to a Flagship feature-flag service. */
 	flagship(options: FlagshipBindingOptions): FlagshipBinding;
+	/**
+	 * Binding to a Hyperdrive configuration.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#hyperdrive
+	 */
 	hyperdrive(options: HyperdriveBindingOptions): HyperdriveBinding;
+	/**
+	 * Binding to Cloudflare Images.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#images
+	 */
 	images(options?: ImagesBindingOptions): ImagesBinding;
+	/**
+	 * Binding to a Workers KV namespace.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces
+	 */
 	kv<TKey extends string = string>(options?: KvBindingOptions): KvBinding<TKey>;
+	/** Binding for forwarding logs to logfwdr. */
 	logfwdr(options: LogfwdrBindingOptions): LogfwdrBinding;
+	/** Binding to Cloudflare Media Transformations. */
 	media(options?: MediaBindingOptions): MediaBinding;
+	/**
+	 * Binding to an uploaded mTLS certificate.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#mtls-certificates
+	 */
 	mtlsCertificate(
 		options: MtlsCertificateBindingOptions
 	): MtlsCertificateBinding;
+	/** Binding to a Cloudflare Pipeline. */
 	pipeline<TRecord extends PipelineRecord = PipelineRecord>(
 		options: PipelineBindingOptions
 	): PipelineBinding<TRecord>;
+	/**
+	 * Producer binding to a Cloudflare Queue.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#queues
+	 */
 	queue<TBody = unknown>(options: QueueBindingOptions): QueueBinding<TBody>;
+	/** Binding to a rate limiter. */
 	rateLimit(options: RateLimitBindingOptions): RateLimitBinding;
+	/**
+	 * Binding to an R2 bucket.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#r2-buckets
+	 */
 	r2(options?: R2BindingOptions): R2Binding;
+	/**
+	 * Declares a secret that is required by your Worker, exposed on `env` under
+	 * the binding name.
+	 *
+	 * When defined, this binding:
+	 * - Replaces .dev.vars/.env/process.env inference for type generation
+	 * - Enables local dev validation with warnings for missing secrets
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#secrets-configuration-property
+	 */
 	secret(): SecretBinding;
+	/** Binding to a Secrets Store secret. */
 	secretsStoreSecret(
 		options: SecretsStoreSecretBindingOptions
 	): SecretsStoreSecretBinding;
+	/**
+	 * Binding for sending email from inside the Worker.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#email-bindings
+	 */
 	sendEmail(options?: SendEmailBindingOptions): SendEmailBinding;
+	/** Binding to Cloudflare Stream. */
 	stream(options?: StreamBindingOptions): StreamBinding;
+	/**
+	 * Escape-hatch binding for runtime features that aren't directly supported
+	 * by this configuration. Included in the Worker's upload metadata without
+	 * changes.
+	 */
 	unsafe(options: UnsafeBindingOptions): UnsafeBinding;
+	/**
+	 * Binding to a Vectorize index.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#vectorize-indexes
+	 */
 	vectorize(options: VectorizeBindingOptions): VectorizeBinding;
+	/** Binding to the Worker version's metadata. */
 	versionMetadata(): VersionMetadataBinding;
+	/** Binding to a VPC service. */
 	vpcService(options: VpcServiceBindingOptions): VpcServiceBinding;
+	/** Binding to a VPC network. */
 	vpcNetwork(options: VpcNetworkBindingOptions): VpcNetworkBinding;
+	/** Binding to a Worker Loader. */
 	workerLoader(): WorkerLoaderBinding;
 }
 
@@ -1039,10 +1157,11 @@ export interface Bindings<
 	TUnwrappedConfig = UnwrapConfig<TConfig>,
 > extends BaseBindings {
 	/**
-	 * Create a Worker binding.
-	 * `workerName` must match a known config's name (or any `string` for untyped bindings).
-	 * `exportName` must be a valid `WorkerEntrypoint` export for the given Worker.
-	 * If `exportName` is omitted, targets the default export.
+	 * Service binding (Worker-to-Worker). `workerName` is the name of the bound
+	 * Worker; `exportName` selects a named `WorkerEntrypoint` export (defaults to
+	 * the default export).
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
 	 */
 	worker<
 		TWorkerName extends WorkerName<TUnwrappedConfig>,
@@ -1061,9 +1180,10 @@ export interface Bindings<
 	>;
 
 	/**
-	 * Create a Durable Object binding.
-	 * `workerName` must match a known config's name (or any `string` for untyped bindings).
-	 * `exportName` must be a valid `DurableObject` export for the given Worker.
+	 * Binding to a Durable Object class. `workerName` is the name of the Worker
+	 * that defines the class; `exportName` is the exported class name.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
 	 */
 	durableObject<
 		TWorkerName extends WorkerName<TUnwrappedConfig>,
