@@ -19,9 +19,8 @@ import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { retryOnAPIFailure } from "../utils/retry";
 import { getZoneForRoute } from "../zones";
-import type { AssetsOptions } from "../assets";
 import type { RouteObject } from "../deploy/deploy";
-import type { Config, Route } from "@cloudflare/workers-utils";
+import type { AssetsOptions, Config, Route } from "@cloudflare/workers-utils";
 
 type Props = {
 	config: Config;
@@ -280,13 +279,13 @@ export default async function triggersDeploy(
 						}
 					);
 				}
-				if (workflow.schedule) {
+				if (workflow.schedules) {
 					throw new UserError(
-						`Workflow "${workflow.name}" has "schedule" configured but references external script "${workflow.script_name}". ` +
-							`Configure schedule on the worker that defines the workflow.`,
+						`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
+							`Configure schedules on the worker that defines the workflow.`,
 						{
 							telemetryMessage:
-								"triggers deploy workflow schedule external script",
+								"triggers deploy workflow schedules external script",
 						}
 					);
 				}
@@ -303,7 +302,7 @@ export default async function triggersDeploy(
 							script_name: scriptName,
 							class_name: workflow.class_name,
 							...(workflow.limits && { limits: workflow.limits }),
-							...(workflow.schedule && { schedule: workflow.schedule }),
+							...(workflow.schedules && { schedules: workflow.schedules }),
 						}),
 						headers: {
 							"Content-Type": "application/json",

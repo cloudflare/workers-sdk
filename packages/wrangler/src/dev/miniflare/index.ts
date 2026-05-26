@@ -20,11 +20,10 @@ import { updateCheck } from "../../update-check";
 import { warnOrError } from "../../utils/print-bindings";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
-import type { AssetsOptions } from "../../assets";
 import type { LoggerLevel } from "../../logger";
-import type { LegacyAssetPaths } from "../../sites";
 import type { EsbuildBundle } from "../use-esbuild";
 import type {
+	AssetsOptions,
 	Binding,
 	CfD1Database,
 	CfDispatchNamespace,
@@ -37,6 +36,7 @@ import type {
 	CfWorkflow,
 	Config,
 	ContainerEngine,
+	LegacyAssetPaths,
 } from "@cloudflare/workers-utils";
 import type {
 	DOContainerOptions,
@@ -798,11 +798,11 @@ export function buildMiniflareBindingOptions(
 							{ telemetryMessage: "workflow limits on external script" }
 						);
 					}
-					if (workflow.schedule) {
+					if (workflow.schedules) {
 						throw new UserError(
-							`Workflow "${workflow.name}" has "schedule" configured but references external script "${workflow.script_name}". ` +
-								`Configure schedule on the worker that defines the workflow.`,
-							{ telemetryMessage: "workflow schedule on external script" }
+							`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
+								`Configure schedules on the worker that defines the workflow.`,
+							{ telemetryMessage: "workflow schedules on external script" }
 						);
 					}
 				}

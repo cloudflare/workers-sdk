@@ -2699,36 +2699,38 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	if (hasProperty(value, "schedule") && value.schedule !== undefined) {
-		if (typeof value.schedule === "string") {
-			if (value.schedule.length === 0) {
+	if (hasProperty(value, "schedules") && value.schedules !== undefined) {
+		if (typeof value.schedules === "string") {
+			if (value.schedules.length === 0) {
 				diagnostics.errors.push(
-					`"${field}" bindings "schedule" field must not be an empty string.`
+					`"${field}" bindings "schedules" field must not be an empty string.`
 				);
 				isValid = false;
 			}
-		} else if (Array.isArray(value.schedule)) {
-			if (value.schedule.length === 0) {
+		} else if (Array.isArray(value.schedules)) {
+			if (value.schedules.length === 0) {
 				diagnostics.errors.push(
-					`"${field}" bindings "schedule" field must not be an empty array.`
+					`"${field}" bindings "schedules" field must not be an empty array.`
 				);
 				isValid = false;
-			} else if (!value.schedule.every((s: unknown) => typeof s === "string")) {
+			} else if (
+				!value.schedules.every((s: unknown) => typeof s === "string")
+			) {
 				diagnostics.errors.push(
-					`"${field}" bindings should, optionally, have a string or array of strings "schedule" field but got ${JSON.stringify(
+					`"${field}" bindings should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
 						value
 					)}.`
 				);
 				isValid = false;
-			} else if (value.schedule.some((s: unknown) => s === "")) {
+			} else if (value.schedules.some((s: unknown) => s === "")) {
 				diagnostics.errors.push(
-					`"${field}" bindings "schedule" field must not contain empty strings.`
+					`"${field}" bindings "schedules" field must not contain empty strings.`
 				);
 				isValid = false;
 			}
 		} else {
 			diagnostics.errors.push(
-				`"${field}" bindings should, optionally, have a string or array of strings "schedule" field but got ${JSON.stringify(
+				`"${field}" bindings should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
 					value
 				)}.`
 			);
@@ -2784,7 +2786,7 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		"script_name",
 		"remote",
 		"limits",
-		"schedule",
+		"schedules",
 	]);
 
 	return isValid;
