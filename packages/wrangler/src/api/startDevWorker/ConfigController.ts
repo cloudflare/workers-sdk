@@ -572,30 +572,33 @@ export class ConfigController extends Controller {
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
 		try {
-			const fileConfig = readConfig(
-				{
-					script: input.entrypoint,
-					config: input.config,
-					env: input.env,
-					"dispatch-namespace": undefined,
-					"legacy-env": !input.legacy?.useServiceEnvironments,
-					remote: !!input.dev?.remote,
-					upstreamProtocol:
-						input.dev?.origin?.secure === undefined
-							? undefined
-							: input.dev?.origin?.secure
-								? "https"
-								: "http",
-					localProtocol:
-						input.dev?.server?.secure === undefined
-							? undefined
-							: input.dev?.server?.secure
-								? "https"
-								: "http",
-					generateTypes: input.dev?.generateTypes,
-				},
-				{ useRedirectIfAvailable: true }
-			);
+			const fileConfig =
+				typeof input.config === "object"
+					? input.config
+					: readConfig(
+							{
+								script: input.entrypoint,
+								config: input.config,
+								env: input.env,
+								"dispatch-namespace": undefined,
+								"legacy-env": !input.legacy?.useServiceEnvironments,
+								remote: !!input.dev?.remote,
+								upstreamProtocol:
+									input.dev?.origin?.secure === undefined
+										? undefined
+										: input.dev?.origin?.secure
+											? "https"
+											: "http",
+								localProtocol:
+									input.dev?.server?.secure === undefined
+										? undefined
+										: input.dev?.server?.secure
+											? "https"
+											: "http",
+								generateTypes: input.dev?.generateTypes,
+							},
+							{ useRedirectIfAvailable: true }
+						);
 
 			if (!getDisableConfigWatching() && input.dev?.watch !== false) {
 				await this.#ensureWatchingConfig(fileConfig.configPath);

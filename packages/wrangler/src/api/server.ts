@@ -23,7 +23,7 @@ import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
-import type { Config, RawConfig, Trigger } from "@cloudflare/workers-utils";
+import type { Config, RawConfig } from "@cloudflare/workers-utils";
 import type { DispatchFetch, Json, RequestInfo } from "miniflare";
 
 export type InlineConfig = Omit<RawConfig, "env">;
@@ -130,28 +130,6 @@ function normalizeInlineWorkerConfig(
 	return normalizedConfig;
 }
 
-type ConfigRoute = NonNullable<Config["route"]> | NonNullable<Config["routes"]>[number];
-
-function routeToTrigger(route: ConfigRoute): Extract<Trigger, { type: "route" }> {
-	return typeof route === "string"
-		? { type: "route", pattern: route }
-		: { type: "route", ...route };
-}
-
-function getInlineConfigTriggers(config: Config): Trigger[] {
-	const routes = [
-		...(config.route ? [config.route] : []),
-		...(config.routes ?? []),
-	].map(routeToTrigger);
-	const crons =
-		config.triggers.crons?.map<Extract<Trigger, { type: "cron" }>>((cron) => ({
-			type: "cron",
-			cron,
-		})) ?? [];
-
-	return [...routes, ...crons];
-}
-
 async function resolveFetchInput(
 	input: RequestInfo,
 	session: ServerSession
@@ -195,31 +173,20 @@ function resolveWorkerInputs(
 				: undefined;
 		const overrides = "configPath" in input ? input.overrides : undefined;
 		const bindings = convertConfigToBindings(
-			inlineConfig ?? { vars: overrides?.vars },
+			{ vars: overrides?.vars },
 			{ usePreviewIds: true }
 		);
-
 		for (const [key, value] of Object.entries(overrides?.secrets ?? {})) {
 			bindings[key] = { type: "secret_text", value };
 		}
 
 		return {
-			// Uses an empty string to avoid dev env from auto discovering a config file and merging it with the inline config
-			config: "configPath" in input ? resolvePath(root, input.configPath) : "",
+			config:
+				"configPath" in input
+					? resolvePath(root, input.configPath)
+					: inlineConfig,
 			env: "configPath" in input ? input.env : undefined,
-			name: inlineConfig?.name,
-			entrypoint: inlineConfig?.main,
-			compatibilityDate: inlineConfig?.compatibility_date,
-			compatibilityFlags: inlineConfig?.compatibility_flags,
-			complianceRegion: inlineConfig?.compliance_region,
-			pythonModules: inlineConfig?.python_modules,
 			bindings,
-			migrations: inlineConfig?.migrations,
-			containers: inlineConfig?.containers,
-			triggers: inlineConfig ? getInlineConfigTriggers(inlineConfig) : undefined,
-			tailConsumers: inlineConfig?.tail_consumers,
-			streamingTailConsumers: inlineConfig?.streaming_tail_consumers,
-			assets: inlineConfig?.assets?.directory,
 			dev: {
 				auth,
 				remote: options.allowRemoteBindings ? undefined : false,
@@ -229,6 +196,7 @@ function resolveWorkerInputs(
 				persist:
 					options.persist === true ? undefined : (options.persist ?? false),
 				inspector: options.inspector ?? false,
+				registry: undefined,
 				outboundService:
 					options.outboundService ??
 					((request) => {
@@ -239,17 +207,16 @@ function resolveWorkerInputs(
 			},
 			build: {
 				nodejsCompatMode: (config) => {
-					const hookConfig = inlineConfig ?? config;
 					return validateNodeCompatMode(
-						hookConfig.compatibility_date,
-						hookConfig.compatibility_flags ?? [],
-						{ noBundle: hookConfig.no_bundle }
+						config.compatibility_date,
+						config.compatibility_flags ?? [],
+						{ noBundle: config.no_bundle }
 					);
 				},
 			},
 			legacy: {
 				site: (config) => {
-					const legacyAssetPaths = getSiteAssetPaths(inlineConfig ?? config);
+					const legacyAssetPaths = getSiteAssetPaths(config);
 
 					if (!legacyAssetPaths) {
 						return undefined;
