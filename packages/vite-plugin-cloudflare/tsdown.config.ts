@@ -7,7 +7,6 @@ export default defineConfig([
 	{
 		entry: {
 			index: "src/index.ts",
-			"experimental-config": "src/experimental-config.ts",
 		},
 		platform: "node",
 		outDir: "dist",
@@ -26,6 +25,19 @@ export default defineConfig([
 			__VITE_PLUGIN_DEFAULT_COMPAT_DATE__: JSON.stringify(
 				new Date().toISOString().slice(0, 10)
 			),
+		},
+		ignoreWatch,
+	},
+	// TODO: move into main build as an additional entry once tsdown has been upgraded
+	{
+		entry: {
+			"experimental-config": "src/experimental-config.ts",
+		},
+		platform: "node",
+		outDir: "dist",
+		tsconfig: "tsconfig.plugin.json",
+		dts: {
+			resolve: ["@cloudflare/config"],
 		},
 		ignoreWatch,
 	},
