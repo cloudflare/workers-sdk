@@ -13,7 +13,8 @@ jobs:
   generate-changeset:
     runs-on: ubuntu-slim
     if: |
-      github.event.pull_request.user.login == 'dependabot[bot]'
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -33,4 +34,17 @@ jobs:
 
       - name: Generate C3 changesets
         # Keep the final param (the changeset prefix: `c3-frameworks-update`) in sync with the filter in the `.github/workflows/c3-e2e-dependabot.yml` workflow.
-        run: node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }} create-cloudflare packages/create-cloudflare/src/frameworks/package.json c3-frameworks-update
+        run: |
+          cat > "$RUNNER_TEMP/git-askpass" <<'EOF'
+          #!/bin/sh
+          case "$1" in
+            *Username*) echo "x-access-token" ;;
+            *Password*) echo "$GH_PUSH_TOKEN" ;;
+          esac
+          EOF
+          chmod +x "$RUNNER_TEMP/git-askpass"
+          export GIT_ASKPASS="$RUNNER_TEMP/git-askpass"
+          export GIT_TERMINAL_PROMPT=0
+          node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }} create-cloudflare packages/create-cloudflare/src/frameworks/package.json c3-frameworks-update
+        env:
+          GH_PUSH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}

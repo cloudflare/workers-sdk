@@ -14,7 +14,8 @@ jobs:
   generate-changeset:
     runs-on: ubuntu-slim
     if: |
-      github.event.pull_request.user.login == 'dependabot[bot]'
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -38,9 +39,21 @@ jobs:
         # - Packages: Coma-separated names of the workers-sdk packages whose dependencies are being updated
         # - PackageJSON: The path to the package JSON being updated by Dependabot
         # - Changeset prefix: The prefix to go on the front of the filename of the generated changeset
-        run: >-
-          node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts
-          ${{ github.event.number }}
-          miniflare,wrangler
-          packages/miniflare/package.json
-          dependabot-update
+        run: |
+          cat > "$RUNNER_TEMP/git-askpass" <<'EOF'
+          #!/bin/sh
+          case "$1" in
+            *Username*) echo "x-access-token" ;;
+            *Password*) echo "$GH_PUSH_TOKEN" ;;
+          esac
+          EOF
+          chmod +x "$RUNNER_TEMP/git-askpass"
+          export GIT_ASKPASS="$RUNNER_TEMP/git-askpass"
+          export GIT_TERMINAL_PROMPT=0
+          node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts \
+            ${{ github.event.number }} \
+            miniflare,wrangler \
+            packages/miniflare/package.json \
+            dependabot-update
+        env:
+          GH_PUSH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
