@@ -60,16 +60,18 @@ export interface ConfigContext {
 	mode: string;
 }
 
-type ConfigFnObject = (ctx: ConfigContext) => UserConfig;
-type ConfigFnPromise = (ctx: ConfigContext) => Promise<UserConfig>;
-type ConfigFn = (ctx: ConfigContext) => UserConfig | Promise<UserConfig>;
-type ConfigExport =
-	| UserConfig
-	| Promise<UserConfig>
-	| ConfigFnObject
-	| ConfigFnPromise
-	| ConfigFn;
-
-export function defineConfig<const T extends ConfigExport>(config: T): T {
+export function defineConfig<const T extends UserConfig>(
+	config: UserConfig & T
+): T;
+export function defineConfig<const T extends UserConfig>(
+	config: Promise<UserConfig & T>
+): Promise<T>;
+export function defineConfig<const T extends UserConfig>(
+	config: (ctx: ConfigContext) => UserConfig & T
+): (ctx: ConfigContext) => T;
+export function defineConfig<const T extends UserConfig>(
+	config: (ctx: ConfigContext) => Promise<UserConfig & T>
+): (ctx: ConfigContext) => Promise<T>;
+export function defineConfig(config: unknown): unknown {
 	return config;
 }
