@@ -1305,7 +1305,7 @@ export async function logout(): Promise<void> {
 	const profileName = getActiveProfileName();
 	if (profileName) {
 		logger.error(
-			`You are currently using the profile "${profileName}".\nTo delete the profile and revoke its tokens, run \`wrangler profiles delete ${profileName}\`.\nIf you want to unset the profile temporarily, run \`wrangler profiles unset\`.`
+			`You are currently using the profile "${profileName}".\nTo unbind this directory from the profile, run \`wrangler logout --profile=${profileName}\`.\nTo delete the profile entirely, run \`wrangler profiles delete ${profileName}\`.`
 		);
 		return;
 	}

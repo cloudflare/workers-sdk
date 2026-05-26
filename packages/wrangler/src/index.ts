@@ -430,8 +430,6 @@ import {
 	profileDeleteCommand,
 	profileListCommand,
 	profileNamespace,
-	profileSetCommand,
-	profileUnsetCommand,
 } from "./user/profiles";
 import { noProxy, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
@@ -2253,16 +2251,8 @@ export function createCLIParser(argv: string[]) {
 			definition: profileCreateCommand,
 		},
 		{
-			command: "wrangler profiles set",
-			definition: profileSetCommand,
-		},
-		{
 			command: "wrangler profiles delete",
 			definition: profileDeleteCommand,
-		},
-		{
-			command: "wrangler profiles unset",
-			definition: profileUnsetCommand,
 		},
 	]);
 	registry.registerNamespace("profiles");

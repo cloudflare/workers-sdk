@@ -14,7 +14,6 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { createCommand, createNamespace } from "../core/create-command";
-import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { getWranglerProfileFromEnv } from "./auth-variables";
 import { handleScopesArgs, loginArgs } from "./login-shared";
@@ -28,11 +27,6 @@ import {
 } from "./user";
 
 export const PROFILES_DIR = "profiles";
-
-/**
- * The file that tracks which profile is currently active.
- */
-const ACTIVE_PROFILE_FILE = "active.json";
 
 /**
  * The file that stores directory-to-profile bindings.
@@ -83,8 +77,7 @@ function getConfigDir(): string {
  * Priority (highest to lowest):
  * 1. `WRANGLER_PROFILE` environment variable
  * 2. Directory binding (walk up from cwd)
- * 3. `active_profile` from `~/.wrangler/config/active.json`
- * 4. `"default"`
+ * 3. Fallback to default auth (returns `undefined`)
  */
 export function getActiveProfileName(): string | undefined {
 	const envProfile = getWranglerProfileFromEnv();
@@ -97,32 +90,6 @@ export function getActiveProfileName(): string | undefined {
 		return dirProfile;
 	}
 
-	const activeProfileFromConfig = getActiveProfileFromConfig();
-	if (activeProfileFromConfig) {
-		return activeProfileFromConfig;
-	}
-
-	return undefined;
-}
-
-/**
- * Read the `active_profile` value directly from `active.json`,
- * ignoring environment variables and directory bindings.
- * Returns `undefined` when active.json doesn't exist or the
- * active profile is "default".
- */
-function getActiveProfileFromConfig(): string | undefined {
-	try {
-		const filePath = path.join(getConfigDir(), ACTIVE_PROFILE_FILE);
-		const content = JSON.parse(readFileSync(filePath)) as {
-			active_profile?: string;
-		};
-		if (content.active_profile && content.active_profile !== "default") {
-			return content.active_profile;
-		}
-	} catch {
-		// active.json doesn't exist; that's fine
-	}
 	return undefined;
 }
 
@@ -278,26 +245,6 @@ export function listProfiles(): string[] {
 }
 
 /**
- * Set the active profile in the active.json manifest.
- */
-export function setActiveProfile(name: string): void {
-	const filePath = path.join(getConfigDir(), ACTIVE_PROFILE_FILE);
-	mkdirSync(path.dirname(filePath), { recursive: true });
-	writeFileSync(
-		filePath,
-		JSON.stringify({ active_profile: name }, null, "\t"),
-		{ encoding: "utf-8" }
-	);
-}
-/**
- * Unset the active profile by removing the active.json manifest.
- */
-export function unsetActiveProfile(): void {
-	const filePath = path.join(getConfigDir(), ACTIVE_PROFILE_FILE);
-	rmSync(filePath, { force: true });
-}
-
-/**
  * Delete a named profile.
  * Cannot delete the "default" profile.
  */
@@ -307,13 +254,6 @@ export function deleteProfile(name: string): void {
 	rmSync(profilePath);
 
 	cleanupDirectoryBindingsForProfile(name);
-
-	// If this was the active profile in active.json, reset to default.
-	// Use getActiveProfileFromConfig() instead of getActiveProfile() so that
-	// WRANGLER_PROFILE and directory bindings don't mask the check.
-	if (getActiveProfileFromConfig() === name) {
-		setActiveProfile("default");
-	}
 }
 
 // ---------------------------------------------------------------------------
@@ -412,7 +352,7 @@ export const profileCreateCommand = createCommand({
 
 		logger.log(`Creating profile "${args.name}"...\n`);
 
-		const success = await login(config, {
+		await login(config, {
 			scopes: args.scopes as Scope[] | undefined,
 			browser: args.browser,
 			callbackHost: args.callbackHost,
@@ -420,68 +360,10 @@ export const profileCreateCommand = createCommand({
 			profile: args.name,
 		});
 
-		if (!success) {
-			return;
-		}
-
 		logger.log(`✨ Successfully created profile "${args.name}".\n`);
-
-		if (getActiveProfileName() !== args.name) {
-			const shouldActivate = await confirm(
-				`Do you want to set "${args.name}" as the active profile?`,
-				{ fallbackValue: false }
-			);
-			if (shouldActivate) {
-				setActiveProfile(args.name);
-				logger.log(`✨ Switched to profile "${args.name}".\n`);
-			}
-		}
-	},
-});
-
-export const profileSetCommand = createCommand({
-	metadata: {
-		description: "Switch the active authentication profile",
-		owner: "Workers: Authoring and Testing",
-		status: "open beta",
-	},
-	behaviour: {
-		printActiveProfile: false,
-		printConfigWarnings: false,
-		provideConfig: false,
-	},
-	args: {
-		name: {
-			describe: "Name of the profile to switch to",
-			type: "string",
-			demandOption: true,
-		},
-		dir: {
-			describe:
-				"Bind a directory to this profile instead of setting it globally. Defaults to the current working directory.",
-			type: "string",
-		},
-	},
-	positionalArgs: ["name"],
-	async handler(args) {
-		validateProfileName(args.name);
-		if (!profileExists(args.name)) {
-			throw new UserError(
-				`Profile "${args.name}" does not exist.\nRun \`wrangler profiles create ${args.name}\` to create it.`,
-				{ telemetryMessage: "profile set not found" }
-			);
-		}
-
-		if (args.dir !== undefined) {
-			const dir = path.resolve(args.dir || process.cwd());
-			const bindings = readDirectoryBindings();
-			bindings[dir] = args.name;
-			writeDirectoryBindings(bindings);
-			logger.log(`✨ Bound directory "${dir}" to profile "${args.name}".\n`);
-		} else {
-			setActiveProfile(args.name);
-			logger.log(`✨ Switched to profile "${args.name}".\n`);
-		}
+		logger.log(
+			`This profile is not active yet. Run \`wrangler login --profile=${args.name}\` to use it in this directory.\n`
+		);
 	},
 });
 
@@ -528,68 +410,5 @@ export const profileDeleteCommand = createCommand({
 		}
 		deleteProfile(args.name);
 		logger.log(`✅ Deleted profile "${args.name}".\n`);
-	},
-});
-
-export const profileUnsetCommand = createCommand({
-	metadata: {
-		description:
-			"Reset the active profile to default, or remove a directory-to-profile binding",
-		owner: "Workers: Authoring and Testing",
-		status: "open beta",
-	},
-	behaviour: {
-		printActiveProfile: false,
-		printConfigWarnings: false,
-		provideConfig: false,
-	},
-	args: {
-		dir: {
-			describe:
-				"If provided, unsets the profile bound to the specified directory. If not provided, unsets the global active profile.",
-			type: "string",
-		},
-	},
-	async handler(args) {
-		if (args.dir !== undefined) {
-			// Unbind a specific directory
-			const dir = path.resolve(args.dir || process.cwd());
-			const removed = removeDirectoryBinding(dir);
-			if (!removed) {
-				throw new UserError(
-					`No profile is set for directory "${dir}". Run \`wrangler profiles list\` to see existing profiles and their associated directories.`,
-					{
-						telemetryMessage: "profile unset no binding",
-					}
-				);
-			}
-			logger.log(`✅ Unset profile for directory "${dir}".\n`);
-		} else {
-			// unset the global active profile
-			const envProfile = getWranglerProfileFromEnv();
-			if (envProfile) {
-				throw new UserError(
-					`The active profile "${envProfile}" is set via the WRANGLER_PROFILE environment variable.\n`,
-					{ telemetryMessage: "profile unset env var" }
-				);
-			}
-
-			const dirProfile = getProfileForDirectory(process.cwd());
-			if (dirProfile) {
-				logger.warn(
-					`This directory is bound to the profile "${dirProfile}" via a directory binding.\nRunning \`wrangler profiles unset\` without the --dir flag will only unset the globally active profile.\nThe directory binding will still apply.`
-				);
-			}
-
-			const current = getActiveProfileFromConfig();
-			if (!current) {
-				logger.log("Already using the default profile.");
-				return;
-			}
-			unsetActiveProfile();
-			logger.log(
-				`✅ Switched from profile "${current}" back to the default profile.\n`
-			);
-		}
 	},
 });
