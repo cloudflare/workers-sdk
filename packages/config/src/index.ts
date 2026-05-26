@@ -42,8 +42,17 @@ export type {
 	WorkerBinding,
 	WorkerLoaderBinding,
 	WorkflowBinding,
+	// Trigger types (exported for declaration file generation)
+	Triggers,
+	FetchTrigger,
+	QueueConsumerTrigger,
+	ScheduledTrigger,
+	// Export types (exported for declaration file generation)
+	Exports,
+	DurableObjectExport,
+	WorkflowExport,
 } from "./config";
-export { createBindings, bindings } from "./config";
+export { createBindings, bindings, triggers, exports } from "./config";
 export type { UserConfig } from "./types";
 export { ConfigSchema } from "./schema";
 export { generateTypes } from "./generate";

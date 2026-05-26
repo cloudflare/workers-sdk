@@ -17,6 +17,8 @@ import type {
 	D1Binding,
 	DispatchNamespaceBinding,
 	DurableObjectBinding,
+	DurableObjectExport,
+	FetchTrigger,
 	FlagshipBinding,
 	HyperdriveBinding,
 	ImagesBinding,
@@ -27,8 +29,10 @@ import type {
 	MtlsCertificateBinding,
 	PipelineBinding,
 	QueueBinding,
+	QueueConsumerTrigger,
 	R2Binding,
 	RateLimitBinding,
+	ScheduledTrigger,
 	SecretBinding,
 	SecretsStoreSecretBinding,
 	SendEmailBinding,
@@ -42,6 +46,7 @@ import type {
 	WorkerBinding,
 	WorkerLoaderBinding,
 	WorkerModule,
+	WorkflowExport,
 	// TODO: re-enable when workflow bindings return.
 	// WorkflowBinding,
 } from "./config";
@@ -87,6 +92,16 @@ type Binding =
 	| WorkerLoaderBinding;
 // TODO: re-enable when workflow bindings return.
 // | WorkflowBinding<unknown, string, string>;
+
+/**
+ * Union of all trigger definitions accepted in `triggers`.
+ */
+type Trigger = FetchTrigger | QueueConsumerTrigger | ScheduledTrigger;
+
+/**
+ * Union of all export definitions accepted in `exports`.
+ */
+type Export = DurableObjectExport | WorkflowExport;
 
 /**
  * Worker configuration. This is the input shape passed to
@@ -177,60 +192,12 @@ export interface UserConfig {
 
 	/**
 	 * Event triggers — fetch routes, queue consumers, and cron schedules
-	 * — that invoke this Worker.
+	 * — that invoke this Worker. Construct entries with `triggers.fetch(...)`,
+	 * `triggers.queue(...)`, or `triggers.scheduled(...)`.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
 	 */
-	triggers?: Array<
-		| {
-				type: "fetch";
-				/**
-				 * A route that your Worker should be published to.
-				 *
-				 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#types-of-routes
-				 */
-				pattern: string;
-				/**
-				 * The DNS zone the pattern is attached to. Required when the
-				 * pattern is ambiguous.
-				 */
-				zone?: string;
-		  }
-		| {
-				type: "queue";
-				/** The name of the queue from which this consumer should consume. */
-				name: string;
-				/** The queue to send messages that failed to be consumed. */
-				deadLetterQueue?: string;
-				/** The maximum number of messages per batch. */
-				maxBatchSize?: number;
-				/** The maximum number of seconds to wait to fill a batch with messages. */
-				maxBatchTimeout?: number;
-				/**
-				 * The maximum number of concurrent consumer Worker invocations.
-				 * Leaving this unset will allow your consumer to scale to the
-				 * maximum concurrency needed to keep up with the message backlog.
-				 */
-				maxConcurrency?: number | null;
-				/** The maximum number of retries for each message. */
-				maxRetries?: number;
-				/** The number of seconds to wait before retrying a message. */
-				retryDelay?: number;
-				/** The number of milliseconds to wait for pulled messages to become visible again. */
-				visibilityTimeoutMs?: number;
-		  }
-		| {
-				type: "scheduled";
-				/**
-				 * "Cron" definitions to trigger a Worker's "scheduled" function.
-				 *
-				 * Lets you call Workers periodically, much like a cron job.
-				 *
-				 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
-				 */
-				schedules: string[];
-		  }
-	>;
+	triggers?: Trigger[];
 
 	/**
 	 * A list of Tail Workers that are bound to this Worker.
@@ -408,6 +375,8 @@ export interface UserConfig {
 	/**
 	 * Configuration for named exports declared by the Worker. Each entry's
 	 * key is the exported class name; the value configures the export.
+	 * Construct entries with `exports.durableObject(...)` or
+	 * `exports.workflow(...)`.
 	 *
 	 * Two export kinds are supported:
 	 *
@@ -420,28 +389,5 @@ export interface UserConfig {
 	 *
 	 * - `workflow`: declares a Workflow defined by this Worker.
 	 */
-	exports?: Record<
-		string,
-		| {
-				type: "durable-object";
-				/**
-				 * Storage backend for the Durable Object.
-				 *
-				 * - `"sqlite"`: selects the SQLite-backed storage engine
-				 *   (recommended for new classes).
-				 * - `"legacy-kv"`: selects the legacy key-value storage engine.
-				 */
-				storage: "sqlite" | "legacy-kv";
-		  }
-		| {
-				type: "workflow";
-				/** The name of the Workflow. */
-				name: string;
-				/** Optional limits for the Workflow. */
-				limits?: {
-					/** Maximum number of steps a Workflow instance can execute. */
-					steps?: number;
-				};
-		  }
-	>;
+	exports?: Record<string, Export>;
 }
