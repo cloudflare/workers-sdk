@@ -6,7 +6,7 @@ import {
 	viteTestUrl,
 } from "../../../__test-utils__";
 
-describe.runIf(satisfiesMinimumViteVersion("7.0.0"))("no-ssr", () => {
+describe.runIf(satisfiesMinimumViteVersion("7.0.0"))("assets-only", () => {
 	test.runIf(isBuild)(
 		"does not return a server rendered response at /hello after the build",
 		async ({ expect }) => {
