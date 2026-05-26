@@ -97,7 +97,7 @@ export default {
 					aiResponse as {
 						choices: { message: { content: string } }[];
 					}
-				).choices[0].message.content.toUpperCase()
+				).choices[0]?.message.content.toUpperCase() ?? ""
 			)
 		);
 	},
