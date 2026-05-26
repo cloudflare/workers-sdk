@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -123,13 +124,14 @@ describe("migrate", () => {
 		}) => {
 			setIsTTY(false);
 
+			const migrationsDir = join(process.cwd(), "my-migrations-go-here");
 			writeWranglerConfig({
 				d1_databases: [
 					{
 						binding: "DATABASE",
 						database_name: "db",
 						database_id: "xxxx",
-						migrations_dir: "/tmp/my-migrations-go-here",
+						migrations_dir: migrationsDir,
 					},
 				],
 			});
@@ -141,7 +143,7 @@ describe("migrate", () => {
 			);
 			mockConfirm({
 				text: `No migrations folder found.
-Ok to create /tmp/my-migrations-go-here?`,
+Ok to create ${migrationsDir}?`,
 				result: true,
 			});
 			await runWrangler("d1 migrations create db test");
@@ -204,20 +206,21 @@ Your database may not be available to serve requests during the migration, conti
 					{ id: "R2-D2", name: "enterprise-nx" },
 				])
 			);
+			const migrationsDir = join(process.cwd(), "my-migrations-go-here");
 			writeWranglerConfig({
 				d1_databases: [
 					{
 						binding: "DATABASE",
 						database_name: "db",
 						database_id: "xxxx",
-						migrations_dir: "/tmp/my-migrations-go-here",
+						migrations_dir: migrationsDir,
 					},
 				],
 				account_id: "nx01",
 			});
 			mockConfirm({
 				text: `No migrations folder found.
-Ok to create /tmp/my-migrations-go-here?`,
+Ok to create ${migrationsDir}?`,
 				result: true,
 			});
 			await runWrangler("d1 migrations create db test");
@@ -227,7 +230,8 @@ Your database may not be available to serve requests during the migration, conti
 				result: true,
 			});
 			await runWrangler("d1 migrations apply db --remote");
-			expect(std.out).toBe("");
+			expect(std.out).toContain("Migrations to be applied:");
+			expect(std.out).toContain("0001_test.sql");
 		});
 
 		it("should throw a clear error when executeSql returns null (execution cancelled)", async ({
