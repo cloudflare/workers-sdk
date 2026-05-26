@@ -326,10 +326,10 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in creating a secret when value is longer than 1024 characters", async ({
+		it("errors in creating a secret when value is larger than 64 KiB", async ({
 			expect,
 		}) => {
-			const longValue = "a".repeat(1025);
+			const longValue = "a".repeat(65537);
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -345,7 +345,7 @@ describe("secrets-store secret commands", () => {
 				err = e as Error;
 			}
 			expect(err?.message).toMatchInlineSnapshot(
-				`"Secret value cannot exceed 1024 characters (got 1025). The Cloudflare API rejects longer values, and a binding to such a secret will fail at deploy time."`
+				`"Secret value cannot exceed 65536 bytes (got 65537). The Cloudflare API rejects longer values, and a binding to such a secret will fail at deploy time."`
 			);
 		});
 	});

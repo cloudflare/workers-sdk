@@ -775,12 +775,13 @@ export const validateSecretName = (name: string) => {
 	}
 };
 
-export const MAX_SECRET_VALUE_LENGTH = 1024;
+export const MAX_SECRET_VALUE_BYTES = 64 * 1024;
 
 export const validateSecretValue = (value: string) => {
-	if (value.length > MAX_SECRET_VALUE_LENGTH) {
+	const byteLength = Buffer.byteLength(value, "utf8");
+	if (byteLength > MAX_SECRET_VALUE_BYTES) {
 		throw new UserError(
-			`Secret value cannot exceed ${MAX_SECRET_VALUE_LENGTH} characters (got ${value.length}). The Cloudflare API rejects longer values, and a binding to such a secret will fail at deploy time.`,
+			`Secret value cannot exceed ${MAX_SECRET_VALUE_BYTES} bytes (got ${byteLength}). The Cloudflare API rejects longer values, and a binding to such a secret will fail at deploy time.`,
 			{ telemetryMessage: "secrets store secret value too long" }
 		);
 	}
