@@ -13,13 +13,3 @@ export type {
 	InferMainModule,
 	UnwrapConfig,
 } from "@cloudflare/config";
-
-declare module "@cloudflare/config" {
-	interface ConfigContext {
-		/**
-		 * The Vite [`mode`](https://vite.dev/guide/env-and-mode.html#modes) the
-		 * config is being evaluated in (e.g. `"development"`, `"production"`).
-		 */
-		mode: string;
-	}
-}
