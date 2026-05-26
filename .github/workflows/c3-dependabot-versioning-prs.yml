@@ -1,6 +1,6 @@
 name: "C3 - Generate changesets for dependabot PRs"
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] dependabot-only job requires write access to push generated changesets; credentials are not persisted by checkout
     paths:
       - "packages/create-cloudflare/src/frameworks/package.json"
 
