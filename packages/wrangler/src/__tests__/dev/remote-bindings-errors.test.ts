@@ -1,3 +1,4 @@
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { assert, beforeEach, describe, it, vi } from "vitest";
 import { startRemoteProxySession } from "../../api";
 import {
@@ -7,8 +8,6 @@ import {
 import { mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw, mswSuccessUserHandlers } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
-
 vi.mock("../../dev/create-worker-preview", () => ({
 	createPreviewSession: vi.fn(),
 	createWorkerPreview: vi.fn(),
@@ -88,7 +87,7 @@ describe("errors during dev with remote bindings", () => {
 		assert(thrownError);
 
 		expect(thrownError).toMatchInlineSnapshot(
-			`[Error: Failed to start the remote proxy session. There is likely additional logging output above.]`
+			`[Error: Failed to start the remote proxy session. Failed to obtain a preview token: The remote worker preview failed.]`
 		);
 
 		expect(thrownError.cause).toMatchInlineSnapshot(`

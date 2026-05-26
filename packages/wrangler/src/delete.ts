@@ -100,7 +100,7 @@ export const deleteCommand = createCommand({
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
 					"For Pages, please run `wrangler pages project delete` instead.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "delete command pages project mismatch" }
 			);
 		}
 		metrics.sendMetricsEvent(

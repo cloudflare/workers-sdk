@@ -38,7 +38,8 @@ export const workflowsInstancesTerminateAllCommand = createCommand({
 			!validStatusToTerminate.includes(args.status)
 		) {
 			throw new CommandLineArgsError(
-				`Provided status "${args.status}" is not valid, it must be one of the following: ${validStatusToTerminate.join(", ")}.`
+				`Provided status "${args.status}" is not valid, it must be one of the following: ${validStatusToTerminate.join(", ")}.`,
+				{ telemetryMessage: "workflows instances terminate all invalid status" }
 			);
 		}
 	},

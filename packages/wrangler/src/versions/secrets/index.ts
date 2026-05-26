@@ -10,6 +10,7 @@ import { getMetricsUsageHeaders } from "../../metrics";
 import type { StartDevWorkerOptions } from "../../api";
 import type {
 	CfModule,
+	CfPlacement,
 	CfTailConsumer,
 	CfUserLimits,
 	CfWorkerInit,
@@ -61,6 +62,7 @@ export interface VersionDetails {
 			etag: string;
 			handlers: string[];
 			placement_mode?: "smart";
+			placement?: CfPlacement;
 			last_deployed_from: string;
 		};
 		script_runtime: {
@@ -180,9 +182,10 @@ export async function copyWorkerVersionWithNewSecrets({
 		keepBindings,
 		logpush: scriptSettings.logpush,
 		placement:
-			versionInfo.resources.script.placement_mode === "smart"
+			versionInfo.resources.script.placement ??
+			(versionInfo.resources.script.placement_mode === "smart"
 				? { mode: "smart" }
-				: undefined,
+				: undefined),
 		tail_consumers: scriptSettings.tail_consumers ?? undefined,
 		limits: versionInfo.resources.script_runtime.limits,
 		annotations: {
@@ -245,19 +248,24 @@ async function parseModules(
 		// Workers Sites is not supported
 		if (formData.get("__STATIC_CONTENT_MANIFEST") !== null) {
 			throw new UserError(
-				"Workers Sites does not support updating secrets through `wrangler versions secret put`. You must use `wrangler secret put` instead."
+				"Workers Sites does not support updating secrets through `wrangler versions secret put`. You must use `wrangler secret put` instead.",
+				{ telemetryMessage: "versions secrets sites unsupported" }
 			);
 		}
 
 		// Load the main module and any additionals
 		const entrypoint = contentRes.headers.get("cf-entrypoint");
 		if (entrypoint === null) {
-			throw new FatalError("Got modules without cf-entrypoint header");
+			throw new FatalError("Got modules without cf-entrypoint header", {
+				telemetryMessage: "versions secrets modules missing entrypoint header",
+			});
 		}
 
 		const entrypointPart = formData.get(entrypoint) as File | null;
 		if (entrypointPart === null) {
-			throw new FatalError("Could not find entrypoint in form-data");
+			throw new FatalError("Could not find entrypoint in form-data", {
+				telemetryMessage: "versions secrets modules missing entrypoint part",
+			});
 		}
 
 		const mainModule: CfModule = {
@@ -303,7 +311,8 @@ async function parseModules(
 		const contentType = contentRes.headers.get("content-type");
 		if (contentType === null) {
 			throw new FatalError(
-				"No content-type header was provided for non-module Worker content"
+				"No content-type header was provided for non-module Worker content",
+				{ telemetryMessage: "versions secrets content missing content type" }
 			);
 		}
 

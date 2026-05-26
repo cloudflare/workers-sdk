@@ -8,6 +8,7 @@ const config: Config = {
 	tsconfig: join(__dirname, "../../workers-utils/tsconfig.json"),
 	type: "RawConfig",
 	skipTypeCheck: true,
+	markdownDescription: true,
 };
 
 const applyFormattingRules = (schema: Schema) => {

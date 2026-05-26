@@ -43,10 +43,112 @@ function chromeBaseUrl(wsEndpoint: string): string {
 	return `http://${u.host}`;
 }
 
+// Substrings of workerd / underlying kj socket error messages that indicate
+// a transient connection failure and are safe to retry. Matched
+// case-insensitively against `Error.message`.
+const RETRYABLE_FETCH_ERROR_SUBSTRINGS = [
+	// kj/async-io-win32.c++ ConnectEx (#1225) — the remote socket refused us.
+	// Surfaces on Windows when Chrome announced the DevTools URL but isn't
+	// quite accepting connections yet.
+	"connection refused",
+	"remote computer refused",
+	// kj/async-io-win32.c++ WSARecv (#64) — the connection went away mid-read.
+	"network name is no longer available",
+	// Generic workerd disconnect classifications.
+	"network connection lost",
+	"disconnected",
+];
+
+function isRetryableFetchError(error: unknown): boolean {
+	const message = (error as { message?: string } | undefined)?.message;
+	if (typeof message !== "string") {
+		return false;
+	}
+	const lower = message.toLowerCase();
+	return RETRYABLE_FETCH_ERROR_SUBSTRINGS.some((needle) =>
+		lower.includes(needle)
+	);
+}
+
+const MAX_BODY_PREVIEW = 2000;
+
+function truncateBody(text: string): string {
+	if (text.length <= MAX_BODY_PREVIEW) {
+		return text;
+	}
+	return `${text.slice(0, MAX_BODY_PREVIEW)}... (truncated, ${text.length} bytes total)`;
+}
+
+/**
+ * Read a JSON response with diagnostic error reporting.
+ *
+ * Standard `await resp.json()` produces opaque "Unexpected token X, ..."
+ * errors when an upstream returns non-JSON (e.g. a 500 with a stack-trace
+ * text body from the loopback `/browser/launch` handler when Chrome fails
+ * to start). This helper reads the body as text first, includes the status
+ * and (truncated) text in any thrown error, and chains the original
+ * `SyntaxError` via `cause` so the underlying parse failure is still
+ * inspectable.
+ */
+async function parseJsonResponse<T = unknown>(
+	resp: Response,
+	context: string
+): Promise<T> {
+	const text = await resp.text();
+	if (!resp.ok) {
+		throw new Error(
+			`${context}: upstream returned ${resp.status} ${resp.statusText}\n${truncateBody(text)}`
+		);
+	}
+	try {
+		return JSON.parse(text) as T;
+	} catch (cause) {
+		throw new Error(
+			`${context}: expected JSON, got non-JSON response (${resp.status} ${resp.statusText})\n${truncateBody(text)}`,
+			{ cause }
+		);
+	}
+}
+
+/**
+ * Wrapper around `fetch` that retries on transient connection failures.
+ *
+ * On Windows, the first fetches from this worker to a freshly-launched
+ * Chrome process can occasionally fail with `ConnectEx (#1225)` or
+ * `WSARecv (#64)` even after the readiness probe in `launchBrowser` has
+ * succeeded. We retry a small number of times with exponential backoff so
+ * those transient failures don't surface as `/v1/acquire` errors to the
+ * user worker.
+ */
+async function fetchWithConnectRetry(
+	url: string | URL,
+	init?: RequestInit,
+	{
+		maxAttempts = 5,
+		baseDelayMs = 25,
+		maxDelayMs = 250,
+	}: { maxAttempts?: number; baseDelayMs?: number; maxDelayMs?: number } = {}
+): Promise<Response> {
+	let lastError: unknown;
+	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		try {
+			return await fetch(url, init);
+		} catch (e) {
+			lastError = e;
+			if (!isRetryableFetchError(e) || attempt === maxAttempts - 1) {
+				break;
+			}
+			const delay = Math.min(maxDelayMs, baseDelayMs * 2 ** attempt);
+			await new Promise((resolve) => setTimeout(resolve, delay));
+		}
+	}
+	throw lastError;
+}
+
 // Reserved codes 1005 (No Status Received) and 1006 (Abnormal Closure) are
 // valid in CloseEvent but throw InvalidAccessError when passed to .close().
 function forwardClose(target?: WebSocket, e?: CloseEvent) {
-	if (!target) {
+	if (!target || target.readyState === WebSocket.CLOSED) {
 		return;
 	}
 	if (!e?.code || e?.code === 1005 || e?.code === 1006) {
@@ -72,7 +174,9 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 		// This serves as the health indicator for the session and is reused
 		// by the legacy chunked-framing client (/v1/connectDevtools).
 		const wsUrl = this.sessionInfo.wsEndpoint.replace("ws://", "http://");
-		const resp = await fetch(wsUrl, { headers: { Upgrade: "websocket" } });
+		const resp = await fetchWithConnectRetry(wsUrl, {
+			headers: { Upgrade: "websocket" },
+		});
 		assert(resp.webSocket !== null, "Expected a WebSocket response");
 		this.chromeWs = resp.webSocket;
 		this.chromeWs.accept();
@@ -270,18 +374,20 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 	}
 
 	async #proxyRawWebSocket(targetWsUrl: string): Promise<Response> {
-		const webSocketPair = new WebSocketPair();
-		const [client, server] = Object.values(webSocketPair);
-
-		server.accept();
-
-		const response = await fetch(targetWsUrl.replace("ws://", "http://"), {
-			headers: { Upgrade: "websocket" },
-		});
+		const response = await fetchWithConnectRetry(
+			targetWsUrl.replace("ws://", "http://"),
+			{
+				headers: { Upgrade: "websocket" },
+			}
+		);
 
 		assert(response.webSocket !== null, "Expected a WebSocket response");
 		const chrome = response.webSocket;
 		chrome.accept();
+
+		const webSocketPair = new WebSocketPair();
+		const [client, server] = Object.values(webSocketPair);
+		server.accept();
 
 		const pair = { chrome, server };
 		this.wss.push(pair);
@@ -309,7 +415,7 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 		if (!this.sessionInfo) {
 			return Response.json({ error: "Browser not found" }, { status: 404 });
 		}
-		const resp = await fetch(
+		const resp = await fetchWithConnectRetry(
 			`${chromeBaseUrl(this.sessionInfo.wsEndpoint)}${chromePath}`,
 			{ method }
 		);
@@ -379,11 +485,13 @@ class BrowserRenderingRouter extends Router {
 	}
 
 	async #acquireSession(): Promise<SessionInfo> {
-		const sessionInfo: SessionInfo = await this.env[
-			SharedBindings.MAYBE_SERVICE_LOOPBACK
-		]
-			.fetch("http://localhost/browser/launch")
-			.then((r) => r.json());
+		const resp = await this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK].fetch(
+			"http://localhost/browser/launch"
+		);
+		const sessionInfo = await parseJsonResponse<SessionInfo>(
+			resp,
+			"Failed to launch local browser via miniflare loopback (/browser/launch)"
+		);
 		await this.#fetchSession(sessionInfo.sessionId, "/session-info", {
 			method: "POST",
 			body: JSON.stringify(sessionInfo),
@@ -392,9 +500,13 @@ class BrowserRenderingRouter extends Router {
 	}
 
 	async #getActiveSessions() {
-		const sessionIds = (await this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
-			.fetch("http://localhost/browser/sessionIds")
-			.then((r) => r.json())) as string[];
+		const sessionIdsResp = await this.env[
+			SharedBindings.MAYBE_SERVICE_LOOPBACK
+		].fetch("http://localhost/browser/sessionIds");
+		const sessionIds = await parseJsonResponse<string[]>(
+			sessionIdsResp,
+			"Failed to list active browser sessions via miniflare loopback (/browser/sessionIds)"
+		);
 
 		const sessions = await Promise.all(
 			sessionIds.map(async (sessionId) => {
@@ -402,7 +514,10 @@ class BrowserRenderingRouter extends Router {
 				if (resp.status === 204) {
 					return null;
 				}
-				const sessionInfo: SessionInfo = await resp.json();
+				const sessionInfo = await parseJsonResponse<SessionInfo>(
+					resp,
+					`Failed to read session-info for browser session ${sessionId}`
+				);
 				return {
 					sessionId: sessionInfo.sessionId,
 					startTime: sessionInfo.startTime,

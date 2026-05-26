@@ -177,12 +177,14 @@ export async function getMTlsCertificateByName(
 	);
 	if (certificates.length === 0) {
 		throw new ErrorMTlsCertificateNameNotFound(
-			`certificate not found with name "${name}"`
+			`certificate not found with name "${name}"`,
+			{ telemetryMessage: "api mtls certificate not found" }
 		);
 	}
 	if (certificates.length > 1) {
 		throw new ErrorMTlsCertificateManyNamesMatch(
-			`multiple certificates found with name "${name}"`
+			`multiple certificates found with name "${name}"`,
+			{ telemetryMessage: "api mtls certificate multiple matches" }
 		);
 	}
 	const certificate = certificates[0];

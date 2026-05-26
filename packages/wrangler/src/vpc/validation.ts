@@ -26,7 +26,9 @@ export function validateHostname(hostname: string): void {
 	const trimmed = hostname.trim();
 
 	if (trimmed.length === 0) {
-		throw new UserError("Hostname cannot be empty.");
+		throw new UserError("Hostname cannot be empty.", {
+			telemetryMessage: "vpc validation empty hostname",
+		});
 	}
 
 	const errors: string[] = [];
@@ -74,7 +76,8 @@ export function validateHostname(hostname: string): void {
 
 	if (errors.length > 0) {
 		throw new UserError(
-			`Invalid hostname '${trimmed}':\n${errors.map((e) => `  - ${e}`).join("\n")}`
+			`Invalid hostname '${trimmed}':\n${errors.map((e) => `  - ${e}`).join("\n")}`,
+			{ telemetryMessage: "vpc validation invalid hostname" }
 		);
 	}
 }
@@ -136,7 +139,8 @@ export function toServiceArgs(args: {
 		if (extracted.port !== undefined) {
 			if (tcpPort && tcpPort !== extracted.port) {
 				throw new UserError(
-					`Conflicting TCP port: --hostname includes port ${extracted.port} but --tcp-port is ${tcpPort}. Provide the port in one place only.`
+					`Conflicting TCP port: --hostname includes port ${extracted.port} but --tcp-port is ${tcpPort}. Provide the port in one place only.`,
+					{ telemetryMessage: "vpc validation conflicting tcp port" }
 				);
 			}
 			hostname = extracted.hostname;
@@ -167,19 +171,22 @@ export function validateRequest(args: ServiceArgs) {
 
 	if (!hasIpAddresses && !hasHostname) {
 		throw new UserError(
-			"Must specify either IP addresses (--ipv4/--ipv6) or hostname (--hostname)"
+			"Must specify either IP addresses (--ipv4/--ipv6) or hostname (--hostname)",
+			{ telemetryMessage: "vpc validation missing host" }
 		);
 	}
 
 	if (args.ipv4 && !net.isIPv4(args.ipv4)) {
 		throw new UserError(
-			`Invalid IPv4 address: '${args.ipv4}'. Provide a valid IPv4 address (e.g., '192.168.1.1').`
+			`Invalid IPv4 address: '${args.ipv4}'. Provide a valid IPv4 address (e.g., '192.168.1.1').`,
+			{ telemetryMessage: "vpc validation invalid ipv4" }
 		);
 	}
 
 	if (args.ipv6 && !net.isIPv6(args.ipv6)) {
 		throw new UserError(
-			`Invalid IPv6 address: '${args.ipv6}'. Provide a valid IPv6 address (e.g., '2001:db8::1').`
+			`Invalid IPv6 address: '${args.ipv6}'. Provide a valid IPv6 address (e.g., '2001:db8::1').`,
+			{ telemetryMessage: "vpc validation invalid ipv6" }
 		);
 	}
 
@@ -194,14 +201,17 @@ export function validateRequest(args: ServiceArgs) {
 		);
 		if (invalidIps.length > 0) {
 			throw new UserError(
-				`Invalid resolver IP address(es): ${invalidIps.map((ip) => `'${ip}'`).join(", ")}. Provide valid IPv4 or IPv6 addresses.`
+				`Invalid resolver IP address(es): ${invalidIps.map((ip) => `'${ip}'`).join(", ")}. Provide valid IPv4 or IPv6 addresses.`,
+				{ telemetryMessage: "vpc validation invalid resolver ip" }
 			);
 		}
 	}
 
 	// Validate TCP services require a port
 	if (args.type === ServiceType.Tcp && !args.tcpPort) {
-		throw new UserError("TCP services require a --tcp-port to be specified");
+		throw new UserError("TCP services require a --tcp-port to be specified", {
+			telemetryMessage: "vpc validation missing tcp port",
+		});
 	}
 }
 

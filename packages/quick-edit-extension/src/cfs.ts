@@ -541,15 +541,16 @@ declare module "*.bin" {
 		});
 	}
 
+	/* eslint-disable no-useless-escape --
+		adapted from vscode-web-playground, see: https://github.com/microsoft/vscode-web-playground/blob/fde7a272cc7de/src/memfs.ts#L399-L401
+		escapes are redundant in a character class but harmless
+	*/
 	private _convertSimple2RegExpPattern(pattern: string): string {
-		return (
-			pattern
-				// eslint-disable-next-line
-				.replace(/[\-\\\{\}\+\?\|\^\$\.\,\[\]\(\)\#\s]/g, "\\$&")
-				// eslint-disable-next-line
-				.replace(/[\*]/g, ".*")
-		);
+		return pattern
+			.replace(/[\-\\\{\}\+\?\|\^\$\.\,\[\]\(\)\#\s]/g, "\\$&")
+			.replace(/[\*]/g, ".*");
 	}
+	/* eslint-enable no-useless-escape */
 
 	// --- search provider
 

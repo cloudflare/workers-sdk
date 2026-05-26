@@ -12,6 +12,7 @@ import {
 	formatConfigSnippet,
 	getDockerPath,
 	parseNonHyphenedUuid,
+	getWranglerTmpDir,
 	UserError,
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
@@ -50,7 +51,6 @@ import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
-import { getWranglerTmpDir } from "../paths";
 import {
 	ensureQueuesExistByConfig,
 	getQueue,
@@ -80,19 +80,19 @@ import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
-import type { AssetsOptions } from "../assets";
-import type { Entry } from "../deployment-bundle/entry";
 import type { PostTypedConsumerBody } from "../queues/client";
-import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
 import type {
+	AssetsOptions,
 	CfModule,
 	CfScriptFormat,
 	CfWorkerInit,
 	ComplianceConfig,
 	Config,
 	CustomDomainRoute,
+	Entry,
+	LegacyAssetPaths,
 	RawConfig,
 	Route,
 	ZoneIdRoute,
@@ -136,7 +136,7 @@ type Props = {
 	dispatchNamespace: string | undefined;
 	experimentalAutoCreate: boolean;
 	metafile: string | boolean | undefined;
-	containersRollout: "immediate" | "gradual" | undefined;
+	containersRollout: "immediate" | "gradual" | "none" | undefined;
 	strict: boolean | undefined;
 	tag: string | undefined;
 	message: string | undefined;
@@ -205,7 +205,8 @@ export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 			`Invalid Routes:\n` +
 				Object.entries(invalidRoutes)
 					.map(([route, errors]) => `${route}:\n` + errors.join("\n"))
-					.join(`\n\n`)
+					.join(`\n\n`),
+			{ telemetryMessage: "deploy invalid routes" }
 		);
 	}
 
@@ -670,14 +671,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	) {
 		throw new UserError(
 			"You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/",
-			{ telemetryMessage: true }
+			{ telemetryMessage: "deploy service worker assets unsupported" }
 		);
 	}
 
 	if (config.wasm_modules && format === "modules") {
 		throw new UserError(
 			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code",
-			{ telemetryMessage: true }
+			{ telemetryMessage: "deploy wasm modules with es module worker" }
 		);
 	}
 
@@ -694,6 +695,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			{ telemetryMessage: "[data_blobs] with an ES module worker" }
 		);
 	}
+
+	const isDryRun = props.dryRun;
 
 	let sourceMapSize;
 	const normalisedContainerConfig = await getNormalizedContainerOptions(
@@ -762,7 +765,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						compatibilityFlags,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
-						alias: config.alias,
+						alias: { ...config.alias, ...props.alias },
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
@@ -804,7 +807,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		});
 
 		// durable object migrations
-		const migrations = !props.dryRun
+		const migrations = !isDryRun
 			? await getMigrationsToUpload(scriptName, {
 					accountId,
 					config,
@@ -816,7 +819,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		// Upload assets if assets is being used
 		const assetsJwt =
-			props.assetsOptions && !props.dryRun
+			props.assetsOptions && !isDryRun
 				? await syncAssets(
 						config,
 						accountId,
@@ -827,7 +830,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				: undefined;
 
 		// validate asset directory
-		if (props.assetsOptions && props.dryRun) {
+		if (props.assetsOptions && isDryRun) {
 			await buildAssetManifest(props.assetsOptions.directory);
 		}
 
@@ -841,7 +844,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			scriptName + (useServiceEnvironments ? `-${props.env}` : ""),
 			props.legacyAssetPaths,
 			false,
-			props.dryRun,
+			isDryRun,
 			props.oldAssetTtl
 		);
 
@@ -967,24 +970,32 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// and we have containers so that we don't get into a
 		// disjointed state where the worker updates but the container
 		// fails.
-		if (normalisedContainerConfig.length) {
+		if (
+			normalisedContainerConfig.length &&
+			props.containersRollout !== "none"
+		) {
 			// if you have a registry url specified, you don't need docker
-			const hasDockerfiles = normalisedContainerConfig.some(
+			const containersWithDockerfile = normalisedContainerConfig.filter(
 				(container) => "dockerfile" in container
 			);
-			if (hasDockerfiles) {
-				await verifyDockerInstalled(dockerPath, false);
+			if (containersWithDockerfile.length > 0) {
+				await verifyDockerInstalled({
+					dockerPath,
+					isDev: false,
+					isDryRun,
+					numberOfContainers: containersWithDockerfile.length,
+				});
 			}
 		}
 
-		if (props.dryRun) {
+		if (isDryRun) {
 			if (normalisedContainerConfig.length) {
 				for (const container of normalisedContainerConfig) {
-					if ("dockerfile" in container) {
+					if ("dockerfile" in container && props.containersRollout !== "none") {
 						await buildContainer(
 							container,
 							workerTag ?? "worker-tag",
-							props.dryRun,
+							isDryRun,
 							dockerPath
 						);
 					}
@@ -1229,7 +1240,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					) {
 						throw new UserError(
 							"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development",
-							{ telemetryMessage: true }
+							{ telemetryMessage: "deploy d1 database binding invalid id" }
 						);
 					}
 
@@ -1279,7 +1290,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 	}
 
-	if (props.dryRun) {
+	if (isDryRun) {
 		logger.log(`--dry-run: exiting now.`);
 		return { versionId, workerTag };
 	}
@@ -1288,19 +1299,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 
-	// Early exit for WfP since it doesn't need the below code
-	if (props.dispatchNamespace !== undefined) {
-		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag };
-	}
-
-	if (normalisedContainerConfig.length) {
+	if (normalisedContainerConfig.length && props.containersRollout !== "none") {
 		assert(versionId && accountId);
 		await deployContainers(config, normalisedContainerConfig, {
 			versionId,
 			accountId,
 			scriptName,
 		});
+	}
+
+	// Early exit for WfP since it doesn't need the below code
+	if (props.dispatchNamespace !== undefined) {
+		deployWfpUserWorker(props.dispatchNamespace, versionId);
+		return { versionId, workerTag };
 	}
 
 	// deploy triggers
@@ -1397,7 +1408,10 @@ async function publishRoutesFallback(
 		throw new UserError(
 			"Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.\n" +
 				"Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth",
-			{ telemetryMessage: true }
+			{
+				telemetryMessage:
+					"deploy service environments require all zones permission",
+			}
 		);
 	}
 	logger.info(
@@ -1525,7 +1539,7 @@ export async function updateQueueConsumers(
 		if (scriptName === undefined) {
 			// TODO: how can we reliably get the current script name?
 			throw new UserError("Script name is required to update queue consumers", {
-				telemetryMessage: true,
+				telemetryMessage: "deploy queue consumers missing script name",
 			});
 		}
 

@@ -39,7 +39,9 @@ export async function getMigrationsPath({
 		logger.warn(warning);
 	}
 
-	throw new UserError(`No migrations present at ${dir}.`);
+	throw new UserError(`No migrations present at ${dir}.`, {
+		telemetryMessage: "d1 migrations missing migrations directory",
+	});
 }
 
 export async function getUnappliedMigrations({

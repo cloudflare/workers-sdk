@@ -61,7 +61,8 @@ export const emailRoutingRulesCreateCommand = createCommand({
 			(!args.actionValue || args.actionValue.length === 0)
 		) {
 			throw new UserError(
-				"--action-value is required when --action-type is not 'drop'"
+				"--action-value is required when --action-type is not 'drop'",
+				{ telemetryMessage: "email routing rules create missing action value" }
 			);
 		}
 	},

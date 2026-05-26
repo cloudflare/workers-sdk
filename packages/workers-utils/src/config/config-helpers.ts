@@ -5,7 +5,7 @@ import dedent from "ts-dedent";
 import { PATH_TO_DEPLOY_CONFIG } from "../constants";
 import { UserError } from "../errors";
 import { parseJSONC, readFileSync } from "../parse";
-import type { RawConfig, RedirectedRawConfig } from "./config";
+import type { ComputedFields, RawConfig, RedirectedRawConfig } from "./config";
 
 export type ResolveConfigPathOptions = {
 	useRedirectIfAvailable?: boolean;
@@ -116,36 +116,45 @@ function findRedirectedWranglerConfig(
 	} catch (e) {
 		throw new UserError(
 			`Failed to parse the deploy configuration file at ${path.relative(".", deployConfigPath)}`,
-			{ cause: e }
+			{ cause: e, telemetryMessage: false }
 		);
 	}
 	if (!redirectedConfigPath) {
-		throw new UserError(dedent`
+		throw new UserError(
+			dedent`
 			A deploy configuration file was found at "${path.relative(".", deployConfigPath)}".
 			But this is not valid - the required "configPath" property was not found.
 			Instead this file contains:
 			\`\`\`
 			${deployConfigFile}
 			\`\`\`
-		`);
+		`,
+			{ telemetryMessage: false }
+		);
 	}
 
 	if (!existsSync(redirectedConfigPath)) {
-		throw new UserError(dedent`
+		throw new UserError(
+			dedent`
 				There is a deploy configuration at "${path.relative(".", deployConfigPath)}".
 				But the redirected configuration path it points to, "${path.relative(".", redirectedConfigPath)}", does not exist.
-			`);
+			`,
+			{ telemetryMessage: false }
+		);
 	}
 	if (userConfigPath) {
 		if (
 			path.join(path.dirname(userConfigPath), PATH_TO_DEPLOY_CONFIG) !==
 			deployConfigPath
 		) {
-			throw new UserError(dedent`
+			throw new UserError(
+				dedent`
 					Found both a user configuration file at "${path.relative(".", userConfigPath)}"
 					and a deploy configuration file at "${path.relative(".", deployConfigPath)}".
 					But these do not share the same base path so it is not clear which should be used.
-				`);
+				`,
+				{ telemetryMessage: false }
+			);
 		}
 	}
 
@@ -156,10 +165,19 @@ function findRedirectedWranglerConfig(
 	};
 }
 
+export function isRedirectedConfig(
+	config: Pick<ComputedFields, "configPath" | "userConfigPath">
+): boolean {
+	return (
+		config.configPath !== undefined &&
+		config.configPath !== config.userConfigPath
+	);
+}
+
 export function isRedirectedRawConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
 	userConfigPath: string | undefined
 ): rawConfig is RedirectedRawConfig {
-	return configPath !== undefined && configPath !== userConfigPath;
+	return isRedirectedConfig({ configPath, userConfigPath });
 }

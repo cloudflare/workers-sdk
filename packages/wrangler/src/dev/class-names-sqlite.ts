@@ -15,7 +15,11 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 		migration.deleted_classes?.forEach((deleted_class) => {
 			if (!durableObjectClassNameToUseSQLiteMap.delete(deleted_class)) {
 				throw new UserError(
-					`Cannot apply deleted_classes migration to non-existent class ${deleted_class}`
+					`Cannot apply deleted_classes migration to non-existent class ${deleted_class}`,
+					{
+						telemetryMessage:
+							"durable object deleted class migration missing class",
+					}
 				);
 			}
 		});
@@ -24,7 +28,11 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 			const useSQLite = durableObjectClassNameToUseSQLiteMap.get(from);
 			if (useSQLite === undefined) {
 				throw new UserError(
-					`Cannot apply renamed_classes migration to non-existent class ${from}`
+					`Cannot apply renamed_classes migration to non-existent class ${from}`,
+					{
+						telemetryMessage:
+							"durable object renamed class migration missing class",
+					}
 				);
 			} else {
 				durableObjectClassNameToUseSQLiteMap.delete(from);
@@ -35,7 +43,11 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 		migration.new_classes?.forEach((new_class) => {
 			if (durableObjectClassNameToUseSQLiteMap.has(new_class)) {
 				throw new UserError(
-					`Cannot apply new_classes migration to existing class ${new_class}`
+					`Cannot apply new_classes migration to existing class ${new_class}`,
+					{
+						telemetryMessage:
+							"durable object new class migration existing class",
+					}
 				);
 			} else {
 				durableObjectClassNameToUseSQLiteMap.set(new_class, false);
@@ -45,7 +57,11 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 		migration.new_sqlite_classes?.forEach((new_class) => {
 			if (durableObjectClassNameToUseSQLiteMap.has(new_class)) {
 				throw new UserError(
-					`Cannot apply new_sqlite_classes migration to existing class ${new_class}`
+					`Cannot apply new_sqlite_classes migration to existing class ${new_class}`,
+					{
+						telemetryMessage:
+							"durable object new sqlite class migration existing class",
+					}
 				);
 			} else {
 				durableObjectClassNameToUseSQLiteMap.set(new_class, true);

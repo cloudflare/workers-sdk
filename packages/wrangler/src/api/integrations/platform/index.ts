@@ -4,8 +4,8 @@ import {
 	getRegistryPath,
 	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
-import { kCurrentWorker, Miniflare } from "miniflare";
-import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
+import { Miniflare } from "miniflare";
+import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
@@ -15,11 +15,11 @@ import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
-	getImageNameFromDOClassName,
 } from "../../../dev/miniflare";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
+import { getZoneFromRoute } from "../../../zones";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { extractBindingsOfType } from "../../startDevWorker/utils";
 import { CacheStorage } from "./caches";
@@ -27,11 +27,11 @@ import { ExecutionContext } from "./executionContext";
 // TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`
 // This is a temporary fix to ensure that the types are included in the build output
 import type {
+	AssetsOptions,
 	Config,
 	RawConfig,
 	RawEnvironment,
 } from "../../../../../workers-utils/src";
-import type { AssetsOptions } from "../../../assets";
 import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
@@ -50,6 +50,31 @@ export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectCla
  */
 export function unstable_getDevCompatibilityDate() {
 	return getTodaysCompatDate();
+}
+
+/**
+ * Derive the zone value used for the outbound `CF-Worker` header from a
+ * normalized Wrangler config, for callers outside of `wrangler dev`
+ * (`getPlatformProxy`, `unstable_getMiniflareWorkerOptions`).
+ *
+ * Falls back to the zone of the first configured route (via
+ * {@link getZoneFromRoute}, which prefers the route's `zone_name` field
+ * when present and otherwise falls back to the pattern's hostname), or
+ * `undefined` if no routes are set — in which case Miniflare keeps its
+ * default of `${workerName}.example.com`.
+ *
+ * `dev.host` is intentionally NOT consulted here: the `dev` config block is
+ * specific to `wrangler dev` and should not influence behaviour under
+ * `@cloudflare/vite-plugin`, `@cloudflare/vitest-pool-workers`, or
+ * `getPlatformProxy`. Users who need a custom `CF-Worker` host in those
+ * environments should configure a `route` instead.
+ */
+function getZoneFromConfig(config: Config): string | undefined {
+	const firstRoute = config.route ?? config.routes?.[0];
+	if (firstRoute) {
+		return getZoneFromRoute(firstRoute);
+	}
+	return undefined;
 }
 
 export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
@@ -268,17 +293,14 @@ async function getMiniflareOptionsFromConfig(args: {
 	// Only resolve assets if a directory is configured. When assets are configured
 	// without a directory (e.g. via @cloudflare/vite-plugin), skip asset setup.
 	if (config.assets?.directory) {
-		try {
-			processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
-		} catch (e) {
-			const isNonExistentError = e instanceof NonExistentAssetsDirError;
-			// we want to loosen up the assets directory existence restriction here,
-			// since `getPlatformProxy` can be run when the assets directory doesn't
-			// actually exist, but all other exceptions should still be thrown
-			if (!isNonExistentError) {
-				throw e;
-			}
-		}
+		processedAssetOptions = getAssetsOptions({
+			args: {
+				assets: undefined,
+			},
+			config,
+			// For getPlatformProxy/local dev we don't need to validate the directory's existence
+			validateDirectoryExistence: false,
+		});
 	}
 
 	const assetOptions = processedAssetOptions
@@ -293,6 +315,7 @@ async function getMiniflareOptionsFromConfig(args: {
 				script: "",
 				modules: true,
 				name: config.name,
+				zone: getZoneFromConfig(config),
 				...bindingOptions,
 				...assetOptions,
 			},
@@ -436,68 +459,6 @@ export function unstable_getMiniflareWorkerOptions(
 		options?.remoteProxyConnectionString
 	);
 
-	// This function is currently only exported for the Workers Vitest pool.
-	// In tests, we don't want to rely on the dev registry, as we can't guarantee
-	// which sessions will be running. Instead, we rewrite `serviceBindings` and
-	// `durableObjects` to use more traditional Miniflare config expecting the
-	// user to define workers with the required names in the `workers` array.
-	// These will run the same `workerd` processes as tests.
-	const serviceBindings = extractBindingsOfType("service", bindings);
-	if (serviceBindings.length > 0) {
-		bindingOptions.serviceBindings = Object.fromEntries(
-			serviceBindings.map((binding) => {
-				const name =
-					binding.service === config.name ? kCurrentWorker : binding.service;
-				if (options?.remoteProxyConnectionString && binding.remote) {
-					return [
-						binding.binding,
-						{
-							name,
-							entrypoint: binding.entrypoint,
-							remoteProxyConnectionString: options.remoteProxyConnectionString,
-						},
-					];
-				}
-				return [binding.binding, { name, entrypoint: binding.entrypoint }];
-			})
-		);
-	}
-	const durableObjectBindings = extractBindingsOfType(
-		"durable_object_namespace",
-		bindings
-	);
-	if (durableObjectBindings.length > 0) {
-		type DurableObjectDefinition = NonNullable<
-			typeof bindingOptions.durableObjects
-		>[string];
-
-		const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
-			config.migrations
-		);
-
-		bindingOptions.durableObjects = Object.fromEntries(
-			durableObjectBindings.map((binding) => {
-				const useSQLite = classNameToUseSQLite.get(binding.class_name);
-				return [
-					binding.name,
-					{
-						className: binding.class_name,
-						scriptName: binding.script_name,
-						useSQLite,
-						container:
-							enableContainers && config.containers?.length
-								? getImageNameFromDOClassName({
-										doClassName: binding.class_name,
-										containerDOClassNames,
-										containerBuildId: options?.containerBuildId,
-									})
-								: undefined,
-					} satisfies DurableObjectDefinition,
-				];
-			})
-		);
-	}
-
 	const sitesAssetPaths = getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
 	// Only resolve assets if a directory is available (from config or overrides).
@@ -507,11 +468,15 @@ export function unstable_getMiniflareWorkerOptions(
 	const hasAssetsDirectory =
 		config.assets?.directory || options?.overrides?.assets?.directory;
 	const processedAssetOptions = hasAssetsDirectory
-		? getAssetsOptions(
-				{ assets: undefined },
+		? getAssetsOptions({
+				args: {
+					assets: undefined,
+				},
 				config,
-				options?.overrides?.assets
-			)
+				// For getPlatformProxy we don't need to validate the directory's existence
+				validateDirectoryExistence: false,
+				overrides: options?.overrides?.assets,
+			})
 		: undefined;
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
@@ -526,6 +491,7 @@ export function unstable_getMiniflareWorkerOptions(
 		containerEngine: useContainers
 			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
 			: undefined,
+		zone: getZoneFromConfig(config),
 
 		...bindingOptions,
 		...sitesOptions,

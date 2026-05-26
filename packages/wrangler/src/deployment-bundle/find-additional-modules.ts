@@ -1,18 +1,21 @@
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { UserError } from "@cloudflare/workers-utils";
+import { getWranglerHiddenDirPath, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
 import { logger } from "../logger";
-import { getWranglerHiddenDirPath } from "../paths";
 import { getBundleType } from "./bundle-type";
 import { RuleTypeToModuleType } from "./module-collection";
 import { parseRules } from "./rules";
 import { tryAttachSourcemapToModule } from "./source-maps";
-import type { Entry } from "./entry";
 import type { ParsedRules } from "./rules";
-import type { CfModule, CfModuleType, Rule } from "@cloudflare/workers-utils";
+import type {
+	Entry,
+	CfModule,
+	CfModuleType,
+	Rule,
+} from "@cloudflare/workers-utils";
 
 async function* getFiles(
 	configPath: string | undefined,
@@ -146,7 +149,8 @@ export async function findAdditionalModules(
 			entry.projectRoot !== entry.moduleRoot
 		) {
 			throw new UserError(
-				"The 'python_modules' directory cannot exist in your module root. Delete it to continue."
+				"The 'python_modules' directory cannot exist in your module root. Delete it to continue.",
+				{ telemetryMessage: "python modules directory in module root" }
 			);
 		}
 
@@ -305,7 +309,8 @@ async function matchFiles(
 					throw new UserError(
 						`The file ${filePath} matched a module rule in your configuration (${JSON.stringify(
 							rule
-						)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`
+						)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`,
+						{ telemetryMessage: "module rule ignored without fallthrough" }
 					);
 				}
 			}

@@ -441,7 +441,7 @@ export function createDurableObjectWrapper(
 				);
 			}
 
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic method assignment in a loop can't satisfy the intersection of all method signatures
 			return (maybeFn as (...args: unknown[]) => any).apply(instance, args);
 		};
 	}
@@ -483,8 +483,7 @@ export function createWorkflowEntrypointWrapper(
 				);
 			}
 
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			return (maybeFn as (...args: unknown[]) => any).apply(instance, args);
+			return (maybeFn as (...args: unknown[]) => unknown).apply(instance, args);
 		};
 	}
 

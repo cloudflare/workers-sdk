@@ -10,7 +10,7 @@ import {
 import { createCommand, createNamespace } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import { containersScope } from ".";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
@@ -93,7 +93,7 @@ async function handleDeleteImageCommand(
 
 	const digest = await promiseSpinner(
 		getCreds().then(async (creds) => {
-			const accountId = await getAccountId(config);
+			const accountId = await getOrSelectAccountId(config);
 			const url = new URL(`https://${getCloudflareContainerRegistry()}`);
 			const baseUrl = `${url.protocol}//${url.host}`;
 			const [image, tag] = args.image.split(":");
@@ -130,7 +130,7 @@ async function handleListImagesCommand(
 		getCreds().then(async (creds) => {
 			const repos = await listReposWithTags(creds);
 			const processed: Repository[] = [];
-			const accountId = await getAccountId(config);
+			const accountId = await getOrSelectAccountId(config);
 			const accountIdPrefix = new RegExp(`^${accountId}/`);
 			const filter = new RegExp(args.filter ?? "");
 			for (const [repo, tags] of Object.entries(repos)) {

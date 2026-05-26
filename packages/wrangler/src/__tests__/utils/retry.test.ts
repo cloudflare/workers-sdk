@@ -21,7 +21,11 @@ describe("retryOnAPIFailure", () => {
 		await retryOnAPIFailure(() => {
 			attempts++;
 			if (attempts < 3) {
-				throw new APIError({ status: 500, text: "500 error" });
+				throw new APIError({
+					status: 500,
+					text: "500 error",
+					telemetryMessage: false,
+				});
 			}
 		});
 		expect(attempts).toBe(3);
@@ -41,7 +45,11 @@ describe("retryOnAPIFailure", () => {
 		await expect(() =>
 			retryOnAPIFailure(() => {
 				attempts++;
-				throw new APIError({ status: 500, text: "500 error" });
+				throw new APIError({
+					status: 500,
+					text: "500 error",
+					telemetryMessage: false,
+				});
 			})
 		).rejects.toMatchInlineSnapshot(`[APIError: 500 error]`);
 		expect(attempts).toBe(3);
@@ -63,7 +71,11 @@ describe("retryOnAPIFailure", () => {
 		await expect(() =>
 			retryOnAPIFailure(() => {
 				attempts++;
-				throw new APIError({ status: 401, text: "401 error" });
+				throw new APIError({
+					status: 401,
+					text: "401 error",
+					telemetryMessage: false,
+				});
 			})
 		).rejects.toMatchInlineSnapshot(`[APIError: 401 error]`);
 		expect(attempts).toBe(1);
@@ -115,7 +127,11 @@ describe("retryOnAPIFailure", () => {
 					// After the first failure, abort before the backoff completes
 					queueMicrotask(() => controller.abort());
 				}
-				throw new APIError({ status: 500, text: "500 error" });
+				throw new APIError({
+					status: 500,
+					text: "500 error",
+					telemetryMessage: false,
+				});
 			},
 			// Use a very long backoff so the test would hang without abort
 			10_000,
@@ -188,7 +204,11 @@ describe("retryOnAPIFailure", () => {
 		await expect(() =>
 			retryOnAPIFailure(() => {
 				attempts++;
-				throw new CustomAPIError({ status: 401, text: "401 error" });
+				throw new CustomAPIError({
+					status: 401,
+					text: "401 error",
+					telemetryMessage: false,
+				});
 			})
 		).rejects.toMatchInlineSnapshot(`[CustomAPIError: 401 error]`);
 		expect(attempts).toBe(3);

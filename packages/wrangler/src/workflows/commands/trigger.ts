@@ -39,7 +39,8 @@ export const workflowsTriggerCommand = createCommand({
 				JSON.parse(args.params);
 			} catch (e) {
 				throw new UserError(
-					`Error while parsing instance parameters: "${args.params}" with ${e}' `
+					`Error while parsing instance parameters: "${args.params}" with ${e}' `,
+					{ telemetryMessage: "workflows trigger invalid params" }
 				);
 			}
 		}

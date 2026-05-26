@@ -70,6 +70,7 @@ export {
 export {
 	resolveWranglerConfigPath,
 	findWranglerConfig,
+	isRedirectedConfig,
 } from "./config/config-helpers";
 export type { ResolveConfigPathOptions } from "./config/config-helpers";
 export * from "./errors";
@@ -95,6 +96,13 @@ export type { CompatDate } from "./compatibility-date";
 export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
+
+export {
+	type EphemeralDirectory,
+	getWranglerHiddenDirPath,
+	getWranglerTmpDir,
+	sweepStaleWranglerTmpDirs,
+} from "./wrangler-tmp-dir";
 
 export { MetricsRegistry } from "./prometheus-metrics";
 export type { Counter } from "./prometheus-metrics";

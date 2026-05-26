@@ -13,8 +13,7 @@ import { logBuildFailure, logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { Entry } from "../../deployment-bundle/entry";
-import type { CfModule } from "@cloudflare/workers-utils";
+import type { CfModule, Entry } from "@cloudflare/workers-utils";
 import type { Plugin } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
 
@@ -377,7 +376,10 @@ function blockWorkerJsImports(nodejsCompatMode: NodeJSCompatMode): Plugin {
 					"_worker.js is not being bundled by Wrangler but it is importing from another file.\n" +
 						"This will throw an error if deployed.\n" +
 						"You should bundle the Worker in a pre-build step, remove the import if it is unused, or ask Wrangler to bundle it by setting `--bundle`.",
-					1
+					{
+						code: 1,
+						telemetryMessage: "pages functions worker imports blocked",
+					}
 				);
 			});
 		},

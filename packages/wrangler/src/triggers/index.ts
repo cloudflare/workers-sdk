@@ -50,12 +50,22 @@ export const triggersDeployCommand = createCommand({
 			describe: "Use legacy environments",
 			hidden: true,
 		},
+		"experimental-deploy-helpers": {
+			describe: "Experimental: Gates refactored deploy/upload path",
+			type: "boolean",
+			default: false,
+			hidden: true,
+			alias: ["x-deploy-helpers"],
+		},
 	},
 	behaviour: {
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	async handler(args, { config }) {
-		const assetsOptions = getAssetsOptions({ assets: undefined }, config);
+		const assetsOptions = getAssetsOptions({
+			args: { assets: undefined },
+			config,
+		});
 		metrics.sendMetricsEvent("deploy worker triggers", {
 			sendMetrics: config.send_metrics,
 		});

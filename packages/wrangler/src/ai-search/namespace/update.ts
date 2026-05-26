@@ -32,7 +32,8 @@ export const aiSearchNamespaceUpdateCommand = createCommand({
 	async handler(args, { config }) {
 		if (args.description === undefined) {
 			throw new UserError(
-				"No fields to update. Provide --description to update the namespace."
+				"No fields to update. Provide --description to update the namespace.",
+				{ telemetryMessage: "ai search namespace update missing fields" }
 			);
 		}
 

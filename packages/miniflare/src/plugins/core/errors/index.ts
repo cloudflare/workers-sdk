@@ -319,7 +319,7 @@ export async function handlePrettyErrorRequest(
 	}
 
 	// Lazily import `youch` when required
-	// eslint-disable-next-line typescript/consistent-type-imports, @typescript-eslint/no-require-imports
+	// eslint-disable-next-line typescript/consistent-type-imports, @typescript-eslint/no-require-imports -- lazy require to avoid loading youch until an error page is needed
 	const { Youch }: typeof import("youch") = require("youch");
 	const youch = new Youch();
 

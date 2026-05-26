@@ -1,6 +1,7 @@
 import { setTimeout } from "node:timers/promises";
 import {
 	normalizeString,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
@@ -13,7 +14,6 @@ import { clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 import { createFetchResult, msw, mswSucessScriptHandlers } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
 	AlarmEvent,

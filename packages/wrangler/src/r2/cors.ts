@@ -110,7 +110,8 @@ export const r2BucketCORSSetCommand = createCommand({
 			throw new UserError(
 				"Wrangler detected an AWS S3 CORS configuration format.\n" +
 					"Cloudflare R2 expects a 'rules' array instead of 'CORSRules'.\n" +
-					"See: https://developers.cloudflare.com/r2/buckets/cors/#example"
+					"See: https://developers.cloudflare.com/r2/buckets/cors/#example",
+				{ telemetryMessage: "r2 cors set aws cors format unsupported" }
 			);
 		}
 
@@ -119,7 +120,8 @@ export const r2BucketCORSSetCommand = createCommand({
 		if (!rules || !Array.isArray(rules)) {
 			throw new UserError(
 				`The CORS configuration file must contain a 'rules' array as expected by the R2 API: ` +
-					`https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
+					`https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`,
+				{ telemetryMessage: "r2 cors set missing rules array" }
 			);
 		}
 
@@ -139,7 +141,8 @@ export const r2BucketCORSSetCommand = createCommand({
 				"Wrangler detected AWS S3 style keys (e.g. 'AllowedOrigins').\n" +
 					"Cloudflare R2 requires lowercase keys nested inside an 'allowed' object.\n" +
 					'Example: { "allowed": { "origins": ["*"], "methods": ["GET"] } }\n' +
-					"See: https://developers.cloudflare.com/r2/buckets/cors/#example"
+					"See: https://developers.cloudflare.com/r2/buckets/cors/#example",
+				{ telemetryMessage: "r2 cors set aws rule keys unsupported" }
 			);
 		}
 

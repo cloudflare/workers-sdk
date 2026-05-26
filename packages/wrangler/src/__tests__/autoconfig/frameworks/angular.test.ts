@@ -1,11 +1,10 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { Angular } from "../../../autoconfig/frameworks/angular";
 import { NpmPackageManager } from "../../../package-manager";
-import { runInTempDir } from "../../helpers/run-in-tmp";
-
 const BASE_OPTIONS = {
 	projectPath: process.cwd(),
 	workerName: "my-angular-app",

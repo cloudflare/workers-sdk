@@ -36,7 +36,8 @@ export function addRequiredSecretsInheritBindings(
 		throw new UserError(
 			`The following required secrets have not been set: ${inheritedSecrets.join(", ")}\n` +
 				`Use \`wrangler secret put <NAME>\` to set secrets before deploying.\n` +
-				`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`
+				`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`,
+			{ telemetryMessage: "required secrets missing before deploy" }
 		);
 	}
 
@@ -71,7 +72,8 @@ export function handleMissingSecretsError(
 		throw new UserError(
 			`The following required secrets have not been set: ${missingSecretNames.join(", ")}\n` +
 				`Use \`wrangler ${options.type === "deploy" ? "secret put" : "versions secret put"} <NAME>\` to set secrets before ${options.type === "deploy" ? "deploying" : "uploading"}.\n` +
-				`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`
+				`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`,
+			{ telemetryMessage: "required secrets missing during upload or deploy" }
 		);
 	}
 }

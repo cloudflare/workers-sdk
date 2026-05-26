@@ -19,9 +19,8 @@ import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { retryOnAPIFailure } from "../utils/retry";
 import { getZoneForRoute } from "../zones";
-import type { AssetsOptions } from "../assets";
 import type { RouteObject } from "../deploy/deploy";
-import type { Config, Route } from "@cloudflare/workers-utils";
+import type { AssetsOptions, Config, Route } from "@cloudflare/workers-utils";
 
 type Props = {
 	config: Config;
@@ -58,7 +57,7 @@ export default async function triggersDeploy(
 	if (!scriptName) {
 		throw new UserError(
 			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-			{ telemetryMessage: true }
+			{ telemetryMessage: "triggers deploy missing worker name" }
 		);
 	}
 
@@ -85,11 +84,16 @@ export default async function triggersDeploy(
 	}
 
 	if (!accountId) {
-		throw new UserError("Missing accountId", { telemetryMessage: true });
+		throw new UserError("Missing accountId", {
+			telemetryMessage: "triggers deploy missing account id",
+		});
 	}
 
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<string[]>[] = [];
+	const hasWorkflowsDefinedInThisScript = config.workflows.some((workflow) =>
+		isWorkflowDefinedInThisScript(workflow, scriptName)
+	);
 
 	const { wantWorkersDev, workersDevInSync } = await subdomainDeploy(
 		props,
@@ -190,8 +194,17 @@ export default async function triggersDeploy(
 			);
 			const dashLink = `Visit ${dashHref} to unassign a worker from a route.`;
 
-			throw new UserError(`${errorMessage}\n${resolution}\n${dashLink}`);
+			throw new UserError(`${errorMessage}\n${resolution}\n${dashLink}`, {
+				telemetryMessage: "triggers deploy routes assigned",
+			});
 		}
+	}
+
+	if (!wantWorkersDev && hasWorkflowsDefinedInThisScript) {
+		await getWorkersDevSubdomain(config, accountId, {
+			configPath: config.configPath,
+			registrationContext: "workflows",
+		});
 	}
 
 	// Update routing table for the script.
@@ -255,14 +268,25 @@ export default async function triggersDeploy(
 		for (const workflow of config.workflows) {
 			// NOTE: if the user provides a script_name thats not this script (aka bounds to another worker)
 			// we don't want to send this worker's config.
-			if (
-				workflow.script_name !== undefined &&
-				workflow.script_name !== scriptName
-			) {
+			if (!isWorkflowDefinedInThisScript(workflow, scriptName)) {
 				if (workflow.limits) {
 					throw new UserError(
 						`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
-							`Configure limits on the worker that defines the workflow.`
+							`Configure limits on the worker that defines the workflow.`,
+						{
+							telemetryMessage:
+								"triggers deploy workflow limits external script",
+						}
+					);
+				}
+				if (workflow.schedules) {
+					throw new UserError(
+						`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
+							`Configure schedules on the worker that defines the workflow.`,
+						{
+							telemetryMessage:
+								"triggers deploy workflow schedules external script",
+						}
 					);
 				}
 				continue;
@@ -278,6 +302,7 @@ export default async function triggersDeploy(
 							script_name: scriptName,
 							class_name: workflow.class_name,
 							...(workflow.limits && { limits: workflow.limits }),
+							...(workflow.schedules && { schedules: workflow.schedules }),
 						}),
 						headers: {
 							"Content-Type": "application/json",
@@ -390,11 +415,9 @@ async function validateSubdomainMixedState(
 		return after;
 	}
 
-	const userSubdomain = await getWorkersDevSubdomain(
-		config,
-		accountId,
-		config.configPath
-	);
+	const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
+		configPath: config.configPath,
+	});
 	const previewUrl = `https://<VERSION_PREFIX>-${scriptName}.${userSubdomain}`;
 
 	// Scenario 1: User disables workers.dev while having preview URLs enabled
@@ -445,17 +468,15 @@ async function subdomainDeploy(
 
 	// workers.dev URL is only set if we want to deploy to workers.dev.
 
-	let workersDevURL: string | undefined;
 	if (wantWorkersDev) {
-		const userSubdomain = await getWorkersDevSubdomain(
-			config,
-			accountId,
-			config.configPath
-		);
-		workersDevURL =
+		const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
+			configPath: config.configPath,
+		});
+		const workersDevURL =
 			!props.useServiceEnvironments || !props.env
 				? `${scriptName}.${userSubdomain}`
 				: `${envName}.${scriptName}.${userSubdomain}`;
+		deployments.push(Promise.resolve([workersDevURL]));
 	}
 
 	// Get current subdomain enablement status.
@@ -541,13 +562,19 @@ async function subdomainDeploy(
 
 	// Done.
 
-	if (workersDevURL) {
-		deployments.push(Promise.resolve([workersDevURL]));
-	}
 	return {
 		wantWorkersDev,
 		wantPreviews,
 		workersDevInSync: before.enabled === after.enabled,
 		previewsInSync: before.previews_enabled === after.previews_enabled,
 	};
+}
+
+function isWorkflowDefinedInThisScript(
+	workflow: Config["workflows"][number],
+	scriptName: string
+): boolean {
+	return (
+		workflow.script_name === undefined || workflow.script_name === scriptName
+	);
 }

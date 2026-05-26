@@ -2,6 +2,7 @@ import {
 	HEADER_SEPARATOR,
 	MAX_HEADER_RULES,
 	MAX_LINE_LENGTH,
+	SPLAT_REGEX,
 	UNSET_OPERATOR,
 } from "./constants";
 import { validateUrl } from "./validateURL";
@@ -24,6 +25,10 @@ export function parseHeaders(
 	const invalid: InvalidHeadersRule[] = [];
 
 	let rule: (HeadersRule & { line: string }) | undefined = undefined;
+	// When a path line is rejected (invalid URL, multiple wildcards, etc.),
+	// we silently skip subsequent header lines until the next path line
+	// rather than emitting confusing "Path should come before header" errors.
+	let skipUntilNextPath = false;
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = (lines[i] || "").trim();
@@ -41,6 +46,8 @@ export function parseHeaders(
 		}
 
 		if (LINE_IS_PROBABLY_A_PATH.test(line)) {
+			skipUntilNextPath = false;
+
 			if (rules.length >= maxRules) {
 				invalid.push({
 					message: `Maximum number of rules supported is ${maxRules}. Skipping remaining ${
@@ -74,6 +81,19 @@ export function parseHeaders(
 					message: pathError,
 				});
 				rule = undefined;
+				skipUntilNextPath = true;
+				continue;
+			}
+
+			const wildcardError = validateNoMultipleWildcards(path as string);
+			if (wildcardError) {
+				invalid.push({
+					line,
+					lineNumber: i + 1,
+					message: wildcardError,
+				});
+				rule = undefined;
+				skipUntilNextPath = true;
 				continue;
 			}
 
@@ -83,6 +103,10 @@ export function parseHeaders(
 				headers: {},
 				unsetHeaders: [],
 			};
+			continue;
+		}
+
+		if (skipUntilNextPath) {
 			continue;
 		}
 
@@ -173,4 +197,25 @@ export function parseHeaders(
 
 function isValidRule(rule: HeadersRule) {
 	return Object.keys(rule.headers).length > 0 || rule.unsetHeaders.length > 0;
+}
+
+/**
+ * At runtime, `*` wildcards are converted to `:splat` placeholders. This means
+ * a path with multiple wildcards, or a wildcard combined with an explicit
+ * `:splat` placeholder, would result in duplicate `:splat` parameters which is
+ * unsupported.
+ */
+function validateNoMultipleWildcards(path: string): string | undefined {
+	const wildcardCount = (path.match(SPLAT_REGEX) ?? []).length;
+	const hasSplatPlaceholder = /:splat(?!\w)/.test(path);
+
+	if (wildcardCount > 1) {
+		return `Only one wildcard is allowed per rule. Use a named placeholder (e.g. :project) instead. Skipping ${path}.`;
+	}
+
+	if (wildcardCount > 0 && hasSplatPlaceholder) {
+		return `Cannot combine a wildcard * with a :splat placeholder because wildcards are converted to :splat at runtime. Skipping ${path}.`;
+	}
+
+	return undefined;
 }

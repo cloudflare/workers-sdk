@@ -57,13 +57,15 @@ function updateBody(
 
 	if (Array.isArray(args.deliveryDelaySecs)) {
 		throw new CommandLineArgsError(
-			"Cannot specify --delivery-delay-secs multiple times"
+			"Cannot specify --delivery-delay-secs multiple times",
+			{ telemetryMessage: "queues update duplicate delivery delay" }
 		);
 	}
 
 	if (Array.isArray(args.messageRetentionPeriodSecs)) {
 		throw new CommandLineArgsError(
-			"Cannot specify --message-retention-period-secs multiple times"
+			"Cannot specify --message-retention-period-secs multiple times",
+			{ telemetryMessage: "queues update duplicate retention period" }
 		);
 	}
 
@@ -75,7 +77,8 @@ function updateBody(
 			args.deliveryDelaySecs > MAX_DELIVERY_DELAY_SECS
 		) {
 			throw new CommandLineArgsError(
-				`Invalid --delivery-delay-secs value: ${args.deliveryDelaySecs}. Must be between ${MIN_DELIVERY_DELAY_SECS} and ${MAX_DELIVERY_DELAY_SECS}`
+				`Invalid --delivery-delay-secs value: ${args.deliveryDelaySecs}. Must be between ${MIN_DELIVERY_DELAY_SECS} and ${MAX_DELIVERY_DELAY_SECS}`,
+				{ telemetryMessage: "queues update invalid delivery delay" }
 			);
 		}
 		body.settings.delivery_delay = args.deliveryDelaySecs;
@@ -89,7 +92,8 @@ function updateBody(
 			args.messageRetentionPeriodSecs > MAX_MESSAGE_RETENTION_PERIOD_SECS
 		) {
 			throw new CommandLineArgsError(
-				`Invalid --message-retention-period-secs value: ${args.messageRetentionPeriodSecs}. Must be between ${MIN_MESSAGE_RETENTION_PERIOD_SECS} and ${MAX_MESSAGE_RETENTION_PERIOD_SECS}`
+				`Invalid --message-retention-period-secs value: ${args.messageRetentionPeriodSecs}. Must be between ${MIN_MESSAGE_RETENTION_PERIOD_SECS} and ${MAX_MESSAGE_RETENTION_PERIOD_SECS}`,
+				{ telemetryMessage: "queues update invalid retention period" }
 			);
 		}
 		body.settings.message_retention_period = args.messageRetentionPeriodSecs;

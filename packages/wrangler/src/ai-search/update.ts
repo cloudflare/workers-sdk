@@ -114,7 +114,8 @@ export const aiSearchUpdateCommand = createCommand({
 
 		if (Object.keys(body).length === 0) {
 			throw new UserError(
-				"No fields to update. Provide at least one flag (e.g. --paused, --cache)."
+				"No fields to update. Provide at least one flag (e.g. --paused, --cache).",
+				{ telemetryMessage: "ai search update missing fields" }
 			);
 		}
 

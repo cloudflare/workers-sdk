@@ -102,11 +102,14 @@ export const getCloudflareComplianceRegion = (
 		complianceConfig?.compliance_region !== undefined &&
 		complianceRegionFromEnv !== complianceConfig.compliance_region
 	) {
-		throw new UserError(dedent`
+		throw new UserError(
+			dedent`
 			The compliance region has been set to different values in two places:
 			 - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`${complianceRegionFromEnv}\`
 			 - \`compliance_region\` configuration property: \`${complianceConfig.compliance_region}\`
-			`);
+			`,
+			{ telemetryMessage: false }
+		);
 	}
 	return (
 		complianceRegionFromEnv || complianceConfig?.compliance_region || "public"

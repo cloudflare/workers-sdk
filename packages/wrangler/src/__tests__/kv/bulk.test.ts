@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import { BATCH_MAX_ERRORS_WARNINGS } from "../../kv/helpers";
@@ -7,7 +8,6 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { createFetchResult, msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { KeyValue } from "../../kv/helpers";
 import type { ExpectStatic } from "vitest";

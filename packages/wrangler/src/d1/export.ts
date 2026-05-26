@@ -92,13 +92,16 @@ export const d1ExportCommand = createCommand({
 			args;
 
 		if (!schema && !data) {
-			throw new UserError(`You cannot specify both --no-schema and --no-data`);
+			throw new UserError(`You cannot specify both --no-schema and --no-data`, {
+				telemetryMessage: "d1 export conflicting no-schema and no-data flags",
+			});
 		}
 
 		const stats = statSync(output, { throwIfNoEntry: false });
 		if (stats?.isDirectory()) {
 			throw new UserError(
-				`Please specify a file path for --output, not a directory.`
+				`Please specify a file path for --output, not a directory.`,
+				{ telemetryMessage: "d1 export output path is directory" }
 			);
 		}
 
@@ -136,7 +139,8 @@ async function exportLocal(
 	});
 	if (!localDB) {
 		throw new UserError(
-			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`
+			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`,
+			{ telemetryMessage: "d1 export local database not found in config" }
 		);
 	}
 
@@ -173,7 +177,9 @@ async function exportLocal(
 			.raw();
 		await fs.writeFile(output, dump[0].join("\n"));
 	} catch (e) {
-		throw new UserError((e as Error).message);
+		throw new UserError((e as Error).message, {
+			telemetryMessage: "d1 export local export failed",
+		});
 	} finally {
 		await mf.dispose();
 	}
@@ -211,7 +217,10 @@ async function exportRemotely(
 	});
 
 	if (finalResponse.status !== "complete") {
-		throw new APIError({ text: `D1 reset before export completed!` });
+		throw new APIError({
+			text: `D1 reset before export completed!`,
+			telemetryMessage: false,
+		});
 	}
 
 	logger.log(
@@ -285,6 +294,7 @@ async function pollExport(
 		throw new APIError({
 			text: response.error,
 			notes: response.messages.map((text) => ({ text })),
+			telemetryMessage: false,
 		});
 	} else {
 		return await pollExport(

@@ -132,7 +132,9 @@ export const r2ObjectGetCommand = createCommand({
 				async (r2Bucket) => {
 					const object = await r2Bucket.get(key);
 					if (object === null) {
-						throw new UserError("The specified key does not exist.");
+						throw new UserError("The specified key does not exist.", {
+							telemetryMessage: "r2 object get local key not found",
+						});
 					}
 					// Note `object.body` is only valid inside this closure
 					await stream.promises.pipeline(object.body, output);
@@ -148,7 +150,9 @@ export const r2ObjectGetCommand = createCommand({
 				jurisdiction
 			);
 			if (input === null) {
-				throw new UserError("The specified key does not exist.");
+				throw new UserError("The specified key does not exist.", {
+					telemetryMessage: "r2 object get remote key not found",
+				});
 			}
 			await stream.promises.pipeline(input, output);
 		}
@@ -269,7 +273,8 @@ export const r2ObjectPutCommand = createCommand({
 		const { file, pipe } = yArgs;
 		if (!file && !pipe) {
 			throw new CommandLineArgsError(
-				"Either the --file or --pipe options are required."
+				"Either the --file or --pipe options are required.",
+				{ telemetryMessage: "r2 object put missing file or pipe" }
 			);
 		}
 
@@ -282,7 +287,9 @@ export const r2ObjectPutCommand = createCommand({
 			try {
 				const stats = fs.statSync(file, { throwIfNoEntry: false });
 				if (!stats) {
-					throw new UserError(`The file "${file}" does not exist.`);
+					throw new UserError(`The file "${file}" does not exist.`, {
+						telemetryMessage: "r2 object put file not found",
+					});
 				}
 				sizeBytes = stats.size;
 
@@ -295,7 +302,10 @@ export const r2ObjectPutCommand = createCommand({
 					`An error occurred while trying to read the file "${file}": ${
 						(err as Error).message
 					}`,
-					{ cause: err }
+					{
+						cause: err,
+						telemetryMessage: "r2 object put file read failed",
+					}
 				);
 			}
 		} else {
@@ -306,7 +316,12 @@ export const r2ObjectPutCommand = createCommand({
 				stdin.on("end", () => resolve(Buffer.concat(chunks)));
 				stdin.on("error", (err) =>
 					reject(
-						new CommandLineArgsError(`Could not pipe. Reason: "${err.message}"`)
+						new CommandLineArgsError(
+							`Could not pipe. Reason: "${err.message}"`,
+							{
+								telemetryMessage: "r2 object put pipe read failed",
+							}
+						)
 					)
 				);
 			});
@@ -571,13 +586,15 @@ export const r2BulkPutCommand = createCommand({
 	async handler(yArgs, { config }) {
 		if (!isValidR2BucketName(yArgs.bucket)) {
 			throw new UserError(
-				`The bucket name "${yArgs.bucket}" is invalid. ${bucketFormatMessage}`
+				`The bucket name "${yArgs.bucket}" is invalid. ${bucketFormatMessage}`,
+				{ telemetryMessage: "r2 object bulk put invalid bucket name" }
 			);
 		}
 
 		if (!yArgs.filename) {
 			throw new UserError(
-				"The --filename argument is required for bulk put operations."
+				"The --filename argument is required for bulk put operations.",
+				{ telemetryMessage: "r2 object bulk put missing filename" }
 			);
 		}
 
@@ -653,7 +670,9 @@ export const r2BulkPutCommand = createCommand({
 						await Promise.race([queue.onError(), queue.onIdle()]);
 					} catch (error) {
 						queue.pause();
-						throw new FatalError(`R2 bulk upload failed\n${error}`);
+						throw new FatalError(`R2 bulk upload failed\n${error}`, {
+							telemetryMessage: "r2 object bulk upload failed",
+						});
 					}
 				}
 			);
@@ -718,7 +737,9 @@ export const r2BulkPutCommand = createCommand({
 							yArgs.storageClass
 						);
 					} catch (e) {
-						throw new FatalError(`Error uploading "${entry.file}"\n${e}`);
+						throw new FatalError(`Error uploading "${entry.file}"\n${e}`, {
+							telemetryMessage: "r2 object bulk upload object failed",
+						});
 					}
 				})
 			);
@@ -727,7 +748,9 @@ export const r2BulkPutCommand = createCommand({
 				await Promise.race([queue.onError(), queue.onIdle()]);
 			} catch (error) {
 				queue.pause();
-				throw new FatalError(`R2 bulk upload failed\n${error}`);
+				throw new FatalError(`R2 bulk upload failed\n${error}`, {
+					telemetryMessage: "r2 object bulk upload failed",
+				});
 			}
 		}
 	},

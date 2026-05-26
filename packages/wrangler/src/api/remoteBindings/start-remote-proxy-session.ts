@@ -1,3 +1,4 @@
+import events from "node:events";
 import path from "node:path";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
@@ -7,6 +8,7 @@ import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
 import type { LoggerLevel } from "../../logger";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker";
+import type { ErrorEvent } from "../startDevWorker/events";
 import type { Config } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString } from "miniflare";
 
@@ -16,6 +18,46 @@ export type StartRemoteProxySessionOptions = {
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
 };
+
+function isErrorEvent(error: unknown): error is ErrorEvent {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"type" in error &&
+		(error as { type?: string }).type === "error" &&
+		"reason" in error &&
+		"cause" in error
+	);
+}
+
+function getErrorMessage(error: unknown): string | undefined {
+	if (error instanceof Error) {
+		return getErrorMessage(error.cause) ?? error.message;
+	}
+
+	if (typeof error === "string") {
+		return error;
+	}
+
+	if (typeof error === "object" && error !== null) {
+		const maybeMessage = (error as { message?: unknown }).message;
+		if (typeof maybeMessage === "string") {
+			const maybeCause = (error as { cause?: unknown }).cause;
+			return getErrorMessage(maybeCause) ?? maybeMessage;
+		}
+	}
+
+	return undefined;
+}
+
+function formatRemoteProxySessionError(error: unknown): string | undefined {
+	if (isErrorEvent(error)) {
+		const causeMessage = getErrorMessage(error.cause);
+		return causeMessage ? `${error.reason}: ${causeMessage}` : error.reason;
+	}
+
+	return getErrorMessage(error);
+}
 
 export async function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
@@ -76,8 +118,11 @@ export async function startRemoteProxySession(
 	]);
 
 	if (maybeError && maybeError.error) {
+		const details = formatRemoteProxySessionError(maybeError.error);
 		throw new Error(
-			"Failed to start the remote proxy session. There is likely additional logging output above.",
+			details
+				? `Failed to start the remote proxy session. ${details}`
+				: "Failed to start the remote proxy session. There is likely additional logging output above.",
 			{
 				cause: maybeError.error,
 			}
@@ -97,7 +142,35 @@ export async function startRemoteProxySession(
 				{ ...binding, raw: true },
 			])
 		);
+
+		// `worker.patchConfig` returns as soon as the config update is dispatched
+		// — long before the remote worker has actually been re-uploaded with the
+		// new bindings and the local proxy worker has unpaused. If we returned
+		// here, callers issuing requests immediately afterwards would race the
+		// reload window, often surfacing as "WebSocket connection failed" for
+		// JSRPC bindings.
+		//
+		// Subscribe BEFORE patchConfig so we don't miss either event.
+		// `events.once()` resolves on `reloadComplete` and rejects if `error`
+		// is emitted first (with the event payload as the rejection value).
+		const reloadComplete = events.once(worker.raw, "reloadComplete");
 		await worker.patchConfig({ bindings: rawNewBindings });
+		try {
+			await reloadComplete;
+		} catch (errOrEvent) {
+			throw errOrEvent instanceof Error
+				? errOrEvent
+				: new Error(
+						`RemoteProxySession.updateBindings failed during reload: ${
+							(errOrEvent as { reason?: string })?.reason ?? "unknown"
+						}`,
+						{ cause: errOrEvent }
+					);
+		}
+		// The "play" message that resumes the local proxy worker is enqueued on
+		// this mutex during onReloadComplete. Wait for it to drain so the proxy
+		// actually unpauses before we return — matches what `worker.fetch` does.
+		await worker.raw.proxy.runtimeMessageMutex.drained();
 	};
 
 	return {

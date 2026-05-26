@@ -47,7 +47,9 @@ export async function createD1Database(
 		const errorCode = (e as { code: number }).code;
 
 		if (errorCode === 7502) {
-			throw new UserError("A database with that name already exists");
+			throw new UserError("A database with that name already exists", {
+				telemetryMessage: "d1 create database already exists",
+			});
 		}
 
 		if (errorCode === 7406) {
@@ -58,7 +60,8 @@ export async function createD1Database(
 
 					To list your existing databases, run: wrangler d1 list
 					To delete a database, run: wrangler d1 delete <database-name>
-				`
+				`,
+				{ telemetryMessage: "d1 create database limit reached" }
 			);
 		}
 

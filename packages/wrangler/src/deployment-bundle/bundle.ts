@@ -3,12 +3,13 @@ import * as path from "node:path";
 import {
 	getBuildConditionsFromEnv,
 	getBuildPlatformFromEnv,
+	getWranglerTmpDir,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import * as esbuild from "esbuild";
 import { getFlag } from "../experimental-flags";
-import { getBasePath, getWranglerTmpDir } from "../paths";
+import { getBasePath } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
 	isBuildFailure,
@@ -23,13 +24,13 @@ import { getNodeJSCompatPlugins } from "./esbuild-plugins/nodejs-plugins";
 import { writeAdditionalModules } from "./find-additional-modules";
 import { noopModuleCollector } from "./module-collection";
 import type { MiddlewareLoader } from "./apply-middleware";
-import type { Entry } from "./entry";
 import type { ModuleCollector } from "./module-collection";
 import type {
 	CfModule,
 	CfModuleType,
 	Config,
 	DurableObjectBindings,
+	Entry,
 	WorkflowBinding,
 } from "@cloudflare/workers-utils";
 import type { NodeJSCompatMode } from "miniflare";
@@ -83,7 +84,8 @@ function getBuildPlatform(): esbuild.Platform {
 	) {
 		throw new UserError(
 			"Invalid esbuild platform configuration defined in the WRANGLER_BUILD_PLATFORM environment variable.\n" +
-				"Valid platform values are: 'browser', 'node' and 'neutral'."
+				"Valid platform values are: 'browser', 'node' and 'neutral'.",
+			{ telemetryMessage: "invalid esbuild platform configuration" }
 		);
 	}
 	return platform as esbuild.Platform;
@@ -284,7 +286,8 @@ export async function bundleWorker(
 	for (const middleware of middlewareToLoad) {
 		if (!middleware.supports.includes(entry.format)) {
 			throw new UserError(
-				`Your Worker is written using the "${entry.format}" format, which isn't supported by the "${middleware.name}" middleware. To use "${middleware.name}" middleware, convert your Worker to the "${middleware.supports[0]}" format`
+				`Your Worker is written using the "${entry.format}" format, which isn't supported by the "${middleware.name}" middleware. To use "${middleware.name}" middleware, convert your Worker to the "${middleware.supports[0]}" format`,
+				{ telemetryMessage: "middleware unsupported worker format" }
 			);
 		}
 	}
@@ -510,7 +513,8 @@ export async function bundleWorker(
 		throw new UserError(
 			`Your Worker depends on the following Durable Objects, which are not exported in your entrypoint file: ${notExportedDOs.join(
 				", "
-			)}.\nYou should export these objects from your entrypoint, ${relativePath}.`
+			)}.\nYou should export these objects from your entrypoint, ${relativePath}.`,
+			{ telemetryMessage: "durable object classes not exported" }
 		);
 	}
 
@@ -522,7 +526,8 @@ export async function bundleWorker(
 		throw new UserError(
 			`Your Worker depends on the following Workflows, which are not exported in your entrypoint file: ${notExportedWorkflows.join(
 				", "
-			)}.\nYou should export these objects from your entrypoint, ${relativePath}.`
+			)}.\nYou should export these objects from your entrypoint, ${relativePath}.`,
+			{ telemetryMessage: "workflow classes not exported" }
 		);
 	}
 

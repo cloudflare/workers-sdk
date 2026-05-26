@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, test } from "vitest";
 import {
@@ -15,7 +16,6 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { MTlsCertificateResponse } from "../api/mtls-certificate";
 
@@ -415,12 +415,13 @@ describe("wrangler", () => {
 						  wrangler mtls-certificate delete  Delete an mTLS certificate
 
 						GLOBAL FLAGS
-						  -c, --config    Path to Wrangler configuration file  [string]
-						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-						  -h, --help      Show help  [boolean]
-						  -v, --version   Show version number  [boolean]"
+						  -c, --config          Path to Wrangler configuration file  [string]
+						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help            Show help  [boolean]
+						      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+						  -v, --version         Show version number  [boolean]"
 					`);
 				});
 			});

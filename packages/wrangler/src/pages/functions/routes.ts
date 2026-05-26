@@ -93,12 +93,16 @@ function parseConfig(config: Config, baseDir: string) {
 				moduleRoot !== path.parse(baseDir).root ||
 				relativePath.startsWith("..")
 			) {
-				throw new UserError(`Invalid module path "${fullFilepath}"`);
+				throw new UserError(`Invalid module path "${fullFilepath}"`, {
+					telemetryMessage: "pages functions invalid module path",
+				});
 			}
 
 			// ensure the module name (if provided) is a valid identifier to guard against injection attacks
 			if (name !== "default" && !isValidIdentifier(name)) {
-				throw new UserError(`Invalid module identifier "${name}"`);
+				throw new UserError(`Invalid module identifier "${name}"`, {
+					telemetryMessage: "pages functions invalid module identifier",
+				});
 			}
 
 			let { identifier } = importMap.get(resolvedPath) ?? {};

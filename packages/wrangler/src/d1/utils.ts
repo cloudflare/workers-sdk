@@ -22,7 +22,8 @@ export function getDatabaseInfoFromConfig(
 		if (name === d1Database.database_name || name === d1Database.binding) {
 			if (requireDatabaseId && !d1Database.database_id) {
 				throw new UserError(
-					`Found a database with name or binding ${name} but it is missing a database_id, which is needed for operations on remote resources. Please create the remote D1 database by deploying your project or running 'wrangler d1 create ${name}'.`
+					`Found a database with name or binding ${name} but it is missing a database_id, which is needed for operations on remote resources. Please create the remote D1 database by deploying your project or running 'wrangler d1 create ${name}'.`,
+					{ telemetryMessage: "d1 database config missing database id" }
 				);
 			}
 			// If requireDatabaseId is true (default), skip entries without database_id
@@ -61,7 +62,9 @@ export const getDatabaseByNameOrBinding = async (
 	const allDBs = await listDatabases(config, accountId);
 	const matchingDB = allDBs.find((db) => db.name === name);
 	if (!matchingDB) {
-		throw new UserError(`Couldn't find DB with name '${name}'`);
+		throw new UserError(`Couldn't find DB with name '${name}'`, {
+			telemetryMessage: "d1 database lookup database not found",
+		});
 	}
 	return matchingDB;
 };

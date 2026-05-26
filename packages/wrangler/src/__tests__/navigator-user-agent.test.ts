@@ -1,12 +1,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { afterEach, assert, describe, it, test, vi } from "vitest";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { noopModuleCollector } from "../deployment-bundle/module-collection";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import type { BundleOptions } from "../deployment-bundle/bundle";
 
 /*

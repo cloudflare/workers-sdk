@@ -7,7 +7,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { isDockerfile, UserError } from "@cloudflare/workers-utils";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import type {
 	ApplicationAffinities,
 	ApplicationAffinityColocation,
@@ -49,7 +49,7 @@ export const getNormalizedContainerOptions = async (
 	config: Config,
 	args: {
 		/** set by args.containersRollout */
-		containersRollout?: "gradual" | "immediate";
+		containersRollout?: "gradual" | "immediate" | "none";
 		dryRun?: boolean;
 	}
 ): Promise<ContainerNormalizedConfig[]> => {
@@ -126,14 +126,17 @@ export const getNormalizedContainerOptions = async (
 					? 100
 					: (container.rollout_step_percentage ??
 						rolloutStepPercentageFallback),
-			rollout_kind: container.rollout_kind ?? "full_auto",
+			rollout_kind:
+				args?.containersRollout === "none"
+					? "none"
+					: (container.rollout_kind ?? "full_auto"),
 			rollout_active_grace_period: container.rollout_active_grace_period ?? 0,
 			observability: {
 				logs_enabled:
 					config.observability?.logs?.enabled ??
 					config.observability?.enabled === true,
 			},
-			wrangler_ssh: container.wrangler_ssh,
+			wrangler_ssh: container.ssh ?? container.wrangler_ssh,
 			authorized_keys: container.authorized_keys,
 			trusted_user_ca_keys: container.trusted_user_ca_keys,
 		};
@@ -196,7 +199,10 @@ export const getNormalizedContainerOptions = async (
 				...instanceTypeOrLimits,
 				image_uri: args.dryRun
 					? container.image
-					: resolveImageName(await getAccountId(config), container.image), // if it is not a dockerfile, it must be an image uri or have thrown an error
+					: resolveImageName(
+							await getOrSelectAccountId(config),
+							container.image
+						), // if it is not a dockerfile, it must be an image uri or have thrown an error
 			});
 		}
 	}

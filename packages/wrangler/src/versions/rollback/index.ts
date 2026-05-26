@@ -50,7 +50,7 @@ export const versionsRollbackCommand = createCommand({
 		if (workerName === undefined) {
 			throw new UserError(
 				'You need to provide a name for your Worker. Either pass it as a cli arg with `--name <name>` or in your configuration file as `name = "<name>"`',
-				{ telemetryMessage: true }
+				{ telemetryMessage: "versions rollback missing worker name" }
 			);
 		}
 

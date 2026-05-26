@@ -80,7 +80,8 @@ function getGoArch(): string {
 				`Unsupported architecture for cloudflared: ${nodeArch}\n\n` +
 					`cloudflared supports: x64 (amd64), arm64, arm\n\n` +
 					`You can manually install cloudflared and set the CLOUDFLARED_PATH environment variable.\n` +
-					`Download instructions: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`
+					`Download instructions: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`,
+				{ telemetryMessage: "tunnel cloudflared unsupported architecture" }
 			);
 	}
 }
@@ -102,7 +103,8 @@ function getGoOS(): string {
 				`Unsupported platform for cloudflared: ${process.platform}\n\n` +
 					`cloudflared supports: darwin (macOS), linux, win32 (Windows)\n\n` +
 					`You can manually install cloudflared and set the CLOUDFLARED_PATH environment variable.\n` +
-					`Download instructions: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`
+					`Download instructions: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`,
+				{ telemetryMessage: "tunnel cloudflared unsupported platform" }
 			);
 	}
 }
@@ -224,7 +226,8 @@ async function getLatestVersionInfo(options?: {
 				`The update service did not return results for ${goOS}/${goArch},\n` +
 				`and the fallback query also failed.\n\n` +
 				`You can manually install cloudflared from:\n` +
-				`https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`
+				`https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`,
+			{ telemetryMessage: "tunnel cloudflared version lookup failed" }
 		);
 	}
 
@@ -304,7 +307,9 @@ function validateBinary(binPath: string, options?: { logger?: Logger }): void {
 		errorMessage += `  3. Manually installing cloudflared: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/\n`;
 		errorMessage += `  4. Setting CLOUDFLARED_PATH to point to your cloudflared binary`;
 
-		throw new UserError(errorMessage);
+		throw new UserError(errorMessage, {
+			telemetryMessage: "tunnel cloudflared validation failed",
+		});
 	}
 }
 
@@ -458,7 +463,8 @@ async function downloadCloudflared(
 			`[cloudflared] Failed to download cloudflared from ${url}\n\n` +
 				`Network error: ${e instanceof Error ? e.message : String(e)}\n\n` +
 				`Please check your internet connection and try again.\n` +
-				`If you're behind a proxy, make sure it's configured correctly.`
+				`If you're behind a proxy, make sure it's configured correctly.`,
+			{ telemetryMessage: "tunnel cloudflared download network failed" }
 		);
 	}
 
@@ -467,7 +473,8 @@ async function downloadCloudflared(
 			`[cloudflared] Failed to download cloudflared from ${url}\n\n` +
 				`HTTP ${response.status}: ${response.statusText}\n\n` +
 				`You can manually download cloudflared from:\n` +
-				`https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`
+				`https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`,
+			{ telemetryMessage: "tunnel cloudflared download response failed" }
 		);
 	}
 
@@ -494,7 +501,8 @@ async function downloadCloudflared(
 		throw new UserError(
 			`[cloudflared] Failed to save cloudflared binary\n\n` +
 				`Error: ${e instanceof Error ? e.message : String(e)}\n\n` +
-				`Please ensure you have write permissions to: ${cacheDir}`
+				`Please ensure you have write permissions to: ${cacheDir}`,
+			{ telemetryMessage: "tunnel cloudflared save failed" }
 		);
 	}
 
@@ -525,7 +533,8 @@ async function downloadAndExtractTarball(
 			throw new UserError(
 				`[cloudflared] SHA256 mismatch for downloaded cloudflared tarball.\n\n` +
 					`Expected: ${expectedChecksum}\n` +
-					`Actual:   ${actualSha256}`
+					`Actual:   ${actualSha256}`,
+				{ telemetryMessage: "tunnel cloudflared tarball checksum mismatch" }
 			);
 		}
 	}
@@ -566,7 +575,8 @@ async function downloadBinary(
 			throw new UserError(
 				`[cloudflared] SHA256 mismatch for downloaded cloudflared binary.\n\n` +
 					`Expected: ${expectedChecksum}\n` +
-					`Actual:   ${actualSha256}`
+					`Actual:   ${actualSha256}`,
+				{ telemetryMessage: "tunnel cloudflared binary checksum mismatch" }
 			);
 		}
 	}
@@ -594,7 +604,8 @@ export async function getCloudflaredPath(options?: {
 		if (!existsSync(envPath)) {
 			throw new UserError(
 				`CLOUDFLARED_PATH is set to "${envPath}" but the file does not exist.\n\n` +
-					`Please ensure the path points to a valid cloudflared binary.`
+					`Please ensure the path points to a valid cloudflared binary.`,
+				{ telemetryMessage: "tunnel cloudflared env path missing" }
 			);
 		}
 		logger?.debug(`Using cloudflared from CLOUDFLARED_PATH: ${envPath}`);
@@ -643,7 +654,8 @@ export async function getCloudflaredPath(options?: {
 			`cloudflared is required to run this command.\n\n` +
 				`You can install it manually from:\n` +
 				`https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/\n\n` +
-				`Then either add it to your PATH or set CLOUDFLARED_PATH.`
+				`Then either add it to your PATH or set CLOUDFLARED_PATH.`,
+			{ telemetryMessage: "tunnel cloudflared download declined" }
 		);
 	}
 

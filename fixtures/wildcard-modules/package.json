@@ -16,8 +16,5 @@
 		"@fixture/shared": "workspace:*",
 		"undici": "catalog:default",
 		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
 	}
 }

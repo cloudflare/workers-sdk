@@ -8,10 +8,10 @@ import {
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccountV4 as mockAccount } from "./utils";
 
@@ -461,7 +461,11 @@ describe("buildAndMaybePush", () => {
 		});
 		await expect(
 			runWrangler("containers build ./container-context -t test-app:tag")
-		).rejects.toThrow(new UserError(errorMessage));
+		).rejects.toThrow(
+			new UserError(errorMessage, {
+				telemetryMessage: "cloudchamber build image operation failed",
+			})
+		);
 	});
 
 	it("should throw UserError when docker login fails", async ({ expect }) => {
@@ -472,6 +476,10 @@ describe("buildAndMaybePush", () => {
 		);
 		await expect(
 			runWrangler("containers build ./container-context -t test-app:tag -p")
-		).rejects.toThrow(new UserError(errorMessage));
+		).rejects.toThrow(
+			new UserError(errorMessage, {
+				telemetryMessage: "cloudchamber build image operation failed",
+			})
+		);
 	});
 });

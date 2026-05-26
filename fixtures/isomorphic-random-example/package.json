@@ -7,8 +7,5 @@
 		"node": "./src/node.js",
 		"workerd": "./src/workerd.mjs",
 		"default": "./src/default.js"
-	},
-	"volta": {
-		"extends": "../../package.json"
 	}
 }

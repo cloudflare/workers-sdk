@@ -261,23 +261,32 @@ export const dev = createCommand({
 		},
 		tunnel: {
 			describe:
-				"Expose your local dev server via a Cloudflare Quick Tunnel (https://try.cloudflare.com)",
+				"Expose your local dev server via a Cloudflare Tunnel. Use `--tunnel` for a Quick Tunnel and `--tunnel-name` with `--tunnel` for a named tunnel.",
 			type: "boolean",
+		},
+		"tunnel-name": {
+			describe:
+				"Use an existing named Cloudflare Tunnel when `--tunnel` is enabled.",
+			type: "string",
 		},
 	},
 	async validateArgs(args) {
 		if (args.nodeCompat) {
 			throw new UserError(
-				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`,
+				{ telemetryMessage: "dev command node compat unsupported" }
 			);
 		}
 		if (args.liveReload && args.remote) {
 			throw new UserError(
-				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
+				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload.",
+				{ telemetryMessage: "dev command live reload remote conflict" }
 			);
 		}
 		if (args.tunnel && args.remote) {
-			throw new UserError("--tunnel is only supported in local mode.");
+			throw new UserError("--tunnel is only supported in local mode.", {
+				telemetryMessage: "dev command tunnel remote conflict",
+			});
 		}
 
 		if (isWebContainer()) {
@@ -351,7 +360,7 @@ export type AdditionalDevProps = {
 	showInteractiveDevSession?: boolean;
 };
 
-type DevArguments = (typeof dev)["args"];
+type DevArguments = Omit<(typeof dev)["args"], "installSkills">;
 
 export type StartDevOptions = DevArguments &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
@@ -398,7 +407,12 @@ export async function getHostAndRoutes(
 		}
 	});
 	if (routes) {
-		const assetOptions = getAssetsOptions({ assets: args.assets }, config);
+		const assetOptions = getAssetsOptions({
+			args: {
+				assets: args.assets,
+			},
+			config,
+		});
 		validateRoutes(routes, assetOptions);
 	}
 	return { host, routes };
@@ -429,7 +443,8 @@ export function getInferredHost(
 		configPath
 	)}
 	\`\`\`
-`
+`,
+				{ telemetryMessage: "dev command host inference failed" }
 			);
 		}
 		return host;

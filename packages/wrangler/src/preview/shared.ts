@@ -64,7 +64,8 @@ export function resolveWorkerName(
 		throw new UserError(
 			`Required Worker name missing. Please specify the Worker name in your ${configFileName(
 				config.configPath
-			)} file, or pass it with --worker-name <worker-name>.`
+			)} file, or pass it with --worker-name <worker-name>.`,
+			{ telemetryMessage: "preview command missing worker name" }
 		);
 	}
 
@@ -79,6 +80,8 @@ export function getBindingValue(binding: Binding): string {
 	switch (binding.type) {
 		case "plain_text":
 			return `"${binding.text}"`;
+		case "json":
+			return JSON.stringify(binding.json);
 		case "secret_text":
 			return "********";
 		case "kv_namespace":
@@ -117,6 +120,8 @@ export function getBindingValue(binding: Binding): string {
 				: String(binding.store_id ?? "");
 		case "artifacts":
 			return String(binding.namespace ?? "");
+		case "flagship":
+			return String(binding.app_id ?? "");
 		case "ratelimit":
 			return String(binding.namespace_id ?? "");
 		case "vpc_service":
@@ -134,10 +139,18 @@ export function extractConfigBindings(config: Config): EnvBindings {
 
 	const vars = previews?.vars ?? {};
 	for (const [name, value] of Object.entries(vars)) {
-		env[name] = {
-			type: "plain_text",
-			text: typeof value === "string" ? value : JSON.stringify(value),
-		};
+		// Non-string vars (arrays/objects/numbers/booleans) need the `json`
+		// binding type so the Workers runtime parses them back into native JS
+		// values. Coercing them to plain_text via JSON.stringify makes
+		// `env[name]` a literal string at runtime, breaking any caller that
+		// expects the shape declared in wrangler.jsonc — `wrangler deploy`
+		// preserves the native shape via the `json` binding (see
+		// `deployment-bundle/create-worker-upload-form.ts`), so previews
+		// should match.
+		env[name] =
+			typeof value === "string"
+				? { type: "plain_text", text: value }
+				: { type: "json", json: value };
 	}
 
 	for (const kv of previews?.kv_namespaces ?? []) {
@@ -157,10 +170,17 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	}
 
 	for (const service of previews?.services ?? []) {
+		// `cross_account_grant` is internal/non-public-facing, so we access it
+		// through the runtime shape instead of the public type.
+		const crossAccountGrant = (service as { cross_account_grant?: string })
+			.cross_account_grant;
 		env[service.binding] = {
 			type: "service",
 			service: service.service,
 			entrypoint: service.entrypoint,
+			...(crossAccountGrant !== undefined && {
+				cross_account_grant: crossAccountGrant,
+			}),
 		};
 	}
 
@@ -260,6 +280,13 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		};
 	}
 
+	for (const flagship of previews?.flagship ?? []) {
+		env[flagship.binding] = {
+			type: "flagship",
+			app_id: flagship.app_id,
+		};
+	}
+
 	for (const ratelimit of previews?.ratelimits ?? []) {
 		env[ratelimit.name] = {
 			type: "ratelimit",
@@ -298,6 +325,15 @@ export function extractConfigBindings(config: Config): EnvBindings {
 
 	if (previews?.version_metadata) {
 		env[previews.version_metadata.binding] = { type: "version_metadata" };
+	}
+
+	if (config.assets?.binding) {
+		env[config.assets.binding] = { type: "assets" };
+	}
+
+	for (const binding of previews?.unsafe?.bindings ?? []) {
+		const { name, type, ...rest } = binding;
+		env[name] = { type, ...rest } as Binding;
 	}
 
 	return env;
@@ -339,6 +375,10 @@ export function assemblePreviewDefaults(config: Config): PreviewDefaults {
 
 	if (previews?.limits || config.limits) {
 		previewDefaults.limits = previews?.limits ?? config.limits;
+	}
+
+	if (previews?.cache !== undefined || config.cache !== undefined) {
+		previewDefaults.cache = previews?.cache ?? config.cache;
 	}
 
 	if (config.placement) {

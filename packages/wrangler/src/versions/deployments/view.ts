@@ -25,11 +25,19 @@ export const deploymentsViewCommand = createCommand({
 	handler: async function versionsDeploymentsViewHandler(args) {
 		if (args.deploymentId === undefined) {
 			throw new UserError(
-				"`wrangler deployments view` has been renamed `wrangler deployments status`. Please use that command instead."
+				"`wrangler deployments view` has been renamed `wrangler deployments status`. Please use that command instead.",
+				{
+					telemetryMessage:
+						"versions deployments view deprecated status command",
+				}
 			);
 		} else {
 			throw new UserError(
-				"`wrangler deployments view <deployment-id>` has been renamed `wrangler versions view [version-id]`. Please use that command instead."
+				"`wrangler deployments view <deployment-id>` has been renamed `wrangler versions view [version-id]`. Please use that command instead.",
+				{
+					telemetryMessage:
+						"versions deployments view deprecated version command",
+				}
 			);
 		}
 	},

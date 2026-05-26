@@ -3,7 +3,7 @@
 	"private": true,
 	"description": "A test for the getPlatformProxy utility used with remote bindings",
 	"scripts": {
-		"test:e2e": "vitest run",
+		"test:e2e": "vitest run --reporter=default",
 		"type:tests": "tsc --noEmit -p tests/tsconfig.json"
 	},
 	"devDependencies": {
@@ -13,8 +13,5 @@
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
 	}
 }

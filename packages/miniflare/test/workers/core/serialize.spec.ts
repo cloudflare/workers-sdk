@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { parse, stringify } from "devalue";
 import {
 	createHTTPReducers,
@@ -7,6 +8,19 @@ import {
 } from "miniflare";
 import { test } from "vitest";
 import { NODE_PLATFORM_IMPL } from "../../../src/plugins/core/proxy/types";
+
+test("serialize Buffer as Uint8Array", ({ expect }) => {
+	const input = Buffer.from([99, 88, 77]);
+
+	const serialized = stringify(input, structuredSerializableReducers);
+	const deserialized = parse(serialized, structuredSerializableRevivers);
+
+	// Buffer should round-trip as Uint8Array since Buffer isn't available in all runtimes
+	expect(deserialized).toBeInstanceOf(Uint8Array);
+	expect(new Uint8Array(deserialized as ArrayBuffer)).toEqual(
+		new Uint8Array([99, 88, 77])
+	);
+});
 
 test("serialize RegExp object consisting of only ascii chars", ({ expect }) => {
 	const input = new RegExp(/HelloWorld/);

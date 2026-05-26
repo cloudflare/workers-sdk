@@ -80,9 +80,47 @@ describe("Hot Keys", () => {
 			expect(handlerA).toHaveBeenCalled();
 			handlerA.mockClear();
 
-			writeToMockedStdin("A");
+			// Caps Lock and Shift+A both come through readline as { name: "a", shift: true }.
+			writeToMockedStdin({
+				name: "a",
+				sequence: "A",
+				ctrl: false,
+				meta: false,
+				shift: true,
+			});
 			expect(handlerA).toHaveBeenCalled();
 			handlerA.mockClear();
+		});
+
+		it("does not fire plain key handler when ctrl or meta is also held with shift", async ({
+			expect,
+		}) => {
+			const handlerA = vi.fn();
+			const options = [
+				{ keys: ["a"], label: "first option", handler: handlerA },
+			];
+
+			registerHotKeys(options);
+
+			// ctrl+shift+a should NOT fire the "a" handler
+			writeToMockedStdin({
+				name: "a",
+				sequence: "",
+				ctrl: true,
+				meta: false,
+				shift: true,
+			});
+			expect(handlerA).not.toHaveBeenCalled();
+
+			// meta+shift+a should NOT fire the "a" handler
+			writeToMockedStdin({
+				name: "a",
+				sequence: "",
+				ctrl: false,
+				meta: true,
+				shift: true,
+			});
+			expect(handlerA).not.toHaveBeenCalled();
 		});
 
 		it("handles meta keys", async ({ expect }) => {

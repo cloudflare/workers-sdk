@@ -1,5 +1,49 @@
 # @cloudflare/workers-utils
 
+## 0.21.1
+
+### Patch Changes
+
+- [#13933](https://github.com/cloudflare/workers-sdk/pull/13933) [`90092c0`](https://github.com/cloudflare/workers-sdk/commit/90092c0bca526e2e08a25fe7969534426eb6fd9f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Mark `@cloudflare/workers-utils` as side-effect-free and properly declare `undici` as a runtime dependency
+
+  The package now declares `"sideEffects": false` in its `package.json` so that downstream bundlers can tree-shake unused exports. In particular, consumers that only use a subset of the package (for example, `getTodaysCompatDate` from the main entry) will no longer carry the `cloudflared` / `tunnel` exports — or their transitive dependencies — in their final bundle.
+
+  `undici` has been moved from `devDependencies` to `dependencies`. Previously it was incorrectly listed as a devDependency while the bundler config marked it as external, leaving the published `dist/index.mjs` with an unresolved `import { fetch } from "undici"` for anyone installing the package directly. `undici` is deliberately kept external (rather than bundled) so that downstream consumers don't end up with two copies of `undici` in their bundle — which would break `instanceof Request`/`Response`/`Headers` checks across the boundary and prevent `setGlobalDispatcher` / proxy configuration from applying to the bundled copy.
+
+  `vitest` has been added as an optional `peerDependency` because the `./test-helpers` sub-export uses `vitest`'s `vi`, `beforeEach`, and `afterEach` APIs at runtime; consumers that import from `./test-helpers` must have `vitest` installed themselves.
+
+## 0.21.0
+
+### Minor Changes
+
+- [#12279](https://github.com/cloudflare/workers-sdk/pull/12279) [`248bc08`](https://github.com/cloudflare/workers-sdk/commit/248bc08152cf9f792d98c8c78f8fb1417b1bb3b3) Thanks [@penalosa](https://github.com/penalosa)! - Add deprecation warning for `delivery_delay` in queue producer bindings
+
+  The `delivery_delay` setting in `[[queues.producers]]` was silently having no effect since 2024. This change adds a deprecation warning when the setting is used, informing users that queue-level settings should be configured using `wrangler queues update` instead. The setting will be removed in a future version.
+
+## 0.20.0
+
+### Minor Changes
+
+- [#13055](https://github.com/cloudflare/workers-sdk/pull/13055) [`f3fed88`](https://github.com/cloudflare/workers-sdk/commit/f3fed8859b612d424388fe45a1d638cf6b1c42c7) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Introducing the `cache` configuration option for Workers.
+
+  You can now set `{ cache: { enabled: true } }` in your Wrangler configuration file to enable a HTTP cache in front of your Worker's `fetch` handler. This is also supported in `[previews]` configuration — `previews.cache` overrides the top-level `cache` setting for preview deployments, and falls back to the top-level value when absent. More information can be found in [our documentation](https://developers.cloudflare.com/workers/cache/configuration/).
+
+## 0.19.0
+
+### Minor Changes
+
+- [#13810](https://github.com/cloudflare/workers-sdk/pull/13810) [`2b8c0cc`](https://github.com/cloudflare/workers-sdk/commit/2b8c0ccb9ede7487bd96cfc51b3262a717bb532c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Stabilize the `secrets` configuration property
+
+  The `secrets` property in the Wrangler config file is no longer experimental and will no longer emit an experimental warning when used. Required secrets are validated during local development and deploy, and used as the source of truth for type generation.
+
+  ```json
+  {
+    "secrets": {
+      "required": ["API_KEY", "DB_PASSWORD"]
+    }
+  }
+  ```
+
 ## 0.18.0
 
 ### Minor Changes

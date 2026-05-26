@@ -29,7 +29,7 @@
 		"wrangler": "workspace:*"
 	},
 	"engines": {
-		"node": ">=18.15"
+		"node": ">=22.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

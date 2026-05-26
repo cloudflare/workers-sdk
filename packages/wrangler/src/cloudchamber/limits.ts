@@ -76,7 +76,9 @@ export async function ensureContainerLimits(options: {
 		);
 	}
 	if (errors.length > 0) {
-		throw new UserError(`Exceeded account limits: ${errors.join(" ")}`);
+		throw new UserError(`Exceeded account limits: ${errors.join(" ")}`, {
+			telemetryMessage: "cloudchamber limits account limit exceeded",
+		});
 	}
 
 	// check whether an image fits within the configured limits for a container
@@ -109,7 +111,8 @@ export async function ensureImageFitsLimits(options: {
 	);
 	if (options.availableSizeInBytes < requiredSizeInBytes) {
 		throw new UserError(
-			`Image too large: needs ${Math.ceil(requiredSizeInBytes / MB)}MB, but your app is limited to images with size ${options.availableSizeInBytes / MB}MB. Your need more disk for this image.`
+			`Image too large: needs ${Math.ceil(requiredSizeInBytes / MB)}MB, but your app is limited to images with size ${options.availableSizeInBytes / MB}MB. Your need more disk for this image.`,
+			{ telemetryMessage: "cloudchamber limits image too large" }
 		);
 	}
 }

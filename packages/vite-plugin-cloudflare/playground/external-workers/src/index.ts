@@ -16,8 +16,10 @@ async function waitForMutation(env: Env, mutationId: string) {
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
-		const aiResponse = await env.AI.run("@cf/meta/llama-3-8b-instruct", {
-			prompt: "When I say PING, you say PONG. PING",
+		const aiResponse = await env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
+			messages: [
+				{ role: "user", content: "When I say PING, you say PONG. PING" },
+			],
 		});
 
 		if (url.pathname === "/vectorize") {
@@ -81,7 +83,7 @@ export default {
 			const stream = await (
 				await fetch("https://thispersondoesnotexist.com/")
 			).body;
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- we are sure that at this point there will be a stream
 			const transform = await env.IMAGES.input(stream!)
 				.transform({ blur: 250 })
 				.output({ format: "image/avif" });
@@ -91,7 +93,11 @@ export default {
 
 		return new Response(
 			JSON.stringify(
-				(aiResponse as { response: string }).response.toUpperCase()
+				(
+					aiResponse as {
+						choices: { message: { content: string } }[];
+					}
+				).choices[0]?.message.content.toUpperCase() ?? ""
 			)
 		);
 	},

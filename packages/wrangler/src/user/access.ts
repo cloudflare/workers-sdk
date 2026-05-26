@@ -75,16 +75,15 @@ export async function domainUsesAccess(domain: string): Promise<boolean> {
 export async function getAccessHeaders(
 	domain: string
 ): Promise<Record<string, string>> {
-	if (!(await domainUsesAccess(domain))) {
-		return {};
-	}
-	logger.debug("Getting Access headers for domain:", domain);
-	if (headersCache[domain]) {
-		logger.debug("Using cached Access headers for domain:", domain);
-		return headersCache[domain];
-	}
-
-	// 1. If Access Service Token credentials are provided, use them directly
+	// 1. If Access Service Token credentials are provided, use them directly.
+	//
+	// This check intentionally comes before `domainUsesAccess()`, which detects
+	// Access by looking for a 302 redirect to `cloudflareaccess.com`. When an
+	// Access application is configured to only allow Service Auth tokens (no
+	// interactive user authentication), the domain responds with a hard 403
+	// instead of redirecting, so `domainUsesAccess()` returns false. If we
+	// gated the env var check on `domainUsesAccess()` we would never attach
+	// the service token headers and the request would fail with a 403.
 	const clientId = getAccessClientIdFromEnv();
 	const clientSecret = getAccessClientSecretFromEnv();
 
@@ -110,6 +109,15 @@ export async function getAccessHeaders(
 		);
 	}
 
+	if (!(await domainUsesAccess(domain))) {
+		return {};
+	}
+	logger.debug("Getting Access headers for domain:", domain);
+	if (headersCache[domain]) {
+		logger.debug("Using cached Access headers for domain:", domain);
+		return headersCache[domain];
+	}
+
 	// 2. If non-interactive (CI), error with actionable message
 	if (isNonInteractiveOrCI()) {
 		throw new UserError(
@@ -117,7 +125,10 @@ export async function getAccessHeaders(
 				`and the current environment is non-interactive.\n` +
 				`Set the CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET environment variables ` +
 				`to authenticate with an Access Service Token.\n` +
-				`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/`
+				`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/`,
+			{
+				telemetryMessage: "user access missing service token non interactive",
+			}
 		);
 	}
 
@@ -126,7 +137,8 @@ export async function getAccessHeaders(
 	const output = spawnSync("cloudflared", ["access", "login", domain]);
 	if (output.error) {
 		throw new UserError(
-			"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
+			"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation",
+			{ telemetryMessage: "user access missing cloudflared" }
 		);
 	}
 	const stringOutput = output.stdout.toString();

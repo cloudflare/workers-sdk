@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-function-type */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type -- WebAssembly API type declarations use Function as a generic callable type */
 // Types adapted from https://github.com/microsoft/TypeScript/blob/main/lib/lib.webworker.d.ts
 //
 // Copyright (c) Microsoft Corporation. All rights reserved.

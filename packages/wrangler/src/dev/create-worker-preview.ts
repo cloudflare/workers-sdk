@@ -218,9 +218,10 @@ export async function createPreviewSession(
 			const subdomain = await getWorkersDevSubdomain(
 				complianceConfig,
 				account.accountId,
-				undefined,
-				apiToken,
-				withTimeout(abortSignal)
+				{
+					apiToken,
+					abortSignal: withTimeout(abortSignal),
+				}
 			);
 			host = `${name ?? crypto.randomUUID()}.${subdomain}`;
 		}
@@ -238,7 +239,8 @@ export async function createPreviewSession(
 					ctx.zone
 						? ` host \`${ctx.host}\` on zone \`${ctx.zone}\``
 						: `your account`
-				}.`
+				}.`,
+				{ telemetryMessage: "remote preview session creation failed" }
 			);
 		}
 	}

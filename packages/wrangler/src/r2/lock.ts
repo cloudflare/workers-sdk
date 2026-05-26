@@ -146,7 +146,7 @@ export const r2BucketLockAddCommand = createCommand({
 
 		if (!name) {
 			throw new UserError("Must specify a rule name.", {
-				telemetryMessage: true,
+				telemetryMessage: "r2 lock add missing rule name",
 			});
 		}
 
@@ -370,7 +370,7 @@ export const r2BucketLockSetCommand = createCommand({
 		if (!lockRule.rules || !Array.isArray(lockRule.rules)) {
 			throw new UserError(
 				"The lock configuration file must contain a 'rules' array.",
-				{ telemetryMessage: true }
+				{ telemetryMessage: "r2 lock set config missing rules array" }
 			);
 		}
 

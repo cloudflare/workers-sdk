@@ -20,13 +20,15 @@ export function demandOneOfOption(...options: string[]) {
 			throw new CommandLineArgsError(
 				`Exactly one of the arguments ${options.join(
 					", "
-				)} and ${lastOption} is required`
+				)} and ${lastOption} is required`,
+				{ telemetryMessage: "core arguments missing exclusive option" }
 			);
 		} else if (count > 1) {
 			throw new CommandLineArgsError(
 				`Arguments ${options.join(
 					", "
-				)} and ${lastOption} are mutually exclusive`
+				)} and ${lastOption} are mutually exclusive`,
+				{ telemetryMessage: "core arguments mutually exclusive options" }
 			);
 		}
 
@@ -49,7 +51,8 @@ export function demandSingleValue<Argv extends { [key: string]: unknown }>(
 	return function (argv: Argv) {
 		if (Array.isArray(argv[key]) && !allow?.(argv)) {
 			throw new CommandLineArgsError(
-				`The argument "--${key}" expects a single value, but received multiple: ${JSON.stringify(argv[key])}.`
+				`The argument "--${key}" expects a single value, but received multiple: ${JSON.stringify(argv[key])}.`,
+				{ telemetryMessage: "core arguments multiple values" }
 			);
 		}
 

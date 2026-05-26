@@ -7,4 +7,7 @@ export default defineConfig({
 			wrangler: { configPath: "./wrangler.jsonc" },
 		}),
 	],
+	test: {
+		reporters: ["default"],
+	},
 });

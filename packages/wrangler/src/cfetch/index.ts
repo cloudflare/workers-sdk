@@ -244,6 +244,7 @@ function throwFetchError(
 		text: `A request to the Cloudflare API (${resource}) failed.`,
 		notes,
 		status,
+		telemetryMessage: false,
 	});
 	// add the first error code directly to this error
 	// so consumers can use it for specific behaviour

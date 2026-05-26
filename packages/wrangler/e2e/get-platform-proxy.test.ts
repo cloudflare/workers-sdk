@@ -393,6 +393,16 @@ describe("getPlatformProxy()", () => {
 					if (scheme === "mysql") {
 						socket.write(MYSQL_INITIAL_HANDSHAKE_PACKET);
 					}
+					// When the spawned child process exits after `dispose()`, workerd's
+					// outbound TCP connection (now direct, not via the Hyperdrive proxy
+					// for `sslmode=disable`) can close with RST rather than FIN — most
+					// reliably reproduced on Windows. Swallow the resulting ECONNRESET
+					// so it doesn't leak as an `uncaughtException` in the test process.
+					socket.on("error", (err: NodeJS.ErrnoException) => {
+						if (err.code !== "ECONNRESET") {
+							throw err;
+						}
+					});
 					socket.on("data", (chunk) => {
 						// Handle PostgreSQL SSL request packet
 						if (
@@ -638,4 +648,50 @@ describe("getPlatformProxy()", () => {
 			);
 		}
 	);
+
+	describe("send_email", () => {
+		let root: string;
+
+		beforeEach(async () => {
+			root = makeRoot();
+
+			await seed(root, {
+				"wrangler.jsonc": JSON.stringify({
+					name: "email-app",
+					compatibility_date: "2025-03-17",
+					send_email: [{ name: "EMAIL" }],
+				}),
+				"index.mjs": dedent /* javascript */ `
+						import { getPlatformProxy } from "${WRANGLER_IMPORT}";
+
+						const { env, dispose } = await getPlatformProxy();
+						const result = await env.EMAIL.send({
+							from: "sender@sender.domain",
+							to: "recipient@example.com",
+							subject: "s",
+							text: "t",
+						});
+
+						console.log(result.messageId);
+						await dispose();
+				`,
+				"package.json": dedent`
+						{
+							"name": "email-app",
+							"version": "0.0.0",
+							"private": true
+						}
+				`,
+			});
+		});
+
+		it("can send a MessageBuilder email", async ({ expect }) => {
+			const stdout = execSync(`node index.mjs`, {
+				cwd: root,
+				encoding: "utf-8",
+			});
+
+			expect(stdout).toMatch(/^<[A-Za-z0-9]{36}@sender\.domain>/);
+		});
+	});
 });

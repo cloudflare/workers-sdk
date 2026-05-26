@@ -10,6 +10,7 @@ export default defineConfig({
 		}),
 	],
 	test: {
+		reporters: ["default"],
 		testTimeout: 50_000,
 	},
 });

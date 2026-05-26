@@ -1,8 +1,8 @@
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
+import { InstanceType } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import type {
 	CreateApplicationRequest,
-	InstanceType,
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
 import type {
@@ -117,7 +117,11 @@ export function checkInstanceType(
 	// memory or vcpu specified in the config
 	if (args.memory !== undefined || args.vcpu !== undefined) {
 		throw new UserError(
-			`Field "instance_type" is mutually exclusive with "memory" and "vcpu". These fields cannot be set together.`
+			`Field "instance_type" is mutually exclusive with "memory" and "vcpu". These fields cannot be set together.`,
+			{
+				telemetryMessage:
+					"cloudchamber instance type conflicting configuration",
+			}
 		);
 	}
 
@@ -125,7 +129,8 @@ export function checkInstanceType(
 		return instance_type as InstanceType;
 	} else {
 		throw new UserError(
-			`"instance_type" field value is expected to be one of 'lite', 'basic', 'standard-1', 'standard-2', 'standard-3', 'standard-4', but got "${instance_type}"`
+			`"instance_type" field value is expected to be one of 'lite', 'basic', 'standard-1', 'standard-2', 'standard-3', 'standard-4', but got "${instance_type}"`,
+			{ telemetryMessage: "cloudchamber instance type invalid value" }
 		);
 	}
 }
@@ -139,6 +144,15 @@ export function getInstanceTypeUsage(instanceType: InstanceType): {
 	return instanceTypes[instanceType];
 }
 
+// Legacy alias → canonical name mapping.
+// The API may return the legacy alias (e.g. "standard") for an instance
+// type configured as the canonical name ("standard-1"). Normalizing ensures
+// the deploy diff doesn't show a phantom EDIT for instance_type.
+const LEGACY_TO_CANONICAL: Record<"dev" | "standard", InstanceType> = {
+	dev: InstanceType.LITE,
+	standard: InstanceType.STANDARD_1,
+};
+
 // infers the instance type from a given configuration
 export function inferInstanceType(
 	config: UserDeploymentConfiguration
@@ -149,7 +163,13 @@ export function inferInstanceType(
 			config.memory_mib === configuration.memory_mib &&
 			config.disk?.size_mb === configuration.disk_mb
 		) {
-			return instanceType as InstanceType;
+			const canonical =
+				instanceType in LEGACY_TO_CANONICAL
+					? LEGACY_TO_CANONICAL[
+							instanceType as keyof typeof LEGACY_TO_CANONICAL
+						]
+					: undefined;
+			return (canonical ?? instanceType) as InstanceType;
 		}
 	}
 }

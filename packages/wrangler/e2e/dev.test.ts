@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as nodeNet from "node:net";
 import { setTimeout } from "node:timers/promises";
+import { stripVTControlCharacters } from "node:util";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -750,6 +751,19 @@ describe.each([{ cmd: "wrangler dev" }])(
 	}
 );
 
+// When `wrangler dev` is force-killed via tree-kill at test teardown,
+// workerd's outbound TCP connection to the mock database server is reset
+// rather than gracefully closed. With the Hyperdrive proxy now skipped for
+// `sslmode=disable` (the default), that RST surfaces directly on the
+// per-connection socket of the test's `nodeNet.Server`. Without an `error`
+// listener Node escalates it to `uncaughtException`, which Vitest catches as
+// an unhandled error and fails the run even though the test itself passed.
+function ignoreEconnreset(err: NodeJS.ErrnoException): void {
+	if (err.code !== "ECONNRESET") {
+		throw err;
+	}
+}
+
 describe.each(HYPERDRIVE_DATABASES)(
 	"hyperdrive dev tests ($scheme)",
 	({ scheme, defaultPort, envVar }) => {
@@ -766,6 +780,11 @@ describe.each(HYPERDRIVE_DATABASES)(
 					})
 					.listen();
 			}
+			// Attach a no-op-on-ECONNRESET listener to every accepted socket.
+			// See `ignoreEconnreset` for context.
+			server.on("connection", (socket) => {
+				socket.on("error", ignoreEconnreset);
+			});
 		});
 
 		it("matches expected configuration parameters", async ({ expect }) => {
@@ -2400,7 +2419,8 @@ This is a random email body.
 		);
 
 		const maybeReplyPath = await vi.waitUntil(
-			() => pathRegexp.exec(worker.currentOutput)?.[1],
+			() =>
+				pathRegexp.exec(stripVTControlCharacters(worker.currentOutput))?.[1],
 			{ interval: 100, timeout: 5000 }
 		);
 
@@ -2568,7 +2588,8 @@ This is a random email body.
 		);
 
 		const maybeReplyPath = await vi.waitUntil(
-			() => pathRegexp.exec(worker.currentOutput)?.[1],
+			() =>
+				pathRegexp.exec(stripVTControlCharacters(worker.currentOutput))?.[1],
 			{ interval: 100, timeout: 5000 }
 		);
 

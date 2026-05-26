@@ -6,6 +6,7 @@ import { once } from "node:events";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import http from "node:http";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { json, text } from "node:stream/consumers";
@@ -25,7 +26,7 @@ import {
 	Response,
 	viewToBuffer,
 } from "miniflare";
-import { onTestFinished, test } from "vitest";
+import { afterEach, test, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { assertIsV2ModuleFallbackProtocol } from "../src/plugins/core/module-fallback";
 import {
@@ -65,7 +66,11 @@ const ADD_WASM_MODULE = Buffer.from(
 	"base64"
 );
 
-test("Miniflare: validates options", async ({ expect }) => {
+afterEach(() => {
+	vi.unstubAllEnvs();
+});
+
+test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	// Check empty workers array rejected
 	expect(() => new Miniflare({ workers: [] })).toThrow(
 		new MiniflareCoreError("ERR_NO_WORKERS", "No workers defined")
@@ -639,7 +644,10 @@ test("Miniflare: custom service using Set-Cookie header", async ({
 	expect(await res.json()).toEqual(testCookies);
 });
 
-test("Miniflare: web socket kitchen sink", async ({ expect }) => {
+test("Miniflare: web socket kitchen sink", async ({
+	expect,
+	onTestFinished,
+}) => {
 	// Create deferred promises for asserting asynchronous event results
 	const clientEventPromise = new DeferredPromise<MessageEvent>();
 	const serverMessageEventPromise = new DeferredPromise<StandardMessageEvent>();
@@ -1107,6 +1115,72 @@ test("Miniflare: custom outbound service", async ({ expect }) => {
 	});
 });
 
+test("Miniflare: custom outbound service passes through TCP sockets", async ({
+	expect,
+}) => {
+	const tcpServer = net.createServer((socket) => {
+		socket.on("data", () => {
+			socket.write("pong");
+		});
+	});
+	const listeningPromise = once(tcpServer, "listening");
+	tcpServer.listen(0, "127.0.0.1");
+
+	await listeningPromise;
+
+	const address = tcpServer.address();
+	assert(typeof address === "object" && address !== null);
+
+	const mf = new Miniflare({
+		modules: true,
+		compatibilityDate: "2026-05-20",
+		compatibilityFlags: ["nodejs_compat"],
+		script: `
+			import { connect } from "cloudflare:sockets";
+
+			export default {
+				async fetch() {
+				    const response = await fetch("https://example.com/path?query=1");
+					const fetchBody = await response.text();
+					const socket = connect({ hostname: "127.0.0.1", port: ${address.port} });
+					const writer = socket.writable.getWriter();
+					await writer.write(new TextEncoder().encode("ping"));
+					const reader = socket.readable.getReader();
+					const { value } = await reader.read();
+					writer.releaseLock();
+					reader.releaseLock();
+					socket.close();
+
+					return Response.json({
+						fetchBody,
+						socketBody: new TextDecoder().decode(value),
+					});
+				}
+			};
+		`,
+		outboundService(request) {
+			return new Response(`intercepted:${request.url}`);
+		},
+	});
+	useDispose(mf);
+
+	try {
+		const response = await mf.dispatchFetch("http://localhost");
+		const body = await response.json();
+		expect({ status: response.status, body }).toEqual({
+			status: 200,
+			body: {
+				fetchBody: "intercepted:https://example.com/path?query=1",
+				socketBody: "pong",
+			},
+		});
+	} finally {
+		await new Promise<void>((resolve, reject) => {
+			tcpServer.close((error) => (error ? reject(error) : resolve()));
+		});
+	}
+});
+
 test("Miniflare: can send GET request with body", async ({ expect }) => {
 	// https://github.com/cloudflare/workerd/issues/1122
 	const mf = new Miniflare({
@@ -1559,11 +1633,16 @@ test("Miniflare: python modules", async ({ expect }) => {
 test("Miniflare: HTTPS fetches using browser CA certificates", async ({
 	expect,
 }) => {
+	// example.com is intentionally maintained as a stable test endpoint by IANA.
+	// We previously fetched https://workers.cloudflare.com/cf.json but that URL
+	// now 301s to https://www.cloudflare.com/cf.json which 404s, so the test
+	// was effectively asserting on an unintended 404 path rather than HTTPS CA
+	// trust.
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
 			fetch() {
-				return fetch("https://workers.cloudflare.com/cf.json");
+				return fetch("https://example.com/");
 			}
 		}`,
 	});
@@ -2036,7 +2115,10 @@ test("Miniflare: dispose() immediately after construction", async ({
 	await readyAssertion;
 });
 
-test("Miniflare: getBindings() returns all bindings", async ({ expect }) => {
+test("Miniflare: getBindings() returns all bindings", async ({
+	expect,
+	onTestFinished,
+}) => {
 	const tmp = await useTmp();
 	const blobPath = path.join(tmp, "blob.txt");
 	await fs.writeFile(blobPath, "blob");
@@ -2643,7 +2725,7 @@ const isWindows = process.platform === "win32";
 const unixSerialTest = isWindows ? test.skip : test.sequential;
 unixSerialTest(
 	"Miniflare: MINIFLARE_WORKERD_PATH overrides workerd path",
-	async ({ expect }) => {
+	async ({ expect, onTestFinished }) => {
 		const workerdPath = path.join(FIXTURES_PATH, "little-workerd.mjs");
 
 		const original = process.env.MINIFLARE_WORKERD_PATH;
@@ -2661,6 +2743,55 @@ unixSerialTest(
 		expect(await res.text()).toBe(
 			"When I grow up, I want to be a big workerd!"
 		);
+	}
+);
+
+const TIMEZONE_WORKER = `
+	export default {
+		fetch() {
+			return Response.json({
+				tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+			});
+		}
+	}
+`;
+
+test.sequential("Miniflare: workerd subprocess defaults to TZ=UTC to match production", async ({
+	expect,
+}) => {
+	// Deliberately set the host TZ to a non-UTC value, otherwise the test
+	// would falsely pass: the test-runner's vitest globalSetup already sets
+	// `process.env.TZ = "UTC"`, which would propagate to workerd via the
+	// inherited `process.env`.
+	vi.stubEnv("TZ", "America/Chicago");
+	const mf = new Miniflare({ modules: true, script: TIMEZONE_WORKER });
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.json()).toEqual({ tz: "UTC" });
+});
+
+// Skipped on Windows because workerd-on-Windows always reports `UTC` from
+// `Intl.DateTimeFormat().resolvedOptions().timeZone` regardless of the `TZ`
+// env var. A diagnostic probe on Windows CI showed that every value tried
+// (`America/Chicago`, `Asia/Tokyo`, `Europe/London`, `Etc/GMT+5`, `Etc/UTC`,
+// `UTC`, `PST8PDT`) all resolved to `UTC`. This is a workerd limitation on
+// Windows; the override mechanism itself (passing the env var through) is
+// platform-independent and exercised on macOS/Linux.
+unixSerialTest(
+	"Miniflare: unsafeRuntimeEnv overrides the default workerd subprocess env",
+	async ({ expect }) => {
+		vi.stubEnv("TZ", "UTC");
+
+		const mf = new Miniflare({
+			modules: true,
+			script: TIMEZONE_WORKER,
+			unsafeRuntimeEnv: { TZ: "America/Chicago" },
+		});
+		useDispose(mf);
+
+		const res = await mf.dispatchFetch("http://localhost");
+		expect(await res.json()).toEqual({ tz: "America/Chicago" });
 	}
 );
 
@@ -3800,6 +3931,7 @@ test("Miniflare: setOptions: can restart workerd multiple times in succession", 
 
 test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file creation", async ({
 	expect,
+	onTestFinished,
 }) => {
 	const originalEnv = process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
 	const configFilePath = "workerd-config.json";

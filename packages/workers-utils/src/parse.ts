@@ -11,7 +11,9 @@ export type Message = {
 	location?: Location;
 	notes?: Message[];
 	kind?: "warning" | "error";
-} & TelemetryMessage;
+};
+
+type MessageInit = Message & TelemetryMessage;
 
 export type Location = ParseFile & {
 	line: number;
@@ -35,7 +37,7 @@ export class ParseError extends UserError implements Message {
 	readonly location?: Location;
 	readonly kind: "warning" | "error";
 
-	constructor({ text, notes, location, kind, telemetryMessage }: Message) {
+	constructor({ text, notes, location, kind, telemetryMessage }: MessageInit) {
 		super(text, { telemetryMessage });
 		this.name = this.constructor.name;
 		this.text = text;
@@ -54,7 +56,7 @@ export class APIError extends ParseError {
 	code?: number;
 	accountTag?: string;
 
-	constructor({ status, ...rest }: Message & { status?: number }) {
+	constructor({ status, ...rest }: MessageInit & { status?: number }) {
 		super(rest);
 		this.name = this.constructor.name;
 		this.#status = status;
@@ -184,6 +186,7 @@ export function readFileSyncToBuffer(file: string): Buffer {
 					text: message.replace(file, resolve(file)),
 				},
 			],
+			telemetryMessage: false,
 		});
 	}
 }

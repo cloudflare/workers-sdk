@@ -113,6 +113,11 @@ function getRPCProperty(
 	return Reflect.get(/* target */ ctor.prototype, key, /* receiver */ instance);
 }
 
+type RPCInvocationQueueOwner =
+	| WorkerEntrypoint<Cloudflare.Env>
+	| DurableObjectClass<Cloudflare.Env>
+	| WorkflowEntrypoint<Cloudflare.Env>;
+
 /**
  * When calling RPC methods dynamically, we don't know whether the `property`
  * returned from `getSELFRPCProperty()` or `getDurableObjectRPCProperty()` below
@@ -131,20 +136,61 @@ function getRPCProperty(
  */
 function getRPCPropertyCallableThenable(
 	key: string,
-	property: Promise<unknown>
+	property: Promise<unknown>,
+	queueOwner: RPCInvocationQueueOwner
 ) {
 	const fn = async function (...args: unknown[]) {
-		const maybeFn = await property;
-		if (typeof maybeFn === "function") {
-			return maybeFn(...args);
-		} else {
-			throw new TypeError(`${JSON.stringify(key)} is not a function.`);
-		}
+		return enqueueRPCInvocation(queueOwner, async (release) => {
+			try {
+				const maybeFn = await property;
+				if (typeof maybeFn === "function") {
+					return maybeFn(...args);
+				} else {
+					throw new TypeError(`${JSON.stringify(key)} is not a function.`);
+				}
+			} finally {
+				release();
+			}
+		});
 	} as Promise<unknown> & ((...args: unknown[]) => Promise<unknown>);
 	fn.then = (onFulfilled, onRejected) => property.then(onFulfilled, onRejected);
 	fn.catch = (onRejected) => property.catch(onRejected);
 	fn.finally = (onFinally) => property.finally(onFinally);
 	return fn;
+}
+
+const rpcInvocationQueues = new WeakMap<
+	RPCInvocationQueueOwner,
+	Promise<void>
+>();
+
+/**
+ * Preserve the order in which dynamically-wrapped RPC methods begin executing.
+ *
+ * Resolving a property like `stub.method` may need to import user modules or
+ * instantiate wrapper objects. If several calls are fired synchronously, those
+ * async steps can otherwise complete out of order before the actual user method
+ * is invoked. The queue is released as soon as invocation starts, so async RPC
+ * completions can still run concurrently.
+ */
+async function enqueueRPCInvocation<T>(
+	owner: RPCInvocationQueueOwner,
+	callback: (release: () => void) => Promise<T>
+): Promise<T> {
+	const previous = rpcInvocationQueues.get(owner) ?? Promise.resolve();
+	let releaseStarted: (() => void) | undefined;
+	const started = new Promise<void>((resolve) => {
+		releaseStarted = resolve;
+	});
+	const release = () => {
+		const releaseStartedFn = releaseStarted;
+		if (releaseStartedFn !== undefined) {
+			releaseStartedFn();
+		}
+	};
+	const result = previous.catch(() => {}).then(() => callback(release));
+	rpcInvocationQueues.set(owner, started);
+	return result;
 }
 
 /**
@@ -297,7 +343,7 @@ export function createWorkerEntrypointWrapper(
 			}
 
 			const property = getWorkerEntrypointRPCProperty(this, entrypoint, key);
-			return getRPCPropertyCallableThenable(key, property);
+			return getRPCPropertyCallableThenable(key, property, this);
 		}
 	);
 
@@ -410,7 +456,7 @@ export function createDurableObjectWrapper(
 		}
 
 		const property = getDurableObjectRPCProperty(this, className, key);
-		return getRPCPropertyCallableThenable(key, property);
+		return getRPCPropertyCallableThenable(key, property, this);
 	});
 
 	Wrapper.prototype[kEnsureInstance] = async function (
@@ -526,7 +572,7 @@ export function createWorkflowEntrypointWrapper(entrypoint: string) {
 				entrypoint,
 				key
 			);
-			return getRPCPropertyCallableThenable(key, property);
+			return getRPCPropertyCallableThenable(key, property, this);
 		}
 	);
 

@@ -18,7 +18,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import { cloudchamberScope, fillOpenAPIConfiguration } from "./common";
 import { ensureContainerLimits } from "./limits";
 import { loadAccount } from "./locations";
@@ -247,9 +247,14 @@ export async function buildAndMaybePush(
 		return { newTag: imageTag };
 	} catch (error) {
 		if (error instanceof Error) {
-			throw new UserError(error.message, { cause: error });
+			throw new UserError(error.message, {
+				cause: error,
+				telemetryMessage: "cloudchamber build image operation failed",
+			});
 		}
-		throw new UserError("An unknown error occurred");
+		throw new UserError("An unknown error occurred", {
+			telemetryMessage: "cloudchamber build unknown error",
+		});
 	}
 }
 
@@ -259,12 +264,14 @@ export async function buildCommand(
 	// TODO: merge args with Wrangler config if available
 	if (existsSync(args.PATH) && !isDirectory(args.PATH)) {
 		throw new UserError(
-			`${args.PATH} is not a directory. Please specify a valid directory path.`
+			`${args.PATH} is not a directory. Please specify a valid directory path.`,
+			{ telemetryMessage: "cloudchamber build invalid path" }
 		);
 	}
 	if (args.platform !== "linux/amd64") {
 		throw new UserError(
-			`Unsupported platform: Platform "${args.platform}" is unsupported. Please use "linux/amd64" instead.`
+			`Unsupported platform: Platform "${args.platform}" is unsupported. Please use "linux/amd64" instead.`,
+			{ telemetryMessage: "cloudchamber build unsupported platform" }
 		);
 	}
 
@@ -296,7 +303,7 @@ export async function pushCommand(
 			getCloudflareContainerRegistry()
 		);
 
-		const accountId = await getAccountId(config);
+		const accountId = await getOrSelectAccountId(config);
 		const newTag = resolveImageName(accountId, args.TAG);
 		const dockerPath = args.pathToDocker ?? getDockerPath();
 		await checkImagePlatform(dockerPath, args.TAG);
@@ -305,10 +312,14 @@ export async function pushCommand(
 		logger.log(`Pushed image: ${newTag}`);
 	} catch (error) {
 		if (error instanceof Error) {
-			throw new UserError(error.message);
+			throw new UserError(error.message, {
+				telemetryMessage: "cloudchamber push failed",
+			});
 		}
 
-		throw new UserError("An unknown error occurred");
+		throw new UserError("An unknown error occurred", {
+			telemetryMessage: "cloudchamber push unknown error",
+		});
 	}
 }
 

@@ -50,7 +50,7 @@ export const versionsViewCommand = createCommand({
 		if (workerName === undefined) {
 			throw new UserError(
 				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
-				{ telemetryMessage: true }
+				{ telemetryMessage: "versions view missing worker name" }
 			);
 		}
 

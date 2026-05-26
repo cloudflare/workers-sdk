@@ -46,7 +46,8 @@ export const emailSendingDnsGetCommand = createCommand({
 			const match = settings.subdomains?.find((s) => s.name === args.domain);
 			if (!match) {
 				throw new UserError(
-					`No sending subdomain found for \`${args.domain}\`. Run \`wrangler email sending settings ${args.domain}\` to see configured domains.`
+					`No sending subdomain found for \`${args.domain}\`. Run \`wrangler email sending settings ${args.domain}\` to see configured domains.`,
+					{ telemetryMessage: "email routing sending dns subdomain not found" }
 				);
 			}
 			records = await getEmailSendingSubdomainDns(config, zoneId, match.tag);

@@ -10,6 +10,10 @@ updates:
       day: "sunday"
       time: "06:00"
     versioning-strategy: increase
+    # Match the 24h minimumReleaseAge enforced by pnpm in pnpm-workspace.yaml
+    # so Dependabot doesn't open PRs that CI will then reject.
+    cooldown:
+      default-days: 1
     # the following is used to add the [C3] prefix to the PR title,
     # we override the commit message but setting a prefix like this
     # makes it so that also the PR title gets such prefix

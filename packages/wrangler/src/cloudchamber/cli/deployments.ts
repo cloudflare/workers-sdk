@@ -104,7 +104,8 @@ export async function loadDeployments(
 	if (err) {
 		throw new UserError(
 			"There has been an error while loading your deployments: \n " +
-				err.message
+				err.message,
+			{ telemetryMessage: "cloudchamber deployments list failed" }
 		);
 	}
 

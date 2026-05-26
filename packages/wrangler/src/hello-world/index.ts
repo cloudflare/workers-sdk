@@ -66,7 +66,7 @@ export const helloWorldGetCommand = createCommand({
 
 		if (args.remote) {
 			throw new UserError("Not implemented", {
-				telemetryMessage: true,
+				telemetryMessage: "hello world get remote unsupported",
 			});
 		}
 
@@ -117,7 +117,7 @@ export const helloWorldSetCommand = createCommand({
 
 		if (args.remote) {
 			throw new UserError("Not implemented", {
-				telemetryMessage: true,
+				telemetryMessage: "hello world set remote unsupported",
 			});
 		}
 

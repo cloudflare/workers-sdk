@@ -6,9 +6,9 @@ declare module "vitest" {
 	interface CustomMatchers<R = unknown> {
 		toExist(): R;
 	}
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- required by vitest's module augmentation pattern
 	interface Assertion<T> extends CustomMatchers<T> {}
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- required by vitest's module augmentation pattern
 	interface AsymmetricMatchersContaining extends CustomMatchers {}
 }
 

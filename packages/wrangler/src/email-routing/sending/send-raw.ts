@@ -38,7 +38,8 @@ export const emailSendingSendRawCommand = createCommand({
 	validateArgs: (args) => {
 		if (!args.mime && !args.mimeFile) {
 			throw new UserError(
-				"You must provide either --mime (inline MIME message) or --mime-file (path to MIME file)"
+				"You must provide either --mime (inline MIME message) or --mime-file (path to MIME file)",
+				{ telemetryMessage: "email routing sending send raw missing mime" }
 			);
 		}
 	},
@@ -50,7 +51,11 @@ export const emailSendingSendRawCommand = createCommand({
 				mimeMessage = readFileSync(args.mimeFile, "utf-8");
 			} catch (e) {
 				throw new UserError(
-					`Failed to read MIME file '${args.mimeFile}': ${e instanceof Error ? e.message : e}`
+					`Failed to read MIME file '${args.mimeFile}': ${e instanceof Error ? e.message : e}`,
+					{
+						telemetryMessage:
+							"email routing sending send raw mime file read failed",
+					}
 				);
 			}
 		} else {

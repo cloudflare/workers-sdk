@@ -1,5 +1,8 @@
 import { writeFileSync } from "node:fs";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -8,7 +11,7 @@ import { clearDialogs } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockProcess } from "../helpers/mock-process";
 import { createFetchResult, msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
+import { getMswSuccessMembershipHandlers } from "../helpers/msw/handlers/user";
 import { runWrangler } from "../helpers/run-wrangler";
 import { wranglerKVConfig } from "./constant";
 import type { KeyValue, NamespaceKeyInfo } from "../../kv/helpers";
@@ -369,12 +372,13 @@ describe("kv", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -c, --config    Path to Wrangler configuration file  [string]
-					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help      Show help  [boolean]
-					  -v, --version   Show version number  [boolean]
+					  -c, --config          Path to Wrangler configuration file  [string]
+					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help            Show help  [boolean]
+					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
 					      --path          Read value from the file at a given path  [string]
@@ -418,12 +422,13 @@ describe("kv", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -c, --config    Path to Wrangler configuration file  [string]
-					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help      Show help  [boolean]
-					  -v, --version   Show version number  [boolean]
+					  -c, --config          Path to Wrangler configuration file  [string]
+					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help            Show help  [boolean]
+					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
 					      --path          Read value from the file at a given path  [string]
@@ -469,12 +474,13 @@ describe("kv", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -c, --config    Path to Wrangler configuration file  [string]
-					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help      Show help  [boolean]
-					  -v, --version   Show version number  [boolean]
+					  -c, --config          Path to Wrangler configuration file  [string]
+					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help            Show help  [boolean]
+					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
 					      --path          Read value from the file at a given path  [string]
@@ -518,12 +524,13 @@ describe("kv", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -c, --config    Path to Wrangler configuration file  [string]
-					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help      Show help  [boolean]
-					  -v, --version   Show version number  [boolean]
+					  -c, --config          Path to Wrangler configuration file  [string]
+					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help            Show help  [boolean]
+					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
 					      --path          Read value from the file at a given path  [string]
@@ -564,12 +571,13 @@ describe("kv", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -c, --config    Path to Wrangler configuration file  [string]
-					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help      Show help  [boolean]
-					  -v, --version   Show version number  [boolean]
+					  -c, --config          Path to Wrangler configuration file  [string]
+					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help            Show help  [boolean]
+					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
 					      --path          Read value from the file at a given path  [string]
@@ -615,12 +623,13 @@ describe("kv", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -c, --config    Path to Wrangler configuration file  [string]
-					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help      Show help  [boolean]
-					  -v, --version   Show version number  [boolean]
+					  -c, --config          Path to Wrangler configuration file  [string]
+					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help            Show help  [boolean]
+					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
 					      --path          Read value from the file at a given path  [string]
@@ -1058,12 +1067,13 @@ describe("kv", () => {
 					  key  The key value to get.  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config    Path to Wrangler configuration file  [string]
-					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help      Show help  [boolean]
-					  -v, --version   Show version number  [boolean]
+					  -c, --config          Path to Wrangler configuration file  [string]
+					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help            Show help  [boolean]
+					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
 					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
@@ -1099,12 +1109,13 @@ describe("kv", () => {
 					  key  The key value to get.  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config    Path to Wrangler configuration file  [string]
-					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help      Show help  [boolean]
-					  -v, --version   Show version number  [boolean]
+					  -c, --config          Path to Wrangler configuration file  [string]
+					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help            Show help  [boolean]
+					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
 					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
@@ -1141,12 +1152,13 @@ describe("kv", () => {
 					  key  The key value to get.  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config    Path to Wrangler configuration file  [string]
-					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-					  -h, --help      Show help  [boolean]
-					  -v, --version   Show version number  [boolean]
+					  -c, --config          Path to Wrangler configuration file  [string]
+					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help            Show help  [boolean]
+					      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
 					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
@@ -1187,10 +1199,7 @@ describe("kv", () => {
 				it("should error if there are multiple accounts available but not interactive on stdin", async ({
 					expect,
 				}) => {
-					mockGetMemberships([
-						{ id: "xxx", account: { id: "1", name: "one" } },
-						{ id: "yyy", account: { id: "2", name: "two" } },
-					]);
+					msw.use(...getMswSuccessMembershipHandlers());
 					setIsTTY({ stdin: false, stdout: true });
 					await expect(
 						runWrangler("kv key get --remote key --namespace-id=xxxx")
@@ -1198,18 +1207,16 @@ describe("kv", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`one\`: \`1\`
-						  \`two\`: \`2\`]
+						  \`Account One\`: \`account-1\`
+						  \`Account Two\`: \`account-2\`
+						  \`Account Three\`: \`account-3\`]
 					`);
 				});
 
 				it("should error if there are multiple accounts available but not interactive on stdout", async ({
 					expect,
 				}) => {
-					mockGetMemberships([
-						{ id: "xxx", account: { id: "1", name: "one" } },
-						{ id: "yyy", account: { id: "2", name: "two" } },
-					]);
+					msw.use(...getMswSuccessMembershipHandlers());
 					setIsTTY({ stdin: true, stdout: false });
 					await expect(
 						runWrangler("kv key get --remote key --namespace-id=xxxx")
@@ -1217,8 +1224,9 @@ describe("kv", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`one\`: \`1\`
-						  \`two\`: \`2\`]
+						  \`Account One\`: \`account-1\`
+						  \`Account Two\`: \`account-2\`
+						  \`Account Three\`: \`account-3\`]
 					`);
 				});
 
@@ -1226,14 +1234,17 @@ describe("kv", () => {
 					expect,
 				}) => {
 					msw.use(
+						http.get("*/accounts", () => {
+							return HttpResponse.json(createFetchResult([]));
+						}),
 						http.get(
 							"*/memberships",
 							() => {
 								return HttpResponse.json(
 									createFetchResult(null, false, [
 										{
-											code: 9109,
-											message: "Uauthorized to access requested resource",
+											code: 9106,
+											message: "Authentication failed (status: 400)",
 										},
 									]),
 									{ status: 200 }
@@ -1246,17 +1257,16 @@ describe("kv", () => {
 						runWrangler("kv key get --remote key --namespace-id=xxxx")
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: Failed to automatically retrieve account IDs for the logged in user.
-						You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your Wrangler configuration file, or by setting the value of CLOUDFLARE_ACCOUNT_ID"]
+						You may have incorrect permissions on your API token, or an environment variable such as CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_KEY, or CLOUDFLARE_EMAIL may be set to an invalid value.
+						Check your environment and unset or correct any Cloudflare credential variables, or run \`wrangler logout\` followed by \`wrangler login\` to re-authenticate.
+						You can also skip this account check by adding an \`account_id\` in your Wrangler configuration file, or by setting the value of CLOUDFLARE_ACCOUNT_ID]
 					`);
 				});
 
 				it("should error if there are multiple accounts available but not interactive at all", async ({
 					expect,
 				}) => {
-					mockGetMemberships([
-						{ id: "xxx", account: { id: "1", name: "one" } },
-						{ id: "yyy", account: { id: "2", name: "two" } },
-					]);
+					msw.use(...getMswSuccessMembershipHandlers());
 					setIsTTY(false);
 					await expect(
 						runWrangler("kv key get --remote key --namespace-id=xxxx")
@@ -1264,8 +1274,9 @@ describe("kv", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`one\`: \`1\`
-						  \`two\`: \`2\`]
+						  \`Account One\`: \`account-1\`
+						  \`Account Two\`: \`account-2\`
+						  \`Account Three\`: \`account-3\`]
 					`);
 				});
 			});
@@ -1414,20 +1425,6 @@ describe("kv", () => {
 		});
 	});
 });
-
-function mockGetMemberships(
-	accounts: { id: string; account: { id: string; name: string } }[]
-) {
-	msw.use(
-		http.get(
-			"*/memberships",
-			() => {
-				return HttpResponse.json(createFetchResult(accounts));
-			},
-			{ once: true }
-		)
-	);
-}
 
 function mockKeyListRequest(
 	expect: ExpectStatic,

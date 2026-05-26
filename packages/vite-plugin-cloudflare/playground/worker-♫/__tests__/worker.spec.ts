@@ -68,6 +68,26 @@ test("receives the original Host header", async ({ expect }) => {
 	}, WAIT_FOR_OPTIONS);
 });
 
+// https://github.com/cloudflare/workers-sdk/issues/13801
+test("honors `X-Forwarded-Proto: https` when constructing `request.url`", async ({
+	expect,
+}) => {
+	const response = await fetch(`${viteTestUrl}/request-url`, {
+		headers: { "x-forwarded-proto": "https" },
+	});
+	const url = new URL(await response.text());
+	expect(url.protocol).toBe("https:");
+});
+
+test("falls back to `http://` for `request.url` when no proxy header is set", async ({
+	expect,
+}) => {
+	await vi.waitFor(async () => {
+		const url = new URL(await getTextResponse("/request-url"));
+		expect(url.protocol).toBe("http:");
+	}, WAIT_FOR_OPTIONS);
+});
+
 test("does not cause unhandled rejection", async ({ expect }) => {
 	expect(serverLogs.errors.join()).not.toContain("__unhandled rejection__");
 });

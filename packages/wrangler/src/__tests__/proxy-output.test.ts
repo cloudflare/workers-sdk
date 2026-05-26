@@ -1,7 +1,6 @@
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
-
 describe("proxy startup output", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();

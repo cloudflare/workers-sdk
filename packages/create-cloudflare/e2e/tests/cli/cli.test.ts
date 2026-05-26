@@ -509,7 +509,7 @@ describe("Create Cloudflare CLI", () => {
 						throw new Error("Remote worker not found");
 					}
 				} catch {
-					// eslint-disable-next-line no-console
+					// eslint-disable-next-line no-console -- e2e setup logging for worker redeployment
 					console.log(
 						"Redeploying the existing-script-test-do-not-delete worker"
 					);

@@ -96,11 +96,13 @@ function comparePathHashWithEntry(
 ) {
 	let pathHashOffset = HEADER_SIZE + entryIndex * ENTRY_SIZE + PATH_HASH_OFFSET;
 	for (let offset = 0; offset < PATH_HASH_SIZE; offset++, pathHashOffset++) {
-		// We know that both values could not be undefined
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const s = searchValue[offset]!;
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const e = manifest[pathHashOffset]!;
+		const s = searchValue[offset];
+		const e = manifest[pathHashOffset];
+		if (s === undefined || e === undefined) {
+			throw new TypeError(
+				`Unexpected undefined value at offset ${offset} during path hash comparison`
+			);
+		}
 		if (s < e) {
 			return -1;
 		}

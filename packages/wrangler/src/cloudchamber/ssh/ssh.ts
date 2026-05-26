@@ -365,7 +365,9 @@ async function promptForSSHKey(
 	);
 	stop();
 	if (err != null) {
-		throw new UserError("Error adding your public ssh key: " + err.message);
+		throw new UserError("Error adding your public ssh key: " + err.message, {
+			telemetryMessage: "cloudchamber ssh public key add failed",
+		});
 	}
 
 	return res;

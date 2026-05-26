@@ -250,7 +250,8 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 								"To use images from the Cloudflare-managed registry with the Vite plugin, " +
 									"set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID environment variables.\n" +
 									"The API token requires Containers:Edit and Workers Scripts:Edit permissions.\n" +
-									"Alternatively, use a Dockerfile that references the image via FROM."
+									"Alternatively, use a Dockerfile that references the image via FROM.",
+								{ telemetryMessage: false }
 							);
 						}
 

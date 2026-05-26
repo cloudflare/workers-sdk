@@ -188,7 +188,8 @@ export function getOriginFromArgs<
 
 		if (url.protocol === "") {
 			throw new UserError(
-				"You must specify the database protocol - e.g. 'postgresql'/'mysql'."
+				"You must specify the database protocol - e.g. 'postgresql'/'mysql'.",
+				{ telemetryMessage: "hyperdrive origin missing protocol" }
 			);
 		} else if (
 			!url.protocol.startsWith("postgresql") &&
@@ -196,27 +197,33 @@ export function getOriginFromArgs<
 			!url.protocol.startsWith("mysql")
 		) {
 			throw new UserError(
-				"Only PostgreSQL-compatible or MySQL-compatible databases are currently supported."
+				"Only PostgreSQL-compatible or MySQL-compatible databases are currently supported.",
+				{ telemetryMessage: "hyperdrive origin unsupported protocol" }
 			);
 		} else if (url.host === "") {
 			throw new UserError(
-				"You must provide a hostname or IP address in your connection string - e.g. 'user:password@database-hostname.example.com:5432/databasename"
+				"You must provide a hostname or IP address in your connection string - e.g. 'user:password@database-hostname.example.com:5432/databasename",
+				{ telemetryMessage: "hyperdrive origin missing host" }
 			);
 		} else if (url.port === "") {
 			throw new UserError(
-				"You must provide a port number - e.g. 'user:password@database.example.com:port/databasename"
+				"You must provide a port number - e.g. 'user:password@database.example.com:port/databasename",
+				{ telemetryMessage: "hyperdrive origin missing port" }
 			);
 		} else if (!url.pathname) {
 			throw new UserError(
-				"You must provide a database name as the path component - e.g. example.com:port/databasename"
+				"You must provide a database name as the path component - e.g. example.com:port/databasename",
+				{ telemetryMessage: "hyperdrive origin missing database" }
 			);
 		} else if (url.username === "") {
 			throw new UserError(
-				"You must provide a username - e.g. 'user:password@database.example.com:port/databasename'"
+				"You must provide a username - e.g. 'user:password@database.example.com:port/databasename'",
+				{ telemetryMessage: "hyperdrive origin missing username" }
 			);
 		} else if (url.password === "") {
 			throw new UserError(
-				"You must provide a password - e.g. 'user:password@database.example.com:port/databasename' "
+				"You must provide a password - e.g. 'user:password@database.example.com:port/databasename' ",
+				{ telemetryMessage: "hyperdrive origin missing password" }
 			);
 		}
 
@@ -233,17 +240,22 @@ export function getOriginFromArgs<
 	if (!allowPartialOrigin) {
 		if (!args.originScheme) {
 			throw new UserError(
-				"You must specify the database protocol as --origin-scheme - e.g. 'postgresql'"
+				"You must specify the database protocol as --origin-scheme - e.g. 'postgresql'",
+				{ telemetryMessage: "hyperdrive origin missing protocol" }
 			);
 		} else if (!args.database) {
-			throw new UserError("You must provide a database name");
+			throw new UserError("You must provide a database name", {
+				telemetryMessage: "hyperdrive origin missing database",
+			});
 		} else if (!args.originUser) {
 			throw new UserError(
-				"You must provide a username for the origin database"
+				"You must provide a username for the origin database",
+				{ telemetryMessage: "hyperdrive origin missing username" }
 			);
 		} else if (!args.originPassword) {
 			throw new UserError(
-				"You must provide a password for the origin database"
+				"You must provide a password for the origin database",
+				{ telemetryMessage: "hyperdrive origin missing password" }
 			);
 		}
 	}
@@ -265,13 +277,15 @@ export function getOriginFromArgs<
 	} else if (args.accessClientId || args.accessClientSecret) {
 		if (!args.accessClientId || !args.accessClientSecret) {
 			throw new UserError(
-				"You must provide both an Access Client ID and Access Client Secret when configuring Hyperdrive-over-Access"
+				"You must provide both an Access Client ID and Access Client Secret when configuring Hyperdrive-over-Access",
+				{ telemetryMessage: "hyperdrive access missing credentials" }
 			);
 		}
 
 		if (!args.originHost || args.originHost === "") {
 			throw new UserError(
-				"You must provide an origin hostname for the database"
+				"You must provide an origin hostname for the database",
+				{ telemetryMessage: "hyperdrive access missing origin host" }
 			);
 		}
 
@@ -283,13 +297,15 @@ export function getOriginFromArgs<
 	} else if (args.originHost || args.originPort) {
 		if (!args.originHost) {
 			throw new UserError(
-				"You must provide an origin hostname for the database"
+				"You must provide an origin hostname for the database",
+				{ telemetryMessage: "hyperdrive origin missing host" }
 			);
 		}
 
 		if (!args.originPort) {
 			throw new UserError(
-				"You must provide a nonzero origin port for the database"
+				"You must provide a nonzero origin port for the database",
+				{ telemetryMessage: "hyperdrive origin missing port" }
 			);
 		}
 
@@ -355,7 +371,8 @@ export function getMtlsFromArgs(
 			throw new UserError(
 				`Invalid sslmode '${mtls.sslmode}'. Valid options are:\n` +
 					`- PostgreSQL: ${PostgresSslmode.join(", ")}\n` +
-					`- MySQL: ${MySqlSslmode.join(", ")}`
+					`- MySQL: ${MySqlSslmode.join(", ")}`,
+				{ telemetryMessage: "hyperdrive mtls invalid ssl mode" }
 			);
 		}
 		return mtls;

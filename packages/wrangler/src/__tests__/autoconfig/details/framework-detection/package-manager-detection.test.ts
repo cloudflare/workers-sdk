@@ -1,4 +1,4 @@
-import { seed } from "@cloudflare/workers-utils/test-helpers";
+import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { detectFramework } from "../../../../autoconfig/details/framework-detection";
 import {
@@ -7,8 +7,6 @@ import {
 	PnpmPackageManager,
 	YarnPackageManager,
 } from "../../../../package-manager";
-import { runInTempDir } from "../../../helpers/run-in-tmp";
-
 describe("detectFramework() / package manager detection", () => {
 	runInTempDir();
 

@@ -78,7 +78,8 @@ export const validateStatus = (status: string): InstanceStatus => {
 			return "waitingForPause";
 		default:
 			throw new UserError(
-				`Looks like you have provided a invalid status "${status}". Valid statuses are: queued, running, paused, errored, terminated, complete, waiting, waitingForPause`
+				`Looks like you have provided a invalid status "${status}". Valid statuses are: queued, running, paused, errored, terminated, complete, waiting, waitingForPause`,
+				{ telemetryMessage: "workflows invalid status" }
 			);
 	}
 };
@@ -100,7 +101,8 @@ export async function getInstanceIdFromArgs(
 
 		if (instances.length == 0) {
 			throw new UserError(
-				`There are no deployed instances in workflow "${args.name}"`
+				`There are no deployed instances in workflow "${args.name}"`,
+				{ telemetryMessage: "workflows latest instance missing" }
 			);
 		}
 

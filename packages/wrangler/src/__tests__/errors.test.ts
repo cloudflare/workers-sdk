@@ -3,6 +3,7 @@ import {
 	CommandLineArgsError,
 	DeprecationError,
 	FatalError,
+	JsonFriendlyFatalError,
 	MissingConfigError,
 	ParseError,
 	UserError,
@@ -40,7 +41,7 @@ describe("errors", () => {
 
 	describe("FatalError", () => {
 		it("takes a custom telemetry message", ({ expect }) => {
-			const error = new FatalError("message", undefined, {
+			const error = new FatalError("message", {
 				telemetryMessage: "telemetry",
 			});
 			expect(error.message).toBe("message");
@@ -48,7 +49,10 @@ describe("errors", () => {
 			expect(error.code).toBeUndefined();
 		});
 		it("can set telemetryMessage to equal the main message", ({ expect }) => {
-			const error = new FatalError("message", 1, { telemetryMessage: true });
+			const error = new FatalError("message", {
+				code: 1,
+				telemetryMessage: true,
+			});
 			expect(error.message).toBe("message");
 			expect(error.telemetryMessage).toBe("message");
 			expect(error.code).toBe(1);
@@ -74,7 +78,7 @@ describe("errors", () => {
 
 	describe("JsonFriendlyFatalError", () => {
 		it("takes a custom telemetry message", ({ expect }) => {
-			const error = new FatalError("message", undefined, {
+			const error = new JsonFriendlyFatalError("message", {
 				telemetryMessage: "telemetry",
 			});
 			expect(error.message).toBe("message");
@@ -82,7 +86,10 @@ describe("errors", () => {
 			expect(error.code).toBeUndefined();
 		});
 		it("can set telemetryMessage to equal the main message", ({ expect }) => {
-			const error = new FatalError("message", 1, { telemetryMessage: true });
+			const error = new JsonFriendlyFatalError("message", {
+				code: 1,
+				telemetryMessage: true,
+			});
 			expect(error.message).toBe("message");
 			expect(error.telemetryMessage).toBe("message");
 			expect(error.code).toBe(1);

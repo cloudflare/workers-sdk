@@ -53,7 +53,8 @@ export function memoizeGetPort(defaultPort: number, defaultHost: string) {
 					`Failed to bind to ${forHost}:${defaultPort}: permission denied.\n` +
 						`This usually means a sandbox or security policy is preventing network access.\n` +
 						`If you are running inside a restricted environment (container, VM, AI coding agent, etc.),\n` +
-						`configure it to allow binding to loopback addresses.`
+						`configure it to allow binding to loopback addresses.`,
+					{ telemetryMessage: "utils port bind permission denied" }
 				);
 			}
 			throw e;

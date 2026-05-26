@@ -90,16 +90,22 @@ export const r2BucketSippyEnableCommand = createCommand({
 				"Enter the cloud storage provider of your bucket (AWS or GCS):"
 			);
 			if (!args.provider) {
-				throw new UserError("Must specify a cloud storage provider.");
+				throw new UserError("Must specify a cloud storage provider.", {
+					telemetryMessage: "r2 sippy missing cloud storage provider",
+				});
 			}
 			if (!SIPPY_PROVIDER_CHOICES.includes(args.provider)) {
-				throw new UserError("Cloud storage provider must be: AWS or GCS");
+				throw new UserError("Cloud storage provider must be: AWS or GCS", {
+					telemetryMessage: "r2 sippy invalid cloud storage provider",
+				});
 			}
 			args.bucket ??= await prompt(
 				`Enter the name of your ${args.provider} bucket:`
 			);
 			if (!args.bucket) {
-				throw new UserError(`Must specify ${args.provider} bucket name.`);
+				throw new UserError(`Must specify ${args.provider} bucket name.`, {
+					telemetryMessage: "r2 sippy missing source bucket",
+				});
 			}
 
 			if (args.provider === "AWS") {
@@ -107,19 +113,25 @@ export const r2BucketSippyEnableCommand = createCommand({
 					"Enter the AWS region where your S3 bucket is located (example: us-west-2):"
 				);
 				if (!args.region) {
-					throw new UserError("Must specify an AWS Region.");
+					throw new UserError("Must specify an AWS Region.", {
+						telemetryMessage: "r2 sippy aws missing region",
+					});
 				}
 				args.accessKeyId ??= await prompt(
 					"Enter your AWS Access Key ID (requires read and list access):"
 				);
 				if (!args.accessKeyId) {
-					throw new UserError("Must specify an AWS Access Key ID.");
+					throw new UserError("Must specify an AWS Access Key ID.", {
+						telemetryMessage: "r2 sippy aws missing access key id",
+					});
 				}
 				args.secretAccessKey ??= await prompt(
 					"Enter your AWS Secret Access Key:"
 				);
 				if (!args.secretAccessKey) {
-					throw new UserError("Must specify an AWS Secret Access Key.");
+					throw new UserError("Must specify an AWS Secret Access Key.", {
+						telemetryMessage: "r2 sippy aws missing secret access key",
+					});
 				}
 			} else if (args.provider === "GCS") {
 				if (
@@ -131,7 +143,11 @@ export const r2BucketSippyEnableCommand = createCommand({
 					);
 					if (!args.serviceAccountKeyFile) {
 						throw new UserError(
-							"Must specify the path to a service account key JSON file."
+							"Must specify the path to a service account key JSON file.",
+							{
+								telemetryMessage:
+									"r2 sippy gcs missing service account key file",
+							}
 						);
 					}
 				}
@@ -141,13 +157,17 @@ export const r2BucketSippyEnableCommand = createCommand({
 				"Enter your R2 Access Key ID (requires read and write access):"
 			);
 			if (!args.r2AccessKeyId) {
-				throw new UserError("Must specify an R2 Access Key ID.");
+				throw new UserError("Must specify an R2 Access Key ID.", {
+					telemetryMessage: "r2 sippy missing r2 access key id",
+				});
 			}
 			args.r2SecretAccessKey ??= await prompt(
 				"Enter your R2 Secret Access Key:"
 			);
 			if (!args.r2SecretAccessKey) {
-				throw new UserError("Must specify an R2 Secret Access Key.");
+				throw new UserError("Must specify an R2 Secret Access Key.", {
+					telemetryMessage: "r2 sippy missing r2 secret access key",
+				});
 			}
 		}
 
@@ -155,22 +175,34 @@ export const r2BucketSippyEnableCommand = createCommand({
 
 		if (args.provider === "AWS") {
 			if (!args.region) {
-				throw new UserError("Error: must provide --region.");
+				throw new UserError("Error: must provide --region.", {
+					telemetryMessage: "r2 sippy aws missing region",
+				});
 			}
 			if (!args.bucket) {
-				throw new UserError("Error: must provide --bucket.");
+				throw new UserError("Error: must provide --bucket.", {
+					telemetryMessage: "r2 sippy aws missing bucket",
+				});
 			}
 			if (!args.accessKeyId) {
-				throw new UserError("Error: must provide --access-key-id.");
+				throw new UserError("Error: must provide --access-key-id.", {
+					telemetryMessage: "r2 sippy aws missing access key id",
+				});
 			}
 			if (!args.secretAccessKey) {
-				throw new UserError("Error: must provide --secret-access-key.");
+				throw new UserError("Error: must provide --secret-access-key.", {
+					telemetryMessage: "r2 sippy aws missing secret access key",
+				});
 			}
 			if (!args.r2AccessKeyId) {
-				throw new UserError("Error: must provide --r2-access-key-id.");
+				throw new UserError("Error: must provide --r2-access-key-id.", {
+					telemetryMessage: "r2 sippy missing r2 access key id",
+				});
 			}
 			if (!args.r2SecretAccessKey) {
-				throw new UserError("Error: must provide --r2-secret-access-key.");
+				throw new UserError("Error: must provide --r2-secret-access-key.", {
+					telemetryMessage: "r2 sippy missing r2 secret access key",
+				});
 			}
 
 			sippyConfig = {
@@ -202,25 +234,33 @@ export const r2BucketSippyEnableCommand = createCommand({
 			}
 
 			if (!args.bucket) {
-				throw new UserError("Error: must provide --bucket.");
+				throw new UserError("Error: must provide --bucket.", {
+					telemetryMessage: "r2 sippy gcs missing bucket",
+				});
 			}
 			if (!args.clientEmail) {
 				throw new UserError(
-					"Error: must provide --service-account-key-file or --client-email."
+					"Error: must provide --service-account-key-file or --client-email.",
+					{ telemetryMessage: "r2 sippy gcs missing client email" }
 				);
 			}
 			if (!args.privateKey) {
 				throw new UserError(
-					"Error: must provide --service-account-key-file or --private-key."
+					"Error: must provide --service-account-key-file or --private-key.",
+					{ telemetryMessage: "r2 sippy gcs missing private key" }
 				);
 			}
 			args.privateKey = args.privateKey.replace(/\\n/g, "\n");
 
 			if (!args.r2AccessKeyId) {
-				throw new UserError("Error: must provide --r2-access-key-id.");
+				throw new UserError("Error: must provide --r2-access-key-id.", {
+					telemetryMessage: "r2 sippy missing r2 access key id",
+				});
 			}
 			if (!args.r2SecretAccessKey) {
-				throw new UserError("Error: must provide --r2-secret-access-key.");
+				throw new UserError("Error: must provide --r2-secret-access-key.", {
+					telemetryMessage: "r2 sippy missing r2 secret access key",
+				});
 			}
 
 			sippyConfig = {
@@ -238,7 +278,8 @@ export const r2BucketSippyEnableCommand = createCommand({
 			};
 		} else {
 			throw new UserError(
-				"Error: unrecognized provider. Possible options are AWS & GCS."
+				"Error: unrecognized provider. Possible options are AWS & GCS.",
+				{ telemetryMessage: "r2 sippy unrecognized provider" }
 			);
 		}
 

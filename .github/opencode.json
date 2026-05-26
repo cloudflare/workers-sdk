@@ -6,7 +6,7 @@
 		"cloudflare-ai-gateway": {
 			"models": {
 				"anthropic/claude-sonnet-4-5": {},
-				"workers-ai/@cf/moonshotai/kimi-k2.5": {}
+				"workers-ai/@cf/moonshotai/kimi-k2.6": {}
 			}
 		}
 	},

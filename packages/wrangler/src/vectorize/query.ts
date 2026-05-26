@@ -117,7 +117,8 @@ export const vectorizeQueryCommand = createCommand({
 			(args.vector !== undefined && args.vectorId !== undefined)
 		) {
 			throw new UserError(
-				"🚨 Either vector or vector-id parameter must be provided, but not both."
+				"🚨 Either vector or vector-id parameter must be provided, but not both.",
+				{ telemetryMessage: "vectorize query invalid vector arguments" }
 			);
 		}
 

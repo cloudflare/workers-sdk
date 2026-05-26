@@ -1,13 +1,14 @@
 import { ParseError } from "@cloudflare/workers-utils";
-import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import {
+	normalizeString,
+	runInTempDir,
+} from "@cloudflare/workers-utils/test-helpers";
 import { FormData } from "undici";
 import { beforeEach, describe, it, vi } from "vitest";
 import * as checkCommands from "../check/commands";
 import { logger } from "../logger";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
-
 vi.mock("../check/commands", () => ({ analyseBundle: vi.fn() }));
 const mockAnalyseBundle = vi.mocked(checkCommands.analyseBundle);
 
@@ -128,7 +129,7 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 });
 
 function makeScriptSizeError(text: string): ParseError {
-	const error = new ParseError({ text });
+	const error = new ParseError({ text, telemetryMessage: false });
 	Object.assign(error, { code: 10027 });
 	return error;
 }
@@ -137,6 +138,7 @@ function makeStartupError(message: string): ParseError {
 	const error = new ParseError({
 		text: "Deploy failed",
 		notes: [{ text: message }],
+		telemetryMessage: false,
 	});
 	Object.assign(error, { code: 10021 });
 	return error;

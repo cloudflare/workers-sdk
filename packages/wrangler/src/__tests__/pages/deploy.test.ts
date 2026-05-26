@@ -1,6 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
@@ -26,7 +29,6 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
 import { msw } from "../helpers/msw";
 import { normalizeProgressSteps } from "../helpers/normalize-progress";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import {
 	formDataToObject,
@@ -79,10 +81,11 @@ describe("pages deploy", () => {
 			  directory  The directory of static files to upload  [string]
 
 			GLOBAL FLAGS
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
 			      --project-name        The name of the project you want to deploy to  [string]
@@ -2931,6 +2934,75 @@ and that at least one include rule is provided.
 			expect(getProjectRequestCount).toEqual(2);
 		});
 
+		it("should surface a clear error when _routes.json contains invalid JSON (Functions)", async ({
+			expect,
+		}) => {
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+			writeFileSync("public/_routes.json", `{ invalid json `);
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello.js",
+				`export async function onRequest() { return new Response("Hello, world!"); }`
+			);
+			mockGetUploadTokenRequest(
+				expect,
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+			let getProjectRequestCount = 0;
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as { hashes: string[] };
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						return HttpResponse.json(
+							{ success: true, errors: [], messages: [], result: body.hashes },
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						return HttpResponse.json(
+							{ success: true, errors: [], messages: [], result: null },
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { deployment_configs: { production: {}, preview: {} } },
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+			await expect(
+				runWrangler("pages deploy public --project-name=foo")
+			).rejects.toThrow(/^Invalid _routes\.json file at .*_routes\.json: /);
+			expect(getProjectRequestCount).toEqual(2);
+		});
+
 		it("should fail with the appropriate error message, if the deployment of the project failed", async ({
 			expect,
 		}) => {
@@ -4024,6 +4096,74 @@ Please make sure the JSON object has the following format:
 }
 and that at least one include rule is provided.
 		`);
+			expect(getProjectRequestCount).toEqual(2);
+		});
+
+		it("should surface a clear error when _routes.json contains invalid JSON (Advanced Mode)", async ({
+			expect,
+		}) => {
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+			writeFileSync("public/_routes.json", `{ invalid json `);
+			writeFileSync(
+				"public/_worker.js",
+				`export default { async fetch(request, env) { const url = new URL(request.url); return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request); } };`
+			);
+			mockGetUploadTokenRequest(
+				expect,
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+			let getProjectRequestCount = 0;
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as { hashes: string[] };
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						return HttpResponse.json(
+							{ success: true, errors: [], messages: [], result: body.hashes },
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						return HttpResponse.json(
+							{ success: true, errors: [], messages: [], result: null },
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { deployment_configs: { production: {}, preview: {} } },
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+			await expect(
+				runWrangler("pages deploy public --project-name=foo")
+			).rejects.toThrow(/^Invalid _routes\.json file at .*_routes\.json: /);
 			expect(getProjectRequestCount).toEqual(2);
 		});
 

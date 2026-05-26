@@ -91,17 +91,15 @@ export const test = originalTest.extend<{
 		const { logPath, logStream } = createTestLogStream(task);
 
 		onTestFailed(() => {
-			// eslint-disable-next-line no-console
+			// eslint-disable no-console -- raw console outputs for testing logs
 			console.error("##[group]Logs from failed test:", logPath);
 			try {
-				// eslint-disable-next-line no-console
 				console.error(readFileSync(logPath, "utf8"));
 			} catch {
-				// eslint-disable-next-line no-console
 				console.error("Unable to read log file");
 			}
-			// eslint-disable-next-line no-console
 			console.error("##[endgroup]");
+			// eslint-enable no-console
 		});
 
 		await use(logStream);

@@ -16,7 +16,8 @@ export function handleUnsafeCapnp(capnp: CfCapnp): Buffer {
 	);
 	if (!commandExistsSync("capnp")) {
 		throw new UserError(
-			"The capnp compiler is required to upload capnp schemas, but is not present."
+			"The capnp compiler is required to upload capnp schemas, but is not present.",
+			{ telemetryMessage: "capnp compiler missing" }
 		);
 	}
 	const srcPrefix = resolve(base_path ?? ".");

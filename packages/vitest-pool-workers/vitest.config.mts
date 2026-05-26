@@ -2,6 +2,7 @@ import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
+		reporters: ["default"],
 		globalSetup: ["./test/global-setup.ts"],
 		exclude: [...configDefaults.exclude, "**/*.worker.test.ts"],
 		testTimeout: 15_000, // override this for slow tests

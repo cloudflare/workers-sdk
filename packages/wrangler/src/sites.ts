@@ -18,7 +18,11 @@ import {
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
 import type { KeyValue } from "./kv/helpers";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type {
+	ComplianceConfig,
+	Config,
+	LegacyAssetPaths,
+} from "@cloudflare/workers-utils";
 import type { XXHashAPI } from "xxhash-wasm";
 
 /** Paths to always ignore. */
@@ -417,7 +421,8 @@ async function validateAssetSize(
 	const { size } = await stat(absFilePath);
 	if (size > 25 * 1024 * 1024) {
 		throw new UserError(
-			`File ${relativeFilePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
+			`File ${relativeFilePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`,
+			{ telemetryMessage: "sites asset size too large" }
 		);
 	}
 }
@@ -425,7 +430,8 @@ async function validateAssetSize(
 function validateAssetKey(assetKey: string) {
 	if (assetKey.length > 512) {
 		throw new UserError(
-			`The asset path key "${assetKey}" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",`
+			`The asset path key "${assetKey}" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",`,
+			{ telemetryMessage: "sites asset key too long" }
 		);
 	}
 }
@@ -437,30 +443,6 @@ function validateAssetKey(assetKey: string) {
  */
 function urlSafe(filePath: string): string {
 	return filePath.replace(/\\/g, "/");
-}
-
-/**
- * Information about the assets that should be uploaded
- */
-export interface LegacyAssetPaths {
-	/**
-	 * Absolute path to the root of the project.
-	 *
-	 * This is the directory containing wrangler.toml or cwd if no config.
-	 */
-	baseDirectory: string;
-	/**
-	 * The path to the assets directory, relative to the `baseDirectory`.
-	 */
-	assetDirectory: string;
-	/**
-	 * An array of patterns that match files that should be uploaded.
-	 */
-	includePatterns: string[];
-	/**
-	 * An array of patterns that match files that should not be uploaded.
-	 */
-	excludePatterns: string[];
 }
 
 /**

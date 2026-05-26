@@ -44,6 +44,27 @@ export function getHostFromRoute(route: Route): string | undefined {
 }
 
 /**
+ * Best-effort derivation of the Cloudflare zone name that owns a given route,
+ * for use as the `CF-Worker` header value on outbound subrequests in local
+ * development (see https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker).
+ *
+ * In production, `CF-Worker` is set to the zone name — for a route
+ * `foo.example.com/*` on zone `example.com`, the header is `example.com`.
+ * When the user has explicitly told us the zone name in their route config
+ * (`zone_name`), use it. Otherwise, fall back to {@link getHostFromRoute},
+ * which returns the route pattern's hostname — this is the closest local
+ * approximation without performing an API lookup, and matches the behaviour
+ * users see when their route's hostname is already the apex (e.g.
+ * `example.com/*`).
+ */
+export function getZoneFromRoute(route: Route): string | undefined {
+	if (typeof route === "object" && "zone_name" in route && route.zone_name) {
+		return route.zone_name;
+	}
+	return getHostFromRoute(route);
+}
+
+/**
  * Try to compute the a zone ID and host name for a route.
  *
  * When we're given a route, we do 2 things:
@@ -198,7 +219,8 @@ async function getZoneIdFromHost(
 	}
 
 	throw new UserError(
-		`Could not find zone for \`${from.host}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
+		`Could not find zone for \`${from.host}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`,
+		{ telemetryMessage: "zones route zone not found" }
 	);
 }
 
@@ -284,7 +306,8 @@ export async function getWorkerForZone(
 	});
 	if (!zone) {
 		throw new UserError(
-			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`
+			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`,
+			{ telemetryMessage: "zones route outside account zones" }
 		);
 	}
 	const routes = await getRoutesForZone(complianceConfig, zone.id);
@@ -296,11 +319,13 @@ export async function getWorkerForZone(
 
 		if (!closestRoute) {
 			throw new UserError(
-				`The route '${worker}' has no workers assigned. You can assign a worker to it from your ${configFileName(configPath)} file or the Cloudflare dashboard`
+				`The route '${worker}' has no workers assigned. You can assign a worker to it from your ${configFileName(configPath)} file or the Cloudflare dashboard`,
+				{ telemetryMessage: "zones route missing worker assignment" }
 			);
 		} else {
 			throw new UserError(
-				`The route '${worker}' has no workers assigned. Did you mean to tail the route '${closestRoute.pattern}'?`
+				`The route '${worker}' has no workers assigned. Did you mean to tail the route '${closestRoute.pattern}'?`,
+				{ telemetryMessage: "zones route suggested worker assignment" }
 			);
 		}
 	}

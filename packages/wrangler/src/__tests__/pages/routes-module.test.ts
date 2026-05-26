@@ -1,9 +1,8 @@
 import { UserError } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { writeRoutesModule } from "../../pages/functions/routes";
 import { toUrlPath } from "../../paths";
-import { runInTempDir } from "../helpers/run-in-tmp";
-
 describe("routes module", () => {
 	runInTempDir();
 
@@ -47,7 +46,11 @@ describe("routes module", () => {
 					srcDir: String.raw`C:\project`,
 					outfile: "_routes.js",
 				})
-			).rejects.toThrow(new UserError(`Invalid module path "${modulePath}"`));
+			).rejects.toThrow(
+				new UserError(`Invalid module path "${modulePath}"`, {
+					telemetryMessage: "pages functions invalid module path",
+				})
+			);
 		}
 	);
 });

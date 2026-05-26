@@ -1,5 +1,21 @@
 # devprod-status-bot
 
+## 1.5.0
+
+### Minor Changes
+
+- [#13911](https://github.com/cloudflare/workers-sdk/pull/13911) [`2115e8a`](https://github.com/cloudflare/workers-sdk/commit/2115e8af048cd11bfb80008b2bf9ed49e9e52cc8) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Post a Chat alert when an issue is opened with the `api` label, or when the `api` label is added to an existing issue
+
+  Routes alerts to a new `API_ISSUES_WEBHOOK` so the team room watching the Workers SDK community channel gets realtime visibility into incoming api-tagged issues.
+
+## 1.4.2
+
+### Patch Changes
+
+- [#13850](https://github.com/cloudflare/workers-sdk/pull/13850) [`1527003`](https://github.com/cloudflare/workers-sdk/commit/1527003a0f98f37eda3d9664a43e2c5ef87c515d) Thanks [@penalosa](https://github.com/penalosa)! - Migrate bot message generation off the deprecated `@cf/meta/llama-2-7b-chat-int8` Workers AI model
+
+  Workers AI is deprecating Llama 2 7B chat (alongside several other older models) on May 30th 2026. The status bot now uses `@cf/google/gemma-4-26b-a4b-it` (Gemma 4) for generating its short, friendly chat messages.
+
 ## 1.4.1
 
 ### Patch Changes

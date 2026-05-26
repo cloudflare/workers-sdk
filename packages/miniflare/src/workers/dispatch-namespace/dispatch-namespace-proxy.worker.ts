@@ -1,4 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { SharedBindings } from "../shared/constants";
 import {
 	makeRemoteProxyStub,
 	throwRemoteRequired,
@@ -24,7 +25,9 @@ export default class DispatchNamespaceProxy extends WorkerEntrypoint<RemoteBindi
 					args,
 					options,
 				}),
-			}
+			},
+			this.env.cfTraceId,
+			this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
 		);
 	}
 }

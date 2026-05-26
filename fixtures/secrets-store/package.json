@@ -8,8 +8,5 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:default",
 		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
 	}
 }

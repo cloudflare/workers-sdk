@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import http from "node:http";
 import path from "node:path";
 import { cloudflare } from "@cloudflare/vite-plugin";
@@ -41,8 +42,9 @@ export async function serve() {
 		plugins: [cloudflare({ inspectorPort: false, persistState: false })],
 	});
 	viteServer = await server.listen();
-	// oxlint-disable-next-line typescript/no-non-null-assertion
-	viteTestUrl = viteServer.resolvedUrls!.local[0]!.replace(/\/$/, "");
+	assert(viteServer.resolvedUrls);
+	assert(viteServer.resolvedUrls.local[0]);
+	viteTestUrl = viteServer.resolvedUrls.local[0].replace(/\/$/, "");
 	return viteServer;
 }
 

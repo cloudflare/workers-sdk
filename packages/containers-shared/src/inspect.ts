@@ -23,7 +23,9 @@ export async function dockerImageInspect(
 		proc.on("close", (code) => {
 			if (code !== 0) {
 				return reject(
-					new UserError(`failed inspecting image locally: ${stderr.trim()}`)
+					new UserError(`failed inspecting image locally: ${stderr.trim()}`, {
+						telemetryMessage: false,
+					})
 				);
 			}
 			resolve(stdout.trim());

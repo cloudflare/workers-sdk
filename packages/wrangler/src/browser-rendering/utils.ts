@@ -61,6 +61,7 @@ export async function fetchBrowserRendering<ResponseType>(
 			text: `Browser Run API error: ${errorMessage}`,
 			notes: [{ text: `${method} ${url} -> ${response.status}` }],
 			status: response.status,
+			telemetryMessage: false,
 		});
 	}
 
@@ -75,6 +76,7 @@ export async function fetchBrowserRendering<ResponseType>(
 				{ text: `${method} ${url} -> ${response.status}` },
 			],
 			status: response.status,
+			telemetryMessage: false,
 		});
 	}
 }

@@ -44,15 +44,20 @@ export const pipelinesCreateCommand = createCommand({
 				sql = readFileSync(args.sqlFile, "utf-8").trim();
 			} catch (error) {
 				throw new UserError(
-					`Failed to read SQL file '${args.sqlFile}': ${error instanceof Error ? error.message : String(error)}`
+					`Failed to read SQL file '${args.sqlFile}': ${error instanceof Error ? error.message : String(error)}`,
+					{ telemetryMessage: "pipelines create sql file read failed" }
 				);
 			}
 		} else {
-			throw new UserError("Either --sql or --sql-file must be provided");
+			throw new UserError("Either --sql or --sql-file must be provided", {
+				telemetryMessage: "pipelines create missing sql",
+			});
 		}
 
 		if (!sql) {
-			throw new UserError("SQL query cannot be empty");
+			throw new UserError("SQL query cannot be empty", {
+				telemetryMessage: "pipelines create empty sql query",
+			});
 		}
 
 		// Validate SQL before creating pipeline
@@ -88,7 +93,9 @@ export const pipelinesCreateCommand = createCommand({
 					errorMessage = error.message;
 				}
 			}
-			throw new UserError(`SQL validation failed: ${errorMessage}`);
+			throw new UserError(`SQL validation failed: ${errorMessage}`, {
+				telemetryMessage: "pipelines create sql validation failed",
+			});
 		}
 
 		const pipelineConfig: CreatePipelineRequest = {
@@ -105,7 +112,8 @@ export const pipelinesCreateCommand = createCommand({
 			if (error instanceof APIError && error.code === 10000) {
 				// Show error when no access to v1 Pipelines API
 				throw new UserError(
-					`Your account does not have access to the new Pipelines API. To use the legacy Pipelines API, please run:\n\nnpx wrangler@4.36.0 pipelines create ${pipelineName}\n\nThis will use an older version of Wrangler that supports the legacy API.`
+					`Your account does not have access to the new Pipelines API. To use the legacy Pipelines API, please run:\n\nnpx wrangler@4.36.0 pipelines create ${pipelineName}\n\nThis will use an older version of Wrangler that supports the legacy API.`,
+					{ telemetryMessage: "pipelines create api version unavailable" }
 				);
 			}
 			throw error;

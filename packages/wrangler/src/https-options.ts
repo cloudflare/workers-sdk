@@ -25,17 +25,20 @@ export function validateHttpsOptions(
 	if (customHttpsKeyPath !== undefined || customHttpsCertPath !== undefined) {
 		if (customHttpsKeyPath === undefined || customHttpsCertPath === undefined) {
 			throw new UserError(
-				"Must specify both certificate path and key path to use a Custom Certificate."
+				"Must specify both certificate path and key path to use a Custom Certificate.",
+				{ telemetryMessage: "https options custom certificate missing pair" }
 			);
 		}
 		if (!fs.existsSync(customHttpsKeyPath)) {
 			throw new UserError(
-				"Missing Custom Certificate Key at " + customHttpsKeyPath
+				"Missing Custom Certificate Key at " + customHttpsKeyPath,
+				{ telemetryMessage: "https options custom certificate key missing" }
 			);
 		}
 		if (!fs.existsSync(customHttpsCertPath)) {
 			throw new UserError(
-				"Missing Custom Certificate File at " + customHttpsCertPath
+				"Missing Custom Certificate File at " + customHttpsCertPath,
+				{ telemetryMessage: "https options custom certificate file missing" }
 			);
 		}
 

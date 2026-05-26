@@ -16,3 +16,18 @@ interface ExecutionContext<Props = unknown> {
 		override?: string;
 	};
 }
+
+/**
+ * Minimal RPC binding type for the AccountCohortQuerier entrypoint
+ * in the account-services worker. Replace with the published type from
+ * `@cloudflare/workers-toolbox-types` once available with bundled deps.
+ */
+export interface AccountCohortQuerierBinding {
+	lookupAccountCohort(accountID: string): Promise<
+		| { ok: true; result: string | null; meta: { workersVersion: string } }
+		| {
+				ok: false;
+				errors: Array<{ name: string; message: string; code: string }>;
+		  }
+	>;
+}

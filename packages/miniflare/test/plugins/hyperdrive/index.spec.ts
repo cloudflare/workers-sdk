@@ -1,5 +1,5 @@
-import { Miniflare } from "miniflare";
-import { test } from "vitest";
+import { HYPERDRIVE_PLUGIN, Miniflare } from "miniflare";
+import { describe, test, vi } from "vitest";
 import { useDispose } from "../../test-shared";
 import type { Hyperdrive } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions } from "miniflare";
@@ -141,4 +141,200 @@ test("sets default port based on protocol", async ({ expect }) => {
 	await mf.setOptions(opts);
 	res = await mf.dispatchFetch("http://localhost/");
 	expect(await res.text()).toBe("5432");
+});
+
+describe("proxy server creation", () => {
+	type GetServicesOptions = Parameters<typeof HYPERDRIVE_PLUGIN.getServices>[0];
+	type HyperdriveProxyController =
+		GetServicesOptions["hyperdriveProxyController"];
+
+	function createMockProxyController() {
+		return {
+			createProxyServer: vi.fn().mockResolvedValue(12345),
+			dispose: vi.fn().mockResolvedValue(undefined),
+		} as unknown as HyperdriveProxyController & {
+			createProxyServer: ReturnType<typeof vi.fn>;
+		};
+	}
+
+	function serviceOpts(
+		hyperdrives: Record<string, URL>,
+		controller: HyperdriveProxyController & {
+			createProxyServer: ReturnType<typeof vi.fn>;
+		}
+	) {
+		// Returns hyperdrive services from the hyperdrive_plugin
+		return {
+			options: { hyperdrives },
+			hyperdriveProxyController: controller,
+		} as unknown as Parameters<typeof HYPERDRIVE_PLUGIN.getServices>[0];
+	}
+
+	test("skips proxy when sslmode is not specified (postgres)", async ({
+		expect,
+	}) => {
+		const controller = createMockProxyController();
+		const services = await HYPERDRIVE_PLUGIN.getServices(
+			serviceOpts(
+				{ DB: new URL("postgres://user:pass@db.example.com:5432/mydb") },
+				controller
+			)
+		);
+		expect(controller.createProxyServer).not.toHaveBeenCalled();
+		expect(services).toEqual([
+			{
+				name: "hyperdrive:DB",
+				external: { address: "db.example.com:5432", tcp: {} },
+			},
+		]);
+	});
+
+	test("skips proxy when sslmode is explicitly disabled (postgres)", async ({
+		expect,
+	}) => {
+		const controller = createMockProxyController();
+		const services = await HYPERDRIVE_PLUGIN.getServices(
+			serviceOpts(
+				{
+					DB: new URL(
+						"postgres://user:pass@db.example.com:5432/mydb?sslmode=disable"
+					),
+				},
+				controller
+			)
+		);
+		expect(controller.createProxyServer).not.toHaveBeenCalled();
+		expect(services).toEqual([
+			{
+				name: "hyperdrive:DB",
+				external: { address: "db.example.com:5432", tcp: {} },
+			},
+		]);
+	});
+
+	test("wraps IPv6 hosts when skipping proxy for disabled sslmode", async ({
+		expect,
+	}) => {
+		const controller = createMockProxyController();
+		const services = await HYPERDRIVE_PLUGIN.getServices(
+			serviceOpts(
+				{
+					DB: new URL("postgres://user:pass@[::1]:5432/mydb?sslmode=disable"),
+				},
+				controller
+			)
+		);
+		expect(controller.createProxyServer).not.toHaveBeenCalled();
+		expect(services).toEqual([
+			{
+				name: "hyperdrive:DB",
+				external: { address: "[::1]:5432", tcp: {} },
+			},
+		]);
+	});
+
+	test("skips proxy when ssl-mode is disabled (mysql)", async ({ expect }) => {
+		const controller = createMockProxyController();
+		const services = await HYPERDRIVE_PLUGIN.getServices(
+			serviceOpts(
+				{
+					DB: new URL(
+						"mysql://user:pass@db.example.com:3306/mydb?ssl-mode=disabled"
+					),
+				},
+				controller
+			)
+		);
+		expect(controller.createProxyServer).not.toHaveBeenCalled();
+		expect(services).toEqual([
+			{
+				name: "hyperdrive:DB",
+				external: { address: "db.example.com:3306", tcp: {} },
+			},
+		]);
+	});
+
+	test("creates proxy when sslmode=require (postgres)", async ({ expect }) => {
+		const controller = createMockProxyController();
+		const services = await HYPERDRIVE_PLUGIN.getServices(
+			serviceOpts(
+				{
+					DB: new URL(
+						"postgres://user:pass@db.example.com:5432/mydb?sslmode=require"
+					),
+				},
+				controller
+			)
+		);
+		expect(controller.createProxyServer).toHaveBeenCalledOnce();
+		expect(controller.createProxyServer).toHaveBeenCalledWith({
+			name: "DB",
+			targetHost: "db.example.com",
+			targetPort: "5432",
+			scheme: "postgres",
+			sslmode: "require",
+		});
+		expect(services).toEqual([
+			{
+				name: "hyperdrive:DB",
+				external: { address: "127.0.0.1:12345", tcp: {} },
+			},
+		]);
+	});
+
+	test("creates proxy when sslmode=prefer (postgres)", async ({ expect }) => {
+		const controller = createMockProxyController();
+		const services = await HYPERDRIVE_PLUGIN.getServices(
+			serviceOpts(
+				{
+					DB: new URL(
+						"postgres://user:pass@db.example.com:5432/mydb?sslmode=prefer"
+					),
+				},
+				controller
+			)
+		);
+		expect(controller.createProxyServer).toHaveBeenCalledOnce();
+		expect(controller.createProxyServer).toHaveBeenCalledWith({
+			name: "DB",
+			targetHost: "db.example.com",
+			targetPort: "5432",
+			scheme: "postgres",
+			sslmode: "prefer",
+		});
+		expect(services).toEqual([
+			{
+				name: "hyperdrive:DB",
+				external: { address: "127.0.0.1:12345", tcp: {} },
+			},
+		]);
+	});
+
+	test("creates proxy when ssl-mode=required (mysql)", async ({ expect }) => {
+		const controller = createMockProxyController();
+		const services = await HYPERDRIVE_PLUGIN.getServices(
+			serviceOpts(
+				{
+					DB: new URL(
+						"mysql://user:pass@db.example.com:3306/mydb?ssl-mode=required"
+					),
+				},
+				controller
+			)
+		);
+		expect(controller.createProxyServer).toHaveBeenCalledOnce();
+		expect(controller.createProxyServer).toHaveBeenCalledWith({
+			name: "DB",
+			targetHost: "db.example.com",
+			targetPort: "3306",
+			scheme: "mysql",
+			sslmode: "require",
+		});
+		expect(services).toEqual([
+			{
+				name: "hyperdrive:DB",
+				external: { address: "127.0.0.1:12345", tcp: {} },
+			},
+		]);
+	});
 });

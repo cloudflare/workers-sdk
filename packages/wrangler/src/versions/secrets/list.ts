@@ -33,7 +33,8 @@ export const versionsSecretsListCommand = createCommand({
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(
-				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
+				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``,
+				{ telemetryMessage: "versions secrets list missing worker name" }
 			);
 		}
 
@@ -52,7 +53,8 @@ export const versionsSecretsListCommand = createCommand({
 			).items;
 			if (mostRecentVersions.length === 0) {
 				throw new UserError(
-					"There are currently no uploaded versions of this Worker - please upload a version."
+					"There are currently no uploaded versions of this Worker - please upload a version.",
+					{ telemetryMessage: "versions secrets list no uploaded versions" }
 				);
 			}
 			const latestVersion = mostRecentVersions[0];
