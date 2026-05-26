@@ -59,6 +59,16 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
+          cat > "$RUNNER_TEMP/git-askpass" <<'EOF'
+          #!/bin/sh
+          case "$1" in
+            *Username*) echo "x-access-token" ;;
+            *Password*) echo "$GH_PUSH_TOKEN" ;;
+          esac
+          EOF
+          chmod +x "$RUNNER_TEMP/git-askpass"
+          export GIT_ASKPASS="$RUNNER_TEMP/git-askpass"
+          export GIT_TERMINAL_PROMPT=0
           git push origin HEAD --force
         env:
           GH_PUSH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
@@ -97,6 +107,16 @@ jobs:
           # Push an empty commit to trigger CI workflows
           # This ensures CI runs because the PR already exists when this push happens
           git commit --allow-empty -m "Trigger CI for #$PR_NUM"
+          cat > "$RUNNER_TEMP/git-askpass" <<'EOF'
+          #!/bin/sh
+          case "$1" in
+            *Username*) echo "x-access-token" ;;
+            *Password*) echo "$GH_PUSH_TOKEN" ;;
+          esac
+          EOF
+          chmod +x "$RUNNER_TEMP/git-askpass"
+          export GIT_ASKPASS="$RUNNER_TEMP/git-askpass"
+          export GIT_TERMINAL_PROMPT=0
           git push origin HEAD
         env:
           GH_PUSH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
