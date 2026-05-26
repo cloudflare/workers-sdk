@@ -4,6 +4,7 @@ import {
 	configFileName,
 	FatalError,
 	findWranglerConfig,
+	UserError,
 } from "@cloudflare/workers-utils";
 import { readPagesConfig } from "../config";
 import { createCommand } from "../core/create-command";
@@ -37,14 +38,18 @@ export const pagesFunctionsBuildEnvCommand = createCommand({
 	positionalArgs: ["projectDir"],
 	async handler(args) {
 		if (!args.projectDir) {
-			throw new FatalError("No Pages project location specified", {
-				telemetryMessage: "pages build env missing project directory",
-			});
+			throw new UserError(
+				"Missing Pages project location. Provide the project directory as a positional argument.",
+				{
+					telemetryMessage: "pages build env missing project directory",
+				}
+			);
 		}
 		if (!args.outfile) {
-			throw new FatalError("No outfile specified", {
-				telemetryMessage: "pages build env missing outfile",
-			});
+			throw new UserError(
+				"Missing output file. Use --outfile <path> to specify where to write the build environment configuration.",
+				{ telemetryMessage: "pages build env missing outfile" }
+			);
 		}
 
 		logger.log(

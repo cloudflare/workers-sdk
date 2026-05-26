@@ -161,7 +161,7 @@ describe("wrangler pages secret", () => {
 						"pages secret put the-key --project some-project-name --env some-env"
 					)
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
+					`[Error: Pages does not support the "some-env" environment. Only "production" and "preview" are valid. Use --env production or --env preview.]`
 				);
 			});
 
@@ -169,7 +169,7 @@ describe("wrangler pages secret", () => {
 				await expect(
 					runWrangler("pages secret put the-key")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Must specify a project name.]`
+					`[Error: Missing Pages project name. Use --project-name <name> to specify which project to manage secrets for.]`
 				);
 			});
 		});
@@ -398,14 +398,16 @@ describe("wrangler pages secret", () => {
 					"pages secret delete the-key --project some-project-name --env some-env"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
+				`[Error: Pages does not support the "some-env" environment. Only "production" and "preview" are valid. Use --env production or --env preview.]`
 			);
 		});
 
 		it("should error without a project name", async ({ expect }) => {
 			await expect(
 				runWrangler("pages secret delete the-key")
-			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
+			).rejects.toMatchInlineSnapshot(
+				`[Error: Missing Pages project name. Use --project-name <name> to specify which project to manage secrets for.]`
+			);
 		});
 	});
 
@@ -487,14 +489,16 @@ describe("wrangler pages secret", () => {
 					"pages secret list --project some-project-name --env some-env"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
+				`[Error: Pages does not support the "some-env" environment. Only "production" and "preview" are valid. Use --env production or --env preview.]`
 			);
 		});
 
 		it("should error without a project name", async ({ expect }) => {
 			await expect(
 				runWrangler("pages secret list")
-			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
+			).rejects.toMatchInlineSnapshot(
+				`[Error: Missing Pages project name. Use --project-name <name> to specify which project to manage secrets for.]`
+			);
 		});
 	});
 

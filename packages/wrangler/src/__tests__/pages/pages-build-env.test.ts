@@ -49,7 +49,7 @@ describe("pages build env", () => {
 		await expect(
 			runWrangler("pages functions build-env")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: No Pages project location specified]`
+			`[Error: Missing Pages project location. Provide the project directory as a positional argument.]`
 		);
 	});
 
@@ -57,7 +57,7 @@ describe("pages build env", () => {
 		await expect(
 			runWrangler("pages functions build-env .")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: No outfile specified]`
+			`[Error: Missing output file. Use --outfile <path> to specify where to write the build environment configuration.]`
 		);
 	});
 
