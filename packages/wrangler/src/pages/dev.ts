@@ -325,16 +325,16 @@ export const pagesDevCommand = createCommand({
 		}
 
 		if (args.config && !Array.isArray(args.config)) {
-			throw new FatalError(
-				"Pages does not support custom paths for the Wrangler configuration file",
-				{ code: 1, telemetryMessage: "pages dev custom config unsupported" }
+			throw new UserError(
+				"Pages does not support custom paths for the Wrangler configuration file. Remove the --config flag, or use a standard wrangler.jsonc in your project root.",
+				{ telemetryMessage: "pages dev custom config unsupported" }
 			);
 		}
 
 		if (args.env) {
-			throw new FatalError(
-				"Pages does not support targeting an environment with the --env flag during local development.",
-				{ code: 1, telemetryMessage: "pages dev env unsupported" }
+			throw new UserError(
+				"Pages does not support the --env flag during local development. Use the --branch flag to target your production or preview environment instead.",
+				{ telemetryMessage: "pages dev env unsupported" }
 			);
 		}
 
@@ -357,9 +357,10 @@ export const pagesDevCommand = createCommand({
 			config.configPath &&
 			path.resolve(process.cwd(), args.config[0]) !== config.configPath
 		) {
-			throw new FatalError(
-				"The first `--config` argument must point to your Pages configuration file: " +
-					path.relative(process.cwd(), config.configPath),
+			throw new UserError(
+				"The first `--config` argument must point to your Pages configuration file. Expected: " +
+					path.relative(process.cwd(), config.configPath) +
+					". Ensure the file exists and is a valid Pages configuration.",
 				{ telemetryMessage: "pages dev config path mismatch" }
 			);
 		}
@@ -370,9 +371,9 @@ export const pagesDevCommand = createCommand({
 		let directory = resolvedDirectory;
 
 		if (directory !== undefined && command.length > 0) {
-			throw new FatalError(
-				"Specify either a directory OR a proxy command, not both.",
-				{ code: 1, telemetryMessage: "pages dev conflicting serve targets" }
+			throw new UserError(
+				"Cannot specify both a directory and a proxy command. Provide either a directory of static assets or a proxy command, not both.",
+				{ telemetryMessage: "pages dev conflicting serve targets" }
 			);
 		} else if (directory === undefined) {
 			proxyPort = await spawnProxyProcess({

@@ -192,7 +192,7 @@ export interface CfWorkflow {
 	limits?: {
 		steps?: number;
 	};
-	schedule?: string | string[];
+	schedules?: string | string[];
 }
 
 export interface CfQueue {

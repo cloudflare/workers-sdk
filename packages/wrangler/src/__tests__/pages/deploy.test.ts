@@ -115,7 +115,7 @@ describe("pages deploy", () => {
 		await expect(
 			runWrangler("pages deploy public")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must specify a project name.]`
+			`[Error: Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.]`
 		);
 	});
 

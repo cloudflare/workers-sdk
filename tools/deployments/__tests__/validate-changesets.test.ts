@@ -26,6 +26,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/cli-shared-helpers",
 				"@cloudflare/codemod",
 				"@cloudflare/containers-shared",
+				"@cloudflare/deploy-helpers",
 				"@cloudflare/devprod-status-bot",
 				"@cloudflare/edge-preview-authenticated-proxy",
 				"@cloudflare/lint-config-shared",

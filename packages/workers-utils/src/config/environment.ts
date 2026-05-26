@@ -729,7 +729,7 @@ export type WorkflowBinding = {
 		steps?: number;
 	};
 	/** Optional cron schedule(s) for automatically triggering workflow instances */
-	schedule?: string | string[];
+	schedules?: string | string[];
 };
 
 /**

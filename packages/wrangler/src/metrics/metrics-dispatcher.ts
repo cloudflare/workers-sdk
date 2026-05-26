@@ -3,6 +3,7 @@ import { detectAgenticEnvironment } from "am-i-vibing";
 import chalk from "chalk";
 import ci from "ci-info";
 import { fetch } from "undici";
+import { telemetryCurrentAgentSkillsInstalled } from "../agents-skills-install";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
@@ -96,20 +97,34 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		 *  - additional properties are camelCased
 		 */
 		sendAdhocEvent(name: string, properties: Properties = {}) {
-			dispatch({
-				name,
-				properties: {
-					...getCommonEventProperties(),
-					category: "Workers",
-					wranglerVersion,
-					wranglerMajorVersion,
-					wranglerMinorVersion,
-					wranglerPatchVersion,
-					os: getOS(),
-					agent,
-					...properties,
-				},
-			});
+			trackDispatch(
+				telemetryCurrentAgentSkillsInstalled()
+					.catch(() => null)
+					.then((currentAgentSkillsInstalled) => {
+						const baseProperties = {
+							...getCommonEventProperties(),
+							category: "Workers",
+							wranglerVersion,
+							wranglerMajorVersion,
+							wranglerMinorVersion,
+							wranglerPatchVersion,
+							os: getOS(),
+							agent,
+							...properties,
+						};
+
+						return dispatch({
+							name,
+							properties: {
+								...baseProperties,
+								currentAgentSkillsInstalled,
+							},
+						});
+					})
+					.catch((err) => {
+						logger.debug("Error sending adhoc metrics event", err);
+					})
+			);
 		},
 
 		/**
@@ -146,20 +161,25 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					argsCombination,
 				};
 
-				dispatch({
-					name,
-					properties: {
-						...commonCommandEventProperties,
-						...properties,
-					},
-				});
+				trackDispatch(
+					dispatch({
+						name,
+						properties: {
+							...commonCommandEventProperties,
+							...properties,
+						},
+					})
+				);
 			} catch (err) {
 				logger.debug("Error sending metrics event", err);
 			}
 		},
 	};
 
-	function dispatch(event: { name: string; properties: Properties }) {
+	function dispatch(event: {
+		name: string;
+		properties: Properties;
+	}): Promise<void> | void {
 		const metricsConfig = getMetricsConfig(options);
 		const body = {
 			deviceId: metricsConfig.deviceId,
@@ -191,7 +211,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		// before exiting Wrangler. The exit handler in index.ts races
 		// allMetricsDispatchesCompleted() against a 1s timeout, which is the
 		// real protection against slow connections at shutdown.
-		const request = fetch(`${SPARROW_URL}/api/v1/event`, {
+		return fetch(`${SPARROW_URL}/api/v1/event`, {
 			method: "POST",
 			headers: {
 				Accept: "*/*",
@@ -215,12 +235,23 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					"Metrics dispatcher: Failed to send request:",
 					(e as Error).message
 				);
-			})
-			.finally(() => {
-				pendingRequests.delete(request);
 			});
+	}
 
-		pendingRequests.add(request);
+	/**
+	 * Adds a dispatch promise (or promise chain) to `pendingRequests` so it
+	 * is awaited at process exit. Automatically removes itself once settled.
+	 *
+	 * @param maybePromise The dispatch promise to track, or `void` if no async work is needed.
+	 */
+	function trackDispatch(maybePromise: Promise<void> | void): void {
+		if (!maybePromise) {
+			return;
+		}
+		const tracked = maybePromise.finally(() => {
+			pendingRequests.delete(tracked);
+		});
+		pendingRequests.add(tracked);
 	}
 
 	/**
