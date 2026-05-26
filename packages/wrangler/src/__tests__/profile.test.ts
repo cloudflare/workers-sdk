@@ -131,7 +131,7 @@ describe("Profile", () => {
 	});
 
 	describe("CLI commands", () => {
-		describe("wrangler profiles list", () => {
+		describe("wrangler profile list", () => {
 			it("should show active marker on the correct profile", async ({
 				expect,
 			}) => {
@@ -146,7 +146,7 @@ describe("Profile", () => {
 				const dir = process.cwd();
 				writeDirectoryBindings({ [dir]: "work" });
 
-				await runWrangler("profiles list");
+				await runWrangler("profile list");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -171,7 +171,7 @@ describe("Profile", () => {
 					"/projects/app": "work",
 					"/projects/api": "work",
 				});
-				await runWrangler("profiles list");
+				await runWrangler("profile list");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -245,7 +245,7 @@ describe("Profile", () => {
 				await runWrangler("login --profile=work");
 
 				expect(std.out).toContain(
-					"You can create the profile manually with `wrangler profiles create work`"
+					"You can create the profile manually with `wrangler profile create work`"
 				);
 				expect(profileExists("work")).toBe(false);
 			});
@@ -263,7 +263,9 @@ describe("Profile", () => {
 				);
 				const dir = "/custom/project/path";
 				await runWrangler(`login --profile=work --dir=${dir}`);
-				expect(std.out).toContain(`Bound directory "${dir}" to profile "work"`);
+				expect(std.out).toContain(`Bound directory`);
+				expect(std.out).toContain(dir);
+				expect(std.out).toContain(`to profile "work"`);
 				expect(readDirectoryBindings()[dir]).toBe("work");
 			});
 		});
@@ -372,6 +374,33 @@ describe("Profile", () => {
 				);
 			});
 
+			it("should unbind the specified --dir instead of cwd", async ({
+				expect,
+			}) => {
+				writeAuthConfigFile(
+					{
+						oauth_token: "token",
+						refresh_token: "refresh",
+						expiration_time: "2030-01-01T00:00:00Z",
+					},
+					"work"
+				);
+				// Use a subdirectory of cwd to avoid cross-platform path resolution issues
+				const otherDir = path.join(process.cwd(), "other-project");
+				writeDirectoryBindings({ [otherDir]: "work" });
+
+				mockConfirm({
+					text: 'No other directories use profile "work". Would you like to delete it?',
+					result: false,
+				});
+
+				await runWrangler(`logout --profile=work --dir=${otherDir}`);
+
+				expect(std.out).toContain("Unbound directory");
+				expect(std.out).toContain('from profile "work"');
+				expect(readDirectoryBindings()[otherDir]).toBeUndefined();
+			});
+
 			it("should fail if directory is not bound to any profile", async ({
 				expect,
 			}) => {
@@ -409,12 +438,12 @@ describe("Profile", () => {
 					runWrangler("logout --profile=work")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Directory "<cwd>" is not bound to any profile, but a parent directory is bound to profile "work".
- Run "wrangler profiles list" to see all profiles and their bound directories.]`
+ Run "wrangler profile list" to see all profiles and their bound directories.]`
 				);
 			});
 		});
 
-		describe("wrangler profiles create", () => {
+		describe("wrangler profile create", () => {
 			it("should create a profile and log in via OAuth", async ({ expect }) => {
 				mockOAuthServerCallback("success");
 				msw.use(
@@ -432,7 +461,7 @@ describe("Profile", () => {
 					)
 				);
 
-				await runWrangler("profiles create work");
+				await runWrangler("profile create work");
 
 				expect(std.out).toContain("Successfully logged in.");
 				expect(std.out).toContain('Successfully created profile "work".');
@@ -451,7 +480,7 @@ describe("Profile", () => {
 			it("should reject creating a profile with a reserved name", async ({
 				expect,
 			}) => {
-				await expect(runWrangler("profiles create default")).rejects.toThrow(
+				await expect(runWrangler("profile create default")).rejects.toThrow(
 					"reserved"
 				);
 			});
@@ -460,7 +489,7 @@ describe("Profile", () => {
 				expect,
 			}) => {
 				await expect(
-					runWrangler("profiles create 'my profile'")
+					runWrangler("profile create 'my profile'")
 				).rejects.toThrow("Only letters, numbers, hyphens, and underscores");
 			});
 
@@ -476,22 +505,22 @@ describe("Profile", () => {
 					"work"
 				);
 
-				await expect(runWrangler("profiles create work")).rejects.toThrow(
+				await expect(runWrangler("profile create work")).rejects.toThrow(
 					'Profile "work" already exists'
 				);
 			});
 		});
 
-		describe("wrangler profiles delete", () => {
+		describe("wrangler profile delete", () => {
 			it("should throw when trying to delete default", async ({ expect }) => {
-				await expect(runWrangler("profiles delete default")).rejects.toThrow(
+				await expect(runWrangler("profile delete default")).rejects.toThrow(
 					"Cannot delete the default profile"
 				);
 			});
 
 			it("should throw when profile doesn't exist", async ({ expect }) => {
 				await expect(
-					runWrangler("profiles delete nonexistent")
+					runWrangler("profile delete nonexistent")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Profile "nonexistent" does not exist.]`
 				);
@@ -510,9 +539,9 @@ describe("Profile", () => {
 				writeDirectoryBindings({
 					"/project-a": "work",
 				});
-				await runWrangler("profiles list");
-				await runWrangler("profiles delete work");
-				await runWrangler("profiles list");
+				await runWrangler("profile list");
+				await runWrangler("profile delete work");
+				await runWrangler("profile list");
 				expect(std.out).toContain("work");
 				expect(std.out).toContain("/project-a");
 				expect(std.out).toContain('Deleted profile "work"');

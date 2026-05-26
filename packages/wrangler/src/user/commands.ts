@@ -84,20 +84,24 @@ export const loginCommand = createCommand({
 				);
 				if (!shouldCreate) {
 					logger.log(
-						`You can create the profile manually with \`wrangler profiles create ${args.profile}\`.`
+						`You can create the profile manually with \`wrangler profile create ${args.profile}\`.`
 					);
 					return;
 				}
 
 				logger.log(`Creating profile "${args.profile}"...\n`);
 
-				await login(config, {
+				const success = await login(config, {
 					scopes: args.scopes as Scope[] | undefined,
 					browser: args.browser,
 					callbackHost: args.callbackHost,
 					callbackPort: args.callbackPort,
 					profile: args.profile,
 				});
+
+				if (!success) {
+					return;
+				}
 
 				// Bind directory after successful login
 				const bindings = readDirectoryBindings();
@@ -116,7 +120,7 @@ export const loginCommand = createCommand({
 					: `You are currently using the auth profile "${currentProfile}" (via WRANGLER_PROFILE).\nUnset the env var before attempting to switch profiles.\n`;
 				logger.error(
 					message,
-					"If you want to create a new auth profile, run `wrangler profiles create <profile name>`.\n",
+					"If you want to create a new auth profile, run `wrangler profile create <profile name>`.\n",
 					"If you want to switch to an existing auth profile, run `wrangler login --profile=<profile name>`.\n"
 				);
 				return;
@@ -166,7 +170,7 @@ export const logoutCommand = createCommand({
 			const dir = path.resolve(args.dir ?? process.cwd());
 
 			// Check if this directory is actually bound to this profile
-			const activeProfile = getProfileForDirectory();
+			const activeProfile = getProfileForDirectory(dir);
 			const bindings = readDirectoryBindings();
 			if (activeProfile === undefined) {
 				throw new UserError(`Directory "${dir}" is not bound to any profile.`, {
@@ -175,7 +179,7 @@ export const logoutCommand = createCommand({
 			} else if (!Object.keys(bindings).includes(dir)) {
 				// There is a profile, but its not coming from the specified directory
 				throw new UserError(
-					`Directory "${dir}" is not bound to any profile, but a parent directory is bound to profile "${activeProfile}".\n Run "wrangler profiles list" to see all profiles and their bound directories.`,
+					`Directory "${dir}" is not bound to any profile, but a parent directory is bound to profile "${activeProfile}".\n Run "wrangler profile list" to see all profiles and their bound directories.`,
 					{
 						telemetryMessage: "logout no binding on directory",
 					}

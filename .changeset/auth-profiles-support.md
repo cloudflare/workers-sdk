@@ -8,7 +8,7 @@ Profiles allow you to store multiple sets of OAuth credentials against specific 
 
 Create a profile:
 
-`wrangler profiles create "work"`
+`wrangler profile create "work"`
 
 This will direct you through the usual OAuth flow, where you can choose to limit which accounts this OAuth token will have access to.
 
@@ -24,5 +24,5 @@ You can also override the active profile with the `WRANGLER_PROFILE` environment
 
 These commands are also provided:
 
-- `wrangler profiles list`
-- `wrangler profiles delete` (revokes the token and removes all directory bindings)
+- `wrangler profile list`
+- `wrangler profile delete` (revokes the token and removes all directory bindings)

@@ -250,7 +250,11 @@ import {
 import { fetchAllAccounts } from "./fetch-accounts";
 import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
-import { getActiveProfileName, PROFILES_DIR } from "./profiles";
+import {
+	getActiveProfileName,
+	PROFILES_DIR,
+	validateProfileName,
+} from "./profiles";
 import type { Account } from "./shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { ParsedUrlQuery } from "node:querystring";
@@ -946,6 +950,8 @@ export function getAuthConfigFilePath(profile?: string) {
 		subpath =
 			environment === "production" ? "default.toml" : `${environment}.toml`;
 	} else {
+		// Validate profile name to prevent path traversal attacks
+		validateProfileName(targetProfile);
 		// Profile-specific path under profiles/ subdirectory
 		subpath = `${PROFILES_DIR}/${targetProfile}.toml`;
 	}
@@ -1305,7 +1311,7 @@ export async function logout(): Promise<void> {
 	const profileName = getActiveProfileName();
 	if (profileName) {
 		logger.error(
-			`You are currently using the profile "${profileName}".\nTo unbind this directory from the profile, run \`wrangler logout --profile=${profileName}\`.\nTo delete the profile entirely, run \`wrangler profiles delete ${profileName}\`.`
+			`You are currently using the profile "${profileName}".\nTo unbind this directory from the profile, run \`wrangler logout --profile=${profileName}\`.\nTo delete the profile entirely, run \`wrangler profile delete ${profileName}\`.`
 		);
 		return;
 	}

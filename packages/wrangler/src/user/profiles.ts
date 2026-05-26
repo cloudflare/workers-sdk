@@ -33,12 +33,21 @@ export const PROFILES_DIR = "profiles";
  */
 const PROJECTS_FILE = "projects.json";
 
+/**
+ * Pattern for valid profile names: alphanumeric, hyphens, and underscores only.
+ * This strict pattern also prevents path traversal attacks when the name is
+ * used in file paths.
+ */
 const PROFILE_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
 const MAX_PROFILE_NAME_LENGTH = 64;
 
 const RESERVED_PROFILE_NAMES = ["default"];
 
+/**
+ * Validate a profile name, throwing a UserError if invalid.
+ * Validates format, length, and reserved names.
+ */
 export function validateProfileName(name: string): void {
 	const errors = [];
 	if (name.length > MAX_PROFILE_NAME_LENGTH) {
@@ -67,10 +76,6 @@ function getConfigDir(): string {
 	return path.join(getGlobalWranglerConfigPath(), USER_AUTH_CONFIG_PATH);
 }
 
-// ---------------------------------------------------------------------------
-// Active profile config (active.json)
-// ---------------------------------------------------------------------------
-
 /**
  * Resolve the active profile name.
  *
@@ -92,10 +97,6 @@ export function getActiveProfileName(): string | undefined {
 
 	return undefined;
 }
-
-// ---------------------------------------------------------------------------
-// Directory-to-profile bindings (projects.json)
-// ---------------------------------------------------------------------------
 
 interface ProjectEntry {
 	[directory: string]: { profile: string };
@@ -207,10 +208,6 @@ export function removeDirectoryBinding(dir: string): boolean {
 	return true;
 }
 
-// ---------------------------------------------------------------------------
-// Profile CRUD
-// ---------------------------------------------------------------------------
-
 /**
  * Check whether a named profile exists on disk.
  */
@@ -256,10 +253,6 @@ export function deleteProfile(name: string): void {
 	cleanupDirectoryBindingsForProfile(name);
 }
 
-// ---------------------------------------------------------------------------
-// Profile CLI commands
-// ---------------------------------------------------------------------------
-
 export const profileNamespace = createNamespace({
 	metadata: {
 		description: "🔀 Manage authentication profiles for multiple accounts",
@@ -296,7 +289,7 @@ export const profileListCommand = createCommand({
 		const sorted = [...profiles.filter((p) => p !== "default")];
 		if (sorted.length === 0) {
 			logger.log(
-				"No profiles found. You can create a profile by running `wrangler profiles create <profile name>`.\n"
+				"No profiles found. You can create a profile by running `wrangler profile create <profile name>`.\n"
 			);
 		}
 
@@ -345,7 +338,7 @@ export const profileCreateCommand = createCommand({
 
 		if (profileExists(args.name)) {
 			throw new UserError(
-				`Profile "${args.name}" already exists.\nDelete it first with \`wrangler profiles delete ${args.name}\` and recreate it.`,
+				`Profile "${args.name}" already exists.\nDelete it first with \`wrangler profile delete ${args.name}\` and recreate it.`,
 				{ telemetryMessage: "profile create already exists" }
 			);
 		}
@@ -387,12 +380,15 @@ export const profileDeleteCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	validateArgs(args) {
+		// Check for "default" first to give a more helpful error message
 		if (args.name === "default") {
 			throw new UserError(
 				"Cannot delete the default profile. Use `wrangler logout` instead.",
 				{ telemetryMessage: "profile delete default forbidden" }
 			);
 		}
+		// Validate profile name format to prevent path traversal
+		validateProfileName(args.name);
 		if (!profileExists(args.name)) {
 			throw new UserError(`Profile "${args.name}" does not exist.`, {
 				telemetryMessage: "profile delete not found",

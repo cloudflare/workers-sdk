@@ -2239,23 +2239,23 @@ export function createCLIParser(argv: string[]) {
 
 	registry.define([
 		{
-			command: "wrangler profiles",
+			command: "wrangler profile",
 			definition: profileNamespace,
 		},
 		{
-			command: "wrangler profiles list",
+			command: "wrangler profile list",
 			definition: profileListCommand,
 		},
 		{
-			command: "wrangler profiles create",
+			command: "wrangler profile create",
 			definition: profileCreateCommand,
 		},
 		{
-			command: "wrangler profiles delete",
+			command: "wrangler profile delete",
 			definition: profileDeleteCommand,
 		},
 	]);
-	registry.registerNamespace("profiles");
+	registry.registerNamespace("profile");
 
 	registry.define([
 		{
