@@ -486,6 +486,9 @@ export const secretBulkCommand = createCommand({
 		}
 
 		const { content, secretSource, secretFormat } = result;
+		const hasSecretsToCreate = Object.values(content).some(
+			(value) => value != null
+		);
 
 		let created: Array<string> = [];
 		let deleted: Array<string> = [];
@@ -501,6 +504,9 @@ export const secretBulkCommand = createCommand({
 				);
 			} catch (e) {
 				if (!isWorkerNotFoundError(e)) {
+					throw e;
+				}
+				if (!hasSecretsToCreate) {
 					throw e;
 				}
 				// Worker doesn't exist yet — create a draft worker, then retry
