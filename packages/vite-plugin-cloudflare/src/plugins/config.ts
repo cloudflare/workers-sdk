@@ -167,6 +167,13 @@ export const configPlugin = createPlugin("config", (ctx) => {
 
 					const clientEnvironment = builder.environments.client;
 					assert(clientEnvironment, 'No "client" environment');
+
+					if (!clientEnvironment.isBuilt) {
+						throw new Error(
+							"If `assetsOnly` is set to `true`, the client environment must be built"
+						);
+					}
+
 					const entryWorkerConfig = ctx.getWorkerConfig(
 						entryWorkerEnvironmentName
 					);
