@@ -132,6 +132,25 @@ describe("wrangler pipelines", () => {
 		return requests;
 	}
 
+	function mockPipelineNotFoundRequest(identifier: string) {
+		msw.use(
+			http.get(
+				`*/accounts/${accountId}/pipelines/v1/pipelines/${identifier}`,
+				() =>
+					HttpResponse.json(
+						{
+							success: false,
+							errors: [{ code: 1000, message: "Pipeline not found" }],
+							messages: [],
+							result: null,
+						},
+						{ status: 404 }
+					),
+				{ once: true }
+			)
+		);
+	}
+
 	function mockGetStreamRequest(streamId: string, stream: Stream) {
 		const requests = { count: 0 };
 		msw.use(
@@ -152,31 +171,149 @@ describe("wrangler pipelines", () => {
 		return requests;
 	}
 
-	function mockListPipelinesRequest(pipelines: Pipeline[]) {
-		const requests = { count: 0 };
+	function mockStreamNotFoundRequest(streamName: string, errorCode = 1016) {
+		msw.use(
+			http.get(
+				`*/accounts/${accountId}/pipelines/v1/streams/${streamName}`,
+				() =>
+					HttpResponse.json(
+						{
+							success: false,
+							errors: [
+								{
+									code: errorCode,
+									message:
+										errorCode === 1016
+											? "Stream does not exist"
+											: "Stream not found",
+								},
+							],
+							messages: [],
+							result: null,
+						},
+						{ status: 404 }
+					),
+				{ once: true }
+			)
+		);
+	}
+
+	function mockListStreamsRequest(
+		expect: ExpectStatic,
+		streams: Stream[],
+		options: {
+			pipelineId?: string;
+			perPageLimit?: number;
+			expectedName?: string;
+		} = {}
+	) {
+		const requests = { count: 0, dataCount: 0 };
+		msw.use(
+			http.get(
+				`*/accounts/${accountId}/pipelines/v1/streams`,
+				({ request }) => {
+					requests.count++;
+					const url = new URL(request.url);
+					if (options.pipelineId) {
+						expect(url.searchParams.get("pipeline_id")).toBe(
+							options.pipelineId
+						);
+					}
+					if (options.expectedName !== undefined) {
+						expect(url.searchParams.get("name")).toBe(options.expectedName);
+					}
+					const requestedPerPage = Number(
+						url.searchParams.get("per_page") || 20
+					);
+					const perPage = Math.max(
+						1,
+						options.perPageLimit !== undefined
+							? Math.min(requestedPerPage, options.perPageLimit)
+							: requestedPerPage
+					);
+					const page = Number(url.searchParams.get("page") || 1);
+					const filteredStreams =
+						options.expectedName !== undefined
+							? streams.filter((stream) => stream.name === options.expectedName)
+							: streams;
+					const startIndex = (page - 1) * perPage;
+					const pageItems = filteredStreams.slice(
+						startIndex,
+						startIndex + perPage
+					);
+					if (pageItems.length > 0) {
+						requests.dataCount++;
+					}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: pageItems,
+						result_info: {
+							page,
+							per_page: perPage,
+							count: pageItems.length,
+							total_count: filteredStreams.length,
+						},
+					});
+				}
+			)
+		);
+		return requests;
+	}
+
+	function mockListPipelinesRequest(
+		expect: ExpectStatic,
+		pipelines: Pipeline[],
+		options: { perPageLimit?: number; expectedName?: string } = {}
+	) {
+		const requests = { count: 0, dataCount: 0 };
 		msw.use(
 			http.get(
 				`*/accounts/${accountId}/pipelines/v1/pipelines`,
 				({ request }) => {
 					requests.count++;
 					const url = new URL(request.url);
+					if (options.expectedName !== undefined) {
+						expect(url.searchParams.get("name")).toBe(options.expectedName);
+					}
+					const requestedPerPage = Number(
+						url.searchParams.get("per_page") || 20
+					);
+					const perPage = Math.max(
+						1,
+						options.perPageLimit !== undefined
+							? Math.min(requestedPerPage, options.perPageLimit)
+							: requestedPerPage
+					);
 					const page = Number(url.searchParams.get("page") || 1);
-					const perPage = Number(url.searchParams.get("per_page") || 20);
-
+					const filteredPipelines =
+						options.expectedName !== undefined
+							? pipelines.filter(
+									(pipeline) => pipeline.name === options.expectedName
+								)
+							: pipelines;
+					const startIndex = (page - 1) * perPage;
+					const pageItems = filteredPipelines.slice(
+						startIndex,
+						startIndex + perPage
+					);
+					if (pageItems.length > 0) {
+						requests.dataCount++;
+					}
 					return HttpResponse.json({
 						success: true,
 						errors: [],
 						messages: [],
-						result: pipelines,
+						result: pageItems,
 						result_info: {
 							page,
 							per_page: perPage,
-							count: pipelines.length,
-							total_count: pipelines.length,
+							count: pageItems.length,
+							total_count: filteredPipelines.length,
 						},
 					});
-				},
-				{ once: true }
+				}
 			)
 		);
 		return requests;
@@ -424,11 +561,12 @@ describe("wrangler pipelines", () => {
 				},
 			];
 
-			const listRequest = mockListPipelinesRequest(mockPipelines);
+			const listRequest = mockListPipelinesRequest(expect, mockPipelines);
 
 			await runWrangler("pipelines list");
 
-			expect(listRequest.count).toBe(1);
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -445,11 +583,12 @@ describe("wrangler pipelines", () => {
 		});
 
 		it("should handle empty pipelines list", async ({ expect }) => {
-			const listRequest = mockListPipelinesRequest([]);
+			const listRequest = mockListPipelinesRequest(expect, []);
 
 			await runWrangler("pipelines list");
 
-			expect(listRequest.count).toBe(1);
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(0);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -562,7 +701,7 @@ describe("wrangler pipelines", () => {
 				},
 			];
 
-			mockListPipelinesRequest(mockPipelines);
+			mockListPipelinesRequest(expect, mockPipelines);
 
 			await runWrangler("pipelines list --json");
 
@@ -662,6 +801,109 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
+		it("resolves pipeline by name", async ({ expect }) => {
+			const mockPipeline: Pipeline = {
+				id: "pipeline_123",
+				name: "my_pipeline",
+				sql: "INSERT INTO test_sink SELECT * FROM test_stream;",
+				status: "active",
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockPipelineNotFoundRequest("my_pipeline");
+			const listRequest = mockListPipelinesRequest(expect, [mockPipeline], {
+				expectedName: "my_pipeline",
+			});
+			const getRequest = mockGetPipelineRequest("pipeline_123", mockPipeline);
+
+			await runWrangler("pipelines get my_pipeline");
+
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("ID:           pipeline_123");
+		});
+
+		it("resolves pipeline by name across multiple pages", async ({
+			expect,
+		}) => {
+			const pipelines: Pipeline[] = [
+				{
+					id: "pipeline_1",
+					name: "first_pipeline",
+					sql: "SELECT 1;",
+					status: "active",
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+				{
+					id: "pipeline_2",
+					name: "second_pipeline",
+					sql: "SELECT 2;",
+					status: "active",
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+				{
+					id: "pipeline_target",
+					name: "target_pipeline",
+					sql: "SELECT 3;",
+					status: "active",
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+			];
+
+			const targetPipeline = pipelines[2];
+			mockPipelineNotFoundRequest("target_pipeline");
+			const listRequest = mockListPipelinesRequest(expect, pipelines, {
+				perPageLimit: 1,
+				expectedName: "target_pipeline",
+			});
+			const getRequest = mockGetPipelineRequest(
+				targetPipeline.id,
+				targetPipeline
+			);
+
+			await runWrangler("pipelines get target_pipeline");
+
+			expect(listRequest.count).toBe(2);
+			expect(listRequest.dataCount).toBe(1);
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("ID:           pipeline_target");
+		});
+
+		it("resolves pipeline by name when identifier looks like a 32-char hex string", async ({
+			expect,
+		}) => {
+			const hexName = "abcdef1234567890abcdef1234567890";
+			const mockPipeline: Pipeline = {
+				id: "pipeline_123",
+				name: hexName,
+				sql: "SELECT 1;",
+				status: "active",
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockPipelineNotFoundRequest(hexName);
+			const listRequest = mockListPipelinesRequest(expect, [mockPipeline], {
+				expectedName: hexName,
+			});
+			const getRequest = mockGetPipelineRequest("pipeline_123", mockPipeline);
+
+			await runWrangler(`pipelines get ${hexName}`);
+
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("ID:           pipeline_123");
+		});
+
 		it("should fall back to legacy API when pipeline not found in new API", async ({
 			expect,
 		}) => {
@@ -682,6 +924,10 @@ describe("wrangler pipelines", () => {
 					{ once: true }
 				)
 			);
+
+			const listRequest = mockListPipelinesRequest(expect, [], {
+				expectedName: "my-legacy-pipeline",
+			});
 
 			const mockLegacyPipeline = {
 				id: "legacy_123",
@@ -720,6 +966,8 @@ describe("wrangler pipelines", () => {
 
 			await runWrangler("pipelines get my-legacy-pipeline");
 
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(0);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines get\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
@@ -859,6 +1107,44 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
+		it("deletes pipeline by name", async ({ expect }) => {
+			const mockPipeline: Pipeline = {
+				id: "pipeline_123",
+				name: "my_pipeline",
+				sql: "INSERT INTO test_sink SELECT * FROM test_stream;",
+				status: "active",
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockPipelineNotFoundRequest("my_pipeline");
+			const listRequest = mockListPipelinesRequest(expect, [mockPipeline], {
+				expectedName: "my_pipeline",
+			});
+			const getRequest = mockGetPipelineRequest("pipeline_123", mockPipeline);
+			const deleteRequest = mockDeletePipelineRequest("pipeline_123");
+
+			setIsTTY(true);
+			mockConfirm({
+				text: "Are you sure you want to delete the pipeline 'my_pipeline' (pipeline_123)?",
+				result: true,
+			});
+
+			await runWrangler("pipelines delete my_pipeline");
+
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
+			expect(getRequest.count).toBe(1);
+			expect(deleteRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Successfully deleted pipeline 'my_pipeline' with id 'pipeline_123'."
+			`);
+		});
+
 		it("should fall back to legacy API when deleting pipeline not in new API", async ({
 			expect,
 		}) => {
@@ -879,6 +1165,10 @@ describe("wrangler pipelines", () => {
 					{ once: true }
 				)
 			);
+
+			const listRequest = mockListPipelinesRequest(expect, [], {
+				expectedName: "my-legacy-pipeline",
+			});
 
 			msw.use(
 				http.get(
@@ -922,6 +1212,8 @@ describe("wrangler pipelines", () => {
 
 			await runWrangler("pipelines delete my-legacy-pipeline");
 
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(0);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -1243,40 +1535,6 @@ describe("wrangler pipelines", () => {
 	});
 
 	describe("pipelines streams list", () => {
-		function mockListStreamsRequest(
-			expect: ExpectStatic,
-			streams: Stream[],
-			pipelineId?: string
-		) {
-			const requests = { count: 0 };
-			msw.use(
-				http.get(
-					`*/accounts/${accountId}/pipelines/v1/streams`,
-					({ request }) => {
-						requests.count++;
-						const url = new URL(request.url);
-						if (pipelineId) {
-							expect(url.searchParams.get("pipeline_id")).toBe(pipelineId);
-						}
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: streams,
-							result_info: {
-								page: 1,
-								per_page: 20,
-								count: streams.length,
-								total_count: streams.length,
-							},
-						});
-					},
-					{ once: true }
-				)
-			);
-			return requests;
-		}
-
 		it("should list streams", async ({ expect }) => {
 			const mockStreams: Stream[] = [
 				{
@@ -1297,7 +1555,8 @@ describe("wrangler pipelines", () => {
 
 			await runWrangler("pipelines streams list");
 
-			expect(listRequest.count).toBe(1);
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -1327,15 +1586,14 @@ describe("wrangler pipelines", () => {
 				},
 			];
 
-			const listRequest = mockListStreamsRequest(
-				expect,
-				mockStreams,
-				"pipeline_123"
-			);
+			const listRequest = mockListStreamsRequest(expect, mockStreams, {
+				pipelineId: "pipeline_123",
+			});
 
 			await runWrangler("pipelines streams list --pipeline-id pipeline_123");
 
-			expect(listRequest.count).toBe(1);
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -1440,6 +1698,155 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
+		it("resolves stream by name", async ({ expect }) => {
+			const mockStream: Stream = {
+				id: "stream_123",
+				name: "my_stream",
+				version: 1,
+				endpoint: "https://pipelines.cloudflare.com/stream_123",
+				format: { type: "json", unstructured: true },
+				schema: null,
+				http: { enabled: true, authentication: true },
+				worker_binding: { enabled: true },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockStreamNotFoundRequest("my_stream");
+			const listRequest = mockListStreamsRequest(expect, [mockStream], {
+				expectedName: "my_stream",
+			});
+			const getRequest = mockGetStreamRequest("stream_123", mockStream);
+
+			await runWrangler("pipelines streams get my_stream");
+
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("Stream ID: stream_123");
+		});
+
+		it("resolves stream by name when API returns error code 1016", async ({
+			expect,
+		}) => {
+			const mockStream: Stream = {
+				id: "stream_123",
+				name: "my_stream",
+				version: 1,
+				endpoint: "https://pipelines.cloudflare.com/stream_123",
+				format: { type: "json", unstructured: true },
+				schema: null,
+				http: { enabled: true, authentication: true },
+				worker_binding: { enabled: true },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockStreamNotFoundRequest("my_stream", 1016);
+			const listRequest = mockListStreamsRequest(expect, [mockStream], {
+				expectedName: "my_stream",
+			});
+			const getRequest = mockGetStreamRequest("stream_123", mockStream);
+
+			await runWrangler("pipelines streams get my_stream");
+
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("Stream ID: stream_123");
+		});
+
+		it("resolves stream by name across multiple pages", async ({ expect }) => {
+			const streams: Stream[] = [
+				{
+					id: "stream_1",
+					name: "first_stream",
+					version: 1,
+					endpoint: "https://pipelines.cloudflare.com/stream_1",
+					format: { type: "json", unstructured: true },
+					schema: null,
+					http: { enabled: true, authentication: false },
+					worker_binding: { enabled: true },
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+				{
+					id: "stream_2",
+					name: "second_stream",
+					version: 1,
+					endpoint: "https://pipelines.cloudflare.com/stream_2",
+					format: { type: "json", unstructured: true },
+					schema: null,
+					http: { enabled: true, authentication: false },
+					worker_binding: { enabled: true },
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+				{
+					id: "stream_target",
+					name: "target_stream",
+					version: 1,
+					endpoint: "https://pipelines.cloudflare.com/stream_target",
+					format: { type: "json", unstructured: true },
+					schema: null,
+					http: { enabled: true, authentication: true },
+					worker_binding: { enabled: true },
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+			];
+
+			const targetStream = streams[2];
+			mockStreamNotFoundRequest("target_stream");
+			const listRequest = mockListStreamsRequest(expect, streams, {
+				perPageLimit: 1,
+				expectedName: "target_stream",
+			});
+			const getRequest = mockGetStreamRequest(targetStream.id, targetStream);
+
+			await runWrangler("pipelines streams get target_stream");
+
+			expect(listRequest.count).toBe(2);
+			expect(listRequest.dataCount).toBe(1);
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("Stream ID: stream_target");
+		});
+
+		it("resolves stream by name when identifier looks like a 32-char hex string", async ({
+			expect,
+		}) => {
+			const hexName = "abcdef1234567890abcdef1234567890";
+			const mockStream: Stream = {
+				id: "stream_123",
+				name: hexName,
+				version: 1,
+				endpoint: "https://pipelines.cloudflare.com/stream_123",
+				format: { type: "json", unstructured: true },
+				schema: null,
+				http: { enabled: true, authentication: true },
+				worker_binding: { enabled: true },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockStreamNotFoundRequest(hexName);
+			const listRequest = mockListStreamsRequest(expect, [mockStream], {
+				expectedName: hexName,
+			});
+			const getRequest = mockGetStreamRequest("stream_123", mockStream);
+
+			await runWrangler(`pipelines streams get ${hexName}`);
+
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("Stream ID: stream_123");
+		});
+
 		it('supports valid json output with "--json" flag', async ({ expect }) => {
 			const mockStream: Stream = {
 				id: "stream_123",
@@ -1531,6 +1938,48 @@ describe("wrangler pipelines", () => {
 
 			await runWrangler("pipelines streams delete stream_123");
 
+			expect(getRequest.count).toBe(1);
+			expect(deleteRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Successfully deleted stream 'my_stream' with id 'stream_123'."
+			`);
+		});
+
+		it("deletes stream by name", async ({ expect }) => {
+			const mockStream: Stream = {
+				id: "stream_123",
+				name: "my_stream",
+				version: 1,
+				endpoint: "https://pipelines.cloudflare.com/stream_123",
+				format: { type: "json", unstructured: true },
+				schema: null,
+				http: { enabled: true, authentication: false },
+				worker_binding: { enabled: true },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockStreamNotFoundRequest("my_stream");
+			const listRequest = mockListStreamsRequest(expect, [mockStream], {
+				expectedName: "my_stream",
+			});
+			const getRequest = mockGetStreamRequest("stream_123", mockStream);
+			const deleteRequest = mockDeleteStreamRequest("stream_123");
+
+			setIsTTY(true);
+			mockConfirm({
+				text: "Are you sure you want to delete the stream 'my_stream' (stream_123)?",
+				result: true,
+			});
+
+			await runWrangler("pipelines streams delete my_stream");
+
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
 			expect(getRequest.count).toBe(1);
 			expect(deleteRequest.count).toBe(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1751,40 +2200,6 @@ describe("wrangler pipelines", () => {
 	});
 
 	describe("pipelines sinks list", () => {
-		function mockListSinksRequest(
-			expect: ExpectStatic,
-			sinks: Sink[],
-			pipelineId?: string
-		) {
-			const requests = { count: 0 };
-			msw.use(
-				http.get(
-					`*/accounts/${accountId}/pipelines/v1/sinks`,
-					({ request }) => {
-						requests.count++;
-						const url = new URL(request.url);
-						if (pipelineId) {
-							expect(url.searchParams.get("pipeline_id")).toBe(pipelineId);
-						}
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: sinks,
-							result_info: {
-								page: 1,
-								per_page: 20,
-								count: sinks.length,
-								total_count: sinks.length,
-							},
-						});
-					},
-					{ once: true }
-				)
-			);
-			return requests;
-		}
-
 		it("should list sinks", async ({ expect }) => {
 			const mockSinks: Sink[] = [
 				{
@@ -1803,7 +2218,8 @@ describe("wrangler pipelines", () => {
 
 			await runWrangler("pipelines sinks list");
 
-			expect(listRequest.count).toBe(1);
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -1831,15 +2247,14 @@ describe("wrangler pipelines", () => {
 				},
 			];
 
-			const listRequest = mockListSinksRequest(
-				expect,
-				mockSinks,
-				"pipeline_123"
-			);
+			const listRequest = mockListSinksRequest(expect, mockSinks, {
+				pipelineId: "pipeline_123",
+			});
 
 			await runWrangler("pipelines sinks list --pipeline-id pipeline_123");
 
-			expect(listRequest.count).toBe(1);
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -1908,6 +2323,87 @@ describe("wrangler pipelines", () => {
 		return requests;
 	}
 
+	function mockSinkNotFoundRequest(identifier: string, errorCode = 1015) {
+		msw.use(
+			http.get(
+				`*/accounts/${accountId}/pipelines/v1/sinks/${identifier}`,
+				() =>
+					HttpResponse.json(
+						{
+							success: false,
+							errors: [
+								{
+									code: errorCode,
+									message:
+										errorCode === 1015
+											? "Sink does not exist"
+											: "Sink not found",
+								},
+							],
+							messages: [],
+							result: null,
+						},
+						{ status: 404 }
+					),
+				{ once: true }
+			)
+		);
+	}
+
+	function mockListSinksRequest(
+		expect: ExpectStatic,
+		sinks: Sink[],
+		options: {
+			pipelineId?: string;
+			perPageLimit?: number;
+			expectedName?: string;
+		} = {}
+	) {
+		const requests = { count: 0, dataCount: 0 };
+		msw.use(
+			http.get(`*/accounts/${accountId}/pipelines/v1/sinks`, ({ request }) => {
+				requests.count++;
+				const url = new URL(request.url);
+				if (options.pipelineId) {
+					expect(url.searchParams.get("pipeline_id")).toBe(options.pipelineId);
+				}
+				if (options.expectedName !== undefined) {
+					expect(url.searchParams.get("name")).toBe(options.expectedName);
+				}
+				const requestedPerPage = Number(url.searchParams.get("per_page") || 20);
+				const perPage = Math.max(
+					1,
+					options.perPageLimit !== undefined
+						? Math.min(requestedPerPage, options.perPageLimit)
+						: requestedPerPage
+				);
+				const page = Number(url.searchParams.get("page") || 1);
+				const filteredSinks =
+					options.expectedName !== undefined
+						? sinks.filter((sink) => sink.name === options.expectedName)
+						: sinks;
+				const startIndex = (page - 1) * perPage;
+				const pageItems = filteredSinks.slice(startIndex, startIndex + perPage);
+				if (pageItems.length > 0) {
+					requests.dataCount++;
+				}
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: pageItems,
+					result_info: {
+						page,
+						per_page: perPage,
+						count: pageItems.length,
+						total_count: filteredSinks.length,
+					},
+				});
+			})
+		);
+		return requests;
+	}
+
 	describe("pipelines sinks get", () => {
 		it("should get sink details", async ({ expect }) => {
 			const mockSink: Sink = {
@@ -1952,6 +2448,149 @@ describe("wrangler pipelines", () => {
 				Format:
 				  Type:  json"
 			`);
+		});
+
+		it("resolves sink by name", async ({ expect }) => {
+			const mockSink: Sink = {
+				id: "sink_123",
+				name: "my_sink",
+				type: "r2",
+				format: { type: "json" },
+				schema: null,
+				config: {
+					bucket: "my-bucket",
+				},
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockSinkNotFoundRequest("my_sink");
+			const listRequest = mockListSinksRequest(expect, [mockSink], {
+				expectedName: "my_sink",
+			});
+			const getRequest = mockGetSinkRequest("sink_123", mockSink);
+
+			await runWrangler("pipelines sinks get my_sink");
+
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("ID:    sink_123");
+		});
+
+		it("resolves sink by name when API returns error code 1015", async ({
+			expect,
+		}) => {
+			const mockSink: Sink = {
+				id: "sink_123",
+				name: "my_sink",
+				type: "r2",
+				format: { type: "json" },
+				schema: null,
+				config: {
+					bucket: "my-bucket",
+				},
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockSinkNotFoundRequest("my_sink", 1015);
+			const listRequest = mockListSinksRequest(expect, [mockSink], {
+				expectedName: "my_sink",
+			});
+			const getRequest = mockGetSinkRequest("sink_123", mockSink);
+
+			await runWrangler("pipelines sinks get my_sink");
+
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("ID:    sink_123");
+		});
+
+		it("resolves sink by name across multiple pages", async ({ expect }) => {
+			const sinks: Sink[] = [
+				{
+					id: "sink_1",
+					name: "first_sink",
+					type: "r2",
+					format: { type: "json" },
+					schema: null,
+					config: { bucket: "bucket-1" },
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+				{
+					id: "sink_2",
+					name: "second_sink",
+					type: "r2",
+					format: { type: "json" },
+					schema: null,
+					config: { bucket: "bucket-2" },
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+				{
+					id: "sink_target",
+					name: "target_sink",
+					type: "r2",
+					format: { type: "json" },
+					schema: null,
+					config: { bucket: "bucket-target" },
+					created_at: "2024-01-01T00:00:00Z",
+					modified_at: "2024-01-01T00:00:00Z",
+				},
+			];
+
+			const targetSink = sinks[2];
+			mockSinkNotFoundRequest("target_sink");
+			const listRequest = mockListSinksRequest(expect, sinks, {
+				perPageLimit: 1,
+				expectedName: "target_sink",
+			});
+			const getRequest = mockGetSinkRequest(targetSink.id, targetSink);
+
+			await runWrangler("pipelines sinks get target_sink");
+
+			expect(listRequest.count).toBe(2);
+			expect(listRequest.dataCount).toBe(1);
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("ID:    sink_target");
+		});
+
+		it("resolves sink by name when identifier looks like a 32-char hex string", async ({
+			expect,
+		}) => {
+			const hexName = "abcdef1234567890abcdef1234567890";
+			const mockSink: Sink = {
+				id: "sink_123",
+				name: hexName,
+				type: "r2",
+				format: { type: "json" },
+				schema: null,
+				config: {
+					bucket: "my-bucket",
+				},
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockSinkNotFoundRequest(hexName);
+			const listRequest = mockListSinksRequest(expect, [mockSink], {
+				expectedName: hexName,
+			});
+			const getRequest = mockGetSinkRequest("sink_123", mockSink);
+
+			await runWrangler(`pipelines sinks get ${hexName}`);
+
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
+			expect(getRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("ID:    sink_123");
 		});
 
 		it('supports valid json output with "--json" flag', async ({ expect }) => {
@@ -2034,6 +2673,46 @@ describe("wrangler pipelines", () => {
 
 			await runWrangler("pipelines sinks delete sink_123");
 
+			expect(getSinkRequest.count).toBe(1);
+			expect(deleteRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✨ Successfully deleted sink 'my_sink' with id 'sink_123'."
+			`);
+		});
+
+		it("deletes sink by name", async ({ expect }) => {
+			const mockSink: Sink = {
+				id: "sink_123",
+				name: "my_sink",
+				type: "r2",
+				format: { type: "json" },
+				schema: null,
+				config: { bucket: "my-bucket" },
+				created_at: "2024-01-01T00:00:00Z",
+				modified_at: "2024-01-01T00:00:00Z",
+			};
+
+			mockSinkNotFoundRequest("my_sink");
+			const listRequest = mockListSinksRequest(expect, [mockSink], {
+				expectedName: "my_sink",
+			});
+			const getSinkRequest = mockGetSinkRequest("sink_123", mockSink);
+			const deleteRequest = mockDeleteSinkRequest("sink_123");
+
+			setIsTTY(true);
+			mockConfirm({
+				text: "Are you sure you want to delete the sink 'my_sink' (sink_123)?",
+				result: true,
+			});
+
+			await runWrangler("pipelines sinks delete my_sink");
+
+			expect(listRequest.count).toBeGreaterThan(0);
+			expect(listRequest.dataCount).toBe(1);
 			expect(getSinkRequest.count).toBe(1);
 			expect(deleteRequest.count).toBe(1);
 			expect(std.err).toMatchInlineSnapshot(`""`);
