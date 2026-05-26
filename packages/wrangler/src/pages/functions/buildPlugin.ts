@@ -5,8 +5,8 @@ import { createModuleCollector } from "../../deployment-bundle/module-collection
 import { getBasePath } from "../../paths";
 import { getPagesProjectRoot } from "../utils";
 import { buildNotifierPlugin } from "./buildWorker";
-import type { Entry } from "../../deployment-bundle/entry";
 import type { Options as WorkerOptions } from "./buildWorker";
+import type { Entry } from "@cloudflare/workers-utils";
 
 type Options = Omit<
 	WorkerOptions,

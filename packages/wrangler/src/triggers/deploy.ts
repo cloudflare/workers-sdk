@@ -19,9 +19,8 @@ import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { retryOnAPIFailure } from "../utils/retry";
 import { getZoneForRoute } from "../zones";
-import type { AssetsOptions } from "../assets";
 import type { RouteObject } from "../deploy/deploy";
-import type { Config, Route } from "@cloudflare/workers-utils";
+import type { AssetsOptions, Config, Route } from "@cloudflare/workers-utils";
 
 type Props = {
 	config: Config;

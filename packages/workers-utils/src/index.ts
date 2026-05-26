@@ -93,6 +93,13 @@ export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
 
+export {
+	type EphemeralDirectory,
+	getWranglerHiddenDirPath,
+	getWranglerTmpDir,
+	sweepStaleWranglerTmpDirs,
+} from "./wrangler-tmp-dir";
+
 export { MetricsRegistry } from "./prometheus-metrics";
 export type { Counter } from "./prometheus-metrics";
 
