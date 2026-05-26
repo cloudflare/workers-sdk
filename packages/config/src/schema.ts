@@ -1,4 +1,5 @@
 import * as z from "zod";
+import type { UserConfig } from "./types";
 
 const AssetsSchema = z.object({
 	htmlHandling: z
@@ -377,4 +378,37 @@ export const ConfigSchema = z.object({
 	exports: z.record(z.string(), ExportSchema).optional(),
 });
 
-export type Config = z.infer<typeof ConfigSchema>;
+/**
+ * Parsed (post-validation) config returned by `ConfigSchema.parse(...)`.
+ */
+export type ParsedConfig = z.output<typeof ConfigSchema>;
+
+/**
+ * Bidirectional drift check between {@link ConfigSchema} and the public
+ * {@link UserConfig} interface. Excludes `entrypoint` and `env`, which
+ * deliberately differ:
+ *
+ * - `entrypoint`: the public type accepts a `WorkerModule` namespace
+ *   (produced by `import ... with { type: "cf-worker" }`), but the schema
+ *   only accepts the post-`load.ts` shape (`string` or `{ default: string }`).
+ *
+ * - `env`: binding return types (e.g. `AiBinding`) carry phantom
+ *   `__typeParams` / `__config` fields for type inference that the schema
+ *   does not (and cannot) validate at runtime. Drift on `env` shape is
+ *   guarded by the schema-level binding union and the `createBindings`
+ *   factory return types, which must be kept in sync manually.
+ */
+type _ComparableInput = Omit<
+	z.input<typeof ConfigSchema>,
+	"entrypoint" | "env"
+>;
+type _ComparableUserConfig = Omit<UserConfig, "entrypoint" | "env">;
+type _AssertSchemaMatchesUserConfig = [
+	_ComparableInput extends _ComparableUserConfig ? true : false,
+	_ComparableUserConfig extends _ComparableInput ? true : false,
+];
+const _assertSchemaMatchesUserConfig: _AssertSchemaMatchesUserConfig = [
+	true,
+	true,
+];
+void _assertSchemaMatchesUserConfig;

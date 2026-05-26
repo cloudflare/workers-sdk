@@ -7,7 +7,7 @@
 export { bindings, createBindings, defineConfig } from "@cloudflare/config";
 export type {
 	Bindings,
-	Config,
+	UserConfig,
 	InferDurableNamespaces,
 	InferEnv,
 	InferMainModule,

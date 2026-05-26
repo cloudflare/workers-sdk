@@ -1,4 +1,4 @@
-import type { Config } from "./schema";
+import type { ParsedConfig } from "./schema";
 import type { Json } from "./utils";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
@@ -14,17 +14,17 @@ export interface ConvertOptions {
 }
 
 /**
- * Convert a `@cloudflare/config` `Config` into a Wrangler `RawConfig`.
+ * Convert a parsed `@cloudflare/config` config into a Wrangler `RawConfig`.
  *
  * The caller is responsible for unwrapping any function/promise wrapper around
- * the config before passing it in.
+ * the config and validating it against `ConfigSchema` before passing it in.
  *
- * @param config The unwrapped `Config`.
+ * @param config The parsed (post-validation) config.
  * @param options Conversion options.
  * @returns The corresponding Wrangler `RawConfig`.
  */
 export function convertToWranglerConfig(
-	config: Config,
+	config: ParsedConfig,
 	options: ConvertOptions = {}
 ): RawConfig {
 	const result: RawConfig = {};
@@ -43,7 +43,7 @@ export function convertToWranglerConfig(
 // TOP-LEVEL FIELDS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertTopLevel(config: Config, result: RawConfig): void {
+function convertTopLevel(config: ParsedConfig, result: RawConfig): void {
 	if (config.name !== undefined) {
 		result.name = config.name;
 	}
@@ -101,7 +101,7 @@ function convertTopLevel(config: Config, result: RawConfig): void {
 }
 
 function convertObservability(
-	observability: NonNullable<Config["observability"]>
+	observability: NonNullable<ParsedConfig["observability"]>
 ): NonNullable<RawConfig["observability"]> {
 	const out: NonNullable<RawConfig["observability"]> = {};
 	if (observability.enabled !== undefined) {
@@ -154,7 +154,7 @@ function convertObservability(
 }
 
 function convertUnsafeTopLevel(
-	unsafe: NonNullable<Config["unsafe"]>
+	unsafe: NonNullable<ParsedConfig["unsafe"]>
 ): NonNullable<RawConfig["unsafe"]> {
 	const out: NonNullable<RawConfig["unsafe"]> = {};
 	if (unsafe.metadata !== undefined) {
@@ -177,7 +177,10 @@ function convertUnsafeTopLevel(
 // BINDINGS + ASSETS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertBindingsAndAssets(config: Config, result: RawConfig): void {
+function convertBindingsAndAssets(
+	config: ParsedConfig,
+	result: RawConfig
+): void {
 	let assetsBindingName: string | undefined;
 
 	const env = config.env ?? {};
@@ -640,7 +643,7 @@ function convertBindingsAndAssets(config: Config, result: RawConfig): void {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertExports(
-	config: Config,
+	config: ParsedConfig,
 	result: RawConfig,
 	options: ConvertOptions
 ): void {
@@ -716,7 +719,7 @@ function convertExports(
 // TRIGGERS (scheduled + fetch + queue consumer)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertTriggers(config: Config, result: RawConfig): void {
+function convertTriggers(config: ParsedConfig, result: RawConfig): void {
 	const triggers = config.triggers;
 	if (!triggers || triggers.length === 0) {
 		return;
@@ -779,7 +782,7 @@ function convertTriggers(config: Config, result: RawConfig): void {
 // DOMAINS (top-level domains -> custom-domain routes)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertDomains(config: Config, result: RawConfig): void {
+function convertDomains(config: ParsedConfig, result: RawConfig): void {
 	if (!config.domains || config.domains.length === 0) {
 		return;
 	}
@@ -796,7 +799,7 @@ function convertDomains(config: Config, result: RawConfig): void {
 // TAIL CONSUMERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertTailConsumers(config: Config, result: RawConfig): void {
+function convertTailConsumers(config: ParsedConfig, result: RawConfig): void {
 	const consumers = config.tailConsumers;
 	if (!consumers || consumers.length === 0) {
 		return;

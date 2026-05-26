@@ -1,5 +1,4 @@
-import type { WorkerModule } from "./config";
-import type { Config } from "./schema";
+import type { UserConfig } from "./types";
 
 export type {
 	Bindings,
@@ -45,7 +44,7 @@ export type {
 	WorkflowBinding,
 } from "./config";
 export { createBindings, bindings } from "./config";
-export type { Config } from "./schema";
+export type { UserConfig } from "./types";
 export { ConfigSchema } from "./schema";
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";
@@ -59,13 +58,6 @@ export interface ConfigContext {
 	 * config is being evaluated in (e.g. `"development"`, `"production"`).
 	 */
 	mode: string;
-}
-
-/**
- * Use `bindings` or `createBindings<TConfig>()` to create binding definitions for `env`.
- */
-interface UserConfig extends Omit<Config, "entrypoint"> {
-	entrypoint?: WorkerModule | string;
 }
 
 type ConfigFnObject = (ctx: ConfigContext) => UserConfig;
