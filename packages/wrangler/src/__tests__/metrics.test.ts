@@ -38,7 +38,7 @@ vi.mock("../metrics/send-event");
 vi.mock("../package-manager");
 vi.mocked(getMetricsConfig).mockReset();
 
-/* eslint-disable @typescript-eslint/no-namespace, no-shadow-restricted-names, no-unused-vars */
+/* eslint-disable @typescript-eslint/no-namespace, no-shadow-restricted-names, no-unused-vars -- Required for globalThis type augmentation in tests */
 declare namespace globalThis {
 	let ALGOLIA_APP_ID: string | undefined;
 	let ALGOLIA_PUBLIC_KEY: string | undefined;

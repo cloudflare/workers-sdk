@@ -1279,8 +1279,7 @@ describe("generate types - CLI", () => {
 				name: "test-name",
 				main: "./index.ts",
 				vars: bindingsConfigMock.vars,
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			} as any),
+			}),
 			"utf-8"
 		);
 		await runWrangler("types");

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports */
+/* eslint-disable @typescript-eslint/consistent-type-imports -- Setup file uses dynamic imports where typeof requires value imports */
 import { PassThrough } from "node:stream";
 import chalk from "chalk";
 import { passthrough } from "msw";
@@ -10,7 +10,7 @@ chalk.level = 0;
 
 // In general we don't want the ConfigController to watch the config files
 // as this tends to make the tests flaky.
-// eslint-disable-next-line turbo/no-undeclared-env-vars
+// eslint-disable-next-line turbo/no-undeclared-env-vars -- Test-only env var to prevent flaky config file watching
 process.env.WRANGLER_CI_DISABLE_CONFIG_WATCHING = "true";
 
 /**

@@ -67,7 +67,7 @@ function getSourceMappingPrepareStackTrace(
 		return sourceMappingPrepareStackTrace;
 	}
 
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof requires a value import, not a type import
 	const support: typeof import("@cspotcode/source-map-support") =
 		getFreshSourceMapSupport();
 	const originalPrepareStackTrace = Error.prepareStackTrace;
@@ -190,7 +190,7 @@ export function getSourceMappedString(
 const CALL_SITE_REGEXP =
 	// Validation errors from `wrangler deploy` have a 2 space indent, whereas
 	// regular stack traces have a 4 space indent.
-	// eslint-disable-next-line no-control-regex
+	// eslint-disable-next-line no-control-regex -- Intentionally matches ANSI escape sequences in stack traces
 	/^(?:\s+(?:\x1B\[\d+m)?'?)? {2,4}at (?:(.+?)\s+\()?(?:(.+?):(\d+)(?::(\d+))?|([^)]+))\)?/gm;
 function lineMatchToCallSite(lineMatch: RegExpMatchArray): CallSite {
 	let object: string | null = null;
@@ -271,7 +271,7 @@ class CallSite implements NodeJS.CallSite {
 	getTypeName(): string | null {
 		return this.opts.typeName;
 	}
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- V8 CallSite interface requires Function return type
 	getFunction(): Function | undefined {
 		return undefined;
 	}

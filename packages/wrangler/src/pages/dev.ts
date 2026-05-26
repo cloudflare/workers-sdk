@@ -406,7 +406,9 @@ export const pagesDevCommand = createCommand({
 			ai,
 		} = getBindingsFromArgs(args);
 
-		let scriptReadyResolve: () => void;
+		// Note: we initialize scriptReadyResolve to an no-op function, mainly for making
+		//       typescript happy, it will be properly re-assigned before used
+		let scriptReadyResolve: () => void = () => {};
 		const scriptReadyPromise = new Promise<void>(
 			(promiseResolve) => (scriptReadyResolve = promiseResolve)
 		);
@@ -815,8 +817,7 @@ export const pagesDevCommand = createCommand({
 		// Depending on the result of building Functions, we may not actually be using
 		// Functions even if the directory exists.
 		if (!usingFunctions && !usingWorkerScript) {
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			scriptReadyResolve!();
+			scriptReadyResolve();
 
 			logger.log("No Functions. Shimming...");
 			scriptPath = resolve(getBasePath(), "templates/pages-shim.ts");
