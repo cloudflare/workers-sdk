@@ -52,8 +52,14 @@ export { convertToWranglerConfig } from "./convert";
 export { loadConfig, registerConfigHooks } from "./load";
 export type { LoadConfigResult } from "./load";
 
-// oxlint-disable-next-line typescript/no-empty-object-type -- base type to be merged with consumer's
-export interface ConfigContext {}
+// TODO: Use declaration merging in the consuming package once this package is published
+export interface ConfigContext {
+	/**
+	 * The Vite [`mode`](https://vite.dev/guide/env-and-mode.html#modes) the
+	 * config is being evaluated in (e.g. `"development"`, `"production"`).
+	 */
+	mode: string;
+}
 
 /**
  * Use `bindings` or `createBindings<TConfig>()` to create binding definitions for `env`.
