@@ -17,7 +17,7 @@ jobs:
     runs-on: macos-latest-large
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           # See https://github.com/changesets/action/issues/187
           token: ${{ secrets.GH_ACCESS_TOKEN }}
@@ -66,7 +66,7 @@ jobs:
       # builds native modules (tree-sitter) that are not compatible with
       # Node 24's C++20 requirement for V8 headers.
       - name: Switch to Node 22 for non-npm package deployments
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
 

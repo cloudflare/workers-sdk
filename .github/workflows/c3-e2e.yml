@@ -44,7 +44,7 @@ jobs:
     runs-on: ${{ matrix.os.name }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
@@ -95,7 +95,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }} # Needed for begit to clone the repo in the e2e tests for solid-start
 
       - name: Upload Logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
           name: ${{ format('e2e-logs-{0}-{1}-{2}-{3}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
@@ -103,7 +103,7 @@ jobs:
           include-hidden-files: true
 
       - name: Upload Turbo Summary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
           name: ${{ format('turbo-runs-{0}-{1}-{2}-{3}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
@@ -132,7 +132,7 @@ jobs:
     runs-on: ${{ matrix.os.name }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
@@ -209,7 +209,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Upload Logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
           name: ${{ format('e2e-logs-{0}-{1}-{2}-frameworks', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
@@ -217,7 +217,7 @@ jobs:
           include-hidden-files: true
 
       - name: Upload Turbo Summary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
           name: ${{ format('turbo-runs-{0}-{1}-{2}-frameworks', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
