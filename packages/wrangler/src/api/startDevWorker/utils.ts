@@ -709,7 +709,11 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 					WorkerMetadataBinding,
 					{ type: "pipelines" }
 				>;
-				output[name] = { type: "pipeline", pipeline: b.pipeline };
+				output[name] = {
+					type: "pipeline",
+					stream: b.stream,
+					pipeline: b.pipeline,
+				};
 				break;
 			}
 			case "browser":
