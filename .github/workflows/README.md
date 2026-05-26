@@ -4,6 +4,21 @@ See below for a summary of this repo's Actions
 
 - _Actions marked with "⚠️" are expected to sometimes fail._
 
+## Security auditing
+
+We use [`zizmor`](https://docs.zizmor.sh/) to audit GitHub Actions workflow definitions and keep CI workflows as safe as possible. When changing files in this directory, run:
+
+```sh
+zizmor .github/workflows/*.yml
+```
+
+Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
+
+- Pin external actions to immutable commit SHAs, not tags.
+- Set `persist-credentials: false` on `actions/checkout` unless the job intentionally needs persisted Git credentials.
+- Pass GitHub expression values into shell steps through `env` instead of expanding `${{ ... }}` directly inside `run` blocks.
+- Treat privileged triggers such as `pull_request_target` and `workflow_run` as security-sensitive. If a privileged trigger is required, document the safety model and add a targeted `zizmor` ignore with a reason.
+
 ## PR related actions
 
 ### Tests + Checks (test-and-check.yml)
