@@ -21,6 +21,10 @@
 		".": {
 			"types": "./dist/index.d.mts",
 			"import": "./dist/index.mjs"
+		},
+		"./public": {
+			"types": "./dist/public.d.mts",
+			"import": "./dist/public.mjs"
 		}
 	},
 	"scripts": {
