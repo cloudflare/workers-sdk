@@ -42,7 +42,17 @@ type DevOnly = boolean | (() => boolean);
 interface EntryWorkerConfig extends BaseWorkerConfig {
 	configPath?: string;
 	config?: WorkerConfigCustomizer<true>;
-	devOnly?: DevOnly;
+	/**
+	 * Whether the entry Worker should be omitted from the production build.
+	 * Can be a boolean or a function that returns a boolean. The function is
+	 * evaluated lazily at build time, allowing frameworks to provide the value
+	 * after initialization.
+	 *
+	 * When set, an assets-only Wrangler config is emitted to the client output
+	 * directory. This enables using server-side code in development but producing
+	 * a fully static app for deployment.
+	 */
+	assetsOnly?: DevOnly;
 }
 
 interface AuxiliaryWorkerFileConfig extends BaseWorkerConfig {
@@ -440,7 +450,7 @@ export function resolvePluginConfig(
 
 	environmentNameToWorkerMap.set(
 		entryWorkerEnvironmentName,
-		resolveWorker(entryWorkerResolvedConfig.config, pluginConfig.devOnly)
+		resolveWorker(entryWorkerResolvedConfig.config, pluginConfig.assetsOnly)
 	);
 
 	const entryWorkerChildEnvironments =

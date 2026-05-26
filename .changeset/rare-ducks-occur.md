@@ -2,9 +2,23 @@
 "@cloudflare/vite-plugin": minor
 ---
 
-Add per-Worker `devOnly` option to the plugin config
+Add `assetsOnly` (entry Worker) and `devOnly` (auxiliary Workers) options to the plugin config
 
-This determines if the given Worker should be built. It accepts a `boolean` or a function that returns a `boolean`. The function is evaluated lazily at build time, allowing frameworks to provide the value after initialization.
+Both options accept a `boolean` or a function that returns a `boolean`. The function is evaluated lazily at build time, allowing frameworks to provide the value after initialization.
+
+Use `assetsOnly` on the entry Worker to skip building the Worker and instead emit an assets-only Wrangler config to the client output directory. This enables frameworks such as Astro to use the `ssr` environment during development but produce a fully static app for deployment.
+
+```ts
+export default defineConfig({
+	plugins: [
+		cloudflare({
+			assetsOnly: () => isStaticBuild,
+		}),
+	],
+});
+```
+
+Use `devOnly` on an auxiliary Worker to include it during `vite dev` but skip it at build time.
 
 ```ts
 export default defineConfig({
@@ -17,5 +31,3 @@ export default defineConfig({
 	],
 });
 ```
-
-Some frameworks, such as Astro, use the `ssr` environment during development but omit it from the build if the app is fully static. In these cases, we now output an assets only version of the user's input Wrangler config to the output config in the client output directory.

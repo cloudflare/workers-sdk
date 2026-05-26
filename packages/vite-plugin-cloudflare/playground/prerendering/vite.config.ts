@@ -5,7 +5,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig, preview } from "vite";
 import { satisfiesMinimumViteVersion } from "../__test-utils__/vite-version";
 
-export function createConfig(devOnlySsr: boolean) {
+export function createConfig(assetsOnly: boolean) {
 	return defineConfig(
 		// These playground tests don't run in Vite 6 because the feature is not compatible
 		// We return an empty Vite config so that the preview server can still start
@@ -17,7 +17,7 @@ export function createConfig(devOnlySsr: boolean) {
 							inspectorPort: false,
 							persistState: false,
 							viteEnvironment: { name: "ssr" },
-							devOnly: () => devOnlySsr,
+							assetsOnly: () => assetsOnly,
 							experimental: {
 								prerenderWorker: {
 									config(_, { entryWorkerConfig }) {
