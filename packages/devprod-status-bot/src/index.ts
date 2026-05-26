@@ -19,7 +19,7 @@ async function getBotMessage(ai: Ai, prompt: string) {
 				role: "user",
 				content: prompt,
 			},
-		]
+		],
 	} satisfies ChatCompletionsMessagesInput;
 	const message = (await ai.run("@cf/google/gemma-4-26b-a4b-it", chat)) as {
 		choices?: { message: { content: string } }[];
