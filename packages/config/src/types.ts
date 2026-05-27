@@ -106,7 +106,7 @@ type Export = DurableObjectExport | WorkflowExport;
 
 /**
  * Worker configuration. This is the input shape passed to
- * [`defineConfig`](https://developers.cloudflare.com/workers/wrangler/configuration/).
+ * [`defineWorker`](https://developers.cloudflare.com/workers/wrangler/configuration/).
  *
  * Fields are validated at runtime by `ConfigSchema` and normalised before
  * being passed to downstream tooling.
@@ -153,7 +153,7 @@ export interface UserConfig {
 	 * @example
 	 * ```ts
 	 * import * as entrypoint from "./src" with { type: "cf-worker" };
-	 * export default defineConfig({ entrypoint });
+	 * export default defineWorker({ entrypoint });
 	 * ```
 	 */
 	entrypoint?: string | WorkerModule;
