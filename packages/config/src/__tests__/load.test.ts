@@ -54,12 +54,12 @@ describe("loadConfig", () => {
 		expect,
 	}) => {
 		await seed({
-			"worker.config.mjs": `export default { name: "my-worker" };`,
+			"worker.config.ts": `export default { name: "my-worker" };`,
 		});
 
 		const result = runLoadConfigInSubprocess({
 			cwd: process.cwd(),
-			configPath: "./worker.config.mjs",
+			configPath: "./worker.config.ts",
 		});
 
 		expect(result.config).toEqual({ name: "my-worker" });
@@ -69,33 +69,33 @@ describe("loadConfig", () => {
 		expect,
 	}) => {
 		await seed({
-			"src/index.mjs": `throw new Error("entrypoint must not be executed at config load time");`,
-			"worker.config.mjs": `
-				import * as entrypoint from "./src/index.mjs" with { type: "cf-worker" };
+			"src/index.ts": `throw new Error("entrypoint must not be executed at config load time");`,
+			"worker.config.ts": `
+				import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 				export default { name: "w", entrypoint };
 			`,
 		});
 
 		const result = runLoadConfigInSubprocess({
 			cwd: process.cwd(),
-			configPath: "./worker.config.mjs",
+			configPath: "./worker.config.ts",
 		});
 
 		expect(
 			(result.config as { entrypoint: { default: string } }).entrypoint
-		).toEqual({ default: "./src/index.mjs" });
+		).toEqual({ default: "./src/index.ts" });
 		// The entrypoint is referenced for its specifier only; changes to
 		// its source must not trigger a config reload, so it is not tracked.
-		expect(result.dependencies).not.toContain(path.resolve("src/index.mjs"));
+		expect(result.dependencies).not.toContain(path.resolve("src/index.ts"));
 		// The config file itself is still tracked.
-		expect(result.dependencies).toContain(path.resolve("worker.config.mjs"));
+		expect(result.dependencies).toContain(path.resolve("worker.config.ts"));
 	});
 
 	it("passes bare and virtual cf-worker specifiers through verbatim", async ({
 		expect,
 	}) => {
 		await seed({
-			"worker.config.mjs": `
+			"worker.config.ts": `
 				import * as bare from "@example-package/some-module" with { type: "cf-worker" };
 				import * as virtual from "virtual:some-module" with { type: "cf-worker" };
 				export default { name: "w", bare, virtual };
@@ -104,7 +104,7 @@ describe("loadConfig", () => {
 
 		const result = runLoadConfigInSubprocess({
 			cwd: process.cwd(),
-			configPath: "./worker.config.mjs",
+			configPath: "./worker.config.ts",
 		});
 
 		expect(
@@ -122,27 +122,27 @@ describe("loadConfig", () => {
 		expect,
 	}) => {
 		await seed({
-			"src/index.mjs": `// not executed`,
-			"worker.config.mjs": `
-				import * as entrypoint from "./src/index.mjs" with { type: "cf-worker" };
+			"src/index.ts": `// not executed`,
+			"worker.config.ts": `
+				import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 				export default { name: "w", entrypoint };
 			`,
 		});
 
 		const result = runLoadConfigInSubprocess({
 			cwd: process.cwd(),
-			configPath: "./worker.config.mjs",
+			configPath: "./worker.config.ts",
 		});
 		const parsed = ConfigSchema.parse(result.config);
 
-		expect(parsed.entrypoint).toBe("./src/index.mjs");
+		expect(parsed.entrypoint).toBe("./src/index.ts");
 	});
 
 	it("reloads the config when the file changes between calls in the same process", async ({
 		expect,
 	}) => {
 		await seed({
-			"worker.config.mjs": `export default { name: "first" };`,
+			"worker.config.ts": `export default { name: "first" };`,
 		});
 
 		const sourceEntry = pathToFileURL(
@@ -151,9 +151,9 @@ describe("loadConfig", () => {
 		const script = `
 			import { writeFileSync } from "node:fs";
 			import { loadConfig } from ${JSON.stringify(sourceEntry)};
-			const first = await loadConfig("./worker.config.mjs");
-			writeFileSync("./worker.config.mjs", 'export default { name: "second" };');
-			const second = await loadConfig("./worker.config.mjs");
+			const first = await loadConfig("./worker.config.ts");
+			writeFileSync("./worker.config.ts", 'export default { name: "second" };');
+			const second = await loadConfig("./worker.config.ts");
 			process.stdout.write(JSON.stringify({
 				first: first.config,
 				second: second.config,
@@ -179,20 +179,20 @@ describe("loadConfig", () => {
 		expect,
 	}) => {
 		await seed({
-			"helper.mjs": `export const value = 42;`,
-			"worker.config.mjs": `
-				import { value } from "./helper.mjs";
+			"helper.ts": `export const value = 42;`,
+			"worker.config.ts": `
+				import { value } from "./helper.ts";
 				export default { name: "w", value };
 			`,
 		});
 
 		const result = runLoadConfigInSubprocess({
 			cwd: process.cwd(),
-			configPath: "./worker.config.mjs",
+			configPath: "./worker.config.ts",
 		});
 
-		const configPath = path.resolve("worker.config.mjs");
-		const helperPath = path.resolve("helper.mjs");
+		const configPath = path.resolve("worker.config.ts");
+		const helperPath = path.resolve("helper.ts");
 		expect(result.dependencies).toContain(configPath);
 		expect(result.dependencies).toContain(helperPath);
 	});
@@ -207,7 +207,7 @@ describe("loadConfig", () => {
 				main: "./index.mjs",
 			}),
 			"node_modules/fake-pkg/index.mjs": `export const value = "from-pkg";`,
-			"worker.config.mjs": `
+			"worker.config.ts": `
 				import { value } from "fake-pkg";
 				export default { name: "w", value };
 			`,
@@ -215,12 +215,12 @@ describe("loadConfig", () => {
 
 		const result = runLoadConfigInSubprocess({
 			cwd: process.cwd(),
-			configPath: "./worker.config.mjs",
+			configPath: "./worker.config.ts",
 		});
 
 		const pkgPath = path.resolve("node_modules/fake-pkg/index.mjs");
 		expect(result.dependencies).not.toContain(pkgPath);
 		// Sanity: the config file itself is still tracked.
-		expect(result.dependencies).toContain(path.resolve("worker.config.mjs"));
+		expect(result.dependencies).toContain(path.resolve("worker.config.ts"));
 	});
 });
