@@ -483,7 +483,10 @@ function convertBindingsAndAssets(
 				break;
 			}
 			case "vpc-network": {
-				if ("tunnelId" in binding) {
+				// The schema's `superRefine` guarantees exactly one of `tunnelId`
+				// or `networkId` is defined, so an `else` branch on the
+				// `tunnelId` check is sufficient.
+				if (binding.tunnelId !== undefined) {
 					vpcNetworks.push(
 						omitUndefined({
 							binding: name,
@@ -491,7 +494,7 @@ function convertBindingsAndAssets(
 							remote: binding.remote,
 						})
 					);
-				} else {
+				} else if (binding.networkId !== undefined) {
 					vpcNetworks.push(
 						omitUndefined({
 							binding: name,
