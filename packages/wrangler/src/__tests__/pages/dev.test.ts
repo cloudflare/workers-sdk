@@ -6,6 +6,7 @@ import {
 import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { ExpectStatic } from "vitest";
 
 const startDevMock = vi.hoisted(() => vi.fn());
 
@@ -19,6 +20,30 @@ vi.mock("../../dev/start-dev", async () => {
 		}),
 	};
 });
+
+async function expectPagesDevToPassConfigPath(
+	expect: ExpectStatic,
+	files: Record<string, string> = {}
+) {
+	await seed({ "public/index.html": "", ...files });
+	writeWranglerConfig({ pages_build_output_dir: "public" });
+	const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
+		throw new Error("process.exit");
+	}) as typeof process.exit);
+
+	try {
+		await expect(runWrangler("pages dev")).rejects.toThrow("process.exit");
+
+		expect(exitSpy).toHaveBeenCalledWith(0);
+		expect(startDevMock).toHaveBeenCalledWith(
+			expect.objectContaining({
+				config: expect.stringMatching(/wrangler\.toml$/),
+			})
+		);
+	} finally {
+		exitSpy.mockRestore();
+	}
+}
 
 /**
  * Given that `runWrangler()` mocks out the underlying implementation
@@ -68,22 +93,37 @@ describe("pages dev", () => {
 		);
 	});
 
-	it("should pass the discovered config path to startDev", async ({
+	it("should pass the discovered config path to startDev without package.json", async ({
+		expect,
+	}) => {
+		await expectPagesDevToPassConfigPath(expect);
+	});
+
+	it("should pass the discovered config path to startDev with package.json", async ({
+		expect,
+	}) => {
+		await expectPagesDevToPassConfigPath(expect, { "package.json": "{}" });
+	});
+
+	it("should not pass a config path to startDev when no config exists", async ({
 		expect,
 	}) => {
 		await seed({ "public/index.html": "" });
-		writeWranglerConfig({ pages_build_output_dir: "public" });
 		const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
 			throw new Error("process.exit");
 		}) as typeof process.exit);
 
-		await expect(runWrangler("pages dev")).rejects.toThrow("process.exit");
+		try {
+			await expect(runWrangler("pages dev public")).rejects.toThrow(
+				"process.exit"
+			);
 
-		expect(exitSpy).toHaveBeenCalledWith(0);
-		expect(startDevMock).toHaveBeenCalledWith(
-			expect.objectContaining({
-				config: expect.stringMatching(/wrangler\.toml$/),
-			})
-		);
+			expect(exitSpy).toHaveBeenCalledWith(0);
+			expect(startDevMock).toHaveBeenCalledWith(
+				expect.objectContaining({ config: undefined })
+			);
+		} finally {
+			exitSpy.mockRestore();
+		}
 	});
 });
