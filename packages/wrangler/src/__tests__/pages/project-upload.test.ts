@@ -1,4 +1,3 @@
-// /* eslint-disable no-shadow */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
