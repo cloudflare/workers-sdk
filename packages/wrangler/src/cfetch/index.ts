@@ -9,8 +9,11 @@ import { fetchListResultBase } from "../../../workers-utils/src";
 import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { fetchInternal, resolveCredentials } from "./internal";
-import type { ApiCredentials } from "../user";
-import type { ComplianceConfig, FetchResult } from "@cloudflare/workers-utils";
+import type {
+	ComplianceConfig,
+	FetchResult,
+	ApiCredentials,
+} from "@cloudflare/workers-utils";
 import type { RequestInit } from "undici";
 
 // Check out https://api.cloudflare.com/ for API docs.

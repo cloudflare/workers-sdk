@@ -11,9 +11,14 @@ import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Logger } from "../logger";
 import type { HeadersInit, RequestInit } from "undici";
 
-export type CloudflareApiCredentials =
-	| { apiToken: string }
-	| { authKey: string; authEmail: string };
+export type ApiCredentials =
+	| {
+			apiToken: string;
+	  }
+	| {
+			authKey: string;
+			authEmail: string;
+	  };
 
 export interface FetchResult<ResponseType = unknown> {
 	success: boolean;
@@ -53,7 +58,7 @@ export async function performApiFetchBase(
 	logger: Logger,
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal,
-	credentials?: CloudflareApiCredentials
+	credentials?: ApiCredentials
 ): Promise<Response> {
 	assert(credentials, "credentials are required for performApiFetch");
 	const method = init.method ?? "GET";
@@ -102,7 +107,7 @@ export async function fetchInternalBase<ResponseType>(
 	logger: Logger,
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal,
-	credentials?: CloudflareApiCredentials
+	credentials?: ApiCredentials
 ): Promise<{ response: ResponseType; status: number }> {
 	const method = init.method ?? "GET";
 	const response = await performApiFetchBase(
@@ -178,7 +183,7 @@ export async function fetchResultBase<ResponseType>(
 	logger: Logger,
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal,
-	credentials?: CloudflareApiCredentials
+	credentials?: ApiCredentials
 ): Promise<ResponseType> {
 	const { response: json, status } = await fetchInternalBase<
 		FetchResult<ResponseType>
@@ -206,7 +211,7 @@ export async function fetchListResultBase<ResponseType>(
 	userAgent: string,
 	logger: Logger,
 	queryParams?: URLSearchParams,
-	credentials?: CloudflareApiCredentials
+	credentials?: ApiCredentials
 ): Promise<ResponseType[]> {
 	const results: ResponseType[] = [];
 	let getMoreResults = true;
@@ -318,7 +323,7 @@ export function renderError(
 
 export function addAuthorizationHeader(
 	headers: Headers,
-	auth: CloudflareApiCredentials,
+	auth: ApiCredentials,
 	overrideExisting = false
 ): void {
 	if (!headers.has("Authorization") || overrideExisting) {

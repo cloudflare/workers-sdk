@@ -251,18 +251,12 @@ import { fetchAllAccounts } from "./fetch-accounts";
 import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { Account } from "./shared";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type {
+	ApiCredentials,
+	ComplianceConfig,
+} from "@cloudflare/workers-utils";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
-
-export type ApiCredentials =
-	| {
-			apiToken: string;
-	  }
-	| {
-			authKey: string;
-			authEmail: string;
-	  };
 
 /**
  * Try to read API credentials from environment variables.

@@ -11,9 +11,8 @@ import { fetch, FormData, Headers, Request, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
-import type { ApiCredentials } from "../user";
 import type {
-	CloudflareApiCredentials,
+	ApiCredentials,
 	ComplianceConfig,
 	Message,
 } from "@cloudflare/workers-utils";
@@ -152,7 +151,7 @@ function cloneHeaders(headers: HeadersInit | undefined): Headers {
 export async function resolveCredentials(
 	complianceConfig: ComplianceConfig,
 	apiToken?: ApiCredentials
-): Promise<CloudflareApiCredentials> {
+): Promise<ApiCredentials> {
 	await requireLoggedIn(complianceConfig);
 	return apiToken ?? requireApiToken();
 }
