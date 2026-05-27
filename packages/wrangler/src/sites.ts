@@ -18,7 +18,11 @@ import {
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
 import type { KeyValue } from "./kv/helpers";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type {
+	ComplianceConfig,
+	Config,
+	LegacyAssetPaths,
+} from "@cloudflare/workers-utils";
 import type { XXHashAPI } from "xxhash-wasm";
 
 /** Paths to always ignore. */
@@ -439,30 +443,6 @@ function validateAssetKey(assetKey: string) {
  */
 function urlSafe(filePath: string): string {
 	return filePath.replace(/\\/g, "/");
-}
-
-/**
- * Information about the assets that should be uploaded
- */
-export interface LegacyAssetPaths {
-	/**
-	 * Absolute path to the root of the project.
-	 *
-	 * This is the directory containing wrangler.toml or cwd if no config.
-	 */
-	baseDirectory: string;
-	/**
-	 * The path to the assets directory, relative to the `baseDirectory`.
-	 */
-	assetDirectory: string;
-	/**
-	 * An array of patterns that match files that should be uploaded.
-	 */
-	includePatterns: string[];
-	/**
-	 * An array of patterns that match files that should not be uploaded.
-	 */
-	excludePatterns: string[];
 }
 
 /**

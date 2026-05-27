@@ -192,7 +192,7 @@ export interface CfWorkflow {
 	limits?: {
 		steps?: number;
 	};
-	schedule?: string | string[];
+	schedules?: string | string[];
 }
 
 export interface CfQueue {
@@ -345,7 +345,8 @@ export interface CfAssetsBinding {
 
 export interface CfPipeline {
 	binding: string;
-	pipeline: string;
+	stream?: string;
+	pipeline?: string;
 	remote?: boolean;
 }
 

@@ -213,7 +213,7 @@ export interface PipelineTypeResult {
  */
 export async function fetchPipelineTypes(
 	config: Config,
-	pipelines: Array<{ binding: string; pipeline: string }>
+	pipelines: Array<{ binding: string; stream?: string; pipeline?: string }>
 ): Promise<PipelineTypeResult[]> {
 	if (pipelines.length === 0) {
 		return [];
@@ -233,7 +233,15 @@ export async function fetchPipelineTypes(
 
 	// Fetch all streams in parallel for better performance
 	const streams = await Promise.all(
-		pipelines.map((p) => fetchStream(config, p.pipeline))
+		pipelines.map((p) => {
+			const streamID = p.stream || p.pipeline;
+			if (!streamID) {
+				throw new Error(
+					`Pipeline binding ${p.binding} is missing the stream ID`
+				);
+			}
+			return fetchStream(config, streamID);
+		})
 	);
 
 	const results = pipelines.map((pipeline, i) => {

@@ -146,13 +146,6 @@ export const sharedDeployVersionsArgs = {
 			"Compile a project and run checks without actually uploading the Worker",
 		type: "boolean",
 	},
-	"experimental-auto-create": {
-		describe: "Automatically provision draft bindings with new resources",
-		type: "boolean",
-		default: true,
-		hidden: true,
-		alias: "x-auto-create",
-	},
 	"secrets-file": {
 		describe:
 			"Path to a file containing secrets to upload with the version (JSON or .env format). Applies additively with secrets from previous deployments - omitted secrets will not be deleted.",
@@ -167,6 +160,20 @@ export const sharedDeployVersionsArgs = {
 			"Note that secrets are never deleted by deployments.",
 		default: false,
 		type: "boolean",
+	},
+	"experimental-auto-create": {
+		describe: "Automatically provision draft bindings with new resources",
+		type: "boolean",
+		default: true,
+		hidden: true,
+		alias: "x-auto-create",
+	},
+	"experimental-deploy-helpers": {
+		describe: "Experimental: Gates refactored deploy/upload path",
+		type: "boolean",
+		default: false,
+		hidden: true,
+		alias: ["x-deploy-helpers"],
 	},
 } as const satisfies NamedArgDefinitions;
 

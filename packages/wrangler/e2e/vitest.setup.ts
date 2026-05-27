@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
 // eslint-disable-next-line no-restricted-imports -- We need to import `expect` from "vitest" so that we can extend it
 import { expect } from "vitest";
 
@@ -7,8 +6,10 @@ interface CustomMatchers {
 }
 
 declare module "vitest" {
+	/* eslint-disable @typescript-eslint/no-empty-object-type -- Required for vitest module augmentation with empty interfaces */
 	interface Assertion extends CustomMatchers {}
 	interface AsymmetricMatchersContaining extends CustomMatchers {}
+	/* eslint-enable @typescript-eslint/no-empty-object-type */
 }
 
 expect.extend({

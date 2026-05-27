@@ -4,6 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"build:default": "vite build",
+		"build:assets-only": "vite build -c ./vite.config.assets-only.ts",
 		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"preview": "vite preview"
