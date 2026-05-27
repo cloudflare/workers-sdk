@@ -1318,10 +1318,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
 		return { versionId, workerTag };
 	}
-
+	assert(accountId);
 	// deploy triggers
 	const targets = await triggersDeploy({
-		...props,
+		config,
+		accountId,
+		scriptName,
+		env: props.env,
+		crons: props.triggers,
+		useServiceEnvironments,
 		firstDeploy: !workerExists,
 		routes: allDeploymentRoutes,
 	});
