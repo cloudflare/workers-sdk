@@ -57,34 +57,162 @@ export type InspectorOptions = Exclude<
 >;
 
 export type ServerOptions = {
+	/**
+	 * Base directory used to resolve relative worker config paths and persist paths.
+	 * Defaults to `process.cwd()`.
+	 */
 	root?: string | undefined;
+	/**
+	 * Workers to run in this server. The first worker is the primary worker.
+	 */
 	workers: WorkerInput[];
+	/**
+	 * Host, port, and protocol options for the public server.
+	 * Defaults to `{ hostname: "127.0.0.1", port: 0 }`.
+	 */
 	server?: DevServerOptions | undefined;
+	/**
+	 * Inspector options for debugging Workers. Set to `false` to disable.
+	 * Defaults to `false`.
+	 */
 	inspector?: InspectorOptions | undefined;
+	/**
+	 * Controls local storage persistence.
+	 * Defaults to `false` for ephemeral storage. Set to a path to persist storage there.
+	 */
 	persist?: boolean | string | undefined;
+	/**
+	 * Whether to watch worker source/config files and reload on changes.
+	 * Defaults to `false`.
+	 */
 	watch?: boolean | undefined;
+	/**
+	 * Minimum Wrangler log level emitted while running the server.
+	 * Defaults to `"error"`.
+	 */
 	logLevel?: LogLevel | undefined;
+	/**
+	 * Cloudflare account ID used when an operation requires account context.
+	 * Defaults to the account selected by Wrangler auth when needed.
+	 */
 	accountId?: string | undefined;
+	/**
+	 * Whether bindings configured with `remote: true` may connect to remote resources.
+	 * Defaults to `false`.
+	 */
 	allowRemoteBindings?: boolean | undefined;
+	/**
+	 * Handles outbound `fetch()` calls from Workers.
+	 * Defaults to the current process `fetch`.
+	 */
 	outboundService?: ServiceFetch | undefined;
 };
 
-export type Worker = {
+export type WorkerHandle = {
+	/**
+	 * Dispatches a fetch event directly to this worker.
+	 * Relative URL inputs are resolved against the current server URL.
+	 *
+	 * @example
+	 * ```ts
+	 * const response = await worker.fetch("/", {
+	 *   method: "POST",
+	 *   body: "Hello, world!"
+	 * });
+	 * ```
+	 */
 	fetch: DispatchFetch;
+	/**
+	 * Dispatches a scheduled event directly to this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * const result = await worker.scheduled({
+	 *   cron: "0 * * * *",
+	 *   scheduledTime: new Date(),
+	 * });
+	 * ```
+	 */
 	scheduled(options: FetcherScheduledOptions): Promise<FetcherScheduledResult>;
 };
 
 export type WorkerServer = {
+	/**
+	 * Starts the server and returns its current URL.
+	 * Calling this more than once returns the same running server session until
+	 * the server is closed or reset by an operation such as `clearStorage()`.
+	 */
 	listen(): Promise<{
 		url: URL;
 		inspectorUrl: URL | undefined;
 	}>;
+	/**
+	 * Dispatches a fetch request through the server.
+	 *
+	 * - Relative URLs are resolved against the current server URL. Absolute URLs
+	 * are also accepted, and can be used to control the hostname seen by the Worker.
+	 * - Requests are matched against each Worker's configured routes and dispatched to
+	 * the first matching Worker, or to the primary Worker if no routes match.
+	 * - To dispatch directly to a specific Worker, use `server.getWorker(name).fetch()`.
+	 *
+	 * @example
+	 * ```ts
+	 * const server = createServer({
+	 *   workers: [
+	 *     { configPath: "./wrangler.dashboard.jsonc" }, // No route pattern
+	 *     { configPath: "./wrangler.api.jsonc" }, // Route pattern: "example.com/api/*"
+	 *     { configPath: "./wrangler.admin.jsonc" }, // Route pattern: "admin.example.com/*"
+	 *   ]
+	 * });
+	 *
+	 * await server.fetch("/users");
+	 * // Dispatches a request to the dashboard Worker (the first Worker) with URL "http://localhost:{port}/users"
+	 *
+	 * await server.fetch("http://admin.example.com/accounts");
+	 * // Dispatches a request to the admin Worker with URL "http://admin.example.com/accounts"
+	 *
+	 * await server.fetch("http://example.com/api/data");
+	 * // Dispatches a request to the API Worker with URL "http://example.com/api/data"
+	 * ```
+	 */
 	fetch: DispatchFetch;
-	getWorker(name?: string): Worker;
+	/**
+	 * Returns a handle for dispatching events directly to a Worker.
+	 * When no name is provided, this returns the primary Worker, which is the first
+	 * Worker in the server's `workers` options.
+	 */
+	getWorker(name?: string): WorkerHandle;
+	/**
+	 * Updates the server configuration and reloads the running Workers.
+	 *
+	 * @example
+	 * ```ts
+	 * await server.update((options) => ({
+	 *   ...options,
+	 *   outboundService(request) {
+	 *     if (request.url === "http://example.com/api/data") {
+	 *       return Response.json([
+	 *         { id: 1, name: "Alice" },
+	 *         { id: 2, name: "Bob" }
+	 *       ]);
+	 *     }
+	 *
+	 *     throw new Error(`Unexpected request to ${request.url}`);
+	 *   },
+	 * }));
+	 * ```
+	 */
 	update(
 		options: ServerOptions | ((currentOptions: ServerOptions) => ServerOptions)
 	): Promise<void>;
+	/**
+	 * Clears local storage and restarts the server session.
+	 * The server URL may change after storage is cleared.
+	 */
 	clearStorage(): Promise<void>;
+	/**
+	 * Stops the server and releases all runtime resources.
+	 */
 	close(): Promise<void>;
 };
 
@@ -300,9 +428,20 @@ async function updateConfig(
 }
 
 /**
- * Creates a worker server with a small, migration-focused API surface.
+ * Creates a server that runs Workers locally.
  *
- * This intentionally reuses DevEnv/controller internals with minimal behavior changes.
+ * The server can run one or more Workers from Wrangler config files, including
+ * generated configs from vite, or from inline configuration objects.
+ *
+ * @example
+ * ```ts
+ * const server = createServer({
+ *   workers: [{ configPath: "./wrangler.jsonc" }],
+ * });
+ * await server.listen();
+ * const response = await server.fetch("/api/users");
+ * await server.close();
+ * ```
  */
 export function createServer(options: ServerOptions): WorkerServer {
 	let currentOptions = options;

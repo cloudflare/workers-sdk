@@ -63,6 +63,7 @@ export { createServer } from "./server";
 export type {
 	InspectorOptions,
 	ServerOptions,
+	WorkerHandle,
 	WorkerInput,
 	WorkerServer,
 } from "./server";
