@@ -321,13 +321,14 @@ async function recoverSecondaryEntriesFromTypesFile(
 
 		const rawArgs = await yargs(storedCommand).parse();
 		const configArg = rawArgs.config as string | string[] | undefined;
-		// The stored command contains only the secondary config paths (the primary
-		// config is never included since the user always passes it via -c).
-		const secondaryPaths = Array.isArray(configArg)
+		// The stored command has primary config first, then secondaries.
+		// Skip the first entry (primary — the user always re-passes it via -c).
+		const allConfigs = Array.isArray(configArg)
 			? configArg
 			: typeof configArg === "string"
 				? [configArg]
 				: [];
+		const secondaryPaths = allConfigs.slice(1);
 
 		if (secondaryPaths.length === 0) {
 			return new Map();
@@ -347,6 +348,17 @@ function buildGenerateTypesHeaderCommand(
 	resolvedOptions: ResolvedGenerateTypesOptions
 ): string {
 	const commandParts: string[] = ["wrangler", "types"];
+
+	// Store all config paths (primary first, then secondaries) so --check can
+	// recover secondary entries without requiring the user to re-pass every -c.
+	const configs = Array.isArray(options.config)
+		? options.config
+		: typeof options.config === "string"
+			? [options.config]
+			: [];
+	for (const configPath of configs) {
+		commandParts.push(`--config=${configPath}`);
+	}
 
 	if (options.env !== undefined) {
 		commandParts.push(`--env=${options.env}`);
@@ -374,14 +386,6 @@ function buildGenerateTypesHeaderCommand(
 
 	if (resolvedOptions.path !== DEFAULT_WORKERS_TYPES_FILE_NAME) {
 		commandParts.push(resolvedOptions.path);
-	}
-
-	// Store secondary config paths so `--check` can recover them without requiring
-	// the user to re-pass every `-c` flag.
-	if (Array.isArray(options.config) && options.config.length > 1) {
-		for (const configPath of options.config.slice(1)) {
-			commandParts.push(`--config=${configPath}`);
-		}
 	}
 
 	return commandParts.join(" ");
