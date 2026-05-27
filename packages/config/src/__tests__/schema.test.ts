@@ -206,3 +206,205 @@ describe("entrypoint", () => {
 		}
 	});
 });
+
+describe("unknown property rejection", () => {
+	it("rejects unknown top-level keys (typo)", ({ expect }) => {
+		const result = ConfigSchema.safeParse({
+			name: "w",
+			// Typo: should be `compatibilityDate`
+			compatibilityDates: "2025-01-01",
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find(
+				(i) => i.code === "unrecognized_keys"
+			);
+			expect(issue).toBeDefined();
+			expect(issue?.path).toEqual([]);
+			expect((issue as { keys?: string[] } | undefined)?.keys).toContain(
+				"compatibilityDates"
+			);
+		}
+	});
+
+	it("rejects unknown keys inside `assets`", ({ expect }) => {
+		const result = ConfigSchema.safeParse({
+			assets: {
+				// Typo: should be `htmlHandling`
+				htmlHnadling: "none",
+			},
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find(
+				(i) => i.code === "unrecognized_keys"
+			);
+			expect(issue).toBeDefined();
+			expect(issue?.path).toEqual(["assets"]);
+			expect((issue as { keys?: string[] } | undefined)?.keys).toContain(
+				"htmlHnadling"
+			);
+		}
+	});
+
+	it("rejects unknown keys inside a binding", ({ expect }) => {
+		const result = ConfigSchema.safeParse({
+			env: {
+				MY_KV: {
+					type: "kv",
+					// Typo: should be `id`
+					idd: "abc123",
+				},
+			},
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find(
+				(i) => i.code === "unrecognized_keys"
+			);
+			expect(issue).toBeDefined();
+			expect(issue?.path).toEqual(["env", "MY_KV"]);
+			expect((issue as { keys?: string[] } | undefined)?.keys).toContain("idd");
+		}
+	});
+
+	it("rejects unknown keys inside `observability.logs`", ({ expect }) => {
+		const result = ConfigSchema.safeParse({
+			observability: {
+				logs: {
+					enabled: true,
+					// Typo: should be `headSamplingRate`
+					sampleRate: 0.5,
+				},
+			},
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find(
+				(i) => i.code === "unrecognized_keys"
+			);
+			expect(issue).toBeDefined();
+			expect(issue?.path).toEqual(["observability", "logs"]);
+			expect((issue as { keys?: string[] } | undefined)?.keys).toContain(
+				"sampleRate"
+			);
+		}
+	});
+
+	it("rejects unknown keys inside a trigger", ({ expect }) => {
+		const result = ConfigSchema.safeParse({
+			triggers: [
+				{
+					type: "scheduled",
+					schedules: ["0 0 * * *"],
+					// Typo: not a real field
+					cronz: "0 0 * * *",
+				},
+			],
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find(
+				(i) => i.code === "unrecognized_keys"
+			);
+			expect(issue).toBeDefined();
+			expect(issue?.path).toEqual(["triggers", 0]);
+			expect((issue as { keys?: string[] } | undefined)?.keys).toContain(
+				"cronz"
+			);
+		}
+	});
+
+	it("still accepts unknown keys inside `unsafe` binding `value` (looseObject escape hatch)", ({
+		expect,
+	}) => {
+		const result = ConfigSchema.safeParse({
+			env: {
+				MY_UNSAFE: {
+					type: "unsafe",
+					value: {
+						type: "some-future-runtime-feature",
+						unknownField: { nested: 123 },
+						anotherUnknown: "ok",
+					},
+				},
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("still accepts arbitrary binding names in `env` (record, not object)", ({
+		expect,
+	}) => {
+		const result = ConfigSchema.safeParse({
+			env: {
+				MY_WEIRDLY_NAMED_BINDING_1234: { type: "kv" },
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+});
+
+describe("vpc-network binding", () => {
+	it("accepts a binding with `tunnelId`", ({ expect }) => {
+		const result = ConfigSchema.safeParse({
+			env: { V: { type: "vpc-network", tunnelId: "tun-1" } },
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts a binding with `networkId`", ({ expect }) => {
+		const result = ConfigSchema.safeParse({
+			env: { V: { type: "vpc-network", networkId: "net-1" } },
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects a binding with neither `tunnelId` nor `networkId`", ({
+		expect,
+	}) => {
+		const result = ConfigSchema.safeParse({
+			env: { V: { type: "vpc-network" } },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects a binding with both `tunnelId` and `networkId`", ({ expect }) => {
+		const result = ConfigSchema.safeParse({
+			env: {
+				V: { type: "vpc-network", tunnelId: "tun-1", networkId: "net-1" },
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects unknown keys on a `vpc-network` binding", ({ expect }) => {
+		const result = ConfigSchema.safeParse({
+			env: {
+				V: { type: "vpc-network", tunnelId: "tun-1", unknownField: "x" },
+			},
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find(
+				(i) => i.code === "unrecognized_keys"
+			);
+			expect(issue).toBeDefined();
+			expect((issue as { keys?: string[] } | undefined)?.keys).toContain(
+				"unknownField"
+			);
+		}
+	});
+});

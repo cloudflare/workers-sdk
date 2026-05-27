@@ -1,7 +1,7 @@
 import * as z from "zod";
 import type { UserConfig } from "./types";
 
-const AssetsSchema = z.object({
+const AssetsSchema = z.strictObject({
 	htmlHandling: z
 		.enum([
 			"auto-trailing-slash",
@@ -16,124 +16,140 @@ const AssetsSchema = z.object({
 	runWorkerFirst: z.union([z.array(z.string()), z.boolean()]).optional(),
 });
 
-const BindingSchema = z.union([
-	z.object({ type: z.literal("ai"), remote: z.boolean().optional() }),
-	z.object({
+const BindingSchema = z.discriminatedUnion("type", [
+	z.strictObject({ type: z.literal("ai"), remote: z.boolean().optional() }),
+	z.strictObject({
 		type: z.literal("ai-search"),
 		name: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("ai-search-namespace"),
 		namespace: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("analytics-engine-dataset"),
 		name: z.string().optional(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("artifacts"),
 		namespace: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({ type: z.literal("assets") }),
-	z.object({ type: z.literal("browser"), remote: z.boolean().optional() }),
-	z.object({
+	z.strictObject({ type: z.literal("assets") }),
+	z.strictObject({
+		type: z.literal("browser"),
+		remote: z.boolean().optional(),
+	}),
+	z.strictObject({
 		type: z.literal("d1"),
 		name: z.string().optional(),
 		id: z.string().optional(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("dispatch-namespace"),
 		namespace: z.string(),
 		outbound: z
-			.object({
+			.strictObject({
 				workerName: z.string(),
 				parameters: z.array(z.string()).optional(),
 			})
 			.optional(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("durable-object"),
 		workerName: z.string(),
 		exportName: z.string(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("flagship"),
 		id: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("hyperdrive"),
 		id: z.string(),
 		localConnectionString: z.string().optional(),
 	}),
-	z.object({ type: z.literal("images"), remote: z.boolean().optional() }),
-	z.object({ type: z.literal("json"), value: z.json() }),
-	z.object({
+	z.strictObject({
+		type: z.literal("images"),
+		remote: z.boolean().optional(),
+	}),
+	z.strictObject({ type: z.literal("json"), value: z.json() }),
+	z.strictObject({
 		type: z.literal("kv"),
 		id: z.string().optional(),
 		// TODO: name support not yet implemented
 		// name: z.string().optional(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({ type: z.literal("logfwdr"), destination: z.string() }),
-	z.object({ type: z.literal("media"), remote: z.boolean().optional() }),
-	z.object({
+	z.strictObject({ type: z.literal("logfwdr"), destination: z.string() }),
+	z.strictObject({
+		type: z.literal("media"),
+		remote: z.boolean().optional(),
+	}),
+	z.strictObject({
 		type: z.literal("mtls-certificate"),
 		id: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("pipeline"),
 		name: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("queue"),
 		name: z.string(),
 		deliveryDelay: z.number().optional(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("rate-limit"),
 		namespace: z.string(),
-		simple: z.object({
+		simple: z.strictObject({
 			limit: z.number(),
 			period: z.union([z.literal(10), z.literal(60)]),
 		}),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("r2"),
 		name: z.string().optional(),
 		jurisdiction: z.string().optional(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({ type: z.literal("secret") }),
-	z.object({
+	z.strictObject({ type: z.literal("secret") }),
+	z.strictObject({
 		type: z.literal("secrets-store-secret"),
 		storeId: z.string(),
 		secretName: z.string(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("send-email"),
 		destinationAddress: z.string().optional(),
 		allowedDestinationAddresses: z.array(z.string()).optional(),
 		allowedSenderAddresses: z.array(z.string()).optional(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({ type: z.literal("stream"), remote: z.boolean().optional() }),
-	z.object({ type: z.literal("text"), value: z.string() }),
-	z.object({
+	z.strictObject({
+		type: z.literal("stream"),
+		remote: z.boolean().optional(),
+	}),
+	z.strictObject({ type: z.literal("text"), value: z.string() }),
+	z.strictObject({
 		type: z.literal("unsafe"),
+		// `value` is deliberately a `looseObject` so that unknown unsafe-binding
+		// fields pass through untouched — unsafe bindings are an escape hatch
+		// for forward-compatibility with runtime features the schema doesn't
+		// know about yet.
 		value: z.looseObject({
 			type: z.string(),
 			dev: z
-				.object({
-					plugin: z.object({
+				.strictObject({
+					plugin: z.strictObject({
 						package: z.string(),
 						name: z.string(),
 					}),
@@ -142,39 +158,48 @@ const BindingSchema = z.union([
 				.optional(),
 		}),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("vectorize"),
 		name: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({ type: z.literal("version-metadata") }),
-	z.object({
+	z.strictObject({ type: z.literal("version-metadata") }),
+	z.strictObject({
 		type: z.literal("vpc-service"),
 		id: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.intersection(
-		z.object({
+	z
+		.strictObject({
 			type: z.literal("vpc-network"),
+			tunnelId: z.string().optional(),
+			networkId: z.string().optional(),
 			remote: z.boolean().optional(),
+		})
+		.superRefine((value, ctx) => {
+			const hasTunnel = value.tunnelId !== undefined;
+			const hasNetwork = value.networkId !== undefined;
+			if (hasTunnel === hasNetwork) {
+				ctx.addIssue({
+					code: "custom",
+					message: hasTunnel
+						? `"vpc-network" bindings must specify exactly one of "tunnelId" or "networkId", not both`
+						: `"vpc-network" bindings must specify either "tunnelId" or "networkId"`,
+				});
+			}
 		}),
-		z.union([
-			z.object({ tunnelId: z.string() }),
-			z.object({ networkId: z.string() }),
-		])
-	),
-	z.object({
+	z.strictObject({
 		type: z.literal("worker"),
 		workerName: z.string(),
 		exportName: z.string().optional(),
 		props: z.record(z.string(), z.unknown()).optional(),
 		remote: z.boolean().optional(),
 	}),
-	z.object({ type: z.literal("worker-loader") }),
+	z.strictObject({ type: z.literal("worker-loader") }),
 	// TODO: workflow bindings are temporarily disabled. Workflows are defined
 	// via the top-level `exports` field, which produces a same-Worker
 	// `workflows` entry in the Wrangler config.
-	// z.object({
+	// z.strictObject({
 	// 	type: z.literal("workflow"),
 	// 	workerName: z.string(),
 	// 	exportName: z.string(),
@@ -182,7 +207,7 @@ const BindingSchema = z.union([
 	// }),
 ]);
 
-const CacheSchema = z.object({
+const CacheSchema = z.strictObject({
 	enabled: z.boolean(),
 });
 
@@ -245,27 +270,27 @@ const EnvSchema = z
 	.optional();
 
 const ExportSchema = z.discriminatedUnion("type", [
-	z.object({
+	z.strictObject({
 		type: z.literal("durable-object"),
 		storage: z.enum(["sqlite", "legacy-kv"]),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("workflow"),
 		name: z.string(),
-		limits: z.object({ steps: z.number().optional() }).optional(),
+		limits: z.strictObject({ steps: z.number().optional() }).optional(),
 	}),
 ]);
 
-const LimitsSchema = z.object({
+const LimitsSchema = z.strictObject({
 	cpuMs: z.number().optional(),
 	subrequests: z.number().optional(),
 });
 
-const ObservabilitySchema = z.object({
+const ObservabilitySchema = z.strictObject({
 	enabled: z.boolean().optional(),
 	headSamplingRate: z.number().optional(),
 	logs: z
-		.object({
+		.strictObject({
 			enabled: z.boolean().optional(),
 			headSamplingRate: z.number().optional(),
 			invocationLogs: z.boolean().optional(),
@@ -274,7 +299,7 @@ const ObservabilitySchema = z.object({
 		})
 		.optional(),
 	traces: z
-		.object({
+		.strictObject({
 			enabled: z.boolean().optional(),
 			headSamplingRate: z.number().optional(),
 			persist: z.boolean().optional(),
@@ -284,38 +309,38 @@ const ObservabilitySchema = z.object({
 });
 
 const PlacementSchema = z.union([
-	z.object({
+	z.strictObject({
 		mode: z.enum(["off", "smart"]),
 		hint: z.string().optional(),
 	}),
-	z.object({
+	z.strictObject({
 		mode: z.literal("targeted").optional(),
 		region: z.string(),
 	}),
-	z.object({
+	z.strictObject({
 		mode: z.literal("targeted").optional(),
 		host: z.string(),
 	}),
-	z.object({
+	z.strictObject({
 		mode: z.literal("targeted").optional(),
 		hostname: z.string(),
 	}),
 ]);
 
-const TailConsumerSchema = z.object({
+const TailConsumerSchema = z.strictObject({
 	workerName: z.string(),
 	streaming: z.boolean().optional(),
 });
 
 const TriggerSchema = z.discriminatedUnion("type", [
 	// TODO: email triggers not yet implemented
-	// z.object({ type: z.literal("email") }),
-	z.object({
+	// z.strictObject({ type: z.literal("email") }),
+	z.strictObject({
 		type: z.literal("fetch"),
 		pattern: z.string(),
 		zone: z.string().optional(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("queue"),
 		name: z.string(),
 		deadLetterQueue: z.string().optional(),
@@ -326,22 +351,22 @@ const TriggerSchema = z.discriminatedUnion("type", [
 		retryDelay: z.number().optional(),
 		visibilityTimeoutMs: z.number().optional(),
 	}),
-	z.object({
+	z.strictObject({
 		type: z.literal("scheduled"),
 		schedules: z.array(z.string()),
 	}),
 ]);
 
-const UnsafeSchema = z.object({
+const UnsafeSchema = z.strictObject({
 	metadata: z.record(z.string(), z.unknown()).optional(),
 	capnp: z
 		.union([
-			z.object({
+			z.strictObject({
 				basePath: z.string(),
 				sourceSchemas: z.array(z.string()),
 				compiledSchema: z.never().optional(),
 			}),
-			z.object({
+			z.strictObject({
 				basePath: z.never().optional(),
 				sourceSchemas: z.never().optional(),
 				compiledSchema: z.string(),
@@ -350,13 +375,13 @@ const UnsafeSchema = z.object({
 		.optional(),
 });
 
-export const ConfigSchema = z.object({
+export const ConfigSchema = z.strictObject({
 	name: z.string().optional(),
 	accountId: z.string().optional(),
 	compatibilityDate: z.string().optional(),
 	compatibilityFlags: z.array(z.string()).optional(),
 	entrypoint: z
-		.union([z.string(), z.object({ default: z.string() })])
+		.union([z.string(), z.strictObject({ default: z.string() })])
 		.transform((value) => (typeof value === "string" ? value : value.default))
 		.optional(),
 	assets: AssetsSchema.optional(),
@@ -422,8 +447,10 @@ void _assertSchemaMatchesUserConfig;
  * requires, renames a field, changes a field's type to one the schema
  * rejects, or adds a binding the schema doesn't know about.
  */
-type _AssertUserConfigEnvExtendsSchema =
-	UserConfig["env"] extends z.input<typeof ConfigSchema>["env"] ? true : false;
-const _assertUserConfigEnvExtendsSchema: _AssertUserConfigEnvExtendsSchema =
-	true;
+type _AssertUserConfigEnvExtendsSchema = UserConfig["env"] extends z.input<
+	typeof ConfigSchema
+>["env"]
+	? true
+	: false;
+const _assertUserConfigEnvExtendsSchema: _AssertUserConfigEnvExtendsSchema = true;
 void _assertUserConfigEnvExtendsSchema;
