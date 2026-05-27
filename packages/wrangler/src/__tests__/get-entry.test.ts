@@ -1,11 +1,10 @@
 import path from "node:path";
-import { defaultWranglerConfig } from "@cloudflare/workers-utils";
+import { defaultWranglerConfig, type Entry } from "@cloudflare/workers-utils";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { describe, it } from "vitest";
 import { getEntry } from "../deployment-bundle/entry";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import type { Entry } from "../deployment-bundle/entry";
 
 function normalize(entry: Entry): Entry {
 	const tmpDir = process.cwd();

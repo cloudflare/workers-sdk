@@ -289,7 +289,7 @@ describe("deploy", () => {
 			expect(std.out).toContain("workflow: my-workflow");
 		});
 
-		it("should deploy a workflow with schedule", async ({ expect }) => {
+		it("should deploy a workflow with schedules", async ({ expect }) => {
 			writeWranglerConfig({
 				main: "index.js",
 				workflows: [
@@ -297,7 +297,7 @@ describe("deploy", () => {
 						binding: "WORKFLOW",
 						name: "my-workflow",
 						class_name: "MyWorkflow",
-						schedule: "0 * * * *",
+						schedules: "0 * * * *",
 					},
 				],
 			});
@@ -318,7 +318,7 @@ describe("deploy", () => {
 					expect(body).toEqual({
 						script_name: "test-name",
 						class_name: "MyWorkflow",
-						schedule: "0 * * * *",
+						schedules: "0 * * * *",
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -344,7 +344,7 @@ describe("deploy", () => {
 			expect(std.out).toContain("workflow: my-workflow");
 		});
 
-		it("should deploy a workflow with schedule as an array of cron expressions", async ({
+		it("should deploy a workflow with schedules as an array of cron expressions", async ({
 			expect,
 		}) => {
 			writeWranglerConfig({
@@ -354,7 +354,7 @@ describe("deploy", () => {
 						binding: "WORKFLOW",
 						name: "my-workflow",
 						class_name: "MyWorkflow",
-						schedule: ["0 * * * *", "0 9 * * 1"],
+						schedules: ["0 * * * *", "0 9 * * 1"],
 					},
 				],
 			});
@@ -375,7 +375,7 @@ describe("deploy", () => {
 					expect(body).toEqual({
 						script_name: "test-name",
 						class_name: "MyWorkflow",
-						schedule: ["0 * * * *", "0 9 * * 1"],
+						schedules: ["0 * * * *", "0 9 * * 1"],
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -401,7 +401,7 @@ describe("deploy", () => {
 			expect(std.out).toContain("workflow: my-workflow");
 		});
 
-		it("should deploy a workflow with both limits and schedule", async ({
+		it("should deploy a workflow with both limits and schedules", async ({
 			expect,
 		}) => {
 			writeWranglerConfig({
@@ -412,7 +412,7 @@ describe("deploy", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: { steps: 5000 },
-						schedule: "*/15 * * * *",
+						schedules: "*/15 * * * *",
 					},
 				],
 			});
@@ -434,7 +434,7 @@ describe("deploy", () => {
 						script_name: "test-name",
 						class_name: "MyWorkflow",
 						limits: { steps: 5000 },
-						schedule: "*/15 * * * *",
+						schedules: "*/15 * * * *",
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -568,7 +568,7 @@ describe("deploy", () => {
 			);
 		});
 
-		it("should error when deploying a workflow with schedule that references an external script", async ({
+		it("should error when deploying a workflow with schedules that references an external script", async ({
 			expect,
 		}) => {
 			writeWranglerConfig({
@@ -580,7 +580,7 @@ describe("deploy", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						script_name: "another-script",
-						schedule: "0 * * * *",
+						schedules: "0 * * * *",
 					},
 				],
 			});
@@ -606,7 +606,7 @@ describe("deploy", () => {
 			);
 
 			await expect(runWrangler("deploy")).rejects.toThrow(
-				'Workflow "my-workflow" has "schedule" configured but references external script "another-script"'
+				'Workflow "my-workflow" has "schedules" configured but references external script "another-script"'
 			);
 		});
 
@@ -749,7 +749,7 @@ describe("deploy", () => {
 				expect(std.out).toContain("Uploaded my-app-staging");
 			});
 
-			it("should error when script_name matches top-level name but not env-suffixed name and schedule is set", async ({
+			it("should error when script_name matches top-level name but not env-suffixed name and schedules is set", async ({
 				expect,
 			}) => {
 				writeWranglerConfig({
@@ -763,7 +763,7 @@ describe("deploy", () => {
 									name: "my-workflow",
 									class_name: "MyWorkflow",
 									script_name: "my-app",
-									schedule: "0 * * * *",
+									schedules: "0 * * * *",
 								},
 							],
 						},
@@ -777,11 +777,11 @@ describe("deploy", () => {
 				});
 
 				await expect(runWrangler("deploy --env staging")).rejects.toThrow(
-					'Workflow "my-workflow" has "schedule" configured but references external script "my-app"'
+					'Workflow "my-workflow" has "schedules" configured but references external script "my-app"'
 				);
 			});
 
-			it("should allow schedule when script_name matches the env-suffixed name", async ({
+			it("should allow schedules when script_name matches the env-suffixed name", async ({
 				expect,
 			}) => {
 				writeWranglerConfig({
@@ -795,7 +795,7 @@ describe("deploy", () => {
 									name: "my-workflow",
 									class_name: "MyWorkflow",
 									script_name: "my-app-staging",
-									schedule: "0 * * * *",
+									schedules: "0 * * * *",
 								},
 							],
 						},
@@ -818,7 +818,7 @@ describe("deploy", () => {
 						expect(body).toEqual({
 							script_name: "my-app-staging",
 							class_name: "MyWorkflow",
-							schedule: "0 * * * *",
+							schedules: "0 * * * *",
 						});
 						return HttpResponse.json(
 							createFetchResult({ id: "mock-new-workflow-id" })
@@ -837,7 +837,7 @@ describe("deploy", () => {
 				expect(std.out).toContain("workflow: my-workflow");
 			});
 
-			it("should deploy external script_name under env without schedule", async ({
+			it("should deploy external script_name under env without schedules", async ({
 				expect,
 			}) => {
 				writeWranglerConfig({

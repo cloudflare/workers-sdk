@@ -1,7 +1,7 @@
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
-import { getStream } from "../../client";
+import { resolveStream } from "../resolve";
 import { displayStreamConfiguration } from "./utils";
 
 export const pipelinesStreamsGetCommand = createCommand({
@@ -16,7 +16,7 @@ export const pipelinesStreamsGetCommand = createCommand({
 	positionalArgs: ["stream"],
 	args: {
 		stream: {
-			describe: "The ID of the stream to retrieve",
+			describe: "The ID or name of the stream to retrieve",
 			type: "string",
 			demandOption: true,
 		},
@@ -29,7 +29,7 @@ export const pipelinesStreamsGetCommand = createCommand({
 	async handler(args, { config }) {
 		await requireAuth(config);
 
-		const stream = await getStream(config, args.stream);
+		const stream = await resolveStream(config, args.stream);
 
 		if (args.json) {
 			logger.json(stream);

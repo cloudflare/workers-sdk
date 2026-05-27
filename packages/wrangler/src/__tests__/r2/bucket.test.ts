@@ -4,7 +4,10 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Uses expect in MSW handlers outside test callbacks
+ * TODO: remove this `expect` import
+ */
 import { beforeEach, describe, expect, it } from "vitest";
 import { actionsForEventCategories } from "../../r2/helpers/notification";
 import { endEventLoop } from "../helpers/end-event-loop";

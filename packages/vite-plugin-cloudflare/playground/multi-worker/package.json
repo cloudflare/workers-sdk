@@ -7,6 +7,7 @@
 		"build:custom-output-directories": "vite build -c ./vite.config.custom-output-directories.ts",
 		"build:customize-config": "vite build -c ./vite.config.customize-config.ts",
 		"build:default": "vite build",
+		"build:dev-only-auxiliary": "vite build -c ./vite.config.dev-only-auxiliary.ts",
 		"build:no-config-file": "vite build -c ./vite.config.no-config-file.ts",
 		"build:with-worker-configs-warning": "vite build -c vite.config.with-worker-configs-warning.ts",
 		"check:type": "tsc --build",
@@ -14,6 +15,7 @@
 		"dev:custom-build-app": "vite dev -c ./vite.config.custom-build-app.ts",
 		"dev:custom-output-directories": "vite dev -c ./vite.config.custom-output-directories.ts",
 		"dev:customize-config": "vite dev -c ./vite.config.customize-config.ts",
+		"dev:dev-only-auxiliary": "vite dev -c ./vite.config.dev-only-auxiliary.ts",
 		"dev:no-config-file": "vite dev -c ./vite.config.no-config-file.ts",
 		"dev:with-worker-configs-warning": "vite dev -c vite.config.with-worker-configs-warning.ts",
 		"preview": "vite preview"

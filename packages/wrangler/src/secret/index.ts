@@ -389,11 +389,11 @@ async function putBulkSecrets(
 	accountId: string,
 	scriptName: string,
 	environment: string | undefined,
-	content: Record<string, string>,
+	content: Record<string, string | null>,
 	options: {
 		isServiceEnv?: boolean;
 	} = {}
-): Promise<[unknown, Array<string>]> {
+): Promise<[unknown, Array<string>, Array<string>]> {
 	const isServiceEnv = options?.isServiceEnv;
 	const url = isServiceEnv
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${environment}/secrets-bulk`
@@ -401,20 +401,26 @@ async function putBulkSecrets(
 	// Build the merge-patch body using JSON Merge Patch (RFC 7396) semantics:
 	// - Included secrets are created or updated
 	// - Omitted secrets are left unchanged
-	// - Secrets set to null are deleted (not supported yet, to preserve previous behavior)
+	// - Secrets set to null are deleted
 	const secretEntries = Object.entries(content);
-	const secrets: Record<string, SecretBindingUpload> = {};
+	const secrets: Record<string, SecretBindingUpload | null> = {};
 	const toCreate: Array<string> = [];
+	const toDelete: Array<string> = [];
 	for (const [key, value] of secretEntries) {
-		toCreate.push(key);
-		secrets[key] = { name: key, text: value, type: "secret_text" };
+		if (value != null) {
+			toCreate.push(key);
+			secrets[key] = { name: key, text: value, type: "secret_text" };
+		} else {
+			toDelete.push(key);
+			secrets[key] = null;
+		}
 	}
 	const resp = await fetchResult(config, url, {
 		method: "PATCH",
 		headers: { "Content-Type": "application/merge-patch+json" },
 		body: JSON.stringify({ secrets }),
 	});
-	return [resp, toCreate];
+	return [resp, toCreate, toDelete];
 }
 
 export const secretBulkCommand = createCommand({
@@ -468,12 +474,12 @@ export const secretBulkCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		logger.log(
-			`🌀 Creating the secrets for the Worker "${scriptName}" ${
+			`🌀 Processing the secrets for the Worker "${scriptName}" ${
 				isServiceEnv ? `(${args.env})` : ""
 			}`
 		);
 
-		const result = await parseBulkInputToObject(args.file);
+		const result = await parseBulkInputToObject(args.file, true);
 
 		if (!result) {
 			return logger.error(`🚨 No content found in file, or piped input.`);
@@ -482,9 +488,10 @@ export const secretBulkCommand = createCommand({
 		const { content, secretSource, secretFormat } = result;
 
 		let created: Array<string> = [];
+		let deleted: Array<string> = [];
 		try {
 			try {
-				[, created] = await putBulkSecrets(
+				[, created, deleted] = await putBulkSecrets(
 					config,
 					accountId,
 					scriptName,
@@ -506,7 +513,7 @@ export const secretBulkCommand = createCommand({
 				if (draftWorkerResult === null) {
 					return;
 				}
-				[, created] = await putBulkSecrets(
+				[, created, deleted] = await putBulkSecrets(
 					config,
 					accountId,
 					scriptName,
@@ -521,12 +528,27 @@ export const secretBulkCommand = createCommand({
 			throw e;
 		}
 
+		for (const key of deleted) {
+			logger.log(`💥 Successfully deleted secret for key: ${key}`);
+		}
 		for (const key of created) {
 			logger.log(`✨ Successfully created secret for key: ${key}`);
 		}
+
 		logger.log("");
 		logger.log("Finished processing secrets file:");
-		logger.log(`✨ ${created.length} secrets successfully uploaded`);
+		const hasChanges = deleted.length + created.length > 0;
+		if (hasChanges) {
+			if (deleted.length > 0) {
+				logger.log(`💥 ${deleted.length} secrets successfully deleted`);
+			}
+			if (created.length > 0) {
+				logger.log(`✨ ${created.length} secrets successfully created`);
+			}
+		} else {
+			logger.log(`No secrets were created or deleted`);
+		}
+
 		metrics.sendMetricsEvent(
 			"create encrypted variable",
 			{
@@ -545,7 +567,7 @@ export const secretBulkCommand = createCommand({
 export function validateFileSecrets(
 	content: unknown,
 	jsonFilePath: string
-): asserts content is Record<string, string> {
+): content is Record<string, string | null> {
 	if (content === null || typeof content !== "object") {
 		throw new FatalError(
 			`The contents of "${jsonFilePath}" is not valid. It should be a JSON object of string values.`,
@@ -554,13 +576,14 @@ export function validateFileSecrets(
 	}
 	const entries = Object.entries(content);
 	for (const [key, value] of entries) {
-		if (typeof value !== "string") {
+		if (value != null && typeof value !== "string") {
 			throw new FatalError(
-				`The value for "${key}" in "${jsonFilePath}" is not a "string" instead it is of type "${typeof value}"`,
+				`The value for "${key}" in "${jsonFilePath}" is not null or a "string" instead it is of type "${typeof value}"`,
 				{ telemetryMessage: "secret bulk file invalid value type" }
 			);
 		}
 	}
+	return true;
 }
 
 /** Error thrown when no input is provided to parseBulkInputToObject */
@@ -571,17 +594,37 @@ export class NoInputError extends Error {
 	}
 }
 
-/** Result from parsing bulk secret input, including metadata for analytics */
+/** Result from parsing bulk secret input without nullable values, including metadata for analytics */
 export type BulkInputResult = {
 	content: Record<string, string>;
 	secretSource: "file" | "stdin";
 	secretFormat: "json" | "dotenv";
 };
 
+/** Result from parsing bulk secret input with nullable values, including metadata for analytics */
+export type BulkInputNullableResult = {
+	content: Record<string, string | null>;
+	secretSource: "file" | "stdin";
+	secretFormat: "json" | "dotenv";
+};
+
+/** Override for callers that need non-nullable */
 export async function parseBulkInputToObject(
-	input?: string
-): Promise<BulkInputResult | undefined> {
-	let content: Record<string, string>;
+	input?: string,
+	includeNull?: false
+): Promise<BulkInputResult | undefined>;
+
+/** Override for callers that need nullable */
+export async function parseBulkInputToObject(
+	input?: string,
+	includeNull?: true
+): Promise<BulkInputNullableResult | undefined>;
+
+export async function parseBulkInputToObject(
+	input?: string,
+	includeNull: boolean = false
+): Promise<BulkInputResult | BulkInputNullableResult | undefined> {
+	let content: Record<string, string | null>;
 	let secretSource: "file" | "stdin";
 	let secretFormat: "json" | "dotenv";
 
@@ -590,7 +633,7 @@ export async function parseBulkInputToObject(
 		const jsonFilePath = path.resolve(input);
 		const fileContent = readFileSync(jsonFilePath);
 		try {
-			content = parseJSON(fileContent) as Record<string, string>;
+			content = parseJSON(fileContent) as Record<string, string | null>;
 			secretFormat = "json";
 		} catch {
 			content = dotenvParse(fileContent);
@@ -603,6 +646,13 @@ export async function parseBulkInputToObject(
 			}
 		}
 		validateFileSecrets(content, input);
+		if (!includeNull) {
+			content = Object.fromEntries(
+				Object.entries(content).filter(
+					(entry): entry is [string, string] => entry[1] != null
+				)
+			);
+		}
 	} else {
 		secretSource = "stdin";
 		try {
@@ -612,7 +662,7 @@ export async function parseBulkInputToObject(
 				pipedInput += line;
 			}
 			try {
-				content = parseJSON(pipedInput) as Record<string, string>;
+				content = parseJSON(pipedInput) as Record<string, string | null>;
 				secretFormat = "json";
 			} catch (e) {
 				content = dotenvParse(pipedInput);

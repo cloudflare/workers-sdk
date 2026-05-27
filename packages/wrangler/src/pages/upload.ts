@@ -5,6 +5,7 @@ import {
 	APIError,
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
+	UserError,
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
 import { fetchResult } from "../cfetch";
@@ -53,10 +54,10 @@ export const pagesProjectUploadCommand = createCommand({
 	positionalArgs: ["directory"],
 	async handler({ directory, outputManifestPath, skipCaching }) {
 		if (!directory) {
-			throw new FatalError("Must specify a directory.", {
-				code: 1,
-				telemetryMessage: "pages upload missing directory",
-			});
+			throw new UserError(
+				"Missing directory. Provide the path to your build output directory as a positional argument.",
+				{ telemetryMessage: "pages upload missing directory" }
+			);
 		}
 
 		if (!process.env.CF_PAGES_UPLOAD_JWT) {
