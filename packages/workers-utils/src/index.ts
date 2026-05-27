@@ -115,3 +115,5 @@ export * from "./cfetch";
 
 export { fetchLatestNpmVersion } from "./update-check";
 export type { NpmVersionCheckResult } from "./update-check";
+
+export type { Logger } from "./logger";

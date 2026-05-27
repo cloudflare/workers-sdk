@@ -8,21 +8,12 @@ import {
 import { APIError, parseJSON } from "../parse";
 import { type FetchError, maybeThrowFriendlyError } from "./errors";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { Logger } from "../logger";
 import type { HeadersInit, RequestInit } from "undici";
 
 export type CloudflareApiCredentials =
 	| { apiToken: string }
 	| { authKey: string; authEmail: string };
-
-export type CloudflareApiLogger = {
-	debug: (...args: unknown[]) => void;
-	debugWithSanitization: (label: string, ...args: unknown[]) => void;
-};
-
-export interface CloudflareApiClientOptions {
-	logger: CloudflareApiLogger;
-	userAgent: string;
-}
 
 export interface FetchResult<ResponseType = unknown> {
 	success: boolean;
@@ -32,7 +23,15 @@ export interface FetchResult<ResponseType = unknown> {
 	result_info?: unknown;
 }
 
-function logHeaders(headers: Headers, logger: CloudflareApiLogger): void {
+export type FetchResultFetcher = <ResponseType>(
+	complianceConfig: ComplianceConfig,
+	resource: string,
+	init?: RequestInit,
+	queryParams?: URLSearchParams,
+	abortSignal?: AbortSignal
+) => Promise<ResponseType>;
+
+function logHeaders(headers: Headers, logger: Logger): void {
 	const clone = cloneHeaders(headers);
 	clone.delete("Authorization");
 	logger.debugWithSanitization(
@@ -51,7 +50,7 @@ export async function performApiFetchBase(
 	resource: string,
 	init: RequestInit = {},
 	userAgent: string,
-	logger: CloudflareApiLogger,
+	logger: Logger,
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal,
 	credentials?: CloudflareApiCredentials
@@ -100,7 +99,7 @@ export async function fetchInternalBase<ResponseType>(
 	resource: string,
 	init: RequestInit = {},
 	userAgent: string,
-	logger: CloudflareApiLogger,
+	logger: Logger,
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal,
 	credentials?: CloudflareApiCredentials
@@ -176,7 +175,7 @@ export async function fetchResultBase<ResponseType>(
 	resource: string,
 	init: RequestInit = {},
 	userAgent: string,
-	logger: CloudflareApiLogger,
+	logger: Logger,
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal,
 	credentials?: CloudflareApiCredentials
@@ -205,7 +204,7 @@ export async function fetchListResultBase<ResponseType>(
 	resource: string,
 	init: RequestInit = {},
 	userAgent: string,
-	logger: CloudflareApiLogger,
+	logger: Logger,
 	queryParams?: URLSearchParams,
 	credentials?: CloudflareApiCredentials
 ): Promise<ResponseType[]> {
