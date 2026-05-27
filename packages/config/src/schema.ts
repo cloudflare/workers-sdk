@@ -356,7 +356,7 @@ export const ConfigSchema = z.object({
 	compatibilityDate: z.string().optional(),
 	compatibilityFlags: z.array(z.string()).optional(),
 	entrypoint: z
-		.union([z.string(), z.looseObject({ default: z.string() })])
+		.union([z.string(), z.object({ default: z.string() })])
 		.transform((value) => (typeof value === "string" ? value : value.default))
 		.optional(),
 	assets: AssetsSchema.optional(),

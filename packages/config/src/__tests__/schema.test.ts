@@ -170,28 +170,12 @@ describe("entrypoint", () => {
 		expect,
 	}) => {
 		const result = ConfigSchema.safeParse({
-			entrypoint: { default: "/abs/path/to/src.ts" },
+			entrypoint: { default: "./src/index.ts" },
 		});
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data.entrypoint).toBe("/abs/path/to/src.ts");
-		}
-	});
-
-	it("accepts a namespace object with additional properties (looseObject)", ({
-		expect,
-	}) => {
-		const result = ConfigSchema.safeParse({
-			entrypoint: {
-				default: "/abs/path/to/src.ts",
-				namedExport: "anything",
-			},
-		});
-
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.data.entrypoint).toBe("/abs/path/to/src.ts");
+			expect(result.data.entrypoint).toBe("./src/index.ts");
 		}
 	});
 
