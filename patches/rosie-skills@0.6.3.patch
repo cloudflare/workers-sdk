@@ -1,0 +1,44 @@
+diff --git a/dist/bin.js b/dist/bin.js
+index ce3819ac11b76c0b7d49a6be36f8c059824b1e9e..f10c50f448ab1f6040f49f9f905b6413c32ffaaf 100644
+--- a/dist/bin.js
++++ b/dist/bin.js
+@@ -9,7 +9,7 @@
+ //      we don't ship a native binary for.
+ import * as path from "node:path";
+ import { spawnSync } from "node:child_process";
+-import { fileURLToPath } from "node:url";
++import { fileURLToPath, pathToFileURL } from "node:url";
+ import { createRequire } from "node:module";
+ const __dirname = path.dirname(fileURLToPath(import.meta.url));
+ const require = createRequire(import.meta.url);
+@@ -36,7 +36,7 @@ async function runWasm() {
+     const wasmEntry = path.join(__dirname, "..", "wasm", "rosie.js");
+     let createRosie;
+     try {
+-        const mod = (await import(wasmEntry));
++        const mod = (await import(pathToFileURL(wasmEntry).href));
+         createRosie = mod.default;
+     }
+     catch {
+diff --git a/dist/wasm-loader.js b/dist/wasm-loader.js
+index c13c40f60356c1723d1a2cdab25518f851bc374b..d6077ef56fb22c8c820b240f5d6804689b2220ba 100644
+--- a/dist/wasm-loader.js
++++ b/dist/wasm-loader.js
+@@ -8,7 +8,7 @@
+ // (`__rosieLog__`). We can't use Module.print here because NODERAWFS routes
+ // printf to host fd 1/2 directly, bypassing the Module hook.
+ import * as path from "node:path";
+-import { fileURLToPath } from "node:url";
++import { fileURLToPath, pathToFileURL } from "node:url";
+ const __dirname = path.dirname(fileURLToPath(import.meta.url));
+ // Internal: integer levels match the C-side LogLevel enum.
+ const LEVEL_NAMES = ["error", "warn", "info", "debug"];
+@@ -18,7 +18,7 @@ async function getOrLoadModule() {
+     if (modulePromise)
+         return modulePromise;
+     const wasmEntry = path.join(__dirname, "..", "wasm", "rosie.js");
+-    const mod = (await import(wasmEntry));
++    const mod = (await import(pathToFileURL(wasmEntry).href));
+     const createRosie = mod.default;
+     modulePromise = (async () => {
+         const m = await createRosie({

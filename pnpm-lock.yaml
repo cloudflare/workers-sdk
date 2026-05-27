@@ -97,6 +97,9 @@ patchedDependencies:
   postal-mime:
     hash: 44bc62560d3d339b5c0836c18991f42b3b998db144f5ee7101d6758bbe74d3f2
     path: patches/postal-mime.patch
+  rosie-skills@0.6.3:
+    hash: 21a7e5542da47bff807683f724e6f2b40adffca020177c856509db42d50c139e
+    path: patches/rosie-skills@0.6.3.patch
   toucan-js@4.0.0:
     hash: 60bdb1dcdbde0a135bb56d6fa1a1027caba891b149e2cfcb48d6a5b3524e0a91
     path: patches/toucan-js@4.0.0.patch
@@ -3987,7 +3990,7 @@ importers:
         version: 6.3.0
       rosie-skills:
         specifier: ^0.6.3
-        version: 0.6.3
+        version: 0.6.3(patch_hash=21a7e5542da47bff807683f724e6f2b40adffca020177c856509db42d50c139e)
       unenv:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
@@ -24924,7 +24927,7 @@ snapshots:
   rosie-skills-linux-x64@0.6.3:
     optional: true
 
-  rosie-skills@0.6.3:
+  rosie-skills@0.6.3(patch_hash=21a7e5542da47bff807683f724e6f2b40adffca020177c856509db42d50c139e):
     optionalDependencies:
       rosie-skills-darwin-arm64: 0.6.3
       rosie-skills-freebsd-x64: 0.6.3
