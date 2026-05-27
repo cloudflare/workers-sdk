@@ -60,13 +60,7 @@ export type { DevToolsEvent } from "./startDevWorker/devtools";
 
 // Exports from ./server
 export { createServer } from "./server";
-export type {
-	InspectorOptions,
-	ServerOptions,
-	WorkerHandle,
-	WorkerInput,
-	WorkerServer,
-} from "./server";
+export type { ServerOptions, WorkerHandle, WorkerServer } from "./server";
 
 // Exports from ./integrations
 export {
