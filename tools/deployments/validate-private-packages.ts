@@ -36,9 +36,6 @@ async function getPrivatePackageJsons() {
 			// The package.jsons in the vite-plugin playground use the `@playground/` scope
 			// TODO: consider if we should use the `@cloudflare/` scope instead
 			"packages/vite-plugin-cloudflare/playground/**",
-			// The package.jsons in the config examples use the `@config-examples/` scope
-			// TODO: consider if we should use the `@cloudflare/` scope instead
-			"packages/config/examples/**",
 			// We are not interested in vendor sub-packages
 			"vendor/**",
 		],

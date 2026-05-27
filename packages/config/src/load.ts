@@ -20,10 +20,12 @@ const CF_NO_CACHE_VALUE = "no-cache";
 const CF_NO_CACHE_QUERY_KEY = "cf-no-cache";
 const RE_NODE_MODULES = /[/\\]node_modules[/\\]/;
 
+const depsStore = new AsyncLocalStorage<Set<string>>();
+
 /**
  * Dynamically import a worker config file from disk.
  *
- * Returns the module's default export untouched, plus the set of file paths
+ * Returns the module's default export, plus the set of file paths
  * imported during resolution. Callers are responsible for unwrapping
  * function/promise wrappers around the returned value and validating it
  * against `ConfigSchema`.
@@ -56,7 +58,6 @@ export interface LoadConfigResult {
 	dependencies: Set<string>;
 }
 
-const depsStore = new AsyncLocalStorage<Set<string>>();
 let deregister: (() => void) | undefined;
 
 /**

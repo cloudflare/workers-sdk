@@ -98,7 +98,9 @@ interface ExperimentalNewConfig {
 	};
 }
 
-type ResolvedExperimentalNewConfig = { types: { generate: boolean } };
+interface ResolvedExperimentalNewConfig {
+	types: { generate: boolean };
+}
 
 interface Experimental {
 	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
@@ -107,7 +109,7 @@ interface Experimental {
 	prerenderWorker?: PrerenderWorkerConfig;
 	/**
 	 * Experimental support for loading the entry Worker's configuration from
-	 * `worker.config.ts` via `@cloudflare/config` instead of `wrangler.json` /
+	 * `worker.config.ts` instead of `wrangler.json` /
 	 * `wrangler.jsonc` / `wrangler.toml`.
 	 *
 	 * Pass `true` for defaults, or an object to customize behaviour.
