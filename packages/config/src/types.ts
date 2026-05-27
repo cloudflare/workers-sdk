@@ -66,7 +66,7 @@ type Binding =
 	| BrowserBinding
 	| D1Binding
 	| DispatchNamespaceBinding
-	| DurableObjectBinding<unknown, string, string>
+	| DurableObjectBinding
 	| FlagshipBinding
 	| HyperdriveBinding
 	| ImagesBinding
@@ -89,10 +89,10 @@ type Binding =
 	| VersionMetadataBinding
 	| VpcNetworkBinding
 	| VpcServiceBinding
-	| WorkerBinding<unknown, string, string>
+	| WorkerBinding
 	| WorkerLoaderBinding;
 // TODO: re-enable when workflow bindings return.
-// | WorkflowBinding<unknown, string, string>;
+// | WorkflowBinding;
 
 /**
  * Union of all trigger definitions accepted in `triggers`.

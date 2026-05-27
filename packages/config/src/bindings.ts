@@ -234,10 +234,19 @@ type VpcNetworkBindingOptions =
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#workers-ai
  */
-export interface AiBinding<
-	TAiModelList extends AiModelListType = AiModels,
-> extends AiBindingOptions {
+export interface AiBinding extends AiBindingOptions {
 	type: "ai";
+}
+
+/**
+ * Helper-produced AI binding carrying a phantom `__typeParams` field that
+ * drives the inferred `Ai<TAiModelList>` runtime type.
+ *
+ * Returned by `bindings.ai(...)` / `createBindings(...)`.
+ */
+export interface TypedAiBinding<
+	TAiModelList extends AiModelListType = AiModels,
+> extends AiBinding {
 	/** @internal Carries type parameters for inference */
 	__typeParams: [TAiModelList];
 }
@@ -349,10 +358,19 @@ export interface JsonBinding<T extends Json> {
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces
  */
-export interface KvBinding<
-	TKey extends string = string,
-> extends KvBindingOptions {
+export interface KvBinding extends KvBindingOptions {
 	type: "kv";
+}
+
+/**
+ * Helper-produced KV binding carrying a phantom `__typeParams` field that
+ * drives the inferred `KVNamespace<TKey>` runtime type.
+ *
+ * Returned by `bindings.kv(...)` / `createBindings(...)`.
+ */
+export interface TypedKvBinding<
+	TKey extends string = string,
+> extends KvBinding {
 	/** @internal Carries type parameters for inference */
 	__typeParams: [TKey];
 }
@@ -377,10 +395,19 @@ export interface MtlsCertificateBinding extends MtlsCertificateBindingOptions {
 }
 
 /** Binding to a Cloudflare Pipeline. */
-export interface PipelineBinding<
-	TRecord extends PipelineRecord = PipelineRecord,
-> extends PipelineBindingOptions {
+export interface PipelineBinding extends PipelineBindingOptions {
 	type: "pipeline";
+}
+
+/**
+ * Helper-produced Pipeline binding carrying a phantom `__typeParams` field
+ * that drives the inferred `Pipeline<TRecord>` runtime type.
+ *
+ * Returned by `bindings.pipeline(...)` / `createBindings(...)`.
+ */
+export interface TypedPipelineBinding<
+	TRecord extends PipelineRecord = PipelineRecord,
+> extends PipelineBinding {
 	/** @internal Carries type parameters for inference */
 	__typeParams: [TRecord];
 }
@@ -390,8 +417,17 @@ export interface PipelineBinding<
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#queues
  */
-export interface QueueBinding<TBody = unknown> extends QueueBindingOptions {
+export interface QueueBinding extends QueueBindingOptions {
 	type: "queue";
+}
+
+/**
+ * Helper-produced Queue binding carrying a phantom `__typeParams` field that
+ * drives the inferred `Queue<TBody>` runtime type.
+ *
+ * Returned by `bindings.queue(...)` / `createBindings(...)`.
+ */
+export interface TypedQueueBinding<TBody = unknown> extends QueueBinding {
 	/** @internal Carries type parameters for inference */
 	__typeParams: [TBody];
 }
@@ -495,7 +531,10 @@ export interface WorkerLoaderBinding {
 	type: "worker-loader";
 }
 
-// Cross-worker binding types (generic, with `__config` type for inference)
+// Cross-worker binding types. Each kind has a plain interface (the shape a
+// user can write by hand) and a `Typed*` interface returned by the
+// `bindings.*` helpers. The typed variant adds a phantom `__config` field
+// that drives instance-parameterised inference in `InferBindingType`.
 
 /**
  * Binding to a Durable Object class. `workerName` is the name of the Worker
@@ -503,15 +542,26 @@ export interface WorkerLoaderBinding {
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
  */
-export interface DurableObjectBinding<
+export interface DurableObjectBinding {
+	type: "durable-object";
+	/** The name of the Worker that defines the Durable Object class. */
+	workerName: string;
+	/** The exported class name of the Durable Object. */
+	exportName: string;
+}
+
+/**
+ * Helper-produced Durable Object binding carrying a phantom `__config` field
+ * that drives the inferred `DurableObjectNamespace<TInstance>` runtime type.
+ *
+ * Returned by `bindings.durableObject(...)` / `createBindings(...)`.
+ */
+export interface TypedDurableObjectBinding<
 	TConfig,
 	TWorkerName extends string,
 	TExportName extends string,
-> {
-	type: "durable-object";
-	/** The name of the Worker that defines the Durable Object class. */
+> extends DurableObjectBinding {
 	workerName: TWorkerName;
-	/** The exported class name of the Durable Object. */
 	exportName: TExportName;
 	/** @internal Carries the config type for inference */
 	__config: TConfig;
@@ -524,20 +574,31 @@ export interface DurableObjectBinding<
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
  */
-export interface WorkerBinding<
-	TConfig,
-	TWorkerName extends string,
-	TExportName extends string,
-> {
+export interface WorkerBinding {
 	type: "worker";
 	/** The name of the bound Worker. */
-	workerName: TWorkerName;
+	workerName: string;
 	/** The named export to bind to (defaults to the default export). */
-	exportName: TExportName;
+	exportName?: string;
 	/** Optional properties that will be made available to the service via `ctx.props`. */
 	props?: Record<string, unknown>;
 	/** Whether the service binding should be remote or not in local development. */
 	remote?: boolean;
+}
+
+/**
+ * Helper-produced service binding carrying a phantom `__config` field that
+ * drives the inferred `Fetcher<TInstance>` runtime type.
+ *
+ * Returned by `bindings.worker(...)` / `createBindings(...)`.
+ */
+export interface TypedWorkerBinding<
+	TConfig,
+	TWorkerName extends string,
+	TExportName extends string,
+> extends WorkerBinding {
+	workerName: TWorkerName;
+	exportName: TExportName;
 	/** @internal Carries the config type for inference */
 	__config: TConfig;
 }
@@ -546,18 +607,29 @@ export interface WorkerBinding<
  * Binding to a Workflow. `workerName` is the name of the Worker that defines
  * the Workflow; `exportName` is the exported `WorkflowEntrypoint` class name.
  */
-export interface WorkflowBinding<
+export interface WorkflowBinding {
+	type: "workflow";
+	/** The name of the Worker that defines the Workflow. */
+	workerName: string;
+	/** The exported class name of the Workflow. */
+	exportName: string;
+	/** Whether the Workflow binding should be remote or not in local development. */
+	remote?: boolean;
+}
+
+/**
+ * Helper-produced Workflow binding carrying a phantom `__config` field that
+ * drives the inferred `Workflow<TPayload>` runtime type.
+ *
+ * Returned by `bindings.workflow(...)` / `createBindings(...)`.
+ */
+export interface TypedWorkflowBinding<
 	TConfig,
 	TWorkerName extends string,
 	TExportName extends string,
-> {
-	type: "workflow";
-	/** The name of the Worker that defines the Workflow. */
+> extends WorkflowBinding {
 	workerName: TWorkerName;
-	/** The exported class name of the Workflow. */
 	exportName: TExportName;
-	/** Whether the Workflow binding should be remote or not in local development. */
-	remote?: boolean;
 	/** @internal Carries the config type for inference */
 	__config: TConfig;
 }
@@ -594,7 +666,7 @@ interface BaseBindings {
 	 */
 	ai<TAiModelList extends AiModelListType = AiModels>(
 		options?: AiBindingOptions
-	): AiBinding<TAiModelList>;
+	): TypedAiBinding<TAiModelList>;
 	/**
 	 * AI Search instance binding. Each binding is bound directly to a single
 	 * pre-existing instance within the "default" namespace.
@@ -665,7 +737,9 @@ interface BaseBindings {
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces
 	 */
-	kv<TKey extends string = string>(options?: KvBindingOptions): KvBinding<TKey>;
+	kv<TKey extends string = string>(
+		options?: KvBindingOptions
+	): TypedKvBinding<TKey>;
 	/** Binding for forwarding logs to logfwdr. */
 	logfwdr(options: LogfwdrBindingOptions): LogfwdrBinding;
 	/** Binding to Cloudflare Media Transformations. */
@@ -681,13 +755,15 @@ interface BaseBindings {
 	/** Binding to a Cloudflare Pipeline. */
 	pipeline<TRecord extends PipelineRecord = PipelineRecord>(
 		options: PipelineBindingOptions
-	): PipelineBinding<TRecord>;
+	): TypedPipelineBinding<TRecord>;
 	/**
 	 * Producer binding to a Cloudflare Queue.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#queues
 	 */
-	queue<TBody = unknown>(options: QueueBindingOptions): QueueBinding<TBody>;
+	queue<TBody = unknown>(
+		options: QueueBindingOptions
+	): TypedQueueBinding<TBody>;
 	/** Binding to a rate limiter. */
 	rateLimit(options: RateLimitBindingOptions): RateLimitBinding;
 	/**
@@ -804,7 +880,7 @@ export interface Bindings<
 		exportName?: TExportName;
 		props?: Record<string, unknown>;
 		remote?: boolean;
-	}): WorkerBinding<
+	}): TypedWorkerBinding<
 		ConfigOrUndefined<TUnwrappedConfig, TWorkerName>,
 		TWorkerName,
 		TExportName extends string ? TExportName : "default"
@@ -822,7 +898,7 @@ export interface Bindings<
 	>(options: {
 		workerName: TWorkerName;
 		exportName: TExportName;
-	}): DurableObjectBinding<
+	}): TypedDurableObjectBinding<
 		ConfigOrUndefined<TUnwrappedConfig, TWorkerName>,
 		TWorkerName,
 		TExportName
@@ -841,7 +917,7 @@ export interface Bindings<
 	// 	workerName: TWorkerName;
 	// 	exportName: TExportName;
 	// 	remote?: boolean;
-	// }): WorkflowBinding<
+	// }): TypedWorkflowBinding<
 	// 	ConfigOrUndefined<TUnwrappedConfig, TWorkerName>,
 	// 	TWorkerName,
 	// 	TExportName
