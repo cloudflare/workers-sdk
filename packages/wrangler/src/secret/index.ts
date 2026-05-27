@@ -503,6 +503,10 @@ export const secretBulkCommand = createCommand({
 				if (!isWorkerNotFoundError(e)) {
 					throw e;
 				}
+				// Delete-only payloads (all values null) should not create a new Worker
+				if (Object.values(content).every((v) => v === null)) {
+					throw e;
+				}
 				// Worker doesn't exist yet — create a draft worker, then retry
 				const draftWorkerResult = await createDraftWorker({
 					config,

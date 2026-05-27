@@ -1594,6 +1594,32 @@ describe("wrangler secret", () => {
 			`);
 		});
 
+		it("should not create a new Worker when bulk input is delete-only (all null values)", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-to-delete": null,
+				})
+			);
+			mockNoWorkerFound({ isBulk: true });
+
+			await expect(
+				runWrangler("secret bulk ./secret.json --name non-existent-worker")
+			).rejects.toThrow();
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Processing the secrets for the Worker "non-existent-worker"
+
+				🚨 Secrets failed to upload
+				"
+			`);
+		});
+
 		describe("multi-env warning", () => {
 			it("should warn if the wrangler config contains environments but none was specified in the command", async ({
 				expect,
