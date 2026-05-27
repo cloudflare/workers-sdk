@@ -135,7 +135,7 @@ export const containersInfoCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
-		printBanner: () => !isNonInteractiveOrCI(),
+		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
 	args: {
 		ID: {
@@ -143,10 +143,20 @@ export const containersInfoCommand = createCommand({
 			type: "string",
 			demandOption: true,
 		},
+		json: {
+			describe: "Return output as JSON",
+			type: "boolean",
+			default: false,
+		},
 	},
 	positionalArgs: ["ID"],
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
+		if (args.json) {
+			const application = await ApplicationsService.getApplication(args.ID);
+			logger.json(application);
+			return;
+		}
 		await infoCommand(args, config);
 	},
 });

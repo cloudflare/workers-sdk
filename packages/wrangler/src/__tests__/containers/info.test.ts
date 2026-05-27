@@ -40,7 +40,10 @@ describe("containers info", () => {
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
 			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-			  -v, --version         Show version number  [boolean]"
+			  -v, --version         Show version number  [boolean]
+
+			OPTIONS
+			      --json  Return output as JSON  [boolean] [default: false]"
 		`);
 	});
 
@@ -55,6 +58,57 @@ describe("containers info", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: You need 'containers:write', try logging in again or creating an appropiate API token]`
 		);
+	});
+
+	it("should output JSON via --json flag in TTY mode", async ({ expect }) => {
+		setIsTTY(true);
+		setWranglerConfig({});
+		msw.use(
+			http.get(
+				"*/applications/asdf",
+				async ({ request }) => {
+					expect(await request.text()).toEqual("");
+					return HttpResponse.json(
+						`{"success": true, "result": ${MOCK_APPLICATION_SINGLE}}`
+					);
+				},
+				{ once: true }
+			)
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		await runWrangler("containers info asdf --json");
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    "id": "asdf",
+			    "created_at": "2025-02-14T18:03:13.268999936Z",
+			    "account_id": "test-account",
+			    "name": "app-test",
+			    "version": 1,
+			    "configuration": {
+			        "image": "registry.test.cfdata.org/test-app:v1",
+			        "network": {
+			            "mode": "private"
+			        }
+			    },
+			    "scheduling_policy": "regional",
+			    "instances": 2,
+			    "jobs": false,
+			    "constraints": {
+			        "region": "WNAM"
+			    },
+			    "durable_objects": {
+			        "namespace_id": "test-id"
+			    },
+			    "health": {
+			        "instances": {
+			            "healthy": 2,
+			            "failed": 0,
+			            "scheduling": 0,
+			            "starting": 0
+			        }
+			    }
+			}"
+		`);
 	});
 
 	it("should show a single container when given an ID (json)", async ({
