@@ -59,8 +59,8 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		seedWorkerSource();
 		writeWorkerConfig(
 			[
-				"import { defineConfig } from '@cloudflare/config';",
-				"export default defineConfig({",
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
 				"  name: 'w',",
 				"  entrypoint: './src/index.ts',",
 				"  compatibilityDate: '2024-12-30',",
@@ -84,8 +84,8 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		seedWorkerSource();
 		writeWorkerConfig(
 			[
-				"import { defineConfig } from '@cloudflare/config';",
-				"export default defineConfig({",
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
 				"  name: 'w',",
 				"  entrypoint: './src/index.ts',",
 				"  compatibilityDate: '2024-12-30',",
@@ -109,8 +109,8 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		seedWorkerSource();
 		writeWorkerConfig(
 			[
-				"import { defineConfig } from '@cloudflare/config';",
-				"export default defineConfig({",
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
 				"  name: 'experimental-config-worker',",
 				"  entrypoint: './src/index.ts',",
 				"  compatibilityDate: '2024-12-30',",
@@ -147,8 +147,8 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		seedWorkerSource();
 		writeWorkerConfig(
 			[
-				"import { defineConfig } from '@cloudflare/config';",
-				"export default defineConfig((ctx) => ({",
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker((ctx) => ({",
 				"  name: `worker-${ctx.mode}`,",
 				"  entrypoint: './src/index.ts',",
 				"  compatibilityDate: '2024-12-30',",
@@ -178,8 +178,8 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		seedWorkerSource();
 		writeWorkerConfig(
 			[
-				"import { defineConfig } from '@cloudflare/config';",
-				"export default defineConfig({",
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
 				"  name: 'experimental-config-worker',",
 				"  entrypoint: './src/index.ts',",
 				"  compatibilityDate: '2024-12-30',",
@@ -209,8 +209,8 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		seedWorkerSource();
 		writeWorkerConfig(
 			[
-				"import { defineConfig } from '@cloudflare/config';",
-				"export default defineConfig({",
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
 				"  name: 'experimental-config-worker',",
 				"  entrypoint: './src/index.ts',",
 				"  compatibilityDate: '2024-12-30',",
@@ -240,8 +240,8 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		seedWorkerSource();
 		writeWorkerConfig(
 			[
-				"import { defineConfig } from '@cloudflare/config';",
-				"export default defineConfig({",
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
 				"  name: 'experimental-config-worker',",
 				"  entrypoint: './src/index.ts',",
 				"  compatibilityDate: '2024-12-30',",
@@ -265,8 +265,8 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		seedWorkerSource();
 		writeWorkerConfig(
 			[
-				"import { defineConfig } from '@cloudflare/config';",
-				"export default defineConfig({",
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
 				"  name: 'experimental-config-worker',",
 				"  entrypoint: './src/index.ts',",
 				"  compatibilityDate: '2024-12-30',",

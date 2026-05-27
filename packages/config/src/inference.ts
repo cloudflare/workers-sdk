@@ -177,10 +177,10 @@ type InferBindingType<TBinding> =
  *
  * @example
  * ```typescript
- * import { defineConfig } from "@cloudflare/config";
+ * import { defineWorker } from "@cloudflare/config";
  * import type { InferDurableNamespaces, UnwrapConfig } from "@cloudflare/config";
  *
- * const config = defineConfig({ name: "my-worker", ... });
+ * const config = defineWorker({ name: "my-worker", ... });
  *
  * type WorkerConfig = UnwrapConfig<typeof config>;
  * // Inferred as: "my-worker"
@@ -328,10 +328,10 @@ export type UnwrapConfig<TConfig> = TConfig extends (
  *
  * @example
  * ```typescript
- * import { defineConfig, bindings } from "@cloudflare/config";
+ * import { defineWorker, bindings } from "@cloudflare/config";
  * import type { InferEnv, UnwrapConfig } from "@cloudflare/config";
  *
- * const config = defineConfig({
+ * const config = defineWorker({
  *   env: {
  *     MY_JSON: bindings.json({ id: string }),
  *     MY_KV: bindings.kv(),
@@ -355,10 +355,10 @@ export type InferEnv<TUnwrappedConfig> = TUnwrappedConfig extends {
  *
  * @example
  * ```typescript
- * import { defineConfig } from "@cloudflare/config";
+ * import { defineWorker } from "@cloudflare/config";
  * import type { InferDurableNamespaces, UnwrapConfig } from "@cloudflare/config";
  *
- * const config = defineConfig({
+ * const config = defineWorker({
  *   exports: {
  *     MyDurableObject: { type: "durable-object", storage: "sqlite" },
  *     MyWorkflow: { type: "workflow", name: "my-workflow" },

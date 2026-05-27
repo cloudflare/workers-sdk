@@ -77,9 +77,9 @@ export interface Exports {
  *
  * @example
  * ```typescript
- * import { defineConfig, exports } from "@cloudflare/config";
+ * import { defineWorker, exports } from "@cloudflare/config";
  *
- * export default defineConfig({
+ * export default defineWorker({
  *   exports: {
  *     MyDurableObject: exports.durableObject({ storage: "sqlite" }),
  *     MyWorkflow: exports.workflow({ name: "my-workflow" }),

@@ -113,9 +113,9 @@ export interface Triggers {
  *
  * @example
  * ```typescript
- * import { defineConfig, triggers } from "@cloudflare/config";
+ * import { defineWorker, triggers } from "@cloudflare/config";
  *
- * export default defineConfig({
+ * export default defineWorker({
  *   triggers: [
  *     triggers.fetch({ pattern: "example.com/*", zone: "example.com" }),
  *     triggers.queue({ name: "my-queue" }),

@@ -755,9 +755,9 @@ interface BaseBindings {
  * @example
  * ```typescript
  * // Untyped usage with the bindings singleton
- * import { defineConfig, bindings } from "@cloudflare/config";
+ * import { defineWorker, bindings } from "@cloudflare/config";
  *
- * export default defineConfig({
+ * export default defineWorker({
  *   env: {
  *     MY_KV: bindings.kv(),
  *     MY_DO: bindings.durableObject({ workerName: "any-worker", exportName: "AnyExport" }),
@@ -768,12 +768,12 @@ interface BaseBindings {
  * @example
  * ```typescript
  * // Typed usage with createBindings
- * import { defineConfig, createBindings } from "@cloudflare/config";
+ * import { defineWorker, createBindings } from "@cloudflare/config";
  * import type WorkerAConfig from "@worker-a-package/config";
  *
  * const b = createBindings<typeof WorkerAConfig>();
  *
- * export default defineConfig({
+ * export default defineWorker({
  *   env: {
  *     // Type-safe: workerName must be "worker-a"
  *     WORKER_A: b.worker({ workerName: "worker-a" }),
@@ -921,9 +921,9 @@ export function createBindings<TConfig>(): Bindings<TConfig> {
  *
  * @example
  * ```typescript
- * import { defineConfig, bindings } from "@cloudflare/config";
+ * import { defineWorker, bindings } from "@cloudflare/config";
  *
- * export default defineConfig({
+ * export default defineWorker({
  *   env: {
  *     MY_KV: bindings.kv(),
  *     MY_DB: bindings.d1(),

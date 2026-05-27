@@ -1,10 +1,10 @@
 import {
-	defineConfig,
+	defineWorker,
 	bindings,
 } from "@cloudflare/vite-plugin/experimental-config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
-export default defineConfig((ctx) => ({
+export default defineWorker((ctx) => ({
 	name: "worker",
 	entrypoint,
 	compatibilityDate: "2026-05-18",
