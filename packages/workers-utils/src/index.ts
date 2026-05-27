@@ -117,3 +117,6 @@ export { fetchLatestNpmVersion } from "./update-check";
 export type { NpmVersionCheckResult } from "./update-check";
 
 export type { Logger } from "./logger";
+
+export { retryOnAPIFailure } from "./retry";
+export { formatTime } from "./format-time";

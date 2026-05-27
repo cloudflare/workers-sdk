@@ -14,6 +14,7 @@ import {
 	getWranglerTmpDir,
 	ParseError,
 	UserError,
+	formatTime,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import {
@@ -847,10 +848,6 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 	);
 
 	return { versionId, workerTag, versionPreviewUrl, versionPreviewAliasUrl };
-}
-
-function formatTime(duration: number) {
-	return `(${(duration / 1000).toFixed(2)} sec)`;
 }
 
 // Constants for DNS label constraints and hash configuration

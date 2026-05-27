@@ -14,6 +14,7 @@ import {
 	parseNonHyphenedUuid,
 	getWranglerTmpDir,
 	UserError,
+	formatTime,
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
 import { Response } from "undici";
@@ -1348,10 +1349,6 @@ function deployWfpUserWorker(
 	// Will go under the "Uploaded" text
 	logger.log("  Dispatch Namespace:", dispatchNamespace);
 	logger.log("Current Version ID:", versionId);
-}
-
-export function formatTime(duration: number) {
-	return `(${(duration / 1000).toFixed(2)} sec)`;
 }
 
 /**

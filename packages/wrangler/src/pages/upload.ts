@@ -5,6 +5,7 @@ import {
 	APIError,
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
+	formatTime,
 	UserError,
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
@@ -447,10 +448,6 @@ export const maxFileCountAllowedFromClaims = (token: string): number => {
 		return MAX_ASSET_COUNT_DEFAULT;
 	}
 };
-
-function formatTime(duration: number) {
-	return `(${(duration / 1000).toFixed(2)} sec)`;
-}
 
 function renderProgress(done: number, total: number) {
 	const s = spinner();
