@@ -247,10 +247,6 @@ export async function fetchListResultBase<ResponseType>(
 	return results;
 }
 
-// ---------------------------------------------------------------------------
-// Shared pure helpers (exported for direct use)
-// ---------------------------------------------------------------------------
-
 export function truncate(text: string, maxLength: number): string {
 	const { length } = text;
 	if (length <= maxLength) {

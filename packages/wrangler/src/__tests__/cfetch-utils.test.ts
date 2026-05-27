@@ -115,24 +115,24 @@ describe("throwFetchError", () => {
 		expect(std).toMatchInlineSnapshot(`
 			{
 			  "debug": "",
-			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/user) failed.[0m
+			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/user) failed.[0m
 
 			  error one [code: 10001]
-			  To learn more about this error, visit: [4mhttps://example.com/1[0m
+			  To learn more about this error, visit: [4mhttps://example.com/1[0m
 
 			  - error two [code: 10002]
 
 			    - error three [code: 10003]
-			      To learn more about this error, visit: [4mhttps://example.com/3[0m
+			      To learn more about this error, visit: [4mhttps://example.com/3[0m
 
 			      - error 4 [code: 10004]
-			        To learn more about this error, visit: [4mhttps://example.com/4[0m
+			        To learn more about this error, visit: [4mhttps://example.com/4[0m
 
 			  message one
 			  message two
 
 			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
 			",
 			  "info": "",
