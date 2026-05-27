@@ -1,8 +1,11 @@
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
+import {
+	extractWAFBlockRayId,
+	isWAFBlockResponse,
+} from "../../../workers-utils/src";
 import { fetchGraphqlResult } from "../cfetch";
-import { extractWAFBlockRayId, isWAFBlockResponse } from "../cfetch/internal";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { msw } from "./helpers/msw";
 
