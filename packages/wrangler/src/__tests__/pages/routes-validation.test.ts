@@ -117,14 +117,12 @@ describe("routes-validation", () => {
 		it("should throw a fatal error if the routes are not a valid RoutesJSONSpec object", ({
 			expect,
 		}) => {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Intentionally testing invalid types
-			// @ts-ignore: sanity check
+			// @ts-expect-error -- Intentionally testing invalid types
 			const routesWithoutVersion: RoutesJSONSpec = {
 				include: ["/*"],
 				exclude: [],
 			};
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Intentionally testing invalid types
-			// @ts-ignore: sanity check
+			// @ts-expect-error -- Intentionally testing invalid types
 			const routesWithoutInclude: RoutesJSONSpec = {
 				version: ROUTES_SPEC_VERSION,
 				exclude: [],
