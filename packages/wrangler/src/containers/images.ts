@@ -95,6 +95,10 @@ async function handleDeleteImageCommand(
 	args: { image: string; skipConfirmation: boolean },
 	config: Config
 ) {
+	if (!args.image.includes(":")) {
+		throw new Error("Invalid image format. Expected IMAGE:TAG");
+	}
+
 	if (!args.skipConfirmation) {
 		const yes = await confirm(
 			`Are you sure you want to delete ${args.image}? This action cannot be undone.`
@@ -103,10 +107,6 @@ async function handleDeleteImageCommand(
 			cancel("The operation has been cancelled");
 			return;
 		}
-	}
-
-	if (!args.image.includes(":")) {
-		throw new Error("Invalid image format. Expected IMAGE:TAG");
 	}
 
 	const digest = await promiseSpinner(
