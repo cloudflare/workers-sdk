@@ -82,6 +82,7 @@ interface BindingTypeMap<TBinding> {
 	browser: Fetcher;
 	d1: D1Database;
 	"dispatch-namespace": DispatchNamespace;
+	"durable-object": DurableObjectNamespace;
 	flagship: Flagship;
 	hyperdrive: Hyperdrive;
 	images: ImagesBinding;
@@ -99,7 +100,9 @@ interface BindingTypeMap<TBinding> {
 	"vpc-service": Fetcher;
 	"vpc-network": Fetcher;
 	unsafe: any;
+	worker: Fetcher;
 	"worker-loader": WorkerLoader;
+	workflow: Workflow;
 }
 
 type InferBindingType<TBinding> =
