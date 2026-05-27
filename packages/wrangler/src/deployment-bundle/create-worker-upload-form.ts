@@ -487,12 +487,22 @@ export function createWorkerUploadForm(
 		});
 	});
 
-	pipelines.forEach(({ binding, pipeline }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "pipelines",
-			pipeline: pipeline,
-		});
+	pipelines.forEach(({ binding, stream: pipelineStream, pipeline }) => {
+		if (pipelineStream) {
+			metadataBindings.push({
+				name: binding,
+				type: "pipelines",
+				stream: pipelineStream,
+			});
+		} else if (pipeline) {
+			metadataBindings.push({
+				name: binding,
+				type: "pipelines",
+				pipeline,
+			});
+		} else {
+			throw new Error("Pipeline binding must specify a stream or pipeline");
+		}
 	});
 
 	worker_loaders.forEach(({ binding }) => {

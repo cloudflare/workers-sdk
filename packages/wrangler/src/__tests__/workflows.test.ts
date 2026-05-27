@@ -18,6 +18,7 @@ import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { Instance, Workflow } from "../workflows/types";
+import type { RawConfig } from "@cloudflare/workers-utils";
 import type { ExpectStatic } from "vitest";
 
 describe("wrangler workflows", () => {
@@ -916,9 +917,9 @@ describe("wrangler workflows", () => {
 				workflows: [
 					{
 						binding: "MY_WORKFLOW",
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain('should have a string "name" field');
@@ -955,9 +956,9 @@ describe("wrangler workflows", () => {
 						binding: 123, // should be string
 						name: "my-workflow",
 						class_name: "MyWorkflow",
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as unknown as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain('should have a string "binding" field');
@@ -967,8 +968,8 @@ describe("wrangler workflows", () => {
 			expect,
 		}) => {
 			writeWranglerConfig({
-				workflows: ["invalid-workflow-config"] as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-			});
+				workflows: ["invalid-workflow-config"],
+			} as unknown as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain('"workflows" bindings should be objects');
@@ -1053,9 +1054,9 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: { steps: 0 },
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
@@ -1073,9 +1074,9 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: { steps: 1.5 },
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as unknown as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
@@ -1093,7 +1094,7 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: { steps: -1 },
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
 			});
 
@@ -1113,9 +1114,9 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: "invalid",
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
@@ -1133,9 +1134,9 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: [1, 2, 3],
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(

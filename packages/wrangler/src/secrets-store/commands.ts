@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { FatalError, UserError } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { createCommand } from "../core/create-command";
@@ -247,17 +248,19 @@ export const secretsStoreSecretListCommand = createCommand({
 					"",
 					(api) => api.list()
 				)
-			).map((key) => ({
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				id: key.metadata!.uuid,
-				store_id: args.storeId,
-				name: key.name,
-				comment: "",
-				scopes: [],
-				created: new Date().toISOString(),
-				modified: new Date().toISOString(),
-				status: "active",
-			}));
+			).map((key) => {
+				assert(key.metadata, "metadata is always present in API list response");
+				return {
+					id: key.metadata.uuid,
+					store_id: args.storeId,
+					name: key.name,
+					comment: "",
+					scopes: [],
+					created: new Date().toISOString(),
+					modified: new Date().toISOString(),
+					status: "active",
+				};
+			});
 		}
 
 		if (secrets.length === 0) {

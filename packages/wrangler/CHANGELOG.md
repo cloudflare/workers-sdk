@@ -1,5 +1,60 @@
 # wrangler
 
+## 4.95.0
+
+### Minor Changes
+
+- [#14009](https://github.com/cloudflare/workers-sdk/pull/14009) [`ca5b604`](https://github.com/cloudflare/workers-sdk/commit/ca5b604639eabbcb7385537801d1fdd72cf93144) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add telemetry for detecting whether AI coding agents have Cloudflare skills installed
+
+  Wrangler now includes a `currentAgentSkillsInstalled` property in telemetry events that reports whether the current AI coding agent has Cloudflare skills present on disk. The value distinguishes between skills installed automatically by Wrangler (`"automatic"`), skills installed manually by the user (`"manual"`), no skills present (`false`), or no supported agent detected (`null`). Skill names are fetched from the GitHub Contents API with a 24-hour disk cache to avoid rate limits.
+
+- [#14014](https://github.com/cloudflare/workers-sdk/pull/14014) [`d042705`](https://github.com/cloudflare/workers-sdk/commit/d042705c7a8715184e6e16d399c17adb958d0e80) Thanks [@emily-shen](https://github.com/emily-shen)! - Add `--x-deploy-helpers` to gate an upcoming deploy path refactor.
+
+### Patch Changes
+
+- [#14003](https://github.com/cloudflare/workers-sdk/pull/14003) [`c1fd2fd`](https://github.com/cloudflare/workers-sdk/commit/c1fd2fd3a41de5ee8e4698814d89429b86c75450) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260521.1 | 1.20260526.1 |
+
+- [#13728](https://github.com/cloudflare/workers-sdk/pull/13728) [`49c1a59`](https://github.com/cloudflare/workers-sdk/commit/49c1a591cb37a5d30513cc07258d5c27f1dd937f) Thanks [@penalosa](https://github.com/penalosa)! - Reject `remote: false` on always-remote bindings (AI, AI Search, Media, Artifacts, Flagship, VPC Service, VPC Network)
+
+  These binding types have no local simulator and the resource is fundamentally remote-only. Setting `remote: false` was previously silently accepted but produced a non-functional binding. `wrangler dev` now fails with a clear error directing users to either remove the `remote` field or set it to `true`.
+
+- [#14039](https://github.com/cloudflare/workers-sdk/pull/14039) [`fee1ce4`](https://github.com/cloudflare/workers-sdk/commit/fee1ce42aa44b16645682edab3c792a0571c59d6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Preserve `--compatibility-flags` in the interactive deploy config flow
+
+  When running `wrangler deploy` without a config file and going through the interactive setup flow, any `--compatibility-flags` passed on the command line (e.g. `--compatibility-flags=nodejs_compat`) were lost in two places:
+
+  1. The generated `wrangler.jsonc` file did not include `compatibility_flags`.
+  2. The suggested CLI command shown when declining the config file write did not include `--compatibility-flags`.
+
+  Both are now fixed. Compatibility flags are persisted to the generated config and included in the suggested command.
+
+- [#14010](https://github.com/cloudflare/workers-sdk/pull/14010) [`b3962ff`](https://github.com/cloudflare/workers-sdk/commit/b3962ffadb4ce13dea543c994bf3f663e7d445a5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve error messages for Pages CLI commands
+
+  Error messages across `wrangler pages` subcommands (deploy, dev, secret, project, etc.) now provide clearer descriptions and actionable guidance. For example, instead of "Must specify a project name.", you'll now see "Missing Pages project name. Use --project-name <name> or set the name in your wrangler.jsonc configuration file."
+
+- [#14011](https://github.com/cloudflare/workers-sdk/pull/14011) [`420e457`](https://github.com/cloudflare/workers-sdk/commit/420e45789b3ef8d9a05f4dc7ba723f2c2d0c7dbc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Warn when a remote-bindings request is blocked by Cloudflare Access
+
+  When `wrangler dev` is used with remote bindings and a request from the local remote-bindings proxy client to the remote workers.dev proxy server is blocked by Cloudflare Access (HTTP 403 with the Cloudflare Access block page), Wrangler now:
+
+  - Logs a single, visually striking warning per dev session explaining how to set `CLOUDFLARE_ACCESS_CLIENT_ID` / `CLOUDFLARE_ACCESS_CLIENT_SECRET` (Service Token credentials) or run `cloudflared access login` to authenticate.
+  - Replaces the original Access HTML block page with a readable plain-text body containing the same guidance, so the message also reaches the user via binding error messages (e.g. `InferenceUpstreamError` from `env.AI.run()`) and any browser response piped back via a service binding `.fetch()`.
+
+  Previously the 403 was returned to user code with the full Access HTML, which both drowned out other logs and made it hard to tell that the failure was due to Cloudflare Access on workers.dev rather than a problem in the binding itself or the deployed proxy server. The detection runs inside the proxy client worker (which only ever talks to the remote-bindings proxy URL), so it does not trigger false positives on user-worker 403s.
+
+- [#14044](https://github.com/cloudflare/workers-sdk/pull/14044) [`8b1467e`](https://github.com/cloudflare/workers-sdk/commit/8b1467ef04da43696e3a79eb881cea2f4df022f6) Thanks [@pombosilva](https://github.com/pombosilva)! - Rename Workflow binding `schedule` property to `schedules`
+
+  The `schedule` property on Workflow bindings introduced in [#13467](https://github.com/cloudflare/workers-sdk/pull/13467) has been renamed to `schedules` to match the control plane API.
+
+  > **Note:** This remains a configuration-only change. Scheduled triggering of Workflow instances is not yet available — adding `schedules` to a Workflow binding will not result in scheduled invocations at this time.
+
+- Updated dependencies [[`c1fd2fd`](https://github.com/cloudflare/workers-sdk/commit/c1fd2fd3a41de5ee8e4698814d89429b86c75450), [`420e457`](https://github.com/cloudflare/workers-sdk/commit/420e45789b3ef8d9a05f4dc7ba723f2c2d0c7dbc)]:
+  - miniflare@4.20260526.0
+
 ## 4.94.0
 
 ### Minor Changes

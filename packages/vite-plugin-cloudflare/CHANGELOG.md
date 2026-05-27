@@ -1,5 +1,45 @@
 # @cloudflare/vite-plugin
 
+## 1.39.0
+
+### Minor Changes
+
+- [#13985](https://github.com/cloudflare/workers-sdk/pull/13985) [`c809d30`](https://github.com/cloudflare/workers-sdk/commit/c809d30f699eb751d7a288fb65be274850018206) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add `assetsOnly` (entry Worker) and `devOnly` (auxiliary Workers) options to the plugin config
+
+  Both options accept a `boolean` or a function that returns a `boolean`. The function is evaluated lazily at build time, allowing frameworks to provide the value after initialization.
+
+  Use `assetsOnly` on the entry Worker to skip building the Worker and instead emit an assets-only Wrangler config to the client output directory. This enables frameworks such as Astro to use the `ssr` environment during development but produce a fully static app for deployment.
+
+  ```ts
+  export default defineConfig({
+    plugins: [
+      cloudflare({
+        assetsOnly: () => isStaticBuild,
+      }),
+    ],
+  });
+  ```
+
+  Use `devOnly` on an auxiliary Worker to include it during `vite dev` but skip it at build time.
+
+  ```ts
+  export default defineConfig({
+    plugins: [
+      cloudflare({
+        auxiliaryWorkers: [
+          { configPath: "./dev-only-worker/wrangler.jsonc", devOnly: true },
+        ],
+      }),
+    ],
+  });
+  ```
+
+### Patch Changes
+
+- Updated dependencies [[`ca5b604`](https://github.com/cloudflare/workers-sdk/commit/ca5b604639eabbcb7385537801d1fdd72cf93144), [`c1fd2fd`](https://github.com/cloudflare/workers-sdk/commit/c1fd2fd3a41de5ee8e4698814d89429b86c75450), [`49c1a59`](https://github.com/cloudflare/workers-sdk/commit/49c1a591cb37a5d30513cc07258d5c27f1dd937f), [`fee1ce4`](https://github.com/cloudflare/workers-sdk/commit/fee1ce42aa44b16645682edab3c792a0571c59d6), [`b3962ff`](https://github.com/cloudflare/workers-sdk/commit/b3962ffadb4ce13dea543c994bf3f663e7d445a5), [`d042705`](https://github.com/cloudflare/workers-sdk/commit/d042705c7a8715184e6e16d399c17adb958d0e80), [`420e457`](https://github.com/cloudflare/workers-sdk/commit/420e45789b3ef8d9a05f4dc7ba723f2c2d0c7dbc), [`8b1467e`](https://github.com/cloudflare/workers-sdk/commit/8b1467ef04da43696e3a79eb881cea2f4df022f6)]:
+  - wrangler@4.95.0
+  - miniflare@4.20260526.0
+
 ## 1.38.0
 
 ### Minor Changes

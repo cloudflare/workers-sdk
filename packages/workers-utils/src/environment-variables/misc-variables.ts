@@ -46,11 +46,15 @@ export const getWranglerSendMetricsFromEnv =
 	});
 
 /**
- * `WRANGLER_SEND_ERROR_REPORTS` can override whether we attempt to send error reports to Sentry.
+ * `WRANGLER_SEND_ERROR_REPORTS` controls whether we attempt to send error reports to Sentry.
+ *
+ * Defaults to `false` to avoid noisy false-positive reports. Users can opt in
+ * by setting `WRANGLER_SEND_ERROR_REPORTS=true`.
  */
 export const getWranglerSendErrorReportsFromEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "WRANGLER_SEND_ERROR_REPORTS",
+		defaultValue: false,
 	});
 
 /**
