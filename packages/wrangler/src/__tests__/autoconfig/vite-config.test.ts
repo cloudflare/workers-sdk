@@ -4,6 +4,7 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it } from "vitest";
 import {
 	checkIfViteConfigUsesCloudflarePlugin,
+	createViteConfigWithCloudflarePlugin,
 	transformViteConfig,
 } from "../../autoconfig/frameworks/utils/vite-config";
 import { logger } from "../../logger";
@@ -17,6 +18,11 @@ describe("vite-config utils", () => {
 	});
 
 	describe("checkIfViteConfigUsesCloudflarePlugin", () => {
+		it("should return false when there is no Vite config", ({ expect }) => {
+			const result = checkIfViteConfigUsesCloudflarePlugin(".");
+			expect(result).toBe(false);
+		});
+
 		it("should detect cloudflare plugin in function-based defineConfig", async ({
 			expect,
 		}) => {
@@ -90,6 +96,36 @@ export default defineConfig({
 
 			const result = checkIfViteConfigUsesCloudflarePlugin(".");
 			expect(result).toBe(true);
+		});
+	});
+
+	describe("createViteConfigWithCloudflarePlugin", () => {
+		it("should create a TypeScript Vite config when the project uses TypeScript", async ({
+			expect,
+		}) => {
+			await writeFile("tsconfig.json", JSON.stringify({}));
+
+			createViteConfigWithCloudflarePlugin(".");
+
+			expect(readFileSync("vite.config.ts", "utf-8")).toMatchInlineSnapshot(`
+				"import { cloudflare } from "@cloudflare/vite-plugin";
+				import { defineConfig } from "vite";
+
+				export default defineConfig({
+				\tplugins: [cloudflare()],
+				});
+				"
+			`);
+		});
+
+		it("should create a JavaScript Vite config when the project does not use TypeScript", ({
+			expect,
+		}) => {
+			createViteConfigWithCloudflarePlugin(".");
+
+			expect(readFileSync("vite.config.js", "utf-8")).toContain(
+				"plugins: [cloudflare()]"
+			);
 		});
 	});
 

@@ -1,6 +1,11 @@
 import { existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { FatalError, UserError } from "@cloudflare/workers-utils";
+import {
+	FatalError,
+	parsePackageJSON,
+	readFileSync,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
@@ -20,7 +25,11 @@ import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { isKnownFramework } from "../frameworks";
 import { staticFramework } from "../frameworks/all-frameworks";
 import type { PackageManager } from "../../package-manager";
-import type { Config, TelemetryMessage } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	PackageJSON,
+	TelemetryMessage,
+} from "@cloudflare/workers-utils";
 import type { Settings } from "@netlify/build-info";
 
 /**
@@ -94,10 +103,15 @@ export async function detectFramework(
 		existsSync(join(projectPath, lockFile))
 	);
 
-	const maybeDetectedFramework = maybeFindDetectedFramework(buildSettings);
+	const detectedFrameworkFromBuildSettings =
+		maybeFindDetectedFramework(buildSettings);
 
 	if (
-		await isPagesProject(projectPath, wranglerConfig, maybeDetectedFramework)
+		await isPagesProject(
+			projectPath,
+			wranglerConfig,
+			detectedFrameworkFromBuildSettings
+		)
 	) {
 		return {
 			detectedFramework: {
@@ -110,6 +124,13 @@ export async function detectFramework(
 			packageManager,
 		};
 	}
+
+	const maybeDetectedFramework =
+		maybeApplyVitePackageJsonDefaults(
+			detectedFrameworkFromBuildSettings,
+			projectPath,
+			packageManager
+		) ?? maybeDetectViteFromPackageJson(projectPath, packageManager);
 
 	const detectedFramework = maybeDetectedFramework ?? {
 		framework: {
@@ -163,6 +184,103 @@ function convertDetectedPackageManager(
 		default:
 			return NpmPackageManager;
 	}
+}
+
+type PackageJsonWithAdditionalDependencies = PackageJSON & {
+	optionalDependencies?: Record<string, unknown>;
+	peerDependencies?: Record<string, unknown>;
+};
+
+function maybeDetectViteFromPackageJson(
+	projectPath: string,
+	packageManager: PackageManager
+): DetectedFramework | undefined {
+	const vitePackageJsonDefaults = maybeGetVitePackageJsonDefaults(
+		projectPath,
+		packageManager
+	);
+
+	if (!vitePackageJsonDefaults) {
+		return undefined;
+	}
+
+	return {
+		framework: {
+			id: "vite",
+			name: "Vite",
+		},
+		...vitePackageJsonDefaults,
+	};
+}
+
+function maybeApplyVitePackageJsonDefaults(
+	detectedFramework: DetectedFramework | undefined,
+	projectPath: string,
+	packageManager: PackageManager
+): DetectedFramework | undefined {
+	if (detectedFramework?.framework.id !== "vite") {
+		return detectedFramework;
+	}
+
+	const vitePackageJsonDefaults = maybeGetVitePackageJsonDefaults(
+		projectPath,
+		packageManager
+	);
+
+	if (!vitePackageJsonDefaults) {
+		return detectedFramework;
+	}
+
+	return {
+		...detectedFramework,
+		buildCommand:
+			detectedFramework.buildCommand ?? vitePackageJsonDefaults.buildCommand,
+		dist: detectedFramework.dist ?? vitePackageJsonDefaults.dist,
+	};
+}
+
+function maybeGetVitePackageJsonDefaults(
+	projectPath: string,
+	packageManager: PackageManager
+): Pick<DetectedFramework, "buildCommand" | "dist"> | undefined {
+	const packageJsonPath = join(projectPath, "package.json");
+
+	let packageJson: PackageJsonWithAdditionalDependencies;
+	try {
+		packageJson = parsePackageJSON(
+			readFileSync(packageJsonPath),
+			packageJsonPath
+		) as PackageJsonWithAdditionalDependencies;
+	} catch {
+		return undefined;
+	}
+
+	if (!hasPackageJsonDependency(packageJson, "vite")) {
+		return undefined;
+	}
+
+	return {
+		buildCommand:
+			typeof packageJson.scripts?.build === "string"
+				? `${packageManager.type} run build`
+				: "vite build",
+		dist: "dist",
+	};
+}
+
+function hasPackageJsonDependency(
+	packageJson: PackageJsonWithAdditionalDependencies,
+	packageName: string
+): boolean {
+	return [
+		packageJson.dependencies,
+		packageJson.devDependencies,
+		packageJson.optionalDependencies,
+		packageJson.peerDependencies,
+	].some(
+		(dependencies) =>
+			dependencies !== undefined && Object.hasOwn(dependencies, packageName)
+	);
 }
 
 class MultipleFrameworksCIError extends FatalError {

@@ -1,10 +1,11 @@
-import { existsSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { transformFile } from "@cloudflare/codemod";
 import { UserError } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import dedent from "ts-dedent";
 import { logger } from "../../../logger";
+import { usesTypescript } from "../../uses-typescript";
 import type { types } from "recast";
 
 const b = recast.types.builders;
@@ -64,7 +65,11 @@ function extractFromBlockStatement(
 export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string
 ): boolean {
-	const filePath = getViteConfigPath(projectPath);
+	const filePath = maybeGetViteConfigPath(projectPath);
+
+	if (!filePath) {
+		return false;
+	}
 
 	let importsCloudflarePlugin = false;
 	let usesCloudflarePlugin = false;
@@ -127,21 +132,58 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	return importsCloudflarePlugin && usesCloudflarePlugin;
 }
 
-function getViteConfigPath(projectPath: string): string {
+export function hasViteConfig(projectPath: string): boolean {
+	return maybeGetViteConfigPath(projectPath) !== undefined;
+}
+
+function maybeGetViteConfigPath(projectPath: string): string | undefined {
 	const filePathTS = path.join(projectPath, `vite.config.ts`);
 	const filePathJS = path.join(projectPath, `vite.config.js`);
 
-	let filePath: string;
-
 	if (existsSync(filePathTS)) {
-		filePath = filePathTS;
-	} else if (existsSync(filePathJS)) {
-		filePath = filePathJS;
-	} else {
+		return filePathTS;
+	}
+
+	if (existsSync(filePathJS)) {
+		return filePathJS;
+	}
+
+	return undefined;
+}
+
+function getViteConfigPath(projectPath: string): string {
+	const filePath = maybeGetViteConfigPath(projectPath);
+
+	if (!filePath) {
 		throw new Error("Could not find Vite config file to modify");
 	}
 
 	return filePath;
+}
+
+export function createViteConfigWithCloudflarePlugin(
+	projectPath: string,
+	options: { viteEnvironmentName?: string } = {}
+): void {
+	const filePath = path.join(
+		projectPath,
+		`vite.config.${usesTypescript(projectPath) ? "ts" : "js"}`
+	);
+	const cloudflarePluginOptions = options.viteEnvironmentName
+		? `{ viteEnvironment: { name: ${JSON.stringify(options.viteEnvironmentName)} } }`
+		: undefined;
+
+	writeFileSync(
+		filePath,
+		dedent`
+			import { cloudflare } from "@cloudflare/vite-plugin";
+			import { defineConfig } from "vite";
+
+			export default defineConfig({
+				plugins: [cloudflare(${cloudflarePluginOptions ?? ""})],
+			});
+		` + "\n"
+	);
 }
 
 /**

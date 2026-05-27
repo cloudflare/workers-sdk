@@ -59,6 +59,13 @@ export abstract class Framework {
 			`Unable to detect the version of the \`${frameworkPackageInfo.name}\` package`
 		);
 
+		this.validateAndSetFrameworkVersion(frameworkVersion, frameworkPackageInfo);
+	}
+
+	protected validateAndSetFrameworkVersion(
+		frameworkVersion: string,
+		frameworkPackageInfo: AutoConfigFrameworkPackageInfo
+	): void {
 		if (semiver(frameworkVersion, frameworkPackageInfo.minimumVersion) < 0) {
 			throw new AutoConfigFrameworkConfigurationError(
 				`The version of ${this.name} used in the project (${JSON.stringify(

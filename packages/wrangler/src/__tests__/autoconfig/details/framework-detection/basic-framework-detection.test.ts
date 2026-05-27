@@ -30,6 +30,29 @@ describe("detectFramework() / basic framework detection", () => {
 		expect(result.detectedFramework?.framework.name).toBe("Astro");
 	});
 
+	it("detects vite from package.json when no framework is otherwise detected", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({
+				scripts: {
+					build: "tsc && vite build",
+				},
+				devDependencies: {
+					vite: "^8.0.12",
+				},
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		const result = await detectFramework(process.cwd());
+
+		expect(result.detectedFramework?.framework.id).toBe("vite");
+		expect(result.detectedFramework?.framework.name).toBe("Vite");
+		expect(result.detectedFramework?.buildCommand).toBe("npm run build");
+		expect(result.detectedFramework?.dist).toBe("dist");
+	});
+
 	it("includes buildCommand in detectedFramework when available", async ({
 		expect,
 	}) => {

@@ -198,6 +198,34 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
+	it("should detect a Vite project from package.json when no Vite config exists", async ({
+		expect,
+	}) => {
+		await seed({
+			"index.html": '<div id="app"></div>',
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+			"package.json": JSON.stringify({
+				name: "vite-project",
+				scripts: {
+					build: "tsc && vite build",
+				},
+				devDependencies: {
+					vite: "^8.0.12",
+				},
+			}),
+		});
+
+		await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
+			buildCommand: "npm run build",
+			configured: false,
+			framework: {
+				id: "vite",
+				name: "Vite",
+			},
+			outputDir: "dist",
+		});
+	});
+
 	it("an error should be thrown if no output dir can be detected", async ({
 		expect,
 	}) => {
