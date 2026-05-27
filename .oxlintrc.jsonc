@@ -198,12 +198,5 @@
 				"workers-sdk/no-wrangler-named-imports": "error",
 			},
 		},
-		// TODO: Remove the following wrangler override.
-		{
-			"files": ["packages/wrangler/**"],
-			"rules": {
-				"workers-sdk/require-description-when-disabling": "off",
-			},
-		},
 	],
 }

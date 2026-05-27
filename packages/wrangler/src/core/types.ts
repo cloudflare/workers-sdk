@@ -38,9 +38,9 @@ type CamelCaseKey<K extends PropertyKey> = K extends string
 type Alias<O extends Options | PositionalOptions> = O extends { alias: infer T }
 	? T extends Exclude<string, T>
 		? { [key in T]: InferredOptionType<O> }
-		: // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+		: // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- Vendored yargs type requires empty object fallback
 			{}
-	: // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+	: // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- Vendored yargs type requires empty object fallback
 		{};
 
 type StringKeyOf<T> = Extract<keyof T, string>;

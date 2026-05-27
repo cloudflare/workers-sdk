@@ -17,7 +17,9 @@ export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
 		const aiResponse = await env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
-			prompt: "When I say PING, you say PONG. PING",
+			messages: [
+				{ role: "user", content: "When I say PING, you say PONG. PING" },
+			],
 		});
 
 		if (url.pathname === "/vectorize") {
@@ -91,7 +93,11 @@ export default {
 
 		return new Response(
 			JSON.stringify(
-				(aiResponse as { response: string }).response.toUpperCase()
+				(
+					aiResponse as {
+						choices: { message: { content: string } }[];
+					}
+				).choices[0]?.message.content.toUpperCase() ?? ""
 			)
 		);
 	},

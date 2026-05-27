@@ -1,6 +1,6 @@
 import { readdir, stat } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
-import { FatalError } from "@cloudflare/workers-utils";
+import { FatalError, UserError } from "@cloudflare/workers-utils";
 import { getType } from "mime";
 import { Minimatch } from "minimatch";
 import prettyBytes from "pretty-bytes";
@@ -29,10 +29,10 @@ export const pagesProjectValidateCommand = createCommand({
 	positionalArgs: ["directory"],
 	async handler({ directory }) {
 		if (!directory) {
-			throw new FatalError("Must specify a directory.", {
-				code: 1,
-				telemetryMessage: "pages validate missing directory",
-			});
+			throw new UserError(
+				"Missing directory. Provide the path to the directory to validate as a positional argument.",
+				{ telemetryMessage: "pages validate missing directory" }
+			);
 		}
 
 		const fileCountLimit = process.env.CF_PAGES_UPLOAD_JWT

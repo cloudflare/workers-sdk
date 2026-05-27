@@ -27,6 +27,7 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
 - Total session duration of the command run (e.g. 3 seconds, etc.)
 - Whether the Wrangler client is running in CI or in an interactive instance
 - Whether the command was executed by an AI coding agent (e.g. Claude Code, Cursor, GitHub Copilot), and if so, which agent
+- Whether the AI coding agent has Cloudflare skills installed, and if so, whether they were installed automatically by Wrangler or manually by the user
 - Error _type_ (e.g. `APIError` or `UserError`), and sanitised error messages that will not include user information like filepaths or stack traces (e.g. `Asset too large`).
 - General machine information such as OS and OS Version
 - local REST API usage (e.g. via the Local Explorer):

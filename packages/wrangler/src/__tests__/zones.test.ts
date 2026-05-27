@@ -1,6 +1,9 @@
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Uses expect in MSW handlers outside test callbacks
+ * TODO: remove this `expect` import
+ */
 import { describe, expect, it, test } from "vitest";
 import { getHostFromUrl, getZoneForRoute, getZoneFromRoute } from "../zones";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";

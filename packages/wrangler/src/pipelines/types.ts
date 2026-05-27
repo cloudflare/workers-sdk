@@ -76,6 +76,7 @@ export type ValidateSqlResponse = CloudflareAPIResponse<{
 export interface ListPipelinesParams {
 	page?: number;
 	per_page?: number;
+	name?: string;
 }
 
 export interface Stream {
@@ -109,6 +110,7 @@ export interface ListStreamsParams {
 	page?: number;
 	per_page?: number;
 	pipeline_id?: string;
+	name?: string;
 }
 
 // Stream Format type (only JSON supported)
@@ -197,6 +199,7 @@ export interface ListSinksParams {
 	page?: number;
 	per_page?: number;
 	pipeline_id?: string;
+	name?: string;
 }
 
 export interface CreateSinkRequest {
