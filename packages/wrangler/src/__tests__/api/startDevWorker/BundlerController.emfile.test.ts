@@ -75,7 +75,7 @@ describe("BundlerController — assets watcher EMFILE handling", () => {
 				assets: {
 					directory: path.resolve("assets"),
 					binding: undefined,
-					routingConfig: { has_user_worker: true },
+					routerConfig: { has_user_worker: true },
 					assetConfig: {},
 				},
 			});
@@ -117,7 +117,7 @@ describe("BundlerController — assets watcher EMFILE handling", () => {
 				assets: {
 					directory: path.resolve("assets"),
 					binding: undefined,
-					routingConfig: { has_user_worker: true },
+					routerConfig: { has_user_worker: true },
 					assetConfig: {},
 				},
 			});
