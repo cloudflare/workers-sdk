@@ -18,6 +18,7 @@ import { convertConfigToBindings } from "./startDevWorker/utils";
 import type { CfAccount } from "../dev/create-worker-preview";
 import type {
 	LogLevel,
+	BindingMode,
 	ServiceFetch,
 	StartDevWorkerInput,
 } from "./startDevWorker/types";
@@ -69,10 +70,15 @@ export type ServerOptions = {
 	 */
 	accountId?: string | undefined;
 	/**
-	 * Whether bindings configured with `remote: true` may connect to remote resources.
-	 * Defaults to `false`.
+	 * Overrides how bindings are resolved for this server.
+	 *
+	 * - `"local"`: use local bindings and reject bindings without local support
+	 * - `"local-first"`: use local bindings when available, remote otherwise
+	 * - `"configured"`: use the binding mode configured in each Worker config
+	 *
+	 * Defaults to `"local-first"`.
 	 */
-	allowRemoteBindings?: boolean | undefined;
+	bindingMode?: BindingMode | undefined;
 	/**
 	 * Handles outbound `fetch()` calls from Workers.
 	 * Defaults to the current process `fetch`.
@@ -288,6 +294,10 @@ export function createServer(options: ServerOptions): WorkerServer {
 		return persist ?? false;
 	}
 
+	function bindingMode(serverOptions: ServerOptions): BindingMode {
+		return serverOptions.bindingMode ?? "local-first";
+	}
+
 	function resolveWorkerInputs(
 		serverOptions: ServerOptions
 	): StartDevWorkerInput[] {
@@ -324,7 +334,8 @@ export function createServer(options: ServerOptions): WorkerServer {
 				bindings,
 				dev: {
 					auth: serverAuthHook,
-					remote: serverOptions.allowRemoteBindings ? undefined : false,
+					remote: bindingMode(serverOptions) === "local" ? false : undefined,
+					bindingMode: bindingMode(serverOptions),
 					server: serverOptions.server ?? { hostname: "127.0.0.1", port: 0 },
 					logLevel: serverOptions.logLevel ?? "error",
 					watch: serverOptions.watch ?? false,
@@ -548,10 +559,10 @@ export function createServer(options: ServerOptions): WorkerServer {
 		async listen() {
 			if (!serverSession) {
 				if (!startPromise) {
-					void restartServerSession();
+					await restartServerSession();
+				} else {
+					await startPromise;
 				}
-
-				await startPromise;
 			}
 
 			assert(serverSession, "Worker server has no active session.");

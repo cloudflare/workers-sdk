@@ -3,6 +3,7 @@ import events from "node:events";
 import {
 	configFileName,
 	formatConfigSnippet,
+	getBindingLocalSupport,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
@@ -14,7 +15,7 @@ import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { logger } from "./logger";
 import { getHostFromRoute } from "./zones";
-import type { StartDevWorkerInput, Trigger } from "./api";
+import type { BindingMode, StartDevWorkerInput, Trigger } from "./api";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
 	Binding,
@@ -505,6 +506,7 @@ function applyHyperdriveEnvVars(config: Config, local: boolean): void {
  * If `undefined` it defaults to the standard .env files from `getDefaultEnvFiles()`.
  * @param local Whether the dev server should run locally.
  * @param inputBindings Additional bindings to merge on top of config bindings
+ * @param bindingMode How local dev should resolve bindings with local/remote support.
  * @returns The bindings for the Cloudflare Worker.
  */
 export function getBindings(
@@ -513,7 +515,8 @@ export function getBindings(
 	envFiles: string[] | undefined,
 	local: boolean,
 	inputBindings: StartDevWorkerInput["bindings"],
-	defaultBindings: StartDevWorkerInput["bindings"]
+	defaultBindings: StartDevWorkerInput["bindings"],
+	bindingMode?: BindingMode
 ): StartDevWorkerInput["bindings"] {
 	applyHyperdriveEnvVars(configParam, local);
 
@@ -554,7 +557,40 @@ export function getBindings(
 		}
 	}
 
-	return { ...defaultBindings, ...bindings, ...inputBindings };
+	let result = { ...defaultBindings, ...bindings, ...inputBindings };
+
+	if (bindingMode === "local" || bindingMode === "local-first") {
+		result = Object.fromEntries(
+			Object.entries(result).map(([name, binding]) => {
+				if (!("remote" in binding) || binding.remote !== true) {
+					return [name, binding];
+				}
+
+				const support = getBindingLocalSupport(binding.type);
+				const cannotRunLocally =
+					support === "remote" ||
+					support ===
+						"DO-NOT-USE-this-resource-will-never-have-a-local-simulator";
+
+				if (bindingMode === "local" && cannotRunLocally) {
+					throw new UserError(
+						`Binding ${name} (${binding.type}) does not support local development. Set bindingMode to "local-first" or "configured" to allow remote access.`,
+						{
+							telemetryMessage: "server remote binding disabled but required",
+						}
+					);
+				}
+
+				if (support === "local-only" || support === "local-and-remote") {
+					return [name, { ...binding, remote: false }];
+				}
+
+				return [name, binding];
+			})
+		);
+	}
+
+	return result;
 }
 
 export function getAssetChangeMessage(

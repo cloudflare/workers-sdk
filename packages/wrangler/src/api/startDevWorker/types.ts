@@ -143,6 +143,8 @@ export interface StartDevWorkerInput {
 		 *   - undefined (default): Run your Worker's code locally, and any configured remote bindings remotely
 		 */
 		remote?: boolean | "minimal";
+		/** Overrides how bindings are resolved in local mode. */
+		bindingMode?: BindingMode;
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
 		auth?: AsyncHook<CfAccount, [Pick<Config, "account_id">]>; // provide config.account_id as a hook param
 		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. Set to `false` to disable persistence. */
@@ -207,6 +209,9 @@ export interface StartDevWorkerInput {
 
 	experimental?: Record<string, never>;
 }
+
+/** Controls how local dev resolves bindings that may use local or remote resources. */
+export type BindingMode = "local" | "local-first" | "configured";
 
 export type StartDevWorkerOptions = Omit<
 	StartDevWorkerInput,

@@ -29,6 +29,7 @@ export type {
 	AsyncHook,
 	Bundle,
 	LogLevel,
+	BindingMode,
 	File,
 	BinaryFile,
 	Trigger,

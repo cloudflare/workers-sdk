@@ -802,32 +802,31 @@ describe("createServer", { sequential: true }, () => {
 		);
 	});
 
-	it("uses local bindings when remote bindings are not allowed", async ({
+	it("uses local bindings by default when local support is available", async ({
 		expect,
 	}) => {
 		await helper.seed({
 			"wrangler.jsonc": dedent`
 				{
-					"name": "config-local-bindings-worker",
-					"main": "src/config.ts",
+					"name": "write-worker",
+					"main": "src/writer.ts",
 					"compatibility_date": "2026-05-20",
 					"kv_namespaces": [
-						{ "binding": "STORE", "id": "config-test-store", "remote": true }
+						{ "binding": "STORE", "id": "store-id", "remote": true }
 					]
 				}
 			`,
-			"src/config.ts": dedent`
+			"src/writer.ts": dedent`
 				export default {
 					async fetch(request, env) {
-						await env.STORE.put("key", "config-value");
-						return new Response((await env.STORE.get("key")) ?? "missing");
+						await env.STORE.put("key", "value");
+						return new Response("Ok");
 					}
 				};
 			`,
-			"src/inline.ts": dedent`
+			"src/reader.ts": dedent`
 				export default {
 					async fetch(request, env) {
-						await env.STORE.put("key", "inline-value");
 						return new Response((await env.STORE.get("key")) ?? "missing");
 					}
 				};
@@ -840,32 +839,34 @@ describe("createServer", { sequential: true }, () => {
 				{ configPath: "./wrangler.jsonc" },
 				{
 					config: {
-						name: "inline-local-bindings-worker",
-						main: "src/inline.ts",
+						name: "read-worker",
+						main: "src/reader.ts",
 						compatibility_date: "2026-05-20",
 						kv_namespaces: [
 							{
 								binding: "STORE",
-								id: "inline-test-store",
+								id: "store-id",
 								remote: true,
 							},
 						],
 					},
 				},
 			],
-			allowRemoteBindings: false,
 		});
 		onTestFinished(server.close);
 
 		await server.listen();
 
-		const configResponse = await server.fetch("/");
-		await expect(configResponse.text()).resolves.toBe("config-value");
+		const writeResponse = await server.getWorker("write-worker").fetch("/");
+		await expect(writeResponse.text()).resolves.toBe("Ok");
 
-		const inlineResponse = await server
-			.getWorker("inline-local-bindings-worker")
-			.fetch("/");
-		await expect(inlineResponse.text()).resolves.toBe("inline-value");
+		const readResponse1 = await server.getWorker("read-worker").fetch("/");
+		await expect(readResponse1.text()).resolves.toBe("value");
+
+		await server.clearStorage();
+
+		const readResponse2 = await server.getWorker("read-worker").fetch("/");
+		await expect(readResponse2.text()).resolves.toBe("missing");
 	});
 
 	it("exposes the inspector URL when enabled", async ({ expect }) => {

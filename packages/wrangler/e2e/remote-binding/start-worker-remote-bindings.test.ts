@@ -43,7 +43,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const server = createServer({
 				root: helper.tmpPath,
 				workers: [{ configPath: "wrangler.json" }],
-				allowRemoteBindings: true,
+				bindingMode: "configured",
 			});
 			onTestFinished(server.close);
 
@@ -73,7 +73,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const server = createServer({
 				root: helper.tmpPath,
 				workers: [{ configPath: "wrangler.json" }],
-				allowRemoteBindings: true,
+				bindingMode: "configured",
 				watch: true,
 			});
 			onTestFinished(server.close);
@@ -120,7 +120,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	}
 );
 
-it("doesn't connect to remote bindings by default", async ({ expect }) => {
+it("rejects remote-only bindings in local mode", async ({ expect }) => {
 	const helper = new WranglerE2ETestHelper();
 	await helper.seed(resolve(__dirname, "./workers"));
 	await helper.seed({
@@ -139,13 +139,12 @@ it("doesn't connect to remote bindings by default", async ({ expect }) => {
 		const server = createServer({
 			root: helper.tmpPath,
 			workers: [{ configPath: "wrangler.json" }],
+			bindingMode: "local",
 		});
 		onTestFinished(server.close);
 
 		await server.listen();
-
-		await server.fetch("http://example.com");
 	}).rejects.toThrowErrorMatchingInlineSnapshot(
-		`[Error: Binding AI needs to be run remotely]`
+		`[Error: Binding AI (ai) does not support local development. Set bindingMode to "local-first" or "configured" to allow remote access.]`
 	);
 });

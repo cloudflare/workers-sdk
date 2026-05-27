@@ -141,6 +141,53 @@ describe("ConfigController", () => {
 		});
 	});
 
+	it("should set configured remote bindings with local support to local in local-first mode", async ({
+		expect,
+	}) => {
+		const event = bus.waitFor("configUpdate");
+		await seed({
+			"src/index.ts": dedent /* javascript */ `
+				export default {}
+			`,
+			"wrangler.jsonc": dedent`
+				{
+					"name": "my-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2024-06-01",
+					"kv_namespaces": [
+						{ "binding": "STORE", "id": "namespace-id", "remote": true }
+					],
+					"vectorize": [
+						{ "binding": "VECTORIZE", "index_name": "index", "remote": true }
+					]
+				}
+			`,
+		});
+
+		await controller.set({
+			config: "./wrangler.jsonc",
+			dev: { bindingMode: "local-first" },
+		});
+
+		const configUpdate = await event;
+
+		expect(configUpdate).toMatchObject({
+			type: "configUpdate",
+			config: {
+				bindings: {
+					STORE: {
+						type: "kv_namespace",
+						remote: false,
+					},
+					VECTORIZE: {
+						type: "vector_index",
+						remote: true,
+					},
+				},
+			},
+		});
+	});
+
 	it("should apply module root to parent if main is nested from base_dir", async ({
 		expect,
 	}) => {
