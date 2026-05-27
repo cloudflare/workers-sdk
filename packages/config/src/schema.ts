@@ -392,11 +392,7 @@ export type ParsedConfig = z.output<typeof ConfigSchema>;
  *   (produced by `import ... with { type: "cf-worker" }`), but the schema
  *   only accepts the post-`load.ts` shape (`string` or `{ default: string }`).
  *
- * - `env`: binding return types (e.g. `AiBinding`) carry phantom
- *   `__typeParams` / `__config` fields for type inference that the schema
- *   does not (and cannot) validate at runtime. Drift on `env` shape is
- *   guarded by the schema-level binding union and the `createBindings`
- *   factory return types, which must be kept in sync manually.
+ * - `env`: see the separate unidirectional drift check below.
  */
 type _ComparableInput = Omit<
 	z.input<typeof ConfigSchema>,
@@ -412,3 +408,22 @@ const _assertSchemaMatchesUserConfig: _AssertSchemaMatchesUserConfig = [
 	true,
 ];
 void _assertSchemaMatchesUserConfig;
+
+/**
+ * Unidirectional drift check for `env`. The public binding return types
+ * (e.g. `AiBinding`) carry phantom `__typeParams` / `__config` fields for
+ * inference helpers that the schema does not (and cannot) validate at
+ * runtime, so a bidirectional check would always fail in that direction.
+ *
+ * We therefore only assert that `UserConfig['env']` is assignable to
+ * `z.input<typeof ConfigSchema>['env']` — i.e. every binding shape the
+ * public type accepts is something the schema is willing to parse. This
+ * catches drift where the public type drops a field the schema still
+ * requires, renames a field, changes a field's type to one the schema
+ * rejects, or adds a binding the schema doesn't know about.
+ */
+type _AssertUserConfigEnvExtendsSchema =
+	UserConfig["env"] extends z.input<typeof ConfigSchema>["env"] ? true : false;
+const _assertUserConfigEnvExtendsSchema: _AssertUserConfigEnvExtendsSchema =
+	true;
+void _assertUserConfigEnvExtendsSchema;

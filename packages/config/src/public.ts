@@ -1,20 +1,12 @@
 /**
  * Curated public surface of `@cloudflare/config` — the types and values that a
  * user authoring a `worker.config.ts` should have access to.
- *
- * Internal-only exports (`ConfigSchema`, `generateTypes`,
- * `convertToWranglerConfig`, `loadConfig`, `registerConfigHooks`,
- * `LoadConfigResult`) live on the root `@cloudflare/config` entry and must not
- * be re-exported from here. The `@cloudflare/vite-plugin/experimental-config`
- * entry forwards this module verbatim via `export *`, so adding something here
- * exposes it to plugin consumers.
  */
 
 import type { UserConfig } from "./types";
 
 export type {
 	Bindings,
-	// Binding types (exported for declaration file generation)
 	AiBinding,
 	AiSearchBinding,
 	AiSearchNamespaceBinding,
