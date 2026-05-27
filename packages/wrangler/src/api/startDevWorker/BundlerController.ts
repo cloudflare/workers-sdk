@@ -317,7 +317,7 @@ export class BundlerController extends Controller {
 
 		if (config.assets?.directory) {
 			const assetsDir = config.assets.directory;
-			this.#assetsWatcher = watch(assetsDir, {
+			const watcher = watch(assetsDir, {
 				persistent: true,
 				ignoreInitial: true,
 			})
@@ -342,9 +342,12 @@ export class BundlerController extends Controller {
 								`Watcher error: ${err.message}`
 						);
 					}
-					void this.#assetsWatcher?.close();
-					this.#assetsWatcher = undefined;
+					void watcher.close();
+					if (this.#assetsWatcher === watcher) {
+						this.#assetsWatcher = undefined;
+					}
 				});
+			this.#assetsWatcher = watcher;
 		}
 	}
 
