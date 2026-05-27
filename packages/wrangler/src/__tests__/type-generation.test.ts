@@ -1745,8 +1745,7 @@ describe("generate types - CLI", () => {
 
 		fs.writeFileSync(
 			"./primary/index.ts",
-			`import { WorkerEntrypoint } from 'cloudflare:workers';
-export default { async fetch() { return new Response("ok"); } };`,
+			`export default { async fetch() { return new Response("ok"); } };`,
 			"utf-8"
 		);
 		fs.writeFileSync(
