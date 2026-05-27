@@ -10,8 +10,7 @@ import { getEntry } from "../deployment-bundle/entry";
 import { logger } from "../logger";
 import { generateRuntimeTypes } from "./runtime";
 import { generateEnvTypes } from ".";
-import type { Entry } from "../deployment-bundle/entry";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config, Entry } from "@cloudflare/workers-utils";
 
 export const DEFAULT_WORKERS_TYPES_FILE_NAME = "worker-configuration.d.ts";
 export const DEFAULT_WORKERS_TYPES_FILE_PATH = `./${DEFAULT_WORKERS_TYPES_FILE_NAME}`;

@@ -1,6 +1,6 @@
 import path from "node:path";
+import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import * as find from "empathic/find";
-import { getWranglerTmpDir } from "../paths";
 import type { BundleResult } from "../deployment-bundle/bundle";
 
 export const RUNNING_BUILDERS: BundleResult[] = [];

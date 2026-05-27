@@ -16,36 +16,11 @@ import {
 } from "./resolve-entry";
 import { runCustomBuild } from "./run-custom-build";
 import type {
-	CfScriptFormat,
 	Config,
 	DurableObjectBindings,
+	Entry,
 	RawConfig,
 } from "@cloudflare/workers-utils";
-
-/**
- * An entry point for the Worker.
- *
- * It consists not just of a `file`, but also of a `directory` that is used to resolve relative paths.
- */
-export type Entry = {
-	/** A worker's entrypoint */
-	file: string;
-	/** A worker's directory. Usually where the Wrangler configuration file is located */
-	projectRoot: string;
-	/** The path to the config file, if it exists. */
-	configPath: string | undefined;
-	/** Is this a module worker or a service worker? */
-	format: CfScriptFormat;
-	/** The directory that contains all of a `--no-bundle` worker's modules. Usually `${directory}/src`. Defaults to path.dirname(file) */
-	moduleRoot: string;
-	/**
-	 * A worker's name
-	 */
-	name?: string | undefined;
-
-	/** Export from a Worker's entrypoint */
-	exports: string[];
-};
 
 /**
  * Compute the entry-point for the Worker.

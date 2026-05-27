@@ -1,5 +1,8 @@
 import prompts from "prompts";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Helper used outside test callbacks, needs module-level expect
+ * TODO: remove this `expect` import
+ */
 import { expect } from "vitest";
 import type { Mock } from "vitest";
 

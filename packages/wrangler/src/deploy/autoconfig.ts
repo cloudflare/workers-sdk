@@ -26,6 +26,7 @@ type AutoConfigArgs = ReadConfigCommandArgs & {
 	dryRun: boolean | undefined;
 	latest: boolean | undefined;
 	compatibilityDate: string | undefined;
+	compatibilityFlags: string[] | undefined;
 };
 
 /**
@@ -273,6 +274,9 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 		if (args.assets) {
 			configContent.assets = { directory: args.assets };
 		}
+		if (args.compatibilityFlags?.length) {
+			configContent.compatibility_flags = args.compatibilityFlags;
+		}
 
 		const writeConfigFile = await confirm(
 			`Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\n${chalk.dim(
@@ -286,7 +290,7 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 			writeFileSync(configPath, jsonString);
 			logger.log(`Wrote \n${jsonString}\n to ${chalk.bold(configPath)}.`);
 			logger.log(
-				`Simply run ${chalk.bold("`wrangler deploy`")} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
+				`\nSimply run ${chalk.bold("`wrangler deploy`")} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
 			);
 		} else {
 			const scriptPart = args.script ? `${args.script} ` : "";
@@ -296,11 +300,14 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 					? `--compatibility-date ${effectiveCompatDate}`
 					: "",
 				args.assets ? `--assets ${args.assets}` : "",
+				...(args.compatibilityFlags?.length
+					? [`--compatibility-flags ${args.compatibilityFlags.join(" ")}`]
+					: []),
 			]
 				.filter(Boolean)
 				.join(" ");
 			logger.log(
-				`You should run ${chalk.bold(
+				`\nYou should run ${chalk.bold(
 					`wrangler deploy ${scriptPart}${flagParts}`
 				)} next time to deploy this Worker without going through this flow again.`
 			);

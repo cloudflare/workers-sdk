@@ -19,13 +19,16 @@ async function getBotMessage(ai: Ai, prompt: string) {
 				role: "user",
 				content: prompt,
 			},
-		] as RoleScopedChatInput[],
+		],
+	} satisfies ChatCompletionsMessagesInput;
+	const message = (await ai.run("@cf/google/gemma-4-26b-a4b-it", chat)) as {
+		choices?: { message: { content: string } }[];
 	};
-	const message = await ai.run("@cf/google/gemma-4-26b-a4b-it", chat);
-	if (!("response" in message)) {
+	const content = message.choices?.[0]?.message.content;
+	if (!content) {
 		return "I'm feeling a bit poorly 🥲—try asking me for a message later!";
 	}
-	return message.response;
+	return content;
 }
 
 async function isWranglerTeamMember(

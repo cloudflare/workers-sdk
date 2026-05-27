@@ -1124,7 +1124,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "script-name" "
+				🌀 Processing the secrets for the Worker "script-name" "
 			`
 			);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -1151,12 +1151,12 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "script-name"
+				🌀 Processing the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: secret1
 				✨ Successfully created secret for key: password
 
 				Finished processing secrets file:
-				✨ 2 secrets successfully uploaded"
+				✨ 2 secrets successfully created"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1179,12 +1179,12 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "script-name"
+				🌀 Processing the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: secret-name-1
 				✨ Successfully created secret for key: secret-name-2
 
 				Finished processing secrets file:
-				✨ 2 secrets successfully uploaded"
+				✨ 2 secrets successfully created"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1204,12 +1204,12 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "script-name"
+				🌀 Processing the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: SECRET_NAME_1
 				✨ Successfully created secret for key: SECRET_NAME_2
 
 				Finished processing secrets file:
-				✨ 2 secrets successfully uploaded"
+				✨ 2 secrets successfully created"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1238,7 +1238,7 @@ describe("wrangler secret", () => {
 			await expect(
 				runWrangler("secret bulk ./secret.json --name script-name")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The value for "invalid-secret" in "./secret.json" is not a "string" instead it is of type "number"]`
+				`[Error: The value for "invalid-secret" in "./secret.json" is not null or a "string" instead it is of type "number"]`
 			);
 		});
 
@@ -1269,7 +1269,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "script-name"
+				🌀 Processing the secrets for the Worker "script-name"
 
 				🚨 Secrets failed to upload
 
@@ -1303,7 +1303,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "script-name"
+				🌀 Processing the secrets for the Worker "script-name"
 
 				🚨 Secrets failed to upload
 
@@ -1364,7 +1364,7 @@ describe("wrangler secret", () => {
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "script-name"
+				🌀 Processing the secrets for the Worker "script-name"
 
 				🚨 Secrets failed to upload
 				",
@@ -1429,13 +1429,99 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "script-name"
+				🌀 Processing the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: secret-name-2
 				✨ Successfully created secret for key: secret-name-3
 				✨ Successfully created secret for key: secret-name-4
 
 				Finished processing secrets file:
-				✨ 3 secrets successfully uploaded"
+				✨ 3 secrets successfully created"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should send null values to delete secrets via secrets-bulk endpoint", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-to-create": "new-value",
+					"secret-to-update": "updated-value",
+					"secret-to-delete": null,
+				})
+			);
+
+			msw.use(
+				http.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk`,
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+
+						const patchBody = (await request.json()) as {
+							secrets: Record<string, unknown>;
+						};
+
+						// Secrets with values are sent as SecretBindingUpload objects,
+						// secrets set to null are sent as null (RFC 7396 delete)
+						expect(patchBody).toEqual({
+							secrets: {
+								"secret-to-create": {
+									name: "secret-to-create",
+									text: "new-value",
+									type: "secret_text",
+								},
+								"secret-to-update": {
+									name: "secret-to-update",
+									text: "updated-value",
+									type: "secret_text",
+								},
+								"secret-to-delete": null,
+							},
+						});
+
+						return HttpResponse.json(createFetchResult(null));
+					}
+				)
+			);
+
+			await runWrangler("secret bulk ./secret.json --name script-name");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Processing the secrets for the Worker "script-name"
+				💥 Successfully deleted secret for key: secret-to-delete
+				✨ Successfully created secret for key: secret-to-create
+				✨ Successfully created secret for key: secret-to-update
+
+				Finished processing secrets file:
+				💥 1 secrets successfully deleted
+				✨ 2 secrets successfully created"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should show no-op message when bulk input has no secrets", async ({
+			expect,
+		}) => {
+			writeFileSync("secret.json", JSON.stringify({}));
+
+			mockBulkRequest(expect);
+
+			await runWrangler("secret bulk ./secret.json --name script-name");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Processing the secrets for the Worker "script-name"
+
+				Finished processing secrets file:
+				No secrets were created or deleted"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1463,7 +1549,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "non-existent-worker"
+				🌀 Processing the secrets for the Worker "non-existent-worker"
 				Aborting. No secrets added."
 			`);
 		});
@@ -1496,7 +1582,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "non-existent-worker"
+				🌀 Processing the secrets for the Worker "non-existent-worker"
 				? There doesn't seem to be a Worker called "non-existent-worker". Do you want to create a new Worker with that name and add secrets to it?
 				🤖 Using fallback value in non-interactive context: yes
 				🌀 Creating new Worker "non-existent-worker"...
@@ -1504,7 +1590,7 @@ describe("wrangler secret", () => {
 				✨ Successfully created secret for key: secret-name-2
 
 				Finished processing secrets file:
-				✨ 2 secrets successfully uploaded"
+				✨ 2 secrets successfully created"
 			`);
 		});
 

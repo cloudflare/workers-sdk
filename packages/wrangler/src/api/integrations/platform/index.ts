@@ -27,11 +27,11 @@ import { ExecutionContext } from "./executionContext";
 // TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`
 // This is a temporary fix to ensure that the types are included in the build output
 import type {
+	AssetsOptions,
 	Config,
 	RawConfig,
 	RawEnvironment,
 } from "../../../../../workers-utils/src";
-import type { AssetsOptions } from "../../../assets";
 import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
