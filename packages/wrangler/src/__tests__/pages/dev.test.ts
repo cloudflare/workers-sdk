@@ -1,7 +1,24 @@
-import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it } from "vitest";
+import {
+	runInTempDir,
+	seed,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
+import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runWrangler } from "../helpers/run-wrangler";
+
+const startDevMock = vi.hoisted(() => vi.fn());
+
+vi.mock("../../dev/start-dev", async () => {
+	const { EventEmitter } = await import("node:events");
+	return {
+		startDev: startDevMock.mockImplementation(async () => {
+			const devEnv = new EventEmitter();
+			setTimeout(() => devEnv.emit("teardown"), 0);
+			return { devEnv, secondary: [], unregisterHotKeys: vi.fn() };
+		}),
+	};
+});
 
 /**
  * Given that `runWrangler()` mocks out the underlying implementation
@@ -48,6 +65,25 @@ describe("pages dev", () => {
 			runWrangler("pages dev public --env=production")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Pages does not support the --env flag during local development. Use the --branch flag to target your production or preview environment instead.]`
+		);
+	});
+
+	it("should pass the discovered config path to startDev", async ({
+		expect,
+	}) => {
+		await seed({ "public/index.html": "" });
+		writeWranglerConfig({ pages_build_output_dir: "public" });
+		const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
+			throw new Error("process.exit");
+		}) as typeof process.exit);
+
+		await expect(runWrangler("pages dev")).rejects.toThrow("process.exit");
+
+		expect(exitSpy).toHaveBeenCalledWith(0);
+		expect(startDevMock).toHaveBeenCalledWith(
+			expect.objectContaining({
+				config: expect.stringMatching(/wrangler\.toml$/),
+			})
 		);
 	});
 });

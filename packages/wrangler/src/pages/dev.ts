@@ -1029,7 +1029,7 @@ export const pagesDevCommand = createCommand({
 					experimentalProvision: undefined,
 					experimentalAutoCreate: false,
 					enableIpc: true,
-					config: Array.isArray(args.config) ? args.config : undefined,
+					config: Array.isArray(args.config) ? args.config : config.configPath,
 					site: undefined,
 					siteInclude: undefined,
 					siteExclude: undefined,
