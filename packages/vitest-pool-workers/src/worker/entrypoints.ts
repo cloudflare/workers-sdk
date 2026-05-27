@@ -173,12 +173,12 @@ const invocationQueues = new WeakMap<InvocationQueueOwner, Promise<void>>();
 /**
  * Preserve the order in which async wrapper invocations begin executing.
  *
- * Resolving a property like `stub.method` may need to import user modules or
- * ensuring a Durable Object handler instance may need to import user modules or
- * instantiate wrapper objects. If several calls are fired synchronously, those
- * async steps can otherwise complete out of order before the actual user code is
- * invoked. The queue is released as soon as invocation starts, so async
- * completions can still run concurrently.
+ * Resolving a property like `stub.method`, or ensuring a Durable Object handler
+ * instance, may need to import user modules or instantiate wrapper objects. If
+ * several calls are fired synchronously, those async steps can otherwise
+ * complete out of order before the actual user code is invoked. The queue is
+ * released as soon as invocation starts, so async completions can still run
+ * concurrently.
  */
 async function enqueueInvocation<T>(
 	owner: InvocationQueueOwner,
