@@ -4,8 +4,8 @@ import {
 	hasCursor,
 	hasMorePages,
 	fetchResultBase,
+	fetchListResultBase,
 } from "@cloudflare/workers-utils";
-import { fetchListResultBase } from "../../../workers-utils/src";
 import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { fetchInternal, resolveCredentials } from "./internal";
