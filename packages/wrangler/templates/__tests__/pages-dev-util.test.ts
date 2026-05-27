@@ -93,14 +93,12 @@ describe("isRoutingRuleMatch", () => {
 	it("should throw an error if pathname or routing rule params are missing", () => {
 		// MISSING PATHNAME
 		expect(() =>
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore: sanity check
+			// @ts-expect-error -- Intentionally testing invalid types
 			isRoutingRuleMatch(undefined, "/*")
 		).toThrow("Pathname is undefined.");
 
 		expect(() =>
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore: sanity check
+			// @ts-expect-error -- Intentionally testing invalid types
 			isRoutingRuleMatch(null, "/*")
 		).toThrow("Pathname is undefined.");
 
@@ -110,14 +108,12 @@ describe("isRoutingRuleMatch", () => {
 
 		// MISSING ROUTING RULE
 		expect(() =>
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore: sanity check
+			// @ts-expect-error -- Intentionally testing invalid types
 			isRoutingRuleMatch("/foo", undefined)
 		).toThrow("Routing rule is undefined.");
 
 		expect(() =>
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore: sanity check
+			// @ts-expect-error -- Intentionally testing invalid types
 			isRoutingRuleMatch("/foo", null)
 		).toThrow("Routing rule is undefined.");
 
