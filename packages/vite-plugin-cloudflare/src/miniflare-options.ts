@@ -34,6 +34,7 @@ import { getContainerOptions, getDockerPath } from "./containers";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
+import { checkForNpmUpdate } from "./update-check";
 import { satisfiesMinimumViteVersion, withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
@@ -688,7 +689,10 @@ export async function getPreviewMiniflareOptions(
  * A Miniflare logger that forwards messages onto a Vite logger.
  */
 class ViteMiniflareLogger extends Log {
+	#warnedCompatibilityDateFallback = false;
+
 	private logger: vite.Logger;
+
 	constructor(config: vite.ResolvedConfig) {
 		super(miniflareLogLevelFromViteLogLevel(config.logLevel));
 		this.logger = config.logger;
@@ -703,6 +707,33 @@ class ViteMiniflareLogger extends Log {
 			case LogLevel.INFO:
 				return this.logger.info(message);
 		}
+	}
+
+	override warn(message: string): void {
+		// workerd emits a warning when the requested compatibility date is newer
+		// than the binary supports. We intercept it here so we only show it once
+		// and only when a newer version of the plugin is actually available on
+		// npm — otherwise the warning is just noise the user cannot act on.
+		if (!message.startsWith("The latest compatibility date supported by")) {
+			this.logger.warn(message);
+			return;
+		}
+
+		if (this.#warnedCompatibilityDateFallback) {
+			return;
+		}
+		this.#warnedCompatibilityDateFallback = true;
+
+		return void checkForNpmUpdate().then((result) => {
+			if (result.status !== "update-available") {
+				return;
+			}
+			this.logger.warn(
+				`${message}\nFeatures enabled by your requested compatibility date may not be available.` +
+					`\nUpgrade to \`@cloudflare/vite-plugin@${result.latest}\` to remove this warning.`
+			);
+			return;
+		});
 	}
 
 	override logReady() {
