@@ -1,6 +1,11 @@
 import path from "node:path";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
 import * as find from "empathic/find";
+import type { PackageJSON } from "@cloudflare/workers-utils";
+
+type PackageJsonWithAdditionalDependencies = PackageJSON & {
+	optionalDependencies?: Record<string, unknown>;
+};
 
 /**
  * Checks wether a package is installed in a target project or not
@@ -36,6 +41,15 @@ export function getInstalledPackageVersion(
 		if (!packagePath) {
 			return undefined;
 		}
+		if (opts.stopAtProjectPath === true) {
+			const relativePackagePath = path.relative(projectPath, packagePath);
+			if (
+				relativePackagePath.startsWith("..") ||
+				path.isAbsolute(relativePackagePath)
+			) {
+				return undefined;
+			}
+		}
 		const packageJsonPath = find.file("package.json", {
 			cwd: packagePath,
 			last: opts.stopAtProjectPath === true ? projectPath : undefined,
@@ -49,6 +63,77 @@ export function getInstalledPackageVersion(
 		);
 		return packageJson.version;
 	} catch {}
+}
+
+export function getPackageJsonDependencyVersion(
+	packageName: string,
+	projectPath: string
+): string | undefined {
+	const packageJson = getPackageJson(projectPath);
+	if (!packageJson) {
+		return undefined;
+	}
+
+	return getVersionFromSpecifier(
+		getPackageJsonDependency(packageJson, packageName)
+	);
+}
+
+export function hasPackageJsonDependency(
+	packageName: string,
+	projectPath: string
+): boolean {
+	const packageJson = getPackageJson(projectPath);
+	if (!packageJson) {
+		return false;
+	}
+
+	return getPackageJsonDependency(packageJson, packageName) !== undefined;
+}
+
+function getPackageJson(
+	projectPath: string
+): PackageJsonWithAdditionalDependencies | undefined {
+	const packageJsonPath = path.join(projectPath, "package.json");
+
+	try {
+		return parsePackageJSON(
+			readFileSync(packageJsonPath),
+			packageJsonPath
+		) as PackageJsonWithAdditionalDependencies;
+	} catch {
+		return undefined;
+	}
+}
+
+function getPackageJsonDependency(
+	packageJson: PackageJsonWithAdditionalDependencies,
+	packageName: string
+): unknown {
+	return (
+		packageJson.dependencies?.[packageName] ??
+		packageJson.devDependencies?.[packageName] ??
+		packageJson.optionalDependencies?.[packageName]
+	);
+}
+
+function getVersionFromSpecifier(
+	versionSpecifier: unknown
+): string | undefined {
+	if (typeof versionSpecifier !== "string") {
+		return undefined;
+	}
+
+	const versionMatch = versionSpecifier.match(
+		/(\d+)(?:\.(\d+))?(?:\.(\d+))?(-[0-9A-Za-z.-]+)?/
+	);
+
+	if (!versionMatch) {
+		return undefined;
+	}
+
+	const [, major, minor = "0", patch = "0", prerelease = ""] = versionMatch;
+	return `${major}.${minor}.${patch}${prerelease}`;
 }
 
 /**

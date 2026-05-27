@@ -11,6 +11,18 @@ import type { types } from "recast";
 const b = recast.types.builders;
 const t = recast.types.namedTypes;
 
+const transformableViteConfigFileNames = [
+	"vite.config.ts",
+	"vite.config.mts",
+	"vite.config.js",
+	"vite.config.mjs",
+];
+const unsupportedViteConfigFileNames = ["vite.config.cts", "vite.config.cjs"];
+const viteConfigFileNames = [
+	...transformableViteConfigFileNames,
+	...unsupportedViteConfigFileNames,
+];
+
 /**
  * Extracts the ObjectExpression from the first argument of defineConfig().
  *
@@ -65,7 +77,10 @@ function extractFromBlockStatement(
 export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string
 ): boolean {
-	const filePath = maybeGetViteConfigPath(projectPath);
+	const filePath = maybeGetViteConfigPath(
+		projectPath,
+		transformableViteConfigFileNames
+	);
 
 	if (!filePath) {
 		return false;
@@ -133,32 +148,51 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 }
 
 export function hasViteConfig(projectPath: string): boolean {
-	return maybeGetViteConfigPath(projectPath) !== undefined;
+	return maybeGetViteConfigPath(projectPath, viteConfigFileNames) !== undefined;
 }
 
-function maybeGetViteConfigPath(projectPath: string): string | undefined {
-	const filePathTS = path.join(projectPath, `vite.config.ts`);
-	const filePathJS = path.join(projectPath, `vite.config.js`);
+export function assertCanTransformViteConfig(projectPath: string): void {
+	getViteConfigPath(projectPath);
+}
 
-	if (existsSync(filePathTS)) {
-		return filePathTS;
-	}
-
-	if (existsSync(filePathJS)) {
-		return filePathJS;
+function maybeGetViteConfigPath(
+	projectPath: string,
+	fileNames: string[]
+): string | undefined {
+	for (const fileName of fileNames) {
+		const filePath = path.join(projectPath, fileName);
+		if (existsSync(filePath)) {
+			return filePath;
+		}
 	}
 
 	return undefined;
 }
 
 function getViteConfigPath(projectPath: string): string {
-	const filePath = maybeGetViteConfigPath(projectPath);
+	const filePath = maybeGetViteConfigPath(
+		projectPath,
+		transformableViteConfigFileNames
+	);
 
-	if (!filePath) {
-		throw new Error("Could not find Vite config file to modify");
+	if (filePath) {
+		return filePath;
 	}
 
-	return filePath;
+	const unsupportedFilePath = maybeGetViteConfigPath(
+		projectPath,
+		unsupportedViteConfigFileNames
+	);
+	if (unsupportedFilePath) {
+		throw new UserError(
+			"Cannot modify Vite config: CommonJS Vite config files are not supported. Please manually add the Cloudflare plugin or convert the config to vite.config.ts, vite.config.mts, vite.config.js, or vite.config.mjs.",
+			{
+				telemetryMessage: "autoconfig vite config extension unsupported",
+			}
+		);
+	}
+
+	throw new Error("Could not find Vite config file to modify");
 }
 
 export function createViteConfigWithCloudflarePlugin(

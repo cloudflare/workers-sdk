@@ -1,11 +1,15 @@
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { beforeEach, describe, it, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../../../autoconfig/frameworks/utils/packages";
+import {
+	getInstalledPackageVersion,
+	getPackageJsonDependencyVersion,
+} from "../../../../autoconfig/frameworks/utils/packages";
 import { installCloudflareVitePlugin } from "../../../../autoconfig/frameworks/utils/vite-plugin";
 import type { MockInstance } from "vitest";
 
 vi.mock("../../../../autoconfig/frameworks/utils/packages", () => ({
 	getInstalledPackageVersion: vi.fn(),
+	getPackageJsonDependencyVersion: vi.fn(),
 }));
 
 describe("installCloudflareVitePlugin", () => {
@@ -15,6 +19,7 @@ describe("installCloudflareVitePlugin", () => {
 		installSpy = vi
 			.spyOn(cliPackages, "installPackages")
 			.mockImplementation(async () => {});
+		vi.mocked(getPackageJsonDependencyVersion).mockReturnValue(undefined);
 	});
 
 	describe("when Vite is not installed/detected", () => {
@@ -101,6 +106,27 @@ describe("installCloudflareVitePlugin", () => {
 				2,
 				"npm",
 				["@cloudflare/vite-plugin"],
+				expect.objectContaining({ dev: true })
+			);
+		});
+
+		it("upgrades Vite when only package.json declares version 6.0.0", async ({
+			expect,
+		}) => {
+			vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
+			vi.mocked(getPackageJsonDependencyVersion).mockReturnValue("6.0.0");
+
+			await installCloudflareVitePlugin({
+				packageManager: "npm",
+				projectPath: "/test/project",
+				isWorkspaceRoot: false,
+			});
+
+			expect(installSpy).toHaveBeenCalledTimes(2);
+			expect(installSpy).toHaveBeenNthCalledWith(
+				1,
+				"npm",
+				["vite@^6.1.0"],
 				expect.objectContaining({ dev: true })
 			);
 		});
@@ -281,7 +307,8 @@ describe("installCloudflareVitePlugin", () => {
 
 			expect(getInstalledPackageVersion).toHaveBeenCalledWith(
 				"vite",
-				"/custom/path"
+				"/custom/path",
+				{ stopAtProjectPath: true }
 			);
 		});
 	});

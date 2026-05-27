@@ -1,7 +1,9 @@
+import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { AutoConfigFrameworkConfigurationError } from "../../../autoconfig/errors";
+import { getPackageJsonDependencyVersion } from "../../../autoconfig/frameworks/utils/packages";
 import { installCloudflareVitePlugin } from "../../../autoconfig/frameworks/utils/vite-plugin";
 import { Vite } from "../../../autoconfig/frameworks/vite";
 import { NpmPackageManager } from "../../../package-manager";
@@ -12,6 +14,7 @@ vi.mock("../../../autoconfig/frameworks/utils/vite-plugin", () => ({
 
 vi.mock("../../../autoconfig/frameworks/utils/packages", () => ({
 	getInstalledPackageVersion: vi.fn(() => undefined),
+	getPackageJsonDependencyVersion: vi.fn(() => undefined),
 }));
 
 const VITE_PACKAGE_INFO = {
@@ -34,17 +37,15 @@ function getBaseOptions() {
 describe("Vite framework", () => {
 	runInTempDir();
 
-	it("validates the Vite version from package.json when dependencies are not installed", async ({
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(getPackageJsonDependencyVersion).mockReturnValue(undefined);
+	});
+
+	it("validates the Vite version from package.json when dependencies are not installed", ({
 		expect,
 	}) => {
-		await writeFile(
-			"package.json",
-			JSON.stringify({
-				devDependencies: {
-					vite: "^8.0.12",
-				},
-			})
-		);
+		vi.mocked(getPackageJsonDependencyVersion).mockReturnValue("8.0.12");
 
 		const framework = new Vite({ id: "vite", name: "Vite" });
 		expect(() =>
@@ -53,17 +54,10 @@ describe("Vite framework", () => {
 		expect(framework.frameworkVersion).toBe("8.0.12");
 	});
 
-	it("rejects unsupported Vite versions declared in package.json", async ({
+	it("rejects unsupported Vite versions declared in package.json", ({
 		expect,
 	}) => {
-		await writeFile(
-			"package.json",
-			JSON.stringify({
-				devDependencies: {
-					vite: "^5.4.0",
-				},
-			})
-		);
+		vi.mocked(getPackageJsonDependencyVersion).mockReturnValue("5.4.0");
 
 		const framework = new Vite({ id: "vite", name: "Vite" });
 		expect(() =>
@@ -89,5 +83,28 @@ describe("Vite framework", () => {
 			isWorkspaceRoot: false,
 			projectPath: process.cwd(),
 		});
+	});
+
+	it("does not create a duplicate Vite config when an unsupported config exists", async ({
+		expect,
+	}) => {
+		await writeFile(
+			"vite.config.cjs",
+			`
+const { defineConfig } = require("vite");
+
+module.exports = defineConfig({
+  plugins: [],
+});
+`
+		);
+
+		const framework = new Vite({ id: "vite", name: "Vite" });
+		await expect(framework.configure(getBaseOptions())).rejects.toThrow(
+			/Cannot modify Vite config: CommonJS Vite config files are not supported/
+		);
+		expect(installCloudflareVitePlugin).not.toHaveBeenCalled();
+		expect(existsSync("vite.config.ts")).toBe(false);
+		expect(existsSync("vite.config.js")).toBe(false);
 	});
 });

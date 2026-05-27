@@ -1,7 +1,10 @@
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import semiver from "semiver";
-import { getInstalledPackageVersion } from "./packages";
+import {
+	getInstalledPackageVersion,
+	getPackageJsonDependencyVersion,
+} from "./packages";
 import type { PackageManager } from "../../../package-manager";
 
 /**
@@ -23,7 +26,10 @@ export async function installCloudflareVitePlugin({
 	projectPath: string;
 	isWorkspaceRoot: boolean;
 }): Promise<void> {
-	const viteVersion = getInstalledPackageVersion("vite", projectPath);
+	const viteVersion =
+		getInstalledPackageVersion("vite", projectPath, {
+			stopAtProjectPath: true,
+		}) ?? getPackageJsonDependencyVersion("vite", projectPath);
 
 	if (
 		viteVersion &&

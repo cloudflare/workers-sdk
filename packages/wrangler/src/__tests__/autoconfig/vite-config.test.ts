@@ -130,6 +130,45 @@ export default defineConfig({
 	});
 
 	describe("transformViteConfig", () => {
+		it("should transform existing vite.config.mjs files", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.mjs",
+				`
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: []
+});
+`
+			);
+
+			expect(() => transformViteConfig(".")).not.toThrow();
+			const result = readFileSync("vite.config.mjs", "utf-8");
+			expect(result).toContain(
+				'import { cloudflare } from "@cloudflare/vite-plugin"'
+			);
+			expect(result).toContain("cloudflare()");
+		});
+
+		it("should throw for CommonJS Vite config files", async ({ expect }) => {
+			await writeFile(
+				"vite.config.cjs",
+				`
+const { defineConfig } = require('vite');
+
+module.exports = defineConfig({
+  plugins: []
+});
+`
+			);
+
+			expect(() => transformViteConfig(".")).toThrowError(
+				/Cannot modify Vite config: CommonJS Vite config files are not supported/
+			);
+		});
+
 		it("should successfully transform function-based defineConfig with arrow expression body", async ({
 			expect,
 		}) => {

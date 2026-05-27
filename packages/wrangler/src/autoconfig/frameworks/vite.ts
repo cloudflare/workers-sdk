@@ -1,8 +1,10 @@
-import { join } from "node:path";
-import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
 import { Framework } from "./framework-class";
-import { getInstalledPackageVersion } from "./utils/packages";
 import {
+	getInstalledPackageVersion,
+	getPackageJsonDependencyVersion,
+} from "./utils/packages";
+import {
+	assertCanTransformViteConfig,
 	checkIfViteConfigUsesCloudflarePlugin,
 	createViteConfigWithCloudflarePlugin,
 	hasViteConfig,
@@ -14,7 +16,6 @@ import type {
 	ConfigurationOptions,
 	ConfigurationResults,
 } from "./framework-class";
-import type { PackageJSON } from "@cloudflare/workers-utils";
 
 export class Vite extends Framework {
 	isConfigured(projectPath: string): boolean {
@@ -25,23 +26,28 @@ export class Vite extends Framework {
 		projectPath: string,
 		frameworkPackageInfo: AutoConfigFrameworkPackageInfo
 	): void {
-		const installedVersion = getInstalledPackageVersion(
+		const declaredVersion = getPackageJsonDependencyVersion(
 			frameworkPackageInfo.name,
 			projectPath
 		);
 
-		if (installedVersion) {
+		if (declaredVersion) {
 			this.validateAndSetFrameworkVersion(
-				installedVersion,
+				declaredVersion,
 				frameworkPackageInfo
 			);
 			return;
 		}
 
-		const declaredVersion = getDeclaredViteVersion(projectPath);
-		if (declaredVersion) {
+		const installedVersion = getInstalledPackageVersion(
+			frameworkPackageInfo.name,
+			projectPath,
+			{ stopAtProjectPath: true }
+		);
+
+		if (installedVersion) {
 			this.validateAndSetFrameworkVersion(
-				declaredVersion,
+				installedVersion,
 				frameworkPackageInfo
 			);
 			return;
@@ -57,13 +63,18 @@ export class Vite extends Framework {
 		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
+			const viteConfigExists = hasViteConfig(projectPath);
+			if (viteConfigExists) {
+				assertCanTransformViteConfig(projectPath);
+			}
+
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,
 				isWorkspaceRoot,
 				projectPath,
 			});
 
-			if (hasViteConfig(projectPath)) {
+			if (viteConfigExists) {
 				transformViteConfig(projectPath);
 			} else {
 				createViteConfigWithCloudflarePlugin(projectPath);
@@ -78,49 +89,4 @@ export class Vite extends Framework {
 			},
 		};
 	}
-}
-
-type PackageJsonWithAdditionalDependencies = PackageJSON & {
-	optionalDependencies?: Record<string, unknown>;
-	peerDependencies?: Record<string, unknown>;
-};
-
-function getDeclaredViteVersion(projectPath: string): string | undefined {
-	const packageJsonPath = join(projectPath, "package.json");
-
-	let packageJson: PackageJsonWithAdditionalDependencies;
-	try {
-		packageJson = parsePackageJSON(
-			readFileSync(packageJsonPath),
-			packageJsonPath
-		) as PackageJsonWithAdditionalDependencies;
-	} catch {
-		return undefined;
-	}
-
-	return getVersionFromSpecifier(
-		packageJson.dependencies?.vite ??
-			packageJson.devDependencies?.vite ??
-			packageJson.optionalDependencies?.vite ??
-			packageJson.peerDependencies?.vite
-	);
-}
-
-function getVersionFromSpecifier(
-	versionSpecifier: unknown
-): string | undefined {
-	if (typeof versionSpecifier !== "string") {
-		return undefined;
-	}
-
-	const versionMatch = versionSpecifier.match(
-		/(\d+)(?:\.(\d+))?(?:\.(\d+))?(-[0-9A-Za-z.-]+)?/
-	);
-
-	if (!versionMatch) {
-		return undefined;
-	}
-
-	const [, major, minor = "0", patch = "0", prerelease = ""] = versionMatch;
-	return `${major}.${minor}.${patch}${prerelease}`;
 }

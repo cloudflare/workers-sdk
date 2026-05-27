@@ -24,6 +24,8 @@ import {
 import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { isKnownFramework } from "../frameworks";
 import { staticFramework } from "../frameworks/all-frameworks";
+import { hasPackageJsonDependency } from "../frameworks/utils/packages";
+import { hasViteConfig } from "../frameworks/utils/vite-config";
 import type { PackageManager } from "../../package-manager";
 import type {
 	Config,
@@ -186,11 +188,6 @@ function convertDetectedPackageManager(
 	}
 }
 
-type PackageJsonWithAdditionalDependencies = PackageJSON & {
-	optionalDependencies?: Record<string, unknown>;
-	peerDependencies?: Record<string, unknown>;
-};
-
 function maybeDetectViteFromPackageJson(
 	projectPath: string,
 	packageManager: PackageManager
@@ -228,14 +225,23 @@ function maybeApplyVitePackageJsonDefaults(
 	);
 
 	if (!vitePackageJsonDefaults) {
-		return detectedFramework;
+		if (hasViteConfig(projectPath)) {
+			return detectedFramework;
+		}
+
+		// @netlify/build-info can detect Vite from a package dependency alone.
+		// Without a Vite script or config, that is too weak a signal for autoconfig.
+		return undefined;
 	}
 
 	return {
 		...detectedFramework,
 		buildCommand:
 			detectedFramework.buildCommand ?? vitePackageJsonDefaults.buildCommand,
-		dist: detectedFramework.dist ?? vitePackageJsonDefaults.dist,
+		dist:
+			vitePackageJsonDefaults.dist === "dist"
+				? (detectedFramework.dist ?? vitePackageJsonDefaults.dist)
+				: vitePackageJsonDefaults.dist,
 	};
 }
 
@@ -245,17 +251,20 @@ function maybeGetVitePackageJsonDefaults(
 ): Pick<DetectedFramework, "buildCommand" | "dist"> | undefined {
 	const packageJsonPath = join(projectPath, "package.json");
 
-	let packageJson: PackageJsonWithAdditionalDependencies;
+	let packageJson: PackageJSON;
 	try {
 		packageJson = parsePackageJSON(
 			readFileSync(packageJsonPath),
 			packageJsonPath
-		) as PackageJsonWithAdditionalDependencies;
+		);
 	} catch {
 		return undefined;
 	}
 
-	if (!hasPackageJsonDependency(packageJson, "vite")) {
+	if (
+		!hasPackageJsonDependency("vite", projectPath) ||
+		!hasViteScript(packageJson)
+	) {
 		return undefined;
 	}
 
@@ -264,22 +273,36 @@ function maybeGetVitePackageJsonDefaults(
 			typeof packageJson.scripts?.build === "string"
 				? `${packageManager.type} run build`
 				: "vite build",
-		dist: "dist",
+		dist: getViteOutputDir(packageJson.scripts?.build),
 	};
 }
 
-function hasPackageJsonDependency(
-	packageJson: PackageJsonWithAdditionalDependencies,
-	packageName: string
-): boolean {
+function hasViteScript(packageJson: PackageJSON): boolean {
 	return [
-		packageJson.dependencies,
-		packageJson.devDependencies,
-		packageJson.optionalDependencies,
-		packageJson.peerDependencies,
-	].some(
-		(dependencies) =>
-			dependencies !== undefined && Object.hasOwn(dependencies, packageName)
+		packageJson.scripts?.build,
+		packageJson.scripts?.dev,
+		packageJson.scripts?.preview,
+	].some((script) => typeof script === "string" && /\bvite\b/.test(script));
+}
+
+function getViteOutputDir(buildScript: unknown): string {
+	if (typeof buildScript !== "string") {
+		return "dist";
+	}
+	const viteBuildCommand = buildScript
+		.split(/&&|;/)
+		.find((command) => /\bvite\s+build\b/.test(command));
+
+	if (!viteBuildCommand) {
+		return "dist";
+	}
+
+	const outputDirMatch = viteBuildCommand.match(
+		/--outDir(?:=|\s+)(?:"([^"]+)"|'([^']+)'|([^\s]+))/
+	);
+
+	return (
+		outputDirMatch?.[1] ?? outputDirMatch?.[2] ?? outputDirMatch?.[3] ?? "dist"
 	);
 }
 
