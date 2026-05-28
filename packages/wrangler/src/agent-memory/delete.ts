@@ -27,7 +27,7 @@ export const agentMemoryNamespaceDeleteCommand = createCommand({
 	async handler({ namespace_name, force }, { config }) {
 		if (!force) {
 			const confirmedDeletion = await confirm(
-				`OK to delete the namespace '${namespace_name}'?`
+				`OK to delete the Agent Memory namespace "${namespace_name}"?`
 			);
 			if (!confirmedDeletion) {
 				logger.log("Deletion cancelled.");

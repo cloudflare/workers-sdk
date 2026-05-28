@@ -253,7 +253,7 @@ describe("agent-memory namespace commands", () => {
 	it("should delete a namespace after confirmation", async ({ expect }) => {
 		setIsTTY(true);
 		mockConfirm({
-			text: `OK to delete the namespace '${TEST_NAMESPACE.name}'?`,
+			text: `OK to delete the Agent Memory namespace "${TEST_NAMESPACE.name}"?`,
 			result: true,
 		});
 
@@ -278,7 +278,7 @@ describe("agent-memory namespace commands", () => {
 	}) => {
 		setIsTTY(true);
 		mockConfirm({
-			text: `OK to delete the namespace '${TEST_NAMESPACE.name}'?`,
+			text: `OK to delete the Agent Memory namespace "${TEST_NAMESPACE.name}"?`,
 			result: false,
 		});
 

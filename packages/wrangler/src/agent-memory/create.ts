@@ -47,7 +47,7 @@ export const agentMemoryNamespaceCreateCommand = createCommand({
 					`Failed to create Agent Memory namespace "${namespace}".${details ? `\n${details}` : ""}`,
 					{
 						telemetryMessage:
-							"Agent Memory namespace create failed with client error",
+							"agent-memory namespace create failed with client error",
 					}
 				);
 			}

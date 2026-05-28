@@ -5,6 +5,10 @@ import type { AgentMemoryNamespace } from "./client";
 /**
  * Get an Agent Memory namespace for the given account.
  * Returns `null` if the namespace does not exist (404); other errors propagate.
+ *
+ * Used by the provisioning system at deploy time to decide whether a
+ * configured namespace needs to be created. The caller (not this function)
+ * is responsible for provisioning when `null` is returned.
  */
 export async function getAgentMemoryNamespace(
 	complianceConfig: ComplianceConfig,
@@ -19,7 +23,6 @@ export async function getAgentMemoryNamespace(
 		);
 	} catch (e) {
 		if (e instanceof APIError && e.status === 404) {
-			// Namespace does not exist - provision it
 			return null;
 		}
 		throw e;

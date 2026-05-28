@@ -576,8 +576,15 @@ const HANDLERS = {
 		keyDescription: "namespace name",
 		configField: "agent_memory" as const,
 		load: async (_complianceConfig: ComplianceConfig, _accountId: string) => {
-			// Agent Memory namespaces don't have a general list API in this context.
-			// The provisioning system will create them if they don't exist.
+			// `load` only populates the interactive picker in `runProvisioningFlow`
+			// (the "Would you like to connect an existing X or create a new one?"
+			// prompt). For agent_memory, `namespace` is required in config — so
+			// `handler.name` is always set at provision time and `runProvisioningFlow`
+			// goes straight to the "Resource name found in config" branch without
+			// ever consulting this list. Whether or not the namespace already exists
+			// is decided by `isConnectedToExistingResource()` (which hits the GET
+			// /namespaces/:name endpoint), not by this list. Returning [] is
+			// therefore safe and avoids an unnecessary list call at deploy time.
 			return [];
 		},
 		toConfig: (
