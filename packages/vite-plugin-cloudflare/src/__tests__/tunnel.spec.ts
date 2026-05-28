@@ -634,6 +634,53 @@ describe("tunnel plugin", () => {
 		expect(tunnelManager.isOpen()).toBe(false);
 	});
 
+	it("logs tunnel closed only after tunnel startup begins", async ({
+		expect,
+	}) => {
+		const namedTunnelDeferred = createDeferred<{
+			hostnames: string[];
+			token: string;
+		}>();
+		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockReturnValue(
+			namedTunnelDeferred.promise
+		);
+
+		const server = await createServer();
+		const tunnelManager = new TunnelManager(server.config.logger);
+		const info = vi
+			.spyOn(server.config.logger, "info")
+			.mockReturnValue(undefined);
+		const getInfoLogs = () =>
+			info.mock.calls
+				.map(([message]) => stripVTControlCharacters(message))
+				.join("\n");
+
+		onTestFinished(() => server.close());
+
+		tunnelManager.dispose();
+		expect(getInfoLogs()).not.toContain("Tunnel closed");
+
+		const startPromise = tunnelManager.startTunnel({
+			origin: "http://localhost:3000",
+			name: "my-tunnel",
+			mode: "dev",
+			allowedHosts: true,
+			accountId: "account-id",
+			complianceRegion: undefined,
+		});
+
+		tunnelManager.dispose();
+
+		namedTunnelDeferred.resolve({
+			hostnames: ["dev.example.com"],
+			token: "TOKEN",
+		});
+
+		await expect(startPromise).resolves.toBeNull();
+		expect(startTunnel).not.toHaveBeenCalled();
+		expect(getInfoLogs()).toContain("Tunnel closed");
+	});
+
 	it("does not auto-start when the tunnel is configured but disabled", async ({
 		expect,
 	}) => {
