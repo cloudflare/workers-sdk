@@ -1,5 +1,79 @@
 # miniflare
 
+## 4.20260527.0
+
+### Minor Changes
+
+- [#13955](https://github.com/cloudflare/workers-sdk/pull/13955) [`a2ef1a3`](https://github.com/cloudflare/workers-sdk/commit/a2ef1a323bfe0052b53f5eddb302bd6bd0d45a74) Thanks [@G4brym](https://github.com/G4brym)! - Add support for the new `web_search` binding kind.
+
+  Cloudflare Web Search is a managed, zero-setup web discovery primitive for agents and Workers. Declare the binding as a single object in `wrangler.jsonc`:
+
+  ```jsonc
+  {
+    "web_search": { "binding": "WEBSEARCH" }
+  }
+  ```
+
+  There is exactly one shared web corpus, so there is no namespace, instance, or other field to specify -- only the variable name. The binding exposes a single `search()` method that returns URLs and catalog metadata for a query. Web Search is discovery-only -- to read a result's content the caller invokes the global `fetch()` API against the result's `url`.
+
+  The binding is **always remote** in local development: Miniflare proxies to the production Web Search service via the remote-bindings transport. Adds the `websearch.run` OAuth scope to `wrangler login`.
+
+  Also adds a `wrangler websearch search` command for running ad-hoc queries from the CLI:
+
+  ```sh
+  npx wrangler websearch search "cloudflare workers"
+  npx wrangler websearch search "cloudflare workers" --limit 5
+  npx wrangler websearch search "cloudflare workers" --json
+  ```
+
+  `--limit` is optional (defaults to 10, capped at 20). `--json` prints the raw response; without it the results render as a pretty table.
+
+- [#13860](https://github.com/cloudflare/workers-sdk/pull/13860) [`c8c7ec0`](https://github.com/cloudflare/workers-sdk/commit/c8c7ec0bde012ffe9fefe01cb15c7b0d030a6777) Thanks [@oliy](https://github.com/oliy)! - Rename `pipeline` field to `stream` in pipeline bindings configuration
+
+  The `pipeline` field inside `pipelines` bindings has been renamed to `stream` to align with the updated API wire format. The old `pipeline` field is still accepted but deprecated and will emit a warning.
+
+  Before:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "pipelines": [
+      {
+        "binding": "MY_PIPELINE",
+        "pipeline": "my-stream-name"
+      }
+    ]
+  }
+  ```
+
+  After:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "pipelines": [
+      {
+        "binding": "MY_PIPELINE",
+        "stream": "my-stream-name"
+      }
+    ]
+  }
+  ```
+
+### Patch Changes
+
+- [#14062](https://github.com/cloudflare/workers-sdk/pull/14062) [`ce4eb20`](https://github.com/cloudflare/workers-sdk/commit/ce4eb20884d350ac68237fe833a1582dcb9f15fc) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260526.1 | 1.20260527.1 |
+
+- [#13968](https://github.com/cloudflare/workers-sdk/pull/13968) [`0ce88ea`](https://github.com/cloudflare/workers-sdk/commit/0ce88eaddd7d3329ceee3b796d90e8711e48a34f) Thanks [@danieltroger](https://github.com/danieltroger)! - Fix `wrangler dev` crash under Yarn PnP when the worker emits a structured log or the inspector forwards a stack trace.
+
+  `getFreshSourceMapSupport` was unconditionally indexing `require.cache`, but when `miniflare` is `import`ed from ESM under Yarn PnP, Node's ESM->CJS bridge (`loadCJSModule` in `node:internal/modules/esm/translators`) hands the wrapped CJS module a re-invented `require` that only carries `.resolve` and `.main`, with no `.cache`. Fall back to `createRequire(__filename)` in that case so the fresh-load cache-swap keeps working.
+
 ## 4.20260526.0
 
 ### Patch Changes
