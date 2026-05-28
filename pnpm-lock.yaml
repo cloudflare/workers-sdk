@@ -46,8 +46,8 @@ catalogs:
       specifier: ^11.0.0
       version: 11.0.0
     playwright-chromium:
-      specifier: ^1.56.1
-      version: 1.56.1
+      specifier: ^1.60.0
+      version: 1.60.0
     signal-exit:
       specifier: ^3.0.7
       version: 3.0.7
@@ -1463,7 +1463,7 @@ importers:
         version: 6.5.1
       playwright-chromium:
         specifier: catalog:default
-        version: 1.56.1
+        version: 1.60.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1490,7 +1490,7 @@ importers:
         version: 22.15.17
       playwright-chromium:
         specifier: catalog:default
-        version: 1.56.1
+        version: 1.60.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2020,7 +2020,7 @@ importers:
         version: 9.2.1
       playwright-chromium:
         specifier: catalog:default
-        version: 1.56.1
+        version: 1.60.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2485,7 +2485,7 @@ importers:
         version: link:../../workers-tsconfig
       playwright-chromium:
         specifier: catalog:default
-        version: 1.56.1
+        version: 1.60.0
       semver:
         specifier: ^7.7.1
         version: 7.7.3
@@ -12811,13 +12811,13 @@ packages:
     resolution: {integrity: sha512-8xCNE/aT/EXKenuMDZ+xTVwkT8gsoHN2z/Q29l80u0ppGEXVvsKRzNMbtKhg8LS8k1tJLAHHylf6p4VFmP6XUQ==}
     engines: {node: '>= 0.4.0'}
 
-  playwright-chromium@1.56.1:
-    resolution: {integrity: sha512-5TU+NMrofQg2j+DwIaQL/9eC84hs5YGz5Wng8OOdgq+kmu8usPLedxx2pJJ1Pb2TNFNiz3167RsUNFFvY3srNA==}
+  playwright-chromium@1.60.0:
+    resolution: {integrity: sha512-xxz9pc2HIxQW/Qg9ijG2fZOHRT//KhLo0KfvJRa45YYRrcA7ZONoilgJR40SW5pmecb6HkuROaeViXoCaXTZyQ==}
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright-core@1.56.1:
-    resolution: {integrity: sha512-hutraynyn31F+Bifme+Ps9Vq59hKuUCz7H1kDOcBs+2oGguKkWTU50bBWrtz34OUWmIwpBTWDxaRPXrIXkgvmQ==}
+  playwright-core@1.60.0:
+    resolution: {integrity: sha512-9bW6zvX/m0lEbgTKJ6YppOKx8H3VOPBMOCFh2irXFOT4BbHgrx5hPjwJYLT40Lu+4qtD36qKc/Hn56StUW57IA==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -23979,11 +23979,11 @@ snapshots:
 
   pkginfo@0.4.1: {}
 
-  playwright-chromium@1.56.1:
+  playwright-chromium@1.60.0:
     dependencies:
-      playwright-core: 1.56.1
+      playwright-core: 1.60.0
 
-  playwright-core@1.56.1: {}
+  playwright-core@1.60.0: {}
 
   pngjs@3.4.0: {}
 
