@@ -3,26 +3,27 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { Miniflare } from "miniflare";
 import { describe, it, vi } from "vitest";
-import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
+import { createServer } from "wrangler";
 
 describe("`process.env.NODE_ENV` replacement in development", () => {
 	it("replaces `process.env.NODE_ENV` with `development` if it is `undefined`", async ({
 		expect,
 	}) => {
 		vi.stubEnv("NODE_ENV", undefined);
+		const server = createServer({
+			root: path.resolve(__dirname, ".."),
+			workers: [{ configPath: "wrangler.jsonc" }],
+		});
 
-		const { ip, port, stop } = await runWranglerDev(
-			path.resolve(__dirname, ".."),
-			["--port=0", "--inspector-port=0"]
-		);
+		await server.listen();
 
 		await vi.waitFor(async () => {
-			const response = await fetch(`http://${ip}:${port}/`);
+			const response = await server.fetch("/");
 			const text = await response.text();
 			expect(text).toBe(`The value of process.env.NODE_ENV is "development"`);
 		});
 
-		await stop();
+		await server.close();
 
 		vi.unstubAllEnvs();
 	});
@@ -31,19 +32,20 @@ describe("`process.env.NODE_ENV` replacement in development", () => {
 		expect,
 	}) => {
 		vi.stubEnv("NODE_ENV", "some-value");
+		const server = createServer({
+			root: path.resolve(__dirname, ".."),
+			workers: [{ configPath: "wrangler.jsonc" }],
+		});
 
-		const { ip, port, stop } = await runWranglerDev(
-			path.resolve(__dirname, ".."),
-			["--port=0", "--inspector-port=0"]
-		);
+		await server.listen();
 
 		await vi.waitFor(async () => {
-			const response = await fetch(`http://${ip}:${port}/`);
+			const response = await server.fetch("/");
 			const text = await response.text();
 			expect(text).toBe(`The value of process.env.NODE_ENV is "some-value"`);
 		});
 
-		await stop();
+		await server.close();
 
 		vi.unstubAllEnvs();
 	});

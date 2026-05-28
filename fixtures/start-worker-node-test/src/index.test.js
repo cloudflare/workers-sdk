@@ -1,28 +1,24 @@
 import assert from "node:assert";
 import test, { after, before, describe } from "node:test";
-import { unstable_startWorker } from "wrangler";
+import { createServer } from "wrangler";
+
+const server = createServer({
+	workers: [{ configPath: "wrangler.json" }],
+});
 
 describe("worker", () => {
-	/**
-	 * @type {Awaited<ReturnType<typeof unstable_startWorker>>}
-	 */
-	let worker;
-
 	before(async () => {
-		worker = await unstable_startWorker({
-			config: "wrangler.json",
-			dev: { persist: false },
-		});
+		await server.listen();
 	});
 
 	test("hello world", async () => {
 		assert.strictEqual(
-			await (await worker.fetch("http://example.com")).text(),
+			await (await server.fetch("http://example.com")).text(),
 			"Hello from even"
 		);
 	});
 
 	after(async () => {
-		await worker.dispose();
+		await server.close();
 	});
 });
