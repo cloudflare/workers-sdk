@@ -660,7 +660,7 @@ export function buildMiniflareBindingOptions(
 	}
 
 	for (const memory of agentMemoryBindings) {
-		warnOrError("agent_memory", memory.remote, "always-remote");
+		warnOrError("agent_memory", memory.remote);
 	}
 
 	for (const media of mediaBindings) {
