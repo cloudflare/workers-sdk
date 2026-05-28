@@ -1,14 +1,50 @@
+import { PassThrough } from "node:stream";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, it } from "vitest";
-import MockWebSocketServer from "vitest-websocket-mock";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { WebSocketServer } from "ws";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
+import type * as childProcess from "node:child_process";
+import type * as nodeEvents from "node:events";
+import type { WebSocket } from "ws";
+
+vi.mock("node:child_process", async () => {
+	const actual =
+		await vi.importActual<typeof childProcess>("node:child_process");
+	const { EventEmitter } =
+		await vi.importActual<typeof nodeEvents>("node:events");
+
+	return {
+		...actual,
+		spawn: vi.fn((...args: Parameters<typeof actual.spawn>) => {
+			const [command, commandArgs] = args;
+			if (command !== "ssh") {
+				return actual.spawn(...args);
+			}
+
+			const child = new EventEmitter() as ReturnType<typeof actual.spawn>;
+			const sshArgs = Array.isArray(commandArgs)
+				? commandArgs.map((arg) => arg.toString())
+				: [];
+			const exitCode = sshArgs.length === 1 && sshArgs[0] === "-V" ? 0 : 255;
+
+			setImmediate(() => {
+				child.emit("exit", exitCode, null);
+				child.emit("close", exitCode, null);
+			});
+
+			return child;
+		}),
+	};
+});
 
 describe("containers ssh", () => {
 	const std = mockConsoleMethods();
+	const originalStdin = process.stdin;
+	const originalStdout = process.stdout;
 
 	mockAccountId();
 	mockApiToken();
@@ -16,6 +52,14 @@ describe("containers ssh", () => {
 
 	afterEach(() => {
 		msw.resetHandlers();
+		Object.defineProperty(process, "stdin", {
+			value: originalStdin,
+			configurable: true,
+		});
+		Object.defineProperty(process, "stdout", {
+			value: originalStdout,
+			configurable: true,
+		});
 	});
 
 	it("should help", async ({ expect }) => {
@@ -36,7 +80,10 @@ describe("containers ssh", () => {
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
 			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-			  -v, --version         Show version number  [boolean]"
+			  -v, --version         Show version number  [boolean]
+
+			OPTIONS
+			      --stdio  Proxy SSH traffic over stdin/stdout  [boolean]"
 		`);
 	});
 
@@ -79,27 +126,157 @@ describe("containers ssh", () => {
 	// against, but everything up until that point is covered.
 	it("should try ssh'ing into a container", async ({ expect }) => {
 		const instanceId = "a".repeat(64);
-		const wsUrl = "ws://localhost:1234";
 		const sshJwt = "asd";
+		const server = await createWsServer();
+		mockStdio({ stdinIsTTY: true, stdoutIsTTY: true });
+
+		try {
+			setWranglerConfig({});
+			msw.use(
+				http.get(`*/instances/:instanceId/ssh`, async () => {
+					return HttpResponse.json(
+						{ success: true, result: { url: server.url, token: sshJwt } },
+						{ status: 200 }
+					);
+				})
+			);
+
+			const wrangler = runWrangler(`containers ssh ${instanceId}`);
+			const expectedFailure = expect(wrangler).rejects.toMatchInlineSnapshot(`
+				[Error: SSH exited unsuccessfully. Is the container running?
+				NOTE: SSH does not automatically wake a container or count as activity to keep a container alive]
+			`);
+			const socket = await server.connection;
+			socket.close();
+			await expectedFailure;
+		} finally {
+			server.ws.close();
+		}
+	});
+
+	it("should proxy stdin and stdout when stdio is forced", async ({
+		expect,
+	}) => {
+		const instanceId = "a".repeat(64);
+		const sshJwt = "asd";
+		const server = await createWsServer();
+		const { stdin, stdout } = mockStdio({
+			stdinIsTTY: true,
+			stdoutIsTTY: true,
+		});
 
 		setWranglerConfig({});
 		msw.use(
 			http.get(`*/instances/:instanceId/ssh`, async () => {
 				return HttpResponse.json(
-					{ success: true, result: { url: wsUrl, token: sshJwt } },
+					{ success: true, result: { url: server.url, token: sshJwt } },
 					{ status: 200 }
 				);
 			})
 		);
 
-		const mockWebSocket = new MockWebSocketServer(wsUrl);
-		await expect(runWrangler(`containers ssh ${instanceId}`)).rejects
-			.toMatchInlineSnapshot(`
-			[Error: SSH exited unsuccessfully. Is the container running?
-			NOTE: SSH does not automatically wake a container or count as activity to keep a container alive]
-		`);
+		const stdoutData = new Promise<string>((resolve) => {
+			stdout.on("data", (chunk: Buffer) => resolve(chunk.toString()));
+		});
+		const serverMessage = new Promise<string>((resolve) => {
+			void server.connection.then((socket) => {
+				socket.on("message", (chunk) => resolve(chunk.toString()));
+			});
+		});
+		const wrangler = runWrangler(`containers ssh --stdio ${instanceId}`);
 
-		// We got a connection
-		expect(mockWebSocket.connected).toBeTruthy();
+		const socket = await server.connection;
+		stdin.write("client-data");
+		await expect(serverMessage).resolves.toBe("client-data");
+
+		socket.send("server-data");
+		await expect(stdoutData).resolves.toBe("server-data");
+
+		stdin.end();
+		socket.close();
+		await wrangler;
+		server.ws.close();
+		expect(std.out).toBe("");
+		expect(stdin.listenerCount("data")).toBe(0);
+		expect(stdin.listenerCount("end")).toBe(0);
+		expect(stdin.listenerCount("error")).toBe(0);
+	});
+
+	it("should auto-detect proxy mode with extra args when stdin and stdout are not TTYs", async ({
+		expect,
+	}) => {
+		const instanceId = "a".repeat(64);
+		const sshJwt = "asd";
+		const server = await createWsServer();
+		const { stdin, stdout } = mockStdio({});
+
+		setWranglerConfig({});
+		msw.use(
+			http.get(`*/instances/:instanceId/ssh`, async () => {
+				return HttpResponse.json(
+					{ success: true, result: { url: server.url, token: sshJwt } },
+					{ status: 200 }
+				);
+			})
+		);
+
+		const stdoutData = new Promise<string>((resolve) => {
+			stdout.on("data", (chunk: Buffer) => resolve(chunk.toString()));
+		});
+		const serverMessage = new Promise<string>((resolve) => {
+			void server.connection.then((socket) => {
+				socket.on("message", (chunk) => resolve(chunk.toString()));
+			});
+		});
+		const wrangler = runWrangler(`containers ssh ${instanceId} -- 22`);
+
+		const socket = await server.connection;
+		stdin.write("client-data");
+		await expect(serverMessage).resolves.toBe("client-data");
+
+		socket.send("server-data");
+		await expect(stdoutData).resolves.toBe("server-data");
+
+		stdin.end();
+		socket.close();
+		await wrangler;
+		server.ws.close();
+		expect(std.out).toBe("");
 	});
 });
+
+async function createWsServer() {
+	const ws = new WebSocketServer({ port: 0 });
+	await new Promise<void>((resolve) => ws.on("listening", resolve));
+	const address = ws.address();
+	if (address === null || typeof address === "string") {
+		throw new Error("Expected WebSocket server to listen on a TCP port");
+	}
+	const connection = new Promise<WebSocket>((resolve) => {
+		ws.on("connection", resolve);
+	});
+	return { ws, connection, url: `ws://127.0.0.1:${address.port}` };
+}
+
+function mockStdio({
+	stdinIsTTY,
+	stdoutIsTTY,
+}: {
+	stdinIsTTY?: boolean;
+	stdoutIsTTY?: boolean;
+}) {
+	const stdin = new PassThrough();
+	const stdout = new PassThrough();
+	if (stdinIsTTY !== undefined) {
+		Object.defineProperty(stdin, "isTTY", { value: stdinIsTTY });
+	}
+	if (stdoutIsTTY !== undefined) {
+		Object.defineProperty(stdout, "isTTY", { value: stdoutIsTTY });
+	}
+	Object.defineProperty(process, "stdin", { value: stdin, configurable: true });
+	Object.defineProperty(process, "stdout", {
+		value: stdout,
+		configurable: true,
+	});
+	return { stdin, stdout };
+}
