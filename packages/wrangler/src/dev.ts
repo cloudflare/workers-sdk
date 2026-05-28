@@ -525,13 +525,21 @@ export function getBindings(
 	// getVarsForDev returns typed bindings: config vars are plain_text/json,
 	// while .dev.vars/.env vars are secret_text.
 	// When secrets is defined, only declared secret keys are loaded from files.
+	const secrets = configParam.secrets
+		? {
+				...configParam.secrets,
+				required: configParam.secrets?.required?.filter(
+					(secret) => inputBindings?.[secret]?.type !== "secret_text"
+				),
+			}
+		: undefined;
 	const vars = getVarsForDev(
 		configParam.userConfigPath,
 		envFiles,
 		configParam.vars,
 		env,
 		false,
-		configParam.secrets
+		secrets
 	);
 	for (const [name, binding] of Object.entries(vars)) {
 		// Only override plain_text/json/secret_text vars, not other binding types like kv_namespace

@@ -58,6 +58,10 @@ export type {
 } from "./startDevWorker/events";
 export type { DevToolsEvent } from "./startDevWorker/devtools";
 
+// Exports from ./server
+export { createServer } from "./server";
+export type { ServerOptions, WorkerHandle, WorkerServer } from "./server";
+
 // Exports from ./integrations
 export {
 	unstable_getVarsForDev,
