@@ -38,6 +38,8 @@ describe("getDatabaseInfoFromConfig", () => {
 			migrationsTableName: "d1_migrations",
 			name: "db",
 			migrationsFolderPath: "./migrations",
+			migrationsDirRaw: undefined,
+			migrationsPattern: undefined,
 			internal_env: undefined,
 		});
 	});
@@ -62,6 +64,8 @@ describe("getDatabaseInfoFromConfig", () => {
 			migrationsTableName: "d1_migrations",
 			name: "db",
 			migrationsFolderPath: "./custom_migrations",
+			migrationsDirRaw: "./custom_migrations",
+			migrationsPattern: undefined,
 			internal_env: undefined,
 		});
 	});
@@ -86,6 +90,8 @@ describe("getDatabaseInfoFromConfig", () => {
 			migrationsTableName: "custom_migrations",
 			name: "db",
 			migrationsFolderPath: "./migrations",
+			migrationsDirRaw: undefined,
+			migrationsPattern: undefined,
 			internal_env: undefined,
 		});
 	});
@@ -106,6 +112,8 @@ describe("getDatabaseInfoFromConfig", () => {
 			migrationsTableName: "d1_migrations",
 			name: "db2",
 			migrationsFolderPath: "./migrations",
+			migrationsDirRaw: undefined,
+			migrationsPattern: undefined,
 			internal_env: undefined,
 		});
 	});

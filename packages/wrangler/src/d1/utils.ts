@@ -42,6 +42,8 @@ export function getDatabaseInfoFromConfig(
 					d1Database.migrations_table || DEFAULT_MIGRATION_TABLE,
 				migrationsFolderPath:
 					d1Database.migrations_dir || DEFAULT_MIGRATION_PATH,
+				migrationsDirRaw: d1Database.migrations_dir,
+				migrationsPattern: d1Database.migrations_pattern,
 				internal_env: d1Database.database_internal_env,
 			};
 		}

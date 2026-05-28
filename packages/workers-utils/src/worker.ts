@@ -220,6 +220,7 @@ export interface CfD1Database {
 	database_internal_env?: string;
 	migrations_table?: string;
 	migrations_dir?: string;
+	migrations_pattern?: string;
 	remote?: boolean;
 	raw?: boolean;
 }

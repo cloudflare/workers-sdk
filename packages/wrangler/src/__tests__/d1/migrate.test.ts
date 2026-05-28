@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -52,6 +53,95 @@ describe("migrate", () => {
 
 			await runWrangler("d1 migrations create D1 test-migration");
 			expect(mockStd.out).toContain("Successfully created Migration");
+		});
+
+		it("`create` succeeds when the new file matches a permissive pattern", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "migrations",
+						migrations_pattern: "migrations/**/*.sql",
+					},
+				],
+			});
+
+			await runWrangler("d1 migrations create db test");
+
+			const files = fs.readdirSync("./migrations");
+			expect(files).toEqual(["0001_test.sql"]);
+			expect(
+				fs.readFileSync(path.join("./migrations", "0001_test.sql"), "utf8")
+			).toContain("Migration number: 0001");
+		});
+
+		it("rejects `wrangler d1 migrations create` with an actionable error when the new file would not match the configured pattern", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			// Use a JSONC config (what we recommend in our docs) so the
+			// snapshot below reflects the typical user-facing message.
+			writeWranglerConfig(
+				{
+					d1_databases: [
+						{
+							binding: "DATABASE",
+							database_name: "db",
+							database_id: "xxxx",
+							migrations_dir: "migrations",
+							// Pattern only matches nested files, so a top-level
+							// `0001_test.sql` should be rejected.
+							migrations_pattern: "migrations/*/migration.sql",
+						},
+					],
+				},
+				"./wrangler.jsonc"
+			);
+			fs.mkdirSync("./migrations", { recursive: true });
+
+			await expect(runWrangler("d1 migrations create db test")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Wrangler would like to make a new migration called \`migrations/0001_test.sql\` but it does not match the configured \`migrations_pattern: "migrations/*/migration.sql"\` in your wrangler.jsonc file, so \`wrangler d1 migrations apply\` would not pick it up. \`wrangler d1 migrations create\` only writes top-level files inside \`migrations_dir\`.
+
+				If you are using an ORM like drizzle to manage migrations, use the ORM's command (e.g. \`drizzle-kit generate\`) instead of \`wrangler d1 migrations create\` — it will create files in the nested layout your \`migrations_pattern\` expects.
+
+				Otherwise, change \`migrations_pattern\` in your wrangler.jsonc file to match top-level \`.sql\` files (for example, \`migrations/*.sql\`).]
+			`);
+		});
+
+		it("does not create migrations_dir when `wrangler d1 migrations create` fails the pattern check", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig(
+				{
+					d1_databases: [
+						{
+							binding: "DATABASE",
+							database_name: "db",
+							database_id: "xxxx",
+							migrations_dir: "migrations",
+							migrations_pattern: "migrations/*/migration.sql",
+						},
+					],
+				},
+				"./wrangler.jsonc"
+			);
+			// Deliberately do NOT pre-create `./migrations` and do NOT
+			// `mockConfirm` the "Ok to create" prompt: if the pattern check
+			// runs first we never reach the prompt, and the dir is still
+			// absent after the throw.
+
+			await expect(
+				runWrangler("d1 migrations create db test")
+			).rejects.toThrowError(/does not match the configured/);
+
+			expect(fs.existsSync("./migrations")).toBe(false);
 		});
 	});
 
@@ -124,7 +214,7 @@ describe("migrate", () => {
 		}) => {
 			setIsTTY(false);
 
-			const migrationsDir = join(process.cwd(), "my-migrations-go-here");
+			const migrationsDir = path.join(process.cwd(), "my-migrations-go-here");
 			writeWranglerConfig({
 				d1_databases: [
 					{
@@ -206,7 +296,7 @@ Your database may not be available to serve requests during the migration, conti
 					{ id: "R2-D2", name: "enterprise-nx" },
 				])
 			);
-			const migrationsDir = join(process.cwd(), "my-migrations-go-here");
+			const migrationsDir = path.join(process.cwd(), "my-migrations-go-here");
 			writeWranglerConfig({
 				d1_databases: [
 					{
@@ -267,6 +357,82 @@ Your database may not be available to serve requests during the migration, conti
 			).rejects.toThrowError(
 				`Migration "0001_test.sql" was not applied — execution was cancelled.`
 			);
+		});
+
+		it("`apply` records each migration's name in `d1_migrations` as a path relative to `migrations_dir`", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "migrations",
+						migrations_pattern: "migrations/**/*.sql",
+					},
+				],
+			});
+
+			// 3-levels-deep layout:
+			//   migrations/0001_top.sql                            (level 1)
+			//   migrations/0002_users/0001_init.sql                (level 2)
+			//   migrations/0003_features/auth/0001_oauth.sql       (level 3)
+			fs.mkdirSync("./migrations/0002_users", { recursive: true });
+			fs.mkdirSync("./migrations/0003_features/auth", { recursive: true });
+			fs.writeFileSync("./migrations/0001_top.sql", "-- top");
+			fs.writeFileSync("./migrations/0002_users/0001_init.sql", "-- mid");
+			fs.writeFileSync(
+				"./migrations/0003_features/auth/0001_oauth.sql",
+				"-- deep"
+			);
+
+			// Spy on `executeSql` and pluck the `INSERT INTO d1_migrations
+			// (name) values ('...');` lines back out of the SQL `apply` emits.
+			// Fragile — couples to the exact INSERT statement in apply.ts —
+			// but unavoidable: applying against real Miniflare/D1 then
+			// `SELECT name FROM d1_migrations` boots a fresh Miniflare per
+			// executeSql call (~6 boots × ~2s for a 3-migration test) and
+			// blows the per-test timeout. If executeSql ever batches, or
+			// Miniflare startup gets materially faster, rewrite this against
+			// real D1.
+			const insertedNames: string[] = [];
+			const spy = vi
+				.spyOn(d1Execute, "executeSql")
+				.mockImplementation(async ({ command }) => {
+					if (typeof command === "string") {
+						const match = command.match(
+							/INSERT INTO d1_migrations \(name\)\s*values\s*\('([^']+)'\)/
+						);
+						if (match) {
+							insertedNames.push(match[1]);
+						}
+					}
+					return [{ results: [], success: true, meta: {} as never }];
+				});
+
+			mockConfirm({
+				text: `About to apply 3 migration(s)\nYour database may not be available to serve requests during the migration, continue?`,
+				result: true,
+			});
+
+			try {
+				await runWrangler("d1 migrations apply db --local");
+			} finally {
+				spy.mockRestore();
+			}
+
+			// `name` values must be relative to `migrations_dir`, not absolute,
+			// not project-relative. The snapshot locks in the exact shape so
+			// it's obvious at a glance.
+			expect(insertedNames).toMatchInlineSnapshot(`
+				[
+				  "0001_top.sql",
+				  "0002_users/0001_init.sql",
+				  "0003_features/auth/0001_oauth.sql",
+				]
+			`);
 		});
 	});
 
@@ -351,6 +517,138 @@ Your database may not be available to serve requests during the migration, conti
 			await expect(
 				runWrangler("d1 migrations list DATABASE")
 			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
+		});
+
+		it("`list` only shows migrations matching migrations_pattern (nested layout)", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "migrations",
+						migrations_pattern: "migrations/*/migration.sql",
+					},
+				],
+			});
+
+			fs.mkdirSync("./migrations/0000_init", { recursive: true });
+			fs.writeFileSync(
+				"./migrations/0000_init/migration.sql",
+				"-- nested migration"
+			);
+			// Top-level .sql file should NOT be listed because it doesn't match
+			// the pattern.
+			fs.writeFileSync("./migrations/should_be_ignored.sql", "-- noop");
+
+			const spy = vi
+				.spyOn(d1Execute, "executeSql")
+				.mockResolvedValue([{ results: [], success: true, meta: {} as never }]);
+
+			try {
+				await runWrangler("d1 migrations list --local db");
+			} finally {
+				spy.mockRestore();
+			}
+
+			expect(mockStd.out).toContain("0000_init/migration.sql");
+			expect(mockStd.out).not.toContain("should_be_ignored.sql");
+		});
+
+		it("`list` prints a drizzle hint when migrations_pattern is the default but a nested layout exists", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			// Use a JSONC config (the format we recommend in our docs) so the
+			// snapshot below reflects the typical user-facing message.
+			writeWranglerConfig(
+				{
+					d1_databases: [
+						{
+							binding: "DATABASE",
+							database_name: "db",
+							database_id: "xxxx",
+						},
+					],
+				},
+				"./wrangler.jsonc"
+			);
+
+			fs.mkdirSync("./migrations/0000_init", { recursive: true });
+			fs.writeFileSync("./migrations/0000_init/migration.sql", "-- nested");
+
+			const spy = vi
+				.spyOn(d1Execute, "executeSql")
+				.mockResolvedValue([{ results: [], success: true, meta: {} as never }]);
+
+			try {
+				await runWrangler("d1 migrations list --local db");
+			} finally {
+				spy.mockRestore();
+			}
+
+			expect(mockStd.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mCould not find any migration files matching \`migrations/*.sql\`. It looks like there are migration files matching \`migrations/*/migration.sql\` though. If you are using drizzle to manage your migrations, please set \`migrations_pattern\` to \`migrations/*/migration.sql\` in wrangler.jsonc.[0m
+
+				"
+			`);
+		});
+
+		it("rejects a `migrations_pattern` that does not start with `migrations_dir`", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig(
+				{
+					d1_databases: [
+						{
+							binding: "DATABASE",
+							database_name: "db",
+							database_id: "xxxx",
+							migrations_dir: "migrations",
+							migrations_pattern: "schema/*.sql",
+						},
+					],
+				},
+				"./wrangler.jsonc"
+			);
+
+			await expect(runWrangler("d1 migrations list --local db")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The configured \`migrations_pattern: "schema/*.sql"\` in your wrangler.jsonc file must start with \`migrations/\` to match \`migrations_dir: "migrations"\`.
+
+				Either change \`migrations_pattern\` so it starts with \`migrations/\` (for example, \`"migrations/*.sql"\`), or change \`migrations_dir\` to match the start of your pattern.]
+			`);
+		});
+
+		it("rejects a `migrations_pattern` set without `migrations_dir` with an actionable error", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig(
+				{
+					d1_databases: [
+						{
+							binding: "DATABASE",
+							database_name: "db",
+							database_id: "xxxx",
+							// migrations_dir intentionally not set.
+							migrations_pattern: "migrations/*.sql",
+						},
+					],
+				},
+				"./wrangler.jsonc"
+			);
+
+			await expect(runWrangler("d1 migrations list --local db")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: You have set \`migrations_pattern: "migrations/*.sql"\` in your wrangler.jsonc file but no \`migrations_dir\` for this D1 binding.
+
+				When \`migrations_pattern\` is set, \`migrations_dir\` must also be set, and \`migrations_pattern\` must start with \`\${migrations_dir}/\`. Add a \`migrations_dir\` entry to your wrangler.jsonc file (for example, \`migrations_dir: "migrations"\`).]
+			`);
 		});
 	});
 });
