@@ -591,7 +591,9 @@ export function createServer(options: ServerOptions): WorkerServer {
 				async scheduled(scheduledOptions) {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
-					const url = new URL("http://localhost/cdn-cgi/handler/scheduled");
+					const url = new URL(
+						"http://localhost/cdn-cgi/handler/scheduled?format=json"
+					);
 
 					if (scheduledOptions?.cron !== undefined) {
 						url.searchParams.set("cron", scheduledOptions.cron);
@@ -605,13 +607,9 @@ export function createServer(options: ServerOptions): WorkerServer {
 					}
 
 					const response = await dispatchFetch(miniflare, url, undefined, name);
-					const outcome = await response.text();
+					const result = await response.json();
 
-					return {
-						outcome,
-						// FIXME: scheduled handler should include noRetry info in the response
-						noRetry: false,
-					};
+					return result as FetcherScheduledResult;
 				},
 			};
 		},
