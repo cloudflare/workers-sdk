@@ -114,7 +114,7 @@ describe("wrangler", () => {
 		}) => {
 			mockPrompt({ text: ANONYMOUS_TERMS_PROMPT, result: "yes" });
 
-			await runWrangler("--help --allow-anonymous");
+			await runWrangler("--help --temporary");
 
 			expect(std.out).toContain("wrangler");
 			expect(std.out).toContain("COMMANDS");

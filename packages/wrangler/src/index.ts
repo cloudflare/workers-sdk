@@ -525,9 +525,9 @@ export function createCLIParser(argv: string[]) {
 			array: true,
 			requiresArg: true,
 		},
-		"allow-anonymous": {
+		temporary: {
 			describe:
-				"Create a temporary preview account when a command needs authentication in non-interactive mode",
+				"Create a temporary preview account when a command needs authentication",
 			type: "boolean",
 			default: false,
 			hidden: true,
@@ -2312,7 +2312,7 @@ export async function main(argv: string[]): Promise<void> {
 	const hasHelpFlag = argv.includes("--help") || argv.includes("-h");
 	const nonFlagArgs = argv.filter((arg) => !arg.startsWith("-"));
 	const isRootHelpRequest = hasHelpFlag && nonFlagArgs.length === 0;
-	const allowAnonymousRequested = hasAllowAnonymousFlag(argv);
+	const temporaryRequested = hasTemporaryFlag(argv);
 
 	const { wrangler, registry, showHelpWithCategories } = createCLIParser(argv);
 
@@ -2326,7 +2326,7 @@ export async function main(argv: string[]): Promise<void> {
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
 		}
-		setAllowAnonymous(args.allowAnonymous ?? false);
+		setAllowAnonymous(args.temporary ?? false);
 		// Also set the CLI package log level to match
 		setLogLevel(logger.loggerLevel);
 
@@ -2349,7 +2349,7 @@ export async function main(argv: string[]): Promise<void> {
 
 	let cliHandlerThrew = false;
 	try {
-		if (allowAnonymousRequested) {
+		if (temporaryRequested) {
 			await ensureAnonymousTermsAccepted();
 		}
 
@@ -2426,27 +2426,21 @@ export async function main(argv: string[]): Promise<void> {
 	}
 }
 
-function hasAllowAnonymousFlag(argv: string[]): boolean {
-	let allowAnonymous = false;
+function hasTemporaryFlag(argv: string[]): boolean {
+	let temporary = false;
 
 	for (const arg of argv) {
-		if (arg === "--allow-anonymous" || arg === "--allowAnonymous") {
-			allowAnonymous = true;
-		} else if (
-			arg === "--no-allow-anonymous" ||
-			arg === "--no-allowAnonymous"
-		) {
-			allowAnonymous = false;
-		} else if (
-			arg.startsWith("--allow-anonymous=") ||
-			arg.startsWith("--allowAnonymous=")
-		) {
+		if (arg === "--temporary") {
+			temporary = true;
+		} else if (arg === "--no-temporary") {
+			temporary = false;
+		} else if (arg.startsWith("--temporary=")) {
 			const value = arg.slice(arg.indexOf("=") + 1).toLowerCase();
-			allowAnonymous = !["false", "0", "no"].includes(value);
+			temporary = !["false", "0", "no"].includes(value);
 		}
 	}
 
-	return allowAnonymous;
+	return temporary;
 }
 
 /**

@@ -7,12 +7,6 @@ describe("experimental_getWranglerCommands", () => {
 
 		expect(commandTree).toMatchInlineSnapshot(`
 			{
-			  "allow-anonymous": {
-			    "default": false,
-			    "describe": "Create a temporary preview account when a command needs authentication in non-interactive mode",
-			    "hidden": true,
-			    "type": "boolean",
-			  },
 			  "config": {
 			    "alias": "c",
 			    "describe": "Path to Wrangler configuration file",
@@ -55,6 +49,12 @@ describe("experimental_getWranglerCommands", () => {
 			  "install-skills": {
 			    "default": false,
 			    "describe": "Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
+			    "type": "boolean",
+			  },
+			  "temporary": {
+			    "default": false,
+			    "describe": "Create a temporary preview account when a command needs authentication",
+			    "hidden": true,
 			    "type": "boolean",
 			  },
 			  "v": {
