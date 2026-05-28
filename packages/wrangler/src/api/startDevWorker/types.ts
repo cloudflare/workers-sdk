@@ -46,8 +46,8 @@ export interface StartDevWorkerInput {
 	 * This is the `main` property of a Wrangler configuration file.
 	 */
 	entrypoint?: string;
-	/** The configuration path of the worker. */
-	config?: string;
+	/** The configuration path of the worker, or a normalized configuration object. */
+	config?: string | Config;
 
 	/** The compatibility date for the workerd runtime. */
 	compatibilityDate?: string;
@@ -173,6 +173,8 @@ export interface StartDevWorkerInput {
 
 		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
 		multiworkerPrimary?: boolean;
+		/** Whether to infer the local request origin from configured routes. */
+		inferOriginFromRoutes?: boolean;
 
 		containerBuildId?: string;
 		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
@@ -208,8 +210,10 @@ export interface StartDevWorkerInput {
 
 export type StartDevWorkerOptions = Omit<
 	StartDevWorkerInput,
-	"assets" | "containers" | "dev"
+	"assets" | "config" | "containers" | "dev"
 > & {
+	/** The configuration path of the worker */
+	config?: string;
 	/** A worker's directory. Usually where the Wrangler configuration file is located */
 	projectRoot: string;
 	build: StartDevWorkerInput["build"] & {
