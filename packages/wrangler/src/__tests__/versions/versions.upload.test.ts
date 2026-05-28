@@ -7,13 +7,14 @@ import {
 import { http, HttpResponse } from "msw";
 // eslint-disable-next-line no-restricted-imports
 import { assert, beforeEach, describe, expect, it, test, vi } from "vitest";
+import { ANONYMOUS_TERMS_PROMPT } from "../../user/anonymous-terms";
 import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { mockConfirm } from "../helpers/mock-dialogs";
+import { mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import {
 	mockGetWorkerSubdomain,
@@ -138,6 +139,8 @@ describe("versions upload", () => {
 		test("should create a temporary account for non-interactive uploads", async ({
 			expect,
 		}) => {
+			mockPrompt({ text: ANONYMOUS_TERMS_PROMPT, result: "yes" });
+
 			let previewAccountRequests = 0;
 			msw.use(
 				http.post(anonymousPreviewAccountUrl, async () => {

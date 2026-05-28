@@ -419,6 +419,7 @@ import { tunnelQuickStartCommand } from "./tunnel/quick-start";
 import { tunnelRunCommand } from "./tunnel/run";
 import { typesCommand } from "./type-generation";
 import { runWithAuthContext, setAllowAnonymous } from "./user";
+import { ensureAnonymousTermsAccepted } from "./user/anonymous-terms";
 import {
 	authNamespace,
 	authTokenCommand,
@@ -2311,27 +2312,9 @@ export async function main(argv: string[]): Promise<void> {
 	const hasHelpFlag = argv.includes("--help") || argv.includes("-h");
 	const nonFlagArgs = argv.filter((arg) => !arg.startsWith("-"));
 	const isRootHelpRequest = hasHelpFlag && nonFlagArgs.length === 0;
+	const allowAnonymousRequested = hasAllowAnonymousFlag(argv);
 
 	const { wrangler, registry, showHelpWithCategories } = createCLIParser(argv);
-
-	if (isRootHelpRequest) {
-		await showHelpWithCategories();
-		return;
-	}
-
-	// Check for unknown command with a `--help` flag
-	const [subCommand] = nonFlagArgs;
-	if (hasHelpFlag && subCommand) {
-		const knownCommands = registry.topLevelCommands;
-		if (!knownCommands.has(subCommand)) {
-			logger.info("");
-			logger.error(`Unknown argument: ${subCommand}`);
-			await showHelpWithCategories();
-			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`, {
-				telemetryMessage: "cli help unknown argument",
-			});
-		}
-	}
 
 	const startTime = Date.now();
 	let configArgs: ReadConfigCommandArgs = {};
@@ -2366,6 +2349,29 @@ export async function main(argv: string[]): Promise<void> {
 
 	let cliHandlerThrew = false;
 	try {
+		if (allowAnonymousRequested) {
+			await ensureAnonymousTermsAccepted();
+		}
+
+		if (isRootHelpRequest) {
+			await showHelpWithCategories();
+			return;
+		}
+
+		// Check for unknown command with a `--help` flag
+		const [subCommand] = nonFlagArgs;
+		if (hasHelpFlag && subCommand) {
+			const knownCommands = registry.topLevelCommands;
+			if (!knownCommands.has(subCommand)) {
+				logger.info("");
+				logger.error(`Unknown argument: ${subCommand}`);
+				await showHelpWithCategories();
+				throw new CommandLineArgsError(`Unknown argument: ${subCommand}`, {
+					telemetryMessage: "cli help unknown argument",
+				});
+			}
+		}
+
 		await runWithAuthContext(async () => {
 			await wrangler.parse();
 		});
@@ -2418,6 +2424,29 @@ export async function main(argv: string[]): Promise<void> {
 			}
 		}
 	}
+}
+
+function hasAllowAnonymousFlag(argv: string[]): boolean {
+	let allowAnonymous = false;
+
+	for (const arg of argv) {
+		if (arg === "--allow-anonymous" || arg === "--allowAnonymous") {
+			allowAnonymous = true;
+		} else if (
+			arg === "--no-allow-anonymous" ||
+			arg === "--no-allowAnonymous"
+		) {
+			allowAnonymous = false;
+		} else if (
+			arg.startsWith("--allow-anonymous=") ||
+			arg.startsWith("--allowAnonymous=")
+		) {
+			const value = arg.slice(arg.indexOf("=") + 1).toLowerCase();
+			allowAnonymous = !["false", "0", "no"].includes(value);
+		}
+	}
+
+	return allowAnonymous;
 }
 
 /**

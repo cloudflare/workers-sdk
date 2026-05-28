@@ -17,6 +17,7 @@ import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
 import { writeAuthConfigFile } from "../../user";
+import { ANONYMOUS_TERMS_PROMPT } from "../../user/anonymous-terms";
 import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
@@ -95,6 +96,9 @@ describe("deploy", () => {
 	} = mockOAuthFlow();
 	const anonymousPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
+	const mockAnonymousTermsAcceptance = (result = "yes") => {
+		mockPrompt({ text: ANONYMOUS_TERMS_PROMPT, result });
+	};
 
 	beforeEach(() => {
 		vi.stubGlobal("setTimeout", (fn: () => void) => {
@@ -781,6 +785,7 @@ describe("deploy", () => {
 			expect,
 		}) => {
 			setIsTTY(true);
+			mockAnonymousTermsAcceptance();
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockDomainUsesAccess({ usesAccess: false });
@@ -916,6 +921,7 @@ describe("deploy", () => {
 			expect,
 		}) => {
 			setIsTTY(false);
+			mockAnonymousTermsAcceptance();
 			writeAuthConfigFile({ api_token: "cached-api-token" });
 			writeWranglerConfig();
 			writeWorkerSource();
@@ -943,6 +949,7 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
+				mockAnonymousTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1024,10 +1031,35 @@ describe("deploy", () => {
 				});
 			});
 
+			it("requires explicit terms acceptance before using --allow-anonymous", async ({
+				expect,
+			}) => {
+				setIsTTY(false);
+				mockAnonymousTermsAcceptance("no");
+
+				let previewAccountRequests = 0;
+				msw.use(
+					http.post(anonymousPreviewAccountUrl, async () => {
+						previewAccountRequests += 1;
+						return HttpResponse.json({});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --allow-anonymous")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: You must accept Cloudflare's Terms of Service and Privacy Policy to use --allow-anonymous.]`
+				);
+
+				expect(previewAccountRequests).toBe(0);
+			});
+
 			it("reuses a cached anonymous preview account for later anonymous deploys", async ({
 				expect,
 			}) => {
 				setIsTTY(false);
+				mockAnonymousTermsAcceptance();
+				mockAnonymousTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1107,6 +1139,7 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
+				mockAnonymousTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1332,6 +1365,7 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
+				mockAnonymousTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 
