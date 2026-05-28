@@ -463,6 +463,8 @@ import { vpcServiceGetCommand } from "./vpc/get";
 import { vpcNamespace, vpcServiceNamespace } from "./vpc/index";
 import { vpcServiceListCommand } from "./vpc/list";
 import { vpcServiceUpdateCommand } from "./vpc/update";
+import { webSearchNamespace } from "./websearch/index";
+import { webSearchSearchCommand } from "./websearch/search";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
@@ -1552,6 +1554,16 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("ai-search");
+
+	// websearch
+	registry.define([
+		{ command: "wrangler websearch", definition: webSearchNamespace },
+		{
+			command: "wrangler websearch search",
+			definition: webSearchSearchCommand,
+		},
+	]);
+	registry.registerNamespace("websearch");
 
 	// cert - includes mtls-certificates and CA cert management
 	registry.define([

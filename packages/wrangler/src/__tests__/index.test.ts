@@ -71,6 +71,7 @@ describe("wrangler", () => {
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
+				  wrangler websearch              🔎 Run queries against Cloudflare Web Search [experimental]
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
@@ -150,6 +151,7 @@ describe("wrangler", () => {
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
+				  wrangler websearch              🔎 Run queries against Cloudflare Web Search [experimental]
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
