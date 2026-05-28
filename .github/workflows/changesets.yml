@@ -10,6 +10,11 @@ permissions:
   contents: read
   # note: no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
 
+env:
+  # This workflow only builds and publishes — it never runs Playwright tests.
+  # Skip the browser download to avoid the postinstall script hanging in CI.
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
 jobs:
   release:
     if: ${{ github.repository_owner == 'cloudflare' }}
