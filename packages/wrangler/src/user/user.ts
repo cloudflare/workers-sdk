@@ -1035,14 +1035,19 @@ type LoginProps = {
 
 export async function loginOrRefreshIfRequired(
 	complianceConfig: ComplianceConfig,
-	props?: LoginProps
+	props?: LoginProps,
+	{ allowLogin = true }: { allowLogin?: boolean } = {}
 ): Promise<boolean> {
 	// TODO: if there already is a token, then try refreshing
 	// TODO: ask permission before opening browser
 	if (!getAPIToken()) {
 		// Not logged in.
 		// If we are not interactive, we cannot ask the user to login
-		return !isNonInteractiveOrCI() && (await login(complianceConfig, props));
+		return (
+			allowLogin &&
+			!isNonInteractiveOrCI() &&
+			(await login(complianceConfig, props))
+		);
 	} else if (isRefreshNeeded()) {
 		// We're logged in, but the refresh token seems to have expired,
 		// so let's try to refresh it
@@ -1052,7 +1057,11 @@ export async function loginOrRefreshIfRequired(
 			return true;
 		} else {
 			// If the refresh token isn't valid, then we ask the user to login again
-			return !isNonInteractiveOrCI() && (await login(complianceConfig, props));
+			return (
+				allowLogin &&
+				!isNonInteractiveOrCI() &&
+				(await login(complianceConfig, props))
+			);
 		}
 	} else {
 		return true;
@@ -1483,22 +1492,24 @@ export async function requireAuth(
 		account_id?: string;
 	}
 ): Promise<string> {
-	const loggedIn = await loginOrRefreshIfRequired(config);
+	const loggedIn = await loginOrRefreshIfRequired(config, undefined, {
+		allowLogin: !shouldAllowAnonymous(),
+	});
 	if (!loggedIn) {
-		if (isNonInteractiveOrCI()) {
-			if (shouldAllowAnonymous()) {
-				const { account: anonymousPreviewAccount, cached } =
-					await getOrCreateAnonymousPreviewAccount();
-				setAuthOverride({
-					accountId: anonymousPreviewAccount.account.id,
-					apiToken: {
-						apiToken: anonymousPreviewAccount.account.apiToken,
-					},
-				});
-				logAnonymousPreviewAccount(anonymousPreviewAccount, cached);
-				return anonymousPreviewAccount.account.id;
-			}
+		if (shouldAllowAnonymous()) {
+			const { account: anonymousPreviewAccount, cached } =
+				await getOrCreateAnonymousPreviewAccount();
+			setAuthOverride({
+				accountId: anonymousPreviewAccount.account.id,
+				apiToken: {
+					apiToken: anonymousPreviewAccount.account.apiToken,
+				},
+			});
+			logAnonymousPreviewAccount(anonymousPreviewAccount, cached);
+			return anonymousPreviewAccount.account.id;
+		}
 
+		if (isNonInteractiveOrCI()) {
 			throw new UserError(
 				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.\n\nTo continue without logging in, rerun this command with `--allow-anonymous`. Wrangler will use a temporary account and print a claim URL.",
 				{ telemetryMessage: "user auth missing api token non interactive" }
