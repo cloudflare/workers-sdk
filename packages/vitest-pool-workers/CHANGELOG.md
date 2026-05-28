@@ -1,17 +1,5 @@
 # @cloudflare/vitest-pool-workers
 
-## 0.16.11
-
-### Patch Changes
-
-- [#14070](https://github.com/cloudflare/workers-sdk/pull/14070) [`96ae856`](https://github.com/cloudflare/workers-sdk/commit/96ae85681b5e24baf10078480651228fc84ed727) Thanks [@dmmulroy](https://github.com/dmmulroy)! - Fix Durable Object RPC dispatch for constructors that return proxies
-
-  Durable Object RPC methods mediated by a returned `Proxy` are now resolved through that proxy after validating prototype exposure. This allows wrappers that bind methods to the underlying instance to use private fields and methods in Vitest, while matching workerd's rejection of constructor-assigned RPC overrides.
-
-- Updated dependencies [[`a2ef1a3`](https://github.com/cloudflare/workers-sdk/commit/a2ef1a323bfe0052b53f5eddb302bd6bd0d45a74), [`2c1d8b2`](https://github.com/cloudflare/workers-sdk/commit/2c1d8b23dcf666a5626e389e37d027d71a56e5e3), [`ce4eb20`](https://github.com/cloudflare/workers-sdk/commit/ce4eb20884d350ac68237fe833a1582dcb9f15fc), [`5fa3de6`](https://github.com/cloudflare/workers-sdk/commit/5fa3de663217683d59c9a0fc95d99b616d558619), [`37176e5`](https://github.com/cloudflare/workers-sdk/commit/37176e523055da69b56d0306b2d272a45d6e3b27), [`0ce88ea`](https://github.com/cloudflare/workers-sdk/commit/0ce88eaddd7d3329ceee3b796d90e8711e48a34f), [`66d86ba`](https://github.com/cloudflare/workers-sdk/commit/66d86baf52fb62bbae9e04d2b0cd3809625fcca0), [`9dee4cc`](https://github.com/cloudflare/workers-sdk/commit/9dee4ccac78a5027fccc7dbef9e39fae25a681df), [`f623ae4`](https://github.com/cloudflare/workers-sdk/commit/f623ae4360b24708fdc2687b168c1f70954d321d), [`c8c7ec0`](https://github.com/cloudflare/workers-sdk/commit/c8c7ec0bde012ffe9fefe01cb15c7b0d030a6777), [`39d8717`](https://github.com/cloudflare/workers-sdk/commit/39d8717208feab9801b73a8ef781e181c258a6f6), [`ee56ec0`](https://github.com/cloudflare/workers-sdk/commit/ee56ec0b823f761afd4bc2012594f3739948a904)]:
-  - miniflare@4.20260527.0
-  - wrangler@4.96.0
-
 ## 0.16.10
 
 ### Patch Changes
