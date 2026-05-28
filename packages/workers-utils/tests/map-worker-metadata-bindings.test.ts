@@ -36,8 +36,7 @@ describe("mapWorkerMetadataBindings", () => {
 			];
 			const result = mapWorkerMetadataBindings(bindings);
 			expect(result.vars).toEqual({
-				name: "MY_JSON",
-				json: { key: "value" },
+				MY_JSON: { key: "value" },
 			});
 		});
 	});
