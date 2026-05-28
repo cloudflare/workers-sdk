@@ -261,6 +261,11 @@ function maybeGetVitePackageJsonDefaults(
 		return undefined;
 	}
 
+	const viteConfigExists = hasViteConfig(projectPath);
+	if (!viteConfigExists && !hasRootIndexHtml(projectPath)) {
+		return undefined;
+	}
+
 	if (
 		!hasPackageJsonDependency("vite", projectPath) ||
 		!hasViteScript(packageJson)
@@ -304,6 +309,15 @@ function getViteOutputDir(buildScript: unknown): string {
 	return (
 		outputDirMatch?.[1] ?? outputDirMatch?.[2] ?? outputDirMatch?.[3] ?? "dist"
 	);
+}
+
+function hasRootIndexHtml(projectPath: string): boolean {
+	const indexHtmlPath = join(projectPath, "index.html");
+	if (!existsSync(indexHtmlPath)) {
+		return false;
+	}
+
+	return statSync(indexHtmlPath).isFile();
 }
 
 class MultipleFrameworksCIError extends FatalError {

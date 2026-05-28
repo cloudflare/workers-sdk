@@ -34,6 +34,7 @@ describe("detectFramework() / basic framework detection", () => {
 		expect,
 	}) => {
 		await seed({
+			"index.html": `<div id="app"></div>`,
 			"package.json": JSON.stringify({
 				scripts: {
 					build: "tsc && vite build",
@@ -57,6 +58,7 @@ describe("detectFramework() / basic framework detection", () => {
 		expect,
 	}) => {
 		await seed({
+			"index.html": `<div id="app"></div>`,
 			"package.json": JSON.stringify({
 				scripts: {
 					build: "tsc && vite build --outDir build",
@@ -78,6 +80,7 @@ describe("detectFramework() / basic framework detection", () => {
 		expect,
 	}) => {
 		await seed({
+			"index.html": `<div id="app"></div>`,
 			"package.json": JSON.stringify({
 				scripts: {
 					build: "tsc --outDir lib && vite build",
@@ -93,6 +96,26 @@ describe("detectFramework() / basic framework detection", () => {
 
 		expect(result.detectedFramework?.framework.id).toBe("vite");
 		expect(result.detectedFramework?.dist).toBe("dist");
+	});
+
+	it("does not detect configless vite without a root index.html", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({
+				scripts: {
+					build: "vite build",
+				},
+				devDependencies: {
+					vite: "^8.0.12",
+				},
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		const result = await detectFramework(process.cwd());
+
+		expect(result.detectedFramework?.framework.id).toBe("static");
 	});
 
 	it("does not detect vite from package.json without a Vite script", async ({
