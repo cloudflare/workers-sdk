@@ -414,7 +414,7 @@ export function getNextMigrationNumber(
 ): number {
 	const matchedNames = getMigrationNames(migrationsConfig);
 	const migrationNumbers = matchedNames
-		.map((name) => parseInt(name.split("/")[0].split("_")[0]))
+		.map((name) => leadingMigrationNumber(name))
 		// Drop unnumbered migrations (parseInt → NaN) so they don't poison
 		// Math.max.
 		.filter((n) => Number.isFinite(n));
