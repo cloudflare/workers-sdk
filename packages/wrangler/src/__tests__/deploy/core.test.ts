@@ -1,7 +1,10 @@
 import * as fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
@@ -39,7 +42,6 @@ import {
 	mswSuccessUserHandlers,
 } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
@@ -1729,6 +1731,110 @@ describe("deploy", () => {
 			expect(std.out).toContain("--dry-run: exiting now.");
 			// Should NOT have been asked for a name
 			expect(std.out).not.toContain("What do you want to name your project?");
+		});
+
+		it("should include compatibility_flags in generated wrangler.jsonc when --compatibility-flags is passed", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			// No writeWranglerConfig call — no config file exists
+			mockPrompt({
+				text: "What do you want to name your project?",
+				result: "test-worker",
+			});
+			mockConfirm({
+				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+				result: true,
+			});
+			mockConfirm({
+				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				result: true,
+			});
+
+			await runWrangler(
+				"deploy ./index.js --compatibility-flags=nodejs_compat --dry-run"
+			);
+			expect(std.out).toContain("--dry-run: exiting now.");
+			const writtenConfig = JSON.parse(
+				fs.readFileSync("wrangler.jsonc", "utf-8")
+			);
+			expect(writtenConfig).toEqual({
+				name: "test-worker",
+				compatibility_date: "2024-06-15",
+				main: "./index.js",
+				compatibility_flags: ["nodejs_compat"],
+			});
+			expect(std.out).toContain("Proceeding with deployment...");
+		});
+
+		it("should include --compatibility-flags in suggested CLI command when user declines config file write", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			// No writeWranglerConfig call — no config file exists
+			mockPrompt({
+				text: "What do you want to name your project?",
+				result: "test-worker",
+			});
+			mockConfirm({
+				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+				result: true,
+			});
+			mockConfirm({
+				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				result: false,
+			});
+
+			await runWrangler(
+				"deploy ./index.js --compatibility-flags=nodejs_compat --compatibility-flags=disable_navigator_language --dry-run"
+			);
+			expect(std.out).toContain("--dry-run: exiting now.");
+			expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+			// Suggested command should include the compat flags
+			expect(std.out).toContain(
+				"wrangler deploy ./index.js --name test-worker --compatibility-date 2024-06-15 --compatibility-flags nodejs_compat disable_navigator_language"
+			);
+			expect(std.out).toContain("Proceeding with deployment...");
+		});
+
+		it("should include multiple --compatibility-flags in suggested CLI command and config file", async ({
+			expect,
+		}) => {
+			vi.setSystemTime(new Date(2024, 5, 15));
+			setIsTTY(true);
+			writeWorkerSource();
+			// No writeWranglerConfig call — no config file exists
+			mockPrompt({
+				text: "What do you want to name your project?",
+				result: "test-worker",
+			});
+			mockConfirm({
+				text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+				result: true,
+			});
+			mockConfirm({
+				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				result: true,
+			});
+
+			await runWrangler(
+				"deploy ./index.js --compatibility-flags=nodejs_compat --compatibility-flags=url_standard --dry-run"
+			);
+			expect(std.out).toContain("--dry-run: exiting now.");
+			const writtenConfig = JSON.parse(
+				fs.readFileSync("wrangler.jsonc", "utf-8")
+			);
+			expect(writtenConfig).toEqual({
+				name: "test-worker",
+				compatibility_date: "2024-06-15",
+				main: "./index.js",
+				compatibility_flags: ["nodejs_compat", "url_standard"],
+			});
+			expect(std.out).toContain("Proceeding with deployment...");
 		});
 	});
 });

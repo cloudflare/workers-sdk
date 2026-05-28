@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it } from "vitest";
 import {
 	checkIfViteConfigUsesCloudflarePlugin,
@@ -7,8 +8,6 @@ import {
 } from "../../autoconfig/frameworks/utils/vite-config";
 import { logger } from "../../logger";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { runInTempDir } from "../helpers/run-in-tmp";
-
 describe("vite-config utils", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();

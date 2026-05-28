@@ -8,6 +8,7 @@ import {
 import { utimes } from "node:fs/promises";
 import { join } from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import {
 	appendToDebugLogFile,
@@ -15,7 +16,6 @@ import {
 	debugLogFilepath,
 	tryCleanupLogs,
 } from "../../utils/log-file";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import type { ExpectStatic } from "vitest";
 
 describe("appendToDebugLogFile", () => {

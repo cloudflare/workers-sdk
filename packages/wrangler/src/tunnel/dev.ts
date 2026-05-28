@@ -1,6 +1,7 @@
 import { dim } from "@cloudflare/cli-shared-helpers/colors";
 import { startTunnel } from "@cloudflare/workers-utils";
 import chalk from "chalk";
+import encodeQR from "qr";
 import { formatHostname } from "../dev/start-dev";
 import { logger } from "../logger";
 import { resolveNamedTunnel } from "./client";
@@ -159,11 +160,23 @@ export class TunnelManager {
 			logger.log(
 				`⬣ Sharing via Cloudflare Tunnel: ${chalk.green(publicUrls[0])}`
 			);
+			this.printQrCode(publicUrls[0]);
 		} else if (publicUrls.length > 1) {
 			logger.log(
 				"⬣ Sharing via Cloudflare Tunnel:\n" +
 					publicUrls.map((url) => `   ${chalk.green(url)}`).join("\n")
 			);
+			// Print a QR code for the first URL when multiple are available
+			this.printQrCode(publicUrls[0]);
+		}
+	}
+
+	private printQrCode(url: string): void {
+		try {
+			const qrCode = encodeQR(url, "ascii", { border: 1 });
+			logger.log(`\n${qrCode}`);
+		} catch {
+			// QR generation is best-effort; don't disrupt the dev session if it fails
 		}
 	}
 }

@@ -39,6 +39,9 @@ export async function listPipelines(
 	if (params?.per_page) {
 		searchParams.set("per_page", params.per_page.toString());
 	}
+	if (params?.name) {
+		searchParams.set("name", params.name);
+	}
 
 	const response = await fetchResult<Pipeline[]>(
 		config,
@@ -68,6 +71,9 @@ export async function listStreams(
 	if (params?.pipeline_id) {
 		searchParams.set("pipeline_id", params.pipeline_id);
 	}
+	if (params?.name) {
+		searchParams.set("name", params.name);
+	}
 
 	const response = await fetchResult<Stream[]>(
 		config,
@@ -96,6 +102,9 @@ export async function listSinks(
 	}
 	if (params?.pipeline_id) {
 		searchParams.set("pipeline_id", params.pipeline_id);
+	}
+	if (params?.name) {
+		searchParams.set("name", params.name);
 	}
 
 	const response = await fetchResult<Sink[]>(

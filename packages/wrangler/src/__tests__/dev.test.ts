@@ -4,7 +4,10 @@ import {
 	FatalError,
 	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
 import getPort from "get-port";
 import { http, HttpResponse } from "msw";
@@ -26,7 +29,6 @@ import {
 	mswSuccessUserHandlers,
 	mswZoneHandlers,
 } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
 	Binding,
@@ -1929,7 +1931,7 @@ describe.sequential("wrangler dev", () => {
 			expect,
 		}) => {
 			fs.writeFileSync("index.js", `export default {};`);
-			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			// eslint-disable-next-line turbo/no-undeclared-env-vars -- Test sets env var to simulate secret loaded from process.env
 			process.env.API_KEY = "from-process-env";
 			writeWranglerConfig({
 				main: "index.js",

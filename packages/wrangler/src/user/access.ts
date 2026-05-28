@@ -75,16 +75,15 @@ export async function domainUsesAccess(domain: string): Promise<boolean> {
 export async function getAccessHeaders(
 	domain: string
 ): Promise<Record<string, string>> {
-	if (!(await domainUsesAccess(domain))) {
-		return {};
-	}
-	logger.debug("Getting Access headers for domain:", domain);
-	if (headersCache[domain]) {
-		logger.debug("Using cached Access headers for domain:", domain);
-		return headersCache[domain];
-	}
-
-	// 1. If Access Service Token credentials are provided, use them directly
+	// 1. If Access Service Token credentials are provided, use them directly.
+	//
+	// This check intentionally comes before `domainUsesAccess()`, which detects
+	// Access by looking for a 302 redirect to `cloudflareaccess.com`. When an
+	// Access application is configured to only allow Service Auth tokens (no
+	// interactive user authentication), the domain responds with a hard 403
+	// instead of redirecting, so `domainUsesAccess()` returns false. If we
+	// gated the env var check on `domainUsesAccess()` we would never attach
+	// the service token headers and the request would fail with a 403.
 	const clientId = getAccessClientIdFromEnv();
 	const clientSecret = getAccessClientSecretFromEnv();
 
@@ -108,6 +107,15 @@ export async function getAccessHeaders(
 						: "CLOUDFLARE_ACCESS_CLIENT_SECRET"
 				} was found.`
 		);
+	}
+
+	if (!(await domainUsesAccess(domain))) {
+		return {};
+	}
+	logger.debug("Getting Access headers for domain:", domain);
+	if (headersCache[domain]) {
+		logger.debug("Using cached Access headers for domain:", domain);
+		return headersCache[domain];
 	}
 
 	// 2. If non-interactive (CI), error with actionable message

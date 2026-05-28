@@ -1,6 +1,10 @@
 export type ArtifactsTokenScope = "read" | "write";
 
-export type ArtifactsRepoStatus = "ready" | "importing" | "forking";
+export type ArtifactsRepoStatus =
+	| "creating"
+	| "ready"
+	| "importing"
+	| "forking";
 
 export interface ArtifactsNamespace {
 	namespace: string;

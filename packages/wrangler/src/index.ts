@@ -537,6 +537,12 @@ export function createCLIParser(argv: string[]) {
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		"install-skills": {
+			describe:
+				"Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
+			type: "boolean",
+			default: false,
+		},
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
@@ -613,7 +619,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "env-file", "help", "version"],
+		["config", "cwd", "env", "env-file", "help", "install-skills", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 
@@ -2396,7 +2402,7 @@ export async function main(argv: string[]): Promise<void> {
 			// Only re-throw if we haven't already re-thrown an exception from a
 			// command handler.
 			if (!cliHandlerThrew) {
-				// eslint-disable-next-line no-unsafe-finally
+				// eslint-disable-next-line no-unsafe-finally -- Intentionally re-throw in finally when the CLI handler did not throw
 				throw e;
 			}
 		}

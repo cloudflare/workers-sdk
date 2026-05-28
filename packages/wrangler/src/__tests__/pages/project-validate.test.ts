@@ -1,14 +1,13 @@
-// /* eslint-disable no-shadow */
 import { writeFileSync } from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";
 import { validate } from "../../pages/validate";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
 vi.mock("../../pages/constants", async (importActual) => ({
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof requires a value import in vi.mock importActual callback
 	...(await importActual<typeof import("../../pages/constants")>()),
 	MAX_ASSET_SIZE: 1 * 1024 * 1024,
 	MAX_ASSET_COUNT_DEFAULT: 10,

@@ -20,11 +20,10 @@ import { updateCheck } from "../../update-check";
 import { warnOrError } from "../../utils/print-bindings";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
-import type { AssetsOptions } from "../../assets";
 import type { LoggerLevel } from "../../logger";
-import type { LegacyAssetPaths } from "../../sites";
 import type { EsbuildBundle } from "../use-esbuild";
 import type {
+	AssetsOptions,
 	Binding,
 	CfD1Database,
 	CfDispatchNamespace,
@@ -37,6 +36,7 @@ import type {
 	CfWorkflow,
 	Config,
 	ContainerEngine,
+	LegacyAssetPaths,
 } from "@cloudflare/workers-utils";
 import type {
 	DOContainerOptions,
@@ -126,14 +126,14 @@ export class WranglerLog extends Log {
 				return;
 			}
 			this.#warnedCompatibilityDateFallback = true;
-			return void updateCheck().then((maybeNewVersion) => {
-				if (maybeNewVersion === undefined) {
+			return void updateCheck().then((result) => {
+				if (result.status !== "update-available") {
 					return;
 				}
 				message += [
 					"",
 					"Features enabled by your requested compatibility date may not be available.",
-					`Upgrade to \`wrangler@${maybeNewVersion}\` to remove this warning.`,
+					`Upgrade to \`wrangler@${result.latest}\` to remove this warning.`,
 				].join("\n");
 				super.warn(message);
 			});
@@ -283,22 +283,42 @@ function queueProducerEntry(
 	return [binding, { queueName, deliveryDelay, remoteProxyConnectionString }];
 }
 function pipelineEntry(
-	pipeline: CfPipeline,
+	{ binding, stream, pipeline, remote }: CfPipeline,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
-	{
-		pipeline: string;
-		remoteProxyConnectionString?: RemoteProxyConnectionString;
-	},
+	(
+		| {
+				stream: string;
+				remoteProxyConnectionString?: RemoteProxyConnectionString;
+		  }
+		| {
+				pipeline: string;
+				remoteProxyConnectionString?: RemoteProxyConnectionString;
+		  }
+	),
 ] {
-	if (!remoteProxyConnectionString || !pipeline.remote) {
-		return [pipeline.binding, { pipeline: pipeline.pipeline }];
+	if (stream) {
+		return [
+			binding,
+			{
+				stream,
+				...(remoteProxyConnectionString &&
+					remote && { remoteProxyConnectionString }),
+			},
+		];
+	} else if (pipeline) {
+		return [
+			binding,
+			{
+				pipeline,
+				...(remoteProxyConnectionString &&
+					remote && { remoteProxyConnectionString }),
+			},
+		];
+	} else {
+		throw new Error("Pipeline must have either a stream");
 	}
-	return [
-		pipeline.binding,
-		{ pipeline: pipeline.pipeline, remoteProxyConnectionString },
-	];
 }
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
@@ -620,27 +640,27 @@ export function buildMiniflareBindingOptions(
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 
 	for (const ai of aiBindings) {
-		warnOrError("ai", ai.remote, "always-remote");
+		warnOrError("ai", ai.remote);
 	}
 
 	for (const ns of aiSearchNamespaceBindings) {
-		warnOrError("ai_search_namespace", ns.remote, "always-remote");
+		warnOrError("ai_search_namespace", ns.remote);
 	}
 
 	for (const inst of aiSearchInstanceBindings) {
-		warnOrError("ai_search", inst.remote, "always-remote");
+		warnOrError("ai_search", inst.remote);
 	}
 
 	for (const media of mediaBindings) {
-		warnOrError("media", media.remote, "always-remote");
+		warnOrError("media", media.remote);
 	}
 
 	for (const artifact of artifactsBindings) {
-		warnOrError("artifacts", artifact.remote, "always-remote");
+		warnOrError("artifacts", artifact.remote);
 	}
 
 	for (const flagship of flagshipBindings) {
-		warnOrError("flagship", flagship.remote, "always-remote");
+		warnOrError("flagship", flagship.remote);
 	}
 
 	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
@@ -789,14 +809,22 @@ export function buildMiniflareBindingOptions(
 			workflows.map((workflow) => {
 				if (
 					workflow.script_name !== undefined &&
-					workflow.script_name !== config.name &&
-					workflow.limits
+					workflow.script_name !== config.name
 				) {
-					throw new UserError(
-						`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
-							`Configure limits on the worker that defines the workflow.`,
-						{ telemetryMessage: "workflow limits on external script" }
-					);
+					if (workflow.limits) {
+						throw new UserError(
+							`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
+								`Configure limits on the worker that defines the workflow.`,
+							{ telemetryMessage: "workflow limits on external script" }
+						);
+					}
+					if (workflow.schedules) {
+						throw new UserError(
+							`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
+								`Configure schedules on the worker that defines the workflow.`,
+							{ telemetryMessage: "workflow schedules on external script" }
+						);
+					}
 				}
 				return workflowEntry(
 					workflow,
@@ -883,7 +911,7 @@ export function buildMiniflareBindingOptions(
 
 		vectorize: Object.fromEntries(
 			vectorizeBindings.map((vectorize) => {
-				warnOrError("vectorize", vectorize.remote, "remote");
+				warnOrError("vectorize", vectorize.remote);
 				return [
 					vectorize.binding,
 					{
@@ -898,7 +926,7 @@ export function buildMiniflareBindingOptions(
 		),
 		vpcServices: Object.fromEntries(
 			vpcServices.map((vpc) => {
-				warnOrError("vpc_service", vpc.remote, "always-remote");
+				warnOrError("vpc_service", vpc.remote);
 				return [
 					vpc.binding,
 					{
@@ -910,7 +938,7 @@ export function buildMiniflareBindingOptions(
 		),
 		vpcNetworks: Object.fromEntries(
 			vpcNetworks.map((vpc) => {
-				warnOrError("vpc_network", vpc.remote, "always-remote");
+				warnOrError("vpc_network", vpc.remote);
 				const id =
 					vpc.tunnel_id !== undefined
 						? { tunnel_id: vpc.tunnel_id }
@@ -921,7 +949,7 @@ export function buildMiniflareBindingOptions(
 
 		dispatchNamespaces: Object.fromEntries(
 			dispatchNamespaces.map((dispatchNamespace) => {
-				warnOrError("dispatch_namespace", dispatchNamespace.remote, "remote");
+				warnOrError("dispatch_namespace", dispatchNamespace.remote);
 				return dispatchNamespaceEntry(
 					dispatchNamespace,
 					dispatchNamespace.remote && remoteProxyConnectionString
@@ -958,7 +986,7 @@ export function buildMiniflareBindingOptions(
 
 		mtlsCertificates: Object.fromEntries(
 			mtlsCertificates.map((mtlsCertificate) => {
-				warnOrError("mtls_certificate", mtlsCertificate.remote, "remote");
+				warnOrError("mtls_certificate", mtlsCertificate.remote);
 				return [
 					mtlsCertificate.binding,
 					{

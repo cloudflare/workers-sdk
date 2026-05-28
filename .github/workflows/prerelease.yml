@@ -36,8 +36,6 @@ jobs:
         with:
           disable-cache: "true"
 
-      - run: echo ${{ github.head_ref }}
-
       - name: Build
         run: pnpm build --filter="./packages/*"
         env:

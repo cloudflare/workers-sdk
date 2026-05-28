@@ -2,8 +2,8 @@ import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
 import formatLabelledValues from "../../../utils/render-labelled-values";
-import { getSink } from "../../client";
 import { applyDefaultsToSink } from "../../defaults";
+import { resolveSink } from "../resolve";
 import { displaySinkConfiguration } from "./utils";
 
 export const pipelinesSinksGetCommand = createCommand({
@@ -18,7 +18,7 @@ export const pipelinesSinksGetCommand = createCommand({
 	positionalArgs: ["sink"],
 	args: {
 		sink: {
-			describe: "The ID of the sink to retrieve",
+			describe: "The ID or name of the sink to retrieve",
 			type: "string",
 			demandOption: true,
 		},
@@ -31,7 +31,7 @@ export const pipelinesSinksGetCommand = createCommand({
 	async handler(args, { config }) {
 		await requireAuth(config);
 
-		const rawSink = await getSink(config, args.sink);
+		const rawSink = await resolveSink(config, args.sink);
 
 		if (args.json) {
 			logger.json(rawSink);

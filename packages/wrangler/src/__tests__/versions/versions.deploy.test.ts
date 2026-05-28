@@ -1,4 +1,7 @@
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, it, test, vi } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
@@ -28,7 +31,6 @@ import {
 	mswSuccessDeploymentScriptMetadata,
 } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFiftyFifty } from "../helpers/msw/handlers/versions";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 

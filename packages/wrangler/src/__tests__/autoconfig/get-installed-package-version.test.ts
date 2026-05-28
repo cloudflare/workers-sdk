@@ -1,8 +1,6 @@
-import { seed } from "@cloudflare/workers-utils/test-helpers";
+import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, test } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
-import { runInTempDir } from "../helpers/run-in-tmp";
-
 describe("getInstalledPackageVersion()", () => {
 	runInTempDir();
 	test("happy path", async ({ expect }) => {

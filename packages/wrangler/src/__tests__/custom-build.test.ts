@@ -1,12 +1,11 @@
 import { UserError } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { assert, describe, it } from "vitest";
 import {
 	runCommand,
 	runCustomBuild,
 } from "../deployment-bundle/run-custom-build";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
-
 describe("Custom Builds", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();

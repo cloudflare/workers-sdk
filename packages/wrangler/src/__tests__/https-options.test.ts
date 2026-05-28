@@ -1,8 +1,7 @@
 import * as fs from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { assert, describe, it, vi } from "vitest";
 import { validateHttpsOptions } from "../https-options";
-import { runInTempDir } from "./helpers/run-in-tmp";
-
 describe("validateHttpsOptions()", () => {
 	runInTempDir();
 

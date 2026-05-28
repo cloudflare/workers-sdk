@@ -1,10 +1,14 @@
 import * as fs from "node:fs";
 import {
+	runInTempDir,
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Uses assert/expect in MSW handlers and top-level mock setup
+ * TODO: remove this `expect` import
+ */
 import { assert, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
@@ -19,7 +23,6 @@ import {
 	mockSubDomainRequest,
 } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
 import { writeWorkerSource } from "../helpers/write-worker-source";
@@ -1930,7 +1933,7 @@ const mockExecSync = vi.fn();
 describe("generatePreviewAlias", () => {
 	mockConsoleMethods();
 	vi.mock("child_process", () => ({
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- vi.mock callback needs untyped rest args to forward to mock
 		execSync: (...args: any[]) => mockExecSync(...args),
 	}));
 

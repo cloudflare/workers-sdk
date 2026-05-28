@@ -76,6 +76,24 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		"npm_config_registry",
 		`http://localhost:${registryPort}`
 	);
+	// `pnpm run` exports `npm_config_minimum_release_age` from the workspace
+	// pnpm-workspace.yaml to subprocess env vars, but does NOT export the
+	// matching `minimumReleaseAgeExclude` array. Tests using this mock registry
+	// install freshly-published first-party packages, so the 24h cooldown would
+	// reject them. Set the exclude list as a comma-separated env var so the
+	// constraint still applies to other (third-party) deps pulled via uplinks.
+	const revert_npm_config_minimum_release_age_exclude = overrideProcessEnv(
+		"npm_config_minimum_release_age_exclude",
+		[
+			...pkgs.keys(),
+			// workerd and @cloudflare/workers-types are pulled in transitively
+			// (e.g. via miniflare) and may have been bumped same-day. Keep this
+			// list in sync with `minimumReleaseAgeExclude` in pnpm-workspace.yaml.
+			"workerd",
+			"@cloudflare/workerd-*",
+			"@cloudflare/workers-types",
+		].join(",")
+	);
 
 	if (debugLog.enabled) {
 		debugLog("Updated");
@@ -105,6 +123,7 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		revert_NPM_CONFIG_USERCONFIG();
 		revert_npm_config_registry();
 		revert_npm_config_userconfig();
+		revert_npm_config_minimum_release_age_exclude();
 		if (debugLog.enabled) {
 			debugLog("After");
 			debugLog(execSync("pnpm config list", { encoding: "utf8" }));

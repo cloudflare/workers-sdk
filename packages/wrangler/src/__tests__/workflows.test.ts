@@ -5,6 +5,7 @@ import {
 	mockModifiedDate,
 	mockQueuedDate,
 	mockStartDate,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
@@ -14,10 +15,10 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs } from "./helpers/mock-dialogs";
 import { msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { Instance, Workflow } from "../workflows/types";
+import type { RawConfig } from "@cloudflare/workers-utils";
 import type { ExpectStatic } from "vitest";
 
 describe("wrangler workflows", () => {
@@ -159,12 +160,13 @@ describe("wrangler workflows", () => {
 				  wrangler workflows instances                Manage Workflow instances
 
 				GLOBAL FLAGS
-				  -c, --config    Path to Wrangler configuration file  [string]
-				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help      Show help  [boolean]
-				  -v, --version   Show version number  [boolean]"
+				  -c, --config          Path to Wrangler configuration file  [string]
+				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help            Show help  [boolean]
+				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				  -v, --version         Show version number  [boolean]"
 			`
 			);
 		});
@@ -194,12 +196,13 @@ describe("wrangler workflows", () => {
 				  wrangler workflows instances resume <name> <id>      Resume a workflow instance
 
 				GLOBAL FLAGS
-				  -c, --config    Path to Wrangler configuration file  [string]
-				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-				  -h, --help      Show help  [boolean]
-				  -v, --version   Show version number  [boolean]"
+				  -c, --config          Path to Wrangler configuration file  [string]
+				      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help            Show help  [boolean]
+				      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+				  -v, --version         Show version number  [boolean]"
 			`);
 		});
 	});
@@ -914,9 +917,9 @@ describe("wrangler workflows", () => {
 				workflows: [
 					{
 						binding: "MY_WORKFLOW",
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain('should have a string "name" field');
@@ -953,9 +956,9 @@ describe("wrangler workflows", () => {
 						binding: 123, // should be string
 						name: "my-workflow",
 						class_name: "MyWorkflow",
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as unknown as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain('should have a string "binding" field');
@@ -965,8 +968,8 @@ describe("wrangler workflows", () => {
 			expect,
 		}) => {
 			writeWranglerConfig({
-				workflows: ["invalid-workflow-config"] as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-			});
+				workflows: ["invalid-workflow-config"],
+			} as unknown as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain('"workflows" bindings should be objects');
@@ -1051,9 +1054,9 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: { steps: 0 },
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
@@ -1071,9 +1074,9 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: { steps: 1.5 },
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as unknown as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
@@ -1091,7 +1094,7 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: { steps: -1 },
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
 			});
 
@@ -1111,9 +1114,9 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: "invalid",
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
@@ -1131,9 +1134,9 @@ describe("wrangler workflows", () => {
 						name: "my-workflow",
 						class_name: "MyWorkflow",
 						limits: [1, 2, 3],
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+					},
 				],
-			});
+			} as RawConfig);
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(

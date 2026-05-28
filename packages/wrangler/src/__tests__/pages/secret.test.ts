@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { saveToConfigCache } from "../../config-cache";
@@ -16,7 +17,6 @@ import {
 	getMswSuccessMembershipHandlers,
 	msw,
 } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { PagesProject } from "../../pages/download-config";
 import type { PagesConfigCache } from "../../pages/types";
@@ -161,7 +161,7 @@ describe("wrangler pages secret", () => {
 						"pages secret put the-key --project some-project-name --env some-env"
 					)
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
+					`[Error: Pages does not support the "some-env" environment. Only "production" and "preview" are valid. Use --env production or --env preview.]`
 				);
 			});
 
@@ -169,7 +169,7 @@ describe("wrangler pages secret", () => {
 				await expect(
 					runWrangler("pages secret put the-key")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Must specify a project name.]`
+					`[Error: Missing Pages project name. Use --project-name <name> to specify which project to manage secrets for.]`
 				);
 			});
 		});
@@ -398,14 +398,16 @@ describe("wrangler pages secret", () => {
 					"pages secret delete the-key --project some-project-name --env some-env"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
+				`[Error: Pages does not support the "some-env" environment. Only "production" and "preview" are valid. Use --env production or --env preview.]`
 			);
 		});
 
 		it("should error without a project name", async ({ expect }) => {
 			await expect(
 				runWrangler("pages secret delete the-key")
-			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
+			).rejects.toMatchInlineSnapshot(
+				`[Error: Missing Pages project name. Use --project-name <name> to specify which project to manage secrets for.]`
+			);
 		});
 	});
 
@@ -487,14 +489,16 @@ describe("wrangler pages secret", () => {
 					"pages secret list --project some-project-name --env some-env"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
+				`[Error: Pages does not support the "some-env" environment. Only "production" and "preview" are valid. Use --env production or --env preview.]`
 			);
 		});
 
 		it("should error without a project name", async ({ expect }) => {
 			await expect(
 				runWrangler("pages secret list")
-			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
+			).rejects.toMatchInlineSnapshot(
+				`[Error: Missing Pages project name. Use --project-name <name> to specify which project to manage secrets for.]`
+			);
 		});
 	});
 
@@ -773,16 +777,8 @@ describe("wrangler pages secret", () => {
 			);
 
 			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				),
 				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk`,
 					({ params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						return HttpResponse.json(
@@ -800,13 +796,13 @@ describe("wrangler pages secret", () => {
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/secrets-bulk) failed.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
 				{
 				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.[0m
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/secrets-bulk) failed.[0m
 
 				  This is a helpful error [code: 1]
 
@@ -818,7 +814,7 @@ describe("wrangler pages secret", () => {
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "script-name"
+				🌀 Processing the secrets for the Worker "script-name"
 
 				🚨 Secrets failed to upload
 				",

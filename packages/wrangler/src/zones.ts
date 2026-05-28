@@ -44,6 +44,27 @@ export function getHostFromRoute(route: Route): string | undefined {
 }
 
 /**
+ * Best-effort derivation of the Cloudflare zone name that owns a given route,
+ * for use as the `CF-Worker` header value on outbound subrequests in local
+ * development (see https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker).
+ *
+ * In production, `CF-Worker` is set to the zone name — for a route
+ * `foo.example.com/*` on zone `example.com`, the header is `example.com`.
+ * When the user has explicitly told us the zone name in their route config
+ * (`zone_name`), use it. Otherwise, fall back to {@link getHostFromRoute},
+ * which returns the route pattern's hostname — this is the closest local
+ * approximation without performing an API lookup, and matches the behaviour
+ * users see when their route's hostname is already the apex (e.g.
+ * `example.com/*`).
+ */
+export function getZoneFromRoute(route: Route): string | undefined {
+	if (typeof route === "object" && "zone_name" in route && route.zone_name) {
+		return route.zone_name;
+	}
+	return getHostFromRoute(route);
+}
+
+/**
  * Try to compute the a zone ID and host name for a route.
  *
  * When we're given a route, we do 2 things:

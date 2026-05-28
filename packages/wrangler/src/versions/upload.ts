@@ -11,6 +11,7 @@ import {
 	getCIGeneratePreviewAlias,
 	getCIOverrideName,
 	getWorkersCIBranchName,
+	getWranglerTmpDir,
 	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -57,7 +58,6 @@ import { getMetricsUsageHeaders } from "../metrics";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { writeOutput } from "../output";
-import { getWranglerTmpDir } from "../paths";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { parseBulkInputToObject } from "../secret";
@@ -76,10 +76,13 @@ import { retryOnAPIFailure } from "../utils/retry";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import { patchNonVersionedScriptSettings } from "./api";
-import type { AssetsOptions } from "../assets";
-import type { Entry } from "../deployment-bundle/entry";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
-import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
+import type {
+	AssetsOptions,
+	CfWorkerInit,
+	Config,
+	Entry,
+} from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
 type Props = {

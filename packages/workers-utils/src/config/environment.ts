@@ -728,6 +728,8 @@ export type WorkflowBinding = {
 		/** Maximum number of steps a Workflow instance can execute */
 		steps?: number;
 	};
+	/** Optional cron schedule(s) for automatically triggering workflow instances */
+	schedules?: string | string[];
 };
 
 /**
@@ -1344,8 +1346,13 @@ export interface EnvironmentNonInheritable {
 	pipelines: {
 		/** The binding name used to refer to the bound service. */
 		binding: string;
-		/** Name of the Pipeline to bind */
-		pipeline: string;
+		/** Id of the Stream to bind */
+		stream?: string;
+		/**
+		 * Id of the Stream to bind
+		 * @deprecated Use `stream` instead.
+		 */
+		pipeline?: string;
 		/** Whether the pipeline should be remote or not in local development */
 		remote?: boolean;
 	}[];

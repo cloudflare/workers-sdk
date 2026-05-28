@@ -1,6 +1,6 @@
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
-	FatalError,
+	UserError,
 } from "@cloudflare/workers-utils";
 import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
@@ -60,10 +60,10 @@ export const pagesDeploymentListCommand = createCommand({
 		}
 
 		if (!projectName) {
-			throw new FatalError("Must specify a project name.", {
-				code: 1,
-				telemetryMessage: "pages deployments list missing project name",
-			});
+			throw new UserError(
+				"Missing Pages project name. Use --project-name <name> to specify which project to list deployments for.",
+				{ telemetryMessage: "pages deployments list missing project name" }
+			);
 		}
 
 		const deployments: Array<Deployment> = await fetchResult(
@@ -160,10 +160,12 @@ export const pagesDeploymentDeleteCommand = createCommand({
 		}
 
 		if (!projectName) {
-			throw new FatalError("Must specify a project name.", {
-				code: 1,
-				telemetryMessage: "pages deployments delete missing project name",
-			});
+			throw new UserError(
+				"Missing Pages project name. Use --project-name <name> to specify which project to delete the deployment from.",
+				{
+					telemetryMessage: "pages deployments delete missing project name",
+				}
+			);
 		}
 
 		const confirmed =

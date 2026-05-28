@@ -13,8 +13,7 @@ import { logBuildFailure, logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { Entry } from "../../deployment-bundle/entry";
-import type { CfModule } from "@cloudflare/workers-utils";
+import type { CfModule, Entry } from "@cloudflare/workers-utils";
 import type { Plugin } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
 

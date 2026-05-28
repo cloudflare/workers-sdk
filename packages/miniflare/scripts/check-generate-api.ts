@@ -64,7 +64,7 @@ async function main(): Promise<void> {
 				"\n" +
 				`  OPENAPI_INPUT_PATH=<path-to-openapi.json> pnpm -F miniflare generate:api\n` +
 				"\n" +
-				"See packages/miniflare/src/workers/local-explorer/README.md for details.\n" +
+				"See .opencode/skills/local-explorer/SKILL.md for details.\n" +
 				`The CI check uses the spec pinned at commit ${OPENAPI_COMMIT}.\n`
 		);
 		process.exit(1);

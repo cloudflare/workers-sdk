@@ -11,15 +11,28 @@
  * 1. Listed in `dependencies` (or `peerDependencies`) in package.json
  * 2. Listed in `scripts/deps.ts` with EXTERNAL_DEPENDENCIES export
  * 3. Documented with a comment explaining WHY it can't be bundled
+ *
+ * In addition to validating the manifest, this script also scans the actual
+ * built/published files (from the `files` field in package.json) for bare
+ * import specifiers and checks they all resolve to a declared runtime
+ * dependency or peer dependency. This catches cases where a bundler config's
+ * `external` list drifts from `package.json` — for example, a devDependency
+ * being incorrectly externalized would leave the published bundle with an
+ * unresolved import.
  */
 
 import { existsSync, readFileSync } from "node:fs";
+import { isBuiltin } from "node:module";
 import { dirname, resolve } from "node:path";
 import { glob } from "tinyglobby";
 
 export interface PackageJSON {
 	name: string;
 	private?: boolean;
+	main?: string;
+	module?: string;
+	exports?: unknown;
+	bin?: string | Record<string, string>;
 	dependencies?: Record<string, string>;
 	devDependencies?: Record<string, string>;
 	peerDependencies?: Record<string, string>;
@@ -102,23 +115,47 @@ export function getNonWorkspaceDependencies(
  * Attempts to load EXTERNAL_DEPENDENCIES from a package's scripts/deps.ts
  */
 export function loadExternalDependencies(packageDir: string): string[] | null {
-	const depsFilePath = resolve(packageDir, "scripts/deps.ts");
+	const depsModule = loadDepsModule(packageDir);
+	if (!depsModule || !Array.isArray(depsModule.EXTERNAL_DEPENDENCIES)) {
+		return null;
+	}
+	return depsModule.EXTERNAL_DEPENDENCIES;
+}
 
+/**
+ * Attempts to load IGNORED_DIST_IMPORTS from a package's scripts/deps.ts.
+ *
+ * `IGNORED_DIST_IMPORTS` is an allowlist of package names that the dist-scan
+ * validator should not flag as missing dependencies. Use this for legitimate
+ * but unfixable patterns such as:
+ *   - Optional imports inside try/catch blocks in bundled libraries
+ *     (e.g. `@netlify/build-info` probing for installed frameworks)
+ *   - Optional native binaries (e.g. `@aws-sdk/signature-v4-crt`)
+ *   - Code paths that are only reachable when consumers also install the
+ *     listed package themselves
+ */
+export function loadIgnoredDistImports(packageDir: string): string[] {
+	const depsModule = loadDepsModule(packageDir);
+	if (!depsModule || !Array.isArray(depsModule.IGNORED_DIST_IMPORTS)) {
+		return [];
+	}
+	return depsModule.IGNORED_DIST_IMPORTS;
+}
+
+function loadDepsModule(packageDir: string): {
+	EXTERNAL_DEPENDENCIES?: string[];
+	IGNORED_DIST_IMPORTS?: string[];
+} | null {
+	const depsFilePath = resolve(packageDir, "scripts/deps.ts");
 	if (!existsSync(depsFilePath)) {
 		return null;
 	}
-
 	// Use require with esbuild-register (which is already loaded)
 	// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic require needed for esbuild-register compatibility
-	const depsModule = require(depsFilePath) as {
+	return require(depsFilePath) as {
 		EXTERNAL_DEPENDENCIES?: string[];
+		IGNORED_DIST_IMPORTS?: string[];
 	};
-
-	if (!Array.isArray(depsModule.EXTERNAL_DEPENDENCIES)) {
-		return null;
-	}
-
-	return depsModule.EXTERNAL_DEPENDENCIES;
 }
 
 /**
@@ -192,6 +229,284 @@ export function validatePackageDependencies(
 }
 
 /**
+ * Given an import specifier, returns the package name part.
+ *
+ * Examples:
+ *   "lodash" -> "lodash"
+ *   "lodash/fp" -> "lodash"
+ *   "@cloudflare/workers-utils" -> "@cloudflare/workers-utils"
+ *   "@cloudflare/workers-utils/test-helpers" -> "@cloudflare/workers-utils"
+ *   "vitest/runtime" -> "vitest"
+ */
+export function getPackageNameFromSpecifier(spec: string): string {
+	if (spec.startsWith("@")) {
+		const parts = spec.split("/");
+		return parts.slice(0, 2).join("/");
+	}
+	return spec.split("/")[0];
+}
+
+/**
+ * Returns true if the specifier refers to an external bare package import
+ * (i.e. not a built-in, virtual module, or relative path).
+ */
+export function isBareSpecifier(spec: string): boolean {
+	if (!spec || spec.startsWith(".") || spec.startsWith("/")) {
+		return false;
+	}
+	// Node built-ins, both prefixed (node:fs) and unprefixed (fs).
+	if (isBuiltin(spec)) {
+		return false;
+	}
+	// Known non-package protocols used inside bundled user code / templates.
+	// These appear inside string literals in wrangler's shipped code templates,
+	// not as real imports of an npm package.
+	if (/^[a-z][a-z0-9+\-.]*:/.test(spec) && !spec.startsWith("@")) {
+		return false;
+	}
+	// Virtual / runtime-injected modules — anything in ALL_CAPS_WITH_UNDERSCORES
+	// is conventionally a build-time virtual module (e.g. __VITEST_POOL_WORKERS_DEFINES).
+	if (/^__[A-Z][A-Z0-9_]*$/.test(spec)) {
+		return false;
+	}
+	// Specifiers containing template-literal expressions are dynamic strings
+	// that appear inside source-code templates emitted by Wrangler, not real
+	// imports of the wrapping package.
+	if (spec.includes("${") || spec.includes("*")) {
+		return false;
+	}
+	// Specifier must look like a valid npm package name: lowercase letters/digits,
+	// hyphens, dots, underscores; optionally scoped (@scope/name). npm package
+	// names cannot contain uppercase letters per the npm naming rules.
+	const packageNameRe =
+		/^(?:@[a-z0-9._~-]+\/)?[a-z0-9][a-z0-9._~-]*(?:\/[a-z0-9._~-]+)*$/;
+	if (!packageNameRe.test(spec)) {
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Extracts all bare-specifier imports from a JS/CJS source file.
+ *
+ * Handles:
+ *   import x from "pkg"
+ *   import { x } from "pkg"
+ *   import * as x from "pkg"
+ *   import "pkg"
+ *   export ... from "pkg"
+ *   require("pkg")
+ *   await import("pkg")  (only when specifier is a string literal)
+ *
+ * Returns top-level package names (e.g. "vitest" for "vitest/runtime").
+ *
+ * This is a regex-based scanner, not a real parser — it can produce false
+ * positives when bundled output contains string literals that look like
+ * import statements (e.g. JavaScript parser libraries shipped inside the
+ * bundle). False positives are filtered downstream by `isBareSpecifier`
+ * (rejecting non-package-shaped strings) and the self-import guard in
+ * `validateDistImports`.
+ */
+export function extractBareImports(content: string): Set<string> {
+	const imports = new Set<string>();
+
+	// Strip line comments and block comments to avoid matching specs inside them.
+	// This is a deliberate approximation — sufficient for built/minified output.
+	const stripped = content
+		.replace(/\/\*[\s\S]*?\*\//g, "")
+		.replace(/\/\/[^\n]*/g, "");
+
+	const patterns: RegExp[] = [
+		// import ... from "spec" / export ... from "spec"
+		// Anchored to a statement boundary (start of file, newline, `;`, or `}`)
+		// to avoid matching `from "x"` inside string literals.
+		/(?:^|[\n;}])\s*(?:import|export)\b[^"';\n]*?\bfrom\s*["']([^"'\n]+)["']/g,
+		// import "spec" (side-effect import) — also statement-anchored.
+		/(?:^|[\n;}])\s*import\s*["']([^"'\n]+)["']/g,
+		// require("spec")
+		/\brequire\s*\(\s*["']([^"'\n]+)["']\s*\)/g,
+		// import("spec") — only matches string literals
+		/\bimport\s*\(\s*["']([^"'\n]+)["']\s*\)/g,
+	];
+
+	for (const re of patterns) {
+		let m: RegExpExecArray | null;
+		while ((m = re.exec(stripped)) !== null) {
+			const spec = m[1];
+			if (isBareSpecifier(spec)) {
+				imports.add(getPackageNameFromSpecifier(spec));
+			}
+		}
+	}
+
+	return imports;
+}
+
+/**
+ * Collects every path string referenced by the package's main/module/exports/bin
+ * fields. These are the entry points that Node.js will actually load when the
+ * package is imported or executed — and thus the surface that needs to have
+ * all of its imports resolvable from `dependencies`/`peerDependencies`.
+ *
+ * Other entries in `files` (e.g. user-facing scaffolding templates) are
+ * intentionally excluded because they aren't loaded by the package itself.
+ */
+export function getEntryPointPaths(packageJson: PackageJSON): string[] {
+	const paths = new Set<string>();
+	if (packageJson.main) {
+		paths.add(packageJson.main);
+	}
+	if (packageJson.module) {
+		paths.add(packageJson.module);
+	}
+	walkExportValue(packageJson.exports, paths);
+	if (typeof packageJson.bin === "string") {
+		paths.add(packageJson.bin);
+	} else if (packageJson.bin && typeof packageJson.bin === "object") {
+		for (const v of Object.values(packageJson.bin)) {
+			if (typeof v === "string") {
+				paths.add(v);
+			}
+		}
+	}
+	return [...paths];
+}
+
+function walkExportValue(value: unknown, paths: Set<string>): void {
+	if (!value) {
+		return;
+	}
+	if (typeof value === "string") {
+		paths.add(value);
+		return;
+	}
+	if (Array.isArray(value)) {
+		for (const v of value) {
+			walkExportValue(v, paths);
+		}
+		return;
+	}
+	if (typeof value === "object") {
+		for (const v of Object.values(value as Record<string, unknown>)) {
+			walkExportValue(v, paths);
+		}
+	}
+}
+
+/**
+ * Walks the package's runtime entry points (and any sibling files in the same
+ * output directories — to cover code-split chunks) and returns the union of
+ * all bare-specifier imports found across them.
+ */
+export async function scanDistForExternalImports(
+	packageDir: string,
+	packageJson: PackageJSON
+): Promise<Set<string>> {
+	const imports = new Set<string>();
+	const entryPaths = getEntryPointPaths(packageJson);
+
+	// Build the set of patterns to scan. For each entry-point path that points
+	// at a JS file, also scan its containing directory recursively to cover
+	// code-split chunks. (E.g. workers-utils' dist/index.mjs re-exports from
+	// dist/chunk-*.mjs, which we want to validate too.)
+	const patterns = new Set<string>();
+	for (const rawPath of entryPaths) {
+		const cleaned = rawPath.replace(/^\.\//, "");
+		if (!/\.(mjs|cjs|js)$/.test(cleaned)) {
+			continue;
+		}
+		const absPath = resolve(packageDir, cleaned);
+		if (!existsSync(absPath)) {
+			continue;
+		}
+		const containingDir = dirname(cleaned);
+		if (containingDir && containingDir !== ".") {
+			patterns.add(`${containingDir}/**/*.{mjs,cjs,js}`);
+		} else {
+			patterns.add(cleaned);
+		}
+	}
+
+	if (patterns.size === 0) {
+		return imports;
+	}
+
+	const matched = await glob([...patterns], {
+		cwd: packageDir,
+		absolute: true,
+	});
+
+	for (const file of matched) {
+		if (file.endsWith(".map") || file.endsWith(".d.ts")) {
+			continue;
+		}
+		const content = readFileSync(file, "utf-8");
+		for (const imp of extractBareImports(content)) {
+			imports.add(imp);
+		}
+	}
+
+	return imports;
+}
+
+/**
+ * Validates that every bare-specifier import found in a package's published
+ * files is declared as either a `dependency` or `peerDependency`.
+ *
+ * Catches drift between bundler config `external` lists and `package.json` —
+ * for example, a devDependency that's incorrectly marked external in the
+ * bundler config would leave the published bundle importing an undeclared
+ * runtime dependency.
+ */
+export function validateDistImports(
+	packageName: string,
+	packageJson: PackageJSON,
+	importedPackages: Set<string>,
+	ignoredImports: string[] = []
+): string[] {
+	const errors: string[] = [];
+
+	const declaredRuntimeDeps = new Set([
+		...getAllDependencies(packageJson.dependencies),
+		...getAllDependencies(packageJson.peerDependencies),
+	]);
+	const devDeps = new Set(getAllDependencies(packageJson.devDependencies));
+	const ignored = new Set(ignoredImports);
+
+	for (const imp of importedPackages) {
+		// A package importing itself by name is always fine — it's a
+		// self-reference inside the bundle (e.g. wrangler's bundled cli.js
+		// contains code that references "wrangler" as a string literal).
+		if (imp === packageName) {
+			continue;
+		}
+		if (declaredRuntimeDeps.has(imp)) {
+			continue;
+		}
+		if (ignored.has(imp)) {
+			continue;
+		}
+		if (devDeps.has(imp)) {
+			errors.push(
+				`Package "${packageName}" imports "${imp}" in its published files, but ` +
+					`"${imp}" is only a devDependency. Either:\n` +
+					`  1. Move "${imp}" to dependencies (and add to scripts/deps.ts if appropriate), or\n` +
+					`  2. Bundle "${imp}" by removing it from the bundler config's "external" list, or\n` +
+					`  3. Add "${imp}" to IGNORED_DIST_IMPORTS in scripts/deps.ts if it's a legitimate optional/try-catch import.`
+			);
+		} else {
+			errors.push(
+				`Package "${packageName}" imports "${imp}" in its published files, but ` +
+					`"${imp}" is not declared in dependencies or peerDependencies. ` +
+					`Add it to package.json or to IGNORED_DIST_IMPORTS in scripts/deps.ts.`
+			);
+		}
+	}
+
+	return errors;
+}
+
+/**
  * Validates that all packages properly declare their external dependencies
  */
 export async function checkPackageDependencies(): Promise<string[]> {
@@ -211,6 +526,30 @@ export async function checkPackageDependencies(): Promise<string[]> {
 			externalDeps
 		);
 		errors.push(...packageErrors);
+
+		// Scan the published runtime files (main/module/exports/bin) to catch
+		// drift between bundler `external` lists and `package.json`. This
+		// catches devDeps incorrectly marked as external — which would leave
+		// the published bundle with unresolvable imports for end users.
+		try {
+			const importedPackages = await scanDistForExternalImports(
+				dir,
+				packageJson
+			);
+			const ignoredImports = loadIgnoredDistImports(dir);
+			const distErrors = validateDistImports(
+				packageName,
+				packageJson,
+				importedPackages,
+				ignoredImports
+			);
+			errors.push(...distErrors);
+		} catch (e) {
+			errors.push(
+				`Package "${packageName}" dist scan failed: ${e instanceof Error ? e.message : String(e)}.\n` +
+					`  Make sure the package is built before running this check.`
+			);
+		}
 	}
 
 	return errors;

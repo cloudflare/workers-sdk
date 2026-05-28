@@ -1,12 +1,12 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports */
+/* eslint-disable @typescript-eslint/consistent-type-imports -- Test file uses dynamic imports where typeof requires value imports */
 import assert from "node:assert";
-import { seed } from "@cloudflare/workers-utils/test-helpers";
+import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
-/* eslint-disable no-restricted-imports */
 import {
 	afterEach,
 	beforeEach,
 	describe,
+	// eslint-disable-next-line no-restricted-imports -- TODO: remove this `expect` import
 	expect,
 	it,
 	onTestFailed,
@@ -23,7 +23,6 @@ import {
 	mswSuccessUserHandlers,
 	mswZoneHandlers,
 } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { StartDevOptions } from "../../dev";
 import type { RawConfig } from "@cloudflare/workers-utils";
