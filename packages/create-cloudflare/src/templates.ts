@@ -478,7 +478,9 @@ export const createContext = async (
 	});
 
 	const categoryOptions = [];
-	if (Object.keys(helloWorldTemplateMap).length) {
+	// Hello World and Application Starter templates are all Workers-only,
+	// so hide them when the user has explicitly targeted the Pages platform
+	if (args.platform !== "pages" && Object.keys(helloWorldTemplateMap).length) {
 		categoryOptions.push({
 			label: "Hello World example",
 			value: "hello-world",
@@ -492,7 +494,7 @@ export const createContext = async (
 			description: "Select from the most popular full-stack web frameworks",
 		});
 	}
-	if (Object.keys(otherTemplateMap).length) {
+	if (args.platform !== "pages" && Object.keys(otherTemplateMap).length) {
 		categoryOptions.push({
 			label: "Application Starter",
 			value: "demo",
@@ -501,6 +503,9 @@ export const createContext = async (
 		});
 	}
 	categoryOptions.push(
+		// TODO: hide "Template from a GitHub repo" when a --platform arg is
+		// provided (whether workers or pages), since remote templates have no
+		// platform validation and would ignore the user's platform choice
 		{
 			label: "Template from a GitHub repo",
 			value: "remote-template",
@@ -524,6 +529,19 @@ export const createContext = async (
 		return goBack("category");
 	}
 
+	// Validate that the selected category is compatible with the target platform.
+	// This catches the case where a user passes e.g. --platform=pages --category=hello-world
+	// directly via CLI args, bypassing the interactive prompt filtering.
+	if (
+		args.platform === "pages" &&
+		category !== "web-framework" &&
+		category !== "remote-template"
+	) {
+		throw new Error(
+			`The "${category}" category is not available for the "pages" platform`
+		);
+	}
+
 	let template: TemplateConfig;
 
 	if (category === "web-framework") {
@@ -532,6 +550,18 @@ export const createContext = async (
 				// only hide if we're going to show the options - otherwise, the
 				// result will show up as (skipped) instead of the actual value
 				if (!config.hidden || args.framework) {
+					// When a platform is specified, filter out frameworks that don't
+					// support that platform (e.g. workers-only frameworks when
+					// --platform=pages)
+					if (args.platform && !args.framework) {
+						const supportsTargetPlatform =
+							"platformVariants" in config
+								? args.platform in config.platformVariants
+								: config.platform === args.platform;
+						if (!supportsTargetPlatform) {
+							return acc;
+						}
+					}
 					acc.push({
 						label: config.displayName,
 						value: key,
