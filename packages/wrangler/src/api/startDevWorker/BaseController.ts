@@ -9,6 +9,7 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
+import type { Miniflare } from "miniflare";
 
 export type ControllerEvent =
 	| ErrorEvent
@@ -56,6 +57,11 @@ export abstract class RuntimeController extends Controller {
 	abstract onBundleStart(_: BundleStartEvent): void;
 	abstract onBundleComplete(_: BundleCompleteEvent): void;
 	abstract onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void;
+
+	// *********************
+	//   Runtime Accessors
+	// *********************
+	mf: Miniflare | undefined;
 
 	// *********************
 	//   Event Dispatchers

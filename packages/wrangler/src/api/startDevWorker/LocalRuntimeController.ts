@@ -112,10 +112,13 @@ export async function convertToConfigBundle(
 	const bindings: Record<string, Binding> = { ...event.config.bindings };
 
 	const crons = [];
+	const routes = [];
 	const queueConsumers = [];
 	for (const trigger of event.config.triggers ?? []) {
 		if (trigger.type === "cron") {
 			crons.push(trigger.cron);
+		} else if (trigger.type === "route") {
+			routes.push(trigger.pattern);
 		} else if (trigger.type === "queue-consumer") {
 			const { type: _, ...consumer } = trigger;
 			queueConsumers.push(consumer);
@@ -191,7 +194,9 @@ export async function convertToConfigBundle(
 		localPersistencePath: event.config.dev.persist,
 		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
+		routes,
 		queueConsumers,
+		outboundService: event.config.dev.outboundService,
 		localProtocol: event.config.dev?.server?.secure ? "https" : "http",
 		httpsCertPath: event.config.dev?.server?.httpsCertPath,
 		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
@@ -235,7 +240,6 @@ export class LocalRuntimeController extends RuntimeController {
 	// updates were submitted, the second may apply before the first. Therefore,
 	// wrap updates in a mutex, so they're always applied in invocation order.
 	#mutex = new Mutex();
-	#mf?: Miniflare;
 
 	#remoteProxySessionData: {
 		session: RemoteProxySession;
@@ -362,13 +366,13 @@ export class LocalRuntimeController extends RuntimeController {
 				}
 			);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
-			if (this.#mf === undefined) {
+			if (this.mf === undefined) {
 				logger.log(chalk.dim("⎔ Starting local server..."));
-				this.#mf = new Miniflare(options);
+				this.mf = new Miniflare(options);
 			} else {
 				logger.log(chalk.dim("⎔ Reloading local server..."));
 
-				await this.#mf.setOptions(options);
+				await this.mf.setOptions(options);
 
 				logger.log(chalk.dim("⎔ Local server updated and ready"));
 			}
@@ -376,14 +380,14 @@ export class LocalRuntimeController extends RuntimeController {
 			// calls to complete before resolving. To ensure we get the `url` and
 			// `inspectorUrl` for this set of `options`, we protect `#mf` with a mutex,
 			// so only one update can happen at a time.
-			const userWorkerUrl = await this.#mf.ready;
+			const userWorkerUrl = await this.mf.ready;
 			// TODO: Miniflare should itself return undefined on
 			//       `getInspectorURL` when no inspector is in use
 			//       (currently the function just hangs)
 			const userWorkerInspectorUrl =
 				options.inspectorPort === undefined
 					? undefined
-					: await this.#mf.getInspectorURL();
+					: await this.mf.getInspectorURL();
 			// If we received a new `bundleComplete` event before we were able to
 			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 			if (id !== this.#currentBundleId) {
@@ -482,12 +486,12 @@ export class LocalRuntimeController extends RuntimeController {
 		process.off("exit", this.cleanupContainers);
 		this.cleanupContainers();
 
-		if (this.#mf) {
+		if (this.mf) {
 			logger.log(chalk.dim("⎔ Shutting down local server..."));
 		}
 
-		await this.#mf?.dispose();
-		this.#mf = undefined;
+		await this.mf?.dispose();
+		this.mf = undefined;
 
 		if (this.#remoteProxySessionData) {
 			logger.log(chalk.dim("⎔ Shutting down remote connection..."));

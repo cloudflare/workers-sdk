@@ -149,14 +149,21 @@ async function resolveDevConfig(
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
-			hostname: host ?? getInferredHost(routes, config.configPath),
+			hostname:
+				host ??
+				(input.dev?.inferOriginFromRoutes
+					? getInferredHost(routes, config.configPath)
+					: undefined),
 		},
+		watch: input.dev?.watch,
 		liveReload: input.dev?.liveReload || false,
 		testScheduled: input.dev?.testScheduled,
+		outboundService: input.dev?.outboundService,
 		// absolute resolved path
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
+		inferOriginFromRoutes: input.dev?.inferOriginFromRoutes,
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
@@ -565,33 +572,39 @@ export class ConfigController extends Controller {
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
 		try {
-			const fileConfig = readConfig(
-				{
-					script: input.entrypoint,
-					config: input.config,
-					env: input.env,
-					"dispatch-namespace": undefined,
-					"legacy-env": !input.legacy?.useServiceEnvironments,
-					remote: !!input.dev?.remote,
-					upstreamProtocol:
-						input.dev?.origin?.secure === undefined
-							? undefined
-							: input.dev?.origin?.secure
-								? "https"
-								: "http",
-					localProtocol:
-						input.dev?.server?.secure === undefined
-							? undefined
-							: input.dev?.server?.secure
-								? "https"
-								: "http",
-					generateTypes: input.dev?.generateTypes,
-				},
-				{ useRedirectIfAvailable: true }
-			);
+			const fileConfig =
+				typeof input.config === "object"
+					? input.config
+					: readConfig(
+							{
+								script: input.entrypoint,
+								config: input.config,
+								env: input.env,
+								"dispatch-namespace": undefined,
+								"legacy-env": !input.legacy?.useServiceEnvironments,
+								remote: !!input.dev?.remote,
+								upstreamProtocol:
+									input.dev?.origin?.secure === undefined
+										? undefined
+										: input.dev?.origin?.secure
+											? "https"
+											: "http",
+								localProtocol:
+									input.dev?.server?.secure === undefined
+										? undefined
+										: input.dev?.server?.secure
+											? "https"
+											: "http",
+								generateTypes: input.dev?.generateTypes,
+							},
+							{ useRedirectIfAvailable: true }
+						);
 
-			if (!getDisableConfigWatching()) {
+			if (!getDisableConfigWatching() && input.dev?.watch !== false) {
 				await this.#ensureWatchingConfig(fileConfig.configPath);
+			} else {
+				await this.#configWatcher?.close();
+				this.#configWatcher = undefined;
 			}
 
 			const { config: resolvedConfig, printCurrentBindings } =

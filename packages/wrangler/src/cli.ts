@@ -15,6 +15,7 @@ import {
 	startRemoteProxySession,
 	startWorker,
 	unstable_dev,
+	createServer,
 	experimental_generateTypes,
 	unstable_getDevCompatibilityDate,
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
@@ -40,6 +41,7 @@ import type {
 	Unstable_MiniflareWorkerOptions,
 	Unstable_RawConfig,
 	Unstable_RawEnvironment,
+	WorkerServer,
 } from "./api";
 import type { Logger } from "./logger";
 import type { Request, Response } from "miniflare";
@@ -67,6 +69,7 @@ export {
 	unstable_pages,
 	DevEnv as unstable_DevEnv,
 	startWorker as unstable_startWorker,
+	createServer,
 	unstable_getVarsForDev,
 	unstable_readConfig,
 	experimental_generateTypes,
@@ -89,6 +92,7 @@ export type {
 	Unstable_MiniflareWorkerOptions,
 	Experimental_GenerateTypesOptions,
 	Experimental_GenerateTypesResult,
+	WorkerServer,
 };
 
 export { printBindings as unstable_printBindings } from "./utils/print-bindings";

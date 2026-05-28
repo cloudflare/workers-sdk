@@ -265,6 +265,7 @@ async function setupDevEnv(
 				logLevel: args.logLevel,
 				registry: args.disableDevRegistry ? undefined : getRegistryPath(),
 				multiworkerPrimary: args.multiworkerPrimary,
+				inferOriginFromRoutes: true,
 				enableContainers: args.enableContainers,
 				dockerPath: args.dockerPath,
 				// initialise with a random id
