@@ -259,6 +259,76 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(fs.existsSync(dtsPath)).toBe(false);
 	});
 
+	test("emits durable_objects bindings + v1 migrations when running in dev (serve)", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
+				"  name: 'experimental-config-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"  exports: {",
+				"    Counter: { type: 'durable-object', storage: 'sqlite' },",
+				"  },",
+				"});",
+			].join("\n")
+		);
+
+		const pluginConfig: PluginConfig = {
+			experimental: { newConfig: true },
+		};
+
+		const result = (await resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		)) as WorkersResolvedConfig;
+
+		const worker = result.environmentNameToWorkerMap.get(
+			"experimental_config_worker"
+		);
+		expect(worker?.config.durable_objects).toEqual({
+			bindings: [{ name: "Counter", class_name: "Counter" }],
+		});
+		expect(worker?.config.migrations).toEqual([
+			{ tag: "v1", new_sqlite_classes: ["Counter"] },
+		]);
+	});
+
+	test("throws on durable-object exports when running in build", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
+				"  name: 'experimental-config-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"  exports: {",
+				"    Counter: { type: 'durable-object', storage: 'sqlite' },",
+				"  },",
+				"});",
+			].join("\n")
+		);
+
+		const pluginConfig: PluginConfig = {
+			experimental: { newConfig: true },
+		};
+
+		await expect(
+			resolvePluginConfig(
+				pluginConfig,
+				{ root: tempDir },
+				{ mode: "production", command: "build" }
+			)
+		).rejects.toThrow(/Durable Object exports/);
+	});
+
 	test("does not rewrite worker-configuration.d.ts when content is unchanged", async ({
 		expect,
 	}) => {
