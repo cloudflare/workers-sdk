@@ -749,7 +749,7 @@ describe("createServer", { sequential: true }, () => {
 		onTestFinished(server.close);
 
 		await expect(server.clearStorage()).rejects.toThrow(
-			"Worker server has not been started. Call server.listen()."
+			"Worker server has not been started. Start it with server.listen() before calling this method."
 		);
 
 		await server.listen();

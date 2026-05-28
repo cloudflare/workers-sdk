@@ -248,7 +248,7 @@ export function createServer(options: ServerOptions): WorkerServer {
 	let currentOptions = options;
 	let desiredAccountId = options.accountId;
 	let serverSession: ServerSession | undefined;
-	let startPromise: Promise<void> | undefined;
+	let startPromise: Promise<ServerSession> | undefined;
 
 	function resolvePath(basePath: string, maybePath: string | URL): string {
 		if (maybePath instanceof URL) {
@@ -406,33 +406,36 @@ export function createServer(options: ServerOptions): WorkerServer {
 			devEnvs: [primaryDevEnv, ...auxiliaryDevEnvs],
 		};
 
-		await updateConfig(session, inputs);
-
-		return session;
+		try {
+			await updateConfig(session, inputs);
+			await waitForProxyReady(session);
+			return session;
+		} catch (error) {
+			await teardownSession(session);
+			throw error;
+		}
 	}
 
 	async function updateConfig(
 		session: ServerSession,
 		inputs: StartDevWorkerInput[]
 	) {
-		try {
-			for (const [index, workerInput] of inputs.entries()) {
-				const devEnv = session.devEnvs[index];
-				await devEnv.config.set(workerInput, true);
-			}
-		} catch (error) {
-			await Promise.allSettled(
-				session.devEnvs.map((devEnv) => devEnv.teardown())
-			);
-			throw error;
+		for (const [index, workerInput] of inputs.entries()) {
+			const devEnv = session.devEnvs[index];
+			await devEnv.config.set(workerInput, true);
 		}
 	}
 
-	function resolveSession() {
+	async function resolveSession() {
+		if (startPromise) {
+			return await startPromise;
+		}
+
 		assert(
 			serverSession,
-			"Worker server has not been started. Call server.listen()."
+			"Worker server has not been started. Start it with server.listen() before calling this method."
 		);
+
 		return serverSession;
 	}
 
@@ -448,17 +451,31 @@ export function createServer(options: ServerOptions): WorkerServer {
 	}
 
 	async function teardownSession(session: ServerSession) {
-		await Promise.all(session.devEnvs.map((devEnv) => devEnv.teardown()));
+		try {
+			await Promise.all(session.devEnvs.map((devEnv) => devEnv.teardown()));
+		} finally {
+			if (session === serverSession) {
+				serverSession = undefined;
+			}
+		}
 	}
 
-	async function restartServerSession() {
-		startPromise = startServerSession().finally(() => {
-			startPromise = undefined;
-		});
-		await startPromise;
+	async function startServerSession() {
+		if (!startPromise) {
+			startPromise = createSession(currentOptions)
+				.then((session) => {
+					serverSession = session;
+					return session;
+				})
+				.finally(() => {
+					startPromise = undefined;
+				});
+		}
+
+		return await startPromise;
 	}
 
-	async function waitForPrimaryReady(session: ServerSession) {
+	async function waitForProxyReady(session: ServerSession) {
 		return new Promise<
 			Awaited<typeof session.primaryDevEnv.proxy.ready.promise>
 		>((resolve, reject) => {
@@ -501,18 +518,6 @@ export function createServer(options: ServerOptions): WorkerServer {
 		});
 	}
 
-	async function startServerSession() {
-		const session = await createSession(currentOptions);
-
-		try {
-			await waitForPrimaryReady(session);
-			serverSession = session;
-		} catch (error) {
-			await teardownSession(session);
-			throw error;
-		}
-	}
-
 	async function getRuntimeMiniflare(session: ServerSession) {
 		await session.primaryDevEnv.proxy.runtimeMessageMutex.drained();
 		const miniflare = session.primaryDevEnv.runtimes[0].mf;
@@ -527,8 +532,8 @@ export function createServer(options: ServerOptions): WorkerServer {
 		worker?: string
 	) {
 		if (typeof input === "string") {
-			const session = resolveSession();
-			const { url } = await session.primaryDevEnv.proxy.ready.promise;
+			const session = await resolveSession();
+			const { url } = await waitForProxyReady(session);
 			const baseUrl = new URL(url);
 
 			if (
@@ -557,16 +562,8 @@ export function createServer(options: ServerOptions): WorkerServer {
 
 	return {
 		async listen() {
-			if (!serverSession) {
-				if (!startPromise) {
-					await restartServerSession();
-				} else {
-					await startPromise;
-				}
-			}
-
-			assert(serverSession, "Worker server has no active session.");
-			const ready = await serverSession.primaryDevEnv.proxy.ready.promise;
+			const session = serverSession ?? (await startServerSession());
+			const ready = await waitForProxyReady(session);
 
 			return {
 				url: ready.url,
@@ -574,7 +571,7 @@ export function createServer(options: ServerOptions): WorkerServer {
 			};
 		},
 		async fetch(input, init) {
-			const session = resolveSession();
+			const session = await resolveSession();
 			const miniflare = session.primaryDevEnv.proxy.proxyWorker;
 			assert(
 				miniflare,
@@ -586,18 +583,20 @@ export function createServer(options: ServerOptions): WorkerServer {
 		getWorker(name?: string) {
 			return {
 				async fetch(input, init) {
-					const session = resolveSession();
+					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
 
 					return dispatchFetch(miniflare, input, init, name);
 				},
 				async scheduled(scheduledOptions) {
-					const session = resolveSession();
+					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
 					const url = new URL("http://localhost/cdn-cgi/handler/scheduled");
+
 					if (scheduledOptions?.cron !== undefined) {
 						url.searchParams.set("cron", scheduledOptions.cron);
 					}
+
 					if (scheduledOptions?.scheduledTime !== undefined) {
 						url.searchParams.set(
 							"time",
@@ -632,17 +631,19 @@ export function createServer(options: ServerOptions): WorkerServer {
 					);
 				}
 
-				await Promise.all([
-					waitForReloadComplete(serverSession),
-					updateConfig(serverSession, nextInputs),
-				]);
+				try {
+					await Promise.all([
+						waitForReloadComplete(serverSession),
+						updateConfig(serverSession, nextInputs),
+					]);
+				} catch (error) {
+					await teardownSession(serverSession);
+					throw error;
+				}
 			}
 		},
 		async clearStorage() {
-			if (startPromise) {
-				await startPromise;
-			}
-			const session = resolveSession();
+			const session = await resolveSession();
 
 			if (currentOptions.persist === true) {
 				throw new Error(
@@ -651,7 +652,6 @@ export function createServer(options: ServerOptions): WorkerServer {
 			}
 
 			await teardownSession(session);
-			serverSession = undefined;
 
 			if (typeof currentOptions.persist === "string") {
 				const persistPath = resolvePath(
@@ -662,16 +662,16 @@ export function createServer(options: ServerOptions): WorkerServer {
 				await removeDir(persistPath);
 			}
 
-			await restartServerSession();
+			await startServerSession();
 		},
 		async close() {
 			if (startPromise) {
+				// Wait for it to start before tearing down
+				// ignoring any errors since we're closing the server anyway
 				await startPromise.catch(() => undefined);
-				startPromise = undefined;
 			}
 			if (serverSession) {
 				await teardownSession(serverSession);
-				serverSession = undefined;
 			}
 		},
 	};
