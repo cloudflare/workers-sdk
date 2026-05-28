@@ -549,7 +549,7 @@ describe("convertToWranglerConfig", () => {
 			).toThrow(/Durable Object exports/);
 		});
 
-		it("emits durable_objects.bindings + sqlite migrations when includeMigrations is true", ({
+		it("emits sqlite migration (no binding) when includeMigrations is true", ({
 			expect,
 		}) => {
 			const result = convertToWranglerConfig(
@@ -560,9 +560,6 @@ describe("convertToWranglerConfig", () => {
 				},
 				{ includeMigrations: true }
 			);
-			expect(result.durable_objects).toEqual({
-				bindings: [{ name: "MyDO", class_name: "MyDO" }],
-			});
 			expect(result.migrations).toEqual([
 				{ tag: "v1", new_sqlite_classes: ["MyDO"] },
 			]);

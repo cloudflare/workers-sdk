@@ -657,11 +657,6 @@ function convertExports(
 
 	const newSqliteClasses: string[] = [];
 	const newClasses: string[] = [];
-	const durableObjectBindings: NonNullable<
-		NonNullable<RawConfig["durable_objects"]>["bindings"]
-	> = result.durable_objects?.bindings
-		? [...result.durable_objects.bindings]
-		: [];
 	const workflows: NonNullable<RawConfig["workflows"]> = result.workflows
 		? [...result.workflows]
 		: [];
@@ -671,10 +666,6 @@ function convertExports(
 	for (const [exportName, value] of Object.entries(exports)) {
 		if (value.type === "durable-object") {
 			hasDurableObjectExports = true;
-			durableObjectBindings.push({
-				name: exportName,
-				class_name: exportName,
-			});
 			if (value.storage === "sqlite") {
 				newSqliteClasses.push(exportName);
 			} else {
@@ -697,9 +688,6 @@ function convertExports(
 		);
 	}
 
-	if (durableObjectBindings.length) {
-		result.durable_objects = { bindings: durableObjectBindings };
-	}
 	if (workflows.length) {
 		result.workflows = workflows;
 	}
