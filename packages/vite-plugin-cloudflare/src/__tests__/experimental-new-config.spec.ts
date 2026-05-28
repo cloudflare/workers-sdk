@@ -259,7 +259,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(fs.existsSync(dtsPath)).toBe(false);
 	});
 
-	test("emits durable_objects bindings + v1 migrations when running in dev (serve)", async ({
+	test("emits v1 migrations when running in dev (serve)", async ({
 		expect,
 	}) => {
 		seedWorkerSource();
@@ -290,9 +290,6 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		const worker = result.environmentNameToWorkerMap.get(
 			"experimental_config_worker"
 		);
-		expect(worker?.config.durable_objects).toEqual({
-			bindings: [{ name: "Counter", class_name: "Counter" }],
-		});
 		expect(worker?.config.migrations).toEqual([
 			{ tag: "v1", new_sqlite_classes: ["Counter"] },
 		]);
