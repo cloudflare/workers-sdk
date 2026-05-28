@@ -1,5 +1,5 @@
 ---
-"miniflare": patch
+"miniflare": minor
 ---
 
 Add JSON output to `/cdn-cgi/handler/scheduled`
