@@ -1,11 +1,9 @@
-// @ts-ignore entry point will get replaced
 import worker from "__ENTRY_POINT__";
 import { isRoutingRuleMatch } from "./pages-dev-util";
 
-// @ts-ignore entry point will get replaced
 export * from "__ENTRY_POINT__";
 
-// @ts-ignore routes are injected
+// @ts-expect-error -- routes are injected
 const routes = __ROUTES__;
 
 export default <ExportedHandler<{ ASSETS: Fetcher }>>{

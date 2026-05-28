@@ -30,7 +30,7 @@ exports[`pages deploy > with wrangler.json configuration > should support wrangl
 ✨ Deployment complete! Take a peek over at https://abcxyz.pages-is-awesome.pages.dev/"
 `;
 
-exports[`pages deploy > with wrangler.json configuration > should warn and ignore the config file, if it doesn't specify the \`pages_build_output_dir\` field 1`] = `[Error: Must specify a project name.]`;
+exports[`pages deploy > with wrangler.json configuration > should warn and ignore the config file, if it doesn't specify the \`pages_build_output_dir\` field 1`] = `[Error: Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.]`;
 
 exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `"b5f53af7922efd0f0b73c7bf288f7e3f14df5c31e8b654e98027ddf85ea7e574"`;
 
@@ -62,4 +62,4 @@ exports[`pages deploy > with wrangler.toml configuration > should support wrangl
 ✨ Deployment complete! Take a peek over at https://abcxyz.pages-is-awesome.pages.dev/"
 `;
 
-exports[`pages deploy > with wrangler.toml configuration > should warn and ignore the config file, if it doesn't specify the \`pages_build_output_dir\` field 1`] = `[Error: Must specify a project name.]`;
+exports[`pages deploy > with wrangler.toml configuration > should warn and ignore the config file, if it doesn't specify the \`pages_build_output_dir\` field 1`] = `[Error: Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.]`;

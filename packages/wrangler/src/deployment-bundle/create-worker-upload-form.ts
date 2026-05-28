@@ -131,6 +131,7 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
+	const web_search = extractBindingsOfType("web_search", bindings)[0];
 	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
@@ -368,6 +369,13 @@ export function createWorkerUploadForm(
 		});
 	});
 
+	if (web_search !== undefined) {
+		metadataBindings.push({
+			name: web_search.binding,
+			type: "web_search",
+		});
+	}
+
 	agent_memory.forEach(({ binding, namespace }) => {
 		if (options?.dryRun) {
 			namespace ??= INHERIT_SYMBOL;
@@ -512,12 +520,22 @@ export function createWorkerUploadForm(
 		});
 	});
 
-	pipelines.forEach(({ binding, pipeline }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "pipelines",
-			pipeline: pipeline,
-		});
+	pipelines.forEach(({ binding, stream: pipelineStream, pipeline }) => {
+		if (pipelineStream) {
+			metadataBindings.push({
+				name: binding,
+				type: "pipelines",
+				stream: pipelineStream,
+			});
+		} else if (pipeline) {
+			metadataBindings.push({
+				name: binding,
+				type: "pipelines",
+				pipeline,
+			});
+		} else {
+			throw new Error("Pipeline binding must specify a stream or pipeline");
+		}
 	});
 
 	worker_loaders.forEach(({ binding }) => {

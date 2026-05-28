@@ -348,6 +348,7 @@ describe("whoami", () => {
 			  - ai:write
 			  - ai-search:write
 			  - ai-search:run
+			  - websearch.run
 			  - agent-memory:write
 			  - queues:write
 			  - pipelines:write
@@ -423,6 +424,7 @@ describe("whoami", () => {
 			  - ai:write
 			  - ai-search:write
 			  - ai-search:run
+			  - websearch.run
 			  - agent-memory:write
 			  - queues:write
 			  - pipelines:write
@@ -540,6 +542,7 @@ describe("whoami", () => {
 			  - ai:write
 			  - ai-search:write
 			  - ai-search:run
+			  - websearch.run
 			  - agent-memory:write
 			  - queues:write
 			  - pipelines:write

@@ -12,6 +12,7 @@ import {
 	formatConfigSnippet,
 	getDockerPath,
 	parseNonHyphenedUuid,
+	getWranglerTmpDir,
 	UserError,
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
@@ -50,7 +51,6 @@ import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
-import { getWranglerTmpDir } from "../paths";
 import {
 	ensureQueuesExistByConfig,
 	getQueue,
@@ -80,19 +80,19 @@ import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
-import type { AssetsOptions } from "../assets";
-import type { Entry } from "../deployment-bundle/entry";
 import type { PostTypedConsumerBody } from "../queues/client";
-import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
 import type {
+	AssetsOptions,
 	CfModule,
 	CfScriptFormat,
 	CfWorkerInit,
 	ComplianceConfig,
 	Config,
 	CustomDomainRoute,
+	Entry,
+	LegacyAssetPaths,
 	RawConfig,
 	Route,
 	ZoneIdRoute,

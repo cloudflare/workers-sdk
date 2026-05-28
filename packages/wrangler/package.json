@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.93.1",
+	"version": "4.95.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -71,9 +71,9 @@
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
-		"rosie-skills": "^0.6.3",
+		"rosie-skills": "^0.7.6",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20260521.1"
+		"workerd": "1.20260528.1"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -81,6 +81,7 @@
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/codemod": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
+		"@cloudflare/deploy-helpers": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-shared": "workspace:*",
@@ -146,11 +147,12 @@
 		"patch-console": "^1.0.0",
 		"pretty-bytes": "^6.0.0",
 		"prompts": "^2.4.2",
+		"qr": "^0.6.0",
 		"recast": "0.23.11",
 		"resolve": "^1.22.8",
 		"semiver": "^1.1.0",
 		"shell-quote": "^1.8.1",
-		"signal-exit": "^3.0.7",
+		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",
 		"source-map": "^0.6.1",
 		"supports-color": "^9.2.2",
@@ -161,7 +163,6 @@
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
-		"update-check": "^1.5.4",
 		"vitest": "catalog:default",
 		"vitest-websocket-mock": "^0.4.0",
 		"ws": "catalog:default",

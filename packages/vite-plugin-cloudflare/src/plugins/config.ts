@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import * as fs from "node:fs";
 import * as path from "node:path";
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
@@ -8,12 +9,15 @@ import {
 	createCloudflareEnvironmentOptions,
 } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
+import { writeDeployConfig } from "../deploy-config";
 import { hasLocalDevVarsFileChanged } from "../dev-vars";
+import { resolveDevOnly } from "../plugin-config";
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
+import type { Unstable_RawConfig } from "wrangler";
 
 /**
  * Plugin to handle configuration and config file watching
@@ -122,15 +126,17 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				}
 
 				const workerEnvironments = [
-					...ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys(),
-				].map((environmentName) => {
-					const environment = builder.environments[environmentName];
-					assert(environment, `"${environmentName}" environment not found`);
+					...ctx.resolvedPluginConfig.environmentNameToWorkerMap.entries(),
+				]
+					.filter(([_, worker]) => !resolveDevOnly(worker.devOnly))
+					.map(([environmentName]) => {
+						const environment = builder.environments[environmentName];
+						assert(environment, `"${environmentName}" environment not found`);
 
-					return environment;
-				});
+						return environment;
+					});
 
-				// Build any Worker environments that haven't already been built
+				// Build Worker environments that have not yet been built and are not dev-only
 				await Promise.all(
 					workerEnvironments
 						.filter((environment) => !environment.isBuilt)
@@ -144,13 +150,69 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					entryWorkerEnvironment,
 					`No "${entryWorkerEnvironmentName}" environment`
 				);
-				const entryWorkerBuildDirectory = path.resolve(
-					builder.config.root,
-					entryWorkerEnvironment.config.build.outDir
-				);
 
-				if (!builder.environments.client?.isBuilt) {
-					removeAssetsField(entryWorkerBuildDirectory);
+				if (entryWorkerEnvironment.isBuilt) {
+					if (!builder.environments.client?.isBuilt) {
+						// The client environment was not built so we remove the assets config
+
+						const entryWorkerBuildDirectory = path.resolve(
+							builder.config.root,
+							entryWorkerEnvironment.config.build.outDir
+						);
+
+						removeAssetsField(entryWorkerBuildDirectory);
+					}
+				} else {
+					// The entry Worker was only used in development so we emit an assets-only config to the client build output
+
+					const clientEnvironment = builder.environments.client;
+					assert(clientEnvironment, 'No "client" environment');
+
+					if (!clientEnvironment.isBuilt) {
+						throw new Error(
+							"If `assetsOnly` is set to `true`, the client environment must be built"
+						);
+					}
+
+					const entryWorkerConfig = ctx.getWorkerConfig(
+						entryWorkerEnvironmentName
+					);
+					assert(
+						entryWorkerConfig,
+						`No config found for "${entryWorkerEnvironmentName}" environment`
+					);
+
+					const outputConfig: Unstable_RawConfig = {
+						...entryWorkerConfig,
+						main: undefined,
+						assets: {
+							...entryWorkerConfig.assets,
+							directory: ".",
+							binding: undefined,
+						},
+					};
+
+					if (
+						outputConfig.unsafe &&
+						Object.keys(outputConfig.unsafe).length === 0
+					) {
+						outputConfig.unsafe = undefined;
+					}
+
+					fs.writeFileSync(
+						path.resolve(
+							builder.config.root,
+							clientEnvironment.config.build.outDir,
+							"wrangler.json"
+						),
+						JSON.stringify(outputConfig)
+					);
+
+					writeDeployConfig(
+						ctx.resolvedPluginConfig,
+						ctx.resolvedViteConfig,
+						true
+					);
 				}
 			},
 		},

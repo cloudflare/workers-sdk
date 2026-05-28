@@ -888,7 +888,7 @@ describe("pages download config", () => {
 		await expect(
 			runWrangler(`pages download config`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must specify a project name.]`
+			`[Error: Missing Pages project name. Provide the project name as a positional argument: wrangler pages download config <name>.]`
 		);
 	});
 	it("should fail if project does not exist", async ({ expect }) => {

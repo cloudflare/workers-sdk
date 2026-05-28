@@ -34,7 +34,7 @@ import {
 import { mockGetZoneWorkerRoutes } from "../helpers/mock-zone-routes";
 import { createFetchResult, msw } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
-import { runWrangler } from "../helpers/run-wrangler";
+import { runWrangler as runWranglerBase } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
@@ -156,12 +156,16 @@ async function getMetadata(request: Request): Promise<WorkerMetadata> {
 
 // ─── Test suites ─────────────────────────────────────────────────────
 
-describe("config/args merging", () => {
+describe.each([
+	{ mode: "default", flag: "" },
+	{ mode: "deploy helpers", flag: " --experimental-deploy-helpers" },
+])("config/args merging ($mode)", ({ flag }) => {
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
+	const runWrangler = (command: string) => runWranglerBase(`${command}${flag}`);
 
 	beforeEach(() => {
 		vi.stubGlobal("setTimeout", (fn: () => void) => {

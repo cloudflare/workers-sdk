@@ -41,10 +41,12 @@ import type {
 	CfVectorize,
 	CfVpcNetwork,
 	CfVpcService,
+	CfWebSearch,
 	CfWorkerLoader,
 	CfWorkflow,
+	CfScriptFormat,
 } from "./worker";
-import type { AssetConfig } from "@cloudflare/workers-shared";
+import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 
 export type Json =
 	| string
@@ -74,6 +76,7 @@ export type WorkerMetadataBinding =
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "ai_search_namespace"; name: string; namespace: string }
 	| { type: "ai_search"; name: string; instance_name: string }
+	| { type: "web_search"; name: string }
 	| { type: "agent_memory"; name: string; namespace: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
 	| { type: "media"; name: string }
@@ -151,7 +154,7 @@ export type WorkerMetadataBinding =
 			};
 	  }
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
-	| { type: "pipelines"; name: string; pipeline: string }
+	| { type: "pipelines"; name: string; stream?: string; pipeline?: string }
 	| {
 			type: "secrets_store_secret";
 			name: string;
@@ -204,6 +207,40 @@ export type AssetConfigMetadata = {
 	_redirects?: string;
 	_headers?: string;
 };
+
+export type AssetsOptions = {
+	directory: string;
+	binding?: string;
+	routerConfig: RouterConfig;
+	assetConfig: AssetConfig;
+	_redirects?: string;
+	_headers?: string;
+	run_worker_first?: boolean | string[];
+};
+
+/**
+ * Information about the assets that should be uploaded
+ */
+export interface LegacyAssetPaths {
+	/**
+	 * Absolute path to the root of the project.
+	 *
+	 * This is the directory containing wrangler.toml or cwd if no config.
+	 */
+	baseDirectory: string;
+	/**
+	 * The path to the assets directory, relative to the `baseDirectory`.
+	 */
+	assetDirectory: string;
+	/**
+	 * An array of patterns that match files that should be uploaded.
+	 */
+	includePatterns: string[];
+	/**
+	 * An array of patterns that match files that should not be uploaded.
+	 */
+	excludePatterns: string[];
+}
 
 // for PUT /accounts/:accountId/workers/scripts/:scriptName
 type WorkerMetadataPut = {
@@ -336,6 +373,7 @@ export type Binding =
 	| ({ type: "vectorize" } & BindingOmit<CfVectorize>)
 	| ({ type: "ai_search_namespace" } & BindingOmit<CfAISearchNamespace>)
 	| ({ type: "ai_search" } & BindingOmit<CfAISearch>)
+	| ({ type: "web_search" } & BindingOmit<CfWebSearch>)
 	| ({ type: "agent_memory" } & BindingOmit<CfAgentMemory>)
 	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
 	| ({ type: "service" } & BindingOmit<CfService>)
@@ -357,3 +395,28 @@ export type Binding =
 	| ({ type: `unsafe_${string}` } & Omit<CfUnsafeBinding, "name" | "type">)
 	| { type: "assets" }
 	| { type: "inherit" };
+
+/**
+ * An entry point for the Worker.
+ *
+ * It consists not just of a `file`, but also of a `directory` that is used to resolve relative paths.
+ */
+export type Entry = {
+	/** A worker's entrypoint */
+	file: string;
+	/** A worker's directory. Usually where the Wrangler configuration file is located */
+	projectRoot: string;
+	/** The path to the config file, if it exists. */
+	configPath: string | undefined;
+	/** Is this a module worker or a service worker? */
+	format: CfScriptFormat;
+	/** The directory that contains all of a `--no-bundle` worker's modules. Usually `${directory}/src`. Defaults to path.dirname(file) */
+	moduleRoot: string;
+	/**
+	 * A worker's name
+	 */
+	name?: string | undefined;
+
+	/** Export from a Worker's entrypoint */
+	exports: string[];
+};

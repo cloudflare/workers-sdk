@@ -18,6 +18,7 @@ function createBinding(): WorkflowBinding {
 	return new WorkflowBinding(ctx, {
 		ENGINE: env.ENGINE,
 		BINDING_NAME: "TEST_WORKFLOW",
+		WORKFLOW_NAME: "test-workflow",
 	});
 }
 
@@ -59,6 +60,24 @@ describe("WorkflowBinding", () => {
 			const instance = await binding.get(id);
 			const status = await instance.status();
 			expect(status.output).toEqual(params);
+		});
+
+		it("should pass the workflow name in the event", async ({ expect }) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async (event) => {
+				return (event as WorkflowEvent<unknown>).workflowName;
+			});
+
+			await binding.create({ id });
+
+			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+
+			const instance = await binding.get(id);
+			const status = await instance.status();
+			expect(status.output).toBe("test-workflow");
 		});
 
 		it("should auto-generate id when not provided", async ({ expect }) => {

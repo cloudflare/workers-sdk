@@ -276,10 +276,12 @@ export const pagesDeployCommand = createCommand({
 						projectName = await prompt("Enter the name of your new project:");
 
 						if (!projectName) {
-							throw new FatalError("Must specify a project name.", {
-								code: 1,
-								telemetryMessage: "pages deploy missing project name",
-							});
+							throw new UserError(
+								"Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.",
+								{
+									telemetryMessage: "pages deploy missing project name",
+								}
+							);
 						}
 					}
 
@@ -322,10 +324,12 @@ export const pagesDeployCommand = createCommand({
 					});
 
 					if (!productionBranch) {
-						throw new FatalError("Must specify a production branch.", {
-							code: 1,
-							telemetryMessage: "pages deploy missing production branch",
-						});
+						throw new UserError(
+							"Missing production branch. Specify the production branch for your new Pages project when prompted, or re-run with the required information.",
+							{
+								telemetryMessage: "pages deploy missing production branch",
+							}
+						);
 					}
 
 					await fetchResult<Project>(
@@ -353,10 +357,10 @@ export const pagesDeployCommand = createCommand({
 		}
 
 		if (!projectName) {
-			throw new FatalError("Must specify a project name.", {
-				code: 1,
-				telemetryMessage: "pages deploy missing project name",
-			});
+			throw new UserError(
+				"Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.",
+				{ telemetryMessage: "pages deploy missing project name" }
+			);
 		}
 
 		// We infer git info by default is not passed in

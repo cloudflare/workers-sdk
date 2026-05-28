@@ -53,7 +53,6 @@ const base64 = (str: string): string => {
 	try {
 		return btoa(str);
 	} catch (err) {
-		// @ts-ignore
 		return Buffer.from(str).toString("base64");
 	}
 };
@@ -268,7 +267,7 @@ export const sendRequest = async (
 		// :(
 		// The vite-plugin is attempting to typecheck everything with worker types, which does not support request.credentials
 		// Also note this is always set to "omit".
-		// @ts-ignore
+		// @ts-ignore -- request.credentials not in Workers types
 		request.credentials = config.CREDENTIALS;
 	}
 

@@ -25,6 +25,20 @@ describe("access", () => {
 			expect(await domainUsesAccess("access-protected.com")).toBeTruthy();
 			expect(await domainUsesAccess("not-access-protected.com")).toBeFalsy();
 		});
+
+		it("should return false when the domain responds with a 403 (service-auth-only Access app)", async ({
+			expect,
+		}) => {
+			// When an Access application is configured to only allow Service
+			// Auth tokens, the domain responds with a hard 403 instead of
+			// redirecting to cloudflareaccess.com, so this detection method
+			// cannot recognise it as Access-protected. This is why
+			// `getAccessHeaders` must check the env vars before calling
+			// `domainUsesAccess`.
+			expect(
+				await domainUsesAccess("access-service-auth-only.com")
+			).toBeFalsy();
+		});
 	});
 
 	describe("getAccessHeaders", () => {
@@ -47,6 +61,26 @@ describe("access", () => {
 					"CF-Access-Client-Secret": "test-client-secret",
 				});
 				// No warning is presented since both env variables are set
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should return service token headers for a service-auth-only domain (403 response)", async ({
+				expect,
+			}) => {
+				// Regression test: when the Access application is configured to
+				// only allow Service Auth tokens, the domain responds with a
+				// hard 403 instead of redirecting to cloudflareaccess.com.
+				// `domainUsesAccess` returns false in this case, so the env var
+				// check must happen first - otherwise Wrangler would return
+				// empty headers and the request would fail with a 403.
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_ID", "test-client-id.access");
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_SECRET", "test-client-secret");
+
+				const headers = await getAccessHeaders("access-service-auth-only.com");
+				expect(headers).toEqual({
+					"CF-Access-Client-Id": "test-client-id.access",
+					"CF-Access-Client-Secret": "test-client-secret",
+				});
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 

@@ -2,6 +2,7 @@ import { startTunnel } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
+import encodeQR from "qr";
 import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { debuglog, createPlugin } from "../utils";
@@ -264,6 +265,7 @@ export class TunnelManager {
 
 	dispose() {
 		const tunnel = this.#tunnel;
+		const wasTunnelStarted = this.#origin !== undefined;
 
 		this.#abortController?.abort();
 		this.#origin = undefined;
@@ -278,7 +280,11 @@ export class TunnelManager {
 			tunnel.dispose();
 		}
 
-		this.#logger.info("  ➜  Tunnel closed");
+		// The tunnel may still be starting or may have already expired.
+		// Use origin to identify whether tunnel startup had begun
+		if (wasTunnelStarted) {
+			this.#logger.info("  ➜  Tunnel closed");
+		}
 	}
 
 	disposeOnExit() {
@@ -536,6 +542,17 @@ function patchPrintUrls(server: vite.ViteDevServer | vite.PreviewServer) {
 				server.config.logger.info(
 					`              ${colors.cyan(publicUrls[i])}`
 				);
+			}
+		}
+
+		// Print a QR code for the first tunnel URL so it can be scanned from a mobile device
+		const primaryUrl = publicUrls[0];
+		if (primaryUrl) {
+			try {
+				const qrCode = encodeQR(primaryUrl, "ascii", { border: 1 });
+				server.config.logger.info(`\n${qrCode}`);
+			} catch {
+				// QR generation is best-effort; don't disrupt the dev session if it fails
 			}
 		}
 

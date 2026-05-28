@@ -33,7 +33,7 @@ const BOX = {
  * Remove ANSI escape codes from a string.
  */
 export function stripAnsi(str: string): string {
-	// eslint-disable-next-line no-control-regex
+	// eslint-disable-next-line no-control-regex -- Intentionally matches ANSI escape sequences
 	return str.replace(/\x1b\[[0-9;]*m/g, "");
 }
 

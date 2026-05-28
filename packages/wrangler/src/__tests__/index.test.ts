@@ -72,6 +72,7 @@ describe("wrangler", () => {
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
+				  wrangler websearch              🔎 Run queries against Cloudflare Web Search [experimental]
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
@@ -152,6 +153,7 @@ describe("wrangler", () => {
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
+				  wrangler websearch              🔎 Run queries against Cloudflare Web Search [experimental]
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
@@ -413,7 +415,10 @@ describe("wrangler", () => {
 		it("should display a 'try updating' message if there is one available", async ({
 			expect,
 		}) => {
-			(updateCheck as Mock).mockImplementation(async () => "123.123.123");
+			(updateCheck as Mock).mockImplementation(async () => ({
+				status: "update-available",
+				latest: "123.123.123",
+			}));
 			await logPossibleBugMessage();
 			expect(std.out).toMatchInlineSnapshot(`
 			"[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m

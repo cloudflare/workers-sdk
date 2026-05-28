@@ -45,13 +45,16 @@ jobs:
         if: steps.meta.outputs.dependency-group == 'workerd-and-workers-types'
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
-          # Pull commits and changed files via the GitHub API.
-          commits_json=$(gh pr view "$PR_NUMBER" --json commits)
-          files_json=$(gh pr view "$PR_NUMBER" --json files)
+          # Pull commits and changed files via the GitHub API. `--repo` is
+          # required because this workflow runs without `actions/checkout`,
+          # so `gh` has no git remote to infer the repo from.
+          commits_json=$(gh pr view --repo "$REPO" "$PR_NUMBER" --json commits)
+          files_json=$(gh pr view --repo "$REPO" "$PR_NUMBER" --json files)
 
           fail() {
             echo "verified=false" >> "$GITHUB_OUTPUT"
@@ -83,7 +86,7 @@ jobs:
 
           # `gh pr view --json commits` doesn't expose signature info, so look
           # it up via the REST commit endpoint.
-          first_verified=$(gh api "repos/${{ github.repository }}/commits/$first_oid" --jq '.commit.verification.verified')
+          first_verified=$(gh api "repos/$REPO/commits/$first_oid" --jq '.commit.verification.verified')
           if [ "$first_verified" != "true" ]; then
             fail "first commit (Dependabot) does not have a verified signature"
           fi
