@@ -421,6 +421,7 @@ export async function resolvePluginConfig(
 			root,
 			mode: viteEnv.mode,
 			generateTypes: resolvedNewConfig.types.generate,
+			includeMigrations: viteEnv.command === "serve",
 		});
 		configPath = result.configPath;
 		rawConfigOverride = result.rawConfig;
@@ -689,6 +690,7 @@ async function loadNewConfig(options: {
 	root: string;
 	mode: string;
 	generateTypes: boolean;
+	includeMigrations: boolean;
 }): Promise<{
 	rawConfig: RawConfig;
 	configPath: string;
@@ -729,7 +731,19 @@ async function loadNewConfig(options: {
 		);
 	}
 
-	const rawConfig = convertToWranglerConfig(parsed.data) as RawConfig;
+	const rawConfig = convertToWranglerConfig(parsed.data, {
+		includeMigrations: options.includeMigrations,
+	}) as RawConfig;
+
+	const hasDurableObjectExports = Object.values(parsed.data.exports ?? {}).some(
+		(e) => e.type === "durable-object"
+	);
+
+	if (options.includeMigrations && hasDurableObjectExports) {
+		console.info(
+			"worker.config.ts - Durable Object exports are currently supported in dev but not build/deploy"
+		);
+	}
 
 	if (options.generateTypes) {
 		writeWorkerConfigurationDts({
