@@ -2429,7 +2429,13 @@ export class Miniflare {
 			runtimeInspectorAddress = this.#getSocketAddress(
 				kInspectorSocket,
 				this.#previousRuntimeInspectorPort,
-				"localhost",
+				// Use "127.0.0.1" explicitly instead of "localhost" to avoid
+				// DNS resolution issues. On systems where getaddrinfo("localhost")
+				// returns ::1 but IPv6 is disabled, workerd fails to bind the
+				// inspector socket and silently continues without emitting the
+				// listen-inspector event, causing waitForPorts() to hang.
+				// See https://github.com/cloudflare/workers-sdk/issues/14077
+				"127.0.0.1",
 				runtimeInspectorPort
 			);
 			this.#previousRuntimeInspectorPort = runtimeInspectorPort;
