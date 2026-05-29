@@ -111,6 +111,32 @@ describe("containers info", () => {
 		`);
 	});
 
+	it("should throw JsonFriendlyFatalError on unexpected API error with --json", async ({
+		expect,
+	}) => {
+		setIsTTY(true);
+		setWranglerConfig({});
+		msw.use(
+			http.get(
+				"*/applications/asdf",
+				async () => {
+					return HttpResponse.json(
+						{
+							success: false,
+							result: null,
+							errors: [{ code: 2000, message: "boom" }],
+						},
+						{ status: 500 }
+					);
+				},
+				{ once: true }
+			)
+		);
+		await expect(
+			runWrangler("containers info asdf --json")
+		).rejects.toThrowError(/There has been an internal error/);
+	});
+
 	it("should show a single container when given an ID (json)", async ({
 		expect,
 	}) => {
