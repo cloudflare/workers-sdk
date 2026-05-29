@@ -1,7 +1,7 @@
 ---
-"@cloudflare/vite-plugin": minor
+"@cloudflare/vite-plugin": patch
 ---
 
-Add `cf-vite` delegate binary with a `dev` subcommand
+Add an experimental, internal `cf-vite` delegate binary
 
-The plugin now ships a small subcommand-based CLI (`bin/cf-vite`) that any parent process can spawn to drive the plugin as a long-running dev-server subprocess. The protocol is `<pkgRoot>/bin/cf-vite <verb> [argv]` with stdio inherited and SIGINT/SIGTERM forwarded. Today the only verb is `dev`, which boots Vite with the user's `vite.config.ts` (expected to include `cloudflare()`). Unknown or missing verbs exit non-zero with a descriptive error.
+This adds an experimental `bin/cf-vite` binary that is spawned by Cloudflare's own parent tooling to drive the plugin as a long-running dev-server subprocess. It is not part of the plugin's public API surface, is not intended to be invoked directly, and its contract may change at any time without notice.

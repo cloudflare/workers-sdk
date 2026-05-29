@@ -333,10 +333,18 @@ export function resolvePluginConfig(
 	// wrangler when it loads the worker configuration files.
 	Object.assign(process.env, prefixedEnv);
 
+	// The `cf-vite` delegate binary's `--local` flag sets this env var to
+	// force remote bindings off, overriding any `remoteBindings` value in the
+	// plugin config (mirrors `wrangler dev --local`).
+	const remoteBindings =
+		prefixedEnv.CLOUDFLARE_VITE_FORCE_LOCAL === "true"
+			? false
+			: (pluginConfig.remoteBindings ?? true);
+
 	if (viteEnv.isPreview) {
 		return {
 			...shared,
-			remoteBindings: pluginConfig.remoteBindings ?? true,
+			remoteBindings,
 			type: "preview",
 			workers: getWorkerConfigs(root, !!process.env.CLOUDFLARE_VITE_BUILD),
 		};
@@ -425,7 +433,7 @@ export function resolvePluginConfig(
 			environmentNameToChildEnvironmentNamesMap,
 			prerenderWorkerEnvironmentName,
 			configPaths,
-			remoteBindings: pluginConfig.remoteBindings ?? true,
+			remoteBindings,
 			rawConfigs: {
 				entryWorker: entryWorkerResolvedConfig,
 			},
@@ -532,7 +540,7 @@ export function resolvePluginConfig(
 		prerenderWorkerEnvironmentName,
 		entryWorkerEnvironmentName,
 		staticRouting,
-		remoteBindings: pluginConfig.remoteBindings ?? true,
+		remoteBindings,
 		rawConfigs: {
 			entryWorker: entryWorkerResolvedConfig,
 			auxiliaryWorkers: auxiliaryWorkersResolvedConfigs,

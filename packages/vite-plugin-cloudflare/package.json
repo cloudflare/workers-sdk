@@ -19,14 +19,14 @@
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/vite-plugin-cloudflare"
 	},
+	"bin": {
+		"cf-vite": "./bin/cf-vite"
+	},
 	"files": [
 		"bin",
 		"dist"
 	],
 	"type": "module",
-	"bin": {
-		"cf-vite": "./bin/cf-vite"
-	},
 	"sideEffects": false,
 	"main": "./dist/index.mjs",
 	"types": "./dist/index.d.mts",
