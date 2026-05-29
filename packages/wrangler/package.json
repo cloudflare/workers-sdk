@@ -71,7 +71,7 @@
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
-		"rosie-skills": "^0.7.6",
+		"rosie-skills": "0.7.6",
 		"unenv": "2.0.0-rc.24",
 		"workerd": "1.20260529.1"
 	},
@@ -179,7 +179,7 @@
 		}
 	},
 	"optionalDependencies": {
-		"fsevents": "~2.3.2"
+		"fsevents": "2.3.3"
 	},
 	"engines": {
 		"node": ">=22.0.0"

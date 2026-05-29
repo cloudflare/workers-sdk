@@ -11,6 +11,9 @@ Tools for helping with CI
 - `deployments/validate-changesets.ts` - Validate that changesets are formatted correctly.
   Used by the changesets.yml and test-and-check.yml GitHub Action workflows.
 
+- `deployments/validate-pinned-dependencies.ts` - Ensures all non-bundled dependencies of published packages (and all pnpm catalog entries) are pinned to exact versions.
+  Used by the test-and-check.yml GitHub Action workflow, as part of the `check` npm script (`pnpm check:pinned-deps`).
+
 - `dependabot/generate-dependabot-pr-changesets.ts` - Generates and commits a changeset for a Dependabot PR.
   Used by the c3-dependabot-versioning-prs.yml and miniflare-dependabot-versioning-prs.yml GitHub Action workflows.
 
