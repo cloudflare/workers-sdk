@@ -71,9 +71,9 @@
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
-		"rosie-skills": "^0.6.3",
+		"rosie-skills": "^0.7.6",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20260526.1"
+		"workerd": "1.20260528.1"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -163,7 +163,6 @@
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
-		"update-check": "^1.5.4",
 		"vitest": "catalog:default",
 		"vitest-websocket-mock": "^0.4.0",
 		"ws": "catalog:default",

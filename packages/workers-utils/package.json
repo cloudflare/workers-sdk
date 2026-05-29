@@ -63,6 +63,7 @@
 		"tsdown": "^0.15.9",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
+		"update-check": "^1.5.4",
 		"vitest": "catalog:default",
 		"xdg-app-paths": "^8.3.0"
 	},

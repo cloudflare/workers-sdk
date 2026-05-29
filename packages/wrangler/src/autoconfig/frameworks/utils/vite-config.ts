@@ -127,6 +127,17 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	return importsCloudflarePlugin && usesCloudflarePlugin;
 }
 
+/**
+ * Returns whether a Vite config file (`vite.config.ts` or `vite.config.js`)
+ * exists in the given project directory.
+ */
+export function hasViteConfig(projectPath: string): boolean {
+	return (
+		existsSync(path.join(projectPath, "vite.config.ts")) ||
+		existsSync(path.join(projectPath, "vite.config.js"))
+	);
+}
+
 function getViteConfigPath(projectPath: string): string {
 	const filePathTS = path.join(projectPath, `vite.config.ts`);
 	const filePathJS = path.join(projectPath, `vite.config.js`);

@@ -103,6 +103,22 @@ describe("Durable Object", () => {
 		// Check accessing property over RPC
 		expect(await stub.value).toBe(4);
 	});
+	it("dispatches RPC methods from proxy-returning Durable Objects", async ({
+		expect,
+	}) => {
+		const id = env.PROXIED_TEST_OBJECT.newUniqueId();
+		const stub = env.PROXIED_TEST_OBJECT.get(id);
+		expect(await stub.readPrivateValue()).toBe("private value");
+	});
+	it("rejects instance overrides of prototype methods", async ({ expect }) => {
+		const id = env.TEST_OBJECT.newUniqueId();
+		const stub = env.TEST_OBJECT.get(id);
+		await expect(
+			async () => await stub.overriddenPrototypeMethod()
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[TypeError: The RPC receiver does not implement the method "overriddenPrototypeMethod".]`
+		);
+	});
 	it("immediately executes alarm", async ({ expect }) => {
 		// Schedule alarm by directly calling method over RPC
 		const id = env.TEST_OBJECT.newUniqueId();

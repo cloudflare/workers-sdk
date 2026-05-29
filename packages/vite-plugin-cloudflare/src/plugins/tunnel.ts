@@ -265,6 +265,7 @@ export class TunnelManager {
 
 	dispose() {
 		const tunnel = this.#tunnel;
+		const wasTunnelStarted = this.#origin !== undefined;
 
 		this.#abortController?.abort();
 		this.#origin = undefined;
@@ -279,7 +280,11 @@ export class TunnelManager {
 			tunnel.dispose();
 		}
 
-		this.#logger.info("  ➜  Tunnel closed");
+		// The tunnel may still be starting or may have already expired.
+		// Use origin to identify whether tunnel startup had begun
+		if (wasTunnelStarted) {
+			this.#logger.info("  ➜  Tunnel closed");
+		}
 	}
 
 	disposeOnExit() {

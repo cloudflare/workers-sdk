@@ -29,9 +29,10 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Filter changed paths
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
@@ -43,11 +44,16 @@ jobs:
 
       - name: Check if should run tests
         id: should_run
+        env:
+          CHANGES_EVERYTHING_BUT_MARKDOWN: ${{ steps.changes.outputs.everything_but_markdown }}
+          EXPECTED_TO_FAIL: ${{ matrix.expected_to_fail }}
+          HAS_TEST_ALL_NODE_VERSIONS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'test all node versions') }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
-          if [[ "${{ steps.changes.outputs.everything_but_markdown }}" == "true" ]] && \
-             [[ "${{ matrix.expected_to_fail }}" != "true" || \
-                "${{ github.event.pull_request.head.ref }}" == "changeset-release/main" || \
-                "${{ contains(github.event.pull_request.labels.*.name, 'test all node versions') }}" == "true" ]]; then
+          if [[ "$CHANGES_EVERYTHING_BUT_MARKDOWN" == "true" ]] && \
+             [[ "$EXPECTED_TO_FAIL" != "true" || \
+                "$HEAD_REF" == "changeset-release/main" || \
+                "$HAS_TEST_ALL_NODE_VERSIONS_LABEL" == "true" ]]; then
             echo "result=true" >> $GITHUB_OUTPUT
           else
             echo "result=false" >> $GITHUB_OUTPUT

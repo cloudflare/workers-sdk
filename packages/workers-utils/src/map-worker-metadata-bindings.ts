@@ -299,6 +299,13 @@ export function mapWorkerMetadataBindings(
 							},
 						];
 						break;
+					case "web_search":
+						{
+							configObj.web_search = {
+								binding: binding.name,
+							};
+						}
+						break;
 					case "hyperdrive":
 						configObj.hyperdrive = [
 							...(configObj.hyperdrive ?? []),

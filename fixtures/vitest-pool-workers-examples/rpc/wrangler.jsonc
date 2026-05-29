@@ -14,12 +14,20 @@
 				"name": "TEST_OBJECT",
 				"class_name": "TestObject",
 			},
+			{
+				"name": "PROXIED_TEST_OBJECT",
+				"class_name": "ProxiedTestObject",
+			},
 		],
 	},
 	"migrations": [
 		{
 			"tag": "v1",
 			"new_classes": ["TestObject"],
+		},
+		{
+			"tag": "v2",
+			"new_classes": ["ProxiedTestObject"],
 		},
 	],
 	"services": [

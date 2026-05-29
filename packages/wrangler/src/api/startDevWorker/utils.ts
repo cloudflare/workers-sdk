@@ -320,6 +320,11 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "web_search": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "web_search", ...x };
+				break;
+			}
 			case "unsafe": {
 				if (pages) {
 					break;
@@ -722,6 +727,7 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 			case "stream":
 			case "version_metadata":
 			case "media":
+			case "web_search":
 			case "inherit": {
 				// These have the same structure (just type and possibly some flags)
 				const { name: _name, ...rest } = binding;
