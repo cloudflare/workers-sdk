@@ -243,9 +243,6 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20260528.1
-      '@fixture/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@types/node':
         specifier: ^22.10.1
         version: 22.15.17

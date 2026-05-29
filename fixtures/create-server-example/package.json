@@ -13,7 +13,6 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"@fixture/shared": "workspace:*",
 		"@types/node": "catalog:default",
 		"msw": "catalog:default",
 		"typescript": "catalog:default",
