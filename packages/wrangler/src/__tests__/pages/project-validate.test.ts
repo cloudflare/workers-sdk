@@ -1,4 +1,3 @@
-// /* eslint-disable no-shadow */
 import { writeFileSync } from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";

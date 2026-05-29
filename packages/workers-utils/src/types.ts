@@ -40,6 +40,7 @@ import type {
 	CfVectorize,
 	CfVpcNetwork,
 	CfVpcService,
+	CfWebSearch,
 	CfWorkerLoader,
 	CfWorkflow,
 	CfScriptFormat,
@@ -74,6 +75,7 @@ export type WorkerMetadataBinding =
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "ai_search_namespace"; name: string; namespace: string }
 	| { type: "ai_search"; name: string; instance_name: string }
+	| { type: "web_search"; name: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
 	| { type: "media"; name: string }
 	| {
@@ -369,6 +371,7 @@ export type Binding =
 	| ({ type: "vectorize" } & BindingOmit<CfVectorize>)
 	| ({ type: "ai_search_namespace" } & BindingOmit<CfAISearchNamespace>)
 	| ({ type: "ai_search" } & BindingOmit<CfAISearch>)
+	| ({ type: "web_search" } & BindingOmit<CfWebSearch>)
 	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
 	| ({ type: "service" } & BindingOmit<CfService>)
 	| { type: "fetcher"; fetcher: ServiceFetch }
