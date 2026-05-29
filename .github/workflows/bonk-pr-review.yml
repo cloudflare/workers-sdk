@@ -26,20 +26,22 @@ jobs:
           STATUS=$(gh api \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            /orgs/cloudflare/members/${{ github.event.pull_request.user.login }} \
+            "/orgs/cloudflare/members/${PR_AUTHOR}" \
             --silent -i 2>/dev/null | head -1 | awk '{print $2}') || true
           if [ "$STATUS" != "204" ]; then
-            echo "User ${{ github.event.pull_request.user.login }} is not a member of the Cloudflare organization"
+            echo "User ${PR_AUTHOR} is not a member of the Cloudflare organization"
             exit 1
           fi
-          echo "User ${{ github.event.pull_request.user.login }} is a Cloudflare org member"
+          echo "User ${PR_AUTHOR} is a Cloudflare org member"
         env:
           GH_TOKEN: ${{ secrets.READ_ONLY_ORG_GITHUB_TOKEN }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 30
+          persist-credentials: false
 
       - name: Load review prompt
         id: prompt

@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   hotfix-release:
@@ -26,9 +27,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check user for team affiliation
         uses: tspascoal/get-user-teams-membership@ba78054988f58bea69b7c6136d563236f8ed2fc0 # v2
@@ -45,9 +47,15 @@ jobs:
           exit 1
 
       - name: "Checkout PR"
-        run: gh pr checkout ${{ inputs.pr-number }}
+        run: |
+          if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "::error::PR number must be numeric"
+            exit 1
+          fi
+          gh pr checkout "$PR_NUMBER"
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr-number }}
 
       - name: Install Dependencies
         # Defense in depth: do not pass Turbo remote cache credentials and
@@ -64,6 +72,11 @@ jobs:
           CI_OS: ${{ runner.os }}
 
       - name: Publish packages
-        run: pnpm publish -r --tag ${{ inputs.label }} --filter wrangler --filter miniflare --filter create-cloudflare
+        run: |
+          if ! [[ "$NPM_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+            echo "::error::npm dist-tag contains unsupported characters"
+            exit 1
+          fi
+          pnpm publish -r --tag "$NPM_TAG" --filter wrangler --filter miniflare --filter create-cloudflare
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          NPM_TAG: ${{ inputs.label }}
