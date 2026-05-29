@@ -432,7 +432,7 @@ describe("types", () => {
 				expect(output.status).toBe(1);
 			});
 
-			it("should error when --check omits secondary configs that were used during generation", async ({
+			it("should not error when --check omits secondary configs (auto-recovered from header)", async ({
 				expect,
 			}) => {
 				await helper.run(
@@ -442,8 +442,9 @@ describe("types", () => {
 				const output = await helper.run(
 					`wrangler types --check --include-runtime=false -c primary/wrangler.jsonc --path primary/worker-configuration.d.ts`
 				);
-				expect(output.stderr).toContain("out of date");
-				expect(output.status).toBe(1);
+				expect(output.stderr).toBeFalsy();
+				expect(output.stdout).toContain("up to date");
+				expect(output.status).toBe(0);
 			});
 		});
 	});
