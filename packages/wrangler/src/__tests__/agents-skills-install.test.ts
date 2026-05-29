@@ -330,7 +330,9 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 			expect(std.warn).toContain(
 				"Cloudflare agent skills are available for: Claude Code"
 			);
-			expect(std.out).not.toContain("Cloudflare agent skills are available for:");
+			expect(std.out).not.toContain(
+				"Cloudflare agent skills are available for:"
+			);
 			// Verify no install call was made
 			expect(mockRosieInstall).not.toHaveBeenCalled();
 			expect(sendMetricsEvent).toHaveBeenCalledWith(
