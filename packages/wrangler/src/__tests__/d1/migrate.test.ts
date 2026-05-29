@@ -597,7 +597,7 @@ Your database may not be available to serve requests during the migration, conti
 			`);
 		});
 
-		it("`list` with `migrations_dir: \".\"` treats the project root as the migrations dir", async ({
+		it('`list` with `migrations_dir: "."` treats the project root as the migrations dir', async ({
 			expect,
 		}) => {
 			setIsTTY(false);
