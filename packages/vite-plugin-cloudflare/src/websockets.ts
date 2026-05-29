@@ -60,6 +60,17 @@ export function handleWebSocket(
 				return;
 			}
 
+			// Forward response headers (e.g. Set-Cookie, custom auth headers) from
+			// the Worker's 101 response onto the upgrade response sent to the
+			// client. Without this, headers set on a `new Response(null, { status:
+			// 101, webSocket, headers })` are silently dropped during `vite dev`,
+			// even though they are delivered correctly by `wrangler dev`.
+			// See cloudflare/workers-sdk#10390.
+			const onHeaders = (responseHeaders: string[]) => {
+				appendWorkerResponseHeaders(responseHeaders, response.headers);
+			};
+			nodeWebSocket.once("headers", onHeaders);
+
 			nodeWebSocket.handleUpgrade(
 				request,
 				socket,
@@ -71,6 +82,47 @@ export function handleWebSocket(
 			);
 		}
 	);
+}
+
+/**
+ * Headers that must not be forwarded on the 101 upgrade response — they are
+ * either part of the WebSocket handshake managed by `ws` or irrelevant on a
+ * response with no body.
+ */
+const EXCLUDED_RESPONSE_HEADERS = new Set([
+	"connection",
+	"content-length",
+	"sec-websocket-accept",
+	"sec-websocket-extensions",
+	"sec-websocket-protocol",
+	"transfer-encoding",
+	"upgrade",
+]);
+
+function appendWorkerResponseHeaders(
+	responseHeaders: string[],
+	workerHeaders: Headers
+) {
+	// `Set-Cookie` can appear multiple times in a single response.
+	// `Headers.forEach` collapses them into a single comma-joined value, which
+	// breaks cookies that themselves contain commas (e.g. Expires).
+	// `getSetCookie` returns them as a string array.
+	if (typeof workerHeaders.getSetCookie === "function") {
+		for (const cookie of workerHeaders.getSetCookie()) {
+			responseHeaders.push(`Set-Cookie: ${cookie}`);
+		}
+	}
+
+	workerHeaders.forEach((value, name) => {
+		const lower = name.toLowerCase();
+		if (lower === "set-cookie") {
+			return;
+		}
+		if (EXCLUDED_RESPONSE_HEADERS.has(lower)) {
+			return;
+		}
+		responseHeaders.push(`${name}: ${value}`);
+	});
 }
 
 /**

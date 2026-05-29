@@ -205,4 +205,64 @@ describe("handleWebSocket", () => {
 		});
 		expect(`${url}`).toBe(`http://127.0.0.1:${port}/`);
 	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/10390
+	test("forwards response headers from the Worker on the 101 upgrade response", async ({
+		expect,
+	}) => {
+		// Override the default Miniflare instance with a Worker that returns
+		// custom headers (including two Set-Cookie entries) on the upgrade
+		// response.
+		await miniflare.dispose();
+		miniflare = new Miniflare({
+			modules: true,
+			script: `export default {
+				fetch() {
+					const [client, server] = Object.values(new WebSocketPair());
+					server.accept();
+					const headers = new Headers({ "X-Hello": "testing" });
+					headers.append("Set-Cookie", "session=abc; Path=/");
+					headers.append("Set-Cookie", "theme=dark; Path=/; HttpOnly");
+					return new Response(null, {
+						status: 101,
+						webSocket: client,
+						headers,
+					});
+				}
+			}`,
+		});
+		await listen();
+
+		const socket = net.connect(port, "127.0.0.1");
+		await new Promise<void>((r) => socket.on("connect", r));
+
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await vi.waitFor(() => {
+			const raw = Buffer.concat(chunks).toString("utf8");
+			expect(raw).toContain("HTTP/1.1 101");
+			expect(raw).toContain("\r\n\r\n");
+		});
+
+		const raw = Buffer.concat(chunks).toString("utf8");
+		const headerBlock = raw.slice(0, raw.indexOf("\r\n\r\n"));
+
+		// Fetch `Headers` normalize names to lowercase; `Set-Cookie` keeps its
+		// canonical casing because it is appended manually via `getSetCookie()`.
+		expect(headerBlock).toContain("x-hello: testing");
+		expect(headerBlock).toContain("Set-Cookie: session=abc; Path=/");
+		expect(headerBlock).toContain("Set-Cookie: theme=dark; Path=/; HttpOnly");
+
+		socket.destroy();
+	});
 });
