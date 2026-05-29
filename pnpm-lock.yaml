@@ -4286,7 +4286,7 @@ importers:
     dependencies:
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20260528.1
+        version: 4.20260529.1
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
