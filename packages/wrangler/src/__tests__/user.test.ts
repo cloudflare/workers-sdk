@@ -21,6 +21,7 @@ import {
 	getOrSelectAccountId,
 	loginOrRefreshIfRequired,
 	readAuthConfigFile,
+	requireApiToken,
 	requireAuth,
 	writeAuthConfigFile,
 } from "../user";
@@ -1324,6 +1325,51 @@ describe("User", () => {
 				id: "api-account",
 				name: "API Account",
 			});
+		});
+	});
+
+	describe("requireApiToken", () => {
+		it("returns credentials when the token is valid ASCII", ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "valid-ascii-token-1234");
+
+			expect(requireApiToken()).toEqual({ apiToken: "valid-ascii-token-1234" });
+		});
+
+		it("throws a helpful UserError when the token contains non-ASCII characters", ({
+			expect,
+		}) => {
+			// U+2026 HORIZONTAL ELLIPSIS — common when pasting tokens from rich-text sources
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "abc…def");
+
+			expect(() => requireApiToken()).toThrowError(
+				"Your API token contains invalid characters (non-ASCII). " +
+					"Run `wrangler login` to re-authenticate, or check that CLOUDFLARE_API_TOKEN is set correctly."
+			);
+		});
+
+		it("throws a UserError when the token contains emoji (surrogate pair)", ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "tok😀en");
+
+			expect(() => requireApiToken()).toThrowError(
+				"Your API token contains invalid characters (non-ASCII)."
+			);
+		});
+
+		it("throws the missing-token UserError when no credentials exist", ({
+			expect,
+		}) => {
+			expect(() => requireApiToken()).toThrowError("No API token found.");
+		});
+
+		it("does not throw when using authKey/authEmail credentials", ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_API_KEY", "my-auth-key");
+			vi.stubEnv("CLOUDFLARE_EMAIL", "user@example.com");
+
+			expect(() => requireApiToken()).not.toThrow();
 		});
 	});
 });
