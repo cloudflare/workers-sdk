@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
+import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import {
 	afterAll,
@@ -94,10 +95,10 @@ describe("access", () => {
 			expect,
 		}) => {
 			expect(
-				await domainUsesAccess("access-protected.com", silentLogger)
+				await domainUsesAccess(silentLogger, "access-protected.com")
 			).toBeTruthy();
 			expect(
-				await domainUsesAccess("not-access-protected.com", silentLogger)
+				await domainUsesAccess(silentLogger, "not-access-protected.com")
 			).toBeFalsy();
 		});
 
@@ -111,8 +112,42 @@ describe("access", () => {
 			// `getAccessHeaders` must check the env vars before calling
 			// `domainUsesAccess`.
 			expect(
-				await domainUsesAccess("access-service-auth-only.com", silentLogger)
+				await domainUsesAccess(silentLogger, "access-service-auth-only.com")
 			).toBeFalsy();
+		});
+
+		it("forwards the preview token and caches token-authenticated probes separately", async ({
+			expect,
+		}) => {
+			// Simulates an unpublished workers.dev host: the edge only routes the
+			// request (letting the wildcard Access app respond with its 302) once
+			// the preview token activates the edge-preview route. An anonymous
+			// probe 404s and must not poison the token-authenticated result.
+			msw.use(
+				http.get("https://unpublished.workers.dev/", ({ request }) => {
+					const token = new URL(request.url).searchParams.get(
+						"cf_workers_preview_token"
+					);
+					if (!token) {
+						return HttpResponse.json(null, { status: 404 });
+					}
+					return HttpResponse.json(null, {
+						status: 302,
+						headers: { location: "unpublished.cloudflareaccess.com" },
+					});
+				})
+			);
+
+			expect(
+				await domainUsesAccess(silentLogger, "unpublished.workers.dev")
+			).toBeFalsy();
+			expect(
+				await domainUsesAccess(
+					silentLogger,
+					"unpublished.workers.dev",
+					"preview-token"
+				)
+			).toBeTruthy();
 		});
 	});
 
@@ -292,7 +327,37 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 				});
 				expect(spawn).toHaveBeenCalledWith(
 					"cloudflared",
-					["access", "login", "access-protected.com"],
+					["access", "login", "https://access-protected.com/"],
+					{ signal: undefined }
+				);
+			});
+
+			it("should forward the preview token to cloudflared as a query parameter", async ({
+				expect,
+			}) => {
+				const fake = createFakeProcess();
+				vi.mocked(spawn).mockReturnValueOnce(fake.child);
+
+				const pendingHeaders = getAccessHeaders("access-protected.com", {
+					logger: silentLogger,
+					isNonInteractiveOrCI: () => false,
+					previewToken: "preview-token",
+				});
+				await vi.waitFor(() => {
+					expect(spawn).toHaveBeenCalledOnce();
+				});
+				fake.complete("fetched your token:\n\ntest-access-token\n");
+
+				await expect(pendingHeaders).resolves.toEqual({
+					Cookie: "CF_Authorization=test-access-token",
+				});
+				expect(spawn).toHaveBeenCalledWith(
+					"cloudflared",
+					[
+						"access",
+						"login",
+						"https://access-protected.com/?cf_workers_preview_token=preview-token",
+					],
 					{ signal: undefined }
 				);
 			});
