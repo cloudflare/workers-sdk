@@ -548,6 +548,7 @@ const bindingsConfigMock: Omit<
 		},
 	],
 	vpc_networks: [],
+	web_search: undefined,
 };
 
 describe("generate types - CLI", () => {

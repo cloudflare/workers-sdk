@@ -123,7 +123,8 @@ function extractBindingNames(config: Config): string[] {
 				return (value ?? []).map((workflowBinding) => workflowBinding.binding);
 			}
 			case "browser":
-			case "ai": {
+			case "ai":
+			case "web_search": {
 				const value: Config[typeof key] = untypedValue;
 				return value ? [value.binding] : [];
 			}

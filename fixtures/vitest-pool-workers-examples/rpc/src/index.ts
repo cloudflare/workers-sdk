@@ -7,6 +7,7 @@ export class TestObject extends DurableObject<Env> {
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
+		this.overriddenPrototypeMethod = () => "instance";
 		void ctx.blockConcurrencyWhile(async () => {
 			this.#value = (await ctx.storage.get("count")) ?? 0;
 		});
@@ -57,6 +58,10 @@ export class TestObject extends DurableObject<Env> {
 		});
 	}
 
+	overriddenPrototypeMethod() {
+		return "prototype";
+	}
+
 	getCounter() {
 		return new Counter(0);
 	}
@@ -71,6 +76,24 @@ export class TestObject extends DurableObject<Env> {
 	}
 
 	instanceProperty = "👻";
+}
+
+export class ProxiedTestObject extends DurableObject<Env> {
+	#value = "private value";
+
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env);
+		return new Proxy(this, {
+			get(target, key, receiver) {
+				const value = Reflect.get(target, key, receiver);
+				return typeof value === "function" ? value.bind(target) : value;
+			},
+		});
+	}
+
+	readPrivateValue() {
+		return this.#value;
+	}
 }
 
 export const testNamedHandler = <ExportedHandler<Env>>{
