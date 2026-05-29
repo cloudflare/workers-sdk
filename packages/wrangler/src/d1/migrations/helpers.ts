@@ -20,8 +20,12 @@ function getDefaultMigrationsPattern(migrationsDir: string) {
  * Build with {@link resolveMigrationsConfig}.
  *
  * Field invariants:
- *  - `migrationsDir` is normalized (forward slashes, no leading `./`, no trailing `/`) and not empty.
- *  - `migrationsPattern` is normalized in the same way and starts with `${migrationsDir}/`.
+ *  - `migrationsDir` is normalized (forward slashes, no leading `./`,
+ *    no trailing `/`) and not empty. The one special case is `"."`,
+ *    which the user can set when they want to treat the project root
+ *    itself as the migrations dir; it survives normalization unchanged.
+ *  - `migrationsPattern` is normalized in the same way and starts with
+ *    `${migrationsDir}/`.
  *  - `projectPath` is the directory containing the user's Wrangler config —
  *    the base that `migrationsDir` and `migrationsPattern` resolve against.
  *  - `configFile` is the short display name (e.g. `"wrangler.jsonc"`) used
@@ -386,9 +390,8 @@ export function maybeLogHint({
 	if (drizzleFiles.length === 0) {
 		return;
 	}
-	const drizzlePattern = migrationsDir
-		? `${migrationsDir}/*/migration.sql`
-		: "*/migration.sql";
+	// migrationsDir can't be empty
+	const drizzlePattern = `${migrationsDir}/*/migration.sql`;
 	logger.warn(
 		`Could not find any migration files matching \`${migrationsPattern}\`. It looks like there are migration files matching \`${drizzlePattern}\` though. If you are using drizzle to manage your migrations, please set \`migrations_pattern\` to \`${drizzlePattern}\` in ${configFile}.`
 	);

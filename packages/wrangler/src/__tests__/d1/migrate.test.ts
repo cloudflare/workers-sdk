@@ -597,6 +597,45 @@ Your database may not be available to serve requests during the migration, conti
 			`);
 		});
 
+		it("`list` with `migrations_dir: \".\"` treats the project root as the migrations dir", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: ".",
+					},
+				],
+			});
+
+			// Seed the project root with a mix of files. Only the top-level
+			// `.sql` files should be picked up.
+			fs.writeFileSync("0001_top.sql", "-- top");
+			fs.writeFileSync("0002_users.sql", "-- users");
+			fs.writeFileSync("README.md", "# not a migration");
+			fs.mkdirSync("nested", { recursive: true });
+			fs.writeFileSync("nested/0003_deep.sql", "-- deep");
+
+			const spy = vi
+				.spyOn(d1Execute, "executeSql")
+				.mockResolvedValue([{ results: [], success: true, meta: {} as never }]);
+
+			try {
+				await runWrangler("d1 migrations list --local db");
+			} finally {
+				spy.mockRestore();
+			}
+
+			expect(mockStd.out).toContain("0001_top.sql");
+			expect(mockStd.out).toContain("0002_users.sql");
+			expect(mockStd.out).not.toContain("README.md");
+			expect(mockStd.out).not.toContain("0003_deep.sql");
+		});
+
 		it("rejects a `migrations_pattern` that does not start with `migrations_dir`", async ({
 			expect,
 		}) => {
