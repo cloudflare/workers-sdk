@@ -20,9 +20,8 @@ function getDefaultMigrationsPattern(migrationsDir: string) {
  * Build with {@link resolveMigrationsConfig}.
  *
  * Field invariants:
- *  - `migrationsPattern` is normalized (forward slashes, no leading `./`,
- *    no trailing `/`) and starts with `${migrationsDir}/`.
- *  - `migrationsDir` is normalized in the same way.
+ *  - `migrationsDir` is normalized (forward slashes, no leading `./`, no trailing `/`) and not empty.
+ *  - `migrationsPattern` is normalized in the same way and starts with `${migrationsDir}/`.
  *  - `projectPath` is the directory containing the user's Wrangler config —
  *    the base that `migrationsDir` and `migrationsPattern` resolve against.
  *  - `configFile` is the short display name (e.g. `"wrangler.jsonc"`) used

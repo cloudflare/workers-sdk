@@ -1001,7 +1001,7 @@ export interface EnvironmentNonInheritable {
 		 * When `migrations_pattern` is set, `migrations_dir` must also be set, and
 		 * `migrations_pattern` must start with `${migrations_dir}/`. This keeps the
 		 * relationship between the two settings explicit and lets Wrangler record
-		 * each migration's name in the `d1_migrations` table as a path relative to
+		 * each migration's name in the migrations table as a path relative to
 		 * `migrations_dir`.
 		 */
 		migrations_pattern?: string;
