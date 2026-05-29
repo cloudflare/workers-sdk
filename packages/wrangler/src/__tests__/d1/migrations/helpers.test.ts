@@ -794,7 +794,7 @@ describe("resolveMigrationsConfig", () => {
 		// The error should also tell the user how to fix it (add a
 		// migrations_dir entry, with a worked example).
 		expect(call).toThrow(
-			/Add a `migrations_dir` entry.*`migrations_dir: "migrations"`/s
+			/Add a `migrations_dir` entry.*`"migrations_dir": "migrations"`/s
 		);
 	});
 

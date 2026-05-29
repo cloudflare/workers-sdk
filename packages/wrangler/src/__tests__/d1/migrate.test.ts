@@ -657,7 +657,7 @@ Your database may not be available to serve requests during the migration, conti
 
 			await expect(runWrangler("d1 migrations list --local db")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: The configured \`migrations_pattern: "schema/*.sql"\` in your wrangler.jsonc file must start with \`migrations/\` to match \`migrations_dir: "migrations"\`.
+				[Error: The configured \`migrations_pattern: "schema/*.sql"\` in your wrangler.jsonc file must start with \`migrations/\` to match \`"migrations_dir": "migrations"\`.
 
 				Either change \`migrations_pattern\` so it starts with \`migrations/\` (for example, \`"migrations/*.sql"\`), or change \`migrations_dir\` to match the start of your pattern.]
 			`);
@@ -686,7 +686,7 @@ Your database may not be available to serve requests during the migration, conti
 				.toThrowErrorMatchingInlineSnapshot(`
 				[Error: You have set \`migrations_pattern: "migrations/*.sql"\` in your wrangler.jsonc file but no \`migrations_dir\` for this D1 binding.
 
-				When \`migrations_pattern\` is set, \`migrations_dir\` must also be set, and \`migrations_pattern\` must start with \`\${migrations_dir}/\`. Add a \`migrations_dir\` entry to your wrangler.jsonc file (for example, \`migrations_dir: "migrations"\`).]
+				When \`migrations_pattern\` is set, \`migrations_dir\` must also be set, and \`migrations_pattern\` must start with \`\${migrations_dir}/\`. Add a \`migrations_dir\` entry to your wrangler.jsonc file (for example, \`"migrations_dir": "migrations"\`).]
 			`);
 		});
 	});

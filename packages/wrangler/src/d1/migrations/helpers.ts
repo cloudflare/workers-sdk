@@ -64,7 +64,7 @@ export function resolveMigrationsConfig({
 	if (rawPattern !== undefined && rawDir === undefined) {
 		throw new UserError(
 			`You have set \`migrations_pattern: "${rawPattern}"\` in your ${configFile} file but no \`migrations_dir\` for this D1 binding.\n\n` +
-				`When \`migrations_pattern\` is set, \`migrations_dir\` must also be set, and \`migrations_pattern\` must start with \`\${migrations_dir}/\`. Add a \`migrations_dir\` entry to your ${configFile} file (for example, \`migrations_dir: "migrations"\`).`,
+				`When \`migrations_pattern\` is set, \`migrations_dir\` must also be set, and \`migrations_pattern\` must start with \`\${migrations_dir}/\`. Add a \`migrations_dir\` entry to your ${configFile} file (for example, \`"migrations_dir": "migrations"\`).`,
 			{
 				telemetryMessage:
 					"d1 migrations migrations_pattern set without migrations_dir",
@@ -81,7 +81,7 @@ export function resolveMigrationsConfig({
 		if (!normalizedPattern.startsWith(`${migrationsDir}/`)) {
 			const suggestedPattern = getDefaultMigrationsPattern(migrationsDir);
 			throw new UserError(
-				`The configured \`migrations_pattern: "${rawPattern}"\` in your ${configFile} file must start with \`${migrationsDir}/\` to match \`migrations_dir: "${migrationsDir}"\`.\n\n` +
+				`The configured \`migrations_pattern: "${rawPattern}"\` in your ${configFile} file must start with \`${migrationsDir}/\` to match \`"migrations_dir": "${migrationsDir}"\`.\n\n` +
 					`Either change \`migrations_pattern\` so it starts with \`${migrationsDir}/\` (for example, \`"${suggestedPattern}"\`), or change \`migrations_dir\` to match the start of your pattern.`,
 				{
 					telemetryMessage:
