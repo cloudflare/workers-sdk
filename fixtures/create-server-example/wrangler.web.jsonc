@@ -1,0 +1,7 @@
+{
+	"name": "web-worker",
+	"main": "src/web.ts",
+	"compatibility_date": "2024-09-23",
+	"routes": ["example.com/*"],
+	"services": [{ "binding": "API", "service": "api-worker" }],
+}
