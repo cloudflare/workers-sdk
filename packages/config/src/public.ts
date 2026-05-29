@@ -3,8 +3,6 @@
  * user authoring a `worker.config.ts` should have access to.
  */
 
-import type { UserConfig } from "./types";
-
 export type {
 	Bindings,
 	AiBinding,
@@ -50,7 +48,7 @@ export type {
 	WorkerLoaderBinding,
 	WorkflowBinding,
 } from "./bindings";
-export { createBindings, bindings } from "./bindings";
+export { bindings } from "./bindings";
 export type {
 	Triggers,
 	FetchTrigger,
@@ -67,28 +65,9 @@ export type {
 	UnwrapConfig,
 } from "./inference";
 export type { UserConfig } from "./types";
-
-// TODO: Use declaration merging in the consuming package once this package is published
-export interface ConfigContext {
-	/**
-	 * The Vite [`mode`](https://vite.dev/guide/env-and-mode.html#modes) the
-	 * config is being evaluated in (e.g. `"development"`, `"production"`).
-	 */
-	mode: string;
-}
-
-export function defineWorker<const T extends UserConfig>(
-	config: UserConfig & T
-): T;
-export function defineWorker<const T extends UserConfig>(
-	config: Promise<UserConfig & T>
-): Promise<T>;
-export function defineWorker<const T extends UserConfig>(
-	config: (ctx: ConfigContext) => UserConfig & T
-): (ctx: ConfigContext) => T;
-export function defineWorker<const T extends UserConfig>(
-	config: (ctx: ConfigContext) => Promise<UserConfig & T>
-): (ctx: ConfigContext) => Promise<T>;
-export function defineWorker(config: unknown): unknown {
-	return config;
-}
+export type {
+	ConfigContext,
+	TypedWorkerDefinition,
+	UserConfigExport,
+} from "./worker-definition";
+export { defineWorker, resolveWorkerDefinition } from "./worker-definition";

@@ -1,5 +1,6 @@
 // oxlint-disable typescript/no-explicit-any -- needed in type utilities
 
+import type { WorkerDefinition } from "./worker-definition";
 import type { Pipeline, PipelineRecord } from "cloudflare:pipelines";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -190,39 +191,11 @@ type InferBindingType<TBinding> =
  * type Name = InferWorkerName<WorkerConfig>;
  * ```
  */
-type InferWorkerName<TUnwrappedConfig> = TUnwrappedConfig extends {
+export type InferWorkerName<TUnwrappedConfig> = TUnwrappedConfig extends {
 	name: infer TName extends string;
 }
 	? TName
 	: never;
-
-/**
- * Extract config(s) from `TUnwrappedConfig` where `TName` is assignable to the config's name.
- * Unlike Extract, this works when a config has a union name like `"worker-a"` | `"worker-b"`.
- */
-type ExtractConfigByName<TUnwrappedConfig, TName extends string> =
-	TName extends InferWorkerName<TUnwrappedConfig> ? TUnwrappedConfig : never;
-
-/**
- * Resolves the config type for cross-worker bindings.
- * Returns the extracted config if `workerName` matches a known config.
- * Otherwise returns `undefined`.
- */
-export type ConfigOrUndefined<TUnwrappedConfig, TName extends string> =
-	TName extends InferWorkerName<TUnwrappedConfig>
-		? ExtractConfigByName<TUnwrappedConfig, TName>
-		: undefined;
-
-/**
- * Returns valid Worker names.
- * For typed configs, returns the constrained union of known Worker names.
- * Otherwise, returns `string` to allow any `Worker` name.
- */
-export type WorkerName<TUnwrappedConfig> = TUnwrappedConfig extends {
-	name: string;
-}
-	? InferWorkerName<TUnwrappedConfig>
-	: string;
 
 /**
  * Infer export names from a config's exports, optionally filtered by type.
@@ -230,7 +203,7 @@ export type WorkerName<TUnwrappedConfig> = TUnwrappedConfig extends {
  * When TExportType is a specific literal like `"durable-object"` or `"workflow"`,
  * returns only exports of that type.
  */
-type InferExportsByType<
+export type InferExportsByType<
 	TUnwrappedConfig,
 	TExportType extends string = string,
 > = TUnwrappedConfig extends {
@@ -248,63 +221,11 @@ type InferExportsByType<
  * Returns named module exports that are not declared as type `"durable-object"` or `"workflow"` in `exports`.
  * Excludes `"default"` since `exportName` should only be provided for named exports.
  */
-type InferEntrypointExports<TUnwrappedConfig> = Exclude<
+export type InferEntrypointExports<TUnwrappedConfig> = Exclude<
 	keyof InferMainModule<TUnwrappedConfig> & string,
 	| "default"
 	| InferExportsByType<TUnwrappedConfig, "durable-object" | "workflow">
 >;
-
-/**
- * Returns valid exports for a Worker binding.
- * For known Workers, returns the constrained union of entrypoint exports.
- * For unknown Workers in typed configs, returns `never`.
- * For untyped configs, returns `string` to allow any export name.
- */
-export type WorkerExportName<
-	TUnwrappedConfig,
-	TName extends string,
-> = TUnwrappedConfig extends { name: string }
-	? TName extends InferWorkerName<TUnwrappedConfig>
-		? InferEntrypointExports<ExtractConfigByName<TUnwrappedConfig, TName>>
-		: never
-	: string;
-
-/**
- * Returns valid exports for a Durable Object binding.
- * For known Workers, returns the constrained union of Durable Object exports.
- * For unknown Workers in typed configs, returns `never`.
- * For untyped configs, returns `string` to allow any export name.
- */
-export type DurableObjectExportName<
-	TUnwrappedConfig,
-	TName extends string,
-> = TUnwrappedConfig extends { name: string }
-	? TName extends InferWorkerName<TUnwrappedConfig>
-		? InferExportsByType<
-				ExtractConfigByName<TUnwrappedConfig, TName>,
-				"durable-object"
-			>
-		: never
-	: string;
-
-// TODO: re-enable when workflow bindings return.
-// /**
-//  * Returns valid exports for a Workflow binding.
-//  * For known Workers, returns the constrained union of Workflow exports.
-//  * For unknown workers in typed configs, returns `never`.
-//  * For untyped configs, returns `string` to allow any export name.
-//  */
-// type WorkflowExportName<
-// 	TUnwrappedConfig,
-// 	TName extends string,
-// > = TUnwrappedConfig extends { name: string }
-// 	? TName extends InferWorkerName<TUnwrappedConfig>
-// 		? InferExportsByType<
-// 				ExtractConfigByName<TUnwrappedConfig, TName>,
-// 				"workflow"
-// 			>
-// 		: never
-// 	: string;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIG INFERENCE (PUBLIC)
@@ -315,13 +236,14 @@ export type DurableObjectExportName<
  * Unwrap function and promise types to get the underlying config.
  * Use this to normalize a config before passing it to other inference utilities.
  */
-export type UnwrapConfig<TConfig> = TConfig extends (
-	...args: any[]
-) => infer TReturn
-	? UnwrapConfig<TReturn>
-	: TConfig extends Promise<infer TCompletion>
-		? TCompletion
-		: TConfig;
+export type UnwrapConfig<TConfig> =
+	TConfig extends WorkerDefinition<infer T>
+		? T
+		: TConfig extends (...args: any[]) => infer TReturn
+			? UnwrapConfig<TReturn>
+			: TConfig extends Promise<infer TCompletion>
+				? TCompletion
+				: TConfig;
 
 /**
  * Infer the `Env` interface type from a Worker config.
