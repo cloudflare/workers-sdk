@@ -1,5 +1,6 @@
 // oxlint-disable typescript/no-explicit-any -- needed in type utilities
 
+import type { WorkerDefinition } from "./worker-definition";
 import type { Pipeline, PipelineRecord } from "cloudflare:pipelines";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -315,13 +316,14 @@ export type DurableObjectExportName<
  * Unwrap function and promise types to get the underlying config.
  * Use this to normalize a config before passing it to other inference utilities.
  */
-export type UnwrapConfig<TConfig> = TConfig extends (
-	...args: any[]
-) => infer TReturn
-	? UnwrapConfig<TReturn>
-	: TConfig extends Promise<infer TCompletion>
-		? TCompletion
-		: TConfig;
+export type UnwrapConfig<TConfig> =
+	TConfig extends WorkerDefinition<infer T>
+		? T
+		: TConfig extends (...args: any[]) => infer TReturn
+			? UnwrapConfig<TReturn>
+			: TConfig extends Promise<infer TCompletion>
+				? TCompletion
+				: TConfig;
 
 /**
  * Infer the `Env` interface type from a Worker config.
