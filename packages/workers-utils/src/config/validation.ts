@@ -82,6 +82,8 @@ export type ConfigBindingFieldName =
 	| "vectorize"
 	| "ai_search_namespaces"
 	| "ai_search"
+	| "web_search"
+	| "agent_memory"
 	| "hyperdrive"
 	| "r2_buckets"
 	| "logfwdr"
@@ -124,6 +126,8 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespaces: "AI Search Namespace",
 	ai_search: "AI Search Instance",
+	web_search: "Web Search",
+	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
 	logfwdr: "logfwdr",
@@ -181,6 +185,8 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespace: "AI Search Namespace",
 	ai_search: "AI Search Instance",
+	web_search: "Web Search",
+	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
 	fetcher: "Service Binding",
@@ -1756,6 +1762,26 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateAISearchBinding),
 			[]
 		),
+		web_search: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"web_search",
+			validateNamedSimpleBinding(envName),
+			undefined
+		),
+		agent_memory: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"agent_memory",
+			validateBindingArray(envName, validateAgentMemoryBinding),
+			[]
+		),
 		hyperdrive: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3064,6 +3090,8 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"ai",
 			"ai_search_namespace",
 			"ai_search",
+			"web_search",
+			"agent_memory",
 			"kv_namespace",
 			"durable_object_namespace",
 			"d1_database",
@@ -4207,6 +4235,40 @@ const validateAISearchBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"instance_name",
+		"remote",
+	]);
+
+	return isValid;
+};
+
+const validateAgentMemoryBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"agent_memory" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "namespace" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"namespace",
 		"remote",
 	]);
 

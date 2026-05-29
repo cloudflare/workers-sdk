@@ -4,10 +4,13 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { mockCLIOutput } from "../helpers/mock-cli-output";
 import { mockConsoleMethods } from "../helpers/mock-console";
+import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { ExpectStatic } from "vitest";
 
 // Helper to wrap responses in v4 API schema format for containers endpoint
 function wrapV4Response<T>(result: T) {
@@ -184,6 +187,7 @@ describe("containers images list", () => {
 
 describe("containers images delete", () => {
 	const std = mockConsoleMethods();
+	const cliStd = mockCLIOutput();
 	const { setIsTTY } = useMockIsTTY();
 
 	const REGISTRY = getCloudflareContainerRegistry();
@@ -194,6 +198,7 @@ describe("containers images delete", () => {
 	runInTempDir();
 	afterEach(() => {
 		msw.resetHandlers();
+		clearDialogs();
 	});
 
 	it("should help", async ({ expect }) => {
@@ -216,59 +221,29 @@ describe("containers images delete", () => {
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
 			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
-			  -v, --version         Show version number  [boolean]"
+			  -v, --version         Show version number  [boolean]
+
+			OPTIONS
+			  -y, --skip-confirmation  Skip confirmation prompt for deleting an image  [boolean] [default: false]"
 		`);
 	});
 
 	it("should delete images", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
-
-		msw.use(
-			http.post("*/registries/:domain/credentials", async ({ params }) => {
-				expect(params.domain).toEqual(REGISTRY);
-				return HttpResponse.json(
-					wrapV4Response({
-						account_id: "1234",
-						registry_host: REGISTRY,
-						username: "foo",
-						password: "bar",
-					})
-				);
-			}),
-			http.head("*/v2/:accountId/:image/manifests/:tag", async ({ params }) => {
-				expect(params.accountId).toEqual("some-account-id");
-				expect(params.image).toEqual("one");
-				expect(params.tag).toEqual("hundred");
-				return new HttpResponse("", {
-					status: 200,
-					headers: { "Docker-Content-Digest": "some-digest" },
-				});
-			}),
-			http.delete(
-				"*/v2/:accountId/:image/manifests/:tag",
-				async ({ params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.image).toEqual("one");
-					expect(params.tag).toEqual("hundred");
-					return new HttpResponse("", { status: 200 });
-				}
-			),
-			http.put("*/v2/gc/layers", async () => {
-				return new HttpResponse("", { status: 200 });
-			})
-		);
+		mockDeleteImage(expect, REGISTRY);
 		await runWrangler("containers images delete one:hundred");
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(
-			`"Deleted one:hundred (some-digest)"`
-		);
+		expect(std.out).toMatchInlineSnapshot(`
+			"? Are you sure you want to delete one:hundred? This action cannot be undone.
+			🤖 Using fallback value in non-interactive context: yes
+			Deleted one:hundred (some-digest)"
+		`);
 	});
 
 	it("should error when provided a repo without a tag", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
-
 		msw.use(
 			http.post("*/registries/:domain/credentials", async ({ params }) => {
 				expect(params.domain).toEqual(REGISTRY);
@@ -287,4 +262,102 @@ describe("containers images delete", () => {
 				[Error: Invalid image format. Expected IMAGE:TAG]
 			`);
 	});
+
+	it("should prompt for confirmation and proceed when confirmed", async ({
+		expect,
+	}) => {
+		setIsTTY(true);
+		setWranglerConfig({});
+		mockConfirm({
+			text: "Are you sure you want to delete one:hundred? This action cannot be undone.",
+			result: true,
+		});
+		mockDeleteImage(expect, REGISTRY);
+		await runWrangler("containers images delete one:hundred");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Deleted one:hundred (some-digest)"
+		`);
+	});
+
+	it("should cancel deletion when user declines", async ({ expect }) => {
+		setIsTTY(true);
+		setWranglerConfig({});
+		mockConfirm({
+			text: "Are you sure you want to delete one:hundred? This action cannot be undone.",
+			result: false,
+		});
+		await runWrangler("containers images delete one:hundred");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(cliStd.stdout).toContain("The operation has been cancelled");
+	});
+
+	it("should skip confirmation with --skip-confirmation flag", async ({
+		expect,
+	}) => {
+		setIsTTY(true);
+		setWranglerConfig({});
+		mockDeleteImage(expect, REGISTRY);
+		await runWrangler(
+			"containers images delete one:hundred --skip-confirmation"
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Deleted one:hundred (some-digest)"
+		`);
+	});
+
+	it("should skip confirmation with -y flag", async ({ expect }) => {
+		setIsTTY(true);
+		setWranglerConfig({});
+		mockDeleteImage(expect, REGISTRY);
+		await runWrangler("containers images delete one:hundred -y");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Deleted one:hundred (some-digest)"
+		`);
+	});
 });
+
+function mockDeleteImage(expect: ExpectStatic, registry: string) {
+	msw.use(
+		http.post("*/registries/:domain/credentials", async ({ params }) => {
+			expect(params.domain).toEqual(registry);
+			return HttpResponse.json(
+				wrapV4Response({
+					account_id: "1234",
+					registry_host: registry,
+					username: "foo",
+					password: "bar",
+				})
+			);
+		}),
+		http.head("*/v2/:accountId/:image/manifests/:tag", async ({ params }) => {
+			expect(params.accountId).toEqual("some-account-id");
+			expect(params.image).toEqual("one");
+			expect(params.tag).toEqual("hundred");
+			return new HttpResponse("", {
+				status: 200,
+				headers: { "Docker-Content-Digest": "some-digest" },
+			});
+		}),
+		http.delete("*/v2/:accountId/:image/manifests/:tag", async ({ params }) => {
+			expect(params.accountId).toEqual("some-account-id");
+			expect(params.image).toEqual("one");
+			expect(params.tag).toEqual("hundred");
+			return new HttpResponse("", { status: 200 });
+		}),
+		http.put("*/v2/gc/layers", async () => {
+			return new HttpResponse("", { status: 200 });
+		})
+	);
+}

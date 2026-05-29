@@ -31,16 +31,21 @@ jobs:
     steps:
       - name: Resolve issue number
         id: issue
+        env:
+          EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_ISSUE_NUMBER: ${{ inputs.issue-number }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "number=${{ inputs.issue-number }}" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "number=${INPUT_ISSUE_NUMBER}" >> "$GITHUB_OUTPUT"
           else
-            echo "number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+            echo "number=${EVENT_ISSUE_NUMBER}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Checkout (sparse — just the skill and opencode config)
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          persist-credentials: false
           sparse-checkout: |
             .github/skills
             .github/opencode.json
@@ -53,24 +58,24 @@ jobs:
       - name: Fetch issue data
         env:
           GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ steps.issue.outputs.number }}
+          REPO: ${{ github.repository }}
         run: |
-          ISSUE=${{ steps.issue.outputs.number }}
-          mkdir -p data/${ISSUE}
+          mkdir -p "data/${ISSUE}"
 
-          gh issue view ${ISSUE} \
-            --repo ${{ github.repository }} \
+          gh issue view "$ISSUE" \
+            --repo "$REPO" \
             --json number,title,body,comments,createdAt,updatedAt,labels,state,author \
-            > data/${ISSUE}/context.json
+            > "data/${ISSUE}/context.json"
 
       - name: Analyze issue with OpenCode
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_AI_GATEWAY_ACCOUNT_ID }}
           CLOUDFLARE_GATEWAY_ID: ${{ secrets.CF_AI_GATEWAY_NAME }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_AI_GATEWAY_TOKEN }}
+          ISSUE: ${{ steps.issue.outputs.number }}
+          REPO: ${{ github.repository }}
         run: |
-          ISSUE=${{ steps.issue.outputs.number }}
-          REPO=${{ github.repository }}
-
           opencode run \
             --print-logs \
             "Analyze GitHub issue ${REPO}#${ISSUE} using the skill at .github/skills/issue-review.md.
@@ -88,9 +93,9 @@ jobs:
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF1_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF1_ACCESS_CLIENT_SECRET }}
           DASHBOARD_URL: ${{ secrets.REPORTS_DASHBOARD_URL }}
+          ISSUE: ${{ steps.issue.outputs.number }}
+          REPO: ${{ github.repository }}
         run: |
-          ISSUE=${{ steps.issue.outputs.number }}
-
           # Check files were created
           if [ ! -f "data/${ISSUE}/report.md" ]; then
             echo "::error::report.md was not generated"
@@ -114,7 +119,7 @@ jobs:
           # Build JSON payload
           PAYLOAD=$(jq -n \
             --arg title "$TITLE" \
-            --arg githubUrl "https://github.com/${{ github.repository }}/issues/${ISSUE}" \
+            --arg githubUrl "https://github.com/${REPO}/issues/${ISSUE}" \
             --arg recommendation "$RECOMMENDATION" \
             --arg difficulty "$DIFFICULTY" \
             --arg reasoning "$REASONING" \

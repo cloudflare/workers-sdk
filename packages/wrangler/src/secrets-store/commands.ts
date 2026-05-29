@@ -425,6 +425,8 @@ export const secretsStoreSecretCreateCommand = createCommand({
 			});
 		}
 
+		validateSecretValue(secretValue);
+
 		logger.log(
 			`\n🔐 Creating secret... (Name: ${args.name}, Value: REDACTED, Scopes: ${args.scopes}, Comment: ${args.comment})`
 		);
@@ -554,6 +556,10 @@ export const secretsStoreSecretUpdateCommand = createCommand({
 				"Need to pass in a new field using `--value`, `--scopes`, or `--comment` to update a secret.",
 				{ telemetryMessage: "secrets store secret update missing field" }
 			);
+		}
+
+		if (secretValue) {
+			validateSecretValue(secretValue);
 		}
 
 		logger.log(`🔐 Updating secret... (ID: ${args.secretId})`);
@@ -768,6 +774,18 @@ export const validateSecretName = (name: string) => {
 		throw new UserError(
 			"Secret name may only contain alphanumeric characters, underscores, or dashes.",
 			{ telemetryMessage: "secrets store secret invalid name" }
+		);
+	}
+};
+
+export const MAX_SECRET_VALUE_BYTES = 64 * 1024;
+
+export const validateSecretValue = (value: string) => {
+	const byteLength = Buffer.byteLength(value, "utf8");
+	if (byteLength > MAX_SECRET_VALUE_BYTES) {
+		throw new UserError(
+			`Secret value cannot exceed ${MAX_SECRET_VALUE_BYTES} bytes (got ${byteLength}). The Cloudflare API rejects longer values, and a binding to such a secret will fail at deploy time.`,
+			{ telemetryMessage: "secrets store secret value too long" }
 		);
 	}
 };

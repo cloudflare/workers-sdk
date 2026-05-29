@@ -1,3 +1,4 @@
+import { cancel } from "@cloudflare/cli-shared-helpers";
 import {
 	getCloudflareContainerRegistry,
 	ImageRegistriesService,
@@ -8,6 +9,7 @@ import {
 	promiseSpinner,
 } from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../core/create-command";
+import { confirm } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getOrSelectAccountId } from "../user";
@@ -73,6 +75,12 @@ export const containersImagesDeleteCommand = createCommand({
 			description: "Image and tag to delete, of the form IMAGE:TAG",
 			demandOption: true,
 		},
+		"skip-confirmation": {
+			type: "boolean",
+			description: "Skip confirmation prompt for deleting an image",
+			alias: "y",
+			default: false,
+		},
 	},
 	positionalArgs: ["image"],
 	async handler(args, { config }) {
@@ -84,11 +92,21 @@ export const containersImagesDeleteCommand = createCommand({
 // --- Handler functions ---
 
 async function handleDeleteImageCommand(
-	args: { image: string },
+	args: { image: string; skipConfirmation: boolean },
 	config: Config
 ) {
 	if (!args.image.includes(":")) {
 		throw new Error("Invalid image format. Expected IMAGE:TAG");
+	}
+
+	if (!args.skipConfirmation) {
+		const yes = await confirm(
+			`Are you sure you want to delete ${args.image}? This action cannot be undone.`
+		);
+		if (!yes) {
+			cancel("The operation has been cancelled");
+			return;
+		}
 	}
 
 	const digest = await promiseSpinner(
