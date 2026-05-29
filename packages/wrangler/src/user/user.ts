@@ -1447,7 +1447,7 @@ export function requireApiToken(): ApiCredentials {
 			telemetryMessage: "user auth missing api token",
 		});
 	}
-	if ("apiToken" in credentials && /[^\x00-\x7F]/.test(credentials.apiToken)) {
+	if ("apiToken" in credentials && /[-￿]/.test(credentials.apiToken)) {
 		throw new UserError(
 			"Your API token contains invalid characters (non-ASCII). " +
 				"Run `wrangler login` to re-authenticate, or check that CLOUDFLARE_API_TOKEN is set correctly.",
