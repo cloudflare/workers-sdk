@@ -373,6 +373,8 @@ const DefaultScopes = {
 	"ai-search:write": "See and change AI Search data",
 	"ai-search:run": "Run search queries on your AI Search instances",
 	"websearch.run": "Run search queries against Cloudflare Web Search",
+	"agent-memory:write":
+		"See and change Agent Memory data such as keys and namespaces.",
 	"queues:write": "See and change Cloudflare Queues settings and data",
 	"pipelines:write":
 		"See and change Cloudflare Pipelines configurations and data",
