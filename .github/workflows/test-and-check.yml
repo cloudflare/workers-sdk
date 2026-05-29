@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # We run `playwright install` manually instead
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
 jobs:
   add-to-project:
     if: github.head_ref != 'changeset-release/main'
