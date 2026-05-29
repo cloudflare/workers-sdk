@@ -3,8 +3,11 @@ import {
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it } from "vitest";
+import { http, HttpResponse } from "msw";
+import { beforeEach, describe, it } from "vitest";
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 
 describe("triggers deploy", () => {
@@ -135,6 +138,123 @@ describe("triggers deploy", () => {
 			'Using redirected Wrangler configuration.\n - Configuration being used: "dist/wrangler.json"'
 		);
 		expect(std.out).toContain("--dry-run: no changes will be made.");
+	});
+
+	describe("--show-diff", () => {
+		mockAccountId();
+		mockApiToken();
+
+		beforeEach(() => {
+			writeWranglerConfig({
+				name: "test-worker",
+				workers_dev: false,
+				preview_urls: false,
+			});
+			msw.use(
+				http.get(
+					"*/workers/services/test-worker/environments/production/routes",
+					() => HttpResponse.json(createFetchResult([]))
+				),
+				http.get("*/workers/domains/records", () =>
+					HttpResponse.json(createFetchResult([]))
+				),
+				http.get("*/workers/workers/test-worker", () =>
+					HttpResponse.json(
+						createFetchResult({
+							subdomain: { enabled: false, previews_enabled: false },
+						})
+					)
+				),
+				http.get("*/workers/scripts/test-worker/schedules", () =>
+					HttpResponse.json(createFetchResult({ schedules: [] }))
+				)
+			);
+		});
+
+		it("authenticates a diff-only dry run and does not deploy", async ({
+			expect,
+		}) => {
+			let requests = 0;
+			msw.use(
+				http.get("*/workers/scripts/test-worker/schedules", ({ request }) => {
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer some-api-token"
+					);
+					requests++;
+					return HttpResponse.json(
+						createFetchResult({ schedules: [{ cron: "0 0 * * *" }] })
+					);
+				})
+			);
+
+			await runWrangler(
+				"triggers deploy --dry-run --show-diff --triggers '5 0 * * *'"
+			);
+
+			expect(requests).toBe(1);
+			expect(std.out).toContain("Trigger changes (remote → local):");
+			expect(std.out).toContain('-    "0 0 * * *"');
+			expect(std.out).toContain('+    "5 0 * * *"');
+			expect(std.out).toContain("--dry-run: exiting now.");
+		});
+
+		it("reports an unchanged configuration", async ({ expect }) => {
+			await runWrangler("triggers deploy --dry-run --show-diff");
+
+			expect(std.out).toContain("No trigger changes detected.");
+			expect(std.out).toContain("--dry-run: exiting now.");
+		});
+
+		it.for([7, 6])(
+			"compares all pages of custom domains with %i local domains",
+			async (localCount, { expect }) => {
+				const domains = Array.from({ length: 7 }, (_, index) => ({
+					hostname: `domain${index}.example.com`,
+					zone_id: "example-com-id",
+					zone_name: "example.com",
+					enabled: true,
+					previews_enabled: false,
+				}));
+				writeWranglerConfig({
+					name: "test-worker",
+					workers_dev: false,
+					preview_urls: false,
+					routes: domains.slice(0, localCount).map(({ hostname }) => ({
+						pattern: hostname,
+						custom_domain: true,
+					})),
+				});
+				const pages: number[] = [];
+				msw.use(
+					http.get("*/workers/domains/records", ({ request }) => {
+						const searchParams = new URL(request.url).searchParams;
+						expect(searchParams.get("service")).toBe("test-worker");
+						expect(searchParams.get("environment")).toBe("production");
+						const page = Number(searchParams.get("page"));
+						pages.push(page);
+						return HttpResponse.json(
+							createFetchResult(
+								domains.slice((page - 1) * 5, page * 5),
+								true,
+								[],
+								[],
+								{ page, per_page: 5, total_count: domains.length }
+							)
+						);
+					})
+				);
+
+				await runWrangler("triggers deploy --dry-run --show-diff");
+
+				expect(pages).toEqual([1, 2]);
+				if (localCount === domains.length) {
+					expect(std.out).toContain("No trigger changes detected.");
+				} else {
+					expect(std.out).toContain("Trigger changes (remote → local):");
+					expect(std.out).toContain("domain6.example.com");
+				}
+			}
+		);
 	});
 
 	describe("--zone and --zone-id flags", () => {

@@ -205,6 +205,7 @@ export type TriggerProps = {
 	routes: Route[];
 	firstDeploy: boolean;
 	dryRun: boolean;
+	showDiff?: boolean;
 	validated: boolean;
 	queueCreateCommand: (queueName: string) => string;
 	workersDevConfigFieldName: string;
