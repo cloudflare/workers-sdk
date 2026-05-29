@@ -1055,6 +1055,26 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Cloudflare Web Search binding. There is exactly one shared web corpus, so the
+	 * binding is zero-config -- only the variable name is required, declared as a
+	 * single object (not an array).
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	web_search:
+		| {
+				/** The binding name used to refer to Web Search in the Worker. */
+				binding: string;
+				/** Whether the Web Search binding should be remote or not in local development */
+				remote?: boolean;
+		  }
+		| undefined;
+
+	/**
 	 * Specifies Hyperdrive configs that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

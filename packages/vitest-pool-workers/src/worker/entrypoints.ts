@@ -80,17 +80,17 @@ function createProxyPrototypeClass<
 
 /**
  * Only properties and methods declared on the prototype can be accessed over
- * RPC. This function gets a property from the prototype if it's defined, and
- * throws a helpful error message if not. Note we need to distinguish between a
- * property that returns `undefined` and something not being defined at all.
+ * RPC. This function throws a helpful error message if a property isn't
+ * defined. Note we need to distinguish between a property that returns
+ * `undefined` and something not being defined at all.
  */
-function getRPCProperty(
+function assertRPCPropertyAccessible(
 	ctor: WorkerEntrypointConstructor | DurableObjectConstructor,
 	instance:
 		| WorkerEntrypoint<Record<string, unknown> | Cloudflare.Env>
 		| DurableObjectClass<Record<string, unknown> | Cloudflare.Env>,
 	key: string
-): unknown {
+): void {
 	const prototypeHasKey = Reflect.has(ctor.prototype, key);
 	if (!prototypeHasKey) {
 		const quotedKey = JSON.stringify(key);
@@ -108,7 +108,16 @@ function getRPCProperty(
 		}
 		throw new TypeError(message);
 	}
+}
 
+function getRPCProperty(
+	ctor: WorkerEntrypointConstructor | DurableObjectConstructor,
+	instance:
+		| WorkerEntrypoint<Record<string, unknown> | Cloudflare.Env>
+		| DurableObjectClass<Record<string, unknown> | Cloudflare.Env>,
+	key: string
+): unknown {
+	assertRPCPropertyAccessible(ctor, instance, key);
 	// `receiver` is the value of `this` provided if a getter is encountered
 	return Reflect.get(/* target */ ctor.prototype, key, /* receiver */ instance);
 }
@@ -434,7 +443,15 @@ async function getDurableObjectRPCProperty(
 		const message = `Expected ${className} exported by ${mainPath} be a subclass of \`DurableObject\` for RPC`;
 		throw new TypeError(message);
 	}
-	const value = getRPCProperty(instanceCtor, instance, key);
+	assertRPCPropertyAccessible(instanceCtor, instance, key);
+	// `workerd` rejects constructor-assigned overrides of RPC methods, but a
+	// constructor may return a Proxy that wraps a method from its prototype.
+	if (Object.hasOwn(instance, key)) {
+		throw new TypeError(
+			`The RPC receiver does not implement the method ${JSON.stringify(key)}.`
+		);
+	}
+	const value = Reflect.get(instance, key, instance);
 	if (typeof value === "function") {
 		// If this is a function, ensure correctly bound `this`
 		return value.bind(instance);

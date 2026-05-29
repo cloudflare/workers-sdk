@@ -30,4 +30,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Log trigger
-        run: echo "Review event on ${{ github.event.pull_request.html_url }} — privileged rerun will follow."
+        run: echo "Review event on ${PR_URL}, privileged rerun will follow."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
