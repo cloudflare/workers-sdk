@@ -66,6 +66,29 @@ const defaultConfig: ResolvedStepConfig = {
 	timeout: "10 minutes",
 };
 
+/**
+ * Returns a copy of `value` that is safe to persist via Durable Object SQL
+ * storage without dragging unrelated bytes along with typed-array views.
+ *
+ * Background: workerd's `v8::ValueSerializer` writes the entire backing
+ * `ArrayBuffer` for typed-array views, not just `byteLength` bytes. A view
+ * sliced from a much larger buffer (`crypto.getRandomValues`, `arr.slice(...)`,
+ * fetch-stream copies) blows up the wire size by a factor of
+ * (backing-size / view-size) and can hit `SQLITE_TOOBIG` at view sizes well
+ * below the documented 1MiB step-output limit (see issue #14101). Copying the
+ * view's bytes into a tight `ArrayBuffer` before persistence brings local
+ * `wrangler dev` behaviour in line with production. `DataView` is excluded — it
+ * has different semantics and may legitimately need its full backing buffer.
+ */
+function normalizeForStorage(value: unknown): unknown {
+	if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
+		const view = value as ArrayBufferView;
+		return new Uint8Array(view.buffer, view.byteOffset, view.byteLength).slice()
+			.buffer;
+	}
+	return value;
+}
+
 export interface UserErrorField {
 	isUserError?: boolean;
 }
@@ -566,7 +589,13 @@ export class Context extends RpcTarget {
 					activeTimeoutTask?: Promise<never>
 				): Promise<unknown> => {
 					if (!isReadableStreamLike(value)) {
-						await this.#state.storage.put(valueKey, { value });
+						// Top-level typed-array views are normalised to a tight
+						// `ArrayBuffer` so the full backing buffer does not ride
+						// along with the view (issue #14101). The caller still
+						// receives the original `value` below — only the stored
+						// shape changes.
+						const stored = normalizeForStorage(value);
+						await this.#state.storage.put(valueKey, { value: stored });
 						abortController.abort("step finished");
 						// @ts-expect-error priorityQueue is initiated in init
 						this.#engine.priorityQueue.remove({

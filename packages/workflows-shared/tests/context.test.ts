@@ -1234,3 +1234,172 @@ describe("Context - ReadableStream step outputs", () => {
 		});
 	});
 });
+
+describe("Context - typed-array step outputs (issue #14101)", () => {
+	it("should persist a 200KB Uint8Array step output on a tight backing buffer", async ({
+		expect,
+	}) => {
+		// Baseline: a 200KB view sized exactly to its backing buffer must
+		// succeed. This case worked on `main` too — anchors the regression test
+		// suite to "small enough to fit, regardless of normalisation".
+		const engineStub = await runWorkflow(
+			"UINT8-TIGHT-200K",
+			async (_event, step) => {
+				return await step.do("emit-tight-bytes", async () => {
+					return new Uint8Array(200_000);
+				});
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 10000 }
+		);
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+		).toBe(false);
+	});
+
+	it("should persist a 200KB Uint8Array view sliced from an 800KB backing buffer (regression #14101)", async ({
+		expect,
+	}) => {
+		// The exact reporter's repro: a Uint8Array view sized 200KB but
+		// sliced from a much larger backing ArrayBuffer (800KB here). Prior
+		// to the fix, workerd's v8::ValueSerializer would serialise the
+		// entire 800KB backing buffer along with the view, blowing past the
+		// 1MiB SQL blob limit and surfacing a raw `SQLITE_TOOBIG` error.
+		const engineStub = await runWorkflow(
+			"UINT8-SLICED-200K-OF-800K",
+			async (_event, step) => {
+				return await step.do("emit-sliced-bytes", async () => {
+					const backing = new ArrayBuffer(800_000);
+					return new Uint8Array(backing, 0, 200_000);
+				});
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 10000 }
+		);
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+		).toBe(false);
+	});
+
+	it("should fail with SQLITE_TOOBIG when a step output exceeds the 1MiB limit", async ({
+		expect,
+	}) => {
+		// Beyond the 1MiB step-output limit, the workflow must fail
+		// terminally (documented production behaviour: 1MiB cap).
+		//
+		// Note: the friendly `WorkflowInternalError("Maximum allowed size is
+		// 1MiB.")` at context.ts:768-774 does NOT currently fire for typed-array
+		// outputs because the SQLITE_TOOBIG error surfaces asynchronously from
+		// the workerd DO storage layer, bypassing the awaited try/catch around
+		// `persistStepResult`. The raw `string or blob too big: SQLITE_TOOBIG`
+		// error reaches WORKFLOW_FAILURE instead. This is a secondary issue
+		// noted in #14101 and will be addressed in a follow-up — the contract
+		// validated here is just that oversized outputs terminate the workflow.
+		const engineStub = await runWorkflow(
+			"UINT8-OVERSIZE-2M",
+			async (_event, step) => {
+				return await step.do(
+					"emit-too-many-bytes",
+					{ retries: { limit: 0, delay: 0 } },
+					async () => {
+						return new Uint8Array(2_000_000);
+					}
+				);
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
+				);
+			},
+			{ timeout: 10000 }
+		);
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		const failureMessages = logs.logs
+			.filter((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+			.flatMap((val) => {
+				const meta = val.metadata as Record<string, unknown> | undefined;
+				const err = meta?.error as { message?: string } | string | undefined;
+				if (typeof err === "string") {
+					return [err];
+				}
+				if (err && typeof err === "object" && typeof err.message === "string") {
+					return [err.message];
+				}
+				return [];
+			});
+		expect(failureMessages.length).toBeGreaterThan(0);
+		expect(
+			failureMessages.some(
+				(m) =>
+					m.includes("SQLITE_TOOBIG") ||
+					m.includes("Maximum allowed size is 1MiB")
+			)
+		).toBe(true);
+	});
+
+	it("should return the original Uint8Array to the next step in the live execution path", async ({
+		expect,
+	}) => {
+		// The fix normalises the *persisted* form to ArrayBuffer, but the
+		// live execution path (the value `step.do` returns to the caller)
+		// must be the original Uint8Array — otherwise downstream user code
+		// that branches on `value instanceof Uint8Array` silently breaks.
+		let observedInNext: unknown = "not-seen";
+		const engineStub = await runWorkflow(
+			"UINT8-ROUND-TRIP",
+			async (_event, step) => {
+				const bytes = await step.do("emit-bytes", async () => {
+					return new Uint8Array([1, 2, 3, 4, 5]);
+				});
+				await step.do("read-bytes", async () => {
+					observedInNext = bytes;
+					return "ok";
+				});
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 10000 }
+		);
+
+		expect(observedInNext).toBeInstanceOf(Uint8Array);
+		expect(Array.from(observedInNext as Uint8Array)).toEqual([1, 2, 3, 4, 5]);
+	});
+});
