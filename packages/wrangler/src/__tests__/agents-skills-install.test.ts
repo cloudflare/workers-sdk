@@ -326,9 +326,11 @@ describe("maybeInstallCloudflareSkillsGlobally", () => {
 
 			await maybeInstallCloudflareSkillsGlobally(false);
 
-			expect(std.out).toContain(
+			// Banner must go to stderr (logger.warn) so piped JSON commands are not corrupted
+			expect(std.warn).toContain(
 				"Cloudflare agent skills are available for: Claude Code"
 			);
+			expect(std.out).not.toContain("Cloudflare agent skills are available for:");
 			// Verify no install call was made
 			expect(mockRosieInstall).not.toHaveBeenCalled();
 			expect(sendMetricsEvent).toHaveBeenCalledWith(

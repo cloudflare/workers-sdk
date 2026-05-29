@@ -88,7 +88,7 @@ export async function maybeInstallCloudflareSkillsGlobally(
 
 	// In non-interactive terminals (but not CI), log a message
 	if (!force && !isInteractive()) {
-		logger.log(
+		logger.warn(
 			`Cloudflare agent skills are available for: ${detectedAgents.map(({ name }) => name).join(", ")}. Run wrangler in an interactive terminal to install them, or use \`--install-skills\` to install without prompting.`
 		);
 		sendResultMetricsEvent({
