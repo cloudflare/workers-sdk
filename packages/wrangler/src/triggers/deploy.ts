@@ -17,9 +17,12 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
+import { diffJsonObjects } from "../utils/diff-json";
+import { fetchWorkerConfig } from "../utils/download-worker-config";
 import { retryOnAPIFailure } from "../utils/retry";
 import { getZoneForRoute } from "../zones";
 import type { RouteObject } from "../deploy/deploy";
+import type { JsonLike } from "../utils/diff-json";
 import type { AssetsOptions, Config, Route } from "@cloudflare/workers-utils";
 
 type Props = {
@@ -31,6 +34,7 @@ type Props = {
 	routes: Route[] | undefined;
 	useServiceEnvironments: boolean | undefined;
 	dryRun: boolean | undefined;
+	showDiff?: boolean | undefined;
 	assetsOptions: AssetsOptions | undefined;
 	firstDeploy: boolean;
 };
@@ -83,7 +87,7 @@ export default async function triggersDeploy(
 		await ensureQueuesExistByConfig(config);
 	}
 
-	if (props.dryRun) {
+	if (props.dryRun && !props.showDiff) {
 		logger.log(`--dry-run: exiting now.`);
 		return;
 	}
@@ -92,6 +96,33 @@ export default async function triggersDeploy(
 		throw new UserError("Missing accountId", {
 			telemetryMessage: "triggers deploy missing account id",
 		});
+	}
+
+	// When --show-diff is set, fetch remote trigger config before deploying so we
+	// can compare the pre-deployment state against the local configuration.
+	let remoteTriggersSnapshot: Record<string, JsonLike> | undefined;
+	if (props.showDiff) {
+		remoteTriggersSnapshot = await fetchRemoteTriggers(
+			accountId,
+			scriptName,
+			envName
+		);
+	}
+
+	if (props.dryRun) {
+		// --dry-run --show-diff: show what would change, then exit
+		displayTriggerDiff(
+			remoteTriggersSnapshot,
+			buildLocalTriggers(
+				config,
+				routes,
+				routesOnly,
+				customDomainsOnly,
+				schedules
+			)
+		);
+		logger.log(`--dry-run: exiting now.`);
+		return;
 	}
 
 	const uploadMs = Date.now() - start;
@@ -374,6 +405,19 @@ export default async function triggersDeploy(
 		);
 	}
 
+	if (props.showDiff) {
+		displayTriggerDiff(
+			remoteTriggersSnapshot,
+			buildLocalTriggers(
+				config,
+				routes,
+				routesOnly,
+				customDomainsOnly,
+				schedules
+			)
+		);
+	}
+
 	return targets;
 }
 
@@ -635,4 +679,155 @@ function isWorkflowDefinedInThisScript(
 	return (
 		workflow.script_name === undefined || workflow.script_name === scriptName
 	);
+}
+
+/**
+ * Normalizes a route to a comparable shape, stripping internal-only fields
+ * like `id`, `script`, `cert_id`, etc.
+ */
+function normalizeRoute(route: Route): Record<string, JsonLike> {
+	if (typeof route === "string") {
+		return { pattern: route };
+	}
+	const normalized: Record<string, JsonLike> = { pattern: route.pattern };
+	if ("zone_name" in route && route.zone_name) {
+		normalized.zone_name = route.zone_name;
+	}
+	if ("zone_id" in route && route.zone_id) {
+		normalized.zone_id = route.zone_id;
+	}
+	if (route.custom_domain) {
+		normalized.custom_domain = true;
+	}
+	return normalized;
+}
+
+/**
+ * Builds a normalized triggers object from the local configuration, suitable
+ * for diffing against the remote triggers.
+ */
+function buildLocalTriggers(
+	config: Config,
+	_allRoutes: Route[],
+	routesOnly: Route[],
+	customDomainsOnly: RouteObject[],
+	schedules: string[] | undefined
+): Record<string, JsonLike> {
+	const { workers_dev, preview_urls } = getSubdomainValuesAPIMock(
+		config.workers_dev,
+		config.preview_urls,
+		_allRoutes
+	);
+
+	const triggers: Record<string, JsonLike> = {
+		workers_dev,
+		preview_urls,
+	};
+
+	const normalizedRoutes = routesOnly
+		.map(normalizeRoute)
+		.sort((a, b) =>
+			String(a.pattern ?? "").localeCompare(String(b.pattern ?? ""))
+		);
+
+	if (normalizedRoutes.length > 0) {
+		triggers.routes = normalizedRoutes as JsonLike;
+	}
+
+	const normalizedCustomDomains = customDomainsOnly
+		.map((r) => normalizeRoute(r as Route))
+		.sort((a, b) =>
+			String(a.pattern ?? "").localeCompare(String(b.pattern ?? ""))
+		);
+	if (normalizedCustomDomains.length > 0) {
+		triggers.custom_domains = normalizedCustomDomains as JsonLike;
+	}
+
+	if (schedules && schedules.length > 0) {
+		triggers.crons = [...schedules].sort() as JsonLike;
+	}
+
+	return triggers;
+}
+
+/**
+ * Fetches the remote trigger configuration (routes, custom domains, crons,
+ * subdomain status) and returns a normalized object for diffing.
+ */
+async function fetchRemoteTriggers(
+	accountId: string,
+	workerName: string,
+	environment: string
+): Promise<Record<string, JsonLike>> {
+	const { routes, customDomains, subdomainStatus, cronTriggers } =
+		await fetchWorkerConfig(accountId, workerName, environment);
+
+	const triggers: Record<string, JsonLike> = {
+		workers_dev: subdomainStatus.enabled,
+		preview_urls: subdomainStatus.previews_enabled,
+	};
+
+	const normalizedRoutes = routes
+		.map((r) => {
+			const normalized: Record<string, JsonLike> = { pattern: r.pattern };
+			if (r.zone_name) {
+				normalized.zone_name = r.zone_name;
+			}
+			return normalized;
+		})
+		.sort((a, b) =>
+			String(a.pattern ?? "").localeCompare(String(b.pattern ?? ""))
+		);
+	if (normalizedRoutes.length > 0) {
+		triggers.routes = normalizedRoutes as JsonLike;
+	}
+
+	const normalizedCustomDomains = customDomains
+		.map((c) => {
+			const normalized: Record<string, JsonLike> = {
+				pattern: c.hostname,
+			};
+			if (c.zone_name) {
+				normalized.zone_name = c.zone_name;
+			}
+			normalized.custom_domain = true;
+			return normalized;
+		})
+		.sort((a, b) =>
+			String(a.pattern ?? "").localeCompare(String(b.pattern ?? ""))
+		);
+	if (normalizedCustomDomains.length > 0) {
+		triggers.custom_domains = normalizedCustomDomains as JsonLike;
+	}
+
+	const crons = cronTriggers.schedules.map((s) => s.cron).sort();
+	if (crons.length > 0) {
+		triggers.crons = crons as JsonLike;
+	}
+
+	return triggers;
+}
+
+/**
+ * Computes and displays a diff between the remote and local trigger
+ * configurations.
+ */
+function displayTriggerDiff(
+	remoteTriggers: Record<string, JsonLike> | undefined,
+	localTriggers: Record<string, JsonLike>
+): void {
+	if (!remoteTriggers) {
+		return;
+	}
+
+	const diff = diffJsonObjects(remoteTriggers, localTriggers);
+
+	logger.log("");
+	if (diff) {
+		logger.log(
+			`Trigger changes (remote ${chalk.red("\u2192")} local):\n${diff}`
+		);
+	} else {
+		logger.log("No trigger changes detected.");
+	}
 }
