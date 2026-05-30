@@ -122,7 +122,9 @@ jobs:
       fail-fast: false
       matrix:
         experimental: [false]
-        os: [{ name: ubuntu-latest, description: Linux }]
+        os:
+          - { name: ubuntu-latest, description: Linux }
+          - { name: macos-latest, description: macOS }
         pm:
           - { name: pnpm, version: "10.33.0" }
           - { name: npm, version: "0.0.0" }
