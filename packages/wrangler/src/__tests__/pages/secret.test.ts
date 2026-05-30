@@ -23,6 +23,12 @@ import type { PagesConfigCache } from "../../pages/types";
 import type { Interface } from "node:readline";
 import type { ExpectStatic } from "vitest";
 
+function mockReadlineInput(input: string) {
+	vi.spyOn(readline, "createInterface").mockImplementation(
+		() => input.split(/\r?\n/) as unknown as Interface
+	);
+}
+
 describe("wrangler pages secret", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -561,13 +567,11 @@ describe("wrangler pages secret", () => {
 		});
 
 		it("should use secret bulk w/ pipe input", async ({ expect }) => {
-			vi.spyOn(readline, "createInterface").mockImplementation(
-				() =>
-					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
-					JSON.stringify({
-						secret1: "secret-value",
-						password: "hunter2",
-					}) as unknown as Interface
+			mockReadlineInput(
+				JSON.stringify({
+					secret1: "secret-value",
+					password: "hunter2",
+				})
 			);
 
 			mockProjectRequests(expect, [
