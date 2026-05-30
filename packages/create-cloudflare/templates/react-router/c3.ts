@@ -5,6 +5,7 @@ import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { readJSON, removeFile, writeJSON } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
+import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context, PackageJson } from "types";
 
@@ -25,6 +26,17 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
+	// `npmInstall` has already run by this point with the upstream default
+	// template's `package.json`, which doesn't include `@cloudflare/vite-plugin`.
+	// Our overlaid `vite.config.ts` imports it, so install it now (this also
+	// adds it to `package.json`). `wrangler` is installed separately by
+	// `installWrangler()` in the main configure flow before this runs.
+	await installPackages(["@cloudflare/vite-plugin"], {
+		dev: true,
+		startText: "Installing the Cloudflare Vite plugin",
+		doneText: `${brandColor("installed")} ${dim("@cloudflare/vite-plugin")}`,
+	});
+
 	// The upstream default template targets a generic Node.js/Docker deployment.
 	// Remove artifacts that don't apply to a Cloudflare Workers project.
 	const s = spinner();
@@ -60,8 +72,6 @@ const config: TemplateConfig = {
 		},
 		devDependencies: {
 			"@react-router/dev": "^7.10.0",
-			"@cloudflare/vite-plugin": "^1.29.1",
-			wrangler: "^4.75.0",
 		},
 		scripts: {
 			deploy: `${npm} run build && wrangler deploy`,
