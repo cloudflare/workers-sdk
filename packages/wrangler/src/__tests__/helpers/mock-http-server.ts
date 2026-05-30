@@ -19,6 +19,11 @@ export function mockHttpServer() {
 					callback?.();
 					return this;
 				},
+				// The OAuth callback server registers an `error` listener so it
+				// can surface `EADDRINUSE` cleanly. The mock server never emits
+				// errors, so these are no-ops.
+				on: vi.fn().mockReturnThis(),
+				once: vi.fn().mockReturnThis(),
 			} as unknown as http.Server;
 		});
 	});

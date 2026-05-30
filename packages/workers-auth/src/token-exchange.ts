@@ -289,7 +289,13 @@ export async function fetchAuthToken(
 	const headers: Record<string, string> = {
 		"Content-Type": "application/x-www-form-urlencoded",
 	};
-	logger.debug("fetching auth token", body.toString());
+	// Only log the grant_type — never serialize the full body, which contains
+	// the refresh token / auth code / code verifier. If debug logging is
+	// enabled and logs are persisted, the full body would leak credentials.
+	logger.debug(
+		"fetching auth token",
+		`grant_type=${body.get("grant_type") ?? "<unknown>"}`
+	);
 	if (await domainUsesAccess(getAuthDomainFromEnv(), logger)) {
 		logger.debug(
 			"Using Cloudflare Access to get an access token for the auth request"

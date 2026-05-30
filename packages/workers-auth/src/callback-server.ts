@@ -135,17 +135,27 @@ export async function getOauthToken(
 						);
 						return;
 					} else {
-						const exchange = await exchangeAuthCodeForAccessToken(
-							state,
-							ctx.logger
-						);
-						res.writeHead(307, {
-							Location: options.granted.url,
-						});
-						res.end(() => {
-							finish(exchange);
-						});
-
+						// `exchangeAuthCodeForAccessToken` can reject (network error,
+						// invalid JSON, OAuth error response, etc.). Without this
+						// `try/catch` the rejection would become an unhandled promise
+						// rejection inside an `http.createServer` callback, which is
+						// not promise-aware — Node.js >= 15 terminates the process on
+						// unhandled rejection by default. Route the error through
+						// `finish` so the caller's promise rejects cleanly.
+						try {
+							const exchange = await exchangeAuthCodeForAccessToken(
+								state,
+								ctx.logger
+							);
+							res.writeHead(307, {
+								Location: options.granted.url,
+							});
+							res.end(() => {
+								finish(exchange);
+							});
+						} catch (err) {
+							finish(null, err as Error);
+						}
 						return;
 					}
 				}
@@ -161,6 +171,22 @@ export async function getOauthToken(
 					"If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly."
 			);
 		}
+		// Surface a clear error when the port is already in use (or any other
+		// `server.listen` failure) rather than crashing with an unhelpful
+		// stack trace from an unhandled 'error' event.
+		server.once("error", (err: NodeJS.ErrnoException) => {
+			clearTimeout(loginTimeoutHandle);
+			if (err.code === "EADDRINUSE") {
+				reject(
+					new UserError(
+						`The OAuth callback server could not bind to ${options.callbackHost}:${options.callbackPort} because the port is already in use. Stop the process using that port or pass a different \`--callback-port\`.`,
+						{ telemetryMessage: "user oauth callback port in use" }
+					)
+				);
+			} else {
+				reject(err);
+			}
+		});
 		server.listen(options.callbackPort, options.callbackHost);
 	});
 	if (options.browser) {

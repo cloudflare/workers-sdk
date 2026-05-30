@@ -189,9 +189,10 @@ export async function getCloudflareAccessHeaders(options?: {
 
 	// If the environment variable is defined, go ahead and use it.
 	if (cfAuthToken !== undefined) {
+		// Don't include the token value in the log — if debug logging is enabled
+		// and logs are persisted, the raw token would leak as a credential.
 		options?.logger?.debug(
-			"Using WRANGLER_CF_AUTHORIZATION_TOKEN from environment",
-			cfAuthToken
+			"Using WRANGLER_CF_AUTHORIZATION_TOKEN from environment"
 		);
 		return { Cookie: `CF_Authorization=${cfAuthToken}` };
 	}
