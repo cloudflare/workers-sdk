@@ -35,10 +35,6 @@ export const EXTERNAL_DEPENDENCIES = [
 
 	// workerd contains a native binary, so must be external. Wrangler depends on a pinned version.
 	"workerd",
-
-	// rosie-skills contains inlined WASM that is loaded at runtime via import.meta.url-relative
-	// path resolution, so it cannot be bundled.
-	"rosie-skills",
 ];
 
 /**
