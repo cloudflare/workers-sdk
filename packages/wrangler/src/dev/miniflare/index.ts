@@ -126,14 +126,14 @@ export class WranglerLog extends Log {
 				return;
 			}
 			this.#warnedCompatibilityDateFallback = true;
-			return void updateCheck().then((maybeNewVersion) => {
-				if (maybeNewVersion === undefined) {
+			return void updateCheck().then((result) => {
+				if (result.status !== "update-available") {
 					return;
 				}
 				message += [
 					"",
 					"Features enabled by your requested compatibility date may not be available.",
-					`Upgrade to \`wrangler@${maybeNewVersion}\` to remove this warning.`,
+					`Upgrade to \`wrangler@${result.latest}\` to remove this warning.`,
 				].join("\n");
 				super.warn(message);
 			});
@@ -423,6 +423,8 @@ type WorkerOptionsBindings = Pick<
 	| "ai"
 	| "aiSearchNamespaces"
 	| "aiSearchInstances"
+	| "webSearch"
+	| "agentMemory"
 	| "textBlobBindings"
 	| "dataBlobBindings"
 	| "wasmBindings"
@@ -543,6 +545,8 @@ export function buildMiniflareBindingOptions(
 		bindings
 	);
 	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
+	const webSearchBindings = extractBindingsOfType("web_search", bindings);
+	const agentMemoryBindings = extractBindingsOfType("agent_memory", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
 	const browserBindings = extractBindingsOfType("browser", bindings);
@@ -649,6 +653,14 @@ export function buildMiniflareBindingOptions(
 
 	for (const inst of aiSearchInstanceBindings) {
 		warnOrError("ai_search", inst.remote);
+	}
+
+	for (const ws of webSearchBindings) {
+		warnOrError("web_search", ws.remote);
+	}
+
+	for (const memory of agentMemoryBindings) {
+		warnOrError("agent_memory", memory.remote);
 	}
 
 	for (const media of mediaBindings) {
@@ -768,6 +780,25 @@ export function buildMiniflareBindingOptions(
 				inst.binding,
 				{
 					instance_name: inst.instance_name,
+					remoteProxyConnectionString,
+				},
+			])
+		),
+
+		webSearch: Object.fromEntries(
+			webSearchBindings.map((ws) => [
+				ws.binding,
+				{
+					remoteProxyConnectionString,
+				},
+			])
+		),
+
+		agentMemory: Object.fromEntries(
+			agentMemoryBindings.map((memory) => [
+				memory.binding,
+				{
+					namespace: memory.namespace as string,
 					remoteProxyConnectionString,
 				},
 			])

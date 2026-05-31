@@ -13,28 +13,28 @@ jobs:
     name: Add issue to project
     runs-on: ubuntu-slim
     steps:
-      - uses: actions/add-to-project@v0.3.0
+      - uses: actions/add-to-project@a9f041ddd462ed185893ea1024cec954f50dbe42 # v0.3.0
         with:
           project-url: https://github.com/orgs/cloudflare/projects/1
           github-token: ${{ secrets.GH_ACCESS_TOKEN }}
           labeled: bug, enhancement
           label-operator: OR
-      - uses: actions/add-to-project@v0.3.0
+      - uses: actions/add-to-project@a9f041ddd462ed185893ea1024cec954f50dbe42 # v0.3.0
         with:
           project-url: https://github.com/orgs/cloudflare/projects/2
           github-token: ${{ secrets.GH_ACCESS_TOKEN }}
           labeled: pages
-      - uses: actions/add-to-project@v0.3.0
+      - uses: actions/add-to-project@a9f041ddd462ed185893ea1024cec954f50dbe42 # v0.3.0
         with:
           project-url: https://github.com/orgs/cloudflare/projects/6
           github-token: ${{ secrets.GH_ACCESS_TOKEN }}
           labeled: d1
-      - uses: actions/add-to-project@v0.3.0
+      - uses: actions/add-to-project@a9f041ddd462ed185893ea1024cec954f50dbe42 # v0.3.0
         with:
           project-url: https://github.com/orgs/cloudflare/projects/12
           github-token: ${{ secrets.GH_ACCESS_TOKEN }}
           labeled: c3
-      - uses: actions/add-to-project@v0.3.0
+      - uses: actions/add-to-project@a9f041ddd462ed185893ea1024cec954f50dbe42 # v0.3.0
         with:
           project-url: https://github.com/orgs/cloudflare/projects/8
           github-token: ${{ secrets.GH_ACCESS_TOKEN }}

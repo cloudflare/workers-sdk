@@ -77,9 +77,8 @@ export interface Unstable_DevOptions {
 		forceLocal?: boolean;
 		liveReload?: boolean; // Auto reload HTML pages when change is detected in local mode
 		showInteractiveDevSession?: boolean;
-		testMode?: boolean; // This option shouldn't be used - We plan on removing it eventually
 		testScheduled?: boolean; // Test scheduled events by visiting /__scheduled in browser
-		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
+		watch?: boolean; // unstable_dev doesn't support watch-mode yet
 		fileBasedRegistry?: boolean;
 		enableIpc?: boolean;
 		enableContainers?: boolean; // Whether to build and connect to containers in dev mode. Defaults to true.
@@ -110,7 +109,6 @@ export async function unstable_dev(
 		disableDevRegistry: false,
 		disableExperimentalWarning: false,
 		showInteractiveDevSession: false,
-		testMode: true,
 		// Override all options, including overwriting with "undefined"
 		...options?.experimental,
 	};
@@ -125,7 +123,6 @@ export async function unstable_dev(
 		forceLocal,
 		liveReload,
 		showInteractiveDevSession,
-		testMode,
 		testScheduled,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
@@ -153,7 +150,6 @@ export async function unstable_dev(
 		readyResolve = resolve;
 	});
 
-	const defaultLogLevel = testMode ? "warn" : "log";
 	const local = options?.local ?? true;
 
 	const dockerPath = options?.experimental?.dockerPath ?? getDockerPath();
@@ -213,7 +209,7 @@ export async function unstable_dev(
 		minify: undefined,
 		legacyEnv: undefined,
 		...options,
-		logLevel: options?.logLevel ?? defaultLogLevel,
+		logLevel: options?.logLevel,
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
 		experimentalAutoCreate: false,

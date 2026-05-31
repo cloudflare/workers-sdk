@@ -320,6 +320,17 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "web_search": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "web_search", ...x };
+				break;
+			}
+			case "agent_memory": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "agent_memory", ...x };
+				}
+				break;
+			}
 			case "unsafe": {
 				if (pages) {
 					break;
@@ -662,6 +673,17 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				};
 				break;
 			}
+			case "agent_memory": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "agent_memory" }
+				>;
+				output[name] = {
+					type: "agent_memory",
+					namespace: b.namespace,
+				};
+				break;
+			}
 			case "hyperdrive": {
 				const b = binding as Extract<
 					WorkerMetadataBinding,
@@ -722,6 +744,7 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 			case "stream":
 			case "version_metadata":
 			case "media":
+			case "web_search":
 			case "inherit": {
 				// These have the same structure (just type and possibly some flags)
 				const { name: _name, ...rest } = binding;

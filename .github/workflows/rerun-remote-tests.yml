@@ -14,7 +14,7 @@ name: "Rerun Remote Tests"
 # runs code from the default branch — fork authors cannot modify it — and only
 # calls the Actions API (no checkout of untrusted code).
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] label-driven rerun workflow needs actions:write and does not check out or execute PR code
     types: [labeled, unlabeled]
 
 permissions: {}
@@ -31,10 +31,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          LABEL_NAME: ${{ github.event.label.name }}
           REPO: ${{ github.repository }}
         run: |
           # Determine which workflows to re-run based on the label.
-          if [ "${{ github.event.label.name }}" = "run-remote-tests" ]; then
+          if [ "$LABEL_NAME" = "run-remote-tests" ]; then
             WORKFLOWS="e2e-wrangler.yml e2e-vite.yml c3-e2e.yml"
           else
             WORKFLOWS="c3-e2e.yml"

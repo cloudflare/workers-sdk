@@ -131,6 +131,8 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
+	const web_search = extractBindingsOfType("web_search", bindings)[0];
+	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
 		"secrets_store_secret",
@@ -365,6 +367,37 @@ export function createWorkerUploadForm(
 			type: "ai_search",
 			instance_name,
 		});
+	});
+
+	if (web_search !== undefined) {
+		metadataBindings.push({
+			name: web_search.binding,
+			type: "web_search",
+		});
+	}
+
+	agent_memory.forEach(({ binding, namespace }) => {
+		if (options?.dryRun) {
+			namespace ??= INHERIT_SYMBOL;
+		}
+		if (namespace === undefined) {
+			throw new UserError(`${binding} bindings must have a "namespace" field`, {
+				telemetryMessage: false,
+			});
+		}
+
+		if (namespace === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "agent_memory",
+				namespace,
+			});
+		}
 	});
 
 	hyperdrive.forEach(({ binding, id }) => {
