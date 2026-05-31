@@ -18,9 +18,41 @@ import type {
 
 const b = recast.types.builders;
 
+/**
+ * Ensures a future flag property exists in the `future` object expression and is set to `true`.
+ * If the property already exists, its value is set to `true`. Otherwise, a new property is added.
+ *
+ * @param futureObject - The AST `ObjectExpression` node representing the `future` config block.
+ * @param flagName - The name of the future flag to ensure (e.g. `"v8_middleware"`).
+ */
+function ensureFutureFlag(
+	futureObject: recast.types.namedTypes.ObjectExpression,
+	flagName: string
+) {
+	const existingIndex = futureObject.properties.findIndex(
+		(p) =>
+			p.type === "ObjectProperty" &&
+			p.key.type === "Identifier" &&
+			p.key.name === flagName &&
+			p.value.type === "BooleanLiteral"
+	);
+
+	if (existingIndex !== -1) {
+		const prop = futureObject.properties[existingIndex];
+		assert(
+			prop.type === "ObjectProperty" && prop.value.type === "BooleanLiteral"
+		);
+		prop.value.value = true;
+	} else {
+		futureObject.properties.push(
+			b.objectProperty(b.identifier(flagName), b.booleanLiteral(true))
+		);
+	}
+}
+
 function transformReactRouterConfig(
 	projectPath: string,
-	viteEnvironmentKey: ReturnType<typeof configPropertyName>
+	futureFlags: string[]
 ) {
 	const filePathTS = path.join(projectPath, `react-router.config.ts`);
 	const filePathJS = path.join(projectPath, `react-router.config.js`);
@@ -35,6 +67,8 @@ function transformReactRouterConfig(
 		throw new Error("Could not find React Router config file to modify");
 	}
 
+	const flagList = futureFlags.join(", ");
+
 	transformFile(filePath, {
 		/**
 		 * Visit an export default declaration of the form:
@@ -43,13 +77,9 @@ function transformReactRouterConfig(
 		 *     ...
 		 *   }
 		 *
-		 * and add or modify the `future` property to look like:
+		 * and add or modify the `future` property to include the required v8 future flags.
 		 *
-		 *   future: {
-		 *     unstable_viteEnvironmentApi: true // v8_viteEnvironment depending on the React Router version
-		 *   }
-		 *
-		 * For some extra complexity, this also supports TS `as` and `satisfies` expressions
+		 * For some extra complexity, this also supports TS `as` and `satisfies` expressions.
 		 */
 		visitExportDefaultDeclaration(n) {
 			let node: recast.types.namedTypes.ObjectExpression;
@@ -63,61 +93,39 @@ function transformReactRouterConfig(
 				node = n.node.declaration;
 			} else {
 				throw new Error(
-					`Could not parse React Router config file. Please add the following snippet manually:\n  future: {\n    ${viteEnvironmentKey}: true,\n  }`
+					`Could not parse React Router config file. Please add the following snippet manually:\n  future: {\n    ${flagList}: true,\n  }`
 				);
 			}
 
 			assert(node.type === "ObjectExpression");
 
 			// Is there an existing `future` key? If there is, we should modify it rather than creating a new one
-			const futureKey = node.properties.findIndex(
+			const futureKeyIndex = node.properties.findIndex(
 				(p) =>
 					p.type === "ObjectProperty" &&
 					p.key.type === "Identifier" &&
 					p.key.name === "future" &&
 					p.value.type === "ObjectExpression"
 			);
-			if (futureKey !== -1) {
-				const future = node.properties[futureKey];
+			if (futureKeyIndex !== -1) {
+				const future = node.properties[futureKeyIndex];
 				assert(
 					future.type === "ObjectProperty" &&
 						future.value.type === "ObjectExpression"
 				);
 
-				// Does the `future` key already have a property called `unstable_viteEnvironmentApi`?
-				const viteEnvironment = future.value.properties.findIndex(
-					(p) =>
-						p.type === "ObjectProperty" &&
-						p.key.type === "Identifier" &&
-						p.key.name === viteEnvironmentKey &&
-						p.value.type === "BooleanLiteral"
-				);
-
-				// If there's already a unstable_viteEnvironmentApi key, set the value to true
-				if (viteEnvironment !== -1) {
-					const prop = future.value.properties[viteEnvironment];
-					assert(
-						prop.type === "ObjectProperty" &&
-							prop.value.type === "BooleanLiteral"
-					);
-					prop.value.value = true;
-				} else {
-					const prop = b.objectProperty(
-						b.identifier(viteEnvironmentKey),
-						b.booleanLiteral(true)
-					);
-					future.value.properties.push(prop);
+				for (const flag of futureFlags) {
+					ensureFutureFlag(future.value, flag);
 				}
 			} else {
 				node.properties.push(
 					b.objectProperty(
 						b.identifier("future"),
-						b.objectExpression([
-							b.objectProperty(
-								b.identifier(viteEnvironmentKey),
-								b.booleanLiteral(true)
-							),
-						])
+						b.objectExpression(
+							futureFlags.map((flag) =>
+								b.objectProperty(b.identifier(flag), b.booleanLiteral(true))
+							)
+						)
 					)
 				);
 			}
@@ -127,17 +135,49 @@ function transformReactRouterConfig(
 	});
 }
 
-function configPropertyName(reactRouterVersion: string) {
+/**
+ * Returns the list of v8 future flags to enable based on the installed React Router version.
+ *
+ * Version gates:
+ * - < 7.10.0: unstable_viteEnvironmentApi only
+ * - >= 7.10.0: v8_viteEnvironmentApi, v8_splitRouteModules, v8_middleware
+ * - >= 7.15.0: adds v8_passThroughRequests
+ * - >= 7.16.0: adds v8_trailingSlashAwareDataRequests (all 5 stable v8 flags)
+ */
+export function getV8FutureFlags(reactRouterVersion: string): string[] {
 	if (!reactRouterVersion) {
-		return "v8_viteEnvironmentApi";
+		// Default to the full set of flags when version is unknown
+		return [
+			"v8_middleware",
+			"v8_passThroughRequests",
+			"v8_splitRouteModules",
+			"v8_trailingSlashAwareDataRequests",
+			"v8_viteEnvironmentApi",
+		];
 	}
 
 	// version less than 7.10.0
 	if (semiver(reactRouterVersion, "7.10.0") === -1) {
-		return "unstable_viteEnvironmentApi";
-	} else {
-		return "v8_viteEnvironmentApi";
+		return ["unstable_viteEnvironmentApi"];
 	}
+
+	const flags = [
+		"v8_middleware",
+		"v8_splitRouteModules",
+		"v8_viteEnvironmentApi",
+	];
+
+	// v8_passThroughRequests was stabilized in 7.15.0
+	if (semiver(reactRouterVersion, "7.15.0") >= 0) {
+		flags.push("v8_passThroughRequests");
+	}
+
+	// v8_trailingSlashAwareDataRequests was stabilized in 7.16.0
+	if (semiver(reactRouterVersion, "7.16.0") >= 0) {
+		flags.push("v8_trailingSlashAwareDataRequests");
+	}
+
+	return flags.sort();
 }
 
 export class ReactRouter extends Framework {
@@ -147,7 +187,7 @@ export class ReactRouter extends Framework {
 		packageManager,
 		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const viteEnvironmentKey = configPropertyName(this.frameworkVersion);
+		const futureFlags = getV8FutureFlags(this.frameworkVersion);
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,
@@ -162,25 +202,14 @@ export class ReactRouter extends Framework {
 				dedent /* javascript */ `
 					import { createRequestHandler } from "react-router";
 
-					declare module "react-router" {
-						export interface AppLoadContext {
-							cloudflare: {
-								env: Env;
-								ctx: ExecutionContext;
-							};
-						}
-					}
-
 					const requestHandler = createRequestHandler(
 						() => import("virtual:react-router/server-build"),
-						import.meta.env.MODE
+						import.meta.env.MODE,
 					);
 
 					export default {
-						async fetch(request, env, ctx) {
-							return requestHandler(request, {
-								cloudflare: { env, ctx },
-							});
+						async fetch(request) {
+							return requestHandler(request);
 						},
 					} satisfies ExportedHandler<Env>;
 				`
@@ -197,7 +226,7 @@ export class ReactRouter extends Framework {
 				writeFileSync(
 					`app/entry.server.tsx`,
 					dedent /* javascript */ `
-					import type { AppLoadContext, EntryContext } from "react-router";
+					import type { EntryContext } from "react-router";
 					import { ServerRouter } from "react-router";
 					import { isbot } from "isbot";
 					import { renderToReadableStream } from "react-dom/server";
@@ -207,7 +236,6 @@ export class ReactRouter extends Framework {
 						responseStatusCode: number,
 						responseHeaders: Headers,
 						routerContext: EntryContext,
-						_loadContext: AppLoadContext
 					) {
 						let shellRendered = false;
 						const userAgent = request.headers.get("user-agent");
@@ -224,7 +252,7 @@ export class ReactRouter extends Framework {
 										console.error(error);
 									}
 								},
-							}
+							},
 						);
 						shellRendered = true;
 
@@ -253,7 +281,7 @@ export class ReactRouter extends Framework {
 				incompatibleVitePlugins: ["netlifyReactRouter"],
 			});
 
-			transformReactRouterConfig(projectPath, viteEnvironmentKey);
+			transformReactRouterConfig(projectPath, futureFlags);
 		}
 
 		return {
