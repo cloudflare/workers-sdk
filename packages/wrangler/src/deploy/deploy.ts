@@ -82,6 +82,7 @@ import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 import type { PostTypedConsumerBody } from "../queues/client";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
+import type { TriggerDeployment } from "../triggers/deploy";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
 import type {
 	AssetsOptions,
@@ -293,7 +294,7 @@ export async function publishCustomDomains(
 	workerUrl: string,
 	accountId: string,
 	domains: Array<RouteObject>
-): Promise<string[]> {
+): Promise<TriggerDeployment> {
 	const options = {
 		override_scope: true,
 		override_existing_origin: false,
@@ -312,12 +313,16 @@ export async function publishCustomDomains(
 		};
 	});
 
-	const fail = () => {
-		return [
-			domains.length > 1
-				? `Publishing to ${domains.length} Custom Domains was skipped, fix conflicts and try again`
-				: `Publishing to Custom Domain "${domains[0].pattern}" was skipped, fix conflict and try again`,
-		];
+	const fail = (): TriggerDeployment => {
+		return {
+			targets: [],
+			error: new UserError(
+				domains.length > 1
+					? `Publishing to ${domains.length} Custom Domains was skipped, fix conflicts and try again`
+					: `Publishing to Custom Domain "${domains[0].pattern}" was skipped, fix conflict and try again`,
+				{ telemetryMessage: "deploy custom domains skipped" }
+			),
+		};
 	};
 
 	if (!process.stdout.isTTY) {
@@ -392,7 +397,7 @@ Update them to point to this script instead?`;
 		},
 	});
 
-	return domains.map((domain) => renderRoute(domain));
+	return { targets: domains.map((domain) => renderRoute(domain)) };
 }
 
 /**
@@ -1530,9 +1535,9 @@ async function publishRoutesFallback(
 export async function updateQueueConsumers(
 	scriptName: string | undefined,
 	config: Config
-): Promise<Promise<string[]>[]> {
+): Promise<Promise<TriggerDeployment>[]> {
 	const consumers = config.queues.consumers || [];
-	const updateConsumers: Promise<string[]>[] = [];
+	const updateConsumers: Promise<TriggerDeployment>[] = [];
 	for (const consumer of consumers) {
 		const queue = await getQueue(config, consumer.queue);
 
@@ -1568,15 +1573,19 @@ export async function updateQueueConsumers(
 		if (existingConsumer) {
 			updateConsumers.push(
 				putConsumer(config, consumer.queue, scriptName, envName, body).then(
-					() => [`Consumer for ${consumer.queue}`]
+					() => ({ targets: [`Consumer for ${consumer.queue}`] }),
+					(error) => ({ targets: [], error })
 				)
 			);
 			continue;
 		}
 		updateConsumers.push(
-			postConsumer(config, consumer.queue, body).then(() => [
-				`Consumer for ${consumer.queue}`,
-			])
+			postConsumer(config, consumer.queue, body).then(
+				() => ({
+					targets: [`Consumer for ${consumer.queue}`],
+				}),
+				(error) => ({ targets: [], error })
+			)
 		);
 	}
 

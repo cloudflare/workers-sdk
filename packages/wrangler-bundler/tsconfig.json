@@ -1,0 +1,14 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/base.json",
+	"include": ["src/**/*", "bin/**/*"],
+	"exclude": ["dist", "node_modules"],
+	"compilerOptions": {
+		"outDir": "dist",
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"rootDir": ".",
+		"noEmit": false,
+		"declaration": true,
+		"emitDeclarationOnly": true
+	}
+}

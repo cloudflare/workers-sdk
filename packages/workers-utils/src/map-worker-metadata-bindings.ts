@@ -306,6 +306,16 @@ export function mapWorkerMetadataBindings(
 							};
 						}
 						break;
+					case "agent_memory": {
+						configObj.agent_memory = [
+							...(configObj.agent_memory ?? []),
+							{
+								binding: binding.name,
+								namespace: binding.namespace,
+							},
+						];
+						break;
+					}
 					case "hyperdrive":
 						configObj.hyperdrive = [
 							...(configObj.hyperdrive ?? []),

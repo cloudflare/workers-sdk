@@ -462,6 +462,12 @@ const bindingsConfigMock: Omit<
 			instance_name: "cloudflare-blog",
 		},
 	],
+	agent_memory: [
+		{
+			binding: "AGENT_MEMORY_BINDING",
+			namespace: "my-agent",
+		},
+	],
 	hyperdrive: [{ binding: "HYPERDRIVE_BINDING", id: "HYPERDRIVE_ID" }],
 	mtls_certificates: [
 		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },
@@ -789,8 +795,9 @@ describe("generate types - CLI", () => {
 				VPC_SERVICE_BINDING: Fetcher;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
+				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
-				BROWSER_BINDING: Fetcher;
+				BROWSER_BINDING: BrowserRun;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;
@@ -908,8 +915,9 @@ describe("generate types - CLI", () => {
 				VPC_SERVICE_BINDING: Fetcher;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
+				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
-				BROWSER_BINDING: Fetcher;
+				BROWSER_BINDING: BrowserRun;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;
@@ -1090,8 +1098,9 @@ describe("generate types - CLI", () => {
 				VPC_SERVICE_BINDING: Fetcher;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
+				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
-				BROWSER_BINDING: Fetcher;
+				BROWSER_BINDING: BrowserRun;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;

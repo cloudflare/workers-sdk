@@ -2352,6 +2352,26 @@ function collectCoreBindings(
 			}
 		}
 
+		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {
+			if (!agentMemory.binding) {
+				throwMissingBindingError({
+					binding: agentMemory,
+					bindingType: "agent_memory",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(
+				agentMemory.binding,
+				"AgentMemoryNamespace",
+				"agent_memory",
+				envName
+			);
+		}
+
 		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
@@ -2368,7 +2388,7 @@ function collectCoreBindings(
 					fieldName: "binding",
 				});
 			} else {
-				addBinding(env.browser.binding, "Fetcher", "browser", envName);
+				addBinding(env.browser.binding, "BrowserRun", "browser", envName);
 			}
 		}
 
@@ -3353,7 +3373,7 @@ function collectCoreBindingsPerEnvironment(
 				bindings.push({
 					bindingCategory: "browser",
 					name: env.browser.binding,
-					type: "Fetcher",
+					type: "BrowserRun",
 				});
 			}
 		}
@@ -3512,6 +3532,25 @@ function collectCoreBindingsPerEnvironment(
 					type: "WebSearch",
 				});
 			}
+		}
+
+		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {
+			if (!agentMemory.binding) {
+				throwMissingBindingError({
+					binding: agentMemory,
+					bindingType: "agent_memory",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "agent_memory",
+				name: agentMemory.binding,
+				type: "AgentMemoryNamespace",
+			});
 		}
 
 		return bindings;
