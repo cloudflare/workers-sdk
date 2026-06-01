@@ -159,7 +159,7 @@ if (require.main === module) {
 		.then((errors) => {
 			if (errors.length > 0) {
 				console.error(
-					"::error::Dependency pinning checks:" + errors.map((e) => `\n- ${e}`)
+					"::error::Dependency pinning checks:" + errors.map((e) => `\n- ${e}`).join("")
 				);
 			}
 			console.log("::endgroup::");
