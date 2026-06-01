@@ -1,5 +1,23 @@
 # @cloudflare/vite-plugin
 
+## 1.39.1
+
+### Patch Changes
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Filter compatibility date fallback warning when no update is available
+
+  The compatibility date warning from workerd (e.g., "The latest compatibility date supported by the installed Cloudflare Workers Runtime is...") is now only shown when a newer version of `@cloudflare/vite-plugin` is available. This matches the behavior in Wrangler and reduces noise when the user is already on the latest version.
+
+  The update-check logic has been extracted to `@cloudflare/workers-utils` so it can be shared across packages.
+
+- [#14080](https://github.com/cloudflare/workers-sdk/pull/14080) [`ec70cf1`](https://github.com/cloudflare/workers-sdk/commit/ec70cf1e00db7185625d7542b9dc855b9fb28ab2) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix `Tunnel closed` being logged when no tunnel was opened
+
+  Previously, the Vite plugin printed `Tunnel closed` during cleanup even when tunnel startup had never begun. This message is now only shown after tunnel startup begins, including when the tunnel is still starting or has already expired.
+
+- Updated dependencies [[`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`cbb39bd`](https://github.com/cloudflare/workers-sdk/commit/cbb39bdc90d4b93f9a9b4355124570d838eb1a2d), [`cbb39bd`](https://github.com/cloudflare/workers-sdk/commit/cbb39bdc90d4b93f9a9b4355124570d838eb1a2d), [`408432a`](https://github.com/cloudflare/workers-sdk/commit/408432aed493563cb13b9a9c241806112ea606bc), [`1103c07`](https://github.com/cloudflare/workers-sdk/commit/1103c07646569208c4b0a623d123395643e022d5), [`7bb5c7a`](https://github.com/cloudflare/workers-sdk/commit/7bb5c7a78a22320283549a86a29a76146f7252a4), [`5b5cbd3`](https://github.com/cloudflare/workers-sdk/commit/5b5cbd3e98e5713ecf5ee0afa975a1f2ee38b2cc), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`97d7d81`](https://github.com/cloudflare/workers-sdk/commit/97d7d81e0a757e30e7700b183133249e2136a280), [`c647ccc`](https://github.com/cloudflare/workers-sdk/commit/c647ccc7873c2cada60ba5f4ce7c8dfeb4801acc), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`b64b7e4`](https://github.com/cloudflare/workers-sdk/commit/b64b7e4499b940efd74cdc09215620ee0b34a290), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e4c8fd9`](https://github.com/cloudflare/workers-sdk/commit/e4c8fd97a63230fccffe3d2c62185f5350fc5351), [`2dffeeb`](https://github.com/cloudflare/workers-sdk/commit/2dffeeb92d4f0b8a4c2c91f9cca7959d1970638a), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee), [`4c0da7b`](https://github.com/cloudflare/workers-sdk/commit/4c0da7be0d47e6127066dc6edd8a59e536e7c24c), [`972d13d`](https://github.com/cloudflare/workers-sdk/commit/972d13d7054586bb9e3c11e888179d3df7753338), [`13cbadb`](https://github.com/cloudflare/workers-sdk/commit/13cbadbd7ecdd2b7c56b850df1209960a71f7d54), [`59e43e4`](https://github.com/cloudflare/workers-sdk/commit/59e43e4e066f9d201fc6c1e3b31cb232853e83d7)]:
+  - miniflare@4.20260529.0
+  - wrangler@4.96.0
+
 ## 1.39.0
 
 ### Minor Changes
