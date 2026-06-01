@@ -388,11 +388,6 @@ export function throwFetchError(
 	response: FetchResult<unknown>,
 	status: number
 ): never {
-	// TODO: figure out how we can support this from workers-utils
-	// This is an error from within an MSW handler
-	// if (typeof vitest !== "undefined" && !("errors" in response)) {
-	// 	throw response;
-	// }
 	const errors = response.errors ?? [];
 	for (const error of errors) {
 		maybeThrowFriendlyError(error);
