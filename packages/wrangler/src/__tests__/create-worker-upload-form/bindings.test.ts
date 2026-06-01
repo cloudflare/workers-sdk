@@ -300,6 +300,10 @@ describe("createWorkerUploadForm — bindings", () => {
 				type: "ai_search" as const,
 				instance_name: "cloudflare-blog",
 			},
+			{
+				type: "agent_memory" as const,
+				namespace: "my-agent",
+			},
 			{ type: "inherit" as const },
 		])("should pass through $type binding unchanged", (input, { expect }) => {
 			const bindings: StartDevWorkerInput["bindings"] = {
@@ -373,16 +377,59 @@ describe("createWorkerUploadForm — bindings", () => {
 		});
 	});
 
+	describe("agent_memory bindings", () => {
+		it("should include agent_memory binding with namespace", ({ expect }) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				MEMORY: {
+					type: "agent_memory",
+					namespace: "my-agent",
+				},
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "MEMORY",
+				type: "agent_memory",
+				namespace: "my-agent",
+			});
+		});
+
+		it("should throw when agent_memory has no namespace and not in dry run", ({
+			expect,
+		}) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				MEMORY: { type: "agent_memory" } as never,
+			};
+			expect(() =>
+				createWorkerUploadForm(createEsmWorker(), bindings)
+			).toThrowError('MEMORY bindings must have a "namespace" field');
+		});
+
+		it("should convert agent_memory to inherit binding during dry run when namespace is missing", ({
+			expect,
+		}) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				MEMORY: { type: "agent_memory" } as never,
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings, {
+				dryRun: true,
+			});
+			expect(getBindings(form)).toContainEqual({
+				name: "MEMORY",
+				type: "inherit",
+			});
+		});
+	});
+
 	describe("pipeline bindings", () => {
 		it("should transform type from pipeline to pipelines", ({ expect }) => {
 			const bindings: StartDevWorkerInput["bindings"] = {
-				MY_PIPELINE: { type: "pipeline", pipeline: "my-pipeline" },
+				MY_PIPELINE: { type: "pipeline", stream: "my-pipeline" },
 			};
 			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_PIPELINE",
 				type: "pipelines",
-				pipeline: "my-pipeline",
+				stream: "my-pipeline",
 			});
 		});
 	});

@@ -14,6 +14,12 @@ import type { VersionDetails } from "../../../versions/secrets";
 import type { CfPlacement } from "@cloudflare/workers-utils";
 import type { Interface } from "node:readline";
 
+function mockReadlineInput(input: string) {
+	vi.spyOn(readline, "createInterface").mockImplementation(
+		() => input.split(/\r?\n/) as unknown as Interface
+	);
+}
+
 describe("versions secret bulk", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
@@ -124,14 +130,49 @@ describe("versions secret bulk", () => {
 	});
 
 	test("uploading secrets from stdin", async ({ expect }) => {
-		vi.spyOn(readline, "createInterface").mockImplementation(
-			() =>
-				// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
-				JSON.stringify({
-					SECRET_1: "secret-1",
-					SECRET_2: "secret-2",
-					SECRET_3: "secret-3",
-				}) as unknown as Interface
+		mockReadlineInput(
+			JSON.stringify({
+				SECRET_1: "secret-1",
+				SECRET_2: "secret-2",
+				SECRET_3: "secret-3",
+			})
+		);
+
+		mockSetupApiCalls(expect);
+		mockPostVersion(expect, (metadata) => {
+			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
+				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
+				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
+				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
+			]);
+			expect(metadata.keep_bindings).toStrictEqual([
+				"secret_key",
+				"secret_text",
+			]);
+			expect(metadata.keep_assets).toBeTruthy();
+		});
+
+		await runWrangler(`versions secret bulk --name script-name`);
+		expect(std.out).toMatchInlineSnapshot(
+			`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🌀 Creating the secrets for the Worker "script-name"
+			✨ Successfully created secret for key: SECRET_1
+			✨ Successfully created secret for key: SECRET_2
+			✨ Successfully created secret for key: SECRET_3
+			✨ Success! Created version id with 3 secrets.
+			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
+		`
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	test("uploading secrets from env stdin", async ({ expect }) => {
+		mockReadlineInput(
+			"SECRET_1=secret-1\nSECRET_2=secret-2\nSECRET_3=secret-3"
 		);
 
 		mockSetupApiCalls(expect);
@@ -177,11 +218,7 @@ describe("versions secret bulk", () => {
 	});
 
 	test("should error on invalid json stdin", async ({ expect }) => {
-		vi.spyOn(readline, "createInterface").mockImplementation(
-			() =>
-				// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
-				"hello world" as unknown as Interface
-		);
+		mockReadlineInput("hello world");
 
 		mockSetupApiCalls(expect);
 		mockPostVersion(expect, (metadata) => {
@@ -317,12 +354,10 @@ describe("versions secret bulk", () => {
 		it("should warn if the wrangler config contains environments but none was specified in the command", async ({
 			expect,
 		}) => {
-			vi.spyOn(readline, "createInterface").mockImplementation(
-				() =>
-					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
-					JSON.stringify({
-						SECRET_1: "secret-1",
-					}) as unknown as Interface
+			mockReadlineInput(
+				JSON.stringify({
+					SECRET_1: "secret-1",
+				})
 			);
 
 			writeWranglerConfig({ env: { test: {} } });
@@ -345,12 +380,10 @@ describe("versions secret bulk", () => {
 		it("should not warn if the wrangler config contains environments and one was specified in the command", async ({
 			expect,
 		}) => {
-			vi.spyOn(readline, "createInterface").mockImplementation(
-				() =>
-					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
-					JSON.stringify({
-						SECRET_1: "secret-1",
-					}) as unknown as Interface
+			mockReadlineInput(
+				JSON.stringify({
+					SECRET_1: "secret-1",
+				})
 			);
 
 			writeWranglerConfig({ env: { test: {} } });
@@ -364,12 +397,10 @@ describe("versions secret bulk", () => {
 		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async ({
 			expect,
 		}) => {
-			vi.spyOn(readline, "createInterface").mockImplementation(
-				() =>
-					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
-					JSON.stringify({
-						SECRET_1: "secret-1",
-					}) as unknown as Interface
+			mockReadlineInput(
+				JSON.stringify({
+					SECRET_1: "secret-1",
+				})
 			);
 
 			writeWranglerConfig();
@@ -384,12 +415,10 @@ describe("versions secret bulk", () => {
 			expect,
 		}) => {
 			vi.stubEnv("CLOUDFLARE_ENV", "test");
-			vi.spyOn(readline, "createInterface").mockImplementation(
-				() =>
-					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
-					JSON.stringify({
-						SECRET_1: "secret-1",
-					}) as unknown as Interface
+			mockReadlineInput(
+				JSON.stringify({
+					SECRET_1: "secret-1",
+				})
 			);
 
 			writeWranglerConfig({ env: { test: {} } });
@@ -403,12 +432,10 @@ describe("versions secret bulk", () => {
 		it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
 			expect,
 		}) => {
-			vi.spyOn(readline, "createInterface").mockImplementation(
-				() =>
-					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
-					JSON.stringify({
-						SECRET_1: "secret-1",
-					}) as unknown as Interface
+			mockReadlineInput(
+				JSON.stringify({
+					SECRET_1: "secret-1",
+				})
 			);
 
 			writeWranglerConfig({ env: { test: {} } });

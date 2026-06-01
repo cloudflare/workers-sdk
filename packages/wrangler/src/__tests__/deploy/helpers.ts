@@ -1,9 +1,11 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
 import { Buffer } from "node:buffer";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Helper used outside test callbacks, needs module-level expect
+ * TODO: remove this `expect` import
+ */
 import { expect } from "vitest";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import {
@@ -947,6 +949,8 @@ interface CustomMatchers {
 }
 
 declare module "vitest" {
+	/* eslint-disable @typescript-eslint/no-empty-object-type -- Type augmentation interfaces intentionally left empty */
 	interface Assertion extends CustomMatchers {}
 	interface AsymmetricMatchersContaining extends CustomMatchers {}
+	/* eslint-enable @typescript-eslint/no-empty-object-type */
 }

@@ -729,7 +729,7 @@ export type WorkflowBinding = {
 		steps?: number;
 	};
 	/** Optional cron schedule(s) for automatically triggering workflow instances */
-	schedule?: string | string[];
+	schedules?: string | string[];
 };
 
 /**
@@ -1055,6 +1055,44 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies Agent Memory namespace bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	agent_memory: {
+		/** The binding name used to refer to the Agent Memory namespace in the Worker. */
+		binding: string;
+		/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
+		namespace: string;
+		/** Whether the Agent Memory binding should be remote in local development */
+		remote?: boolean;
+	}[];
+
+	/**
+	 * Cloudflare Web Search binding. There is exactly one shared web corpus, so the
+	 * binding is zero-config -- only the variable name is required, declared as a
+	 * single object (not an array).
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	web_search:
+		| {
+				/** The binding name used to refer to Web Search in the Worker. */
+				binding: string;
+				/** Whether the Web Search binding should be remote or not in local development */
+				remote?: boolean;
+		  }
+		| undefined;
+
+	/**
 	 * Specifies Hyperdrive configs that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -1346,8 +1384,13 @@ export interface EnvironmentNonInheritable {
 	pipelines: {
 		/** The binding name used to refer to the bound service. */
 		binding: string;
-		/** Name of the Pipeline to bind */
-		pipeline: string;
+		/** Id of the Stream to bind */
+		stream?: string;
+		/**
+		 * Id of the Stream to bind
+		 * @deprecated Use `stream` instead.
+		 */
+		pipeline?: string;
 		/** Whether the pipeline should be remote or not in local development */
 		remote?: boolean;
 	}[];

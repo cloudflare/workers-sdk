@@ -253,7 +253,7 @@ describe("cloudchamber create", () => {
 			http.post(
 				"*/deployments/v2",
 				async ({ request }) => {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- MSW handler parses untyped JSON request body
 					const r = (await request.json()) as Record<string, any>;
 					expect(r.instance_type).toEqual("lite");
 					return HttpResponse.json({});
@@ -329,7 +329,7 @@ describe("cloudchamber create", () => {
 			http.post(
 				"*/deployments/v2",
 				async ({ request }) => {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- MSW handler parses untyped JSON request body
 					const r = (await request.json()) as Record<string, any>;
 					expect(r.instance_type).toEqual("lite");
 					return HttpResponse.json({});

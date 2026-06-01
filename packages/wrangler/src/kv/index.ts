@@ -917,7 +917,6 @@ export const kvBulkGetCommand = createCommand({
 				)
 			);
 		}
-		logger.log("\nSuccess!");
 	},
 });
 

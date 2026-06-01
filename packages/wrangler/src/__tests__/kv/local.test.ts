@@ -379,9 +379,7 @@ describe("kv", () => {
 				  "test": {
 				    "value": "value"
 				  }
-				}
-
-				Success!"
+				}"
 			`);
 		});
 

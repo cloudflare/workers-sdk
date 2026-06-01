@@ -13,8 +13,12 @@ import {
 	noopModuleCollector,
 } from "../deployment-bundle/module-collection";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
-import type { Entry } from "../deployment-bundle/entry";
-import type { CfModule, CfModuleType, Config } from "@cloudflare/workers-utils";
+import type {
+	CfModule,
+	CfModuleType,
+	Config,
+	Entry,
+} from "@cloudflare/workers-utils";
 import type { Metafile } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
 

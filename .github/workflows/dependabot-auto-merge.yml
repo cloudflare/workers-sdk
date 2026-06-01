@@ -22,7 +22,7 @@ name: "Dependabot - auto-merge workerd updates"
 # those tokens is the standard pwn vector.
 
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] intentionally privileged metadata-only workflow; it never checks out or executes PR code
     types: [opened, reopened, synchronize, ready_for_review]
 
 permissions:

@@ -114,6 +114,7 @@ function extractBindingNames(config: Config): string[] {
 			case "vectorize":
 			case "ai_search_namespaces":
 			case "ai_search":
+			case "agent_memory":
 			case "services":
 			case "mtls_certificates":
 			case "dispatch_namespaces":
@@ -123,7 +124,8 @@ function extractBindingNames(config: Config): string[] {
 				return (value ?? []).map((workflowBinding) => workflowBinding.binding);
 			}
 			case "browser":
-			case "ai": {
+			case "ai":
+			case "web_search": {
 				const value: Config[typeof key] = untypedValue;
 				return value ? [value.binding] : [];
 			}
