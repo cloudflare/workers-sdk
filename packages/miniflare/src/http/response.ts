@@ -61,7 +61,7 @@ export class Response extends BaseResponse {
 	get status() {
 		// When passing a WebSocket, we validate that the passed status was actually
 		// 101, but we can't store this because `undici` rightfully complains.
-		// @ts-ignore
+		// @ts-expect-error -- super.status in the overridden getter
 		return this[kWebSocket] ? 101 : super.status;
 	}
 

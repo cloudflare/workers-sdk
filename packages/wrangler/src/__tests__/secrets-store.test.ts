@@ -325,6 +325,29 @@ describe("secrets-store secret commands", () => {
 				"Missing required argument: scopes"
 			`);
 		});
+
+		it("errors in creating a secret when value is larger than 64 KiB", async ({
+			expect,
+		}) => {
+			const longValue = "a".repeat(65537);
+			let err: undefined | Error;
+			try {
+				await runWrangler(
+					"secrets-store secret create " +
+						"850e0805c1084551bb46d150b5dfe414 " +
+						"--name TEST_SECRET " +
+						`--value '${longValue}' ` +
+						"--scopes 'workers' " +
+						"--comment 'wrangler secret' " +
+						"--remote"
+				);
+			} catch (e) {
+				err = e as Error;
+			}
+			expect(err?.message).toMatchInlineSnapshot(
+				`"Secret value cannot exceed 65536 bytes (got 65537). The Cloudflare API rejects longer values, and a binding to such a secret will fail at deploy time."`
+			);
+		});
 	});
 
 	describe("secrets-store secret list", () => {

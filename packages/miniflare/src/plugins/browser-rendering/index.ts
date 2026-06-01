@@ -238,7 +238,12 @@ export async function launchBrowser({
 		},
 	});
 	const wsEndpoint = await browserProcess.waitForLineOutput(
-		CDP_WEBSOCKET_ENDPOINT_REGEX
+		CDP_WEBSOCKET_ENDPOINT_REGEX,
+		// Note: we pass an explicit timeout so the promise rejects instead of hanging forever
+		//       when Chrome fails to start or crashes before printing the DevTools URL.
+		//       Five minutes is generous enough to cover on-demand browser downloads on slow
+		//       connections while still failing within a reasonable window.
+		5 * 60 * 1_000
 	);
 	// On Windows in particular, Chrome may print the DevTools URL slightly
 	// before its listening socket is fully ready to accept connections.
