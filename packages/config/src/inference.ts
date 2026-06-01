@@ -1,6 +1,8 @@
 // oxlint-disable typescript/no-explicit-any -- needed in type utilities
 
 import type {
+	JsonBinding,
+	TextBinding,
 	TypedAiBinding,
 	TypedDurableObjectBinding,
 	TypedKvBinding,
@@ -59,8 +61,14 @@ type ExtractInstance<T, TInstance> =
 /**
  * Mapping from binding type literals to Cloudflare runtime types.
  *
- * For parameterized bindings (ai, kv, queue etc.), the type parameter is extracted
- * from the binding's `__typeParams` property.
+ * Entries fall into two groups:
+ * - Parameterized bindings (ai, json, kv, pipeline, queue, text) refine their
+ *   runtime type from the binding instance via nominal matches against the
+ *   `Typed*Binding` / `JsonBinding` / `TextBinding` interfaces from
+ *   `./bindings`. When `TBinding` does not match, the entry falls back to the
+ *   unparameterized runtime type.
+ * - Non-parameterized bindings map their type literal directly to a runtime
+ *   type and ignore `TBinding`.
  *
  * IMPORTANT: The right-hand-side identifiers in this map (e.g. `KVNamespace`,
  * `ImagesBinding`, `Fetcher`) must resolve to the ambient runtime types from
@@ -68,18 +76,20 @@ type ExtractInstance<T, TInstance> =
  * binding interfaces in `./bindings.ts` (`ImagesBinding`, `MediaBinding`,
  * `StreamBinding`) share names with ambient globals — importing those local
  * types into this file silently shadows the globals and breaks `InferEnv`.
- * Only import the `Typed*Binding` interfaces from `./bindings` (their names do
- * not collide with ambient globals); never widen the import to a wildcard or
- * to the plain `*Binding` interfaces.
+ * Only import the `Typed*Binding`, `JsonBinding`, and `TextBinding` interfaces
+ * from `./bindings` (their names do not collide with ambient globals); never
+ * widen the import to a wildcard or to the plain `*Binding` interfaces.
  */
 interface BindingTypeMap<TBinding> {
-	// Parameterized bindings - extract `__typeParams` and apply to runtime types
+	// Parameterized bindings - refine via nominal match on the binding instance
 	ai: TBinding extends TypedAiBinding<infer T> ? Ai<T> : Ai;
+	json: TBinding extends JsonBinding<infer T> ? T : never;
 	kv: TBinding extends TypedKvBinding<infer T> ? KVNamespace<T> : KVNamespace;
 	pipeline: TBinding extends TypedPipelineBinding<infer T>
 		? Pipeline<T>
 		: Pipeline;
 	queue: TBinding extends TypedQueueBinding<infer T> ? Queue<T> : Queue;
+	text: TBinding extends TextBinding<infer T> ? T : never;
 
 	// Non-parameterized bindings
 	"ai-search": AiSearchInstance;
@@ -162,18 +172,12 @@ type InferBindingType<TBinding> =
 							: Workflow
 						: never
 					: never
-				: // JSON bindings
-					TBinding extends { type: "json"; value: infer TValue }
-					? TValue
-					: // Text bindings
-						TBinding extends { type: "text"; value: infer TValue }
-						? TValue
-						: // Other bindings
-							TBinding extends {
-									type: infer K extends keyof BindingTypeMap<TBinding>;
-							  }
-							? BindingTypeMap<TBinding>[K]
-							: never;
+				: // Other bindings
+					TBinding extends {
+							type: infer K extends keyof BindingTypeMap<TBinding>;
+					  }
+					? BindingTypeMap<TBinding>[K]
+					: never;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CROSS-WORKER BINDING HELPERS (INTERNAL)
