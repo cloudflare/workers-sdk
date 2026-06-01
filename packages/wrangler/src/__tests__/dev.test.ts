@@ -1287,7 +1287,7 @@ describe.sequential("wrangler dev", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently supported for remote mode.[0m
 
 				  If this is required in your project, please add your use case to the following issue:
-				  [4mhttps://github.com/cloudflare/workers-sdk/issues/583[0m.
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/583[0m
 
 				"
 			`);

@@ -37,6 +37,7 @@ export interface PackageJSON {
 	dependencies?: Record<string, string>;
 	devDependencies?: Record<string, string>;
 	peerDependencies?: Record<string, string>;
+	optionalDependencies?: Record<string, string>;
 }
 
 export interface PackageInfo {

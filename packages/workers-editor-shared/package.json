@@ -27,7 +27,7 @@
 		"dev": "vite"
 	},
 	"dependencies": {
-		"react-split-pane": "^0.1.92"
+		"react-split-pane": "0.1.92"
 	},
 	"devDependencies": {
 		"@cloudflare/style-const": "^5.7.2",
