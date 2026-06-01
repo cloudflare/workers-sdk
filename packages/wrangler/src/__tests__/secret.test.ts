@@ -1608,7 +1608,9 @@ describe("wrangler secret", () => {
 
 			await expect(
 				runWrangler("secret bulk ./secret.json --name non-existent-worker")
-			).rejects.toThrow();
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/non-existent-worker/secrets-bulk) failed.]`
+			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
