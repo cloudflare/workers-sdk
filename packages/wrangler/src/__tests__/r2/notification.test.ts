@@ -7,7 +7,7 @@ import {
 import formatLabelledValues from "../../utils/render-labelled-values";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import type { GetNotificationConfigResponse } from "../../r2/helpers/notification";
-import type { ApiCredentials } from "../../user";
+import type { ApiCredentials } from "@cloudflare/workers-utils";
 
 describe("event notifications", () => {
 	const std = mockConsoleMethods();

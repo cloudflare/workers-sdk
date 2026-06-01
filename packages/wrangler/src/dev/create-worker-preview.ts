@@ -7,9 +7,9 @@ import { createWorkerUploadForm } from "../deployment-bundle/create-worker-uploa
 import { logger } from "../logger";
 import { getWorkersDevSubdomain } from "../routes";
 import { getAccessHeaders } from "../user/access";
-import type { ApiCredentials } from "../user";
 import type { CfWorkerInitWithName } from "./remote";
 import type {
+	ApiCredentials,
 	CfWorkerContext,
 	ComplianceConfig,
 } from "@cloudflare/workers-utils";

@@ -111,5 +111,9 @@ export type { Tunnel, TunnelOptions } from "./tunnel";
 export { startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
 
+export * from "./cfetch";
+
 export { fetchLatestNpmVersion } from "./update-check";
 export type { NpmVersionCheckResult } from "./update-check";
+
+export type { Logger } from "./logger";
