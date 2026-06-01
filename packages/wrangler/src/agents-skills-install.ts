@@ -7,6 +7,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
+import { install as rosieInstall, agents as rosieAgents } from "rosie-skills";
 import { fetch } from "undici";
 import { confirm } from "./dialogs";
 import isInteractive from "./is-interactive";
@@ -116,9 +117,8 @@ export async function maybeInstallCloudflareSkillsGlobally(
 	}
 
 	try {
-		const rosie = await import("rosie-skills");
 		const agentNames = detectedAgents.map((a) => a.rosie.id);
-		const { failedAgents } = await rosie.install(SKILLS_REPO, {
+		const { failedAgents } = await rosieInstall(SKILLS_REPO, {
 			global: true,
 			agent: agentNames,
 			lockfile: false,
@@ -733,8 +733,7 @@ export function telemetryCurrentAgentSkillsInstalled(): Promise<AgentSkillsInsta
  * @returns Array of detected agents with their display names, rosie IDs, and skills paths.
  */
 async function getDetectedAgents(): Promise<AgentInfo[]> {
-	const rosie = await import("rosie-skills");
-	const allAgents = await rosie.agents();
+	const allAgents = await rosieAgents();
 	return allAgents
 		.filter(
 			(
