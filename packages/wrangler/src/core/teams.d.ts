@@ -15,6 +15,7 @@ export type Teams =
 	| "Product: Queues"
 	| "Product: AI"
 	| "Product: AI Search"
+	| "Product: Agent Memory"
 	| "Product: Web Search"
 	| "Product: Hyperdrive"
 	| "Product: Pipelines"

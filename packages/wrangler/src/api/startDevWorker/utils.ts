@@ -325,6 +325,12 @@ export function convertConfigToBindings(
 				output[binding] = { type: "web_search", ...x };
 				break;
 			}
+			case "agent_memory": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "agent_memory", ...x };
+				}
+				break;
+			}
 			case "unsafe": {
 				if (pages) {
 					break;
@@ -664,6 +670,17 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				output[name] = {
 					type: "ai_search",
 					instance_name: b.instance_name,
+				};
+				break;
+			}
+			case "agent_memory": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "agent_memory" }
+				>;
+				output[name] = {
+					type: "agent_memory",
+					namespace: b.namespace,
 				};
 				break;
 			}

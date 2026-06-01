@@ -434,7 +434,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -461,7 +461,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -487,7 +487,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -514,7 +514,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -547,7 +547,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (dev) (TIMINGS)
-				No deploy targets for test-name (dev) (TIMINGS)
+				No targets deployed for test-name (dev) (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -580,7 +580,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (dev) (TIMINGS)
-				No deploy targets for test-name (dev) (TIMINGS)
+				No targets deployed for test-name (dev) (TIMINGS)
 				Current Version ID: undefined"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1372,7 +1372,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1400,7 +1400,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1457,7 +1457,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
