@@ -536,7 +536,7 @@ export function createCLIParser(argv: string[]) {
 		},
 		temporary: {
 			describe:
-				"Create a temporary preview account when a command needs authentication",
+				"Create a temporary preview account when a command needs authentication in non-interactive mode",
 			type: "boolean",
 			default: false,
 			hidden: true,

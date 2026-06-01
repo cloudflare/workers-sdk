@@ -53,7 +53,7 @@ describe("experimental_getWranglerCommands", () => {
 			  },
 			  "temporary": {
 			    "default": false,
-			    "describe": "Create a temporary preview account when a command needs authentication",
+			    "describe": "Create a temporary preview account when a command needs authentication in non-interactive mode",
 			    "hidden": true,
 			    "type": "boolean",
 			  },
