@@ -462,7 +462,7 @@ describe("Engine", () => {
 	}) => {
 		// Regression: JSON.stringify(Uint8Array) encodes each byte as a numeric key,
 		// producing a string far larger than byteLength. A 200 KB Uint8Array → ~2 MB JSON
-		// → SQLITE_TOOBIG. The log metadata must sanitize TypedArrays before storage.
+		// → SQLITE_TOOBIG. writeLog must use a replacer to sanitize TypedArrays.
 		const instanceId = "LARGE-UINT8ARRAY-RESULT";
 		const engineId = env.ENGINE.idFromName(instanceId);
 		const engineStub = env.ENGINE.get(engineId);
@@ -470,6 +470,30 @@ describe("Engine", () => {
 		await runWorkflowAndAwait(instanceId, async (_event, step) => {
 			await step.do("large-binary-step", async () => {
 				return new Uint8Array(200_000); // ~200 KB, triggers SQLITE_TOOBIG without fix
+			});
+		});
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+		).toBe(false);
+	});
+
+	it("should complete a step that returns an object containing a large Uint8Array without SQLITE_TOOBIG", async ({
+		expect,
+	}) => {
+		// Regression: nested TypedArrays inside objects also cause SQLITE_TOOBIG without
+		// the JSON.stringify replacer, since sanitization must be recursive.
+		const instanceId = "NESTED-UINT8ARRAY-RESULT";
+		const engineId = env.ENGINE.idFromName(instanceId);
+		const engineStub = env.ENGINE.get(engineId);
+
+		await runWorkflowAndAwait(instanceId, async (_event, step) => {
+			await step.do("nested-binary-step", async () => {
+				return { payload: new Uint8Array(200_000), label: "test" };
 			});
 		});
 
