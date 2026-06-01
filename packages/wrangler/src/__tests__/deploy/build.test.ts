@@ -1341,6 +1341,49 @@ export default { fetch() { return new Response(mod); } };`;
 			await runWrangler("deploy");
 		});
 
+		it("should include source maps when a //# debugId= comment follows the //# sourceMappingURL= comment", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				no_bundle: true,
+				main: "index.js",
+				upload_source_maps: true,
+				build: {
+					command: `echo "custom build script"`,
+				},
+			});
+			// Mirrors the output of `sentry-cli sourcemaps inject`, which appends
+			// a `//# debugId=` comment on a new line after `//# sourceMappingURL=`.
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("Hello World"); } }\n` +
+					"//# sourceMappingURL=index.js.map\n" +
+					"\n" +
+					"//# debugId=7f1ca8ac-1725-5ca5-b961-279f0ab7279a\n"
+			);
+			fs.writeFileSync(
+				"index.js.map",
+				JSON.stringify({
+					version: 3,
+					sources: ["index.ts"],
+					sourceRoot: "",
+					file: "index.js",
+				})
+			);
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": expect.stringMatching(
+						/"sources":\["index.ts"\],"sourceRoot":"".*"file":"index.js"/
+					),
+				},
+			});
+
+			await runWrangler("deploy");
+		});
+
 		it("should not include source maps emitted by custom build when upload_source_maps = false", async () => {
 			writeWranglerConfig({
 				no_bundle: true,
