@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
@@ -10,6 +10,13 @@ import {
 } from "../../../autoconfig/frameworks/react-router";
 import * as packagesUtils from "../../../autoconfig/frameworks/utils/packages";
 import { NpmPackageManager } from "../../../package-manager";
+
+function fixture(name: string): string {
+	return readFileSync(
+		join(__dirname, "fixtures/react-router", name),
+		"utf-8"
+	);
+}
 
 vi.mock("../../../autoconfig/frameworks/utils/vite-config", () => ({
 	transformViteConfig: vi.fn(),
@@ -60,57 +67,35 @@ describe("hasV8MiddlewareFlag()", () => {
 	});
 
 	it("returns false when config has no future block", async ({ expect }) => {
-		const config = `
-			import type { Config } from "@react-router/dev/config";
-			export default {
-			ssr: true,
-			} satisfies Config;
-		`;
-		await writeFile(resolve("react-router.config.ts"), config);
+		await writeFile(
+			resolve("react-router.config.ts"),
+			fixture("config-no-future.ts")
+		);
 		expect(hasV8MiddlewareFlag(process.cwd())).toBe(false);
 	});
 
 	it("returns false when future block does not contain v8_middleware", async ({
 		expect,
 	}) => {
-		const config = `
-			import type { Config } from "@react-router/dev/config";
-			export default {
-				ssr: true,
-				future: {
-					v8_splitRouteModules: true,
-				},
-			} satisfies Config;
-		`;
-		await writeFile(resolve("react-router.config.ts"), config);
+		await writeFile(
+			resolve("react-router.config.ts"),
+			fixture("config-future-no-middleware.ts")
+		);
 		expect(hasV8MiddlewareFlag(process.cwd())).toBe(false);
 	});
 
 	it("returns true when v8_middleware is set to true", async ({ expect }) => {
-		const config = `
-			import type { Config } from "@react-router/dev/config";
-			export default {
-				ssr: true,
-				future: {
-					v8_middleware: true,
-				},
-			} satisfies Config;
-		`;
-		await writeFile(resolve("react-router.config.ts"), config);
+		await writeFile(
+			resolve("react-router.config.ts"),
+			fixture("config-middleware-true.ts")
+		);
 		expect(hasV8MiddlewareFlag(process.cwd())).toBe(true);
 	});
 
 	it("returns false when v8_middleware is set to false", async ({ expect }) => {
 		await writeFile(
 			resolve("react-router.config.ts"),
-			`import type { Config } from "@react-router/dev/config";
-export default {
-  ssr: true,
-  future: {
-    v8_middleware: false,
-  },
-} satisfies Config;
-`
+			fixture("config-middleware-false.ts")
 		);
 		expect(hasV8MiddlewareFlag(process.cwd())).toBe(false);
 	});
@@ -118,13 +103,7 @@ export default {
 	it("handles plain object export without satisfies", async ({ expect }) => {
 		await writeFile(
 			resolve("react-router.config.ts"),
-			`export default {
-  ssr: true,
-  future: {
-    v8_middleware: true,
-  },
-};
-`
+			fixture("config-plain-object-middleware.ts")
 		);
 		expect(hasV8MiddlewareFlag(process.cwd())).toBe(true);
 	});
@@ -132,7 +111,7 @@ export default {
 	it("returns false when config file has syntax errors", async ({ expect }) => {
 		await writeFile(
 			resolve("react-router.config.ts"),
-			`export default { this is not valid syntax`
+			"export default { this is not valid syntax"
 		);
 		expect(hasV8MiddlewareFlag(process.cwd())).toBe(false);
 	});
@@ -142,15 +121,7 @@ export default {
 	}) => {
 		await writeFile(
 			resolve("react-router.config.ts"),
-			`import type { Config } from "@react-router/dev/config";
-export default {
-  ssr: true,
-  future: {
-    v8_middleware: true,
-    v8_splitRouteModules: true,
-  },
-} satisfies Config;
-`
+			fixture("config-middleware-and-split.ts")
 		);
 		expect(hasV8MiddlewareFlag(process.cwd())).toBe(true);
 	});
@@ -165,22 +136,16 @@ describe("React Router framework configure()", () => {
 		await mkdir(resolve("app"), { recursive: true });
 		await writeFile(
 			resolve("vite.config.ts"),
-			`
-			import { defineConfig } from 'vite';
-			export default defineConfig({ plugins: [] });
-		`
+			fixture("vite-config-basic.ts")
 		);
 	});
 
 	describe("workers/app.ts generation — without v8_middleware", () => {
 		beforeEach(async () => {
-			const config = `
-				import type { Config } from "@react-router/dev/config";
-				export default {
-				ssr: true,
-				} satisfies Config;
-			`;
-			await writeFile(resolve("react-router.config.ts"), config);
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-no-future.ts")
+			);
 		});
 
 		it("creates workers/app.ts with AppLoadContext augmentation", async ({
@@ -200,16 +165,10 @@ describe("React Router framework configure()", () => {
 
 	describe("workers/app.ts generation — with v8_middleware", () => {
 		beforeEach(async () => {
-			const config = `
-				import type { Config } from "@react-router/dev/config";
-				export default {
-					ssr: true,
-					future: {
-						v8_middleware: true,
-					},
-				} satisfies Config;
-			`;
-			await writeFile(resolve("react-router.config.ts"), config);
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-middleware-true.ts")
+			);
 		});
 
 		it("creates workers/app.ts without AppLoadContext augmentation", async ({
@@ -243,13 +202,10 @@ describe("React Router framework configure()", () => {
 
 	describe("entry.server.tsx generation — without v8_middleware", () => {
 		beforeEach(async () => {
-			const config = `
-				import type { Config } from "@react-router/dev/config";
-				export default {
-				ssr: true,
-				} satisfies Config;
-			`;
-			await writeFile(resolve("react-router.config.ts"), config);
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-no-future.ts")
+			);
 		});
 
 		it("creates entry.server.tsx with AppLoadContext", async ({ expect }) => {
@@ -267,16 +223,10 @@ describe("React Router framework configure()", () => {
 
 	describe("entry.server.tsx generation — with v8_middleware", () => {
 		beforeEach(async () => {
-			const config = `
-				import type { Config } from "@react-router/dev/config";
-				export default {
-					ssr: true,
-					future: {
-						v8_middleware: true,
-					},
-				} satisfies Config;
-			`;
-			await writeFile(resolve("react-router.config.ts"), config);
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-middleware-true.ts")
+			);
 		});
 
 		it("creates entry.server.tsx without AppLoadContext", async ({
@@ -298,16 +248,10 @@ describe("React Router framework configure()", () => {
 
 	describe("entry.server.tsx — existing file not overwritten", () => {
 		beforeEach(async () => {
-			const config = `
-				import type { Config } from "@react-router/dev/config";
-				export default {
-					ssr: true,
-					future: {
-						v8_middleware: true,
-					},
-				} satisfies Config;
-			`;
-			await writeFile(resolve("react-router.config.ts"), config);
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-middleware-true.ts")
+			);
 		});
 
 		it("does not overwrite existing entry.server.tsx", async ({ expect }) => {
@@ -327,13 +271,10 @@ describe("React Router framework configure()", () => {
 		it("adds v8_viteEnvironmentApi for React Router >= 7.10.0", async ({
 			expect,
 		}) => {
-			const config = `
-				import type { Config } from "@react-router/dev/config";
-				export default {
-				ssr: true,
-				} satisfies Config;
-			`;
-			await writeFile(resolve("react-router.config.ts"), config);
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-no-future.ts")
+			);
 
 			const framework = createFramework("7.16.0");
 			await framework.configure(getBaseOptions());
@@ -350,13 +291,10 @@ describe("React Router framework configure()", () => {
 		it("uses unstable_viteEnvironmentApi for React Router < 7.10.0", async ({
 			expect,
 		}) => {
-			const config = `
-				import type { Config } from "@react-router/dev/config";
-				export default {
-				ssr: true,
-				} satisfies Config;
-			`;
-			await writeFile(resolve("react-router.config.ts"), config);
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-no-future.ts")
+			);
 
 			const framework = createFramework("7.9.0");
 			await framework.configure(getBaseOptions());
@@ -369,16 +307,10 @@ describe("React Router framework configure()", () => {
 		it("preserves existing future flags when adding viteEnvironmentApi", async ({
 			expect,
 		}) => {
-			const config = `
-				import type { Config } from "@react-router/dev/config";
-				export default {
-					ssr: true,
-					future: {
-						v8_middleware: true,
-					},
-				} satisfies Config;
-			`;
-			await writeFile(resolve("react-router.config.ts"), config);
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-middleware-true.ts")
+			);
 
 			const framework = createFramework("7.16.0");
 			await framework.configure(getBaseOptions());
@@ -409,13 +341,10 @@ describe("React Router framework configure()", () => {
 
 	describe("wrangler config", () => {
 		beforeEach(async () => {
-			const config = `
-				import type { Config } from "@react-router/dev/config";
-				export default {
-				ssr: true,
-				} satisfies Config;
-			`;
-			await writeFile(resolve("react-router.config.ts"), config);
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-no-future.ts")
+			);
 		});
 
 		it("returns wrangler config with main pointing to workers/app.ts", async ({
@@ -432,13 +361,10 @@ describe("React Router framework configure()", () => {
 
 	describe("package installation", () => {
 		beforeEach(async () => {
-			const config = `
-				import type { Config } from "@react-router/dev/config";
-				export default {
-				ssr: true,
-				} satisfies Config;
-			`;
-			await writeFile(resolve("react-router.config.ts"), config);
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-no-future.ts")
+			);
 		});
 
 		it("installs isbot as a dev dependency", async ({ expect }) => {
