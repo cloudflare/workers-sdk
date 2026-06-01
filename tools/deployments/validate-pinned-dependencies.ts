@@ -22,8 +22,7 @@
  *      version. Specifiers using `workspace:`, `catalog:`, `npm:`, `link:` or
  *      `file:` are skipped (the catalog ones are covered by half 1; workspace
  *      ones are released atomically with the monorepo). `peerDependencies` are
- *      excluded because ranges there are intentional — they express the set of
- *      versions a consumer-installed package may satisfy.
+ *      excluded because ranges there are intentional and generally necessary.
  */
 
 import { loadCatalog } from "./validate-catalog-usage";
