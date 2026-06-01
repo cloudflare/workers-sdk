@@ -6,13 +6,13 @@ import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	JsonFriendlyFatalError,
 	ParseError,
+	renderError,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Cloudflare } from "cloudflare";
 import dedent from "ts-dedent";
 import { createCLIParser } from "..";
-import { renderError } from "../cfetch";
 import { readConfig } from "../config";
 import {
 	isBuildFailure,
