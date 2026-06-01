@@ -1497,7 +1497,7 @@ export async function requireAuth(
 		account_id?: string;
 	}
 ): Promise<string> {
-	const allowTemporary = shouldAllowTemporary() && isNonInteractiveOrCI();
+	const allowTemporary = shouldAllowTemporary();
 	const loggedIn = await loginOrRefreshIfRequired(config, undefined, {
 		allowLogin: !allowTemporary,
 	});

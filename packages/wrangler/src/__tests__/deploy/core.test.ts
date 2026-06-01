@@ -17,7 +17,10 @@ import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
 import { writeAuthConfigFile } from "../../user";
-import { TEMPORARY_TERMS_ACCEPTANCE_ENV } from "../../user/temporary-terms";
+import {
+	TEMPORARY_TERMS_ACCEPTANCE_ENV,
+	TEMPORARY_TERMS_PROMPT,
+} from "../../user/temporary-terms";
 import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
@@ -781,21 +784,33 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("still starts OAuth in interactive mode when --temporary is passed", async ({
+		it("creates a temporary preview account in interactive mode when --temporary is passed", async ({
 			expect,
 		}) => {
 			setIsTTY(true);
+			mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 			writeWranglerConfig();
 			writeWorkerSource();
-			mockDomainUsesAccess({ usesAccess: false });
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshSuccess" });
-			mockOAuthServerCallback("success");
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest({
+				expectedAccountId: "preview-account-id",
+			});
 
 			let previewAccountRequests = 0;
 			let contentTypeHeader: string | null = null;
 			msw.use(
+				http.get(
+					"*/accounts/preview-account-id/workers/services/:scriptName",
+					() => {
+						return HttpResponse.json(
+							createFetchResult({
+								default_environment: {
+									script: { last_deployed_from: "wrangler" },
+								},
+							})
+						);
+					}
+				),
 				http.post(temporaryPreviewAccountUrl, async ({ request }) => {
 					previewAccountRequests += 1;
 					contentTypeHeader = request.headers.get("Content-Type");
@@ -821,10 +836,10 @@ describe("deploy", () => {
 				runWrangler("deploy index.js --temporary")
 			).resolves.toBeUndefined();
 
-			expect(previewAccountRequests).toBe(0);
-			expect(contentTypeHeader).toBeNull();
-			expect(std.out).toContain("Attempting to login via OAuth...");
-			expect(std.out).not.toContain("Temporary account ready:");
+			expect(previewAccountRequests).toBe(1);
+			expect(contentTypeHeader).toBe("application/json");
+			expect(std.out).not.toContain("Attempting to login via OAuth...");
+			expect(std.out).toContain("Temporary account ready:");
 		});
 
 		describe("with an alternative auth domain", () => {
@@ -1119,10 +1134,9 @@ describe("deploy", () => {
 					})
 				);
 
-				const result = runWrangler("deploy index.js --temporary");
-				process.stdin.emit("end");
-
-				await expect(result).rejects.toThrowErrorMatchingInlineSnapshot(
+				await expect(
+					runWrangler("deploy index.js --temporary")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: You must accept Cloudflare's Terms of Service and Privacy Policy to use --temporary. To accept non-interactively, set WRANGLER_TEMPORARY_ACCEPT_TERMS=yes.]`
 				);
 
