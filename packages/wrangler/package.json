@@ -179,7 +179,7 @@
 		}
 	},
 	"optionalDependencies": {
-		"fsevents": "~2.3.2"
+		"fsevents": "2.3.3"
 	},
 	"engines": {
 		"node": ">=22.0.0"
