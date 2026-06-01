@@ -1,7 +1,16 @@
 // oxlint-disable typescript/no-explicit-any -- needed in type utilities
 
+import type {
+	TypedAiBinding,
+	TypedDurableObjectBinding,
+	TypedKvBinding,
+	TypedPipelineBinding,
+	TypedQueueBinding,
+	TypedWorkerBinding,
+	TypedWorkflowBinding,
+} from "./bindings";
 import type { WorkerDefinition } from "./worker-definition";
-import type { Pipeline, PipelineRecord } from "cloudflare:pipelines";
+import type { Pipeline } from "cloudflare:pipelines";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GENERIC UTILITIES
@@ -59,20 +68,18 @@ type ExtractInstance<T, TInstance> =
  * binding interfaces in `./bindings.ts` (`ImagesBinding`, `MediaBinding`,
  * `StreamBinding`) share names with ambient globals — importing those local
  * types into this file silently shadows the globals and breaks `InferEnv`.
- * Do not add `import type { ... } from "./bindings"` here.
+ * Only import the `Typed*Binding` interfaces from `./bindings` (their names do
+ * not collide with ambient globals); never widen the import to a wildcard or
+ * to the plain `*Binding` interfaces.
  */
 interface BindingTypeMap<TBinding> {
 	// Parameterized bindings - extract `__typeParams` and apply to runtime types
-	ai: TBinding extends { __typeParams: [infer T extends AiModelListType] }
-		? Ai<T>
-		: Ai;
-	kv: TBinding extends { __typeParams: [infer T extends string] }
-		? KVNamespace<T>
-		: KVNamespace;
-	pipeline: TBinding extends { __typeParams: [infer T extends PipelineRecord] }
+	ai: TBinding extends TypedAiBinding<infer T> ? Ai<T> : Ai;
+	kv: TBinding extends TypedKvBinding<infer T> ? KVNamespace<T> : KVNamespace;
+	pipeline: TBinding extends TypedPipelineBinding<infer T>
 		? Pipeline<T>
 		: Pipeline;
-	queue: TBinding extends { __typeParams: [infer T] } ? Queue<T> : Queue;
+	queue: TBinding extends TypedQueueBinding<infer T> ? Queue<T> : Queue;
 
 	// Non-parameterized bindings
 	"ai-search": AiSearchInstance;
@@ -108,11 +115,10 @@ interface BindingTypeMap<TBinding> {
 
 type InferBindingType<TBinding> =
 	// Worker binding
-	TBinding extends {
-		type: "worker";
-		exportName: infer TExportName extends string;
-		__config: infer TUnwrappedConfig;
-	}
+	TBinding extends TypedWorkerBinding<
+		infer TUnwrappedConfig,
+		infer TExportName extends string
+	>
 		? InferMainModule<TUnwrappedConfig> extends infer TModule extends
 				WorkerModule
 			? TExportName extends keyof TModule
@@ -124,11 +130,10 @@ type InferBindingType<TBinding> =
 				: never
 			: never
 		: // Durable Object binding
-			TBinding extends {
-					type: "durable-object";
-					exportName: infer TExportName extends string;
-					__config: infer TUnwrappedConfig;
-			  }
+			TBinding extends TypedDurableObjectBinding<
+					infer TUnwrappedConfig,
+					infer TExportName extends string
+			  >
 			? InferMainModule<TUnwrappedConfig> extends infer TModule extends
 					WorkerModule
 				? TExportName extends keyof TModule
@@ -138,11 +143,10 @@ type InferBindingType<TBinding> =
 					: never
 				: never
 			: // Workflow binding
-				TBinding extends {
-						type: "workflow";
-						exportName: infer TExportName extends string;
-						__config: infer TUnwrappedConfig;
-				  }
+				TBinding extends TypedWorkflowBinding<
+						infer TUnwrappedConfig,
+						infer TExportName extends string
+				  >
 				? InferMainModule<TUnwrappedConfig> extends infer TModule extends
 						WorkerModule
 					? TExportName extends keyof TModule
