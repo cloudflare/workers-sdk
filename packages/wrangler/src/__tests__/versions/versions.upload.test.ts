@@ -135,7 +135,7 @@ describe("versions upload", () => {
 		) as WorkerMetadata;
 	}
 
-	describe("with --allow-anonymous", () => {
+	describe("with --temporary", () => {
 		mockAccountId({ accountId: null });
 		mockApiToken({ apiToken: null });
 
@@ -176,7 +176,7 @@ describe("versions upload", () => {
 			setIsTTY(false);
 
 			await expect(
-				runWrangler("versions upload --allow-anonymous")
+				runWrangler("versions upload --temporary")
 			).resolves.toBeUndefined();
 
 			expect(previewAccountRequests).toBe(1);

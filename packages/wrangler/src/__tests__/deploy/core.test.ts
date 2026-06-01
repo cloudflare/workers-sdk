@@ -781,7 +781,7 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("still starts OAuth in interactive mode when --allow-anonymous is passed", async ({
+		it("still starts OAuth in interactive mode when --temporary is passed", async ({
 			expect,
 		}) => {
 			setIsTTY(true);
@@ -818,7 +818,7 @@ describe("deploy", () => {
 			);
 
 			await expect(
-				runWrangler("deploy index.js --allow-anonymous")
+				runWrangler("deploy index.js --temporary")
 			).resolves.toBeUndefined();
 
 			expect(previewAccountRequests).toBe(0);
@@ -935,7 +935,7 @@ describe("deploy", () => {
 			);
 
 			await expect(
-				runWrangler("deploy index.js --allow-anonymous")
+				runWrangler("deploy index.js --temporary")
 			).resolves.toBeUndefined();
 
 			expect(previewAccountRequests).toBe(0);
@@ -943,7 +943,7 @@ describe("deploy", () => {
 		});
 
 		describe("non-TTY", () => {
-			it("creates an anonymous preview account in non-TTY when --allow-anonymous is passed", async ({
+			it("creates an anonymous preview account in non-TTY when --temporary is passed", async ({
 				expect,
 			}) => {
 				setIsTTY(false);
@@ -997,7 +997,7 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 
 				const globalAnonymousAccountPath = path.join(
@@ -1096,14 +1096,14 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 
 				expect(std.out).toContain("Temporary account ready:");
 				expect(std.err).not.toContain("Not logged in");
 			});
 
-			it("requires explicit terms acceptance before using --allow-anonymous", async ({
+			it("requires explicit terms acceptance before using --temporary", async ({
 				expect,
 			}) => {
 				setIsTTY(false);
@@ -1120,9 +1120,9 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: You must accept Cloudflare's Terms of Service and Privacy Policy to use --allow-anonymous.]`
+					`[Error: You must accept Cloudflare's Terms of Service and Privacy Policy to use --temporary.]`
 				);
 
 				expect(previewAccountRequests).toBe(0);
@@ -1185,7 +1185,7 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 
 				const stagingAnonymousAccountPath = path.join(
@@ -1274,10 +1274,10 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 
 				expect(previewAccountRequests).toBe(1);
@@ -1346,7 +1346,7 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 
 				expect(previewAccountRequests).toBe(1);
@@ -1508,7 +1508,7 @@ describe("deploy", () => {
 				expect(std.err).toContain(
 					"To continue without logging in, rerun this command with"
 				);
-				expect(std.err).toContain("--allow-anonymous");
+				expect(std.err).toContain("--temporary");
 			});
 
 			it("should fail clearly if the anonymous preview account request fails", async ({
@@ -1529,7 +1529,7 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Failed to create an anonymous preview account (500 Internal Server Error).]`
 				);

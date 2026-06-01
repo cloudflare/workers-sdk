@@ -534,7 +534,7 @@ export function createCLIParser(argv: string[]) {
 			array: true,
 			requiresArg: true,
 		},
-		"allow-anonymous": {
+		temporary: {
 			describe:
 				"Create a temporary preview account when a command needs authentication in non-interactive mode",
 			type: "boolean",
@@ -2370,7 +2370,7 @@ export async function main(argv: string[]): Promise<void> {
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
 		}
-		setAllowAnonymous(args.allowAnonymous ?? false);
+		setAllowAnonymous(args.temporary ?? false);
 		// Also set the CLI package log level to match
 		setLogLevel(logger.loggerLevel);
 

@@ -113,7 +113,7 @@ describe("wrangler", () => {
 		it("should not require anonymous terms acceptance before root help", async ({
 			expect,
 		}) => {
-			await runWrangler("--help --allow-anonymous");
+			await runWrangler("--help --temporary");
 
 			expect(std.out).toContain("wrangler");
 			expect(std.out).toContain("COMMANDS");
