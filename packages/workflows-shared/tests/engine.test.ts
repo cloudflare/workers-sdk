@@ -90,7 +90,7 @@ describe("Engine", () => {
 					{} as DatabaseWorkflow,
 					{} as DatabaseVersion,
 					{ id: instanceId } as DatabaseInstance,
-					{ payload: {}, timestamp: new Date(), instanceId }
+					{ payload: {}, timestamp: new Date(), instanceId, workflowName: "" }
 				)
 				.catch(() => {});
 
@@ -422,6 +422,7 @@ describe("Engine", () => {
 			payload: {},
 			timestamp: new Date(),
 			instanceId: instanceId,
+			workflowName: "",
 		};
 
 		const engineStub = await runWorkflow(instanceId, async () => {
@@ -478,7 +479,7 @@ describe("Engine", () => {
 				{} as DatabaseWorkflow,
 				{} as DatabaseVersion,
 				{ id: instanceId } as DatabaseInstance,
-				{ payload: {}, timestamp: new Date(), instanceId }
+				{ payload: {}, timestamp: new Date(), instanceId, workflowName: "" }
 			);
 
 			const logs = (await engineStub.readLogs()) as EngineLogs;
@@ -512,7 +513,7 @@ describe("Engine", () => {
 				{} as DatabaseWorkflow,
 				{} as DatabaseVersion,
 				{ id: instanceId } as DatabaseInstance,
-				{ payload: {}, timestamp: new Date(), instanceId }
+				{ payload: {}, timestamp: new Date(), instanceId, workflowName: "" }
 			);
 
 			const logs = (await engineStub.readLogs()) as EngineLogs;
@@ -1236,6 +1237,7 @@ describe("Engine", () => {
 						payload: {},
 						timestamp: new Date(),
 						instanceId,
+						workflowName: "",
 					}
 				);
 			});

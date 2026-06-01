@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { createRequire } from "node:module";
 import { parseStack } from "./callsite";
 import type { Options } from "@cspotcode/source-map-support";
 
@@ -14,10 +15,18 @@ import type { Options } from "@cspotcode/source-map-support";
 // overriding `Symbol.for()` to return a unique symbol.
 // eslint-disable-next-line typescript/consistent-type-imports -- dynamic import type used for return type annotation
 export function getFreshSourceMapSupport(): typeof import("@cspotcode/source-map-support") {
-	const resolvedSupportPath = require.resolve("@cspotcode/source-map-support");
+	// Under Yarn PnP, Node's ESM->CJS bridge (`loadCJSModule` in
+	// `node:internal/modules/esm/translators`) hands this module a re-invented
+	// `require` that only carries `.resolve` and `.main`, with no `.cache`. The
+	// cache-swap below needs a real CJS cache, so fall back to a require built
+	// via `createRequire(__filename)` when we detect the stub.
+	const realRequire = require.cache ? require : createRequire(__filename);
+	const resolvedSupportPath = realRequire.resolve(
+		"@cspotcode/source-map-support"
+	);
 
 	const originalSymbolFor = Symbol.for;
-	const originalSupport = require.cache[resolvedSupportPath];
+	const originalSupport = realRequire.cache[resolvedSupportPath];
 	try {
 		Symbol.for = (key) => {
 			// Make sure we only override the expected symbol. If we upgrade this
@@ -29,12 +38,12 @@ export function getFreshSourceMapSupport(): typeof import("@cspotcode/source-map
 			assert.strictEqual(key, "source-map-support/sharedData");
 			return Symbol(key);
 		};
-		delete require.cache[resolvedSupportPath];
+		delete realRequire.cache[resolvedSupportPath];
 		// eslint-disable-next-line @typescript-eslint/no-require-imports -- require needed to bypass module cache for fresh copy
-		return require(resolvedSupportPath);
+		return realRequire(resolvedSupportPath);
 	} finally {
 		Symbol.for = originalSymbolFor;
-		require.cache[resolvedSupportPath] = originalSupport;
+		realRequire.cache[resolvedSupportPath] = originalSupport;
 	}
 }
 

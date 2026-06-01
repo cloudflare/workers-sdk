@@ -14,6 +14,7 @@ import {
 	constants,
 	existsSync,
 	mkdirSync,
+	readFileSync,
 	renameSync,
 	unlinkSync,
 	writeFileSync,
@@ -516,7 +517,13 @@ async function downloadCloudflared(
 }
 
 /**
- * Download and extract a tarball (for macOS)
+ * Download and extract a tarball (for macOS).
+ *
+ * The update service checksum is for the extracted binary, not the tarball
+ * itself. This matches cloudflared's own auto-update behavior — see
+ * cloudflared/cmd/cloudflared/updater/workers_update.go: the download()
+ * function decompresses .tgz into the raw binary, then Apply() checksums
+ * the resulting file. We do the same: extract first, then verify.
  */
 async function downloadAndExtractTarball(
 	response: Response,
@@ -527,17 +534,6 @@ async function downloadAndExtractTarball(
 	const tempTarPath = join(cacheDir, "cloudflared.tgz");
 
 	const buffer = Buffer.from(await response.arrayBuffer());
-	if (expectedChecksum) {
-		const actualSha256 = sha256Hex(buffer);
-		if (actualSha256 !== expectedChecksum) {
-			throw new UserError(
-				`[cloudflared] SHA256 mismatch for downloaded cloudflared tarball.\n\n` +
-					`Expected: ${expectedChecksum}\n` +
-					`Actual:   ${actualSha256}`,
-				{ telemetryMessage: "tunnel cloudflared tarball checksum mismatch" }
-			);
-		}
-	}
 	writeFileSync(tempTarPath, buffer);
 
 	try {
@@ -548,6 +544,24 @@ async function downloadAndExtractTarball(
 		const extractedPath = join(cacheDir, "cloudflared");
 		if (extractedPath !== binPath && existsSync(extractedPath)) {
 			renameSync(extractedPath, binPath);
+		}
+
+		// Verify checksum against the extracted binary, not the tarball.
+		// The update service provides checksums for the uncompressed binary.
+		if (expectedChecksum) {
+			const extractedBinary = readFileSync(binPath);
+			const actualSha256 = sha256Hex(extractedBinary);
+			if (actualSha256 !== expectedChecksum) {
+				throw new UserError(
+					`[cloudflared] SHA256 mismatch for downloaded cloudflared binary.\n\n` +
+						`Expected: ${expectedChecksum}\n` +
+						`Actual:   ${actualSha256}`,
+					{
+						telemetryMessage:
+							"tunnel cloudflared extracted binary checksum mismatch",
+					}
+				);
+			}
 		}
 	} finally {
 		try {
