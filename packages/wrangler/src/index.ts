@@ -427,7 +427,6 @@ import { tunnelQuickStartCommand } from "./tunnel/quick-start";
 import { tunnelRunCommand } from "./tunnel/run";
 import { typesCommand } from "./type-generation";
 import { runWithAuthContext, setAllowAnonymous } from "./user";
-import { ensureAnonymousTermsAccepted } from "./user/anonymous-terms";
 import {
 	authNamespace,
 	authTokenCommand,
@@ -2358,7 +2357,6 @@ export async function main(argv: string[]): Promise<void> {
 	const hasHelpFlag = argv.includes("--help") || argv.includes("-h");
 	const nonFlagArgs = argv.filter((arg) => !arg.startsWith("-"));
 	const isRootHelpRequest = hasHelpFlag && nonFlagArgs.length === 0;
-	const allowAnonymousRequested = hasAllowAnonymousFlag(argv);
 
 	const { wrangler, registry, showHelpWithCategories } = createCLIParser(argv);
 
@@ -2395,10 +2393,6 @@ export async function main(argv: string[]): Promise<void> {
 
 	let cliHandlerThrew = false;
 	try {
-		if (allowAnonymousRequested) {
-			await ensureAnonymousTermsAccepted();
-		}
-
 		if (isRootHelpRequest) {
 			await showHelpWithCategories();
 			return;
@@ -2470,29 +2464,6 @@ export async function main(argv: string[]): Promise<void> {
 			}
 		}
 	}
-}
-
-function hasAllowAnonymousFlag(argv: string[]): boolean {
-	let allowAnonymous = false;
-
-	for (const arg of argv) {
-		if (arg === "--allow-anonymous" || arg === "--allowAnonymous") {
-			allowAnonymous = true;
-		} else if (
-			arg === "--no-allow-anonymous" ||
-			arg === "--no-allowAnonymous"
-		) {
-			allowAnonymous = false;
-		} else if (
-			arg.startsWith("--allow-anonymous=") ||
-			arg.startsWith("--allowAnonymous=")
-		) {
-			const value = arg.slice(arg.indexOf("=") + 1).toLowerCase();
-			allowAnonymous = !["false", "0", "no"].includes(value);
-		}
-	}
-
-	return allowAnonymous;
 }
 
 /**

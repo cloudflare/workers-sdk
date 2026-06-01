@@ -5,11 +5,10 @@ import {
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getPackageManager } from "../package-manager";
 import { updateCheck } from "../update-check";
-import { ANONYMOUS_TERMS_PROMPT } from "../user/anonymous-terms";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs, mockPrompt } from "./helpers/mock-dialogs";
+import { clearDialogs } from "./helpers/mock-dialogs";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { PackageManager } from "../package-manager";
@@ -111,11 +110,9 @@ describe("wrangler", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should require anonymous terms acceptance before root help", async ({
+		it("should not require anonymous terms acceptance before root help", async ({
 			expect,
 		}) => {
-			mockPrompt({ text: ANONYMOUS_TERMS_PROMPT, result: "yes" });
-
 			await runWrangler("--help --allow-anonymous");
 
 			expect(std.out).toContain("wrangler");

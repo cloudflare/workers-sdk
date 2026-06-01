@@ -241,6 +241,7 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { domainUsesAccess } from "./access";
+import { ensureAnonymousTermsAccepted } from "./anonymous-terms";
 import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
@@ -1495,7 +1496,9 @@ export async function requireAuth(
 	if (!loggedIn) {
 		if (shouldAllowAnonymous()) {
 			const { account: anonymousPreviewAccount, cached } =
-				await getOrCreateAnonymousPreviewAccount();
+				await getOrCreateAnonymousPreviewAccount({
+					beforeCreate: ensureAnonymousTermsAccepted,
+				});
 			setAuthOverride({
 				accountId: anonymousPreviewAccount.account.id,
 				apiToken: {

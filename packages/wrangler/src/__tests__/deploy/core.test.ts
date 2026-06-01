@@ -935,7 +935,6 @@ describe("deploy", () => {
 			expect,
 		}) => {
 			setIsTTY(false);
-			mockAnonymousTermsAcceptance();
 			writeAuthConfigFile({ api_token: "cached-api-token" });
 			writeWranglerConfig();
 			writeWorkerSource();
@@ -1050,6 +1049,8 @@ describe("deploy", () => {
 			}) => {
 				setIsTTY(false);
 				mockAnonymousTermsAcceptance("no");
+				writeWranglerConfig();
+				writeWorkerSource();
 
 				let previewAccountRequests = 0;
 				msw.use(
@@ -1072,7 +1073,6 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
-				mockAnonymousTermsAcceptance();
 				mockAnonymousTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
