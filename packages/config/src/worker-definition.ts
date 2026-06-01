@@ -19,7 +19,9 @@ export interface ConfigContext {
 	mode: string;
 }
 
-const CONFIG: unique symbol = Symbol();
+// We currently use Symbol.for rather than Symbol so that the symbol matches if duplicated across bundles
+// This wouldn't be necessary if @cloudflare/config was published and included as a dependency
+const CONFIG = Symbol.for("@cloudflare/config:worker-definition");
 
 /**
  * Base shape of a Worker definition. Carries the resolved config and the
