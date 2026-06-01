@@ -17,7 +17,7 @@ import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
 import { writeAuthConfigFile } from "../../user";
-import { TEMPORARY_TERMS_PROMPT } from "../../user/temporary-terms";
+import { TEMPORARY_TERMS_ACCEPTANCE_ENV } from "../../user/temporary-terms";
 import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
@@ -96,8 +96,8 @@ describe("deploy", () => {
 	} = mockOAuthFlow();
 	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
-	const mockTemporaryTermsAcceptance = (result = "yes") => {
-		mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result });
+	const setTemporaryTermsAcceptance = (result = "yes") => {
+		vi.stubEnv(TEMPORARY_TERMS_ACCEPTANCE_ENV, result);
 	};
 
 	beforeEach(() => {
@@ -947,7 +947,7 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
-				mockTemporaryTermsAcceptance();
+				setTemporaryTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1043,7 +1043,7 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
-				mockTemporaryTermsAcceptance();
+				setTemporaryTermsAcceptance();
 				// A stale stored OAuth token whose refresh fails must not hijack the
 				// temporary override and abort the deploy with "Not logged in".
 				writeAuthConfigFile({
@@ -1108,7 +1108,6 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
-				mockTemporaryTermsAcceptance("no");
 				writeWranglerConfig();
 				writeWorkerSource();
 
@@ -1120,10 +1119,11 @@ describe("deploy", () => {
 					})
 				);
 
-				await expect(
-					runWrangler("deploy index.js --temporary")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: You must accept Cloudflare's Terms of Service and Privacy Policy to use --temporary.]`
+				const result = runWrangler("deploy index.js --temporary");
+				process.stdin.emit("end");
+
+				await expect(result).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: You must accept Cloudflare's Terms of Service and Privacy Policy to use --temporary. To accept non-interactively, set WRANGLER_TEMPORARY_ACCEPT_TERMS=yes.]`
 				);
 
 				expect(previewAccountRequests).toBe(0);
@@ -1134,7 +1134,7 @@ describe("deploy", () => {
 			}) => {
 				vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 				setIsTTY(false);
-				mockTemporaryTermsAcceptance();
+				setTemporaryTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1210,7 +1210,7 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
-				mockTemporaryTermsAcceptance();
+				setTemporaryTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1290,7 +1290,7 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
-				mockTemporaryTermsAcceptance();
+				setTemporaryTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1516,7 +1516,7 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
-				mockTemporaryTermsAcceptance();
+				setTemporaryTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 
