@@ -81,6 +81,7 @@ describe("init", () => {
 					stdio: ["inherit", "pipe", "pipe"],
 				},
 				throwOnError: true,
+				nodePath: false,
 			});
 		});
 
@@ -95,6 +96,7 @@ describe("init", () => {
 						stdio: ["inherit", "pipe", "pipe"],
 					},
 					throwOnError: true,
+					nodePath: false,
 				}
 			);
 		});
@@ -127,6 +129,7 @@ describe("init", () => {
 						stdio: ["inherit", "pipe", "pipe"],
 					},
 					throwOnError: true,
+					nodePath: false,
 				});
 			});
 
@@ -147,6 +150,7 @@ describe("init", () => {
 							stdio: ["inherit", "pipe", "pipe"],
 						},
 						throwOnError: true,
+						nodePath: false,
 					}
 				);
 			});
@@ -188,6 +192,7 @@ describe("init", () => {
 						stdio: ["inherit", "pipe", "pipe"],
 					},
 					throwOnError: true,
+					nodePath: false,
 				});
 			});
 
@@ -202,6 +207,7 @@ describe("init", () => {
 							stdio: ["inherit", "pipe", "pipe"],
 						},
 						throwOnError: true,
+						nodePath: false,
 					}
 				);
 			});
@@ -224,6 +230,7 @@ describe("init", () => {
 					stdio: ["inherit", "pipe", "pipe"],
 				},
 				throwOnError: true,
+				nodePath: false,
 			});
 		});
 	});
@@ -880,6 +887,7 @@ describe("init", () => {
 						stdio: ["inherit", "pipe", "pipe"],
 					},
 					throwOnError: true,
+					nodePath: false,
 				}
 			);
 		});
