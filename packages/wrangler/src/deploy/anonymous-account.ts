@@ -192,7 +192,9 @@ export async function createAnonymousPreviewAccount(): Promise<AnonymousPreviewA
 	};
 }
 
-export async function getOrCreateAnonymousPreviewAccount(): Promise<{
+export async function getOrCreateAnonymousPreviewAccount(options?: {
+	beforeCreate?: () => Promise<void>;
+}): Promise<{
 	account: AnonymousPreviewAccount;
 	cached: boolean;
 }> {
@@ -200,6 +202,8 @@ export async function getOrCreateAnonymousPreviewAccount(): Promise<{
 	if (cachedPreviewAccount) {
 		return { account: cachedPreviewAccount, cached: true };
 	}
+
+	await options?.beforeCreate?.();
 
 	const anonymousPreviewAccount = await createAnonymousPreviewAccount();
 	cacheAnonymousPreviewAccount(anonymousPreviewAccount);

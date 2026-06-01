@@ -534,7 +534,7 @@ export function createCLIParser(argv: string[]) {
 			array: true,
 			requiresArg: true,
 		},
-		"allow-anonymous": {
+		temporary: {
 			describe:
 				"Create a temporary preview account when a command needs authentication in non-interactive mode",
 			type: "boolean",
@@ -2360,25 +2360,6 @@ export async function main(argv: string[]): Promise<void> {
 
 	const { wrangler, registry, showHelpWithCategories } = createCLIParser(argv);
 
-	if (isRootHelpRequest) {
-		await showHelpWithCategories();
-		return;
-	}
-
-	// Check for unknown command with a `--help` flag
-	const [subCommand] = nonFlagArgs;
-	if (hasHelpFlag && subCommand) {
-		const knownCommands = registry.topLevelCommands;
-		if (!knownCommands.has(subCommand)) {
-			logger.info("");
-			logger.error(`Unknown argument: ${subCommand}`);
-			await showHelpWithCategories();
-			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`, {
-				telemetryMessage: "cli help unknown argument",
-			});
-		}
-	}
-
 	const startTime = Date.now();
 	let configArgs: ReadConfigCommandArgs = {};
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
@@ -2389,7 +2370,7 @@ export async function main(argv: string[]): Promise<void> {
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
 		}
-		setAllowAnonymous(args.allowAnonymous ?? false);
+		setAllowAnonymous(args.temporary ?? false);
 		// Also set the CLI package log level to match
 		setLogLevel(logger.loggerLevel);
 
@@ -2412,6 +2393,25 @@ export async function main(argv: string[]): Promise<void> {
 
 	let cliHandlerThrew = false;
 	try {
+		if (isRootHelpRequest) {
+			await showHelpWithCategories();
+			return;
+		}
+
+		// Check for unknown command with a `--help` flag
+		const [subCommand] = nonFlagArgs;
+		if (hasHelpFlag && subCommand) {
+			const knownCommands = registry.topLevelCommands;
+			if (!knownCommands.has(subCommand)) {
+				logger.info("");
+				logger.error(`Unknown argument: ${subCommand}`);
+				await showHelpWithCategories();
+				throw new CommandLineArgsError(`Unknown argument: ${subCommand}`, {
+					telemetryMessage: "cli help unknown argument",
+				});
+			}
+		}
+
 		await runWithAuthContext(async () => {
 			await wrangler.parse();
 		});

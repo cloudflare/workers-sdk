@@ -95,6 +95,37 @@ export async function prompt(
 	return value;
 }
 
+export async function promptForExplicitYes(text: string): Promise<boolean> {
+	let cleanupStdinListeners = () => {};
+	const stdinClosed = new Promise<{ value: undefined }>((resolve) => {
+		const onClosed = () => resolve({ value: undefined });
+		process.stdin.once("close", onClosed);
+		process.stdin.once("end", onClosed);
+		cleanupStdinListeners = () => {
+			process.stdin.off("close", onClosed);
+			process.stdin.off("end", onClosed);
+		};
+	});
+
+	const { value } = await Promise.race([
+		prompts({
+			type: "text",
+			name: "value",
+			message: text,
+			onState: (state) => {
+				if (state.aborted) {
+					process.nextTick(() => {
+						process.exit(1);
+					});
+				}
+			},
+		}),
+		stdinClosed,
+	]).finally(cleanupStdinListeners);
+
+	return typeof value === "string" && value.trim().toLowerCase() === "yes";
+}
+
 interface SelectOptions<Values> {
 	choices: SelectOption<Values>[];
 	defaultOption?: number;

@@ -17,6 +17,7 @@ import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
 import { writeAuthConfigFile } from "../../user";
+import { ANONYMOUS_TERMS_PROMPT } from "../../user/anonymous-terms";
 import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
@@ -95,6 +96,9 @@ describe("deploy", () => {
 	} = mockOAuthFlow();
 	const anonymousPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
+	const mockAnonymousTermsAcceptance = (result = "yes") => {
+		mockPrompt({ text: ANONYMOUS_TERMS_PROMPT, result });
+	};
 
 	beforeEach(() => {
 		vi.stubGlobal("setTimeout", (fn: () => void) => {
@@ -777,7 +781,7 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("still starts OAuth in interactive mode when --allow-anonymous is passed", async ({
+		it("still starts OAuth in interactive mode when --temporary is passed", async ({
 			expect,
 		}) => {
 			setIsTTY(true);
@@ -814,7 +818,7 @@ describe("deploy", () => {
 			);
 
 			await expect(
-				runWrangler("deploy index.js --allow-anonymous")
+				runWrangler("deploy index.js --temporary")
 			).resolves.toBeUndefined();
 
 			expect(previewAccountRequests).toBe(0);
@@ -931,7 +935,7 @@ describe("deploy", () => {
 			);
 
 			await expect(
-				runWrangler("deploy index.js --allow-anonymous")
+				runWrangler("deploy index.js --temporary")
 			).resolves.toBeUndefined();
 
 			expect(previewAccountRequests).toBe(0);
@@ -939,10 +943,11 @@ describe("deploy", () => {
 		});
 
 		describe("non-TTY", () => {
-			it("creates an anonymous preview account in non-TTY when --allow-anonymous is passed", async ({
+			it("creates an anonymous preview account in non-TTY when --temporary is passed", async ({
 				expect,
 			}) => {
 				setIsTTY(false);
+				mockAnonymousTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -992,7 +997,7 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 
 				const globalAnonymousAccountPath = path.join(
@@ -1037,6 +1042,7 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
+				mockAnonymousTermsAcceptance();
 				// A stale stored OAuth token whose refresh fails must not hijack the
 				// anonymous override and abort the deploy with "Not logged in".
 				writeAuthConfigFile({
@@ -1090,11 +1096,36 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 
 				expect(std.out).toContain("Temporary account ready:");
 				expect(std.err).not.toContain("Not logged in");
+			});
+
+			it("requires explicit terms acceptance before using --temporary", async ({
+				expect,
+			}) => {
+				setIsTTY(false);
+				mockAnonymousTermsAcceptance("no");
+				writeWranglerConfig();
+				writeWorkerSource();
+
+				let previewAccountRequests = 0;
+				msw.use(
+					http.post(anonymousPreviewAccountUrl, async () => {
+						previewAccountRequests += 1;
+						return HttpResponse.json({});
+					})
+				);
+
+				await expect(
+					runWrangler("deploy index.js --temporary")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: You must accept Cloudflare's Terms of Service and Privacy Policy to use --temporary.]`
+				);
+
+				expect(previewAccountRequests).toBe(0);
 			});
 
 			it("provisions the preview account against the staging API and caches it per-environment", async ({
@@ -1102,6 +1133,7 @@ describe("deploy", () => {
 			}) => {
 				vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 				setIsTTY(false);
+				mockAnonymousTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1153,7 +1185,7 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 
 				const stagingAnonymousAccountPath = path.join(
@@ -1177,6 +1209,7 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
+				mockAnonymousTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1241,10 +1274,10 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 
 				expect(previewAccountRequests).toBe(1);
@@ -1256,6 +1289,7 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				setIsTTY(false);
+				mockAnonymousTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1312,7 +1346,7 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 
 				expect(previewAccountRequests).toBe(1);
@@ -1474,13 +1508,14 @@ describe("deploy", () => {
 				expect(std.err).toContain(
 					"To continue without logging in, rerun this command with"
 				);
-				expect(std.err).toContain("--allow-anonymous");
+				expect(std.err).toContain("--temporary");
 			});
 
 			it("should fail clearly if the anonymous preview account request fails", async ({
 				expect,
 			}) => {
 				setIsTTY(false);
+				mockAnonymousTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 
@@ -1494,7 +1529,7 @@ describe("deploy", () => {
 				);
 
 				await expect(
-					runWrangler("deploy index.js --allow-anonymous")
+					runWrangler("deploy index.js --temporary")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Failed to create an anonymous preview account (500 Internal Server Error).]`
 				);
