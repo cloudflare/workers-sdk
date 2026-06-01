@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import assert from "node:assert";
 
 export default {
@@ -40,7 +39,11 @@ export default {
 };
 
 function getRuntimeFlagValue(name: string): boolean | undefined {
-	const { compatibilityFlags } = (globalThis as any).Cloudflare;
+	const { compatibilityFlags } = (
+		globalThis as unknown as {
+			Cloudflare: { compatibilityFlags: Record<string, boolean> };
+		}
+	).Cloudflare;
 	return compatibilityFlags[name];
 }
 
@@ -454,12 +457,13 @@ export const WorkerdTests: Record<string, () => Promise<void>> = {
 			assert.ok(blob instanceof Blob);
 
 			// Old names in fs namespace
-			assert.strictEqual((fs as any).FileReadStream, fs.ReadStream);
-			assert.strictEqual((fs as any).FileWriteStream, fs.WriteStream);
-			assert.equal((fs as any).F_OK, 0);
-			assert.equal((fs as any).R_OK, 4);
-			assert.equal((fs as any).W_OK, 2);
-			assert.equal((fs as any).X_OK, 1);
+			const fsAsOld = fs as Record<string, unknown>;
+			assert.strictEqual(fsAsOld.FileReadStream, fs.ReadStream);
+			assert.strictEqual(fsAsOld.FileWriteStream, fs.WriteStream);
+			assert.equal(fsAsOld.F_OK, 0);
+			assert.equal(fsAsOld.R_OK, 4);
+			assert.equal(fsAsOld.W_OK, 2);
+			assert.equal(fsAsOld.X_OK, 1);
 		} else {
 			assert.throws(
 				() => fs.readFileSync("/tmp/file", "utf-8"),
@@ -549,7 +553,10 @@ export const WorkerdTests: Record<string, () => Promise<void>> = {
 			getRuntimeFlagValue("fetch_iterable_type_support_override_adjustment");
 
 		for (const p of [mProcess, gProcess]) {
-			assert.equal(typeof (p as any).binding, "function");
+			assert.equal(
+				typeof (p as unknown as { binding: unknown }).binding,
+				"function"
+			);
 			if (useV2) {
 				// workerd implementation only
 				assert.equal(p.arch, "x64");
@@ -852,8 +859,9 @@ export const WorkerdTests: Record<string, () => Promise<void>> = {
 		});
 
 		// builtinModules should be an array (not in TypeScript types but exported by both unenv and workerd)
-		assert.ok(Array.isArray((repl as any).builtinModules));
-		assert.ok((repl as any).builtinModules.length > 0);
+		const { builtinModules } = repl as unknown as { builtinModules: string[] };
+		assert.ok(Array.isArray(builtinModules));
+		assert.ok(builtinModules.length > 0);
 
 		// Both implementations throw when calling start()
 		assert.throws(
@@ -1113,7 +1121,7 @@ export const WorkerdTests: Record<string, () => Promise<void>> = {
  * Asserts that `target[property]` is of type `expectType`.
  */
 function assertTypeOf(target: unknown, property: string, expectType: string) {
-	const actualType = typeof (target as any)[property];
+	const actualType = typeof (target as Record<string, unknown>)[property];
 	assert.strictEqual(
 		actualType,
 		expectType,

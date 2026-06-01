@@ -80,7 +80,24 @@ export function createRequestHandler(
 			if (req.originalUrl) {
 				req.url = req.originalUrl;
 			}
-			request = createRequest(req, res);
+			// Honor the `X-Forwarded-Proto` header on the incoming request so that
+			// `request.url` reflects the protocol the original client used, not the
+			// HTTP connection between the proxy and the dev server. This is needed
+			// when the Vite dev server sits behind a TLS-terminating reverse proxy
+			// or tunnel (cloudflared, ngrok, etc.) so that frameworks performing
+			// Origin/Host checks (e.g. CSRF protection) see a consistent origin.
+			//
+			// We trust this unconditionally because the Vite dev server is a
+			// local-only dev tool and this header is the de-facto standard set by
+			// reverse proxies. Browser-mediated CSRF attacks cannot reach here:
+			// `X-Forwarded-Proto` is not a CORS-safelisted header, so a `fetch()`
+			// that sets it triggers a CORS preflight, and simple form-submitted
+			// POSTs cannot include custom headers at all.
+			//
+			// If the header is absent or invalid, `createRequest` falls back to the
+			// connection protocol (`req.socket.encrypted`).
+			const protocol = getForwardedProto(req);
+			request = createRequest(req, res, protocol ? { protocol } : undefined);
 
 			let response = await handler(toMiniflareRequest(request), req);
 
@@ -139,3 +156,25 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 }
 
 export const isRolldown = "rolldownVersion" in vite;
+
+/**
+ * Parses the `X-Forwarded-Proto` header from an incoming Node.js request.
+ *
+ * If multiple proxies are in the chain, the header may be a comma-separated
+ * list — the left-most value is the original client-facing protocol.
+ * Returns `undefined` if the header is missing or holds an unsupported value.
+ */
+export function getForwardedProto(req: {
+	headers: http.IncomingHttpHeaders;
+}): "http:" | "https:" | undefined {
+	const raw = req.headers["x-forwarded-proto"];
+	const value = Array.isArray(raw) ? raw[0] : raw;
+	if (!value) {
+		return undefined;
+	}
+	const first = value.split(",")[0]?.trim().toLowerCase();
+	if (first === "http" || first === "https") {
+		return `${first}:`;
+	}
+	return undefined;
+}

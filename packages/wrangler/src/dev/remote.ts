@@ -12,17 +12,17 @@ import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
 import type { StartDevWorkerInput } from "../api";
-import type { AssetsOptions } from "../assets";
-import type { LegacyAssetPaths } from "../sites";
 import type { ApiCredentials } from "../user";
 import type { CfAccount } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
+	AssetsOptions,
 	CfModule,
 	CfScriptFormat,
 	CfWorkerContext,
 	CfWorkerInit,
 	ComplianceConfig,
+	LegacyAssetPaths,
 	Route,
 } from "@cloudflare/workers-utils";
 

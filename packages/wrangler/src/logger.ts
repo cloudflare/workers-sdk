@@ -68,6 +68,21 @@ export const runWithLogLevel = <V>(
 	cb: () => V
 ) => overrideLoggerLevel.run({ logLevel: overrideLogLevel }, cb);
 
+/**
+ * Determines whether Wrangler should write logs to disk.
+ * Exported for testability — skips disk logging in unit tests
+ * and when WRANGLER_WRITE_LOGS is "false" or "0".
+ */
+export function shouldLogToDisk(
+	isTestEnvironment = typeof vitest !== "undefined"
+): boolean {
+	if (isTestEnvironment) {
+		return false;
+	}
+	const setting = process.env.WRANGLER_WRITE_LOGS?.toLowerCase();
+	return setting !== "false" && setting !== "0";
+}
+
 export type TableRow<Keys extends string> = Record<Keys, string>;
 
 function consoleMethodToLoggerLevel(
@@ -107,7 +122,7 @@ export class Logger {
 	columns = process.stdout.columns;
 
 	json = (data: unknown) => {
-		// eslint-disable-next-line no-console
+		// eslint-disable-next-line no-console -- The logger implementation has to use console directly
 		console.log(JSON.stringify(data, null, 4));
 	};
 
@@ -160,7 +175,7 @@ export class Logger {
 		method: M,
 		...args: Parameters<Console[M]>
 	) {
-		// eslint-disable-next-line no-console
+		// eslint-disable-next-line no-console -- Logger implementation must use console directly
 		if (typeof console[method] !== "function") {
 			throw new Error(`console.${method}() is not a function`);
 		}
@@ -170,7 +185,7 @@ export class Logger {
 			LOGGER_LEVELS[consoleMethodToLoggerLevel(method)]
 		) {
 			Logger.#beforeLogHook?.();
-			// eslint-disable-next-line no-console
+			// eslint-disable-next-line no-console -- Logger implementation must use console directly
 			(console[method] as (...args: unknown[]) => unknown).apply(console, args);
 			Logger.#afterLogHook?.();
 		}
@@ -207,15 +222,15 @@ export class Logger {
 			: args;
 
 		// unless in unit-tests, send ALL logs to the debug log file (even non-debug logs for context & order)
-		const inUnitTests = typeof vitest !== "undefined";
-		if (!inUnitTests) {
+		// users can opt out of disk logging entirely by setting WRANGLER_WRITE_LOGS=false (or "0")
+		if (shouldLogToDisk()) {
 			void appendToDebugLogFile(messageLevel, message);
 		}
 
 		// only send logs to the terminal if their level is at least the configured log-level
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
 			Logger.#beforeLogHook?.();
-			// eslint-disable-next-line no-console
+			// eslint-disable-next-line no-console -- Logger implementation must use console directly
 			console[messageLevel](message);
 			Logger.#afterLogHook?.();
 		}

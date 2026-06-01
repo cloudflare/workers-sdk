@@ -1,5 +1,8 @@
 import * as fs from "node:fs";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -15,7 +18,6 @@ import { mockGetSettings } from "../helpers/mock-worker-settings";
 import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
@@ -1323,6 +1325,77 @@ describe("deploy", () => {
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: An unexpected response has been received from the Cloudflare API for assets upload. Please try again.]`
 			);
+		});
+
+		it("should retry asset uploads on failure and log a retry message including the attempt count", async ({
+			expect,
+		}) => {
+			vi.stubEnv("WRANGLER_LOG", "debug");
+
+			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+
+			const mockBuckets = [["0de3dd5df907418e9730fd2bd747bd5e"]];
+			await mockAUSRequest([], mockBuckets, "<<aus-token>>");
+
+			// Fail the first upload attempt, succeed on the second.
+			const uploadAttempts: Request[] = [];
+			msw.use(
+				http.post(
+					"*/accounts/some-account-id/workers/assets/upload",
+					async ({ request }) => {
+						uploadAttempts.push(request);
+						if (uploadAttempts.length === 1) {
+							return HttpResponse.json(
+								{
+									success: false,
+									errors: [{ code: 1, message: "upload-boom-from-test" }],
+									messages: [],
+									result: null,
+								},
+								{ status: 500 }
+							);
+						}
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "<<aus-completion-token>>" },
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+			});
+
+			await runWrangler("deploy");
+
+			// The upload endpoint was hit twice: once failing, once succeeding.
+			expect(uploadAttempts.length).toBe(2);
+
+			// The new info message includes the attempt count.
+			expect(std.info).toContain(
+				"Asset upload failed. Retrying... 1 of 5 attempts."
+			);
+
+			// The error details no longer leak into the user-facing info log.
+			expect(std.info).not.toContain("upload-boom-from-test");
+
+			// The error is now logged at debug level instead.
+			expect(std.debug).toContain("upload-boom-from-test");
 		});
 	});
 });

@@ -16,10 +16,10 @@ export async function logPossibleBugMessage() {
 		`${fgGreenColor}%s${resetColor}`,
 		"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 	);
-	const latestVersion = await updateCheck();
-	if (latestVersion) {
+	const result = await updateCheck();
+	if (result.status === "update-available") {
 		logger.log(
-			`Note that there is a newer version of Wrangler available (${latestVersion}). Consider checking whether upgrading resolves this error.`
+			`Note that there is a newer version of Wrangler available (${result.latest}). Consider checking whether upgrading resolves this error.`
 		);
 	}
 }

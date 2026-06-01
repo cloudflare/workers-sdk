@@ -1,5 +1,363 @@
 # miniflare
 
+## 4.20260529.0
+
+### Minor Changes
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Add support for the new `web_search` binding kind.
+
+  Cloudflare Web Search is a managed, zero-setup web discovery primitive for agents and Workers. Declare the binding as a single object in `wrangler.jsonc`:
+
+  ```jsonc
+  {
+    "web_search": { "binding": "WEBSEARCH" }
+  }
+  ```
+
+  There is exactly one shared web corpus, so there is no namespace, instance, or other field to specify -- only the variable name. The binding exposes a single `search()` method that returns URLs and catalog metadata for a query. Web Search is discovery-only -- to read a result's content the caller invokes the global `fetch()` API against the result's `url`.
+
+  The binding is **always remote** in local development: Miniflare proxies to the production Web Search service via the remote-bindings transport. Adds the `websearch.run` OAuth scope to `wrangler login`.
+
+  Also adds a `wrangler websearch search` command for running ad-hoc queries from the CLI:
+
+  ```sh
+  npx wrangler websearch search "cloudflare workers"
+  npx wrangler websearch search "cloudflare workers" --limit 5
+  npx wrangler websearch search "cloudflare workers" --json
+  ```
+
+  `--limit` is optional (defaults to 10, capped at 20). `--json` prints the raw response; without it the results render as a pretty table.
+
+- [#13610](https://github.com/cloudflare/workers-sdk/pull/13610) [`cbb39bd`](https://github.com/cloudflare/workers-sdk/commit/cbb39bdc90d4b93f9a9b4355124570d838eb1a2d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for `agent_memory` bindings
+
+  Agent Memory bindings allow Workers to connect to Cloudflare's Agent Memory service for storing and retrieving agent conversation state. This binding is remote-only, meaning it always connects to the Cloudflare API during `wrangler dev` rather than using a local simulation.
+
+  To configure an `agent_memory` binding, add the following to your `wrangler.json`:
+
+  ```jsonc
+  {
+    "agent_memory": [
+      {
+        "binding": "MY_MEMORY",
+        "namespace": "my-namespace"
+      }
+    ]
+  }
+  ```
+
+  Wrangler will automatically provision the namespace during deployment if it does not already exist. Type generation via `wrangler types` is also supported.
+
+  This change also adds the `agent-memory:write` OAuth scope to Wrangler's default login scopes, so `wrangler login` can request the permissions needed to provision and manage Agent Memory namespaces.
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Rename `pipeline` field to `stream` in pipeline bindings configuration
+
+  The `pipeline` field inside `pipelines` bindings has been renamed to `stream` to align with the updated API wire format. The old `pipeline` field is still accepted but deprecated and will emit a warning.
+
+  Before:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "pipelines": [
+      {
+        "binding": "MY_PIPELINE",
+        "pipeline": "my-stream-name"
+      }
+    ]
+  }
+  ```
+
+  After:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "pipelines": [
+      {
+        "binding": "MY_PIPELINE",
+        "stream": "my-stream-name"
+      }
+    ]
+  }
+  ```
+
+- [#14079](https://github.com/cloudflare/workers-sdk/pull/14079) [`972d13d`](https://github.com/cloudflare/workers-sdk/commit/972d13d7054586bb9e3c11e888179d3df7753338) Thanks [@edmundhung](https://github.com/edmundhung)! - Add JSON output to `/cdn-cgi/handler/scheduled`
+
+  The `/cdn-cgi/handler/scheduled` endpoint now accepts `?format=json` to return the scheduled handler result as JSON, including whether the handler called `controller.noRetry()`. Requests without `format=json` still return the existing text outcome for backward compatibility.
+
+### Patch Changes
+
+- [#14106](https://github.com/cloudflare/workers-sdk/pull/14106) [`7bb5c7a`](https://github.com/cloudflare/workers-sdk/commit/7bb5c7a78a22320283549a86a29a76146f7252a4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add timeout to browser-rendering browser launch to prevent infinite hangs
+
+  The browser-rendering plugin's `launchBrowser()` function now passes a 5-minute timeout to `waitForLineOutput()` when waiting for Chrome to print its DevTools WebSocket URL. Previously, if Chrome failed to start or crashed before printing the URL, the promise would hang forever. This could cause CI pipelines and local dev sessions to get stuck indefinitely.
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260526.1 | 1.20260527.1 |
+
+- [#14076](https://github.com/cloudflare/workers-sdk/pull/14076) [`97d7d81`](https://github.com/cloudflare/workers-sdk/commit/97d7d81e0a757e30e7700b183133249e2136a280) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260527.1 | 1.20260528.1 |
+
+- [#14100](https://github.com/cloudflare/workers-sdk/pull/14100) [`c647ccc`](https://github.com/cloudflare/workers-sdk/commit/c647ccc7873c2cada60ba5f4ce7c8dfeb4801acc) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260528.1 | 1.20260529.1 |
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix `wrangler dev` crash under Yarn PnP when the worker emits a structured log or the inspector forwards a stack trace.
+
+  `getFreshSourceMapSupport` was unconditionally indexing `require.cache`, but when `miniflare` is `import`ed from ESM under Yarn PnP, Node's ESM->CJS bridge (`loadCJSModule` in `node:internal/modules/esm/translators`) hands the wrapped CJS module a re-invented `require` that only carries `.resolve` and `.main`, with no `.cache`. Fall back to `createRequire(__filename)` in that case so the fresh-load cache-swap keeps working.
+
+## 4.20260526.0
+
+### Patch Changes
+
+- [#14003](https://github.com/cloudflare/workers-sdk/pull/14003) [`c1fd2fd`](https://github.com/cloudflare/workers-sdk/commit/c1fd2fd3a41de5ee8e4698814d89429b86c75450) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260521.1 | 1.20260526.1 |
+
+- [#14011](https://github.com/cloudflare/workers-sdk/pull/14011) [`420e457`](https://github.com/cloudflare/workers-sdk/commit/420e45789b3ef8d9a05f4dc7ba723f2c2d0c7dbc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Warn when a remote-bindings request is blocked by Cloudflare Access
+
+  When `wrangler dev` is used with remote bindings and a request from the local remote-bindings proxy client to the remote workers.dev proxy server is blocked by Cloudflare Access (HTTP 403 with the Cloudflare Access block page), Wrangler now:
+
+  - Logs a single, visually striking warning per dev session explaining how to set `CLOUDFLARE_ACCESS_CLIENT_ID` / `CLOUDFLARE_ACCESS_CLIENT_SECRET` (Service Token credentials) or run `cloudflared access login` to authenticate.
+  - Replaces the original Access HTML block page with a readable plain-text body containing the same guidance, so the message also reaches the user via binding error messages (e.g. `InferenceUpstreamError` from `env.AI.run()`) and any browser response piped back via a service binding `.fetch()`.
+
+  Previously the 403 was returned to user code with the full Access HTML, which both drowned out other logs and made it hard to tell that the failure was due to Cloudflare Access on workers.dev rather than a problem in the binding itself or the deployed proxy server. The detection runs inside the proxy client worker (which only ever talks to the remote-bindings proxy URL), so it does not trigger false positives on user-worker 403s.
+
+## 4.20260521.0
+
+### Patch Changes
+
+- [#13993](https://github.com/cloudflare/workers-sdk/pull/13993) [`0733688`](https://github.com/cloudflare/workers-sdk/commit/07336888e0bc82925e4023f5b72a0062f10d77b8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260520.1 | 1.20260521.1 |
+
+- [#13999](https://github.com/cloudflare/workers-sdk/pull/13999) [`30657e1`](https://github.com/cloudflare/workers-sdk/commit/30657e1db097135d97209c3ae0cc623fc66827b9) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix TCP requests failing when `outboundService` is configured
+
+  Workers using `outboundService` can now open TCP connections with `cloudflare:sockets`. Previously, TCP requests could throw an error when a custom outbound service was configured.
+
+## 4.20260520.0
+
+### Patch Changes
+
+- [#13978](https://github.com/cloudflare/workers-sdk/pull/13978) [`fa1f61f`](https://github.com/cloudflare/workers-sdk/commit/fa1f61f5c6f4b8e363eaabdc68baafa29635bacd) Thanks [@sassyconsultingllc](https://github.com/sassyconsultingllc)! - Bump `ws` from 8.18.0 to 8.20.1 to address GHSA-58qx-3vcg-4xpx
+
+  [GHSA-58qx-3vcg-4xpx](https://github.com/advisories/GHSA-58qx-3vcg-4xpx) / [CVE-2026-45736](https://www.cve.org/CVERecord?id=CVE-2026-45736) reports an uninitialized-memory disclosure in `ws@<8.20.1` when a `TypedArray` is passed as the reason argument to `WebSocket.close()`. The fix shipped in [ws@8.20.1](https://github.com/websockets/ws/commit/c0327ec15a54d701eb6ccefaa8bef328cfc03086) on 2026-05-12. This change bumps the workspace catalog entry so that `miniflare`, `wrangler`, and `@cloudflare/vite-plugin` all pick up the patched release.
+
+- [#13977](https://github.com/cloudflare/workers-sdk/pull/13977) [`2679e05`](https://github.com/cloudflare/workers-sdk/commit/2679e057d4e3bcc9b460b7fa03a900f62e43fc94) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260518.1 | 1.20260519.1 |
+
+- [#13984](https://github.com/cloudflare/workers-sdk/pull/13984) [`7e40d98`](https://github.com/cloudflare/workers-sdk/commit/7e40d98aacd79014fb88b08cc8487909a7c4d749) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260519.1 | 1.20260520.1 |
+
+- [#13912](https://github.com/cloudflare/workers-sdk/pull/13912) [`d803737`](https://github.com/cloudflare/workers-sdk/commit/d803737b74f7cb08c6a91c64a649a96307fe9dc6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix `/cdn-cgi/*` host validation incorrectly accepting subdomains of exact configured routes
+
+  Miniflare's `/cdn-cgi/*` host/origin validator was treating exact configured routes the same as wildcard configured routes, so a request whose `Host` or `Origin` hostname was a subdomain of an exact route (e.g. `sub.my-custom-site.com` for a `my-custom-site.com/*` route) was incorrectly accepted. Exact configured routes and the configured `upstream` hostname are now required to match the request hostname exactly. Subdomain matching is only applied to wildcard routes such as `*.example.com/*`. Localhost hostnames continue to be allowed as before.
+
+  This affects `wrangler dev` and local development through `@cloudflare/vite-plugin`, both of which use Miniflare under the hood.
+
+- [#13971](https://github.com/cloudflare/workers-sdk/pull/13971) [`59cd880`](https://github.com/cloudflare/workers-sdk/commit/59cd880c559023962cb2537734a7ed511b18b269) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Improve error diagnostics in the Browser Run binding worker
+
+  When the local Browser Run binding failed to reach an upstream — for example when Chrome failed to launch and miniflare's loopback `/browser/launch` endpoint returned a 500 with a stack-trace text body — the binding worker would call `response.json()` on the non-JSON body and throw an opaque `SyntaxError: Unexpected token X, "..." is not valid JSON`. The actual upstream error message (e.g. `Chrome readiness probe at ... timed out after 5000ms`) was discarded.
+
+  The binding worker now reads the response body as text first, surfaces the HTTP status and body content in the thrown error, and chains the original `SyntaxError` via `cause` when the body was a 2xx response that didn't parse as JSON. This makes both local-dev failures and CI test flakes self-diagnosing.
+
+- [#13980](https://github.com/cloudflare/workers-sdk/pull/13980) [`e8c2031`](https://github.com/cloudflare/workers-sdk/commit/e8c2031b9ad7cec110e4310f95cf6cef72992029) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Recover from corrupted `@puppeteer/browsers` cache when launching a Browser Run session
+
+  When Miniflare's local Browser Run binding launches Chrome, it calls `@puppeteer/browsers`' `install()` to ensure the binary is present. If a previous `install()` was interrupted mid-extraction (test timeout, process kill, antivirus quarantine), the cache directory can be left partially populated — the folder exists but the executable inside it is missing. `install()` then throws `The browser folder (...) exists but the executable (...) is missing` on every subsequent call within the same process and the entire test session, breaking every later Browser Run operation until the cache is manually cleared.
+
+  `launchBrowser` now catches that specific error, removes the corrupted cache directory, and retries `install()` once. If the corruption persists after cleanup, the original error is rethrown with a clearer message.
+
+  This complements [#13971](https://github.com/cloudflare/workers-sdk/pull/13971), which surfaced the original error from inside the binding worker. With that diagnostic in place and this self-healing layer, the previously-intermittent "browser folder exists but executable missing" failure mode should no longer fail an entire CI run.
+
+## 4.20260518.0
+
+### Minor Changes
+
+- [#13864](https://github.com/cloudflare/workers-sdk/pull/13864) [`b27eb18`](https://github.com/cloudflare/workers-sdk/commit/b27eb18de664e416316d50116e568513d08123eb) Thanks [@benjamincburns](https://github.com/benjamincburns)! - Bumped miniflare deps `acorn` to `8.16.0` and `acorn-walk` to `8.3.5` to add support for the `using` and `await using` keywords when miniflare parses scripts.
+
+### Patch Changes
+
+- [#13948](https://github.com/cloudflare/workers-sdk/pull/13948) [`b25dc0d`](https://github.com/cloudflare/workers-sdk/commit/b25dc0d9f19ff51ec246c9c8175be7e445c12c0b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260515.1 | 1.20260518.1 |
+
+- [#13932](https://github.com/cloudflare/workers-sdk/pull/13932) [`ebf4b24`](https://github.com/cloudflare/workers-sdk/commit/ebf4b24226060d0ea714e9221a1f2744033729cb) Thanks [@zebp](https://github.com/zebp)! - Fix local Workflow startup when compatibility flags include `experimental`
+
+  Miniflare now deduplicates compatibility flags for the internal Workflow engine service. This prevents `wrangler dev` from failing with `Compatibility flag specified multiple times: experimental` when the user's Worker already enables that flag.
+
+## 4.20260515.0
+
+### Patch Changes
+
+- [#13926](https://github.com/cloudflare/workers-sdk/pull/13926) [`19ed49a`](https://github.com/cloudflare/workers-sdk/commit/19ed49a008be273df0ce60a817f4f367f4cea8fd) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260511.1 | 1.20260515.1 |
+
+## 4.20260511.0
+
+### Patch Changes
+
+- [#13894](https://github.com/cloudflare/workers-sdk/pull/13894) [`58b4403`](https://github.com/cloudflare/workers-sdk/commit/58b44035e2c2e1b9339bd2b798c5de5dc8bff7b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260508.1 | 1.20260511.1 |
+
+- [#13646](https://github.com/cloudflare/workers-sdk/pull/13646) [`f781a2b`](https://github.com/cloudflare/workers-sdk/commit/f781a2b874decbedc9dae09feff39ac861014016) Thanks [@emily-shen](https://github.com/emily-shen)! - Propagate `cf-trace-id` header on remote binding proxy requests
+
+  When the `CF_TRACE_ID` environment variable is set, its value is now forwarded as a `cf-trace-id` header on outgoing remote binding proxy requests. This makes it easier to correlate traces when debugging remote bindings in local development.
+
+## 4.20260508.0
+
+### Minor Changes
+
+- [#8431](https://github.com/cloudflare/workers-sdk/pull/8431) [`5d936c5`](https://github.com/cloudflare/workers-sdk/commit/5d936c594b9f9298320e9c289aaaa876fd26a163) Thanks [@penalosa](https://github.com/penalosa)! - Support `workerd` autogates via the `MINIFLARE_WORKERD_AUTOGATES` environment variable.
+
+### Patch Changes
+
+- [#13866](https://github.com/cloudflare/workers-sdk/pull/13866) [`4e44ce6`](https://github.com/cloudflare/workers-sdk/commit/4e44ce6a27b9c9313a1b9a6b56bb18935039e13e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260507.1 | 1.20260508.1 |
+
+## 4.20260507.1
+
+### Patch Changes
+
+- [#13348](https://github.com/cloudflare/workers-sdk/pull/13348) [`5cf6f81`](https://github.com/cloudflare/workers-sdk/commit/5cf6f813bb49e40326a87ccee588175545408f5e) Thanks [@mglewis](https://github.com/mglewis)! - Improve variant URLs returned by the hosted images mock for local development
+
+  The miniflare hosted images mock previously returned bare variant names (e.g. `"public"`) in the `variants` field of `ImageMetadata`. In production, this field contains full delivery URLs. The bare names were not usable as image sources, causing applications that render images from variant URLs to fail during local development.
+
+  Variant URLs now point to a new local delivery endpoint at `/cdn-cgi/imagedelivery/<image_id>/<variant>` which serves image bytes directly from the local KV store with content-type detection via Sharp.
+
+## 4.20260507.0
+
+### Minor Changes
+
+- [#13836](https://github.com/cloudflare/workers-sdk/pull/13836) [`039bada`](https://github.com/cloudflare/workers-sdk/commit/039badabe54358e31b7b488e6720fd7cdd268c4f) Thanks [@Skye-31](https://github.com/Skye-31)! - Support named recipients in the Email Sending API MessageBuilder
+
+  The `send_email` binding's MessageBuilder now accepts `EmailAddress` objects for `to`, `cc`, and `bcc` in addition to plain strings. You can mix named and plain addresses in the same array:
+
+  ```js
+  await env.SEND_EMAIL.send({
+    from: "sender@example.com",
+    to: [
+      "plain@example.com",
+      '"Name" <address@example.com>',
+      { name: "Jane Doe", email: "jane@example.com" },
+    ],
+    cc: [{ name: "CC Person", email: "cc@example.com" }],
+    subject: "Hello",
+    text: "...",
+  });
+  ```
+
+  Additionally, addresses in `"Name" <address>` format are now correctly parsed when checking `allowed_destination_addresses` and `allowed_sender_addresses` restrictions.
+
+- [#13776](https://github.com/cloudflare/workers-sdk/pull/13776) [`1a54ac5`](https://github.com/cloudflare/workers-sdk/commit/1a54ac5646be16f9f7151e6ecff7dec5fc6110fa) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Default the `workerd` runtime subprocess to `TZ=UTC` to match the production Cloudflare runtime
+
+  Previously, Miniflare inherited the host machine's timezone, so `Date` and `Intl` APIs inside a Worker observed the developer's local timezone during local development but UTC in production. This caused dev/prod drift that was hard to debug.
+
+  Miniflare now sets `TZ=UTC` on the spawned `workerd` subprocess by default. A new `unsafeRuntimeEnv` option (a `Record<string, string>`) is available on the `Miniflare` constructor for advanced cases that need to override the default — for example, to test timezone-dependent behaviour:
+
+  ```ts
+  new Miniflare({
+    modules: true,
+    script: "...",
+    unsafeRuntimeEnv: { TZ: "Europe/London" },
+  });
+  ```
+
+### Patch Changes
+
+- [#13829](https://github.com/cloudflare/workers-sdk/pull/13829) [`2284f20`](https://github.com/cloudflare/workers-sdk/commit/2284f20465c9c94d86e530daed30debcb9207d90) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260504.1 | 1.20260506.1 |
+
+- [#13841](https://github.com/cloudflare/workers-sdk/pull/13841) [`332f527`](https://github.com/cloudflare/workers-sdk/commit/332f52763c7996e08fd4995c643124c5a9701e40) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260506.1 | 1.20260507.1 |
+
+## 4.20260504.0
+
+### Patch Changes
+
+- [#13765](https://github.com/cloudflare/workers-sdk/pull/13765) [`3020214`](https://github.com/cloudflare/workers-sdk/commit/3020214014066aafd2369469e92f4b91e979ebb4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260430.1 | 1.20260501.1 |
+
+- [#13800](https://github.com/cloudflare/workers-sdk/pull/13800) [`0099265`](https://github.com/cloudflare/workers-sdk/commit/00992655695093ce644bb2916ffd0d924d5abbab) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260501.1 | 1.20260504.1 |
+
+- [#13737](https://github.com/cloudflare/workers-sdk/pull/13737) [`bb27219`](https://github.com/cloudflare/workers-sdk/commit/bb27219651142036180cb1d01650df48d5282800) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Fix race condition that broke Browser Run on Windows when Chrome had not yet started accepting connections
+
+  When Miniflare launched Chrome for Browser Run bindings, it returned the WebSocket endpoint as soon as Chrome printed its `DevTools listening on ws://...` banner. On Windows the underlying listening socket is occasionally not yet accepting connections at that point, causing the first request from workerd to Chrome to fail with `ConnectEx (#1225) The remote computer refused the network connection.` and the user worker to receive an error response from `/v1/acquire`.
+
+  Miniflare now probes Chrome's `/json/version` HTTP endpoint with retry/backoff after the banner is logged, only declaring the browser ready once the socket actually accepts connections. As an additional safety net, the browser binding worker also retries transient `ConnectEx`/`WSARecv` failures when establishing connections to Chrome.
+
+- [#13767](https://github.com/cloudflare/workers-sdk/pull/13767) [`12fb5db`](https://github.com/cloudflare/workers-sdk/commit/12fb5db89a31cc6ecccf022dfc7de4622973129d) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix local explorer startup in Yarn Plug'n'Play projects by copying the explorer UI assets to a real temporary directory before registering the workerd disk service.
+
 ## 4.20260430.0
 
 ### Minor Changes

@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import { BATCH_MAX_ERRORS_WARNINGS } from "../../kv/helpers";
@@ -7,7 +8,6 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { createFetchResult, msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { KeyValue } from "../../kv/helpers";
 import type { ExpectStatic } from "vitest";
@@ -607,9 +607,7 @@ describe("kv", () => {
 					"{
 					  "someKey1": "someKey1-value",
 					  "key2": "key2-value"
-					}
-
-					Success!"
+					}"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler kv bulk get\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
@@ -637,9 +635,7 @@ describe("kv", () => {
 					"{
 					  "someKey1": "someKey1-value",
 					  "ns:someKey2": "ns:someKey2-value"
-					}
-
-					Success!"
+					}"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler kv bulk get\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m

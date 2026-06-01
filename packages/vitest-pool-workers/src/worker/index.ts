@@ -42,7 +42,7 @@ process.cwd = () => {
 
 globalThis.__console = console;
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- V8 stack trace API requires Function type for Error.captureStackTrace
 function getCallerFileName(of: Function): string | null {
 	const originalStackTraceLimit = Error.stackTraceLimit;
 	const originalPrepareStackTrace = Error.prepareStackTrace;

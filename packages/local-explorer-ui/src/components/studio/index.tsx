@@ -481,10 +481,13 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 	 */
 	const hasDirtyState = tabs.some((tab) => tab.isDirty);
 
+	const onBeforeLeaveRef = useRef(
+		() => "You have unsaved changes. Are you sure you want to leave?"
+	);
+
 	useLeaveGuard({
 		enabled: hasDirtyState,
-		onBeforeLeave: () =>
-			"You have unsaved changes. Are you sure you want to leave?",
+		onBeforeLeave: onBeforeLeaveRef.current,
 	});
 
 	const contextValues = useMemo(

@@ -119,10 +119,9 @@ export const WORKFLOWS_PLUGIN: Plugin<
 					),
 					worker: {
 						compatibilityDate: "2024-10-22",
-						compatibilityFlags: [
-							"experimental",
-							...(workflow.compatibilityFlags ?? []),
-						],
+						compatibilityFlags: Array.from(
+							new Set(["experimental", ...(workflow.compatibilityFlags ?? [])])
+						),
 						modules: [
 							{
 								name: "workflows.mjs",
@@ -155,6 +154,10 @@ export const WORKFLOWS_PLUGIN: Plugin<
 							{
 								name: "BINDING_NAME",
 								json: JSON.stringify(bindingName),
+							},
+							{
+								name: "WORKFLOW_NAME",
+								json: JSON.stringify(workflow.name),
 							},
 							...(workflow.stepLimit !== undefined
 								? [

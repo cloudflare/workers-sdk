@@ -20,6 +20,12 @@ export default class ViteProxyWorker extends WorkerEntrypoint<Env> {
 	}
 
 	override async fetch(request: Request) {
+		// Upgrade requests (e.g. WebSocket) cannot be proxied through the
+		// Node.js middleware binding, so send them directly to the user worker.
+		if (request.headers.get("Upgrade")) {
+			return this.env.ENTRY_USER_WORKER.fetch(request);
+		}
+
 		return this.env.__VITE_MIDDLEWARE__.fetch(request);
 	}
 

@@ -23,19 +23,19 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Install Dependencies
+        # Defense in depth: do not pass Turbo remote cache credentials and
+        # disable the pnpm store cache so release builds always resolve
+        # packages from the registry and rebuild every task from source,
+        # rather than restoring from a (potentially poisoned) cache.
         uses: ./.github/actions/install-dependencies
         with:
-          turbo-api: ${{ secrets.TURBO_API }}
-          turbo-team: ${{ secrets.TURBO_TEAM }}
-          turbo-token: ${{ secrets.TURBO_TOKEN }}
-          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-
-      - run: echo ${{ github.head_ref }}
+          disable-cache: "true"
 
       - name: Build
         run: pnpm build --filter="./packages/*"

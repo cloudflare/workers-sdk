@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { getTodaysCompatDate } from "@cloudflare/workers-utils";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, beforeEach, describe, it, vi } from "vitest";
 import { saveToConfigCache } from "../../config-cache";
@@ -11,7 +14,6 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { PagesConfigCache } from "../../pages/types";
 import type { ExpectStatic } from "vitest";
@@ -886,7 +888,7 @@ describe("pages download config", () => {
 		await expect(
 			runWrangler(`pages download config`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must specify a project name.]`
+			`[Error: Missing Pages project name. Provide the project name as a positional argument: wrangler pages download config <name>.]`
 		);
 	});
 	it("should fail if project does not exist", async ({ expect }) => {

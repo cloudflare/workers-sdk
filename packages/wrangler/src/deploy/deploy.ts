@@ -12,6 +12,7 @@ import {
 	formatConfigSnippet,
 	getDockerPath,
 	parseNonHyphenedUuid,
+	getWranglerTmpDir,
 	UserError,
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
@@ -50,7 +51,6 @@ import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
-import { getWranglerTmpDir } from "../paths";
 import {
 	ensureQueuesExistByConfig,
 	getQueue,
@@ -80,19 +80,20 @@ import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
-import type { AssetsOptions } from "../assets";
-import type { Entry } from "../deployment-bundle/entry";
 import type { PostTypedConsumerBody } from "../queues/client";
-import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
+import type { TriggerDeployment } from "../triggers/deploy";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
 import type {
+	AssetsOptions,
 	CfModule,
 	CfScriptFormat,
 	CfWorkerInit,
 	ComplianceConfig,
 	Config,
 	CustomDomainRoute,
+	Entry,
+	LegacyAssetPaths,
 	RawConfig,
 	Route,
 	ZoneIdRoute,
@@ -136,7 +137,7 @@ type Props = {
 	dispatchNamespace: string | undefined;
 	experimentalAutoCreate: boolean;
 	metafile: string | boolean | undefined;
-	containersRollout: "immediate" | "gradual" | undefined;
+	containersRollout: "immediate" | "gradual" | "none" | undefined;
 	strict: boolean | undefined;
 	tag: string | undefined;
 	message: string | undefined;
@@ -293,7 +294,7 @@ export async function publishCustomDomains(
 	workerUrl: string,
 	accountId: string,
 	domains: Array<RouteObject>
-): Promise<string[]> {
+): Promise<TriggerDeployment> {
 	const options = {
 		override_scope: true,
 		override_existing_origin: false,
@@ -312,12 +313,16 @@ export async function publishCustomDomains(
 		};
 	});
 
-	const fail = () => {
-		return [
-			domains.length > 1
-				? `Publishing to ${domains.length} Custom Domains was skipped, fix conflicts and try again`
-				: `Publishing to Custom Domain "${domains[0].pattern}" was skipped, fix conflict and try again`,
-		];
+	const fail = (): TriggerDeployment => {
+		return {
+			targets: [],
+			error: new UserError(
+				domains.length > 1
+					? `Publishing to ${domains.length} Custom Domains was skipped, fix conflicts and try again`
+					: `Publishing to Custom Domain "${domains[0].pattern}" was skipped, fix conflict and try again`,
+				{ telemetryMessage: "deploy custom domains skipped" }
+			),
+		};
 	};
 
 	if (!process.stdout.isTTY) {
@@ -392,7 +397,7 @@ Update them to point to this script instead?`;
 		},
 	});
 
-	return domains.map((domain) => renderRoute(domain));
+	return { targets: domains.map((domain) => renderRoute(domain)) };
 }
 
 /**
@@ -696,6 +701,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	const isDryRun = props.dryRun;
+
 	let sourceMapSize;
 	const normalisedContainerConfig = await getNormalizedContainerOptions(
 		config,
@@ -763,7 +770,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						compatibilityFlags,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
-						alias: config.alias,
+						alias: { ...config.alias, ...props.alias },
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
@@ -805,7 +812,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		});
 
 		// durable object migrations
-		const migrations = !props.dryRun
+		const migrations = !isDryRun
 			? await getMigrationsToUpload(scriptName, {
 					accountId,
 					config,
@@ -817,7 +824,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		// Upload assets if assets is being used
 		const assetsJwt =
-			props.assetsOptions && !props.dryRun
+			props.assetsOptions && !isDryRun
 				? await syncAssets(
 						config,
 						accountId,
@@ -828,7 +835,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				: undefined;
 
 		// validate asset directory
-		if (props.assetsOptions && props.dryRun) {
+		if (props.assetsOptions && isDryRun) {
 			await buildAssetManifest(props.assetsOptions.directory);
 		}
 
@@ -842,7 +849,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			scriptName + (useServiceEnvironments ? `-${props.env}` : ""),
 			props.legacyAssetPaths,
 			false,
-			props.dryRun,
+			isDryRun,
 			props.oldAssetTtl
 		);
 
@@ -968,24 +975,32 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// and we have containers so that we don't get into a
 		// disjointed state where the worker updates but the container
 		// fails.
-		if (normalisedContainerConfig.length) {
+		if (
+			normalisedContainerConfig.length &&
+			props.containersRollout !== "none"
+		) {
 			// if you have a registry url specified, you don't need docker
-			const hasDockerfiles = normalisedContainerConfig.some(
+			const containersWithDockerfile = normalisedContainerConfig.filter(
 				(container) => "dockerfile" in container
 			);
-			if (hasDockerfiles) {
-				await verifyDockerInstalled(dockerPath, false);
+			if (containersWithDockerfile.length > 0) {
+				await verifyDockerInstalled({
+					dockerPath,
+					isDev: false,
+					isDryRun,
+					numberOfContainers: containersWithDockerfile.length,
+				});
 			}
 		}
 
-		if (props.dryRun) {
+		if (isDryRun) {
 			if (normalisedContainerConfig.length) {
 				for (const container of normalisedContainerConfig) {
-					if ("dockerfile" in container) {
+					if ("dockerfile" in container && props.containersRollout !== "none") {
 						await buildContainer(
 							container,
 							workerTag ?? "worker-tag",
-							props.dryRun,
+							isDryRun,
 							dockerPath
 						);
 					}
@@ -1280,7 +1295,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 	}
 
-	if (props.dryRun) {
+	if (isDryRun) {
 		logger.log(`--dry-run: exiting now.`);
 		return { versionId, workerTag };
 	}
@@ -1289,19 +1304,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 
-	// Early exit for WfP since it doesn't need the below code
-	if (props.dispatchNamespace !== undefined) {
-		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag };
-	}
-
-	if (normalisedContainerConfig.length) {
+	if (normalisedContainerConfig.length && props.containersRollout !== "none") {
 		assert(versionId && accountId);
 		await deployContainers(config, normalisedContainerConfig, {
 			versionId,
 			accountId,
 			scriptName,
 		});
+	}
+
+	// Early exit for WfP since it doesn't need the below code
+	if (props.dispatchNamespace !== undefined) {
+		deployWfpUserWorker(props.dispatchNamespace, versionId);
+		return { versionId, workerTag };
 	}
 
 	// deploy triggers
@@ -1520,9 +1535,9 @@ async function publishRoutesFallback(
 export async function updateQueueConsumers(
 	scriptName: string | undefined,
 	config: Config
-): Promise<Promise<string[]>[]> {
+): Promise<Promise<TriggerDeployment>[]> {
 	const consumers = config.queues.consumers || [];
-	const updateConsumers: Promise<string[]>[] = [];
+	const updateConsumers: Promise<TriggerDeployment>[] = [];
 	for (const consumer of consumers) {
 		const queue = await getQueue(config, consumer.queue);
 
@@ -1558,15 +1573,19 @@ export async function updateQueueConsumers(
 		if (existingConsumer) {
 			updateConsumers.push(
 				putConsumer(config, consumer.queue, scriptName, envName, body).then(
-					() => [`Consumer for ${consumer.queue}`]
+					() => ({ targets: [`Consumer for ${consumer.queue}`] }),
+					(error) => ({ targets: [], error })
 				)
 			);
 			continue;
 		}
 		updateConsumers.push(
-			postConsumer(config, consumer.queue, body).then(() => [
-				`Consumer for ${consumer.queue}`,
-			])
+			postConsumer(config, consumer.queue, body).then(
+				() => ({
+					targets: [`Consumer for ${consumer.queue}`],
+				}),
+				(error) => ({ targets: [], error })
+			)
 		);
 	}
 

@@ -2,7 +2,11 @@ import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
 import { fetchGraphqlResult } from "../cfetch";
-import { extractWAFBlockRayId, isWAFBlockResponse } from "../cfetch/internal";
+import {
+	addAuthorizationHeader,
+	extractWAFBlockRayId,
+	isWAFBlockResponse,
+} from "../cfetch/internal";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { msw } from "./helpers/msw";
 
@@ -34,6 +38,28 @@ describe("extractWAFBlockRayId", () => {
 	it("should return undefined when cf-ray header is absent", ({ expect }) => {
 		const headers = new Headers();
 		expect(extractWAFBlockRayId(headers)).toBeUndefined();
+	});
+});
+
+describe("addAuthorizationHeader", () => {
+	it("should throw a helpful error when the API token cannot be used in an Authorization header", ({
+		expect,
+	}) => {
+		expect(() =>
+			addAuthorizationHeader(new Headers(), { apiToken: "abcdefg…" })
+		).toThrow(
+			'The configured Cloudflare API token contains a character that cannot be used in an HTTP Authorization header: "…" (U+2026). Recreate or copy the token again, making sure it does not include characters such as ellipses.'
+		);
+	});
+
+	it("should set the Authorization header for an ASCII API token", ({
+		expect,
+	}) => {
+		const headers = new Headers();
+
+		addAuthorizationHeader(headers, { apiToken: "abcdefg" });
+
+		expect(headers.get("Authorization")).toBe("Bearer abcdefg");
 	});
 });
 

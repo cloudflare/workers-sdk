@@ -31,9 +31,9 @@ import {
 import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
-import type { Entry } from "../deployment-bundle/entry";
 import type {
 	Config,
+	Entry,
 	RawConfig,
 	RawEnvironment,
 } from "@cloudflare/workers-utils";
@@ -220,7 +220,9 @@ export const typesCommand = createCommand({
 				config,
 				envInterface,
 				outputPath,
-				secondaryEntries
+				secondaryEntries,
+				args.envFile,
+				args.env
 			);
 			if (outOfDate) {
 				throw new FatalError(
@@ -1603,6 +1605,13 @@ async function generatePerEnvironmentTypes(
 }
 
 /**
+ * Formats name of internal env interface when generating type strings
+ */
+function prefixEnvInterface(envInterface: string) {
+	return `__BaseEnv_${envInterface}`;
+}
+
+/**
  * Generates type strings for per-environment interfaces plus aggregated Env.
  *
  * @param formatType - The worker format type ("modules" or "service-worker")
@@ -1655,14 +1664,16 @@ function generatePerEnvTypeStrings(
 		const perEnvContent = perEnvInterfaces.join("\n");
 
 		const envBindingLines = aggregatedEnvBindings
-			.map((b) => `\t\t${b.key}${b.required ? "" : "?"}: ${b.type};`)
+			.map((b) => `\t${b.key}${b.required ? "" : "?"}: ${b.type};`)
 			.join("\n");
 
 		const globalPropsContent = entrypointModule
 			? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}`
 			: "";
 
-		baseContent = `declare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env {\n${envBindingLines}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+		const internalEnvInterface = prefixEnvInterface(envInterface);
+
+		baseContent = `interface ${internalEnvInterface} {\n${envBindingLines}\n}\ndeclare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
 	} else {
 		// Service worker syntax - type definitions go at the top level since there's no namespace
 		const globalTypeDefsContent =
@@ -1764,7 +1775,10 @@ function generateTypeStrings(
 			// StringifyValues ensures that json vars are correctly types as strings, not objects on process.env
 			processEnv = `\ntype StringifyValues<EnvType extends Record<string, unknown>> = {\n\t[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;\n};\ndeclare namespace NodeJS {\n\tinterface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, ${stringKeys.map((k) => `"${k}"`).join(" | ")}>> {}\n}`;
 		}
-		baseContent = `declare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+
+		const internalEnvInterface = prefixEnvInterface(envInterface);
+
+		baseContent = `interface ${internalEnvInterface} {${envTypeStructure.map((value) => `\n\t${value}`).join("")}\n}\ndeclare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
 	} else {
 		// For service worker format, type definitions still go at the top level since there's no namespace
 		const globalTypeDefsContent =
@@ -2324,6 +2338,40 @@ function collectCoreBindings(
 			addBinding(aiSearch.binding, "AiSearchInstance", "ai_search", envName);
 		}
 
+		if (env.web_search) {
+			if (!env.web_search.binding) {
+				throwMissingBindingError({
+					binding: env.web_search,
+					bindingType: "web_search",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				addBinding(env.web_search.binding, "WebSearch", "web_search", envName);
+			}
+		}
+
+		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {
+			if (!agentMemory.binding) {
+				throwMissingBindingError({
+					binding: agentMemory,
+					bindingType: "agent_memory",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(
+				agentMemory.binding,
+				"AgentMemoryNamespace",
+				"agent_memory",
+				envName
+			);
+		}
+
 		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
@@ -2340,7 +2388,7 @@ function collectCoreBindings(
 					fieldName: "binding",
 				});
 			} else {
-				addBinding(env.browser.binding, "Fetcher", "browser", envName);
+				addBinding(env.browser.binding, "BrowserRun", "browser", envName);
 			}
 		}
 
@@ -2733,19 +2781,21 @@ function collectAllUnsafeBindings(
  *
  * @param args - All the CLI arguments passed to the `types` command
  *
- * @returns An array of collected pipeline bindings with their names and pipeline IDs.
+ * @returns An array of collected pipeline bindings with their names and stream IDs.
  */
 function collectAllPipelines(
 	args: Partial<(typeof typesCommand)["args"]>
 ): Array<{
 	binding: string;
-	pipeline: string;
+	stream?: string;
+	pipeline?: string;
 }> {
 	const pipelinesMap = new Map<
 		string,
 		{
 			binding: string;
-			pipeline: string;
+			stream?: string;
+			pipeline?: string;
 		}
 	>();
 
@@ -2769,13 +2819,13 @@ function collectAllPipelines(
 				});
 			}
 
-			if (!pipeline.pipeline) {
+			if (!pipeline.stream && !pipeline.pipeline) {
 				throwMissingBindingError({
 					binding: pipeline,
 					bindingType: "pipelines",
 					configPath: args.config,
 					envName,
-					fieldName: "pipeline",
+					fieldName: "stream",
 					index,
 				});
 			}
@@ -2786,6 +2836,7 @@ function collectAllPipelines(
 
 			pipelinesMap.set(pipeline.binding, {
 				binding: pipeline.binding,
+				stream: pipeline.stream,
 				pipeline: pipeline.pipeline,
 			});
 		}
@@ -3322,7 +3373,7 @@ function collectCoreBindingsPerEnvironment(
 				bindings.push({
 					bindingCategory: "browser",
 					name: env.browser.binding,
-					type: "Fetcher",
+					type: "BrowserRun",
 				});
 			}
 		}
@@ -3462,6 +3513,43 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "ai_search",
 				name: aiSearch.binding,
 				type: "AiSearchInstance",
+			});
+		}
+
+		if (env.web_search) {
+			if (!env.web_search.binding) {
+				throwMissingBindingError({
+					binding: env.web_search,
+					bindingType: "web_search",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				bindings.push({
+					bindingCategory: "web_search",
+					name: env.web_search.binding,
+					type: "WebSearch",
+				});
+			}
+		}
+
+		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {
+			if (!agentMemory.binding) {
+				throwMissingBindingError({
+					binding: agentMemory,
+					bindingType: "agent_memory",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "agent_memory",
+				name: agentMemory.binding,
+				type: "AgentMemoryNamespace",
 			});
 		}
 
@@ -3878,30 +3966,54 @@ function collectPipelinesPerEnvironment(
 	args: Partial<(typeof typesCommand)["args"]>
 ): Map<
 	string,
-	Array<{
-		binding: string;
-		pipeline: string;
-	}>
+	Array<
+		| {
+				binding: string;
+				stream: string;
+		  }
+		| {
+				binding: string;
+				pipeline: string;
+		  }
+	>
 > {
 	const result = new Map<
 		string,
-		Array<{
-			binding: string;
-			pipeline: string;
-		}>
+		Array<
+			| {
+					binding: string;
+					stream: string;
+			  }
+			| {
+					binding: string;
+					pipeline: string;
+			  }
+		>
 	>();
 
 	function collectEnvironmentPipelines(
 		env: RawEnvironment | undefined,
 		envName: string
-	): Array<{
-		binding: string;
-		pipeline: string;
-	}> {
-		const pipelines = new Array<{
-			binding: string;
-			pipeline: string;
-		}>();
+	): Array<
+		| {
+				binding: string;
+				stream: string;
+		  }
+		| {
+				binding: string;
+				pipeline: string;
+		  }
+	> {
+		const pipelines = new Array<
+			| {
+					binding: string;
+					stream: string;
+			  }
+			| {
+					binding: string;
+					pipeline: string;
+			  }
+		>();
 
 		if (!env?.pipelines) {
 			return pipelines;
@@ -3919,21 +4031,26 @@ function collectPipelinesPerEnvironment(
 				});
 			}
 
-			if (!pipeline.pipeline) {
+			if (pipeline.stream) {
+				pipelines.push({
+					binding: pipeline.binding,
+					stream: pipeline.stream,
+				});
+			} else if (pipeline.pipeline) {
+				pipelines.push({
+					binding: pipeline.binding,
+					pipeline: pipeline.pipeline,
+				});
+			} else {
 				throwMissingBindingError({
 					binding: pipeline,
 					bindingType: "pipelines",
 					configPath: args.config,
 					envName,
-					fieldName: "pipeline",
+					fieldName: "stream",
 					index,
 				});
 			}
-
-			pipelines.push({
-				binding: pipeline.binding,
-				pipeline: pipeline.pipeline,
-			});
 		}
 
 		return pipelines;

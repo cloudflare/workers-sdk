@@ -1,12 +1,16 @@
 import * as fs from "node:fs";
 import path from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import { x } from "tinyexec";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Uses expect in MSW handlers outside test callbacks
+ * TODO: remove this `expect` import
+ */
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { downloadWorker } from "../init";
 import { writeMetricsConfig } from "../metrics/metrics-config";
@@ -16,7 +20,6 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PackageManager } from "../package-manager";
 import type { RawConfig, UserLimits } from "@cloudflare/workers-utils";
@@ -345,7 +348,7 @@ describe("init", () => {
 				{
 					type: "pipelines",
 					name: "PIPELINE_BINDING",
-					pipeline: "some-name",
+					stream: "some-name",
 				},
 				{
 					type: "mtls_certificate",
@@ -578,7 +581,7 @@ describe("init", () => {
 			pipelines: [
 				{
 					binding: "PIPELINE_BINDING",
-					pipeline: "some-name",
+					stream: "some-name",
 				},
 			],
 			queues: {
@@ -1114,7 +1117,7 @@ describe("init", () => {
 					  "pipelines": [
 					    {
 					      "binding": "PIPELINE_BINDING",
-					      "pipeline": "some-name"
+					      "stream": "some-name"
 					    }
 					  ],
 					  "mtls_certificates": [

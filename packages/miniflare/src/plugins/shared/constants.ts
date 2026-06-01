@@ -83,6 +83,7 @@ export function remoteProxyClientWorker(
 	binding: string,
 	script?: () => string
 ) {
+	const cfTraceId = process.env.CF_TRACE_ID;
 	return {
 		compatibilityDate: "2025-01-01",
 		modules: [
@@ -104,6 +105,18 @@ export function remoteProxyClientWorker(
 				name: "binding",
 				text: binding,
 			},
+			...(cfTraceId
+				? [
+						{
+							name: "cfTraceId",
+							text: cfTraceId,
+						},
+					]
+				: []),
+			// Loopback binding so the proxy client can report diagnostics
+			// (e.g. a Cloudflare Access block on the remote proxy server)
+			// back to the Miniflare host for a single, actionable warning.
+			WORKER_BINDING_SERVICE_LOOPBACK,
 		],
 	};
 }

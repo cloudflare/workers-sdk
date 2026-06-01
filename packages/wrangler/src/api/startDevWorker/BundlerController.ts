@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { getBundleType } from "../../deployment-bundle/bundle-type";
@@ -14,17 +15,15 @@ import { getAssetChangeMessage } from "../../dev";
 import { runBuild } from "../../dev/use-esbuild";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
-import { getWranglerTmpDir } from "../../paths";
 import { debounce } from "../../utils/debounce";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { extractBindingsOfType } from "./utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { Entry } from "../../deployment-bundle/entry";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { EphemeralDirectory } from "../../paths";
 import type { ConfigUpdateEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
+import type { EphemeralDirectory, Entry } from "@cloudflare/workers-utils";
 
 export class BundlerController extends Controller {
 	#currentBundle?: EsbuildBundle;

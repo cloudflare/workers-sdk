@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import {
+	runInTempDir,
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
@@ -12,16 +13,19 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
+import { mockOAuthFlow } from "../helpers/mock-oauth-flow";
 import { mockUploadWorkerRequest } from "../helpers/mock-upload-worker";
 import { mockGetSettings } from "../helpers/mock-worker-settings";
 import {
 	mockGetWorkerSubdomain,
 	mockSubDomainRequest,
 } from "../helpers/mock-workers-subdomain";
-import { createFetchResult, msw } from "../helpers/msw";
+import {
+	createFetchResult,
+	getMswSuccessMembershipHandlers,
+	msw,
+} from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
@@ -148,7 +152,7 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({ keepVars: true, keepSecrets: true });
 			mockOAuthServerCallback();
-			mockGetMemberships([]);
+			msw.use(...getMswSuccessMembershipHandlers());
 
 			await runWrangler("deploy index.js --keep-vars");
 
@@ -175,7 +179,7 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			mockOAuthServerCallback();
-			mockGetMemberships([]);
+			msw.use(...getMswSuccessMembershipHandlers());
 
 			await runWrangler("deploy index.js");
 
@@ -204,7 +208,7 @@ describe("deploy", () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({ keepVars: true, keepSecrets: true });
 			mockOAuthServerCallback();
-			mockGetMemberships([]);
+			msw.use(...getMswSuccessMembershipHandlers());
 
 			await runWrangler("deploy index.js");
 
@@ -954,7 +958,7 @@ describe("deploy", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the deploy command.[0m
 
 				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-				  the target environment using the \`-e|--env\` flag.
+				  the target environment using the \`-e|--env\` flag or CLOUDFLARE_ENV env variable.
 				  If your intention is to use the top-level environment of your configuration simply pass an empty
 				  string to the flag to target such environment. For example \`--env=""\`.
 
@@ -990,6 +994,94 @@ describe("deploy", () => {
 			writeWranglerConfig({
 				main: "./index.js",
 			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+			expect,
+		}) => {
+			writeWorkerSource();
+			writeWranglerConfig({
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler('deploy --env=""');
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ENV", "test");
+			writeWorkerSource();
+			writeWranglerConfig({
+				main: "./index.js",
+				env: {
+					test: {},
+				},
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				env: "test",
+				useServiceEnvironments: false,
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if using a redirected wrangler config with a baked-in target environment", async ({
+			expect,
+		}) => {
+			writeWorkerSource();
+			writeRedirectedWranglerConfig(
+				{
+					name: "test-name-production",
+					main: "../index.js",
+					userConfigPath: "./wrangler.toml",
+					topLevelName: "test-name",
+					targetEnvironment: "production",
+					definedEnvironments: ["production"],
+				},
+				"./dist/wrangler.json"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedScriptName: "test-name-production",
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if using a redirected wrangler config targeting the top-level environment (no targetEnvironment set)", async ({
+			expect,
+		}) => {
+			writeWorkerSource();
+			writeRedirectedWranglerConfig(
+				{
+					name: "test-name",
+					main: "../index.js",
+					userConfigPath: "./wrangler.toml",
+					topLevelName: "test-name",
+					// No targetEnvironment — built for the top-level environment
+					definedEnvironments: ["production"],
+				},
+				"./dist/wrangler.json"
+			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 

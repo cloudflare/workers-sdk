@@ -4,6 +4,7 @@ import {
 } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
@@ -14,6 +15,7 @@ import {
 	fetchAllAccounts,
 	getAccountFromCache,
 	getActiveAccountId,
+	getAPIToken,
 	getAuthConfigFilePath,
 	getOAuthTokenFromLocalState,
 	getOrSelectAccountId,
@@ -27,15 +29,15 @@ import { mockSelect } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {
 	mockExchangeRefreshTokenForAccessToken,
-	mockGetMemberships,
 	mockOAuthFlow,
 } from "./helpers/mock-oauth-flow";
 import {
+	createFetchResult,
 	msw,
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
+import { getMswSuccessMembershipHandlers } from "./helpers/msw/handlers/user";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { UserAuthConfig } from "../user";
 import type { Config } from "@cloudflare/workers-utils";
@@ -83,7 +85,7 @@ describe("User", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -129,7 +131,7 @@ describe("User", () => {
 				Temporary login server listening on 0.0.0.0:8976
 				Note that the OAuth login page will always redirect to \`localhost:8976\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -175,7 +177,7 @@ describe("User", () => {
 				Temporary login server listening on mylocalhost.local:8976
 				Note that the OAuth login page will always redirect to \`localhost:8976\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -221,7 +223,7 @@ describe("User", () => {
 				Temporary login server listening on localhost:8787
 				Note that the OAuth login page will always redirect to \`localhost:8976\`.
 				If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly.
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
@@ -263,7 +265,7 @@ describe("User", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=4b2ea6cc-9421-4761-874b-ce550e0e3def&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=4b2ea6cc-9421-4761-874b-ce550e0e3def&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in."
 			`);
 
@@ -344,6 +346,95 @@ describe("User", () => {
 		).resolves.toEqual(false);
 	});
 
+	describe("CLOUDFLARE_API_TOKEN priority over stored OAuth state", () => {
+		// Regression coverage for https://github.com/cloudflare/workers-sdk/issues/13744
+		//
+		// A user may legitimately have both:
+		//   - A `CLOUDFLARE_API_TOKEN` set in the environment (typically via `.env`)
+		//   - A stale OAuth token left over from a previous `wrangler login`
+		//
+		// The env-based API token should win unconditionally — the stored OAuth
+		// state should not even be consulted, let alone refreshed.
+
+		it("getAPIToken returns the env token even when a stored OAuth token also exists", ({
+			expect,
+		}) => {
+			writeAuthConfigFile({
+				oauth_token: "stale-oauth",
+				refresh_token: "stale-refresh",
+				expiration_time: new Date(Date.now() + 100_000 * 1000).toISOString(),
+				scopes: ["account:read"],
+			});
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-token");
+
+			expect(getAPIToken()).toEqual({ apiToken: "env-token" });
+		});
+
+		it("loginOrRefreshIfRequired does not attempt to refresh an expired OAuth token when env auth is set", async ({
+			expect,
+		}) => {
+			// Stored OAuth token is expired. Without the fix, wrangler would try to
+			// refresh it (and fail), aborting the command even though env auth is
+			// valid and available.
+			const pastDate = new Date(Date.now() - 100_000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-oauth",
+				refresh_token: "stale-refresh",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-token");
+
+			let oauthRefreshCalled = false;
+			msw.use(
+				http.post("*/oauth2/token", () => {
+					oauthRefreshCalled = true;
+					return new HttpResponse(null, { status: 400 });
+				})
+			);
+
+			await expect(
+				loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
+			).resolves.toEqual(true);
+			expect(oauthRefreshCalled).toBe(false);
+		});
+
+		it("wrangler whoami succeeds via env token when a stale OAuth token also exists on disk", async ({
+			expect,
+		}) => {
+			// End-to-end reproduction of issue #13744. With the bug, this command
+			// would fail with "Failed to fetch auth token: 400 Bad Request" /
+			// "Not logged in." Now it should succeed using the env token.
+			const pastDate = new Date(Date.now() - 100_000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-oauth",
+				refresh_token: "stale-refresh",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-token");
+
+			let oauthRefreshCalled = false;
+			msw.use(
+				http.post("*/oauth2/token", () => {
+					oauthRefreshCalled = true;
+					return new HttpResponse(null, { status: 400 });
+				}),
+				http.get("*/user/tokens/verify", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+
+			await runWrangler("whoami");
+
+			expect(std.err).toBe("");
+			expect(std.out).toContain(
+				"The API Token is read from the CLOUDFLARE_API_TOKEN environment variable."
+			);
+			expect(oauthRefreshCalled).toBe(false);
+		});
+	});
+
 	it("should have auth per environment", async ({ expect }) => {
 		setIsTTY(false);
 		vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
@@ -392,7 +483,7 @@ describe("User", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Attempting to login via OAuth...
-			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20websearch.run%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 			Successfully logged in."
 		`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -442,6 +533,99 @@ describe("User", () => {
 
 			// The token should have been refreshed (mock returns "access_token_success_mock")
 			expect(std.out).toContain("access_token_success_mock");
+		});
+
+		it("should re-read refresh_token from disk before refreshing in case a sibling process rotated it", async ({
+			expect,
+		}) => {
+			// Bug repro: when a long-lived wrangler process (e.g. `wrangler dev`) holds a
+			// refresh_token from a snapshot of disk, and a sibling wrangler invocation
+			// rotates the token on disk, the long-lived process's next refresh must
+			// pick up the rotated token rather than send the stale RT and get a 401.
+			// See real-world logs: same RT sent by two processes 60min apart, second 401'd.
+			setIsTTY(false);
+
+			// Sibling process has already rotated RT_A → RT_B on disk, but the access
+			// token written alongside is also expired (so a refresh is still needed).
+			// This simulates: our process started up with RT_A, time passes, the
+			// sibling rotates, then our process tries to refresh.
+			const pastDate = new Date(Date.now() - 100_000_000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-access",
+				refresh_token: "RT_B",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+
+			// CF token endpoint: stale RT_A returns 401, current RT_B succeeds.
+			// Matches the exact failure mode observed in production logs.
+			msw.use(
+				http.post("*/oauth2/token", async ({ request }) => {
+					const body = new URLSearchParams(await request.text());
+					const rt = body.get("refresh_token");
+					if (rt === "RT_A") {
+						return new HttpResponse(null, {
+							status: 401,
+							statusText: "Unauthorized",
+						});
+					}
+					return HttpResponse.json({
+						access_token: "fresh-access-token",
+						expires_in: 3600,
+						refresh_token: "RT_B_NEXT",
+						scope: "account:read",
+						token_type: "bearer",
+					});
+				})
+			);
+
+			// readStoredAuthState() reads the auth config file on every call, so
+			// exchangeRefreshTokenForAccessToken picks up RT_B written by the
+			// "sibling" process and the command prints the fresh access token.
+			await runWrangler("auth token");
+			expect(std.out).toContain("fresh-access-token");
+		});
+
+		it("should preserve the stored refresh_token when the OAuth server omits one on refresh", async ({
+			expect,
+		}) => {
+			// RFC 6749 §6 allows the authorization server to return a successful
+			// refresh response without a new refresh_token; the previously issued
+			// refresh token then remains valid. Wrangler must keep that stored
+			// refresh token on disk rather than wiping it — otherwise the next
+			// refresh attempt fails with "No refresh token is present" and the
+			// user is effectively logged out.
+			setIsTTY(false);
+			const pastDate = new Date(Date.now() - 100_000_000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-access",
+				refresh_token: "RT_A",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+
+			msw.use(
+				http.post("*/oauth2/token", () =>
+					HttpResponse.json({
+						access_token: "fresh-access-token",
+						expires_in: 3600,
+						// no refresh_token in the response
+						scope: "account:read",
+						token_type: "bearer",
+					})
+				)
+			);
+
+			await runWrangler("auth token");
+
+			expect(std.out).toContain("fresh-access-token");
+			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+				api_token: undefined,
+				oauth_token: "fresh-access-token",
+				refresh_token: "RT_A",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
 		});
 
 		it("should error when not logged in", async ({ expect }) => {
@@ -609,18 +793,14 @@ describe("User", () => {
 			setIsTTY(true);
 
 			// Mock the memberships API to return multiple accounts
-			// Note: mockGetMemberships uses { once: true }, so we need to set it up for each expected call
+			// Note: getMswSuccessMembershipHandlers uses { once: true }, so we need to set it up for each expected call
 			// But since we're testing caching, the second call should NOT hit the API
-			mockGetMemberships([
-				{
-					id: "membership-1",
-					account: { id: "account-1", name: "Account One" },
-				},
-				{
-					id: "membership-2",
-					account: { id: "account-2", name: "Account Two" },
-				},
-			]);
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "account-1", name: "Account One" },
+					{ id: "account-2", name: "Account Two" },
+				])
+			);
 
 			// Mock the select dialog - should only be called once
 			mockSelect({
@@ -666,12 +846,11 @@ describe("User", () => {
 			expect,
 		}) => {
 			// Mock single account - no prompt needed
-			mockGetMemberships([
-				{
-					id: "membership-1",
-					account: { id: "single-account", name: "Only Account" },
-				},
-			]);
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "single-account", name: "Only Account" },
+				])
+			);
 
 			const accountId = await getOrSelectAccountId({});
 			expect(accountId).toBe("single-account");
@@ -685,12 +864,11 @@ describe("User", () => {
 
 			// Set up another membership response for verification
 			// (won't be called because cache is used)
-			mockGetMemberships([
-				{
-					id: "membership-2",
-					account: { id: "different-account", name: "Different" },
-				},
-			]);
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "different-account", name: "Different" },
+				])
+			);
 
 			// Second call should use cache
 			const secondAccountId = await getOrSelectAccountId({});
@@ -757,17 +935,15 @@ describe("User", () => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-api-token");
 		});
 
-		it("should return accounts from the API", async ({ expect }) => {
-			mockGetMemberships([
-				{
-					id: "membership-1",
-					account: { id: "account-1", name: "Account One" },
-				},
-				{
-					id: "membership-2",
-					account: { id: "account-2", name: "Account Two" },
-				},
-			]);
+		it("should return the intersection of /accounts and /memberships", async ({
+			expect,
+		}) => {
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "account-1", name: "Account One" },
+					{ id: "account-2", name: "Account Two" },
+				])
+			);
 
 			const accounts = await fetchAllAccounts({});
 			expect(accounts).toEqual([
@@ -776,24 +952,179 @@ describe("User", () => {
 			]);
 		});
 
+		it("should drop accounts present in /accounts but not /memberships", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/accounts",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{ id: "account-1", name: "Account One" },
+								{ id: "account-2", name: "Account Two" },
+								{ id: "account-3", name: "Orphan account" },
+							])
+						),
+					{ once: true }
+				),
+				http.get(
+					"*/memberships",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{
+									id: "membership-1",
+									account: { id: "account-1", name: "Account One" },
+								},
+								{
+									id: "membership-2",
+									account: { id: "account-2", name: "Account Two" },
+								},
+							])
+						),
+					{ once: true }
+				)
+			);
+
+			const accounts = await fetchAllAccounts({});
+			expect(accounts).toEqual([
+				{ id: "account-1", name: "Account One" },
+				{ id: "account-2", name: "Account Two" },
+			]);
+		});
+
+		it("should drop accounts present in /memberships but not /accounts", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/accounts",
+					() =>
+						HttpResponse.json(
+							createFetchResult([{ id: "account-1", name: "Account One" }])
+						),
+					{ once: true }
+				),
+				http.get(
+					"*/memberships",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{
+									id: "membership-1",
+									account: { id: "account-1", name: "Account One" },
+								},
+								{
+									id: "membership-2",
+									account: { id: "account-2", name: "Phantom account" },
+								},
+							])
+						),
+					{ once: true }
+				)
+			);
+
+			const accounts = await fetchAllAccounts({});
+			expect(accounts).toEqual([{ id: "account-1", name: "Account One" }]);
+		});
+
 		it("should throw when no accounts are found", async ({ expect }) => {
-			mockGetMemberships([]);
+			msw.use(...getMswSuccessMembershipHandlers([]));
 
 			await expect(fetchAllAccounts({})).rejects.toThrowError(
 				/Failed to automatically retrieve account IDs for the logged in user/
 			);
 		});
 
-		it("should throw a helpful error on 9109 permission error", async ({
+		it("should throw when /accounts and /memberships have no overlap", async ({
 			expect,
 		}) => {
 			msw.use(
+				http.get(
+					"*/accounts",
+					() =>
+						HttpResponse.json(
+							createFetchResult([{ id: "account-1", name: "Account One" }])
+						),
+					{ once: true }
+				),
+				http.get(
+					"*/memberships",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{
+									id: "membership-1",
+									account: { id: "account-2", name: "Account Two" },
+								},
+							])
+						),
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/Failed to automatically retrieve account IDs for the logged in user/
+			);
+		});
+
+		it("should fall back to /accounts when /memberships returns 9106 (Account API Token path)", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/accounts",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{ id: "account-only", name: "Single Account" },
+							])
+						),
+					{ once: true }
+				),
 				http.get(
 					"*/memberships",
 					() => {
 						return HttpResponse.json({
 							success: false,
-							errors: [{ code: 9109, message: "Insufficient permissions" }],
+							errors: [
+								{
+									code: 9106,
+									message: "Authentication failed (status: 400)",
+								},
+							],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			const accounts = await fetchAllAccounts({});
+			expect(accounts).toEqual([
+				{ id: "account-only", name: "Single Account" },
+			]);
+		});
+
+		it("should throw a helpful error on 9106 when /accounts is also unusable", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get("*/accounts", () => HttpResponse.json(createFetchResult([])), {
+					once: true,
+				}),
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [
+								{
+									code: 9106,
+									message: "Authentication failed (status: 400)",
+								},
+							],
 							result: null,
 						});
 					},
@@ -805,6 +1136,127 @@ describe("User", () => {
 				/incorrect permissions on your API token/
 			);
 		});
+
+		it("should fall back to /accounts when /memberships returns 10000 (Authentication error)", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/accounts",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{ id: "account-1", name: "Account One" },
+								{ id: "account-2", name: "Account Two" },
+							])
+						),
+					{ once: true }
+				),
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [{ code: 10000, message: "Authentication error" }],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			const accounts = await fetchAllAccounts({});
+			expect(accounts).toEqual([
+				{ id: "account-1", name: "Account One" },
+				{ id: "account-2", name: "Account Two" },
+			]);
+		});
+
+		it("should throw a helpful error on 10000 when /accounts is also unusable", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get("*/accounts", () => HttpResponse.json(createFetchResult([])), {
+					once: true,
+				}),
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [{ code: 10000, message: "Authentication error" }],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/incorrect permissions on your API token/
+			);
+		});
+
+		it("should include env-var hint when /memberships returns 9106 and /accounts is empty", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get("*/accounts", () => HttpResponse.json(createFetchResult([])), {
+					once: true,
+				}),
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [
+								{
+									code: 9106,
+									message: "Authentication failed",
+								},
+							],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/CLOUDFLARE_API_TOKEN/
+			);
+		});
+
+		it("should propagate /memberships errors that are not 9106 or 10000", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [{ code: 1003, message: "Invalid something" }],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/A request to the Cloudflare API \(\/memberships\) failed/
+			);
+		});
+
+		it("should return an empty array instead of throwing when throwOnEmpty is false", async ({
+			expect,
+		}) => {
+			msw.use(...getMswSuccessMembershipHandlers([]));
+
+			const accounts = await fetchAllAccounts({}, { throwOnEmpty: false });
+			expect(accounts).toEqual([]);
+		});
 	});
 
 	describe("getOrSelectAccountId with env var", () => {
@@ -815,7 +1267,7 @@ describe("User", () => {
 		it("should return env var without making API calls", async ({ expect }) => {
 			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-account-id");
 
-			// No mockGetMemberships — if an API call is made, it will fail
+			// No getMswSuccessMembershipHandlers — if an API call is made, it will fail
 			const accountId = await getOrSelectAccountId({});
 			expect(accountId).toBe("env-account-id");
 		});
@@ -857,12 +1309,11 @@ describe("User", () => {
 		it("should write to cache when account is resolved via API", async ({
 			expect,
 		}) => {
-			mockGetMemberships([
-				{
-					id: "membership-1",
-					account: { id: "api-account", name: "API Account" },
-				},
-			]);
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "api-account", name: "API Account" },
+				])
+			);
 
 			const accountId = await getOrSelectAccountId({});
 			expect(accountId).toBe("api-account");

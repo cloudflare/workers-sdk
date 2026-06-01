@@ -1,15 +1,17 @@
 import fs from "node:fs";
 import { join } from "node:path";
 import { UserError } from "@cloudflare/workers-utils";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { createFetchResult, msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
+import { getMswSuccessMembershipHandlers } from "../helpers/msw/";
 import { runWrangler } from "../helpers/run-wrangler";
 
 describe("execute", () => {
@@ -261,12 +263,14 @@ describe("execute", () => {
 				],
 			});
 
-			mockGetMemberships([
-				{
-					id: "IG-88",
-					account: { id: "some-account-id", name: "test-account" },
-				},
-			]);
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{
+						id: "some-account-id",
+						name: "test-account",
+					},
+				])
+			);
 
 			msw.use(
 				http.get("*/accounts/:accountId/d1/database", async () => {
@@ -306,12 +310,14 @@ describe("execute", () => {
 				],
 			});
 
-			mockGetMemberships([
-				{
-					id: "IG-88",
-					account: { id: "some-account-id", name: "test-account" },
-				},
-			]);
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{
+						id: "some-account-id",
+						name: "test-account",
+					},
+				])
+			);
 
 			msw.use(
 				http.get("*/accounts/:accountId/d1/database", async () => {

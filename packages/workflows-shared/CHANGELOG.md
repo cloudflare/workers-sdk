@@ -1,5 +1,35 @@
 # @cloudflare/workflows-shared
 
+## 0.11.1
+
+### Patch Changes
+
+- [#14134](https://github.com/cloudflare/workers-sdk/pull/14134) [`262dfc2`](https://github.com/cloudflare/workers-sdk/commit/262dfc2b32531165f94ba87c70ce75fcb1490b61) Thanks [@matingathani](https://github.com/matingathani)! - Fix `wrangler dev` Workflows crashing with `SQLITE_TOOBIG` when a step returns a large `Uint8Array`
+
+  `JSON.stringify` encodes each byte of a `Uint8Array` as a separate numeric key
+  (`{"0":1,"1":2,...}`), producing a string ~10× larger than the array's byte
+  length. A 200 KB `Uint8Array` became a ~2 MB JSON string that exceeded SQLite's
+  blob limit, crashing the Workflow step. The same bytes returned as an
+  `ArrayBuffer` succeeded because `JSON.stringify(ArrayBuffer)` → `{}`.
+
+  The step log metadata (used by the local Workflows explorer) now stores a
+  human-readable description for `TypedArray` and `ArrayBuffer` outputs
+  (`[Uint8Array(200000 bytes)]`) instead of attempting to JSON-serialise the raw
+  bytes. The actual step value is unaffected — it is preserved in Durable Object
+  key-value storage via structured clone for replay by subsequent steps.
+
+## 0.11.0
+
+### Minor Changes
+
+- [#13983](https://github.com/cloudflare/workers-sdk/pull/13983) [`9803586`](https://github.com/cloudflare/workers-sdk/commit/98035862e1e303ca1f380d8d2694ad3d4659e3be) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Add rollback support for local Workflows development
+
+  Workflow steps can now register a compensation callback with trailing rollback options: `step.do(name, fn, { rollback })` and `step.do(name, config, fn, { rollback, rollbackConfig })`. When the workflow fails, the local engine runs every registered rollback in reverse step-start order (LIFO), giving steps the opportunity to undo their side effects.
+
+  Each rollback executes through an internal rollback-scoped `Context.do`, so it inherits the existing retry / timeout / attempt-tracking machinery. `rollbackConfig` lets users override the per-rollback config.
+
+  Note: the public rollback option type lands with workerd's `workflows_step_rollback` compat flag. Until that ships, the trailing rollback options only flow through when called through the StepPromise wrapper from a worker that has the flag enabled.
+
 ## 0.10.0
 
 ### Minor Changes

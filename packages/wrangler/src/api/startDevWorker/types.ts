@@ -1,10 +1,10 @@
-import type { AssetsOptions } from "../../assets";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigController } from "./ConfigController";
 import type { DevEnv } from "./DevEnv";
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
+	AssetsOptions,
 	BinaryFile,
 	Binding,
 	CfModule,
@@ -190,8 +190,11 @@ export interface StartDevWorkerInput {
 		/** Re-generate your worker types when your Wrangler configuration file changes */
 		generateTypes?: boolean;
 
-		/** Whether a Cloudflare Quick Tunnel is active for this dev session */
-		tunnel?: boolean;
+		/** Tunnel configuration for this dev session. */
+		tunnel?: {
+			enabled: boolean;
+			name?: string;
+		};
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;

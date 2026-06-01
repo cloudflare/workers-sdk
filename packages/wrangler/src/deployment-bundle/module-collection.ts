@@ -12,8 +12,8 @@ import {
 	findAdditionalModuleWatchDirs,
 } from "./find-additional-modules";
 import { isJavaScriptModuleRule, parseRules } from "./rules";
-import type { Entry } from "./entry";
 import type {
+	Entry,
 	CfModule,
 	CfModuleType,
 	Config,

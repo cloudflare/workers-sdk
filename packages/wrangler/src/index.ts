@@ -9,6 +9,14 @@ import chalk from "chalk";
 import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
+import {
+	agentMemoryNamespace,
+	agentMemoryNamespaceNamespace,
+} from "./agent-memory";
+import { agentMemoryNamespaceCreateCommand } from "./agent-memory/create";
+import { agentMemoryNamespaceDeleteCommand } from "./agent-memory/delete";
+import { agentMemoryNamespaceGetCommand } from "./agent-memory/get";
+import { agentMemoryNamespaceListCommand } from "./agent-memory/list";
 import { aiFineTuneNamespace, aiNamespace } from "./ai";
 import { aiSearchCreateCommand } from "./ai-search/create";
 import { aiSearchDeleteCommand } from "./ai-search/delete";
@@ -25,8 +33,21 @@ import { aiSearchSearchCommand } from "./ai-search/search";
 import { aiSearchStatsCommand } from "./ai-search/stats";
 import { aiSearchUpdateCommand } from "./ai-search/update";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
-import { aiModelsCommand } from "./ai/listCatalog";
+import { aiModelsCommand, aiModelsListCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
+import { aiModelsSchemaCommand } from "./ai/modelSchema";
+import {
+	artifactsNamespace,
+	artifactsNamespacesGetCommand,
+	artifactsNamespacesListCommand,
+	artifactsNamespacesNamespace,
+	artifactsReposCreateCommand,
+	artifactsReposDeleteCommand,
+	artifactsReposGetCommand,
+	artifactsReposIssueTokenCommand,
+	artifactsReposListCommand,
+	artifactsReposNamespace,
+} from "./artifacts";
 import {
 	browserCloseCommand,
 	browserCreateCommand,
@@ -450,6 +471,8 @@ import { vpcServiceGetCommand } from "./vpc/get";
 import { vpcNamespace, vpcServiceNamespace } from "./vpc/index";
 import { vpcServiceListCommand } from "./vpc/list";
 import { vpcServiceUpdateCommand } from "./vpc/update";
+import { webSearchNamespace } from "./websearch/index";
+import { webSearchSearchCommand } from "./websearch/search";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
@@ -523,6 +546,12 @@ export function createCLIParser(argv: string[]) {
 			default: true,
 			hidden: true,
 			alias: "x-auto-create",
+		},
+		"install-skills": {
+			describe:
+				"Install Cloudflare agents skills, if not already present, without asking the user for confirmation",
+			type: "boolean",
+			default: false,
 		},
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
@@ -600,7 +629,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "env-file", "help", "version"],
+		["config", "cwd", "env", "env-file", "help", "install-skills", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 
@@ -963,6 +992,50 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler kv bulk delete", definition: kvBulkDeleteCommand },
 	]);
 	registry.registerNamespace("kv");
+
+	registry.define([
+		{
+			command: "wrangler artifacts",
+			definition: artifactsNamespace,
+		},
+		{
+			command: "wrangler artifacts namespaces",
+			definition: artifactsNamespacesNamespace,
+		},
+		{
+			command: "wrangler artifacts namespaces list",
+			definition: artifactsNamespacesListCommand,
+		},
+		{
+			command: "wrangler artifacts namespaces get",
+			definition: artifactsNamespacesGetCommand,
+		},
+		{
+			command: "wrangler artifacts repos",
+			definition: artifactsReposNamespace,
+		},
+		{
+			command: "wrangler artifacts repos create",
+			definition: artifactsReposCreateCommand,
+		},
+		{
+			command: "wrangler artifacts repos list",
+			definition: artifactsReposListCommand,
+		},
+		{
+			command: "wrangler artifacts repos get",
+			definition: artifactsReposGetCommand,
+		},
+		{
+			command: "wrangler artifacts repos delete",
+			definition: artifactsReposDeleteCommand,
+		},
+		{
+			command: "wrangler artifacts repos issue-token",
+			definition: artifactsReposIssueTokenCommand,
+		},
+	]);
+	registry.registerNamespace("artifacts");
 
 	registry.define([
 		{ command: "wrangler queues", definition: queuesNamespace },
@@ -1490,6 +1563,16 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("ai-search");
 
+	// websearch
+	registry.define([
+		{ command: "wrangler websearch", definition: webSearchNamespace },
+		{
+			command: "wrangler websearch search",
+			definition: webSearchSearchCommand,
+		},
+	]);
+	registry.registerNamespace("websearch");
+
 	// cert - includes mtls-certificates and CA cert management
 	registry.define([
 		{ command: "wrangler cert", definition: certNamespace },
@@ -1782,6 +1865,8 @@ export function createCLIParser(argv: string[]) {
 	registry.define([
 		{ command: "wrangler ai", definition: aiNamespace },
 		{ command: "wrangler ai models", definition: aiModelsCommand },
+		{ command: "wrangler ai models list", definition: aiModelsListCommand },
+		{ command: "wrangler ai models schema", definition: aiModelsSchemaCommand },
 		{ command: "wrangler ai finetune", definition: aiFineTuneNamespace },
 		{ command: "wrangler ai finetune list", definition: aiFineTuneListCommand },
 		{
@@ -1800,6 +1885,32 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler browser view", definition: browserViewCommand },
 	]);
 	registry.registerNamespace("browser");
+
+	// agent-memory
+	registry.define([
+		{ command: "wrangler agent-memory", definition: agentMemoryNamespace },
+		{
+			command: "wrangler agent-memory namespace",
+			definition: agentMemoryNamespaceNamespace,
+		},
+		{
+			command: "wrangler agent-memory namespace create",
+			definition: agentMemoryNamespaceCreateCommand,
+		},
+		{
+			command: "wrangler agent-memory namespace list",
+			definition: agentMemoryNamespaceListCommand,
+		},
+		{
+			command: "wrangler agent-memory namespace get",
+			definition: agentMemoryNamespaceGetCommand,
+		},
+		{
+			command: "wrangler agent-memory namespace delete",
+			definition: agentMemoryNamespaceDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("agent-memory");
 
 	// secrets store
 	registry.define([
@@ -2321,7 +2432,7 @@ export async function main(argv: string[]): Promise<void> {
 			// needed, so we can cleanly exit. Note, we don't want to disconnect if
 			// this file was imported in Vitest, as that would stop communication with
 			// the test runner.
-			if (typeof vitest === "undefined") {
+			if (typeof vitest === "undefined" && process.connected) {
 				process.disconnect?.();
 			}
 
@@ -2337,7 +2448,7 @@ export async function main(argv: string[]): Promise<void> {
 			// Only re-throw if we haven't already re-thrown an exception from a
 			// command handler.
 			if (!cliHandlerThrew) {
-				// eslint-disable-next-line no-unsafe-finally
+				// eslint-disable-next-line no-unsafe-finally -- Intentionally re-throw in finally when the CLI handler did not throw
 				throw e;
 			}
 		}

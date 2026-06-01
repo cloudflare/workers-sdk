@@ -1,11 +1,10 @@
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships } from "../helpers/mock-oauth-flow";
-import { msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
+import { getMswSuccessMembershipHandlers, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
 describe("list", () => {
@@ -18,10 +17,8 @@ describe("list", () => {
 
 	beforeEach(() => {
 		setIsTTY(false);
-		mockGetMemberships([
-			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-		]);
 		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }]),
 			http.get("*/accounts/:accountId/d1/database", async () => {
 				return HttpResponse.json(
 					{

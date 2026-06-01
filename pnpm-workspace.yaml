@@ -30,6 +30,24 @@ gitChecks: false
 # URLs. Only direct dependencies may use exotic sources.
 blockExoticSubdeps: true
 
+# Require packages to be at least 24 hours old before they can be installed.
+# This mitigates supply-chain attacks where a malicious version is published and
+# yanked quickly, by ensuring there is a window for detection before adoption.
+# Value is in minutes (1440 = 24 hours).
+minimumReleaseAge: 1440
+
+# First-party Cloudflare packages are exempt from the cooldown so they can be
+# adopted same-day.
+minimumReleaseAgeExclude:
+  - "workerd"
+  # Platform-specific workerd binaries published in lock-step with workerd.
+  - "@cloudflare/workerd-*"
+  - "@cloudflare/workers-types"
+  # The below is to install the rosie-skills package and remove the problematic
+  # wasm module it brings as soon as possible
+  # TODO(dario): remove in a few days
+  - "rosie-skills"
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Build scripts
 # pnpm 10 blocks lifecycle scripts by default. Only the packages listed here
@@ -93,12 +111,12 @@ catalog:
   # version of Undici
   undici-types: "7.24.8"
   vitest: "4.1.0"
-  vite: "^8.0.0"
-  "ws": "8.18.0"
+  vite: "^8.0.12"
+  "ws": "8.20.1"
   esbuild: "0.27.3"
-  playwright-chromium: "^1.56.1"
-  "@cloudflare/workers-types": "^4.20260504.1"
-  workerd: "1.20260504.1"
+  playwright-chromium: "^1.60.0"
+  "@cloudflare/workers-types": "^4.20260529.1"
+  workerd: "1.20260529.1"
   jsonc-parser: "^3.2.0"
   smol-toml: "^1.5.2"
   msw: 2.12.4
@@ -108,6 +126,7 @@ catalog:
   "capnweb": "^0.5.0"
   "ci-info": "^4.4.0"
   "open": "^11.0.0"
+  "signal-exit": "^3.0.7"
   # CAUTION: Most usage of @cloudflare/vitest-pool-workers in this monorepo should use workspace:* instead of this catalog version
   # However, some packages (pages-shared, workers-shared, etc...) need to be tested using vitest-pool-workers but are themselves
   # ultimately included in vitest-pool-workers (through Wrangler), causing a circular dependency.

@@ -13,7 +13,12 @@ import type {
 	DatabaseWorkflow,
 	EngineLogs,
 } from "../src/engine";
-import type { WorkflowStep } from "cloudflare:workers";
+import type {
+	RollbackContext,
+	RollbackFn,
+	WorkflowStepRollbackOptions,
+} from "../src/lib/rollback";
+import type { WorkflowStep, WorkflowStepConfig } from "cloudflare:workers";
 
 afterEach(async () => {
 	await workerdUnsafe.abortAllDurableObjects();
@@ -85,7 +90,7 @@ describe("Engine", () => {
 					{} as DatabaseWorkflow,
 					{} as DatabaseVersion,
 					{ id: instanceId } as DatabaseInstance,
-					{ payload: {}, timestamp: new Date(), instanceId }
+					{ payload: {}, timestamp: new Date(), instanceId, workflowName: "" }
 				)
 				.catch(() => {});
 
@@ -417,6 +422,7 @@ describe("Engine", () => {
 			payload: {},
 			timestamp: new Date(),
 			instanceId: instanceId,
+			workflowName: "",
 		};
 
 		const engineStub = await runWorkflow(instanceId, async () => {
@@ -451,6 +457,55 @@ describe("Engine", () => {
 		).toBe(true);
 	});
 
+	it("should complete a step that returns a large Uint8Array without SQLITE_TOOBIG", async ({
+		expect,
+	}) => {
+		// Regression: JSON.stringify(Uint8Array) encodes each byte as a numeric key,
+		// producing a string far larger than byteLength. A 200 KB Uint8Array → ~2 MB JSON
+		// → SQLITE_TOOBIG. writeLog must use a replacer to sanitize TypedArrays.
+		const instanceId = "LARGE-UINT8ARRAY-RESULT";
+		const engineId = env.ENGINE.idFromName(instanceId);
+		const engineStub = env.ENGINE.get(engineId);
+
+		await runWorkflowAndAwait(instanceId, async (_event, step) => {
+			await step.do("large-binary-step", async () => {
+				return new Uint8Array(200_000); // ~200 KB, triggers SQLITE_TOOBIG without fix
+			});
+		});
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+		).toBe(false);
+	});
+
+	it("should complete a step that returns an object containing a large Uint8Array without SQLITE_TOOBIG", async ({
+		expect,
+	}) => {
+		// Regression: nested TypedArrays inside objects also cause SQLITE_TOOBIG without
+		// the JSON.stringify replacer, since sanitization must be recursive.
+		const instanceId = "NESTED-UINT8ARRAY-RESULT";
+		const engineId = env.ENGINE.idFromName(instanceId);
+		const engineStub = env.ENGINE.get(engineId);
+
+		await runWorkflowAndAwait(instanceId, async (_event, step) => {
+			await step.do("nested-binary-step", async () => {
+				return { payload: new Uint8Array(200_000), label: "test" };
+			});
+		});
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+		).toBe(true);
+		expect(
+			logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+		).toBe(false);
+	});
+
 	describe("step limits", () => {
 		it("should enforce step limit when exceeded", async ({ expect }) => {
 			const stepLimit = 3;
@@ -473,7 +528,7 @@ describe("Engine", () => {
 				{} as DatabaseWorkflow,
 				{} as DatabaseVersion,
 				{ id: instanceId } as DatabaseInstance,
-				{ payload: {}, timestamp: new Date(), instanceId }
+				{ payload: {}, timestamp: new Date(), instanceId, workflowName: "" }
 			);
 
 			const logs = (await engineStub.readLogs()) as EngineLogs;
@@ -507,7 +562,7 @@ describe("Engine", () => {
 				{} as DatabaseWorkflow,
 				{} as DatabaseVersion,
 				{ id: instanceId } as DatabaseInstance,
-				{ payload: {}, timestamp: new Date(), instanceId }
+				{ payload: {}, timestamp: new Date(), instanceId, workflowName: "" }
 			);
 
 			const logs = (await engineStub.readLogs()) as EngineLogs;
@@ -1231,6 +1286,7 @@ describe("Engine", () => {
 						payload: {},
 						timestamp: new Date(),
 						instanceId,
+						workflowName: "",
 					}
 				);
 			});
@@ -1240,5 +1296,321 @@ describe("Engine", () => {
 			);
 			expect(status).toBe(InstanceStatus.Paused);
 		});
+	});
+});
+
+// RPC-stubbed rollback fns can't reliably mutate test-scope closures —
+// assert via engine log events instead.
+describe("Rollback", () => {
+	async function readLogsAfter(
+		stub: { readLogs(): Promise<EngineLogs> | EngineLogs },
+		predicate: (logs: EngineLogs) => boolean,
+		timeout = 5000
+	): Promise<EngineLogs> {
+		await vi.waitUntil(
+			async () => predicate((await stub.readLogs()) as EngineLogs),
+			{ timeout }
+		);
+		return (await stub.readLogs()) as EngineLogs;
+	}
+
+	function targetsOf(
+		logs: EngineLogs,
+		event: InstanceEvent
+	): (string | null)[] {
+		return logs.logs.filter((l) => l.event === event).map((l) => l.target);
+	}
+
+	function countOf(logs: EngineLogs, event: InstanceEvent): number {
+		return logs.logs.filter((l) => l.event === event).length;
+	}
+
+	function doWithRollback<T>(
+		step: WorkflowStep,
+		name: string,
+		callback: (ctx: unknown) => Promise<T>,
+		options: WorkflowStepRollbackOptions
+	): Promise<unknown>;
+	function doWithRollback<T>(
+		step: WorkflowStep,
+		name: string,
+		config: WorkflowStepConfig,
+		callback: (ctx: unknown) => Promise<T>,
+		options: WorkflowStepRollbackOptions
+	): Promise<unknown>;
+	function doWithRollback<T>(
+		step: WorkflowStep,
+		name: string,
+		configOrCallback: WorkflowStepConfig | ((ctx: unknown) => Promise<T>),
+		callbackOrOptions:
+			| ((ctx: unknown) => Promise<T>)
+			| WorkflowStepRollbackOptions,
+		options?: WorkflowStepRollbackOptions
+	): Promise<unknown> {
+		if (typeof configOrCallback === "function") {
+			// @ts-expect-error -- rollback options are not in workers-types yet
+			return step.do(name, configOrCallback, callbackOrOptions);
+		}
+		// @ts-expect-error -- rollback options are not in workers-types yet
+		return step.do(name, configOrCallback, callbackOrOptions, options);
+	}
+
+	async function noopRollback(_ctx: RollbackContext): Promise<void> {}
+
+	function rollbackOptions(
+		fn: RollbackFn = noopRollback
+	): WorkflowStepRollbackOptions {
+		return { rollback: fn };
+	}
+
+	function rollbackOptionsWithConfig(
+		rollbackConfig: WorkflowStepConfig,
+		fn: RollbackFn = noopRollback
+	): WorkflowStepRollbackOptions {
+		return { rollback: fn, rollbackConfig };
+	}
+
+	it("runs rollback fns in LIFO order on workflow failure", async ({
+		expect,
+	}) => {
+		const stub = await runWorkflowAndAwait("RB-LIFO", async (_e, step) => {
+			await doWithRollback(
+				step,
+				"step-1",
+				async () => "out-1",
+				rollbackOptions()
+			);
+			await doWithRollback(
+				step,
+				"step-2",
+				async () => "out-2",
+				rollbackOptions()
+			);
+			await doWithRollback(
+				step,
+				"step-3",
+				async () => "out-3",
+				rollbackOptions()
+			);
+			throw new Error("boom");
+		});
+		const logs = await readLogsAfter(stub, (l) =>
+			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
+		);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_SUCCESS)).toEqual([
+			"step-3-1",
+			"step-2-1",
+			"step-1-1",
+		]);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_ATTEMPT_SUCCESS)).toEqual([
+			"step-3-1",
+			"step-2-1",
+			"step-1-1",
+		]);
+		expect(countOf(logs, InstanceEvent.ROLLBACK_FAILED)).toBe(0);
+	});
+
+	it("runs parallel rollbacks in reverse step start order", async ({
+		expect,
+	}) => {
+		let firstStarted: () => void = () => {};
+		let firstMayFinish: () => void = () => {};
+		const firstStartedPromise = new Promise<void>((resolve) => {
+			firstStarted = resolve;
+		});
+		const firstMayFinishPromise = new Promise<void>((resolve) => {
+			firstMayFinish = resolve;
+		});
+
+		const stub = await runWorkflowAndAwait("RB-PARALLEL", async (_e, step) => {
+			const first = doWithRollback(
+				step,
+				"first",
+				async () => {
+					firstStarted();
+					await firstMayFinishPromise;
+					await scheduler.wait(50);
+					return "out-1";
+				},
+				rollbackOptions()
+			);
+			await firstStartedPromise;
+
+			const second = doWithRollback(
+				step,
+				"second",
+				async () => {
+					firstMayFinish();
+					return "out-2";
+				},
+				rollbackOptions()
+			);
+
+			await Promise.all([first, second]);
+			throw new Error("boom");
+		});
+		const logs = await readLogsAfter(stub, (l) =>
+			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
+		);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_SUCCESS)).toEqual([
+			"second-1",
+			"first-1",
+		]);
+	});
+
+	it("uses rollbackConfig when executing rollback", async ({ expect }) => {
+		const rollbackConfig = {
+			retries: { limit: 0, delay: 0, backoff: "constant" },
+			timeout: "30 seconds",
+		};
+		const stub = await runWorkflowAndAwait("RB-CONFIG", async (_e, step) => {
+			await doWithRollback(
+				step,
+				"configured-step",
+				async () => "out",
+				rollbackOptionsWithConfig(rollbackConfig)
+			);
+			throw new Error("boom");
+		});
+		const logs = await readLogsAfter(stub, (l) =>
+			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
+		);
+		expect(
+			logs.logs.find((l) => l.event === InstanceEvent.ROLLBACK_STEP_START)
+				?.metadata
+		).toMatchObject({ config: rollbackConfig });
+	});
+
+	it("passes rollback context to rollback fn", async ({ expect }) => {
+		const stub = await runWorkflowAndAwait("RB-CONTEXT", async (_e, step) => {
+			await doWithRollback(
+				step,
+				"ctx-step",
+				async () => "out",
+				rollbackOptions(async (ctx) => {
+					if (
+						ctx.error.name !== "Error" ||
+						ctx.error.message !== "boom" ||
+						ctx.output !== "out" ||
+						ctx.stepName !== "ctx-step-1"
+					) {
+						throw new Error("unexpected rollback context");
+					}
+				})
+			);
+			throw new Error("boom");
+		});
+		const logs = await readLogsAfter(stub, (l) =>
+			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
+		);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_SUCCESS)).toEqual([
+			"ctx-step-1",
+		]);
+	});
+
+	it("runs rollback for failed step", async ({ expect }) => {
+		const stub = await runWorkflowAndAwait(
+			"RB-FAILED-STEP",
+			async (_e, step) => {
+				await doWithRollback(
+					step,
+					"failed-step",
+					{ retries: { limit: 0, delay: 0, backoff: "constant" } },
+					async () => {
+						throw new Error("step-boom");
+					},
+					rollbackOptions(async (ctx) => {
+						if (
+							ctx.error.message !== "step-boom" ||
+							ctx.output !== undefined ||
+							ctx.stepName !== "failed-step-1"
+						) {
+							throw new Error("unexpected failed-step rollback context");
+						}
+					})
+				);
+			}
+		);
+		const logs = await readLogsAfter(stub, (l) =>
+			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
+		);
+		const rollbackStepTargets = targetsOf(
+			logs,
+			InstanceEvent.ROLLBACK_STEP_SUCCESS
+		);
+		const stepFailureTargets = targetsOf(logs, InstanceEvent.STEP_FAILURE);
+
+		expect(rollbackStepTargets).toEqual(["failed-step-1"]);
+		expect(stepFailureTargets).toContain("failed-step-1");
+	});
+
+	it("only runs rollbacks for steps with a registered fn", async ({
+		expect,
+	}) => {
+		const stub = await runWorkflowAndAwait("RB-PARTIAL", async (_e, step) => {
+			await step.do("plain-step", async () => "v1");
+			await doWithRollback(
+				step,
+				"step-with-rollback",
+				async () => "v2",
+				rollbackOptions()
+			);
+			await step.do("plain-step-after", async () => "v3");
+			throw new Error("boom");
+		});
+		const logs = await readLogsAfter(stub, (l) =>
+			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_COMPLETE)
+		);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_SUCCESS)).toEqual([
+			"step-with-rollback-1",
+		]);
+		expect(
+			logs.logs.find((l) => l.event === InstanceEvent.ROLLBACK_START)?.metadata
+		).toMatchObject({ totalSteps: 1 });
+	});
+
+	it("stops at the first failing rollback and logs ROLLBACK_FAILED", async ({
+		expect,
+	}) => {
+		const stub = await runWorkflowAndAwait("RB-FAILS", async (_e, step) => {
+			await doWithRollback(step, "step-1", async () => "v1", rollbackOptions());
+			await doWithRollback(
+				step,
+				"step-2",
+				async () => "v2",
+				rollbackOptionsWithConfig(
+					{ retries: { limit: 0, delay: 0, backoff: "constant" } },
+					async () => {
+						throw new Error("rollback-boom");
+					}
+				)
+			);
+			await doWithRollback(step, "step-3", async () => "v3", rollbackOptions());
+			throw new Error("boom");
+		});
+		const logs = await readLogsAfter(stub, (l) =>
+			l.logs.some((r) => r.event === InstanceEvent.ROLLBACK_FAILED)
+		);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_SUCCESS)).toEqual([
+			"step-3-1",
+		]);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_STEP_FAILURE)).toEqual([
+			"step-2-1",
+		]);
+		expect(targetsOf(logs, InstanceEvent.ROLLBACK_ATTEMPT_FAILURE)).toEqual([
+			"step-2-1",
+		]);
+		expect(countOf(logs, InstanceEvent.ROLLBACK_COMPLETE)).toBe(0);
+	});
+
+	it("does not run rollback when workflow succeeds", async ({ expect }) => {
+		const stub = await runWorkflowAndAwait("RB-NOOP", async (_e, step) => {
+			await doWithRollback(step, "a", async () => "ok", rollbackOptions());
+			return "done";
+		});
+		const logs = await readLogsAfter(stub, (l) =>
+			l.logs.some((r) => r.event === InstanceEvent.WORKFLOW_SUCCESS)
+		);
+		expect(countOf(logs, InstanceEvent.ROLLBACK_START)).toBe(0);
 	});
 });

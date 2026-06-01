@@ -2,10 +2,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { getNormalizedContainerOptions } from "../../containers/config";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import type { Config } from "@cloudflare/workers-utils";
 
 describe("getNormalizedContainerOptions", () => {
@@ -720,6 +720,40 @@ describe("getNormalizedContainerOptions", () => {
 		expect(result[0].rollout_step_percentage).toBe(100);
 	});
 
+	it("should set rollout_kind to none when containersRollout is none", async ({
+		expect,
+	}) => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "TestContainer",
+					image: `${getCloudflareContainerRegistry()}/test:latest`,
+					name: "test-container",
+					max_instances: 10,
+					rollout_kind: "full_auto",
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {
+			containersRollout: "none",
+		});
+		expect(result).toHaveLength(1);
+		expect(result[0].rollout_kind).toBe("none");
+	});
+
 	describe("image validation and resolution", async () => {
 		it("should allow any image registry", async ({ expect }) => {
 			const config: Config = {
@@ -836,7 +870,7 @@ describe("getNormalizedContainerOptions", () => {
 					image: `${getCloudflareContainerRegistry()}/test:latest`,
 					name: "test-container",
 					max_instances: 3,
-					wrangler_ssh: {
+					ssh: {
 						enabled: true,
 						port: 22,
 					},

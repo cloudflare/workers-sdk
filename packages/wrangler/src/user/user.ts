@@ -297,27 +297,30 @@ interface PKCECodes {
 }
 
 /**
- * The module level state of the authentication flow.
+ * Transient state that is shared across the steps of a single OAuth login flow
+ * within one Wrangler command. This state is not file-backed; it lives only for
+ * the duration of an interactive login.
  */
-interface State extends AuthTokens {
+interface OAuthFlowState {
 	authorizationCode?: string;
 	codeChallenge?: string;
 	codeVerifier?: string;
 	hasAuthCodeBeenExchangedForAccessToken?: boolean;
 	stateQueryParam?: string;
-	scopes?: Scope[];
-	account?: Account;
 }
 
 /**
- * The tokens related to authentication.
+ * The auth state that is stored on disk in the user auth config file (TOML).
+ * Read on demand by {@link readStoredAuthState} — never cached at module scope
+ * so that environment variables loaded after import (e.g. from `.env`) take
+ * priority correctly.
  */
-interface AuthTokens {
+interface StoredAuthState {
 	accessToken?: AccessToken;
 	refreshToken?: RefreshToken;
 	scopes?: Scope[];
 	/** @deprecated - this field was only provided by the deprecated v1 `wrangler config` command. */
-	apiToken?: string;
+	deprecatedApiToken?: string;
 }
 
 /**
@@ -369,6 +372,9 @@ const DefaultScopes = {
 	"ai:write": "See and change Workers AI catalog and assets",
 	"ai-search:write": "See and change AI Search data",
 	"ai-search:run": "Run search queries on your AI Search instances",
+	"websearch.run": "Run search queries against Cloudflare Web Search",
+	"agent-memory:write":
+		"See and change Agent Memory data such as keys and namespaces.",
 	"queues:write": "See and change Cloudflare Queues settings and data",
 	"pipelines:write":
 		"See and change Cloudflare Pipelines configurations and data",
@@ -407,82 +413,81 @@ export function validateScopeKeys(
 	return scopes.every((scope) => scope in DefaultScopes);
 }
 
-let localState: State = {
-	...getAuthTokens(),
-};
+/**
+ * Module-level state intentionally limited to the transient state shared
+ * across the steps of one OAuth login flow. The on-disk OAuth tokens are NOT
+ * cached here — they are read on demand by readStoredAuthState() so that env
+ * vars loaded after module import (for example from `.env`) take priority
+ * correctly. The selected-account cache is file-backed (wrangler-account.json)
+ * and therefore naturally scoped to the current working directory.
+ */
+const oauthFlowState: OAuthFlowState = {};
+
+let hasWarnedAboutDeprecatedV1ApiToken = false;
 
 /**
- * Compute the current auth tokens.
+ * Read the on-disk auth state. This is called on demand from every site that
+ * needs the stored OAuth tokens or the deprecated v1 `api_token`, rather than
+ * being cached at module scope, so that environment-based credentials loaded
+ * after module import are honoured.
+ *
+ * @return an empty object when no auth config file exists or the file cannot
+ * be parsed — the caller treats this as "not logged in via local OAuth".
+ *
+ * @param config The optional `config` argument lets callers seed the state from an
+ * in-memory config (used by the OAuth login flow before it writes to disk).
  */
-function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
-	// get refreshToken/accessToken from fs if exists
+function readStoredAuthState(config?: UserAuthConfig): StoredAuthState {
+	let parsed: UserAuthConfig;
 	try {
-		// if the environment variable is available, we don't need to do anything here
-		if (getAuthFromEnv()) {
-			return;
-		}
+		parsed = config ?? readAuthConfigFile();
+	} catch {
+		return {};
+	}
 
-		// otherwise try loading from the user auth config file.
-		const { oauth_token, refresh_token, expiration_time, scopes, api_token } =
-			config || readAuthConfigFile();
+	const { oauth_token, refresh_token, expiration_time, scopes, api_token } =
+		parsed;
 
-		if (oauth_token) {
-			return {
-				accessToken: {
-					value: oauth_token,
-					// If there is no `expiration_time` field then set it to an old date, to cause it to expire immediately.
-					expiry: expiration_time ?? "2000-01-01:00:00:00+00:00",
-				},
-				refreshToken: { value: refresh_token ?? "" },
-				scopes: scopes as Scope[],
-			};
-		} else if (api_token) {
+	if (oauth_token) {
+		return {
+			accessToken: {
+				value: oauth_token,
+				// If there is no `expiration_time` field then set it to an old date, to cause it to expire immediately.
+				expiry: expiration_time ?? "2000-01-01:00:00:00+00:00",
+			},
+			refreshToken: { value: refresh_token ?? "" },
+			scopes: scopes as Scope[] | undefined,
+		};
+	}
+
+	if (api_token) {
+		if (!hasWarnedAboutDeprecatedV1ApiToken) {
+			hasWarnedAboutDeprecatedV1ApiToken = true;
 			logger.warn(
 				"It looks like you have used Wrangler v1's `config` command to login with an API token\n" +
 					`from ${config === undefined ? getAuthConfigFilePath() : "in-memory config"}.\n` +
 					"This is no longer supported in the current version of Wrangler.\n" +
 					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
 			);
-			return { apiToken: api_token };
 		}
-	} catch {
-		return undefined;
+		return { deprecatedApiToken: api_token };
 	}
-}
 
-/**
- * Run the initialization of the auth state, in the case that something changed.
- *
- * This runs automatically whenever `writeAuthConfigFile` is run, so generally
- * you won't need to call it yourself.
- */
-export function reinitialiseAuthTokens(): void;
-
-/**
- * Reinitialise auth state from an in-memory config, skipping
- * over the part where we write a file and then read it back into memory
- */
-export function reinitialiseAuthTokens(config: UserAuthConfig): void;
-
-export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
-	localState = {
-		...getAuthTokens(config),
-	};
+	return {};
 }
 
 export function getAPIToken(): ApiCredentials | undefined {
-	if (localState.apiToken) {
-		return { apiToken: localState.apiToken };
+	const envAuth = getAuthFromEnv();
+	if (envAuth) {
+		return envAuth;
 	}
 
-	const localAPIToken = getAuthFromEnv();
-	if (localAPIToken) {
-		return localAPIToken;
+	const stored = readStoredAuthState();
+	if (stored.deprecatedApiToken) {
+		return { apiToken: stored.deprecatedApiToken };
 	}
-
-	const storedAccessToken = localState.accessToken?.value;
-	if (storedAccessToken) {
-		return { apiToken: storedAccessToken };
+	if (stored.accessToken?.value) {
+		return { apiToken: stored.accessToken.value };
 	}
 
 	return undefined;
@@ -706,10 +711,8 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 		return false;
 	}
 
-	const state = localState;
-
 	const stateQueryParam = query.state;
-	if (stateQueryParam !== state.stateQueryParam) {
+	if (stateQueryParam !== oauthFlowState.stateQueryParam) {
 		logger.warn(
 			"Received query string parameter doesn't match the one sent! Possible malicious activity somewhere."
 		);
@@ -718,8 +721,8 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 		});
 	}
 	assert(!Array.isArray(code));
-	state.authorizationCode = code;
-	state.hasAuthCodeBeenExchangedForAccessToken = false;
+	oauthFlowState.authorizationCode = code;
+	oauthFlowState.hasAuthCodeBeenExchangedForAccessToken = false;
 	return true;
 }
 
@@ -727,7 +730,7 @@ async function getAuthURL(scopes: string[], clientId: string): Promise<string> {
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
 	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
-	Object.assign(localState, {
+	Object.assign(oauthFlowState, {
 		codeChallenge,
 		codeVerifier,
 		stateQueryParam,
@@ -757,13 +760,16 @@ type TokenResponse =
  * Refresh an access token from the remote service.
  */
 async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
-	if (!localState.refreshToken) {
+	// Read the refresh token fresh from disk on every call so we always pick up
+	// the latest rotation written by a sibling Wrangler process.
+	const storedRefreshToken = readStoredAuthState().refreshToken;
+	if (!storedRefreshToken) {
 		logger.warn("No refresh token is present.");
 	}
 
 	const params = new URLSearchParams({
 		grant_type: "refresh_token",
-		refresh_token: localState.refreshToken?.value ?? "",
+		refresh_token: storedRefreshToken?.value ?? "",
 		client_id: getClientIdFromEnv(),
 	});
 
@@ -798,31 +804,29 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 			}
 
 			const { access_token, expires_in, refresh_token, scope } = json;
-			let scopes: Scope[] = [];
 
 			const accessToken: AccessToken = {
 				value: access_token,
 				expiry: new Date(Date.now() + expires_in * 1000).toISOString(),
 			};
-			localState.accessToken = accessToken;
 
-			if (refresh_token) {
-				localState.refreshToken = {
-					value: refresh_token,
-				};
-			}
+			// Multiple scopes are passed and delimited by spaces,
+			// despite using the singular name "scope".
+			const scopes: Scope[] = scope ? (scope.split(" ") as Scope[]) : [];
 
-			if (scope) {
-				// Multiple scopes are passed and delimited by spaces,
-				// despite using the singular name "scope".
-				scopes = scope.split(" ") as Scope[];
-				localState.scopes = scopes;
-			}
-
+			// The caller (refreshToken) persists this via writeAuthConfigFile.
+			// No need to mirror the values into any module-level cache.
+			//
+			// The OAuth server is allowed to omit `refresh_token` from a successful
+			// refresh response, in which case the previously issued refresh token
+			// remains valid (RFC 6749 §6). Preserve the stored value so we don't
+			// wipe a still-valid refresh token from disk.
 			const accessContext: AccessContext = {
 				token: accessToken,
 				scopes,
-				refreshToken: localState.refreshToken,
+				refreshToken: refresh_token
+					? { value: refresh_token }
+					: storedRefreshToken,
 			};
 			return accessContext;
 		} catch (error) {
@@ -839,7 +843,7 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
  * Fetch an access token from the remote service.
  */
 async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
-	const { authorizationCode, codeVerifier = "" } = localState;
+	const { authorizationCode, codeVerifier = "" } = oauthFlowState;
 
 	if (!codeVerifier) {
 		logger.warn("No code verifier is being sent.");
@@ -873,33 +877,24 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 		throw new Error(json.error);
 	}
 	const { access_token, expires_in, refresh_token, scope } = json;
-	let scopes: Scope[] = [];
-	localState.hasAuthCodeBeenExchangedForAccessToken = true;
+	oauthFlowState.hasAuthCodeBeenExchangedForAccessToken = true;
 
 	const expiryDate = new Date(Date.now() + expires_in * 1000);
 	const accessToken: AccessToken = {
 		value: access_token,
 		expiry: expiryDate.toISOString(),
 	};
-	localState.accessToken = accessToken;
 
-	if (refresh_token) {
-		localState.refreshToken = {
-			value: refresh_token,
-		};
-	}
+	// Multiple scopes are passed and delimited by spaces,
+	// despite using the singular name "scope".
+	const scopes: Scope[] = scope ? (scope.split(" ") as Scope[]) : [];
 
-	if (scope) {
-		// Multiple scopes are passed and delimited by spaces,
-		// despite using the singular name "scope".
-		scopes = scope.split(" ") as Scope[];
-		localState.scopes = scopes;
-	}
-
+	// The caller (login) persists this via writeAuthConfigFile.
+	// No need to mirror the values into any module-level cache.
 	const accessContext: AccessContext = {
 		token: accessToken,
 		scopes,
-		refreshToken: localState.refreshToken,
+		refreshToken: refresh_token ? { value: refresh_token } : undefined,
 	};
 	return accessContext;
 }
@@ -950,8 +945,10 @@ export function getAuthConfigFilePath() {
 }
 
 /**
- * Writes a a wrangler config file (auth credentials) to disk,
- * and updates the user auth state with the new credentials.
+ * Writes a wrangler config file (auth credentials) to disk.
+ *
+ * No in-memory cache to invalidate — auth state is read on demand by
+ * {@link readStoredAuthState} on every call site that needs it.
  */
 export function writeAuthConfigFile(config: UserAuthConfig) {
 	const configPath = getAuthConfigFilePath();
@@ -962,8 +959,6 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 	writeFileSync(path.join(configPath), TOML.stringify(config), {
 		encoding: "utf-8",
 	});
-
-	reinitialiseAuthTokens();
 }
 
 export function readAuthConfigFile(): UserAuthConfig {
@@ -987,7 +982,7 @@ export async function loginOrRefreshIfRequired(
 		// Not logged in.
 		// If we are not interactive, we cannot ask the user to login
 		return !isNonInteractiveOrCI() && (await login(complianceConfig, props));
-	} else if (isAccessTokenExpired()) {
+	} else if (isRefreshNeeded()) {
 		// We're logged in, but the refresh token seems to have expired,
 		// so let's try to refresh it
 		const didRefresh = await refreshToken();
@@ -1014,19 +1009,22 @@ export async function getOAuthTokenFromLocalState(): Promise<
 	string | undefined
 > {
 	// Check if we have an OAuth token
-	if (!localState.accessToken) {
+	let stored = readStoredAuthState();
+	if (!stored.accessToken) {
 		return undefined;
 	}
 
 	// If the token is expired, try to refresh it
-	if (isAccessTokenExpired()) {
+	if (isRefreshNeeded()) {
 		const didRefresh = await refreshToken();
 		if (!didRefresh) {
 			return undefined;
 		}
+		// Re-read after the refresh has persisted the new token to disk.
+		stored = readStoredAuthState();
 	}
 
-	return localState.accessToken?.value;
+	return stored.accessToken?.value;
 }
 
 export async function getOauthToken(options: {
@@ -1218,15 +1216,31 @@ export async function login(
 }
 
 /**
- * Checks to see if the access token has expired.
+ * Checks to see if we need to refresh the OAuth token.
+ *
+ * Returns `false` when env-based credentials are present: in that case the
+ * env token is what will be used for API calls, and the stored OAuth state
+ * is not consulted, so its expiry is irrelevant.
+ *
+ * Without this short-circuit, the presence of a stale OAuth token on disk
+ * could spuriously trigger an OAuth refresh that fails and aborts the command,
+ * even though a perfectly valid env-based credential is in scope.
  */
-function isAccessTokenExpired(): boolean {
-	const { accessToken } = localState;
+function isRefreshNeeded(): boolean {
+	if (getAuthFromEnv()) {
+		return false;
+	}
+	const { accessToken } = readStoredAuthState();
 	return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 }
 
 async function refreshToken(): Promise<boolean> {
-	// refresh
+	// `exchangeRefreshTokenForAccessToken` reads the refresh token fresh from
+	// disk on every call, so we always pick up the latest rotation written by a
+	// sibling Wrangler process. Refresh tokens are single-use, so a long-lived
+	// process such as `wrangler dev` would otherwise send a stale value and get
+	// a 401 from the token endpoint.
+
 	try {
 		const {
 			token: { value: oauth_token, expiry: expiration_time } = {
@@ -1243,7 +1257,10 @@ async function refreshToken(): Promise<boolean> {
 			scopes,
 		});
 		return true;
-	} catch {
+	} catch (e) {
+		logger.debug(
+			`Token refresh failed: ${e instanceof Error ? e.message : String(e)}`
+		);
 		return false;
 	}
 }
@@ -1259,33 +1276,16 @@ export async function logout(): Promise<void> {
 		return;
 	}
 
-	if (!localState.accessToken) {
-		if (!localState.refreshToken) {
-			logger.log("Not logged in, exiting...");
-			return;
-		}
-
-		const body =
-			`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
-			`token_type_hint=refresh_token&` +
-			`token=${encodeURIComponent(localState.refreshToken?.value || "")}`;
-
-		const response = await fetch(getRevokeUrlFromEnv(), {
-			method: "POST",
-			body,
-			headers: {
-				"Content-Type": "application/x-www-form-urlencoded",
-			},
-		});
-		await response.text(); // blank text? would be nice if it was something meaningful
-		logger.log(
-			"💁  Wrangler is configured with an OAuth token. The token has been successfully revoked"
-		);
+	const storedRefreshToken = readStoredAuthState().refreshToken;
+	if (!storedRefreshToken) {
+		logger.log("Not logged in, exiting...");
+		return;
 	}
+
 	const body =
 		`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 		`token_type_hint=refresh_token&` +
-		`token=${encodeURIComponent(localState.refreshToken?.value || "")}`;
+		`token=${encodeURIComponent(storedRefreshToken.value || "")}`;
 
 	const response = await fetch(getRevokeUrlFromEnv(), {
 		method: "POST",
@@ -1453,24 +1453,20 @@ export function requireApiToken(): ApiCredentials {
 }
 
 /**
- * Saves the given account details to the filesystem cache as well as the local state
+ * Saves the given account details to the filesystem cache.
  *
  * @param account The account to save
  */
 function saveAccountToCache(account: Account): void {
-	localState.account = account;
 	saveToConfigCache<{ account: Account }>("wrangler-account.json", { account });
 }
 
 /**
- * Retrieves the account details from either the local state or the filesystem cache (in that order)
+ * Retrieves the account details from the filesystem cache.
  *
  * @returns The cached account if present, `undefined` otherwise
  */
 export function getAccountFromCache(): undefined | Account {
-	if (localState.account) {
-		return localState.account;
-	}
 	return getConfigCache<{ account: Account }>("wrangler-account.json").account;
 }
 
@@ -1479,7 +1475,7 @@ export function getAccountFromCache(): undefined | Account {
  * if the token is an OAuth token.
  */
 export function getScopes(): Scope[] | undefined {
-	return localState.scopes;
+	return readStoredAuthState().scopes;
 }
 
 export function printScopes(scopes: Scope[]) {

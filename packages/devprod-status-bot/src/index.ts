@@ -19,13 +19,16 @@ async function getBotMessage(ai: Ai, prompt: string) {
 				role: "user",
 				content: prompt,
 			},
-		] as RoleScopedChatInput[],
+		],
+	} satisfies ChatCompletionsMessagesInput;
+	const message = (await ai.run("@cf/google/gemma-4-26b-a4b-it", chat)) as {
+		choices?: { message: { content: string } }[];
 	};
-	const message = await ai.run("@cf/meta/llama-2-7b-chat-int8", chat);
-	if (!("response" in message)) {
+	const content = message.choices?.[0]?.message.content;
+	if (!content) {
 		return "I'm feeling a bit poorly 🥲—try asking me for a message later!";
 	}
-	return message.response;
+	return content;
 }
 
 async function isWranglerTeamMember(
@@ -299,6 +302,35 @@ function isRepositoryAdvisoryEvent(
 	return null;
 }
 
+/**
+ * Returns the issue event if a new issue was opened with the `api` label, or
+ * if the `api` label was just added to an existing issue. Returns null
+ * otherwise.
+ */
+function isApiLabeledIssueEvent(message: WebhookEvent): IssuesEvent | null {
+	if (!("issue" in message) || !("action" in message)) {
+		return null;
+	}
+	if ("pull_request" in message.issue) {
+		return null;
+	}
+
+	const event = message as IssuesEvent;
+
+	if (event.action === "opened") {
+		const hasApiLabel = event.issue.labels?.some(
+			(label) => label.name === "api"
+		);
+		return hasApiLabel ? event : null;
+	}
+
+	if (event.action === "labeled" && event.label?.name === "api") {
+		return event;
+	}
+
+	return null;
+}
+
 function isCheckRunCompleted(
 	message: WebhookEvent
 ): message is CheckRunCompletedEvent {
@@ -477,6 +509,55 @@ async function sendRepositoryAdvisoryAlert(
 			],
 		},
 		"-repository-advisory-" + advisory.ghsa_id
+	);
+}
+
+async function sendApiIssueAlert(webhookUrl: string, event: IssuesEvent) {
+	return sendMessage(
+		webhookUrl,
+		{
+			cardsV2: [
+				{
+					cardId: "api-issue-" + event.issue.number,
+					card: {
+						header: {
+							title: `🏷️ New api-labeled issue`,
+							subtitle: `#${event.issue.number} in ${event.repository.full_name}`,
+							imageUrl: event.issue.user.avatar_url,
+							imageType: "CIRCLE",
+							imageAltText: "Reporter Avatar",
+						},
+						sections: [
+							{
+								collapsible: false,
+								widgets: [
+									{
+										textParagraph: {
+											text: `<b>Title:</b> ${event.issue.title}\n\n<b>Reporter:</b> ${event.issue.user.login}`,
+										},
+									},
+									{
+										buttonList: {
+											buttons: [
+												{
+													text: "View Issue",
+													onClick: {
+														openLink: {
+															url: event.issue.html_url,
+														},
+													},
+												},
+											],
+										},
+									},
+								],
+							},
+						],
+					},
+				},
+			],
+		},
+		"-api-issue-" + event.issue.number
 	);
 }
 
@@ -749,6 +830,11 @@ export default {
 					env.ALERTS_WEBHOOK,
 					maybeVersionPackagesFailure
 				);
+			}
+			// Notifies when an issue is opened with the `api` label, or the `api` label is added to an existing issue
+			const maybeApiIssue = isApiLabeledIssueEvent(body);
+			if (maybeApiIssue) {
+				await sendApiIssueAlert(env.API_ISSUES_WEBHOOK, maybeApiIssue);
 			}
 		}
 

@@ -1,4 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { SharedBindings } from "./constants";
 import {
 	makeFetch,
 	makeRemoteProxyStub,
@@ -11,7 +12,10 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 	fetch(request: Request): Promise<Response> {
 		return makeFetch(
 			this.env.remoteProxyConnectionString,
-			this.env.binding
+			this.env.binding,
+			undefined,
+			this.env.cfTraceId,
+			this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
 		)(request);
 	}
 
@@ -19,7 +23,13 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 		super(ctx, env);
 
 		const stub = env.remoteProxyConnectionString
-			? makeRemoteProxyStub(env.remoteProxyConnectionString, env.binding)
+			? makeRemoteProxyStub(
+					env.remoteProxyConnectionString,
+					env.binding,
+					undefined,
+					env.cfTraceId,
+					env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
+				)
 			: undefined;
 
 		return new Proxy(this, {

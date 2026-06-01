@@ -1,3 +1,4 @@
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, it, vi } from "vitest";
 import { saveToConfigCache } from "../../config-cache";
@@ -6,7 +7,6 @@ import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { msw } from "./../helpers/msw";
-import { runInTempDir } from "./../helpers/run-in-tmp";
 import { runWrangler } from "./../helpers/run-wrangler";
 import type { PagesConfigCache } from "../../pages/types";
 import type { Deployment } from "./../../pages/types";

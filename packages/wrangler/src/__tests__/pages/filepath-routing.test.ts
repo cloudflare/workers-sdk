@@ -1,11 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, test } from "vitest";
 import {
 	compareRoutes,
 	generateConfigFromFileTree,
 } from "../../pages/functions/filepath-routing";
 import { toUrlPath } from "../../paths";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import type { HTTPMethod, RouteConfig } from "../../pages/functions/routes";
 import type { UrlPath } from "../../paths";
 

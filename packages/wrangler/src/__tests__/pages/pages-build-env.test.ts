@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import {
 	normalizeString,
+	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -10,7 +11,6 @@ import {
 	EXIT_CODE_NO_CONFIG_FOUND,
 } from "../../pages/errors";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
 describe("pages build env", () => {
@@ -49,7 +49,7 @@ describe("pages build env", () => {
 		await expect(
 			runWrangler("pages functions build-env")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: No Pages project location specified]`
+			`[Error: Missing Pages project location. Provide the project directory as a positional argument.]`
 		);
 	});
 
@@ -57,7 +57,7 @@ describe("pages build env", () => {
 		await expect(
 			runWrangler("pages functions build-env .")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: No outfile specified]`
+			`[Error: Missing output file. Use --outfile <path> to specify where to write the build environment configuration.]`
 		);
 	});
 
@@ -203,7 +203,7 @@ describe("pages build env", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should throw an error if an invalid pages confg file is found", async ({
+	it("should throw an error if an invalid pages config file is found", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
@@ -229,7 +229,7 @@ describe("pages build env", () => {
 		`);
 	});
 
-	it("should exit if an unparseable pages confg file is found", async ({
+	it("should exit if an unparseable pages config file is found", async ({
 		expect,
 	}) => {
 		writeFileSync(

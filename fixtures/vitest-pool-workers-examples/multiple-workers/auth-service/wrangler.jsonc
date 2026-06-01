@@ -7,4 +7,7 @@
    `AUTH_PUBLIC_KEY` would be a secret created with `wrangler secret put`, and
     stored in `.dev.vars` during development
   */
+	"secrets": {
+		"required": ["AUTH_PUBLIC_KEY"],
+	},
 }

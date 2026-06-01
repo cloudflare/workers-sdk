@@ -52,6 +52,10 @@ export {
 	isValidR2BucketName,
 	bucketFormatMessage,
 } from "./config/validation";
+export {
+	type BindingLocalSupport,
+	getBindingLocalSupport,
+} from "./config/binding-local-support";
 
 export { validatePagesConfig } from "./config/validation-pages";
 
@@ -66,6 +70,7 @@ export {
 export {
 	resolveWranglerConfigPath,
 	findWranglerConfig,
+	isRedirectedConfig,
 } from "./config/config-helpers";
 export type { ResolveConfigPathOptions } from "./config/config-helpers";
 export * from "./errors";
@@ -92,9 +97,19 @@ export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
 
+export {
+	type EphemeralDirectory,
+	getWranglerHiddenDirPath,
+	getWranglerTmpDir,
+	sweepStaleWranglerTmpDirs,
+} from "./wrangler-tmp-dir";
+
 export { MetricsRegistry } from "./prometheus-metrics";
 export type { Counter } from "./prometheus-metrics";
 
 export type { Tunnel, TunnelOptions } from "./tunnel";
 export { startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
+
+export { fetchLatestNpmVersion } from "./update-check";
+export type { NpmVersionCheckResult } from "./update-check";

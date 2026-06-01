@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
@@ -12,7 +13,6 @@ import {
 } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 // ── Shared test data ──────────────────────────────────────────────────────────
@@ -25,7 +25,7 @@ const MOCK_INSTANCE = {
 	type: "r2",
 	status: "active",
 	namespace: "default",
-	ai_search_model: "@cf/meta/llama-3-8b",
+	ai_search_model: "@cf/google/gemma-4-26b-a4b-it",
 	embedding_model: "@cf/bge-base-en-v1.5",
 };
 
@@ -236,6 +236,16 @@ describe("ai-search commands", () => {
 			expect(parsed).toEqual([MOCK_INSTANCE]);
 		});
 
+		it("should not print beta status banner when --json is passed", async ({
+			expect,
+		}) => {
+			mockListInstances([MOCK_INSTANCE]);
+			await runWrangler("ai-search list --json");
+			// The beta/open-beta statusMessage must not appear in stderr when
+			// printBanner returns false (i.e. when --json suppresses the banner).
+			expect(std.warn).not.toContain("open beta");
+		});
+
 		it("should output empty JSON array when no instances exist with --json", async ({
 			expect,
 		}) => {
@@ -309,7 +319,7 @@ describe("ai-search commands", () => {
 				)
 			);
 			await runWrangler(
-				"ai-search create my-instance --namespace default --type r2 --source my-bucket --embedding-model @cf/bge-base-en-v1.5 --generation-model @cf/meta/llama-3-8b --chunk-size 512 --chunk-overlap 64 --max-num-results 10 --reranking --hybrid-search --cache --score-threshold 0.5"
+				"ai-search create my-instance --namespace default --type r2 --source my-bucket --embedding-model @cf/bge-base-en-v1.5 --generation-model @cf/google/gemma-4-26b-a4b-it --chunk-size 512 --chunk-overlap 64 --max-num-results 10 --reranking --hybrid-search --cache --score-threshold 0.5"
 			);
 			expect(capturedNamespace).toBe("default");
 			expect(capturedBody).toMatchObject({
@@ -317,7 +327,7 @@ describe("ai-search commands", () => {
 				source: "my-bucket",
 				type: "r2",
 				embedding_model: "@cf/bge-base-en-v1.5",
-				ai_search_model: "@cf/meta/llama-3-8b",
+				ai_search_model: "@cf/google/gemma-4-26b-a4b-it",
 				chunk_size: 512,
 				chunk_overlap: 64,
 				max_num_results: 10,
@@ -837,6 +847,116 @@ describe("ai-search commands", () => {
 					"ai-search create my-instance --namespace default --type web-crawler"
 				)
 			).rejects.toThrowError(/Missing required flag.*--source/);
+		});
+
+		it("should create a builtin instance and omit type/source from the request body", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult(
+								{
+									id: "my-instance",
+									created_at: "2025-01-01T00:00:00Z",
+									modified_at: "2025-01-02T00:00:00Z",
+									namespace: "default",
+									status: "active",
+								},
+								true
+							)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type builtin"
+			);
+			expect(capturedBody).toBeDefined();
+			expect(capturedBody).not.toHaveProperty("type");
+			expect(capturedBody).not.toHaveProperty("source");
+			expect(capturedBody).toMatchObject({ id: "my-instance" });
+			expect(std.out).toContain(
+				'Successfully created AI Search instance "my-instance"'
+			);
+			expect(std.out).toContain("Type:       builtin");
+			expect(std.out).toContain("Source:     -");
+		});
+
+		it("should error when --source is passed with --type builtin", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type builtin --source my-bucket"
+				)
+			).rejects.toThrowError(/not supported with --type builtin.*--source/);
+		});
+
+		it("should error when source_params flags are passed with --type builtin", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					'ai-search create my-instance --namespace default --type builtin --prefix docs/ --include-items "*.md" --exclude-items "*.tmp"'
+				)
+			).rejects.toThrowError(
+				/not supported with --type builtin.*--prefix.*--include-items.*--exclude-items/
+			);
+		});
+
+		it("should interactively select builtin and omit type from the request body", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockSelect({
+				text: "Select the source type:",
+				result: "builtin",
+			});
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult(
+								{
+									id: "my-instance",
+									created_at: "2025-01-01T00:00:00Z",
+									modified_at: "2025-01-02T00:00:00Z",
+									namespace: "default",
+									status: "active",
+								},
+								true
+							)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler("ai-search create my-instance --namespace default");
+			expect(capturedBody).not.toHaveProperty("type");
+			expect(capturedBody).not.toHaveProperty("source");
+			expect(std.out).toContain(
+				'Successfully created AI Search instance "my-instance"'
+			);
 		});
 
 		// ── custom_metadata ─────────────────────────────────────────────────────

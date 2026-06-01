@@ -23,34 +23,71 @@ import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { Unstable_Config } from "wrangler";
 
 export type PersistState = boolean | { path: string };
+export type TunnelConfig = {
+	autoStart?: boolean;
+	name?: string;
+};
 
 interface BaseWorkerConfig {
 	viteEnvironment?: { name?: string; childEnvironments?: string[] };
 }
 
+/**
+ * Whether this Worker is only used during development and should not be built for production.
+ * Can be a boolean or a function that returns a boolean. The function is evaluated lazily
+ * at build time, allowing frameworks to provide the value after initialization.
+ */
+type DevOnly = boolean | (() => boolean);
+
 interface EntryWorkerConfig extends BaseWorkerConfig {
 	configPath?: string;
 	config?: WorkerConfigCustomizer<true>;
+	/**
+	 * Whether the entry Worker should be omitted from the production build.
+	 * Can be a boolean or a function that returns a boolean. The function is
+	 * evaluated lazily at build time, allowing frameworks to provide the value
+	 * after initialization.
+	 *
+	 * When set, an assets-only Wrangler config is emitted to the client output
+	 * directory. This enables using server-side code in development but producing
+	 * a fully static app for deployment.
+	 */
+	assetsOnly?: DevOnly;
 }
 
 interface AuxiliaryWorkerFileConfig extends BaseWorkerConfig {
 	configPath: string;
+	devOnly?: DevOnly;
 }
 
 interface AuxiliaryWorkerInlineConfig extends BaseWorkerConfig {
 	configPath?: string;
 	config: WorkerConfigCustomizer<false>;
+	devOnly?: DevOnly;
 }
 
 type AuxiliaryWorkerConfig =
 	| AuxiliaryWorkerFileConfig
 	| AuxiliaryWorkerInlineConfig;
 
+interface PrerenderWorkerFileConfig extends BaseWorkerConfig {
+	configPath: string;
+}
+
+interface PrerenderWorkerInlineConfig extends BaseWorkerConfig {
+	configPath?: string;
+	config: WorkerConfigCustomizer<false>;
+}
+
+type PrerenderWorkerConfig =
+	| PrerenderWorkerFileConfig
+	| PrerenderWorkerInlineConfig;
+
 interface Experimental {
 	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 	headersAndRedirectsDevModeSupport?: boolean;
 	/** Experimental support for a dedicated prerender Worker */
-	prerenderWorker?: AuxiliaryWorkerConfig;
+	prerenderWorker?: PrerenderWorkerConfig;
 }
 
 type FilteredEntryWorkerConfig = Omit<
@@ -74,7 +111,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 	persistState?: PersistState;
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
-	tunnel?: boolean;
+	tunnel?: boolean | TunnelConfig;
 	experimental?: Experimental;
 }
 
@@ -91,6 +128,7 @@ export interface ResolvedWorkerConfig extends ResolvedAssetsOnlyConfig {
 export interface Worker {
 	config: ResolvedWorkerConfig;
 	nodeJsCompat: NodeJsCompat | undefined;
+	devOnly: DevOnly | undefined;
 }
 
 interface BaseResolvedConfig {
@@ -98,7 +136,7 @@ interface BaseResolvedConfig {
 	inspectorPort: number | false | undefined;
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport">;
 	remoteBindings: boolean;
-	tunnel: boolean;
+	tunnel: TunnelConfig;
 }
 
 interface NonPreviewResolvedConfig extends BaseResolvedConfig {
@@ -272,7 +310,13 @@ export function resolvePluginConfig(
 	const shared = {
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
-		tunnel: pluginConfig.tunnel ?? false,
+		tunnel:
+			typeof pluginConfig.tunnel === "boolean"
+				? { autoStart: pluginConfig.tunnel }
+				: {
+						autoStart: pluginConfig.tunnel?.autoStart ?? false,
+						name: pluginConfig.tunnel?.name,
+					},
 		experimental: {
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
@@ -350,7 +394,10 @@ export function resolvePluginConfig(
 
 		environmentNameToWorkerMap.set(
 			prerenderWorkerEnvironmentName,
-			resolveWorker(workerResolvedConfig.config as ResolvedWorkerConfig)
+			resolveWorker(
+				workerResolvedConfig.config as ResolvedWorkerConfig,
+				undefined
+			)
 		);
 
 		const prerenderWorkerChildEnvironments =
@@ -403,7 +450,7 @@ export function resolvePluginConfig(
 
 	environmentNameToWorkerMap.set(
 		entryWorkerEnvironmentName,
-		resolveWorker(entryWorkerResolvedConfig.config)
+		resolveWorker(entryWorkerResolvedConfig.config, pluginConfig.assetsOnly)
 	);
 
 	const entryWorkerChildEnvironments =
@@ -454,7 +501,10 @@ export function resolvePluginConfig(
 
 		environmentNameToWorkerMap.set(
 			workerEnvironmentName,
-			resolveWorker(workerResolvedConfig.config as ResolvedWorkerConfig)
+			resolveWorker(
+				workerResolvedConfig.config as ResolvedWorkerConfig,
+				auxiliaryWorker.devOnly
+			)
 		);
 
 		const auxiliaryWorkerChildEnvironments =
@@ -511,11 +561,27 @@ function createEnvironmentNameValidator() {
 	};
 }
 
-function resolveWorker(workerConfig: ResolvedWorkerConfig): Worker {
+/**
+ * Evaluates the `devOnly` value. Should be called lazily at build time
+ * to allow frameworks to provide the value after initialization.
+ */
+export function resolveDevOnly(devOnly: DevOnly | undefined): boolean {
+	if (typeof devOnly === "function") {
+		return devOnly();
+	}
+
+	return devOnly ?? false;
+}
+
+function resolveWorker(
+	workerConfig: ResolvedWorkerConfig,
+	devOnly: DevOnly | undefined
+): Worker {
 	return {
 		config: workerConfig,
 		nodeJsCompat: hasNodeJsCompat(workerConfig)
 			? new NodeJsCompat(workerConfig)
 			: undefined,
+		devOnly,
 	};
 }

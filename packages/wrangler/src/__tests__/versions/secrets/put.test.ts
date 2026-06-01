@@ -1,17 +1,21 @@
 import { writeFile } from "node:fs/promises";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { FormData } from "undici";
-import { afterEach, describe, it, test } from "vitest";
+import { afterEach, describe, it, test, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs, mockPrompt } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 import { useMockStdin } from "../../helpers/mock-stdin";
 import { msw } from "../../helpers/msw";
-import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { mockPostVersion, mockSetupApiCalls } from "./utils";
+import { mockGetVersion, mockPostVersion, mockSetupApiCalls } from "./utils";
+import type { VersionDetails } from "../../../versions/secrets";
+import type { CfPlacement } from "@cloudflare/workers-utils";
 
 describe("versions secret put", () => {
 	const std = mockConsoleMethods();
@@ -484,7 +488,7 @@ describe("versions secret put", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the versions secret put command.[0m
 
 				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
-				  the target environment using the \`-e|--env\` flag.
+				  the target environment using the \`-e|--env\` flag or CLOUDFLARE_ENV env variable.
 				  If your intention is to use the top-level environment of your configuration simply pass an empty
 				  string to the flag to target such environment. For example \`--env=""\`.
 
@@ -531,6 +535,162 @@ describe("versions secret put", () => {
 			await runWrangler("versions secret put NEW_SECRET");
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if the wrangler config contains environments and CLOUDFLARE_ENV is set", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ENV", "test");
+			writeWranglerConfig({
+				name: "script-name",
+				env: { test: {} },
+			});
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
+
+			mockStdIn.send(
+				`the`,
+				`-`,
+				`secret
+			` // whitespace & newline being removed
+			);
+			await runWrangler("versions secret put NEW_SECRET");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it('should not warn if --env="" is passed to explicitly target the top-level environment', async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				name: "script-name",
+				env: { test: {} },
+			});
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect);
+
+			mockStdIn.send(
+				`the`,
+				`-`,
+				`secret
+			` // whitespace & newline being removed
+			);
+			await runWrangler('versions secret put NEW_SECRET --env=""');
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+	});
+
+	describe("placement", () => {
+		function buildVersionInfo(placement: CfPlacement): VersionDetails {
+			return {
+				id: "ce15c78b-cc43-4f60-b5a9-15ce4f298c2a",
+				metadata: {} as VersionDetails["metadata"],
+				number: 2,
+				resources: {
+					bindings: [],
+					script: {
+						etag: "etag",
+						handlers: ["fetch"],
+						last_deployed_from: "api",
+						placement,
+					},
+					script_runtime: {
+						usage_model: "standard",
+						limits: {},
+					},
+				},
+			};
+		}
+
+		test("preserves smart placement on the new version", async ({ expect }) => {
+			setIsTTY(true);
+
+			mockPrompt({
+				text: "Enter a secret value:",
+				options: { isSecret: true },
+				result: "the-secret",
+			});
+
+			const placement: CfPlacement = { mode: "smart" };
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect, buildVersionInfo(placement));
+			mockPostVersion(expect, (metadata) => {
+				expect(metadata.placement).toStrictEqual(placement);
+			});
+			await runWrangler("versions secret put NEW_SECRET --name script-name");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		test("preserves targeted placement with service targets on the new version", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+
+			mockPrompt({
+				text: "Enter a secret value:",
+				options: { isSecret: true },
+				result: "the-secret",
+			});
+
+			const placement = {
+				mode: "targeted",
+				target: [{ hostname: "example.com", id: 410, type: "http" }],
+			} as unknown as CfPlacement;
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect, buildVersionInfo(placement));
+			mockPostVersion(expect, (metadata) => {
+				expect(metadata.placement).toStrictEqual(placement);
+			});
+			await runWrangler("versions secret put NEW_SECRET --name script-name");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		test("preserves targeted placement with region targets on the new version", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+
+			mockPrompt({
+				text: "Enter a secret value:",
+				options: { isSecret: true },
+				result: "the-secret",
+			});
+
+			const placement = {
+				mode: "targeted",
+				target: [{ id: 12, region: "aws:ap-northeast-1", type: "region" }],
+			} as unknown as CfPlacement;
+			mockSetupApiCalls(expect);
+			mockGetVersion(expect, buildVersionInfo(placement));
+			mockPostVersion(expect, (metadata) => {
+				expect(metadata.placement).toStrictEqual(placement);
+			});
+			await runWrangler("versions secret put NEW_SECRET --name script-name");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		test("omits placement when the existing version has none", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+
+			mockPrompt({
+				text: "Enter a secret value:",
+				options: { isSecret: true },
+				result: "the-secret",
+			});
+
+			mockSetupApiCalls(expect);
+			mockPostVersion(expect, (metadata) => {
+				expect(metadata.placement).toBeUndefined();
+			});
+			await runWrangler("versions secret put NEW_SECRET --name script-name");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
 });

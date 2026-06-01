@@ -5,5 +5,6 @@ declare namespace NodeJS {
 		MINIFLARE_WORKERD_PATH?: string;
 		MINIFLARE_WORKERD_CONFIG_DEBUG?: string;
 		MINIFLARE_ASSERT_BODIES_CONSUMED?: "true";
+		MINIFLARE_WORKERD_AUTOGATES?: string;
 	}
 }

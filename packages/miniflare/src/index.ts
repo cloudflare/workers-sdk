@@ -11,7 +11,7 @@ import util from "node:util";
 import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli-shared-helpers";
 import { removeDir, removeDirSync } from "@cloudflare/workers-utils";
-import { $ as colors$, green } from "kleur/colors";
+import { $ as colors$, bold, dim, green, yellow } from "kleur/colors";
 import stoppable from "stoppable";
 import { getGlobalDispatcher, Pool } from "undici";
 import SCRIPT_DEV_REGISTRY_PROXY from "worker:core/dev-registry-proxy";
@@ -63,6 +63,7 @@ import {
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
+import { BROWSER_VERSION } from "./plugins/browser-rendering/browser-version";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -993,6 +994,11 @@ export class Miniflare {
 	#hyperdriveProxyController: HyperdriveProxyController =
 		new HyperdriveProxyController();
 
+	// Set the first time the remote-bindings proxy CLIENT worker reports a
+	// Cloudflare Access 403 block on a request to the remote-bindings proxy
+	// server. Used to dedupe the user-facing warning to once per session.
+	#warnedRemoteBindingsAccessBlock = false;
+
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
@@ -1544,19 +1550,43 @@ export class Miniflare {
 				if (!colors$.enabled) message = stripAnsi(message);
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
+			} else if (url.pathname === "/core/remote-bindings-access-warning") {
+				// Reported by the remote-bindings proxy CLIENT worker when it sees
+				// a 403 + "Cloudflare Access" body from the remote-bindings proxy
+				// server. Surfaced once per Miniflare instance so users with many
+				// remote bindings don't get a wall of repeated warnings.
+				if (!this.#warnedRemoteBindingsAccessBlock) {
+					this.#warnedRemoteBindingsAccessBlock = true;
+					const bindingName = request.headers.get("MF-Binding") ?? "<unknown>";
+					const proxyUrl = request.headers.get("MF-Proxy-URL") ?? "<unknown>";
+					// Visually striking format so the warning isn't lost in the
+					// noise of binding error stack traces that follow it.
+					const separator = dim("━".repeat(76));
+					this.#log.warn(
+						`\n${separator}\n` +
+							`${bold(yellow("Cloudflare Access blocked a remote bindings request"))}\n` +
+							`${separator}\n` +
+							`\n` +
+							`Remote binding "${bold(bindingName)}": request to ${proxyUrl} was blocked.\n` +
+							`\n` +
+							`If your Cloudflare account protects workers.dev with Access, set the\n` +
+							`${bold("CLOUDFLARE_ACCESS_CLIENT_ID")} and ${bold("CLOUDFLARE_ACCESS_CLIENT_SECRET")}\n` +
+							`environment variables (Service Token credentials), or run\n` +
+							`  ${bold("cloudflared access login <your-workers.dev-host>")}\n` +
+							`for interactive authentication.\n` +
+							`\n` +
+							`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/\n` +
+							separator
+					);
+				}
+				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/browser/launch") {
 				const headful = this.#workerOpts.some(
 					(w) => w[BROWSER_RENDERING_PLUGIN_NAME].browserRendering?.headful
 				);
 				const { sessionId, browserProcess, startTime, wsEndpoint } =
 					await launchBrowser({
-						// Puppeteer v22.13.1 supported chrome version:
-						// https://pptr.dev/supported-browsers#supported-browser-version-list
-						//
-						// It should match the supported chrome version for the upstream puppeteer
-						// version from which @cloudflare/puppeteer branched off, which is specified in:
-						// https://github.com/cloudflare/puppeteer/?tab=readme-ov-file#workers-version-of-puppeteer-core
-						browserVersion: "126.0.6478.182",
+						browserVersion: BROWSER_VERSION,
 						log: this.#log,
 						tmpPath: this.#tmpPath,
 						headful,
@@ -2291,6 +2321,7 @@ export class Miniflare {
 					? `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
+			tmpPath: this.#tmpPath,
 			log: this.#log,
 			proxyBindings,
 			durableObjectClassNames,
@@ -2332,6 +2363,9 @@ export class Miniflare {
 			sockets,
 			extensions,
 			structuredLogging: this.#structuredWorkerdLogs,
+			autogates: process.env.MINIFLARE_WORKERD_AUTOGATES
+				? process.env.MINIFLARE_WORKERD_AUTOGATES.split(" ")
+				: [],
 		};
 	}
 
@@ -2395,7 +2429,13 @@ export class Miniflare {
 			runtimeInspectorAddress = this.#getSocketAddress(
 				kInspectorSocket,
 				this.#previousRuntimeInspectorPort,
-				"localhost",
+				// Use "127.0.0.1" explicitly instead of "localhost" to avoid
+				// DNS resolution issues. On systems where getaddrinfo("localhost")
+				// returns ::1 but IPv6 is disabled, workerd fails to bind the
+				// inspector socket and silently continues without emitting the
+				// listen-inspector event, causing waitForPorts() to hang.
+				// See https://github.com/cloudflare/workers-sdk/issues/14077
+				"127.0.0.1",
 				runtimeInspectorPort
 			);
 			this.#previousRuntimeInspectorPort = runtimeInspectorPort;
@@ -2413,6 +2453,7 @@ export class Miniflare {
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
+			runtimeEnv: this.#sharedOpts.core.unsafeRuntimeEnv,
 		};
 		const maybeSocketPorts = await this.#runtime.updateConfig(
 			configBuffer,

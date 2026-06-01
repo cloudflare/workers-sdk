@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { saveToConfigCache } from "../../config-cache";
@@ -8,29 +9,19 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMembershipsFail } from "../helpers/mock-oauth-flow";
 import { useMockStdin } from "../helpers/mock-stdin";
-import { createFetchResult, msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
+import {
+	createFetchResult,
+	mswFailMembershipHandler,
+	mswFailAccountsHandler,
+	getMswSuccessMembershipHandlers,
+	msw,
+} from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { PagesProject } from "../../pages/download-config";
 import type { PagesConfigCache } from "../../pages/types";
 import type { Interface } from "node:readline";
 import type { ExpectStatic } from "vitest";
-
-export function mockGetMemberships(
-	accounts: { id: string; account: { id: string; name: string } }[]
-) {
-	msw.use(
-		http.get(
-			"*/memberships",
-			() => {
-				return HttpResponse.json(createFetchResult(accounts));
-			},
-			{ once: true }
-		)
-	);
-}
 
 describe("wrangler pages secret", () => {
 	const std = mockConsoleMethods();
@@ -170,7 +161,7 @@ describe("wrangler pages secret", () => {
 						"pages secret put the-key --project some-project-name --env some-env"
 					)
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
+					`[Error: Pages does not support the "some-env" environment. Only "production" and "preview" are valid. Use --env production or --env preview.]`
 				);
 			});
 
@@ -178,7 +169,7 @@ describe("wrangler pages secret", () => {
 				await expect(
 					runWrangler("pages secret put the-key")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Must specify a project name.]`
+					`[Error: Missing Pages project name. Use --project-name <name> to specify which project to manage secrets for.]`
 				);
 			});
 		});
@@ -256,10 +247,24 @@ describe("wrangler pages secret", () => {
 			describe("with accountId", () => {
 				mockAccountId({ accountId: null });
 
-				it("should error if request for memberships fails", async ({
+				it("should error if request for available accounts fails", async ({
 					expect,
 				}) => {
-					mockGetMembershipsFail();
+					msw.use(mswFailAccountsHandler, ...getMswSuccessMembershipHandlers());
+					await expect(
+						runWrangler("pages secret put the-key --project some-project-name")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[APIError: A request to the Cloudflare API (/accounts) failed.]`
+					);
+				});
+
+				it("should error if request for available memberships fails", async ({
+					expect,
+				}) => {
+					msw.use(
+						mswFailMembershipHandler,
+						...getMswSuccessMembershipHandlers()
+					);
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -268,7 +273,7 @@ describe("wrangler pages secret", () => {
 				});
 
 				it("should error if a user has no account", async ({ expect }) => {
-					mockGetMemberships([]);
+					msw.use(...getMswSuccessMembershipHandlers([]));
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
@@ -280,20 +285,13 @@ describe("wrangler pages secret", () => {
 				it("should error if a user has multiple accounts, and has not specified an account", async ({
 					expect,
 				}) => {
-					mockGetMemberships([
-						{
-							id: "1",
-							account: { id: "account-id-1", name: "account-name-1" },
-						},
-						{
-							id: "2",
-							account: { id: "account-id-2", name: "account-name-2" },
-						},
-						{
-							id: "3",
-							account: { id: "account-id-3", name: "account-name-3" },
-						},
-					]);
+					msw.use(
+						...getMswSuccessMembershipHandlers([
+							{ id: "account-id-1", name: "account-name-1" },
+							{ id: "account-id-2", name: "account-name-2" },
+							{ id: "account-id-3", name: "account-name-3" },
+						])
+					);
 
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
@@ -400,14 +398,16 @@ describe("wrangler pages secret", () => {
 					"pages secret delete the-key --project some-project-name --env some-env"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
+				`[Error: Pages does not support the "some-env" environment. Only "production" and "preview" are valid. Use --env production or --env preview.]`
 			);
 		});
 
 		it("should error without a project name", async ({ expect }) => {
 			await expect(
 				runWrangler("pages secret delete the-key")
-			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
+			).rejects.toMatchInlineSnapshot(
+				`[Error: Missing Pages project name. Use --project-name <name> to specify which project to manage secrets for.]`
+			);
 		});
 	});
 
@@ -489,14 +489,16 @@ describe("wrangler pages secret", () => {
 					"pages secret list --project some-project-name --env some-env"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
+				`[Error: Pages does not support the "some-env" environment. Only "production" and "preview" are valid. Use --env production or --env preview.]`
 			);
 		});
 
 		it("should error without a project name", async ({ expect }) => {
 			await expect(
 				runWrangler("pages secret list")
-			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
+			).rejects.toMatchInlineSnapshot(
+				`[Error: Missing Pages project name. Use --project-name <name> to specify which project to manage secrets for.]`
+			);
 		});
 	});
 
@@ -775,16 +777,8 @@ describe("wrangler pages secret", () => {
 			);
 
 			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				),
 				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk`,
 					({ params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						return HttpResponse.json(
@@ -802,13 +796,13 @@ describe("wrangler pages secret", () => {
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/secrets-bulk) failed.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
 				{
 				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.[0m
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/secrets-bulk) failed.[0m
 
 				  This is a helpful error [code: 1]
 
@@ -820,7 +814,7 @@ describe("wrangler pages secret", () => {
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker "script-name"
+				🌀 Processing the secrets for the Worker "script-name"
 
 				🚨 Secrets failed to upload
 				",

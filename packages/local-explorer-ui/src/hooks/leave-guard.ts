@@ -42,8 +42,10 @@ export function useLeaveGuard({
 	fallbackMessage = "You have unsaved changes. Are you sure you want to leave?",
 	onBeforeLeave,
 }: UseLeaveGuardOptions): void {
-	// eslint-disable-next-line react-hooks/exhaustive-deps
-	const handlerCallback = useCallback(onBeforeLeave, dependencies);
+	const handlerCallback = useCallback(onBeforeLeave, [
+		...dependencies,
+		onBeforeLeave,
+	]);
 
 	// Block tab close or refresh
 	useEffect(() => {

@@ -6,8 +6,7 @@ import {
 	getDatabaseInfoFromConfig,
 } from "../../d1/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
-import { mockGetMemberships } from "../helpers/mock-oauth-flow";
-import { msw } from "../helpers/msw";
+import { getMswSuccessMembershipHandlers, msw } from "../helpers/msw";
 
 describe("getDatabaseInfoFromConfig", () => {
 	it("should handle no database", ({ expect }) => {
@@ -117,10 +116,8 @@ describe("getDatabaseByNameOrBinding", () => {
 	mockApiToken();
 
 	it("should handle no database", async ({ expect }) => {
-		mockGetMemberships([
-			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-		]);
 		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "IG-88", name: "enterprise" }]),
 			http.get("*/accounts/:accountId/d1/database", async () => {
 				return HttpResponse.json(
 					{
@@ -150,9 +147,6 @@ describe("getDatabaseByNameOrBinding", () => {
 	});
 
 	it("should handle a matching database", async ({ expect }) => {
-		mockGetMemberships([
-			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-		]);
 		const mockDb = {
 			file_size: 7421952,
 			name: "db",
@@ -161,6 +155,7 @@ describe("getDatabaseByNameOrBinding", () => {
 			version: "alpha",
 		};
 		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "IG-88", name: "enterprise" }]),
 			http.get("*/accounts/:accountId/d1/database", async () => {
 				return HttpResponse.json(
 					{

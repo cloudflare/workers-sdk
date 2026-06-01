@@ -24,6 +24,7 @@ const reorderableBindings = {
 	vectorize: true,
 	ai_search_namespaces: true,
 	ai_search: true,
+	agent_memory: true,
 	hyperdrive: true,
 	workflows: true,
 	dispatch_namespaces: true,
@@ -54,6 +55,7 @@ const reorderableBindings = {
 	images: false,
 	stream: false,
 	media: false,
+	web_search: false,
 	version_metadata: false,
 	unsafe: false,
 	assets: false,
@@ -237,6 +239,12 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		);
 	}
 
+	if (normalizedConfig.agent_memory?.length) {
+		normalizedConfig.agent_memory = normalizedConfig.agent_memory.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
 	if (normalizedConfig.flagship?.length) {
 		normalizedConfig.flagship = normalizedConfig.flagship.map(
 			({ remote: _, ...binding }) => binding
@@ -255,6 +263,7 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		"images",
 		"stream",
 		"media",
+		"web_search",
 	] as const;
 	for (const singleBindingField of singleBindingFields) {
 		if (

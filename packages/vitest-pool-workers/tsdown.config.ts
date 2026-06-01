@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig } from "tsdown";
 import { getBuiltinModules } from "./scripts/rtti/query.mjs";
@@ -23,6 +23,28 @@ const libPaths = [
 	...walk(path.join(pkgRoot, "src/worker/node")),
 ];
 
+// Derive bundler externals from package.json so devDependencies are always
+// bundled and runtime dependencies/peer dependencies are always external.
+// This prevents drift between package.json and the bundler config — the
+// previous hand-maintained list incorrectly externalized undici and semver
+// (both devDependencies), leaving the published bundle with unresolved
+// imports for users who don't have those packages installed transitively.
+const pkg = JSON.parse(
+	readFileSync(path.join(pkgRoot, "package.json"), "utf-8")
+) as {
+	dependencies?: Record<string, string>;
+	peerDependencies?: Record<string, string>;
+};
+const runtimeDeps = [
+	...Object.keys(pkg.dependencies ?? {}),
+	...Object.keys(pkg.peerDependencies ?? {}),
+];
+// Match the bare package name and any subpath import (e.g. `vitest/node`).
+const runtimeDepPatterns = runtimeDeps.flatMap((name) => [
+	name,
+	new RegExp(`^${name.replace(/[/\\^$+?.()|[\]{}]/g, "\\$&")}/`),
+]);
+
 const commonOptions: UserConfig = {
 	platform: "node",
 	target: "esnext",
@@ -36,22 +58,8 @@ const commonOptions: UserConfig = {
 		// Virtual/runtime modules
 		"__VITEST_POOL_WORKERS_DEFINES",
 		"__VITEST_POOL_WORKERS_USER_OBJECT",
-		// All npm packages (previously handled by packages: "external")
-		"cjs-module-lexer",
-		"esbuild",
-		"miniflare",
-		"semver",
-		"semver/*",
-		"wrangler",
-		"zod",
-		"undici",
-		"undici/*",
-		// Peer dependencies
-		"vitest",
-		"vitest/*",
-		"@vitest/runner",
-		"@vitest/snapshot",
-		"@vitest/snapshot/*",
+		// Runtime dependencies and peer dependencies (derived from package.json)
+		...runtimeDepPatterns,
 	],
 	sourcemap: true,
 	outDir: path.join(pkgRoot, "dist"),

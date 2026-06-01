@@ -1,14 +1,15 @@
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
-import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import {
+	runInTempDir,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { throwIfDatabaseIsAlpha } from "../../d1/timeTravel/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships } from "../helpers/mock-oauth-flow";
-import { msw } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
+import { getMswSuccessMembershipHandlers, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
 describe("time-travel", () => {
@@ -46,10 +47,10 @@ describe("time-travel", () => {
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 				],
 			});
-			mockGetMemberships([
-				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-			]);
 			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "IG-88", name: "enterprise" },
+				]),
 				http.get("*/accounts/:accountId/d1/database/*", async () => {
 					return HttpResponse.json(
 						{
@@ -86,10 +87,10 @@ describe("time-travel", () => {
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 				],
 			});
-			mockGetMemberships([
-				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-			]);
 			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "IG-88", name: "enterprise" },
+				]),
 				http.get("*/accounts/:accountId/d1/database/*", async () => {
 					return HttpResponse.json(
 						{
@@ -128,10 +129,10 @@ describe("time-travel", () => {
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 				],
 			});
-			mockGetMemberships([
-				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-			]);
 			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{ id: "IG-88", name: "enterprise" },
+				]),
 				http.get("*/accounts/:accountId/d1/database/*", async () => {
 					return HttpResponse.json(
 						{

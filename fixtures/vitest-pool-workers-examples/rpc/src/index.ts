@@ -3,9 +3,11 @@ import { Counter } from "./counter";
 
 export class TestObject extends DurableObject<Env> {
 	#value: number = 0;
+	#log: string[] = [];
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
+		this.overriddenPrototypeMethod = () => "instance";
 		void ctx.blockConcurrencyWhile(async () => {
 			this.#value = (await ctx.storage.get("count")) ?? 0;
 		});
@@ -25,6 +27,27 @@ export class TestObject extends DurableObject<Env> {
 		void this.ctx.storage.setAlarm(Date.now() + afterMillis);
 	}
 
+	record(value: string) {
+		this.#log.push(value);
+	}
+
+	getLog() {
+		return this.#log;
+	}
+
+	async recordFromDurableObject(targetName: string, calls: number) {
+		const id = this.env.TEST_OBJECT.idFromName(targetName);
+		const stub = this.env.TEST_OBJECT.get(id);
+		const promises: Promise<void>[] = [];
+
+		for (let i = 0; i < calls; i++) {
+			promises.push(stub.record(`call-${i}`));
+		}
+
+		await Promise.all(promises);
+		return stub.getLog();
+	}
+
 	async fetch(request: Request) {
 		return Response.json({
 			source: "TestObject",
@@ -33,6 +56,10 @@ export class TestObject extends DurableObject<Env> {
 			ctxWaitUntil: typeof this.ctx.waitUntil,
 			envKeys: Object.keys(this.env).sort(),
 		});
+	}
+
+	overriddenPrototypeMethod() {
+		return "prototype";
 	}
 
 	getCounter() {
@@ -49,6 +76,24 @@ export class TestObject extends DurableObject<Env> {
 	}
 
 	instanceProperty = "👻";
+}
+
+export class ProxiedTestObject extends DurableObject<Env> {
+	#value = "private value";
+
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env);
+		return new Proxy(this, {
+			get(target, key, receiver) {
+				const value = Reflect.get(target, key, receiver);
+				return typeof value === "function" ? value.bind(target) : value;
+			},
+		});
+	}
+
+	readPrivateValue() {
+		return this.#value;
+	}
 }
 
 export const testNamedHandler = <ExportedHandler<Env>>{
@@ -80,6 +125,19 @@ export class TestNamedEntrypoint extends WorkerEntrypoint<Env> {
 
 	getCounter() {
 		return new Counter(0);
+	}
+
+	async recordFromWorkerEntrypoint(targetName: string, calls: number) {
+		const id = this.env.TEST_OBJECT.idFromName(targetName);
+		const stub = this.env.TEST_OBJECT.get(id);
+		const promises: Promise<void>[] = [];
+
+		for (let i = 0; i < calls; i++) {
+			promises.push(stub.record(`call-${i}`));
+		}
+
+		await Promise.all(promises);
+		return stub.getLog();
 	}
 }
 

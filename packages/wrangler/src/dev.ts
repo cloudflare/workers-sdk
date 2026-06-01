@@ -261,8 +261,13 @@ export const dev = createCommand({
 		},
 		tunnel: {
 			describe:
-				"Expose your local dev server via a Cloudflare Quick Tunnel (https://try.cloudflare.com)",
+				"Expose your local dev server via a Cloudflare Tunnel. Use `--tunnel` for a Quick Tunnel and `--tunnel-name` with `--tunnel` for a named tunnel.",
 			type: "boolean",
+		},
+		"tunnel-name": {
+			describe:
+				"Use an existing named Cloudflare Tunnel when `--tunnel` is enabled.",
+			type: "string",
 		},
 	},
 	async validateArgs(args) {
@@ -355,7 +360,7 @@ export type AdditionalDevProps = {
 	showInteractiveDevSession?: boolean;
 };
 
-type DevArguments = (typeof dev)["args"];
+type DevArguments = Omit<(typeof dev)["args"], "installSkills">;
 
 export type StartDevOptions = DevArguments &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
