@@ -37,6 +37,7 @@ describe("normalizeAndValidateConfig()", () => {
 			vectorize: [],
 			ai_search_namespaces: [],
 			ai_search: [],
+			agent_memory: [],
 			hyperdrive: [],
 			dev: {
 				ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
@@ -89,6 +90,7 @@ describe("normalizeAndValidateConfig()", () => {
 			text_blobs: undefined,
 			browser: undefined,
 			ai: undefined,
+			web_search: undefined,
 			version_metadata: undefined,
 			triggers: {
 				crons: undefined,
@@ -2019,6 +2021,50 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[web_search]", () => {
+			it("should accept a valid web_search binding", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ web_search: { binding: "WEBSEARCH" } } as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error if web_search is an array", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ web_search: [] } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "web_search" should be an object but got []."
+				`);
+			});
+
+			it("should error if web_search has no binding name", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ web_search: {} } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - binding should have a string "binding" field."
+				`);
+			});
+		});
+
 		// Vectorize
 		describe("[vectorize]", () => {
 			it("should error if vectorize is an object", ({ expect }) => {
@@ -2269,6 +2315,137 @@ describe("normalizeAndValidateConfig()", () => {
 							{
 								binding: "BLOG_SEARCH",
 								instance_name: "cloudflare-blog",
+								extra_field: "unexpected",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain("extra_field");
+			});
+		});
+
+		describe("[agent_memory]", () => {
+			it("should error if agent_memory is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ agent_memory: {} } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "agent_memory" should be an array but got {}."
+				`);
+			});
+
+			it("should error if agent_memory is a string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ agent_memory: "BAD" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "agent_memory" should be an array but got "BAD"."
+				`);
+			});
+
+			it("should error if agent_memory is a number", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ agent_memory: 999 } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "agent_memory" should be an array but got 999."
+				`);
+			});
+
+			it("should error if agent_memory is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ agent_memory: null } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "agent_memory" should be an array but got null."
+				`);
+			});
+
+			it("should error if agent_memory bindings are not valid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						agent_memory: [
+							{},
+							{ binding: "VALID" },
+							{ binding: 2000, namespace: 2111 },
+							{
+								binding: "BINDING_2",
+								namespace: "my-namespace",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "agent_memory[0]" bindings should have a string "binding" field but got {}.
+					  - "agent_memory[0]" bindings must have a "namespace" field but got {}.
+					  - "agent_memory[1]" bindings must have a "namespace" field but got {"binding":"VALID"}.
+					  - "agent_memory[2]" bindings should have a string "binding" field but got {"binding":2000,"namespace":2111}.
+					  - "agent_memory[2]" bindings must have a "namespace" field but got {"binding":2000,"namespace":2111}."
+				`);
+			});
+
+			it("should accept valid agent_memory bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						agent_memory: [
+							{
+								binding: "MEMORY",
+								namespace: "my-namespace",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error on additional properties", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						agent_memory: [
+							{
+								binding: "MEMORY",
+								namespace: "my-namespace",
 								extra_field: "unexpected",
 							},
 						],
@@ -4499,7 +4676,28 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should accept valid bindings", ({ expect }) => {
+			it("should accept valid bindings with stream field", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						pipelines: [
+							{
+								binding: "VALID",
+								stream: "343cd4f1d58c42fbb5bd082592fd7143",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should accept deprecated pipeline field with warning", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						pipelines: [
@@ -4515,6 +4713,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The "pipeline" field in "pipelines[0]" bindings is deprecated. Use "stream" instead."
+				`);
 			});
 
 			it("should error if pipelines.bindings are not valid", ({ expect }) => {
@@ -4524,7 +4727,7 @@ describe("normalizeAndValidateConfig()", () => {
 							{},
 							{
 								binding: "VALID",
-								pipeline: "343cd4f1d58c42fbb5bd082592fd7143",
+								stream: "343cd4f1d58c42fbb5bd082592fd7143",
 							},
 							{ binding: 2000, project: 2111 },
 						],
@@ -4541,9 +4744,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "pipelines[0]" bindings must have a string "binding" field but got {}.
-					  - "pipelines[0]" bindings must have a string "pipeline" field but got {}.
+					  - "pipelines[0]" bindings must have a string "stream" field but got {}.
 					  - "pipelines[2]" bindings must have a string "binding" field but got {"binding":2000,"project":2111}.
-					  - "pipelines[2]" bindings must have a string "pipeline" field but got {"binding":2000,"project":2111}."
+					  - "pipelines[2]" bindings must have a string "stream" field but got {"binding":2000,"project":2111}."
 				`);
 			});
 		});
@@ -5204,7 +5407,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should accept valid workflow bindings with schedule as a string", ({
+			it("should accept valid workflow bindings with schedules as a string", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -5214,7 +5417,7 @@ describe("normalizeAndValidateConfig()", () => {
 								binding: "MY_WORKFLOW",
 								name: "my-workflow",
 								class_name: "MyWorkflow",
-								schedule: "*/5 * * * *",
+								schedules: "*/5 * * * *",
 							},
 						],
 					} as unknown as RawConfig,
@@ -5227,7 +5430,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should accept valid workflow bindings with schedule as an array of strings", ({
+			it("should accept valid workflow bindings with schedules as an array of strings", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -5237,7 +5440,7 @@ describe("normalizeAndValidateConfig()", () => {
 								binding: "MY_WORKFLOW",
 								name: "my-workflow",
 								class_name: "MyWorkflow",
-								schedule: ["*/5 * * * *", "0 9 * * 1"],
+								schedules: ["*/5 * * * *", "0 9 * * 1"],
 							},
 						],
 					} as unknown as RawConfig,
@@ -5330,7 +5533,7 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if schedule has wrong type", ({ expect }) => {
+			it("should error if schedules has wrong type", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						workflows: [
@@ -5338,7 +5541,7 @@ describe("normalizeAndValidateConfig()", () => {
 								binding: "MY_WORKFLOW",
 								name: "my-workflow",
 								class_name: "MyWorkflow",
-								schedule: 123,
+								schedules: 123,
 							},
 						],
 					} as unknown as RawConfig,
@@ -5350,11 +5553,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "workflows[0]" bindings should, optionally, have a string or array of strings "schedule" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","schedule":123}."
+					  - "workflows[0]" bindings should, optionally, have a string or array of strings "schedules" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","schedules":123}."
 				`);
 			});
 
-			it("should error if schedule is an empty string", ({ expect }) => {
+			it("should error if schedules is an empty string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						workflows: [
@@ -5362,7 +5565,7 @@ describe("normalizeAndValidateConfig()", () => {
 								binding: "MY_WORKFLOW",
 								name: "my-workflow",
 								class_name: "MyWorkflow",
-								schedule: "",
+								schedules: "",
 							},
 						],
 					} as unknown as RawConfig,
@@ -5374,11 +5577,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "workflows[0]" bindings "schedule" field must not be an empty string."
+					  - "workflows[0]" bindings "schedules" field must not be an empty string."
 				`);
 			});
 
-			it("should error if schedule is an empty array", ({ expect }) => {
+			it("should error if schedules is an empty array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						workflows: [
@@ -5386,7 +5589,7 @@ describe("normalizeAndValidateConfig()", () => {
 								binding: "MY_WORKFLOW",
 								name: "my-workflow",
 								class_name: "MyWorkflow",
-								schedule: [],
+								schedules: [],
 							},
 						],
 					} as unknown as RawConfig,
@@ -5398,11 +5601,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "workflows[0]" bindings "schedule" field must not be an empty array."
+					  - "workflows[0]" bindings "schedules" field must not be an empty array."
 				`);
 			});
 
-			it("should error if schedule is an array containing non-strings", ({
+			it("should error if schedules is an array containing non-strings", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -5412,7 +5615,7 @@ describe("normalizeAndValidateConfig()", () => {
 								binding: "MY_WORKFLOW",
 								name: "my-workflow",
 								class_name: "MyWorkflow",
-								schedule: ["*/5 * * * *", 123],
+								schedules: ["*/5 * * * *", 123],
 							},
 						],
 					} as unknown as RawConfig,
@@ -5424,11 +5627,11 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "workflows[0]" bindings should, optionally, have a string or array of strings "schedule" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","schedule":["*/5 * * * *",123]}."
+					  - "workflows[0]" bindings should, optionally, have a string or array of strings "schedules" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","schedules":["*/5 * * * *",123]}."
 				`);
 			});
 
-			it("should error if schedule is an array containing empty strings", ({
+			it("should error if schedules is an array containing empty strings", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -5438,7 +5641,7 @@ describe("normalizeAndValidateConfig()", () => {
 								binding: "MY_WORKFLOW",
 								name: "my-workflow",
 								class_name: "MyWorkflow",
-								schedule: ["*/5 * * * *", ""],
+								schedules: ["*/5 * * * *", ""],
 							},
 						],
 					} as unknown as RawConfig,
@@ -5450,7 +5653,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "workflows[0]" bindings "schedule" field must not contain empty strings."
+					  - "workflows[0]" bindings "schedules" field must not contain empty strings."
 				`);
 			});
 

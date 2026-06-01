@@ -82,6 +82,8 @@ export type ConfigBindingFieldName =
 	| "vectorize"
 	| "ai_search_namespaces"
 	| "ai_search"
+	| "web_search"
+	| "agent_memory"
 	| "hyperdrive"
 	| "r2_buckets"
 	| "logfwdr"
@@ -124,6 +126,8 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespaces: "AI Search Namespace",
 	ai_search: "AI Search Instance",
+	web_search: "Web Search",
+	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
 	logfwdr: "logfwdr",
@@ -181,6 +185,8 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespace: "AI Search Namespace",
 	ai_search: "AI Search Instance",
+	web_search: "Web Search",
+	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
 	fetcher: "Service Binding",
@@ -1756,6 +1762,26 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateAISearchBinding),
 			[]
 		),
+		web_search: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"web_search",
+			validateNamedSimpleBinding(envName),
+			undefined
+		),
+		agent_memory: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"agent_memory",
+			validateBindingArray(envName, validateAgentMemoryBinding),
+			[]
+		),
 		hyperdrive: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2699,36 +2725,38 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	if (hasProperty(value, "schedule") && value.schedule !== undefined) {
-		if (typeof value.schedule === "string") {
-			if (value.schedule.length === 0) {
+	if (hasProperty(value, "schedules") && value.schedules !== undefined) {
+		if (typeof value.schedules === "string") {
+			if (value.schedules.length === 0) {
 				diagnostics.errors.push(
-					`"${field}" bindings "schedule" field must not be an empty string.`
+					`"${field}" bindings "schedules" field must not be an empty string.`
 				);
 				isValid = false;
 			}
-		} else if (Array.isArray(value.schedule)) {
-			if (value.schedule.length === 0) {
+		} else if (Array.isArray(value.schedules)) {
+			if (value.schedules.length === 0) {
 				diagnostics.errors.push(
-					`"${field}" bindings "schedule" field must not be an empty array.`
+					`"${field}" bindings "schedules" field must not be an empty array.`
 				);
 				isValid = false;
-			} else if (!value.schedule.every((s: unknown) => typeof s === "string")) {
+			} else if (
+				!value.schedules.every((s: unknown) => typeof s === "string")
+			) {
 				diagnostics.errors.push(
-					`"${field}" bindings should, optionally, have a string or array of strings "schedule" field but got ${JSON.stringify(
+					`"${field}" bindings should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
 						value
 					)}.`
 				);
 				isValid = false;
-			} else if (value.schedule.some((s: unknown) => s === "")) {
+			} else if (value.schedules.some((s: unknown) => s === "")) {
 				diagnostics.errors.push(
-					`"${field}" bindings "schedule" field must not contain empty strings.`
+					`"${field}" bindings "schedules" field must not contain empty strings.`
 				);
 				isValid = false;
 			}
 		} else {
 			diagnostics.errors.push(
-				`"${field}" bindings should, optionally, have a string or array of strings "schedule" field but got ${JSON.stringify(
+				`"${field}" bindings should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
 					value
 				)}.`
 			);
@@ -2784,7 +2812,7 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		"script_name",
 		"remote",
 		"limits",
-		"schedule",
+		"schedules",
 	]);
 
 	return isValid;
@@ -3062,6 +3090,8 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"ai",
 			"ai_search_namespace",
 			"ai_search",
+			"web_search",
+			"agent_memory",
 			"kv_namespace",
 			"durable_object_namespace",
 			"d1_database",
@@ -4211,6 +4241,40 @@ const validateAISearchBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateAgentMemoryBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"agent_memory" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "namespace" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"namespace",
+		"remote",
+	]);
+
+	return isValid;
+};
+
 const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -4839,7 +4903,7 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 	let isValid = true;
-	// Pipeline bindings must have a binding and a pipeline.
+	// Pipeline bindings must have a binding and a stream (or deprecated pipeline).
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
@@ -4848,9 +4912,21 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "pipeline", "string")) {
+
+	const hasStream = isOptionalProperty(value, "stream", "string");
+	const hasPipeline = isOptionalProperty(value, "pipeline", "string");
+	const v = value as Record<string, unknown>;
+
+	if (hasStream && v.stream) {
+		// "stream" is the primary field — use it as-is
+	} else if (hasPipeline && v.pipeline) {
+		// Deprecated "pipeline" field — normalize to "stream"
+		diagnostics.warnings.push(
+			`The "pipeline" field in "${field}" bindings is deprecated. Use "stream" instead.`
+		);
+	} else {
 		diagnostics.errors.push(
-			`"${field}" bindings must have a string "pipeline" field but got ${JSON.stringify(
+			`"${field}" bindings must have a string "stream" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -4863,6 +4939,7 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
+		"stream",
 		"pipeline",
 		"remote",
 	]);

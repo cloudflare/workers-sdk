@@ -3,7 +3,10 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Uses expect in MSW handlers outside test callbacks
+ * TODO: remove this `expect` import
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
@@ -431,7 +434,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -458,7 +461,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -484,7 +487,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -511,7 +514,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -544,7 +547,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (dev) (TIMINGS)
-				No deploy targets for test-name (dev) (TIMINGS)
+				No targets deployed for test-name (dev) (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -577,7 +580,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (dev) (TIMINGS)
-				No deploy targets for test-name (dev) (TIMINGS)
+				No targets deployed for test-name (dev) (TIMINGS)
 				Current Version ID: undefined"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1369,7 +1372,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1397,7 +1400,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1454,7 +1457,7 @@ describe("deploy", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				No deploy targets for test-name (TIMINGS)
+				No targets deployed for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);

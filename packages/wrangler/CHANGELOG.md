@@ -1,5 +1,136 @@
 # wrangler
 
+## 4.95.0
+
+### Minor Changes
+
+- [#14009](https://github.com/cloudflare/workers-sdk/pull/14009) [`ca5b604`](https://github.com/cloudflare/workers-sdk/commit/ca5b604639eabbcb7385537801d1fdd72cf93144) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add telemetry for detecting whether AI coding agents have Cloudflare skills installed
+
+  Wrangler now includes a `currentAgentSkillsInstalled` property in telemetry events that reports whether the current AI coding agent has Cloudflare skills present on disk. The value distinguishes between skills installed automatically by Wrangler (`"automatic"`), skills installed manually by the user (`"manual"`), no skills present (`false`), or no supported agent detected (`null`). Skill names are fetched from the GitHub Contents API with a 24-hour disk cache to avoid rate limits.
+
+- [#14014](https://github.com/cloudflare/workers-sdk/pull/14014) [`d042705`](https://github.com/cloudflare/workers-sdk/commit/d042705c7a8715184e6e16d399c17adb958d0e80) Thanks [@emily-shen](https://github.com/emily-shen)! - Add `--x-deploy-helpers` to gate an upcoming deploy path refactor.
+
+### Patch Changes
+
+- [#14003](https://github.com/cloudflare/workers-sdk/pull/14003) [`c1fd2fd`](https://github.com/cloudflare/workers-sdk/commit/c1fd2fd3a41de5ee8e4698814d89429b86c75450) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260521.1 | 1.20260526.1 |
+
+- [#13728](https://github.com/cloudflare/workers-sdk/pull/13728) [`49c1a59`](https://github.com/cloudflare/workers-sdk/commit/49c1a591cb37a5d30513cc07258d5c27f1dd937f) Thanks [@penalosa](https://github.com/penalosa)! - Reject `remote: false` on always-remote bindings (AI, AI Search, Media, Artifacts, Flagship, VPC Service, VPC Network)
+
+  These binding types have no local simulator and the resource is fundamentally remote-only. Setting `remote: false` was previously silently accepted but produced a non-functional binding. `wrangler dev` now fails with a clear error directing users to either remove the `remote` field or set it to `true`.
+
+- [#14039](https://github.com/cloudflare/workers-sdk/pull/14039) [`fee1ce4`](https://github.com/cloudflare/workers-sdk/commit/fee1ce42aa44b16645682edab3c792a0571c59d6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Preserve `--compatibility-flags` in the interactive deploy config flow
+
+  When running `wrangler deploy` without a config file and going through the interactive setup flow, any `--compatibility-flags` passed on the command line (e.g. `--compatibility-flags=nodejs_compat`) were lost in two places:
+
+  1. The generated `wrangler.jsonc` file did not include `compatibility_flags`.
+  2. The suggested CLI command shown when declining the config file write did not include `--compatibility-flags`.
+
+  Both are now fixed. Compatibility flags are persisted to the generated config and included in the suggested command.
+
+- [#14010](https://github.com/cloudflare/workers-sdk/pull/14010) [`b3962ff`](https://github.com/cloudflare/workers-sdk/commit/b3962ffadb4ce13dea543c994bf3f663e7d445a5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve error messages for Pages CLI commands
+
+  Error messages across `wrangler pages` subcommands (deploy, dev, secret, project, etc.) now provide clearer descriptions and actionable guidance. For example, instead of "Must specify a project name.", you'll now see "Missing Pages project name. Use --project-name <name> or set the name in your wrangler.jsonc configuration file."
+
+- [#14011](https://github.com/cloudflare/workers-sdk/pull/14011) [`420e457`](https://github.com/cloudflare/workers-sdk/commit/420e45789b3ef8d9a05f4dc7ba723f2c2d0c7dbc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Warn when a remote-bindings request is blocked by Cloudflare Access
+
+  When `wrangler dev` is used with remote bindings and a request from the local remote-bindings proxy client to the remote workers.dev proxy server is blocked by Cloudflare Access (HTTP 403 with the Cloudflare Access block page), Wrangler now:
+
+  - Logs a single, visually striking warning per dev session explaining how to set `CLOUDFLARE_ACCESS_CLIENT_ID` / `CLOUDFLARE_ACCESS_CLIENT_SECRET` (Service Token credentials) or run `cloudflared access login` to authenticate.
+  - Replaces the original Access HTML block page with a readable plain-text body containing the same guidance, so the message also reaches the user via binding error messages (e.g. `InferenceUpstreamError` from `env.AI.run()`) and any browser response piped back via a service binding `.fetch()`.
+
+  Previously the 403 was returned to user code with the full Access HTML, which both drowned out other logs and made it hard to tell that the failure was due to Cloudflare Access on workers.dev rather than a problem in the binding itself or the deployed proxy server. The detection runs inside the proxy client worker (which only ever talks to the remote-bindings proxy URL), so it does not trigger false positives on user-worker 403s.
+
+- [#14044](https://github.com/cloudflare/workers-sdk/pull/14044) [`8b1467e`](https://github.com/cloudflare/workers-sdk/commit/8b1467ef04da43696e3a79eb881cea2f4df022f6) Thanks [@pombosilva](https://github.com/pombosilva)! - Rename Workflow binding `schedule` property to `schedules`
+
+  The `schedule` property on Workflow bindings introduced in [#13467](https://github.com/cloudflare/workers-sdk/pull/13467) has been renamed to `schedules` to match the control plane API.
+
+  > **Note:** This remains a configuration-only change. Scheduled triggering of Workflow instances is not yet available — adding `schedules` to a Workflow binding will not result in scheduled invocations at this time.
+
+- Updated dependencies [[`c1fd2fd`](https://github.com/cloudflare/workers-sdk/commit/c1fd2fd3a41de5ee8e4698814d89429b86c75450), [`420e457`](https://github.com/cloudflare/workers-sdk/commit/420e45789b3ef8d9a05f4dc7ba723f2c2d0c7dbc)]:
+  - miniflare@4.20260526.0
+
+## 4.94.0
+
+### Minor Changes
+
+- [#13897](https://github.com/cloudflare/workers-sdk/pull/13897) [`52e9082`](https://github.com/cloudflare/workers-sdk/commit/52e9082e32d7bffaeca92f27ab472b56964ba2bb) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add automatic Cloudflare skills installation for AI coding agents
+
+  Wrangler now detects AI coding agents and offers to install Cloudflare skill files from the `cloudflare/skills` GitHub repository. Users are prompted once interactively; subsequent runs skip the prompt. Use `--install-skills` to install without prompting.
+
+- [#13989](https://github.com/cloudflare/workers-sdk/pull/13989) [`f598eac`](https://github.com/cloudflare/workers-sdk/commit/f598eac72bcdf838ba890bcbd100e99ee8fac17f) Thanks [@MattieTK](https://github.com/MattieTK)! - Print a QR code alongside the tunnel URL when sharing via Cloudflare Tunnel
+
+  When a tunnel is started (via `wrangler dev --tunnel` or the Vite plugin with `tunnel: true`), a scannable QR code is now printed to the terminal beneath the tunnel URL. This makes it easy to open the tunnel on a mobile device without manually copying the URL.
+
+  The QR code uses Unicode block characters for a compact representation and is generated best-effort -- if generation fails for any reason, the tunnel URL is still displayed as before.
+
+- [#13467](https://github.com/cloudflare/workers-sdk/pull/13467) [`3a1fbed`](https://github.com/cloudflare/workers-sdk/commit/3a1fbed5988efe03ae50cc502eff6a4785728396) Thanks [@deloreyj](https://github.com/deloreyj)! - Add `schedule` property to Workflow bindings for cron-based triggering
+
+  > **Note:** This is a configuration-only change. Scheduled triggering of Workflow instances is not yet available — adding `schedule` to a Workflow binding will not result in scheduled invocations at this time. This change lays the groundwork for an upcoming feature.
+
+  Workflow bindings in `wrangler.json` now accept an optional `schedule` field that configures one or more cron expressions to automatically trigger new workflow instances on a schedule.
+
+  ```jsonc
+  // wrangler.json
+  {
+    "workflows": [
+      {
+        "binding": "MY_WORKFLOW",
+        "name": "my-workflow",
+        "class_name": "MyWorkflow",
+        "schedule": "0 9 * * 1"
+      }
+    ]
+  }
+  ```
+
+  Multiple schedules can be provided as an array:
+
+  ```jsonc
+  {
+    "workflows": [
+      {
+        "binding": "MY_WORKFLOW",
+        "name": "my-workflow",
+        "class_name": "MyWorkflow",
+        "schedule": ["0 9 * * 1", "0 17 * * 5"]
+      }
+    ]
+  }
+  ```
+
+  The schedule is sent to the Workflows control plane on `wrangler deploy`. Configuring `schedule` on a workflow binding that references an external `script_name` is an error — the schedule must be configured on the worker that defines the workflow.
+
+### Patch Changes
+
+- [#13993](https://github.com/cloudflare/workers-sdk/pull/13993) [`0733688`](https://github.com/cloudflare/workers-sdk/commit/07336888e0bc82925e4023f5b72a0062f10d77b8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260520.1 | 1.20260521.1 |
+
+- [#14008](https://github.com/cloudflare/workers-sdk/pull/14008) [`fc1f7b9`](https://github.com/cloudflare/workers-sdk/commit/fc1f7b977908b78a4379d1d7b261ca7c69022ba3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix Access Service Token authentication for applications that only allow service tokens
+
+  When using remote bindings against a Worker behind a Cloudflare Access application configured to only allow Service Auth tokens (no interactive user authentication), Wrangler previously ignored the `CLOUDFLARE_ACCESS_CLIENT_ID` and `CLOUDFLARE_ACCESS_CLIENT_SECRET` environment variables and the request would fail with a 403.
+
+  This happened because Wrangler detects Access by looking for a 302 redirect to `cloudflareaccess.com`. A service-auth-only Access application has no interactive login path, so it responds with a hard 403 instead of redirecting. Wrangler concluded the domain was not behind Access and skipped attaching the service token headers entirely.
+
+  The env-var check now runs before the Access detection step, so the configured service token credentials are always used when present.
+
+- [#12277](https://github.com/cloudflare/workers-sdk/pull/12277) [`8c569c6`](https://github.com/cloudflare/workers-sdk/commit/8c569c6232588594e7a48219bbd020955f5fd5a4) Thanks [@penalosa](https://github.com/penalosa)! - Include column names in D1 SQL export INSERT statements
+
+  D1 SQL exports now include column names in INSERT statements (e.g., `INSERT INTO "table" ("col1","col2") VALUES(...)`). This ensures that exported SQL can be successfully imported even when the target table has columns in a different order than the original, which commonly occurs during iterative development when schemas evolve.
+
+- Updated dependencies [[`0733688`](https://github.com/cloudflare/workers-sdk/commit/07336888e0bc82925e4023f5b72a0062f10d77b8), [`30657e1`](https://github.com/cloudflare/workers-sdk/commit/30657e1db097135d97209c3ae0cc623fc66827b9)]:
+  - miniflare@4.20260521.0
+
 ## 4.93.1
 
 ### Patch Changes

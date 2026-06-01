@@ -1,5 +1,8 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Helper used outside test callbacks, needs module-level expect
+ * TODO: remove this `expect` import
+ */
 import { expect } from "vitest";
 import { EventSourceType } from "../../queues/subscription-types";
 import { msw } from "../helpers/msw";

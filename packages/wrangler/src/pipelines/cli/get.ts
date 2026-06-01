@@ -1,10 +1,10 @@
-import { APIError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
-import { getPipeline } from "../client";
 import { tryGetLegacyPipeline } from "./legacy-helpers";
+import { resolvePipeline } from "./resolve";
 
 export const pipelinesGetCommand = createCommand({
 	metadata: {
@@ -18,7 +18,7 @@ export const pipelinesGetCommand = createCommand({
 	args: {
 		pipeline: {
 			type: "string",
-			describe: "The ID of the pipeline to retrieve",
+			describe: "The ID or name of the pipeline to retrieve",
 			demandOption: true,
 		},
 		json: {
@@ -32,27 +32,23 @@ export const pipelinesGetCommand = createCommand({
 		const accountId = await requireAuth(config);
 		const pipelineId = args.pipeline;
 
-		let pipeline;
+		const pipeline = await resolvePipeline(config, pipelineId);
 
-		try {
-			pipeline = await getPipeline(config, pipelineId);
-		} catch (error) {
-			if (
-				error instanceof APIError &&
-				(error.code === 1000 || error.code === 2)
-			) {
-				const foundInLegacy = await tryGetLegacyPipeline(
-					config,
-					accountId,
-					pipelineId,
-					args.json ? "json" : "pretty"
-				);
+		if (!pipeline) {
+			const foundInLegacy = await tryGetLegacyPipeline(
+				config,
+				accountId,
+				pipelineId,
+				args.json ? "json" : "pretty"
+			);
 
-				if (foundInLegacy) {
-					return;
-				}
+			if (foundInLegacy) {
+				return;
 			}
-			throw error;
+
+			throw new UserError(`Pipeline "${pipelineId}" not found.`, {
+				telemetryMessage: "pipelines pipeline resolve not found",
+			});
 		}
 
 		if (args.json) {

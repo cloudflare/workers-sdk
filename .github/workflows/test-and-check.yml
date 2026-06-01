@@ -29,9 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
@@ -74,7 +75,7 @@ jobs:
 
       # Check for old Node.js version warnings and errors
       - name: Use Node.js v20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
 
@@ -109,9 +110,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Filter changed paths
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
@@ -150,7 +152,7 @@ jobs:
       # `fixtures`.
       - name: Restore Chrome browser cache (Browser Run)
         if: steps.changes.outputs.everything_but_markdown == 'true' && (matrix.suite == 'packages-and-tools' || (matrix.suite == 'fixtures' && matrix.os != 'ubuntu-latest'))
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           # The Chrome version lives in
           # `packages/miniflare/src/plugins/browser-rendering/browser-version.ts`.
@@ -201,7 +203,7 @@ jobs:
 
       - name: Upload turbo logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: turbo-runs-${{ matrix.os }}-${{ matrix.suite }}
           path: .turbo/runs

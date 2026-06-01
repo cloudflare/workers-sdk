@@ -41,12 +41,13 @@ describe("hyperdrive help", () => {
 			  wrangler hyperdrive update <id>    Update a Hyperdrive config
 
 			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]"
 		`);
 	});
 
@@ -76,12 +77,13 @@ describe("hyperdrive help", () => {
 			  wrangler hyperdrive update <id>    Update a Hyperdrive config
 
 			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]"
 		`);
 	});
 });
@@ -2119,7 +2121,7 @@ function mockHyperdriveUpdate(
 							password: _,
 							access_client_secret: _2,
 							...reqOrigin
-							// eslint-disable-next-line @typescript-eslint/no-explicit-any
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Destructuring untyped origin fields from API mock
 						} = reqBody.origin as any;
 						origin = { ...origin, ...reqOrigin };
 						if (reqOrigin.service_id) {
@@ -2176,7 +2178,7 @@ function mockHyperdriveCreate(): Promise<CreateUpdateHyperdriveBody> {
 
 					resolve(reqBody);
 
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Accessing untyped origin fields from API mock
 					const reqOrigin = reqBody.origin as any;
 					return HttpResponse.json(
 						createFetchResult(

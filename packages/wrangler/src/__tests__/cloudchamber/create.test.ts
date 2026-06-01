@@ -81,12 +81,13 @@ describe("cloudchamber create", () => {
 			Create a new deployment [alpha]
 
 			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
 			      --image          Image to use for your deployment  [string]
@@ -252,7 +253,7 @@ describe("cloudchamber create", () => {
 			http.post(
 				"*/deployments/v2",
 				async ({ request }) => {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- MSW handler parses untyped JSON request body
 					const r = (await request.json()) as Record<string, any>;
 					expect(r.instance_type).toEqual("lite");
 					return HttpResponse.json({});
@@ -328,7 +329,7 @@ describe("cloudchamber create", () => {
 			http.post(
 				"*/deployments/v2",
 				async ({ request }) => {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- MSW handler parses untyped JSON request body
 					const r = (await request.json()) as Record<string, any>;
 					expect(r.instance_type).toEqual("lite");
 					return HttpResponse.json({});

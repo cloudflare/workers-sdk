@@ -945,6 +945,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
+
 					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
@@ -1029,6 +1030,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
+
 					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
@@ -1101,6 +1103,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
+
 					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
@@ -1180,6 +1183,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
+
 					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
@@ -1266,6 +1270,7 @@ addEventListener('fetch', event => {});`
 					  }
 					}
 					 to <cwd>/wrangler.jsonc.
+
 					Simply run \`wrangler deploy\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
@@ -1382,6 +1387,7 @@ addEventListener('fetch', event => {});`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
+
 
 
 					You should run wrangler deploy --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.

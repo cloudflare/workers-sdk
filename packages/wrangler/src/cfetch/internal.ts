@@ -321,12 +321,62 @@ export function addAuthorizationHeader(
 ): void {
 	if (!headers.has("Authorization") || overrideExisting) {
 		if ("apiToken" in auth) {
-			headers.set("Authorization", `Bearer ${auth.apiToken}`);
+			const authorizationHeader = `Bearer ${auth.apiToken}`;
+			validateAuthorizationHeaderValue(authorizationHeader);
+			headers.set("Authorization", authorizationHeader);
 		} else {
 			headers.set("X-Auth-Key", auth.authKey);
 			headers.set("X-Auth-Email", auth.authEmail);
 		}
 	}
+}
+
+function validateAuthorizationHeaderValue(value: string): void {
+	for (const character of value) {
+		const codePoint = character.codePointAt(0);
+		if (codePoint === undefined || codePoint > 255) {
+			throw new UserError(
+				`The configured Cloudflare API token contains a character that cannot be used in an HTTP Authorization header: ${formatAuthorizationHeaderCharacter(character, codePoint)}. Recreate or copy the token again, making sure it does not include characters such as ellipses.`,
+				{
+					telemetryMessage: "cfetch auth invalid authorization header",
+				}
+			);
+		}
+	}
+}
+
+function formatAuthorizationHeaderCharacter(
+	character: string,
+	codePoint: number | undefined
+): string {
+	if (codePoint === undefined) {
+		return '"\\u{unknown}"';
+	}
+
+	const codePointLabel = `U+${codePoint.toString(16).toUpperCase().padStart(4, "0")}`;
+	const characterLabel = isPrintableCharacter(character)
+		? `"${character}"`
+		: `"${escapeCharacter(character)}"`;
+
+	return `${characterLabel} (${codePointLabel})`;
+}
+
+function isPrintableCharacter(character: string): boolean {
+	return !/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(character);
+}
+
+function escapeCharacter(character: string): string {
+	return Array.from(character)
+		.map((c) => {
+			const codePoint = c.codePointAt(0);
+			if (codePoint === undefined) {
+				return "";
+			}
+			return codePoint <= 0xffff
+				? `\\u${codePoint.toString(16).toUpperCase().padStart(4, "0")}`
+				: `\\u{${codePoint.toString(16).toUpperCase()}}`;
+		})
+		.join("");
 }
 
 export function addUserAgent(headers: Headers): void {

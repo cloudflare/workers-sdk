@@ -170,7 +170,7 @@ function printTokenPermissions(user: UserInfo) {
 		user.tokenPermissions?.map((scope) => scope.split(":")) ?? [];
 	if (user.authType !== "OAuth Token") {
 		return void logger.log(
-			`🔓 To see token permissions visit https://dash.cloudflare.com/${user.authType === "User API Token" ? "profile" : user.accounts[0].id}/api-tokens.`
+			`🔓 To see token permissions, visit https://dash.cloudflare.com/${user.authType === "User API Token" ? "profile" : user.accounts[0].id}/api-tokens`
 		);
 	}
 	logger.log(`🔓 Token Permissions:`);
@@ -179,8 +179,11 @@ function printTokenPermissions(user: UserInfo) {
 	// This Set contains all the scopes we expect to see (that Wrangler requests by default)
 	const expectedScopes = new Set(DefaultScopeKeys);
 	for (const [scope, access] of permissions) {
-		// We'll remove scopes from the set of scopes that we expect to see when we see them in the API response
-		expectedScopes.delete(`${scope}:${access}` as Scope);
+		// We'll remove scopes from the set of scopes that we expect to see when we see them in the API response.
+		// Some scopes are dot-separated (e.g. "websearch.run") rather than colon-separated, in which case
+		// the split above yields a single element with `access === undefined`.
+		const key = (access === undefined ? scope : `${scope}:${access}`) as Scope;
+		expectedScopes.delete(key);
 		logger.log(`- ${scope} ${access ? `(${access})` : ``}`);
 	}
 
