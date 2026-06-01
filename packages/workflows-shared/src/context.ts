@@ -76,17 +76,133 @@ const defaultConfig: ResolvedStepConfig = {
  * fetch-stream copies) blows up the wire size by a factor of
  * (backing-size / view-size) and can hit `SQLITE_TOOBIG` at view sizes well
  * below the documented 1MiB step-output limit (see issue #14101). Copying the
- * view's bytes into a tight `ArrayBuffer` before persistence brings local
- * `wrangler dev` behaviour in line with production. `DataView` is excluded — it
- * has different semantics and may legitimately need its full backing buffer.
+ * view's bytes into a tight backing buffer before persistence brings local
+ * `wrangler dev` behaviour in line with production.
+ *
+ * The walk is recursive (cycle-safe via a `WeakMap`) so views nested inside
+ * objects, arrays, Maps, and Sets are also compacted. View types are preserved
+ * (`Uint8Array` stays `Uint8Array`, `Int16Array` stays `Int16Array`, etc.) so
+ * the persisted shape matches the live shape — cached replays observe the
+ * same constructor type the step originally returned. Class instances and
+ * host objects (`Date`, `RegExp`, raw `ArrayBuffer`, streams, `Blob`, …) are
+ * passed through unchanged — recursing into them would either fail to
+ * reconstruct the original type or trigger their own structured-clone path.
  */
-function normalizeForStorage(value: unknown): unknown {
-	if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
-		const view = value as ArrayBufferView;
-		return new Uint8Array(view.buffer, view.byteOffset, view.byteLength).slice()
-			.buffer;
+function normalizeForStorage(
+	value: unknown,
+	seen: WeakMap<object, unknown> = new WeakMap()
+): unknown {
+	// Primitives: nothing to do.
+	if (value === null || typeof value !== "object") {
+		return value;
 	}
+
+	// Already visited (cycle): return the previously-built copy so the result
+	// graph mirrors the original's cycle topology.
+	if (seen.has(value)) {
+		return seen.get(value);
+	}
+
+	// Typed-array views (TypedArray + DataView): copy bytes into a tight
+	// backing buffer, preserving the original view constructor.
+	if (ArrayBuffer.isView(value)) {
+		return compactView(value);
+	}
+
+	if (Array.isArray(value)) {
+		const result: unknown[] = [];
+		seen.set(value, result);
+		for (const item of value) {
+			result.push(normalizeForStorage(item, seen));
+		}
+		return result;
+	}
+
+	if (value instanceof Map) {
+		const result = new Map();
+		seen.set(value, result);
+		for (const [k, v] of value) {
+			result.set(normalizeForStorage(k, seen), normalizeForStorage(v, seen));
+		}
+		return result;
+	}
+
+	if (value instanceof Set) {
+		const result = new Set();
+		seen.set(value, result);
+		for (const v of value) {
+			result.add(normalizeForStorage(v, seen));
+		}
+		return result;
+	}
+
+	// Plain objects (Object literals and null-prototype objects). Class
+	// instances and host objects fall through to the pass-through below.
+	const proto = Object.getPrototypeOf(value);
+	if (proto === Object.prototype || proto === null) {
+		const result: Record<string, unknown> = {};
+		seen.set(value, result);
+		for (const key of Object.keys(value)) {
+			result[key] = normalizeForStorage(
+				(value as Record<string, unknown>)[key],
+				seen
+			);
+		}
+		return result;
+	}
+
 	return value;
+}
+
+function compactView(view: ArrayBufferView): ArrayBufferView {
+	const tightBuffer = new Uint8Array(
+		view.buffer,
+		view.byteOffset,
+		view.byteLength
+	).slice().buffer;
+
+	// Preserve the view type so the persisted shape matches the live shape.
+	// Subclasses we don't recognise (Node `Buffer`, custom user types) fall
+	// through to `Uint8Array` — bytes are intact but the precise constructor
+	// is downgraded. Acceptable trade-off; the bug being fixed is buffer
+	// bloat, not type fidelity for exotic subclasses.
+	if (view instanceof Uint8Array) {
+		return new Uint8Array(tightBuffer);
+	}
+	if (view instanceof Uint8ClampedArray) {
+		return new Uint8ClampedArray(tightBuffer);
+	}
+	if (view instanceof Int8Array) {
+		return new Int8Array(tightBuffer);
+	}
+	if (view instanceof Uint16Array) {
+		return new Uint16Array(tightBuffer);
+	}
+	if (view instanceof Int16Array) {
+		return new Int16Array(tightBuffer);
+	}
+	if (view instanceof Uint32Array) {
+		return new Uint32Array(tightBuffer);
+	}
+	if (view instanceof Int32Array) {
+		return new Int32Array(tightBuffer);
+	}
+	if (view instanceof Float32Array) {
+		return new Float32Array(tightBuffer);
+	}
+	if (view instanceof Float64Array) {
+		return new Float64Array(tightBuffer);
+	}
+	if (view instanceof BigUint64Array) {
+		return new BigUint64Array(tightBuffer);
+	}
+	if (view instanceof BigInt64Array) {
+		return new BigInt64Array(tightBuffer);
+	}
+	if (view instanceof DataView) {
+		return new DataView(tightBuffer);
+	}
+	return new Uint8Array(tightBuffer);
 }
 
 export interface UserErrorField {
@@ -589,9 +705,11 @@ export class Context extends RpcTarget {
 					activeTimeoutTask?: Promise<never>
 				): Promise<unknown> => {
 					if (!isReadableStreamLike(value)) {
-						// Top-level typed-array views are normalised to a tight
-						// `ArrayBuffer` so the full backing buffer does not ride
-						// along with the view (issue #14101). The caller still
+						// Typed-array views anywhere in the value tree are copied
+						// into a tight backing buffer so the full backing buffer
+						// does not ride along with each view (issue #14101). View
+						// types are preserved so cached replays observe the same
+						// constructor as the live execution path. The caller still
 						// receives the original `value` below — only the stored
 						// shape changes.
 						const stored = normalizeForStorage(value);
