@@ -83,26 +83,16 @@ export interface TypedWorkerDefinition<
 	// }): TypedWorkflowBinding<TConfig, TExportName>;
 }
 
-type UserConfigFnObject = (ctx: ConfigContext) => UserConfig;
-type UserConfigFnPromise = (ctx: ConfigContext) => Promise<UserConfig>;
-
-export type UserConfigExport =
-	| UserConfig
-	| Promise<UserConfig>
-	| UserConfigFnObject
-	| UserConfigFnPromise;
+export type UserConfigExport<T extends UserConfig = UserConfig> =
+	| T
+	| Promise<T>
+	| ((ctx: ConfigContext) => T | Promise<T>);
 
 export function defineWorker<const T extends UserConfig>(
-	config: UserConfig & T
+	config: (ctx: ConfigContext) => (UserConfig & T) | Promise<UserConfig & T>
 ): TypedWorkerDefinition<T>;
 export function defineWorker<const T extends UserConfig>(
-	config: Promise<UserConfig & T>
-): TypedWorkerDefinition<T>;
-export function defineWorker<const T extends UserConfig>(
-	config: (ctx: ConfigContext) => UserConfig & T
-): TypedWorkerDefinition<T>;
-export function defineWorker<const T extends UserConfig>(
-	config: (ctx: ConfigContext) => Promise<UserConfig & T>
+	config: (UserConfig & T) | Promise<UserConfig & T>
 ): TypedWorkerDefinition<T>;
 export function defineWorker(config: UserConfigExport): WorkerDefinition {
 	return {

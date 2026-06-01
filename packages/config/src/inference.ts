@@ -11,7 +11,7 @@ import type {
 	TypedWorkerBinding,
 	TypedWorkflowBinding,
 } from "./bindings";
-import type { WorkerDefinition } from "./worker-definition";
+import type { UserConfigExport, WorkerDefinition } from "./worker-definition";
 import type { Pipeline } from "cloudflare:pipelines";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -242,13 +242,11 @@ export type InferEntrypointExports<TUnwrappedConfig> = Exclude<
  * Use this to normalize a config before passing it to other inference utilities.
  */
 export type UnwrapConfig<TConfig> =
-	TConfig extends WorkerDefinition<infer T>
-		? T
-		: TConfig extends (...args: any[]) => infer TReturn
-			? UnwrapConfig<TReturn>
-			: TConfig extends Promise<infer TCompletion>
-				? TCompletion
-				: TConfig;
+	TConfig extends WorkerDefinition<infer TUnwrappedConfig>
+		? TUnwrappedConfig
+		: TConfig extends UserConfigExport<infer TUnwrappedConfig>
+			? TUnwrappedConfig
+			: never;
 
 /**
  * Infer the `Env` interface type from a Worker config.
