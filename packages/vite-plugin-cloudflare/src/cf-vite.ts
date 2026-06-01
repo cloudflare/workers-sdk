@@ -114,7 +114,15 @@ async function main(): Promise<number> {
 	}
 
 	// Bridge plugin-owned flags via env vars the plugin reads during config
-	// resolution — must be set before `createServer()`.
+	// resolution — must be set before `createServer()`. Precedence vs the
+	// user's `cloudflare()` options differs per flag, by design:
+	//   - `--config`: an explicit `cloudflare({ configPath })` wins, since
+	//     this maps to the existing `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH`
+	//     discovery fallback (`configPath ?? env`). A pinned configPath is
+	//     a deliberate user choice, so it stays authoritative.
+	//   - `--local`: overrides `remoteBindings` outright, mirroring
+	//     `wrangler dev --local` (force local even if config opts into
+	//     remote).
 	if (args.config !== undefined) {
 		process.env.CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH = args.config;
 	}
