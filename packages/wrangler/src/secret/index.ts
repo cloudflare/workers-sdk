@@ -657,10 +657,11 @@ export async function parseBulkInputToObject(
 		secretSource = "stdin";
 		try {
 			const rl = readline.createInterface({ input: process.stdin });
-			let pipedInput = "";
+			const pipedInputLines: string[] = [];
 			for await (const line of rl) {
-				pipedInput += line;
+				pipedInputLines.push(line);
 			}
+			const pipedInput = pipedInputLines.join("\n");
 			try {
 				content = parseJSON(pipedInput) as Record<string, string | null>;
 				secretFormat = "json";
