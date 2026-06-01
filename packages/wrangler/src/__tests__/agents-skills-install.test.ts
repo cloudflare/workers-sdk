@@ -24,8 +24,12 @@ vi.unmock("../agents-skills-install");
 vi.mock("am-i-vibing");
 
 // Mock rosie-skills to avoid real network/WASM calls.
-const mockRosieInstall = vi.fn();
-const mockRosieAgents = vi.fn();
+// vi.hoisted() is required because vi.mock() factories are hoisted above normal
+// variable declarations, so plain `const` variables would still be in the TDZ.
+const { mockRosieInstall, mockRosieAgents } = vi.hoisted(() => ({
+	mockRosieInstall: vi.fn(),
+	mockRosieAgents: vi.fn(),
+}));
 vi.mock("rosie-skills", () => ({
 	install: mockRosieInstall,
 	agents: mockRosieAgents,

@@ -291,7 +291,7 @@ async function getWorkerEntrypointExport(
 	if (!entrypointValue) {
 		const message =
 			`${mainPath} does not export a ${entrypoint} entrypoint. \`@cloudflare/vitest-pool-workers\` does not support service workers or named entrypoints for \`SELF\`.\n` +
-			"If you're using service workers, please migrate to the modules format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers.";
+			"If you're using service workers, please migrate to the modules format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/";
 		throw new TypeError(message);
 	}
 	return { mainPath, entrypointValue };

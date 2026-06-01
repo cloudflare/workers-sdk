@@ -24,6 +24,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { isBuiltin } from "node:module";
 import { dirname, resolve } from "node:path";
+import * as esbuild from "esbuild";
 import { glob } from "tinyglobby";
 
 export interface PackageJSON {
@@ -36,6 +37,7 @@ export interface PackageJSON {
 	dependencies?: Record<string, string>;
 	devDependencies?: Record<string, string>;
 	peerDependencies?: Record<string, string>;
+	optionalDependencies?: Record<string, string>;
 }
 
 export interface PackageInfo {
@@ -269,12 +271,6 @@ export function isBareSpecifier(spec: string): boolean {
 	if (/^__[A-Z][A-Z0-9_]*$/.test(spec)) {
 		return false;
 	}
-	// Specifiers containing template-literal expressions are dynamic strings
-	// that appear inside source-code templates emitted by Wrangler, not real
-	// imports of the wrapping package.
-	if (spec.includes("${") || spec.includes("*")) {
-		return false;
-	}
 	// Specifier must look like a valid npm package name: lowercase letters/digits,
 	// hyphens, dots, underscores; optionally scoped (@scope/name). npm package
 	// names cannot contain uppercase letters per the npm naming rules.
@@ -300,41 +296,44 @@ export function isBareSpecifier(spec: string): boolean {
  *
  * Returns top-level package names (e.g. "vitest" for "vitest/runtime").
  *
- * This is a regex-based scanner, not a real parser — it can produce false
- * positives when bundled output contains string literals that look like
- * import statements (e.g. JavaScript parser libraries shipped inside the
- * bundle). False positives are filtered downstream by `isBareSpecifier`
- * (rejecting non-package-shaped strings) and the self-import guard in
- * `validateDistImports`.
+ * Uses esbuild's parser (via a `bundle: true` build with everything marked
+ * external) so that specifiers found inside string literals, template
+ * literals, comments, etc. are correctly ignored. `bundle: true` is required
+ * to surface `require()` calls in the metafile — `bundle: false` only
+ * reports ESM `import` statements. The `externalize-all` plugin short-
+ * circuits resolution so esbuild never has to find the imports on disk.
  */
-export function extractBareImports(content: string): Set<string> {
+export async function extractBareImports(
+	content: string
+): Promise<Set<string>> {
 	const imports = new Set<string>();
 
-	// Strip line comments and block comments to avoid matching specs inside them.
-	// This is a deliberate approximation — sufficient for built/minified output.
-	const stripped = content
-		.replace(/\/\*[\s\S]*?\*\//g, "")
-		.replace(/\/\/[^\n]*/g, "");
+	const result = await esbuild.build({
+		stdin: { contents: content, loader: "js" },
+		metafile: true,
+		bundle: true,
+		write: false,
+		logLevel: "silent",
+		platform: "neutral",
+		plugins: [
+			{
+				name: "externalize-all",
+				setup(build) {
+					build.onResolve({ filter: /.*/ }, (args) => {
+						if (args.kind === "entry-point") {
+							return undefined;
+						}
+						return { path: args.path, external: true };
+					});
+				},
+			},
+		],
+	});
 
-	const patterns: RegExp[] = [
-		// import ... from "spec" / export ... from "spec"
-		// Anchored to a statement boundary (start of file, newline, `;`, or `}`)
-		// to avoid matching `from "x"` inside string literals.
-		/(?:^|[\n;}])\s*(?:import|export)\b[^"';\n]*?\bfrom\s*["']([^"'\n]+)["']/g,
-		// import "spec" (side-effect import) — also statement-anchored.
-		/(?:^|[\n;}])\s*import\s*["']([^"'\n]+)["']/g,
-		// require("spec")
-		/\brequire\s*\(\s*["']([^"'\n]+)["']\s*\)/g,
-		// import("spec") — only matches string literals
-		/\bimport\s*\(\s*["']([^"'\n]+)["']\s*\)/g,
-	];
-
-	for (const re of patterns) {
-		let m: RegExpExecArray | null;
-		while ((m = re.exec(stripped)) !== null) {
-			const spec = m[1];
-			if (isBareSpecifier(spec)) {
-				imports.add(getPackageNameFromSpecifier(spec));
+	for (const input of Object.values(result.metafile.inputs)) {
+		for (const imp of input.imports) {
+			if (isBareSpecifier(imp.path)) {
+				imports.add(getPackageNameFromSpecifier(imp.path));
 			}
 		}
 	}
@@ -441,7 +440,7 @@ export async function scanDistForExternalImports(
 			continue;
 		}
 		const content = readFileSync(file, "utf-8");
-		for (const imp of extractBareImports(content)) {
+		for (const imp of await extractBareImports(content)) {
 			imports.add(imp);
 		}
 	}

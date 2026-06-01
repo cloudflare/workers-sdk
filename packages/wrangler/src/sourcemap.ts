@@ -67,7 +67,6 @@ function getSourceMappingPrepareStackTrace(
 		return sourceMappingPrepareStackTrace;
 	}
 
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof requires a value import, not a type import
 	const support: typeof import("@cspotcode/source-map-support") =
 		getFreshSourceMapSupport();
 	const originalPrepareStackTrace = Error.prepareStackTrace;

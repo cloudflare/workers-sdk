@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports -- Setup file uses dynamic imports where typeof requires value imports */
 import { PassThrough } from "node:stream";
 import chalk from "chalk";
 import { passthrough } from "msw";

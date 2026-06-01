@@ -5,10 +5,21 @@ import type {
 	CfPlacement,
 	Config,
 	EphemeralDirectory,
+	FetchResultFetcher,
+	Logger,
 	Route,
 	Entry,
 } from "@cloudflare/workers-utils";
 import type { NodeJSCompatMode } from "miniflare";
+
+/**
+ * client needs to handle logger and fetch/auth implementation
+ * these are passed into this package to handle any API requests/logs
+ */
+export type DeployHelpersContext = {
+	fetchResult: FetchResultFetcher;
+	logger: Logger;
+};
 
 /**
  * Shared fields produced by merging CLI args with wrangler config.
