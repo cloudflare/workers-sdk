@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.69.0
+
+### Minor Changes
+
+- [#14096](https://github.com/cloudflare/workers-sdk/pull/14096) [`a5b7690`](https://github.com/cloudflare/workers-sdk/commit/a5b76906ec568eb6ad096dc166c5b6228040acb7) Thanks [@MattieTK](https://github.com/MattieTK)! - Migrate TanStack Start scaffolding from `@tanstack/create-start` to `@tanstack/cli`
+
+  TanStack has consolidated their project scaffolding into a unified CLI package (`@tanstack/cli`) with a `create` subcommand, replacing the previous `@tanstack/create-start` package. This updates C3 to use the new CLI while preserving the same Cloudflare deployment target and React framework options.
+
 ## 2.68.4
 
 ### Patch Changes

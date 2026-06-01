@@ -1,5 +1,124 @@
 # miniflare
 
+## 4.20260529.0
+
+### Minor Changes
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Add support for the new `web_search` binding kind.
+
+  Cloudflare Web Search is a managed, zero-setup web discovery primitive for agents and Workers. Declare the binding as a single object in `wrangler.jsonc`:
+
+  ```jsonc
+  {
+    "web_search": { "binding": "WEBSEARCH" }
+  }
+  ```
+
+  There is exactly one shared web corpus, so there is no namespace, instance, or other field to specify -- only the variable name. The binding exposes a single `search()` method that returns URLs and catalog metadata for a query. Web Search is discovery-only -- to read a result's content the caller invokes the global `fetch()` API against the result's `url`.
+
+  The binding is **always remote** in local development: Miniflare proxies to the production Web Search service via the remote-bindings transport. Adds the `websearch.run` OAuth scope to `wrangler login`.
+
+  Also adds a `wrangler websearch search` command for running ad-hoc queries from the CLI:
+
+  ```sh
+  npx wrangler websearch search "cloudflare workers"
+  npx wrangler websearch search "cloudflare workers" --limit 5
+  npx wrangler websearch search "cloudflare workers" --json
+  ```
+
+  `--limit` is optional (defaults to 10, capped at 20). `--json` prints the raw response; without it the results render as a pretty table.
+
+- [#13610](https://github.com/cloudflare/workers-sdk/pull/13610) [`cbb39bd`](https://github.com/cloudflare/workers-sdk/commit/cbb39bdc90d4b93f9a9b4355124570d838eb1a2d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for `agent_memory` bindings
+
+  Agent Memory bindings allow Workers to connect to Cloudflare's Agent Memory service for storing and retrieving agent conversation state. This binding is remote-only, meaning it always connects to the Cloudflare API during `wrangler dev` rather than using a local simulation.
+
+  To configure an `agent_memory` binding, add the following to your `wrangler.json`:
+
+  ```jsonc
+  {
+    "agent_memory": [
+      {
+        "binding": "MY_MEMORY",
+        "namespace": "my-namespace"
+      }
+    ]
+  }
+  ```
+
+  Wrangler will automatically provision the namespace during deployment if it does not already exist. Type generation via `wrangler types` is also supported.
+
+  This change also adds the `agent-memory:write` OAuth scope to Wrangler's default login scopes, so `wrangler login` can request the permissions needed to provision and manage Agent Memory namespaces.
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Rename `pipeline` field to `stream` in pipeline bindings configuration
+
+  The `pipeline` field inside `pipelines` bindings has been renamed to `stream` to align with the updated API wire format. The old `pipeline` field is still accepted but deprecated and will emit a warning.
+
+  Before:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "pipelines": [
+      {
+        "binding": "MY_PIPELINE",
+        "pipeline": "my-stream-name"
+      }
+    ]
+  }
+  ```
+
+  After:
+
+  ```jsonc
+  // wrangler.json
+  {
+    "pipelines": [
+      {
+        "binding": "MY_PIPELINE",
+        "stream": "my-stream-name"
+      }
+    ]
+  }
+  ```
+
+- [#14079](https://github.com/cloudflare/workers-sdk/pull/14079) [`972d13d`](https://github.com/cloudflare/workers-sdk/commit/972d13d7054586bb9e3c11e888179d3df7753338) Thanks [@edmundhung](https://github.com/edmundhung)! - Add JSON output to `/cdn-cgi/handler/scheduled`
+
+  The `/cdn-cgi/handler/scheduled` endpoint now accepts `?format=json` to return the scheduled handler result as JSON, including whether the handler called `controller.noRetry()`. Requests without `format=json` still return the existing text outcome for backward compatibility.
+
+### Patch Changes
+
+- [#14106](https://github.com/cloudflare/workers-sdk/pull/14106) [`7bb5c7a`](https://github.com/cloudflare/workers-sdk/commit/7bb5c7a78a22320283549a86a29a76146f7252a4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add timeout to browser-rendering browser launch to prevent infinite hangs
+
+  The browser-rendering plugin's `launchBrowser()` function now passes a 5-minute timeout to `waitForLineOutput()` when waiting for Chrome to print its DevTools WebSocket URL. Previously, if Chrome failed to start or crashed before printing the URL, the promise would hang forever. This could cause CI pipelines and local dev sessions to get stuck indefinitely.
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260526.1 | 1.20260527.1 |
+
+- [#14076](https://github.com/cloudflare/workers-sdk/pull/14076) [`97d7d81`](https://github.com/cloudflare/workers-sdk/commit/97d7d81e0a757e30e7700b183133249e2136a280) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260527.1 | 1.20260528.1 |
+
+- [#14100](https://github.com/cloudflare/workers-sdk/pull/14100) [`c647ccc`](https://github.com/cloudflare/workers-sdk/commit/c647ccc7873c2cada60ba5f4ce7c8dfeb4801acc) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260528.1 | 1.20260529.1 |
+
+- [#14087](https://github.com/cloudflare/workers-sdk/pull/14087) [`e3c862a`](https://github.com/cloudflare/workers-sdk/commit/e3c862a99f9b633ca288306eae8a8c3a900590ee) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix `wrangler dev` crash under Yarn PnP when the worker emits a structured log or the inspector forwards a stack trace.
+
+  `getFreshSourceMapSupport` was unconditionally indexing `require.cache`, but when `miniflare` is `import`ed from ESM under Yarn PnP, Node's ESM->CJS bridge (`loadCJSModule` in `node:internal/modules/esm/translators`) hands the wrapped CJS module a re-invented `require` that only carries `.resolve` and `.main`, with no `.cache`. Fall back to `createRequire(__filename)` in that case so the fresh-load cache-swap keeps working.
+
 ## 4.20260526.0
 
 ### Patch Changes
