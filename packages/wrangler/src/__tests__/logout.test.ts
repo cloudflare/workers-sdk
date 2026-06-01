@@ -28,6 +28,30 @@ describe("logout", () => {
 		`);
 	});
 
+	it("should clear a cached anonymous preview account when not logged in via OAuth", async ({
+		expect,
+	}) => {
+		const anonymousAccountConfigPath = path.join(
+			getGlobalWranglerConfigPath(),
+			"wrangler-anonymous-account.json"
+		);
+		fs.mkdirSync(path.dirname(anonymousAccountConfigPath), { recursive: true });
+		fs.writeFileSync(
+			anonymousAccountConfigPath,
+			JSON.stringify({ anonymousPreviewAccount: { account: {}, claim: {} } })
+		);
+
+		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Cleared temporary preview account."
+		`);
+		expect(fs.existsSync(anonymousAccountConfigPath)).toBeFalsy();
+	});
+
 	it("should exit with a message stating the user logged in via API token", async ({
 		expect,
 	}) => {

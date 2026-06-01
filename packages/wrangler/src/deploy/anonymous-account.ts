@@ -1,14 +1,33 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import {
+	COMPLIANCE_REGION_CONFIG_PUBLIC,
+	getCloudflareApiBaseUrl,
+	getCloudflareApiEnvironmentFromEnv,
 	getGlobalWranglerConfigPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 
-const ANONYMOUS_ACCOUNT_PREVIEW_URL =
-	"https://api.cloudflare.com/client/v4/provisioning/previews";
-const ANONYMOUS_ACCOUNT_CONFIG_FILE = "wrangler-anonymous-account.json";
+function getAnonymousPreviewUrl(): string {
+	return `${getCloudflareApiBaseUrl(COMPLIANCE_REGION_CONFIG_PUBLIC)}/provisioning/previews`;
+}
+
+// The provisioning service requires this exact terms-of-service value.
+const TERMS_OF_SERVICE_URL = "https://www.cloudflare.com/terms/";
+
+function getAnonymousAccountConfigFile(): string {
+	const environment = getCloudflareApiEnvironmentFromEnv();
+	return environment === "production"
+		? "wrangler-anonymous-account.json"
+		: `wrangler-anonymous-account.${environment}.json`;
+}
 
 type AnonymousAccountPayload = {
 	account?: {
@@ -50,7 +69,7 @@ type CachedAnonymousPreviewAccount = {
 function getAnonymousPreviewAccountConfigPath(): string {
 	return path.join(
 		getGlobalWranglerConfigPath(),
-		ANONYMOUS_ACCOUNT_CONFIG_FILE
+		getAnonymousAccountConfigFile()
 	);
 }
 
@@ -100,13 +119,22 @@ function cacheAnonymousPreviewAccount(
 	);
 }
 
-export function clearCachedAnonymousPreviewAccount(): void {
-	rmSync(getAnonymousPreviewAccountConfigPath(), { force: true });
+/** Returns whether a cached account existed before removal. */
+export function clearCachedAnonymousPreviewAccount(): boolean {
+	const configPath = getAnonymousPreviewAccountConfigPath();
+	const existed = existsSync(configPath);
+	rmSync(configPath, { force: true });
+	return existed;
 }
 
 export async function createAnonymousPreviewAccount(): Promise<AnonymousPreviewAccount> {
-	const response = await fetch(ANONYMOUS_ACCOUNT_PREVIEW_URL, {
+	const response = await fetch(getAnonymousPreviewUrl(), {
 		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			termsOfService: TERMS_OF_SERVICE_URL,
+			acceptTermsOfService: "yes",
+		}),
 	});
 
 	if (!response.ok) {

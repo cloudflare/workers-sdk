@@ -1287,16 +1287,16 @@ export async function login(
 /**
  * Checks to see if we need to refresh the OAuth token.
  *
- * Returns `false` when env-based credentials are present: in that case the
- * env token is what will be used for API calls, and the stored OAuth state
- * is not consulted, so its expiry is irrelevant.
+ * Returns `false` when an auth override or env-based credentials are present:
+ * in those cases that credential is what will be used for API calls, and the
+ * stored OAuth state is not consulted, so its expiry is irrelevant.
  *
  * Without this short-circuit, the presence of a stale OAuth token on disk
  * could spuriously trigger an OAuth refresh that fails and aborts the command,
- * even though a perfectly valid env-based credential is in scope.
+ * even though a perfectly valid credential is in scope.
  */
 function isRefreshNeeded(): boolean {
-	if (getAuthFromEnv()) {
+	if (getAuthOverride() || getAuthFromEnv()) {
 		return false;
 	}
 	const { accessToken } = readStoredAuthState();
@@ -1335,6 +1335,9 @@ async function refreshToken(): Promise<boolean> {
 }
 
 export async function logout(): Promise<void> {
+	// Independent of OAuth state, so clear it on every logout path.
+	const clearedAnonymous = clearCachedAnonymousPreviewAccount();
+
 	const authFromEnv = getAuthFromEnv();
 	if (authFromEnv) {
 		// Auth from env overrides any login details, so we cannot log out.
@@ -1347,7 +1350,11 @@ export async function logout(): Promise<void> {
 
 	const storedRefreshToken = readStoredAuthState().refreshToken;
 	if (!storedRefreshToken) {
-		logger.log("Not logged in, exiting...");
+		logger.log(
+			clearedAnonymous
+				? "Cleared temporary preview account."
+				: "Not logged in, exiting..."
+		);
 		return;
 	}
 
