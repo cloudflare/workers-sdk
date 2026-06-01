@@ -426,7 +426,7 @@ import { tunnelListCommand } from "./tunnel/list";
 import { tunnelQuickStartCommand } from "./tunnel/quick-start";
 import { tunnelRunCommand } from "./tunnel/run";
 import { typesCommand } from "./type-generation";
-import { runWithAuthContext, setAllowAnonymous } from "./user";
+import { runWithAuthContext, setAllowTemporary } from "./user";
 import {
 	authNamespace,
 	authTokenCommand,
@@ -2370,7 +2370,7 @@ export async function main(argv: string[]): Promise<void> {
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
 		}
-		setAllowAnonymous(args.temporary ?? false);
+		setAllowTemporary(args.temporary ?? false);
 		// Also set the CLI package log level to match
 		setLogLevel(logger.loggerLevel);
 

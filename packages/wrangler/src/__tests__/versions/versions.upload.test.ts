@@ -10,7 +10,7 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { assert, beforeEach, describe, expect, it, test, vi } from "vitest";
-import { ANONYMOUS_TERMS_PROMPT } from "../../user/anonymous-terms";
+import { TEMPORARY_TERMS_PROMPT } from "../../user/temporary-terms";
 import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
@@ -36,7 +36,7 @@ describe("versions upload", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 	const assertApiRequest = makeApiRequestAsserter(std);
-	const anonymousPreviewAccountUrl =
+	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
 
 	function mockGetScript(result?: unknown) {
@@ -142,11 +142,11 @@ describe("versions upload", () => {
 		test("should create a temporary account for non-interactive uploads", async ({
 			expect,
 		}) => {
-			mockPrompt({ text: ANONYMOUS_TERMS_PROMPT, result: "yes" });
+			mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 
 			let previewAccountRequests = 0;
 			msw.use(
-				http.post(anonymousPreviewAccountUrl, async () => {
+				http.post(temporaryPreviewAccountUrl, async () => {
 					previewAccountRequests += 1;
 					return HttpResponse.json({
 						account: {

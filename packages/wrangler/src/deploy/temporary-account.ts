@@ -15,21 +15,22 @@ import {
 } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 
-function getAnonymousPreviewUrl(): string {
+function getTemporaryPreviewUrl(): string {
 	return `${getCloudflareApiBaseUrl(COMPLIANCE_REGION_CONFIG_PUBLIC)}/provisioning/previews`;
 }
 
-// The provisioning service requires this exact terms-of-service value.
+// The provisioning service requires these exact policy values.
 const TERMS_OF_SERVICE_URL = "https://www.cloudflare.com/terms/";
+const PRIVACY_POLICY_URL = "https://www.cloudflare.com/privacypolicy/";
 
-function getAnonymousAccountConfigFile(): string {
+function getTemporaryAccountConfigFile(): string {
 	const environment = getCloudflareApiEnvironmentFromEnv();
 	return environment === "production"
-		? "wrangler-anonymous-account.json"
-		: `wrangler-anonymous-account.${environment}.json`;
+		? "wrangler-temporary-account.json"
+		: `wrangler-temporary-account.${environment}.json`;
 }
 
-type AnonymousAccountPayload = {
+type TemporaryAccountPayload = {
 	account?: {
 		id?: string;
 		name?: string;
@@ -45,11 +46,11 @@ type AnonymousAccountPayload = {
 	};
 };
 
-type AnonymousAccountResponse = AnonymousAccountPayload & {
-	result?: AnonymousAccountPayload;
+type TemporaryAccountResponse = TemporaryAccountPayload & {
+	result?: TemporaryAccountPayload;
 };
 
-export type AnonymousPreviewAccount = {
+export type TemporaryPreviewAccount = {
 	account: {
 		id: string;
 		name: string;
@@ -62,22 +63,22 @@ export type AnonymousPreviewAccount = {
 	};
 };
 
-type CachedAnonymousPreviewAccount = {
-	anonymousPreviewAccount: AnonymousPreviewAccount;
+type CachedTemporaryPreviewAccount = {
+	temporaryPreviewAccount: TemporaryPreviewAccount;
 };
 
-function getAnonymousPreviewAccountConfigPath(): string {
+function getTemporaryPreviewAccountConfigPath(): string {
 	return path.join(
 		getGlobalWranglerConfigPath(),
-		getAnonymousAccountConfigFile()
+		getTemporaryAccountConfigFile()
 	);
 }
 
-function readAnonymousPreviewAccountConfig(): Partial<CachedAnonymousPreviewAccount> {
+function readTemporaryPreviewAccountConfig(): Partial<CachedTemporaryPreviewAccount> {
 	try {
 		return JSON.parse(
-			readFileSync(getAnonymousPreviewAccountConfigPath(), "utf-8")
-		) as Partial<CachedAnonymousPreviewAccount>;
+			readFileSync(getTemporaryPreviewAccountConfigPath(), "utf-8")
+		) as Partial<CachedTemporaryPreviewAccount>;
 	} catch {
 		return {};
 	}
@@ -88,71 +89,72 @@ function isFutureTimestamp(timestamp: string): boolean {
 	return !Number.isNaN(parsed) && parsed > Date.now();
 }
 
-export function getCachedAnonymousPreviewAccount():
-	| AnonymousPreviewAccount
+export function getCachedTemporaryPreviewAccount():
+	| TemporaryPreviewAccount
 	| undefined {
-	const anonymousPreviewAccount =
-		readAnonymousPreviewAccountConfig().anonymousPreviewAccount;
+	const temporaryPreviewAccount =
+		readTemporaryPreviewAccountConfig().temporaryPreviewAccount;
 
-	if (!anonymousPreviewAccount) {
+	if (!temporaryPreviewAccount) {
 		return undefined;
 	}
 
 	if (
-		!isFutureTimestamp(anonymousPreviewAccount.account?.expiresAt ?? "") ||
-		!isFutureTimestamp(anonymousPreviewAccount.claim?.expiresAt ?? "")
+		!isFutureTimestamp(temporaryPreviewAccount.account?.expiresAt ?? "") ||
+		!isFutureTimestamp(temporaryPreviewAccount.claim?.expiresAt ?? "")
 	) {
 		return undefined;
 	}
 
-	return anonymousPreviewAccount;
+	return temporaryPreviewAccount;
 }
 
-function cacheAnonymousPreviewAccount(
-	anonymousPreviewAccount: AnonymousPreviewAccount
+function cacheTemporaryPreviewAccount(
+	temporaryPreviewAccount: TemporaryPreviewAccount
 ): void {
-	const configPath = getAnonymousPreviewAccountConfigPath();
+	const configPath = getTemporaryPreviewAccountConfigPath();
 	mkdirSync(path.dirname(configPath), { recursive: true });
 	writeFileSync(
 		configPath,
-		JSON.stringify({ anonymousPreviewAccount }, null, 2)
+		JSON.stringify({ temporaryPreviewAccount }, null, 2)
 	);
 }
 
 /** Returns whether a cached account existed before removal. */
-export function clearCachedAnonymousPreviewAccount(): boolean {
-	const configPath = getAnonymousPreviewAccountConfigPath();
+export function clearCachedTemporaryPreviewAccount(): boolean {
+	const configPath = getTemporaryPreviewAccountConfigPath();
 	const existed = existsSync(configPath);
 	rmSync(configPath, { force: true });
 	return existed;
 }
 
-export async function createAnonymousPreviewAccount(): Promise<AnonymousPreviewAccount> {
-	const response = await fetch(getAnonymousPreviewUrl(), {
+export async function createTemporaryPreviewAccount(): Promise<TemporaryPreviewAccount> {
+	const response = await fetch(getTemporaryPreviewUrl(), {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
 			termsOfService: TERMS_OF_SERVICE_URL,
+			privacyPolicy: PRIVACY_POLICY_URL,
 			acceptTermsOfService: "yes",
 		}),
 	});
 
 	if (!response.ok) {
 		throw new UserError(
-			`Failed to create an anonymous preview account (${response.status} ${response.statusText}).`,
-			{ telemetryMessage: "deploy anonymous account create failed" }
+			`Failed to create a temporary preview account (${response.status} ${response.statusText}).`,
+			{ telemetryMessage: "deploy temporary account create failed" }
 		);
 	}
 
 	const responseText = await response.text();
-	let responseBody: AnonymousAccountResponse;
+	let responseBody: TemporaryAccountResponse;
 
 	try {
-		responseBody = JSON.parse(responseText) as AnonymousAccountResponse;
+		responseBody = JSON.parse(responseText) as TemporaryAccountResponse;
 	} catch {
 		throw new UserError(
-			`Failed to create an anonymous preview account. Received an invalid response (${response.status} ${response.statusText}).`,
-			{ telemetryMessage: "deploy anonymous account invalid response" }
+			`Failed to create a temporary preview account. Received an invalid response (${response.status} ${response.statusText}).`,
+			{ telemetryMessage: "deploy temporary account invalid response" }
 		);
 	}
 
@@ -173,8 +175,8 @@ export async function createAnonymousPreviewAccount(): Promise<AnonymousPreviewA
 		claimExpiresAt === undefined
 	) {
 		throw new UserError(
-			"Failed to create an anonymous preview account because the response was missing required fields.",
-			{ telemetryMessage: "deploy anonymous account response incomplete" }
+			"Failed to create a temporary preview account because the response was missing required fields.",
+			{ telemetryMessage: "deploy temporary account response incomplete" }
 		);
 	}
 
@@ -192,21 +194,21 @@ export async function createAnonymousPreviewAccount(): Promise<AnonymousPreviewA
 	};
 }
 
-export async function getOrCreateAnonymousPreviewAccount(options?: {
+export async function getOrCreateTemporaryPreviewAccount(options?: {
 	beforeCreate?: () => Promise<void>;
 }): Promise<{
-	account: AnonymousPreviewAccount;
+	account: TemporaryPreviewAccount;
 	cached: boolean;
 }> {
-	const cachedPreviewAccount = getCachedAnonymousPreviewAccount();
+	const cachedPreviewAccount = getCachedTemporaryPreviewAccount();
 	if (cachedPreviewAccount) {
 		return { account: cachedPreviewAccount, cached: true };
 	}
 
 	await options?.beforeCreate?.();
 
-	const anonymousPreviewAccount = await createAnonymousPreviewAccount();
-	cacheAnonymousPreviewAccount(anonymousPreviewAccount);
+	const temporaryPreviewAccount = await createTemporaryPreviewAccount();
+	cacheTemporaryPreviewAccount(temporaryPreviewAccount);
 
-	return { account: anonymousPreviewAccount, cached: false };
+	return { account: temporaryPreviewAccount, cached: false };
 }

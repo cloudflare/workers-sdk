@@ -110,7 +110,7 @@ describe("wrangler", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not require anonymous terms acceptance before root help", async ({
+		it("should not require temporary terms acceptance before root help", async ({
 			expect,
 		}) => {
 			await runWrangler("--help --temporary");
