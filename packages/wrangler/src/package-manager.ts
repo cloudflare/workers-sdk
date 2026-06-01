@@ -110,6 +110,8 @@ async function supports(name: string): Promise<boolean> {
 		await x(name, ["--version"], {
 			nodeOptions: { stdio: "ignore" },
 			throwOnError: true,
+			// Disable tinyexec's default PATH (includes node_modules/.bin)
+			nodePath: false,
 		});
 		return true;
 	} catch {
