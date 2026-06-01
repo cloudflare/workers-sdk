@@ -149,6 +149,7 @@ export const init = createCommand({
 						}),
 					},
 					throwOnError: true,
+					nodePath: false,
 				});
 				childProcess.process?.stdout?.on("data", (chunk: Buffer) => {
 					stdout += chunk.toString();
