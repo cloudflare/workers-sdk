@@ -8,9 +8,10 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { maybeInstallCloudflareSkillsGlobally } from "../agents-skills-install";
-import { fetchResult } from "../cfetch";
+import { fetchResult, fetchListResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
+import { confirm, prompt } from "../dialogs";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
@@ -265,6 +266,9 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						errors: { UserError, FatalError },
 						logger,
 						fetchResult,
+						fetchListResult,
+						prompt,
+						confirm,
 					});
 
 					const durationMs = Date.now() - startTime;

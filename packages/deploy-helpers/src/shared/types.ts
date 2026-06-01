@@ -6,6 +6,7 @@ import type {
 	Config,
 	EphemeralDirectory,
 	FetchResultFetcher,
+	FetchListResultFetcher,
 	Logger,
 	Route,
 	Entry,
@@ -18,7 +19,16 @@ import type { NodeJSCompatMode } from "miniflare";
  */
 export type DeployHelpersContext = {
 	fetchResult: FetchResultFetcher;
+	fetchListResult: FetchListResultFetcher;
 	logger: Logger;
+	confirm: (
+		text: string,
+		options?: { defaultValue?: boolean; fallbackValue?: boolean }
+	) => Promise<boolean>;
+	prompt: (
+		text: string,
+		options?: { defaultValue?: string }
+	) => Promise<string>;
 };
 
 /**
