@@ -43,6 +43,10 @@ minimumReleaseAgeExclude:
   # Platform-specific workerd binaries published in lock-step with workerd.
   - "@cloudflare/workerd-*"
   - "@cloudflare/workers-types"
+  # The below is to install the rosie-skills package and remove the problematic
+  # wasm module it brings as soon as possible
+  # TODO(dario): remove in a few days
+  - "rosie-skills"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Build scripts
@@ -95,35 +99,35 @@ patchedDependencies:
 # ──────────────────────────────────────────────────────────────────────────────
 
 catalog:
-  "@hey-api/openapi-ts": "^0.94.0"
-  "@types/node": "^22.10.1"
+  "@hey-api/openapi-ts": "0.94.0"
+  "@types/node": "22.15.17"
 
   "@vitest/runner": 4.1.0
   "@vitest/snapshot": 4.1.0
   "@vitest/ui": 4.1.0
-  typescript: "~5.8.3"
+  typescript: "5.8.3"
   undici: "7.24.8"
   # Override undici-types from @types/node so that the Cloudflare SDK typings match our installed
   # version of Undici
   undici-types: "7.24.8"
   vitest: "4.1.0"
-  vite: "^8.0.12"
+  vite: "8.0.13"
   "ws": "8.20.1"
   esbuild: "0.27.3"
-  playwright-chromium: "^1.60.0"
+  playwright-chromium: "1.60.0"
   "@cloudflare/workers-types": "^4.20260529.1"
   workerd: "1.20260529.1"
-  jsonc-parser: "^3.2.0"
-  smol-toml: "^1.5.2"
+  jsonc-parser: "3.2.0"
+  smol-toml: "1.5.2"
   msw: 2.12.4
-  tinyglobby: "^0.2.12"
-  "tree-kill": "^1.2.2"
-  "capnp-es": "^0.0.14"
-  "capnweb": "^0.5.0"
-  "ci-info": "^4.4.0"
-  "open": "^11.0.0"
-  "signal-exit": "^3.0.7"
+  tinyglobby: "0.2.16"
+  "tree-kill": "1.2.2"
+  "capnp-es": "0.0.14"
+  "capnweb": "0.5.0"
+  "ci-info": "4.4.0"
+  "open": "11.0.0"
+  "signal-exit": "3.0.7"
   # CAUTION: Most usage of @cloudflare/vitest-pool-workers in this monorepo should use workspace:* instead of this catalog version
   # However, some packages (pages-shared, workers-shared, etc...) need to be tested using vitest-pool-workers but are themselves
   # ultimately included in vitest-pool-workers (through Wrangler), causing a circular dependency.
-  "@cloudflare/vitest-pool-workers": "^0.13.0"
+  "@cloudflare/vitest-pool-workers": "0.13.3"

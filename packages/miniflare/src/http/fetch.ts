@@ -27,7 +27,7 @@ export async function fetch(
 		const url = new URL(request.url);
 		if (url.protocol !== "http:" && url.protocol !== "https:") {
 			throw new TypeError(
-				`Fetch API cannot load: ${url.toString()}.\nMake sure you're using http(s):// URLs for WebSocket requests via fetch.`
+				`Fetch API cannot load: ${url.toString()}\nMake sure you're using http(s):// URLs for WebSocket requests via fetch.`
 			);
 		}
 		url.protocol = url.protocol.replace("http", "ws");

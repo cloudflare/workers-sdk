@@ -2388,7 +2388,7 @@ function collectCoreBindings(
 					fieldName: "binding",
 				});
 			} else {
-				addBinding(env.browser.binding, "Fetcher", "browser", envName);
+				addBinding(env.browser.binding, "BrowserRun", "browser", envName);
 			}
 		}
 
@@ -3373,7 +3373,7 @@ function collectCoreBindingsPerEnvironment(
 				bindings.push({
 					bindingCategory: "browser",
 					name: env.browser.binding,
-					type: "Fetcher",
+					type: "BrowserRun",
 				});
 			}
 		}

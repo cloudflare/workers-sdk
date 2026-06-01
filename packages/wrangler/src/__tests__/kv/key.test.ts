@@ -1258,7 +1258,7 @@ describe("kv", () => {
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: Failed to automatically retrieve account IDs for the logged in user.
 						You may have incorrect permissions on your API token, or an environment variable such as CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_KEY, or CLOUDFLARE_EMAIL may be set to an invalid value.
-						Check your environment and unset or correct any Cloudflare credential variables, or run \`wrangler logout\` followed by \`wrangler login\` to re-authenticate.
+						Check your environment and unset or correct any Cloudflare credential variables, or run \`wrangler login\` to re-authenticate.
 						You can also skip this account check by adding an \`account_id\` in your Wrangler configuration file, or by setting the value of CLOUDFLARE_ACCOUNT_ID]
 					`);
 				});

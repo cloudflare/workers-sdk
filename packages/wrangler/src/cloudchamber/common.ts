@@ -10,11 +10,12 @@ import {
 	OpenAPI,
 } from "@cloudflare/containers-shared";
 import {
+	addAuthorizationHeader,
 	getCloudflareApiBaseUrl,
 	parseByteSize,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { addAuthorizationHeader, addUserAgent } from "../cfetch/internal";
+import { addUserAgent } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { constructStatusMessage } from "../core/CommandRegistry";
 import { isNonInteractiveOrCI } from "../is-interactive";
