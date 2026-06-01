@@ -2432,7 +2432,7 @@ export async function main(argv: string[]): Promise<void> {
 			// needed, so we can cleanly exit. Note, we don't want to disconnect if
 			// this file was imported in Vitest, as that would stop communication with
 			// the test runner.
-			if (typeof vitest === "undefined") {
+			if (typeof vitest === "undefined" && process.connected) {
 				process.disconnect?.();
 			}
 

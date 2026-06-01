@@ -16,6 +16,7 @@ import type { HandlerArgs, NamedArgDefinitions } from "../core/types";
 import type { WranglerSSHResponse } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 import type { Server } from "node:net";
+import type { RawData } from "ws";
 
 // Deprecated SSH flags are hidden because a future SSH implementation
 // will not use OpenSSH, at which point these options will not work.
@@ -91,6 +92,10 @@ const sshArgDefs = {
 		hidden: true,
 		deprecated: true,
 	},
+	stdio: {
+		describe: "Proxy SSH traffic over stdin/stdout",
+		type: "boolean",
+	},
 } as const satisfies NamedArgDefinitions;
 
 type SshArgs = HandlerArgs<typeof sshArgDefs>;
@@ -102,13 +107,19 @@ async function sshCommand(sshArgs: SshArgs, _config: Config) {
 		});
 	}
 
+	// Get arguments passed to the SSH command itself. yargs includes
+	// "containers" and "ssh" as the first two elements of the array, which
+	// we don't want, so we don't include those.
+	const [, , ...rest] = sshArgs._;
+	const useStdio = shouldUseStdio(sshArgs);
+
 	// Check that ssh is enabled
 	let sshResponse: WranglerSSHResponse;
 	try {
-		sshResponse = await promiseSpinner(
-			DeploymentsService.containerWranglerSsh(sshArgs.ID),
-			{ message: "Authenticating" }
-		);
+		const sshPromise = DeploymentsService.containerWranglerSsh(sshArgs.ID);
+		sshResponse = useStdio
+			? await sshPromise
+			: await promiseSpinner(sshPromise, { message: "Authenticating" });
 	} catch (e) {
 		if (e instanceof ApiError) {
 			if (e.status === 404) {
@@ -126,7 +137,21 @@ async function sshCommand(sshArgs: SshArgs, _config: Config) {
 		throw e;
 	}
 
-	const proxy = createSshTcpProxy(sshResponse);
+	const ws = new WebSocket(sshResponse.url, {
+		headers: {
+			authorization: `Bearer ${sshResponse.token}`,
+			"user-agent": "wrangler",
+		},
+	});
+
+	ws.binaryType = "arraybuffer";
+
+	if (useStdio) {
+		await stdioProxy(ws);
+		return;
+	}
+
+	const proxy = tcpProxy(ws);
 	const proxyController = new AbortController();
 	proxy.listen({ port: 0, signal: proxyController.signal });
 
@@ -136,11 +161,6 @@ async function sshCommand(sshArgs: SshArgs, _config: Config) {
 	}
 
 	await verifySshInstalled("ssh");
-
-	// Get arguments passed to the SSH command itself. yargs includes
-	// "containers" and "ssh" as the first two elements of the array, which
-	// we don't want, so we don't include those.
-	const [, , ...rest] = sshArgs._;
 
 	const child = spawn(
 		"ssh",
@@ -221,7 +241,7 @@ export function verifySshInstalled(sshPath: string): Promise<undefined> {
  * Creates a local TCP proxy that wraps data sent in a websocket binary
  * websocket message
  */
-export function createSshTcpProxy(sshResponse: WranglerSSHResponse): Server {
+function tcpProxy(ws: WebSocket): Server {
 	let hasConnection = false;
 	const proxy = createServer((inbound) => {
 		if (hasConnection) {
@@ -235,15 +255,6 @@ export function createSshTcpProxy(sshResponse: WranglerSSHResponse): Server {
 			logger.error("Proxy error: ", err);
 		});
 
-		const ws = new WebSocket(sshResponse.url, {
-			headers: {
-				authorization: `Bearer ${sshResponse.token}`,
-				"user-agent": "wrangler",
-			},
-		});
-
-		ws.binaryType = "arraybuffer";
-
 		ws.addEventListener("error", (err) => {
 			logger.error("Web socket error:", err.message);
 			inbound.end();
@@ -251,9 +262,7 @@ export function createSshTcpProxy(sshResponse: WranglerSSHResponse): Server {
 		});
 
 		ws.addEventListener("open", () => {
-			inbound.on("data", (data) => {
-				ws.send(data);
-			});
+			inbound.on("data", (data) => ws.send(data));
 
 			inbound.on("close", () => {
 				ws.close();
@@ -273,6 +282,57 @@ export function createSshTcpProxy(sshResponse: WranglerSSHResponse): Server {
 	});
 
 	return proxy;
+}
+
+function stdioProxy(ws: WebSocket): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		const onData = (data: Buffer | string) => ws.send(data);
+		const onEnd = () => ws.close();
+		const onError = (err: Error) => {
+			ws.close();
+			reject(err);
+		};
+		const cleanup = () => {
+			process.stdin.off("data", onData);
+			process.stdin.off("end", onEnd);
+			process.stdin.off("error", onError);
+		};
+
+		ws.addEventListener("error", (err) => {
+			cleanup();
+			reject(new Error(`Web socket error: ${err.message}`));
+		});
+
+		ws.addEventListener("open", () => {
+			process.stdin.on("data", onData);
+			process.stdin.on("end", onEnd);
+			process.stdin.on("error", onError);
+			process.stdin.resume();
+		});
+
+		ws.on("message", (data: RawData) => {
+			process.stdout.write(formatWebSocketData(data));
+		});
+
+		ws.addEventListener("close", () => {
+			cleanup();
+			resolve(undefined);
+		});
+	});
+}
+
+function formatWebSocketData(data: RawData) {
+	if (Array.isArray(data)) {
+		return Buffer.concat(data);
+	}
+	return data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+}
+
+function shouldUseStdio(sshArgs: SshArgs) {
+	return (
+		sshArgs.stdio === true ||
+		(process.stdin.isTTY !== true && process.stdout.isTTY !== true)
+	);
 }
 
 function buildSshArgs(sshArgs: SshArgs): string[] {
@@ -344,6 +404,9 @@ export const containersSshCommand = createCommand({
 		description: "SSH into a container",
 		status: "stable",
 		owner: "Product: Cloudchamber",
+	},
+	behaviour: {
+		printBanner: (args) => !shouldUseStdio(args),
 	},
 	args: sshArgDefs,
 	positionalArgs: ["ID"],
