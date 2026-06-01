@@ -71,7 +71,6 @@
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
-		"rosie-skills": "^0.7.6",
 		"unenv": "2.0.0-rc.24",
 		"workerd": "1.20260529.1"
 	},
@@ -150,6 +149,7 @@
 		"qr": "^0.6.0",
 		"recast": "0.23.11",
 		"resolve": "^1.22.8",
+		"rosie-skills": "^0.8.1",
 		"semiver": "^1.1.0",
 		"shell-quote": "^1.8.1",
 		"signal-exit": "catalog:default",
