@@ -1497,11 +1497,12 @@ export async function requireAuth(
 		account_id?: string;
 	}
 ): Promise<string> {
+	const allowAnonymous = shouldAllowAnonymous() && isNonInteractiveOrCI();
 	const loggedIn = await loginOrRefreshIfRequired(config, undefined, {
-		allowLogin: !shouldAllowAnonymous(),
+		allowLogin: !allowAnonymous,
 	});
 	if (!loggedIn) {
-		if (shouldAllowAnonymous()) {
+		if (allowAnonymous) {
 			const { account: anonymousPreviewAccount, cached } =
 				await getOrCreateAnonymousPreviewAccount({
 					beforeCreate: ensureAnonymousTermsAccepted,
