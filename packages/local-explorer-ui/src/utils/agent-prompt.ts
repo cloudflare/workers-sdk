@@ -1,5 +1,5 @@
 const AGENT_PROMPT_TEMPLATE = `You have access to local Cloudflare services (KV, R2, D1, Durable Objects, and Workflows) for this app via the Explorer API.
-API endpoint: {{apiEndpoint}}.
+API endpoint: {{apiEndpoint}}
 Fetch the OpenAPI schema from {{apiEndpoint}} to discover available operations. Use these endpoints to list, query, and manage local resources during development.`;
 
 /**

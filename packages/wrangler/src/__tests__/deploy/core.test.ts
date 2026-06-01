@@ -529,7 +529,7 @@ describe("deploy", () => {
 			├─┼─┤
 			│ Account Three │ account-3 │
 			└─┴─┘
-			🔓 To see token permissions, visit https://dash.cloudflare.com/profile/api-tokens",
+			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens",
 			  "warn": "",
 			}
 		`);

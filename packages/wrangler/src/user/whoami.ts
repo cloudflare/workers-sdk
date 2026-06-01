@@ -173,7 +173,7 @@ function printTokenPermissions(user: UserInfo) {
 		user.tokenPermissions?.map((scope) => scope.split(":")) ?? [];
 	if (user.authType !== "OAuth Token") {
 		return void logger.log(
-			`🔓 To see token permissions, visit https://dash.cloudflare.com/${user.authType === "User API Token" ? "profile" : user.accounts[0].id}/api-tokens`
+			`🔓 To see token permissions visit https://dash.cloudflare.com/${user.authType === "User API Token" ? "profile" : user.accounts[0].id}/api-tokens`
 		);
 	}
 	logger.log(`🔓 Token Permissions:`);
