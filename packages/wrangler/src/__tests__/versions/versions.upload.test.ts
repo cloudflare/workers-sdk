@@ -10,14 +10,14 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { assert, beforeEach, describe, expect, it, test, vi } from "vitest";
-import { TEMPORARY_TERMS_ACCEPTANCE_ENV } from "../../user/temporary-terms";
+import { TEMPORARY_TERMS_PROMPT } from "../../user/temporary-terms";
 import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { mockConfirm } from "../helpers/mock-dialogs";
+import { mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import {
 	mockGetWorkerSubdomain,
@@ -139,10 +139,10 @@ describe("versions upload", () => {
 		mockAccountId({ accountId: null });
 		mockApiToken({ apiToken: null });
 
-		test("should create a temporary account for non-interactive uploads", async ({
+		test("should create a temporary account after interactive terms acceptance", async ({
 			expect,
 		}) => {
-			vi.stubEnv(TEMPORARY_TERMS_ACCEPTANCE_ENV, "yes");
+			mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 
 			let previewAccountRequests = 0;
 			msw.use(
@@ -173,7 +173,7 @@ describe("versions upload", () => {
 				main: "./index.js",
 			});
 			writeWorkerSource();
-			setIsTTY(false);
+			setIsTTY(true);
 
 			await expect(
 				runWrangler("versions upload --temporary")

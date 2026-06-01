@@ -96,6 +96,10 @@ export async function prompt(
 }
 
 export async function promptForExplicitYes(text: string): Promise<boolean> {
+	if (isNonInteractiveOrCI()) {
+		return false;
+	}
+
 	let cleanupStdinListeners = () => {};
 	const stdinClosed = new Promise<{ value: undefined }>((resolve) => {
 		const onClosed = () => resolve({ value: undefined });

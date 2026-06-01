@@ -17,10 +17,7 @@ import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
 import { writeAuthConfigFile } from "../../user";
-import {
-	TEMPORARY_TERMS_ACCEPTANCE_ENV,
-	TEMPORARY_TERMS_PROMPT,
-} from "../../user/temporary-terms";
+import { TEMPORARY_TERMS_PROMPT } from "../../user/temporary-terms";
 import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
@@ -99,9 +96,6 @@ describe("deploy", () => {
 	} = mockOAuthFlow();
 	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
-	const setTemporaryTermsAcceptance = (result = "yes") => {
-		vi.stubEnv(TEMPORARY_TERMS_ACCEPTANCE_ENV, result);
-	};
 
 	beforeEach(() => {
 		vi.stubGlobal("setTimeout", (fn: () => void) => {
@@ -957,12 +951,12 @@ describe("deploy", () => {
 			expect(std.out).not.toContain("Temporary account ready:");
 		});
 
-		describe("non-TTY", () => {
-			it("creates a temporary preview account in non-TTY when --temporary is passed", async ({
+		describe("with temporary preview accounts", () => {
+			it("creates a temporary preview account after interactive terms acceptance", async ({
 				expect,
 			}) => {
-				setIsTTY(false);
-				setTemporaryTermsAcceptance();
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1057,8 +1051,8 @@ describe("deploy", () => {
 			it("deploys temporarily even when an expired OAuth token that cannot refresh is on disk", async ({
 				expect,
 			}) => {
-				setIsTTY(false);
-				setTemporaryTermsAcceptance();
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 				// A stale stored OAuth token whose refresh fails must not hijack the
 				// temporary override and abort the deploy with "Not logged in".
 				writeAuthConfigFile({
@@ -1137,7 +1131,7 @@ describe("deploy", () => {
 				await expect(
 					runWrangler("deploy index.js --temporary")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: You must accept Cloudflare's Terms of Service and Privacy Policy to use --temporary. To accept non-interactively, set WRANGLER_TEMPORARY_ACCEPT_TERMS=yes.]`
+					`[Error: You must accept Cloudflare's Terms of Service (https://www.cloudflare.com/website-terms/) and Privacy Policy (https://www.cloudflare.com/privacypolicy/) to use --temporary. Rerun this command in an interactive terminal and type "yes" when prompted.]`
 				);
 
 				expect(previewAccountRequests).toBe(0);
@@ -1147,8 +1141,8 @@ describe("deploy", () => {
 				expect,
 			}) => {
 				vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
-				setIsTTY(false);
-				setTemporaryTermsAcceptance();
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1223,8 +1217,8 @@ describe("deploy", () => {
 			it("reuses a cached temporary preview account for later temporary deploys", async ({
 				expect,
 			}) => {
-				setIsTTY(false);
-				setTemporaryTermsAcceptance();
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1303,8 +1297,8 @@ describe("deploy", () => {
 			it("treats a malformed temporary preview account cache as a miss and refetches", async ({
 				expect,
 			}) => {
-				setIsTTY(false);
-				setTemporaryTermsAcceptance();
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1529,8 +1523,8 @@ describe("deploy", () => {
 			it("should fail clearly if the temporary preview account request fails", async ({
 				expect,
 			}) => {
-				setIsTTY(false);
-				setTemporaryTermsAcceptance();
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 				writeWranglerConfig();
 				writeWorkerSource();
 
