@@ -207,6 +207,71 @@ describe("handleWebSocket", () => {
 	});
 
 	// https://github.com/cloudflare/workers-sdk/issues/10390
+	test("does not forward framing headers from the Worker response", async ({
+		expect,
+	}) => {
+		// Defense in depth: even if a Worker returns framing headers, they
+		// must not leak onto the 101 response (no body, so they're nonsensical).
+		// Handshake headers (`Sec-WebSocket-*`, `Connection`, `Upgrade`) are
+		// rejected upstream by miniflare's own validation before reaching the
+		// forwarding code, so they're not exercised here.
+		await miniflare.dispose();
+		miniflare = new Miniflare({
+			modules: true,
+			script: `export default {
+				fetch() {
+					const [client, server] = Object.values(new WebSocketPair());
+					server.accept();
+					const headers = new Headers({
+						"X-Hello": "testing",
+						"Transfer-Encoding": "chunked",
+						"Content-Length": "42",
+					});
+					return new Response(null, {
+						status: 101,
+						webSocket: client,
+						headers,
+					});
+				}
+			}`,
+		});
+		await listen();
+
+		const socket = net.connect(port, "127.0.0.1");
+		await new Promise<void>((r) => socket.on("connect", r));
+
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await vi.waitFor(() => {
+			const raw = Buffer.concat(chunks).toString("utf8");
+			expect(raw).toContain("HTTP/1.1 101");
+			expect(raw).toContain("\r\n\r\n");
+		});
+
+		const raw = Buffer.concat(chunks).toString("utf8");
+		const headerBlock = raw.slice(0, raw.indexOf("\r\n\r\n"));
+
+		// Non-excluded header still forwarded.
+		expect(headerBlock).toContain("x-hello: testing");
+
+		// Excluded framing headers must NOT appear on the 101 response.
+		expect(headerBlock).not.toMatch(/Transfer-Encoding: chunked/i);
+		expect(headerBlock).not.toMatch(/Content-Length: 42/i);
+
+		socket.destroy();
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/10390
 	test("forwards response headers from the Worker on the 101 upgrade response", async ({
 		expect,
 	}) => {

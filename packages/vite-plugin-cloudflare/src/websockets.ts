@@ -18,6 +18,27 @@ export function handleWebSocket(
 ) {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
+	// Stash Worker 101-response headers keyed by the upgrade request so a single
+	// persistent `headers` listener can apply them when `ws` emits the upgrade
+	// response. Matches the pattern in `packages/miniflare/src/index.ts`.
+	//
+	// Using `once()` per upgrade is unsafe: if `ws.handleUpgrade` aborts before
+	// emitting `headers` (e.g. malformed `Sec-WebSocket-Key`/`Sec-WebSocket-
+	// Version`), the listener stays attached and fires on the next successful
+	// upgrade with stale headers leaked from the previous Worker response. The
+	// WeakMap entry is GC'd if the request never completes.
+	const workerResponseHeaders = new WeakMap<IncomingMessage, Headers>();
+	nodeWebSocket.on(
+		"headers",
+		(responseHeaders: string[], request: IncomingMessage) => {
+			const extra = workerResponseHeaders.get(request);
+			workerResponseHeaders.delete(request);
+			if (extra) {
+				appendWorkerResponseHeaders(responseHeaders, extra);
+			}
+		}
+	);
+
 	httpServer.on(
 		"upgrade",
 		async (request: IncomingMessage, socket: Duplex, head: Buffer) => {
@@ -66,10 +87,7 @@ export function handleWebSocket(
 			// 101, webSocket, headers })` are silently dropped during `vite dev`,
 			// even though they are delivered correctly by `wrangler dev`.
 			// See cloudflare/workers-sdk#10390.
-			const onHeaders = (responseHeaders: string[]) => {
-				appendWorkerResponseHeaders(responseHeaders, response.headers);
-			};
-			nodeWebSocket.once("headers", onHeaders);
+			workerResponseHeaders.set(request, response.headers);
 
 			nodeWebSocket.handleUpgrade(
 				request,
