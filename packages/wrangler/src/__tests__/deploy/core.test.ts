@@ -1033,6 +1033,7 @@ describe("deploy", () => {
 
 					  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning
 					  its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your Wrangler configuration file.
+					  Alternatively, try running \`wrangler login\` to re-authenticate.
 
 					"
 				`);
