@@ -9,7 +9,10 @@ import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import TOML from "smol-toml";
 import dedent from "ts-dedent";
-// eslint-disable-next-line no-restricted-imports
+/* eslint-disable-next-line no-restricted-imports --
+ * Uses expect in MSW handlers outside test callbacks
+ * TODO: remove this `expect` import
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { version } from "../../../package.json";
 import { saveToConfigCache } from "../../config-cache";
@@ -115,7 +118,7 @@ describe("pages deploy", () => {
 		await expect(
 			runWrangler("pages deploy public")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must specify a project name.]`
+			`[Error: Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.]`
 		);
 	});
 

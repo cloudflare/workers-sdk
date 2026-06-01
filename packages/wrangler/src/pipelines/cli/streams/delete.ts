@@ -2,7 +2,8 @@ import { createCommand } from "../../../core/create-command";
 import { confirm } from "../../../dialogs";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
-import { deleteStream, getStream } from "../../client";
+import { deleteStream } from "../../client";
+import { resolveStream } from "../resolve";
 
 export const pipelinesStreamsDeleteCommand = createCommand({
 	metadata: {
@@ -13,7 +14,7 @@ export const pipelinesStreamsDeleteCommand = createCommand({
 	positionalArgs: ["stream"],
 	args: {
 		stream: {
-			describe: "The ID of the stream to delete",
+			describe: "The ID or name of the stream to delete",
 			type: "string",
 			demandOption: true,
 		},
@@ -27,11 +28,11 @@ export const pipelinesStreamsDeleteCommand = createCommand({
 	async handler(args, { config }) {
 		await requireAuth(config);
 
-		const stream = await getStream(config, args.stream);
+		const stream = await resolveStream(config, args.stream);
 
 		if (!args.force) {
 			const confirmedDelete = await confirm(
-				`Are you sure you want to delete the stream '${stream.name}' (${args.stream})?`,
+				`Are you sure you want to delete the stream '${stream.name}' (${stream.id})?`,
 				{ fallbackValue: false }
 			);
 			if (!confirmedDelete) {
@@ -40,7 +41,7 @@ export const pipelinesStreamsDeleteCommand = createCommand({
 			}
 		}
 
-		await deleteStream(config, args.stream);
+		await deleteStream(config, stream.id);
 
 		logger.log(
 			`✨ Successfully deleted stream '${stream.name}' with id '${stream.id}'.`

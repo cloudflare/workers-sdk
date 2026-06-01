@@ -1712,8 +1712,9 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 				fetch() {
 					return new Response(scheduledRun);
 				},
-				scheduled() {
+				scheduled(controller) {
 					scheduledRun = true;
+					controller.noRetry();
 				}
 			}`,
 		unsafeTriggerHandlers: true,
@@ -1725,6 +1726,11 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 
 	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/scheduled");
 	expect(await res.text()).toBe("ok");
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/scheduled?format=json"
+	);
+	expect(await res.json()).toEqual({ outcome: "ok", noRetry: true });
 
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("true");

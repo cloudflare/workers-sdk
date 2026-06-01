@@ -42,7 +42,7 @@ export async function runWorkflow(
 			{} as DatabaseWorkflow,
 			{} as DatabaseVersion,
 			{ id: instanceId } as DatabaseInstance,
-			{ payload: {}, timestamp: new Date(), instanceId }
+			{ payload: {}, timestamp: new Date(), instanceId, workflowName: "" }
 		)
 		.catch(() => {});
 
@@ -66,7 +66,7 @@ export async function runWorkflowAndAwait(
 			{} as DatabaseWorkflow,
 			{} as DatabaseVersion,
 			{ id: instanceId } as DatabaseInstance,
-			{ payload: {}, timestamp: new Date(), instanceId }
+			{ payload: {}, timestamp: new Date(), instanceId, workflowName: "" }
 		)
 		.catch(() => {});
 

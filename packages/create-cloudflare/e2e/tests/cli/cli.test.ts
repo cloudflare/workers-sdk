@@ -740,7 +740,7 @@ describe("Create Cloudflare CLI", () => {
 	});
 
 	describe("frameworks related", () => {
-		["solid", "next"].forEach((framework) =>
+		["solid", "next", "react-router", "analog"].forEach((framework) =>
 			test(`error when trying to create a ${framework} app on Pages`, async ({
 				expect,
 				logStream,
@@ -838,6 +838,99 @@ describe("Create Cloudflare CLI", () => {
 			expect(output).toContain("--template react-ts");
 			expect(output).not.toContain("Select a variant");
 		});
+	});
+
+	describe.skipIf(isExperimental)("platform filtering", () => {
+		test.skipIf(isWindows)(
+			"--platform=pages hides non-framework categories",
+			async ({ expect, logStream, project }) => {
+				const { output } = await runC3(
+					[project.path, "--platform=pages"],
+					[
+						{
+							matcher: /What would you like to start with\?/,
+							input: {
+								type: "select",
+								target: "Framework Starter",
+								// "Framework Starter" should be the default (first visible)
+								// option since "Hello World example" is hidden
+								assertDefaultSelection: "Framework Starter",
+							},
+						},
+						{
+							matcher: /Which development framework do you want to use\?/,
+							input: {
+								type: "select",
+								target: "Angular",
+							},
+						},
+						{
+							matcher: /Do you want to use git for version control/,
+							input: ["n"],
+						},
+						{
+							matcher: /Do you want to deploy your application/,
+							input: ["n"],
+						},
+					],
+					logStream
+				);
+
+				expect(output).toContain("category Framework Starter");
+				expect(output).not.toContain("Hello World");
+				expect(output).not.toContain("Application Starter");
+			}
+		);
+
+		test.skipIf(isWindows)(
+			"--platform=pages filters out workers-only frameworks",
+			async ({ expect, logStream, project }) => {
+				const { output } = await runC3(
+					[project.path, "--platform=pages", "--category=web-framework"],
+					[
+						{
+							matcher: /Which development framework do you want to use\?/,
+							input: {
+								type: "select",
+								target: "Angular",
+							},
+						},
+						{
+							matcher: /Do you want to use git for version control/,
+							input: ["n"],
+						},
+						{
+							matcher: /Do you want to deploy your application/,
+							input: ["n"],
+						},
+					],
+					logStream
+				);
+
+				// Workers-only frameworks should not appear in the output
+				expect(output).not.toContain("Next");
+				expect(output).not.toContain("SolidStart");
+				expect(output).not.toContain("React Router");
+				expect(output).not.toContain("Analog");
+			}
+		);
+
+		["hello-world", "demo"].forEach((category) =>
+			test(`--platform=pages --category=${category} errors for workers-only category`, async ({
+				expect,
+				logStream,
+				project,
+			}) => {
+				const { errors } = await runC3(
+					[project.path, "--platform=pages", `--category=${category}`],
+					[],
+					logStream
+				);
+				expect(errors).toContain(
+					`The "${category}" category is not available for the "pages" platform`
+				);
+			})
+		);
 	});
 });
 

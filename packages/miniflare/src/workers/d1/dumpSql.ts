@@ -40,7 +40,7 @@ export function* dumpSql(
 	const { noData, noSchema } = options || {};
 
 	// Taken from SQLite shell.c.in https://github.com/sqlite/sqlite/blob/105c20648e1b05839fd0638686b95f2e3998abcb/src/shell.c.in#L8463-L8469
-	// @ts-ignore (SqlStorageStatement needs to be callable)
+	// @ts-expect-error -- SqlStorageStatement needs to be callable
 	const tables_cursor = db.prepare(`
     SELECT name, type, sql
       FROM sqlite_schema AS o

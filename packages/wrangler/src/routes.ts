@@ -7,8 +7,10 @@ import chalk from "chalk";
 import { fetchResult } from "./cfetch";
 import { confirm, prompt } from "./dialogs";
 import { logger } from "./logger";
-import type { ApiCredentials } from "./user/user";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type {
+	ComplianceConfig,
+	ApiCredentials,
+} from "@cloudflare/workers-utils";
 
 type WorkersDevSubdomainRegistrationContext = "workers_dev" | "workflows";
 

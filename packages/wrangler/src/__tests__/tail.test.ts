@@ -32,7 +32,7 @@ import type { ExpectStatic } from "vitest";
 import type WebSocket from "ws";
 
 vi.mock("ws", async (importOriginal) => {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof requires a value import in vi.mock importOriginal callback
 	const realModule = await importOriginal<typeof import("ws")>();
 	const module = {
 		__esModule: true,
@@ -1211,7 +1211,7 @@ function mockWebsocketAPIs(
 			deletion: { count: 0 },
 			creation: [],
 		},
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Initialized in beforeEach()
 		ws: null!, // will be set in the `beforeEach()` below.
 
 		/**

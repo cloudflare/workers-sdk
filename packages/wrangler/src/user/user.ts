@@ -241,6 +241,7 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { domainUsesAccess } from "./access";
+import { ensureAnonymousTermsAccepted } from "./anonymous-terms";
 import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
@@ -258,18 +259,12 @@ import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { AnonymousPreviewAccount } from "../deploy/anonymous-account";
 import type { Account } from "./shared";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type {
+	ApiCredentials,
+	ComplianceConfig,
+} from "@cloudflare/workers-utils";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
-
-export type ApiCredentials =
-	| {
-			apiToken: string;
-	  }
-	| {
-			authKey: string;
-			authEmail: string;
-	  };
 
 type AuthOverride = {
 	accountId?: string;
@@ -431,6 +426,9 @@ const DefaultScopes = {
 	"ai:write": "See and change Workers AI catalog and assets",
 	"ai-search:write": "See and change AI Search data",
 	"ai-search:run": "Run search queries on your AI Search instances",
+	"websearch.run": "Run search queries against Cloudflare Web Search",
+	"agent-memory:write":
+		"See and change Agent Memory data such as keys and namespaces.",
 	"queues:write": "See and change Cloudflare Queues settings and data",
 	"pipelines:write":
 		"See and change Cloudflare Pipelines configurations and data",
@@ -1498,7 +1496,9 @@ export async function requireAuth(
 	if (!loggedIn) {
 		if (shouldAllowAnonymous()) {
 			const { account: anonymousPreviewAccount, cached } =
-				await getOrCreateAnonymousPreviewAccount();
+				await getOrCreateAnonymousPreviewAccount({
+					beforeCreate: ensureAnonymousTermsAccepted,
+				});
 			setAuthOverride({
 				accountId: anonymousPreviewAccount.account.id,
 				apiToken: {

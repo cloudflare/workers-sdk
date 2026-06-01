@@ -155,6 +155,10 @@ export const WORKFLOWS_PLUGIN: Plugin<
 								name: "BINDING_NAME",
 								json: JSON.stringify(bindingName),
 							},
+							{
+								name: "WORKFLOW_NAME",
+								json: JSON.stringify(workflow.name),
+							},
 							...(workflow.stepLimit !== undefined
 								? [
 										{

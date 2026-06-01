@@ -114,7 +114,10 @@ export default function (
 	function printInstructions() {
 		const bottomFloat = formatInstructions();
 		if (bottomFloat) {
-			// eslint-disable-next-line no-console
+			/* eslint-disable-next-line no-console --
+				here we are intentionally using a console.log instead of using the logger to
+				ensure that the text is always present regardless on the current log level
+			*/
 			console.log(bottomFloat);
 		}
 	}

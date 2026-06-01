@@ -192,7 +192,7 @@ export interface CfWorkflow {
 	limits?: {
 		steps?: number;
 	};
-	schedule?: string | string[];
+	schedules?: string | string[];
 }
 
 export interface CfQueue {
@@ -240,6 +240,17 @@ export interface CfAISearchNamespace {
 export interface CfAISearch {
 	binding: string;
 	instance_name: string;
+	remote?: boolean;
+}
+
+export interface CfWebSearch {
+	binding: string;
+	remote?: boolean;
+}
+
+export interface CfAgentMemory {
+	binding: string;
+	namespace: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
 }
 
@@ -345,7 +356,8 @@ export interface CfAssetsBinding {
 
 export interface CfPipeline {
 	binding: string;
-	pipeline: string;
+	stream?: string;
+	pipeline?: string;
 	remote?: boolean;
 }
 

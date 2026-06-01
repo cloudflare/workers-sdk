@@ -385,7 +385,7 @@ async function maybeReadPagesConfig(
 		const config = readPagesConfig({
 			...args,
 			config: configPath,
-			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			// eslint-disable-next-line turbo/no-undeclared-env-vars -- PAGES_ENVIRONMENT is set by the Pages CI environment
 			env: process.env.PAGES_ENVIRONMENT,
 		});
 

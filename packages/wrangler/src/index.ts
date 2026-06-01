@@ -9,6 +9,14 @@ import chalk from "chalk";
 import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
+import {
+	agentMemoryNamespace,
+	agentMemoryNamespaceNamespace,
+} from "./agent-memory";
+import { agentMemoryNamespaceCreateCommand } from "./agent-memory/create";
+import { agentMemoryNamespaceDeleteCommand } from "./agent-memory/delete";
+import { agentMemoryNamespaceGetCommand } from "./agent-memory/get";
+import { agentMemoryNamespaceListCommand } from "./agent-memory/list";
 import { aiFineTuneNamespace, aiNamespace } from "./ai";
 import { aiSearchCreateCommand } from "./ai-search/create";
 import { aiSearchDeleteCommand } from "./ai-search/delete";
@@ -419,7 +427,6 @@ import { tunnelQuickStartCommand } from "./tunnel/quick-start";
 import { tunnelRunCommand } from "./tunnel/run";
 import { typesCommand } from "./type-generation";
 import { runWithAuthContext, setAllowAnonymous } from "./user";
-import { ensureAnonymousTermsAccepted } from "./user/anonymous-terms";
 import {
 	authNamespace,
 	authTokenCommand,
@@ -465,6 +472,8 @@ import { vpcServiceGetCommand } from "./vpc/get";
 import { vpcNamespace, vpcServiceNamespace } from "./vpc/index";
 import { vpcServiceListCommand } from "./vpc/list";
 import { vpcServiceUpdateCommand } from "./vpc/update";
+import { webSearchNamespace } from "./websearch/index";
+import { webSearchSearchCommand } from "./websearch/search";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
@@ -1562,6 +1571,16 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("ai-search");
 
+	// websearch
+	registry.define([
+		{ command: "wrangler websearch", definition: webSearchNamespace },
+		{
+			command: "wrangler websearch search",
+			definition: webSearchSearchCommand,
+		},
+	]);
+	registry.registerNamespace("websearch");
+
 	// cert - includes mtls-certificates and CA cert management
 	registry.define([
 		{ command: "wrangler cert", definition: certNamespace },
@@ -1874,6 +1893,32 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler browser view", definition: browserViewCommand },
 	]);
 	registry.registerNamespace("browser");
+
+	// agent-memory
+	registry.define([
+		{ command: "wrangler agent-memory", definition: agentMemoryNamespace },
+		{
+			command: "wrangler agent-memory namespace",
+			definition: agentMemoryNamespaceNamespace,
+		},
+		{
+			command: "wrangler agent-memory namespace create",
+			definition: agentMemoryNamespaceCreateCommand,
+		},
+		{
+			command: "wrangler agent-memory namespace list",
+			definition: agentMemoryNamespaceListCommand,
+		},
+		{
+			command: "wrangler agent-memory namespace get",
+			definition: agentMemoryNamespaceGetCommand,
+		},
+		{
+			command: "wrangler agent-memory namespace delete",
+			definition: agentMemoryNamespaceDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("agent-memory");
 
 	// secrets store
 	registry.define([
@@ -2312,7 +2357,6 @@ export async function main(argv: string[]): Promise<void> {
 	const hasHelpFlag = argv.includes("--help") || argv.includes("-h");
 	const nonFlagArgs = argv.filter((arg) => !arg.startsWith("-"));
 	const isRootHelpRequest = hasHelpFlag && nonFlagArgs.length === 0;
-	const temporaryRequested = hasTemporaryFlag(argv);
 
 	const { wrangler, registry, showHelpWithCategories } = createCLIParser(argv);
 
@@ -2349,10 +2393,6 @@ export async function main(argv: string[]): Promise<void> {
 
 	let cliHandlerThrew = false;
 	try {
-		if (temporaryRequested) {
-			await ensureAnonymousTermsAccepted();
-		}
-
 		if (isRootHelpRequest) {
 			await showHelpWithCategories();
 			return;
@@ -2403,7 +2443,7 @@ export async function main(argv: string[]): Promise<void> {
 			// needed, so we can cleanly exit. Note, we don't want to disconnect if
 			// this file was imported in Vitest, as that would stop communication with
 			// the test runner.
-			if (typeof vitest === "undefined") {
+			if (typeof vitest === "undefined" && process.connected) {
 				process.disconnect?.();
 			}
 
@@ -2419,28 +2459,11 @@ export async function main(argv: string[]): Promise<void> {
 			// Only re-throw if we haven't already re-thrown an exception from a
 			// command handler.
 			if (!cliHandlerThrew) {
-				// eslint-disable-next-line no-unsafe-finally
+				// eslint-disable-next-line no-unsafe-finally -- Intentionally re-throw in finally when the CLI handler did not throw
 				throw e;
 			}
 		}
 	}
-}
-
-function hasTemporaryFlag(argv: string[]): boolean {
-	let temporary = false;
-
-	for (const arg of argv) {
-		if (arg === "--temporary") {
-			temporary = true;
-		} else if (arg === "--no-temporary") {
-			temporary = false;
-		} else if (arg.startsWith("--temporary=")) {
-			const value = arg.slice(arg.indexOf("=") + 1).toLowerCase();
-			temporary = !["false", "0", "no"].includes(value);
-		}
-	}
-
-	return temporary;
 }
 
 /**

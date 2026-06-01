@@ -19,9 +19,8 @@ import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { retryOnAPIFailure } from "../utils/retry";
 import { getZoneForRoute } from "../zones";
-import type { AssetsOptions } from "../assets";
 import type { RouteObject } from "../deploy/deploy";
-import type { Config, Route } from "@cloudflare/workers-utils";
+import type { AssetsOptions, Config, Route } from "@cloudflare/workers-utils";
 
 type Props = {
 	config: Config;
@@ -35,6 +34,11 @@ type Props = {
 	assetsOptions: AssetsOptions | undefined;
 	firstDeploy: boolean;
 };
+
+export interface TriggerDeployment {
+	targets: string[];
+	error?: Error;
+}
 
 export default async function triggersDeploy(
 	props: Props
@@ -91,7 +95,7 @@ export default async function triggersDeploy(
 	}
 
 	const uploadMs = Date.now() - start;
-	const deployments: Promise<string[]>[] = [];
+	const deployments: Promise<TriggerDeployment>[] = [];
 	const hasWorkflowsDefinedInThisScript = config.workflows.some((workflow) =>
 		isWorkflowDefinedInThisScript(workflow, scriptName)
 	);
@@ -216,22 +220,32 @@ export default async function triggersDeploy(
 				scriptName,
 				useServiceEnvironments,
 				accountId,
-			}).then(() => {
-				if (routesOnly.length > 10) {
-					return routesOnly
-						.slice(0, 9)
-						.map((route) => renderRoute(route))
-						.concat([`...and ${routesOnly.length - 10} more routes`]);
-				}
-				return routesOnly.map((route) => renderRoute(route));
-			})
+			}).then(
+				() => {
+					if (routesOnly.length > 10) {
+						return {
+							targets: routesOnly
+								.slice(0, 9)
+								.map((route) => renderRoute(route))
+								.concat([`...and ${routesOnly.length - 9} more routes`]),
+						};
+					}
+					return { targets: routesOnly.map((route) => renderRoute(route)) };
+				},
+				(error) => ({ targets: [], error })
+			)
 		);
 	}
 
 	// Update custom domains for the script
 	if (customDomainsOnly.length > 0) {
 		deployments.push(
-			publishCustomDomains(config, workerUrl, accountId, customDomainsOnly)
+			publishCustomDomains(
+				config,
+				workerUrl,
+				accountId,
+				customDomainsOnly
+			).catch((error) => ({ targets: [], error }))
 		);
 	}
 
@@ -247,14 +261,19 @@ export default async function triggersDeploy(
 				headers: {
 					"Content-Type": "application/json",
 				},
-			}).then(() => schedules.map((trigger) => `schedule: ${trigger}`))
+			}).then(
+				() => ({
+					targets: schedules.map((trigger) => `schedule: ${trigger}`),
+				}),
+				(error) => ({ targets: [], error })
+			)
 		);
 	}
 
 	if (config.queues.producers && config.queues.producers.length) {
 		deployments.push(
 			...config.queues.producers.map((producer) =>
-				Promise.resolve([`Producer for ${producer.queue}`])
+				Promise.resolve({ targets: [`Producer for ${producer.queue}`] })
 			)
 		);
 	}
@@ -280,13 +299,13 @@ export default async function triggersDeploy(
 						}
 					);
 				}
-				if (workflow.schedule) {
+				if (workflow.schedules) {
 					throw new UserError(
-						`Workflow "${workflow.name}" has "schedule" configured but references external script "${workflow.script_name}". ` +
-							`Configure schedule on the worker that defines the workflow.`,
+						`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
+							`Configure schedules on the worker that defines the workflow.`,
 						{
 							telemetryMessage:
-								"triggers deploy workflow schedule external script",
+								"triggers deploy workflow schedules external script",
 						}
 					);
 				}
@@ -303,35 +322,73 @@ export default async function triggersDeploy(
 							script_name: scriptName,
 							class_name: workflow.class_name,
 							...(workflow.limits && { limits: workflow.limits }),
-							...(workflow.schedule && { schedule: workflow.schedule }),
+							...(workflow.schedules && { schedules: workflow.schedules }),
 						}),
 						headers: {
 							"Content-Type": "application/json",
 						},
 					}
-				).then(() => [`workflow: ${workflow.name}`])
+				).then(
+					() => ({ targets: [`workflow: ${workflow.name}`] }),
+					(error) => ({ targets: [], error })
+				)
 			);
 		}
 	}
 
-	const targets = await Promise.all(deployments);
+	const completedDeployments = await Promise.all(deployments);
 	const deployMs = Date.now() - start - uploadMs;
 
-	if (deployments.length > 0) {
-		logger.log(`Deployed ${workerName} triggers`, formatTime(deployMs));
-
-		const flatTargets = targets.flat().map(
+	const targets = completedDeployments
+		.flatMap((deployment) => deployment.targets)
+		.map(
 			// Append protocol only on workers.dev domains
 			(target) => (target.endsWith("workers.dev") ? "https://" : "") + target
 		);
-
-		for (const target of flatTargets) {
+	if (targets.length > 0) {
+		logger.log(`Deployed ${workerName} triggers`, formatTime(deployMs));
+		for (const target of targets) {
 			logger.log(" ", target);
 		}
-		return flatTargets;
 	} else {
-		logger.log("No deploy targets for", workerName, formatTime(deployMs));
+		logger.log("No targets deployed for", workerName, formatTime(deployMs));
 	}
+
+	const errors = completedDeployments
+		.map((deployment) => deployment.error)
+		.filter((error): error is Error => error !== undefined);
+
+	if (errors.length > 0) {
+		throw new UserError(
+			`Some triggers failed to deploy for ${workerName}:\n` +
+				errors.map((error) => `  - ${error.message}`).join("\n"),
+			{
+				// Preserve the original errors (with stacks and subclass info) for
+				// debugging, while still presenting a single aggregated message.
+				cause: new AggregateError(errors),
+				// Aggregate the inner telemetry labels into a single deterministic,
+				// low-cardinality label so failures still group meaningfully. Non-
+				// UserError causes contribute a generic "non-user error" marker.
+				telemetryMessage: `triggers deploy partial failure: ${aggregateTelemetryMessages(errors)}`,
+			}
+		);
+	}
+
+	return targets;
+}
+
+/**
+ * Collapse the telemetry labels of a set of inner errors into a single sorted,
+ * deduplicated string. Each `UserError` contributes its own `telemetryMessage`;
+ * anything else contributes `"non-user error"`.
+ */
+function aggregateTelemetryMessages(errors: Error[]): string {
+	const labels = errors.map((error) =>
+		error instanceof UserError && error.telemetryMessage
+			? error.telemetryMessage
+			: "non-user error"
+	);
+	return Array.from(new Set(labels)).sort().join(", ");
 }
 
 // getSubdomainValues returns the values for workers_dev and preview_urls.
@@ -457,7 +514,7 @@ async function subdomainDeploy(
 	envName: string,
 	workerUrl: string,
 	routes: Route[],
-	deployments: Array<Promise<string[]>>,
+	deployments: Promise<TriggerDeployment>[],
 	firstDeploy: boolean
 ) {
 	const { config } = props;
@@ -477,7 +534,7 @@ async function subdomainDeploy(
 			!props.useServiceEnvironments || !props.env
 				? `${scriptName}.${userSubdomain}`
 				: `${envName}.${scriptName}.${userSubdomain}`;
-		deployments.push(Promise.resolve([workersDevURL]));
+		deployments.push(Promise.resolve({ targets: [workersDevURL] }));
 	}
 
 	// Get current subdomain enablement status.

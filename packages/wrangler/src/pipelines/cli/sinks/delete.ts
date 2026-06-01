@@ -2,7 +2,8 @@ import { createCommand } from "../../../core/create-command";
 import { confirm } from "../../../dialogs";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
-import { deleteSink, getSink } from "../../client";
+import { deleteSink } from "../../client";
+import { resolveSink } from "../resolve";
 
 export const pipelinesSinksDeleteCommand = createCommand({
 	metadata: {
@@ -13,7 +14,7 @@ export const pipelinesSinksDeleteCommand = createCommand({
 	positionalArgs: ["sink"],
 	args: {
 		sink: {
-			describe: "The ID of the sink to delete",
+			describe: "The ID or name of the sink to delete",
 			type: "string",
 			demandOption: true,
 		},
@@ -27,11 +28,11 @@ export const pipelinesSinksDeleteCommand = createCommand({
 	async handler(args, { config }) {
 		await requireAuth(config);
 
-		const sink = await getSink(config, args.sink);
+		const sink = await resolveSink(config, args.sink);
 
 		if (!args.force) {
 			const confirmedDelete = await confirm(
-				`Are you sure you want to delete the sink '${sink.name}' (${args.sink})?`,
+				`Are you sure you want to delete the sink '${sink.name}' (${sink.id})?`,
 				{ fallbackValue: false }
 			);
 			if (!confirmedDelete) {
@@ -40,7 +41,7 @@ export const pipelinesSinksDeleteCommand = createCommand({
 			}
 		}
 
-		await deleteSink(config, args.sink);
+		await deleteSink(config, sink.id);
 
 		logger.log(
 			`✨ Successfully deleted sink '${sink.name}' with id '${sink.id}'.`
