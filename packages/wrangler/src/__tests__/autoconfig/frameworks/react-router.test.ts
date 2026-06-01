@@ -12,10 +12,7 @@ import * as packagesUtils from "../../../autoconfig/frameworks/utils/packages";
 import { NpmPackageManager } from "../../../package-manager";
 
 function fixture(name: string): string {
-	return readFileSync(
-		join(__dirname, "fixtures/react-router", name),
-		"utf-8"
-	);
+	return readFileSync(join(__dirname, "fixtures/react-router", name), "utf-8");
 }
 
 vi.mock("../../../autoconfig/frameworks/utils/vite-config", () => ({
@@ -134,10 +131,7 @@ describe("React Router framework configure()", () => {
 		vi.spyOn(cliPackages, "installPackages").mockImplementation(async () => {});
 
 		await mkdir(resolve("app"), { recursive: true });
-		await writeFile(
-			resolve("vite.config.ts"),
-			fixture("vite-config-basic.ts")
-		);
+		await writeFile(resolve("vite.config.ts"), fixture("vite-config-basic.ts"));
 	});
 
 	describe("workers/app.ts generation — without v8_middleware", () => {
