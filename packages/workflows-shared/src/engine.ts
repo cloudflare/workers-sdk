@@ -108,6 +108,24 @@ export const DEFAULT_STEP_LIMIT = 10_000;
 
 const PAUSE_DATETIME = "PAUSE_DATETIME";
 
+/**
+ * JSON.stringify replacer that converts TypedArrays and ArrayBuffers to a
+ * human-readable description. Without this, JSON.stringify(Uint8Array) encodes
+ * each byte as a numeric key ({"0":1,"1":2,...}), producing a string ~10x larger
+ * than byteLength and causing SQLITE_TOOBIG for outputs above ~170 KB.
+ * The replacer is called recursively by JSON.stringify, so nested binary values
+ * inside objects or arrays are also handled.
+ */
+function binaryReplacer(_key: string, value: unknown): unknown {
+	if (value instanceof ArrayBuffer) {
+		return `[ArrayBuffer(${value.byteLength} bytes)]`;
+	}
+	if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
+		return `[${value.constructor.name}(${(value as ArrayBufferView).byteLength} bytes)]`;
+	}
+	return value;
+}
+
 function isStepSuccessEvent(event: InstanceEvent): boolean {
 	return (
 		event === InstanceEvent.STEP_SUCCESS ||
@@ -200,7 +218,7 @@ export class Engine extends DurableObject<Env> {
 			event,
 			group,
 			target,
-			JSON.stringify(metadata)
+			JSON.stringify(metadata, binaryReplacer)
 		);
 
 		// Wake any waiters if this is a terminal step event

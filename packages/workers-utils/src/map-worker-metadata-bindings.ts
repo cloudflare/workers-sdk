@@ -34,8 +34,7 @@ export function mapWorkerMetadataBindings(
 						{
 							configObj.vars = {
 								...(configObj.vars ?? {}),
-								name: binding.name,
-								json: binding.json,
+								[binding.name]: binding.json,
 							};
 						}
 						break;
