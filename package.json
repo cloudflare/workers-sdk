@@ -17,7 +17,7 @@
 		"check:fixtures": "node -r esbuild-register tools/deployments/validate-fixtures.ts",
 		"check:format": "oxfmt --check",
 		"check:lint": "oxlint --deny-warnings --type-aware",
-		"check:package-deps": "node -r esbuild-register tools/deployments/validate-package-dependencies.ts",
+		"check:package-deps": "pnpm build && node -r esbuild-register tools/deployments/validate-package-dependencies.ts",
 		"check:pinned-deps": "node -r esbuild-register tools/deployments/validate-pinned-dependencies.ts",
 		"check:private-packages": "node -r esbuild-register tools/deployments/validate-private-packages.ts",
 		"check:type": "dotenv -- turbo check:type type:tests",

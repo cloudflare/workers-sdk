@@ -797,7 +797,7 @@ describe("generate types - CLI", () => {
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
-				BROWSER_BINDING: Fetcher;
+				BROWSER_BINDING: BrowserRun;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;
@@ -917,7 +917,7 @@ describe("generate types - CLI", () => {
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
-				BROWSER_BINDING: Fetcher;
+				BROWSER_BINDING: BrowserRun;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;
@@ -1100,7 +1100,7 @@ describe("generate types - CLI", () => {
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
-				BROWSER_BINDING: Fetcher;
+				BROWSER_BINDING: BrowserRun;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;

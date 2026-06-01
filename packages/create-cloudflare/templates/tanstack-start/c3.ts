@@ -8,6 +8,8 @@ const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
+		// @tanstack/cli uses `create` as a subcommand
+		"create",
 		ctx.project.name,
 		"--deployment",
 		"cloudflare",
@@ -24,7 +26,7 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "tanstack-start",
 	platform: "workers",
-	frameworkCli: "@tanstack/create-start",
+	frameworkCli: "@tanstack/cli",
 	displayName: "TanStack Start",
 	generate,
 	transformPackageJson: async () => ({
