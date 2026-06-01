@@ -126,11 +126,10 @@ interface BindingTypeMap<TBinding> {
 type InferBindingType<TBinding> =
 	// Worker binding
 	TBinding extends TypedWorkerBinding<
-		infer TUnwrappedConfig,
+		infer TConfig,
 		infer TExportName extends string
 	>
-		? InferMainModule<TUnwrappedConfig> extends infer TModule extends
-				WorkerModule
+		? InferMainModule<TConfig> extends infer TModule extends WorkerModule
 			? TExportName extends keyof TModule
 				? TModule[TExportName] extends Constructor<any>
 					? Fetcher<
@@ -141,11 +140,10 @@ type InferBindingType<TBinding> =
 			: never
 		: // Durable Object binding
 			TBinding extends TypedDurableObjectBinding<
-					infer TUnwrappedConfig,
+					infer TConfig,
 					infer TExportName extends string
 			  >
-			? InferMainModule<TUnwrappedConfig> extends infer TModule extends
-					WorkerModule
+			? InferMainModule<TConfig> extends infer TModule extends WorkerModule
 				? TExportName extends keyof TModule
 					? DurableObjectNamespace<
 							ExtractInstance<TModule[TExportName], Rpc.DurableObjectBranded>
@@ -154,11 +152,10 @@ type InferBindingType<TBinding> =
 				: never
 			: // Workflow binding
 				TBinding extends TypedWorkflowBinding<
-						infer TUnwrappedConfig,
+						infer TConfig,
 						infer TExportName extends string
 				  >
-				? InferMainModule<TUnwrappedConfig> extends infer TModule extends
-						WorkerModule
+				? InferMainModule<TConfig> extends infer TModule extends WorkerModule
 					? TExportName extends keyof TModule
 						? ExtractInstance<
 								TModule[TExportName],

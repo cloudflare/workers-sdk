@@ -85,14 +85,12 @@ export interface TypedWorkerDefinition<
 
 type UserConfigFnObject = (ctx: ConfigContext) => UserConfig;
 type UserConfigFnPromise = (ctx: ConfigContext) => Promise<UserConfig>;
-type UserConfigFn = (ctx: ConfigContext) => UserConfig | Promise<UserConfig>;
 
 export type UserConfigExport =
 	| UserConfig
 	| Promise<UserConfig>
 	| UserConfigFnObject
-	| UserConfigFnPromise
-	| UserConfigFn;
+	| UserConfigFnPromise;
 
 export function defineWorker<const T extends UserConfig>(
 	config: UserConfig & T
@@ -117,7 +115,7 @@ export function defineWorker(config: UserConfigExport): WorkerDefinition {
 		},
 		// TODO: re-enable when workflow bindings return.
 		// workflow(options) {
-		// 	return options;
+		// 	return { type: "workflow", ...options };
 		// },
 	};
 }
