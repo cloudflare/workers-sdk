@@ -427,9 +427,26 @@ const putCommonArgs = {
 		type: "string",
 		describe: "Arbitrary JSON that is associated with a key",
 		coerce: (jsonStr: string): KeyValue["metadata"] => {
+			let parsed: unknown;
 			try {
-				return JSON.parse(jsonStr);
-			} catch {}
+				parsed = JSON.parse(jsonStr);
+			} catch {
+				throw new CommandLineArgsError(
+					`--metadata must be valid JSON. Received: ${jsonStr}`,
+					{ telemetryMessage: "kv key put --metadata not valid JSON" }
+				);
+			}
+			if (
+				parsed === null ||
+				Array.isArray(parsed) ||
+				typeof parsed !== "object"
+			) {
+				throw new CommandLineArgsError(
+					`--metadata must be a JSON object. Received: ${jsonStr}`,
+					{ telemetryMessage: "kv key put --metadata not a JSON object" }
+				);
+			}
+			return parsed as KeyValue["metadata"];
 		},
 	},
 	local: {
