@@ -46,6 +46,24 @@ import type {
 	WorkflowStepEvent,
 } from "cloudflare:workers";
 
+/**
+ * Converts TypedArrays and ArrayBuffers to a human-readable description before
+ * storing in the SQLite log. JSON.stringify encodes each byte of a TypedArray as
+ * a separate numeric key (e.g. {"0":1,"1":2,...}), which causes SQLITE_TOOBIG
+ * for outputs larger than ~170 KB. The actual step value is preserved in
+ * Durable Object key-value storage via structuredClone; this sanitization only
+ * affects the log metadata used by the local explorer.
+ */
+function sanitizeResultForLog(value: unknown): unknown {
+	if (value instanceof ArrayBuffer) {
+		return `[ArrayBuffer(${value.byteLength} bytes)]`;
+	}
+	if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
+		return `[${value.constructor.name}(${(value as ArrayBufferView).byteLength} bytes)]`;
+	}
+	return value;
+}
+
 export type Event = {
 	timestamp: Date;
 	payload: unknown;
@@ -930,7 +948,7 @@ export class Context extends RpcTarget {
 
 			this.#engine.writeLog(events.success, cacheKey, stepNameWithCounter, {
 				// TODO (WOR-86): Add limits, figure out serialization
-				result: lastStreamMeta ? undefined : result,
+				result: lastStreamMeta ? undefined : sanitizeResultForLog(result),
 				...(lastStreamMeta && {
 					streamOutput: { cacheKey, meta: lastStreamMeta },
 				}),
