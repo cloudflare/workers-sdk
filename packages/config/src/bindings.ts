@@ -1,10 +1,3 @@
-import type {
-	ConfigOrUndefined,
-	DurableObjectExportName,
-	UnwrapConfig,
-	WorkerExportName,
-	WorkerName,
-} from "./inference";
 import type { Json } from "./utils";
 import type { PipelineRecord } from "cloudflare:pipelines";
 
@@ -536,18 +529,21 @@ export interface WorkerLoaderBinding {
 // `bindings.*` helpers. The typed variant adds a phantom `__config` field
 // that drives instance-parameterised inference in `InferBindingType`.
 
+interface DurableObjectBindingOptions {
+	/** The name of the Worker that defines the Durable Object class. */
+	workerName: string;
+	/** The exported class name of the Durable Object. */
+	exportName: string;
+}
+
 /**
  * Binding to a Durable Object class. `workerName` is the name of the Worker
  * that defines the class; `exportName` is the exported class name.
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
  */
-export interface DurableObjectBinding {
+export interface DurableObjectBinding extends DurableObjectBindingOptions {
 	type: "durable-object";
-	/** The name of the Worker that defines the Durable Object class. */
-	workerName: string;
-	/** The exported class name of the Durable Object. */
-	exportName: string;
 }
 
 /**
@@ -558,24 +554,15 @@ export interface DurableObjectBinding {
  */
 export interface TypedDurableObjectBinding<
 	TConfig,
-	TWorkerName extends string,
 	TExportName extends string,
 > extends DurableObjectBinding {
-	workerName: TWorkerName;
+	workerName: string;
 	exportName: TExportName;
 	/** @internal Carries the config type for inference */
 	__config: TConfig;
 }
 
-/**
- * Service binding (Worker-to-Worker). `workerName` is the name of the bound
- * Worker; `exportName` selects a named `WorkerEntrypoint` export (defaults to
- * the default export).
- *
- * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
- */
-export interface WorkerBinding {
-	type: "worker";
+interface WorkerBindingOptions {
 	/** The name of the bound Worker. */
 	workerName: string;
 	/** The named export to bind to (defaults to the default export). */
@@ -587,6 +574,17 @@ export interface WorkerBinding {
 }
 
 /**
+ * Service binding (Worker-to-Worker). `workerName` is the name of the bound
+ * Worker; `exportName` selects a named `WorkerEntrypoint` export (defaults to
+ * the default export).
+ *
+ * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+ */
+export interface WorkerBinding extends WorkerBindingOptions {
+	type: "worker";
+}
+
+/**
  * Helper-produced service binding carrying a phantom `__config` field that
  * drives the inferred `Fetcher<TInstance>` runtime type.
  *
@@ -594,27 +592,29 @@ export interface WorkerBinding {
  */
 export interface TypedWorkerBinding<
 	TConfig,
-	TWorkerName extends string,
 	TExportName extends string,
 > extends WorkerBinding {
-	workerName: TWorkerName;
+	workerName: string;
 	exportName: TExportName;
 	/** @internal Carries the config type for inference */
 	__config: TConfig;
 }
 
-/**
- * Binding to a Workflow. `workerName` is the name of the Worker that defines
- * the Workflow; `exportName` is the exported `WorkflowEntrypoint` class name.
- */
-export interface WorkflowBinding {
-	type: "workflow";
+interface WorkflowBindingOptions {
 	/** The name of the Worker that defines the Workflow. */
 	workerName: string;
 	/** The exported class name of the Workflow. */
 	exportName: string;
 	/** Whether the Workflow binding should be remote or not in local development. */
 	remote?: boolean;
+}
+
+/**
+ * Binding to a Workflow. `workerName` is the name of the Worker that defines
+ * the Workflow; `exportName` is the exported `WorkflowEntrypoint` class name.
+ */
+export interface WorkflowBinding extends WorkflowBindingOptions {
+	type: "workflow";
 }
 
 /**
@@ -625,10 +625,9 @@ export interface WorkflowBinding {
  */
 export interface TypedWorkflowBinding<
 	TConfig,
-	TWorkerName extends string,
 	TExportName extends string,
 > extends WorkflowBinding {
-	workerName: TWorkerName;
+	workerName: string;
 	exportName: TExportName;
 	/** @internal Carries the config type for inference */
 	__config: TConfig;
@@ -639,11 +638,7 @@ export interface TypedWorkflowBinding<
 // The public interface and factory for creating binding definitions.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/**
- * Base bindings interface - provides typed builder methods for non-cross-worker binding types.
- * This is used internally and extended by Bindings<TConfigs>.
- */
-interface BaseBindings {
+export interface Bindings {
 	// Value-first bindings
 	/**
 	 * Inline JSON value made available to the Worker on `env` under the
@@ -718,6 +713,13 @@ interface BaseBindings {
 	dispatchNamespace(
 		options: DispatchNamespaceBindingOptions
 	): DispatchNamespaceBinding;
+	/**
+	 * Binding to a Durable Object class. `workerName` is the name of the Worker
+	 * that defines the class; `exportName` is the exported class name.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
+	 */
+	durableObject(options: DurableObjectBindingOptions): DurableObjectBinding;
 	/** Binding to a Flagship feature-flag service. */
 	flagship(options: FlagshipBindingOptions): FlagshipBinding;
 	/**
@@ -813,56 +815,6 @@ interface BaseBindings {
 	vpcService(options: VpcServiceBindingOptions): VpcServiceBinding;
 	/** Binding to a VPC network. */
 	vpcNetwork(options: VpcNetworkBindingOptions): VpcNetworkBinding;
-	/** Binding to a Worker Loader. */
-	workerLoader(): WorkerLoaderBinding;
-}
-
-/**
- * Bindings interface for defining Worker bindings in config.
- *
- * When used without a type parameter, all cross-worker bindings (`worker`,
- * `durableObject`, `workflow`) allow any `workerName` and `exportName`.
- *
- * When parameterized with specific config types, cross-worker bindings become type-safe:
- * - `workerName` is constrained to the `name` from the config(s)
- * - `exportName` is constrained to valid exports for that worker
- * - The resulting binding types are fully parameterized
- *
- * @example
- * ```typescript
- * // Untyped usage with the bindings singleton
- * import { defineWorker, bindings } from "@cloudflare/config";
- *
- * export default defineWorker({
- *   env: {
- *     MY_KV: bindings.kv(),
- *     MY_DO: bindings.durableObject({ workerName: "any-worker", exportName: "AnyExport" }),
- *   },
- * });
- * ```
- *
- * @example
- * ```typescript
- * // Typed usage with createBindings
- * import { defineWorker, createBindings } from "@cloudflare/config";
- * import type WorkerAConfig from "@worker-a-package/config";
- *
- * const b = createBindings<typeof WorkerAConfig>();
- *
- * export default defineWorker({
- *   env: {
- *     // Type-safe: workerName must be "worker-a"
- *     WORKER_A: b.worker({ workerName: "worker-a" }),
- *     // Type-safe: exportName must be a valid durable object export
- *     MY_DO: b.durableObject({ workerName: "worker-a", exportName: "MyDurableObject" }),
- *   },
- * });
- * ```
- */
-export interface Bindings<
-	TConfig,
-	TUnwrappedConfig = UnwrapConfig<TConfig>,
-> extends BaseBindings {
 	/**
 	 * Service binding (Worker-to-Worker). `workerName` is the name of the bound
 	 * Worker; `exportName` selects a named `WorkerEntrypoint` export (defaults to
@@ -870,141 +822,65 @@ export interface Bindings<
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
 	 */
-	worker<
-		TWorkerName extends WorkerName<TUnwrappedConfig>,
-		TExportName extends
-			| WorkerExportName<TUnwrappedConfig, TWorkerName>
-			| undefined = undefined,
-	>(options: {
-		workerName: TWorkerName;
-		exportName?: TExportName;
-		props?: Record<string, unknown>;
-		remote?: boolean;
-	}): TypedWorkerBinding<
-		ConfigOrUndefined<TUnwrappedConfig, TWorkerName>,
-		TWorkerName,
-		TExportName extends string ? TExportName : "default"
-	>;
-
-	/**
-	 * Binding to a Durable Object class. `workerName` is the name of the Worker
-	 * that defines the class; `exportName` is the exported class name.
-	 *
-	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
-	 */
-	durableObject<
-		TWorkerName extends WorkerName<TUnwrappedConfig>,
-		TExportName extends DurableObjectExportName<TUnwrappedConfig, TWorkerName>,
-	>(options: {
-		workerName: TWorkerName;
-		exportName: TExportName;
-	}): TypedDurableObjectBinding<
-		ConfigOrUndefined<TUnwrappedConfig, TWorkerName>,
-		TWorkerName,
-		TExportName
-	>;
-
+	worker(options: WorkerBindingOptions): WorkerBinding;
+	/** Binding to a Worker Loader. */
+	workerLoader(): WorkerLoaderBinding;
 	// TODO: re-enable when workflow bindings return.
 	// /**
 	//  * Create a Workflow binding.
 	//  * `workerName` must match a known config's name (or any `string` for untyped bindings).
 	//  * `exportName` must be a valid `WorkflowEntrypoint` export for the given Worker.
 	//  */
-	// workflow<
-	// 	TWorkerName extends WorkerName<TUnwrappedConfig>,
-	// 	TExportName extends WorkflowExportName<TUnwrappedConfig, TWorkerName>,
-	// >(options: {
-	// 	workerName: TWorkerName;
-	// 	exportName: TExportName;
-	// 	remote?: boolean;
-	// }): TypedWorkflowBinding<
-	// 	ConfigOrUndefined<TUnwrappedConfig, TWorkerName>,
-	// 	TWorkerName,
-	// 	TExportName
-	// >;
+	// workflow(options: WorkflowBindingOptions): WorkflowBinding;
 }
 
-/**
- * Create a bindings builder for defining Worker bindings.
- *
- * Without a type parameter, creates untyped bindings where cross-worker
- * bindings (`worker`, `durableObject`, `workflow`) accept any `workerName`/`exportName`.
- *
- * With a type parameter, creates typed bindings with autocomplete and
- * type checking for known Worker configs.
- *
- * @example
- * ```typescript
- * import type WorkerAConfig from "@worker-a-package/config";
- * const b = createBindings<typeof WorkerAConfig>();
- * ```
- */
-export function createBindings<TConfig>(): Bindings<TConfig> {
-	return {
-		ai: (options) => ({ type: "ai", ...options }),
-		aiSearch: (options) => ({ type: "ai-search", ...options }),
-		aiSearchNamespace: (options) => ({
-			type: "ai-search-namespace",
-			...options,
-		}),
-		analyticsEngineDataset: (options) => ({
-			type: "analytics-engine-dataset",
-			...options,
-		}),
-		artifacts: (options) => ({ type: "artifacts", ...options }),
-		assets: () => ({ type: "assets" }),
-		browser: (options) => ({ type: "browser", ...options }),
-		d1: (options) => ({ type: "d1", ...options }),
-		dispatchNamespace: (options) => ({
-			type: "dispatch-namespace",
-			...options,
-		}),
-		durableObject: (options) => ({ type: "durable-object", ...options }),
-		flagship: (options) => ({ type: "flagship", ...options }),
-		hyperdrive: (options) => ({ type: "hyperdrive", ...options }),
-		images: (options) => ({ type: "images", ...options }),
-		json: (value) => ({ type: "json", value }),
-		kv: (options) => ({ type: "kv", ...options }),
-		logfwdr: (options) => ({ type: "logfwdr", ...options }),
-		media: (options) => ({ type: "media", ...options }),
-		mtlsCertificate: (options) => ({ type: "mtls-certificate", ...options }),
-		pipeline: (options) => ({ type: "pipeline", ...options }),
-		queue: (options) => ({ type: "queue", ...options }),
-		rateLimit: (options) => ({ type: "rate-limit", ...options }),
-		r2: (options) => ({ type: "r2", ...options }),
-		secret: () => ({ type: "secret" }),
-		secretsStoreSecret: (options) => ({
-			type: "secrets-store-secret",
-			...options,
-		}),
-		sendEmail: (options) => ({ type: "send-email", ...options }),
-		stream: (options) => ({ type: "stream", ...options }),
-		text: (value) => ({ type: "text", value }),
-		unsafe: (options) => ({ type: "unsafe", value: options }),
-		vectorize: (options) => ({ type: "vectorize", ...options }),
-		versionMetadata: () => ({ type: "version-metadata" }),
-		vpcService: (options) => ({ type: "vpc-service", ...options }),
-		vpcNetwork: (options) => ({ type: "vpc-network", ...options }),
-		worker: (options) => ({ type: "worker", ...options }),
-		workerLoader: () => ({ type: "worker-loader" }),
-		// TODO: re-enable when workflow bindings return.
-		// workflow: (options) => ({ type: "workflow", ...options }),
-	} as Bindings<TConfig>;
-}
-
-/**
- * Bindings builder for configuring bindings.
- *
- * @example
- * ```typescript
- * import { defineWorker, bindings } from "@cloudflare/config";
- *
- * export default defineWorker({
- *   env: {
- *     MY_KV: bindings.kv(),
- *     MY_DB: bindings.d1(),
- *   },
- * });
- * ```
- */
-export const bindings = createBindings();
+export const bindings = {
+	ai: (options) => ({ type: "ai", ...options }),
+	aiSearch: (options) => ({ type: "ai-search", ...options }),
+	aiSearchNamespace: (options) => ({
+		type: "ai-search-namespace",
+		...options,
+	}),
+	analyticsEngineDataset: (options) => ({
+		type: "analytics-engine-dataset",
+		...options,
+	}),
+	artifacts: (options) => ({ type: "artifacts", ...options }),
+	assets: () => ({ type: "assets" }),
+	browser: (options) => ({ type: "browser", ...options }),
+	d1: (options) => ({ type: "d1", ...options }),
+	dispatchNamespace: (options) => ({
+		type: "dispatch-namespace",
+		...options,
+	}),
+	durableObject: (options) => ({ type: "durable-object", ...options }),
+	flagship: (options) => ({ type: "flagship", ...options }),
+	hyperdrive: (options) => ({ type: "hyperdrive", ...options }),
+	images: (options) => ({ type: "images", ...options }),
+	json: (value) => ({ type: "json", value }),
+	kv: (options) => ({ type: "kv", ...options }),
+	logfwdr: (options) => ({ type: "logfwdr", ...options }),
+	media: (options) => ({ type: "media", ...options }),
+	mtlsCertificate: (options) => ({ type: "mtls-certificate", ...options }),
+	pipeline: (options) => ({ type: "pipeline", ...options }),
+	queue: (options) => ({ type: "queue", ...options }),
+	rateLimit: (options) => ({ type: "rate-limit", ...options }),
+	r2: (options) => ({ type: "r2", ...options }),
+	secret: () => ({ type: "secret" }),
+	secretsStoreSecret: (options) => ({
+		type: "secrets-store-secret",
+		...options,
+	}),
+	sendEmail: (options) => ({ type: "send-email", ...options }),
+	stream: (options) => ({ type: "stream", ...options }),
+	text: (value) => ({ type: "text", value }),
+	unsafe: (options) => ({ type: "unsafe", value: options }),
+	vectorize: (options) => ({ type: "vectorize", ...options }),
+	versionMetadata: () => ({ type: "version-metadata" }),
+	vpcService: (options) => ({ type: "vpc-service", ...options }),
+	vpcNetwork: (options) => ({ type: "vpc-network", ...options }),
+	worker: (options) => ({ type: "worker", ...options }),
+	workerLoader: () => ({ type: "worker-loader" }),
+	// TODO: re-enable when workflow bindings return.
+	// workflow: (options) => ({ type: "workflow", ...options }),
+} as Bindings;

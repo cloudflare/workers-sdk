@@ -48,7 +48,7 @@ export type {
 	WorkerLoaderBinding,
 	WorkflowBinding,
 } from "./bindings";
-export { createBindings, bindings } from "./bindings";
+export { bindings } from "./bindings";
 export type {
 	Triggers,
 	FetchTrigger,
@@ -67,7 +67,7 @@ export type {
 export type { UserConfig } from "./types";
 export type {
 	ConfigContext,
-	WorkerDefinition,
-	WorkerDefinitionMethods,
+	TypedWorkerDefinition,
+	UserConfigExport,
 } from "./worker-definition";
 export { defineWorker, resolveWorkerDefinition } from "./worker-definition";
