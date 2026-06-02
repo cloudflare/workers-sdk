@@ -14,14 +14,11 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
+import { TEMPORARY_TERMS_URLS } from "../user/temporary-terms-policy";
 
 function getTemporaryPreviewUrl(): string {
 	return `${getCloudflareApiBaseUrl(COMPLIANCE_REGION_CONFIG_PUBLIC)}/provisioning/previews`;
 }
-
-// The provisioning service requires these exact policy values.
-const TERMS_OF_SERVICE_URL = "https://www.cloudflare.com/terms/";
-const PRIVACY_POLICY_URL = "https://www.cloudflare.com/privacypolicy/";
 
 function getTemporaryAccountConfigFile(): string {
 	const environment = getCloudflareApiEnvironmentFromEnv();
@@ -137,8 +134,8 @@ export async function createTemporaryPreviewAccount(): Promise<TemporaryPreviewA
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
-			termsOfService: TERMS_OF_SERVICE_URL,
-			privacyPolicy: PRIVACY_POLICY_URL,
+			termsOfService: TEMPORARY_TERMS_URLS.termsOfService,
+			privacyPolicy: TEMPORARY_TERMS_URLS.privacyPolicy,
 			acceptTermsOfService: "yes",
 		}),
 	});
@@ -150,11 +147,10 @@ export async function createTemporaryPreviewAccount(): Promise<TemporaryPreviewA
 		);
 	}
 
-	const responseText = await response.text();
 	let responseBody: TemporaryAccountResponse;
 
 	try {
-		responseBody = JSON.parse(responseText) as TemporaryAccountResponse;
+		responseBody = (await response.json()) as TemporaryAccountResponse;
 	} catch {
 		throw new UserError(
 			`Failed to create a temporary preview account. Received an invalid response (${response.status} ${response.statusText}).`,
