@@ -52,7 +52,7 @@ export function writeAuthConfigFile(config: UserAuthConfig): void {
 	mkdirSync(path.dirname(configPath), {
 		recursive: true,
 	});
-	writeFileSync(path.join(configPath), TOML.stringify(config), {
+	writeFileSync(configPath, TOML.stringify(config), {
 		encoding: "utf-8",
 	});
 }
