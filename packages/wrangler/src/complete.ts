@@ -132,6 +132,7 @@ export const completionsCommand = createCommand({
 	behaviour: {
 		printBanner: false,
 		provideConfig: false,
+		skipSkillsPrompt: true,
 	},
 	positionalArgs: ["shell"],
 	args: {
