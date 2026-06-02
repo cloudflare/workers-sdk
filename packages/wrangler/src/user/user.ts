@@ -31,11 +31,11 @@ import { fetchAllAccounts } from "./fetch-accounts";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { Account } from "./shared";
+import type { LoginProps } from "@cloudflare/workers-auth";
 import type {
 	ApiCredentials,
 	ComplianceConfig,
 } from "@cloudflare/workers-utils";
-import type { LoginProps, UserAuthConfig } from "@cloudflare/workers-auth";
 
 /**
  * The single wrangler-wide OAuth flow instance.

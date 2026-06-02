@@ -3688,7 +3688,7 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@types/node':
-        specifier: ^22.10.1
+        specifier: 22.15.17
         version: 22.15.17
       '@vitest/ui':
         specifier: catalog:default
