@@ -702,14 +702,14 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("appends domain routes to fetch-trigger routes", ({ expect }) => {
+		it("appends fetch-trigger routes after domain routes", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				triggers: [{ type: "fetch", pattern: "x.com/*", zone: "x.com" }],
 				domains: ["y.com"],
 			});
 			expect(result.routes).toEqual([
-				{ pattern: "x.com/*", zone_name: "x.com" },
 				{ pattern: "y.com", custom_domain: true },
+				{ pattern: "x.com/*", zone_name: "x.com" },
 			]);
 		});
 	});

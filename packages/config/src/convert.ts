@@ -33,8 +33,8 @@ export function convertToWranglerConfig(
 	convertTopLevel(config, result);
 	convertBindingsAndAssets(config, result);
 	convertExports(config, result, options);
-	convertTriggers(config, result);
 	convertDomains(config, result);
+	convertTriggers(config, result);
 	convertTailConsumers(config, result);
 
 	return result;
