@@ -100,6 +100,10 @@ export function getCachedTemporaryPreviewAccount():
 	}
 
 	if (
+		!temporaryPreviewAccount.account?.id ||
+		!temporaryPreviewAccount.account?.apiToken ||
+		!temporaryPreviewAccount.account?.name ||
+		!temporaryPreviewAccount.claim?.url ||
 		!isFutureTimestamp(temporaryPreviewAccount.account?.expiresAt ?? "") ||
 		!isFutureTimestamp(temporaryPreviewAccount.claim?.expiresAt ?? "")
 	) {
