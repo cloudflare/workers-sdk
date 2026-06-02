@@ -6,22 +6,22 @@ import {
 } from "../shared";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
-const WebSearchEntrySchema = z.object({
+const WebsearchEntrySchema = z.object({
 	remoteProxyConnectionString: z
 		.custom<RemoteProxyConnectionString>()
 		.optional(),
 });
 
-export const WebSearchOptionsSchema = z.object({
-	webSearch: z.record(WebSearchEntrySchema).optional(),
+export const WebsearchOptionsSchema = z.object({
+	websearch: z.record(WebsearchEntrySchema).optional(),
 });
 
-export const WEB_SEARCH_PLUGIN_NAME = "web-search";
+export const WEBSEARCH_PLUGIN_NAME = "websearch";
 
-const WEB_SEARCH_SCOPE = "web-search";
+const WEBSEARCH_SCOPE = "websearch";
 
-export const WEB_SEARCH_PLUGIN: Plugin<typeof WebSearchOptionsSchema> = {
-	options: WebSearchOptionsSchema,
+export const WEBSEARCH_PLUGIN: Plugin<typeof WebsearchOptionsSchema> = {
+	options: WebsearchOptionsSchema,
 	async getBindings(options) {
 		const bindings: {
 			name: string;
@@ -29,13 +29,13 @@ export const WEB_SEARCH_PLUGIN: Plugin<typeof WebSearchOptionsSchema> = {
 		}[] = [];
 
 		for (const [bindingName, entry] of Object.entries(
-			options.webSearch ?? {}
+			options.websearch ?? {}
 		)) {
 			bindings.push({
 				name: bindingName,
 				service: {
 					name: getUserBindingServiceName(
-						WEB_SEARCH_SCOPE,
+						WEBSEARCH_SCOPE,
 						bindingName,
 						entry.remoteProxyConnectionString
 					),
@@ -45,10 +45,10 @@ export const WEB_SEARCH_PLUGIN: Plugin<typeof WebSearchOptionsSchema> = {
 
 		return bindings;
 	},
-	getNodeBindings(options: z.infer<typeof WebSearchOptionsSchema>) {
+	getNodeBindings(options: z.infer<typeof WebsearchOptionsSchema>) {
 		const nodeBindings: Record<string, ProxyNodeBinding> = {};
 
-		for (const bindingName of Object.keys(options.webSearch ?? {})) {
+		for (const bindingName of Object.keys(options.websearch ?? {})) {
 			nodeBindings[bindingName] = new ProxyNodeBinding();
 		}
 
@@ -61,11 +61,11 @@ export const WEB_SEARCH_PLUGIN: Plugin<typeof WebSearchOptionsSchema> = {
 		}[] = [];
 
 		for (const [bindingName, entry] of Object.entries(
-			options.webSearch ?? {}
+			options.websearch ?? {}
 		)) {
 			services.push({
 				name: getUserBindingServiceName(
-					WEB_SEARCH_SCOPE,
+					WEBSEARCH_SCOPE,
 					bindingName,
 					entry.remoteProxyConnectionString
 				),

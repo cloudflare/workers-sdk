@@ -320,9 +320,9 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
-			case "web_search": {
+			case "websearch": {
 				const { binding, ...x } = info;
-				output[binding] = { type: "web_search", ...x };
+				output[binding] = { type: "websearch", ...x };
 				break;
 			}
 			case "agent_memory": {
@@ -744,7 +744,7 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 			case "stream":
 			case "version_metadata":
 			case "media":
-			case "web_search":
+			case "websearch":
 			case "inherit": {
 				// These have the same structure (just type and possibly some flags)
 				const { name: _name, ...rest } = binding;

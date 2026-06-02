@@ -471,8 +471,8 @@ import { vpcServiceGetCommand } from "./vpc/get";
 import { vpcNamespace, vpcServiceNamespace } from "./vpc/index";
 import { vpcServiceListCommand } from "./vpc/list";
 import { vpcServiceUpdateCommand } from "./vpc/update";
-import { webSearchNamespace } from "./websearch/index";
-import { webSearchSearchCommand } from "./websearch/search";
+import { websearchNamespace } from "./websearch/index";
+import { websearchSearchCommand } from "./websearch/search";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
@@ -1565,10 +1565,10 @@ export function createCLIParser(argv: string[]) {
 
 	// websearch
 	registry.define([
-		{ command: "wrangler websearch", definition: webSearchNamespace },
+		{ command: "wrangler websearch", definition: websearchNamespace },
 		{
 			command: "wrangler websearch search",
-			definition: webSearchSearchCommand,
+			definition: websearchSearchCommand,
 		},
 	]);
 	registry.registerNamespace("websearch");
