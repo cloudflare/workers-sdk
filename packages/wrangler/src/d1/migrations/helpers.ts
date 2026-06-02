@@ -38,6 +38,7 @@ export type MigrationsConfig = {
 	migrationsDir: string;
 	migrationsPattern: string;
 	migrationsTableName: string;
+	migrationsDirRaw?: string;
 };
 
 /**
@@ -107,6 +108,7 @@ export function resolveMigrationsConfig({
 		migrationsDir,
 		migrationsPattern,
 		migrationsTableName,
+		migrationsDirRaw: rawDir,
 	};
 }
 
@@ -149,22 +151,24 @@ export function normalizeRelativePath(p: string): string {
 
 export async function getMigrationsPath({
 	projectPath,
-	migrationsFolderPath,
+	migrationsDir,
+	migrationsDirRaw,
 	createIfMissing,
 	configPath,
 }: {
 	projectPath: string;
-	migrationsFolderPath: string;
+	migrationsDir: string;
+	migrationsDirRaw?: string;
 	createIfMissing: boolean;
 	configPath: string | undefined;
 }): Promise<string> {
-	const dir = path.resolve(projectPath, migrationsFolderPath);
+	const dir = path.resolve(projectPath, migrationsDir);
 	if (fs.existsSync(dir)) {
 		return dir;
 	}
 
 	const warning = `No migrations folder found.${
-		migrationsFolderPath === DEFAULT_MIGRATION_PATH
+		migrationsDirRaw === undefined
 			? ` Set \`migrations_dir\` in your ${configFileName(configPath)} file to choose a different path.`
 			: ""
 	}`;

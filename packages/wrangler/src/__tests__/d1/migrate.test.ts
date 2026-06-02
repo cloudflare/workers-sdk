@@ -483,6 +483,54 @@ Your database may not be available to serve requests during the migration, conti
 			);
 		});
 
+		it("hints at `migrations_dir` when the folder is missing and the user has not set one", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig(
+				{
+					d1_databases: [
+						{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+					],
+				},
+				"./wrangler.jsonc"
+			);
+			await expect(
+				runWrangler("d1 migrations list --local DATABASE")
+			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
+			expect(mockStd.warn).toContain(
+				"Set `migrations_dir` in your wrangler.jsonc file to choose a different path."
+			);
+		});
+
+		it("does not hint at `migrations_dir` when the user set it, even to the default `./migrations`", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			// `./migrations` normalizes to `migrations`, so a check against the
+			// default path would wrongly conclude the user is on the default and
+			// show the (misleading) "Set `migrations_dir`..." hint. The user did
+			// set it explicitly, so no hint should appear.
+			writeWranglerConfig(
+				{
+					d1_databases: [
+						{
+							binding: "DATABASE",
+							database_name: "db",
+							database_id: "xxxx",
+							migrations_dir: "./migrations",
+						},
+					],
+				},
+				"./wrangler.jsonc"
+			);
+			await expect(
+				runWrangler("d1 migrations list --local DATABASE")
+			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
+			expect(mockStd.warn).toContain("No migrations folder found.");
+			expect(mockStd.warn).not.toContain("Set `migrations_dir`");
+		});
+
 		it("should try to read D1 config from wrangler.toml when logged in", async ({
 			expect,
 		}) => {

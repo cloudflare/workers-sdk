@@ -83,7 +83,8 @@ export const d1MigrationsListCommand = createCommand({
 		// `projectPath` + `migrationsPattern`.
 		await getMigrationsPath({
 			projectPath: migrationsConfig.projectPath,
-			migrationsFolderPath: migrationsConfig.migrationsDir,
+			migrationsDir: migrationsConfig.migrationsDir,
+			migrationsDirRaw: migrationsConfig.migrationsDirRaw,
 			createIfMissing: false,
 			configPath: config.configPath,
 		});
