@@ -46,7 +46,14 @@ export async function writeResponse(
 ): Promise<void> {
 	res.statusCode = response.status;
 	res.statusMessage = response.statusText;
+	const setCookies = response.headers.getSetCookie();
+	if (setCookies.length > 0) {
+		res.setHeader("set-cookie", setCookies);
+	}
 	response.headers.forEach((value, key) => {
+		if (key.toLowerCase() === "set-cookie") {
+			return;
+		}
 		res.setHeader(key, value);
 	});
 
