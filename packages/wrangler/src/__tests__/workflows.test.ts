@@ -696,7 +696,9 @@ describe("wrangler workflows", () => {
 			);
 		});
 
-		it("should restart an instance from a specific step", async ({ expect }) => {
+		it("should restart an instance from a specific step", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 
 			msw.use(

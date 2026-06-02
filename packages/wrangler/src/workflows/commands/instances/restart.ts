@@ -19,7 +19,10 @@ function getRestartFrom(args: {
 		if (args.fromStepCount !== undefined || args.fromStepType !== undefined) {
 			throw new UserError(
 				"--from-step-name is required when using --from-step-count or --from-step-type",
-				{ telemetryMessage: "workflows instances restart missing from step name" }
+				{
+					telemetryMessage:
+						"workflows instances restart missing from step name",
+				}
 			);
 		}
 
@@ -88,11 +91,24 @@ export const workflowsInstancesRestartCommand = createCommand({
 
 		if (args.local) {
 			id = await getLocalInstanceIdFromArgs(args.port, args);
-			await updateLocalInstanceStatus(args.port, args.name, id, "restart", from);
+			await updateLocalInstanceStatus(
+				args.port,
+				args.name,
+				id,
+				"restart",
+				from
+			);
 		} else {
 			const accountId = await requireAuth(config);
 			id = await getInstanceIdFromArgs(accountId, args, config);
-			await updateInstanceStatus(config, accountId, args.name, id, "restart", from);
+			await updateInstanceStatus(
+				config,
+				accountId,
+				args.name,
+				id,
+				"restart",
+				from
+			);
 		}
 
 		logger.info(

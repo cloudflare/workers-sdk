@@ -1,7 +1,10 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { logger } from "../logger";
-import type { InstanceStatusAndLogs, WorkflowInstanceRestartFrom } from "./types";
+import type {
+	InstanceStatusAndLogs,
+	WorkflowInstanceRestartFrom,
+} from "./types";
 
 const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/explorer/api";
 const DEFAULT_LOCAL_PORT = 8787;

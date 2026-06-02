@@ -761,7 +761,9 @@ describe("Engine", () => {
 				async (_event: unknown, step: WorkflowStep) => {
 					const setup = await step.do("setup", async () => crypto.randomUUID());
 					await step.sleep("checkpoint", 1);
-					const between = await step.do("between", async () => crypto.randomUUID());
+					const between = await step.do("between", async () =>
+						crypto.randomUUID()
+					);
 					const checkpoint = await step.do("checkpoint", async () =>
 						crypto.randomUUID()
 					);
