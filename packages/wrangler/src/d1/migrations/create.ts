@@ -74,6 +74,21 @@ export const d1MigrationsCreateCommand = createCommand({
 		);
 		const migrationName = message.replaceAll(" ", "_");
 
+		// `wrangler d1 migrations create` writes a single file directly inside
+		// `migrations_dir`, so a name containing a path separator can't work —
+		// it would imply nested directories. Reject it up front with a clear
+		// message, rather than letting it fall through to the confusing "does
+		// not match migrations_pattern" error below (a name like `foo/bar`
+		// produces an extra path segment that the pattern can't match).
+		if (/[\\/]/.test(migrationName)) {
+			throw new UserError(
+				`The migration name ${JSON.stringify(message)} contains a path separator ("/" or "\\"). Please remove this and try again.`,
+				{
+					telemetryMessage: "d1 migrations create name contains path separator",
+				}
+			);
+		}
+
 		const newMigrationName = `${nextMigrationNumber}_${migrationName}.sql`;
 
 		// Make sure the migration we are about to create will actually be picked

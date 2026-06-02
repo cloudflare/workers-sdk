@@ -174,6 +174,55 @@ describe("migrate", () => {
 				"Migration number: 0001"
 			);
 		});
+
+		it("rejects a migration name containing a path separator with a clear error", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig(
+				{
+					d1_databases: [
+						{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+					],
+				},
+				"./wrangler.jsonc"
+			);
+
+			// A `/` in the name would otherwise produce an extra path segment
+			// (`migrations/0001_foo/bar.sql`) that the default pattern can't
+			// match — surfacing as a confusing "does not match migrations_pattern"
+			// error. We reject it up front instead.
+			await expect(
+				runWrangler("d1 migrations create db foo/bar")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				// snapshot process seems to replace \ with / for consistency across platforms
+				`[Error: The migration name "foo/bar" contains a path separator ("/" or "/"). Please remove this and try again.]`
+			);
+
+			// And the dir must not have been created as a side effect.
+			expect(fs.existsSync("migrations")).toBe(false);
+		});
+
+		it("rejects a migration name containing a backslash with a clear error", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig(
+				{
+					d1_databases: [
+						{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+					],
+				},
+				"./wrangler.jsonc"
+			);
+
+			await expect(
+				runWrangler("d1 migrations create db foo\\\\bar")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				// snapshot process seems to replace \ with / for consistency across platforms
+				`[Error: The migration name "foo//bar" contains a path separator ("/" or "/"). Please remove this and try again.]`
+			);
+		});
 	});
 
 	describe("apply", () => {
