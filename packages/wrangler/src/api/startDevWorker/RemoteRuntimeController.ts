@@ -322,7 +322,11 @@ export class RemoteRuntimeController extends RuntimeController {
 			return false;
 		}
 
-		const accessHeaders = await getAccessHeaders(token.host);
+		// Probe with the preview token so Access detection works on unpublished
+		// `<name>.workers.dev` hosts, which otherwise return 404 with no Access redirect.
+		const accessHeaders = await getAccessHeaders(token.host, {
+			"cf-workers-preview-token": token.value,
+		});
 
 		const proxyData: ProxyData = {
 			userWorkerUrl: {

@@ -22,16 +22,21 @@ export function clearAccessCaches(): void {
 	usesAccessCache.clear();
 }
 
-export async function domainUsesAccess(domain: string): Promise<boolean> {
+export async function domainUsesAccess(
+	domain: string,
+	probeHeaders?: Record<string, string>
+): Promise<boolean> {
 	logger.debug("Checking if domain has Access enabled:", domain);
 
-	if (usesAccessCache.has(domain)) {
+	const cacheKey = probeHeaders ? `${domain}|with-headers` : domain;
+
+	if (usesAccessCache.has(cacheKey)) {
 		logger.debug(
 			"Using cached Access switch for:",
 			domain,
-			usesAccessCache.get(domain)
+			usesAccessCache.get(cacheKey)
 		);
-		return usesAccessCache.get(domain);
+		return usesAccessCache.get(cacheKey);
 	}
 	logger.debug("Access switch not cached for:", domain);
 	try {
@@ -43,6 +48,7 @@ export async function domainUsesAccess(domain: string): Promise<boolean> {
 		const output = await fetch(`https://${domain}`, {
 			redirect: "manual",
 			signal: controller.signal,
+			headers: probeHeaders,
 		});
 		clearTimeout(cancel);
 		const usesAccess = !!(
@@ -51,10 +57,10 @@ export async function domainUsesAccess(domain: string): Promise<boolean> {
 		);
 		logger.debug("Caching access switch for:", domain);
 
-		usesAccessCache.set(domain, usesAccess);
+		usesAccessCache.set(cacheKey, usesAccess);
 		return usesAccess;
 	} catch {
-		usesAccessCache.set(domain, false);
+		usesAccessCache.set(cacheKey, false);
 		return false;
 	}
 }
@@ -63,6 +69,8 @@ export async function domainUsesAccess(domain: string): Promise<boolean> {
  * Get the headers needed to authenticate with an Access-protected domain.
  *
  * @param domain The hostname of the Access-protected domain (e.g. `"example.com"`).
+ * @param probeHeaders Optional headers to forward when probing for Access and
+ *   when invoking `cloudflared access login`.
  * @returns
  * - Service token headers (`CF-Access-Client-Id` + `CF-Access-Client-Secret`) if env vars are set
  * - A `Cookie: CF_Authorization=...` header if obtained via `cloudflared` (interactive only)
@@ -73,7 +81,8 @@ export async function domainUsesAccess(domain: string): Promise<boolean> {
  *   but no service token credentials are configured.
  */
 export async function getAccessHeaders(
-	domain: string
+	domain: string,
+	probeHeaders?: Record<string, string>
 ): Promise<Record<string, string>> {
 	// 1. If Access Service Token credentials are provided, use them directly.
 	//
@@ -109,7 +118,7 @@ export async function getAccessHeaders(
 		);
 	}
 
-	if (!(await domainUsesAccess(domain))) {
+	if (!(await domainUsesAccess(domain, probeHeaders))) {
 		return {};
 	}
 	logger.debug("Getting Access headers for domain:", domain);
@@ -134,7 +143,20 @@ export async function getAccessHeaders(
 
 	// 3. Interactive: fall back to cloudflared
 	logger.debug("Spawning cloudflared to get Access token for domain:");
-	const output = spawnSync("cloudflared", ["access", "login", domain]);
+	const cloudflaredBinary =
+		process.env.WRANGLER_CLOUDFLARED_BINARY ?? "cloudflared";
+	const headerArgs: string[] = [];
+	if (probeHeaders) {
+		for (const [name, value] of Object.entries(probeHeaders)) {
+			headerArgs.push("--header", `${name}: ${value}`);
+		}
+	}
+	const output = spawnSync(cloudflaredBinary, [
+		"access",
+		"login",
+		...headerArgs,
+		domain,
+	]);
 	if (output.error) {
 		throw new UserError(
 			"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation",
