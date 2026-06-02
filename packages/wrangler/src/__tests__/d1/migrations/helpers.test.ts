@@ -54,7 +54,9 @@ function migrationsConfig(
 
 describe("getMigrationNames", () => {
 	runInTempDir();
-	const std = mockConsoleMethods();
+	// `getMigrationNames` never logs — the drizzle hint comes from
+	// `maybeLogHint` (tested separately). Swallow console output anyway.
+	mockConsoleMethods();
 
 	it("returns an empty array for an empty directory", ({ expect }) => {
 		fs.mkdirSync("migrations", { recursive: true });
@@ -200,27 +202,13 @@ describe("getMigrationNames", () => {
 		]);
 	});
 
-	it("does not log a hint when the configured pattern matches", ({
+	it("ignores nested .sql files that the configured pattern can't reach", ({
 		expect,
 	}) => {
-		seedProjectFiles(["migrations/0001_create_tables.sql"]);
-
-		const result = getMigrationNames(
-			migrationsConfig({ migrationsPattern: "migrations/*.sql" })
-		);
-
-		expect(result).toEqual(["0001_create_tables.sql"]);
-		expect(std.warn).toBe("");
-	});
-
-	it("does not log a drizzle hint for nested .sql files that aren't named `migration.sql`", ({
-		expect,
-	}) => {
-		// Drizzle's layout is specifically `<numbered_folder>/migration.sql`.
-		// A nested file with any other name (here `destroy.sql`) shouldn't
-		// trigger the drizzle hint — the user may have intentionally placed
-		// a test-data dump or similar SQL file under their migrations_dir
-		// without wanting it to be applied.
+		// A nested file under a flat `migrations/*.sql` pattern is not a
+		// migration. (Whether this should print a drizzle hint is
+		// `maybeLogHint`'s job, tested separately — `getMigrationNames`
+		// itself never logs.)
 		seedProjectFiles(["migrations/test_data/destroy.sql"]);
 
 		const result = getMigrationNames(
@@ -228,29 +216,19 @@ describe("getMigrationNames", () => {
 		);
 
 		expect(result).toEqual([]);
-		expect(std.warn).toBe("");
 	});
 
-	it("does not descend into subdirectories the configured pattern (or hint pattern) cannot reach", ({
+	it("does not descend into subdirectories the configured pattern cannot reach", ({
 		expect,
 	}) => {
 		// Imagine the user has somehow ended up with a `node_modules` inside
 		// their migrations dir. Walking it would be expensive and pointless,
 		// because the default pattern `migrations/*.sql` only matches
 		// top-level files. The walker should prune `node_modules/` before
-		// descending into it.
-		//
-		// We can't easily observe "did not descend" from outside the walker,
-		// but we can observe its effect: a file deep under `node_modules/`
-		// that — by name — could match the drizzle hint pattern is NOT
-		// reported as a drizzle file, because we never walked it.
+		// descending into it. We observe the effect: a file deep under
+		// `node_modules/` is not reported.
 		seedProjectFiles([
 			"migrations/0001_real.sql",
-			// This file would match the drizzle hint pattern *by name* if we
-			// walked the full tree. But it's deeper than the configured
-			// pattern OR the hint pattern (`migrations/*/migration.sql`)
-			// can reach — both stop after one wildcard segment under
-			// migrations/. The prune should skip it.
 			"migrations/node_modules/some_pkg/0001/migration.sql",
 		]);
 
@@ -258,11 +236,6 @@ describe("getMigrationNames", () => {
 
 		// The configured pattern matches only the top-level file.
 		expect(result).toEqual(["0001_real.sql"]);
-		// And no drizzle hint, because the file inside node_modules is
-		// invisible to the walker (the hint pattern `*/migration.sql` is
-		// only one level deep, so `node_modules/` was pruned before we
-		// went any deeper).
-		expect(std.warn).toBe("");
 	});
 
 	it("descends arbitrarily deep when migrations_pattern uses `**`", ({
@@ -349,6 +322,32 @@ describe("maybeLogHint", () => {
 
 			"
 		`);
+	});
+
+	it("does not log a hint for nested .sql files that aren't named `migration.sql`", ({
+		expect,
+	}) => {
+		// Drizzle's layout is specifically `<numbered_folder>/migration.sql`.
+		// A nested file with any other name (here `destroy.sql`) is not the
+		// drizzle layout, so no hint — the user may have intentionally placed
+		// a test-data dump or similar under their migrations_dir.
+		seedProjectFiles(["migrations/test_data/destroy.sql"]);
+
+		maybeLogHint(migrationsConfig({ migrationsPattern: "migrations/*.sql" }));
+
+		expect(std.warn).toBe("");
+	});
+
+	it("does not log a hint when there are no nested files at all", ({
+		expect,
+	}) => {
+		// Only top-level files (which the default pattern would have matched
+		// anyway). Nothing looks like the drizzle layout, so no hint.
+		seedProjectFiles(["migrations/0001_init.sql"]);
+
+		maybeLogHint(migrationsConfig({ migrationsPattern: "migrations/*.sql" }));
+
+		expect(std.warn).toBe("");
 	});
 });
 
