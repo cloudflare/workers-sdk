@@ -119,6 +119,11 @@ export type HandlerContext = {
 	prompt: typeof prompt;
 
 	/**
+	 * Whether the process is non-interactive or running in CI.
+	 */
+	isNonInteractiveOrCI: () => boolean;
+
+	/**
 	 * Error classes provided to the command implementor as a convenience
 	 * to aid discoverability and to encourage their usage.
 	 */

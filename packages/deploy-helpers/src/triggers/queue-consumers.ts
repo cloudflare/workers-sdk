@@ -246,7 +246,7 @@ async function resolveWorkerConsumerByName(
 				{ telemetryMessage: "queues worker consumer missing environment" }
 			);
 		}
-		return consumers[0];
+		return targetConsumers[0];
 	}
 
 	if (consumers[0].service) {

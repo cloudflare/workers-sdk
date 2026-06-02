@@ -1,7 +1,6 @@
 import {
 	formatTime,
 	getSubdomainMixedStateCheckDisabled,
-	isNonInteractiveOrCI,
 	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -443,7 +442,7 @@ async function validateSubdomainMixedState(
 	}
 
 	// Early return if non-interactive or CI
-	if (isNonInteractiveOrCI()) {
+	if (ctx.isNonInteractiveOrCI()) {
 		return after;
 	}
 

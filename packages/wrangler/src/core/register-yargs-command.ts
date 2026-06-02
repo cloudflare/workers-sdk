@@ -12,6 +12,7 @@ import { fetchResult, fetchListResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { confirm, prompt } from "../dialogs";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
@@ -269,6 +270,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						fetchListResult,
 						prompt,
 						confirm,
+						isNonInteractiveOrCI,
 					});
 
 					const durationMs = Date.now() - startTime;

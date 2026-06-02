@@ -1,5 +1,6 @@
 import { fetchListResult, fetchResult } from "../cfetch";
 import { confirm, prompt } from "../dialogs";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import type { DeployHelpersContext } from "@cloudflare/deploy-helpers";
 import type { ApiCredentials } from "@cloudflare/workers-utils";
@@ -31,5 +32,6 @@ export function createDeployHelpersContext(options?: {
 		logger,
 		confirm,
 		prompt,
+		isNonInteractiveOrCI,
 	};
 }

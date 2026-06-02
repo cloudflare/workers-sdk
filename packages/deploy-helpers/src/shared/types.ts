@@ -29,6 +29,7 @@ export type DeployHelpersContext = {
 		text: string,
 		options?: { defaultValue?: string }
 	) => Promise<string>;
+	isNonInteractiveOrCI: () => boolean;
 };
 
 /**

@@ -1,4 +1,8 @@
-import { getHostFromRoute, UserError } from "@cloudflare/workers-utils";
+import {
+	getHostFromRoute,
+	retryOnAPIFailure,
+	UserError,
+} from "@cloudflare/workers-utils";
 import type { DeployHelpersContext } from "../shared/types";
 import type { ComplianceConfig, Route } from "@cloudflare/workers-utils";
 
@@ -66,17 +70,19 @@ export async function getZoneIdFromHost(
 		if (!zoneIdCache.has(cacheKey)) {
 			zoneIdCache.set(
 				cacheKey,
-				ctx
-					.fetchListResult<{ id: string }>(
-						complianceConfig,
-						`/zones`,
-						{},
-						new URLSearchParams({
-							name: hostPieces.join("."),
-							"account.id": from.accountId,
-						})
-					)
-					.then((zones) => zones[0]?.id ?? null)
+				retryOnAPIFailure(
+					() =>
+						ctx.fetchListResult<{ id: string }>(
+							complianceConfig,
+							`/zones`,
+							{},
+							new URLSearchParams({
+								name: hostPieces.join("."),
+								"account.id": from.accountId,
+							})
+						),
+					ctx.logger
+				).then((zones) => zones[0]?.id ?? null)
 			);
 		}
 
