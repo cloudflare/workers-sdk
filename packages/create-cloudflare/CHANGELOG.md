@@ -1,5 +1,39 @@
 # create-cloudflare
 
+## 2.70.0
+
+### Minor Changes
+
+- [#14095](https://github.com/cloudflare/workers-sdk/pull/14095) [`8b4e917`](https://github.com/cloudflare/workers-sdk/commit/8b4e9174a496ede02b97ed81779d1e3f450b7d53) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Hide non-framework categories when `--platform=pages` is specified
+
+  When running C3 with `--platform=pages`, the "Hello World example" and "Application Starter" categories are now hidden since they only produce Workers projects. The framework list is also filtered to only show frameworks that support the Pages platform. This makes it clear that C3 can only create Pages projects when using a framework.
+
+### Patch Changes
+
+- [#14128](https://github.com/cloudflare/workers-sdk/pull/14128) [`7868998`](https://github.com/cloudflare/workers-sdk/commit/7868998b047e77b71ff58dabd448434e3612a70b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To      |
+  | --------------- | ------- | ------- |
+  | @angular/create | 21.2.12 | 21.2.13 |
+
+- [#14129](https://github.com/cloudflare/workers-sdk/pull/14129) [`fe97ff8`](https://github.com/cloudflare/workers-sdk/commit/fe97ff8e8e5c74a03cf040c4fefb425f0cc59467) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From   | To     |
+  | ------------------- | ------ | ------ |
+  | create-react-router | 7.15.1 | 7.16.0 |
+
+- [#14113](https://github.com/cloudflare/workers-sdk/pull/14113) [`063d98e`](https://github.com/cloudflare/workers-sdk/commit/063d98e96e39a4e08cad6d6bccf4f382bc654967) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Switch the `react-router` template to scaffold from the upstream `create-react-router` default template and overlay Cloudflare-specific files locally
+
+  Previously, C3 invoked `create-react-router` with `--template <pinned GitHub URL>` pointing at a specific commit of `remix-run/react-router-templates/cloudflare`. This pinning was needed because the upstream Cloudflare template had been deleted before, leaving us reliant on a third-party source we don't control.
+
+  We now invoke `create-react-router` without `--template` (using the upstream default template) and overlay all Cloudflare-specific files — `workers/app.ts`, `wrangler.jsonc`, split `tsconfig`s, a Cloudflare-flavored `vite.config.ts`, `entry.server.tsx`, etc. — from `templates/react-router/ts/`. A `configure` step deletes `Dockerfile`/`.dockerignore` and the `@react-router/node`/`@react-router/serve` dependencies and `start` script that ship with the default template.
+
+  This brings the `react-router` template in line with how `astro`, `svelte`, and `react` already work and removes our dependency on a deleted upstream template. The scaffolded project is functionally equivalent to before.
+
 ## 2.69.0
 
 ### Minor Changes

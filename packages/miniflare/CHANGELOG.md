@@ -1,5 +1,31 @@
 # miniflare
 
+## 4.20260601.0
+
+### Patch Changes
+
+- [#14147](https://github.com/cloudflare/workers-sdk/pull/14147) [`e06cbb7`](https://github.com/cloudflare/workers-sdk/commit/e06cbb722b3552b622e48c53d4f7d910162ce943) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260529.1 | 1.20260601.1 |
+
+- [#14086](https://github.com/cloudflare/workers-sdk/pull/14086) [`4ef790b`](https://github.com/cloudflare/workers-sdk/commit/4ef790b3ee22389db29c64f49564aac28022e40e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use `127.0.0.1` instead of `localhost` for the runtime inspector address
+
+  On systems where `getaddrinfo("localhost")` returns `::1` but IPv6 is disabled at the kernel level, `workerd` fails to bind the inspector socket and silently continues without emitting the `listen-inspector` event to the control FD. This caused `wrangler dev` to hang indefinitely at "Starting local server..." with no error output.
+
+  Using `127.0.0.1` explicitly is consistent with `DEFAULT_HOST`, `--debug-port`, and `resolveLocalhost()` already in the codebase.
+
+- [#14105](https://github.com/cloudflare/workers-sdk/pull/14105) [`337e912`](https://github.com/cloudflare/workers-sdk/commit/337e9124cfa461a99ce7ffb800dcc341f7b2f026) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove trailing periods from URLs in terminal output
+
+  URLs printed to the terminal with a sentence-ending period (e.g. `https://example.com/path.`) would include the period when clicked in some terminal emulators, causing 404 errors. This removes trailing periods from all URLs displayed in CLI output across wrangler, miniflare, vitest-pool-workers, and workers-utils.
+
+- [#14112](https://github.com/cloudflare/workers-sdk/pull/14112) [`3a746ac`](https://github.com/cloudflare/workers-sdk/commit/3a746ac56a40b805e38f26ef5328e44917b543e6) Thanks [@penalosa](https://github.com/penalosa)! - Pin non-bundled runtime dependencies to exact versions
+
+  Dependencies that are not bundled into a package's published output are installed directly into consumers' dependency trees, so they are now pinned to exact versions instead of semver ranges. This closes a supply-chain gap where an unpinned external dependency could resolve to a compromised upstream release on a fresh install. A new `pnpm check:pinned-deps` lint enforces this for all published packages (and for the shared pnpm catalog) going forward.
+
 ## 4.20260529.0
 
 ### Minor Changes
