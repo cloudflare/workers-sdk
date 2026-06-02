@@ -12,8 +12,8 @@ import { fetchResult, fetchListResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { confirm, prompt } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { run } from "../experimental-flags";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
 import {
