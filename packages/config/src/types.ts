@@ -7,6 +7,7 @@
  */
 
 import type {
+	AgentMemoryBinding,
 	AiBinding,
 	AiSearchBinding,
 	AiSearchNamespaceBinding,
@@ -39,6 +40,7 @@ import type {
 	VersionMetadataBinding,
 	VpcNetworkBinding,
 	VpcServiceBinding,
+	WebSearchBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
 	// TODO: re-enable when workflow bindings return.
@@ -56,6 +58,7 @@ import type {
  * Union of all binding definitions accepted in `env`.
  */
 type Binding =
+	| AgentMemoryBinding
 	| AiBinding
 	| AiSearchBinding
 	| AiSearchNamespaceBinding
@@ -88,6 +91,7 @@ type Binding =
 	| VersionMetadataBinding
 	| VpcNetworkBinding
 	| VpcServiceBinding
+	| WebSearchBinding
 	| WorkerBinding
 	| WorkerLoaderBinding;
 // TODO: re-enable when workflow bindings return.

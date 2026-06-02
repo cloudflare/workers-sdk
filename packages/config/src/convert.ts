@@ -197,6 +197,7 @@ function convertBindingsAndAssets(
 	const flagship: NonNullable<RawConfig["flagship"]> = [];
 	const aiSearch: NonNullable<RawConfig["ai_search"]> = [];
 	const aiSearchNamespaces: NonNullable<RawConfig["ai_search_namespaces"]> = [];
+	const agentMemory: NonNullable<RawConfig["agent_memory"]> = [];
 	const analyticsEngineDatasets: NonNullable<
 		RawConfig["analytics_engine_datasets"]
 	> = [];
@@ -237,6 +238,16 @@ function convertBindingsAndAssets(
 		}
 
 		switch (binding.type) {
+			case "agent-memory": {
+				agentMemory.push(
+					omitUndefined({
+						binding: name,
+						namespace: binding.namespace,
+						remote: binding.remote,
+					})
+				);
+				break;
+			}
 			case "ai": {
 				result.ai = omitUndefined({ binding: name, remote: binding.remote });
 				break;
@@ -508,6 +519,13 @@ function convertBindingsAndAssets(
 				}
 				break;
 			}
+			case "web-search": {
+				result.web_search = omitUndefined({
+					binding: name,
+					remote: binding.remote,
+				});
+				break;
+			}
 			case "worker": {
 				services.push(
 					omitUndefined({
@@ -569,6 +587,9 @@ function convertBindingsAndAssets(
 	}
 	if (aiSearchNamespaces.length) {
 		result.ai_search_namespaces = aiSearchNamespaces;
+	}
+	if (agentMemory.length) {
+		result.agent_memory = agentMemory;
 	}
 	if (analyticsEngineDatasets.length) {
 		result.analytics_engine_datasets = analyticsEngineDatasets;

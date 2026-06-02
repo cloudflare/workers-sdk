@@ -5,6 +5,7 @@
 
 export type {
 	Bindings,
+	AgentMemoryBinding,
 	AiBinding,
 	AiSearchBinding,
 	AiSearchNamespaceBinding,
@@ -44,6 +45,7 @@ export type {
 	VersionMetadataBinding,
 	VpcNetworkBinding,
 	VpcServiceBinding,
+	WebSearchBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
 	WorkflowBinding,

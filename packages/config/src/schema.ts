@@ -17,6 +17,11 @@ const AssetsSchema = z.strictObject({
 });
 
 const KnownBindingSchema = z.discriminatedUnion("type", [
+	z.strictObject({
+		type: z.literal("agent-memory"),
+		namespace: z.string(),
+		remote: z.boolean().optional(),
+	}),
 	z.strictObject({ type: z.literal("ai"), remote: z.boolean().optional() }),
 	z.strictObject({
 		type: z.literal("ai-search"),
@@ -170,6 +175,10 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 			}
 		}),
 	z.strictObject({
+		type: z.literal("web-search"),
+		remote: z.boolean().optional(),
+	}),
+	z.strictObject({
 		type: z.literal("worker"),
 		workerName: z.string(),
 		exportName: z.string().optional(),
@@ -246,6 +255,7 @@ const SINGLETON_BINDING_TYPES = new Set([
 	"media",
 	"stream",
 	"version-metadata",
+	"web-search",
 ]);
 
 /**

@@ -153,6 +153,7 @@ describe("convertToWranglerConfig", () => {
 					MY_MEDIA: { type: "media" },
 					MY_STREAM: { type: "stream" },
 					MY_VM: { type: "version-metadata" },
+					MY_WEB_SEARCH: { type: "web-search" },
 				},
 			});
 			expect(result.ai).toEqual({ binding: "MY_AI" });
@@ -161,6 +162,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.media).toEqual({ binding: "MY_MEDIA" });
 			expect(result.stream).toEqual({ binding: "MY_STREAM" });
 			expect(result.version_metadata).toEqual({ binding: "MY_VM" });
+			expect(result.web_search).toEqual({ binding: "MY_WEB_SEARCH" });
 		});
 
 		it("includes the remote flag on singletons that support it", ({
@@ -170,6 +172,16 @@ describe("convertToWranglerConfig", () => {
 				env: { MY_AI: { type: "ai", remote: true } },
 			});
 			expect(result.ai).toEqual({ binding: "MY_AI", remote: true });
+		});
+
+		it("includes the remote flag on web-search", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				env: { MY_WS: { type: "web-search", remote: true } },
+			});
+			expect(result.web_search).toEqual({
+				binding: "MY_WS",
+				remote: true,
+			});
 		});
 	});
 
@@ -288,6 +300,30 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect(result.ai_search_namespaces).toEqual([
 				{ binding: "N", namespace: "ns-1" },
+			]);
+		});
+
+		it("maps agent-memory bindings with namespace", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				env: {
+					MEM: { type: "agent-memory", namespace: "ns-1", remote: true },
+				},
+			});
+			expect(result.agent_memory).toEqual([
+				{ binding: "MEM", namespace: "ns-1", remote: true },
+			]);
+		});
+
+		it("maps multiple agent-memory bindings", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				env: {
+					MEM_1: { type: "agent-memory", namespace: "ns-1" },
+					MEM_2: { type: "agent-memory", namespace: "ns-2" },
+				},
+			});
+			expect(result.agent_memory).toEqual([
+				{ binding: "MEM_1", namespace: "ns-1" },
+				{ binding: "MEM_2", namespace: "ns-2" },
 			]);
 		});
 

@@ -92,6 +92,7 @@ interface BindingTypeMap<TBinding> {
 	text: TBinding extends TextBinding<infer T> ? T : never;
 
 	// Non-parameterized bindings
+	"agent-memory": AgentMemoryNamespace;
 	"ai-search": AiSearchInstance;
 	"ai-search-namespace": AiSearchNamespace;
 	"analytics-engine-dataset": AnalyticsEngineDataset;
@@ -117,6 +118,7 @@ interface BindingTypeMap<TBinding> {
 	"version-metadata": WorkerVersionMetadata;
 	"vpc-service": Fetcher;
 	"vpc-network": Fetcher;
+	"web-search": WebSearch;
 	worker: Fetcher;
 	"worker-loader": WorkerLoader;
 	workflow: Workflow;

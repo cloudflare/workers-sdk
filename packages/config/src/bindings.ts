@@ -7,6 +7,21 @@ import type { PipelineRecord } from "cloudflare:pipelines";
 // BINDING TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
+interface AgentMemoryBindingOptions {
+	/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
+	namespace: string;
+	/** Whether the Agent Memory binding should be remote in local development. */
+	remote?: boolean;
+}
+
+/**
+ * Agent Memory namespace binding. Each binding is scoped to a namespace and
+ * allows agents to persist and recall memory.
+ */
+export interface AgentMemoryBinding extends AgentMemoryBindingOptions {
+	type: "agent-memory";
+}
+
 interface AiBindingOptions {
 	/** Whether the AI binding should be remote or not in local development. */
 	remote?: boolean;
@@ -533,6 +548,19 @@ export interface VpcServiceBinding extends VpcServiceBindingOptions {
 	type: "vpc-service";
 }
 
+interface WebSearchBindingOptions {
+	/** Whether the Web Search binding should be remote or not in local development. */
+	remote?: boolean;
+}
+
+/**
+ * Cloudflare Web Search binding. There is exactly one shared web corpus, so
+ * the binding is zero-config — only the variable name is required.
+ */
+export interface WebSearchBinding extends WebSearchBindingOptions {
+	type: "web-search";
+}
+
 interface WorkerBindingOptions {
 	/** The name of the bound Worker. */
 	workerName: string;
@@ -613,6 +641,11 @@ export interface TypedWorkflowBinding<
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface Bindings {
+	/**
+	 * Agent Memory namespace binding. Each binding is scoped to a namespace and
+	 * allows agents to persist and recall memory.
+	 */
+	agentMemory(options: AgentMemoryBindingOptions): AgentMemoryBinding;
 	/**
 	 * Binding to the Workers AI project.
 	 *
@@ -781,6 +814,11 @@ export interface Bindings {
 	/** Binding to a VPC service. */
 	vpcService(options: VpcServiceBindingOptions): VpcServiceBinding;
 	/**
+	 * Cloudflare Web Search binding. There is exactly one shared web corpus, so
+	 * the binding is zero-config — only the variable name is required.
+	 */
+	webSearch(options?: WebSearchBindingOptions): WebSearchBinding;
+	/**
 	 * Service binding (Worker-to-Worker). `workerName` is the name of the bound
 	 * Worker; `exportName` selects a named `WorkerEntrypoint` export (defaults to
 	 * the default export).
@@ -800,6 +838,7 @@ export interface Bindings {
 }
 
 export const bindings = {
+	agentMemory: (options) => ({ type: "agent-memory", ...options }),
 	ai: (options) => ({ type: "ai", ...options }),
 	aiSearch: (options) => ({ type: "ai-search", ...options }),
 	aiSearchNamespace: (options) => ({
@@ -843,6 +882,7 @@ export const bindings = {
 	versionMetadata: () => ({ type: "version-metadata" }),
 	vpcService: (options) => ({ type: "vpc-service", ...options }),
 	vpcNetwork: (options) => ({ type: "vpc-network", ...options }),
+	webSearch: (options) => ({ type: "web-search", ...options }),
 	worker: (options) => ({ type: "worker", ...options }),
 	workerLoader: () => ({ type: "worker-loader" }),
 	// TODO: re-enable when workflow bindings return.

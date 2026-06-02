@@ -24,6 +24,7 @@ describe("env singleton bindings", () => {
 				MY_MEDIA: { type: "media" },
 				MY_STREAM: { type: "stream" },
 				MY_VERSION_METADATA: { type: "version-metadata" },
+				MY_WEB_SEARCH: { type: "web-search" },
 			},
 		});
 
@@ -44,6 +45,17 @@ describe("env singleton bindings", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts multiple agent-memory bindings", ({ expect }) => {
+		const result = ConfigSchema.safeParse({
+			env: {
+				MEM_1: { type: "agent-memory", namespace: "ns-1" },
+				MEM_2: { type: "agent-memory", namespace: "ns-2" },
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
 	it.for([
 		["ai"],
 		["assets"],
@@ -52,6 +64,7 @@ describe("env singleton bindings", () => {
 		["media"],
 		["stream"],
 		["version-metadata"],
+		["web-search"],
 	] as const)("rejects two %s bindings", ([type], { expect }) => {
 		const result = ConfigSchema.safeParse({
 			env: {
