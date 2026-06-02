@@ -750,6 +750,72 @@ describe("Engine", () => {
 			).toBe(true);
 		});
 
+		it("should default restart from step type to step.do", async ({
+			expect,
+		}) => {
+			const instanceId = "RESTART-FROM-STEP-DEFAULT-DO";
+			const engineId = env.ENGINE.idFromName(instanceId);
+
+			const engineStub = await runWorkflowAndAwait(
+				instanceId,
+				async (_event: unknown, step: WorkflowStep) => {
+					const setup = await step.do("setup", async () => crypto.randomUUID());
+					await step.sleep("checkpoint", 1);
+					const between = await step.do("between", async () =>
+						crypto.randomUUID()
+					);
+					const checkpoint = await step.do("checkpoint", async () =>
+						crypto.randomUUID()
+					);
+					const after = await step.do("after", async () => crypto.randomUUID());
+					return { setup, between, checkpoint, after };
+				}
+			);
+
+			const logsBefore = (await engineStub.readLogs()) as EngineLogs;
+			const stepResultsBefore = logsBefore.logs
+				.filter((log) => log.event === InstanceEvent.STEP_SUCCESS)
+				.map((log) => log.metadata.result);
+
+			try {
+				await runInDurableObject(engineStub, async (engine) => {
+					await engine.changeInstanceStatus("restart", {
+						name: "checkpoint",
+					});
+				});
+			} catch (e) {
+				if (!isAbortError(e)) {
+					throw e;
+				}
+			}
+
+			const restartedStub = env.ENGINE.get(engineId);
+
+			await runInDurableObject(restartedStub, async (engine) => {
+				await engine.attemptRestart();
+			});
+
+			await vi.waitUntil(
+				async () => {
+					const status = await runInDurableObject(restartedStub, (engine) =>
+						engine.getStatus()
+					);
+					return status === InstanceStatus.Complete;
+				},
+				{ timeout: 5000 }
+			);
+
+			const logsAfter = (await restartedStub.readLogs()) as EngineLogs;
+			const stepResultsAfter = logsAfter.logs
+				.filter((log) => log.event === InstanceEvent.STEP_SUCCESS)
+				.map((log) => log.metadata.result);
+
+			expect(stepResultsAfter[0]).toEqual(stepResultsBefore[0]);
+			expect(stepResultsAfter[1]).toEqual(stepResultsBefore[1]);
+			expect(stepResultsAfter[2]).not.toEqual(stepResultsBefore[2]);
+			expect(stepResultsAfter[3]).not.toEqual(stepResultsBefore[3]);
+		});
+
 		it("should throw when restarting from a non-existing step", async ({
 			expect,
 		}) => {

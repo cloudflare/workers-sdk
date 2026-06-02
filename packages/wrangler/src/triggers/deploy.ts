@@ -322,7 +322,12 @@ export default async function triggersDeploy(
 							script_name: scriptName,
 							class_name: workflow.class_name,
 							...(workflow.limits && { limits: workflow.limits }),
-							...(workflow.schedules && { schedules: workflow.schedules }),
+							...(workflow.schedules && {
+								schedules: (Array.isArray(workflow.schedules)
+									? workflow.schedules
+									: [workflow.schedules]
+								).map((cron) => ({ cron })),
+							}),
 						}),
 						headers: {
 							"Content-Type": "application/json",
