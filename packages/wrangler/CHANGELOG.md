@@ -1,5 +1,89 @@
 # wrangler
 
+## 4.97.0
+
+### Minor Changes
+
+- [#13996](https://github.com/cloudflare/workers-sdk/pull/13996) [`94b29f7`](https://github.com/cloudflare/workers-sdk/commit/94b29f76c6c6543c2504fb9d1967f15a3bad530d) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Add restart-from-step options to `wrangler workflows instances restart`
+
+  You can now restart a Workflow instance from a specific step using `--from-step-name`, with optional `--from-step-count` and `--from-step-type` disambiguation. These options work for both remote Workflow instances and local `wrangler dev --local` sessions.
+
+### Patch Changes
+
+- [#14141](https://github.com/cloudflare/workers-sdk/pull/14141) [`b210c5e`](https://github.com/cloudflare/workers-sdk/commit/b210c5eefdb22d83f937728527bc0091f9308070) Thanks [@MattieTK](https://github.com/MattieTK)! - Add re-authentication hint to account fetch error messages
+
+  When Wrangler fails to automatically retrieve account IDs, the error messages now suggest running `wrangler login` as a troubleshooting step. This addresses confusion for users who encounter these errors after OAuth system changes or other authentication issues.
+
+- [#14078](https://github.com/cloudflare/workers-sdk/pull/14078) [`aec1bb8`](https://github.com/cloudflare/workers-sdk/commit/aec1bb826aaba963bfc1ee96ba7359e284162bfa) Thanks [@MattieTK](https://github.com/MattieTK)! - Bump `am-i-vibing` from 0.1.1 to 0.4.0
+
+  This updates the agentic environment detection library to the latest version, which includes improved detection coverage for newer AI coding agents.
+
+- [#14147](https://github.com/cloudflare/workers-sdk/pull/14147) [`e06cbb7`](https://github.com/cloudflare/workers-sdk/commit/e06cbb722b3552b622e48c53d4f7d910162ce943) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260529.1 | 1.20260601.1 |
+
+- [#14027](https://github.com/cloudflare/workers-sdk/pull/14027) [`9a26191`](https://github.com/cloudflare/workers-sdk/commit/9a26191e1a8c4246f7999bdb3637a176b9166207) Thanks [@matingathani](https://github.com/matingathani)! - Gracefully handle EMFILE error when assets directory exceeds OS watcher limit
+
+  Previously, when `wrangler dev` was pointed at an assets directory with more than ~4,096 subdirectories, the chokidar file watcher threw an `EMFILE: too many open files` error that was not caught, causing an infinite error loop that made the dev server unresponsive.
+
+  Now the error is caught and wrangler:
+
+  1. Logs a clear warning explaining the platform watcher limit was hit
+  2. Recommends reducing the number of subdirectories by flattening or restructuring the assets directory
+  3. Disables the assets watcher gracefully so the dev server continues working without hot-reload
+
+- [#14041](https://github.com/cloudflare/workers-sdk/pull/14041) [`5565823`](https://github.com/cloudflare/workers-sdk/commit/5565823854b60937fcad7162425fcd9fad64558a) Thanks [@matingathani](https://github.com/matingathani)! - Fix `wrangler complete` printing the AI skills prompt into shell completion output
+
+  Previously, running `eval "$(wrangler complete zsh)"` (or any other shell) would fail with errors like `zsh: command not found: --install-skills` because the interactive AI agent skills installation prompt was included in the completion script output.
+
+  The skills prompt is now skipped when running `wrangler complete`, so the generated completion script is clean and can be sourced correctly.
+
+- [#13881](https://github.com/cloudflare/workers-sdk/pull/13881) [`890fca7`](https://github.com/cloudflare/workers-sdk/commit/890fca7d63a6efab5a58e4829cf02bf731eab197) Thanks [@matingathani](https://github.com/matingathani)! - Show a clear error when `--metadata` is not valid JSON instead of silently ignoring the value
+
+- [#14149](https://github.com/cloudflare/workers-sdk/pull/14149) [`6fc9777`](https://github.com/cloudflare/workers-sdk/commit/6fc97775d688ab6b65c40cad1c403bb04346d77e) Thanks [@mattjohnsonpint](https://github.com/mattjohnsonpint)! - Fix `wrangler deploy --upload-source-maps` silently skipping source maps when the entry file ends with magic comments after `//# sourceMappingURL=`
+
+  Wrangler previously assumed the `//# sourceMappingURL=` comment was the last non-empty line of a module. Tools like `sentry-cli sourcemaps inject` append a `//# debugId=` comment after it, which silently caused source maps to be omitted from the upload form, most commonly when deploying with `--no-bundle --upload-source-maps`. Wrangler now scans trailing magic comments (lines starting with `//#` or `//@`) and detects the `//# sourceMappingURL=` comment regardless of which other magic comments follow it.
+
+- [#14105](https://github.com/cloudflare/workers-sdk/pull/14105) [`337e912`](https://github.com/cloudflare/workers-sdk/commit/337e9124cfa461a99ce7ffb800dcc341f7b2f026) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove trailing periods from URLs in terminal output
+
+  URLs printed to the terminal with a sentence-ending period (e.g. `https://example.com/path.`) would include the period when clicked in some terminal emulators, causing 404 errors. This removes trailing periods from all URLs displayed in CLI output across wrangler, miniflare, vitest-pool-workers, and workers-utils.
+
+- [#14150](https://github.com/cloudflare/workers-sdk/pull/14150) [`8e7b74f`](https://github.com/cloudflare/workers-sdk/commit/8e7b74fa837dc7b67c4affab1d4b28876ce4d3f2) Thanks [@avenceslau](https://github.com/avenceslau)! - Fix Workflows `schedules` deploy payload to match the control plane API
+
+  When deploying a Workflow with a `schedules` binding property, Wrangler sent the cron expressions as a list of strings. The Workflows API expects a list of objects of the form `{ cron: string }`, so the request was rejected. Wrangler now maps each configured cron expression to `{ cron }` (normalizing a single string or an array) when building the request. The user-facing config still accepts a string or an array of strings.
+
+- [#14084](https://github.com/cloudflare/workers-sdk/pull/14084) [`e86489a`](https://github.com/cloudflare/workers-sdk/commit/e86489a5743ff9bad7bcb5b444ad3d952d5b0164) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix JSON variable bindings in `wrangler init --from-dash` and remote config diff
+
+  When fetching a remote Worker's configuration, JSON variable bindings (e.g. `{"my_value": 5}`) were incorrectly serialized as `{ "name": "MY_JSON", "json": {"my_value": 5} }` instead of `{ "MY_JSON": {"my_value": 5} }`. This affected two areas:
+
+  - `wrangler init --from-dash` would generate a `wrangler.json` with broken `vars` entries
+  - Remote config diff checks would always report JSON bindings as changed, since the malformed remote representation could never match the local config
+
+  Both issues are now fixed and remote JSON bindings are now correctly mapped.
+
+- [#14155](https://github.com/cloudflare/workers-sdk/pull/14155) [`42288d4`](https://github.com/cloudflare/workers-sdk/commit/42288d4886b7b7a516f5bcca6924a706201aa1e8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Include agent skill installation status in all telemetry events
+
+  The agent skill installation status is now consistently included in all telemetry events, not just a subset of them.
+
+- [#14063](https://github.com/cloudflare/workers-sdk/pull/14063) [`65b5f9e`](https://github.com/cloudflare/workers-sdk/commit/65b5f9e1855651c2df2c1bdfc8930141e36413d5) Thanks [@emily-shen](https://github.com/emily-shen)! - Move fetch helpers into `@cloudflare/workers-utils`
+
+  Shared Cloudflare API fetch helper types and plumbing now live in `@cloudflare/workers-utils` so Wrangler and other clients can use the same implementation.
+
+- [#14112](https://github.com/cloudflare/workers-sdk/pull/14112) [`3a746ac`](https://github.com/cloudflare/workers-sdk/commit/3a746ac56a40b805e38f26ef5328e44917b543e6) Thanks [@penalosa](https://github.com/penalosa)! - Pin non-bundled runtime dependencies to exact versions
+
+  Dependencies that are not bundled into a package's published output are installed directly into consumers' dependency trees, so they are now pinned to exact versions instead of semver ranges. This closes a supply-chain gap where an unpinned external dependency could resolve to a compromised upstream release on a fresh install. A new `pnpm check:pinned-deps` lint enforces this for all published packages (and for the shared pnpm catalog) going forward.
+
+- [#14124](https://github.com/cloudflare/workers-sdk/pull/14124) [`64ef9fd`](https://github.com/cloudflare/workers-sdk/commit/64ef9fd46eeb590813bb8cbc61b58c407452362e) Thanks [@odiak](https://github.com/odiak)! - Fix `wrangler secret bulk` dropping newlines from `.env` input read from stdin
+
+  Previously, `.env` input piped through stdin was concatenated without line breaks, so only the first secret could be parsed correctly. Stdin input now preserves line separators before parsing.
+
+- Updated dependencies [[`e06cbb7`](https://github.com/cloudflare/workers-sdk/commit/e06cbb722b3552b622e48c53d4f7d910162ce943), [`4ef790b`](https://github.com/cloudflare/workers-sdk/commit/4ef790b3ee22389db29c64f49564aac28022e40e), [`337e912`](https://github.com/cloudflare/workers-sdk/commit/337e9124cfa461a99ce7ffb800dcc341f7b2f026), [`3a746ac`](https://github.com/cloudflare/workers-sdk/commit/3a746ac56a40b805e38f26ef5328e44917b543e6)]:
+  - miniflare@4.20260601.0
+
 ## 4.96.0
 
 ### Minor Changes
