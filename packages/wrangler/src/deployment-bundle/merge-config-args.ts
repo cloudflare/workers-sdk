@@ -1,4 +1,3 @@
-import path from "node:path";
 import {
 	getCIGeneratePreviewAlias,
 	getCIOverrideName,
@@ -6,20 +5,17 @@ import {
 	getWranglerTmpDir,
 	UserError,
 } from "@cloudflare/workers-utils";
-import {
-	getAssetsOptions,
-	validateAssetsArgsAndConfig,
-} from "../assets";
+import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironmentApi } from "../utils/useServiceEnvironments";
-import { getEntry } from "./entry";
 import { generatePreviewAlias } from "../versions/upload";
+import { getEntry } from "./entry";
+import type { HandlerArgs } from "../core/types";
 import type { DeployArgs } from "../deploy/index";
 import type { VersionsUploadArgs } from "../versions/upload";
-import type { HandlerArgs } from "../core/types";
 import type { sharedDeployVersionsArgs } from "./deploy-args";
 import type {
 	DeployProps,
@@ -53,17 +49,12 @@ async function mergeSharedConfigArgs(
 
 	const compatibilityDate = args.latest
 		? getTodaysCompatDate()
-		: args.compatibilityDate ?? config.compatibility_date;
+		: (args.compatibilityDate ?? config.compatibility_date);
 
 	const compatibilityFlags =
 		args.compatibilityFlags ?? config.compatibility_flags;
 
 	const noBundle = !(args.bundle ?? !config.no_bundle);
-
-	const projectRoot =
-		command === "deploy"
-			? config.userConfigPath && path.dirname(config.userConfigPath)
-			: entry.projectRoot;
 
 	return {
 		entry,
@@ -82,7 +73,7 @@ async function mergeSharedConfigArgs(
 		defines: { ...config.define, ...collectKeyValues(args.define) },
 		alias: { ...config.alias, ...collectKeyValues(args.alias) },
 		useServiceEnvApiPath: useServiceEnvironmentApi(args, config),
-		destination: args.outdir ?? getWranglerTmpDir(projectRoot, "deploy"),
+		destination: args.outdir ?? getWranglerTmpDir(entry.projectRoot, "deploy"),
 		dryRun: args.dryRun ?? false,
 		env: args.env,
 		outdir: args.outdir,

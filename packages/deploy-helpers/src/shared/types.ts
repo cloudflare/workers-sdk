@@ -1,6 +1,8 @@
 import type {
 	AssetsOptions,
 	LegacyAssetPaths,
+	CfModule,
+	CfModuleType,
 	Config,
 	EphemeralDirectory,
 	FetchResultFetcher,
@@ -9,6 +11,7 @@ import type {
 	Route,
 	Entry,
 } from "@cloudflare/workers-utils";
+import type { NodeJSCompatMode } from "miniflare";
 
 /**
  * client needs to handle logger and fetch/auth implementation
@@ -123,6 +126,32 @@ export type VersionsUploadProps = SharedDeployVersionsProps & {
 	command: "versions upload";
 	/** CLI-only (--preview-alias), or auto-generated from CI branch name. */
 	previewAlias: string | undefined;
+};
+
+export type BuildBundleInfo = {
+	sourceMapPath?: string | undefined;
+	sourceMapMetadata?: { tmpDir: string; entryDirectory: string } | undefined;
+};
+
+export type HandleBuildResult = {
+	modules: CfModule[];
+	dependencies: Record<string, { bytesInOutput: number }>;
+	resolvedEntryPointPath: string;
+	bundleType: CfModuleType;
+	content: string;
+	bundle: BuildBundleInfo;
+};
+
+export type HandleBuild = {
+	build: (
+		props: SharedDeployVersionsProps,
+		config: Config,
+		options: {
+			nodejsCompatMode: NodeJSCompatMode;
+			metafile?: string | boolean;
+		}
+	) => Promise<HandleBuildResult>;
+	cleanup: (props: SharedDeployVersionsProps) => void;
 };
 
 export interface TriggerDeployment {

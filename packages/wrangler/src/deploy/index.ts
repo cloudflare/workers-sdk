@@ -3,6 +3,7 @@ import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
 } from "../deployment-bundle/deploy-args";
+import { handleBuild } from "../deployment-bundle/maybe-build-worker";
 import { mergeDeployConfigArgs } from "../deployment-bundle/merge-config-args";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
@@ -136,7 +137,7 @@ export const deployCommand = createCommand({
 		const { sourceMapSize, versionId, workerTag, targets } = await deploy(
 			mergedProps,
 			config,
-			workerNameOverridden,
+			handleBuild,
 			ctx
 		);
 

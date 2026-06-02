@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli-shared-helpers";
@@ -23,15 +23,8 @@ import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { deployContainers } from "../containers/deploy";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
-import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
-import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
-import {
-	createModuleCollector,
-	getWrangler1xLegacyModuleReferences,
-} from "../deployment-bundle/module-collection";
-import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { validateRoutes } from "../deployment-bundle/resolve-config-args";
 import {
@@ -51,7 +44,6 @@ import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import { getMetricsUsageHeaders } from "../metrics";
-import { isNavigatorDefined } from "../navigator-user-agent";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { parseBulkInputToObject } from "../secret";
 import { syncWorkersSite } from "../sites";
@@ -79,7 +71,7 @@ import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 import type { HandlerContext } from "../core/types";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
-import type { DeployProps } from "@cloudflare/deploy-helpers";
+import type { DeployProps, HandleBuild } from "@cloudflare/deploy-helpers";
 import type {
 	CfModule,
 	CfScriptFormat,
@@ -123,7 +115,7 @@ function addWorkersSitesBindings(
 export default async function deploy(
 	props: DeployProps,
 	config: Config,
-	workerNameOverridden: boolean,
+	buildWorker: HandleBuild,
 	ctx: Omit<HandlerContext, "config">
 ): Promise<{
 	sourceMapSize?: number;
@@ -143,12 +135,9 @@ export default async function deploy(
 		name,
 		compatibilityDate,
 		compatibilityFlags,
-		jsxFactory,
-		jsxFragment,
 		keepVars,
 		minify,
 		noBundle,
-		destination,
 		uploadSourceMaps,
 	} = props;
 
@@ -322,18 +311,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		"A [site] definition requires a `bucket` field with a path to the site's assets directory."
 	);
 
-	if (props.outdir) {
-		// we're using a custom output directory,
-		// so let's first ensure it exists
-		mkdirSync(props.outdir, { recursive: true });
-		// add a README
-		const readmePath = path.join(props.outdir, "README.md");
-		writeFileSync(
-			readmePath,
-			`This folder contains the built output assets for the worker "${scriptName}" generated at ${new Date().toISOString()}.`
-		);
-	}
-
 	const envName = props.env ?? "production";
 
 	const start = Date.now();
@@ -348,8 +325,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
 	const { format } = entry;
-	const projectRoot =
-		config.userConfigPath && path.dirname(config.userConfigPath);
+	const { projectRoot } = entry;
 
 	if (
 		!props.dispatchNamespace &&
@@ -407,107 +383,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		config,
 		props
 	);
+	const {
+		modules,
+		dependencies,
+		resolvedEntryPointPath,
+		bundleType,
+		content,
+		bundle,
+	} = await buildWorker.build(props, config, {
+		nodejsCompatMode,
+		metafile: props.metafile,
+	});
 	try {
-		if (noBundle) {
-			// if we're not building, let's just copy the entry to the destination directory
-			const destinationDir =
-				typeof destination === "string" ? destination : destination.path;
-			mkdirSync(destinationDir, { recursive: true });
-			writeFileSync(
-				path.join(destinationDir, path.basename(entry.file)),
-				readFileSync(entry.file, "utf-8")
-			);
-		}
-
-		const entryDirectory = path.dirname(entry.file);
-		const moduleCollector = createModuleCollector({
-			wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
-				entryDirectory,
-				entry.file
-			),
-			entry,
-			// `moduleCollector` doesn't get used when `noBundle` is set, so
-			// `findAdditionalModules` always defaults to `false`
-			findAdditionalModules: config.find_additional_modules ?? false,
-			rules: config.rules ?? [],
-			preserveFileNames: config.preserve_file_names ?? false,
-		});
-
-		const {
-			modules,
-			dependencies,
-			resolvedEntryPointPath,
-			bundleType,
-			...bundle
-		} = noBundle
-			? await noBundleWorker(
-					entry,
-					config.rules ?? [],
-					props.outdir,
-					config.python_modules.exclude
-				)
-			: await bundleWorker(
-					entry,
-					typeof destination === "string" ? destination : destination.path,
-					{
-						metafile: props.metafile,
-						bundle: true,
-						additionalModules: [],
-						moduleCollector,
-						doBindings: config.durable_objects.bindings,
-						workflowBindings: config.workflows ?? [],
-						jsxFactory,
-						jsxFragment,
-						tsconfig: props.tsconfig,
-						minify,
-						keepNames: config.keep_names ?? true,
-						sourcemap: uploadSourceMaps,
-						nodejsCompatMode,
-						compatibilityDate,
-						compatibilityFlags,
-						define: props.defines,
-						checkFetch: false,
-						alias: props.alias,
-						// We want to know if the build is for development or publishing
-						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
-						targetConsumer: "deploy",
-						local: false,
-						projectRoot,
-						defineNavigatorUserAgent: isNavigatorDefined(
-							compatibilityDate,
-							compatibilityFlags
-						),
-						plugins: [logBuildOutput(nodejsCompatMode)],
-
-						// Pages specific options used by wrangler pages commands
-						entryName: undefined,
-						inject: undefined,
-						isOutfile: undefined,
-						external: undefined,
-
-						// These options are dev-only
-						testScheduled: undefined,
-						watch: undefined,
-					}
-				);
-
-		// Add modules to dependencies for size warning
-		for (const module of modules) {
-			const modulePath =
-				module.filePath === undefined
-					? module.name
-					: path.relative("", module.filePath);
-			const bytesInOutput =
-				typeof module.content === "string"
-					? Buffer.byteLength(module.content)
-					: module.content.byteLength;
-			dependencies[modulePath] = { bytesInOutput };
-		}
-
-		const content = readFileSync(resolvedEntryPointPath, {
-			encoding: "utf-8",
-		});
-
 		// durable object migrations
 		const migrations = !isDryRun
 			? await getMigrationsToUpload(scriptName, {
@@ -985,11 +872,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			writeFileSync(props.outfile, Buffer.from(serializedFormData));
 		}
 	} finally {
-		if (typeof destination !== "string") {
-			// this means we're using a temp dir,
-			// so let's clean up before we proceed
-			destination.remove();
-		}
+		buildWorker.cleanup(props);
 	}
 
 	if (isDryRun) {
