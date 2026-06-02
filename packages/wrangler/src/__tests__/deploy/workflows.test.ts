@@ -318,7 +318,7 @@ describe("deploy", () => {
 					expect(body).toEqual({
 						script_name: "test-name",
 						class_name: "MyWorkflow",
-						schedules: "0 * * * *",
+						schedules: [{ cron: "0 * * * *" }],
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -375,7 +375,7 @@ describe("deploy", () => {
 					expect(body).toEqual({
 						script_name: "test-name",
 						class_name: "MyWorkflow",
-						schedules: ["0 * * * *", "0 9 * * 1"],
+						schedules: [{ cron: "0 * * * *" }, { cron: "0 9 * * 1" }],
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -434,7 +434,7 @@ describe("deploy", () => {
 						script_name: "test-name",
 						class_name: "MyWorkflow",
 						limits: { steps: 5000 },
-						schedules: "*/15 * * * *",
+						schedules: [{ cron: "*/15 * * * *" }],
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -818,7 +818,7 @@ describe("deploy", () => {
 						expect(body).toEqual({
 							script_name: "my-app-staging",
 							class_name: "MyWorkflow",
-							schedules: "0 * * * *",
+							schedules: [{ cron: "0 * * * *" }],
 						});
 						return HttpResponse.json(
 							createFetchResult({ id: "mock-new-workflow-id" })
