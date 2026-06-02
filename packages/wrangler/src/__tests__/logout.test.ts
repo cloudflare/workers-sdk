@@ -28,17 +28,17 @@ describe("logout", () => {
 		`);
 	});
 
-	it("should clear a cached anonymous preview account when not logged in via OAuth", async ({
+	it("should clear a cached temporary preview account when not logged in via OAuth", async ({
 		expect,
 	}) => {
-		const anonymousAccountConfigPath = path.join(
+		const temporaryAccountConfigPath = path.join(
 			getGlobalWranglerConfigPath(),
-			"wrangler-anonymous-account.json"
+			"wrangler-temporary-account.json"
 		);
-		fs.mkdirSync(path.dirname(anonymousAccountConfigPath), { recursive: true });
+		fs.mkdirSync(path.dirname(temporaryAccountConfigPath), { recursive: true });
 		fs.writeFileSync(
-			anonymousAccountConfigPath,
-			JSON.stringify({ anonymousPreviewAccount: { account: {}, claim: {} } })
+			temporaryAccountConfigPath,
+			JSON.stringify({ temporaryPreviewAccount: { account: {}, claim: {} } })
 		);
 
 		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
@@ -49,7 +49,7 @@ describe("logout", () => {
 			──────────────────
 			Cleared temporary preview account."
 		`);
-		expect(fs.existsSync(anonymousAccountConfigPath)).toBeFalsy();
+		expect(fs.existsSync(temporaryAccountConfigPath)).toBeFalsy();
 	});
 
 	it("should exit with a message stating the user logged in via API token", async ({
@@ -69,18 +69,18 @@ describe("logout", () => {
 	it("should logout user that has been properly logged in", async ({
 		expect,
 	}) => {
-		const anonymousAccountConfigPath = path.join(
+		const temporaryAccountConfigPath = path.join(
 			getGlobalWranglerConfigPath(),
-			"wrangler-anonymous-account.json"
+			"wrangler-temporary-account.json"
 		);
 		writeAuthConfigFile({
 			oauth_token: "some-oauth-tok",
 			refresh_token: "some-refresh-tok",
 		});
-		fs.mkdirSync(path.dirname(anonymousAccountConfigPath), { recursive: true });
+		fs.mkdirSync(path.dirname(temporaryAccountConfigPath), { recursive: true });
 		fs.writeFileSync(
-			anonymousAccountConfigPath,
-			JSON.stringify({ anonymousPreviewAccount: { account: {}, claim: {} } })
+			temporaryAccountConfigPath,
+			JSON.stringify({ temporaryPreviewAccount: { account: {}, claim: {} } })
 		);
 		// Make sure that logout removed the config file containing the auth tokens.
 		const config = getAuthConfigFilePath();
@@ -98,7 +98,7 @@ describe("logout", () => {
 		);
 
 		expect(fs.existsSync(config)).toBeTruthy();
-		expect(fs.existsSync(anonymousAccountConfigPath)).toBeTruthy();
+		expect(fs.existsSync(temporaryAccountConfigPath)).toBeTruthy();
 
 		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
 
@@ -109,7 +109,7 @@ describe("logout", () => {
 			Successfully logged out."
 		`);
 		expect(fs.existsSync(config)).toBeFalsy();
-		expect(fs.existsSync(anonymousAccountConfigPath)).toBeFalsy();
+		expect(fs.existsSync(temporaryAccountConfigPath)).toBeFalsy();
 		expect(counter).toBe(1);
 	});
 

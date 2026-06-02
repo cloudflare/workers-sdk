@@ -10,14 +10,14 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { assert, beforeEach, describe, expect, it, test, vi } from "vitest";
-import { ANONYMOUS_TERMS_PROMPT } from "../../user/anonymous-terms";
+import { TEMPORARY_TERMS_NOTICE } from "../../user/temporary-terms";
 import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
+import { mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import {
 	mockGetWorkerSubdomain,
@@ -36,7 +36,7 @@ describe("versions upload", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 	const assertApiRequest = makeApiRequestAsserter(std);
-	const anonymousPreviewAccountUrl =
+	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
 
 	function mockGetScript(result?: unknown) {
@@ -139,14 +139,12 @@ describe("versions upload", () => {
 		mockAccountId({ accountId: null });
 		mockApiToken({ apiToken: null });
 
-		test("should create a temporary account for non-interactive uploads", async ({
+		test("should create a temporary account in non-interactive mode after printing terms notice", async ({
 			expect,
 		}) => {
-			mockPrompt({ text: ANONYMOUS_TERMS_PROMPT, result: "yes" });
-
 			let previewAccountRequests = 0;
 			msw.use(
-				http.post(anonymousPreviewAccountUrl, async () => {
+				http.post(temporaryPreviewAccountUrl, async () => {
 					previewAccountRequests += 1;
 					return HttpResponse.json({
 						account: {
@@ -180,6 +178,7 @@ describe("versions upload", () => {
 			).resolves.toBeUndefined();
 
 			expect(previewAccountRequests).toBe(1);
+			expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
 			expect(std.out).toContain("Temporary account ready:");
 			expect(std.out).toContain("Account: Preview Account Alpha (created)");
 			expect(std.out).toContain("Uploaded test-name");

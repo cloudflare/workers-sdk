@@ -17,7 +17,10 @@ import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
 import { writeAuthConfigFile } from "../../user";
-import { ANONYMOUS_TERMS_PROMPT } from "../../user/anonymous-terms";
+import {
+	TEMPORARY_TERMS_NOTICE,
+	TEMPORARY_TERMS_PROMPT,
+} from "../../user/temporary-terms";
 import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
@@ -94,11 +97,8 @@ describe("deploy", () => {
 		mockGrantAccessToken,
 		mockDomainUsesAccess,
 	} = mockOAuthFlow();
-	const anonymousPreviewAccountUrl =
+	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
-	const mockAnonymousTermsAcceptance = (result = "yes") => {
-		mockPrompt({ text: ANONYMOUS_TERMS_PROMPT, result });
-	};
 
 	beforeEach(() => {
 		vi.stubGlobal("setTimeout", (fn: () => void) => {
@@ -781,22 +781,34 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("still starts OAuth in interactive mode when --temporary is passed", async ({
+		it("creates a temporary preview account in interactive mode when --temporary is passed", async ({
 			expect,
 		}) => {
 			setIsTTY(true);
+			mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 			writeWranglerConfig();
 			writeWorkerSource();
-			mockDomainUsesAccess({ usesAccess: false });
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshSuccess" });
-			mockOAuthServerCallback("success");
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest({
+				expectedAccountId: "preview-account-id",
+			});
 
 			let previewAccountRequests = 0;
 			let contentTypeHeader: string | null = null;
 			msw.use(
-				http.post(anonymousPreviewAccountUrl, async ({ request }) => {
+				http.get(
+					"*/accounts/preview-account-id/workers/services/:scriptName",
+					() => {
+						return HttpResponse.json(
+							createFetchResult({
+								default_environment: {
+									script: { last_deployed_from: "wrangler" },
+								},
+							})
+						);
+					}
+				),
+				http.post(temporaryPreviewAccountUrl, async ({ request }) => {
 					previewAccountRequests += 1;
 					contentTypeHeader = request.headers.get("Content-Type");
 					return HttpResponse.json({
@@ -821,10 +833,10 @@ describe("deploy", () => {
 				runWrangler("deploy index.js --temporary")
 			).resolves.toBeUndefined();
 
-			expect(previewAccountRequests).toBe(0);
-			expect(contentTypeHeader).toBeNull();
-			expect(std.out).toContain("Attempting to login via OAuth...");
-			expect(std.out).not.toContain("Temporary account ready:");
+			expect(previewAccountRequests).toBe(1);
+			expect(contentTypeHeader).toBe("application/json");
+			expect(std.out).not.toContain("Attempting to login via OAuth...");
+			expect(std.out).toContain("Temporary account ready:");
 		});
 
 		describe("with an alternative auth domain", () => {
@@ -916,7 +928,7 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("does not create an anonymous preview account when the user is already authenticated", async ({
+		it("does not create a temporary preview account when the user is already authenticated", async ({
 			expect,
 		}) => {
 			setIsTTY(false);
@@ -928,7 +940,7 @@ describe("deploy", () => {
 
 			let previewAccountRequests = 0;
 			msw.use(
-				http.post(anonymousPreviewAccountUrl, async () => {
+				http.post(temporaryPreviewAccountUrl, async () => {
 					previewAccountRequests += 1;
 					return HttpResponse.json({});
 				})
@@ -942,12 +954,11 @@ describe("deploy", () => {
 			expect(std.out).not.toContain("Temporary account ready:");
 		});
 
-		describe("non-TTY", () => {
-			it("creates an anonymous preview account in non-TTY when --temporary is passed", async ({
+		describe("with temporary preview accounts", () => {
+			it("creates a temporary preview account in non-interactive mode after printing terms notice", async ({
 				expect,
 			}) => {
 				setIsTTY(false);
-				mockAnonymousTermsAcceptance();
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -970,7 +981,7 @@ describe("deploy", () => {
 							);
 						}
 					),
-					http.post(anonymousPreviewAccountUrl, async ({ request }) => {
+					http.post(temporaryPreviewAccountUrl, async ({ request }) => {
 						previewContentType = request.headers.get("Content-Type");
 						previewRequestBody = await request.json();
 						return HttpResponse.json({
@@ -1000,33 +1011,35 @@ describe("deploy", () => {
 					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 
-				const globalAnonymousAccountPath = path.join(
+				const globalTemporaryAccountPath = path.join(
 					getGlobalWranglerConfigPath(),
-					"wrangler-anonymous-account.json"
+					"wrangler-temporary-account.json"
 				);
-				const localAnonymousAccountPath = path.join(
+				const localTemporaryAccountPath = path.join(
 					process.cwd(),
 					".wrangler",
 					"cache",
-					"wrangler-anonymous-account.json"
+					"wrangler-temporary-account.json"
 				);
 
 				expect(previewContentType).toBe("application/json");
 				expect(previewRequestBody).toEqual({
 					termsOfService: "https://www.cloudflare.com/terms/",
+					privacyPolicy: "https://www.cloudflare.com/privacypolicy/",
 					acceptTermsOfService: "yes",
 				});
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).not.toContain("Attempting to login via OAuth...");
+				expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
 				expect(std.out).toContain("Temporary account ready:");
 				expect(std.out).toContain("Account: Preview Account Alpha (created)");
 				expect(std.out).toContain("Claim within:");
-				expect(fs.existsSync(globalAnonymousAccountPath)).toBe(true);
-				expect(fs.existsSync(localAnonymousAccountPath)).toBe(false);
+				expect(fs.existsSync(globalTemporaryAccountPath)).toBe(true);
+				expect(fs.existsSync(localTemporaryAccountPath)).toBe(false);
 				expect(
-					JSON.parse(fs.readFileSync(globalAnonymousAccountPath, "utf-8"))
+					JSON.parse(fs.readFileSync(globalTemporaryAccountPath, "utf-8"))
 				).toMatchObject({
-					anonymousPreviewAccount: {
+					temporaryPreviewAccount: {
 						account: {
 							id: "preview-account-id",
 							apiToken: "preview-account-token",
@@ -1038,13 +1051,13 @@ describe("deploy", () => {
 				});
 			});
 
-			it("deploys anonymously even when an expired OAuth token that cannot refresh is on disk", async ({
+			it("deploys temporarily even when an expired OAuth token that cannot refresh is on disk", async ({
 				expect,
 			}) => {
-				setIsTTY(false);
-				mockAnonymousTermsAcceptance();
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 				// A stale stored OAuth token whose refresh fails must not hijack the
-				// anonymous override and abort the deploy with "Not logged in".
+				// temporary override and abort the deploy with "Not logged in".
 				writeAuthConfigFile({
 					oauth_token: "expired-token",
 					refresh_token: "expired-refresh-token",
@@ -1071,7 +1084,7 @@ describe("deploy", () => {
 							);
 						}
 					),
-					http.post(anonymousPreviewAccountUrl, async () => {
+					http.post(temporaryPreviewAccountUrl, async () => {
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -1103,37 +1116,12 @@ describe("deploy", () => {
 				expect(std.err).not.toContain("Not logged in");
 			});
 
-			it("requires explicit terms acceptance before using --temporary", async ({
-				expect,
-			}) => {
-				setIsTTY(false);
-				mockAnonymousTermsAcceptance("no");
-				writeWranglerConfig();
-				writeWorkerSource();
-
-				let previewAccountRequests = 0;
-				msw.use(
-					http.post(anonymousPreviewAccountUrl, async () => {
-						previewAccountRequests += 1;
-						return HttpResponse.json({});
-					})
-				);
-
-				await expect(
-					runWrangler("deploy index.js --temporary")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: You must accept Cloudflare's Terms of Service and Privacy Policy to use --temporary.]`
-				);
-
-				expect(previewAccountRequests).toBe(0);
-			});
-
 			it("provisions the preview account against the staging API and caches it per-environment", async ({
 				expect,
 			}) => {
 				vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
-				setIsTTY(false);
-				mockAnonymousTermsAcceptance();
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1188,28 +1176,28 @@ describe("deploy", () => {
 					runWrangler("deploy index.js --temporary")
 				).resolves.toBeUndefined();
 
-				const stagingAnonymousAccountPath = path.join(
+				const stagingTemporaryAccountPath = path.join(
 					getGlobalWranglerConfigPath(),
-					"wrangler-anonymous-account.staging.json"
+					"wrangler-temporary-account.staging.json"
 				);
-				const productionAnonymousAccountPath = path.join(
+				const productionTemporaryAccountPath = path.join(
 					getGlobalWranglerConfigPath(),
-					"wrangler-anonymous-account.json"
+					"wrangler-temporary-account.json"
 				);
 
 				expect(stagingPreviewRequests).toBe(1);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toContain("Temporary account ready:");
 				expect(std.out).toContain("Account: Preview Account Alpha (created)");
-				expect(fs.existsSync(stagingAnonymousAccountPath)).toBe(true);
-				expect(fs.existsSync(productionAnonymousAccountPath)).toBe(false);
+				expect(fs.existsSync(stagingTemporaryAccountPath)).toBe(true);
+				expect(fs.existsSync(productionTemporaryAccountPath)).toBe(false);
 			});
 
-			it("reuses a cached anonymous preview account for later anonymous deploys", async ({
+			it("reuses a cached temporary preview account for later temporary deploys", async ({
 				expect,
 			}) => {
-				setIsTTY(false);
-				mockAnonymousTermsAcceptance();
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1253,7 +1241,7 @@ describe("deploy", () => {
 							return HttpResponse.json(createFetchResult({ deployments: [] }));
 						}
 					),
-					http.post(anonymousPreviewAccountUrl, async () => {
+					http.post(temporaryPreviewAccountUrl, async () => {
 						previewAccountRequests += 1;
 						return HttpResponse.json({
 							account: {
@@ -1285,11 +1273,11 @@ describe("deploy", () => {
 				expect(std.out).toContain("Account: Preview Account Alpha (reused)");
 			});
 
-			it("treats a malformed anonymous preview account cache as a miss and refetches", async ({
+			it("treats a malformed temporary preview account cache as a miss and refetches", async ({
 				expect,
 			}) => {
-				setIsTTY(false);
-				mockAnonymousTermsAcceptance();
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1303,12 +1291,12 @@ describe("deploy", () => {
 				// reading `.account.expiresAt`.
 				const cachePath = path.join(
 					getGlobalWranglerConfigPath(),
-					"wrangler-anonymous-account.json"
+					"wrangler-temporary-account.json"
 				);
 				fs.mkdirSync(path.dirname(cachePath), { recursive: true });
 				fs.writeFileSync(
 					cachePath,
-					JSON.stringify({ anonymousPreviewAccount: {} })
+					JSON.stringify({ temporaryPreviewAccount: {} })
 				);
 
 				let previewAccountRequests = 0;
@@ -1325,7 +1313,7 @@ describe("deploy", () => {
 							);
 						}
 					),
-					http.post(anonymousPreviewAccountUrl, async () => {
+					http.post(temporaryPreviewAccountUrl, async () => {
 						previewAccountRequests += 1;
 						return HttpResponse.json({
 							account: {
@@ -1352,7 +1340,7 @@ describe("deploy", () => {
 				expect(previewAccountRequests).toBe(1);
 				expect(std.out).toContain("Account: Preview Account Alpha (created)");
 				expect(JSON.parse(fs.readFileSync(cachePath, "utf-8"))).toMatchObject({
-					anonymousPreviewAccount: {
+					temporaryPreviewAccount: {
 						account: { id: "preview-account-id" },
 						claim: {
 							url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
@@ -1511,16 +1499,16 @@ describe("deploy", () => {
 				expect(std.err).toContain("--temporary");
 			});
 
-			it("should fail clearly if the anonymous preview account request fails", async ({
+			it("should fail clearly if the temporary preview account request fails", async ({
 				expect,
 			}) => {
-				setIsTTY(false);
-				mockAnonymousTermsAcceptance();
+				setIsTTY(true);
+				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
 				writeWranglerConfig();
 				writeWorkerSource();
 
 				msw.use(
-					http.post(anonymousPreviewAccountUrl, async () => {
+					http.post(temporaryPreviewAccountUrl, async () => {
 						return new HttpResponse(null, {
 							status: 500,
 							statusText: "Internal Server Error",
@@ -1531,7 +1519,7 @@ describe("deploy", () => {
 				await expect(
 					runWrangler("deploy index.js --temporary")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Failed to create an anonymous preview account (500 Internal Server Error).]`
+					`[Error: Failed to create a temporary preview account (500 Internal Server Error).]`
 				);
 			});
 

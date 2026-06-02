@@ -1,0 +1,7 @@
+---
+"wrangler": minor
+---
+
+Add `--temporary` to `wrangler deploy`, `wrangler versions upload`, and Pages commands
+
+`--temporary` can now create a temporary preview account when you are not already authenticated, instead of starting the OAuth login flow. It applies when a command needs authentication and `--temporary` is passed — including `wrangler deploy`, `wrangler versions upload`, and the Pages commands. Wrangler deploys with the short-lived account token and prints a claim URL so the account can be claimed before it expires. The cached temporary preview account is cleared on successful OAuth login or logout so a stale account is not reused after switching back to authenticated usage.

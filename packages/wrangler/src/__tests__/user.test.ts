@@ -99,24 +99,24 @@ describe("User", () => {
 			});
 		});
 
-		it("should clear the cached anonymous preview account when logging in", async ({
+		it("should clear the cached temporary preview account when logging in", async ({
 			expect,
 		}) => {
 			// Resolve the path inside the test so it picks up the HOME/XDG_CONFIG_HOME
 			// stubs set by runInTempDir's beforeEach, rather than the real homedir.
-			const anonymousAccountConfigPath = path.join(
+			const temporaryAccountConfigPath = path.join(
 				getGlobalWranglerConfigPath(),
-				"wrangler-anonymous-account.json"
+				"wrangler-temporary-account.json"
 			);
 
 			mockOAuthServerCallback("success");
 
-			fs.mkdirSync(path.dirname(anonymousAccountConfigPath), {
+			fs.mkdirSync(path.dirname(temporaryAccountConfigPath), {
 				recursive: true,
 			});
 			fs.writeFileSync(
-				anonymousAccountConfigPath,
-				JSON.stringify({ anonymousPreviewAccount: { account: {}, claim: {} } })
+				temporaryAccountConfigPath,
+				JSON.stringify({ temporaryPreviewAccount: { account: {}, claim: {} } })
 			);
 
 			msw.use(
@@ -134,11 +134,11 @@ describe("User", () => {
 				)
 			);
 
-			expect(fs.existsSync(anonymousAccountConfigPath)).toBe(true);
+			expect(fs.existsSync(temporaryAccountConfigPath)).toBe(true);
 
 			await runWrangler("login");
 
-			expect(fs.existsSync(anonymousAccountConfigPath)).toBe(false);
+			expect(fs.existsSync(temporaryAccountConfigPath)).toBe(false);
 		});
 
 		it("should login a user when `wrangler login` is run with an ip address for custom callback-host", async ({

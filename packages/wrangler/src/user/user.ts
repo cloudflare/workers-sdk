@@ -233,15 +233,14 @@ import {
 	saveToConfigCache,
 } from "../config-cache";
 import {
-	clearCachedAnonymousPreviewAccount,
-	getOrCreateAnonymousPreviewAccount,
-} from "../deploy/anonymous-account";
+	clearCachedTemporaryPreviewAccount,
+	getOrCreateTemporaryPreviewAccount,
+} from "../deploy/temporary-account";
 import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { domainUsesAccess } from "./access";
-import { ensureAnonymousTermsAccepted } from "./anonymous-terms";
 import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
@@ -257,7 +256,8 @@ import {
 import { fetchAllAccounts } from "./fetch-accounts";
 import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
-import type { AnonymousPreviewAccount } from "../deploy/anonymous-account";
+import { ensureTemporaryTermsAccepted } from "./temporary-terms";
+import type { TemporaryPreviewAccount } from "../deploy/temporary-account";
 import type { Account } from "./shared";
 import type {
 	ApiCredentials,
@@ -272,20 +272,20 @@ type AuthOverride = {
 };
 
 type AuthContext = {
-	allowAnonymous: boolean;
+	allowTemporary: boolean;
 	override?: AuthOverride;
 };
 
 const authContextStorage = new AsyncLocalStorage<AuthContext>();
 
 export function runWithAuthContext<T>(cb: () => T): T {
-	return authContextStorage.run({ allowAnonymous: false }, cb);
+	return authContextStorage.run({ allowTemporary: false }, cb);
 }
 
-export function setAllowAnonymous(allowAnonymous: boolean): void {
+export function setAllowTemporary(allowTemporary: boolean): void {
 	const authContext = authContextStorage.getStore();
 	if (authContext) {
-		authContext.allowAnonymous = allowAnonymous;
+		authContext.allowTemporary = allowTemporary;
 	}
 }
 
@@ -300,22 +300,22 @@ function setAuthOverride(override: AuthOverride): void {
 	}
 }
 
-function shouldAllowAnonymous(): boolean {
-	return authContextStorage.getStore()?.allowAnonymous ?? false;
+function shouldAllowTemporary(): boolean {
+	return authContextStorage.getStore()?.allowTemporary ?? false;
 }
 
-function logAnonymousPreviewAccount(
-	anonymousPreviewAccount: AnonymousPreviewAccount,
+function logTemporaryPreviewAccount(
+	temporaryPreviewAccount: TemporaryPreviewAccount,
 	cached: boolean
 ): void {
-	const claimExpiresAt = new Date(anonymousPreviewAccount.claim.expiresAt);
+	const claimExpiresAt = new Date(temporaryPreviewAccount.claim.expiresAt);
 	logger.log("");
 	logger.log("Temporary account ready:");
 	logger.log(
-		`  Account: ${anonymousPreviewAccount.account.name} (${cached ? "reused" : "created"})`
+		`  Account: ${temporaryPreviewAccount.account.name} (${cached ? "reused" : "created"})`
 	);
 	logger.log(`  Claim within: ${formatDistanceToNowStrict(claimExpiresAt)}`);
-	logger.log(`  Claim URL: ${anonymousPreviewAccount.claim.url}`);
+	logger.log(`  Claim URL: ${temporaryPreviewAccount.claim.url}`);
 }
 
 /**
@@ -1275,7 +1275,7 @@ export async function login(
 		refresh_token: oauth.refreshToken?.value,
 		scopes: oauth.scopes,
 	});
-	clearCachedAnonymousPreviewAccount();
+	clearCachedTemporaryPreviewAccount();
 
 	logger.log(`Successfully logged in.`);
 
@@ -1336,7 +1336,7 @@ async function refreshToken(): Promise<boolean> {
 
 export async function logout(): Promise<void> {
 	// Independent of OAuth state, so clear it on every logout path.
-	const clearedAnonymous = clearCachedAnonymousPreviewAccount();
+	const clearedTemporary = clearCachedTemporaryPreviewAccount();
 
 	const authFromEnv = getAuthFromEnv();
 	if (authFromEnv) {
@@ -1351,7 +1351,7 @@ export async function logout(): Promise<void> {
 	const storedRefreshToken = readStoredAuthState().refreshToken;
 	if (!storedRefreshToken) {
 		logger.log(
-			clearedAnonymous
+			clearedTemporary
 				? "Cleared temporary preview account."
 				: "Not logged in, exiting..."
 		);
@@ -1372,7 +1372,7 @@ export async function logout(): Promise<void> {
 	});
 	await response.text(); // blank text? would be nice if it was something meaningful
 	rmSync(getAuthConfigFilePath());
-	clearCachedAnonymousPreviewAccount();
+	clearCachedTemporaryPreviewAccount();
 	logger.log(`Successfully logged out.`);
 }
 
@@ -1497,24 +1497,24 @@ export async function requireAuth(
 		account_id?: string;
 	}
 ): Promise<string> {
-	const allowAnonymous = shouldAllowAnonymous() && isNonInteractiveOrCI();
+	const allowTemporary = shouldAllowTemporary();
 	const loggedIn = await loginOrRefreshIfRequired(config, undefined, {
-		allowLogin: !allowAnonymous,
+		allowLogin: !allowTemporary,
 	});
 	if (!loggedIn) {
-		if (allowAnonymous) {
-			const { account: anonymousPreviewAccount, cached } =
-				await getOrCreateAnonymousPreviewAccount({
-					beforeCreate: ensureAnonymousTermsAccepted,
+		if (allowTemporary) {
+			const { account: temporaryPreviewAccount, cached } =
+				await getOrCreateTemporaryPreviewAccount({
+					beforeCreate: ensureTemporaryTermsAccepted,
 				});
 			setAuthOverride({
-				accountId: anonymousPreviewAccount.account.id,
+				accountId: temporaryPreviewAccount.account.id,
 				apiToken: {
-					apiToken: anonymousPreviewAccount.account.apiToken,
+					apiToken: temporaryPreviewAccount.account.apiToken,
 				},
 			});
-			logAnonymousPreviewAccount(anonymousPreviewAccount, cached);
-			return anonymousPreviewAccount.account.id;
+			logTemporaryPreviewAccount(temporaryPreviewAccount, cached);
+			return temporaryPreviewAccount.account.id;
 		}
 
 		if (isNonInteractiveOrCI()) {
