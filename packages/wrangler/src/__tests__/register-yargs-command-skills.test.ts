@@ -63,4 +63,50 @@ describe("register-yargs-command skills integration", () => {
 
 		expect(maybeInstallCloudflareSkillsGlobally).toHaveBeenCalledWith(true);
 	});
+
+	test("does not call maybeInstallCloudflareSkillsGlobally when skip_wrangler_startup_prompts is true", async ({
+		expect,
+	}) => {
+		await seed({
+			"wrangler.jsonc": JSON.stringify({
+				name: "test-worker",
+				skip_wrangler_startup_prompts: true,
+			}),
+		});
+
+		await runWrangler("setup");
+
+		expect(maybeInstallCloudflareSkillsGlobally).not.toHaveBeenCalled();
+	});
+
+	test("still calls maybeInstallCloudflareSkillsGlobally when skip_wrangler_startup_prompts is true but --install-skills is passed", async ({
+		expect,
+	}) => {
+		// Explicit --install-skills overrides the config option.
+		await seed({
+			"wrangler.jsonc": JSON.stringify({
+				name: "test-worker",
+				skip_wrangler_startup_prompts: true,
+			}),
+		});
+
+		await runWrangler("setup --install-skills");
+
+		expect(maybeInstallCloudflareSkillsGlobally).toHaveBeenCalledWith(true);
+	});
+
+	test("calls maybeInstallCloudflareSkillsGlobally when skip_wrangler_startup_prompts is false", async ({
+		expect,
+	}) => {
+		await seed({
+			"wrangler.jsonc": JSON.stringify({
+				name: "test-worker",
+				skip_wrangler_startup_prompts: false,
+			}),
+		});
+
+		await runWrangler("setup");
+
+		expect(maybeInstallCloudflareSkillsGlobally).toHaveBeenCalledWith(false);
+	});
 });

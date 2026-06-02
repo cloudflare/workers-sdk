@@ -181,6 +181,28 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	 * @nonInheritable
 	 */
 	keep_vars?: boolean;
+
+	/**
+	 * When invoked, Wrangler may present interactive confirmation prompts during
+	 * its startup sequence before the command handler runs.
+	 *
+	 * Setting this option to `true` suppresses those prompts (and the operations
+	 * they guard). Removing the option (or setting it to `false`) restores the
+	 * standard Wrangler behavior.
+	 *
+	 * Prompts currently suppressed by this option:
+	 *
+	 * - **AI coding agent skills installation** — the `confirm()` prompt that asks
+	 *   whether to install Cloudflare skills for detected AI coding agents.
+	 *   The `--install-skills` CLI flag still overrides this option and forces installation.
+	 *
+	 * This option also applies to any future interactive startup prompts that
+	 * Wrangler may introduce.
+	 *
+	 * @default false
+	 * @nonInheritable
+	 */
+	skip_wrangler_startup_prompts?: boolean;
 }
 
 // Pages-specific configuration fields
@@ -365,6 +387,7 @@ export const defaultWranglerConfig: Config = {
 	data_blobs: undefined,
 	keep_vars: undefined,
 	alias: undefined,
+	skip_wrangler_startup_prompts: false,
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/
 	account_id: undefined,

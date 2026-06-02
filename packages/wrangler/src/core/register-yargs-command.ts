@@ -138,7 +138,19 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				await printWranglerBanner();
 			}
 
-			if (!def.behaviour?.skipSkillsPrompt || args.installSkills) {
+			// Perform a lightweight raw config read to check whether the user
+			// opted out of startup prompts.  This runs before the full
+			// `readConfig()` call so we can skip the interactive skills prompt
+			// early.  The `--install-skills` CLI flag always takes precedence.
+			const skipStartupPrompts =
+				experimental_readRawConfig({ config: args.config }).rawConfig
+					.skip_wrangler_startup_prompts === true;
+
+			if (
+				!skipStartupPrompts ||
+				!def.behaviour?.skipSkillsPrompt ||
+				args.installSkills
+			) {
 				await maybeInstallCloudflareSkillsGlobally(args.installSkills);
 			}
 

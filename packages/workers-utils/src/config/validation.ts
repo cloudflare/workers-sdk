@@ -314,6 +314,14 @@ export function normalizeAndValidateConfig(
 	validateOptionalProperty(
 		diagnostics,
 		"",
+		"skip_wrangler_startup_prompts",
+		rawConfig.skip_wrangler_startup_prompts,
+		"boolean"
+	);
+
+	validateOptionalProperty(
+		diagnostics,
+		"",
 		"pages_build_output_dir",
 		rawConfig.pages_build_output_dir,
 		"string"
@@ -498,6 +506,7 @@ export function normalizeAndValidateConfig(
 		legacy_env: !useServiceEnvironments,
 		send_metrics: rawConfig.send_metrics,
 		keep_vars: rawConfig.keep_vars,
+		skip_wrangler_startup_prompts: rawConfig.skip_wrangler_startup_prompts,
 		...activeEnv,
 		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}, args),
 		site: normalizeAndValidateSite(
