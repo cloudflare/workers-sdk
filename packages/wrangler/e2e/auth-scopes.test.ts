@@ -1,9 +1,9 @@
-import { fetch } from "undici";
-import { describe, it } from "vitest";
 import {
 	getAuthUrlFromEnv,
 	getClientIdFromEnv,
-} from "../src/user/auth-variables";
+} from "@cloudflare/workers-auth";
+import { fetch } from "undici";
+import { describe, it } from "vitest";
 import { generateAuthUrl } from "../src/user/generate-auth-url";
 import { DefaultScopeKeys } from "../src/user/user";
 

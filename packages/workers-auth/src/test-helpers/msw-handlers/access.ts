@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 
-export default [
+export const mswAccessHandlers = [
 	http.get("https://access-protected.com/", () => {
 		return HttpResponse.json(null, {
 			status: 302,
