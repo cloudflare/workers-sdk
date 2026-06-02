@@ -121,6 +121,9 @@ export const d1ExecuteCommand = createCommand({
 		}
 
 		if (file && command) {
+			if (json) {
+				logger.loggerLevel = existingLogLevel;
+			}
 			throw createFatalError(
 				`Error: can't provide both --command and --file.`,
 				json,
