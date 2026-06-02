@@ -34,10 +34,19 @@ describe("wrangler pipelines", () => {
 					expect(body.sql).toBe(sql);
 
 					if (!isValid) {
-						const error = {
-							notes: [{ text: "Invalid SQL syntax near 'INVALID'" }],
-						};
-						throw error;
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [
+									{
+										message: "Invalid SQL syntax near 'INVALID'",
+									},
+								],
+								messages: [],
+								result: null,
+							},
+							{ status: 400 }
+						);
 					}
 
 					return HttpResponse.json({

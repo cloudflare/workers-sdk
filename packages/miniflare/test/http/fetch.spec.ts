@@ -195,7 +195,7 @@ test("fetch: throws on ws(s) protocols", async ({ expect }) => {
 		})
 	).rejects.toThrow(
 		new TypeError(
-			"Fetch API cannot load: ws://localhost/.\nMake sure you're using http(s):// URLs for WebSocket requests via fetch."
+			"Fetch API cannot load: ws://localhost/\nMake sure you're using http(s):// URLs for WebSocket requests via fetch."
 		)
 	);
 	await expect(
@@ -204,7 +204,7 @@ test("fetch: throws on ws(s) protocols", async ({ expect }) => {
 		})
 	).rejects.toThrow(
 		new TypeError(
-			"Fetch API cannot load: wss://localhost/.\nMake sure you're using http(s):// URLs for WebSocket requests via fetch."
+			"Fetch API cannot load: wss://localhost/\nMake sure you're using http(s):// URLs for WebSocket requests via fetch."
 		)
 	);
 });

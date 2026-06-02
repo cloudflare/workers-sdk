@@ -2,6 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 
 export class Counter extends DurableObject {
 	count: number = 0;
+	#webSocketMessages: string[] = [];
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
@@ -17,6 +18,14 @@ export class Counter extends DurableObject {
 
 	fetch(request: Request) {
 		const url = new URL(request.url);
+		if (url.pathname === "/websocket-order") {
+			const { 0: client, 1: server } = new WebSocketPair();
+			this.ctx.acceptWebSocket(server);
+			return new Response(null, { status: 101, webSocket: client });
+		}
+		if (url.pathname === "/websocket-order-log") {
+			return Response.json(this.#webSocketMessages);
+		}
 		if (url.pathname === "/redirect") {
 			return Response.redirect("https://example.com/redirected", 302);
 		}
@@ -32,6 +41,17 @@ export class Counter extends DurableObject {
 	scheduleReset(afterMillis: number) {
 		void this.ctx.storage.setAlarm(Date.now() + afterMillis);
 	}
+
+	webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
+		const value =
+			typeof message === "string" ? message : new TextDecoder().decode(message);
+		this.#webSocketMessages.push(value);
+		ws.send(value);
+	}
+
+	webSocketClose() {}
+
+	webSocketError() {}
 }
 
 export class SQLiteDurableObject extends DurableObject {

@@ -85,14 +85,14 @@ export async function fetchAllAccounts(
 				throw new UserError(
 					`Failed to automatically retrieve account IDs for the logged in user.
 You may have incorrect permissions on your API token, or an environment variable such as CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_KEY, or CLOUDFLARE_EMAIL may be set to an invalid value.
-Check your environment and unset or correct any Cloudflare credential variables, or run \`wrangler logout\` followed by \`wrangler login\` to re-authenticate.
+Check your environment and unset or correct any Cloudflare credential variables, or run \`wrangler login\` to re-authenticate.
 You can also skip this account check by adding an \`account_id\` in your ${configFileName(undefined)} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 					{ telemetryMessage: "user account fetch permission denied" }
 				);
 			}
 			throw new UserError(
 				`Failed to automatically retrieve account IDs for the logged in user.
-You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your ${configFileName(undefined)} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
+You may have incorrect permissions on your API token, or your authentication may have expired. Try running \`wrangler login\` to re-authenticate. You can also skip this account check by adding an \`account_id\` in your ${configFileName(undefined)} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 				{ telemetryMessage: "user account fetch permission denied" }
 			);
 		} else {
@@ -108,7 +108,8 @@ You may have incorrect permissions on your API token. You can skip this account 
 	if (usableAccounts.length === 0 && throwOnEmpty) {
 		throw new UserError(
 			`Failed to automatically retrieve account IDs for the logged in user.
-In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your ${configFileName(undefined)} file.`,
+In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your ${configFileName(undefined)} file.
+Alternatively, try running \`wrangler login\` to re-authenticate.`,
 			{ telemetryMessage: "user account fetch empty" }
 		);
 	}

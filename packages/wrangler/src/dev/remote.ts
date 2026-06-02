@@ -12,9 +12,9 @@ import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
 import type { StartDevWorkerInput } from "../api";
-import type { ApiCredentials } from "../user";
 import type { CfAccount } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
+import type { ApiCredentials } from "@cloudflare/workers-utils";
 import type {
 	AssetsOptions,
 	CfModule,

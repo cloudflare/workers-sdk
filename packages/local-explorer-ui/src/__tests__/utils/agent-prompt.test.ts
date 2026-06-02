@@ -21,7 +21,7 @@ describe("llm-prompt utils", () => {
 		);
 
 		expect(prompt).toContain(
-			"API endpoint: http://localhost:8787/cdn-cgi/explorer/api."
+			"API endpoint: http://localhost:8787/cdn-cgi/explorer/api"
 		);
 		expect(prompt).toContain(
 			"Fetch the OpenAPI schema from http://localhost:8787/cdn-cgi/explorer/api"

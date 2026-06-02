@@ -14,12 +14,15 @@ const ROOT = resolve(__dirname, "../..");
 // bumped in coordinated PRs with its own automation).
 const IGNORED_DEPS = new Set(["workerd"]);
 
-function loadCatalogDeps(): Set<string> {
-	const content = readFileSync(resolve(ROOT, "pnpm-workspace.yaml"), "utf-8");
-	const deps = new Set<string>();
+/**
+ * Parses the `catalog:` block of a pnpm-workspace.yaml into a map of
+ * dependency name -> version specifier.
+ */
+export function parseCatalog(workspaceYaml: string): Map<string, string> {
+	const catalog = new Map<string, string>();
 	let inCatalog = false;
 
-	for (const line of content.split("\n")) {
+	for (const line of workspaceYaml.split("\n")) {
 		if (line.startsWith("catalog:")) {
 			inCatalog = true;
 			continue;
@@ -36,13 +39,27 @@ function loadCatalogDeps(): Set<string> {
 			continue;
 		}
 
-		const match = trimmed.match(/^["']?(@?[^"':]+)["']?\s*:/);
+		const match = trimmed.match(
+			/^["']?(@?[^"':]+)["']?\s*:\s*["']?([^"'#\s]+)["']?/
+		);
 		if (match) {
-			deps.add(match[1]);
+			catalog.set(match[1].trim(), match[2]);
 		}
 	}
 
-	return deps;
+	return catalog;
+}
+
+/**
+ * Loads the pnpm catalog as a map of dependency name -> version specifier.
+ */
+export function loadCatalog(): Map<string, string> {
+	const content = readFileSync(resolve(ROOT, "pnpm-workspace.yaml"), "utf-8");
+	return parseCatalog(content);
+}
+
+function loadCatalogDeps(): Set<string> {
+	return new Set(loadCatalog().keys());
 }
 
 async function main(): Promise<void> {
@@ -105,8 +122,10 @@ async function main(): Promise<void> {
 	process.exit(errors.length > 0 ? 1 : 0);
 }
 
-main().catch((error) => {
-	console.log("::endgroup::");
-	console.error("An unexpected error occurred", error);
-	process.exit(1);
-});
+if (require.main === module) {
+	main().catch((error) => {
+		console.log("::endgroup::");
+		console.error("An unexpected error occurred", error);
+		process.exit(1);
+	});
+}

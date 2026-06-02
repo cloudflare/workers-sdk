@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.39.0",
+	"version": "1.39.1",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -19,7 +19,11 @@
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/vite-plugin-cloudflare"
 	},
+	"bin": {
+		"cf-vite": "./bin/cf-vite"
+	},
 	"files": [
+		"bin",
 		"dist"
 	],
 	"type": "module",
