@@ -1,0 +1,15 @@
+{
+	"$schema": "http://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"env": [
+				"CLOUDFLARE_ENV",
+				"CLOUDFLARE_RSBUILD_WRANGLER_CONFIG_PATH",
+				"CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH",
+				"NODE_ENV"
+			],
+			"outputs": ["dist/**"]
+		}
+	}
+}

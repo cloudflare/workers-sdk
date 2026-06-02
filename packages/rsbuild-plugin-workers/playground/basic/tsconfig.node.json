@@ -1,0 +1,8 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/base.json",
+	"compilerOptions": {
+		"composite": true,
+		"types": ["node"]
+	},
+	"include": ["rsbuild.config.ts"]
+}

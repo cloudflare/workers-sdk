@@ -1,5 +1,6 @@
 packages:
   - "packages/*"
+  - "packages/rsbuild-plugin-workers/playground/*"
   - "packages/vite-plugin-cloudflare/playground/*"
   - "packages/vite-plugin-cloudflare/playground"
   - "fixtures/*"

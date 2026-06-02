@@ -1,0 +1,20 @@
+{
+	"name": "@cloudflare/rsbuild-plugin-workers-playground-basic",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "rsbuild build",
+		"build:default": "rsbuild build",
+		"check:type": "tsc --build",
+		"deploy:dry-run": "pnpm build && wrangler deploy --dry-run",
+		"dev": "rsbuild dev --host 127.0.0.1"
+	},
+	"devDependencies": {
+		"@cloudflare/rsbuild-plugin-workers": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@rsbuild/core": "2.0.9",
+		"typescript": "catalog:default",
+		"wrangler": "workspace:*"
+	}
+}

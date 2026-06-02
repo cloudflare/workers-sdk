@@ -1,0 +1,10 @@
+{
+	"name": "@cloudflare/rsbuild-plugin-workers-playground",
+	"private": true,
+	"scripts": {
+		"build": "pnpm --dir basic build",
+		"check:type": "pnpm --dir basic check:type",
+		"deploy:dry-run": "pnpm --dir basic deploy:dry-run",
+		"dev": "pnpm --dir basic dev"
+	}
+}

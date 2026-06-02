@@ -1,0 +1,8 @@
+{
+	"name": "rsbuild-workers-playground-basic",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-01-01",
+	"vars": {
+		"MESSAGE": "hello-from-rsbuild"
+	}
+}
