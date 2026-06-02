@@ -830,7 +830,7 @@ describe("resolveMigrationsConfig", () => {
 				}),
 				configPath: "wrangler.jsonc",
 			});
-		expect(call).toThrow(/no `migrations_dir`/);
+		expect(call).toThrow(/have not set `migrations_dir`/);
 		// The error should also tell the user how to fix it (add a
 		// migrations_dir entry, with a worked example).
 		expect(call).toThrow(

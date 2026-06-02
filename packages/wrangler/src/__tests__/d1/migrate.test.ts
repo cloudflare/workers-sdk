@@ -684,7 +684,7 @@ Your database may not be available to serve requests during the migration, conti
 
 			await expect(runWrangler("d1 migrations list --local db")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: You have set \`migrations_pattern: "migrations/*.sql"\` in your wrangler.jsonc file but no \`migrations_dir\` for this D1 binding.
+				[Error: You have set \`migrations_pattern: "migrations/*.sql"\` in your wrangler.jsonc file but have not set \`migrations_dir\` for this D1 binding.
 
 				When \`migrations_pattern\` is set, \`migrations_dir\` must also be set, and \`migrations_pattern\` must start with \`\${migrations_dir}/\`. Add a \`migrations_dir\` entry to your wrangler.jsonc file (for example, \`"migrations_dir": "migrations"\`).]
 			`);

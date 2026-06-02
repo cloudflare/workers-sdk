@@ -64,7 +64,7 @@ export function resolveMigrationsConfig({
 
 	if (rawPattern !== undefined && rawDir === undefined) {
 		throw new UserError(
-			`You have set \`migrations_pattern: "${rawPattern}"\` in your ${configFile} file but no \`migrations_dir\` for this D1 binding.\n\n` +
+			`You have set \`migrations_pattern: "${rawPattern}"\` in your ${configFile} file but have not set \`migrations_dir\` for this D1 binding.\n\n` +
 				`When \`migrations_pattern\` is set, \`migrations_dir\` must also be set, and \`migrations_pattern\` must start with \`\${migrations_dir}/\`. Add a \`migrations_dir\` entry to your ${configFile} file (for example, \`"migrations_dir": "migrations"\`).`,
 			{
 				telemetryMessage:
