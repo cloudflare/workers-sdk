@@ -25,7 +25,7 @@ export function resolveGroupKeysToWipe(
 		sleep: InstanceEvent.SLEEP_START,
 		waitForEvent: InstanceEvent.WAIT_START,
 	};
-	const targetEvent = param.type ? stepTypeToEvent[param.type] : null;
+	const targetEvent = stepTypeToEvent[param.type ?? "do"];
 	const targetCount = param.count ?? 1;
 
 	const cursor = sql.exec<RawInstanceLog>(
@@ -57,7 +57,7 @@ export function resolveGroupKeysToWipe(
 		if (rawStepName !== param.name) {
 			continue;
 		}
-		if (targetEvent && row.event !== targetEvent) {
+		if (row.event !== targetEvent) {
 			continue;
 		}
 
