@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { getSubdomainValuesAPIMock } from "../triggers/deploy";
+import { getSubdomainValuesAPIMock } from "@cloudflare/deploy-helpers";
 import {
 	diffJsonObjects,
 	isModifiedDiffValue,

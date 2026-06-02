@@ -32,13 +32,17 @@
 		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
+	"dependencies": {
+		"@cloudflare/workers-utils": "workspace:*"
+	},
 	"devDependencies": {
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
+		"chalk": "^5.2.0",
 		"concurrently": "^8.2.2",
 		"miniflare": "workspace:*",
+		"p-queue": "^9.0.0",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"

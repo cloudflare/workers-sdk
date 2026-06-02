@@ -1,139 +1,16 @@
+import { getZoneForRoute, getZoneIdFromHost } from "@cloudflare/deploy-helpers";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchListResult } from "./cfetch";
-import { retryOnAPIFailure } from "./utils/retry";
+import { createDeployHelpersContext } from "./core/deploy-helpers-context";
+import type { ZoneIdCache } from "@cloudflare/deploy-helpers";
 import type { ComplianceConfig, Route } from "@cloudflare/workers-utils";
 
-/**
- * An object holding information about a zone for publishing.
- */
-export interface Zone {
-	id: string;
-	host: string;
-}
+export {
+	getHostFromRoute,
+	getHostFromUrl,
+	getZoneFromRoute,
+} from "@cloudflare/workers-utils";
 
-/**
- * Get the hostname on which to run a Worker.
- *
- * The most accurate place is usually
- * `route.pattern`, as that includes any subdomains. For example:
- * ```js
- * {
- * 	pattern: foo.example.com
- * 	zone_name: example.com
- * }
- * ```
- * However, in the case of patterns that _can't_ be parsed as a hostname
- * (primarily the pattern `*/ /*`), we fall back to the `zone_name`
- * (and in the absence of that return undefined).
- * @param route
- */
-export function getHostFromRoute(route: Route): string | undefined {
-	let host: string | undefined;
-
-	if (typeof route === "string") {
-		host = getHostFromUrl(route);
-	} else if (typeof route === "object") {
-		host = getHostFromUrl(route.pattern);
-
-		if (host === undefined && "zone_name" in route) {
-			host = getHostFromUrl(route.zone_name);
-		}
-	}
-
-	return host;
-}
-
-/**
- * Best-effort derivation of the Cloudflare zone name that owns a given route,
- * for use as the `CF-Worker` header value on outbound subrequests in local
- * development (see https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker).
- *
- * In production, `CF-Worker` is set to the zone name — for a route
- * `foo.example.com/*` on zone `example.com`, the header is `example.com`.
- * When the user has explicitly told us the zone name in their route config
- * (`zone_name`), use it. Otherwise, fall back to {@link getHostFromRoute},
- * which returns the route pattern's hostname — this is the closest local
- * approximation without performing an API lookup, and matches the behaviour
- * users see when their route's hostname is already the apex (e.g.
- * `example.com/*`).
- */
-export function getZoneFromRoute(route: Route): string | undefined {
-	if (typeof route === "object" && "zone_name" in route && route.zone_name) {
-		return route.zone_name;
-	}
-	return getHostFromRoute(route);
-}
-
-/**
- * Try to compute the a zone ID and host name for a route.
- *
- * When we're given a route, we do 2 things:
- * - We try to extract a host from it
- * - We try to get a zone id from the host
- */
-export async function getZoneForRoute(
-	complianceConfig: ComplianceConfig,
-	from: {
-		route: Route;
-		accountId: string;
-	},
-	zoneIdCache: ZoneIdCache = new Map()
-): Promise<Zone | undefined> {
-	const { route, accountId } = from;
-	const host = getHostFromRoute(route);
-	let id: string | undefined;
-
-	if (typeof route === "object" && "zone_id" in route) {
-		id = route.zone_id;
-	} else if (typeof route === "object" && "zone_name" in route) {
-		id = await getZoneIdFromHost(
-			complianceConfig,
-			{
-				host: route.zone_name,
-				accountId,
-			},
-			zoneIdCache
-		);
-	} else if (host) {
-		id = await getZoneIdFromHost(
-			complianceConfig,
-			{ host, accountId },
-			zoneIdCache
-		);
-	}
-
-	return id && host ? { id, host } : undefined;
-}
-
-/**
- * Given something that resembles a URL, try to extract a host from it.
- */
-export function getHostFromUrl(urlLike: string): string | undefined {
-	// if the urlLike-pattern uses a splat for the entire host and is only concerned with the pathname, we cannot infer a host
-	if (
-		urlLike.startsWith("*/") ||
-		urlLike.startsWith("http://*/") ||
-		urlLike.startsWith("https://*/")
-	) {
-		return undefined;
-	}
-
-	// if the urlLike-pattern uses a splat for the sub-domain (*.example.com) or for the root-domain (*example.com), remove the wildcard parts
-	urlLike = urlLike.replace(/\*(\.)?/g, "");
-
-	// prepend a protocol if the pattern did not specify one
-	if (!(urlLike.startsWith("http://") || urlLike.startsWith("https://"))) {
-		urlLike = "http://" + urlLike;
-	}
-
-	// now we've done our best to make urlLike a valid url string which we can pass to `new URL()` to get the host
-	// if it still isn't, return undefined to indicate we couldn't infer a host
-	try {
-		return new URL(urlLike).host;
-	} catch {
-		return undefined;
-	}
-}
 export async function getZoneIdForPreview(
 	complianceConfig: ComplianceConfig,
 	from: {
@@ -142,6 +19,7 @@ export async function getZoneIdForPreview(
 		accountId: string;
 	}
 ) {
+	const ctx = createDeployHelpersContext();
 	const zoneIdCache: ZoneIdCache = new Map();
 	const { host, routes, accountId } = from;
 	let zoneId: string | undefined;
@@ -149,6 +27,7 @@ export async function getZoneIdForPreview(
 		zoneId = await getZoneIdFromHost(
 			complianceConfig,
 			{ host, accountId },
+			ctx,
 			zoneIdCache
 		);
 	}
@@ -160,6 +39,7 @@ export async function getZoneIdForPreview(
 				route: firstRoute,
 				accountId,
 			},
+			ctx,
 			zoneIdCache
 		);
 		if (zone) {
@@ -167,61 +47,6 @@ export async function getZoneIdForPreview(
 		}
 	}
 	return zoneId;
-}
-
-/**
- * A mapping from account:host to zone id.
- */
-export type ZoneIdCache = Map<string, Promise<string | null>>;
-
-/**
- * Given something that resembles a host, try to infer a zone id from it.
- *
- * It's hard to get a 'valid' domain from a string, so we don't even try to validate TLDs, etc.
- * For each domain-like part of the host (e.g. w.x.y.z) try to get a zone id for it by
- * lopping off subdomains until we get a hit from the API.
- */
-async function getZoneIdFromHost(
-	complianceConfig: ComplianceConfig,
-	from: {
-		host: string;
-		accountId: string;
-	},
-	zoneIdCache: ZoneIdCache
-): Promise<string> {
-	const hostPieces = from.host.split(".");
-
-	while (hostPieces.length > 1) {
-		const cacheKey = `${from.accountId}:${hostPieces.join(".")}`;
-		if (!zoneIdCache.has(cacheKey)) {
-			zoneIdCache.set(
-				cacheKey,
-				retryOnAPIFailure(() =>
-					fetchListResult<{ id: string }>(
-						complianceConfig,
-						`/zones`,
-						{},
-						new URLSearchParams({
-							name: hostPieces.join("."),
-							"account.id": from.accountId,
-						})
-					)
-				).then((zones) => zones[0]?.id ?? null)
-			);
-		}
-
-		const cachedZone = await zoneIdCache.get(cacheKey);
-		if (cachedZone) {
-			return cachedZone;
-		}
-
-		hostPieces.shift();
-	}
-
-	throw new UserError(
-		`Could not find zone for \`${from.host}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`,
-		{ telemetryMessage: "zones route zone not found" }
-	);
 }
 
 /**
@@ -300,10 +125,14 @@ export async function getWorkerForZone(
 	configPath: string | undefined
 ) {
 	const { worker, accountId } = from;
-	const zone = await getZoneForRoute(complianceConfig, {
-		route: worker,
-		accountId,
-	});
+	const zone = await getZoneForRoute(
+		complianceConfig,
+		{
+			route: worker,
+			accountId,
+		},
+		createDeployHelpersContext()
+	);
 	if (!zone) {
 		throw new UserError(
 			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`,
