@@ -45,6 +45,11 @@ export const triggersDeployCommand = createCommand({
 			describe: "Don't actually deploy",
 			type: "boolean",
 		},
+		"show-diff": {
+			describe: "Show the diff between remote and local trigger configuration",
+			type: "boolean",
+			default: false,
+		},
 		"legacy-env": {
 			type: "boolean",
 			describe: "Use legacy environments",
@@ -70,7 +75,8 @@ export const triggersDeployCommand = createCommand({
 			sendMetrics: config.send_metrics,
 		});
 
-		const accountId = args.dryRun ? undefined : await requireAuth(config);
+		const accountId =
+			args.dryRun && !args.showDiff ? undefined : await requireAuth(config);
 
 		await triggersDeploy({
 			config,
@@ -81,6 +87,7 @@ export const triggersDeployCommand = createCommand({
 			routes: args.routes,
 			useServiceEnvironments: useServiceEnvironments(config),
 			dryRun: args.dryRun,
+			showDiff: args.showDiff,
 			assetsOptions,
 			firstDeploy: false, // at this point the Worker should already exist.
 		});
