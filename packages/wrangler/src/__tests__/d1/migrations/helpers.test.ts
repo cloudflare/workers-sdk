@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
+	compareMigrationPaths,
 	getMigrationNames,
 	getNextMigrationNumber,
 	maybeLogHint,
@@ -517,6 +518,24 @@ describe("getMigrationNames ordering", () => {
 			"1_a/migration.sql",
 			"2_b/migration.sql",
 			"10_c/migration.sql",
+		]);
+	});
+});
+
+describe("compareMigrationPaths", () => {
+	it("orders numbered files inside a shared numbered directory numerically", ({
+		expect,
+	}) => {
+		const unsorted = [
+			"0001_posts/10_c.sql",
+			"0001_posts/1_a.sql",
+			"0001_posts/9_b.sql",
+		];
+
+		expect([...unsorted].sort(compareMigrationPaths)).toEqual([
+			"0001_posts/1_a.sql",
+			"0001_posts/9_b.sql",
+			"0001_posts/10_c.sql",
 		]);
 	});
 });

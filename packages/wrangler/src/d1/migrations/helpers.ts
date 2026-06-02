@@ -287,7 +287,7 @@ function listFilesRelative(dir: string, matcher: Minimatch): string[] {
 }
 
 /**
- * Compare two migration paths by the leading integer of their first path
+ * Compare two migration paths by the leading integer of in each path
  * segment, falling back to lex order on ties. Numbered files sort before
  * unnumbered ones.
  *
@@ -296,6 +296,22 @@ function listFilesRelative(dir: string, matcher: Minimatch): string[] {
  * `10_c.sql` between `1_a.sql` and `9_b.sql`.
  */
 export function compareMigrationPaths(a: string, b: string): number {
+	const aSegments = a.split("/");
+	const bSegments = b.split("/");
+	const shared = Math.min(aSegments.length, bSegments.length);
+	for (let i = 0; i < shared; i++) {
+		const cmp = compareSegments(aSegments[i], bSegments[i]);
+		if (cmp !== 0) {
+			return cmp;
+		}
+	}
+	// Every shared segment is equal: the shorter path sorts first (e.g.
+	// `0001_a` before `0001_a/migration.sql`). This is impossible because
+	// listFilesRelative() will never output a directory.
+	return aSegments.length - bSegments.length;
+}
+
+function compareSegments(a: string, b: string): number {
 	const aNum = leadingMigrationNumber(a);
 	const bNum = leadingMigrationNumber(b);
 	if (aNum !== bNum) {
@@ -312,7 +328,7 @@ export function compareMigrationPaths(a: string, b: string): number {
 			return 1;
 		}
 	}
-	// Same number, or both unprefixed: lex order for determinism.
+	// Same number, or both unnumbered: lex order for determinism.
 	if (a < b) {
 		return -1;
 	}
