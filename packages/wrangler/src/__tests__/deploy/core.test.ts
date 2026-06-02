@@ -17,7 +17,10 @@ import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
 import { writeAuthConfigFile } from "../../user";
-import { TEMPORARY_TERMS_PROMPT } from "../../user/temporary-terms";
+import {
+	TEMPORARY_TERMS_NOTICE,
+	TEMPORARY_TERMS_PROMPT,
+} from "../../user/temporary-terms";
 import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
@@ -952,11 +955,10 @@ describe("deploy", () => {
 		});
 
 		describe("with temporary preview accounts", () => {
-			it("creates a temporary preview account after interactive terms acceptance", async ({
+			it("creates a temporary preview account in non-interactive mode after printing terms notice", async ({
 				expect,
 			}) => {
-				setIsTTY(true);
-				mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
+				setIsTTY(false);
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest("test-sub-domain", true, false);
@@ -1028,6 +1030,7 @@ describe("deploy", () => {
 				});
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).not.toContain("Attempting to login via OAuth...");
+				expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
 				expect(std.out).toContain("Temporary account ready:");
 				expect(std.out).toContain("Account: Preview Account Alpha (created)");
 				expect(std.out).toContain("Claim within:");
@@ -1111,30 +1114,6 @@ describe("deploy", () => {
 
 				expect(std.out).toContain("Temporary account ready:");
 				expect(std.err).not.toContain("Not logged in");
-			});
-
-			it("requires explicit terms acceptance before using --temporary", async ({
-				expect,
-			}) => {
-				setIsTTY(false);
-				writeWranglerConfig();
-				writeWorkerSource();
-
-				let previewAccountRequests = 0;
-				msw.use(
-					http.post(temporaryPreviewAccountUrl, async () => {
-						previewAccountRequests += 1;
-						return HttpResponse.json({});
-					})
-				);
-
-				await expect(
-					runWrangler("deploy index.js --temporary")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: You must accept Cloudflare's Terms of Service (https://www.cloudflare.com/website-terms/) and Privacy Policy (https://www.cloudflare.com/privacypolicy/) to use --temporary. Rerun this command in an interactive terminal and type "yes" when prompted.]`
-				);
-
-				expect(previewAccountRequests).toBe(0);
 			});
 
 			it("provisions the preview account against the staging API and caches it per-environment", async ({
