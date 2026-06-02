@@ -104,7 +104,7 @@ function switchRemote(url: URL, remote: string) {
 function isTokenExchangeRequest(request: Request, url: URL, env: Env) {
 	return (
 		request.method === "POST" &&
-		url.hostname === env.PREVIEW &&
+		(url.hostname === env.PREVIEW || url.hostname === env.PREVIEW_LEGACY) &&
 		url.pathname === "/exchange"
 	);
 }
@@ -112,13 +112,17 @@ function isTokenExchangeRequest(request: Request, url: URL, env: Env) {
 function isPreviewUpdateRequest(request: Request, url: URL, env: Env) {
 	return (
 		request.method === "GET" &&
-		url.hostname.endsWith(env.PREVIEW) &&
+		(url.hostname.endsWith(env.PREVIEW) ||
+			url.hostname.endsWith(env.PREVIEW_LEGACY)) &&
 		url.pathname === "/.update-preview-token"
 	);
 }
 
 function isRawHttpRequest(url: URL, env: Env) {
-	return url.hostname.endsWith(env.RAW_HTTP);
+	return (
+		url.hostname.endsWith(env.RAW_HTTP) ||
+		url.hostname.endsWith(env.RAW_HTTP_LEGACY)
+	);
 }
 
 async function handleRequest(request: Request, env: Env) {
@@ -172,7 +176,7 @@ async function handleRequest(request: Request, env: Env) {
 
 /**
  * Given a preview token, this endpoint allows for raw http calls to be inspected
- * It must be called with a random subdomain (i.e. some-random-data.rawhttp.devprod.cloudflare.dev)
+ * It must be called with a random subdomain (i.e. some-random-data.rawhttp.cloudflarepreviews.com)
  * for consistency with the preview endpoint. This is not currently used, but may be in future
  *
  * It requires two parameters, passed as headers:
@@ -285,7 +289,7 @@ async function handleRawHttp(request: Request, url: URL) {
  *  - `prewarm` A fire-and-forget prewarm endpoint to hit to start up the preview
  *  - `suffix`  (optional) The pathname + search to hit on the preview worker once redirected
  *
- * It must be called with a random subdomain (i.e. some-random-data.preview.devprod.cloudflare.dev)
+ * It must be called with a random subdomain (i.e. some-random-data.preview.cloudflarepreviews.com)
  * to provide cookie isolation for the preview.
  *
  * It will redirect to the suffix provide, setting a cookie with the `token` and `remote`

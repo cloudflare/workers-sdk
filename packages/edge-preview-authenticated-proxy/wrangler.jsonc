@@ -8,14 +8,28 @@
 		"preview.devprod.cloudflare.dev/*",
 		"*.preview.devprod.cloudflare.dev/*",
 		"*.rawhttp.devprod.cloudflare.dev/*",
+		{
+			"pattern": "preview.cloudflarepreviews.com/*",
+			"zone_name": "cloudflarepreviews.com",
+		},
+		{
+			"pattern": "*.preview.cloudflarepreviews.com/*",
+			"zone_name": "cloudflarepreviews.com",
+		},
+		{
+			"pattern": "*.rawhttp.cloudflarepreviews.com/*",
+			"zone_name": "cloudflarepreviews.com",
+		},
 	],
 	"vars": {
 		"SENTRY_DSN": "https://1ff9df95733c4e7d9c31dc13ab05d44a@sentry10.cfdata.org/891",
-		"PREVIEW": "preview.devprod.cloudflare.dev",
-		"RAW_HTTP": "rawhttp.devprod.cloudflare.dev",
+		"PREVIEW": "preview.cloudflarepreviews.com",
+		"PREVIEW_LEGACY": "preview.devprod.cloudflare.dev",
+		"RAW_HTTP": "rawhttp.cloudflarepreviews.com",
+		"RAW_HTTP_LEGACY": "rawhttp.devprod.cloudflare.dev",
 	},
 	"dev": {
-		"host": "preview.devprod.cloudflare.dev",
+		"host": "preview.cloudflarepreviews.com",
 	},
 	"kv_namespaces": [
 		{

@@ -485,3 +485,71 @@ describe("Raw HTTP preview", () => {
 		`);
 	});
 });
+
+// The worker is served from both the legacy `*.devprod.cloudflare.dev` domains
+// (covered above) and the new `*.cloudflarepreviews.com` domains during the
+// migration. These tests confirm the new domains are handled identically.
+describe("cloudflarepreviews.com domains", () => {
+	it("sets a cookie scoped to the new preview domain and proxies it as a header", async ({
+		expect,
+	}) => {
+		let resp = await SELF.fetch(
+			`https://random-data.preview.cloudflarepreviews.com/.update-preview-token?token=TEST_TOKEN&remote=${encodeURIComponent(
+				MOCK_REMOTE_URL
+			)}&suffix=${encodeURIComponent("/hello?world")}`,
+			{
+				method: "GET",
+				redirect: "manual",
+			}
+		);
+		expect(resp.headers.get("location")).toMatchInlineSnapshot(
+			'"/hello?world"'
+		);
+		expect(
+			removeUUID(resp.headers.get("set-cookie") ?? "")
+		).toMatchInlineSnapshot(
+			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.cloudflarepreviews.com; HttpOnly; Secure; Partitioned; SameSite=None"'
+		);
+		const tokenId = (resp.headers.get("set-cookie") ?? "")
+			.split(";")[0]
+			.split("=")[1];
+		resp = await SELF.fetch(
+			`https://random-data.preview.cloudflarepreviews.com`,
+			{
+				method: "GET",
+				headers: {
+					cookie: `token=${tokenId}`,
+				},
+			}
+		);
+
+		const json = await resp.json();
+		expect(json).toMatchObject({
+			url: `${MOCK_REMOTE_URL}/`,
+			headers: expect.arrayContaining([
+				["cf-workers-preview-token", "TEST_TOKEN"],
+			]),
+		});
+	});
+
+	it("handles raw HTTP requests on the new rawhttp domain", async ({
+		expect,
+	}) => {
+		const token = randomBytes(4096).toString("hex");
+		const resp = await SELF.fetch(
+			`https://0000.rawhttp.cloudflarepreviews.com/method`,
+			{
+				method: "POST",
+				headers: {
+					origin: "https://cloudflare.dev",
+					"X-CF-Token": token,
+					"X-CF-Remote": MOCK_REMOTE_URL,
+					"X-CF-Http-Method": "PUT",
+				},
+			}
+		);
+
+		expect(await resp.text()).toEqual("PUT");
+		expect(resp.headers.get("cf-ew-raw-Test-Http-Method")).toEqual("PUT");
+	});
+});
