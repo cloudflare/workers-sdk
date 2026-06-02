@@ -483,13 +483,10 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				env: {
 					U: {
-						type: "unsafe",
-						value: {
-							type: "my-custom",
-							custom_field: "value-1",
-							dev: {
-								plugin: { package: "pkg", name: "plug" },
-							},
+						type: "unsafe:my-custom",
+						custom_field: "value-1",
+						dev: {
+							plugin: { package: "pkg", name: "plug" },
 						},
 					},
 				},

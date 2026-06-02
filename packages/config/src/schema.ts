@@ -16,7 +16,7 @@ const AssetsSchema = z.strictObject({
 	runWorkerFirst: z.union([z.array(z.string()), z.boolean()]).optional(),
 });
 
-const BindingSchema = z.discriminatedUnion("type", [
+const KnownBindingSchema = z.discriminatedUnion("type", [
 	z.strictObject({ type: z.literal("ai"), remote: z.boolean().optional() }),
 	z.strictObject({
 		type: z.literal("ai-search"),
@@ -140,25 +140,6 @@ const BindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({ type: z.literal("text"), value: z.string() }),
 	z.strictObject({
-		type: z.literal("unsafe"),
-		// `value` is deliberately a `looseObject` so that unknown unsafe-binding
-		// fields pass through untouched — unsafe bindings are an escape hatch
-		// for forward-compatibility with runtime features the schema doesn't
-		// know about yet.
-		value: z.looseObject({
-			type: z.string(),
-			dev: z
-				.strictObject({
-					plugin: z.strictObject({
-						package: z.string(),
-						name: z.string(),
-					}),
-					options: z.record(z.string(), z.unknown()).optional(),
-				})
-				.optional(),
-		}),
-	}),
-	z.strictObject({
 		type: z.literal("vectorize"),
 		name: z.string(),
 		remote: z.boolean().optional(),
@@ -206,6 +187,51 @@ const BindingSchema = z.discriminatedUnion("type", [
 	// 	remote: z.boolean().optional(),
 	// }),
 ]);
+
+const UnsafeBindingSchema = z.looseObject({
+	type: z.templateLiteral(["unsafe:", z.string().min(1)]),
+	dev: z
+		.strictObject({
+			plugin: z.strictObject({
+				package: z.string(),
+				name: z.string(),
+			}),
+			options: z.record(z.string(), z.unknown()).optional(),
+		})
+		.optional(),
+});
+
+type BindingInput =
+	| z.input<typeof KnownBindingSchema>
+	| z.input<typeof UnsafeBindingSchema>;
+type BindingOutput =
+	| z.output<typeof KnownBindingSchema>
+	| z.output<typeof UnsafeBindingSchema>;
+
+const BindingSchema = z.unknown().transform((value, ctx) => {
+	const isUnsafe =
+		typeof value === "object" &&
+		value !== null &&
+		"type" in value &&
+		typeof value.type === "string" &&
+		value.type.startsWith("unsafe:");
+
+	const schema = isUnsafe ? UnsafeBindingSchema : KnownBindingSchema;
+	const result = schema.safeParse(value);
+
+	if (!result.success) {
+		ctx.issues.push(...(result.error.issues as unknown as typeof ctx.issues));
+		return z.NEVER;
+	}
+
+	return result.data;
+}) as z.ZodType<BindingOutput, BindingInput>;
+
+export function isParsedUnsafeBinding(
+	binding: BindingOutput
+): binding is z.output<typeof UnsafeBindingSchema> {
+	return binding.type.startsWith("unsafe:");
+}
 
 const CacheSchema = z.strictObject({
 	enabled: z.boolean(),

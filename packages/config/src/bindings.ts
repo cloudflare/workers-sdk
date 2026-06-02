@@ -460,8 +460,6 @@ export interface TextBinding<T extends string> {
 }
 
 interface UnsafeBindingOptions {
-	/** The binding type identifier as recognised by the Workers runtime. */
-	type: string;
 	/** Local-dev plugin configuration for this unsafe binding. */
 	dev?: {
 		/** The plugin package that provides the binding's local-dev implementation. */
@@ -480,10 +478,8 @@ interface UnsafeBindingOptions {
  * by this configuration. Included in the Worker's upload metadata without
  * changes.
  */
-export interface UnsafeBinding {
-	type: "unsafe";
-	/** The raw binding shape passed to the Workers runtime. */
-	value: UnsafeBindingOptions;
+export interface UnsafeBinding extends UnsafeBindingOptions {
+	type: `unsafe:${string}`;
 }
 
 interface VectorizeBindingOptions {
@@ -774,12 +770,6 @@ export interface Bindings {
 	 */
 	text<T extends string>(value: T): TextBinding<T>;
 	/**
-	 * Escape-hatch binding for runtime features that aren't directly supported
-	 * by this configuration. Included in the Worker's upload metadata without
-	 * changes.
-	 */
-	unsafe(options: UnsafeBindingOptions): UnsafeBinding;
-	/**
 	 * Binding to a Vectorize index.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#vectorize-indexes
@@ -850,7 +840,6 @@ export const bindings = {
 	sendEmail: (options) => ({ type: "send-email", ...options }),
 	stream: (options) => ({ type: "stream", ...options }),
 	text: (value) => ({ type: "text", value }),
-	unsafe: (options) => ({ type: "unsafe", value: options }),
 	vectorize: (options) => ({ type: "vectorize", ...options }),
 	versionMetadata: () => ({ type: "version-metadata" }),
 	vpcService: (options) => ({ type: "vpc-service", ...options }),

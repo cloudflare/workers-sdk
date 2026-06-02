@@ -117,7 +117,6 @@ interface BindingTypeMap<TBinding> {
 	"version-metadata": WorkerVersionMetadata;
 	"vpc-service": Fetcher;
 	"vpc-network": Fetcher;
-	unsafe: any;
 	worker: Fetcher;
 	"worker-loader": WorkerLoader;
 	workflow: Workflow;
@@ -169,12 +168,15 @@ type InferBindingType<TBinding> =
 							: Workflow
 						: never
 					: never
-				: // Other bindings
-					TBinding extends {
-							type: infer K extends keyof BindingTypeMap<TBinding>;
-					  }
-					? BindingTypeMap<TBinding>[K]
-					: never;
+				: // Unsafe bindings
+					TBinding extends { type: `unsafe:${string}` }
+					? any
+					: // Other bindings
+						TBinding extends {
+								type: infer K extends keyof BindingTypeMap<TBinding>;
+						  }
+						? BindingTypeMap<TBinding>[K]
+						: never;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CROSS-WORKER BINDING HELPERS (INTERNAL)

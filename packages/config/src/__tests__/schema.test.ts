@@ -320,23 +320,53 @@ describe("unknown property rejection", () => {
 		}
 	});
 
-	it("still accepts unknown keys inside `unsafe` binding `value` (looseObject escape hatch)", ({
+	it("still accepts unknown keys on `unsafe:*` bindings (looseObject escape hatch)", ({
 		expect,
 	}) => {
 		const result = ConfigSchema.safeParse({
 			env: {
 				MY_UNSAFE: {
-					type: "unsafe",
-					value: {
-						type: "some-future-runtime-feature",
-						unknownField: { nested: 123 },
-						anotherUnknown: "ok",
-					},
+					type: "unsafe:some-future-runtime-feature",
+					unknownField: { nested: 123 },
+					anotherUnknown: "ok",
 				},
 			},
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("passes the `unsafe:*` `type` through unchanged on parse", ({
+		expect,
+	}) => {
+		const result = ConfigSchema.safeParse({
+			env: {
+				MY_UNSAFE: {
+					type: "unsafe:ratelimit",
+					namespace_id: "123",
+				},
+			},
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			const binding = result.data.env?.MY_UNSAFE as {
+				type: string;
+				namespace_id: string;
+			};
+			expect(binding.type).toBe("unsafe:ratelimit");
+			expect(binding.namespace_id).toBe("123");
+		}
+	});
+
+	it("rejects `unsafe:` (empty suffix)", ({ expect }) => {
+		const result = ConfigSchema.safeParse({
+			env: {
+				MY_UNSAFE: { type: "unsafe:" },
+			},
+		});
+
+		expect(result.success).toBe(false);
 	});
 
 	it("still accepts arbitrary binding names in `env` (record, not object)", ({

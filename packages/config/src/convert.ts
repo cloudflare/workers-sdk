@@ -1,3 +1,4 @@
+import { isParsedUnsafeBinding } from "./schema";
 import type { ParsedConfig } from "./schema";
 import type { Json } from "./utils";
 import type { RawConfig } from "@cloudflare/workers-utils";
@@ -226,6 +227,15 @@ function convertBindingsAndAssets(
 	const secretsRequired: string[] = [];
 
 	for (const [name, binding] of Object.entries(env)) {
+		if (isParsedUnsafeBinding(binding)) {
+			unsafeBindings.push({
+				...binding,
+				name,
+				type: binding.type.slice("unsafe:".length),
+			});
+			continue;
+		}
+
 		switch (binding.type) {
 			case "ai": {
 				result.ai = omitUndefined({ binding: name, remote: binding.remote });
@@ -449,13 +459,6 @@ function convertBindingsAndAssets(
 			}
 			case "text": {
 				vars[name] = binding.value;
-				break;
-			}
-			case "unsafe": {
-				unsafeBindings.push({
-					name,
-					...binding.value,
-				} as (typeof unsafeBindings)[number]);
 				break;
 			}
 			case "vectorize": {
