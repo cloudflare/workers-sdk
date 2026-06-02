@@ -13,7 +13,6 @@ import {
 	formatConfigSnippet,
 	getDockerPath,
 	parseNonHyphenedUuid,
-	getWranglerTmpDir,
 	UserError,
 	formatTime,
 } from "@cloudflare/workers-utils";
@@ -50,6 +49,7 @@ import {
 import { getFlag } from "../experimental-flags";
 import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
+import { verifyWorkerMatchesCITag } from "../match-tag";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { ensureQueuesExistByConfig } from "../queues/client";
@@ -59,11 +59,13 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
+import { requireAuth } from "../user";
 import { downloadWorkerConfig } from "../utils/download-worker-config";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
+import { useServiceEnvironments as useServiceEnvironmentsConfig } from "../utils/useServiceEnvironments";
 import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import {
 	createDeployment,
@@ -77,60 +79,15 @@ import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 import type { HandlerContext } from "../core/types";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
+import type { DeployProps } from "@cloudflare/deploy-helpers";
 import type {
-	AssetsOptions,
 	CfModule,
 	CfScriptFormat,
 	CfWorkerInit,
 	Config,
-	Entry,
-	LegacyAssetPaths,
 	RawConfig,
 } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
-
-type Props = {
-	config: Config;
-	accountId: string | undefined;
-	entry: Entry;
-	rules: Config["rules"];
-	name: string;
-	env: string | undefined;
-	compatibilityDate: string | undefined;
-	compatibilityFlags: string[] | undefined;
-	legacyAssetPaths: LegacyAssetPaths | undefined;
-	assetsOptions: AssetsOptions | undefined;
-	vars: Record<string, string> | undefined;
-	defines: Record<string, string> | undefined;
-	alias: Record<string, string> | undefined;
-	triggers: string[] | undefined;
-	routes: string[] | undefined;
-	domains: string[] | undefined;
-	/** Deprecated service environments.*/
-	useServiceEnvironments: boolean | undefined;
-	jsxFactory: string | undefined;
-	jsxFragment: string | undefined;
-	tsconfig: string | undefined;
-	isWorkersSite: boolean;
-	minify: boolean | undefined;
-	outDir: string | undefined;
-	outFile: string | undefined;
-	dryRun: boolean | undefined;
-	noBundle: boolean | undefined;
-	keepVars: boolean | undefined;
-	logpush: boolean | undefined;
-	uploadSourceMaps: boolean | undefined;
-	oldAssetTtl: number | undefined;
-	projectRoot: string | undefined;
-	dispatchNamespace: string | undefined;
-	experimentalAutoCreate: boolean;
-	metafile: string | boolean | undefined;
-	containersRollout: "immediate" | "gradual" | "none" | undefined;
-	strict: boolean | undefined;
-	tag: string | undefined;
-	message: string | undefined;
-	secretsFile: string | undefined;
-};
 
 /**
  * Inject bindings into the Worker to support Workers Sites. These are injected at the last minute so that
@@ -164,7 +121,9 @@ function addWorkersSitesBindings(
 }
 
 export default async function deploy(
-	props: Props,
+	props: DeployProps,
+	config: Config,
+	workerNameOverridden: boolean,
 	ctx: Omit<HandlerContext, "config">
 ): Promise<{
 	sourceMapSize?: number;
@@ -172,23 +131,44 @@ export default async function deploy(
 	workerTag: string | null;
 	targets?: string[];
 }> {
+	if (!props.name) {
+		throw new UserError(
+			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+			{ telemetryMessage: "deploy command missing worker name" }
+		);
+	}
+
+	const {
+		entry,
+		name,
+		compatibilityDate,
+		compatibilityFlags,
+		jsxFactory,
+		jsxFragment,
+		keepVars,
+		minify,
+		noBundle,
+		destination,
+		uploadSourceMaps,
+	} = props;
+
+	const accountId = props.dryRun ? undefined : await requireAuth(config);
+
+	if (!props.dryRun) {
+		assert(accountId, "Missing account ID");
+		await verifyWorkerMatchesCITag(config, accountId, name, config.configPath);
+	}
+
 	const deployConfirm = getDeployConfirmFunction(props.strict);
 
 	// TODO: warn if git/hg has uncommitted changes
-	const { config, accountId, name, entry } = props;
 	let workerTag: string | null = null;
 	let versionId: string | null = null;
 	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
 
 	let workerExists: boolean = true;
 
-	const domainRoutes = (props.domains || []).map((domain) => ({
-		pattern: domain,
-		custom_domain: true,
-	}));
-	const routes =
-		props.routes ?? config.routes ?? (config.route ? [config.route] : []);
-	const allDeploymentRoutes = [...routes, ...domainRoutes];
+	const allDeploymentRoutes = props.routes;
 
 	if (!props.dispatchNamespace && accountId) {
 		try {
@@ -306,11 +286,6 @@ export default async function deploy(
 		}
 	}
 
-	const compatibilityDate =
-		props.compatibilityDate ?? config.compatibility_date;
-	const compatibilityFlags =
-		props.compatibilityFlags ?? config.compatibility_flags;
-
 	if (!compatibilityDate) {
 		const compatibilityDateStr = getTodaysCompatDate();
 
@@ -327,55 +302,42 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	validateRoutes(allDeploymentRoutes, props.assetsOptions);
 
-	const jsxFactory = props.jsxFactory || config.jsx_factory;
-	const jsxFragment = props.jsxFragment || config.jsx_fragment;
-	const keepVars = props.keepVars || config.keep_vars;
-
-	const minify = props.minify ?? config.minify;
-
 	const nodejsCompatMode = validateNodeCompatMode(
 		compatibilityDate,
 		compatibilityFlags,
-		{
-			noBundle: props.noBundle ?? config.no_bundle,
-		}
+		{ noBundle }
 	);
 
 	// Warn if user tries minify with no-bundle
-	if (props.noBundle && minify) {
+	if (noBundle && minify) {
 		logger.warn(
 			"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
 		);
 	}
 
-	const scriptName = props.name;
+	const scriptName = name;
 
 	assert(
 		!config.site || config.site.bucket,
 		"A [site] definition requires a `bucket` field with a path to the site's assets directory."
 	);
 
-	if (props.outDir) {
+	if (props.outdir) {
 		// we're using a custom output directory,
 		// so let's first ensure it exists
-		mkdirSync(props.outDir, { recursive: true });
+		mkdirSync(props.outdir, { recursive: true });
 		// add a README
-		const readmePath = path.join(props.outDir, "README.md");
+		const readmePath = path.join(props.outdir, "README.md");
 		writeFileSync(
 			readmePath,
 			`This folder contains the built output assets for the worker "${scriptName}" generated at ${new Date().toISOString()}.`
 		);
 	}
 
-	const destination =
-		props.outDir ?? getWranglerTmpDir(props.projectRoot, "deploy");
 	const envName = props.env ?? "production";
 
 	const start = Date.now();
-	/** Whether to use the deprecated service environments path */
-	const useServiceEnvironments = Boolean(
-		props.useServiceEnvironments && props.env
-	);
+	const useServiceEnvironments = props.useServiceEnvApiPath;
 	const workerName = useServiceEnvironments
 		? `${scriptName} (${envName})`
 		: scriptName;
@@ -385,7 +347,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 			: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-	const { format } = props.entry;
+	const { format } = entry;
+	const projectRoot =
+		config.userConfigPath && path.dirname(config.userConfigPath);
 
 	if (
 		!props.dispatchNamespace &&
@@ -444,32 +408,30 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		props
 	);
 	try {
-		if (props.noBundle) {
+		if (noBundle) {
 			// if we're not building, let's just copy the entry to the destination directory
 			const destinationDir =
 				typeof destination === "string" ? destination : destination.path;
 			mkdirSync(destinationDir, { recursive: true });
 			writeFileSync(
-				path.join(destinationDir, path.basename(props.entry.file)),
-				readFileSync(props.entry.file, "utf-8")
+				path.join(destinationDir, path.basename(entry.file)),
+				readFileSync(entry.file, "utf-8")
 			);
 		}
 
-		const entryDirectory = path.dirname(props.entry.file);
+		const entryDirectory = path.dirname(entry.file);
 		const moduleCollector = createModuleCollector({
 			wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
 				entryDirectory,
-				props.entry.file
+				entry.file
 			),
-			entry: props.entry,
-			// `moduleCollector` doesn't get used when `props.noBundle` is set, so
+			entry,
+			// `moduleCollector` doesn't get used when `noBundle` is set, so
 			// `findAdditionalModules` always defaults to `false`
 			findAdditionalModules: config.find_additional_modules ?? false,
-			rules: props.rules,
+			rules: config.rules ?? [],
 			preserveFileNames: config.preserve_file_names ?? false,
 		});
-		const uploadSourceMaps =
-			props.uploadSourceMaps ?? config.upload_source_maps;
 
 		const {
 			modules,
@@ -477,15 +439,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			resolvedEntryPointPath,
 			bundleType,
 			...bundle
-		} = props.noBundle
+		} = noBundle
 			? await noBundleWorker(
-					props.entry,
-					props.rules,
-					props.outDir,
+					entry,
+					config.rules ?? [],
+					props.outdir,
 					config.python_modules.exclude
 				)
 			: await bundleWorker(
-					props.entry,
+					entry,
 					typeof destination === "string" ? destination : destination.path,
 					{
 						metafile: props.metafile,
@@ -496,21 +458,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						workflowBindings: config.workflows ?? [],
 						jsxFactory,
 						jsxFragment,
-						tsconfig: props.tsconfig ?? config.tsconfig,
+						tsconfig: props.tsconfig,
 						minify,
 						keepNames: config.keep_names ?? true,
 						sourcemap: uploadSourceMaps,
 						nodejsCompatMode,
 						compatibilityDate,
 						compatibilityFlags,
-						define: { ...config.define, ...props.defines },
+						define: props.defines,
 						checkFetch: false,
-						alias: { ...config.alias, ...props.alias },
+						alias: props.alias,
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
 						local: false,
-						projectRoot: props.projectRoot,
+						projectRoot,
 						defineNavigatorUserAgent: isNavigatorDefined(
 							compatibilityDate,
 							compatibilityFlags
@@ -551,7 +513,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			? await getMigrationsToUpload(scriptName, {
 					accountId,
 					config,
-					useServiceEnvironments: props.useServiceEnvironments,
+					useServiceEnvironments: useServiceEnvironmentsConfig(config),
 					env: props.env,
 					dispatchNamespace: props.dispatchNamespace,
 				})
@@ -591,7 +553,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const bindings = getBindings(config);
 
 		// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
-		for (const [bindingName, value] of Object.entries(props.vars ?? {})) {
+		for (const [bindingName, value] of Object.entries(props.cliVars)) {
 			bindings[bindingName] = {
 				type: "plain_text",
 				value,
@@ -649,7 +611,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_flags: compatibilityFlags,
 			keepVars,
 			keepSecrets: keepVars || !!props.secretsFile,
-			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
+			logpush: props.logpush,
 			placement,
 			tail_consumers: config.tail_consumers,
 			streaming_tail_consumers: config.streaming_tail_consumers,
@@ -772,7 +734,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					accountId,
 					scriptName,
 					props.experimentalAutoCreate,
-					props.config
+					config
 				);
 			}
 
@@ -823,7 +785,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					const versionMap = new Map<VersionId, Percentage>();
 					versionMap.set(versionResult.id, 100);
 					await createDeployment(
-						props.config,
+						config,
 						accountId,
 						scriptName,
 						versionMap,
@@ -836,7 +798,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					try {
 						// Update tail consumers, logpush, and observability settings
 						await patchNonVersionedScriptSettings(
-							props.config,
+							config,
 							accountId,
 							scriptName,
 							{
@@ -892,7 +854,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					if (!tagsAreEqual(tags, nextTags)) {
 						try {
 							await patchNonVersionedScriptSettings(
-								props.config,
+								config,
 								accountId,
 								scriptName,
 								{
@@ -954,7 +916,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					err,
 					dependencies,
 					workerBundle,
-					props.projectRoot
+					projectRoot
 				);
 				if (message !== null) {
 					logger.error(message);
@@ -1013,14 +975,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				throw err;
 			}
 		}
-		if (props.outFile) {
+		if (props.outfile) {
 			// we're using a custom output file,
 			// so let's first ensure it's parent directory exists
-			mkdirSync(path.dirname(props.outFile), { recursive: true });
+			mkdirSync(path.dirname(props.outfile), { recursive: true });
 
 			const serializedFormData = await new Response(workerBundle).arrayBuffer();
 
-			writeFileSync(props.outFile, Buffer.from(serializedFormData));
+			writeFileSync(props.outfile, Buffer.from(serializedFormData));
 		}
 	} finally {
 		if (typeof destination !== "string") {
@@ -1061,7 +1023,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			accountId,
 			scriptName,
 			env: props.env,
-			crons: props.triggers || config.triggers?.crons,
+			crons: props.triggers,
 			useServiceEnvironments,
 			firstDeploy: !workerExists,
 			routes: allDeploymentRoutes,
