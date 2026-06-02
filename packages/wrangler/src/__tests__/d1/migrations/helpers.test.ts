@@ -679,7 +679,6 @@ describe("resolveMigrationsConfig", () => {
 			uuid: "x",
 			binding: "DB",
 			migrationsTableName: "d1_migrations",
-			migrationsFolderPath: props.migrationsDirRaw ?? "migrations",
 			...props,
 		};
 	}
@@ -701,7 +700,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "migrations",
 					migrationsDirRaw: "migrations",
 				}),
 				configPath: "wrangler.jsonc",
@@ -716,7 +714,6 @@ describe("resolveMigrationsConfig", () => {
 	}) => {
 		const result = resolveMigrationsConfig({
 			databaseInfo: databaseInfo({
-				migrationsFolderPath: "migrations",
 				migrationsDirRaw: "migrations",
 				migrationsPattern: "migrations/*.sql",
 			}),
@@ -728,7 +725,6 @@ describe("resolveMigrationsConfig", () => {
 	it("accepts nested drizzle-style pattern", ({ expect }) => {
 		const result = resolveMigrationsConfig({
 			databaseInfo: databaseInfo({
-				migrationsFolderPath: "migrations",
 				migrationsDirRaw: "migrations",
 				migrationsPattern: "migrations/*/migration.sql",
 			}),
@@ -741,7 +737,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "db/migrations",
 					migrationsDirRaw: "db/migrations",
 					migrationsPattern: "db/migrations/**/*.sql",
 				}),
@@ -756,7 +751,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "./migrations",
 					migrationsDirRaw: "./migrations",
 					migrationsPattern: "migrations/*.sql",
 				}),
@@ -771,7 +765,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "migrations/",
 					migrationsDirRaw: "migrations/",
 					migrationsPattern: "migrations/*.sql",
 				}),
@@ -786,7 +779,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "migrations",
 					migrationsDirRaw: "migrations",
 					migrationsPattern: "./migrations/*.sql",
 				}),
@@ -795,7 +787,7 @@ describe("resolveMigrationsConfig", () => {
 		).not.toThrow();
 	});
 
-	it("accepts `migrations_dir: \".\"` with a pattern rooted at the project root", ({
+	it('accepts `migrations_dir: "."` with a pattern rooted at the project root', ({
 		expect,
 	}) => {
 		// A user can treat the project root itself as the migrations dir by
@@ -806,7 +798,6 @@ describe("resolveMigrationsConfig", () => {
 		// check.
 		const result = resolveMigrationsConfig({
 			databaseInfo: databaseInfo({
-				migrationsFolderPath: ".",
 				migrationsDirRaw: ".",
 				migrationsPattern: "./*.sql",
 			}),
@@ -824,7 +815,6 @@ describe("resolveMigrationsConfig", () => {
 		const call = () =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "migrations",
 					migrationsDirRaw: undefined,
 					migrationsPattern: "migrations/*.sql",
 				}),
@@ -846,7 +836,6 @@ describe("resolveMigrationsConfig", () => {
 		const call = () =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "migrations",
 					migrationsDirRaw: "migrations",
 					migrationsPattern: "schema/*.sql",
 				}),
@@ -866,7 +855,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "migrations",
 					migrationsDirRaw: "migrations",
 					migrationsPattern: "*.sql",
 				}),
@@ -881,7 +869,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "migrations",
 					migrationsDirRaw: "migrations",
 					migrationsPattern: "**/*.sql",
 				}),
@@ -899,7 +886,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "migrations",
 					migrationsDirRaw: "migrations",
 					migrationsPattern: "migrationsfoo/*.sql",
 				}),
@@ -914,7 +900,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "/abs/migrations",
 					migrationsDirRaw: "/abs/migrations",
 					migrationsPattern: "/abs/migrations/*.sql",
 				}),
@@ -927,7 +912,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "/abs/migrations",
 					migrationsDirRaw: "/abs/migrations",
 					migrationsPattern: "/abs/other/*.sql",
 				}),
@@ -942,7 +926,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "/abs/migrations",
 					migrationsDirRaw: "/abs/migrations",
 					migrationsPattern: "migrations/*.sql",
 				}),
@@ -955,7 +938,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "migrations",
 					migrationsDirRaw: "migrations",
 					migrationsPattern: "/abs/migrations/*.sql",
 				}),
@@ -973,7 +955,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "C:\\Users\\Dave\\proj\\migrations",
 					migrationsDirRaw: "C:\\Users\\Dave\\proj\\migrations",
 					migrationsPattern: "C:\\Users\\Dave\\proj\\migrations\\*.sql",
 				}),
@@ -992,7 +973,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "C:\\Users\\Dave\\proj\\migrations",
 					migrationsDirRaw: "C:\\Users\\Dave\\proj\\migrations",
 					migrationsPattern: "C:/Users/Dave/proj/migrations/*/migration.sql",
 				}),
@@ -1005,7 +985,6 @@ describe("resolveMigrationsConfig", () => {
 		expect(() =>
 			resolveMigrationsConfig({
 				databaseInfo: databaseInfo({
-					migrationsFolderPath: "C:\\Users\\Dave\\proj\\migrations",
 					migrationsDirRaw: "C:\\Users\\Dave\\proj\\migrations",
 					migrationsPattern: "C:\\Users\\Dave\\proj\\other\\*.sql",
 				}),

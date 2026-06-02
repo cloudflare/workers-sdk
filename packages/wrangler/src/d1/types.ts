@@ -5,18 +5,15 @@ export type Database = {
 	binding: string;
 	internal_env?: string;
 	migrationsTableName: string;
-	migrationsFolderPath: string;
 	/**
 	 * The raw `migrations_dir` value the user set in their Wrangler config,
-	 * or undefined if they did not set one. Use this when you need to check
-	 * whether the user explicitly opted in to a directory (as opposed to
-	 * accepting the default via `migrationsFolderPath`).
+	 * or undefined if they did not set one.
 	 */
 	migrationsDirRaw?: string;
 	/**
 	 * Optional glob (relative to the Wrangler config file) for discovering
 	 * migration files. When not set, callers should default to
-	 * `${migrationsFolderPath}/*.sql`.
+	 * `${migrationsDirRaw ?? DEFAULT_MIGRATION_PATH}/*.sql`.
 	 */
 	migrationsPattern?: string;
 };

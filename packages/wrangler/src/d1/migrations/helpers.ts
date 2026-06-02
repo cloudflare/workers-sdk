@@ -75,7 +75,7 @@ export function resolveMigrationsConfig({
 	}
 
 	const migrationsDir = normalizeRelativePath(
-		databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH
+		databaseInfo?.migrationsDirRaw ?? DEFAULT_MIGRATION_PATH
 	);
 
 	let migrationsPattern: string;
