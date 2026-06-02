@@ -4,9 +4,9 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 
 export const TEMPORARY_TERMS_PROMPT =
-	'Before continuing with --temporary, you must accept Cloudflare\'s Terms of Service (https://www.cloudflare.com/website-terms/) and Privacy Policy (https://www.cloudflare.com/privacypolicy/). Anything you deploy with --temporary is temporary and may expire unless you claim it before it expires. By typing "yes", you agree to these terms. Type "yes" to continue.';
+	'You must accept Cloudflare\'s Terms of Service (https://www.cloudflare.com/website-terms/) and Privacy Policy (https://www.cloudflare.com/privacypolicy/) in order to continue. By typing "yes", you agree to these terms. Type "yes" to continue.';
 export const TEMPORARY_TERMS_NOTICE =
-	"Continuing with --temporary means you accept Cloudflare's Terms of Service (https://www.cloudflare.com/website-terms/) and Privacy Policy (https://www.cloudflare.com/privacypolicy/). Anything you deploy with --temporary is temporary and may expire unless you claim it before it expires.";
+	"Continuing means you accept Cloudflare's Terms of Service (https://www.cloudflare.com/website-terms/) and Privacy Policy (https://www.cloudflare.com/privacypolicy/).";
 
 const TEMPORARY_TERMS_ERROR =
 	"You must accept Cloudflare's Terms of Service (https://www.cloudflare.com/website-terms/) and Privacy Policy (https://www.cloudflare.com/privacypolicy/) to use --temporary.";
