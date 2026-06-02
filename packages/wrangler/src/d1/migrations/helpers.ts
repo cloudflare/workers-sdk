@@ -12,7 +12,7 @@ import type { Database, Migration } from "../types";
 import type { Config } from "@cloudflare/workers-utils";
 
 function getDefaultMigrationsPattern(migrationsDir: string) {
-	return `${normalizeRelativePath(migrationsDir)}/*.sql`;
+	return normalizeRelativePath(`${migrationsDir}/*.sql`);
 }
 
 /**
@@ -21,11 +21,12 @@ function getDefaultMigrationsPattern(migrationsDir: string) {
  *
  * Field invariants:
  *  - `migrationsDir` is normalized (forward slashes, no leading `./`,
- *    no trailing `/`) and not empty. The one special case is `"."`,
- *    which the user can set when they want to treat the project root
- *    itself as the migrations dir; it survives normalization unchanged.
- *  - `migrationsPattern` is normalized in the same way and starts with
- *    `${migrationsDir}/`.
+ *    no trailing `/`) and not empty. `"."` is the project root — the user
+ *    can set it to treat the project directory itself as the migrations dir.
+ *  - `migrationsPattern` is normalized in the same way, and is under
+ *    `migrationsDir` — i.e. {@link stripDirPrefix} can rewrite it relative
+ *    to `migrationsDir` without throwing. (When `migrationsDir` is `"."` the
+ *    pattern carries no prefix, since normalization strips any leading `./`.)
  *  - `projectPath` is the directory containing the user's Wrangler config —
  *    the base that `migrationsDir` and `migrationsPattern` resolve against.
  *  - `configFile` is the short display name (e.g. `"wrangler.jsonc"`) used
@@ -76,9 +77,15 @@ export function resolveMigrationsConfig({
 		databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH
 	);
 
-	if (rawPattern !== undefined) {
-		const normalizedPattern = normalizeRelativePath(rawPattern);
-		if (!normalizedPattern.startsWith(`${migrationsDir}/`)) {
+	let migrationsPattern: string;
+	if (rawPattern === undefined) {
+		migrationsPattern = getDefaultMigrationsPattern(migrationsDir);
+	} else {
+		migrationsPattern = normalizeRelativePath(rawPattern);
+		try {
+			// Called for its throw-on-non-prefix side effect
+			stripDirPrefix(migrationsPattern, migrationsDir);
+		} catch {
 			const suggestedPattern = getDefaultMigrationsPattern(migrationsDir);
 			throw new UserError(
 				`The configured \`migrations_pattern: "${rawPattern}"\` in your ${configFile} file must start with \`${migrationsDir}/\` to match \`"migrations_dir": "${migrationsDir}"\`.\n\n` +
@@ -90,11 +97,6 @@ export function resolveMigrationsConfig({
 			);
 		}
 	}
-
-	const migrationsPattern =
-		rawPattern !== undefined
-			? normalizeRelativePath(rawPattern)
-			: getDefaultMigrationsPattern(migrationsDir);
 
 	const migrationsTableName =
 		databaseInfo?.migrationsTableName ?? DEFAULT_MIGRATION_TABLE;
@@ -116,6 +118,26 @@ export function resolveMigrationsConfig({
  *  - Leading `./` and `//` runs collapsed (via `path.posix.normalize`).
  *  - Trailing `/` stripped (`normalize("foo/")` keeps it; we don't want it).
  */
+/**
+ * Rewrite `pattern` relative to `dir` by stripping the `${dir}/` prefix. Both
+ * `pattern` and `dir` must already be normalized (see
+ * {@link normalizeRelativePath}).
+ *
+ * Throws if `pattern` is not under `dir`.
+ */
+function stripDirPrefix(pattern: string, dir: string): string {
+	if (dir === ".") {
+		return pattern;
+	}
+	const prefix = `${dir}/`;
+	if (!pattern.startsWith(prefix)) {
+		throw new Error(
+			`Expected migrations pattern ${JSON.stringify(pattern)} to start with ${JSON.stringify(prefix)}`
+		);
+	}
+	return pattern.slice(prefix.length);
+}
+
 export function normalizeRelativePath(p: string): string {
 	const forwardSlashed = p.replace(/\\/g, "/");
 	const normalized = path.posix.normalize(forwardSlashed);
@@ -369,12 +391,10 @@ export function getMigrationNames({
 	const walkRoot = path.resolve(projectPath, migrationsDir);
 
 	// `listFilesRelative` returns paths relative to `walkRoot`, so the
-	// matcher must also be `migrationsDir`-relative. The pattern is
-	// guaranteed to start with `${migrationsDir}/` (see MigrationsConfig
-	// invariants), so we strip that prefix off.
-	const dirRelativePattern = migrationsDir
-		? migrationsPattern.slice(migrationsDir.length + 1)
-		: migrationsPattern;
+	// matcher must also be `migrationsDir`-relative. The MigrationsConfig
+	// invariant guarantees the pattern is under migrationsDir, so this never
+	// throws.
+	const dirRelativePattern = stripDirPrefix(migrationsPattern, migrationsDir);
 	const matches = listFilesRelative(
 		walkRoot,
 		new Minimatch(dirRelativePattern, { dot: false })
@@ -406,8 +426,9 @@ export function maybeLogHint({
 	if (drizzleFiles.length === 0) {
 		return;
 	}
-	// migrationsDir can't be empty
-	const drizzlePattern = `${migrationsDir}/*/migration.sql`;
+	const drizzlePattern = normalizeRelativePath(
+		`${migrationsDir}/*/migration.sql`
+	);
 	logger.warn(
 		`Could not find any migration files matching \`${migrationsPattern}\`. It looks like there are migration files matching \`${drizzlePattern}\` though. If you are using drizzle to manage your migrations, please set \`migrations_pattern\` to \`${drizzlePattern}\` in ${configFile}.`
 	);

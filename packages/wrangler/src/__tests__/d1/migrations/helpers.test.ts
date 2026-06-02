@@ -795,6 +795,27 @@ describe("resolveMigrationsConfig", () => {
 		).not.toThrow();
 	});
 
+	it("accepts `migrations_dir: \".\"` with a pattern rooted at the project root", ({
+		expect,
+	}) => {
+		// A user can treat the project root itself as the migrations dir by
+		// setting `migrations_dir: "."`. Both `.` and `./` normalize to `.`,
+		// and a pattern like `./*.sql` normalizes to `*.sql`. The two are
+		// consistent — the pattern targets files directly inside the dir —
+		// so this should be accepted, not rejected by the "starts with"
+		// check.
+		const result = resolveMigrationsConfig({
+			databaseInfo: databaseInfo({
+				migrationsFolderPath: ".",
+				migrationsDirRaw: ".",
+				migrationsPattern: "./*.sql",
+			}),
+			configPath: "wrangler.jsonc",
+		});
+		expect(result.migrationsDir).toBe(".");
+		expect(result.migrationsPattern).toBe("*.sql");
+	});
+
 	// --- Rejected: migrations_pattern set without migrations_dir ---
 
 	it("rejects migrations_pattern set without an explicit migrations_dir, with an actionable hint", ({
