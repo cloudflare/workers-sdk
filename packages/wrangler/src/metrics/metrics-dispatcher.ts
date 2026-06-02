@@ -162,13 +162,21 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				};
 
 				trackDispatch(
-					dispatch({
-						name,
-						properties: {
-							...commonCommandEventProperties,
-							...properties,
-						},
-					})
+					telemetryCurrentAgentSkillsInstalled()
+						.catch(() => null)
+						.then((currentAgentSkillsInstalled) => {
+							return dispatch({
+								name,
+								properties: {
+									...commonCommandEventProperties,
+									...properties,
+									currentAgentSkillsInstalled,
+								},
+							});
+						})
+						.catch((err) => {
+							logger.debug("Error sending command metrics event", err);
+						})
 				);
 			} catch (err) {
 				logger.debug("Error sending metrics event", err);
