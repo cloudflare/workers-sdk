@@ -2,13 +2,15 @@ import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
+import { http, HttpResponse } from "msw";
 import { beforeEach, describe, test } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { msw, mswListVersions } from "../helpers/msw";
+import { createFetchResult, msw, mswListVersions } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { ApiVersion } from "../../versions/types";
 
 describe("versions list", () => {
 	mockAccountId();
@@ -18,6 +20,39 @@ describe("versions list", () => {
 	const cnsl = mockConsoleMethods();
 
 	const std = collectCLIOutput();
+
+	function createMockVersion(index: number): ApiVersion {
+		const versionNumber = index + 1;
+		const paddedVersionNumber = versionNumber.toString().padStart(8, "0");
+		const paddedDay = versionNumber.toString().padStart(2, "0");
+		const timestamp = `2021-01-${paddedDay}T00:00:00.000000Z`;
+
+		return {
+			id: `${paddedVersionNumber}-0000-0000-0000-000000000000`,
+			number: versionNumber,
+			metadata: {
+				author_id: "Picard-Gamma-6-0-7-3",
+				author_email: "Jean-Luc-Picard@federation.org",
+				created_on: timestamp,
+				modified_on: timestamp,
+				source: "wrangler",
+			},
+			resources: {
+				bindings: [],
+				script: {
+					etag: "etag",
+					handlers: ["fetch"],
+					last_deployed_from: "wrangler",
+				},
+				script_runtime: {
+					compatibility_date: "2021-01-01",
+					compatibility_flags: [],
+					limits: { cpu_ms: 50 },
+					usage_model: "standard",
+				},
+			},
+		};
+	}
 
 	beforeEach(() => {
 		msw.use(mswListVersions);
@@ -149,6 +184,51 @@ describe("versions list", () => {
 			`);
 
 			expect(cnsl.out).not.toMatch(/⛅️ wrangler/);
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		test("prints the 10 most recent versions to stdout as valid json", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/scripts/:workerName/versions",
+					({ request }) => {
+						const url = new URL(request.url);
+						expect(url.searchParams.get("deployable")).toBe("true");
+						expect(url.searchParams.has("per_page")).toBe(false);
+
+						return HttpResponse.json(
+							createFetchResult({
+								items: Array.from({ length: 12 }, (_, index) =>
+									createMockVersion(index)
+								),
+							})
+						);
+					}
+				)
+			);
+
+			const result = runWrangler("versions list --name test-name --json");
+
+			await expect(result).resolves.toBeUndefined();
+
+			const versions = JSON.parse(std.out) as ApiVersion[];
+			expect(versions.map((version) => version.id)).toMatchInlineSnapshot(`
+				[
+				  "00000003-0000-0000-0000-000000000000",
+				  "00000004-0000-0000-0000-000000000000",
+				  "00000005-0000-0000-0000-000000000000",
+				  "00000006-0000-0000-0000-000000000000",
+				  "00000007-0000-0000-0000-000000000000",
+				  "00000008-0000-0000-0000-000000000000",
+				  "00000009-0000-0000-0000-000000000000",
+				  "00000010-0000-0000-0000-000000000000",
+				  "00000011-0000-0000-0000-000000000000",
+				  "00000012-0000-0000-0000-000000000000",
+				]
+			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
