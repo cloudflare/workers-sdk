@@ -32,19 +32,19 @@ export function clearAccessCaches(): void {
  */
 export async function domainUsesAccess(
 	domain: string,
-	logger?: OAuthFlowLogger
+	logger: OAuthFlowLogger
 ): Promise<boolean> {
-	logger?.debug("Checking if domain has Access enabled:", domain);
+	logger.debug("Checking if domain has Access enabled:", domain);
 
 	if (usesAccessCache.has(domain)) {
-		logger?.debug(
+		logger.debug(
 			"Using cached Access switch for:",
 			domain,
 			usesAccessCache.get(domain)
 		);
 		return usesAccessCache.get(domain) ?? false;
 	}
-	logger?.debug("Access switch not cached for:", domain);
+	logger.debug("Access switch not cached for:", domain);
 	try {
 		const controller = new AbortController();
 		const cancel = setTimeout(() => {
@@ -60,7 +60,7 @@ export async function domainUsesAccess(
 			output.status === 302 &&
 			output.headers.get("location")?.includes("cloudflareaccess.com")
 		);
-		logger?.debug("Caching access switch for:", domain);
+		logger.debug("Caching access switch for:", domain);
 
 		usesAccessCache.set(domain, usesAccess);
 		return usesAccess;
@@ -74,7 +74,7 @@ export async function domainUsesAccess(
  * Get the headers needed to authenticate with an Access-protected domain.
  *
  * @param domain The hostname of the Access-protected domain (e.g. `"example.com"`).
- * @param options Optional logger + an `isNonInteractiveOrCI` predicate used to
+ * @param options logger + an `isNonInteractiveOrCI` predicate used to
  *   produce an actionable error in CI; both default to no-op / `false`.
  * @returns
  * - Service token headers (`CF-Access-Client-Id` + `CF-Access-Client-Secret`) if env vars are set
@@ -87,13 +87,13 @@ export async function domainUsesAccess(
  */
 export async function getAccessHeaders(
 	domain: string,
-	options?: {
-		logger?: OAuthFlowLogger;
-		isNonInteractiveOrCI?: () => boolean;
+	options: {
+		logger: OAuthFlowLogger;
+		isNonInteractiveOrCI: () => boolean;
 	}
 ): Promise<Record<string, string>> {
-	const logger = options?.logger;
-	const isNonInteractiveOrCI = options?.isNonInteractiveOrCI ?? (() => false);
+	const logger = options.logger;
+	const isNonInteractiveOrCI = options.isNonInteractiveOrCI;
 
 	// 1. If Access Service Token credentials are provided, use them directly.
 	//
@@ -108,7 +108,7 @@ export async function getAccessHeaders(
 	const clientSecret = getAccessClientSecretFromEnv();
 
 	if (clientId && clientSecret) {
-		logger?.debug("Using Access Service Token headers for domain:", domain);
+		logger.debug("Using Access Service Token headers for domain:", domain);
 		const headers = {
 			"CF-Access-Client-Id": clientId,
 			"CF-Access-Client-Secret": clientSecret,
@@ -119,7 +119,7 @@ export async function getAccessHeaders(
 
 	// Warn if only one of the two env vars is set
 	if (clientId !== undefined || clientSecret !== undefined) {
-		logger?.warn(
+		logger.warn(
 			"Both CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET must be set to use Access Service Token authentication. " +
 				`Only ${
 					clientId !== undefined
@@ -132,9 +132,9 @@ export async function getAccessHeaders(
 	if (!(await domainUsesAccess(domain, logger))) {
 		return {};
 	}
-	logger?.debug("Getting Access headers for domain:", domain);
+	logger.debug("Getting Access headers for domain:", domain);
 	if (headersCache[domain]) {
-		logger?.debug("Using cached Access headers for domain:", domain);
+		logger.debug("Using cached Access headers for domain:", domain);
 		return headersCache[domain];
 	}
 
@@ -153,7 +153,7 @@ export async function getAccessHeaders(
 	}
 
 	// 3. Interactive: fall back to cloudflared
-	logger?.debug("Spawning cloudflared to get Access token for domain:");
+	logger.debug("Spawning cloudflared to get Access token for domain:");
 	const output = spawnSync("cloudflared", ["access", "login", domain]);
 	if (output.error) {
 		throw new UserError(
@@ -162,12 +162,12 @@ export async function getAccessHeaders(
 		);
 	}
 	const stringOutput = output.stdout.toString();
-	logger?.debug("cloudflared output:", stringOutput);
+	logger.debug("cloudflared output:", stringOutput);
 	const matches = stringOutput.match(/fetched your token:\n\n(.*)/m);
 	if (matches && matches.length >= 2) {
 		const headers = { Cookie: `CF_Authorization=${matches[1]}` };
 		headersCache[domain] = headers;
-		logger?.debug("Caching Access headers for domain:", domain);
+		logger.debug("Caching Access headers for domain:", domain);
 		return headers;
 	}
 	throw new Error("Failed to authenticate with Cloudflare Access");
@@ -181,9 +181,9 @@ export async function getAccessHeaders(
  * Checks `WRANGLER_CF_AUTHORIZATION_TOKEN` first, then falls back to
  * {@link getAccessHeaders} against the configured auth domain.
  */
-export async function getCloudflareAccessHeaders(options?: {
-	logger?: OAuthFlowLogger;
-	isNonInteractiveOrCI?: () => boolean;
+export async function getCloudflareAccessHeaders(options: {
+	logger: OAuthFlowLogger;
+	isNonInteractiveOrCI: () => boolean;
 }): Promise<Record<string, string>> {
 	const cfAuthToken = getCfAuthorizationTokenFromEnv();
 
@@ -191,7 +191,7 @@ export async function getCloudflareAccessHeaders(options?: {
 	if (cfAuthToken !== undefined) {
 		// Don't include the token value in the log — if debug logging is enabled
 		// and logs are persisted, the raw token would leak as a credential.
-		options?.logger?.debug(
+		options.logger.debug(
 			"Using WRANGLER_CF_AUTHORIZATION_TOKEN from environment"
 		);
 		return { Cookie: `CF_Authorization=${cfAuthToken}` };

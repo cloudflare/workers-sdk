@@ -145,7 +145,8 @@ export async function getOauthToken(
 						try {
 							const exchange = await exchangeAuthCodeForAccessToken(
 								state,
-								ctx.logger
+								ctx.logger,
+								ctx.isNonInteractiveOrCI
 							);
 							res.writeHead(307, {
 								Location: options.granted.url,

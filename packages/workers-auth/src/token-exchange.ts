@@ -127,7 +127,8 @@ export async function getAuthURL(
  * Refresh an access token from the remote service.
  */
 export async function exchangeRefreshTokenForAccessToken(
-	logger: OAuthFlowContext["logger"]
+	logger: OAuthFlowContext["logger"],
+	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"]
 ): Promise<AccessContext> {
 	// Read the refresh token fresh from disk on every call so we always pick up
 	// the latest rotation written by a sibling Wrangler process.
@@ -144,7 +145,7 @@ export async function exchangeRefreshTokenForAccessToken(
 		client_id: getClientIdFromEnv(),
 	});
 
-	const response = await fetchAuthToken(params, logger);
+	const response = await fetchAuthToken(params, logger, isNonInteractiveOrCI);
 
 	if (response.status >= 400) {
 		let tokenExchangeResErr = undefined;
@@ -218,7 +219,8 @@ export async function exchangeRefreshTokenForAccessToken(
  */
 export async function exchangeAuthCodeForAccessToken(
 	state: OAuthFlowState,
-	logger: OAuthFlowContext["logger"]
+	logger: OAuthFlowContext["logger"],
+	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"]
 ): Promise<AccessContext> {
 	const { authorizationCode, codeVerifier = "" } = state;
 
@@ -236,7 +238,7 @@ export async function exchangeAuthCodeForAccessToken(
 		code_verifier: codeVerifier,
 	});
 
-	const response = await fetchAuthToken(params, logger);
+	const response = await fetchAuthToken(params, logger, isNonInteractiveOrCI);
 	if (!response.ok) {
 		const { error } = (await getJSONFromResponse(response, logger)) as {
 			error: string;
@@ -284,7 +286,8 @@ export async function exchangeAuthCodeForAccessToken(
  */
 export async function fetchAuthToken(
 	body: URLSearchParams,
-	logger: OAuthFlowContext["logger"]
+	logger: OAuthFlowContext["logger"],
+	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"]
 ): Promise<Response> {
 	const headers: Record<string, string> = {
 		"Content-Type": "application/x-www-form-urlencoded",
@@ -301,7 +304,10 @@ export async function fetchAuthToken(
 			"Using Cloudflare Access to get an access token for the auth request"
 		);
 		// We are trying to access a domain behind Access so we need auth headers.
-		const accessHeaders = await getCloudflareAccessHeaders({ logger });
+		const accessHeaders = await getCloudflareAccessHeaders({
+			logger,
+			isNonInteractiveOrCI,
+		});
 		Object.assign(headers, accessHeaders);
 	}
 	logger.debug("Fetching auth token from", getTokenUrlFromEnv());

@@ -221,7 +221,10 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				},
 				refreshToken: { value: refresh_token } = {},
 				scopes,
-			} = await exchangeRefreshTokenForAccessToken(ctx.logger);
+			} = await exchangeRefreshTokenForAccessToken(
+				ctx.logger,
+				ctx.isNonInteractiveOrCI
+			);
 			writeAuthConfigFile({
 				oauth_token,
 				expiration_time,

@@ -46,6 +46,8 @@ const silentLogger = {
 	error: () => {},
 };
 
+const isNonInteractiveOrCI = () => true;
+
 describe("access", () => {
 	beforeEach(() => {
 		clearAccessCaches();
@@ -57,8 +59,12 @@ describe("access", () => {
 		it("should correctly detect an access protected domain", async ({
 			expect,
 		}) => {
-			expect(await domainUsesAccess("access-protected.com")).toBeTruthy();
-			expect(await domainUsesAccess("not-access-protected.com")).toBeFalsy();
+			expect(
+				await domainUsesAccess("access-protected.com", silentLogger)
+			).toBeTruthy();
+			expect(
+				await domainUsesAccess("not-access-protected.com", silentLogger)
+			).toBeFalsy();
 		});
 
 		it("should return false when the domain responds with a 403 (service-auth-only Access app)", async ({
@@ -71,7 +77,7 @@ describe("access", () => {
 			// `getAccessHeaders` must check the env vars before calling
 			// `domainUsesAccess`.
 			expect(
-				await domainUsesAccess("access-service-auth-only.com")
+				await domainUsesAccess("access-service-auth-only.com", silentLogger)
 			).toBeFalsy();
 		});
 	});
@@ -80,7 +86,12 @@ describe("access", () => {
 		it("should return empty headers for non-access-protected domains", async ({
 			expect,
 		}) => {
-			expect(await getAccessHeaders("not-access-protected.com")).toEqual({});
+			expect(
+				await getAccessHeaders("not-access-protected.com", {
+					logger: silentLogger,
+					isNonInteractiveOrCI,
+				})
+			).toEqual({});
 		});
 
 		describe("service token authentication", () => {
@@ -92,6 +103,7 @@ describe("access", () => {
 
 				const headers = await getAccessHeaders("access-protected.com", {
 					logger: silentLogger,
+					isNonInteractiveOrCI,
 				});
 				expect(headers).toEqual({
 					"CF-Access-Client-Id": "test-client-id.access",
@@ -115,6 +127,7 @@ describe("access", () => {
 
 				const headers = await getAccessHeaders("access-service-auth-only.com", {
 					logger: silentLogger,
+					isNonInteractiveOrCI,
 				});
 				expect(headers).toEqual({
 					"CF-Access-Client-Id": "test-client-id.access",
@@ -182,7 +195,8 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 			}) => {
 				await expect(
 					getAccessHeaders("access-protected.com", {
-						isNonInteractiveOrCI: () => true,
+						logger: silentLogger,
+						isNonInteractiveOrCI,
 					})
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: The domain "access-protected.com" is behind Cloudflare Access, but no Access Service Token credentials were found and the current environment is non-interactive.
@@ -198,6 +212,7 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 			}) => {
 				await expect(
 					getAccessHeaders("access-protected.com", {
+						logger: silentLogger,
 						isNonInteractiveOrCI: () => false,
 					})
 				).rejects.toThrowErrorMatchingInlineSnapshot(
