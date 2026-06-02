@@ -90,7 +90,7 @@ describe("normalizeAndValidateConfig()", () => {
 			text_blobs: undefined,
 			browser: undefined,
 			ai: undefined,
-			web_search: undefined,
+			websearch: undefined,
 			version_metadata: undefined,
 			triggers: {
 				crons: undefined,
@@ -2021,10 +2021,10 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("[web_search]", () => {
-			it("should accept a valid web_search binding", ({ expect }) => {
+		describe("[websearch]", () => {
+			it("should accept a valid websearch binding", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ web_search: { binding: "WEBSEARCH" } } as RawConfig,
+					{ websearch: { binding: "WEBSEARCH" } } as RawConfig,
 					undefined,
 					undefined,
 					{ env: undefined }
@@ -2034,9 +2034,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should error if web_search is an array", ({ expect }) => {
+			it("should error if websearch is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ web_search: [] } as unknown as RawConfig,
+					{ websearch: [] } as unknown as RawConfig,
 					undefined,
 					undefined,
 					{ env: undefined }
@@ -2045,13 +2045,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - The field "web_search" should be an object but got []."
+					  - The field "websearch" should be an object but got []."
 				`);
 			});
 
-			it("should error if web_search has no binding name", ({ expect }) => {
+			it("should error if websearch has no binding name", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ web_search: {} } as unknown as RawConfig,
+					{ websearch: {} } as unknown as RawConfig,
 					undefined,
 					undefined,
 					{ env: undefined }
